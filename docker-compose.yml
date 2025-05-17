@@ -1,0 +1,11 @@
+services:
+  context7-mcp:
+    build: .
+    image: context7-mcp
+    container_name: context7-mcp
+    stdin_open: true
+    tty: true
+    volumes:
+      - .:/app
+    environment:
+      - NODE_ENV=production
