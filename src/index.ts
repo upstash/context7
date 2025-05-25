@@ -5,22 +5,34 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { searchLibraries, fetchLibraryDocumentation } from "./lib/api.js";
 import { formatSearchResults } from "./lib/utils.js";
-import dotenv from "dotenv";
+import { Command } from "commander";
 
-// Load environment variables from .env file if present
-dotenv.config();
+const program = new Command();
 
-// Get DEFAULT_MINIMUM_TOKENS from environment variable or use default
+program
+  .name("context7-mcp")
+  .description(
+    "Context7 MCP Server - Retrieves up-to-date documentation and code examples for any library"
+  )
+  .version("1.0.6")
+  .option(
+    "-t, --default-minimum-tokens <number>",
+    "Set the minimum token count for documentation retrieval",
+    "10000"
+  );
+
+program.parse();
+
+const options = program.opts();
+
 let DEFAULT_MINIMUM_TOKENS = 10000;
-if (process.env.DEFAULT_MINIMUM_TOKENS) {
-  const parsedValue = parseInt(process.env.DEFAULT_MINIMUM_TOKENS, 10);
-  if (!isNaN(parsedValue) && parsedValue > 0) {
-    DEFAULT_MINIMUM_TOKENS = parsedValue;
-  } else {
-    console.warn(
-      `Warning: Invalid DEFAULT_MINIMUM_TOKENS value provided in environment variable. Using default value of 10000`
-    );
-  }
+const parsedValue = parseInt(options.defaultMinimumTokens, 10);
+if (!isNaN(parsedValue) && parsedValue > 0) {
+  DEFAULT_MINIMUM_TOKENS = parsedValue;
+} else {
+  console.warn(
+    `Warning: Invalid DEFAULT_MINIMUM_TOKENS value provided. Using default value of 10000`
+  );
 }
 
 // Create server instance

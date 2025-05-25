@@ -268,9 +268,9 @@ The configuration on Windows is slightly different compared to Linux or macOS (*
 }
 ```
 
-### Environment Variables
+### Command Line Arguments
 
-- `DEFAULT_MINIMUM_TOKENS`: Set the minimum token count for documentation retrieval (default: 10000).
+- `--default-minimum-tokens, -t`: Set the minimum token count for documentation retrieval (default: 10000).
 
 Examples:
 
@@ -279,10 +279,7 @@ Examples:
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"],
-      "env": {
-        "DEFAULT_MINIMUM_TOKENS": "10000"
-      }
+      "args": ["-y", "@upstash/context7-mcp", "--default-minimum-tokens", "10000"]
     }
   }
 }
