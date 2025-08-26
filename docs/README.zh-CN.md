@@ -126,7 +126,7 @@ claude mcp add --transport sse context7 https://mcp.context7.com/sse --header "C
 #### Claude Code 本地服务器连接
 
 ```sh
-claude mcp add context7 -- npx -y @upstash/context7-mcp --header "CONTEXT7_API_KEY: YOUR_API_KEY"
+claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 ```
 
 </details>
