@@ -34,7 +34,7 @@
   },
   "homepage": "https://github.com/upstash/context7#readme",
   "dependencies": {
-    "undici": "^6.6.3",
+    "undici": "^7.15.0",
     "@modelcontextprotocol/sdk": "^1.13.2",
     "commander": "^14.0.0",
     "zod": "^3.24.2"
