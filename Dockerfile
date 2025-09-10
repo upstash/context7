@@ -23,7 +23,7 @@ COPY --from=builder /app/dist ./dist
 COPY package.json ./
 
 # Install only production dependencies
-RUN npm install --production --ignore-scripts
+RUN npm install --omit=dev --ignore-scripts
 
 # Expose HTTP port
 EXPOSE 8080
