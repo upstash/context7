@@ -338,6 +338,17 @@ async function main() {
             requestServer.close();
           });
           await requestServer.connect(sseTransport);
+
+          // Send initial message to establish communication
+          res.write(
+            "data: " +
+              JSON.stringify({
+                type: "connection_established",
+                sessionId: sseTransport.sessionId,
+                timestamp: new Date().toISOString(),
+              }) +
+              "\n\n"
+          );
         } else if (url === "/messages" && req.method === "POST") {
           // Get session ID from query parameters
           const sessionId =
@@ -345,33 +356,38 @@ async function main() {
             "";
 
           if (!sessionId) {
-            res.writeHead(400);
-            res.end("Missing sessionId parameter");
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "Missing sessionId parameter", status: 400 }));
             return;
           }
 
           // Get existing transport for this session
           const sseTransport = sseTransports[sessionId];
           if (!sseTransport) {
-            res.writeHead(400);
-            res.end(`No transport found for sessionId: ${sessionId}`);
+            res.writeHead(400, { "Content-Type": "application/json" });
+            res.end(
+              JSON.stringify({
+                error: `No transport found for sessionId: ${sessionId}`,
+                status: 400,
+              })
+            );
             return;
           }
 
           // Handle the POST message with the existing transport
           await sseTransport.handlePostMessage(req, res);
         } else if (url === "/ping") {
-          res.writeHead(200, { "Content-Type": "text/plain" });
-          res.end("pong");
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ status: "ok", message: "pong" }));
         } else {
-          res.writeHead(404);
-          res.end("Not found");
+          res.writeHead(404, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Not found", status: 404 }));
         }
       } catch (error) {
         console.error("Error handling request:", error);
         if (!res.headersSent) {
-          res.writeHead(500);
-          res.end("Internal Server Error");
+          res.writeHead(500, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Internal Server Error", status: 500 }));
         }
       }
     });
