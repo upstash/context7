@@ -257,7 +257,7 @@ async function main() {
     // Keep track of which port we end up using
     let actualPort = initialPort;
     const httpServer = createServer(async (req, res) => {
-      const url = new URL(req.url || "", `http://${req.headers.host}`).pathname;
+      const pathname = new URL(req.url || "/", "http://localhost").pathname;
 
       // Set CORS headers for all responses
       res.setHeader("Access-Control-Allow-Origin", "*");
@@ -316,7 +316,7 @@ async function main() {
         // Create new server instance for each request
         const requestServer = createServerInstance(clientIp, apiKey);
 
-        if (url === "/mcp") {
+        if (pathname === "/mcp") {
           const transport = new StreamableHTTPServerTransport({
             sessionIdGenerator: undefined,
           });
@@ -326,7 +326,7 @@ async function main() {
           });
           await requestServer.connect(transport);
           await transport.handleRequest(req, res);
-        } else if (url === "/sse" && req.method === "GET") {
+        } else if (pathname === "/sse" && req.method === "GET") {
           // Create new SSE transport for GET request
           const sseTransport = new SSEServerTransport("/messages", res);
           // Store the transport by session ID
@@ -349,11 +349,10 @@ async function main() {
               }) +
               "\n\n"
           );
-        } else if (url === "/messages" && req.method === "POST") {
+        } else if (pathname === "/messages" && req.method === "POST") {
           // Get session ID from query parameters
           const sessionId =
-            new URL(req.url || "", `http://${req.headers.host}`).searchParams.get("sessionId") ??
-            "";
+            new URL(req.url || "/", "http://localhost").searchParams.get("sessionId") ?? "";
 
           if (!sessionId) {
             res.writeHead(400, { "Content-Type": "application/json" });
@@ -376,7 +375,7 @@ async function main() {
 
           // Handle the POST message with the existing transport
           await sseTransport.handlePostMessage(req, res);
-        } else if (url === "/ping") {
+        } else if (pathname === "/ping") {
           res.writeHead(200, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ status: "ok", message: "pong" }));
         } else {
