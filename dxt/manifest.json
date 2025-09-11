@@ -1,0 +1,46 @@
+{
+  "dxt_version": "0.1",
+  "name": "context7",
+  "display_name": "Context7",
+  "version": "1.0.0",
+  "description": "Up-to-date Code Docs For Any Prompt",
+  "author": {
+    "name": "Upstash",
+    "email": "context7@upstash.com",
+    "url": "https://upstash.com"
+  },
+  "homepage": "https://context7.com",
+  "documentation": "https://github.com/upstash/context7",
+  "icon": "public/context7logo.png",
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/index.js"],
+      "env": {}
+    }
+  },
+  "tools": [
+    {
+      "name": "Resolve Context7 Library ID",
+      "description": "Resolves a package/product name to a Context7-compatible library ID and returns a list of matching libraries."
+    },
+    {
+      "name": "Get Library Docs",
+      "description": "Fetches up-to-date documentation for a library."
+    }
+  ],
+  "compatibility": {
+    "platforms": ["darwin", "win32", "linux"],
+    "runtimes": {
+      "node": ">=v18.0.0"
+    }
+  },
+  "keywords": ["vibe-coding", "developer tools", "documentation", "context"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/upstash/context7.git"
+  }
+}

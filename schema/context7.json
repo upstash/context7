@@ -33,7 +33,7 @@
       "uniqueItems": true,
       "default": [],
       "examples": [
-        ["docs", "guides"],
+        ["docs", "guides", "examples"],
         ["documentation/**"],
         ["api-reference", "tutorials/*"]
       ]
@@ -127,4 +127,4 @@
       ]
     }
   ]
-} 
+}

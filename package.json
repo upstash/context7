@@ -7,7 +7,9 @@
     "build": "tsc && chmod 755 dist/index.js",
     "format": "prettier --write .",
     "lint": "eslint \"**/*.{js,ts,tsx}\" --fix",
-    "start": "MCP_TRANSPORT=http node dist/index.js"
+    "lint:check": "eslint \"**/*.{js,ts,tsx}\"",
+    "start": "node dist/index.js --transport http",
+    "pack-dxt": "bun install && bun run build && rm -rf node_modules && bun install --production && mv dxt/.dxtignore .dxtignore && mv dxt/manifest.json manifest.json && dxt validate manifest.json && dxt pack . dxt/context7.dxt && mv manifest.json dxt/manifest.json && mv .dxtignore dxt/.dxtignore && bun install"
   },
   "repository": {
     "type": "git",
@@ -32,18 +34,19 @@
   },
   "homepage": "https://github.com/upstash/context7#readme",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.0",
-    "dotenv": "^16.5.0",
+    "@modelcontextprotocol/sdk": "^1.17.5",
+    "commander": "^14.0.0",
+    "undici": "^6.6.3",
     "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/node": "^22.13.14",
     "@typescript-eslint/eslint-plugin": "^8.28.0",
     "@typescript-eslint/parser": "^8.28.0",
-    "eslint": "^9.23.0",
+    "eslint": "^9.34.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.5",
-    "prettier": "^3.5.3",
+    "prettier": "^3.6.2",
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.28.0"
   }

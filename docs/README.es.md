@@ -132,7 +132,7 @@ Añade esto a tu archivo de configuración MCP de VS Code. Consulta la [document
 
 ### Instalar en Claude Code
 
-Ejecuta este comando. Consulta la [documentación de MCP de Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/tutorials#set-up-model-context-protocol-mcp) para más información.
+Ejecuta este comando. Consulta la [documentación de MCP de Claude Code](https://docs.anthropic.com/es/docs/claude-code/mcp) para más información.
 
 ```sh
 claude mcp add context7 -- npx -y @upstash/context7-mcp@latest
@@ -152,6 +152,24 @@ Añade esto a tu archivo `claude_desktop_config.json` de Claude Desktop. Consult
   }
 }
 ```
+
+### Instalar en Copilot Coding Agent
+
+Agrega la siguiente configuración a la sección `mcp` de tu archivo de configuración de Copilot Coding Agent (Repository->Settings->Copilot->Coding agent->MCP configuration):
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "tools": ["get-library-docs", "resolve-library-id"]
+    }
+  }
+}
+```
+
+Para más información, consulta la [documentación oficial de GitHub](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/agents/copilot-coding-agent/extending-copilot-coding-agent-with-mcp).
 
 ### Herramientas Disponibles
 

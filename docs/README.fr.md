@@ -150,7 +150,7 @@ Peut être installé via [Zed Extensions](https://zed.dev/extensions?query=Conte
 
 ### Installation dans Claude Code
 
-Exécutez cette commande. Voir la [documentation Claude Code MCP](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/tutorials#set-up-model-context-protocol-mcp).
+Exécutez cette commande. Voir la [documentation Claude Code MCP](https://docs.anthropic.com/fr/docs/claude-code/mcp).
 
 ```sh
 claude mcp add context7 -- npx -y @upstash/context7-mcp@latest
@@ -187,6 +187,24 @@ Ouvrez la page "Settings" de l'application, naviguez jusqu'à "Plugins", et entr
 ```
 
 Une fois enregistré, saisissez dans le chat `get-library-docs` suivi de votre ID de documentation Context7 (par exemple, `get-library-docs /nuxt/ui`). Plus d'informations sont disponibles sur le [site de documentation BoltAI](https://docs.boltai.com/docs/plugins/mcp-servers). Pour BoltAI sur iOS, [consultez ce guide](https://docs.boltai.com/docs/boltai-mobile/mcp-servers).
+
+### Installation dans Copilot Coding Agent
+
+Ajoutez la configuration suivante à la section `mcp` de votre fichier de configuration Copilot Coding Agent (Repository->Settings->Copilot->Coding agent->MCP configuration) :
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "tools": ["get-library-docs", "resolve-library-id"]
+    }
+  }
+}
+```
+
+Pour plus d'informations, consultez la [documentation officielle GitHub](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/agents/copilot-coding-agent/extending-copilot-coding-agent-with-mcp).
 
 ### Utilisation avec Docker
 
@@ -226,15 +244,15 @@ Si vous préférez exécuter le serveur MCP dans un conteneur Docker :
 
     Mettez à jour la configuration de votre client MCP pour utiliser la commande Docker.
 
-    *Exemple pour un fichier cline_mcp_settings.json :*
+    _Exemple pour un fichier cline_mcp_settings.json :_
 
     ```json
     {
       "mcpServers": {
         "Сontext7": {
-        "autoApprove": [],
-        "disabled": false,
-        "timeout": 60,
+          "autoApprove": [],
+          "disabled": false,
+          "timeout": 60,
           "command": "docker",
           "args": ["run", "-i", "--rm", "context7-mcp"],
           "transportType": "stdio"
@@ -242,23 +260,19 @@ Si vous préférez exécuter le serveur MCP dans un conteneur Docker :
       }
     }
     ```
-    *Note : Ceci est un exemple. Adaptez la structure selon votre client MCP (voir plus haut dans ce README). Assurez-vous que le nom de l’image dans `args` correspond au tag utilisé lors du build.*
+
+    _Note : Ceci est un exemple. Adaptez la structure selon votre client MCP (voir plus haut dans ce README). Assurez-vous que le nom de l’image dans `args` correspond au tag utilisé lors du build._
 
 ### Installation sous Windows
 
-La configuration sous Windows est légèrement différente par rapport à Linux ou macOS (*`Cline` est utilisé dans l'exemple*). Le même principe s'applique à d'autres éditeurs; référez-vous à la configuration de `command` et `args`.
+La configuration sous Windows est légèrement différente par rapport à Linux ou macOS (_`Cline` est utilisé dans l'exemple_). Le même principe s'applique à d'autres éditeurs; référez-vous à la configuration de `command` et `args`.
 
 ```json
 {
   "mcpServers": {
     "github.com/upstash/context7-mcp": {
       "command": "cmd",
-      "args": [
-        "/c",
-        "npx",
-        "-y",
-        "@upstash/context7-mcp@latest"
-      ],
+      "args": ["/c", "npx", "-y", "@upstash/context7-mcp@latest"],
       "disabled": false,
       "autoApprove": []
     }
@@ -356,11 +370,7 @@ Si vous rencontrez une erreur comme : `Error: Cannot find module 'uriTemplate.js
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": [
-        "-y",
-        "--node-options=--experimental-vm-modules",
-        "@upstash/context7-mcp@1.0.6"
-      ]
+      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
     }
   }
 }

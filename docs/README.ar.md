@@ -26,9 +26,9 @@
 
 يقوم Context7 بجلب الأمثلة المحدثة والتوثيق المناسب مباشرة إلى السياق.
 
-* 1️⃣ اكتب طلبك بشكل طبيعي
-* 2️⃣ أخبر النموذج بـ `use context7`
-* 3️⃣ احصل على أكواد تعمل مباشرة
+- 1️⃣ اكتب طلبك بشكل طبيعي
+- 2️⃣ أخبر النموذج بـ `use context7`
+- 3️⃣ احصل على أكواد تعمل مباشرة
 
 لا حاجة للتنقل بين التبويبات، لا واجهات برمجة تطبيقات وهمية، لا أكواد قديمة.
 
@@ -36,8 +36,8 @@
 
 ### المتطلبات
 
-* Node.js إصدار 18.0.0 أو أعلى
-* Cursor، Windsurf، Claude Desktop أو أي عميل MCP آخر
+- Node.js إصدار 18.0.0 أو أعلى
+- Cursor، Windsurf، Claude Desktop أو أي عميل MCP آخر
 
 ### التثبيت عبر Smithery
 
@@ -165,6 +165,24 @@ claude mcp add context7 -- npx -y @upstash/context7-mcp@latest
 }
 ```
 
+### التثبيت في Copilot Coding Agent
+
+أضف التكوين التالي إلى قسم `mcp` في ملف إعدادات Copilot Coding Agent الخاص بك Repository->Settings->Copilot->Coding agent->MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "tools": ["get-library-docs", "resolve-library-id"]
+    }
+  }
+}
+```
+
+لمزيد من المعلومات، راجع [التوثيق الرسمي على GitHub](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/agents/copilot-coding-agent/extending-copilot-coding-agent-with-mcp).
+
 ### باستخدام Docker
 
 **Dockerfile:**
@@ -203,12 +221,7 @@ docker build -t context7-mcp .
   "mcpServers": {
     "github.com/upstash/context7-mcp": {
       "command": "cmd",
-      "args": [
-        "/c",
-        "npx",
-        "-y",
-        "@upstash/context7-mcp@latest"
-      ],
+      "args": ["/c", "npx", "-y", "@upstash/context7-mcp@latest"],
       "disabled": false,
       "autoApprove": []
     }
@@ -234,12 +247,11 @@ docker build -t context7-mcp .
 
 ### الأدوات المتوفرة
 
-* `resolve-library-id`: يحول اسم مكتبة عام إلى معرف متوافق مع Context7.
-* `get-library-docs`: يستخرج التوثيق حسب المعرف.
-
-  * `context7CompatibleLibraryID`: مطلوب
-  * `topic`: موضوع معين مثل "routing"
-  * `tokens`: الحد الأعلى لعدد الرموز
+- `resolve-library-id`: يحول اسم مكتبة عام إلى معرف متوافق مع Context7.
+- `get-library-docs`: يستخرج التوثيق حسب المعرف.
+  - `context7CompatibleLibraryID`: مطلوب
+  - `topic`: موضوع معين مثل "routing"
+  - `tokens`: الحد الأعلى لعدد الرموز
 
 ## التطوير
 
@@ -269,7 +281,7 @@ npx -y @modelcontextprotocol/inspector npx @upstash/context7-mcp@latest
 
 ## استكشاف الأخطاء
 
-### ERR\_MODULE\_NOT\_FOUND
+### ERR_MODULE_NOT_FOUND
 
 استخدم `bunx` بدلاً من `npx`.
 
@@ -291,11 +303,7 @@ npx -y @modelcontextprotocol/inspector npx @upstash/context7-mcp@latest
 ```json
 {
   "command": "npx",
-  "args": [
-    "-y",
-    "--node-options=--experimental-vm-modules",
-    "@upstash/context7-mcp@1.0.6"
-  ]
+  "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
 }
 ```
 
@@ -312,18 +320,18 @@ npx -y @modelcontextprotocol/inspector npx @upstash/context7-mcp@latest
 
 ## Context7 في الإعلام
 
-* [Better Stack: "أداة مجانية تجعل Cursor أذكى 10x"](https://youtu.be/52FC3qObp9E)
-* [Cole Medin: "أفضل MCP Server لمساعدين الذكاء الاصطناعي البرمجيين"](https://www.youtube.com/watch?v=G7gK8H6u7Rs)
-* [Context7 + SequentialThinking: هل هذا AGI؟](https://www.youtube.com/watch?v=-ggvzyLpK6o)
-* [تحديث جديد من Context7 MCP](https://www.youtube.com/watch?v=CTZm6fBYisc)
-* [إعداد Context7 في VS Code](https://www.youtube.com/watch?v=-ls0D-rtET4)
-* [Context7: MCP جديد سيغير البرمجة](https://www.youtube.com/watch?v=PS-2Azb-C3M)
-* [Cline & RooCode + Context7: قوة مضاعفة](https://www.youtube.com/watch?v=qZfENAPMnyo)
-* [أفضل 5 MCP Servers لتجربة برمجة ساحرة](https://www.youtube.com/watch?v=LqTQi8qexJM)
+- [Better Stack: "أداة مجانية تجعل Cursor أذكى 10x"](https://youtu.be/52FC3qObp9E)
+- [Cole Medin: "أفضل MCP Server لمساعدين الذكاء الاصطناعي البرمجيين"](https://www.youtube.com/watch?v=G7gK8H6u7Rs)
+- [Context7 + SequentialThinking: هل هذا AGI؟](https://www.youtube.com/watch?v=-ggvzyLpK6o)
+- [تحديث جديد من Context7 MCP](https://www.youtube.com/watch?v=CTZm6fBYisc)
+- [إعداد Context7 في VS Code](https://www.youtube.com/watch?v=-ls0D-rtET4)
+- [Context7: MCP جديد سيغير البرمجة](https://www.youtube.com/watch?v=PS-2Azb-C3M)
+- [Cline & RooCode + Context7: قوة مضاعفة](https://www.youtube.com/watch?v=qZfENAPMnyo)
+- [أفضل 5 MCP Servers لتجربة برمجة ساحرة](https://www.youtube.com/watch?v=LqTQi8qexJM)
 
 ## سجل النجوم
 
-[![Star History Chart](https://api.star-history.com/svg?repos=upstash/context7\&type=Date)](https://www.star-history.com/#upstash/context7&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=upstash/context7&type=Date)](https://www.star-history.com/#upstash/context7&Date)
 
 ## الترخيص
 

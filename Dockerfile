@@ -25,12 +25,8 @@ COPY package.json ./
 # Install only production dependencies
 RUN npm install --production --ignore-scripts
 
-# Set default environment variables for HTTP mode
-ENV MCP_TRANSPORT=http
-ENV PORT=8080
-
 # Expose HTTP port
 EXPOSE 8080
 
-# Default command
-CMD ["node", "dist/index.js"]
+# Default command using CLI flags
+CMD ["node", "dist/index.js", "--transport", "http", "--port", "8080"]

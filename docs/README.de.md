@@ -150,7 +150,7 @@ Es kann über [Zed Extensions](https://zed.dev/extensions?query=Context7) instal
 
 ### Installation in Claude Code
 
-Führe diesen Befehl aus. Siehe die [Claude Code MCP Dokumentation](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/tutorials#set-up-model-context-protocol-mcp) für mehr Informationen.
+Führe diesen Befehl aus. Siehe die [Claude Code MCP Dokumentation](https://docs.anthropic.com/de/docs/claude-code/mcp) für mehr Informationen.
 
 ```sh
 claude mcp add context7 -- npx -y @upstash/context7-mcp@latest
@@ -170,6 +170,24 @@ Füge dies zu deiner Claude Desktop `claude_desktop_config.json` Datei hinzu. Si
   }
 }
 ```
+
+### Installation im Copilot Coding Agent
+
+Füge die folgende Konfiguration zum Abschnitt `mcp` deiner Copilot Coding Agent-Konfigurationsdatei hinzu (Repository->Settings->Copilot->Coding agent->MCP configuration):
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "tools": ["get-library-docs", "resolve-library-id"]
+    }
+  }
+}
+```
+
+Weitere Informationen findest du in der [offiziellen GitHub-Dokumentation](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/agents/copilot-coding-agent/extending-copilot-coding-agent-with-mcp).
 
 ### Docker verwenden
 
@@ -209,15 +227,15 @@ Wenn du den MCP-Server lieber in einem Docker-Container ausführen möchtest:
 
     Aktualisiere die Konfiguration deines MCP-Clients, um den Docker-Befehl zu verwenden.
 
-    *Beispiel für eine cline_mcp_settings.json:*
+    _Beispiel für eine cline_mcp_settings.json:_
 
     ```json
     {
       "mcpServers": {
         "Сontext7": {
-        "autoApprove": [],
-        "disabled": false,
-        "timeout": 60,
+          "autoApprove": [],
+          "disabled": false,
+          "timeout": 60,
           "command": "docker",
           "args": ["run", "-i", "--rm", "context7-mcp"],
           "transportType": "stdio"
@@ -225,7 +243,8 @@ Wenn du den MCP-Server lieber in einem Docker-Container ausführen möchtest:
       }
     }
     ```
-    *Hinweis: Dies ist eine Beispielkonfiguration. Bitte beziehe dich auf die spezifischen Beispiele für deinen MCP-Client (wie Cursor, VS Code usw.), die weiter oben in dieser README beschrieben sind, um die Struktur anzupassen (z.B. `mcpServers` vs `servers`). Stelle außerdem sicher, dass der Bildname in `args` mit dem beim `docker build`-Befehl verwendeten Tag übereinstimmt.*
+
+    _Hinweis: Dies ist eine Beispielkonfiguration. Bitte beziehe dich auf die spezifischen Beispiele für deinen MCP-Client (wie Cursor, VS Code usw.), die weiter oben in dieser README beschrieben sind, um die Struktur anzupassen (z.B. `mcpServers` vs `servers`). Stelle außerdem sicher, dass der Bildname in `args` mit dem beim `docker build`-Befehl verwendeten Tag übereinstimmt._
 
 ### Verfügbare Tools
 
@@ -297,11 +316,7 @@ Wenn du einen Fehler wie `Error: Cannot find module 'uriTemplate.js'` bekommst, 
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": [
-        "-y",
-        "--node-options=--experimental-vm-modules",
-        "@upstash/context7-mcp@1.0.6"
-      ]
+      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
     }
   }
 }
@@ -318,6 +333,7 @@ Wenn du einen Fehler wie `Error: Cannot find module 'uriTemplate.js'` bekommst, 
 4. Stelle sicher, dass du Node v18 oder höher verwendest, um native Fetch-Unterstützung mit `npx` zu haben.
 
 ## Haftungsausschluss
+
 Context7-Projekte werden von der Community beigetragen, und obwohl wir uns bemühen, eine hohe Qualität aufrechtzuerhalten, können wir die Genauigkeit, Vollständigkeit oder Sicherheit aller Bibliotheksdokumentationen nicht garantieren. Die in Context7 aufgeführten Projekte werden von ihren jeweiligen Eigentümern entwickelt und gepflegt, nicht von Context7. Wenn du auf verdächtige, unangemessene oder potenziell schädliche Inhalte stößt, verwende bitte die Schaltfläche "Melden" auf der Projektseite, um uns sofort zu benachrichtigen. Wir nehmen alle Berichte ernst und werden gemeldete Inhalte umgehend überprüfen, um die Integrität und Sicherheit unserer Plattform zu gewährleisten. Durch die Nutzung von Context7 erkennst du an, dass du dies nach eigenem Ermessen und auf eigenes Risiko tust.
 
 ## Context7 in den Medien
