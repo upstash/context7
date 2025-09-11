@@ -44,6 +44,8 @@ Here's an example `context7.json` file with all available options:
 
 - **`description`** (string): A brief description of what your library does. This helps coding agents understand the purpose of your project.
 
+- **`branch`** (string): The name of the git branch to parse. If not provided, the default branch will be used.
+
 - **`folders`** (array): Specific folder paths to include when parsing documentation. If empty, Context7 will scan the entire repository for relevant documentation files. Supports regex patterns and requires full paths.
 
 - **`excludeFolders`** (array): Folder paths to exclude from documentation parsing. Useful for excluding source code directories, build folders, or other non-documentation content. Supports regex patterns and requires full paths.
