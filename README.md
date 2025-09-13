@@ -119,7 +119,7 @@ Run this command. See [Claude Code MCP docs](https://docs.anthropic.com/en/docs/
 #### Claude Code Remote Server Connection
 
 ```sh
-claude mcp add --transport http context7 https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: YOUR_API_KEY"
+claude mcp add --transport http context7 https://mcp.context7.com/mcp --header "Authorization: Bearer YOUR_CONTEXT7_API_KEY"
 ```
 
 #### Claude Code Local Server Connection
