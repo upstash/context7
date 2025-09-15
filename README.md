@@ -643,7 +643,7 @@ If you prefer to run the MCP server in a Docker container:
 <details>
 <summary><b>Install Using the Desktop Extension</b></summary>
 
-Install the [context7.dxt](dxt/context7.dxt) file under the dxt folder and add it to your client. For more information, please check out [the desktop extensions docs](https://github.com/anthropics/dxt#desktop-extensions-dxt).
+Install the [context7.mcpb](mcpb/context7.mcpb) file under the mcpb folder and add it to your client. For more information, please check out [MCP bundles docs](https://github.com/anthropics/mcpb#mcp-bundles-mcpb).
 
 </details>
 
