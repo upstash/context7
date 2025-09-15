@@ -1003,33 +1003,33 @@ Context7 MCP provides the following tools that LLMs can use:
 
 ### Add a Rule
 
-> If you don’t want to add `use context7` to every prompt, you can define a simple rule in your MCP client's rule section:
->
-> - For Windsurf, in `.windsurfrules` file
-> - For Cursor, from `Cursor Settings > Rules` section
-> - For Claude Code, in `CLAUDE.md` file
->
-> Or the equivalent in your MCP client to auto-invoke Context7 on any code question.
->
-> Example Rule:
->
-> ```toml
-> Always use context7 when I need code generation, setup or configuration steps, or
-> library/API documentation. This means you should automatically use the Context7 MCP
-> tools to resolve library id and get library docs without me having to explicitly ask.
-> ```
->
-> From then on, you’ll get Context7’s docs in any related conversation without typing anything extra. You can alter the rule to match your use cases.
+If you don’t want to add `use context7` to every prompt, you can define a simple rule in your MCP client's rule section:
+
+- For Windsurf, in `.windsurfrules` file
+- For Cursor, from `Cursor Settings > Rules` section
+- For Claude Code, in `CLAUDE.md` file
+
+Or the equivalent in your MCP client to auto-invoke Context7 on any code question.
+
+#### Example Rule
+
+```txt
+Always use context7 when I need code generation, setup or configuration steps, or
+library/API documentation. This means you should automatically use the Context7 MCP
+tools to resolve library id and get library docs without me having to explicitly ask.
+```
+
+From then on, you’ll get Context7’s docs in any related conversation without typing anything extra. You can alter the rule to match your use cases.
 
 ### Use Library Id
 
-> If you already know exactly which library you want to use, add its Context7 ID to your prompt. That way, Context7 MCP server can skip the library-matching step and directly continue with retrieving docs.
->
-> ```txt
-> Implement basic authentication with Supabase. use library /supabase/supabase for API and docs.
-> ```
->
-> The slash syntax tells the MCP tool exactly which library to load docs for.
+If you already know exactly which library you want to use, add its Context7 ID to your prompt. That way, Context7 MCP server can skip the library-matching step and directly continue with retrieving docs.
+
+```txt
+Implement basic authentication with Supabase. use library /supabase/supabase for API and docs.
+```
+
+The slash syntax tells the MCP tool exactly which library to load docs for.
 
 ### HTTPS Proxy
 
