@@ -173,4 +173,3 @@ dist
 
 # Finder (MacOS) folder config
 .DS_Store
-package-lock.json
