@@ -440,6 +440,7 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
 ```
 
 </details>
+
 <details>
 <summary><b>Install in OpenAI Codex</b></summary>
 
@@ -453,6 +454,26 @@ args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
 command = "npx"
 ```
 
+⚠️ Windows Notes
+
+On Windows, some users may encounter request timed out errors with the default configuration.
+In that case, explicitly configure the MCP server with the full path to Node.js and the installed package:
+
+```toml
+[mcp_servers.context7]
+command = "C:\\Program Files\\nodejs\\node.exe"
+args = [
+  "C:\\Users\\yourname\\AppData\\Roaming\\npm\\node_modules\\@upstash\\context7-mcp\\dist\\index.js",
+  "--transport",
+  "stdio"
+]
+
+[mcp_servers.context7.env]
+CONTEXT7_MCP_URL = "https://mcp.context7.com/mcp"
+CONTEXT7_API_KEY = "your-api-key"
+```
+
+This ensures Codex CLI works reliably on Windows.
 </details>
 
 <details>
@@ -985,36 +1006,6 @@ See [Local and Remote MCPs for Perplexity](https://www.perplexity.ai/help-center
 ```
 
 7. Click `Save`.
-</details>
-
-<details>
-<summary><b>Install in OpenAI Codex CLI</b></summary>
-
-See [OpenAI Codex CLI](https://github.com/openai/codex/blob/main/docs/advanced.md#model-context-protocol-mcp) for more information.
-
-1. Install the OpenAI Codex CLI.
-2. Install Context7 MCP globally: `npm install -g @upstash/context7-mcp`.
-3. Navigate to the CLI config directory (e.g., `C:\\Users\\yourname\\.codex`).
-4. Open the `config.toml` file.
-5. Add or update the following configuration:
-
-```toml
-[mcp_servers.context7]
-command = "C:\\Program Files\\nodejs\\node.exe"
-args = [
-  "C:\\Users\\yourname\\AppData\\Roaming\\npm\\node_modules\\@upstash\\context7-mcp\\dist\\index.js",
-  "--transport",
-  "stdio"
-]
-
-[mcp_servers.context7.env]
-CONTEXT7_MCP_URL = "https://mcp.context7.com/mcp"
-CONTEXT7_API_KEY = "your-api-key"
-```
-
-6. Replace `your-api-key` with your actual Context7 API key.
-7. Save the file and restart the CLI.
-
 </details>
 
 ## 🔨 Available Tools
