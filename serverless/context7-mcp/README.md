@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Context7 Serverless MCP (Next.js)
 
-## Getting Started
+A minimal serverless HTTP MCP server for Context7, built with Next.js. It exposes an MCP endpoint your editor (Cursor, Claude Code, VS Code, etc.) can call to fetch up-to-date, version-specific docs and code examples from Context7.
 
-First, run the development server:
+## Quick Start
+
+Run locally:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Test the MCP endpoint with MCP Inspector:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npx -y @modelcontextprotocol/inspector http://localhost:3000/mcp
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Endpoint
 
-## Learn More
+- MCP endpoint: `/mcp`
+- Uses Node runtime since this project relies on Node APIs.
 
-To learn more about Next.js, take a look at the following resources:
+## Auth & Headers
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Provide your Context7 API key via one of the following request headers:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `Authorization: Bearer <YOUR_API_KEY>`
+- `Context7-API-Key: <YOUR_API_KEY>`
 
-## Deploy on Vercel
+The server forwards an encrypted client IP to Context7 when available.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploy
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Deploy to Vercel as a standard Next.js app.
+
+```bash
+vercel
+```
+
+## Notes
+
+- This endpoint uses the HTTP MCP transport (SSE is not supported for serverless).
+- Large responses stream back to clients; verify function timeouts in your deployment target.
