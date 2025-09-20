@@ -40,9 +40,9 @@ Here's an example `context7.json` file with all available options:
 
 #### Field Descriptions
 
-- **`projectTitle`** (string): The display name for your project in Context7. This overrides the default repository name.
+- **`projectTitle`** (string): Suggested display name for your project in Context7. Only used when LLM can not generate a name with high confidence.
 
-- **`description`** (string): A brief description of what your library does. This helps coding agents understand the purpose of your project.
+- **`description`** (string): Suggested description for your project in Context7. Only used when LLM can not generate a name with high confidence.
 
 - **`branch`** (string): The name of the git branch to parse. If not provided, the default branch will be used.
 
