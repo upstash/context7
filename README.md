@@ -482,7 +482,7 @@ See [JetBrains AI Assistant Documentation](https://www.jetbrains.com/help/ai-ass
 </details>
 
 <details>
-  
+
 <summary><b>Install in Kiro</b></summary>
 
 See [Kiro Model Context Protocol Documentation](https://kiro.dev/docs/mcp/configuration/) for details.
@@ -1062,6 +1062,7 @@ bun run dist/index.js
 - `--transport <stdio|http>` – Transport to use (`stdio` by default). Note that HTTP transport automatically provides both HTTP and SSE endpoints.
 - `--port <number>` – Port to listen on when using `http` transport (default `3000`).
 - `--api-key <key>` – API key for authentication. You can get your API key by creating an account at [context7.com/dashboard](https://context7.com/dashboard).
+- `--safe-input` –  Mode for safer inputs. When provided, the server will request structured, validated user input instead of accepting free-form string arguments.
 
 Example with HTTP transport and port 8080:
 

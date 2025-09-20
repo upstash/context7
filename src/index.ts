@@ -11,6 +11,12 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { Command } from "commander";
 import { IncomingMessage } from "http";
+import {
+  buildResolveLibraryIdElicitationSchema,
+  validateResolveLibraryIdInput,
+  assertSafe,
+  buildSafeUsageNotice,
+} from "./lib/validation.js";
 
 /** Minimum allowed tokens for documentation retrieval */
 const MINIMUM_TOKENS = 1000;
@@ -24,6 +30,10 @@ const program = new Command()
   .option("--transport <stdio|http>", "transport type", "stdio")
   .option("--port <number>", "port for HTTP transport", DEFAULT_PORT.toString())
   .option("--api-key <key>", "API key for authentication")
+  .option(
+    "--safe-input",
+    "Enable structured elicitation mode for safer inputs (conditional secure mode)"
+  )
   .allowUnknownOption() // let MCP Inspector / other wrappers pass through extra flags
   .parse(process.argv);
 
@@ -31,7 +41,10 @@ const cliOptions = program.opts<{
   transport: string;
   port: string;
   apiKey?: string;
+  safeInput?: boolean;
 }>();
+
+const SAFE_INPUT_MODE = !!cliOptions.safeInput;
 
 // Validate transport option
 const allowedTransports = ["stdio", "http"];
@@ -102,24 +115,26 @@ function getClientIp(req: IncomingMessage): string | undefined {
 }
 
 // Function to create a new server instance with all tools registered
-function createServerInstance(clientIp?: string, apiKey?: string) {
+function createServerInstance(clientIp?: string, apiKey?: string, safeInputMode = false) {
   const server = new McpServer(
     {
       name: "Context7",
       version: "1.0.13",
     },
     {
-      instructions:
-        "Use this server to retrieve up-to-date documentation and code examples for any library.",
+      instructions: safeInputMode
+        ? "Use this server to retrieve up-to-date documentation and code examples for any library. SAFETY MODE ENABLED (--safe-input): Do NOT include secrets, internal code, confidential project names, PII, or proprietary info."
+        : "Use this server to retrieve up-to-date documentation and code examples for any library.",
+      ...(safeInputMode ? { capabilities: { elicitation: {} } } : {}),
     }
   );
 
-  // Register Context7 tools
-  server.registerTool(
-    "resolve-library-id",
-    {
-      title: "Resolve Context7 Library ID",
-      description: `Resolves a package/product name to a Context7-compatible library ID and returns a list of matching libraries.
+  if (safeInputMode) {
+    server.registerTool(
+      "resolve-library-id",
+      {
+        title: "Resolve Context7 Library ID",
+        description: `Resolves a package/product name to a Context7-compatible library ID and returns a list of matching libraries.
 
 You MUST call this function before 'get-library-docs' to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
@@ -138,35 +153,86 @@ Response Format:
 - If no good matches exist, clearly state this and suggest query refinements
 
 For ambiguous queries, request clarification before proceeding with a best-guess match.`,
-      inputSchema: {
-        libraryName: z
-          .string()
-          .describe("Library name to search for and retrieve a Context7-compatible library ID."),
+        inputSchema: {},
       },
-    },
-    async ({ libraryName }) => {
-      const searchResponse: SearchResponse = await searchLibraries(libraryName, clientIp, apiKey);
+      async () => {
+        const notice = buildSafeUsageNotice();
 
-      if (!searchResponse.results || searchResponse.results.length === 0) {
+        let elicit: {
+          action: "accept" | "reject" | "cancel";
+          content?: { libraryName?: string };
+        };
+        try {
+          elicit = await server.server.elicitInput({
+            message: `Enter the public (publicly known) library or product name only.
+
+${notice}`,
+            requestedSchema: buildResolveLibraryIdElicitationSchema(),
+          });
+        } catch {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "Your client does not support interactive input for this action. This tool must be used via elicitation to reduce the risk of leaking sensitive data.",
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        if (elicit.action !== "accept" || !elicit.content?.libraryName) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "No valid input provided. Please retry and provide only a public library name (no internal identifiers).",
+              },
+            ],
+            isError: true,
+          };
+        }
+
+        const validated = validateResolveLibraryIdInput(elicit.content.libraryName);
+        if (!validated.ok || validated.sensitive?.flagged) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "The provided input appears to include sensitive or invalid data. Remove secrets, internal names, or code and try again.",
+              },
+            ],
+            isError: true,
+          };
+        }
+        const safeInput = assertSafe(validated);
+
+        const searchResponse: SearchResponse = await searchLibraries(
+          safeInput.libraryName,
+          clientIp,
+          apiKey
+        );
+
+        if (!searchResponse.results || searchResponse.results.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: searchResponse.error
+                  ? searchResponse.error
+                  : "Failed to retrieve library documentation data from Context7",
+              },
+            ],
+          };
+        }
+
+        const resultsText = formatSearchResults(searchResponse);
+
         return {
           content: [
             {
               type: "text",
-              text: searchResponse.error
-                ? searchResponse.error
-                : "Failed to retrieve library documentation data from Context7",
-            },
-          ],
-        };
-      }
-
-      const resultsText = formatSearchResults(searchResponse);
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Available Libraries (top matches):
+              text: `Available Libraries (top matches):
 
 Each result includes:
 - Library ID: Context7-compatible identifier (format: /org/project)
@@ -181,11 +247,84 @@ For best results, select libraries based on name match, trust score, snippet cov
 ----------
 
 ${resultsText}`,
-          },
-        ],
-      };
-    }
-  );
+            },
+          ],
+        };
+      }
+    );
+  } else {
+    server.registerTool(
+      "resolve-library-id",
+      {
+        title: "Resolve Context7 Library ID",
+        description: `Resolves a package/product name to a Context7-compatible library ID and returns a list of matching libraries.
+
+You MUST call this function before 'get-library-docs' to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
+
+Selection Process:
+1. Analyze the query to understand what library/package the user is looking for
+2. Return the most relevant match based on:
+- Name similarity to the query (exact matches prioritized)
+- Description relevance to the query's intent
+- Documentation coverage (prioritize libraries with higher Code Snippet counts)
+- Trust Score (consider libraries with scores of 7-10 more authoritative)
+
+Response Format:
+- Return the selected library ID in a clearly marked section
+- Provide a brief explanation for why this library was chosen
+- If multiple good matches exist, acknowledge this but proceed with the most relevant one
+- If no good matches exist, clearly state this and suggest query refinements
+
+For ambiguous queries, request clarification before proceeding with a best-guess match.`,
+        inputSchema: {
+          libraryName: z
+            .string()
+            .describe("Library name to search for and retrieve a Context7-compatible library ID."),
+        },
+      },
+      async ({ libraryName }) => {
+        const searchResponse: SearchResponse = await searchLibraries(libraryName, clientIp, apiKey);
+
+        if (!searchResponse.results || searchResponse.results.length === 0) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: searchResponse.error
+                  ? searchResponse.error
+                  : "Failed to retrieve library documentation data from Context7",
+              },
+            ],
+          };
+        }
+
+        const resultsText = formatSearchResults(searchResponse);
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Available Libraries (top matches):
+
+Each result includes:
+- Library ID: Context7-compatible identifier (format: /org/project)
+- Name: Library or package name
+- Description: Short summary
+- Code Snippets: Number of available code examples
+- Trust Score: Authority indicator
+- Versions: List of versions if available. Use one of those versions if and only if the user explicitly provides a version in their query.
+
+For best results, select libraries based on name match, trust score, snippet coverage, and relevance to your use case.
+
+----------
+
+${resultsText}`,
+            },
+          ],
+        };
+      }
+    );
+  }
 
   server.registerTool(
     "get-library-docs",
@@ -314,7 +453,7 @@ async function main() {
         const clientIp = getClientIp(req);
 
         // Create new server instance for each request
-        const requestServer = createServerInstance(clientIp, apiKey);
+        const requestServer = createServerInstance(clientIp, apiKey, SAFE_INPUT_MODE);
 
         if (pathname === "/mcp") {
           const transport = new StreamableHTTPServerTransport({
@@ -415,7 +554,7 @@ async function main() {
     startServer(initialPort);
   } else {
     // Stdio transport - this is already stateless by nature
-    const server = createServerInstance(undefined, cliOptions.apiKey);
+    const server = createServerInstance(undefined, cliOptions.apiKey, SAFE_INPUT_MODE);
     const transport = new StdioServerTransport();
     await server.connect(transport);
     console.error("Context7 Documentation MCP Server running on stdio");
