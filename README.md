@@ -465,14 +465,11 @@ command = "C:\\Program Files\\nodejs\\node.exe"
 args = [
   "C:\\Users\\yourname\\AppData\\Roaming\\npm\\node_modules\\@upstash\\context7-mcp\\dist\\index.js",
   "--transport",
-  "stdio"
+  "stdio",
+  "--api-key",
+  "YOUR_API_KEY"
 ]
-
-[mcp_servers.context7.env]
-CONTEXT7_MCP_URL = "https://mcp.context7.com/mcp"
-CONTEXT7_API_KEY = "your-api-key"
 ```
-
 Alternatively, you can use the following configuration:
 
 ```toml
@@ -484,7 +481,7 @@ args = [
     "-y",
     "@upstash/context7-mcp",
     "--api-key",
-    "YOUR_API_KEY",
+    "YOUR_API_KEY"
 ]
 env = { SystemRoot="C:\\Windows" }
 startup_timeout_ms = 20_000
