@@ -473,6 +473,23 @@ CONTEXT7_MCP_URL = "https://mcp.context7.com/mcp"
 CONTEXT7_API_KEY = "your-api-key"
 ```
 
+Alternatively, you can use the following configuration:
+
+```toml
+[mcp_servers.context7]
+command = "cmd"
+args = [
+    "/c",
+    "npx",
+    "-y",
+    "@upstash/context7-mcp",
+    "--api-key",
+    "YOUR_API_KEY",
+]
+env = { SystemRoot="C:\\Windows" }
+startup_timeout_ms = 20_000
+```
+
 This ensures Codex CLI works reliably on Windows.
 </details>
 
