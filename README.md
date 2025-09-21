@@ -496,8 +496,13 @@ See [Kiro Model Context Protocol Documentation](https://kiro.dev/docs/mcp/config
   "mcpServers": {
     "Context7": {
       "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
-      "env": {},
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ],
+      "env": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      },
       "disabled": false,
       "autoApprove": []
     }
