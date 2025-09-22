@@ -443,6 +443,7 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
 ```
 
 </details>
+
 <details>
 <summary><b>Install in OpenAI Codex</b></summary>
 
@@ -456,6 +457,40 @@ args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
 command = "npx"
 ```
 
+⚠️ Windows Notes
+
+On Windows, some users may encounter request timed out errors with the default configuration.
+In that case, explicitly configure the MCP server with the full path to Node.js and the installed package:
+
+```toml
+[mcp_servers.context7]
+command = "C:\\Program Files\\nodejs\\node.exe"
+args = [
+  "C:\\Users\\yourname\\AppData\\Roaming\\npm\\node_modules\\@upstash\\context7-mcp\\dist\\index.js",
+  "--transport",
+  "stdio",
+  "--api-key",
+  "YOUR_API_KEY"
+]
+```
+Alternatively, you can use the following configuration:
+
+```toml
+[mcp_servers.context7]
+command = "cmd"
+args = [
+    "/c",
+    "npx",
+    "-y",
+    "@upstash/context7-mcp",
+    "--api-key",
+    "YOUR_API_KEY"
+]
+env = { SystemRoot="C:\\Windows" }
+startup_timeout_ms = 20_000
+```
+
+This ensures Codex CLI works reliably on Windows.
 </details>
 
 <details>
