@@ -57,6 +57,23 @@ Here's an example `context7.json` file with all available options:
 - **`previousVersions`** (array): Information about previous versions of your library that should also be available in Context7.
   - **`tag`**: The Git tag or version identifier
   - **`title`**: Human-readable version name
+ 
+
+### Exclusion Patterns:
+
+The `excludeFolders` parameter supports various pattern types for flexible exclusion:
+
+- **Simple folder names**: `"node_modules"` - Excludes any folder named "node_modules" anywhere in the tree
+- **Path patterns**: `"app-sdk/v2.3"` - Excludes specific paths and everything under them
+- **Glob patterns**: `"*.test"`, `"temp*"` - Excludes folders matching the pattern
+- **Globstar patterns**: `"**/dist"`, `"docs/**/internal"` - Advanced path matching
+- **Complex patterns**: `"src/**/*.test.js"` - Exclude test files in src directory
+
+Examples:
+- `"node_modules"` - Excludes all node_modules folders
+- `"app-sdk/v2.3"` - Excludes app-sdk/v2.3 and all its contents
+- `"*.test"` - Excludes folders ending with .test
+- `"docs/**/internal"` - Excludes any "internal" folder under docs
 
 ### Default Exclusions
 
