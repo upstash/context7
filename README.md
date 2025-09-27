@@ -323,7 +323,7 @@ Add this to your Roo Code MCP configuration file. See [Roo Code MCP docs](https:
       "type": "streamable-http",
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY",
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
       }
     }
   }
@@ -473,6 +473,7 @@ args = [
   "YOUR_API_KEY"
 ]
 ```
+
 Alternatively, you can use the following configuration:
 
 ```toml
@@ -491,6 +492,7 @@ startup_timeout_ms = 20_000
 ```
 
 This ensures Codex CLI works reliably on Windows.
+
 </details>
 
 <details>

@@ -40,56 +40,56 @@ Here's an example `context7.json` file with all available options:
 
 ## Field Descriptions
 
-  - **`projectTitle`** (string): Suggested display name for your project in Context7. Only used when LLM
+- **`projectTitle`** (string): Suggested display name for your project in Context7. Only used when LLM
   can not generate a name with high confidence.
 
-  - **`description`** (string): Suggested description for your project in Context7. Only used when LLM can
-   not generate a name with high confidence.
+- **`description`** (string): Suggested description for your project in Context7. Only used when LLM can
+  not generate a name with high confidence.
 
-  - **`branch`** (string): The name of the git branch to parse. If not provided, the default branch will
+- **`branch`** (string): The name of the git branch to parse. If not provided, the default branch will
   be used.
 
-  - **`folders`** (array): Specific folder paths to include when parsing documentation. If empty, Context7
-   will scan the entire repository for relevant documentation files. Note: Root-level markdown files are
+- **`folders`** (array): Specific folder paths to include when parsing documentation. If empty, Context7
+  will scan the entire repository for relevant documentation files. Note: Root-level markdown files are
   always included regardless of this setting.
 
-  - **`excludeFolders`** (array): Patterns to exclude folders and paths from documentation parsing.
+- **`excludeFolders`** (array): Patterns to exclude folders and paths from documentation parsing.
   Supports simple names, paths, and glob patterns (see Exclusion Patterns section below).
 
-  - **`excludeFiles`** (array): Specific file names to exclude from documentation parsing. Only include
+- **`excludeFiles`** (array): Specific file names to exclude from documentation parsing. Only include
   the filename (not the path). Useful for excluding files like `CHANGELOG.md`, license files, or other
   non-documentation content.
 
-  - **`rules`** (array): Best practices or important guidelines that coding agents should follow when
+- **`rules`** (array): Best practices or important guidelines that coding agents should follow when
   using your library. These appear as recommendations in the documentation context provided to coding
   agents.
 
-  - **`previousVersions`** (array): Information about previous versions of your library that should also
+- **`previousVersions`** (array): Information about previous versions of your library that should also
   be available in Context7.
-    - **`tag`**: The Git tag or version identifier
-    - **`title`**: Human-readable version name
+  - **`tag`**: The Git tag or version identifier
+  - **`title`**: Human-readable version name
 
+### Exclusion Patterns
 
-  ### Exclusion Patterns
+The `excludeFolders` parameter supports various pattern types for flexible exclusion:
 
-  The `excludeFolders` parameter supports various pattern types for flexible exclusion:
-
-  - **Simple folder names**: `"node_modules"` - Excludes any folder named "node_modules" anywhere in the
+- **Simple folder names**: `"node_modules"` - Excludes any folder named "node_modules" anywhere in the
   tree
-  - **Root-specific patterns**: `"./xyz"` - Excludes folder only at repository root (e.g., excludes `/xyz`
-   but not `/dist/xyz`)
-  - **Path patterns**: `"app-sdk/v2.3"` - Excludes specific paths and everything under them
-  - **Glob patterns**: `"*.test"`, `"temp*"` - Excludes folders matching the pattern
-  - **Globstar patterns**: `"**/dist"`, `"docs/**/internal"` - Advanced path matching
-  - **Complex patterns**: `"src/**/*.test.js"` - Exclude test files in src directory
+- **Root-specific patterns**: `"./xyz"` - Excludes folder only at repository root (e.g., excludes `/xyz`
+  but not `/dist/xyz`)
+- **Path patterns**: `"app-sdk/v2.3"` - Excludes specific paths and everything under them
+- **Glob patterns**: `"*.test"`, `"temp*"` - Excludes folders matching the pattern
+- **Globstar patterns**: `"**/dist"`, `"docs/**/internal"` - Advanced path matching
+- **Complex patterns**: `"src/**/*.test.js"` - Exclude test files in src directory
 
-  Examples:
-  - `"node_modules"` - Excludes all node_modules folders anywhere
-  - `"./build"` - Excludes build folder only at root (not `src/build`)
-  - `"app-sdk/v2.3"` - Excludes app-sdk/v2.3 path and all its contents
-  - `"*.test"` - Excludes folders ending with .test
-  - `"docs/**/internal"` - Excludes any "internal" folder under docs
-  - `"**/temp"` - Excludes any folder named "temp" anywhere
+Examples:
+
+- `"node_modules"` - Excludes all node_modules folders anywhere
+- `"./build"` - Excludes build folder only at root (not `src/build`)
+- `"app-sdk/v2.3"` - Excludes app-sdk/v2.3 path and all its contents
+- `"*.test"` - Excludes folders ending with .test
+- `"docs/**/internal"` - Excludes any "internal" folder under docs
+- `"**/temp"` - Excludes any folder named "temp" anywhere
 
 ### Default Exclusions
 
