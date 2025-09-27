@@ -51,29 +51,36 @@ export async function searchLibraries(
     if (!response.ok) {
       const errorCode = response.status;
       if (errorCode === 429) {
-        console.error("Rate limited due to too many requests. Please try again later.");
+        const errorMessage = "Rate limited due to too many requests. Please try again later.";
+        console.error(errorMessage);
         return {
           results: [],
-          error: "Rate limited due to too many requests. Please try again later.",
+          error: errorMessage,
         } as SearchResponse;
       }
       if (errorCode === 401) {
-        console.error("Unauthorized. Please check your API key.");
+        const errorMessage =
+          "Unauthorized. Please check your API key. The API key you provided (possibly incorrect) is: " +
+          apiKey +
+          ". API keys should start with 'ctx7sk'";
+        console.error(errorMessage);
         return {
           results: [],
-          error: "Unauthorized. Please check your API key.",
+          error: errorMessage,
         } as SearchResponse;
       }
-      console.error(`Failed to search libraries. Please try again later. Error code: ${errorCode}`);
+      const errorMessage = `Failed to search libraries. Please try again later. Error code: ${errorCode}`;
+      console.error(errorMessage);
       return {
         results: [],
-        error: `Failed to search libraries. Please try again later. Error code: ${errorCode}`,
+        error: errorMessage,
       } as SearchResponse;
     }
     return await response.json();
   } catch (error) {
-    console.error("Error searching libraries:", error);
-    return { results: [], error: `Error searching libraries: ${error}` } as SearchResponse;
+    const errorMessage = `Error searching libraries: ${error}`;
+    console.error(errorMessage);
+    return { results: [], error: errorMessage } as SearchResponse;
   }
 }
 
