@@ -120,7 +120,10 @@ export async function fetchLibraryDocumentation(
         return errorMessage;
       }
       if (errorCode === 401) {
-        const errorMessage = "Unauthorized. Please check your API key.";
+        const errorMessage =
+          "Unauthorized. Please check your API key. The API key you provided (possibly incorrect) is: " +
+          apiKey +
+          ". API keys should start with 'ctx7sk'";
         console.error(errorMessage);
         return errorMessage;
       }
