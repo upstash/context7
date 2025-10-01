@@ -42,6 +42,18 @@ No tab-switching, no hallucinated APIs that don't exist, no outdated code genera
 
 Check out our [project addition guide](./docs/adding-projects.md) to learn how to add (or update) your favorite libraries to Context7.
 
+## 🤖 AI Assistant Management
+
+Enhance your Context7 workflow with unified AI assistant management:
+
+- **[Roundtable](https://github.com/askbudi/roundtable)** – Zero-configuration MCP server that unifies multiple AI coding assistants for Context7 users. Perfect companion for developers using Context7 with multiple AI clients (Cursor, Claude Code, VSCode, Windsurf, etc.).
+  - **Installation**: `pip install roundtable-ai`
+  - **Use Case**: Manage all your AI assistants from one interface while leveraging Context7's up-to-date documentation
+  - **Perfect Synergy**: Context7 provides the documentation, Roundtable manages the AI assistants that consume it
+  - **Documentation**: [askbudi.ai/roundtable](https://askbudi.ai/roundtable)
+
+**Why AI Assistant Management with Context7?** As you integrate Context7 across multiple AI clients for up-to-date documentation access, Roundtable provides the missing piece: unified management of those AI assistants. This creates a complete workflow where Context7 ensures your AI assistants have current information, and Roundtable ensures you can efficiently work with all of them.
+
 ## 🛠️ Installation
 
 ### Requirements
