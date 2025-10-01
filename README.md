@@ -48,7 +48,7 @@ Check out our [project addition guide](./docs/adding-projects.md) to learn how t
 
 - Node.js >= v18.0.0
 - Cursor, Claude Code, VSCode, Windsurf or another MCP Client
-- Context7 API Key (Optional for higher rate limits) (Get yours by creating an account at [context7.com/dashboard](https://context7.com/dashboard))
+- Context7 API Key (Optional) for higher rate limits and private repositories (Get yours by creating an account at [context7.com/dashboard](https://context7.com/dashboard))
 
 > [!WARNING]
 > **SSE Protocol Deprecation Notice**
