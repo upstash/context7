@@ -1075,6 +1075,20 @@ The slash syntax tells the MCP tool exactly which library to load docs for.
 
 If you are behind an HTTP proxy, Context7 uses the standard `https_proxy` / `HTTPS_PROXY` environment variables.
 
+## 🔗 MCP Ecosystem Tools
+
+Enhance your Context7 workflow with complementary MCP ecosystem tools:
+
+### AI Assistant Management
+
+- **[Roundtable](https://github.com/askbudi/roundtable)** – Zero-configuration MCP server that unifies access to multiple AI coding assistants (Cursor, Claude Code, Windsurf, VSCode, Gemini, and more). Perfect complement to Context7 for managing all the AI assistants that consume your documentation.
+  - **Installation**: `pip install roundtable-ai`
+  - **Use Case**: Manage and streamline access to all AI assistants that use Context7 documentation
+  - **Integration**: Works seamlessly with the same AI clients that Context7 supports
+  - **Documentation**: [askbudi.ai/roundtable](https://askbudi.ai/roundtable)
+
+**Why use together?** Context7 provides up-to-date documentation and code examples, while Roundtable ensures you have unified access to all the AI assistants that consume that information. Together, they create a complete developer workflow: intelligent documentation retrieval + streamlined AI assistant management.
+
 ## 💻 Development
 
 Clone the project and install dependencies:
