@@ -131,6 +131,25 @@ claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 </details>
 
 <details>
+<summary><b>Install in Amp</b></summary>
+
+Run this command in your terminal. See [Amp MCP docs](https://ampcode.com/manual#mcp) for more info.
+
+#### Without API Key (Basic Usage)
+
+```sh
+amp mcp add context7 https://mcp.context7.com/mcp
+```
+
+#### With API Key (Higher Rate Limits & Private Repos)
+
+```sh
+amp mcp add context7 --header "CONTEXT7_API_KEY=YOUR_API_KEY" https://mcp.context7.com/mcp
+```
+
+</details>
+
+<details>
 <summary><b>Install in Windsurf</b></summary>
 
 Add this to your Windsurf MCP config file. See [Windsurf MCP docs](https://docs.windsurf.com/windsurf/cascade/mcp) for more info.
