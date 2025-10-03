@@ -1136,7 +1136,7 @@ bun run dist/index.js
 
 - `--transport <stdio|http>` – Transport to use (`stdio` by default). Note that HTTP transport automatically provides both HTTP and SSE endpoints.
 - `--port <number>` – Port to listen on when using `http` transport (default `3000`).
-- `--api-key <key>` – API key for authentication. You can get your API key by creating an account at [context7.com/dashboard](https://context7.com/dashboard).
+- `--api-key <key>` – API key for authentication (or set `CONTEXT7_API_KEY` env var). You can get your API key by creating an account at [context7.com/dashboard](https://context7.com/dashboard).
 
 Example with HTTP transport and port 8080:
 
@@ -1148,6 +1148,45 @@ Another example with stdio transport:
 
 ```bash
 bun run dist/index.js --transport stdio --api-key YOUR_API_KEY
+```
+
+### Environment Variables
+
+You can use the `CONTEXT7_API_KEY` environment variable instead of passing the `--api-key` flag. This is useful for:
+- Storing API keys securely in `.env` files
+- Integration with MCP server setups that use dotenv
+- Tools that prefer environment variable configuration
+
+**Note:** The `--api-key` CLI flag takes precedence over the environment variable when both are provided.
+
+**Example with environment variable:**
+
+```bash
+export CONTEXT7_API_KEY=your_api_key_here
+npx -y @upstash/context7-mcp
+```
+
+**Example with .env file:**
+
+```bash
+# .env
+CONTEXT7_API_KEY=your_api_key_here
+```
+
+**Example MCP configuration using environment variable:**
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "env": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      }
+    }
+  }
+}
 ```
 
 <details>
