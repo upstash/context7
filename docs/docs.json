@@ -1,0 +1,145 @@
+{
+    "$schema": "https://mintlify.com/docs.json",
+    "theme": "maple",
+    "name": "Context7 MCP",
+    "description": "Up-to-date code docs for any prompt.",
+    "colors": {
+      "primary": "#3B82F6",
+      "light": "#F8FAFC",
+      "dark": "#0F172A"
+    },
+    "navigation": {
+      "dropdowns": [
+        {
+          "dropdown": "Documentation",
+          "icon": "book",
+          "description": "Context7 MCP usage and setup",
+          "groups": [
+            {
+              "group": "Getting started",
+              "pages": [
+                "index",
+                "quickstart",
+                "installation"
+              ]
+            },
+            {
+              "group": "Usage",
+              "pages": [
+                "tools",
+                "tips"
+              ]
+            },
+            {
+              "group": "Reference",
+              "pages": [
+                "development",
+                "troubleshooting",
+                "adding-projects"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "logo": {
+      "light": "/context7-logo.svg",
+      "dark": "/context7-logo.svg",
+      "href": "https://context7.com"
+    },
+    "navbar": {
+      "links": [
+        {
+          "label": "Discord",
+          "href": "https://upstash.com/discord"
+        },
+        {
+          "label": "GitHub",
+          "href": "https://github.com/upstash/context7"
+        }
+      ],
+      "primary": {
+        "type": "button",
+        "label": "Install MCP",
+        "href": "https://context7.com"
+      }
+    },
+    "footer": {
+      "socials": {
+        "x": "https://x.com/context7ai",
+        "linkedin": "https://www.linkedin.com/company/example",
+        "github": "https://github.com/upstash/context7",
+        "slack": "https://upstash.com/discord"
+      },
+      "links": [
+        {
+          "header": "Resources",
+          "items": [
+            {
+              "label": "Customers",
+              "href": "https://example.com/customers"
+            },
+            {
+              "label": "Enterprise",
+              "href": "https://example.com/enterprise"
+            },
+            {
+              "label": "Request Preview",
+              "href": "https://example.com/preview"
+            }
+          ]
+        },
+        {
+          "header": "Company",
+          "items": [
+            {
+              "label": "Careers",
+              "href": "https://example.com/careers"
+            },
+            {
+              "label": "Blog",
+              "href": "https://example.com/blog"
+            },
+            {
+              "label": "Privacy Policy",
+              "href": "https://example.com/legal/privacy"
+            }
+          ]
+        }
+      ]
+    },
+    "integrations": {
+      "ga4": {
+        "measurementId": "G-XXXXXXXXXX"
+      },
+      "koala": {
+        "publicApiKey": "pk_example_key_123"
+      },
+      "telemetry": {
+        "enabled": true
+      },
+      "cookies": {
+        "key": "example_cookie_key",
+        "value": "example_cookie_value"
+      }
+    },
+    "contextual": {
+      "options": [
+        "copy",
+        "view",
+        "chatgpt",
+        "claude"
+      ]
+    },
+    "errors": {
+      "404": {
+        "redirect": false,
+        "title": "I can't be found",
+        "description": "What ever **happened** to this _page_?"
+      }
+    },
+    "exclude": [
+      "README.*.md",
+      "README.*.mdx"
+    ]
+  }
