@@ -518,13 +518,14 @@ it also can be solved tith the full path to Node.js and the installed package:
 ```toml
 [mcp_servers.context7]
 command = "/Users/yourname/.nvm/versions/node/v22.14.0/bin/node"  # Node.js full path
-args = ["/Users/yourname/.nvm/versions/node/v22.14.0/lib/node_modules/@upstash/context7-mcp/dist/index.js",  
+args = ["/Users/yourname/.nvm/versions/node/v22.14.0/lib/node_modules/@upstash/context7-mcp/dist/index.js",
   "--transport",
   "stdio",
   "--api-key",
   "YOUR_API_KEY"
 ]
 ```
+
 This ensures Codex CLI works reliably on MacOS.
 
 </details>
@@ -1153,18 +1154,12 @@ bun run dist/index.js --transport stdio --api-key YOUR_API_KEY
 ### Environment Variables
 
 You can use the `CONTEXT7_API_KEY` environment variable instead of passing the `--api-key` flag. This is useful for:
+
 - Storing API keys securely in `.env` files
 - Integration with MCP server setups that use dotenv
 - Tools that prefer environment variable configuration
 
 **Note:** The `--api-key` CLI flag takes precedence over the environment variable when both are provided.
-
-**Example with environment variable:**
-
-```bash
-export CONTEXT7_API_KEY=your_api_key_here
-npx -y @upstash/context7-mcp
-```
 
 **Example with .env file:**
 
