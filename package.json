@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "MCP server for Context7",
   "scripts": {
-    "test": "bun test",
+    "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc && chmod 755 dist/index.js",
     "format": "prettier --write .",
     "lint": "eslint \"**/*.{js,ts,tsx}\" --fix",
@@ -47,7 +47,6 @@
     "@types/node": "^22.13.14",
     "@typescript-eslint/eslint-plugin": "^8.28.0",
     "@typescript-eslint/parser": "^8.28.0",
-    "bun-types": "^1.2.23",
     "eslint": "^9.34.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.5",
