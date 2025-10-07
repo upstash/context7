@@ -23,7 +23,7 @@ const DEFAULT_PORT = 3000;
 const program = new Command()
   .option("--transport <stdio|http>", "transport type", "stdio")
   .option("--port <number>", "port for HTTP transport", DEFAULT_PORT.toString())
-  .option("--api-key <key>", "API key for authentication")
+  .option("--api-key <key>", "API key for authentication (or set CONTEXT7_API_KEY env var)")
   .allowUnknownOption() // let MCP Inspector / other wrappers pass through extra flags
   .parse(process.argv);
 
@@ -415,7 +415,8 @@ async function main() {
     startServer(initialPort);
   } else {
     // Stdio transport - this is already stateless by nature
-    const server = createServerInstance(undefined, cliOptions.apiKey);
+    const apiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
+    const server = createServerInstance(undefined, apiKey);
     const transport = new StdioServerTransport();
     await server.connect(transport);
     console.error("Context7 Documentation MCP Server running on stdio");
