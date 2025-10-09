@@ -1063,6 +1063,25 @@ See [Local and Remote MCPs for Perplexity](https://www.perplexity.ai/help-center
 7. Click `Save`.
 </details>
 
+<details>
+<summary><b>Install in Neovate Code</b></summary>
+
+Run this command. See [Neovate Code MCP docs](https://neovateai.dev/en/docs/mcp/) for more info.
+
+#### Neovate Code Remote Server Connection
+
+```sh
+neovate mcp add context7 --transport sse https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: YOUR_API_KEY"
+```
+
+#### Neovate Code Local Server Connection
+
+```sh
+neovate mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+```
+
+</details>
+
 ## 🔨 Available Tools
 
 Context7 MCP provides the following tools that LLMs can use:
