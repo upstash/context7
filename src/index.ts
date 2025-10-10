@@ -264,7 +264,7 @@ async function main() {
       res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
       res.setHeader(
         "Access-Control-Allow-Headers",
-        "Content-Type, MCP-Session-Id, MCP-Protocol-Version, X-Context7-API-Key, Context7-API-Key, X-API-Key, Authorization"
+        "Content-Type, MCP-Session-Id, MCP-Protocol-Version, context7-api-key, context7_api_key, x-api-key, x_api_key, Authorization"
       );
       res.setHeader("Access-Control-Expose-Headers", "MCP-Session-Id");
 
@@ -298,15 +298,13 @@ async function main() {
       };
 
       // Check headers in order of preference
+      // Note: Node.js http module normalizes all incoming HTTP header names to lowercase
+      // See: https://nodejs.org/en/learn/modules/anatomy-of-an-http-transaction
       const apiKey =
         extractBearerToken(req.headers.authorization) ||
-        extractHeaderValue(req.headers["Context7-API-Key"]) ||
-        extractHeaderValue(req.headers["X-API-Key"]) ||
-        extractHeaderValue(req.headers["context7-api-key"]) ||
+        extractHeaderValue(req.headers["context7_api_key"]) || // Priority 1: matches README docs
+        extractHeaderValue(req.headers["context7-api-key"]) || // Priority 2: hyphen variant
         extractHeaderValue(req.headers["x-api-key"]) ||
-        extractHeaderValue(req.headers["Context7_API_Key"]) ||
-        extractHeaderValue(req.headers["X_API_Key"]) ||
-        extractHeaderValue(req.headers["context7_api_key"]) ||
         extractHeaderValue(req.headers["x_api_key"]);
 
       try {
