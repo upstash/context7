@@ -31,11 +31,6 @@ Here's an example `context7.json` file with all available options:
     {
       "tag": "v1.2.1"
     }
-  ],
-"branchVersions": [
-    {
-      "branch": "v2.0"
-    }
   ]
 }
 ```
