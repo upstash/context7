@@ -1,0 +1,127 @@
+name: Bug Report
+description: Report a bug or issue with Context7 MCP
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this issue! Please fill out the form below to help us investigate.
+
+  - type: dropdown
+    id: client
+    attributes:
+      label: MCP Client
+      description: Which MCP client are you using?
+      options:
+        - Cursor
+        - Claude Desktop
+        - Claude Code
+        - Windsurf
+        - VS Code
+        - Cline
+        - Zed
+        - Other (specify in description)
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Context7 MCP Version
+      description: Which version of Context7 MCP are you using? (Check package.json or npm list)
+      placeholder: e.g., 1.0.21
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear description of what the bug is
+      placeholder: When I try to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Install Context7 MCP via...
+        2. Run the command...
+        3. See error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Messages / Logs
+      description: Please copy and paste any relevant error messages or logs
+      render: shell
+
+  - type: dropdown
+    id: transport
+    attributes:
+      label: Transport Method
+      description: Which transport method are you using?
+      options:
+        - stdio (default)
+        - http
+        - SSE (deprecated)
+    validations:
+      required: true
+
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js Version
+      description: Output of `node --version`
+      placeholder: e.g., v20.10.0
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      description: Which OS are you running?
+      placeholder: e.g., macOS 14.2, Windows 11, Ubuntu 22.04
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration
+      description: Your Context7 MCP configuration (remove any API keys!)
+      render: json
+      placeholder: |
+        {
+          "mcpServers": {
+            "context7": {
+              "command": "npx",
+              "args": ["-y", "@upstash/context7-mcp"]
+            }
+          }
+        }
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other context about the problem (proxy settings, firewalls, etc.)
