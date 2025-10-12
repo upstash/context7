@@ -513,7 +513,7 @@ This ensures Codex CLI works reliably on Windows.
 ⚠️ MacOS Notes
 
 On MacOS, some users may encounter the same request timed out errors like Windows,
-it also can be solved tith the full path to Node.js and the installed package:
+it also can be solved with the full path to Node.js and the installed package:
 
 ```toml
 [mcp_servers.context7]
