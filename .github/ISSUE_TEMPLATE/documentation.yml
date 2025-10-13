@@ -1,0 +1,50 @@
+name: Documentation Issue
+description: Report incorrect or missing documentation
+title: "[Docs]: "
+labels: ["documentation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Found an issue with Context7 documentation? Let us know!
+
+  - type: dropdown
+    id: doc-type
+    attributes:
+      label: Documentation Type
+      description: Where is the issue?
+      options:
+        - README
+        - Installation instructions
+        - API documentation
+        - Library-specific docs
+        - Configuration examples
+    validations:
+      required: true
+
+  - type: textarea
+    id: issue
+    attributes:
+      label: Issue Description
+      description: What's wrong or missing?
+    validations:
+      required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: Documentation Location
+      description: Link or section name where the issue exists
+      placeholder: e.g., README.md line 45, or "Installation via Smithery" section
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested Fix
+      description: How should it be corrected or what should be added?
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other relevant information
