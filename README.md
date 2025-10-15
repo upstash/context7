@@ -689,6 +689,7 @@ If you prefer to run the MCP server in a Docker container:
 
    ```bash
    docker build -t context7-mcp .
+   docker run context7-mcp:latest
    ```
 
 2. **Configure Your MCP Client:**
