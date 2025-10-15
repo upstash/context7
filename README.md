@@ -504,7 +504,7 @@ args = [
     "--api-key",
     "YOUR_API_KEY"
 ]
-env = { SystemRoot="C:\\Windows" }
+env = { SystemRoot="C:\\Windows", APPDATA="C:\\Users\\yourname\\AppData\\Roaming" }
 startup_timeout_ms = 20_000
 ```
 
