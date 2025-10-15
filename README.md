@@ -477,7 +477,65 @@ command = "npx"
 ⚠️ Windows Notes
 
 On Windows, some users may encounter request timed out errors with the default configuration.
-In that case, explicitly configure the MCP server with the full path to Node.js and the installed package:
+In that case, use one of the following configurations:
+
+Option A: Run the installed CLI directly (no extra env required)
+
+**Requires the package to be installed beforehand.**
+
+```toml
+[mcp_servers.context7]
+command = "C:\\Users\\yourname\\AppData\\Roaming\\npm\\context7-mcp.cmd"
+args = [
+  "--api-key",
+  "YOUR_API_KEY"
+]
+startup_timeout_ms = 20_000
+```
+
+Option B: Use the absolute path to npx.cmd + set APPDATA/SystemRoot
+
+**No need to install the package beforehand.**
+
+```toml
+[mcp_servers.context7]
+command = "C:\\Users\\yourname\\AppData\\Roaming\\npm\\npx.cmd"
+args = [
+  "-y",
+  "@upstash/context7-mcp",
+  "--api-key",
+  "YOUR_API_KEY"
+]
+env = { SystemRoot="C:\\Windows", APPDATA="C:\\Users\\yourname\\AppData\\Roaming" }
+startup_timeout_ms = 20_000
+```
+
+Option C: Use cmd /c npx + set APPDATA/SystemRoot
+
+Equivalent to B, but invokes via cmd.
+
+**No need to install the package beforehand.**
+
+```toml
+[mcp_servers.context7]
+command = "cmd"
+args = [
+  "/c",
+  "npx",
+  "-y",
+  "@upstash/context7-mcp",
+  "--api-key",
+  "YOUR_API_KEY"
+]
+env = { SystemRoot="C:\\Windows", APPDATA="C:\\Users\\yourname\\AppData\\Roaming" }
+startup_timeout_ms = 20_000
+```
+
+Option D: Use node.exe + the package entry point (avoids npx)
+
+Works well when npx/npm resolution is blocked by a minimal environment.
+
+**Requires the package to be installed beforehand.**
 
 ```toml
 [mcp_servers.context7]
@@ -489,24 +547,14 @@ args = [
   "--api-key",
   "YOUR_API_KEY"
 ]
-```
-
-Alternatively, you can use the following configuration:
-
-```toml
-[mcp_servers.context7]
-command = "cmd"
-args = [
-    "/c",
-    "npx",
-    "-y",
-    "@upstash/context7-mcp",
-    "--api-key",
-    "YOUR_API_KEY"
-]
-env = { SystemRoot="C:\\Windows", APPDATA="C:\\Users\\yourname\\AppData\\Roaming" }
 startup_timeout_ms = 20_000
 ```
+
+Troubleshooting
+
+- If you still see “request timed out”, increase startup_timeout_ms (e.g. 20_000–40_000), especially on first run when npx downloads packages.
+- Replace yourname with your Windows username and ensure Node.js/npm are installed.
+- Adding APPDATA and SystemRoot explicitly is safe and backward‑compatible across MCP clients.
 
 This ensures Codex CLI works reliably on Windows.
 
