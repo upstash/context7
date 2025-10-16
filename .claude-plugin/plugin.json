@@ -17,7 +17,6 @@
     "vibe-coding",
     "library-docs"
   ],
-  "hooks": "./hooks/hooks.json",
   "mcpServers": {
     "context7": {
       "command": "npx",

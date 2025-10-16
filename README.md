@@ -118,7 +118,7 @@ Run this command. See [Claude Code MCP docs](https://docs.anthropic.com/en/docs/
 
 #### Claude Code Plugin
 
-Install as a Claude Code plugin with automatic Context7 integration:
+Install as a Claude Code plugin with intelligent Context7 integration:
 
 ```sh
 claude
@@ -126,7 +126,13 @@ claude
 /plugin install context7@pleaseai
 ```
 
-This automatically loads Context7 usage instructions on every session start, so Claude will use Context7 MCP tools without you having to ask explicitly.
+This provides a skill that Claude automatically activates when needed. Claude will intelligently use Context7 MCP tools when working with external libraries, frameworks, or when you need up-to-date documentation - without requiring explicit activation.
+
+The skill triggers automatically when you:
+- Write code using external libraries
+- Need library documentation or API references
+- Set up or configure frameworks
+- Request code examples with specific packages
 
 Optionally set your API key for higher rate limits:
 
