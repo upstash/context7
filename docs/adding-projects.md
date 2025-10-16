@@ -12,7 +12,7 @@ Simply provide the GitHub repository URL and Context7 will automatically parse a
 
 ## Advanced Configuration with `context7.json`
 
-For more control over how Context7 parses and presents your library, you can add a `context7.json` file to the root of your repository. This file works similar to `robots.txt` and tells Context7 how to handle your project.
+For more control over how Context7 parses and presents your library, you can add a `context7.json` file to the root of your repository. This file works similarly to `robots.txt` and tells Context7 how to handle your project.
 
 ### Configuration Fields
 
@@ -22,14 +22,25 @@ Here's an example `context7.json` file with all available options:
 {
   "$schema": "https://context7.com/schema/context7.json",
   "projectTitle": "Upstash Ratelimit",
-  "description": "Ratelimiting library based on Upstash Redis",
+  "description": "Rate limiting library based on Upstash Redis",
+  "branch": "main",
   "folders": [],
   "excludeFolders": ["src"],
   "excludeFiles": [],
-  "rules": ["Use Upstash Redis as a database", "Use single region set up"],
+  "rules": [
+    "Use Upstash Redis as a database",
+    "Use a single-region setup"
+  ],
   "previousVersions": [
     {
-      "tag": "v1.2.1"
+      "tag": "v1.2.1",
+      "title": "version 1.2.1"
+    }
+  ],
+  "branchVersions": [
+    {
+      "branch": "v1",
+      "title": "version 1.x branch"
     }
   ]
 }
@@ -40,10 +51,10 @@ Here's an example `context7.json` file with all available options:
 ## Field Descriptions
 
 - **`projectTitle`** (string): Suggested display name for your project in Context7. Only used when LLM
-  can not generate a name with high confidence.
+  cannot generate a name with high confidence.
 
-- **`description`** (string): Suggested description for your project in Context7. Only used when LLM can
-  not generate a name with high confidence.
+- **`description`** (string): Suggested description for your project in Context7. Only used when LLM
+  cannot generate a name with high confidence.
 
 - **`branch`** (string): The name of the git branch to parse. If not provided, the default branch will
   be used.
@@ -55,9 +66,8 @@ Here's an example `context7.json` file with all available options:
 - **`excludeFolders`** (array): Patterns to exclude folders and paths from documentation parsing.
   Supports simple names, paths, and glob patterns (see Exclusion Patterns section below).
 
-- **`excludeFiles`** (array): Specific file names to exclude from documentation parsing. Only include
-  the filename (not the path). Useful for excluding files like `CHANGELOG.md`, license files, or other
-  non-documentation content.
+- **`excludeFiles`** (array): Specific file names to exclude from documentation parsing. Only include the filename (not the path).
+  Glob patterns are not supported; list exact filenames only.
 
 - **`rules`** (array): Best practices or important guidelines that coding agents should follow when
   using your library. These appear as recommendations in the documentation context provided to coding
@@ -65,11 +75,11 @@ Here's an example `context7.json` file with all available options:
 
 - **`previousVersions`** (array): Information about previous versions of your library that should also
   be available in Context7.
-  - **`tag`**: The Git tag or version identifier
+  - **`tag`**: The Git tag or version identifier; title: Optional display label for this version.
 
-- **`branchVersions`** (array): Information about previous versions (branch based) of your library that should also
+- **`branchVersions`** (array): Information about previous versions (branch-based) of your library that should also
   be available in Context7.
-  - **`branch`**: The Git branch
+  - **`branch`**: The Git branch; title: Optional display label for this branch version.
 
 ### Exclusion Patterns
 
@@ -95,7 +105,7 @@ Examples:
 
 ### Default Exclusions
 
-If you don't specify `excludeFiles` or `excludeFolders` in your `context7.json`, Context7 uses these default patterns:
+Your excludeFiles and excludeFolders are merged with these defaults; specify an item again to remove it from exclusion or tailor behavior to your project’s needs
 
 #### Default Excluded Files
 
@@ -152,4 +162,4 @@ To add a new version to your existing library:
 
 ## Need Help?
 
-If you encounter issues or need assistance adding your project, please [report an issue](https://context7.com/add-library?tab=github) or reach out to our community.
+If you encounter issues or need assistance adding your project, please [report an issue](https://context7.com/add-library?tab=github) via the repository’s issue tracker or reach out to our community.
