@@ -1,0 +1,17 @@
+{
+  "description": "Load Context7 usage instructions at session start",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/context.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

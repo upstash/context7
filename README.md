@@ -116,6 +116,24 @@ Pasting the following configuration into your Cursor `~/.cursor/mcp.json` file i
 
 Run this command. See [Claude Code MCP docs](https://docs.anthropic.com/en/docs/claude-code/mcp) for more info.
 
+#### Claude Code Plugin
+
+Install as a Claude Code plugin with automatic Context7 integration:
+
+```sh
+claude
+/plugin marketplace add pleaseai/claude-code-plugins
+/plugin install context7@pleaseai
+```
+
+This automatically loads Context7 usage instructions on every session start, so Claude will use Context7 MCP tools without you having to ask explicitly.
+
+Optionally set your API key for higher rate limits:
+
+```sh
+export CONTEXT7_API_KEY="your-api-key"
+```
+
 #### Claude Code Remote Server Connection
 
 ```sh

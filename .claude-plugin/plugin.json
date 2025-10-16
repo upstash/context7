@@ -1,0 +1,35 @@
+{
+  "name": "context7",
+  "version": "1.0.0",
+  "description": "Up-to-date documentation and code examples for any library or framework using Context7 MCP server",
+  "author": {
+    "name": "Upstash",
+    "url": "https://github.com/upstash"
+  },
+  "homepage": "https://context7.com",
+  "repository": "https://github.com/upstash/context7",
+  "license": "MIT",
+  "keywords": [
+    "documentation",
+    "code-examples",
+    "mcp",
+    "context7",
+    "vibe-coding",
+    "library-docs"
+  ],
+  "hooks": "./hooks/hooks.json",
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "${CONTEXT7_API_KEY:-}"
+      ],
+      "env": {
+        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY:-}"
+      }
+    }
+  }
+}
