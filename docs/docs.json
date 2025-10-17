@@ -9,42 +9,18 @@
       "dark": "#0F172A"
     },
     "navigation": {
-      "dropdowns": [
-        {
-          "dropdown": "Documentation",
-          "icon": "book",
-          "description": "Context7 MCP usage and setup",
-          "groups": [
-            {
-              "group": "Getting started",
-              "pages": [
-                "index",
-                "quickstart",
-                "installation"
-              ]
-            },
-            {
-              "group": "Usage",
-              "pages": [
-                "tools",
-                "tips"
-              ]
-            },
-            {
-              "group": "Reference",
-              "pages": [
-                "development",
-                "troubleshooting",
-                "adding-projects"
-              ]
-            }
-          ]
-        }
+      "pages": [
+        "getting-started",
+        "how-to",
+        "library-owners",
+        "api",
+        "mcp",
+        "security"
       ]
     },
     "logo": {
-      "light": "/context7-logo.svg",
-      "dark": "/context7-logo.svg",
+      "light": "/logo/logo.svg",
+      "dark": "/logo/logo.svg",
       "href": "https://context7.com"
     },
     "navbar": {
@@ -67,79 +43,49 @@
     "footer": {
       "socials": {
         "x": "https://x.com/context7ai",
-        "linkedin": "https://www.linkedin.com/company/example",
         "github": "https://github.com/upstash/context7",
-        "slack": "https://upstash.com/discord"
+        "discord": "https://upstash.com/discord"
       },
       "links": [
         {
           "header": "Resources",
           "items": [
             {
-              "label": "Customers",
-              "href": "https://example.com/customers"
+              "label": "Website",
+              "href": "https://context7.com"
             },
             {
-              "label": "Enterprise",
-              "href": "https://example.com/enterprise"
+              "label": "Submit a Library",
+              "href": "https://context7.com/add-library"
             },
             {
-              "label": "Request Preview",
-              "href": "https://example.com/preview"
+              "label": "Dashboard",
+              "href": "https://context7.com/dashboard"
             }
           ]
         },
         {
-          "header": "Company",
+          "header": "Community",
           "items": [
             {
-              "label": "Careers",
-              "href": "https://example.com/careers"
+              "label": "GitHub",
+              "href": "https://github.com/upstash/context7"
             },
             {
-              "label": "Blog",
-              "href": "https://example.com/blog"
+              "label": "Discord",
+              "href": "https://upstash.com/discord"
             },
             {
-              "label": "Privacy Policy",
-              "href": "https://example.com/legal/privacy"
+              "label": "Twitter",
+              "href": "https://x.com/context7ai"
             }
           ]
         }
       ]
     },
-    "integrations": {
-      "ga4": {
-        "measurementId": "G-XXXXXXXXXX"
-      },
-      "koala": {
-        "publicApiKey": "pk_example_key_123"
-      },
-      "telemetry": {
-        "enabled": true
-      },
-      "cookies": {
-        "key": "example_cookie_key",
-        "value": "example_cookie_value"
-      }
-    },
-    "contextual": {
-      "options": [
-        "copy",
-        "view",
-        "chatgpt",
-        "claude"
-      ]
-    },
-    "errors": {
-      "404": {
-        "redirect": false,
-        "title": "I can't be found",
-        "description": "What ever **happened** to this _page_?"
-      }
-    },
-    "exclude": [
-      "README.*.md",
-      "README.*.mdx"
-    ]
+    "feedback": {
+      "thumbsRating": true,
+      "suggestEdit": true,
+      "raiseIssue": true
+    }
   }

@@ -1,0 +1,177 @@
+---
+title: How To
+description: Learn how to get the most out of Context7
+---
+
+# How To Use Context7
+
+Learn how to maximize Context7's capabilities with these practical guides.
+
+## Adding a Project
+
+You can add your favorite libraries and frameworks to Context7 to help developers get up-to-date documentation.
+
+### Quick Method
+
+The easiest way to add a library is through our web interface:
+
+1. Visit [context7.com/add-library](https://context7.com/add-library?tab=github)
+2. Provide the GitHub repository URL
+3. Context7 will automatically parse and index the project's documentation
+
+### Advanced Configuration
+
+For more control over how Context7 parses your library, add a `context7.json` file to your repository root:
+
+```json
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "Your Library Name",
+  "description": "Brief description of your library",
+  "folders": ["docs", "guides"],
+  "excludeFolders": ["src", "tests"],
+  "excludeFiles": ["CHANGELOG.md"],
+  "rules": ["Best practice or guideline here"],
+  "previousVersions": [
+    {
+      "tag": "v1.0.0",
+      "title": "version 1.0.0"
+    }
+  ]
+}
+```
+
+See the [Library Owners](/library-owners) guide for detailed configuration options.
+
+## Add Rule to Use Context7 in Your Agent
+
+If you don't want to add `use context7` to every prompt, you can define a simple rule in your MCP client's rule section to auto-invoke Context7 on any code question.
+
+### Where to Add Rules
+
+<AccordionGroup>
+  <Accordion title="Windsurf" icon="wind">
+    Add your rule to the `.windsurfrules` file in your project root.
+  </Accordion>
+
+  <Accordion title="Cursor" icon="cursor">
+    Go to `Cursor Settings` ’ `Rules` and add your rule there.
+  </Accordion>
+
+  <Accordion title="Claude Code" icon="code">
+    Add your rule to the `CLAUDE.md` file in your project root.
+  </Accordion>
+</AccordionGroup>
+
+### Example Rule
+
+```txt
+Always use context7 when I need code generation, setup or configuration steps, or
+library/API documentation. This means you should automatically use the Context7 MCP
+tools to resolve library id and get library docs without me having to explicitly ask.
+```
+
+<Note>
+You can customize this rule to match your specific use cases and workflow preferences.
+</Note>
+
+## Using a Special Library ID
+
+If you already know exactly which library you want to use, add its Context7 ID to your prompt. This allows Context7 MCP server to skip the library-matching step and directly retrieve documentation.
+
+### How to Use Library IDs
+
+Include the library ID in your prompt with the `/` prefix:
+
+```txt
+Implement basic authentication with Supabase. use library /supabase/supabase for API and docs.
+```
+
+```txt
+Create a rate limiter using Redis. use library /upstash/ratelimit for implementation.
+```
+
+```txt
+Set up a Next.js API route with middleware. use library /vercel/next.js for documentation.
+```
+
+### Benefits
+
+- **Faster responses**: Skips the library resolution step
+- **Precise documentation**: Ensures you get docs for the exact library you need
+- **Better context**: LLM knows exactly which library's conventions to follow
+
+### Finding Library IDs
+
+1. Search for your library on [context7.com](https://context7.com)
+2. The library ID is shown in the URL and on the library page
+3. Format: `/owner/repository` (e.g., `/mongodb/docs`, `/facebook/react`)
+
+## Using HTTPS Proxy
+
+If you are behind an HTTP proxy, Context7 uses the standard `https_proxy` / `HTTPS_PROXY` environment variables.
+
+### Configuration
+
+Set the environment variable before starting your MCP client:
+
+<AccordionGroup>
+  <Accordion title="Linux/macOS" icon="terminal">
+    ```bash
+    export https_proxy=http://proxy.example.com:8080
+    export HTTPS_PROXY=http://proxy.example.com:8080
+    ```
+
+    For authentication:
+    ```bash
+    export https_proxy=http://username:password@proxy.example.com:8080
+    ```
+  </Accordion>
+
+  <Accordion title="Windows (Command Prompt)" icon="windows">
+    ```cmd
+    set https_proxy=http://proxy.example.com:8080
+    set HTTPS_PROXY=http://proxy.example.com:8080
+    ```
+
+    For authentication:
+    ```cmd
+    set https_proxy=http://username:password@proxy.example.com:8080
+    ```
+  </Accordion>
+
+  <Accordion title="Windows (PowerShell)" icon="windows">
+    ```powershell
+    $env:https_proxy = "http://proxy.example.com:8080"
+    $env:HTTPS_PROXY = "http://proxy.example.com:8080"
+    ```
+
+    For authentication:
+    ```powershell
+    $env:https_proxy = "http://username:password@proxy.example.com:8080"
+    ```
+  </Accordion>
+
+  <Accordion title="MCP Configuration" icon="gear">
+    You can also add proxy settings directly in your MCP configuration:
+
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
+          "env": {
+            "https_proxy": "http://proxy.example.com:8080",
+            "HTTPS_PROXY": "http://proxy.example.com:8080"
+          }
+        }
+      }
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+Both lowercase `https_proxy` and uppercase `HTTPS_PROXY` are supported. Context7 will check both.
+</Note>

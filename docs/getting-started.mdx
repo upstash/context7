@@ -1,0 +1,251 @@
+---
+title: Getting Started
+description: Up-to-date code docs for any prompt
+---
+
+# Context7 MCP
+
+Context7 MCP pulls up-to-date, version-specific documentation and code examples straight from the source  and places them directly into your prompt.
+
+## Why Context7?
+
+### Without Context7
+
+LLMs rely on outdated or generic information about the libraries you use. You get:
+
+- Code examples are outdated and based on year-old training data
+- Hallucinated APIs that don't even exist
+- Generic answers for old package versions
+
+### With Context7
+
+Context7 MCP pulls up-to-date, version-specific documentation and code examples straight from the source  and places them directly into your prompt.
+
+Add `use context7` to your prompt in Cursor:
+
+```txt
+Create a Next.js middleware that checks for a valid JWT in cookies and redirects unauthenticated users to `/login`. use context7
+```
+
+```txt
+Configure a Cloudflare Worker script to cache JSON API responses for five minutes. use context7
+```
+
+Context7 fetches up-to-date code examples and documentation right into your LLM's context.
+
+1. Write your prompt naturally
+2. Tell the LLM to `use context7`
+3. Get working code answers
+
+No tab-switching, no hallucinated APIs that don't exist, no outdated code generation.
+
+## Installation
+
+### Requirements
+
+- Node.js >= v18.0.0
+- Cursor, Claude Code, VSCode, Windsurf or another MCP Client
+- Context7 API Key (Optional) for higher rate limits and private repositories (Get yours at [context7.com/dashboard](https://context7.com/dashboard))
+
+<AccordionGroup>
+  <Accordion title="Install via Smithery" icon="sparkles">
+    To install Context7 MCP Server for any client automatically via [Smithery](https://smithery.ai/server/@upstash/context7-mcp):
+
+    ```bash
+    npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME> --key <YOUR_SMITHERY_KEY>
+    ```
+
+    You can find your Smithery key in the [Smithery.ai webpage](https://smithery.ai/server/@upstash/context7-mcp).
+  </Accordion>
+
+  <Accordion title="Install in Cursor" icon="cursor">
+    Go to: `Settings` ’ `Cursor Settings` ’ `MCP` ’ `Add new global MCP server`
+
+    Pasting the following configuration into your Cursor `~/.cursor/mcp.json` file is the recommended approach. You may also install in a specific project by creating `.cursor/mcp.json` in your project folder.
+
+    Since Cursor 1.0, you can click the install button below for instant one-click installation.
+
+    **Cursor Remote Server Connection**
+
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "url": "https://mcp.context7.com/mcp",
+          "headers": {
+            "CONTEXT7_API_KEY": "YOUR_API_KEY"
+          }
+        }
+      }
+    }
+    ```
+
+    **Cursor Local Server Connection**
+
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Install in Claude Code" icon="code">
+    Run this command:
+
+    **Claude Code Remote Server Connection**
+
+    ```sh
+    claude mcp add --transport http context7 https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: YOUR_API_KEY"
+    ```
+
+    **Claude Code Local Server Connection**
+
+    ```sh
+    claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+    ```
+  </Accordion>
+
+  <Accordion title="Install in Amp" icon="bolt">
+    Run this command in your terminal:
+
+    **Without API Key (Basic Usage)**
+
+    ```sh
+    amp mcp add context7 https://mcp.context7.com/mcp
+    ```
+
+    **With API Key (Higher Rate Limits & Private Repos)**
+
+    ```sh
+    amp mcp add context7 --header "CONTEXT7_API_KEY=YOUR_API_KEY" https://mcp.context7.com/mcp
+    ```
+  </Accordion>
+
+  <Accordion title="Install in Windsurf" icon="wind">
+    Add this to your Windsurf MCP config file:
+
+    **Windsurf Remote Server Connection**
+
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "serverUrl": "https://mcp.context7.com/mcp",
+          "headers": {
+            "CONTEXT7_API_KEY": "YOUR_API_KEY"
+          }
+        }
+      }
+    }
+    ```
+
+    **Windsurf Local Server Connection**
+
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Install in VS Code" icon="code">
+    Add this to your VS Code MCP config file:
+
+    **VS Code Remote Server Connection**
+
+    ```json
+    "mcp": {
+      "servers": {
+        "context7": {
+          "type": "http",
+          "url": "https://mcp.context7.com/mcp",
+          "headers": {
+            "CONTEXT7_API_KEY": "YOUR_API_KEY"
+          }
+        }
+      }
+    }
+    ```
+
+    **VS Code Local Server Connection**
+
+    ```json
+    "mcp": {
+      "servers": {
+        "context7": {
+          "type": "stdio",
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Install in Cline" icon="robot">
+    You can easily install Context7 through the [Cline MCP Server Marketplace](https://cline.bot/mcp-marketplace):
+
+    1. Open **Cline**
+    2. Click the hamburger menu icon (0) to enter the **MCP Servers** section
+    3. Use the search bar within the **Marketplace** tab to find _Context7_
+    4. Click the **Install** button
+
+    Or you can directly edit MCP servers configuration:
+
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "url": "https://mcp.context7.com/mcp",
+          "type": "streamableHttp",
+          "headers": {
+            "Authorization": "Bearer YOUR_API_KEY"
+          }
+        }
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Install in Zed" icon="zap">
+    It can be installed via [Zed Extensions](https://zed.dev/extensions?query=Context7) or you can add this to your Zed `settings.json`:
+
+    ```json
+    {
+      "context_servers": {
+        "Context7": {
+          "source": "custom",
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Other Clients" icon="ellipsis">
+    Context7 supports many more clients including:
+    - Augment Code
+    - Roo Code
+    - Gemini CLI
+    - Claude Desktop
+    - Opencode
+    - OpenAI Codex
+    - JetBrains AI Assistant
+    - Kiro
+    - Trae
+    - And many more...
+
+    Check our [GitHub repository](https://github.com/upstash/context7) for detailed installation instructions for each client.
+  </Accordion>
+</AccordionGroup>
