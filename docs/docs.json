@@ -23,7 +23,7 @@
     },
     "logo": {
       "light": "/logo/logo.svg",
-      "dark": "/logo/logo.svg",
+      "dark": "/logo/logo-dark.svg",
       "href": "https://context7.com"
     },
     "navbar": {
