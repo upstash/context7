@@ -1,15 +1,18 @@
 ---
 title: MCP Server
-description: Technical documentation for Context7 MCP Server implementation
 ---
-
-# MCP Server
 
 Context7 implements the Model Context Protocol (MCP) to provide up-to-date library documentation directly to AI coding assistants.
 
 ## Overview
 
 The Context7 MCP Server is a lightweight service that bridges AI assistants with Context7's documentation database. It provides two main tools that work together to fetch relevant, version-specific documentation.
+
+## Quick Start
+
+- **Remote (recommended)**: Point your IDE to `https://mcp.context7.com/mcp` and supply your API key in the headers.
+- **Local**: Run `npx -y @upstash/context7-mcp --transport stdio --api-key YOUR_API_KEY` and connect over stdio.
+- **Validate**: Use `npx -y @modelcontextprotocol/inspector npx @upstash/context7-mcp` to confirm connectivity and tool availability.
 
 ### Server Information
 

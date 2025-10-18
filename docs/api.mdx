@@ -1,9 +1,6 @@
 ---
 title: Public API
-description: Context7 Public API V1 documentation
 ---
-
-# Context7 Public API - V1
 
 The Context7 Public API provides programmatic access to library documentation and search functionality.
 
@@ -22,6 +19,10 @@ Authorization: Bearer CONTEXT7_API_KEY
 ```
 
 Get your API key at [context7.com/dashboard](https://context7.com/dashboard).
+
+<Warning>
+Treat your API key like a password. Store it in an environment variable or secret manager and rotate it immediately if you suspect it has leaked.
+</Warning>
 
 ## Endpoints
 
@@ -94,6 +95,26 @@ Retrieve documentation and code examples for a specific library.
 #### Response
 
 Returns documentation content in the specified format (`txt` or `json`).
+
+- `txt` (default) delivers a plain-text block optimised for feeding into LLM contexts.
+- `json` provides a structured payload with metadata, snippets, and sections.
+
+```json
+{
+  "library": "/vercel/next.js",
+  "version": "v15.1.8",
+  "topic": "routing",
+  "tokens": 2950,
+  "chunks": [
+    {
+      "title": "Middleware overview",
+      "content": "Next.js middleware runs before a request is completed...",
+      "source": "docs/app/building-your-application/routing/middleware.mdx",
+      "url": "https://nextjs.org/docs/app/building-your-application/routing/middleware"
+    }
+  ]
+}
+```
 
 ---
 
@@ -282,10 +303,13 @@ Submit a new library to Context7 for indexing.
 }
 ```
 
+The `status` field transitions through `processing → finalized`. Poll the library detail view or call the `/v1/search` endpoint to confirm when parsing completes.
+
 ## Rate Limits
 
 - **Without API key**: Limited requests per IP
 - **With API key**: Higher limits based on your plan
+- View current usage and reset windows in the [dashboard](https://context7.com/dashboard).
 
 ## Error Codes
 
@@ -296,6 +320,14 @@ Submit a new library to Context7 for indexing.
 | 404 | Not Found - Library or endpoint doesn't exist |
 | 429 | Too Many Requests - Rate limit exceeded |
 | 500 | Internal Server Error |
+
+```json
+{
+  "error": "Too many requests",
+  "status": 429,
+  "retryAfterSeconds": 60
+}
+```
 
 ## Best Practices
 

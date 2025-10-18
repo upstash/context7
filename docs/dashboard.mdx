@@ -1,0 +1,362 @@
+---
+title: Dashboard
+---
+
+Your central hub for managing documentation access, team collaboration, and usage monitoring.
+
+Access your dashboard at [context7.com/dashboard](https://context7.com/dashboard)
+
+## Quick Actions
+
+- Copy your API key or regenerate it from **Overview → API Connection**
+- Monitor rate limits and token usage in **Overview → Usage Statistics**
+- Control access to libraries and repositories in **Libraries**
+- Invite teammates and manage roles in **Members**
+- Upgrade your plan or manage billing directly from the Dashboard sidebar
+
+## Dashboard Overview
+
+The dashboard has three main tabs for managing different aspects of your project.
+
+### Overview Tab
+
+Your project's command center.
+
+**Usage Statistics**:
+View your last 30 days of activity:
+- **Search requests**: How many library searches you've performed
+- **Query/fetch requests**: Documentation retrieval count
+- **Query tokens**: Total tokens returned in responses
+- **Parsing tokens**: Tokens used when adding/refreshing libraries
+
+**API Connection**:
+- Copy your API key (starts with `ctx7sk`)
+- View rate limits for your current plan
+- See example configurations for MCP and REST API
+
+**Project Settings**:
+- Rename your project
+- Delete team projects (if no private repos exist)
+- View project metadata
+
+### Libraries Tab
+
+Control which libraries your project can access.
+
+**Public Library Access**:
+
+Choose your access level:
+- **All Libraries** (default): Access all public documentation
+- **Select Libraries**: Whitelist specific libraries only
+- **Disabled**: Block all public library access
+
+**Token Limits**:
+Set maximum tokens per API request (default: 10,000). Lower limits = faster responses and lower costs for large libraries.
+
+**Private Repositories** (Pro/Team only):
+- Add private GitHub/GitLab repositories
+- View all private repos with access
+- Remove private repositories
+- See parsing status and token count
+
+### Members Tab
+
+Manage your team and API access (Team projects only).
+
+**Team Members**:
+- View all members and their roles
+- Invite new members via email
+- Update member roles (Owner, Admin, Developer)
+- Remove team members
+- View pending invitations
+
+**API Keys**:
+Each member gets their own API key with 60 req/hour. Regenerate keys for security.
+
+**Billing Estimate**:
+View your monthly costs:
+- Member seats: $7/month each
+- Parse tokens: $15 per 1M tokens
+
+## Personal vs Team Projects
+
+| Feature | Personal Project | Team Project |
+|---------|------------------|--------------|
+| Members | You only | Up to 20 |
+| Private repos | ❌ | ✅ |
+| Billing | Free | Usage-based |
+| Can delete | No | Yes* |
+| Rate limits | 60 req/hr | 60 req/hr per member |
+
+*Team projects can only be deleted if they have no private repositories.
+
+### Personal Projects
+
+Every user gets one personal project automatically:
+- Always free
+- Access to all public libraries
+- Cannot be deleted
+- Single user access
+- Perfect for individual development
+
+### Team Projects
+
+Create up to 5 team projects for collaboration:
+- Invite team members
+- Add private repositories
+- Role-based access control
+- Usage-based billing
+- Shared API access
+
+## Getting Your API Key
+
+1. Go to **Dashboard → Overview**
+2. Find the **API Connection** section
+3. Click to copy your API key
+4. Keep it secure - treat it like a password
+
+### Using Your API Key
+
+**MCP Server**:
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+
+**REST API**:
+```bash
+curl "https://context7.com/api/v1/vercel/next.js" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+## Managing Libraries
+
+### Adding Public Libraries
+
+Public libraries are submitted through the web interface, not the dashboard.
+
+1. Go to [context7.com/add-library](https://context7.com/add-library)
+2. Enter repository URL
+3. Configure parsing options
+4. Submit for processing
+
+See [Library Owners](/library-owners) for detailed configuration.
+
+### Adding Private Repositories
+
+<Note>
+Requires Pro or Team plan. See [Plans & Pricing](/plans-pricing).
+</Note>
+
+1. Navigate to **Dashboard → Libraries → Private Repositories**
+2. Click **Add Private Repository**
+3. Enter repository URL
+4. Provide access token:
+   - GitHub: Personal Access Token with `repo` scope
+   - GitLab: Personal Access Token with `read_repository` scope
+5. Configure folders and exclusions (optional)
+6. Submit
+
+**Cost**: $15 per 1M tokens parsed (one-time when adding, incremental when refreshing).
+
+### Refreshing Libraries
+
+Update library documentation:
+
+1. Visit [context7.com/refresh-library](https://context7.com/refresh-library)
+2. Enter library ID (e.g., `/vercel/next.js`)
+3. Submit
+
+Private repos: You only pay for new/changed content.
+
+## Team Collaboration
+
+### Creating a Team Project
+
+1. Click **Create Team Project** in the dashboard
+2. Enter project name
+3. You're automatically set as Owner
+
+### Inviting Team Members
+
+1. Go to **Dashboard → Members**
+2. Click **Invite Member**
+3. Enter email address
+4. Select role:
+   - **Owner**: Full control, billing access, cannot be removed
+   - **Admin**: Manage members, libraries, and settings
+   - **Developer**: API access and documentation viewing only
+5. Send invitation
+
+Members receive an email invite to join.
+
+### Managing Roles
+
+Change member roles from the Members tab. Only Owners can modify other Owners.
+
+### Removing Members
+
+1. Go to **Dashboard → Members**
+2. Click remove icon next to member
+3. Confirm removal
+
+Their API key is immediately revoked.
+
+## Usage Monitoring
+
+### Understanding Metrics
+
+**Search Requests**:
+Times you searched for libraries via API (`/v1/search` endpoint).
+
+**Query/Fetch Requests**:
+Times you retrieved documentation (`/v1/{owner}/{repo}` endpoint).
+
+**Query Tokens**:
+Total tokens returned in API responses. Doesn't affect billing directly.
+
+**Parsing Tokens**:
+Tokens processed when adding or refreshing private repositories. **This is what you're billed for** on Pro plans.
+
+### Cost Calculation
+
+**Free Plan**: $0 (always)
+
+**Pro Plan**:
+- Base: $7/month per team member
+- Plus: $15 per 1M parsing tokens (private repos only)
+
+**Example**:
+- 3 team members = $21/month
+- Added 750K token private repo = $11.25 one-time
+- Refreshed with 50K new content = $0.75
+- Monthly total = $21 + usage
+
+See [Plans & Pricing](/plans-pricing) for detailed pricing.
+
+### Viewing Logs
+
+Check parsing status and errors:
+
+1. Visit any library page (e.g., `context7.com/upstash/docs`)
+2. Click **View Logs**
+3. See real-time parsing progress and any errors
+
+## Security Best Practices
+
+### API Key Security
+
+- ❌ Never commit to version control
+- ✅ Use environment variables
+- ✅ Rotate keys regularly
+- ✅ Revoke compromised keys immediately
+- ✅ Use separate keys for different environments
+
+### Access Management
+
+- Give team members minimum required role
+- Review team members regularly
+- Remove members who no longer need access
+- Monitor usage for unusual patterns
+
+### Private Repository Security
+
+- Use tokens with minimum required scopes
+- Rotate repository tokens periodically
+- Remove unused private repositories
+- Audit access regularly
+
+See [Security](/security) for comprehensive guidelines.
+
+## Billing and Payments
+
+### Adding Payment Method
+
+1. Click **Add Payment Method** in Dashboard
+2. Enter card details via Stripe
+3. Submit securely
+
+Your card is charged monthly for team seats and parsing usage.
+
+### Viewing Invoices
+
+Invoices are emailed monthly and include:
+- Member seat charges
+- Parse token usage
+- Total amount
+
+Download from your email or request from support.
+
+### Downgrading
+
+To downgrade from Pro to Free:
+
+1. Remove all team members except yourself
+2. Delete all private repositories
+3. Visit [Plans & Pricing](https://context7.com/plans)
+4. Click **Choose Free Plan**
+
+<Warning>
+Downgrading removes team collaboration and private repository access.
+</Warning>
+
+## Troubleshooting
+
+### Common Issues
+
+**"Not authorized to access this project"**
+- Verify you're logged in with the correct account
+- Check you're a member of the project
+- Ask the project owner to invite you
+
+**"Rate limit exceeded"**
+- Wait for your hourly limit to reset (60 req/hr)
+- Pro plan: Each team member gets their own 60 req/hr
+- Enterprise: Contact us for custom limits
+
+**"Private repository access denied"**
+- Verify your access token is valid and not expired
+- Check token has required scopes (`repo` for GitHub)
+- Ensure you're on a Pro or Team plan
+
+**"Library not found"**
+- Verify the library ID format (`/owner/repo`)
+- Check the library exists at [context7.com](https://context7.com)
+- Try searching for it first
+
+See [Troubleshooting](/troubleshooting) for more solutions.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Learn Best Practices" icon="lightbulb" href="/how-to">
+    Practical guides for optimizing your Context7 usage
+  </Card>
+
+  <Card title="Add Your Library" icon="plus" href="/library-owners">
+    Submit your library to Context7
+  </Card>
+
+  <Card title="View API Docs" icon="code" href="/api">
+    Complete REST API reference
+  </Card>
+
+  <Card title="Upgrade Plan" icon="arrow-up" href="/plans-pricing">
+    Unlock team features and private repos
+  </Card>
+</CardGroup>
+
+## Support
+
+- **Documentation**: Browse all docs at [docs.context7.com](https://docs.context7.com)
+- **GitHub**: Report issues at [github.com/upstash/context7](https://github.com/upstash/context7/issues)
+- **Discord**: Join [upstash.com/discord](https://upstash.com/discord)
+- **Email**: Pro and Enterprise customers can email support

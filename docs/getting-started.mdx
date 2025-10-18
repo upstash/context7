@@ -1,72 +1,50 @@
 ---
-title: Getting Started
-description: Up-to-date code docs for any prompt
+title: Getting Started with Context7
+sidebarTitle: Getting Started
 ---
 
-# Context7 MCP
-
-Context7 MCP pulls up-to-date, version-specific documentation and code examples straight from the source  and places them directly into your prompt.
+Context7 brings up-to-date, version-specific documentation and code examples directly into your AI coding assistant. No more outdated examples or hallucinated APIs.
 
 ## Why Context7?
 
-### Without Context7
+**The Problem:**
+- LLMs use outdated training data from months or years ago
+- Hallucinated APIs that don't actually exist
+- Generic answers that don't match your library version
 
-LLMs rely on outdated or generic information about the libraries you use. You get:
+**The Solution:**
+Context7 fetches current documentation in real-time, so your AI assistant always has the latest information.
 
-- Code examples are outdated and based on year-old training data
-- Hallucinated APIs that don't even exist
-- Generic answers for old package versions
+## Quick Example
 
-### With Context7
-
-Context7 MCP pulls up-to-date, version-specific documentation and code examples straight from the source  and places them directly into your prompt.
-
-Add `use context7` to your prompt in Cursor:
+Instead of hoping your AI knows the latest API:
 
 ```txt
-Create a Next.js middleware that checks for a valid JWT in cookies and redirects unauthenticated users to `/login`. use context7
+Create a Next.js middleware that checks for a valid JWT in cookies. use context7
 ```
 
-```txt
-Configure a Cloudflare Worker script to cache JSON API responses for five minutes. use context7
-```
+Context7 automatically pulls the current Next.js documentation into the AI's context.
 
-Context7 fetches up-to-date code examples and documentation right into your LLM's context.
+## Three Steps to Get Started
 
-1. Write your prompt naturally
-2. Tell the LLM to `use context7`
-3. Get working code answers
+### Before You Begin
 
-No tab-switching, no hallucinated APIs that don't exist, no outdated code generation.
+- Sign up or log in at [context7.com](https://context7.com) to access the dashboard
+- (Optional) Generate an API key for higher rate limits
+- Confirm your MCP client (Cursor, Claude Code, Windsurf, etc.) is on the latest version
+- Ensure Node.js v18+ is installed if you plan to run the local MCP server
 
-## Installation
+### 1. Install Context7 MCP
 
-### Requirements
-
-- Node.js >= v18.0.0
-- Cursor, Claude Code, VSCode, Windsurf or another MCP Client
-- Context7 API Key (Optional) for higher rate limits and private repositories (Get yours at [context7.com/dashboard](https://context7.com/dashboard))
+Choose your preferred client below for installation instructions.
 
 <AccordionGroup>
-  <Accordion title="Install via Smithery" icon="sparkles">
-    To install Context7 MCP Server for any client automatically via [Smithery](https://smithery.ai/server/@upstash/context7-mcp):
+  <Accordion title="Cursor" icon="cursor">
+    **One-Click Install** (Cursor 1.0+):
 
-    ```bash
-    npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME> --key <YOUR_SMITHERY_KEY>
-    ```
+    Click â†’ `Settings` â†’ `Cursor Settings` â†’ `MCP` â†’ `Add new global MCP server`
 
-    You can find your Smithery key in the [Smithery.ai webpage](https://smithery.ai/server/@upstash/context7-mcp).
-  </Accordion>
-
-  <Accordion title="Install in Cursor" icon="cursor">
-    Go to: `Settings` ’ `Cursor Settings` ’ `MCP` ’ `Add new global MCP server`
-
-    Pasting the following configuration into your Cursor `~/.cursor/mcp.json` file is the recommended approach. You may also install in a specific project by creating `.cursor/mcp.json` in your project folder.
-
-    Since Cursor 1.0, you can click the install button below for instant one-click installation.
-
-    **Cursor Remote Server Connection**
-
+    **Remote Server (Recommended)**:
     ```json
     {
       "mcpServers": {
@@ -80,88 +58,24 @@ No tab-switching, no hallucinated APIs that don't exist, no outdated code genera
     }
     ```
 
-    **Cursor Local Server Connection**
-
-    ```json
-    {
-      "mcpServers": {
-        "context7": {
-          "command": "npx",
-          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
-        }
-      }
-    }
-    ```
+    Or add to `~/.cursor/mcp.json` manually.
   </Accordion>
 
-  <Accordion title="Install in Claude Code" icon="code">
-    Run this command:
-
-    **Claude Code Remote Server Connection**
-
-    ```sh
-    claude mcp add --transport http context7 https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: YOUR_API_KEY"
+  <Accordion title="Claude Code" icon="code">
+    **Remote Server**:
+    ```bash
+    claude mcp add --transport http context7 https://mcp.context7.com/mcp \
+      --header "CONTEXT7_API_KEY: YOUR_API_KEY"
     ```
 
-    **Claude Code Local Server Connection**
-
-    ```sh
+    **Local Server**:
+    ```bash
     claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
     ```
   </Accordion>
 
-  <Accordion title="Install in Amp" icon="bolt">
-    Run this command in your terminal:
-
-    **Without API Key (Basic Usage)**
-
-    ```sh
-    amp mcp add context7 https://mcp.context7.com/mcp
-    ```
-
-    **With API Key (Higher Rate Limits & Private Repos)**
-
-    ```sh
-    amp mcp add context7 --header "CONTEXT7_API_KEY=YOUR_API_KEY" https://mcp.context7.com/mcp
-    ```
-  </Accordion>
-
-  <Accordion title="Install in Windsurf" icon="wind">
-    Add this to your Windsurf MCP config file:
-
-    **Windsurf Remote Server Connection**
-
-    ```json
-    {
-      "mcpServers": {
-        "context7": {
-          "serverUrl": "https://mcp.context7.com/mcp",
-          "headers": {
-            "CONTEXT7_API_KEY": "YOUR_API_KEY"
-          }
-        }
-      }
-    }
-    ```
-
-    **Windsurf Local Server Connection**
-
-    ```json
-    {
-      "mcpServers": {
-        "context7": {
-          "command": "npx",
-          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
-        }
-      }
-    }
-    ```
-  </Accordion>
-
-  <Accordion title="Install in VS Code" icon="code">
-    Add this to your VS Code MCP config file:
-
-    **VS Code Remote Server Connection**
+  <Accordion title="VS Code" icon="code">
+    Add to your VS Code MCP config:
 
     ```json
     "mcp": {
@@ -176,40 +90,16 @@ No tab-switching, no hallucinated APIs that don't exist, no outdated code genera
       }
     }
     ```
-
-    **VS Code Local Server Connection**
-
-    ```json
-    "mcp": {
-      "servers": {
-        "context7": {
-          "type": "stdio",
-          "command": "npx",
-          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
-        }
-      }
-    }
-    ```
   </Accordion>
 
-  <Accordion title="Install in Cline" icon="robot">
-    You can easily install Context7 through the [Cline MCP Server Marketplace](https://cline.bot/mcp-marketplace):
-
-    1. Open **Cline**
-    2. Click the hamburger menu icon (0) to enter the **MCP Servers** section
-    3. Use the search bar within the **Marketplace** tab to find _Context7_
-    4. Click the **Install** button
-
-    Or you can directly edit MCP servers configuration:
-
+  <Accordion title="Windsurf" icon="wind">
     ```json
     {
       "mcpServers": {
         "context7": {
-          "url": "https://mcp.context7.com/mcp",
-          "type": "streamableHttp",
+          "serverUrl": "https://mcp.context7.com/mcp",
           "headers": {
-            "Authorization": "Bearer YOUR_API_KEY"
+            "CONTEXT7_API_KEY": "YOUR_API_KEY"
           }
         }
       }
@@ -217,35 +107,104 @@ No tab-switching, no hallucinated APIs that don't exist, no outdated code genera
     ```
   </Accordion>
 
-  <Accordion title="Install in Zed" icon="zap">
-    It can be installed via [Zed Extensions](https://zed.dev/extensions?query=Context7) or you can add this to your Zed `settings.json`:
-
-    ```json
-    {
-      "context_servers": {
-        "Context7": {
-          "source": "custom",
-          "command": "npx",
-          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
-        }
-      }
-    }
-    ```
-  </Accordion>
-
   <Accordion title="Other Clients" icon="ellipsis">
-    Context7 supports many more clients including:
-    - Augment Code
-    - Roo Code
-    - Gemini CLI
-    - Claude Desktop
-    - Opencode
-    - OpenAI Codex
+    Context7 supports 25+ MCP clients including:
+    - Zed, Cline, Amp
     - JetBrains AI Assistant
-    - Kiro
-    - Trae
+    - OpenAI Codex, Gemini CLI
+    - LM Studio, Perplexity
     - And many more...
 
-    Check our [GitHub repository](https://github.com/upstash/context7) for detailed installation instructions for each client.
+    See the [README](https://github.com/upstash/context7) for detailed instructions.
   </Accordion>
 </AccordionGroup>
+
+<Note>
+**API Key**: Get yours at [context7.com/dashboard](https://context7.com/dashboard) for higher rate limits. Works without a key for basic usage.
+</Note>
+
+### 2. Try It Out
+
+Add `use context7` to any coding prompt:
+
+```txt
+Build a Redis rate limiter with sliding window. use context7
+```
+
+```txt
+Set up Supabase auth with Next.js middleware. use context7
+```
+
+Context7 automatically finds and retrieves the relevant documentation.
+
+### 3. Optimize Your Workflow
+
+**Auto-invoke Context7** by adding a rule to your AI:
+
+<Tabs>
+  <Tab title="Cursor">
+    Go to `Cursor Settings` â†’ `Rules` and add:
+    ```txt
+    Always use context7 for code generation and library documentation.
+    ```
+  </Tab>
+  <Tab title="Windsurf">
+    Add to `.windsurfrules` in your project:
+    ```txt
+    Use context7 for all code and API questions.
+    ```
+  </Tab>
+  <Tab title="Claude Code">
+    Add to `CLAUDE.md` in your project:
+    ```txt
+    Use context7 when generating code or explaining APIs.
+    ```
+  </Tab>
+</Tabs>
+
+Now you don't need to type "use context7" every time!
+
+## How It Works
+
+1. **You prompt your AI** with a coding question
+2. **Context7 MCP intercepts** library names from your prompt
+3. **Documentation is fetched** in real-time from Context7's database
+4. **AI responds** with current, accurate information
+
+All happening seamlessly in the background.
+
+## Requirements
+
+- **Node.js**: v18.0.0 or higher
+- **MCP Client**: Cursor, Claude Code, VS Code, or another MCP-supported IDE
+- **API Key**: Optional, but recommended for higher rate limits
+
+<Tip>
+Not sure everything is wired up? Run `npx -y @modelcontextprotocol/inspector npx @upstash/context7-mcp` to validate the connection before you jump back into coding.
+</Tip>
+
+## What's Next?
+
+<CardGroup cols={2}>
+  <Card title="Explore the Dashboard" icon="gauge" href="/dashboard">
+    Manage your API keys, monitor usage, and set up team collaboration
+  </Card>
+
+  <Card title="View Pricing" icon="tag" href="/plans-pricing">
+    Free for public repos, Pro for teams and private repositories
+  </Card>
+
+  <Card title="Add Your Library" icon="plus" href="/library-owners">
+    Submit your own library to make it available in Context7
+  </Card>
+
+  <Card title="How-To Guides" icon="book" href="/how-to">
+    Learn advanced techniques and best practices
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+Having issues? Check our [Troubleshooting Guide](/troubleshooting) for common solutions.
+
+Need help? Join our [Discord Community](https://upstash.com/discord) or open an issue on [GitHub](https://github.com/upstash/context7/issues).

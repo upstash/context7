@@ -1,19 +1,20 @@
 ---
 title: Library Owners
-description: Add your library to Context7 and help developers get up-to-date documentation
 ---
 
-# Adding Projects to Context7
-
-Context7 allows you to add your favorite libraries and frameworks to help developers get up-to-date documentation directly in their coding environment.
+Context7 allows you to add your favorite libraries and frameworks so developers always receive current, trustworthy documentation inside their coding environment.
 
 ## Quick Submission
 
-The easiest way to add a library is through our web interface:
+The fastest way to add a library is through our web interface:
 
-**[Submit a Library ’](https://context7.com/add-library?tab=github)**
+**[Submit a Library ->](https://context7.com/add-library?tab=github)**
 
-Simply provide the GitHub repository URL and Context7 will automatically parse and index the project's documentation.
+1. Paste the GitHub repository URL.
+2. (Optional) Adjust folders and exclusions.
+3. Submit and let Context7 parse and index the documentation.
+
+You'll receive an email notification when parsing finishes. You can also monitor progress from the library detail page (e.g., `context7.com/owner/repo`).
 
 ## Advanced Configuration with `context7.json`
 
@@ -143,7 +144,16 @@ To add a new version to your existing library:
    </Note>
 
 2. **Refresh your library**: Go to your library page on Context7 and trigger a refresh to index the new version.
+3. **Confirm availability**: Search for the new version or run `resolve-library-id` from an MCP client to confirm it appears in results.
+
+## Monitor Parsing and Quality
+
+Keep documentation helpful for agents:
+
+- Review the rendered documentation at least once per release.
+- Trim noisy sections (e.g., large changelogs) with `excludeFiles` or `excludeFolders`.
+- Update `rules` when best practices change so AI assistants surface the right guidance.
 
 ## Need Help?
 
-If you encounter issues or need assistance adding your project, please [report an issue](https://context7.com/add-library?tab=github) or reach out to our community.
+If you encounter issues or need assistance adding your project, please [open an issue](https://github.com/upstash/context7/issues/new/choose) or reach out to our community.

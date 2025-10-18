@@ -11,11 +11,14 @@
     "navigation": {
       "pages": [
         "getting-started",
+        "dashboard",
+        "plans-pricing",
         "how-to",
         "library-owners",
         "api",
         "mcp",
-        "security"
+        "security",
+        "troubleshooting"
       ]
     },
     "logo": {
@@ -36,7 +39,7 @@
       ],
       "primary": {
         "type": "button",
-        "label": "Install MCP",
+        "label": "Dashboard",
         "href": "https://context7.com"
       }
     },

@@ -1,119 +1,94 @@
 ---
-title: How To
-description: Learn how to get the most out of Context7
+title: How-To Guides
 ---
 
-# How To Use Context7
+Learn practical techniques to maximize your Context7 experience.
 
-Learn how to maximize Context7's capabilities with these practical guides.
+## Quick Wins
 
-## Adding a Project
+- [Auto-invoke Context7](#auto-invoke-context7) so you never forget to pull fresh docs
+- [Target the exact library ID](#use-specific-library-ids) to skip search steps
+- [Tune networking and proxies](#configure-https-proxy) for locked-down environments
+- [Control token usage](#optimize-token-usage) to keep responses snappy
+- [Bring in private repositories](#work-with-private-repositories) for internal docs
 
-You can add your favorite libraries and frameworks to Context7 to help developers get up-to-date documentation.
+## Auto-Invoke Context7
 
-### Quick Method
+Stop adding "use context7" to every prompt by setting up an automatic rule.
 
-The easiest way to add a library is through our web interface:
-
-1. Visit [context7.com/add-library](https://context7.com/add-library?tab=github)
-2. Provide the GitHub repository URL
-3. Context7 will automatically parse and index the project's documentation
-
-### Advanced Configuration
-
-For more control over how Context7 parses your library, add a `context7.json` file to your repository root:
-
-```json
-{
-  "$schema": "https://context7.com/schema/context7.json",
-  "projectTitle": "Your Library Name",
-  "description": "Brief description of your library",
-  "folders": ["docs", "guides"],
-  "excludeFolders": ["src", "tests"],
-  "excludeFiles": ["CHANGELOG.md"],
-  "rules": ["Best practice or guideline here"],
-  "previousVersions": [
-    {
-      "tag": "v1.0.0",
-      "title": "version 1.0.0"
-    }
-  ]
-}
-```
-
-See the [Library Owners](/library-owners) guide for detailed configuration options.
-
-## Add Rule to Use Context7 in Your Agent
-
-If you don't want to add `use context7` to every prompt, you can define a simple rule in your MCP client's rule section to auto-invoke Context7 on any code question.
-
-### Where to Add Rules
+### Add a Rule to Your MCP Client
 
 <AccordionGroup>
-  <Accordion title="Windsurf" icon="wind">
-    Add your rule to the `.windsurfrules` file in your project root.
+  <Accordion title="Cursor" icon="cursor">
+    1. Open `Cursor Settings` → `Rules`
+    2. Add this rule:
+
+    ```txt
+    Always use context7 when I need code generation, setup steps, or library documentation.
+    Automatically use Context7 MCP tools without me having to ask.
+    ```
   </Accordion>
 
-  <Accordion title="Cursor" icon="cursor">
-    Go to `Cursor Settings` � `Rules` and add your rule there.
+  <Accordion title="Windsurf" icon="wind">
+    Create or edit `.windsurfrules` in your project root:
+
+    ```txt
+    Use context7 for all code generation and API documentation questions.
+    ```
   </Accordion>
 
   <Accordion title="Claude Code" icon="code">
-    Add your rule to the `CLAUDE.md` file in your project root.
+    Create or edit `CLAUDE.md` in your project root:
+
+    ```txt
+    Automatically use context7 for code generation and library documentation.
+    ```
   </Accordion>
 </AccordionGroup>
 
-### Example Rule
+<Tip>
+Customize the rule to match your workflow. For example, only auto-invoke for specific libraries or frameworks.
+</Tip>
+
+## Use Specific Library IDs
+
+Skip the search step and get documentation instantly by specifying exact library IDs.
+
+### How to Find Library IDs
+
+1. Visit [context7.com](https://context7.com)
+2. Search for your library
+3. The ID is shown in the format `/owner/repository`
+
+### Use in Your Prompts
 
 ```txt
-Always use context7 when I need code generation, setup or configuration steps, or
-library/API documentation. This means you should automatically use the Context7 MCP
-tools to resolve library id and get library docs without me having to explicitly ask.
+Implement JWT auth with Supabase. use library /supabase/supabase
+```
+
+```txt
+Build a rate limiter. use library /upstash/ratelimit
+```
+
+```txt
+Set up Next.js middleware. use library /vercel/next.js/v15.1.0
 ```
 
 <Note>
-You can customize this rule to match your specific use cases and workflow preferences.
+You can even specify versions: `/owner/repo/v1.0.0`
 </Note>
-
-## Using a Special Library ID
-
-If you already know exactly which library you want to use, add its Context7 ID to your prompt. This allows Context7 MCP server to skip the library-matching step and directly retrieve documentation.
-
-### How to Use Library IDs
-
-Include the library ID in your prompt with the `/` prefix:
-
-```txt
-Implement basic authentication with Supabase. use library /supabase/supabase for API and docs.
-```
-
-```txt
-Create a rate limiter using Redis. use library /upstash/ratelimit for implementation.
-```
-
-```txt
-Set up a Next.js API route with middleware. use library /vercel/next.js for documentation.
-```
 
 ### Benefits
 
-- **Faster responses**: Skips the library resolution step
-- **Precise documentation**: Ensures you get docs for the exact library you need
-- **Better context**: LLM knows exactly which library's conventions to follow
+- **Faster**: No library resolution needed
+- **Precise**: Get docs for the exact library and version
+- **Reliable**: No ambiguity about which library to use
 
-### Finding Library IDs
+## Configure HTTPS Proxy
 
-1. Search for your library on [context7.com](https://context7.com)
-2. The library ID is shown in the URL and on the library page
-3. Format: `/owner/repository` (e.g., `/mongodb/docs`, `/facebook/react`)
+If you're behind a corporate proxy, configure Context7 to route through it.
 
-## Using HTTPS Proxy
-
-If you are behind an HTTP proxy, Context7 uses the standard `https_proxy` / `HTTPS_PROXY` environment variables.
-
-### Configuration
-
-Set the environment variable before starting your MCP client:
+### Set Environment Variables
 
 <AccordionGroup>
   <Accordion title="Linux/macOS" icon="terminal">
@@ -122,7 +97,7 @@ Set the environment variable before starting your MCP client:
     export HTTPS_PROXY=http://proxy.example.com:8080
     ```
 
-    For authentication:
+    With authentication:
     ```bash
     export https_proxy=http://username:password@proxy.example.com:8080
     ```
@@ -134,7 +109,7 @@ Set the environment variable before starting your MCP client:
     set HTTPS_PROXY=http://proxy.example.com:8080
     ```
 
-    For authentication:
+    With authentication:
     ```cmd
     set https_proxy=http://username:password@proxy.example.com:8080
     ```
@@ -145,33 +120,215 @@ Set the environment variable before starting your MCP client:
     $env:https_proxy = "http://proxy.example.com:8080"
     $env:HTTPS_PROXY = "http://proxy.example.com:8080"
     ```
-
-    For authentication:
-    ```powershell
-    $env:https_proxy = "http://username:password@proxy.example.com:8080"
-    ```
-  </Accordion>
-
-  <Accordion title="MCP Configuration" icon="gear">
-    You can also add proxy settings directly in your MCP configuration:
-
-    ```json
-    {
-      "mcpServers": {
-        "context7": {
-          "command": "npx",
-          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
-          "env": {
-            "https_proxy": "http://proxy.example.com:8080",
-            "HTTPS_PROXY": "http://proxy.example.com:8080"
-          }
-        }
-      }
-    }
-    ```
   </Accordion>
 </AccordionGroup>
 
+### Or Configure in MCP Settings
+
+Add proxy directly to your MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
+      "env": {
+        "https_proxy": "http://proxy.example.com:8080",
+        "HTTPS_PROXY": "http://proxy.example.com:8080"
+      }
+    }
+  }
+}
+```
+
+Both lowercase and uppercase environment variables are supported.
+
+<Tip>
+After updating proxy settings, run `curl https://mcp.context7.com/mcp/ping` to confirm outbound connectivity before restarting your IDE.
+</Tip>
+
+## Optimize Token Usage
+
+Control documentation size to manage costs and response times.
+
+### Set Token Limits in Dashboard
+
+1. Go to [Dashboard → Libraries](https://context7.com/dashboard)
+2. Set "Maximum tokens per request"
+3. Default is 10,000, adjust based on your needs
+
+### Use Topic Filtering
+
+Focus documentation on specific topics:
+
+```txt
+Explain Next.js middleware authentication patterns. use context7
+```
+
+Context7 automatically extracts "authentication" as a topic and ranks relevant docs higher.
+
+### Direct API Usage
+
+When using the API directly, specify tokens:
+
+```bash
+curl "https://context7.com/api/v1/vercel/next.js?tokens=3000&topic=routing" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+Lower token counts = faster responses and lower costs.
+
+## Work with Private Repositories
+
+Access your private documentation with Context7 Pro.
+
+### Requirements
+
+- Pro plan ($7/seat/month)
+- GitHub or GitLab personal access token
+- Repository access permissions
+
+### Add a Private Repository
+
+1. Go to [Dashboard → Libraries → Private Repositories](https://context7.com/dashboard)
+2. Click **Add Private Repository**
+3. Enter repository URL
+4. Provide access token:
+   - **GitHub**: Token with `repo` scope
+   - **GitLab**: Token with `read_repository` scope
+5. Configure folders and exclusions (optional)
+6. Submit
+
+### Cost
+
+- **Adding**: $15 per 1M tokens parsed (one-time)
+- **Refreshing**: Only pay for new/changed content
+- **Querying**: Free (covered by seat cost)
+
+See [Plans & Pricing](/plans-pricing#parse-token-pricing) for examples.
+
+## Set Up Team Collaboration
+
+Share Context7 access with your team.
+
+### Create a Team Project
+
+1. Visit [Dashboard](https://context7.com/dashboard)
+2. Click **Create Team Project**
+3. Name your project
+
+### Invite Team Members
+
+1. Go to **Dashboard → Members**
+2. Click **Invite Member**
+3. Enter email and select role:
+   - **Owner**: Full control
+   - **Admin**: Manage team and settings
+   - **Developer**: API access only
+
+Members receive an email invitation.
+
+### Manage API Keys
+
+Each team member gets their own API key with independent rate limits (60 req/hour per member).
+
+Regenerate keys from the Members tab if compromised.
+
+See [Dashboard → Team Collaboration](/dashboard#team-collaboration) for details.
+
+## Refresh Library Documentation
+
+Keep your documentation up to date.
+
+### Web Interface
+
+1. Go to [context7.com/refresh-library](https://context7.com/refresh-library)
+2. Enter library ID (e.g., `/vercel/next.js`)
+3. Submit
+
+### API
+
+```bash
+POST https://context7.com/api/v1/refresh
+Content-Type: application/json
+Authorization: Bearer YOUR_API_KEY
+
+{
+  "docsRepoUrl": "https://github.com/vercel/next.js"
+}
+```
+
+### When to Refresh
+
+- After major version releases
+- When documentation is updated
+- When you notice outdated information
+
 <Note>
-Both lowercase `https_proxy` and uppercase `HTTPS_PROXY` are supported. Context7 will check both.
+For private repos, you only pay for new/changed content during refresh.
 </Note>
+
+## Monitor Usage
+
+Track your Context7 usage and costs.
+
+### View Statistics
+
+Go to [Dashboard → Overview](https://context7.com/dashboard) to see:
+
+- **Search requests**: Library searches
+- **Query/fetch requests**: Documentation retrievals
+- **Query tokens**: Tokens returned in responses
+- **Parsing tokens**: Tokens processed when adding/refreshing
+
+All stats show the last 30 days.
+
+### Understand Costs
+
+**Free Plan**: Always $0
+
+**Pro Plan**:
+- **Seats**: $7/month × team members
+- **Parse tokens**: $15 per 1M tokens (private repos only)
+
+**Example**:
+- 4 team members: $28/month
+- Added 800K token private repo: $12 one-time
+- Monthly total: $40
+
+See [Dashboard → Usage Monitoring](/dashboard#usage-monitoring) for more details.
+
+## Best Practices
+
+### Security
+
+- Never commit API keys to version control
+- Use environment variables for keys
+- Rotate keys regularly
+- Give team members minimum required permissions
+
+See [Security](/security) for comprehensive security guidelines.
+
+### Performance
+
+- Use specific library IDs when possible
+- Set appropriate token limits
+- Use topic filtering to focus results
+- Cache frequently-used documentation locally
+
+### Library Management
+
+- Keep `context7.json` up to date in your repositories
+- Exclude unnecessary folders (tests, build artifacts)
+- Add helpful rules for AI agents
+- Maintain version tags for important releases
+
+See [Library Owners](/library-owners) for configuration details.
+
+## Need Help?
+
+- **Troubleshooting**: [Common issues and solutions](/troubleshooting)
+- **API Reference**: [Complete API documentation](/api)
+- **MCP Details**: [Technical MCP server info](/mcp)
+- **Community**: [Join our Discord](https://upstash.com/discord)
