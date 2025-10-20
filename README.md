@@ -472,109 +472,40 @@ Add the following configuration to your OpenAI Codex MCP server settings:
 [mcp_servers.context7]
 args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
 command = "npx"
-```
-
-⚠️ Windows Notes
-
-On Windows, some users may encounter request timed out errors with the default configuration.
-In that case, use one of the following configurations:
-
-Option A: Run the installed CLI directly (no extra env required)
-
-**Requires the package to be installed beforehand.**
-
-```toml
-[mcp_servers.context7]
-command = "C:\\Users\\yourname\\AppData\\Roaming\\npm\\context7-mcp.cmd"
-args = [
-  "--api-key",
-  "YOUR_API_KEY"
-]
 startup_timeout_ms = 20_000
 ```
-
-Option B: Use the absolute path to npx.cmd + set APPDATA/SystemRoot
-
-**No need to install the package beforehand.**
-
-```toml
-[mcp_servers.context7]
-command = "C:\\Users\\yourname\\AppData\\Roaming\\npm\\npx.cmd"
-args = [
-  "-y",
-  "@upstash/context7-mcp",
-  "--api-key",
-  "YOUR_API_KEY"
-]
-env = { SystemRoot="C:\\Windows", APPDATA="C:\\Users\\yourname\\AppData\\Roaming" }
-startup_timeout_ms = 20_000
-```
-
-Option C: Use cmd /c npx + set APPDATA/SystemRoot
-
-Equivalent to B, but invokes via cmd.
-
-**No need to install the package beforehand.**
-
-```toml
-[mcp_servers.context7]
-command = "cmd"
-args = [
-  "/c",
-  "npx",
-  "-y",
-  "@upstash/context7-mcp",
-  "--api-key",
-  "YOUR_API_KEY"
-]
-env = { SystemRoot="C:\\Windows", APPDATA="C:\\Users\\yourname\\AppData\\Roaming" }
-startup_timeout_ms = 20_000
-```
-
-Option D: Use node.exe + the package entry point (avoids npx)
-
-Works well when npx/npm resolution is blocked by a minimal environment.
-
-**Requires the package to be installed beforehand.**
-
-```toml
-[mcp_servers.context7]
-command = "C:\\Program Files\\nodejs\\node.exe"
-args = [
-  "C:\\Users\\yourname\\AppData\\Roaming\\npm\\node_modules\\@upstash\\context7-mcp\\dist\\index.js",
-  "--transport",
-  "stdio",
-  "--api-key",
-  "YOUR_API_KEY"
-]
-startup_timeout_ms = 20_000
-```
-
-Troubleshooting
-
-- If you still see “request timed out”, increase startup_timeout_ms (e.g. 20_000–40_000), especially on first run when npx downloads packages.
-- Replace yourname with your Windows username and ensure Node.js/npm are installed.
-- Adding APPDATA and SystemRoot explicitly is safe and backward‑compatible across MCP clients.
-
-This ensures Codex CLI works reliably on Windows.
-
-⚠️ MacOS Notes
-
-On MacOS, some users may encounter the same request timed out errors like Windows,
-it also can be solved with the full path to Node.js and the installed package:
-
-```toml
-[mcp_servers.context7]
-command = "/Users/yourname/.nvm/versions/node/v22.14.0/bin/node"  # Node.js full path
-args = ["/Users/yourname/.nvm/versions/node/v22.14.0/lib/node_modules/@upstash/context7-mcp/dist/index.js",
-  "--transport",
-  "stdio",
-  "--api-key",
-  "YOUR_API_KEY"
-]
-```
-
-This ensures Codex CLI works reliably on MacOS.
+> Optional troubleshooting — only if you see startup "request timed out" or "not found program". Most users can ignore this.
+>
+> - First try: increase `startup_timeout_ms` to `40_000` and retry.
+> - Windows quick fix (absolute `npx` path + explicit env):
+>
+>   ```toml
+>   [mcp_servers.context7]
+>   command = "C:\\Users\\yourname\\AppData\\Roaming\\npm\\npx.cmd"
+>   args = [
+>     "-y",
+>     "@upstash/context7-mcp",
+>     "--api-key",
+>     "YOUR_API_KEY"
+>   ]
+>   env = { SystemRoot="C:\\Windows", APPDATA="C:\\Users\\yourname\\AppData\\Roaming" }
+>   startup_timeout_ms = 40_000
+>   ```
+>
+> - macOS quick fix (use Node + installed package entry point):
+>
+>   ```toml
+>   [mcp_servers.context7]
+>   command = "/Users/yourname/.nvm/versions/node/v22.14.0/bin/node"
+>   args = ["/Users/yourname/.nvm/versions/node/v22.14.0/lib/node_modules/@upstash/context7-mcp/dist/index.js",
+>     "--transport",
+>     "stdio",
+>     "--api-key",
+>     "YOUR_API_KEY"
+>   ]
+>   ```
+>
+> Notes: Replace `yourname` with your OS username. Explicitly setting `APPDATA` and `SystemRoot` is essential because these are required by `npx` on Windows but not set by certain versions of OpenAI Codex mcp clients by default.
 
 </details>
 
