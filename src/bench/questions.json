@@ -1,0 +1,116 @@
+{
+  "questions": [
+    {
+      "library": "Next.js",
+      "question": "How do I create a dynamic route in Next.js?"
+    },
+    {
+      "library": "Next.js",
+      "question": "How do I implement server-side rendering with data fetching in Next.js?"
+    },
+    {
+      "library": "Next.js",
+      "question": "How do I use middleware in Next.js to protect routes?"
+    },
+    {
+      "library": "MongoDB",
+      "question": "How do I create an index in MongoDB?"
+    },
+    {
+      "library": "MongoDB",
+      "question": "How do I perform aggregation operations in MongoDB?"
+    },
+    {
+      "library": "MongoDB",
+      "question": "How do I connect to MongoDB using Node.js?"
+    },
+    {
+      "library": "Vercel AI SDK",
+      "question": "How do I stream responses from an LLM using Vercel AI SDK?"
+    },
+    {
+      "library": "Vercel AI SDK",
+      "question": "How do I use tools with generateText in Vercel AI SDK?"
+    },
+    {
+      "library": "Vercel AI SDK",
+      "question": "How do I implement function calling with Vercel AI SDK?"
+    },
+    {
+      "library": "Better Auth",
+      "question": "How do I set up email and password authentication with Better Auth?"
+    },
+    {
+      "library": "Better Auth",
+      "question": "How do I implement OAuth providers in Better Auth?"
+    },
+    {
+      "library": "Shadcn UI",
+      "question": "How do I install and use the Button component from Shadcn UI?"
+    },
+    {
+      "library": "Shadcn UI",
+      "question": "How do I create a form with validation using Shadcn UI?"
+    },
+    {
+      "library": "Shadcn UI",
+      "question": "How do I use the Dialog component in Shadcn UI?"
+    },
+    {
+      "library": "React",
+      "question": "How do I use useState hook in React?"
+    },
+    {
+      "library": "React",
+      "question": "How do I implement useEffect for data fetching in React?"
+    },
+    {
+      "library": "React",
+      "question": "How do I use Context API in React?"
+    },
+    {
+      "library": "Tailwind CSS",
+      "question": "How do I configure Tailwind CSS in my project?"
+    },
+    {
+      "library": "Tailwind CSS",
+      "question": "How do I create responsive designs with Tailwind CSS?"
+    },
+    {
+      "library": "Tailwind CSS",
+      "question": "How do I customize colors and themes in Tailwind CSS?"
+    },
+    {
+      "library": "Supabase",
+      "question": "How do I set up authentication with Supabase?"
+    },
+    {
+      "library": "Supabase",
+      "question": "How do I query data from Supabase database?"
+    },
+    {
+      "library": "Supabase",
+      "question": "How do I upload and retrieve files from Supabase Storage?"
+    },
+    {
+      "library": "G6",
+      "question": "How do I create a basic graph visualization with G6?"
+    },
+    {
+      "library": "G6",
+      "question": "How do I customize node styles in G6?"
+    },
+    {
+      "library": "FastAPI",
+      "question": "How do I create a REST API endpoint in FastAPI?"
+    },
+    {
+      "library": "FastAPI",
+      "question": "How do I add request validation with Pydantic in FastAPI?"
+    },
+    {
+      "library": "FastAPI",
+      "question": "How do I implement authentication and authorization in FastAPI?"
+    }
+  ]
+}

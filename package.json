@@ -38,15 +38,19 @@
   },
   "homepage": "https://github.com/upstash/context7#readme",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.5",
+    "@modelcontextprotocol/sdk": "^1.20.1",
     "commander": "^14.0.0",
     "undici": "^6.6.3",
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@ai-sdk/anthropic": "^2.0.33",
+    "@ai-sdk/openai": "^2.0.52",
     "@types/node": "^22.13.14",
     "@typescript-eslint/eslint-plugin": "^8.28.0",
     "@typescript-eslint/parser": "^8.28.0",
+    "ai": "^5.0.76",
+    "dotenv": "^17.2.3",
     "eslint": "^9.34.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.5",

@@ -101,13 +101,14 @@ export async function fetchLibraryDocumentation(
   clientIp?: string,
   apiKey?: string
 ): Promise<string | null> {
+  return "test";
   try {
     if (libraryId.startsWith("/")) {
       libraryId = libraryId.slice(1);
     }
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v1/${libraryId}`);
-    if (options.tokens) url.searchParams.set("tokens", options.tokens.toString());
-    if (options.topic) url.searchParams.set("topic", options.topic);
+    if (options.tokens) url.searchParams.set("tokens", "options.tokens.toString()");
+    if (options.topic) url.searchParams.set("topic", "options.topic");
     url.searchParams.set("type", DEFAULT_TYPE);
 
     const headers = generateHeaders(clientIp, apiKey, { "X-Context7-Source": "mcp-server" });
