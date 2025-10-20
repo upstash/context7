@@ -479,31 +479,31 @@ startup_timeout_ms = 20_000
 > - First try: increase `startup_timeout_ms` to `40_000` and retry.
 > - Windows quick fix (absolute `npx` path + explicit env):
 >
->   ```toml
->   [mcp_servers.context7]
->   command = "C:\\Users\\yourname\\AppData\\Roaming\\npm\\npx.cmd"
->   args = [
->     "-y",
->     "@upstash/context7-mcp",
->     "--api-key",
->     "YOUR_API_KEY"
->   ]
->   env = { SystemRoot="C:\\Windows", APPDATA="C:\\Users\\yourname\\AppData\\Roaming" }
->   startup_timeout_ms = 40_000
->   ```
+> ```toml
+> [mcp_servers.context7]
+> command = "C:\\Users\\yourname\\AppData\\Roaming\\npm\\npx.cmd"
+> args = [
+>   "-y",
+>   "@upstash/context7-mcp",
+>   "--api-key",
+>   "YOUR_API_KEY"
+> ]
+> env = { SystemRoot="C:\\Windows", APPDATA="C:\\Users\\yourname\\AppData\\Roaming" }
+> startup_timeout_ms = 40_000
+> ```
 >
 > - macOS quick fix (use Node + installed package entry point):
 >
->   ```toml
->   [mcp_servers.context7]
->   command = "/Users/yourname/.nvm/versions/node/v22.14.0/bin/node"
->   args = ["/Users/yourname/.nvm/versions/node/v22.14.0/lib/node_modules/@upstash/context7-mcp/dist/index.js",
->     "--transport",
->     "stdio",
->     "--api-key",
->     "YOUR_API_KEY"
->   ]
->   ```
+> ```toml
+> [mcp_servers.context7]
+> command = "/Users/yourname/.nvm/versions/node/v22.14.0/bin/node"
+> args = ["/Users/yourname/.nvm/versions/node/v22.14.0/lib/node_modules/@upstash/context7-mcp/dist/index.js",
+>   "--transport",
+>   "stdio",
+>   "--api-key",
+>   "YOUR_API_KEY"
+> ]
+> ```
 >
 > Notes: Replace `yourname` with your OS username. Explicitly setting `APPDATA` and `SystemRoot` is essential because these are required by `npx` on Windows but not set by certain versions of OpenAI Codex mcp clients by default.
 
