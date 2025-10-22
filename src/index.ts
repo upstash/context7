@@ -173,7 +173,7 @@ Each result includes:
 - Name: Library or package name
 - Description: Short summary
 - Code Snippets: Number of available code examples
-- Trust Score: Authority indicator
+- Trust Score: Categorized authority indicator (Secure, Moderate, or Unknown)
 - Benchmark Score: Quality indicator
 - Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.
 
