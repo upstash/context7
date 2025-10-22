@@ -10,7 +10,7 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     permissions:
-      id-token: write  # Required for OIDC authentication with MCP Registry
+      id-token: write # Required for OIDC authentication with MCP Registry
       contents: read
     steps:
       - name: Checkout Repo
