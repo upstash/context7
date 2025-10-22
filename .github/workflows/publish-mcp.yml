@@ -28,6 +28,8 @@ jobs:
         run: |
           if [ -n "${{ inputs.version }}" ]; then
             VERSION="${{ inputs.version }}"
+            # Remove 'v' prefix if it exists
+            VERSION="${VERSION#v}"
           else
             VERSION=$(node -p "require('./package.json').version")
           fi
