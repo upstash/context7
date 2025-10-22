@@ -174,6 +174,7 @@ Each result includes:
 - Description: Short summary
 - Code Snippets: Number of available code examples
 - Trust Score: Authority indicator
+- Benchmark Score: Quality indicator
 - Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.
 
 For best results, select libraries based on name match, trust score, snippet coverage, and relevance to your use case.
