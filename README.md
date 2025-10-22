@@ -513,6 +513,7 @@ args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
 command = "npx"
 startup_timeout_ms = 20_000
 ```
+
 > Optional troubleshooting — only if you see startup "request timed out" or "not found program". Most users can ignore this.
 >
 > - First try: increase `startup_timeout_ms` to `40_000` and retry.
