@@ -103,7 +103,6 @@ export async function fetchLibraryDocumentation(
   clientIp?: string,
   apiKey?: string
 ): Promise<string | null> {
-  return "test";
   try {
     if (libraryId.startsWith("/")) {
       libraryId = libraryId.slice(1);
