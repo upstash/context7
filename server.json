@@ -12,7 +12,7 @@
     {
       "registryType": "npm",
       "identifier": "@upstash/context7-mcp",
-      "version": "1.0.21",
+      "version": "1.0.26",
       "transport": {
         "type": "stdio"
       },
@@ -23,20 +23,6 @@
           "format": "string",
           "isSecret": true,
           "name": "CONTEXT7_API_KEY"
-        }
-      ]
-    }
-  ],
-  "remotes": [
-    {
-      "type": "streamable-http",
-      "url": "https://mcp.context7.com/mcp",
-      "headers": [
-        {
-          "name": "CONTEXT7_API_KEY",
-          "description": "API key for authentication",
-          "isRequired": false,
-          "isSecret": true
         }
       ]
     }
