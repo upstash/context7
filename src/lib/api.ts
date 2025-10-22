@@ -3,6 +3,8 @@ import { generateHeaders } from "./encryption.js";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 
 const CONTEXT7_API_BASE_URL = "https://context7.com/api";
+const CONTEXT7_API_V1_URL = CONTEXT7_API_BASE_URL + "/v1";
+
 const DEFAULT_TYPE = "txt";
 
 // Pick up proxy configuration in a variety of common env var names.
@@ -42,7 +44,7 @@ export async function searchLibraries(
   apiKey?: string
 ): Promise<SearchResponse> {
   try {
-    const url = new URL(`${CONTEXT7_API_BASE_URL}/v1/search`);
+    const url = new URL(`${CONTEXT7_API_V1_URL}/search`);
     url.searchParams.set("query", query);
 
     const headers = generateHeaders(clientIp, apiKey);
@@ -106,7 +108,7 @@ export async function fetchLibraryDocumentation(
     if (libraryId.startsWith("/")) {
       libraryId = libraryId.slice(1);
     }
-    const url = new URL(`${CONTEXT7_API_BASE_URL}/v1/${libraryId}`);
+    const url = new URL(`${CONTEXT7_API_V1_URL}/${libraryId}`);
     if (options.tokens) url.searchParams.set("tokens", "options.tokens.toString()");
     if (options.topic) url.searchParams.set("topic", "options.topic");
     url.searchParams.set("type", DEFAULT_TYPE);
