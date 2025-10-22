@@ -3,7 +3,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { searchLibraries, fetchLibraryDocumentation } from "./lib/api.js";
+import { searchLibraries, fetchCodeDocs, fetchInfoDocs } from "./lib/api.js";
 import { formatSearchResults } from "./lib/utils.js";
 import { SearchResponse } from "./lib/types.js";
 import { createServer } from "http";
@@ -12,10 +12,6 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { Command } from "commander";
 import { IncomingMessage } from "http";
 
-/** Minimum allowed tokens for documentation retrieval */
-const MINIMUM_TOKENS = 1000;
-/** Default tokens when none specified */
-const DEFAULT_TOKENS = 5000;
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
 
@@ -121,7 +117,7 @@ function createServerInstance(clientIp?: string, apiKey?: string) {
       title: "Resolve Context7 Library ID",
       description: `Resolves a package/product name to a Context7-compatible library ID and returns a list of matching libraries.
 
-You MUST call this function before 'get-library-docs' to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
+You MUST call this function before 'get-coding-and-api-docs' or 'get-informational-docs' to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
 Selection Process:
 1. Analyze the query to understand what library/package the user is looking for
@@ -189,11 +185,11 @@ ${resultsText}`,
   );
 
   server.registerTool(
-    "get-library-docs",
+    "get-coding-and-api-docs",
     {
-      title: "Get Library Docs",
+      title: "Get Coding and API Documentation",
       description:
-        "Fetches up-to-date documentation for a library. You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.",
+        "Fetches code snippets, API references, function signatures, and implementation examples for a library. Use this tool when you need practical code examples, API usage patterns, or technical implementation details. You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.",
       inputSchema: {
         context7CompatibleLibraryID: z
           .string()
@@ -203,43 +199,103 @@ ${resultsText}`,
         topic: z
           .string()
           .optional()
-          .describe("Topic to focus documentation on (e.g., 'hooks', 'routing')."),
-        tokens: z
-          .preprocess((val) => (typeof val === "string" ? Number(val) : val), z.number())
-          .transform((val) => (val < MINIMUM_TOKENS ? MINIMUM_TOKENS : val))
-          .optional()
           .describe(
-            `Maximum number of tokens of documentation to retrieve (default: ${DEFAULT_TOKENS}). Higher values provide more context but consume more tokens.`
+            "Semantic search filter to focus on specific topics (e.g., 'authentication', 'routing', 'database queries')."
           ),
+        page: z
+          .number()
+          .int()
+          .min(1)
+          .max(10)
+          .optional()
+          .default(1)
+          .describe("Page number for pagination (default: 1, max: 10)."),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(50)
+          .optional()
+          .default(10)
+          .describe("Number of items per page (default: 10, max: 50)."),
       },
     },
-    async ({ context7CompatibleLibraryID, tokens = DEFAULT_TOKENS, topic = "" }) => {
-      const fetchDocsResponse = await fetchLibraryDocumentation(
+    async ({ context7CompatibleLibraryID, topic, page = 1, limit = 10 }) => {
+      const docsResponse = await fetchCodeDocs(
         context7CompatibleLibraryID,
         {
-          tokens,
           topic,
+          page,
+          limit,
         },
         clientIp,
         apiKey
       );
 
-      if (!fetchDocsResponse) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: "Documentation not found or not finalized for this library. This might have happened because you used an invalid Context7-compatible library ID. To get a valid Context7-compatible library ID, use the 'resolve-library-id' with the package name you wish to retrieve documentation for.",
-            },
-          ],
-        };
-      }
+      return {
+        content: [
+          {
+            type: "text",
+            text: docsResponse,
+          },
+        ],
+      };
+    }
+  );
+
+  server.registerTool(
+    "get-informational-docs",
+    {
+      title: "Get Informational Documentation",
+      description:
+        "Fetches conceptual documentation, guides, tutorials, and architecture explanations for a library. Use this tool when you need to understand concepts, learn about features, or get high-level architectural information. You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.",
+      inputSchema: {
+        context7CompatibleLibraryID: z
+          .string()
+          .describe(
+            "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
+          ),
+        topic: z
+          .string()
+          .optional()
+          .describe(
+            "Semantic search filter to focus on specific topics (e.g., 'getting started', 'architecture', 'best practices')."
+          ),
+        page: z
+          .number()
+          .int()
+          .min(1)
+          .max(10)
+          .optional()
+          .default(1)
+          .describe("Page number for pagination (default: 1, max: 10)."),
+        limit: z
+          .number()
+          .int()
+          .min(1)
+          .max(50)
+          .optional()
+          .default(10)
+          .describe("Number of items per page (default: 10, max: 50)."),
+      },
+    },
+    async ({ context7CompatibleLibraryID, topic, page = 1, limit = 10 }) => {
+      const docsResponse = await fetchInfoDocs(
+        context7CompatibleLibraryID,
+        {
+          topic,
+          page,
+          limit,
+        },
+        clientIp,
+        apiKey
+      );
 
       return {
         content: [
           {
             type: "text",
-            text: fetchDocsResponse,
+            text: docsResponse,
           },
         ],
       };
