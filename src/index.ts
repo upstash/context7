@@ -480,7 +480,10 @@ async function main() {
 
     // Function to attempt server listen with port fallback
     const startServer = (port: number, maxAttempts = 10) => {
+      let hasErrored = false;
+
       httpServer.once("error", (err: NodeJS.ErrnoException) => {
+        hasErrored = true;
         if (err.code === "EADDRINUSE" && port < initialPort + maxAttempts) {
           console.warn(`Port ${port} is in use, trying port ${port + 1}...`);
           startServer(port + 1, maxAttempts);
@@ -491,10 +494,13 @@ async function main() {
       });
 
       httpServer.listen(port, () => {
-        actualPort = port;
-        console.error(
-          `Context7 Documentation MCP Server running on ${transportType.toUpperCase()} at http://localhost:${actualPort}/mcp with SSE endpoint at /sse`
-        );
+        // Only log success if this specific port attempt didn't error
+        if (!hasErrored) {
+          actualPort = port;
+          console.error(
+            `Context7 Documentation MCP Server running on ${transportType.toUpperCase()} at http://localhost:${actualPort}/mcp`
+          );
+        }
       });
     };
 
