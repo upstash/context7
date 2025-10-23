@@ -6,8 +6,6 @@ const CONTEXT7_API_BASE_URL = "https://context7.com/api";
 const CONTEXT7_API_V1_URL = CONTEXT7_API_BASE_URL + "/v1";
 const CONTEXT7_API_V2_URL = CONTEXT7_API_BASE_URL + "/v2";
 
-const DEFAULT_TYPE = "txt";
-
 /**
  * Parses a Context7-compatible library ID into its components
  * @param libraryId The library ID (e.g., "/vercel/next.js" or "/vercel/next.js/v14.3.0")

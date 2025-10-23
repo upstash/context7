@@ -209,7 +209,9 @@ ${resultsText}`,
           .max(10)
           .optional()
           .default(1)
-          .describe("Page number for pagination (default: 1, max: 10). Applied to all libraries when fetching multiple."),
+          .describe(
+            "Page number for pagination (default: 1, max: 10). Applied to all libraries when fetching multiple."
+          ),
         limit: z
           .number()
           .int()
@@ -217,7 +219,9 @@ ${resultsText}`,
           .max(50)
           .optional()
           .default(10)
-          .describe("Number of items per page (default: 10, max: 50). Applied to all libraries when fetching multiple."),
+          .describe(
+            "Number of items per page (default: 10, max: 50). Applied to all libraries when fetching multiple."
+          ),
       },
     },
     async ({ context7CompatibleLibraryID, topic, page = 1, limit = 10 }) => {
@@ -279,7 +283,9 @@ ${resultsText}`,
           .max(10)
           .optional()
           .default(1)
-          .describe("Page number for pagination (default: 1, max: 10). Applied to all libraries when fetching multiple."),
+          .describe(
+            "Page number for pagination (default: 1, max: 10). Applied to all libraries when fetching multiple."
+          ),
         limit: z
           .number()
           .int()
@@ -287,7 +293,9 @@ ${resultsText}`,
           .max(50)
           .optional()
           .default(10)
-          .describe("Number of items per page (default: 10, max: 50). Applied to all libraries when fetching multiple."),
+          .describe(
+            "Number of items per page (default: 10, max: 50). Applied to all libraries when fetching multiple."
+          ),
       },
     },
     async ({ context7CompatibleLibraryID, topic, page = 1, limit = 10 }) => {
