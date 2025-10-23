@@ -125,7 +125,7 @@ Selection Process:
 - Name similarity to the query (exact matches prioritized)
 - Description relevance to the query's intent
 - Documentation coverage (prioritize libraries with higher Code Snippet counts)
-- Trust score (consider libraries with scores of 7-10 more authoritative)
+- Trust level (consider libraries with Secure or Moderate levels more authoritative)
 
 Response Format:
 - Return the selected library ID in a clearly marked section
@@ -169,11 +169,11 @@ Each result includes:
 - Name: Library or package name
 - Description: Short summary
 - Code Snippets: Number of available code examples
-- Trust Score: Categorized authority indicator (Secure, Moderate, or Unknown)
+- Trust Level: Categorized authority indicator (Secure, Moderate, or Unknown)
 - Benchmark Score: Quality indicator
 - Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.
 
-For best results, select libraries based on name match, trust score, snippet coverage, and relevance to your use case.
+For best results, select libraries based on name match, trust level, snippet coverage, and relevance to your use case.
 
 ----------
 

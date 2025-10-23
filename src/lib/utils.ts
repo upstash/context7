@@ -1,12 +1,12 @@
 import { SearchResponse, SearchResult } from "./types.js";
 
 /**
- * Categorizes a trust score into a human-readable label.
+ * Categorizes a trust score into a human-readable trust level.
  *
  * @param trustScore The numeric trust score (or undefined/-1 for no data)
- * @returns A categorized label: "Secure", "Moderate", or "Unknown"
+ * @returns A categorized trust level: "Secure", "Moderate", or "Unknown"
  */
-function categorizeTrustScore(trustScore: number | undefined): string {
+function categorizeTrustLevel(trustScore: number | undefined): string {
   // No data or invalid value
   if (trustScore === undefined || trustScore === -1) {
     return "Moderate";
@@ -46,9 +46,9 @@ export function formatSearchResult(result: SearchResult): string {
     formattedResult.push(`- Code Snippets: ${result.totalSnippets}`);
   }
 
-  // Always add categorized trust score
-  const trustCategory = categorizeTrustScore(result.trustScore);
-  formattedResult.push(`- Trust Score: ${trustCategory}`);
+  // Always add categorized trust level
+  const trustLevel = categorizeTrustLevel(result.trustScore);
+  formattedResult.push(`- Trust Level: ${trustLevel}`);
 
   // Only add benchmark score if it's a valid value
   if (result.benchmarkScore !== undefined && result.benchmarkScore > 0) {
