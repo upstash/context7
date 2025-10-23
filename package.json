@@ -1,6 +1,7 @@
 {
   "name": "@upstash/context7-mcp",
   "version": "1.0.0",
+  "mcpName": "io.github.upstash/context7",
   "description": "MCP server for Context7",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",

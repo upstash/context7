@@ -511,61 +511,41 @@ Add the following configuration to your OpenAI Codex MCP server settings:
 [mcp_servers.context7]
 args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
 command = "npx"
-```
-
-⚠️ Windows Notes
-
-On Windows, some users may encounter request timed out errors with the default configuration.
-In that case, explicitly configure the MCP server with the full path to Node.js and the installed package:
-
-```toml
-[mcp_servers.context7]
-command = "C:\\Program Files\\nodejs\\node.exe"
-args = [
-  "C:\\Users\\yourname\\AppData\\Roaming\\npm\\node_modules\\@upstash\\context7-mcp\\dist\\index.js",
-  "--transport",
-  "stdio",
-  "--api-key",
-  "YOUR_API_KEY"
-]
-```
-
-Alternatively, you can use the following configuration:
-
-```toml
-[mcp_servers.context7]
-command = "cmd"
-args = [
-    "/c",
-    "npx",
-    "-y",
-    "@upstash/context7-mcp",
-    "--api-key",
-    "YOUR_API_KEY"
-]
-env = { SystemRoot="C:\\Windows" }
 startup_timeout_ms = 20_000
 ```
 
-This ensures Codex CLI works reliably on Windows.
-
-⚠️ MacOS Notes
-
-On MacOS, some users may encounter the same request timed out errors like Windows,
-it also can be solved with the full path to Node.js and the installed package:
-
-```toml
-[mcp_servers.context7]
-command = "/Users/yourname/.nvm/versions/node/v22.14.0/bin/node"  # Node.js full path
-args = ["/Users/yourname/.nvm/versions/node/v22.14.0/lib/node_modules/@upstash/context7-mcp/dist/index.js",
-  "--transport",
-  "stdio",
-  "--api-key",
-  "YOUR_API_KEY"
-]
-```
-
-This ensures Codex CLI works reliably on MacOS.
+> Optional troubleshooting — only if you see startup "request timed out" or "not found program". Most users can ignore this.
+>
+> - First try: increase `startup_timeout_ms` to `40_000` and retry.
+> - Windows quick fix (absolute `npx` path + explicit env):
+>
+> ```toml
+> [mcp_servers.context7]
+> command = "C:\\Users\\yourname\\AppData\\Roaming\\npm\\npx.cmd"
+> args = [
+>   "-y",
+>   "@upstash/context7-mcp",
+>   "--api-key",
+>   "YOUR_API_KEY"
+> ]
+> env = { SystemRoot="C:\\Windows", APPDATA="C:\\Users\\yourname\\AppData\\Roaming" }
+> startup_timeout_ms = 40_000
+> ```
+>
+> - macOS quick fix (use Node + installed package entry point):
+>
+> ```toml
+> [mcp_servers.context7]
+> command = "/Users/yourname/.nvm/versions/node/v22.14.0/bin/node"
+> args = ["/Users/yourname/.nvm/versions/node/v22.14.0/lib/node_modules/@upstash/context7-mcp/dist/index.js",
+>   "--transport",
+>   "stdio",
+>   "--api-key",
+>   "YOUR_API_KEY"
+> ]
+> ```
+>
+> Notes: Replace `yourname` with your OS username. Explicitly setting `APPDATA` and `SystemRoot` is essential because these are required by `npx` on Windows but not set by certain versions of OpenAI Codex mcp clients by default.
 
 </details>
 
