@@ -4,7 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { searchLibraries, fetchCodeDocs, fetchInfoDocs } from "./lib/api.js";
-import { formatSearchResults } from "./lib/utils.js";
+import { formatSearchResults, formatMultiLibraryDocs } from "./lib/utils.js";
 import { SearchResponse } from "./lib/types.js";
 import { createServer } from "http";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -189,18 +189,18 @@ ${resultsText}`,
     {
       title: "Get Coding and API Documentation",
       description:
-        "Fetches code snippets, API references, function signatures, and implementation examples for a library. Use this tool when you need practical code examples, API usage patterns, or technical implementation details. You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.",
+        "Fetches code snippets, API references, function signatures, and implementation examples for a library. Use this tool when you need practical code examples, API usage patterns, or technical implementation details. You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query. Supports fetching from multiple libraries at once.",
       inputSchema: {
         context7CompatibleLibraryID: z
-          .string()
+          .union([z.string(), z.array(z.string()).min(1)])
           .describe(
-            "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
+            "Single library ID as string (e.g., '/vercel/next.js'), or array of library IDs to fetch docs from multiple libraries at once (e.g., ['/vercel/next.js', '/mongodb/docs']). Each ID should be in the format '/org/project' or '/org/project/version', retrieved from 'resolve-library-id' or directly from user query."
           ),
         topic: z
           .string()
           .optional()
           .describe(
-            "Semantic search filter to focus on specific topics (e.g., 'authentication', 'routing', 'database queries')."
+            "Semantic search filter to focus on specific topics (e.g., 'authentication', 'routing', 'database queries'). Applied to all libraries when fetching multiple."
           ),
         page: z
           .number()
@@ -209,7 +209,7 @@ ${resultsText}`,
           .max(10)
           .optional()
           .default(1)
-          .describe("Page number for pagination (default: 1, max: 10)."),
+          .describe("Page number for pagination (default: 1, max: 10). Applied to all libraries when fetching multiple."),
         limit: z
           .number()
           .int()
@@ -217,26 +217,37 @@ ${resultsText}`,
           .max(50)
           .optional()
           .default(10)
-          .describe("Number of items per page (default: 10, max: 50)."),
+          .describe("Number of items per page (default: 10, max: 50). Applied to all libraries when fetching multiple."),
       },
     },
     async ({ context7CompatibleLibraryID, topic, page = 1, limit = 10 }) => {
-      const docsResponse = await fetchCodeDocs(
-        context7CompatibleLibraryID,
-        {
-          topic,
-          page,
-          limit,
-        },
-        clientIp,
-        apiKey
+      // Normalize to array
+      const libraryIds = Array.isArray(context7CompatibleLibraryID)
+        ? context7CompatibleLibraryID
+        : [context7CompatibleLibraryID];
+
+      // Fetch docs for each library
+      const results = await Promise.all(
+        libraryIds.map(async (libraryId) => {
+          const docs = await fetchCodeDocs(
+            libraryId,
+            {
+              topic,
+              page,
+              limit,
+            },
+            clientIp,
+            apiKey
+          );
+          return { libraryId, docs };
+        })
       );
 
       return {
         content: [
           {
             type: "text",
-            text: docsResponse,
+            text: formatMultiLibraryDocs(results),
           },
         ],
       };
@@ -248,18 +259,18 @@ ${resultsText}`,
     {
       title: "Get Informational Documentation",
       description:
-        "Fetches conceptual documentation, guides, tutorials, and architecture explanations for a library. Use this tool when you need to understand concepts, learn about features, or get high-level architectural information. You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.",
+        "Fetches conceptual documentation, guides, tutorials, and architecture explanations for a library. Use this tool when you need to understand concepts, learn about features, or get high-level architectural information. You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query. Supports fetching from multiple libraries at once.",
       inputSchema: {
         context7CompatibleLibraryID: z
-          .string()
+          .union([z.string(), z.array(z.string()).min(1)])
           .describe(
-            "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
+            "Single library ID as string (e.g., '/vercel/next.js'), or array of library IDs to fetch docs from multiple libraries at once (e.g., ['/vercel/next.js', '/mongodb/docs']). Each ID should be in the format '/org/project' or '/org/project/version', retrieved from 'resolve-library-id' or directly from user query."
           ),
         topic: z
           .string()
           .optional()
           .describe(
-            "Semantic search filter to focus on specific topics (e.g., 'getting started', 'architecture', 'best practices')."
+            "Semantic search filter to focus on specific topics (e.g., 'getting started', 'architecture', 'best practices'). Applied to all libraries when fetching multiple."
           ),
         page: z
           .number()
@@ -268,7 +279,7 @@ ${resultsText}`,
           .max(10)
           .optional()
           .default(1)
-          .describe("Page number for pagination (default: 1, max: 10)."),
+          .describe("Page number for pagination (default: 1, max: 10). Applied to all libraries when fetching multiple."),
         limit: z
           .number()
           .int()
@@ -276,26 +287,37 @@ ${resultsText}`,
           .max(50)
           .optional()
           .default(10)
-          .describe("Number of items per page (default: 10, max: 50)."),
+          .describe("Number of items per page (default: 10, max: 50). Applied to all libraries when fetching multiple."),
       },
     },
     async ({ context7CompatibleLibraryID, topic, page = 1, limit = 10 }) => {
-      const docsResponse = await fetchInfoDocs(
-        context7CompatibleLibraryID,
-        {
-          topic,
-          page,
-          limit,
-        },
-        clientIp,
-        apiKey
+      // Normalize to array
+      const libraryIds = Array.isArray(context7CompatibleLibraryID)
+        ? context7CompatibleLibraryID
+        : [context7CompatibleLibraryID];
+
+      // Fetch docs for each library
+      const results = await Promise.all(
+        libraryIds.map(async (libraryId) => {
+          const docs = await fetchInfoDocs(
+            libraryId,
+            {
+              topic,
+              page,
+              limit,
+            },
+            clientIp,
+            apiKey
+          );
+          return { libraryId, docs };
+        })
       );
 
       return {
         content: [
           {
             type: "text",
-            text: docsResponse,
+            text: formatMultiLibraryDocs(results),
           },
         ],
       };

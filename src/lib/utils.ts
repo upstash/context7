@@ -79,3 +79,23 @@ export function formatSearchResults(searchResponse: SearchResponse): string {
   const formattedResults = searchResponse.results.map(formatSearchResult);
   return formattedResults.join("\n----------\n");
 }
+
+/**
+ * Formats documentation results from multiple libraries with proper section headers.
+ * For single library, returns content as-is.
+ * For multiple libraries, adds headers and separators.
+ *
+ * @param results Array of library documentation results
+ * @returns Formatted documentation string
+ */
+export function formatMultiLibraryDocs(
+  results: Array<{ libraryId: string; docs: string }>
+): string {
+  if (results.length === 1) {
+    // Single library - return as-is
+    return results[0].docs;
+  }
+
+  // Multiple libraries - add section headers with separator between sections
+  return results.map(({ libraryId, docs }) => `=== ${libraryId} ===\n${docs}`).join("\n\n");
+}
