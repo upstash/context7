@@ -79,8 +79,9 @@ export async function searchLibraries(
     if (!response.ok) {
       const errorCode = response.status;
       if (errorCode === 429) {
-        const errorMessage = "Rate limited due to too many requests. Please try again later.";
-        console.error(errorMessage);
+        const errorMessage = apiKey
+          ? "Rate limited due to too many requests. Please try again later."
+          : "Rate limited due to too many requests. You can create a free API key at https://context7.com/dashboard for higher rate limits.";
         return {
           results: [],
           error: errorMessage,
@@ -91,14 +92,12 @@ export async function searchLibraries(
           "Unauthorized. Please check your API key. The API key you provided (possibly incorrect) is: " +
           apiKey +
           ". API keys should start with 'ctx7sk'";
-        console.error(errorMessage);
         return {
           results: [],
           error: errorMessage,
         } as SearchResponse;
       }
       const errorMessage = `Failed to search libraries. Please try again later. Error code: ${errorCode}`;
-      console.error(errorMessage);
       return {
         results: [],
         error: errorMessage,
@@ -107,7 +106,6 @@ export async function searchLibraries(
     return await response.json();
   } catch (error) {
     const errorMessage = `Error searching libraries: ${error}`;
-    console.error(errorMessage);
     return { results: [], error: errorMessage } as SearchResponse;
   }
 }
@@ -151,7 +149,10 @@ export async function fetchCodeDocs(
     if (!response.ok) {
       const errorCode = response.status;
       if (errorCode === 429) {
-        return "Rate limited due to too many requests. Please try again later.";
+        const errorMessage = apiKey
+          ? "Rate limited due to too many requests. Please try again later."
+          : "Rate limited due to too many requests. You can create a free API key at https://context7.com/dashboard for higher rate limits.";
+        return errorMessage;
       }
       if (errorCode === 404) {
         return "The library you are trying to access does not exist. Please try with a different library ID.";
@@ -215,7 +216,10 @@ export async function fetchInfoDocs(
     if (!response.ok) {
       const errorCode = response.status;
       if (errorCode === 429) {
-        return "Rate limited due to too many requests. Please try again later.";
+        const errorMessage = apiKey
+          ? "Rate limited due to too many requests. Please try again later."
+          : "Rate limited due to too many requests. You can create a free API key at https://context7.com/dashboard for higher rate limits.";
+        return errorMessage;
       }
       if (errorCode === 404) {
         return "The library you are trying to access does not exist. Please try with a different library ID.";
