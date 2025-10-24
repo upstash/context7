@@ -82,6 +82,7 @@ export async function searchLibraries(
         const errorMessage = apiKey
           ? "Rate limited due to too many requests. Please try again later."
           : "Rate limited due to too many requests. You can create a free API key at https://context7.com/dashboard for higher rate limits.";
+        console.error(errorMessage);
         return {
           results: [],
           error: errorMessage,
@@ -92,12 +93,14 @@ export async function searchLibraries(
           "Unauthorized. Please check your API key. The API key you provided (possibly incorrect) is: " +
           apiKey +
           ". API keys should start with 'ctx7sk'";
+        console.error(errorMessage);
         return {
           results: [],
           error: errorMessage,
         } as SearchResponse;
       }
       const errorMessage = `Failed to search libraries. Please try again later. Error code: ${errorCode}`;
+      console.error(errorMessage);
       return {
         results: [],
         error: errorMessage,
@@ -106,6 +109,7 @@ export async function searchLibraries(
     return await response.json();
   } catch (error) {
     const errorMessage = `Error searching libraries: ${error}`;
+    console.error(errorMessage);
     return { results: [], error: errorMessage } as SearchResponse;
   }
 }
@@ -152,6 +156,7 @@ export async function fetchCodeDocs(
         const errorMessage = apiKey
           ? "Rate limited due to too many requests. Please try again later."
           : "Rate limited due to too many requests. You can create a free API key at https://context7.com/dashboard for higher rate limits.";
+        console.error(errorMessage);
         return errorMessage;
       }
       if (errorCode === 404) {
@@ -219,6 +224,7 @@ export async function fetchInfoDocs(
         const errorMessage = apiKey
           ? "Rate limited due to too many requests. Please try again later."
           : "Rate limited due to too many requests. You can create a free API key at https://context7.com/dashboard for higher rate limits.";
+        console.error(errorMessage);
         return errorMessage;
       }
       if (errorCode === 404) {
