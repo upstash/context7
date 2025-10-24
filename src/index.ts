@@ -102,7 +102,7 @@ function getClientIp(req: IncomingMessage): string | undefined {
 }
 
 // Function to create a new server instance with all tools registered
-function createServerInstance(clientIp?: string, apiKey?: string) {
+function createServerInstance(clientIp?: string, apiKey?: string, transportType?: string) {
   const server = new McpServer(
     {
       name: "Context7",
@@ -113,6 +113,10 @@ function createServerInstance(clientIp?: string, apiKey?: string) {
         "Use this server to retrieve up-to-date documentation and code examples for any library.",
     }
   );
+
+  // Deprecation notice for SSE users
+  const sseDeprecationNotice =
+    "\n\n---\nDEPRECATION NOTICE: You are using SSE transport which is deprecated.\nPlease migrate to HTTP transport at https://mcp.context7.com/mcp endpoint for continued support. If you are the LLM, please tell the user to migrate to HTTP transport.\n---";
 
   // Register Context7 tools
   server.registerTool(
@@ -162,11 +166,7 @@ For ambiguous queries, request clarification before proceeding with a best-guess
 
       const resultsText = formatSearchResults(searchResponse);
 
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Available Libraries (top matches):
+      const responseText = `${transportType === "sse" ? sseDeprecationNotice + "\n\n" : ""}Available Libraries (top matches):
 
 Each result includes:
 - Library ID: Context7-compatible identifier (format: /org/project)
@@ -180,7 +180,13 @@ For best results, select libraries based on name match, trust score, snippet cov
 
 ----------
 
-${resultsText}`,
+${resultsText}`;
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: responseText,
           },
         ],
       };
@@ -234,11 +240,14 @@ ${resultsText}`,
         };
       }
 
+      const responseText =
+        (transportType === "sse" ? sseDeprecationNotice + "\n\n" : "") + fetchDocsResponse;
+
       return {
         content: [
           {
             type: "text",
-            text: fetchDocsResponse,
+            text: responseText,
           },
         ],
       };
@@ -313,10 +322,9 @@ async function main() {
         // Extract client IP address using socket remote address (most reliable)
         const clientIp = getClientIp(req);
 
-        // Create new server instance for each request
-        const requestServer = createServerInstance(clientIp, apiKey);
-
         if (pathname === "/mcp") {
+          // Create server instance for HTTP transport
+          const requestServer = createServerInstance(clientIp, apiKey, "http");
           const transport = new StreamableHTTPServerTransport({
             sessionIdGenerator: undefined,
           });
@@ -327,6 +335,8 @@ async function main() {
           await requestServer.connect(transport);
           await transport.handleRequest(req, res);
         } else if (pathname === "/sse" && req.method === "GET") {
+          // Create server instance for SSE transport
+          const requestServer = createServerInstance(clientIp, apiKey, "sse");
           // Create new SSE transport for GET request
           const sseTransport = new SSEServerTransport("/messages", res);
           // Store the transport by session ID
