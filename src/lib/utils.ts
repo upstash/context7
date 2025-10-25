@@ -1,6 +1,32 @@
 import { SearchResponse, SearchResult } from "./types.js";
 
 /**
+ * Categorizes a trust score into a human-readable trust level.
+ *
+ * @param trustScore The numeric trust score (or undefined/-1 for no data)
+ * @returns A categorized trust level: "Secure", "Moderate", or "Unknown"
+ */
+function categorizeTrustLevel(trustScore: number | undefined): string {
+  // No data or invalid value
+  if (trustScore === undefined || trustScore === -1) {
+    return "Moderate";
+  }
+
+  // Secure: >= 7
+  if (trustScore >= 7) {
+    return "Secure";
+  }
+
+  // Moderate: >= 4 and < 7
+  if (trustScore >= 4) {
+    return "Moderate";
+  }
+
+  // Unknown: < 4
+  return "Unknown";
+}
+
+/**
  * Formats a search result into a human-readable string representation.
  * Only shows code snippet count and GitHub stars when available (not equal to -1).
  *
@@ -20,9 +46,13 @@ export function formatSearchResult(result: SearchResult): string {
     formattedResult.push(`- Code Snippets: ${result.totalSnippets}`);
   }
 
-  // Only add trust score if it's a valid value
-  if (result.trustScore !== -1 && result.trustScore !== undefined) {
-    formattedResult.push(`- Trust Score: ${result.trustScore}`);
+  // Always add categorized trust level
+  const trustLevel = categorizeTrustLevel(result.trustScore);
+  formattedResult.push(`- Trust Level: ${trustLevel}`);
+
+  // Only add benchmark score if it's a valid value
+  if (result.benchmarkScore !== undefined && result.benchmarkScore > 0) {
+    formattedResult.push(`- Benchmark Score: ${result.benchmarkScore}`);
   }
 
   // Only add versions if it's a valid value
@@ -48,4 +78,24 @@ export function formatSearchResults(searchResponse: SearchResponse): string {
 
   const formattedResults = searchResponse.results.map(formatSearchResult);
   return formattedResults.join("\n----------\n");
+}
+
+/**
+ * Formats documentation results from multiple libraries with proper section headers.
+ * For single library, returns content as-is.
+ * For multiple libraries, adds headers and separators.
+ *
+ * @param results Array of library documentation results
+ * @returns Formatted documentation string
+ */
+export function formatMultiLibraryDocs(
+  results: Array<{ libraryId: string; docs: string }>
+): string {
+  if (results.length === 1) {
+    // Single library - return as-is
+    return results[0].docs;
+  }
+
+  // Multiple libraries - add section headers with separator between sections
+  return results.map(({ libraryId, docs }) => `=== ${libraryId} ===\n${docs}`).join("\n\n");
 }
