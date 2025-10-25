@@ -38,6 +38,9 @@ Context7 fetches up-to-date code examples and documentation right into your LLM'
 
 No tab-switching, no hallucinated APIs that don't exist, no outdated code generation.
 
+> [!NOTE]
+> This repository hosts the source code of Context7 MCP server. The supporting components — API backend, parsing engine, and crawling engine — are private and not part of this release. 
+
 ## 📚 Adding Projects
 
 Check out our [project addition guide](./docs/adding-projects.md) to learn how to add (or update) your favorite libraries to Context7.
