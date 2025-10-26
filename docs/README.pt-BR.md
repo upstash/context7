@@ -412,10 +412,20 @@ Veja mais em [OpenAI Codex](https://github.com/openai/codex).
 
 Adicione a seguinte configuração às definições do servidor MCP do OpenAI Codex:
 
+#### Conexão de Servidor Local
+
 ```toml
 [mcp_servers.context7]
 args = ["-y", "@upstash/context7-mcp"]
 command = "npx"
+```
+
+#### Conexão de Servidor Remoto
+
+```toml
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
 ```
 
 </details>

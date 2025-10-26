@@ -673,10 +673,21 @@ Lihat [Dokumentasi Protokol Konteks Model Kiro](https://kiro.dev/docs/mcp/config
 <summary><b>Instal di OpenAI Codex</b></summary>
 Lihat [OpenAI Codex](https://github.com/openai/codex) untuk informasi lebih lanjut.
 Tambahkan konfigurasi berikut ke pengaturan server MCP OpenAI Codex Anda:
+
+#### Koneksi Server Lokal
+
 ```toml
 [mcp_servers.context7]
 args = ["-y", "@upstash/context7-mcp"]
 command = "npx"
+```
+
+#### Koneksi Server Jarak Jauh
+
+```toml
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
 ```
 </details>
 
