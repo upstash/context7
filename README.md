@@ -514,11 +514,21 @@ See [OpenAI Codex](https://github.com/openai/codex) for more information.
 
 Add the following configuration to your OpenAI Codex MCP server settings:
 
+#### Local Server Connection
+
 ```toml
 [mcp_servers.context7]
 args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
 command = "npx"
 startup_timeout_ms = 20_000
+```
+
+#### Remote Server Connection
+
+```toml
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
 ```
 
 > Optional troubleshooting — only if you see startup "request timed out" or "not found program". Most users can ignore this.

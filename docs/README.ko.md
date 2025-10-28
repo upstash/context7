@@ -770,10 +770,20 @@ Opencode 설정 파일에 다음을 추가하세요. 자세한 내용은 [Openco
 
 OpenAI Codex MCP 서버 설정에 다음 설정을 추가하세요:
 
+#### 로컬 서버 연결
+
 ```toml
 [mcp_servers.context7]
 args = ["-y", "@upstash/context7-mcp"]
 command = "npx"
+```
+
+#### 원격 서버 연결
+
+```toml
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
 ```
 
 </details>
