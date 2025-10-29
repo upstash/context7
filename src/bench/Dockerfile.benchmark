@@ -1,0 +1,22 @@
+# Dockerfile for running benchmarks
+FROM node:lts-alpine
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json tsconfig.json ./
+
+# Copy source code
+COPY src ./src
+
+# Install ALL dependencies (including devDependencies for benchmark)
+# Using npm ci for reproducible builds with package-lock.json
+RUN npm ci
+
+# Build the TypeScript code
+RUN npm run build
+
+# Create results directory
+RUN mkdir -p /app/src/bench/results
+
+# Run benchmark and keep container alive indefinitely for result retrieval
+CMD ["sh", "-c", "node dist/bench/benchmark.js && echo 'Benchmark complete. Results available. Pod will stay alive until manually deleted.' && sleep infinity"]

@@ -10,6 +10,8 @@
     "lint": "eslint \"**/*.{js,ts,tsx}\" --fix",
     "lint:check": "eslint \"**/*.{js,ts,tsx}\"",
     "start": "node dist/index.js --transport http",
+    "benchmark": "npm run build && node dist/bench/benchmark.js",
+    "benchmark:dev": "npm run build && npx tsx src/bench/benchmark.ts",
     "pack-mcpb": "bun install && bun run build && rm -rf node_modules && bun install --production && mv mcpb/.mcpbignore .mcpbignore && mv mcpb/manifest.json manifest.json && mv public/icon.png icon.png && mcpb validate manifest.json && mcpb pack . mcpb/context7.mcpb && mv manifest.json mcpb/manifest.json && mv .mcpbignore mcpb/.mcpbignore && mv icon.png public/icon.png && bun install"
   },
   "repository": {
@@ -40,6 +42,7 @@
   "homepage": "https://github.com/upstash/context7#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.20.1",
+    "@upstash/context7-mcp": "^1.0.26",
     "commander": "^14.0.0",
     "undici": "^6.6.3",
     "zod": "^3.24.2"

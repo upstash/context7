@@ -176,3 +176,9 @@ dist
 package-lock.json
 
 prompt.txt
+
+# Benchmark results
+temp/
+
+src/bench/results/*
+src/bench/k8s/*

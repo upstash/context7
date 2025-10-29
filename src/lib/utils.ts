@@ -1,29 +1,17 @@
 import { SearchResponse, SearchResult } from "./types.js";
 
 /**
- * Categorizes a trust score into a human-readable trust level.
+ * Maps numeric source reputation score to an interpretable label for LLM consumption.
  *
- * @param trustScore The numeric trust score (or undefined/-1 for no data)
- * @returns A categorized trust level: "Secure", "Moderate", or "Unknown"
+ * @returns One of: "High", "Medium", "Low", or "Unknown"
  */
-function categorizeTrustLevel(trustScore: number | undefined): string {
-  // No data or invalid value
-  if (trustScore === undefined || trustScore === -1) {
-    return "Moderate";
-  }
-
-  // Secure: >= 7
-  if (trustScore >= 7) {
-    return "Secure";
-  }
-
-  // Moderate: >= 4 and < 7
-  if (trustScore >= 4) {
-    return "Moderate";
-  }
-
-  // Unknown: < 4
-  return "Unknown";
+function getSourceReputationLabel(
+  sourceReputation?: number
+): "High" | "Medium" | "Low" | "Unknown" {
+  if (sourceReputation === undefined || sourceReputation < 0) return "Unknown";
+  if (sourceReputation >= 7) return "High";
+  if (sourceReputation >= 4) return "Medium";
+  return "Low";
 }
 
 /**
@@ -46,9 +34,9 @@ export function formatSearchResult(result: SearchResult): string {
     formattedResult.push(`- Code Snippets: ${result.totalSnippets}`);
   }
 
-  // Always add categorized trust level
-  const trustLevel = categorizeTrustLevel(result.trustScore);
-  formattedResult.push(`- Trust Level: ${trustLevel}`);
+  // Always add categorized source reputation
+  const reputationLabel = getSourceReputationLabel(result.trustScore);
+  formattedResult.push(`- Source Reputation: ${reputationLabel}`);
 
   // Only add benchmark score if it's a valid value
   if (result.benchmarkScore !== undefined && result.benchmarkScore > 0) {
@@ -78,24 +66,4 @@ export function formatSearchResults(searchResponse: SearchResponse): string {
 
   const formattedResults = searchResponse.results.map(formatSearchResult);
   return formattedResults.join("\n----------\n");
-}
-
-/**
- * Formats documentation results from multiple libraries with proper section headers.
- * For single library, returns content as-is.
- * For multiple libraries, adds headers and separators.
- *
- * @param results Array of library documentation results
- * @returns Formatted documentation string
- */
-export function formatMultiLibraryDocs(
-  results: Array<{ libraryId: string; docs: string }>
-): string {
-  if (results.length === 1) {
-    // Single library - return as-is
-    return results[0].docs;
-  }
-
-  // Multiple libraries - add section headers with separator between sections
-  return results.map(({ libraryId, docs }) => `=== ${libraryId} ===\n${docs}`).join("\n\n");
 }

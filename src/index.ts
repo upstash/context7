@@ -4,7 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { searchLibraries, fetchCodeDocs, fetchInfoDocs } from "./lib/api.js";
-import { formatSearchResults, formatMultiLibraryDocs } from "./lib/utils.js";
+import { formatSearchResults } from "./lib/utils.js";
 import { SearchResponse } from "./lib/types.js";
 import { createServer } from "http";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -123,21 +123,22 @@ function createServerInstance(clientIp?: string, apiKey?: string, transportType?
 
 You MUST call this function before 'get-coding-and-api-docs' or 'get-informational-docs' to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
-Selection Process:
-1. Analyze the query to understand what library/package the user is looking for
-2. Return the most relevant match based on:
+After receiving results, select the most relevant library by analyzing:
 - Name similarity to the query (exact matches prioritized)
 - Description relevance to the query's intent
 - Documentation coverage (prioritize libraries with higher Code Snippet counts)
-- Trust level (consider libraries with Secure or Moderate levels more authoritative)
+- Source reputation (consider libraries with High or Medium reputation more authoritative)
 
-Response Format:
-- Return the selected library ID in a clearly marked section
-- Provide a brief explanation for why this library was chosen
-- If multiple good matches exist, acknowledge this but proceed with the most relevant one
-- If no good matches exist, clearly state this and suggest query refinements
+Then clearly state which library ID you selected and why. If no good matches exist, inform the user and suggest query refinements.
 
-For ambiguous queries, request clarification before proceeding with a best-guess match.`,
+Result Fields:
+- Library ID: Context7-compatible identifier (format: /org/project or /org/project/version)
+- Title: Library or package name
+- Description: Short summary
+- Code Snippets: Number of available code examples
+- Source Reputation: Authority indicator (High, Medium, Low, or Unknown)
+- Benchmark Score: Quality indicator (100 is the highest score)
+- Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.`,
       inputSchema: {
         libraryName: z
           .string()
@@ -164,17 +165,6 @@ For ambiguous queries, request clarification before proceeding with a best-guess
 
       const responseText = `${transportType === "sse" ? sseDeprecationNotice + "\n\n" : ""}Available Libraries (top matches):
 
-Each result includes:
-- Library ID: Context7-compatible identifier (format: /org/project)
-- Name: Library or package name
-- Description: Short summary
-- Code Snippets: Number of available code examples
-- Trust Level: Categorized authority indicator (Secure, Moderate, or Unknown)
-- Benchmark Score: Quality indicator
-- Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.
-
-For best results, select libraries based on name match, trust level, snippet coverage, and relevance to your use case.
-
 ----------
 
 ${resultsText}`;
@@ -194,19 +184,43 @@ ${resultsText}`;
     "get-coding-and-api-docs",
     {
       title: "Get Coding and API Documentation",
-      description:
-        "Fetches code snippets, API references, function signatures, and implementation examples for a library. Use this tool when you need practical code examples, API usage patterns, or technical implementation details. You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query. Supports fetching from multiple libraries at once.",
+      description: `Fetches code snippets, API references, function signatures, implementation examples, guides, and tutorials for a library.
+
+When to use:
+- User needs practical code examples, guides, or tutorials
+- User asks "how to" questions about implementation
+- User wants API usage patterns or technical implementation details
+- If you are not sure which tool to use, use this tool
+
+Prerequisites:
+- Must call 'resolve-library-id' first to get valid library ID, UNLESS user explicitly provides ID in format '/org/project' or '/org/project/version'
+
+Using the topic parameter:
+- Extract semantic topics from user queries to significantly improve result relevance
+- Examples: "how to authenticate" → topic="authentication", "Next.js routing" → topic="routing", "database connections" → topic="database"
+- Use topics liberally - even broad queries often have extractable topics
+- Omit when you want to get default summarized documentation for the library
+
+**IMPORTANT - When Results Are Insufficient:**
+If the first response doesn't fully answer the user's question, you should:
+1. Try fetching additional pages (page=2, page=3, etc.) - there may be more relevant content on subsequent pages
+2. Try different topic keywords if the current topic didn't yield good results
+3. Try 'get-informational-docs' if code examples aren't available or if you need conceptual context
+4. Try a different library from the 'resolve-library-id' results if the current library lacks coverage
+
+Be proactive and exploratory - don't stop at the first result if it's insufficient.
+`,
       inputSchema: {
         context7CompatibleLibraryID: z
-          .union([z.string(), z.array(z.string()).min(1)])
+          .string()
           .describe(
-            "Single library ID as string (e.g., '/vercel/next.js'), or array of library IDs to fetch docs from multiple libraries at once (e.g., ['/vercel/next.js', '/mongodb/docs']). Each ID should be in the format '/org/project' or '/org/project/version', retrieved from 'resolve-library-id' or directly from user query."
+            "Library ID to fetch documentation from. Must be in the format '/org/project' or '/org/project/version' (e.g., '/vercel/next.js')."
           ),
         topic: z
           .string()
           .optional()
           .describe(
-            "Semantic search filter to focus on specific topics (e.g., 'authentication', 'routing', 'database queries'). Applied to all libraries when fetching multiple."
+            "Semantic topic to filter and improve result relevance. Extract from user query (e.g., 'Next.js authentication setup' → 'authentication', 'how to query MongoDB' → 'database queries'). Using topics improves result quality. Only omit if query is too broad to extract a topic."
           ),
         page: z
           .number()
@@ -216,46 +230,32 @@ ${resultsText}`;
           .optional()
           .default(1)
           .describe(
-            "Page number for pagination (default: 1, max: 10). Applied to all libraries when fetching multiple."
+            "Page number for pagination (default: 1, max: 10). If initial results don't answer the question, try page=2, page=3, etc. to find more relevant content."
           ),
         limit: z
           .number()
           .int()
-          .min(1)
+          .min(10)
           .max(50)
           .optional()
-          .default(10)
-          .describe(
-            "Number of items per page (default: 10, max: 50). Applied to all libraries when fetching multiple."
-          ),
+          .default(20)
+          .describe("Number of results to return (default: 20, max: 50)."),
       },
     },
     async ({ context7CompatibleLibraryID, topic, page = 1, limit = 10 }) => {
-      // Normalize to array
-      const libraryIds = Array.isArray(context7CompatibleLibraryID)
-        ? context7CompatibleLibraryID
-        : [context7CompatibleLibraryID];
-
-      // Fetch docs for each library
-      const results = await Promise.all(
-        libraryIds.map(async (libraryId) => {
-          const docs = await fetchCodeDocs(
-            libraryId,
-            {
-              topic,
-              page,
-              limit,
-            },
-            clientIp,
-            apiKey
-          );
-          return { libraryId, docs };
-        })
+      // Fetch docs for the library
+      const docs = await fetchCodeDocs(
+        context7CompatibleLibraryID,
+        {
+          topic,
+          page,
+          limit,
+        },
+        clientIp,
+        apiKey
       );
 
-      const formattedDocs = formatMultiLibraryDocs(results);
-      const responseText =
-        (transportType === "sse" ? sseDeprecationNotice + "\n\n" : "") + formattedDocs;
+      const responseText = (transportType === "sse" ? sseDeprecationNotice + "\n\n" : "") + docs;
 
       return {
         content: [
@@ -272,19 +272,46 @@ ${resultsText}`;
     "get-informational-docs",
     {
       title: "Get Informational Documentation",
-      description:
-        "Fetches conceptual documentation, guides, tutorials, and architecture explanations for a library. Use this tool when you need to understand concepts, learn about features, or get high-level architectural information. You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query. Supports fetching from multiple libraries at once.",
+      description: `Fetches narrative documentation and architecture explanations for a library.
+
+When to use:
+- User wants to understand concepts, architecture, or design decisions
+- Plan, pricing, or other non-technical information
+- User asks "what is" or "why does X work this way" questions
+- User needs high-level understanding without code examples
+- When 'get-coding-and-api-docs' doesn't have enough context or background information
+- If code/API examples would help answer the question, use 'get-coding-and-api-docs' instead
+- If you are not sure which tool to use, use 'get-coding-and-api-docs'
+
+Prerequisites:
+- Must call 'resolve-library-id' first to get valid library ID, UNLESS user explicitly provides ID in format '/org/project' or '/org/project/version'
+
+Using the topic parameter:
+- Extract semantic topics from user queries to significantly improve result relevance
+- Examples: "Next.js architecture" → topic="architecture", "React concepts" → topic="concepts", "deployment best practices" → topic="deployment"
+- Use topics liberally - even broad conceptual queries often have extractable topics
+- Never omit the topic parameter
+
+**IMPORTANT - When Results Are Insufficient:**
+If the first response doesn't fully answer the user's question, you should:
+1. Try fetching additional pages (page=2, page=3, etc.) - there may be more relevant content on subsequent pages
+2. Try different topic keywords if the current topic didn't yield good results
+3. Try 'get-coding-and-api-docs' if you need code examples or implementation details
+4. Try a different library from the 'resolve-library-id' results if the current library lacks coverage
+
+Be proactive and exploratory - don't stop at the first result if it's insufficient.
+`,
       inputSchema: {
         context7CompatibleLibraryID: z
-          .union([z.string(), z.array(z.string()).min(1)])
+          .string()
           .describe(
-            "Single library ID as string (e.g., '/vercel/next.js'), or array of library IDs to fetch docs from multiple libraries at once (e.g., ['/vercel/next.js', '/mongodb/docs']). Each ID should be in the format '/org/project' or '/org/project/version', retrieved from 'resolve-library-id' or directly from user query."
+            "Library ID to fetch documentation from. Must be in the format '/org/project' or '/org/project/version' (e.g., '/vercel/next.js')."
           ),
         topic: z
           .string()
           .optional()
           .describe(
-            "Semantic search filter to focus on specific topics (e.g., 'getting started', 'architecture', 'best practices'). Applied to all libraries when fetching multiple."
+            "Semantic topic to filter and improve result relevance. Extract from user query (e.g., 'getting started guide' → 'getting started', 'architecture overview' → 'architecture'). Using topics improves result quality. Only omit if query is too broad to extract a topic."
           ),
         page: z
           .number()
@@ -294,46 +321,32 @@ ${resultsText}`;
           .optional()
           .default(1)
           .describe(
-            "Page number for pagination (default: 1, max: 10). Applied to all libraries when fetching multiple."
+            "Page number for pagination (default: 1, max: 10). If initial results don't answer the question, try page=2, page=3, etc. to find more relevant content."
           ),
         limit: z
           .number()
           .int()
-          .min(1)
+          .min(10)
           .max(50)
           .optional()
-          .default(10)
-          .describe(
-            "Number of items per page (default: 10, max: 50). Applied to all libraries when fetching multiple."
-          ),
+          .default(20)
+          .describe("Number of results to return (default: 20, max: 50)."),
       },
     },
     async ({ context7CompatibleLibraryID, topic, page = 1, limit = 10 }) => {
-      // Normalize to array
-      const libraryIds = Array.isArray(context7CompatibleLibraryID)
-        ? context7CompatibleLibraryID
-        : [context7CompatibleLibraryID];
-
-      // Fetch docs for each library
-      const results = await Promise.all(
-        libraryIds.map(async (libraryId) => {
-          const docs = await fetchInfoDocs(
-            libraryId,
-            {
-              topic,
-              page,
-              limit,
-            },
-            clientIp,
-            apiKey
-          );
-          return { libraryId, docs };
-        })
+      // Fetch docs for the library
+      const docs = await fetchInfoDocs(
+        context7CompatibleLibraryID,
+        {
+          topic,
+          page,
+          limit,
+        },
+        clientIp,
+        apiKey
       );
 
-      const formattedDocs = formatMultiLibraryDocs(results);
-      const responseText =
-        (transportType === "sse" ? sseDeprecationNotice + "\n\n" : "") + formattedDocs;
+      const responseText = (transportType === "sse" ? sseDeprecationNotice + "\n\n" : "") + docs;
 
       return {
         content: [
