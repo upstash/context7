@@ -69,6 +69,18 @@ const CLI_PORT = (() => {
 
 // Store SSE transports by session ID
 const sseTransports: Record<string, SSEServerTransport> = {};
+// Counter for SSE deprecation notice usage
+let sseDeprecationCounter = 0;
+
+/**
+ * Tracks SSE deprecation notice usage and logs every 10th occurrence
+ */
+function trackSseDeprecation(): void {
+  sseDeprecationCounter++;
+  if (sseDeprecationCounter % 10 === 0) {
+    console.error(`SSE deprecated usage count: ${sseDeprecationCounter}`);
+  }
+}
 
 function getClientIp(req: IncomingMessage): string | undefined {
   // Check both possible header casings
@@ -166,6 +178,11 @@ For ambiguous queries, request clarification before proceeding with a best-guess
 
       const resultsText = formatSearchResults(searchResponse);
 
+      // Track SSE deprecation usage
+      if (transportType === "sse") {
+        trackSseDeprecation();
+      }
+
       const responseText = `${transportType === "sse" ? sseDeprecationNotice + "\n\n" : ""}Available Libraries (top matches):
 
 Each result includes:
@@ -238,6 +255,11 @@ ${resultsText}`;
             },
           ],
         };
+      }
+
+      // Track SSE deprecation usage
+      if (transportType === "sse") {
+        trackSseDeprecation();
       }
 
       const responseText =
