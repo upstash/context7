@@ -775,10 +775,20 @@ Xem [OpenAI Codex](https://github.com/openai/codex) để biết thêm thông ti
 
 Thêm cấu hình sau vào cài đặt OpenAI Codex MCP server của bạn:
 
+#### Kết nối Server Cục bộ
+
 ```toml
 [mcp_servers.context7]
 args = ["-y", "@upstash/context7-mcp"]
 command = "npx"
+```
+
+#### Kết nối Server Từ xa
+
+```toml
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
 ```
 
 </details>
