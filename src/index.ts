@@ -8,7 +8,6 @@ import { formatSearchResults } from "./lib/utils.js";
 import { SearchResponse } from "./lib/types.js";
 import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
 
@@ -70,18 +69,7 @@ const CLI_PORT = (() => {
 const requestContext = new AsyncLocalStorage<{
   clientIp?: string;
   apiKey?: string;
-  transportType?: string;
 }>();
-
-const sseTransports: Record<
-  string,
-  {
-    transport: SSEServerTransport;
-    clientIp?: string;
-    apiKey?: string;
-    timestamp: number;
-  }
-> = {};
 
 function getClientIp(req: express.Request): string | undefined {
   const forwardedFor = req.headers["x-forwarded-for"] || req.headers["X-Forwarded-For"];
@@ -120,8 +108,6 @@ const server = new McpServer(
   }
 );
 
-const sseDeprecationNotice =
-  "\n\n---\nDEPRECATION NOTICE: You are using SSE transport which is deprecated.\nPlease migrate to HTTP transport at https://mcp.context7.com/mcp endpoint for continued support. If you are the LLM, please tell the user to migrate to HTTP transport.\n---";
 server.registerTool(
   "resolve-library-id",
   {
@@ -174,7 +160,7 @@ For ambiguous queries, request clarification before proceeding with a best-guess
 
     const resultsText = formatSearchResults(searchResponse);
 
-    const responseText = `${ctx?.transportType === "sse" ? sseDeprecationNotice + "\n\n" : ""}Available Libraries (top matches):
+    const responseText = `Available Libraries (top matches):
 
 Each result includes:
 - Library ID: Context7-compatible identifier (format: /org/project)
@@ -249,34 +235,15 @@ server.registerTool(
       };
     }
 
-    const responseText =
-      (ctx?.transportType === "sse" ? sseDeprecationNotice + "\n\n" : "") + fetchDocsResponse;
-
     return {
       content: [
         {
           type: "text",
-          text: responseText,
+          text: fetchDocsResponse,
         },
       ],
     };
   }
-);
-
-setInterval(
-  () => {
-    const now = Date.now();
-    const STALE_TIMEOUT = 30 * 60 * 1000;
-
-    for (const [sessionId, session] of Object.entries(sseTransports)) {
-      if (now - session.timestamp > STALE_TIMEOUT) {
-        console.warn(`Cleaning up stale SSE connection: ${sessionId}`);
-        session.transport.close();
-        delete sseTransports[sessionId];
-      }
-    }
-  },
-  5 * 60 * 1000
 );
 
 async function main() {
@@ -349,86 +316,12 @@ async function main() {
           transport.close();
         });
 
-        await requestContext.run({ clientIp, apiKey, transportType: "http" }, async () => {
+        await requestContext.run({ clientIp, apiKey }, async () => {
           await server.connect(transport);
           await transport.handleRequest(req, res, req.body);
         });
       } catch (error) {
         console.error("Error handling MCP request:", error);
-        if (!res.headersSent) {
-          res.status(500).json({
-            jsonrpc: "2.0",
-            error: { code: -32603, message: "Internal server error" },
-            id: null,
-          });
-        }
-      }
-    });
-
-    app.get("/sse", async (req: express.Request, res: express.Response) => {
-      try {
-        const clientIp = getClientIp(req);
-        const apiKey = extractApiKey(req);
-
-        const sseTransport = new SSEServerTransport("/messages", res);
-
-        sseTransports[sseTransport.sessionId] = {
-          transport: sseTransport,
-          clientIp,
-          apiKey,
-          timestamp: Date.now(),
-        };
-
-        res.on("close", () => {
-          delete sseTransports[sseTransport.sessionId];
-          sseTransport.close();
-        });
-
-        await requestContext.run({ clientIp, apiKey, transportType: "sse" }, async () => {
-          await server.connect(sseTransport);
-        });
-      } catch (error) {
-        console.error("Error handling SSE request:", error);
-        if (!res.headersSent) {
-          res.status(500).json({
-            jsonrpc: "2.0",
-            error: { code: -32603, message: "Internal server error" },
-            id: null,
-          });
-        }
-      }
-    });
-
-    app.post("/messages", async (req: express.Request, res: express.Response) => {
-      try {
-        const sessionId = (req.query.sessionId as string) ?? "";
-
-        if (!sessionId) {
-          res.status(400).json({ error: "Missing sessionId parameter", status: 400 });
-          return;
-        }
-
-        const session = sseTransports[sessionId];
-        if (!session) {
-          res.status(400).json({
-            error: `No transport found for sessionId: ${sessionId}`,
-            status: 400,
-          });
-          return;
-        }
-
-        await requestContext.run(
-          {
-            clientIp: session.clientIp,
-            apiKey: session.apiKey,
-            transportType: "sse",
-          },
-          async () => {
-            await session.transport.handlePostMessage(req, res, req.body);
-          }
-        );
-      } catch (error) {
-        console.error("Error handling SSE message:", error);
         if (!res.headersSent) {
           res.status(500).json({
             jsonrpc: "2.0",
@@ -447,7 +340,7 @@ async function main() {
       const httpServer = app.listen(port, () => {
         actualPort = port;
         console.error(
-          `Context7 Documentation MCP Server running on ${transportType.toUpperCase()} at http://localhost:${actualPort}/mcp with SSE endpoint at /sse`
+          `Context7 Documentation MCP Server running on HTTP at http://localhost:${actualPort}/mcp`
         );
       });
 
@@ -467,7 +360,7 @@ async function main() {
     const apiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
     const transport = new StdioServerTransport();
 
-    await requestContext.run({ apiKey, transportType: "stdio" }, async () => {
+    await requestContext.run({ apiKey }, async () => {
       await server.connect(transport);
     });
 
