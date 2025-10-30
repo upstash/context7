@@ -77,7 +77,7 @@ let sseDeprecationCounter = 0;
  */
 function trackSseDeprecation(): void {
   sseDeprecationCounter++;
-  if (sseDeprecationCounter % 10 === 0) {
+  if (sseDeprecationCounter % 100 === 0) {
     console.error(`SSE deprecated usage count: ${sseDeprecationCounter}`);
   }
 }
