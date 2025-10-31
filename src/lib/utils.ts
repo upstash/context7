@@ -1,6 +1,20 @@
 import { SearchResponse, SearchResult } from "./types.js";
 
 /**
+ * Maps numeric source reputation score to an interpretable label for LLM consumption.
+ *
+ * @returns One of: "High", "Medium", "Low", or "Unknown"
+ */
+function getSourceReputationLabel(
+  sourceReputation?: number
+): "High" | "Medium" | "Low" | "Unknown" {
+  if (sourceReputation === undefined || sourceReputation < 0) return "Unknown";
+  if (sourceReputation >= 7) return "High";
+  if (sourceReputation >= 4) return "Medium";
+  return "Low";
+}
+
+/**
  * Formats a search result into a human-readable string representation.
  * Only shows code snippet count and GitHub stars when available (not equal to -1).
  *
@@ -20,9 +34,13 @@ export function formatSearchResult(result: SearchResult): string {
     formattedResult.push(`- Code Snippets: ${result.totalSnippets}`);
   }
 
-  // Only add trust score if it's a valid value
-  if (result.trustScore !== -1 && result.trustScore !== undefined) {
-    formattedResult.push(`- Trust Score: ${result.trustScore}`);
+  // Always add categorized source reputation
+  const reputationLabel = getSourceReputationLabel(result.trustScore);
+  formattedResult.push(`- Source Reputation: ${reputationLabel}`);
+
+  // Only add benchmark score if it's a valid value
+  if (result.benchmarkScore !== undefined && result.benchmarkScore > 0) {
+    formattedResult.push(`- Benchmark Score: ${result.benchmarkScore}`);
   }
 
   // Only add versions if it's a valid value
