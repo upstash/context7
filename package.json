@@ -40,7 +40,9 @@
   "homepage": "https://github.com/upstash/context7#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.5",
+    "@types/express": "^5.0.4",
     "commander": "^14.0.0",
+    "express": "^5.1.0",
     "undici": "^6.6.3",
     "zod": "^3.24.2"
   },

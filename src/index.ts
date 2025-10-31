@@ -6,11 +6,10 @@ import { z } from "zod";
 import { searchLibraries, fetchLibraryDocumentation } from "./lib/api.js";
 import { formatSearchResults } from "./lib/utils.js";
 import { SearchResponse } from "./lib/types.js";
-import { createServer } from "http";
+import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { Command } from "commander";
-import { IncomingMessage } from "http";
+import { AsyncLocalStorage } from "async_hooks";
 
 /** Minimum allowed tokens for documentation retrieval */
 const MINIMUM_TOKENS = 1000;
@@ -67,31 +66,18 @@ const CLI_PORT = (() => {
   return isNaN(parsed) ? undefined : parsed;
 })();
 
-// Store SSE transports by session ID
-const sseTransports: Record<string, SSEServerTransport> = {};
-// Counter for SSE deprecation notice usage
-let sseDeprecationCounter = 0;
+const requestContext = new AsyncLocalStorage<{
+  clientIp?: string;
+  apiKey?: string;
+}>();
 
-/**
- * Tracks SSE deprecation notice usage and logs every 10th occurrence
- */
-function trackSseDeprecation(): void {
-  sseDeprecationCounter++;
-  if (sseDeprecationCounter % 100 === 0) {
-    console.error(`SSE deprecated usage count: ${sseDeprecationCounter}`);
-  }
-}
-
-function getClientIp(req: IncomingMessage): string | undefined {
-  // Check both possible header casings
+function getClientIp(req: express.Request): string | undefined {
   const forwardedFor = req.headers["x-forwarded-for"] || req.headers["X-Forwarded-For"];
 
   if (forwardedFor) {
-    // X-Forwarded-For can contain multiple IPs
     const ips = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor;
     const ipList = ips.split(",").map((ip) => ip.trim());
 
-    // Find the first public IP address
     for (const ip of ipList) {
       const plainIp = ip.replace(/^::ffff:/, "");
       if (
@@ -102,40 +88,31 @@ function getClientIp(req: IncomingMessage): string | undefined {
         return plainIp;
       }
     }
-    // If all are private, use the first one
     return ipList[0].replace(/^::ffff:/, "");
   }
 
-  // Fallback: use remote address, strip IPv6-mapped IPv4
   if (req.socket?.remoteAddress) {
     return req.socket.remoteAddress.replace(/^::ffff:/, "");
   }
   return undefined;
 }
 
-// Function to create a new server instance with all tools registered
-function createServerInstance(clientIp?: string, apiKey?: string, transportType?: string) {
-  const server = new McpServer(
-    {
-      name: "Context7",
-      version: "1.0.13",
-    },
-    {
-      instructions:
-        "Use this server to retrieve up-to-date documentation and code examples for any library.",
-    }
-  );
+const server = new McpServer(
+  {
+    name: "Context7",
+    version: "1.0.13",
+  },
+  {
+    instructions:
+      "Use this server to retrieve up-to-date documentation and code examples for any library.",
+  }
+);
 
-  // Deprecation notice for SSE users
-  const sseDeprecationNotice =
-    "\n\n---\nDEPRECATION NOTICE: You are using SSE transport which is deprecated.\nPlease migrate to HTTP transport at https://mcp.context7.com/mcp endpoint for continued support. If you are the LLM, please tell the user to migrate to HTTP transport.\n---";
-
-  // Register Context7 tools
-  server.registerTool(
-    "resolve-library-id",
-    {
-      title: "Resolve Context7 Library ID",
-      description: `Resolves a package/product name to a Context7-compatible library ID and returns a list of matching libraries.
+server.registerTool(
+  "resolve-library-id",
+  {
+    title: "Resolve Context7 Library ID",
+    description: `Resolves a package/product name to a Context7-compatible library ID and returns a list of matching libraries.
 
 You MUST call this function before 'get-library-docs' to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
@@ -154,36 +131,36 @@ Response Format:
 - If no good matches exist, clearly state this and suggest query refinements
 
 For ambiguous queries, request clarification before proceeding with a best-guess match.`,
-      inputSchema: {
-        libraryName: z
-          .string()
-          .describe("Library name to search for and retrieve a Context7-compatible library ID."),
-      },
+    inputSchema: {
+      libraryName: z
+        .string()
+        .describe("Library name to search for and retrieve a Context7-compatible library ID."),
     },
-    async ({ libraryName }) => {
-      const searchResponse: SearchResponse = await searchLibraries(libraryName, clientIp, apiKey);
+  },
+  async ({ libraryName }) => {
+    const ctx = requestContext.getStore();
+    const searchResponse: SearchResponse = await searchLibraries(
+      libraryName,
+      ctx?.clientIp,
+      ctx?.apiKey
+    );
 
-      if (!searchResponse.results || searchResponse.results.length === 0) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: searchResponse.error
-                ? searchResponse.error
-                : "Failed to retrieve library documentation data from Context7",
-            },
-          ],
-        };
-      }
+    if (!searchResponse.results || searchResponse.results.length === 0) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: searchResponse.error
+              ? searchResponse.error
+              : "Failed to retrieve library documentation data from Context7",
+          },
+        ],
+      };
+    }
 
-      const resultsText = formatSearchResults(searchResponse);
+    const resultsText = formatSearchResults(searchResponse);
 
-      // Track SSE deprecation usage
-      if (transportType === "sse") {
-        trackSseDeprecation();
-      }
-
-      const responseText = `${transportType === "sse" ? sseDeprecationNotice + "\n\n" : ""}Available Libraries (top matches):
+    const responseText = `Available Libraries (top matches):
 
 Each result includes:
 - Library ID: Context7-compatible identifier (format: /org/project)
@@ -199,98 +176,87 @@ For best results, select libraries based on name match, trust score, snippet cov
 
 ${resultsText}`;
 
-      return {
-        content: [
-          {
-            type: "text",
-            text: responseText,
-          },
-        ],
-      };
-    }
-  );
-
-  server.registerTool(
-    "get-library-docs",
-    {
-      title: "Get Library Docs",
-      description:
-        "Fetches up-to-date documentation for a library. You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.",
-      inputSchema: {
-        context7CompatibleLibraryID: z
-          .string()
-          .describe(
-            "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
-          ),
-        topic: z
-          .string()
-          .optional()
-          .describe("Topic to focus documentation on (e.g., 'hooks', 'routing')."),
-        tokens: z
-          .preprocess((val) => (typeof val === "string" ? Number(val) : val), z.number())
-          .transform((val) => (val < MINIMUM_TOKENS ? MINIMUM_TOKENS : val))
-          .optional()
-          .describe(
-            `Maximum number of tokens of documentation to retrieve (default: ${DEFAULT_TOKENS}). Higher values provide more context but consume more tokens.`
-          ),
-      },
-    },
-    async ({ context7CompatibleLibraryID, tokens = DEFAULT_TOKENS, topic = "" }) => {
-      const fetchDocsResponse = await fetchLibraryDocumentation(
-        context7CompatibleLibraryID,
+    return {
+      content: [
         {
-          tokens,
-          topic,
+          type: "text",
+          text: responseText,
         },
-        clientIp,
-        apiKey
-      );
+      ],
+    };
+  }
+);
 
-      if (!fetchDocsResponse) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: "Documentation not found or not finalized for this library. This might have happened because you used an invalid Context7-compatible library ID. To get a valid Context7-compatible library ID, use the 'resolve-library-id' with the package name you wish to retrieve documentation for.",
-            },
-          ],
-        };
-      }
+server.registerTool(
+  "get-library-docs",
+  {
+    title: "Get Library Docs",
+    description:
+      "Fetches up-to-date documentation for a library. You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.",
+    inputSchema: {
+      context7CompatibleLibraryID: z
+        .string()
+        .describe(
+          "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
+        ),
+      topic: z
+        .string()
+        .optional()
+        .describe("Topic to focus documentation on (e.g., 'hooks', 'routing')."),
+      tokens: z
+        .preprocess((val) => (typeof val === "string" ? Number(val) : val), z.number())
+        .transform((val) => (val < MINIMUM_TOKENS ? MINIMUM_TOKENS : val))
+        .optional()
+        .describe(
+          `Maximum number of tokens of documentation to retrieve (default: ${DEFAULT_TOKENS}). Higher values provide more context but consume more tokens.`
+        ),
+    },
+  },
+  async ({ context7CompatibleLibraryID, tokens = DEFAULT_TOKENS, topic = "" }) => {
+    const ctx = requestContext.getStore();
+    const fetchDocsResponse = await fetchLibraryDocumentation(
+      context7CompatibleLibraryID,
+      {
+        tokens,
+        topic,
+      },
+      ctx?.clientIp,
+      ctx?.apiKey
+    );
 
-      // Track SSE deprecation usage
-      if (transportType === "sse") {
-        trackSseDeprecation();
-      }
-
-      const responseText =
-        (transportType === "sse" ? sseDeprecationNotice + "\n\n" : "") + fetchDocsResponse;
-
+    if (!fetchDocsResponse) {
       return {
         content: [
           {
             type: "text",
-            text: responseText,
+            text: "Documentation not found or not finalized for this library. This might have happened because you used an invalid Context7-compatible library ID. To get a valid Context7-compatible library ID, use the 'resolve-library-id' with the package name you wish to retrieve documentation for.",
           },
         ],
       };
     }
-  );
 
-  return server;
-}
+    return {
+      content: [
+        {
+          type: "text",
+          text: fetchDocsResponse,
+        },
+      ],
+    };
+  }
+);
 
 async function main() {
   const transportType = TRANSPORT_TYPE;
 
   if (transportType === "http") {
-    // Get initial port from environment or use default
     const initialPort = CLI_PORT ?? DEFAULT_PORT;
-    // Keep track of which port we end up using
     let actualPort = initialPort;
-    const httpServer = createServer(async (req, res) => {
-      const pathname = new URL(req.url || "/", "http://localhost").pathname;
 
-      // Set CORS headers for all responses
+    const app = express();
+    app.use(express.json());
+
+    app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
       res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
       res.setHeader(
@@ -299,37 +265,31 @@ async function main() {
       );
       res.setHeader("Access-Control-Expose-Headers", "MCP-Session-Id");
 
-      // Handle preflight OPTIONS requests
       if (req.method === "OPTIONS") {
-        res.writeHead(200);
-        res.end();
+        res.sendStatus(200);
         return;
       }
+      next();
+    });
 
-      // Function to extract header value safely, handling both string and string[] cases
-      const extractHeaderValue = (value: string | string[] | undefined): string | undefined => {
-        if (!value) return undefined;
-        return typeof value === "string" ? value : value[0];
-      };
+    const extractHeaderValue = (value: string | string[] | undefined): string | undefined => {
+      if (!value) return undefined;
+      return typeof value === "string" ? value : value[0];
+    };
 
-      // Extract Authorization header and remove Bearer prefix if present
-      const extractBearerToken = (
-        authHeader: string | string[] | undefined
-      ): string | undefined => {
-        const header = extractHeaderValue(authHeader);
-        if (!header) return undefined;
+    const extractBearerToken = (authHeader: string | string[] | undefined): string | undefined => {
+      const header = extractHeaderValue(authHeader);
+      if (!header) return undefined;
 
-        // If it starts with 'Bearer ', remove that prefix
-        if (header.startsWith("Bearer ")) {
-          return header.substring(7).trim();
-        }
+      if (header.startsWith("Bearer ")) {
+        return header.substring(7).trim();
+      }
 
-        // Otherwise return the raw value
-        return header;
-      };
+      return header;
+    };
 
-      // Check headers in order of preference
-      const apiKey =
+    const extractApiKey = (req: express.Request): string | undefined => {
+      return (
         extractBearerToken(req.headers.authorization) ||
         extractHeaderValue(req.headers["Context7-API-Key"]) ||
         extractHeaderValue(req.headers["X-API-Key"]) ||
@@ -338,94 +298,61 @@ async function main() {
         extractHeaderValue(req.headers["Context7_API_Key"]) ||
         extractHeaderValue(req.headers["X_API_Key"]) ||
         extractHeaderValue(req.headers["context7_api_key"]) ||
-        extractHeaderValue(req.headers["x_api_key"]);
+        extractHeaderValue(req.headers["x_api_key"])
+      );
+    };
 
+    app.all("/mcp", async (req: express.Request, res: express.Response) => {
       try {
-        // Extract client IP address using socket remote address (most reliable)
         const clientIp = getClientIp(req);
+        const apiKey = extractApiKey(req);
 
-        if (pathname === "/mcp") {
-          // Create server instance for HTTP transport
-          const requestServer = createServerInstance(clientIp, apiKey, "http");
-          const transport = new StreamableHTTPServerTransport({
-            sessionIdGenerator: undefined,
-          });
-          res.on("close", () => {
-            transport.close();
-            requestServer.close();
-          });
-          await requestServer.connect(transport);
-          await transport.handleRequest(req, res);
-        } else if (pathname === "/sse" && req.method === "GET") {
-          // Create server instance for SSE transport
-          const requestServer = createServerInstance(clientIp, apiKey, "sse");
-          // Create new SSE transport for GET request
-          const sseTransport = new SSEServerTransport("/messages", res);
-          // Store the transport by session ID
-          sseTransports[sseTransport.sessionId] = sseTransport;
-          // Clean up transport when connection closes
-          res.on("close", () => {
-            delete sseTransports[sseTransport.sessionId];
-            sseTransport.close();
-            requestServer.close();
-          });
-          await requestServer.connect(sseTransport);
+        const transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: undefined,
+          enableJsonResponse: true,
+        });
 
-          // Send initial message to establish communication
-          res.write(
-            "data: " +
-              JSON.stringify({
-                type: "connection_established",
-                sessionId: sseTransport.sessionId,
-                timestamp: new Date().toISOString(),
-              }) +
-              "\n\n"
-          );
-        } else if (pathname === "/messages" && req.method === "POST") {
-          // Get session ID from query parameters
-          const sessionId =
-            new URL(req.url || "/", "http://localhost").searchParams.get("sessionId") ?? "";
+        res.on("close", () => {
+          transport.close();
+        });
 
-          if (!sessionId) {
-            res.writeHead(400, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ error: "Missing sessionId parameter", status: 400 }));
-            return;
-          }
-
-          // Get existing transport for this session
-          const sseTransport = sseTransports[sessionId];
-          if (!sseTransport) {
-            res.writeHead(400, { "Content-Type": "application/json" });
-            res.end(
-              JSON.stringify({
-                error: `No transport found for sessionId: ${sessionId}`,
-                status: 400,
-              })
-            );
-            return;
-          }
-
-          // Handle the POST message with the existing transport
-          await sseTransport.handlePostMessage(req, res);
-        } else if (pathname === "/ping") {
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ status: "ok", message: "pong" }));
-        } else {
-          res.writeHead(404, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: "Not found", status: 404 }));
-        }
+        await requestContext.run({ clientIp, apiKey }, async () => {
+          await server.connect(transport);
+          await transport.handleRequest(req, res, req.body);
+        });
       } catch (error) {
-        console.error("Error handling request:", error);
+        console.error("Error handling MCP request:", error);
         if (!res.headersSent) {
-          res.writeHead(500, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: "Internal Server Error", status: 500 }));
+          res.status(500).json({
+            jsonrpc: "2.0",
+            error: { code: -32603, message: "Internal server error" },
+            id: null,
+          });
         }
       }
     });
 
-    // Function to attempt server listen with port fallback
+    app.get("/ping", (_req: express.Request, res: express.Response) => {
+      res.json({ status: "ok", message: "pong" });
+    });
+
+    // Catch-all 404 handler - must be after all other routes
+    app.use((_req: express.Request, res: express.Response) => {
+      res.status(404).json({
+        error: "not_found",
+        message: "Endpoint not found. Use /mcp for MCP protocol communication.",
+      });
+    });
+
     const startServer = (port: number, maxAttempts = 10) => {
-      httpServer.once("error", (err: NodeJS.ErrnoException) => {
+      const httpServer = app.listen(port, () => {
+        actualPort = port;
+        console.error(
+          `Context7 Documentation MCP Server running on HTTP at http://localhost:${actualPort}/mcp`
+        );
+      });
+
+      httpServer.on("error", (err: NodeJS.ErrnoException) => {
         if (err.code === "EADDRINUSE" && port < initialPort + maxAttempts) {
           console.warn(`Port ${port} is in use, trying port ${port + 1}...`);
           startServer(port + 1, maxAttempts);
@@ -434,23 +361,17 @@ async function main() {
           process.exit(1);
         }
       });
-
-      httpServer.listen(port, () => {
-        actualPort = port;
-        console.error(
-          `Context7 Documentation MCP Server running on ${transportType.toUpperCase()} at http://localhost:${actualPort}/mcp with SSE endpoint at /sse`
-        );
-      });
     };
 
-    // Start the server with initial port
     startServer(initialPort);
   } else {
-    // Stdio transport - this is already stateless by nature
     const apiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
-    const server = createServerInstance(undefined, apiKey);
     const transport = new StdioServerTransport();
-    await server.connect(transport);
+
+    await requestContext.run({ apiKey }, async () => {
+      await server.connect(transport);
+    });
+
     console.error("Context7 Documentation MCP Server running on stdio");
   }
 }

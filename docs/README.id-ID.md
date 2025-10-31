@@ -127,7 +127,7 @@ Tambahkan ini ke file konfigurasi MCP Windsurf Anda. Lihat [dokumentasi MCP Wind
 {
   "mcpServers": {
     "context7": {
-      "serverUrl": "https://mcp.context7.com/sse"
+      "serverUrl": "https://mcp.context7.com/mcp"
     }
   }
 }
@@ -303,12 +303,6 @@ Jalankan perintah ini. Lihat [dokumentasi MCP Claude Code](https://docs.anthropi
 
 ```sh
 claude mcp add --transport http context7 https://mcp.context7.com/mcp
-```
-
-Atau menggunakan transport SSE:
-
-```sh
-claude mcp add --transport sse context7 https://mcp.context7.com/sse
 ```
 
 #### Koneksi Server Lokal Claude Code
@@ -689,6 +683,7 @@ command = "npx"
 url = "https://mcp.context7.com/mcp"
 http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
 ```
+
 </details>
 
 <details>
@@ -778,8 +773,8 @@ bun run dist/index.js
 
 `context7-mcp` menerima bendera CLI berikut:
 
-- `--transport <stdio|http|sse>` – Transportasi yang digunakan (`stdio` secara default).
-- `--port <number>` – Port yang didengarkan saat menggunakan transport `http` atau `sse` (default `3000`).
+- `--transport <stdio|http>` – Transportasi yang digunakan (`stdio` secara default).
+- `--port <number>` – Port yang didengarkan saat menggunakan transport `http` (default `3000`).
   Contoh dengan transport http dan port 8080:
 
 ```bash
