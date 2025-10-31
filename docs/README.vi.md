@@ -150,7 +150,7 @@ Thêm cấu hình này vào file cấu hình Windsurf MCP của bạn. Xem [tài
 {
   "mcpServers": {
     "context7": {
-      "serverUrl": "https://mcp.context7.com/sse"
+      "serverUrl": "https://mcp.context7.com/mcp"
     }
   }
 }
@@ -346,12 +346,6 @@ Chạy lệnh này. Xem [tài liệu Claude Code MCP](https://docs.anthropic.com
 
 ```sh
 claude mcp add --transport http context7 https://mcp.context7.com/mcp
-```
-
-Hoặc sử dụng SSE transport:
-
-```sh
-claude mcp add --transport sse context7 https://mcp.context7.com/sse
 ```
 
 #### Kết nối Claude Code Local Server
@@ -882,8 +876,8 @@ bun run dist/index.js
 
 `context7-mcp` chấp nhận các CLI flags sau:
 
-- `--transport <stdio|http|sse>` – Transport để sử dụng (`stdio` theo mặc định).
-- `--port <number>` – Port để lắng nghe khi sử dụng transport `http` hoặc `sse` (mặc định `3000`).
+- `--transport <stdio|http>` – Transport để sử dụng (`stdio` theo mặc định).
+- `--port <number>` – Port để lắng nghe khi sử dụng transport `http` (mặc định `3000`).
 
 Ví dụ với http transport và port 8080:
 

@@ -38,12 +38,8 @@ Context7 fetches up-to-date code examples and documentation right into your LLM'
 
 No tab-switching, no hallucinated APIs that don't exist, no outdated code generation.
 
-
-
 > [!NOTE]
-> This repository hosts the source code of Context7 MCP server. The supporting components — API backend, parsing engine, and crawling engine — are private and not part of this release. 
-
-
+> This repository hosts the source code of Context7 MCP server. The supporting components — API backend, parsing engine, and crawling engine — are private and not part of this release.
 
 ## 📚 Adding Projects
 
@@ -56,11 +52,6 @@ Check out our [project addition guide](./docs/adding-projects.md) to learn how t
 - Node.js >= v18.0.0
 - Cursor, Claude Code, VSCode, Windsurf or another MCP Client
 - Context7 API Key (Optional) for higher rate limits and private repositories (Get yours by creating an account at [context7.com/dashboard](https://context7.com/dashboard))
-
-> [!WARNING]
-> **SSE Protocol Deprecation Notice**
->
-> The Server-Sent Events (SSE) transport protocol is deprecated and its endpoint will be removed in upcoming releases. Please use HTTP or stdio transport methods instead.
 
 <details>
 <summary><b>Installing via Smithery</b></summary>
@@ -1171,7 +1162,7 @@ bun run dist/index.js
 
 `context7-mcp` accepts the following CLI flags:
 
-- `--transport <stdio|http>` – Transport to use (`stdio` by default). Note that HTTP transport automatically provides both HTTP and SSE endpoints.
+- `--transport <stdio|http>` – Transport to use (`stdio` by default). Use `http` for remote HTTP server or `stdio` for local integration.
 - `--port <number>` – Port to listen on when using `http` transport (default `3000`).
 - `--api-key <key>` – API key for authentication (or set `CONTEXT7_API_KEY` env var). You can get your API key by creating an account at [context7.com/dashboard](https://context7.com/dashboard).
 
@@ -1316,7 +1307,6 @@ Use the `--experimental-fetch` flag to bypass TLS-related problems:
 ## ⚠️ Disclaimer
 
 1- Context7 projects are community-contributed and while we strive to maintain high quality, we cannot guarantee the accuracy, completeness, or security of all library documentation. Projects listed in Context7 are developed and maintained by their respective owners, not by Context7. If you encounter any suspicious, inappropriate, or potentially harmful content, please use the "Report" button on the project page to notify us immediately. We take all reports seriously and will review flagged content promptly to maintain the integrity and safety of our platform. By using Context7, you acknowledge that you do so at your own discretion and risk.
-
 
 2- This repository hosts the MCP server’s source code. The supporting components — API backend, parsing engine, and crawling engine — are private and not part of this release.
 
