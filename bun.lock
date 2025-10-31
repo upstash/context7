@@ -6,7 +6,6 @@
       "dependencies": {
         "@modelcontextprotocol/sdk": "^1.20.1",
         "@types/express": "^5.0.4",
-        "@upstash/context7-mcp": "^1.0.26",
         "commander": "^14.0.0",
         "express": "^5.1.0",
         "undici": "^6.6.3",
@@ -125,8 +124,6 @@
     "@typescript-eslint/utils": ["@typescript-eslint/utils@8.41.0", "", { "dependencies": { "@eslint-community/eslint-utils": "^4.7.0", "@typescript-eslint/scope-manager": "8.41.0", "@typescript-eslint/types": "8.41.0", "@typescript-eslint/typescript-estree": "8.41.0" }, "peerDependencies": { "eslint": "^8.57.0 || ^9.0.0", "typescript": ">=4.8.4 <6.0.0" } }, "sha512-udbCVstxZ5jiPIXrdH+BZWnPatjlYwJuJkDA4Tbo3WyYLh8NvB+h/bKeSZHDOFKfphsZYJQqaFtLeXEqurQn1A=="],
 
     "@typescript-eslint/visitor-keys": ["@typescript-eslint/visitor-keys@8.41.0", "", { "dependencies": { "@typescript-eslint/types": "8.41.0", "eslint-visitor-keys": "^4.2.1" } }, "sha512-+GeGMebMCy0elMNg67LRNoVnUFPIm37iu5CmHESVx56/9Jsfdpsvbv605DQ81Pi/x11IdKUsS5nzgTYbCQU9fg=="],
-
-    "@upstash/context7-mcp": ["@upstash/context7-mcp@1.0.26", "", { "dependencies": { "@modelcontextprotocol/sdk": "^1.17.5", "commander": "^14.0.0", "undici": "^6.6.3", "zod": "^3.24.2" }, "bin": { "context7-mcp": "dist/index.js" } }, "sha512-Iz6nJIXpMzkKd7kcli00M61G76+74X6C/x3Jg4icxnlUQb+w0TqQAziXNTFZZ5gBKmgPKovPoZ6gvtvxmiD+7Q=="],
 
     "@vercel/oidc": ["@vercel/oidc@3.0.3", "", {}, "sha512-yNEQvPcVrK9sIe637+I0jD6leluPxzwJKx/Haw6F4H77CdDsszUn5V3o96LPziXkSNE2B83+Z3mjqGKBK/R6Gg=="],
 
