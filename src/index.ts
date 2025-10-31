@@ -336,6 +336,14 @@ async function main() {
       res.json({ status: "ok", message: "pong" });
     });
 
+    // Catch-all 404 handler - must be after all other routes
+    app.use((_req: express.Request, res: express.Response) => {
+      res.status(404).json({
+        error: "not_found",
+        message: "Endpoint not found. Use /mcp for MCP protocol communication.",
+      });
+    });
+
     const startServer = (port: number, maxAttempts = 10) => {
       const httpServer = app.listen(port, () => {
         actualPort = port;
