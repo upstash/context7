@@ -150,7 +150,7 @@ Windsurf MCP 설정 파일에 다음을 추가하세요. 자세한 내용은 [Wi
 {
   "mcpServers": {
     "context7": {
-      "serverUrl": "https://mcp.context7.com/sse"
+      "serverUrl": "https://mcp.context7.com/mcp"
     }
   }
 }
@@ -346,12 +346,6 @@ Visual Studio MCP 설정 파일에 다음을 추가하세요(자세한 내용은
 
 ```sh
 claude mcp add --transport http context7 https://mcp.context7.com/mcp
-```
-
-또는 SSE 전송 사용:
-
-```sh
-claude mcp add --transport sse context7 https://mcp.context7.com/sse
 ```
 
 #### Claude Code 로컬 서버 연결
@@ -770,10 +764,20 @@ Opencode 설정 파일에 다음을 추가하세요. 자세한 내용은 [Openco
 
 OpenAI Codex MCP 서버 설정에 다음 설정을 추가하세요:
 
+#### 로컬 서버 연결
+
 ```toml
 [mcp_servers.context7]
 args = ["-y", "@upstash/context7-mcp"]
 command = "npx"
+```
+
+#### 원격 서버 연결
+
+```toml
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
 ```
 
 </details>
@@ -838,8 +842,8 @@ bun run dist/index.js
 
 `context7-mcp`는 다음 CLI 플래그를 지원합니다:
 
-- `--transport <stdio|http|sse>` – 사용할 전송 방식 (`stdio`가 기본값).
-- `--port <number>` – `http` 또는 `sse` 전송 방식 사용 시 수신 대기할 포트 (기본값 `3000`).
+- `--transport <stdio|http>` – 사용할 전송 방식 (`stdio`가 기본값).
+- `--port <number>` – `http` 전송 방식 사용 시 수신 대기할 포트 (기본값 `3000`).
 
 http 전송과 포트 8080을 사용하는 예시:
 

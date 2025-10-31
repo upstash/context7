@@ -150,7 +150,7 @@ Smithery キーは [Smithery.ai Web ページ](https://smithery.ai/server/@upsta
 {
   "mcpServers": {
     "context7": {
-      "serverUrl": "https://mcp.context7.com/sse"
+      "serverUrl": "https://mcp.context7.com/mcp"
     }
   }
 }
@@ -303,7 +303,7 @@ Smithery キーは [Smithery.ai Web ページ](https://smithery.ai/server/@upsta
 #### Claude Code リモートサーバー接続
 
 ```sh
-claude mcp add --transport sse context7 https://mcp.context7.com/sse
+claude mcp add --transport http context7 https://mcp.context7.com/mcp
 ```
 
 #### Claude Code ローカルサーバー接続
@@ -606,8 +606,8 @@ bun run dist/index.js
 
 `context7-mcp` は以下の CLI フラグを受け付けます：
 
-- `--transport <stdio|http|sse>` – 使用するトランスポート（デフォルトは `stdio`）。
-- `--port <number>` – `http` または `sse` トランスポート使用時にリッスンするポート（デフォルト `3000`）。
+- `--transport <stdio|http>` – 使用するトランスポート（デフォルトは `stdio`）。
+- `--port <number>` – `http` トランスポート使用時にリッスンするポート（デフォルト `3000`）。
 
 http トランスポートとポート 8080 の例：
 

@@ -139,7 +139,7 @@ npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME>
 {
   "mcpServers": {
     "context7": {
-      "serverUrl": "https://mcp.context7.com/sse"
+      "serverUrl": "https://mcp.context7.com/mcp"
     }
   }
 }
@@ -335,12 +335,6 @@ npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME>
 
 ```sh
 claude mcp add --transport http context7 https://mcp.context7.com/mcp
-```
-
-或者使用 SSE 傳輸方式：
-
-```sh
-claude mcp add --transport sse context7 https://mcp.context7.com/sse
 ```
 
 #### Claude Code 本地伺服器連線
@@ -766,10 +760,20 @@ Windows 的設定與 Linux 或 macOS 略有不同（_範例以 Cline 為例_）�
 
 將下列設定加入你的 OpenAI Codex MCP 伺服器設定：
 
+#### 本地伺服器連接
+
 ```toml
 [mcp_servers.context7]
 args = ["-y", "@upstash/context7-mcp"]
 command = "npx"
+```
+
+#### 遠端伺服器連接
+
+```toml
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
 ```
 
 </details>

@@ -111,12 +111,6 @@ Execute este comando. Veja mais em [Claude Code MCP docs](https://docs.anthropic
 claude mcp add --transport http context7 https://mcp.context7.com/mcp
 ```
 
-Ou usando transporte SSE:
-
-```sh
-claude mcp add --transport sse context7 https://mcp.context7.com/sse
-```
-
 #### Conexão Local do Servidor Claude Code
 
 ```sh
@@ -412,10 +406,20 @@ Veja mais em [OpenAI Codex](https://github.com/openai/codex).
 
 Adicione a seguinte configuração às definições do servidor MCP do OpenAI Codex:
 
+#### Conexão de Servidor Local
+
 ```toml
 [mcp_servers.context7]
 args = ["-y", "@upstash/context7-mcp"]
 command = "npx"
+```
+
+#### Conexão de Servidor Remoto
+
+```toml
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
 ```
 
 </details>
@@ -774,7 +778,7 @@ Para mais informações e solução de problemas, consulte a [documentação de 
 
 Adicione isto ao arquivo de configuração do Crush. Veja mais em [Crush MCP docs](https://github.com/charmbracelet/crush#mcps).
 
-#### Conexão Remota do Crush (HTTP)
+#### Conexão Remota do Crush
 
 ```json
 {
@@ -783,20 +787,6 @@ Adicione isto ao arquivo de configuração do Crush. Veja mais em [Crush MCP doc
     "context7": {
       "type": "http",
       "url": "https://mcp.context7.com/mcp"
-    }
-  }
-}
-```
-
-#### Conexão Remota do Crush (SSE)
-
-```json
-{
-  "$schema": "https://charm.land/crush.json",
-  "mcp": {
-    "context7": {
-      "type": "sse",
-      "url": "https://mcp.context7.com/sse"
     }
   }
 }
@@ -1019,7 +1009,7 @@ bun run dist/index.js
 
 `context7-mcp` aceita as seguintes flags de CLI:
 
-- `--transport <stdio|http>` – Transporte a ser usado (`stdio` por padrão). Observe que o transporte HTTP fornece automaticamente endpoints HTTP e SSE.
+- `--transport <stdio|http>` – Transporte a ser usado (`stdio` por padrão). Use `http` para servidor HTTP remoto ou `stdio` para integração local.
 - `--port <number>` – Porta para escutar ao usar o transporte `http` (padrão `3000`).
 
 Exemplo com transporte http e porta 8080:
