@@ -639,6 +639,57 @@ Untuk informasi lebih lanjut, lihat [dokumentasi resmi GitHub](https://docs.gith
 </details>
 
 <details>
+<summary><b>Instal di Copilot CLI</b></summary>
+
+1.  Buka file konfigurasi MCP Copilot CLI. Lokasinya adalah `~/.copilot/mcp-config.json` (di mana `~` adalah direktori home Anda).
+2.  Tambahkan yang berikut ke objek `mcpServers` di file `mcp-config.json` Anda:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      },
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ]
+    }
+  }
+}
+```
+
+Atau, untuk server lokal:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "local",
+      "command": "npx",
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ],
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "YOUR_API_KEY"
+      ]
+    }
+  }
+}
+```
+
+Jika file `mcp-config.json` tidak ada, buatlah.
+
+</details>
+
+<details>
 <summary><b>Instal di Kiro</b></summary>
 Lihat [Dokumentasi Protokol Konteks Model Kiro](https://kiro.dev/docs/mcp/configuration/) untuk detail.
 1. Navigasikan `Kiro` > `Server MCP`

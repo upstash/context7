@@ -443,6 +443,57 @@ claude mcp add context7 -- npx -y @upstash/context7-mcp
 </details>
 
 <details>
+<summary><b>在 Copilot CLI 中安裝</b></summary>
+
+1.  打開 Copilot CLI MCP 設定檔。位置為 `~/.copilot/mcp-config.json`（其中 `~` 是您的主目錄）。
+2.  在 `mcp-config.json` 檔案中的 `mcpServers` 物件新增下列内容：
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      },
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ]
+    }
+  }
+}
+```
+
+或者，對於本地伺服器：
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "local",
+      "command": "npx",
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ],
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "YOUR_API_KEY"
+      ]
+    }
+  }
+}
+```
+
+如果 `mcp-config.json` 檔案不存在，請建立它。
+
+</details>
+
+<details>
 <summary><b>使用 Docker</b></summary>
 
 若你偏好在 Docker 容器中執行 MCP 伺服器：

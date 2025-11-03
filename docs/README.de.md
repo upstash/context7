@@ -189,6 +189,54 @@ Füge die folgende Konfiguration zum Abschnitt `mcp` deiner Copilot Coding Agent
 
 Weitere Informationen findest du in der [offiziellen GitHub-Dokumentation](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/agents/copilot-coding-agent/extending-copilot-coding-agent-with-mcp).
 
+### Installation im Copilot CLI
+
+1.  Öffne die MCP-Konfigurationsdatei von Copilot CLI. Der Ort ist `~/.copilot/mcp-config.json` (wobei `~` dein Home-Verzeichnis ist).
+2.  Füge Folgendes zum `mcpServers`-Objekt in deiner `mcp-config.json`-Datei hinzu:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      },
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ]
+    }
+  }
+}
+```
+
+Oder für einen lokalen Server:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "local",
+      "command": "npx",
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ],
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "YOUR_API_KEY"
+      ]
+    }
+  }
+}
+```
+
+Falls die `mcp-config.json`-Datei nicht existiert, erstelle sie.
+
 ### Docker verwenden
 
 Wenn du den MCP-Server lieber in einem Docker-Container ausführen möchtest:

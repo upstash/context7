@@ -740,6 +740,57 @@ http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
 </details>
 
 <details>
+<summary><b>在 Copilot CLI 中安装</b></summary>
+
+1.  打开 Copilot CLI MCP 配置文件。文件位置是 `~/.copilot/mcp-config.json`（其中 `~` 是你的主目录）。
+2.  将以下内容添加到 `mcp-config.json` 文件中的 `mcpServers` 对象：
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      },
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ]
+    }
+  }
+}
+```
+
+或者，对于本地服务器：
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "local",
+      "command": "npx",
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ],
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "YOUR_API_KEY"
+      ]
+    }
+  }
+}
+```
+
+如果 `mcp-config.json` 文件不存在，请创建它。
+
+</details>
+
+<details>
 <summary><b>在 LM Studio 中安装</b></summary>
 
 更多详情请参见 [LM Studio MCP 支持](https://lmstudio.ai/blog/lmstudio-v0.3.17)。

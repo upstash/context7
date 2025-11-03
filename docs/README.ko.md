@@ -430,6 +430,57 @@ Claude Desktop의 `claude_desktop_config.json` 파일에 다음을 추가하세�
 </details>
 
 <details>
+<summary><b>Copilot CLI 설치</b></summary>
+
+1.  Copilot CLI MCP 구성 파일을 엽니다. 파일 위치는 `~/.copilot/mcp-config.json`입니다(`~`는 홈 디렉토리).
+2.  `mcp-config.json` 파일의 `mcpServers` 객체에 다음을 추가하세요:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      },
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ]
+    }
+  }
+}
+```
+
+또는 로컬 서버의 경우:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "local",
+      "command": "npx",
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ],
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "YOUR_API_KEY"
+      ]
+    }
+  }
+}
+```
+
+`mcp-config.json` 파일이 없으면 생성하세요.
+
+</details>
+
+<details>
 <summary><b>Docker 사용하기</b></summary>
 
 MCP 서버를 Docker 컨테이너에서 실행하려면:

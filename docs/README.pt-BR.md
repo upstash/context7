@@ -704,6 +704,57 @@ Para mais informações, veja a [documentação oficial do GitHub](https://docs.
 </details>
 
 <details>
+<summary><b>Instalar no Copilot CLI</b></summary>
+
+1.  Abra o arquivo de configuração MCP do Copilot CLI. A localização é `~/.copilot/mcp-config.json` (onde `~` é o seu diretório home).
+2.  Adicione o seguinte ao objeto `mcpServers` no seu arquivo `mcp-config.json`:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      },
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ]
+    }
+  }
+}
+```
+
+Ou, para um servidor local:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "local",
+      "command": "npx",
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ],
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "YOUR_API_KEY"
+      ]
+    }
+  }
+}
+```
+
+Se o arquivo `mcp-config.json` não existir, crie-o.
+
+</details>
+
+<details>
 <summary><b>Instalar no LM Studio</b></summary>
 
 Veja mais em [Suporte a MCP no LM Studio](https://lmstudio.ai/blog/lmstudio-v0.3.17).
