@@ -844,7 +844,7 @@ For more information, see the [official GitHub documentation](https://docs.githu
 <summary><b>Install in Copilot CLI</b></summary>
 
 1.  Open the Copilot CLI MCP config file. The location is `~/.copilot/mcp-config.json` (where `~` is your home directory).
-2.  Add the following to the `mcpServers` object in your `settings.json` file:
+2.  Add the following to the `mcpServers` object in your `mcp-config.json` file:
 
 ```json
 {
