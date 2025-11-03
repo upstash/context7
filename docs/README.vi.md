@@ -734,6 +734,57 @@ Thêm cấu hình sau vào phần `mcp` trong file cấu hình Copilot Coding Ag
 Để biết thêm thông tin, xem [tài liệu GitHub chính thức](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/agents/copilot-coding-agent/extending-copilot-coding-agent-with-mcp).
 
 </details>
+
+<details>
+<summary><b>Cài đặt trong Copilot CLI</b></summary>
+
+1.  Mở file cấu hình MCP của Copilot CLI. Vị trí là `~/.copilot/mcp-config.json` (trong đó `~` là thư mục home của bạn).
+2.  Thêm nội dung sau vào đối tượng `mcpServers` trong file `mcp-config.json` của bạn:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      },
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ]
+    }
+  }
+}
+```
+
+Hoặc, đối với server cục bộ:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "local",
+      "command": "npx",
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ],
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "YOUR_API_KEY"
+      ]
+    }
+  }
+}
+```
+
+Nếu file `mcp-config.json` không tồn tại, hãy tạo nó.
+
+</details>
   
 <details>
   
