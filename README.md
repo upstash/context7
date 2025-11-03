@@ -1141,6 +1141,37 @@ See [Local and Remote MCPs for Perplexity](https://www.perplexity.ai/help-center
 7. Click `Save`.
 </details>
 
+<details>
+<summary><b>Install in Factory</b></summary>
+
+Factory's droid supports MCP servers through its CLI. See [Factory MCP docs](https://docs.factory.ai/cli/configuration/mcp) for more info.
+
+#### Factory Remote Server Connection (HTTP)
+
+Run this command in your terminal:
+
+```sh
+droid mcp add context7 https://mcp.context7.com/mcp --type http --header "CONTEXT7_API_KEY: YOUR_API_KEY"
+```
+
+Or without an API key (basic usage with rate limits):
+
+```sh
+droid mcp add context7 https://mcp.context7.com/mcp --type http
+```
+
+#### Factory Local Server Connection (Stdio)
+
+Run this command in your terminal:
+
+```sh
+droid mcp add context7 "npx -y @upstash/context7-mcp" --env CONTEXT7_API_KEY=YOUR_API_KEY
+```
+
+Once configured, Context7 tools will be available in your droid sessions. Type `/mcp` within droid to manage servers, authenticate, and view available tools.
+
+</details>
+
 ## 🔨 Available Tools
 
 Context7 MCP provides the following tools that LLMs can use:
