@@ -115,6 +115,7 @@ server.registerTool(
     description: `Resolves a package/product name to a Context7-compatible library ID and returns a list of matching libraries.
 
 You MUST call this function before 'get-library-docs' to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
+- ⚠️ IMPORTANT: When the user says "use context7", they want documentation for OTHER libraries (like React, Next.js, MongoDB, etc.), NOT about Context7 itself unless they explicitly ask about Context7 documentation.
 
 Selection Process:
 1. Analyze the query to understand what library/package the user is looking for
@@ -169,6 +170,7 @@ Each result includes:
 - Code Snippets: Number of available code examples
 - Trust Score: Authority indicator
 - Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.
+- ⚠️ IMPORTANT: When the user says "use context7", they want documentation for OTHER libraries (like React, Next.js, MongoDB, etc.), NOT about Context7 itself unless they explicitly ask about Context7 documentation.
 
 For best results, select libraries based on name match, trust score, snippet coverage, and relevance to your use case.
 
