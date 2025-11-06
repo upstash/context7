@@ -26,8 +26,10 @@ Add `use context7` to your prompt in Cursor:
 Create a Next.js middleware that checks for a valid JWT in cookies and redirects unauthenticated users to `/login`. use context7
 ```
 
+Get answers tailored to the exact package versions in your project
+
 ```txt
-Configure a Cloudflare Worker script to cache JSON API responses for five minutes. use context7
+Configure a Cloudflare Worker script to cache JSON API responses for five minutes. Use the package versions specified in the repository. use context7
 ```
 
 Context7 fetches up-to-date code examples and documentation right into your LLM's context.
