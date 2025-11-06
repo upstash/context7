@@ -9,17 +9,34 @@
     "dark": "#0F172A"
   },
   "navigation": {
-    "pages": [
-      "overview",
-      "installation",
-      "usage",
-      "adding-libraries",
-      "plans-pricing",
-      "api",
-      "security",
-      "troubleshooting",
-      "contact"
+    "groups": [
+      {
+        "group": "Overview",
+        "pages": [
+          "overview",
+          "installation",
+          "usage",
+          "adding-libraries",
+          "plans-pricing",
+          "api-guide"
+        ]
+      },
+      {
+        "group": "API Reference",
+        "openapi": "openapi.json"
+      },
+      {
+        "group": "Resources",
+        "pages": [
+          "security",
+          "troubleshooting",
+          "contact"
+        ]
+      }
     ]
+  },
+  "api": {
+    "playground": {"display": "simple"}
   },
   "logo": {
     "light": "/logo/logo.svg",

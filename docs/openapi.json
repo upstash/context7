@@ -1,0 +1,756 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Context7 Public API",
+    "description": "The Context7 Public API provides programmatic access to library documentation and search functionality. Get up-to-date documentation and code examples for any library.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "Context7 Support",
+      "url": "https://context7.com",
+      "email": "support@context7.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://context7.com/api",
+      "description": "Production server"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/v1/{owner}/{repo}": {
+      "get": {
+        "summary": "Get Context",
+        "description": "Retrieve documentation and code examples for the latest version of a specific library.",
+        "operationId": "getContext",
+        "tags": ["Documentation"],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "description": "Repository owner (e.g., 'vercel', 'upstash')",
+            "schema": {
+              "type": "string"
+            },
+            "example": "vercel"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "description": "Repository name (e.g., 'next.js', 'docs')",
+            "schema": {
+              "type": "string"
+            },
+            "example": "next.js"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "description": "Format of the response: `txt` for plain text optimized for LLM contexts, or `json` for structured payload with metadata",
+            "schema": {
+              "type": "string",
+              "enum": ["txt", "json"],
+              "default": "txt"
+            }
+          },
+          {
+            "name": "topic",
+            "in": "query",
+            "required": false,
+            "description": "Topic to search/rerank the results (e.g., 'routing', 'authentication', 'hooks')",
+            "schema": {
+              "type": "string"
+            },
+            "example": "routing"
+          },
+          {
+            "name": "tokens",
+            "in": "query",
+            "required": false,
+            "description": "Maximum token count to be included in the result",
+            "schema": {
+              "type": "integer",
+              "default": 10000,
+              "minimum": 100,
+              "maximum": 100000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response with documentation content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContextResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "description": "Plain text documentation optimized for LLM contexts"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/v1/{owner}/{repo}/{version}": {
+      "get": {
+        "summary": "Get Context (Specific Version)",
+        "description": "Retrieve documentation and code examples for a specific version of a library.",
+        "operationId": "getContextVersion",
+        "tags": ["Documentation"],
+        "parameters": [
+          {
+            "name": "owner",
+            "in": "path",
+            "required": true,
+            "description": "Repository owner (e.g., 'vercel', 'upstash')",
+            "schema": {
+              "type": "string"
+            },
+            "example": "vercel"
+          },
+          {
+            "name": "repo",
+            "in": "path",
+            "required": true,
+            "description": "Repository name (e.g., 'next.js', 'docs')",
+            "schema": {
+              "type": "string"
+            },
+            "example": "next.js"
+          },
+          {
+            "name": "version",
+            "in": "path",
+            "required": true,
+            "description": "Specific version tag (e.g., 'v15.1.8', 'v14.3.0-canary.87')",
+            "schema": {
+              "type": "string"
+            },
+            "example": "v15.1.8"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "description": "Format of the response: `txt` for plain text optimized for LLM contexts, or `json` for structured payload with metadata",
+            "schema": {
+              "type": "string",
+              "enum": ["txt", "json"],
+              "default": "txt"
+            }
+          },
+          {
+            "name": "topic",
+            "in": "query",
+            "required": false,
+            "description": "Topic to search/rerank the results (e.g., 'routing', 'authentication', 'hooks')",
+            "schema": {
+              "type": "string"
+            },
+            "example": "routing"
+          },
+          {
+            "name": "tokens",
+            "in": "query",
+            "required": false,
+            "description": "Maximum token count to be included in the result",
+            "schema": {
+              "type": "integer",
+              "default": 10000,
+              "minimum": 100,
+              "maximum": 100000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response with documentation content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContextResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string",
+                  "description": "Plain text documentation optimized for LLM contexts"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/v1/search": {
+      "get": {
+        "summary": "Search Libraries",
+        "description": "Search for libraries in the Context7 database. Returns up to 50 matching libraries with metadata.",
+        "operationId": "searchLibraries",
+        "tags": ["Search"],
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "description": "Library name to search for",
+            "schema": {
+              "type": "string"
+            },
+            "example": "next.js"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful search with up to 50 matching libraries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/v1/add": {
+      "post": {
+        "summary": "Add a Library",
+        "description": "Submit a new library to Context7 for indexing. The parsing process starts immediately and the status transitions from `processing` to `finalized`.",
+        "operationId": "addLibrary",
+        "tags": ["Library Management"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddLibraryRequest"
+              },
+              "examples": {
+                "basic": {
+                  "summary": "Basic example",
+                  "value": {
+                    "docsRepoUrl": "https://github.com/okken/pytest-check",
+                    "projectTitle": "PyTest Check",
+                    "branch": "main"
+                  }
+                },
+                "withFolders": {
+                  "summary": "With included folders",
+                  "value": {
+                    "docsRepoUrl": "https://github.com/okken/pytest-check",
+                    "branch": "main",
+                    "folders": ["docs", "examples"]
+                  }
+                },
+                "withExclusions": {
+                  "summary": "With excluded folders",
+                  "value": {
+                    "docsRepoUrl": "https://github.com/psf/requests",
+                    "projectTitle": "Requests",
+                    "branch": "main",
+                    "excludeFolders": ["tests", "examples"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Library parsing process started successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddLibraryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Get your API key at [context7.com/dashboard](https://context7.com/dashboard). Treat your API key like a password and store it securely."
+      }
+    },
+    "schemas": {
+      "ContextResponse": {
+        "type": "object",
+        "description": "Documentation content response with metadata and chunks",
+        "properties": {
+          "library": {
+            "type": "string",
+            "description": "Library ID in format `/owner/repo`",
+            "example": "/vercel/next.js"
+          },
+          "version": {
+            "type": "string",
+            "description": "Version of the library",
+            "example": "v15.1.8"
+          },
+          "topic": {
+            "type": "string",
+            "description": "Requested topic (if specified)",
+            "example": "routing"
+          },
+          "tokens": {
+            "type": "integer",
+            "description": "Actual token count in the response",
+            "example": 2950
+          },
+          "chunks": {
+            "type": "array",
+            "description": "Documentation chunks with content and metadata",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Title of the documentation section",
+                  "example": "Middleware overview"
+                },
+                "content": {
+                  "type": "string",
+                  "description": "Documentation content",
+                  "example": "Next.js middleware runs before a request is completed..."
+                },
+                "source": {
+                  "type": "string",
+                  "description": "Source file path in the repository",
+                  "example": "docs/app/building-your-application/routing/middleware.mdx"
+                },
+                "url": {
+                  "type": "string",
+                  "description": "URL to the original documentation",
+                  "example": "https://nextjs.org/docs/app/building-your-application/routing/middleware"
+                }
+              }
+            }
+          }
+        }
+      },
+      "SearchResponse": {
+        "type": "object",
+        "description": "Search results with library metadata",
+        "properties": {
+          "results": {
+            "type": "array",
+            "description": "Array of matching libraries (up to 50 results)",
+            "items": {
+              "$ref": "#/components/schemas/Library"
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "authentication": {
+                "type": "string",
+                "description": "Authentication status",
+                "example": "paid"
+              }
+            }
+          }
+        },
+        "example": {
+          "results": [
+            {
+              "id": "/vercel/next.js",
+              "title": "Next.js",
+              "description": "The React Framework",
+              "branch": "canary",
+              "lastUpdateDate": "2025-07-27T06:56:26.691Z",
+              "state": "finalized",
+              "totalTokens": 607822,
+              "totalSnippets": 3629,
+              "totalPages": 1156,
+              "stars": 131745,
+              "trustScore": 10,
+              "versions": [
+                "v14.3.0-canary.87",
+                "v13.5.11",
+                "v15.1.8",
+                "v15.4.0-canary.82",
+                "v12.3.7",
+                "v11.1.3"
+              ]
+            }
+          ],
+          "metadata": {
+            "authentication": "paid"
+          }
+        }
+      },
+      "Library": {
+        "type": "object",
+        "description": "Library metadata",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Library ID in format `/owner/repo`",
+            "example": "/vercel/next.js"
+          },
+          "title": {
+            "type": "string",
+            "description": "Display name of the library",
+            "example": "Next.js"
+          },
+          "description": {
+            "type": "string",
+            "description": "Short description",
+            "example": "The React Framework"
+          },
+          "branch": {
+            "type": "string",
+            "description": "Git branch being tracked",
+            "example": "canary"
+          },
+          "lastUpdateDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp of last update",
+            "example": "2025-07-27T06:56:26.691Z"
+          },
+          "state": {
+            "type": "string",
+            "enum": ["finalized", "initial", "processing", "error", "delete"],
+            "description": "Processing state of the library",
+            "example": "finalized"
+          },
+          "totalTokens": {
+            "type": "integer",
+            "description": "Total tokens in documentation",
+            "example": 607822
+          },
+          "totalSnippets": {
+            "type": "integer",
+            "description": "Number of code snippets",
+            "example": 3629
+          },
+          "totalPages": {
+            "type": "integer",
+            "description": "Number of documentation pages",
+            "example": 1156
+          },
+          "stars": {
+            "type": "integer",
+            "description": "GitHub stars count",
+            "example": 131745
+          },
+          "trustScore": {
+            "type": "integer",
+            "description": "Authority score (0-10)",
+            "minimum": 0,
+            "maximum": 10,
+            "example": 10
+          },
+          "versions": {
+            "type": "array",
+            "description": "Available version tags",
+            "items": {
+              "type": "string"
+            },
+            "example": ["v15.1.8", "v14.3.0-canary.87"]
+          }
+        }
+      },
+      "AddLibraryRequest": {
+        "type": "object",
+        "required": ["docsRepoUrl"],
+        "properties": {
+          "docsRepoUrl": {
+            "type": "string",
+            "description": "GitHub repository URL",
+            "example": "https://github.com/okken/pytest-check"
+          },
+          "projectTitle": {
+            "type": "string",
+            "description": "Display name for the project (auto-detected if not provided)",
+            "example": "PyTest Check"
+          },
+          "branch": {
+            "type": "string",
+            "description": "Git branch to parse (defaults to repository's default branch)",
+            "example": "main"
+          },
+          "folders": {
+            "type": "array",
+            "description": "Specific folders to include for documentation",
+            "items": {
+              "type": "string"
+            },
+            "example": ["docs", "examples"]
+          },
+          "excludeFolders": {
+            "type": "array",
+            "description": "Folders to exclude from parsing",
+            "items": {
+              "type": "string"
+            },
+            "example": ["tests", "archive"]
+          },
+          "excludeFiles": {
+            "type": "array",
+            "description": "Files to exclude from parsing",
+            "items": {
+              "type": "string"
+            },
+            "example": ["CHANGELOG.md", "LICENSE.md"]
+          }
+        }
+      },
+      "AddLibraryResponse": {
+        "type": "object",
+        "description": "Response after submitting a library for indexing",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Status message",
+            "example": "Parsing process started for https://github.com/okken/pytest-check"
+          },
+          "status": {
+            "type": "string",
+            "description": "Current processing status (transitions from processing to finalized)",
+            "enum": ["processing", "finalized"],
+            "example": "processing"
+          },
+          "docsRepoUrl": {
+            "type": "string",
+            "description": "GitHub repository URL",
+            "example": "https://github.com/okken/pytest-check"
+          },
+          "projectName": {
+            "type": "string",
+            "description": "Project name in format `/owner/repo`",
+            "example": "/okken/pytest-check"
+          },
+          "description": {
+            "type": "string",
+            "description": "Auto-detected project description",
+            "example": "A pytest plugin that allows multiple failures per test."
+          },
+          "projectTitle": {
+            "type": "string",
+            "description": "Project title (auto-detected or provided)",
+            "example": "auto-detected"
+          },
+          "folders": {
+            "type": "array",
+            "description": "Folders included in parsing",
+            "items": {
+              "type": "string"
+            },
+            "example": ["docs", "examples"]
+          },
+          "excludeFolders": {
+            "type": "array",
+            "description": "Folders excluded from parsing",
+            "items": {
+              "type": "string"
+            },
+            "example": ["archive"]
+          },
+          "excludeFiles": {
+            "type": "array",
+            "description": "Files excluded from parsing (default excludes common files)",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "CHANGELOG.md",
+              "changelog.md",
+              "CHANGELOG.mdx",
+              "changelog.mdx",
+              "LICENSE.md",
+              "license.md",
+              "CODE_OF_CONDUCT.md",
+              "code_of_conduct.md"
+            ]
+          },
+          "metadata": {
+            "type": "object",
+            "properties": {
+              "authentication": {
+                "type": "string",
+                "example": "paid"
+              }
+            }
+          }
+        },
+        "example": {
+          "message": "Parsing process started for https://github.com/okken/pytest-check",
+          "status": "processing",
+          "docsRepoUrl": "https://github.com/okken/pytest-check",
+          "projectName": "/okken/pytest-check",
+          "description": "A pytest plugin that allows multiple failures per test.",
+          "projectTitle": "auto-detected",
+          "folders": ["docs", "examples"],
+          "excludeFolders": ["archive"],
+          "excludeFiles": [
+            "CHANGELOG.md",
+            "changelog.md",
+            "CHANGELOG.mdx",
+            "changelog.mdx",
+            "LICENSE.md",
+            "license.md",
+            "CODE_OF_CONDUCT.md",
+            "code_of_conduct.md"
+          ],
+          "metadata": {
+            "authentication": "paid"
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "status": {
+            "type": "integer",
+            "description": "HTTP status code"
+          },
+          "retryAfterSeconds": {
+            "type": "integer",
+            "description": "Seconds to wait before retrying (for rate limit errors)"
+          }
+        }
+      }
+    },
+    "responses": {
+      "UnauthorizedError": {
+        "description": "Unauthorized - Invalid or missing API key",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Unauthorized - Invalid or missing API key",
+              "status": 401
+            }
+          }
+        }
+      },
+      "NotFoundError": {
+        "description": "Not Found - Library or endpoint doesn't exist",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Library not found",
+              "status": 404
+            }
+          }
+        }
+      },
+      "RateLimitError": {
+        "description": "Too Many Requests - Rate limit exceeded",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Too many requests",
+              "status": 429,
+              "retryAfterSeconds": 60
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Internal Server Error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Internal server error",
+              "status": 500
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Documentation",
+      "description": "Retrieve library documentation and code examples"
+    },
+    {
+      "name": "Search",
+      "description": "Search for libraries in the Context7 database"
+    },
+    {
+      "name": "Library Management",
+      "description": "Add and manage libraries in Context7"
+    }
+  ]
+}
