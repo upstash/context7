@@ -27,6 +27,7 @@ Stop adding "use context7" to every prompt by setting up an automatic rule.
     Always use context7 when I need code generation, setup steps, or library documentation.
     Automatically use Context7 MCP tools without me having to ask.
     ```
+
   </Accordion>
 
   <Accordion title="Windsurf" icon="wind">
@@ -35,6 +36,7 @@ Stop adding "use context7" to every prompt by setting up an automatic rule.
     ```txt
     Use context7 for all code generation and API documentation questions.
     ```
+
   </Accordion>
 
   <Accordion title="Claude Code" icon="code">
@@ -43,11 +45,13 @@ Stop adding "use context7" to every prompt by setting up an automatic rule.
     ```txt
     Automatically use context7 for code generation and library documentation.
     ```
+
   </Accordion>
 </AccordionGroup>
 
 <Tip>
-Customize the rule to match your workflow. For example, only auto-invoke for specific libraries or frameworks.
+  Customize the rule to match your workflow. For example, only auto-invoke for specific libraries or
+  frameworks.
 </Tip>
 
 ## Use Specific Library IDs
@@ -74,9 +78,7 @@ Build a rate limiter. use library /upstash/ratelimit
 Set up Next.js middleware. use library /vercel/next.js/v15.1.0
 ```
 
-<Note>
-You can even specify versions: `/owner/repo/v1.0.0`
-</Note>
+<Note>You can even specify versions: `/owner/repo/v1.0.0`</Note>
 
 ### Benefits
 
@@ -101,6 +103,7 @@ If you're behind a corporate proxy, configure Context7 to route through it.
     ```bash
     export https_proxy=http://username:password@proxy.example.com:8080
     ```
+
   </Accordion>
 
   <Accordion title="Windows (Command Prompt)" icon="windows">
@@ -113,6 +116,7 @@ If you're behind a corporate proxy, configure Context7 to route through it.
     ```cmd
     set https_proxy=http://username:password@proxy.example.com:8080
     ```
+
   </Accordion>
 
   <Accordion title="Windows (PowerShell)" icon="windows">
@@ -145,7 +149,8 @@ Add proxy directly to your MCP configuration:
 Both lowercase and uppercase environment variables are supported.
 
 <Tip>
-After updating proxy settings, run `curl https://mcp.context7.com/mcp/ping` to confirm outbound connectivity before restarting your IDE.
+  After updating proxy settings, run `curl https://mcp.context7.com/mcp/ping` to confirm outbound
+  connectivity before restarting your IDE.
 </Tip>
 
 ## Optimize Token Usage
@@ -265,9 +270,7 @@ Authorization: Bearer YOUR_API_KEY
 - When documentation is updated
 - When you notice outdated information
 
-<Note>
-For private repos, you only pay for new/changed content during refresh.
-</Note>
+<Note>For private repos, you only pay for new/changed content during refresh.</Note>
 
 ## Monitor Usage
 
@@ -289,10 +292,12 @@ All stats show the last 30 days.
 **Free Plan**: Always $0
 
 **Pro Plan**:
+
 - **Seats**: $7/month × team members
 - **Parse tokens**: $15 per 1M tokens (private repos only)
 
 **Example**:
+
 - 4 team members: $28/month
 - Added 800K token private repo: $12 one-time
 - Monthly total: $40

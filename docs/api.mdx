@@ -21,7 +21,8 @@ Authorization: Bearer CONTEXT7_API_KEY
 Get your API key at [context7.com/dashboard](https://context7.com/dashboard).
 
 <Warning>
-Treat your API key like a password. Store it in an environment variable or secret manager and rotate it immediately if you suspect it has leaked.
+  Treat your API key like a password. Store it in an environment variable or secret manager and
+  rotate it immediately if you suspect it has leaked.
 </Warning>
 
 ## Endpoints
@@ -37,21 +38,23 @@ Retrieve documentation and code examples for a specific library.
 **Endpoint**: `/v1/[library]`
 
 **URL Format**:
+
 - `/v1/{owner}/{repo}` - Get latest version
 - `/v1/{owner}/{repo}/{version}` - Get specific version
 
 **Examples**:
+
 - `/v1/vercel/next.js`
 - `/v1/vercel/next.js/v15.1.8`
 - `/v1/upstash/docs`
 
 #### Query Parameters
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `type` | string | No | `txt` | Format of the response: `txt` or `json` |
-| `topic` | string | No | - | Topic to search/rerank the results |
-| `tokens` | number | No | `10000` | Maximum token count to be included in the result |
+| Parameter | Type   | Required | Default | Description                                      |
+| --------- | ------ | -------- | ------- | ------------------------------------------------ |
+| `type`    | string | No       | `txt`   | Format of the response: `txt` or `json`          |
+| `topic`   | string | No       | -       | Topic to search/rerank the results               |
+| `tokens`  | number | No       | `10000` | Maximum token count to be included in the result |
 
 #### Examples
 
@@ -63,26 +66,20 @@ Retrieve documentation and code examples for a specific library.
     ```
   </Accordion>
 
-  <Accordion title="Using JSON format">
-    ```bash
-    curl "https://context7.com/api/v1/vercel/next.js?type=json" \
-      -H "Authorization: Bearer CONTEXT7_API_KEY"
-    ```
-  </Accordion>
+<Accordion title="Using JSON format">
+  ```bash curl "https://context7.com/api/v1/vercel/next.js?type=json" \ -H "Authorization: Bearer
+  CONTEXT7_API_KEY" ```
+</Accordion>
 
-  <Accordion title="Specifying a topic">
-    ```bash
-    curl "https://context7.com/api/v1/vercel/next.js?topic=routing" \
-      -H "Authorization: Bearer CONTEXT7_API_KEY"
-    ```
-  </Accordion>
+<Accordion title="Specifying a topic">
+  ```bash curl "https://context7.com/api/v1/vercel/next.js?topic=routing" \ -H "Authorization:
+  Bearer CONTEXT7_API_KEY" ```
+</Accordion>
 
-  <Accordion title="Limiting token count">
-    ```bash
-    curl "https://context7.com/api/v1/vercel/next.js?tokens=2000" \
-      -H "Authorization: Bearer CONTEXT7_API_KEY"
-    ```
-  </Accordion>
+<Accordion title="Limiting token count">
+  ```bash curl "https://context7.com/api/v1/vercel/next.js?tokens=2000" \ -H "Authorization: Bearer
+  CONTEXT7_API_KEY" ```
+</Accordion>
 
   <Accordion title="Multiple parameters">
     ```bash
@@ -130,9 +127,9 @@ Search for libraries in the Context7 database.
 
 #### Query Parameters
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `query` | string | Yes | Library name to search for |
+| Parameter | Type   | Required | Description                |
+| --------- | ------ | -------- | -------------------------- |
+| `query`   | string | Yes      | Library name to search for |
 
 #### Example
 
@@ -178,20 +175,20 @@ Returns up to 50 matching libraries.
 
 #### Response Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | string | Library ID in format `/owner/repo` |
-| `title` | string | Display name of the library |
-| `description` | string | Short description |
-| `branch` | string | Git branch being tracked |
-| `lastUpdateDate` | string | ISO 8601 timestamp of last update |
-| `state` | string | Processing state: `finalized`, `initial`, `error`, or `delete` |
-| `totalTokens` | number | Total tokens in documentation |
-| `totalSnippets` | number | Number of code snippets |
-| `totalPages` | number | Number of documentation pages |
-| `stars` | number | GitHub stars count |
-| `trustScore` | number | Authority score (0-10) |
-| `versions` | array | Available version tags |
+| Field            | Type   | Description                                                    |
+| ---------------- | ------ | -------------------------------------------------------------- |
+| `id`             | string | Library ID in format `/owner/repo`                             |
+| `title`          | string | Display name of the library                                    |
+| `description`    | string | Short description                                              |
+| `branch`         | string | Git branch being tracked                                       |
+| `lastUpdateDate` | string | ISO 8601 timestamp of last update                              |
+| `state`          | string | Processing state: `finalized`, `initial`, `error`, or `delete` |
+| `totalTokens`    | number | Total tokens in documentation                                  |
+| `totalSnippets`  | number | Number of code snippets                                        |
+| `totalPages`     | number | Number of documentation pages                                  |
+| `stars`          | number | GitHub stars count                                             |
+| `trustScore`     | number | Authority score (0-10)                                         |
+| `versions`       | array  | Available version tags                                         |
 
 ---
 
@@ -209,14 +206,14 @@ Submit a new library to Context7 for indexing.
 
 #### Request Body
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `docsRepoUrl` | string | Yes | GitHub repository URL |
-| `projectTitle` | string | No | Display name for the project |
-| `branch` | string | No | Git branch to parse (default: repository's default branch) |
-| `folders` | array | No | Specific folders to include for documentation |
-| `excludeFolders` | array | No | Folders to exclude from parsing |
-| `excludeFiles` | array | No | Files to exclude from parsing |
+| Field            | Type   | Required | Description                                                |
+| ---------------- | ------ | -------- | ---------------------------------------------------------- |
+| `docsRepoUrl`    | string | Yes      | GitHub repository URL                                      |
+| `projectTitle`   | string | No       | Display name for the project                               |
+| `branch`         | string | No       | Git branch to parse (default: repository's default branch) |
+| `folders`        | array  | No       | Specific folders to include for documentation              |
+| `excludeFolders` | array  | No       | Folders to exclude from parsing                            |
+| `excludeFiles`   | array  | No       | Files to exclude from parsing                              |
 
 #### Examples
 
@@ -313,13 +310,13 @@ The `status` field transitions through `processing → finalized`. Poll the libr
 
 ## Error Codes
 
-| Code | Description |
-|------|-------------|
-| 200 | Success |
-| 401 | Unauthorized - Invalid or missing API key |
-| 404 | Not Found - Library or endpoint doesn't exist |
-| 429 | Too Many Requests - Rate limit exceeded |
-| 500 | Internal Server Error |
+| Code | Description                                   |
+| ---- | --------------------------------------------- |
+| 200  | Success                                       |
+| 401  | Unauthorized - Invalid or missing API key     |
+| 404  | Not Found - Library or endpoint doesn't exist |
+| 429  | Too Many Requests - Rate limit exceeded       |
+| 500  | Internal Server Error                         |
 
 ```json
 {
@@ -347,6 +344,7 @@ For easier integration, consider using:
 ## Support
 
 For API support and questions:
+
 - Documentation: [docs.context7.com](https://docs.context7.com)
 - GitHub Issues: [github.com/upstash/context7/issues](https://github.com/upstash/context7/issues)
 - Discord: [upstash.com/discord](https://upstash.com/discord)

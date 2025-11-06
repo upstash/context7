@@ -149,14 +149,7 @@ Alternatively, use this configuration with `cmd`:
   "mcpServers": {
     "context7": {
       "command": "cmd",
-      "args": [
-        "/c",
-        "npx",
-        "-y",
-        "@upstash/context7-mcp",
-        "--api-key",
-        "YOUR_API_KEY"
-      ]
+      "args": ["/c", "npx", "-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
     }
   }
 }
@@ -186,7 +179,8 @@ On macOS, some users may encounter the same request timeout errors. Use the full
 ```
 
 <Note>
-Replace `yourname` and the Node.js version (`v22.14.0`) with your actual username and installed Node.js version.
+  Replace `yourname` and the Node.js version (`v22.14.0`) with your actual username and installed
+  Node.js version.
 </Note>
 
 ## API and Connection Issues
@@ -219,6 +213,7 @@ If you see `401 Unauthorized` errors:
 2. **Check the header format** - ensure the API key is properly set:
 
 For HTTP transport:
+
 ```json
 {
   "headers": {
@@ -228,6 +223,7 @@ For HTTP transport:
 ```
 
 For stdio transport:
+
 ```json
 {
   "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]

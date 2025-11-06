@@ -1,93 +1,93 @@
 {
-    "$schema": "https://mintlify.com/docs.json",
-    "theme": "maple",
-    "name": "Context7 MCP",
-    "description": "Up-to-date code docs for any prompt.",
-    "colors": {
-      "primary": "#3B82F6",
-      "light": "#F8FAFC",
-      "dark": "#0F172A"
-    },
-    "navigation": {
-      "pages": [
-        "overview",
-        "installation",
-        "usage",
-        "adding-libraries",
-        "plans-pricing",
-        "api",
-        "security",
-        "contact"
-      ]
-    },
-    "logo": {
-      "light": "/logo/logo.svg",
-      "dark": "/logo/logo-dark.svg",
-      "href": "https://context7.com"
-    },
-    "navbar": {
-      "links": [
-        {
-          "label": "Discord",
-          "href": "https://upstash.com/discord"
-        },
-        {
-          "label": "GitHub",
-          "href": "https://github.com/upstash/context7"
-        }
-      ],
-      "primary": {
-        "type": "button",
-        "label": "Dashboard",
-        "href": "https://context7.com"
-      }
-    },
-    "footer": {
-      "socials": {
-        "x": "https://x.com/context7ai",
-        "github": "https://github.com/upstash/context7",
-        "discord": "https://upstash.com/discord"
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "maple",
+  "name": "Context7 MCP",
+  "description": "Up-to-date code docs for any prompt.",
+  "colors": {
+    "primary": "#3B82F6",
+    "light": "#F8FAFC",
+    "dark": "#0F172A"
+  },
+  "navigation": {
+    "pages": [
+      "overview",
+      "installation",
+      "usage",
+      "adding-libraries",
+      "plans-pricing",
+      "api",
+      "security",
+      "contact"
+    ]
+  },
+  "logo": {
+    "light": "/logo/logo.svg",
+    "dark": "/logo/logo-dark.svg",
+    "href": "https://context7.com"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Discord",
+        "href": "https://upstash.com/discord"
       },
-      "links": [
-        {
-          "header": "Resources",
-          "items": [
-            {
-              "label": "Website",
-              "href": "https://context7.com"
-            },
-            {
-              "label": "Submit a Library",
-              "href": "https://context7.com/add-library"
-            },
-            {
-              "label": "Dashboard",
-              "href": "https://context7.com/dashboard"
-            }
-          ]
-        },
-        {
-          "header": "Community",
-          "items": [
-            {
-              "label": "GitHub",
-              "href": "https://github.com/upstash/context7"
-            },
-            {
-              "label": "Discord",
-              "href": "https://upstash.com/discord"
-            },
-            {
-              "label": "Twitter",
-              "href": "https://x.com/context7ai"
-            }
-          ]
-        }
-      ]
-    },
-    "feedback": {
-      "thumbsRating": true,
-      "suggestEdit": true,
-      "raiseIssue": true
+      {
+        "label": "GitHub",
+        "href": "https://github.com/upstash/context7"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Dashboard",
+      "href": "https://context7.com"
     }
+  },
+  "footer": {
+    "socials": {
+      "x": "https://x.com/context7ai",
+      "github": "https://github.com/upstash/context7",
+      "discord": "https://upstash.com/discord"
+    },
+    "links": [
+      {
+        "header": "Resources",
+        "items": [
+          {
+            "label": "Website",
+            "href": "https://context7.com"
+          },
+          {
+            "label": "Submit a Library",
+            "href": "https://context7.com/add-library"
+          },
+          {
+            "label": "Dashboard",
+            "href": "https://context7.com/dashboard"
+          }
+        ]
+      },
+      {
+        "header": "Community",
+        "items": [
+          {
+            "label": "GitHub",
+            "href": "https://github.com/upstash/context7"
+          },
+          {
+            "label": "Discord",
+            "href": "https://upstash.com/discord"
+          },
+          {
+            "label": "Twitter",
+            "href": "https://x.com/context7ai"
+          }
+        ]
+      }
+    ]
+  },
+  "feedback": {
+    "thumbsRating": true,
+    "suggestEdit": true,
+    "raiseIssue": true
   }
+}
