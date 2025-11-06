@@ -1,0 +1,80 @@
+{
+  "questions": [
+    {
+      "library": "/anthropics/claude-code",
+      "question": "Explain how to utilize Claude Code for implementing a custom middleware that handles complex, dynamic authorization rules based on user roles, resource attributes, and contextual information in an API Gateway. Consider its application in a multi-tenant SaaS environment."
+    },
+    {
+      "library": "/berriai/litellm",
+      "question": "When deploying Litellm as a unified API gateway in a production environment, describe how you would implement robust rate limiting and access control per user or API key across heterogeneous LLM providers. Detail the necessary configuration and integration points for this complex scenario."
+    },
+    {
+      "library": "/better-auth/better-auth",
+      "question": "How would you implement user registration, including password hashing and storage, using Better Auth's API?"
+    },
+    {
+      "library": "/drizzle-team/drizzle-orm",
+      "question": "Detail how to design and query a Drizzle ORM schema for a polymorphic relationship, such as `comments` that can belong to either `posts` or `products`. Explain how to define the tables and write a query to fetch all comments associated with a specific entity (e.g., a post with ID 1)."
+    },
+    {
+      "library": "/google/adk-python",
+      "question": "Propose an architectural approach for an application that needs to synchronize data with an ADK Python backend while supporting offline capabilities. Detail how to manage local state, conflict resolution, and background synchronization queues."
+    },
+    {
+      "library": "/googleapis/js-genai",
+      "question": "Propose an architecture for implementing an agentic workflow using the `js-genai` library, enabling the GenAI model to dynamically select and execute external tools or APIs based on user intent, including robust error handling and state persistence."
+    },
+    {
+      "library": "/langchain-ai/langgraph",
+      "question": "Design a fault-tolerant LangGraph architecture that can gracefully recover from failures in external API calls made by nodes. Propose a strategy for retrying failed steps or switching to a fallback node based on error conditions."
+    },
+    {
+      "library": "/mongodb/docs",
+      "question": "Detail a strategy for optimizing query performance on a large collection that frequently involves sorting and filtering by multiple fields, considering compound indexes, index prefixes, and index cardinality. Explain how to analyze query plans to validate your optimization efforts."
+    },
+    {
+      "library": "/pydantic/pydantic-ai",
+      "question": "Explain how Pydantic validation can be integrated into a continuous integration/continuous deployment (CI/CD) pipeline for AI models to prevent data drift and schema mismatches between model versions and deployed services."
+    },
+    {
+      "library": "/reactjs/react.dev",
+      "question": "Describe a robust strategy for error boundary implementation in a complex React application, including how to gracefully handle component-level errors and report them to an external logging service without crashing the entire UI."
+    },
+    {
+      "library": "/shadcn-ui/ui",
+      "question": "Implement a user registration form using Shadcn UI's `Form`, `Input`, and `Button` components. Include basic client-side validation for email and password fields."
+    },
+    {
+      "library": "/supabase/supabase",
+      "question": "Implement user sign-up and sign-in functionality using the Supabase JavaScript client, configuring email/password authentication. Provide the necessary client-side code snippets for these operations."
+    },
+    {
+      "library": "/sveltejs/kit",
+      "question": "Explain how SvelteKit's `event.fetch` can be leveraged to proxy and cache external API requests on the server, improving performance and reducing client-side load. Provide an example use case demonstrating its advantages over direct client-side fetching."
+    },
+    {
+      "library": "/tailwindlabs/tailwindcss.com",
+      "question": "How can you create a responsive, centered layout for a web page using Tailwind CSS flexbox and margin auto utilities?"
+    },
+    {
+      "library": "/tiangolo/fastapi",
+      "question": "Describe a comprehensive strategy for integrating an asynchronous database (e.g., PostgreSQL with `asyncpg` and SQLAlchemy's async capabilities) with FastAPI, including connection management and session handling. Furthermore, explain how to offload a long-running, non-blocking task (e.g., sending an email) using FastAPI's `BackgroundTasks` to avoid blocking the main event loop and ensure responsive API behavior."
+    },
+    {
+      "library": "/vercel/ai",
+      "question": "Implement a basic chat interface in a Next.js application that streams responses from an AI model using the Vercel AI SDK."
+    },
+    {
+      "library": "/vercel/next.js",
+      "question": "Implement a dynamic route in Next.js for a blog post, where the post ID is passed as a URL parameter. Show how to access this parameter within the component."
+    },
+    {
+      "library": "/vuejs/docs",
+      "question": "Explain the core benefits of implementing Server-Side Rendering (SSR) with Vue 3, particularly when leveraging a framework like Nuxt 3, and detail the 'hydration' process. Discuss specific challenges or architectural considerations that arise when integrating SSR into an existing Single-Page Application (SPA) workflow."
+    },
+    {
+      "library": "/websites/platform_openai",
+      "question": "Propose an architecture for a sophisticated RAG system that leverages OpenAI models, integrates with multiple dynamic data sources, and ensures data freshness, security, and cost-effectiveness for a multi-tenant enterprise solution."
+    }
+  ]
+}

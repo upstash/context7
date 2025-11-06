@@ -3,7 +3,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { searchLibraries, fetchLibraryDocumentation } from "./lib/api.js";
+import { searchLibraries, fetchCodeDocs, fetchInfoDocs } from "./lib/api.js";
 import { formatSearchResults } from "./lib/utils.js";
 import { SearchResponse } from "./lib/types.js";
 import express from "express";
@@ -11,12 +11,28 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
 
-/** Minimum allowed tokens for documentation retrieval */
-const MINIMUM_TOKENS = 1000;
-/** Default tokens when none specified */
-const DEFAULT_TOKENS = 5000;
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
+
+const MAX_TOOL_CALLS = 5;
+
+/** Default number of results to return per page */
+const DEFAULT_RESULTS_LIMIT = 20;
+
+const WHEN_RESULTS_INSUFFICIENT_DIRECTIVE = `**IMPORTANT - When Results Are Insufficient:**
+If the first response doesn't fully answer the user's question, you should:
+1. Try fetching additional pages (page=2, page=3, etc.) with the SAME topic - there may be more relevant content on subsequent pages
+2. Try different topic keywords if the current topic didn't yield good results
+3. Try a different library from the 'resolve-library-id' results if the current library lacks coverage
+4. Try alternative tools if the current tool didn't yield good results
+5. Do not make more than ${MAX_TOOL_CALLS} tool calls
+
+- ALWAYS return gathered documentation, never meta-commentary about searches
+`;
+
+/** Common parameter descriptions */
+const PAGE_PARAM_DESCRIPTION =
+  "Page number for pagination (default: 1, max: 10). If initial results don't answer the question, try page=2, page=3, etc. to find more relevant content. IMPORTANT: When requesting page=2 or higher, you MUST use the EXACT SAME topic as the previous call - changing the topic creates a different result set, not pagination of the same results.";
 
 // Parse CLI arguments using commander
 const program = new Command()
@@ -114,21 +130,24 @@ server.registerTool(
     title: "Resolve Context7 Library ID",
     description: `Resolves a package/product name to a Context7-compatible library ID and returns a list of matching libraries.
 
-You MUST call this function before 'get-library-docs' to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
+You MUST call this function before 'get-coding-and-api-docs' or 'get-informational-docs' to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
-Selection Process:
-1. Analyze the query to understand what library/package the user is looking for
-2. Return the most relevant match based on:
+After receiving results, select the most relevant library by analyzing:
 - Name similarity to the query (exact matches prioritized)
 - Description relevance to the query's intent
 - Documentation coverage (prioritize libraries with higher Code Snippet counts)
-- Trust score (consider libraries with scores of 7-10 more authoritative)
+- Source reputation (consider libraries with High or Medium reputation more authoritative)
 
-Response Format:
-- Return the selected library ID in a clearly marked section
-- Provide a brief explanation for why this library was chosen
-- If multiple good matches exist, acknowledge this but proceed with the most relevant one
-- If no good matches exist, clearly state this and suggest query refinements
+Then clearly state which library ID you selected and why. If no good matches exist, inform the user and suggest query refinements.
+
+Result Fields:
+- Library ID: Context7-compatible identifier (format: /org/project or /org/project/version)
+- Title: Library or package name
+- Description: Short summary
+- Code Snippets: Number of available code examples
+- Source Reputation: Authority indicator (High, Medium, Low, or Unknown)
+- Benchmark Score: Quality indicator (100 is the highest score)
+- Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.
 
 For ambiguous queries, request clarification before proceeding with a best-guess match.`,
     inputSchema: {
@@ -162,16 +181,6 @@ For ambiguous queries, request clarification before proceeding with a best-guess
 
     const responseText = `Available Libraries (top matches):
 
-Each result includes:
-- Library ID: Context7-compatible identifier (format: /org/project)
-- Name: Library or package name
-- Description: Short summary
-- Code Snippets: Number of available code examples
-- Trust Score: Authority indicator
-- Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.
-
-For best results, select libraries based on name match, trust score, snippet coverage, and relevance to your use case.
-
 ----------
 
 ${resultsText}`;
@@ -188,58 +197,133 @@ ${resultsText}`;
 );
 
 server.registerTool(
-  "get-library-docs",
+  "get-coding-and-api-docs",
   {
-    title: "Get Library Docs",
-    description:
-      "Fetches up-to-date documentation for a library. You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.",
+    title: "Get Coding and API Documentation",
+    description: `Fetches code snippets, API references, function signatures, implementation examples, guides, and tutorials for a library.
+
+When to use:
+- User needs practical code examples, guides, or tutorials
+- User asks "how to" questions about implementation
+- User wants API usage patterns or technical implementation details
+- If you are not sure which tool to use, use this tool
+
+Prerequisites:
+- Must call 'resolve-library-id' first to get valid library ID, UNLESS user explicitly provides ID in format '/org/project' or '/org/project/version'
+
+Using the topic parameter:
+- Extract semantic topics from user queries to significantly improve result relevance
+- Examples: "how to authenticate" → topic="authentication", "Next.js routing" → topic="routing", "database connections" → topic="database"
+- Use topics liberally - even broad queries often have extractable topics
+- Omit when you want to get default summarized documentation for the library
+
+${WHEN_RESULTS_INSUFFICIENT_DIRECTIVE}
+
+
+`,
     inputSchema: {
       context7CompatibleLibraryID: z
         .string()
         .describe(
-          "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
+          "Library ID to fetch documentation from. Must be in the format '/org/project' or '/org/project/version' (e.g., '/vercel/next.js')."
         ),
       topic: z
         .string()
         .optional()
-        .describe("Topic to focus documentation on (e.g., 'hooks', 'routing')."),
-      tokens: z
-        .preprocess((val) => (typeof val === "string" ? Number(val) : val), z.number())
-        .transform((val) => (val < MINIMUM_TOKENS ? MINIMUM_TOKENS : val))
-        .optional()
         .describe(
-          `Maximum number of tokens of documentation to retrieve (default: ${DEFAULT_TOKENS}). Higher values provide more context but consume more tokens.`
+          "Semantic topic to filter and improve result relevance. Extract from user query (e.g., 'Next.js authentication setup' → 'authentication', 'how to query MongoDB' → 'database queries'). Using topics improves result quality. Only omit if query is too broad to extract a topic."
         ),
+      page: z.number().int().min(1).max(10).optional().default(1).describe(PAGE_PARAM_DESCRIPTION),
     },
   },
-  async ({ context7CompatibleLibraryID, tokens = DEFAULT_TOKENS, topic = "" }) => {
-    const ctx = requestContext.getStore();
-    const fetchDocsResponse = await fetchLibraryDocumentation(
+  async ({ context7CompatibleLibraryID, topic, page = 1 }) => {
+    // Fetch docs for the library
+    const docs = await fetchCodeDocs(
       context7CompatibleLibraryID,
       {
-        tokens,
         topic,
+        page,
+        limit: DEFAULT_RESULTS_LIMIT,
       },
-      ctx?.clientIp,
-      ctx?.apiKey
+      clientIp,
+      apiKey
     );
 
-    if (!fetchDocsResponse) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: "Documentation not found or not finalized for this library. This might have happened because you used an invalid Context7-compatible library ID. To get a valid Context7-compatible library ID, use the 'resolve-library-id' with the package name you wish to retrieve documentation for.",
-          },
-        ],
-      };
-    }
+    const responseText = (transportType === "sse" ? sseDeprecationNotice + "\n\n" : "") + docs;
 
     return {
       content: [
         {
           type: "text",
-          text: fetchDocsResponse,
+          text: docs,
+        },
+      ],
+    };
+  }
+);
+
+server.registerTool(
+  "get-informational-docs",
+  {
+    title: "Get Informational Documentation",
+    description: `Fetches narrative documentation and architecture explanations for a library.
+
+When to use:
+- User wants to understand concepts, architecture, or design decisions
+- Plan, pricing, or other non-technical information
+- User asks "what is" or "why does X work this way" questions
+- User needs high-level understanding without code examples
+- When 'get-coding-and-api-docs' doesn't have enough context or background information
+- If code/API examples would help answer the question, use 'get-coding-and-api-docs' instead
+- If you are not sure which tool to use, use 'get-coding-and-api-docs'
+
+Prerequisites:
+- Must call 'resolve-library-id' first to get valid library ID, UNLESS user explicitly provides ID in format '/org/project' or '/org/project/version'
+
+Using the topic parameter:
+- Extract semantic topics from user queries to significantly improve result relevance
+- Examples: "Next.js architecture" → topic="architecture", "React concepts" → topic="concepts", "deployment best practices" → topic="deployment"
+- Use topics liberally - even broad conceptual queries often have extractable topics
+- Never omit the topic parameter
+
+${WHEN_RESULTS_INSUFFICIENT_DIRECTIVE}
+
+`,
+    inputSchema: {
+      context7CompatibleLibraryID: z
+        .string()
+        .describe(
+          "Library ID to fetch documentation from. Must be in the format '/org/project' or '/org/project/version' (e.g., '/vercel/next.js')."
+        ),
+      topic: z
+        .string()
+        .optional()
+        .describe(
+          "Semantic topic to filter and improve result relevance. Extract from user query (e.g., 'getting started guide' → 'getting started', 'architecture overview' → 'architecture'). Using topics improves result quality. Only omit if query is too broad to extract a topic."
+        ),
+      page: z.number().int().min(1).max(10).optional().default(1).describe(PAGE_PARAM_DESCRIPTION),
+    },
+  },
+  async ({ context7CompatibleLibraryID, topic, page = 1 }) => {
+    // Fetch docs for the library
+    const docs = await fetchInfoDocs(
+      context7CompatibleLibraryID,
+      {
+        topic,
+        page,
+        limit: DEFAULT_RESULTS_LIMIT,
+      },
+      clientIp,
+      apiKey
+    );
+
+    const responseText = (transportType === "sse" ? sseDeprecationNotice + "\n\n" : "") + docs;
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: docs,
         },
       ],
     };
@@ -302,7 +386,7 @@ async function main() {
       );
     };
 
-    app.all("/mcp", async (req: express.Request, res: express.Response) => {
+    app.post("/mcp", async (req: express.Request, res: express.Response) => {
       try {
         const clientIp = getClientIp(req);
         const apiKey = extractApiKey(req);
@@ -345,14 +429,16 @@ async function main() {
     });
 
     const startServer = (port: number, maxAttempts = 10) => {
-      const httpServer = app.listen(port, () => {
+      const httpServer = app.listen(port);
+
+      httpServer.once("listening", () => {
         actualPort = port;
         console.error(
           `Context7 Documentation MCP Server running on HTTP at http://localhost:${actualPort}/mcp`
         );
       });
 
-      httpServer.on("error", (err: NodeJS.ErrnoException) => {
+      httpServer.once("error", (err: NodeJS.ErrnoException) => {
         if (err.code === "EADDRINUSE" && port < initialPort + maxAttempts) {
           console.warn(`Port ${port} is in use, trying port ${port + 1}...`);
           startServer(port + 1, maxAttempts);
