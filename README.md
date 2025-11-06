@@ -1301,7 +1301,8 @@ CONTEXT7_API_KEY=your_api_key_here
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["tsx", "/path/to/folder/context7/src/index.ts", "--api-key", "YOUR_API_KEY"]
+      "args": ["path/context7/dist/index.js"],
+      "env": { "CONTEXT7_API_KEY": "[API_KEY]" }
     }
   }
 }
