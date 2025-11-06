@@ -1,0 +1,384 @@
+{
+  "questions": [
+    {
+      "library": "/websites/platform_openai",
+      "question": "Propose an architecture for a sophisticated RAG system that leverages OpenAI models, integrates with multiple dynamic data sources, and ensures data freshness, security, and cost-effectiveness for a multi-tenant enterprise solution."
+    },
+    {
+      "library": "/websites/platform_openai",
+      "question": "Design a comprehensive rate limiting and retry strategy for an application making high-volume, concurrent requests to the OpenAI API. Your design should include exponential backoff, circuit breaking, and distributed token buckets."
+    },
+    {
+      "library": "/websites/platform_openai",
+      "question": "Describe the process to upload a file for fine-tuning using the OpenAI API and initiate a fine-tuning job. What are the key steps and considerations for preparing the training data?"
+    },
+    {
+      "library": "/websites/platform_openai",
+      "question": "How do you specify different models (e.g., `gpt-4o`, `gpt-3.5-turbo`) for a chat completion request? Explain how to set model-specific parameters like `temperature`."
+    },
+    {
+      "library": "/websites/platform_openai",
+      "question": "Write code to handle common API errors, such as `RateLimitError` or `AuthenticationError`, gracefully. Suggest appropriate retry logic for transient issues."
+    },
+    {
+      "library": "/berriai/litellm",
+      "question": "When deploying Litellm as a unified API gateway in a production environment, describe how you would implement robust rate limiting and access control per user or API key across heterogeneous LLM providers. Detail the necessary configuration and integration points for this complex scenario."
+    },
+    {
+      "library": "/berriai/litellm",
+      "question": "Design a solution using Litellm to intelligently route incoming LLM requests to different providers based on a combination of cost optimization, latency, and specific model capabilities. How would you handle dynamic updates to this routing logic without restarting the application?"
+    },
+    {
+      "library": "/berriai/litellm",
+      "question": "Implement a custom retry strategy for Litellm requests that applies exponential backoff on specific error codes. Show how to integrate this strategy into the Litellm client configuration."
+    },
+    {
+      "library": "/berriai/litellm",
+      "question": "How can you set provider-specific API keys and custom base URLs when initializing Litellm for multiple models? Provide an example for both OpenAI and a custom hosted model."
+    },
+    {
+      "library": "/berriai/litellm",
+      "question": "Demonstrate how to use Litellm's proxy server feature to expose multiple LLMs under a unified API endpoint. Show how to make a request to this local proxy."
+    },
+    {
+      "library": "/sveltejs/kit",
+      "question": "Explain how SvelteKit's `event.fetch` can be leveraged to proxy and cache external API requests on the server, improving performance and reducing client-side load. Provide an example use case demonstrating its advantages over direct client-side fetching."
+    },
+    {
+      "library": "/sveltejs/kit",
+      "question": "Describe how to implement a server-side caching strategy for frequently accessed data within SvelteKit using `hooks.server.js`. Discuss considerations for cache invalidation and handling stale data effectively."
+    },
+    {
+      "library": "/sveltejs/kit",
+      "question": "Demonstrate how to implement optimistic UI updates for a list of items using SvelteKit's form actions. Show how to immediately reflect changes on the client before the server confirms the update."
+    },
+    {
+      "library": "/sveltejs/kit",
+      "question": "Outline the steps to implement a basic session-based authentication flow using SvelteKit's `hooks.server.js` and `+server.js` endpoints. Focus on setting and reading HTTP-only cookies for session management."
+    },
+    {
+      "library": "/sveltejs/kit",
+      "question": "Implement custom error pages for both 404 (Not Found) and 500 (Server Error) scenarios in a SvelteKit application. Demonstrate how to gracefully handle and display these errors to the user."
+    },
+    {
+      "library": "/drizzle-team/drizzle-orm",
+      "question": "Detail how to design and query a Drizzle ORM schema for a polymorphic relationship, such as `comments` that can belong to either `posts` or `products`. Explain how to define the tables and write a query to fetch all comments associated with a specific entity (e.g., a post with ID 1)."
+    },
+    {
+      "library": "/drizzle-team/drizzle-orm",
+      "question": "Describe how to implement a multi-tenancy pattern using Drizzle ORM, where each query implicitly filters data based on a `tenantId` without explicitly adding `where` clauses to every operation. Discuss strategies for ensuring data isolation and preventing accidental cross-tenant data access."
+    },
+    {
+      "library": "/drizzle-team/drizzle-orm",
+      "question": "Show how to define a custom TypeScript enum (e.g., `UserRole: 'admin' | 'editor' | 'viewer'`) and use it as a column type in a Drizzle ORM table schema. Ensure proper type inference for queries."
+    },
+    {
+      "library": "/drizzle-team/drizzle-orm",
+      "question": "Implement a Drizzle query to select all users who registered in the last 30 days and have at least 5 posts. Group the results by user and order by the number of posts."
+    },
+    {
+      "library": "/drizzle-team/drizzle-orm",
+      "question": "Write a Drizzle query to update the `email` address of a user identified by their `id`. Include a conditional check to ensure the user exists before updating."
+    },
+    {
+      "library": "/anthropics/claude-code",
+      "question": "Explain how to utilize Claude Code for implementing a custom middleware that handles complex, dynamic authorization rules based on user roles, resource attributes, and contextual information in an API Gateway. Consider its application in a multi-tenant SaaS environment."
+    },
+    {
+      "library": "/anthropics/claude-code",
+      "question": "Detail a strategy for using Claude Code to design and implement a distributed caching layer with multiple eviction policies and seamless failover capabilities for a high-traffic microservice. How would it help in orchestrating data synchronization across cache nodes?"
+    },
+    {
+      "library": "/anthropics/claude-code",
+      "question": "Employ Claude Code to create a cross-platform mobile application component (e.g., a login screen) using Flutter, including form validation."
+    },
+    {
+      "library": "/anthropics/claude-code",
+      "question": "How can Claude Code assist in designing and implementing a real-time notification system using WebSockets for a chat application?"
+    },
+    {
+      "library": "/anthropics/claude-code",
+      "question": "Instruct Claude Code to refactor a legacy C# codebase, suggesting improvements for readability, performance, and adherence to modern coding standards."
+    },
+    {
+      "library": "/googleapis/js-genai",
+      "question": "Propose an architecture for implementing an agentic workflow using the `js-genai` library, enabling the GenAI model to dynamically select and execute external tools or APIs based on user intent, including robust error handling and state persistence."
+    },
+    {
+      "library": "/googleapis/js-genai",
+      "question": "Describe an effective strategy for managing and optimizing token usage in production for long-running conversational AI sessions, considering both latency and cost implications when using the `js-genai` library."
+    },
+    {
+      "library": "/googleapis/js-genai",
+      "question": "Write a function that leverages GenAI to summarize a given long document or article into a concise, fixed-length abstract."
+    },
+    {
+      "library": "/googleapis/js-genai",
+      "question": "How do you implement prompt templating to dynamically inject multiple user-defined variables into a GenAI prompt before sending the request?"
+    },
+    {
+      "library": "/googleapis/js-genai",
+      "question": "Implement a multi-turn conversational interface where the GenAI model maintains context across several user interactions within the same session."
+    },
+    {
+      "library": "/google/adk-python",
+      "question": "Propose an architectural approach for an application that needs to synchronize data with an ADK Python backend while supporting offline capabilities. Detail how to manage local state, conflict resolution, and background synchronization queues."
+    },
+    {
+      "library": "/google/adk-python",
+      "question": "Design a comprehensive error handling and retry mechanism for transient failures when interacting with the ADK Python API, considering exponential backoff and circuit breaker patterns. How would you integrate this into the client's request lifecycle?"
+    },
+    {
+      "library": "/google/adk-python",
+      "question": "Explain how to add custom HTTP headers, such as for idempotency keys or custom tracing IDs, to specific requests made through the ADK Python client. Provide an example for a single API call."
+    },
+    {
+      "library": "/google/adk-python",
+      "question": "Describe and implement a strategy for performing multiple create or update operations in a single batch request using ADK Python, assuming the API supports such functionality. Highlight efficiency considerations."
+    },
+    {
+      "library": "/google/adk-python",
+      "question": "Implement a robust method for iterating through and collecting all items from a paginated API endpoint provided by ADK Python. Your solution should correctly handle `next_page_token` or similar mechanisms."
+    },
+    {
+      "library": "/vuejs/docs",
+      "question": "Explain the core benefits of implementing Server-Side Rendering (SSR) with Vue 3, particularly when leveraging a framework like Nuxt 3, and detail the 'hydration' process. Discuss specific challenges or architectural considerations that arise when integrating SSR into an existing Single-Page Application (SPA) workflow."
+    },
+    {
+      "library": "/vuejs/docs",
+      "question": "Describe effective strategies for optimizing a large Vue 3 application's performance and reducing its overall bundle size, specifically focusing on lazy loading, tree-shaking, and efficient component registration. How do these techniques mitigate common performance bottlenecks in production deployments and improve user experience?"
+    },
+    {
+      "library": "/vuejs/docs",
+      "question": "Apply a simple fade-in and fade-out transition effect to an element that is conditionally rendered using `v-if` in Vue 3. Demonstrate the use of the built-in `<Transition>` component for this purpose."
+    },
+    {
+      "library": "/vuejs/docs",
+      "question": "Implement a custom directive in Vue 3 that changes the background color of an HTML element when it is hovered over. Show both the directive's definition and its application within a template."
+    },
+    {
+      "library": "/vuejs/docs",
+      "question": "Create a `Card` component in Vue 3 that uses a default slot for its main content and a named slot for a header section. Provide an example of how to consume this `Card` component and populate its slots."
+    },
+    {
+      "library": "/pydantic/pydantic-ai",
+      "question": "Explain how Pydantic validation can be integrated into a continuous integration/continuous deployment (CI/CD) pipeline for AI models to prevent data drift and schema mismatches between model versions and deployed services."
+    },
+    {
+      "library": "/pydantic/pydantic-ai",
+      "question": "Discuss strategies for dynamically generating Pydantic models at runtime to accommodate evolving AI model output schemas or integrate with highly configurable prompt engineering systems."
+    },
+    {
+      "library": "/pydantic/pydantic-ai",
+      "question": "How would you use Pydantic to validate that a vector database query response, containing embeddings and metadata, conforms to a specified structure?"
+    },
+    {
+      "library": "/pydantic/pydantic-ai",
+      "question": "Design a Pydantic model to validate user feedback on an AI model's performance, including a rating scale and controlled vocabulary for categories."
+    },
+    {
+      "library": "/pydantic/pydantic-ai",
+      "question": "Implement a Pydantic model to define the expected structure of a sequence of actions an AI assistant might propose, ensuring each action has valid parameters."
+    },
+    {
+      "library": "/tiangolo/fastapi",
+      "question": "Describe a comprehensive strategy for integrating an asynchronous database (e.g., PostgreSQL with `asyncpg` and SQLAlchemy's async capabilities) with FastAPI, including connection management and session handling. Furthermore, explain how to offload a long-running, non-blocking task (e.g., sending an email) using FastAPI's `BackgroundTasks` to avoid blocking the main event loop and ensure responsive API behavior."
+    },
+    {
+      "library": "/tiangolo/fastapi",
+      "question": "Design and implement a custom FastAPI middleware that logs the incoming request method and URL, measures the execution time of the request, and logs the response status code. Explain how this middleware can be applied globally to all routes and handle potential exceptions during request processing."
+    },
+    {
+      "library": "/tiangolo/fastapi",
+      "question": "Configure FastAPI to serve static files from a 'static' directory, such as an `index.html` and a `style.css` file. Ensure these files are accessible via the application."
+    },
+    {
+      "library": "/tiangolo/fastapi",
+      "question": "Implement a simple authentication dependency using FastAPI's `Security` or `Depends` for an API key in the request header. Protect a GET endpoint with this authentication mechanism."
+    },
+    {
+      "library": "/tiangolo/fastapi",
+      "question": "Write a FastAPI endpoint that raises an `HTTPException` with a status code of 404 (Not Found) if a specific resource (e.g., an item with a given ID) is not found. Provide a custom detail message for the error."
+    },
+    {
+      "library": "/reactjs/react.dev",
+      "question": "Describe a robust strategy for error boundary implementation in a complex React application, including how to gracefully handle component-level errors and report them to an external logging service without crashing the entire UI."
+    },
+    {
+      "library": "/reactjs/react.dev",
+      "question": "Explain the architectural considerations and trade-offs when implementing server-side rendering (SSR) versus client-side rendering (CSR) for a large-scale React application. Detail the impact on SEO, performance, and development complexity for each approach."
+    },
+    {
+      "library": "/reactjs/react.dev",
+      "question": "Set up client-side routing in a React application using `react-router-dom` to navigate between a Home page and an About page."
+    },
+    {
+      "library": "/reactjs/react.dev",
+      "question": "Optimize a list rendering component by preventing unnecessary re-renders of its child items using `React.memo`."
+    },
+    {
+      "library": "/reactjs/react.dev",
+      "question": "Show how to implement conditional rendering in React to display different UI elements based on a user's logged-in status."
+    },
+    {
+      "library": "/langchain-ai/langgraph",
+      "question": "Design a fault-tolerant LangGraph architecture that can gracefully recover from failures in external API calls made by nodes. Propose a strategy for retrying failed steps or switching to a fallback node based on error conditions."
+    },
+    {
+      "library": "/langchain-ai/langgraph",
+      "question": "Describe how to implement a custom persistence layer for LangGraph checkpoints, for example, storing the graph state in a NoSQL database instead of in-memory. Explain the necessary interface methods and considerations for serialization."
+    },
+    {
+      "library": "/langchain-ai/langgraph",
+      "question": "Implement a mechanism within LangGraph to maintain conversational history by appending new messages to a `messages` list key in the state across multiple turns."
+    },
+    {
+      "library": "/langchain-ai/langgraph",
+      "question": "Illustrate how to set the entry point for a LangGraph and define how the final output is extracted from the graph's state after all processing is complete."
+    },
+    {
+      "library": "/langchain-ai/langgraph",
+      "question": "Write the necessary code to compile a `StateGraph` into a runnable `Graph` and then invoke it with an initial input, illustrating a complete execution cycle."
+    },
+    {
+      "library": "/mongodb/docs",
+      "question": "Detail a strategy for optimizing query performance on a large collection that frequently involves sorting and filtering by multiple fields, considering compound indexes, index prefixes, and index cardinality. Explain how to analyze query plans to validate your optimization efforts."
+    },
+    {
+      "library": "/mongodb/docs",
+      "question": "Compare and contrast the use cases for a single-node MongoDB instance versus a replica set, focusing on data durability, high availability, and operational overhead in a production environment. Under what specific conditions would you prioritize one over the other?"
+    },
+    {
+      "library": "/mongodb/docs",
+      "question": "How can you implement a change stream listener in a Node.js application to react to all insert operations on a specific MongoDB collection?"
+    },
+    {
+      "library": "/mongodb/docs",
+      "question": "Provide the steps to configure a capped collection for storing real-time sensor data, ensuring automatic document expiration and insertion order."
+    },
+    {
+      "library": "/mongodb/docs",
+      "question": "Explain how to use the `$addToSet` operator to add a new tag to an array field 'tags' in a document, ensuring no duplicate tags are added."
+    },
+    {
+      "library": "/tailwindlabs/tailwindcss.com",
+      "question": "How can you create a responsive, centered layout for a web page using Tailwind CSS flexbox and margin auto utilities?"
+    },
+    {
+      "library": "/tailwindlabs/tailwindcss.com",
+      "question": "Implement a navigation menu that displays horizontally on desktop screens and transforms into a vertical column on mobile using Tailwind's responsive prefixes."
+    },
+    {
+      "library": "/tailwindlabs/tailwindcss.com",
+      "question": "Describe how to configure and apply a custom brand color, 'brand-primary', to a div element's background using your `tailwind.config.js` file."
+    },
+    {
+      "library": "/tailwindlabs/tailwindcss.com",
+      "question": "Using Tailwind CSS, create a button that changes its background color on hover and displays an outline on focus."
+    },
+    {
+      "library": "/tailwindlabs/tailwindcss.com",
+      "question": "Explain how to set up a dark mode toggle for a web page, ensuring elements correctly switch styles based on the user's preference or a manual switch with Tailwind CSS."
+    },
+    {
+      "library": "/supabase/supabase",
+      "question": "Implement user sign-up and sign-in functionality using the Supabase JavaScript client, configuring email/password authentication. Provide the necessary client-side code snippets for these operations."
+    },
+    {
+      "library": "/supabase/supabase",
+      "question": "Create a Supabase table `products` and define a Row Level Security (RLS) policy. This policy should allow authenticated users to view all products, but only the `owner_id` to update or delete their own."
+    },
+    {
+      "library": "/supabase/supabase",
+      "question": "Demonstrate how to subscribe to real-time inserts on a specific Supabase table (e.g., `messages`) and log new records to the console. Show the initialization of the Supabase client for this real-time functionality."
+    },
+    {
+      "library": "/supabase/supabase",
+      "question": "Implement a function using the Supabase Storage client to upload a file (e.g., an image) to a specified bucket. The function should return the public URL of the uploaded file upon success."
+    },
+    {
+      "library": "/supabase/supabase",
+      "question": "Write a simple Supabase Edge Function that accepts a `name` query parameter via a GET request. The function should return a JSON response containing a personalized greeting message."
+    },
+    {
+      "library": "/better-auth/better-auth",
+      "question": "How would you implement user registration, including password hashing and storage, using Better Auth's API?"
+    },
+    {
+      "library": "/better-auth/better-auth",
+      "question": "Demonstrate the process of authenticating a user and generating a secure session token or JSON Web Token (JWT) with Better Auth."
+    },
+    {
+      "library": "/better-auth/better-auth",
+      "question": "Implement a protected API endpoint that requires a valid authenticated user session using Better Auth's middleware integration."
+    },
+    {
+      "library": "/better-auth/better-auth",
+      "question": "Outline the steps to create a password reset functionality, including generating and verifying a one-time token, using Better Auth's features."
+    },
+    {
+      "library": "/better-auth/better-auth",
+      "question": "How would you define and enforce basic role-based access control (e.g., 'admin' and 'user') for specific routes using Better Auth's authorization capabilities?"
+    },
+    {
+      "library": "/vercel/ai",
+      "question": "Implement a basic chat interface in a Next.js application that streams responses from an AI model using the Vercel AI SDK."
+    },
+    {
+      "library": "/vercel/ai",
+      "question": "Demonstrate how to send a non-streaming prompt to a large language model and display its generated text using the Vercel AI SDK."
+    },
+    {
+      "library": "/vercel/ai",
+      "question": "Create a simple user form that captures input, sends it to an AI model via the Vercel AI SDK, and renders the AI's output."
+    },
+    {
+      "library": "/vercel/ai",
+      "question": "Show how to integrate the Vercel AI SDK with a React component to manage and display a real-time conversational flow."
+    },
+    {
+      "library": "/vercel/ai",
+      "question": "Write a function using the Vercel AI SDK that includes error handling for AI API calls, providing graceful fallbacks or user notifications."
+    },
+    {
+      "library": "/shadcn-ui/ui",
+      "question": "Implement a user registration form using Shadcn UI's `Form`, `Input`, and `Button` components. Include basic client-side validation for email and password fields."
+    },
+    {
+      "library": "/shadcn-ui/ui",
+      "question": "Create a data table using Shadcn UI components to display a list of users, including columns for name, email, and status. Demonstrate how to add pagination and sorting functionality."
+    },
+    {
+      "library": "/shadcn-ui/ui",
+      "question": "Implement a modal dialog that opens upon a button click, containing a form to update user profile information. Ensure proper state management for opening and closing the dialog."
+    },
+    {
+      "library": "/shadcn-ui/ui",
+      "question": "Construct a responsive navigation bar for a web application using Shadcn UI's `Menubar` and `Sheet` components. Include desktop menu items and a mobile-friendly off-canvas menu."
+    },
+    {
+      "library": "/shadcn-ui/ui",
+      "question": "Integrate Shadcn UI's `Toast` component to display success and error messages after asynchronous operations. Show how to trigger a toast programmatically with different variants."
+    },
+    {
+      "library": "/vercel/next.js",
+      "question": "Implement a dynamic route in Next.js for a blog post, where the post ID is passed as a URL parameter. Show how to access this parameter within the component."
+    },
+    {
+      "library": "/vercel/next.js",
+      "question": "Demonstrate how to use `getServerSideProps` to fetch data from an external API and render it on a page before the component is sent to the client. Ensure the data fetching is robust."
+    },
+    {
+      "library": "/vercel/next.js",
+      "question": "Create an API route in Next.js that accepts a POST request with user data and responds with a success message. Include basic request body parsing."
+    },
+    {
+      "library": "/vercel/next.js",
+      "question": "Utilize `next/image` to display an image, ensuring it is optimized for different screen sizes and lazy-loaded by default. Provide an example of its usage in a component."
+    },
+    {
+      "library": "/vercel/next.js",
+      "question": "Implement static site generation (SSG) for a list of products, where the data is fetched at build time. Configure incremental static regeneration (ISR) to revalidate the data every 60 seconds."
+    }
+  ]
+}

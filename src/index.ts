@@ -15,6 +15,26 @@ import { IncomingMessage } from "http";
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
 
+const MAX_TOOL_CALLS = 5;
+
+/** Default number of results to return per page */
+const DEFAULT_RESULTS_LIMIT = 20;
+
+const WHEN_RESULTS_INSUFFICIENT_DIRECTIVE = `**IMPORTANT - When Results Are Insufficient:**
+If the first response doesn't fully answer the user's question, you should:
+1. Try fetching additional pages (page=2, page=3, etc.) with the SAME topic - there may be more relevant content on subsequent pages
+2. Try different topic keywords if the current topic didn't yield good results
+3. Try a different library from the 'resolve-library-id' results if the current library lacks coverage
+4. Try alternative tools if the current tool didn't yield good results
+5. Do not make more than ${MAX_TOOL_CALLS} tool calls
+
+- ALWAYS return gathered documentation, never meta-commentary about searches
+`;
+
+/** Common parameter descriptions */
+const PAGE_PARAM_DESCRIPTION =
+  "Page number for pagination (default: 1, max: 10). If initial results don't answer the question, try page=2, page=3, etc. to find more relevant content. IMPORTANT: When requesting page=2 or higher, you MUST use the EXACT SAME topic as the previous call - changing the topic creates a different result set, not pagination of the same results.";
+
 // Parse CLI arguments using commander
 const program = new Command()
   .option("--transport <stdio|http>", "transport type", "stdio")
@@ -201,14 +221,9 @@ Using the topic parameter:
 - Use topics liberally - even broad queries often have extractable topics
 - Omit when you want to get default summarized documentation for the library
 
-**IMPORTANT - When Results Are Insufficient:**
-If the first response doesn't fully answer the user's question, you should:
-1. Try fetching additional pages (page=2, page=3, etc.) - there may be more relevant content on subsequent pages
-2. Try different topic keywords if the current topic didn't yield good results
-3. Try 'get-informational-docs' if code examples aren't available or if you need conceptual context
-4. Try a different library from the 'resolve-library-id' results if the current library lacks coverage
+${WHEN_RESULTS_INSUFFICIENT_DIRECTIVE}
 
-Be proactive and exploratory - don't stop at the first result if it's insufficient.
+
 `,
       inputSchema: {
         context7CompatibleLibraryID: z
@@ -229,27 +244,17 @@ Be proactive and exploratory - don't stop at the first result if it's insufficie
           .max(10)
           .optional()
           .default(1)
-          .describe(
-            "Page number for pagination (default: 1, max: 10). If initial results don't answer the question, try page=2, page=3, etc. to find more relevant content."
-          ),
-        limit: z
-          .number()
-          .int()
-          .min(10)
-          .max(50)
-          .optional()
-          .default(20)
-          .describe("Number of results to return (default: 20, max: 50)."),
+          .describe(PAGE_PARAM_DESCRIPTION),
       },
     },
-    async ({ context7CompatibleLibraryID, topic, page = 1, limit = 10 }) => {
+    async ({ context7CompatibleLibraryID, topic, page = 1 }) => {
       // Fetch docs for the library
       const docs = await fetchCodeDocs(
         context7CompatibleLibraryID,
         {
           topic,
           page,
-          limit,
+          limit: DEFAULT_RESULTS_LIMIT,
         },
         clientIp,
         apiKey
@@ -292,14 +297,8 @@ Using the topic parameter:
 - Use topics liberally - even broad conceptual queries often have extractable topics
 - Never omit the topic parameter
 
-**IMPORTANT - When Results Are Insufficient:**
-If the first response doesn't fully answer the user's question, you should:
-1. Try fetching additional pages (page=2, page=3, etc.) - there may be more relevant content on subsequent pages
-2. Try different topic keywords if the current topic didn't yield good results
-3. Try 'get-coding-and-api-docs' if you need code examples or implementation details
-4. Try a different library from the 'resolve-library-id' results if the current library lacks coverage
+${WHEN_RESULTS_INSUFFICIENT_DIRECTIVE}
 
-Be proactive and exploratory - don't stop at the first result if it's insufficient.
 `,
       inputSchema: {
         context7CompatibleLibraryID: z
@@ -320,27 +319,17 @@ Be proactive and exploratory - don't stop at the first result if it's insufficie
           .max(10)
           .optional()
           .default(1)
-          .describe(
-            "Page number for pagination (default: 1, max: 10). If initial results don't answer the question, try page=2, page=3, etc. to find more relevant content."
-          ),
-        limit: z
-          .number()
-          .int()
-          .min(10)
-          .max(50)
-          .optional()
-          .default(20)
-          .describe("Number of results to return (default: 20, max: 50)."),
+          .describe(PAGE_PARAM_DESCRIPTION),
       },
     },
-    async ({ context7CompatibleLibraryID, topic, page = 1, limit = 10 }) => {
+    async ({ context7CompatibleLibraryID, topic, page = 1 }) => {
       // Fetch docs for the library
       const docs = await fetchInfoDocs(
         context7CompatibleLibraryID,
         {
           topic,
           page,
-          limit,
+          limit: DEFAULT_RESULTS_LIMIT,
         },
         clientIp,
         apiKey

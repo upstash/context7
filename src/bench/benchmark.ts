@@ -243,7 +243,7 @@ async function generateContextWithMCP(
   console.log(`    [generateContextWithMCP] Starting text generation with AI model...`);
   const result = await generateText({
     model: mcpModel,
-    stopWhen: stepCountIs(5),
+    stopWhen: stepCountIs(15),
     tools,
     messages: [
       {
@@ -251,12 +251,31 @@ async function generateContextWithMCP(
         content: [
           {
             type: "text",
-            text: `Use the Context7 tools to gather relevant documentation for this question: ${question}
+            text: `CRITICAL INSTRUCTIONS - READ CAREFULLY:
 
-Do not answer the question yourself. Your task is only to:
-1. Use the tools to find the most relevant documentation
-2. Relay the retrieved context exactly as it is provided by the tools
-3. Do not add explanations, summaries, or your own knowledge - just return the raw documentation context as is`,
+Your ONLY task is to gather documentation from Context7 tools for this question:
+${question}
+
+YOU ARE A DATA PIPELINE, NOT AN ASSISTANT. Follow these rules EXACTLY:
+
+1. Call tools to fetch documentation (resolve-library-id, get-coding-and-api-docs, etc.)
+2. After gathering tool results, output ONLY the raw text content from the tools
+3. Copy-paste ALL documentation text from ALL tool calls verbatim
+4. DO NOT summarize, filter, or explain anything
+5. DO NOT answer the question yourself
+6. DO NOT add your own commentary like "Here is the documentation..." or "Let me search..."
+7. Your response must be ONLY raw documentation text, nothing else
+
+FORMAT: Just concatenate all tool response texts with "---" separators.
+
+Example correct output:
+---
+[Raw doc from tool 1]
+---
+[Raw doc from tool 2]
+---
+
+DO NOT output anything except raw documentation text.`,
           },
         ],
       },
@@ -275,6 +294,17 @@ Do not answer the question yourself. Your task is only to:
       } else {
         console.log(`    Text generation step completed`);
       }
+
+      // Log tool results to debug content length issues
+      if (step.toolResults) {
+        step.toolResults.forEach((tr, idx) => {
+          const resultText = JSON.stringify(tr).substring(0, 200);
+          const fullLength = JSON.stringify(tr).length;
+          console.log(
+            `    Tool result ${idx + 1}: ${fullLength} chars (preview: ${resultText}...)`
+          );
+        });
+      }
     },
   });
 
@@ -286,6 +316,14 @@ Do not answer the question yourself. Your task is only to:
   console.log(
     `    [generateContextWithMCP] Generated ${context.length} chars in ${stepCount} steps with ${toolCalls.length} tool calls`
   );
+
+  // Log actual context if it's suspiciously small (likely an error message)
+  if (context.length < 200) {
+    console.log(`    ⚠️  WARNING: Context is very small (${context.length} chars). Content:`);
+    console.log(`    ─────────────────────────────────────────────────────────`);
+    console.log(`    ${context}`);
+    console.log(`    ─────────────────────────────────────────────────────────`);
+  }
 
   return {
     context,
@@ -312,7 +350,7 @@ async function runBenchmark(mcpModel: LanguageModel) {
     let { questions } = JSON.parse(questionsFile) as { questions: Question[] };
     console.log(`Loaded ${questions.length} questions from file`);
 
-    questions = questions.slice(0, 100);
+    questions = questions.slice(0, 1);
     console.log(`Using first ${questions.length} questions for benchmark`);
 
     console.log(`\n${"=".repeat(80)}`);
@@ -333,11 +371,15 @@ async function runBenchmark(mcpModel: LanguageModel) {
     console.log("[1/2] Initializing MCP client 1 (local stdio)...");
     console.log("      Transport: stdio");
     console.log("      Command: node dist/index.js");
+    const apiKey = process.env.CONTEXT7_API_KEY;
+    if (!apiKey) {
+      throw new Error("CONTEXT7_API_KEY environment variable is required");
+    }
     const client1StartTime = Date.now();
     mcpClient1 = await createMCPClient({
       transport: new StdioClientTransport({
         command: "node",
-        args: ["dist/index.js"],
+        args: ["dist/index.js", "--api-key", apiKey],
       }),
     });
     console.log(
@@ -348,10 +390,6 @@ async function runBenchmark(mcpModel: LanguageModel) {
     console.log("\n[2/2] Initializing MCP client 2 (remote HTTP)...");
     console.log("      Transport: HTTP");
     console.log("      URL: https://mcp.context7.com/mcp");
-    const apiKey = process.env.CONTEXT7_API_KEY;
-    if (!apiKey) {
-      throw new Error("CONTEXT7_API_KEY environment variable is required");
-    }
     console.log(`      API Key: ${apiKey.substring(0, 10)}...`);
 
     const client2StartTime = Date.now();
@@ -659,11 +697,74 @@ async function runBenchmark(mcpModel: LanguageModel) {
     summaryMarkdown += `- **Date**: ${new Date().toISOString()}\n\n`;
 
     summaryMarkdown += `## Overall Results\n\n`;
+
+    // Individual scoring results
+    summaryMarkdown += `### Individual Scoring (Jury scores each MCP independently)\n\n`;
+    summaryMarkdown += `- **MCP 1 (Local) Average Score**: ${mcp1AvgScore.toFixed(2)}/100\n`;
+    summaryMarkdown += `- **MCP 2 (Remote) Average Score**: ${mcp2AvgScore.toFixed(2)}/100\n`;
+
+    // Calculate individual wins based on scores
+    let individualMcp1Wins = 0;
+    let individualMcp2Wins = 0;
+    results.forEach((result) => {
+      const mcp1Avg =
+        result.mcp1Scores.reduce((s, sc) => s + sc.score, 0) / result.mcp1Scores.length;
+      const mcp2Avg =
+        result.mcp2Scores.reduce((s, sc) => s + sc.score, 0) / result.mcp2Scores.length;
+      if (mcp1Avg > mcp2Avg) individualMcp1Wins++;
+      else individualMcp2Wins++;
+    });
+    summaryMarkdown += `- **MCP 1 (Local) Wins**: ${individualMcp1Wins}\n`;
+    summaryMarkdown += `- **MCP 2 (Remote) Wins**: ${individualMcp2Wins}\n\n`;
+
+    // Comparison results
+    summaryMarkdown += `### Side-by-Side Comparison (Jury compares both MCPs directly)\n\n`;
     summaryMarkdown += `- **MCP 1 (Local) Wins**: ${mcp1TotalWins}\n`;
     summaryMarkdown += `- **MCP 2 (Remote) Wins**: ${mcp2TotalWins}\n`;
-    summaryMarkdown += `- **Overall Winner**: ${mcp1TotalWins > mcp2TotalWins ? "MCP 1 (Local)" : "MCP 2 (Remote)"}\n\n`;
-    summaryMarkdown += `- **MCP 1 (Local) Average Score**: ${mcp1AvgScore.toFixed(2)}/100\n`;
-    summaryMarkdown += `- **MCP 2 (Remote) Average Score**: ${mcp2AvgScore.toFixed(2)}/100\n\n`;
+    summaryMarkdown += `- **Overall Winner**: ${mcp1TotalWins > mcp2TotalWins ? "MCP 1 (Local)" : mcp2TotalWins > mcp1TotalWins ? "MCP 2 (Remote)" : "TIE"}\n`;
+
+    // Calculate average comparison scores
+    let totalCompMcp1Score = 0;
+    let totalCompMcp2Score = 0;
+    results.forEach((result) => {
+      result.comparisons.forEach((comp) => {
+        totalCompMcp1Score += comp.score1;
+        totalCompMcp2Score += comp.score2;
+      });
+    });
+    const avgCompMcp1 = totalCompMcp1Score / (results.length * JURY_MODELS.length);
+    const avgCompMcp2 = totalCompMcp2Score / (results.length * JURY_MODELS.length);
+    summaryMarkdown += `- **MCP 1 (Local) Average Comparison Score**: ${avgCompMcp1.toFixed(2)}/100\n`;
+    summaryMarkdown += `- **MCP 2 (Remote) Average Comparison Score**: ${avgCompMcp2.toFixed(2)}/100\n\n`;
+
+    // Jury model breakdown
+    summaryMarkdown += `### Jury Model Vote Breakdown\n\n`;
+    const juryBreakdown: Record<string, { mcp1: number; mcp2: number }> = {};
+    results.forEach((result) => {
+      result.comparisons.forEach((comp) => {
+        if (!juryBreakdown[comp.model]) {
+          juryBreakdown[comp.model] = { mcp1: 0, mcp2: 0 };
+        }
+        if (comp.winner === 1) juryBreakdown[comp.model].mcp1++;
+        else juryBreakdown[comp.model].mcp2++;
+      });
+    });
+
+    summaryMarkdown += `| Jury Model | MCP 1 Wins | MCP 2 Wins |\n`;
+    summaryMarkdown += `|------------|------------|------------|\n`;
+    Object.entries(juryBreakdown).forEach(([model, votes]) => {
+      summaryMarkdown += `| ${model} | ${votes.mcp1} | ${votes.mcp2} |\n`;
+    });
+    summaryMarkdown += `\n`;
+
+    // Agreement analysis
+    const agreementCount = results.filter((r) =>
+      r.comparisons.every((c) => c.winner === r.comparisons[0].winner)
+    ).length;
+    const disagreementCount = results.length - agreementCount;
+    summaryMarkdown += `### Jury Agreement\n\n`;
+    summaryMarkdown += `- **Unanimous decisions**: ${agreementCount}/${results.length} (${((agreementCount * 100) / results.length).toFixed(1)}%)\n`;
+    summaryMarkdown += `- **Split decisions**: ${disagreementCount}/${results.length} (${((disagreementCount * 100) / results.length).toFixed(1)}%)\n\n`;
 
     // Summary table
     summaryMarkdown += `## Questions Summary\n\n`;

@@ -1,0 +1,156 @@
+{
+  "questions": [
+    {
+      "library": "OpenAI Platform",
+      "question": "How do I use the Chat Completions API with streaming in OpenAI?"
+    },
+    {
+      "library": "OpenAI Platform",
+      "question": "How do I implement function calling with the OpenAI API?"
+    },
+    {
+      "library": "LiteLLM",
+      "question": "How do I use LiteLLM to call multiple LLM providers with a unified interface?"
+    },
+    {
+      "library": "LiteLLM",
+      "question": "How do I implement fallbacks and retries with LiteLLM?"
+    },
+    {
+      "library": "SvelteKit",
+      "question": "How do I create dynamic routes in SvelteKit?"
+    },
+    {
+      "library": "SvelteKit",
+      "question": "How do I implement server-side data loading with load functions in SvelteKit?"
+    },
+    {
+      "library": "Drizzle ORM",
+      "question": "How do I define a schema and create tables with Drizzle ORM?"
+    },
+    {
+      "library": "Drizzle ORM",
+      "question": "How do I perform queries and joins with Drizzle ORM?"
+    },
+    {
+      "library": "Claude Code",
+      "question": "How do I use Claude Code to refactor existing code?"
+    },
+    {
+      "library": "Claude Code",
+      "question": "How do I configure Claude Code to use custom tools and commands?"
+    },
+    {
+      "library": "Google Generative AI",
+      "question": "How do I generate text with Gemini using the Google Generative AI SDK?"
+    },
+    {
+      "library": "Google Generative AI",
+      "question": "How do I implement multimodal inputs with images in Google Generative AI?"
+    },
+    {
+      "library": "Google ADK Python",
+      "question": "How do I create an agent with Google ADK Python?"
+    },
+    {
+      "library": "Google ADK Python",
+      "question": "How do I implement tool calling with Google ADK Python?"
+    },
+    {
+      "library": "Vue.js",
+      "question": "How do I use reactive state with ref and reactive in Vue 3?"
+    },
+    {
+      "library": "Vue.js",
+      "question": "How do I create and use composables in Vue 3?"
+    },
+    {
+      "library": "Pydantic AI",
+      "question": "How do I define and validate models with Pydantic AI?"
+    },
+    {
+      "library": "Pydantic AI",
+      "question": "How do I create agents with structured outputs in Pydantic AI?"
+    },
+    {
+      "library": "FastAPI",
+      "question": "How do I create a REST API endpoint with path and query parameters in FastAPI?"
+    },
+    {
+      "library": "FastAPI",
+      "question": "How do I implement dependency injection in FastAPI?"
+    },
+    {
+      "library": "React",
+      "question": "How do I use the useReducer hook in React?"
+    },
+    {
+      "library": "React",
+      "question": "How do I implement custom hooks in React?"
+    },
+    {
+      "library": "LangGraph",
+      "question": "How do I create a basic agent workflow with LangGraph?"
+    },
+    {
+      "library": "LangGraph",
+      "question": "How do I implement conditional edges and routing in LangGraph?"
+    },
+    {
+      "library": "MongoDB",
+      "question": "How do I perform CRUD operations with the MongoDB Node.js driver?"
+    },
+    {
+      "library": "MongoDB",
+      "question": "How do I use transactions in MongoDB?"
+    },
+    {
+      "library": "Tailwind CSS",
+      "question": "How do I use arbitrary values and JIT mode in Tailwind CSS?"
+    },
+    {
+      "library": "Tailwind CSS",
+      "question": "How do I create custom plugins for Tailwind CSS?"
+    },
+    {
+      "library": "Supabase",
+      "question": "How do I implement row-level security (RLS) in Supabase?"
+    },
+    {
+      "library": "Supabase",
+      "question": "How do I use real-time subscriptions in Supabase?"
+    },
+    {
+      "library": "Better Auth",
+      "question": "How do I implement session management with Better Auth?"
+    },
+    {
+      "library": "Better Auth",
+      "question": "How do I add multi-factor authentication with Better Auth?"
+    },
+    {
+      "library": "Vercel AI SDK",
+      "question": "How do I implement structured output with Vercel AI SDK?"
+    },
+    {
+      "library": "Vercel AI SDK",
+      "question": "How do I handle errors and retries with Vercel AI SDK?"
+    },
+    {
+      "library": "Shadcn UI",
+      "question": "How do I customize the theme and styling of Shadcn UI components?"
+    },
+    {
+      "library": "Shadcn UI",
+      "question": "How do I use the Data Table component with sorting and filtering in Shadcn UI?"
+    },
+    {
+      "library": "Next.js",
+      "question": "How do I implement parallel and intercepting routes in Next.js App Router?"
+    },
+    {
+      "library": "Next.js",
+      "question": "How do I use Server Actions for form handling in Next.js?"
+    }
+  ]
+}
