@@ -150,7 +150,7 @@ Smithery キーは [Smithery.ai Web ページ](https://smithery.ai/server/@upsta
 {
   "mcpServers": {
     "context7": {
-      "serverUrl": "https://mcp.context7.com/sse"
+      "serverUrl": "https://mcp.context7.com/mcp"
     }
   }
 }
@@ -303,7 +303,7 @@ Smithery キーは [Smithery.ai Web ページ](https://smithery.ai/server/@upsta
 #### Claude Code リモートサーバー接続
 
 ```sh
-claude mcp add --transport sse context7 https://mcp.context7.com/sse
+claude mcp add --transport http context7 https://mcp.context7.com/mcp
 ```
 
 #### Claude Code ローカルサーバー接続
@@ -370,6 +370,57 @@ claude mcp add context7 -- npx -y @upstash/context7-mcp
 ```
 
 詳細は [公式 GitHub ドキュメント](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/agents/copilot-coding-agent/extending-copilot-coding-agent-with-mcp) をご覧ください。
+
+</details>
+
+<details>
+<summary><b>Copilot CLI へのインストール</b></summary>
+
+1.  Copilot CLI MCP 設定ファイルを開きます。ファイルの場所は `~/.copilot/mcp-config.json`（`~` はホームディレクトリ）です。
+2.  `mcp-config.json` ファイルの `mcpServers` オブジェクトに以下を追加します：
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      },
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ]
+    }
+  }
+}
+```
+
+または、ローカルサーバーの場合：
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "local",
+      "command": "npx",
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ],
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "YOUR_API_KEY"
+      ]
+    }
+  }
+}
+```
+
+`mcp-config.json` ファイルが存在しない場合は、作成してください。
 
 </details>
 
@@ -606,8 +657,8 @@ bun run dist/index.js
 
 `context7-mcp` は以下の CLI フラグを受け付けます：
 
-- `--transport <stdio|http|sse>` – 使用するトランスポート（デフォルトは `stdio`）。
-- `--port <number>` – `http` または `sse` トランスポート使用時にリッスンするポート（デフォルト `3000`）。
+- `--transport <stdio|http>` – 使用するトランスポート（デフォルトは `stdio`）。
+- `--port <number>` – `http` トランスポート使用時にリッスンするポート（デフォルト `3000`）。
 
 http トランスポートとポート 8080 の例：
 

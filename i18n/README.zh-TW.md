@@ -139,7 +139,7 @@ npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME>
 {
   "mcpServers": {
     "context7": {
-      "serverUrl": "https://mcp.context7.com/sse"
+      "serverUrl": "https://mcp.context7.com/mcp"
     }
   }
 }
@@ -337,12 +337,6 @@ npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME>
 claude mcp add --transport http context7 https://mcp.context7.com/mcp
 ```
 
-或者使用 SSE 傳輸方式：
-
-```sh
-claude mcp add --transport sse context7 https://mcp.context7.com/sse
-```
-
 #### Claude Code 本地伺服器連線
 
 ```sh
@@ -445,6 +439,57 @@ claude mcp add context7 -- npx -y @upstash/context7-mcp
 ```
 
 更多資訊請參見[官方 GitHub 文件](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/agents/copilot-coding-agent/extending-copilot-coding-agent-with-mcp)。
+
+</details>
+
+<details>
+<summary><b>在 Copilot CLI 中安裝</b></summary>
+
+1.  打開 Copilot CLI MCP 設定檔。位置為 `~/.copilot/mcp-config.json`（其中 `~` 是您的主目錄）。
+2.  在 `mcp-config.json` 檔案中的 `mcpServers` 物件新增下列内容：
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      },
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ]
+    }
+  }
+}
+```
+
+或者，對於本地伺服器：
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "local",
+      "command": "npx",
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ],
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "YOUR_API_KEY"
+      ]
+    }
+  }
+}
+```
+
+如果 `mcp-config.json` 檔案不存在，請建立它。
 
 </details>
 
@@ -766,10 +811,20 @@ Windows 的設定與 Linux 或 macOS 略有不同（_範例以 Cline 為例_）�
 
 將下列設定加入你的 OpenAI Codex MCP 伺服器設定：
 
+#### 本地伺服器連接
+
 ```toml
 [mcp_servers.context7]
 args = ["-y", "@upstash/context7-mcp"]
 command = "npx"
+```
+
+#### 遠端伺服器連接
+
+```toml
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
 ```
 
 </details>

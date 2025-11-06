@@ -117,12 +117,6 @@ npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME>
 claude mcp add --transport http context7 https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: YOUR_API_KEY"
 ```
 
-或者使用 SSE 传输：
-
-```sh
-claude mcp add --transport sse context7 https://mcp.context7.com/sse --header "CONTEXT7_API_KEY: YOUR_API_KEY"
-```
-
 #### Claude Code 本地服务器连接
 
 ```sh
@@ -447,10 +441,20 @@ claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 
 将以下配置添加到您的 OpenAI Codex MCP 服务器设置中：
 
+#### 本地服务器连接
+
 ```toml
 [mcp_servers.context7]
 args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
 command = "npx"
+```
+
+#### 远程服务器连接
+
+```toml
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
 ```
 
 </details>
@@ -736,6 +740,57 @@ command = "npx"
 </details>
 
 <details>
+<summary><b>在 Copilot CLI 中安装</b></summary>
+
+1.  打开 Copilot CLI MCP 配置文件。文件位置是 `~/.copilot/mcp-config.json`（其中 `~` 是你的主目录）。
+2.  将以下内容添加到 `mcp-config.json` 文件中的 `mcpServers` 对象：
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      },
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ]
+    }
+  }
+}
+```
+
+或者，对于本地服务器：
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "local",
+      "command": "npx",
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ],
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "YOUR_API_KEY"
+      ]
+    }
+  }
+}
+```
+
+如果 `mcp-config.json` 文件不存在，请创建它。
+
+</details>
+
+<details>
 <summary><b>在 LM Studio 中安装</b></summary>
 
 更多详情请参见 [LM Studio MCP 支持](https://lmstudio.ai/blog/lmstudio-v0.3.17)。
@@ -815,7 +870,7 @@ command = "npx"
 3. 点击添加自定义 MCP
 4. 从下面添加名称和服务器配置，并确保点击安装按钮
 
-#### Crush 远程服务器连接 (HTTP)
+#### Crush 远程服务器连接
 
 ```json
 {
@@ -824,23 +879,6 @@ command = "npx"
     "context7": {
       "type": "http",
       "url": "https://mcp.context7.com/mcp",
-      "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY"
-      }
-    }
-  }
-}
-```
-
-#### Crush 远程服务器连接 (SSE)
-
-```json
-{
-  "$schema": "https://charm.land/crush.json",
-  "mcp": {
-    "context7": {
-      "type": "sse",
-      "url": "https://mcp.context7.com/sse",
       "headers": {
         "CONTEXT7_API_KEY": "YOUR_API_KEY"
       }
@@ -1066,7 +1104,7 @@ bun run dist/index.js
 
 `context7-mcp` 接受以下 CLI 标志：
 
-- `--transport <stdio|http>` – 使用的传输方式（默认 `stdio`）。请注意，HTTP 传输自动提供 HTTP 和 SSE 端点。
+- `--transport <stdio|http>` – 使用的传输方式（默认 `stdio`）。使用 `http` 作为远程 HTTP 服务器或 `stdio` 用于本地集成。
 - `--port <number>` – 使用 `http` 传输时监听的端口（默认 `3000`）。
 - `--api-key <key>` – 用于身份验证的API密钥。您可以通过在 [context7.com/dashboard](https://context7.com/dashboard) 创建账户来获取您的API密钥。
 

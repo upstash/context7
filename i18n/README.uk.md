@@ -150,7 +150,7 @@ npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME>
 {
   "mcpServers": {
     "context7": {
-      "serverUrl": "https://mcp.context7.com/sse"
+      "serverUrl": "https://mcp.context7.com/mcp"
     }
   }
 }
@@ -301,6 +301,83 @@ npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME>
 </details>
 
 <details>
+<summary><b>Встановлення в Copilot Coding Agent</b></summary>
+
+## Використання Context7 з Copilot Coding Agent
+
+Додайте наступну конфігурацію до розділу `mcp` вашого файла настроек Copilot Coding Agent Repository->Settings->Copilot->Coding agent->MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      },
+      "tools": ["get-library-docs", "resolve-library-id"]
+    }
+  }
+}
+```
+
+Детальніше див. в [офіційній документації GitHub](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/agents/copilot-coding-agent/extending-copilot-coding-agent-with-mcp).
+
+</details>
+
+<details>
+<summary><b>Встановлення в Copilot CLI</b></summary>
+
+1.  Відкрийте файл конфігурації MCP Copilot CLI. Розташування: `~/.copilot/mcp-config.json` (де `~` — ваша домашня папка).
+2.  Додайте наступне до об'єкта `mcpServers` у вашому файлі `mcp-config.json`:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      },
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ]
+    }
+  }
+}
+```
+
+Або для локального сервера:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "local",
+      "command": "npx",
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ],
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "YOUR_API_KEY"
+      ]
+    }
+  }
+}
+```
+
+Якщо файл `mcp-config.json` не існує, створіть його.
+
+</details>
+
+<details>
 <summary><b>Встановлення в Gemini CLI</b></summary>
 
 Детальніше див. у [конфігурації Gemini CLI](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/configuration.md).
@@ -332,12 +409,6 @@ npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME>
 
 ```sh
 claude mcp add --transport http context7 https://mcp.context7.com/mcp
-```
-
-Або з використанням SSE-транспорту:
-
-```sh
-claude mcp add --transport sse context7 https://mcp.context7.com/sse
 ```
 
 #### Підключення до локального сервера Claude Code
@@ -754,8 +825,8 @@ bun run dist/index.js
 
 `context7-mcp` приймає наступні прапори CLI:
 
-- `--transport <stdio|http|sse>` — Транспорт для використання (`stdio` за замовчуванням).
-- `--port <number>` — Порт для прослуховування при використанні транспорту `http` або `sse` (за замовчуванням `3000`).
+- `--transport <stdio|http>` — Транспорт для використання (`stdio` за замовчуванням).
+- `--port <number>` — Порт для прослуховування при використанні транспорту `http` (за замовчуванням `3000`).
 
 Приклад з http-транспортом і портом 8080:
 

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
+  "name": "io.github.upstash/context7",
+  "title": "Context7",
+  "description": "Up-to-date code docs for any prompt",
+  "repository": {
+    "url": "https://github.com/upstash/context7",
+    "source": "github"
+  },
+  "version": "1.0.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@upstash/context7-mcp",
+      "version": "1.0.26",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "API key for authentication",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true,
+          "name": "CONTEXT7_API_KEY"
+        }
+      ]
+    }
+  ]
+}

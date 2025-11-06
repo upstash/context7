@@ -150,7 +150,7 @@ Windsurf MCP 설정 파일에 다음을 추가하세요. 자세한 내용은 [Wi
 {
   "mcpServers": {
     "context7": {
-      "serverUrl": "https://mcp.context7.com/sse"
+      "serverUrl": "https://mcp.context7.com/mcp"
     }
   }
 }
@@ -348,12 +348,6 @@ Visual Studio MCP 설정 파일에 다음을 추가하세요(자세한 내용은
 claude mcp add --transport http context7 https://mcp.context7.com/mcp
 ```
 
-또는 SSE 전송 사용:
-
-```sh
-claude mcp add --transport sse context7 https://mcp.context7.com/sse
-```
-
 #### Claude Code 로컬 서버 연결
 
 ```sh
@@ -432,6 +426,57 @@ Claude Desktop의 `claude_desktop_config.json` 파일에 다음을 추가하세�
 ```
 
 자세한 내용은 [공식 GitHub 문서](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/agents/copilot-coding-agent/extending-copilot-coding-agent-with-mcp)를 참고하세요.
+
+</details>
+
+<details>
+<summary><b>Copilot CLI 설치</b></summary>
+
+1.  Copilot CLI MCP 구성 파일을 엽니다. 파일 위치는 `~/.copilot/mcp-config.json`입니다(`~`는 홈 디렉토리).
+2.  `mcp-config.json` 파일의 `mcpServers` 객체에 다음을 추가하세요:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      },
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ]
+    }
+  }
+}
+```
+
+또는 로컬 서버의 경우:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "local",
+      "command": "npx",
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ],
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "YOUR_API_KEY"
+      ]
+    }
+  }
+}
+```
+
+`mcp-config.json` 파일이 없으면 생성하세요.
 
 </details>
 
@@ -770,10 +815,20 @@ Opencode 설정 파일에 다음을 추가하세요. 자세한 내용은 [Openco
 
 OpenAI Codex MCP 서버 설정에 다음 설정을 추가하세요:
 
+#### 로컬 서버 연결
+
 ```toml
 [mcp_servers.context7]
 args = ["-y", "@upstash/context7-mcp"]
 command = "npx"
+```
+
+#### 원격 서버 연결
+
+```toml
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
 ```
 
 </details>
@@ -838,8 +893,8 @@ bun run dist/index.js
 
 `context7-mcp`는 다음 CLI 플래그를 지원합니다:
 
-- `--transport <stdio|http|sse>` – 사용할 전송 방식 (`stdio`가 기본값).
-- `--port <number>` – `http` 또는 `sse` 전송 방식 사용 시 수신 대기할 포트 (기본값 `3000`).
+- `--transport <stdio|http>` – 사용할 전송 방식 (`stdio`가 기본값).
+- `--port <number>` – `http` 전송 방식 사용 시 수신 대기할 포트 (기본값 `3000`).
 
 http 전송과 포트 8080을 사용하는 예시:
 

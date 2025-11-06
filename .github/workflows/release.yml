@@ -9,6 +9,9 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write # Required for OIDC authentication with MCP Registry
+      contents: read
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -38,6 +41,10 @@ jobs:
         run: |
           sed -i "s/version: \"[0-9]*\.[0-9]*\.[0-9]*\"/version: \"${{ env.VERSION }}\"/" src/index.ts
 
+      - name: Update package version in server.json
+        run: |
+          echo $(jq --arg v "${{ env.VERSION }}" '(.packages[0].version) = $v' server.json) > server.json
+
       - name: Install Dependencies
         run: bun install
 
@@ -58,3 +65,20 @@ jobs:
         run: |
           npm pkg delete scripts.prepare
           npm publish --access public --tag=canary
+
+      - name: Validate server.json
+        if: "!github.event.release.prerelease"
+        run: npx mcp-registry-validator validate server.json
+
+      - name: Install MCP Publisher
+        if: "!github.event.release.prerelease"
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/download/v1.3.3/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Login to MCP Registry
+        if: "!github.event.release.prerelease"
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish to MCP Registry
+        if: "!github.event.release.prerelease"
+        run: ./mcp-publisher publish

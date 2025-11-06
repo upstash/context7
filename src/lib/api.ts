@@ -51,7 +51,9 @@ export async function searchLibraries(
     if (!response.ok) {
       const errorCode = response.status;
       if (errorCode === 429) {
-        const errorMessage = "Rate limited due to too many requests. Please try again later.";
+        const errorMessage = apiKey
+          ? "Rate limited due to too many requests. Please try again later."
+          : "Rate limited due to too many requests. You can create a free API key at https://context7.com/dashboard for higher rate limits.";
         console.error(errorMessage);
         return {
           results: [],
@@ -116,7 +118,9 @@ export async function fetchLibraryDocumentation(
     if (!response.ok) {
       const errorCode = response.status;
       if (errorCode === 429) {
-        const errorMessage = "Rate limited due to too many requests. Please try again later.";
+        const errorMessage = apiKey
+          ? "Rate limited due to too many requests. Please try again later."
+          : "Rate limited due to too many requests. You can create a free API key at https://context7.com/dashboard for higher rate limits.";
         console.error(errorMessage);
         return errorMessage;
       }

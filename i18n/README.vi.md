@@ -150,7 +150,7 @@ Thêm cấu hình này vào file cấu hình Windsurf MCP của bạn. Xem [tài
 {
   "mcpServers": {
     "context7": {
-      "serverUrl": "https://mcp.context7.com/sse"
+      "serverUrl": "https://mcp.context7.com/mcp"
     }
   }
 }
@@ -346,12 +346,6 @@ Chạy lệnh này. Xem [tài liệu Claude Code MCP](https://docs.anthropic.com
 
 ```sh
 claude mcp add --transport http context7 https://mcp.context7.com/mcp
-```
-
-Hoặc sử dụng SSE transport:
-
-```sh
-claude mcp add --transport sse context7 https://mcp.context7.com/sse
 ```
 
 #### Kết nối Claude Code Local Server
@@ -740,6 +734,57 @@ Thêm cấu hình sau vào phần `mcp` trong file cấu hình Copilot Coding Ag
 Để biết thêm thông tin, xem [tài liệu GitHub chính thức](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/agents/copilot-coding-agent/extending-copilot-coding-agent-with-mcp).
 
 </details>
+
+<details>
+<summary><b>Cài đặt trong Copilot CLI</b></summary>
+
+1.  Mở file cấu hình MCP của Copilot CLI. Vị trí là `~/.copilot/mcp-config.json` (trong đó `~` là thư mục home của bạn).
+2.  Thêm nội dung sau vào đối tượng `mcpServers` trong file `mcp-config.json` của bạn:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      },
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ]
+    }
+  }
+}
+```
+
+Hoặc, đối với server cục bộ:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "local",
+      "command": "npx",
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ],
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "YOUR_API_KEY"
+      ]
+    }
+  }
+}
+```
+
+Nếu file `mcp-config.json` không tồn tại, hãy tạo nó.
+
+</details>
   
 <details>
   
@@ -775,10 +820,20 @@ Xem [OpenAI Codex](https://github.com/openai/codex) để biết thêm thông ti
 
 Thêm cấu hình sau vào cài đặt OpenAI Codex MCP server của bạn:
 
+#### Kết nối Server Cục bộ
+
 ```toml
 [mcp_servers.context7]
 args = ["-y", "@upstash/context7-mcp"]
 command = "npx"
+```
+
+#### Kết nối Server Từ xa
+
+```toml
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
 ```
 
 </details>
@@ -872,8 +927,8 @@ bun run dist/index.js
 
 `context7-mcp` chấp nhận các CLI flags sau:
 
-- `--transport <stdio|http|sse>` – Transport để sử dụng (`stdio` theo mặc định).
-- `--port <number>` – Port để lắng nghe khi sử dụng transport `http` hoặc `sse` (mặc định `3000`).
+- `--transport <stdio|http>` – Transport để sử dụng (`stdio` theo mặc định).
+- `--port <number>` – Port để lắng nghe khi sử dụng transport `http` (mặc định `3000`).
 
 Ví dụ với http transport và port 8080:
 

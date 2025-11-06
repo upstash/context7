@@ -171,6 +171,54 @@ Agrega la siguiente configuración a la sección `mcp` de tu archivo de configur
 
 Para más información, consulta la [documentación oficial de GitHub](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/agents/copilot-coding-agent/extending-copilot-coding-agent-with-mcp).
 
+### Instalar en Copilot CLI
+
+1.  Abre el archivo de configuración MCP de Copilot CLI. La ubicación es `~/.copilot/mcp-config.json` (donde `~` es tu directorio home).
+2.  Agrega lo siguiente al objeto `mcpServers` en tu archivo `mcp-config.json`:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      },
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ]
+    }
+  }
+}
+```
+
+O, para un servidor local:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "local",
+      "command": "npx",
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ],
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "YOUR_API_KEY"
+      ]
+    }
+  }
+}
+```
+
+Si el archivo `mcp-config.json` no existe, créalo.
+
 ### Herramientas Disponibles
 
 - `resolve-library-id`: Resuelve un nombre de una biblioteca general en un ID de biblioteca compatible con Context7.

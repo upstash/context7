@@ -35,8 +35,7 @@ Here's an example `context7.json` file with all available options:
   "rules": ["Use Upstash Redis as a database", "Use single region set up"],
   "previousVersions": [
     {
-      "tag": "v1.2.1",
-      "title": "version 1.2.1"
+      "tag": "v1.2.1"
     }
   ]
 }
@@ -65,7 +64,10 @@ Here's an example `context7.json` file with all available options:
 
 - **`previousVersions`** (array): Information about previous versions of your library that should also be available in Context7.
   - **`tag`**: The Git tag or version identifier
-  - **`title`**: Human-readable version name
+
+- **`branchVersions`** (array): Information about previous versions (branch based) of your library that should also
+  be available in Context7.
+  - **`branch`**: The Git branch
 
 ### Exclusion Patterns
 

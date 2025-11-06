@@ -1,10 +1,10 @@
 ![Cover](public/cover.png)
 
+[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D) [<img alt="Install in VS Code (npx)" src="https://img.shields.io/badge/Install%20in%20VS%20Code-0098FF?style=for-the-badge&logo=visualstudiocode&logoColor=white">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22context7%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40upstash%2Fcontext7-mcp%40latest%22%5D%7D)
+
 # Context7 MCP - Up-to-date Code Docs For Any Prompt
 
 [![Website](https://img.shields.io/badge/Website-context7.com-blue)](https://context7.com) [![smithery badge](https://smithery.ai/badge/@upstash/context7-mcp)](https://smithery.ai/server/@upstash/context7-mcp) [![NPM Version](https://img.shields.io/npm/v/%40upstash%2Fcontext7-mcp?color=red)](https://www.npmjs.com/package/@upstash/context7-mcp) [![MIT licensed](https://img.shields.io/npm/l/%40upstash%2Fcontext7-mcp)](./LICENSE)
-
-[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D) [<img alt="Install in VS Code (npx)" src="https://img.shields.io/badge/Install%20in%20VS%20Code-0098FF?style=for-the-badge&logo=visualstudiocode&logoColor=white">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22context7%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40upstash%2Fcontext7-mcp%40latest%22%5D%7D)
 
 [![繁體中文](https://img.shields.io/badge/docs-繁體中文-yellow)](./i18n/README.zh-TW.md) [![简体中文](https://img.shields.io/badge/docs-简体中文-yellow)](./i18n/README.zh-CN.md) [![日本語](https://img.shields.io/badge/docs-日本語-b7003a)](./i18n/README.ja.md) [![한국어 문서](https://img.shields.io/badge/docs-한국어-green)](./i18n/README.ko.md) [![Documentación en Español](https://img.shields.io/badge/docs-Español-orange)](./i18n/README.es.md) [![Documentation en Français](https://img.shields.io/badge/docs-Français-blue)](./i18n/README.fr.md) [![Documentação em Português (Brasil)](<https://img.shields.io/badge/docs-Português%20(Brasil)-purple>)](./i18n/README.pt-BR.md) [![Documentazione in italiano](https://img.shields.io/badge/docs-Italian-red)](./i18n/README.it.md) [![Dokumentasi Bahasa Indonesia](https://img.shields.io/badge/docs-Bahasa%20Indonesia-pink)](./i18n/README.id-ID.md) [![Dokumentation auf Deutsch](https://img.shields.io/badge/docs-Deutsch-darkgreen)](./i18n/README.de.md) [![Документация на русском языке](https://img.shields.io/badge/docs-Русский-darkblue)](./i18n/README.ru.md) [![Українська документація](https://img.shields.io/badge/docs-Українська-lightblue)](./i18n/README.uk.md) [![Türkçe Doküman](https://img.shields.io/badge/docs-Türkçe-blue)](./i18n/README.tr.md) [![Arabic Documentation](https://img.shields.io/badge/docs-Arabic-white)](./i18n/README.ar.md) [![Tiếng Việt](https://img.shields.io/badge/docs-Tiếng%20Việt-red)](./i18n/README.vi.md)
 
@@ -38,6 +38,9 @@ Context7 fetches up-to-date code examples and documentation right into your LLM'
 
 No tab-switching, no hallucinated APIs that don't exist, no outdated code generation.
 
+> [!NOTE]
+> This repository hosts the source code of Context7 MCP server. The supporting components — API backend, parsing engine, and crawling engine — are private and not part of this release.
+
 ## 📚 Adding Projects
 
 Check out our [project addition guide](./docs/adding-projects.md) to learn how to add (or update) your favorite libraries to Context7.
@@ -49,11 +52,6 @@ Check out our [project addition guide](./docs/adding-projects.md) to learn how t
 - Node.js >= v18.0.0
 - Cursor, Claude Code, VSCode, Windsurf or another MCP Client
 - Context7 API Key (Optional) for higher rate limits and private repositories (Get yours by creating an account at [context7.com/dashboard](https://context7.com/dashboard))
-
-> [!WARNING]
-> **SSE Protocol Deprecation Notice**
->
-> The Server-Sent Events (SSE) transport protocol is deprecated and its endpoint will be removed in upcoming releases. Please use HTTP or stdio transport methods instead.
 
 <details>
 <summary><b>Installing via Smithery</b></summary>
@@ -402,6 +400,45 @@ If the `mcpServers` object does not exist, create it.
 </details>
 
 <details>
+<summary><b>Install in Qwen Coder</b></summary>
+
+See [Qwen Coder MCP Configuration](https://qwenlm.github.io/qwen-code-docs/en/tools/mcp-server/#how-to-set-up-your-mcp-server) for details.
+
+1.  Open the Qwen Coder settings file. The location is `~/.qwen/settings.json` (where `~` is your home directory).
+2.  Add the following to the `mcpServers` object in your `settings.json` file:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "httpUrl": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY",
+        "Accept": "application/json, text/event-stream"
+      }
+    }
+  }
+}
+```
+
+Or, for a local server:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+    }
+  }
+}
+```
+
+If the `mcpServers` object does not exist, create it.
+
+</details>
+
+<details>
 <summary><b>Install in Claude Desktop</b></summary>
 
 #### Remote Server Connection
@@ -468,65 +505,55 @@ See [OpenAI Codex](https://github.com/openai/codex) for more information.
 
 Add the following configuration to your OpenAI Codex MCP server settings:
 
+#### Local Server Connection
+
 ```toml
 [mcp_servers.context7]
 args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
 command = "npx"
-```
-
-⚠️ Windows Notes
-
-On Windows, some users may encounter request timed out errors with the default configuration.
-In that case, explicitly configure the MCP server with the full path to Node.js and the installed package:
-
-```toml
-[mcp_servers.context7]
-command = "C:\\Program Files\\nodejs\\node.exe"
-args = [
-  "C:\\Users\\yourname\\AppData\\Roaming\\npm\\node_modules\\@upstash\\context7-mcp\\dist\\index.js",
-  "--transport",
-  "stdio",
-  "--api-key",
-  "YOUR_API_KEY"
-]
-```
-
-Alternatively, you can use the following configuration:
-
-```toml
-[mcp_servers.context7]
-command = "cmd"
-args = [
-    "/c",
-    "npx",
-    "-y",
-    "@upstash/context7-mcp",
-    "--api-key",
-    "YOUR_API_KEY"
-]
-env = { SystemRoot="C:\\Windows" }
 startup_timeout_ms = 20_000
 ```
 
-This ensures Codex CLI works reliably on Windows.
-
-⚠️ MacOS Notes
-
-On MacOS, some users may encounter the same request timed out errors like Windows,
-it also can be solved tith the full path to Node.js and the installed package:
+#### Remote Server Connection
 
 ```toml
 [mcp_servers.context7]
-command = "/Users/yourname/.nvm/versions/node/v22.14.0/bin/node"  # Node.js full path
-args = ["/Users/yourname/.nvm/versions/node/v22.14.0/lib/node_modules/@upstash/context7-mcp/dist/index.js",
-  "--transport",
-  "stdio",
-  "--api-key",
-  "YOUR_API_KEY"
-]
+url = "https://mcp.context7.com/mcp"
+http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
 ```
 
-This ensures Codex CLI works reliably on MacOS.
+> Optional troubleshooting — only if you see startup "request timed out" or "not found program". Most users can ignore this.
+>
+> - First try: increase `startup_timeout_ms` to `40_000` and retry.
+> - Windows quick fix (absolute `npx` path + explicit env):
+>
+> ```toml
+> [mcp_servers.context7]
+> command = "C:\\Users\\yourname\\AppData\\Roaming\\npm\\npx.cmd"
+> args = [
+>   "-y",
+>   "@upstash/context7-mcp",
+>   "--api-key",
+>   "YOUR_API_KEY"
+> ]
+> env = { SystemRoot="C:\\Windows", APPDATA="C:\\Users\\yourname\\AppData\\Roaming" }
+> startup_timeout_ms = 40_000
+> ```
+>
+> - macOS quick fix (use Node + installed package entry point):
+>
+> ```toml
+> [mcp_servers.context7]
+> command = "/Users/yourname/.nvm/versions/node/v22.14.0/bin/node"
+> args = ["/Users/yourname/.nvm/versions/node/v22.14.0/lib/node_modules/@upstash/context7-mcp/dist/index.js",
+>   "--transport",
+>   "stdio",
+>   "--api-key",
+>   "YOUR_API_KEY"
+> ]
+> ```
+>
+> Notes: Replace `yourname` with your OS username. Explicitly setting `APPDATA` and `SystemRoot` is essential because these are required by `npx` on Windows but not set by certain versions of OpenAI Codex mcp clients by default.
 
 </details>
 
@@ -814,6 +841,57 @@ For more information, see the [official GitHub documentation](https://docs.githu
 </details>
 
 <details>
+<summary><b>Install in Copilot CLI</b></summary>
+
+1.  Open the Copilot CLI MCP config file. The location is `~/.copilot/mcp-config.json` (where `~` is your home directory).
+2.  Add the following to the `mcpServers` object in your `mcp-config.json` file:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      },
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ]
+    }
+  }
+}
+```
+
+Or, for a local server:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "local",
+      "command": "npx",
+      "tools": [
+        "get-library-docs", 
+        "resolve-library-id"
+      ],
+      "args": [
+        "-y",
+        "@upstash/context7-mcp",
+        "--api-key",
+        "YOUR_API_KEY"
+      ]
+    }
+  }
+}
+```
+
+If the `mcp-config.json` file does not exist, create it.
+
+</details>
+
+<details>
 <summary><b>Install in LM Studio</b></summary>
 
 See [LM Studio MCP Support](https://lmstudio.ai/blog/lmstudio-v0.3.17) for more information.
@@ -1063,6 +1141,37 @@ See [Local and Remote MCPs for Perplexity](https://www.perplexity.ai/help-center
 7. Click `Save`.
 </details>
 
+<details>
+<summary><b>Install in Factory</b></summary>
+
+Factory's droid supports MCP servers through its CLI. See [Factory MCP docs](https://docs.factory.ai/cli/configuration/mcp) for more info.
+
+#### Factory Remote Server Connection (HTTP)
+
+Run this command in your terminal:
+
+```sh
+droid mcp add context7 https://mcp.context7.com/mcp --type http --header "CONTEXT7_API_KEY: YOUR_API_KEY"
+```
+
+Or without an API key (basic usage with rate limits):
+
+```sh
+droid mcp add context7 https://mcp.context7.com/mcp --type http
+```
+
+#### Factory Local Server Connection (Stdio)
+
+Run this command in your terminal:
+
+```sh
+droid mcp add context7 "npx -y @upstash/context7-mcp" --env CONTEXT7_API_KEY=YOUR_API_KEY
+```
+
+Once configured, Context7 tools will be available in your droid sessions. Type `/mcp` within droid to manage servers, authenticate, and view available tools.
+
+</details>
+
 ## 🔨 Available Tools
 
 Context7 MCP provides the following tools that LLMs can use:
@@ -1135,9 +1244,9 @@ bun run dist/index.js
 
 `context7-mcp` accepts the following CLI flags:
 
-- `--transport <stdio|http>` – Transport to use (`stdio` by default). Note that HTTP transport automatically provides both HTTP and SSE endpoints.
+- `--transport <stdio|http>` – Transport to use (`stdio` by default). Use `http` for remote HTTP server or `stdio` for local integration.
 - `--port <number>` – Port to listen on when using `http` transport (default `3000`).
-- `--api-key <key>` – API key for authentication. You can get your API key by creating an account at [context7.com/dashboard](https://context7.com/dashboard).
+- `--api-key <key>` – API key for authentication (or set `CONTEXT7_API_KEY` env var). You can get your API key by creating an account at [context7.com/dashboard](https://context7.com/dashboard).
 
 Example with HTTP transport and port 8080:
 
@@ -1149,6 +1258,39 @@ Another example with stdio transport:
 
 ```bash
 bun run dist/index.js --transport stdio --api-key YOUR_API_KEY
+```
+
+### Environment Variables
+
+You can use the `CONTEXT7_API_KEY` environment variable instead of passing the `--api-key` flag. This is useful for:
+
+- Storing API keys securely in `.env` files
+- Integration with MCP server setups that use dotenv
+- Tools that prefer environment variable configuration
+
+**Note:** The `--api-key` CLI flag takes precedence over the environment variable when both are provided.
+
+**Example with .env file:**
+
+```bash
+# .env
+CONTEXT7_API_KEY=your_api_key_here
+```
+
+**Example MCP configuration using environment variable:**
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "env": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      }
+    }
+  }
+}
 ```
 
 <details>
@@ -1246,7 +1388,9 @@ Use the `--experimental-fetch` flag to bypass TLS-related problems:
 
 ## ⚠️ Disclaimer
 
-Context7 projects are community-contributed and while we strive to maintain high quality, we cannot guarantee the accuracy, completeness, or security of all library documentation. Projects listed in Context7 are developed and maintained by their respective owners, not by Context7. If you encounter any suspicious, inappropriate, or potentially harmful content, please use the "Report" button on the project page to notify us immediately. We take all reports seriously and will review flagged content promptly to maintain the integrity and safety of our platform. By using Context7, you acknowledge that you do so at your own discretion and risk.
+1- Context7 projects are community-contributed and while we strive to maintain high quality, we cannot guarantee the accuracy, completeness, or security of all library documentation. Projects listed in Context7 are developed and maintained by their respective owners, not by Context7. If you encounter any suspicious, inappropriate, or potentially harmful content, please use the "Report" button on the project page to notify us immediately. We take all reports seriously and will review flagged content promptly to maintain the integrity and safety of our platform. By using Context7, you acknowledge that you do so at your own discretion and risk.
+
+2- This repository hosts the MCP server’s source code. The supporting components — API backend, parsing engine, and crawling engine — are private and not part of this release.
 
 ## 🤝 Connect with Us
 

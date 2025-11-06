@@ -1,0 +1,11 @@
+{
+  "name": "context7",
+  "description": "Up-to-date code docs for any prompt",
+  "version": "1.0.0",
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "${CONTEXT7_API_KEY}"]
+    }
+  }
+}
