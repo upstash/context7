@@ -2,19 +2,19 @@
 title: How-To Guides
 ---
 
-Learn practical techniques to maximize your Context7 experience.
+Practical techniques for using Context7 effectively.
 
 ## Quick Wins
 
 - [Auto-invoke Context7](#auto-invoke-context7) so you never forget to pull fresh docs
 - [Target the exact library ID](#use-specific-library-ids) to skip search steps
 - [Tune networking and proxies](#configure-https-proxy) for locked-down environments
-- [Control token usage](#optimize-token-usage) to keep responses snappy
+- [Control token usage](#control-token-usage) to keep responses snappy
 - [Bring in private repositories](#work-with-private-repositories) for internal docs
 
 ## Auto-Invoke Context7
 
-Stop adding "use context7" to every prompt by setting up an automatic rule.
+Stop adding `use context7` to every prompt by setting up an automatic rule.
 
 ### Add a Rule to Your MCP Client
 
@@ -50,8 +50,7 @@ Stop adding "use context7" to every prompt by setting up an automatic rule.
 </AccordionGroup>
 
 <Tip>
-  Customize the rule to match your workflow. For example, only auto-invoke for specific libraries or
-  frameworks.
+  Customize the rule for your workflow. Examples: "Auto-invoke only for Next.js questions" or "Use context7 when the prompt mentions 'API' or 'documentation'."
 </Tip>
 
 ## Use Specific Library IDs
@@ -153,9 +152,9 @@ Both lowercase and uppercase environment variables are supported.
   connectivity before restarting your IDE.
 </Tip>
 
-## Optimize Token Usage
+## Control Token Usage
 
-Control documentation size to manage costs and response times.
+Manage documentation size to control costs and response times.
 
 ### Set Token Limits in Dashboard
 
@@ -182,7 +181,7 @@ curl "https://context7.com/api/v1/vercel/next.js?tokens=3000&topic=routing" \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
-Lower token counts = faster responses and lower costs.
+Lower token counts result in faster responses and lower costs.
 
 ## Work with Private Repositories
 
@@ -309,28 +308,28 @@ Visit the [Dashboard](https://context7.com/dashboard) to monitor your usage and 
 
 ### Security
 
-- Never commit API keys to version control
-- Use environment variables for keys
-- Rotate keys regularly
-- Give team members minimum required permissions
+- Never commit API keys to version control - Use `.env` files and add them to `.gitignore`
+- Use environment variables for keys - `export CONTEXT7_API_KEY=your_key_here`
+- Rotate keys regularly - Rotate every 90 days or immediately if compromised
+- Give team members minimum required permissions - Use "Developer" role for non-admins
 
 See [Security](/security) for comprehensive security guidelines.
 
 ### Performance
 
-- Use specific library IDs when possible
-- Set appropriate token limits
-- Use topic filtering to focus results
-- Cache frequently-used documentation locally
+- Use specific library IDs when possible - `/vercel/next.js` instead of "next.js docs"
+- Set appropriate token limits - small amounts for quick lookups, higher amounts for comprehensive docs
+- Use topic filtering to focus results - Add specific topics like "authentication" or "routing"
+- Cache frequently-used documentation locally - Cache for 6-24 hours to reduce API calls
 
 ### Library Management
 
-- Keep `context7.json` up to date in your repositories
-- Exclude unnecessary folders (tests, build artifacts)
-- Add helpful rules for AI agents
-- Maintain version tags for important releases
+- Keep `context7.json` up to date in your repositories - Update when adding new docs or changing structure
+- Exclude unnecessary folders (tests, build artifacts) - `excludeFolders: ["test", "dist", "node_modules"]`
+- Add helpful rules for AI agents - Example: "Always validate user input" or "Use TypeScript strict mode"
+- Maintain version tags for important releases - Keep v1.x docs available even after releasing v2.x
 
-See [Library Owners](/library-owners) for configuration details.
+See [Library Owners](/adding-libraries) for configuration details.
 
 ## Need Help?
 

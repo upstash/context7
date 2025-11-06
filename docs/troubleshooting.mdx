@@ -29,11 +29,11 @@ If you encounter `ERR_MODULE_NOT_FOUND`, try using `bunx` instead of `npx`:
 }
 ```
 
-This often resolves module resolution issues in environments where `npx` doesn't properly install or resolve packages.
+Use this when you see module resolution errors with npx.
 
 ### ESM Resolution Issues
 
-For errors like `Error: Cannot find module 'uriTemplate.js'`, try the `--experimental-vm-modules` flag:
+For errors such as `Error: Cannot find module 'uriTemplate.js'`, try the `--experimental-vm-modules` flag:
 
 ```json
 {
@@ -61,9 +61,7 @@ Use the `--experimental-fetch` flag to bypass TLS-related problems:
 }
 ```
 
-## General Solutions
-
-### Quick Fixes
+## Quick Fixes
 
 1. **Try adding `@latest`** to the package name to ensure you're using the most recent version:
 
@@ -326,11 +324,11 @@ Test the remote server is reachable:
 curl https://mcp.context7.com/mcp/ping
 ```
 
-Should return: `{"status": "ok", "message": "pong"}`
+Expected response: `{"status": "ok", "message": "pong"}`
 
-## Still Having Issues?
+## Additional Support
 
-If none of these solutions work:
+If these solutions don't resolve your issue:
 
 1. **Check GitHub Issues**: Search for similar problems at [github.com/upstash/context7/issues](https://github.com/upstash/context7/issues)
 2. **Create a new issue**: Include your:

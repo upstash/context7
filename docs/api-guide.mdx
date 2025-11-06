@@ -14,8 +14,7 @@ Authorization: Bearer CONTEXT7_API_KEY
 Get your API key at [context7.com/dashboard](https://context7.com/dashboard).
 
 <Warning>
-  Treat your API key like a password. Store it in an environment variable or secret manager and
-  rotate it immediately if you suspect it has leaked.
+  Store your API key in an environment variable or secret manager. Rotate it if compromised.
 </Warning>
 
 ## Rate Limits
@@ -36,17 +35,17 @@ When you exceed rate limits, the API returns a `429` status code with a `retryAf
 
 ## Best Practices
 
-### 1. Use Appropriate Token Limits
+### Use Appropriate Token Limits
 
 Request only the amount of documentation you need to minimize token usage and response times:
 
 ```bash
-# Request only 2000 tokens for quick lookups
+# Fetches 2000 tokens of documentation
 curl "https://context7.com/api/v1/vercel/next.js?tokens=2000" \
   -H "Authorization: Bearer CONTEXT7_API_KEY"
 ```
 
-### 2. Specify Topics
+### Specify Topics
 
 Use the `topic` parameter to get more relevant results and reduce unnecessary content:
 
@@ -56,11 +55,11 @@ curl "https://context7.com/api/v1/vercel/next.js?topic=routing" \
   -H "Authorization: Bearer CONTEXT7_API_KEY"
 ```
 
-### 3. Cache Responses
+### Cache Responses
 
 Store documentation locally to reduce API calls and improve performance. Documentation updates are relatively infrequent, so caching for several hours or days is usually appropriate.
 
-### 4. Handle Rate Limits
+### Handle Rate Limits
 
 Implement exponential backoff for rate limit errors:
 
@@ -82,9 +81,9 @@ def fetch_with_retry(url, headers, max_retries=3):
     raise Exception("Max retries exceeded")
 ```
 
-### 5. Use Specific Versions
+### Use Specific Versions
 
-When possible, specify exact versions for consistent results across deployments:
+Specify exact versions for consistent results across deployments:
 
 ```bash
 # Pin to a specific version

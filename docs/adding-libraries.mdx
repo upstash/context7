@@ -48,17 +48,17 @@ Here's an example `context7.json` file with all available options:
 
 ## Field Descriptions
 
-- **`projectTitle`** (string): Suggested display name for your project in Context7. Only used when LLM can not generate a name with high confidence.
+- **`projectTitle`** (string): Suggested display name for your project in Context7. Only used when the LLM cannot generate a name with high confidence.
 
-- **`description`** (string): Suggested description for your project in Context7. Only used when LLM can not generate a name with high confidence.
+- **`description`** (string): Suggested description for your project in Context7. Only used when the LLM cannot generate a description with high confidence.
 
 - **`branch`** (string): The name of the git branch to parse. If not provided, the default branch will be used.
 
-- **`folders`** (array): Specific folder paths to include when parsing documentation. If empty, Context7 will scan the entire repository for relevant documentation files. Note: Root-level markdown files are always included regardless of this setting.
+- **`folders`** (array): Specific folder paths to include when parsing. If empty, Context7 scans the entire repository. Root-level markdown files are always included.
 
-- **`excludeFolders`** (array): Patterns to exclude folders and paths from documentation parsing. Supports simple names, paths, and glob patterns (see Exclusion Patterns section below).
+- **`excludeFolders`** (array): Patterns to exclude from documentation parsing. Supports simple names, paths, and glob patterns (see Exclusion Patterns below).
 
-- **`excludeFiles`** (array): Specific file names to exclude from documentation parsing. Only include the filename (not the path). Useful for excluding files like `CHANGELOG.md`, license files, or other non-documentation content.
+- **`excludeFiles`** (array): Specific file names to exclude. Use only the filename, not the full path. Examples: `CHANGELOG.md`, license files, or non-documentation content.
 
 - **`rules`** (array): Best practices or important guidelines that coding agents should follow when using your library. These appear as recommendations in the documentation context provided to coding agents.
 
@@ -122,10 +122,10 @@ These defaults help ensure that coding agents receive relevant, current document
 
 ## Best Practices
 
-1. **Keep descriptions concise**: Aim for one clear sentence that explains your library's purpose to coding agents
-2. **Exclude irrelevant folders**: Use `excludeFolders` to avoid indexing source code, tests, or build artifacts
-3. **Add helpful rules**: Include common gotchas or best practices that coding agents should know when generating code
-4. **Maintain version history**: Keep important previous versions accessible for projects that need older APIs
+1. **Keep descriptions concise**: One sentence explaining your library's purpose. Example: "Serverless Redis SDK for edge and browser environments."
+2. **Exclude irrelevant folders**: Use `excludeFolders` to skip source code, tests, or build artifacts. Example: `["src", "test", "dist", "node_modules"]`
+3. **Add helpful rules**: Include common gotchas or best practices. Example: "Always call `.close()` on Redis connections" or "Use environment variables for API keys, never hardcode them"
+4. **Maintain version history**: Keep important previous versions accessible. Users on v1.x still need v1.x documentation, not just the latest v2.x
 
 ## Adding a Version
 
@@ -151,9 +151,9 @@ To add a new version to your existing library:
 
 Keep documentation helpful for agents:
 
-- Review the rendered documentation at least once per release.
-- Trim noisy sections (e.g., large changelogs) with `excludeFiles` or `excludeFolders`.
-- Update `rules` when best practices change so AI assistants surface the right guidance.
+- Review the rendered documentation after each release
+- Trim noisy sections (e.g., large changelogs) with `excludeFiles` or `excludeFolders`
+- Update `rules` when best practices change so AI assistants surface current guidance
 
 ## Need Help?
 
