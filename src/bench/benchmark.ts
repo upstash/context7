@@ -283,7 +283,7 @@ DO NOT output anything except raw documentation text.`,
     onStepFinish: (step) => {
       if (step.toolCalls) {
         step.toolCalls.forEach((tc) => {
-          const input = (tc as any).input || (tc as any).args || {};
+          const input = tc.input || {};
           const toolCall: ToolCall = {
             toolName: tc.toolName,
             args: input,

@@ -150,7 +150,7 @@ npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME>
 {
   "mcpServers": {
     "context7": {
-      "serverUrl": "https://mcp.context7.com/sse"
+      "serverUrl": "https://mcp.context7.com/mcp"
     }
   }
 }
@@ -332,12 +332,6 @@ npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME>
 
 ```sh
 claude mcp add --transport http context7 https://mcp.context7.com/mcp
-```
-
-Або з використанням SSE-транспорту:
-
-```sh
-claude mcp add --transport sse context7 https://mcp.context7.com/sse
 ```
 
 #### Підключення до локального сервера Claude Code
@@ -754,8 +748,8 @@ bun run dist/index.js
 
 `context7-mcp` приймає наступні прапори CLI:
 
-- `--transport <stdio|http|sse>` — Транспорт для використання (`stdio` за замовчуванням).
-- `--port <number>` — Порт для прослуховування при використанні транспорту `http` або `sse` (за замовчуванням `3000`).
+- `--transport <stdio|http>` — Транспорт для використання (`stdio` за замовчуванням).
+- `--port <number>` — Порт для прослуховування при використанні транспорту `http` (за замовчуванням `3000`).
 
 Приклад з http-транспортом і портом 8080:
 
