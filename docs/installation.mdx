@@ -13,9 +13,9 @@ Before you begin, make sure you have:
 - **API Key** (Recommended): For higher rate limits and private repositories. Get yours at [context7.com/dashboard](https://context7.com/dashboard)
 
 <Warning>
-**SSE Protocol Deprecation Notice**
+**SSE Protocol Removed**
 
-The Server-Sent Events (SSE) transport protocol is deprecated and its endpoint will be removed in upcoming releases. Please use HTTP or stdio transport methods instead.
+The Server-Sent Events (SSE) transport protocol has been removed and is no longer available. Please use HTTP or stdio transport methods instead.
 
 </Warning>
 
@@ -616,6 +616,43 @@ Find your Smithery key at [smithery.ai](https://smithery.ai/server/@upstash/cont
 
   </Accordion>
 
+  <Accordion title="Qwen Coder" icon="code">
+    See [Qwen Coder MCP Configuration](https://qwenlm.github.io/qwen-code-docs/en/tools/mcp-server/#how-to-set-up-your-mcp-server) for details.
+
+    1. Open the Qwen Coder settings file. The location is `~/.qwen/settings.json` (where `~` is your home directory).
+    2. Add the following to the `mcpServers` object in your `settings.json` file:
+
+    **Remote Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "httpUrl": "https://mcp.context7.com/mcp",
+          "headers": {
+            "CONTEXT7_API_KEY": "YOUR_API_KEY",
+            "Accept": "application/json, text/event-stream"
+          }
+        }
+      }
+    }
+    ```
+
+    **Local Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+
+    If the `mcpServers` object does not exist, create it.
+
+  </Accordion>
+
   <Accordion title="Perplexity Desktop" icon="search">
     1. Navigate `Perplexity` → `Settings` → `Connectors`
     2. Click `Add Connector` → `Advanced`
@@ -671,6 +708,55 @@ Find your Smithery key at [smithery.ai](https://smithery.ai/server/@upstash/cont
 
   </Accordion>
 
+  <Accordion title="Copilot CLI" icon="github">
+    1. Open the Copilot CLI MCP config file. The location is `~/.copilot/mcp-config.json` (where `~` is your home directory).
+    2. Add the following to the `mcpServers` object in your `mcp-config.json` file:
+
+    **Remote Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "type": "http",
+          "url": "https://mcp.context7.com/mcp",
+          "headers": {
+            "CONTEXT7_API_KEY": "YOUR_API_KEY"
+          },
+          "tools": [
+            "get-library-docs",
+            "resolve-library-id"
+          ]
+        }
+      }
+    }
+    ```
+
+    **Local Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "type": "local",
+          "command": "npx",
+          "tools": [
+            "get-library-docs",
+            "resolve-library-id"
+          ],
+          "args": [
+            "-y",
+            "@upstash/context7-mcp",
+            "--api-key",
+            "YOUR_API_KEY"
+          ]
+        }
+      }
+    }
+    ```
+
+    If the `mcp-config.json` file does not exist, create it.
+
+  </Accordion>
+
   <Accordion title="Amazon Q Developer CLI" icon="amazon">
     ```json
     {
@@ -699,6 +785,35 @@ Find your Smithery key at [smithery.ai](https://smithery.ai/server/@upstash/cont
       }
     }
     ```
+
+  </Accordion>
+
+  <Accordion title="Factory" icon="factory">
+    Factory's droid supports MCP servers through its CLI. See [Factory MCP docs](https://docs.factory.ai/cli/configuration/mcp) for more info.
+
+    **Remote Server Connection (HTTP)**:
+
+    Run this command in your terminal:
+
+    ```sh
+    droid mcp add context7 https://mcp.context7.com/mcp --type http --header "CONTEXT7_API_KEY: YOUR_API_KEY"
+    ```
+
+    Or without an API key (basic usage with rate limits):
+
+    ```sh
+    droid mcp add context7 https://mcp.context7.com/mcp --type http
+    ```
+
+    **Local Server Connection (Stdio)**:
+
+    Run this command in your terminal:
+
+    ```sh
+    droid mcp add context7 "npx -y @upstash/context7-mcp" --env CONTEXT7_API_KEY=YOUR_API_KEY
+    ```
+
+    Once configured, Context7 tools will be available in your droid sessions. Type `/mcp` within droid to manage servers, authenticate, and view available tools.
 
   </Accordion>
 </AccordionGroup>

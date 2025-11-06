@@ -19,7 +19,7 @@ Stop adding "use context7" to every prompt by setting up an automatic rule.
 ### Add a Rule to Your MCP Client
 
 <AccordionGroup>
-  <Accordion title="Cursor" icon="cursor">
+  <Accordion title="Cursor" icon="code">
     1. Open `Cursor Settings` → `Rules`
     2. Add this rule:
 
@@ -191,19 +191,20 @@ Access your private documentation with Context7 Pro.
 ### Requirements
 
 - Pro plan ($7/seat/month)
-- GitHub or GitLab personal access token
+- GitHub, GitLab, or Bitbucket account connection
 - Repository access permissions
 
 ### Add a Private Repository
 
 1. Go to [Dashboard → Libraries → Private Repositories](https://context7.com/dashboard)
 2. Click **Add Private Repository**
-3. Enter repository URL
-4. Provide access token:
-   - **GitHub**: Token with `repo` scope
-   - **GitLab**: Token with `read_repository` scope
-5. Configure folders and exclusions (optional)
-6. Submit
+3. Choose your source:
+   - **Connect Repository**: Link your GitHub, GitLab, or Bitbucket account
+   - **Upload OpenAPI Docs**: Upload your own OpenAPI documentation
+4. Enter repository URL (if connecting repository)
+5. Authorize Context7 to access your repository
+6. Configure folders and exclusions (optional)
+7. Submit
 
 ### Cost
 
@@ -240,7 +241,7 @@ Each team member gets their own API key with independent rate limits (60 req/hou
 
 Regenerate keys from the Members tab if compromised.
 
-See [Dashboard → Team Collaboration](/dashboard#team-collaboration) for details.
+Visit the [Dashboard](https://context7.com/dashboard) for team management details.
 
 ## Refresh Library Documentation
 
@@ -302,7 +303,7 @@ All stats show the last 30 days.
 - Added 800K token private repo: $12 one-time
 - Monthly total: $40
 
-See [Dashboard → Usage Monitoring](/dashboard#usage-monitoring) for more details.
+Visit the [Dashboard](https://context7.com/dashboard) to monitor your usage and costs.
 
 ## Best Practices
 

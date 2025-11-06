@@ -43,7 +43,7 @@ No tab-switching, no hallucinated APIs that don't exist, no outdated code genera
 
 ## 📚 Adding Projects
 
-Check out our [project addition guide](./docs/adding-projects.md) to learn how to add (or update) your favorite libraries to Context7.
+Check out our [project addition guide](https://context7.com/docs/adding-libraries) to learn how to add (or update) your favorite libraries to Context7.
 
 ## 🛠️ Installation
 
