@@ -6,186 +6,22 @@ Pick the plan that matches how you work today and scale when your needs grow.
 
 ## Compare Plans
 
-<CardGroup cols={3}>
-  <Card title="Free" icon="gift">
-    **$0**
-
-    Perfect for individual developers
-
-    **Features:**
-    - Public Repositories
-    - Access Control
-    - API Usage (60 req/hr)
-    - Community Support
-
-    [Get Started Free →](https://context7.com/dashboard)
-  </Card>
-
-  <Card title="Pro" icon="star">
-    **$7 per seat / month**
-
-    For teams that need private repos
-
-    **Free Features +**
-    - Private Repositories
-    - Team Collaboration
-    - $15/1M parse tokens
-    - Email Support
-
-    [Choose Pro →](https://context7.com/plans)
-  </Card>
-
-  <Card title="Enterprise" icon="building">
-    **Custom Pricing**
-
-    For large teams with custom needs
-
-    **Pro Features +**
-    - SOC-2 Compliance
-    - SSO (SAML, OAuth, OIDC)
-    - Custom Rate Limits
-    - Dedicated Support
-
-    [Contact Us →](https://context7.com/contact)
-  </Card>
-</CardGroup>
-
-## Plan Details
-
-### Free Plan
-
-The Free plan is perfect for individual developers who want to access public documentation.
-
-**What's Included:**
-- Access to all public repositories
-- Basic access control
-- 60 API requests per hour
-- MCP server integration
-- Community support via Discord and GitHub
-
-**Limitations:**
-- No private repository access
-- No team collaboration
-- Single user only
-
-**Best For:**
-- Individual developers
-- Personal projects
-- Learning and experimentation
-- Public documentation needs
-
-### Pro Plan
-
-The Pro plan adds private repository access and team collaboration capabilities.
-
-**Pricing:**
-- **$7 per seat per month**: Each team member counts as one seat
-- **$15 per 1M parse tokens**: For parsing private repositories (adding or refreshing)
-
-**What's Included:**
-- Everything in Free plan
-- Private repository access
-- Team collaboration (up to 20 members per project)
-- 60 requests/hour per team member
-- Email support
-- Usage analytics and monitoring
-
-**How Billing Works:**
-1. **Member Seats**: Charged monthly based on the number of team members
-2. **Parse Tokens**: Charged when adding or refreshing private repositories
-3. **Pro-rated Charges**: Billed based on days in the current billing period
-4. **Cached Pages**: Free when refreshing (only new/changed content is charged)
-
-<Note>
-Parse tokens measure how much *documentation* Context7 processes during ingestion—querying already-indexed docs stays free.
-</Note>
-
-**Example Costs:**
-- 3 team members: $21/month (3 × $7)
-- Adding a 500K token private repo: $7.50 one-time (0.5M × $15)
-- Total first month: $28.50
-
-**Best For:**
-- Development teams
-- Projects with private repositories
-- Organizations needing collaboration
-- Teams with proprietary documentation
-
-### Enterprise Plan
-
-The Enterprise plan provides custom solutions for large organizations.
-
-**Custom Pricing:**
-Contact us at [context7@upstash.com](mailto:context7@upstash.com) for customized pricing based on your needs.
-
-**What's Included:**
-- Everything in Pro plan
-- SOC-2 Type II compliance
-- SSO authentication (SAML, OAuth 2.0, OIDC)
-- Custom rate limits
-- Dedicated support team
-- Priority feature requests
-- Custom SLA
-- Regular check-ins
-- Advanced security features
-
-**Best For:**
-- Large enterprises
-- Organizations requiring SOC-2 compliance
-- Teams with high-volume API usage
-- Companies needing SSO integration
-
-## Pricing Details
-
-### Parse Token Pricing
-
-When you add or refresh a private repository, you're charged $15 per 1 million tokens parsed.
-
-**What Counts as Parsing:**
-- Initial addition of a private repository
-- Refreshing a private repository (only new/changed content)
-- Processing documentation and code examples
-
-**What's Free:**
-- Cached pages during refresh (unchanged content)
-- Public repository access
-- Querying documentation via API (covered by seat cost)
-
-**Example Scenarios:**
-
-<AccordionGroup>
-  <Accordion title="Adding a Private Repository">
-    - Repository documentation size: 750K tokens
-    - Cost: $11.25 (0.75M × $15)
-    - This is a one-time charge when adding the repository
-  </Accordion>
-
-  <Accordion title="Refreshing a Repository">
-    - Previous size: 750K tokens
-    - New content: 50K tokens
-    - Cached (unchanged): 700K tokens
-    - Cost: $0.75 (0.05M × $15)
-    - You only pay for the new/changed content
-  </Accordion>
-
-  <Accordion title="Monthly Team Cost">
-    - Team members: 5
-    - Seat cost: $35/month (5 × $7)
-    - Added 2 private repos: $30 (2M tokens × $15)
-    - Refreshed repos: $5 (0.33M new tokens × $15)
-    - Total: $70 for the month
-  </Accordion>
-</AccordionGroup>
-
-### Rate Limits
-
-| Plan | Rate Limit | Notes |
-|------|------------|-------|
-| Free | 60 req/hour | Per API key |
-| Pro | 60 req/hour | Per team member |
-| Enterprise | Custom | Based on your needs |
-
-Rate limits are calculated using a sliding window algorithm and reset hourly.
+| Feature | Free | Pro | Enterprise |
+|---------|------|-----|------------|
+| **Price** | $0 | $7 per seat/month | Custom |
+| **Public Repositories** | ✓ | ✓ | ✓ |
+| **Private Repositories** | ✗ | ✓ | ✓ |
+| **Team Collaboration** | ✗ | ✓ (up to 20 members) | ✓ (unlimited) |
+| **API Rate Limit** | 60 req/hour | 60 req/hour per member | Custom |
+| **Parse Token Cost** | N/A | $15 per 1M tokens | Custom |
+| **Access Control** | Basic | Full | Advanced |
+| **SOC-2 Compliance** | ✗ | ✗ | ✓ |
+| **SSO (SAML, OAuth, OIDC)** | ✗ | ✗ | ✓ |
+| **Support** | Community | Email | Dedicated |
+| **Usage Analytics** | Basic | ✓ | Advanced |
+| **Custom Rate Limits** | ✗ | ✗ | ✓ |
+| **Priority Features** | ✗ | ✗ | ✓ |
+| **Custom SLA** | ✗ | ✗ | ✓ |
 
 ## Frequently Asked Questions
 
@@ -256,56 +92,3 @@ Rate limits are calculated using a sliding window algorithm and reset hourly.
     No, we have different rate limits for each plan. The Free plan has lower rate limits, while the Pro plan offers higher limits per team member. If you need custom rate limits for high-volume usage, please contact us at [context7@upstash.com](mailto:context7@upstash.com) to discuss Enterprise plan options.
   </Accordion>
 </AccordionGroup>
-
-## Getting Started
-
-### Free Plan
-
-1. Sign up at [context7.com](https://context7.com)
-2. Access your dashboard at [context7.com/dashboard](https://context7.com/dashboard)
-3. Get your API key
-4. Start using Context7 with public libraries
-
-### Pro Plan
-
-1. Start with a Free account
-2. Go to [Plans & Pricing](https://context7.com/plans)
-3. Click "Choose Pro Plan"
-4. Add payment method via Stripe
-5. Create team projects and add members
-6. Add private repositories
-
-### Enterprise Plan
-
-1. Contact us at [context7@upstash.com](mailto:context7@upstash.com)
-2. Discuss your requirements
-3. Receive custom pricing proposal
-4. Get onboarding support
-5. Start using enterprise features
-
-## Need Help Choosing?
-
-**Choose Free if:**
-- You're an individual developer
-- You only need public documentation
-- You're just getting started
-
-**Choose Pro if:**
-- You need private repository access
-- You're working in a team
-- You need collaboration features
-
-**Choose Enterprise if:**
-- You're a large organization
-- You need SOC-2 compliance
-- You require SSO integration
-- You have high-volume API usage
-
-Still not sure? [Contact us](https://context7.com/contact) and we'll help you choose the right plan.
-
-## Additional Resources
-
-- [Dashboard Guide →](/dashboard)
-- [API Documentation →](/api)
-- [Security & Privacy →](/security)
-- [Getting Started →](/getting-started)

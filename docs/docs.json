@@ -10,15 +10,14 @@
     },
     "navigation": {
       "pages": [
-        "getting-started",
-        "dashboard",
+        "overview",
+        "installation",
+        "usage",
+        "adding-libraries",
         "plans-pricing",
-        "how-to",
-        "library-owners",
         "api",
-        "mcp",
         "security",
-        "troubleshooting"
+        "contact"
       ]
     },
     "logo": {
