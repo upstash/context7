@@ -4,9 +4,9 @@
   "name": "Context7 MCP",
   "description": "Up-to-date code docs for any prompt.",
   "colors": {
-    "primary": "#3B82F6",
-    "light": "#F8FAFC",
-    "dark": "#0F172A"
+    "primary": "#10B981",
+    "light": "#ECFDF5",
+    "dark": "#064E3B"
   },
   "navigation": {
     "groups": [
