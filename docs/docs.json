@@ -26,6 +26,7 @@
     "dark": "/logo/logo-dark.svg",
     "href": "https://context7.com"
   },
+  "favicon": "/logo/logo.png",
   "navbar": {
     "links": [
       {
