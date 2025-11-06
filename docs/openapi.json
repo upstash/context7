@@ -16,11 +16,6 @@
       "description": "Production server"
     }
   ],
-  "security": [
-    {
-      "bearerAuth": []
-    }
-  ],
   "paths": {
     "/v1/{owner}/{repo}": {
       "get": {
@@ -99,6 +94,9 @@
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
           },
           "401": {
             "$ref": "#/components/responses/UnauthorizedError"
@@ -203,6 +201,9 @@
               }
             }
           },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
           "401": {
             "$ref": "#/components/responses/UnauthorizedError"
           },
@@ -262,9 +263,14 @@
     "/v1/add": {
       "post": {
         "summary": "Add a Library",
-        "description": "Submit a new library to Context7 for indexing. The parsing process starts immediately and the status transitions from `processing` to `finalized`.",
+        "description": "Submit a new library to Context7 for indexing. Supports GitHub/GitLab repositories, llms.txt files, and tag-based library versions. The parsing process starts immediately and the status transitions from `processing` to `finalized`.",
         "operationId": "addLibrary",
         "tags": ["Library Management"],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -273,29 +279,25 @@
                 "$ref": "#/components/schemas/AddLibraryRequest"
               },
               "examples": {
-                "basic": {
-                  "summary": "Basic example",
-                  "value": {
-                    "docsRepoUrl": "https://github.com/okken/pytest-check",
-                    "projectTitle": "PyTest Check",
-                    "branch": "main"
-                  }
-                },
-                "withFolders": {
-                  "summary": "With included folders",
+                "github": {
+                  "summary": "GitHub repository",
                   "value": {
                     "docsRepoUrl": "https://github.com/okken/pytest-check",
                     "branch": "main",
-                    "folders": ["docs", "examples"]
+                    "folders": ["docs"]
                   }
                 },
-                "withExclusions": {
-                  "summary": "With excluded folders",
+                "llmstxt": {
+                  "summary": "llms.txt file",
                   "value": {
-                    "docsRepoUrl": "https://github.com/psf/requests",
-                    "projectTitle": "Requests",
-                    "branch": "main",
-                    "excludeFolders": ["tests", "examples"]
+                    "llmstxtUrl": "https://example.com/llms.txt"
+                  }
+                },
+                "tag": {
+                  "summary": "Tag-based version",
+                  "value": {
+                    "libraryName": "/vercel/next.js",
+                    "libraryTagCode": "v15.1.8"
                   }
                 }
               }
@@ -313,8 +315,17 @@
               }
             }
           },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
           "401": {
             "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           },
           "429": {
             "$ref": "#/components/responses/RateLimitError"
@@ -385,6 +396,17 @@
                   "description": "URL to the original documentation",
                   "example": "https://nextjs.org/docs/app/building-your-application/routing/middleware"
                 }
+              }
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "description": "API request metadata",
+            "properties": {
+              "authentication": {
+                "type": "string",
+                "description": "Authentication status",
+                "example": "paid"
               }
             }
           }
@@ -516,17 +538,27 @@
       },
       "AddLibraryRequest": {
         "type": "object",
-        "required": ["docsRepoUrl"],
+        "description": "Request to add a library. Provide exactly one of: docsRepoUrl, llmstxtUrl, or both libraryName and libraryTagCode.",
         "properties": {
           "docsRepoUrl": {
             "type": "string",
-            "description": "GitHub repository URL",
+            "description": "GitHub or GitLab repository URL",
             "example": "https://github.com/okken/pytest-check"
           },
-          "projectTitle": {
+          "llmstxtUrl": {
             "type": "string",
-            "description": "Display name for the project (auto-detected if not provided)",
-            "example": "PyTest Check"
+            "description": "URL to llms.txt, llms-full.txt, or llms-small.txt file",
+            "example": "https://example.com/llms.txt"
+          },
+          "libraryName": {
+            "type": "string",
+            "description": "Library identifier for tag-based sources (use with libraryTagCode)",
+            "example": "/vercel/next.js"
+          },
+          "libraryTagCode": {
+            "type": "string",
+            "description": "Version tag for tag-based sources (use with libraryName)",
+            "example": "v15.1.8"
           },
           "branch": {
             "type": "string",
@@ -589,11 +621,6 @@
             "description": "Auto-detected project description",
             "example": "A pytest plugin that allows multiple failures per test."
           },
-          "projectTitle": {
-            "type": "string",
-            "description": "Project title (auto-detected or provided)",
-            "example": "auto-detected"
-          },
           "folders": {
             "type": "array",
             "description": "Folders included in parsing",
@@ -643,7 +670,6 @@
           "docsRepoUrl": "https://github.com/okken/pytest-check",
           "projectName": "/okken/pytest-check",
           "description": "A pytest plugin that allows multiple failures per test.",
-          "projectTitle": "auto-detected",
           "folders": ["docs", "examples"],
           "excludeFolders": ["archive"],
           "excludeFiles": [
@@ -680,6 +706,20 @@
       }
     },
     "responses": {
+      "BadRequestError": {
+        "description": "Bad Request - Invalid input parameters",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Invalid input",
+              "status": 400
+            }
+          }
+        }
+      },
       "UnauthorizedError": {
         "description": "Unauthorized - Invalid or missing API key",
         "content": {
@@ -690,6 +730,20 @@
             "example": {
               "error": "Unauthorized - Invalid or missing API key",
               "status": 401
+            }
+          }
+        }
+      },
+      "ForbiddenError": {
+        "description": "Forbidden - Insufficient permissions",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "Insufficient permissions",
+              "status": 403
             }
           }
         }
