@@ -3,7 +3,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { searchLibraries, fetchLibraryDocumentation, logLibraryFeedback } from "./lib/api.js";
+import { searchLibraries, fetchLibraryDocumentation } from "./lib/api.js";
 import { formatSearchResults } from "./lib/utils.js";
 import { SearchResponse } from "./lib/types.js";
 import express from "express";
@@ -71,6 +71,9 @@ const requestContext = new AsyncLocalStorage<{
   apiKey?: string;
 }>();
 
+// Store API key globally for stdio mode (where requestContext may not be available in tool handlers)
+let globalApiKey: string | undefined;
+
 function getClientIp(req: express.Request): string | undefined {
   const forwardedFor = req.headers["x-forwarded-for"] || req.headers["X-Forwarded-For"];
 
@@ -104,7 +107,7 @@ const server = new McpServer(
   },
   {
     instructions:
-      "Use this server to retrieve up-to-date documentation and code examples for any library. Call 'rate-library' when finished to help improve the documentation quality.",
+      "Use this server to retrieve up-to-date documentation and code examples for any library.",
   }
 );
 
@@ -139,10 +142,11 @@ For ambiguous queries, request clarification before proceeding with a best-guess
   },
   async ({ libraryName }) => {
     const ctx = requestContext.getStore();
+    const apiKey = ctx?.apiKey || globalApiKey;
     const searchResponse: SearchResponse = await searchLibraries(
       libraryName,
       ctx?.clientIp,
-      ctx?.apiKey
+      apiKey
     );
 
     if (!searchResponse.results || searchResponse.results.length === 0) {
@@ -214,6 +218,7 @@ server.registerTool(
   },
   async ({ context7CompatibleLibraryID, tokens = DEFAULT_TOKENS, topic = "" }) => {
     const ctx = requestContext.getStore();
+    const apiKey = ctx?.apiKey || globalApiKey;
     const fetchDocsResponse = await fetchLibraryDocumentation(
       context7CompatibleLibraryID,
       {
@@ -221,7 +226,7 @@ server.registerTool(
         topic,
       },
       ctx?.clientIp,
-      ctx?.apiKey
+      apiKey
     );
 
     if (!fetchDocsResponse) {
@@ -240,61 +245,6 @@ server.registerTool(
         {
           type: "text",
           text: fetchDocsResponse,
-        },
-      ],
-    };
-  }
-);
-
-server.registerTool(
-  "rate-library",
-  {
-    title: "Rate Library Documentation",
-    description:
-      "Rate the quality and usefulness of library documentation you retrieved. Call this to provide feedback and help improve documentation quality.",
-    inputSchema: {
-      context7CompatibleLibraryID: z
-        .string()
-        .describe(
-          "The Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js') that you retrieved documentation for."
-        ),
-      feedbackScore: z
-        .number()
-        .min(1)
-        .max(10)
-        .describe(
-          "A score from 1-10 indicating how useful the documentation context was (1 = not useful, 10 = extremely useful)."
-        ),
-      feedbackText: z
-        .string()
-        .optional()
-        .describe(
-          "Optional feedback text explaining your score (e.g., 'Missing authentication examples', 'Very comprehensive', 'Outdated information')."
-        ),
-      topic: z
-        .string()
-        .optional()
-        .describe("Optional topic that was queried (if a specific topic was used)."),
-    },
-  },
-  async ({ context7CompatibleLibraryID, feedbackScore, feedbackText, topic }) => {
-    const ctx = requestContext.getStore();
-
-    // Log feedback
-    await logLibraryFeedback(
-      context7CompatibleLibraryID,
-      feedbackScore,
-      feedbackText,
-      topic,
-      ctx?.clientIp,
-      ctx?.apiKey
-    );
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: `Thank you for rating ${context7CompatibleLibraryID}! Your feedback (${feedbackScore}/10) helps improve documentation quality.`,
         },
       ],
     };
@@ -421,6 +371,7 @@ async function main() {
     startServer(initialPort);
   } else {
     const apiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
+    globalApiKey = apiKey; // Store globally for tool handlers in stdio mode
     const transport = new StdioServerTransport();
 
     await requestContext.run({ apiKey }, async () => {
