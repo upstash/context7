@@ -200,7 +200,7 @@ Access your private documentation with Context7 Pro.
 3. Choose your source:
    - **Connect Repository**: Link your GitHub, GitLab, or Bitbucket account
    - **Upload OpenAPI Docs**: Upload your own OpenAPI documentation
-4. Enter repository URL (if connecting repository)
+4. Enter repository URL (if connecting a repository)
 5. Authorize Context7 to access your repository
 6. Configure folders and exclusions (optional)
 7. Submit
@@ -227,18 +227,18 @@ Share Context7 access with your team.
 
 1. Go to **Dashboard → Members**
 2. Click **Invite Member**
-3. Enter email and select role:
+3. Enter their email and select a role:
    - **Owner**: Full control
    - **Admin**: Manage team and settings
    - **Developer**: API access only
 
-Members receive an email invitation.
+Members will receive an email invitation.
 
 ### Manage API Keys
 
 Each team member gets their own API key with independent rate limits (60 req/hour per member).
 
-Regenerate keys from the Members tab if compromised.
+You can regenerate keys from the Members tab if compromised.
 
 Visit the [Dashboard](https://context7.com/dashboard) for team management details.
 
@@ -285,7 +285,7 @@ Go to [Dashboard → Overview](https://context7.com/dashboard) to see:
 - **Query tokens**: Tokens returned in responses
 - **Parsing tokens**: Tokens processed when adding/refreshing
 
-All stats show the last 30 days.
+Stats reflect usage from the last 30 days.
 
 ### Understand Costs
 
@@ -308,26 +308,26 @@ Visit the [Dashboard](https://context7.com/dashboard) to monitor your usage and 
 
 ### Security
 
-- Never commit API keys to version control - Use `.env` files and add them to `.gitignore`
-- Use environment variables for keys - `export CONTEXT7_API_KEY=your_key_here`
-- Rotate keys regularly - Rotate every 90 days or immediately if compromised
-- Give team members minimum required permissions - Use "Developer" role for non-admins
+- Never commit API keys to version control. Use `.env` files and add them to `.gitignore`.
+- Use environment variables for keys, like: `export CONTEXT7_API_KEY=your_key_here`.
+- Rotate keys regularly -- every 90 days or immediately if compromised.
+- Grant only the permissions a team member needs. Use the "Developer" role for non-admins.
 
 See [Security](/security) for comprehensive security guidelines.
 
 ### Performance
 
-- Use specific library IDs when possible - `/vercel/next.js` instead of "next.js docs"
-- Set appropriate token limits - small amounts for quick lookups, higher amounts for comprehensive docs
-- Use topic filtering to focus results - Add specific topics like "authentication" or "routing"
-- Cache frequently-used documentation locally - Cache for 6-24 hours to reduce API calls
+- Use specific library IDs such as `/vercel/next.js` instead of general phrases like "next.js docs" when possible.
+- Set appropriate token limits -- use lower values for quick lookups, and higher values for comprehensive docs.
+- Focus results using topic filtering. Try adding specific topics like "authentication" or "routing".
+- Cache frequently used documentation locally for 6-24 hours to reduce API calls.
 
 ### Library Management
 
-- Keep `context7.json` up to date in your repositories - Update when adding new docs or changing structure
-- Exclude unnecessary folders (tests, build artifacts) - `excludeFolders: ["test", "dist", "node_modules"]`
-- Add helpful rules for AI agents - Example: "Always validate user input" or "Use TypeScript strict mode"
-- Maintain version tags for important releases - Keep v1.x docs available even after releasing v2.x
+- Keep the `context7.json` file in your repositories up to date. Update it when adding new docs or changing structure.
+- Exclude unnecessary folders, such as tests and build artifacts: `excludeFolders: ["test", "dist", "node_modules"]`.
+- Add helpful rules for AI agents, such as "Always validate user input" or "Use TypeScript strict mode".
+- Maintain version tags for important releases. For example, keep v1.x docs available even after releasing v2.x.
 
 See [Library Owners](/adding-libraries) for configuration details.
 

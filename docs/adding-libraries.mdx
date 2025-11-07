@@ -18,7 +18,7 @@ You'll receive an email notification when parsing finishes. You can also monitor
 
 ## Advanced Configuration with `context7.json`
 
-For more control over how Context7 parses and presents your library, you can add a `context7.json` file to the root of your repository. This file works similar to `robots.txt` and tells Context7 how to handle your project.
+For more control over how Context7 parses and presents your library, you can add a `context7.json` file to the root of your repository. This file works similarly to `robots.txt` and tells Context7 how to handle your project.
 
 ### Configuration Fields
 
@@ -65,7 +65,7 @@ Here's an example `context7.json` file with all available options:
 - **`previousVersions`** (array): Information about previous versions of your library that should also be available in Context7.
   - **`tag`**: The Git tag or version identifier
 
-- **`branchVersions`** (array): Information about previous versions (branch based) of your library that should also
+- **`branchVersions`** (array): Information about previous versions (branch-based) of your library that should also
   be available in Context7.
   - **`branch`**: The Git branch
 
@@ -74,24 +74,24 @@ Here's an example `context7.json` file with all available options:
 The `excludeFolders` parameter supports various pattern types for flexible exclusion:
 
 - **Simple folder names**: `"node_modules"` - Excludes any folder named "node_modules" anywhere in the tree
-- **Root-specific patterns**: `"./xyz"` - Excludes folder only at repository root (e.g., excludes `/xyz` but not `/dist/xyz`)
+- **Root-specific patterns**: `"./xyz"` - Excludes the folder only at repository root (e.g., excludes `/xyz` but not `/dist/xyz`)
 - **Path patterns**: `"app-sdk/v2.3"` - Excludes specific paths and everything under them
 - **Glob patterns**: `"*.test"`, `"temp*"` - Excludes folders matching the pattern
 - **Globstar patterns**: `"**/dist"`, `"docs/**/internal"` - Advanced path matching
-- **Complex patterns**: `"src/**/*.test.js"` - Exclude test files in src directory
+- **Complex patterns**: `"src/**/*.test.js"` - Exclude test files in the src directory
 
 Examples:
 
 - `"node_modules"` - Excludes all node_modules folders anywhere
-- `"./build"` - Excludes build folder only at root (not `src/build`)
-- `"app-sdk/v2.3"` - Excludes app-sdk/v2.3 path and all its contents
+- `"./build"` - Excludes the build folder only at root (not `src/build`)
+- `"app-sdk/v2.3"` - Excludes the app-sdk/v2.3 path and all its contents
 - `"*.test"` - Excludes folders ending with .test
 - `"docs/**/internal"` - Excludes any "internal" folder under docs
 - `"**/temp"` - Excludes any folder named "temp" anywhere
 
 ### Default Exclusions
 
-If you don't specify `excludeFiles` or `excludeFolders` in your `context7.json`, Context7 uses these default patterns:
+If you don't specify `excludeFiles` or `excludeFolders` in your `context7.json` file, Context7 uses these default patterns:
 
 #### Default Excluded Files
 
@@ -112,13 +112,13 @@ i18n/nl*, i18n/pl*, i18n/sv*, i18n/vi*, i18n/th*
 zh-cn, zh-tw, zh-hk, zh-mo, zh-sg
 ```
 
-These defaults help ensure that coding agents receive relevant, current documentation without outdated or non-technical content.
+These defaults help coding agents avoid irrelevant, outdated, and non-technical content.
 
-## Who Can Add Configuration?
+## Who Can Manage Configuration?
 
 - **Library authors**: Add `context7.json` directly to your repository
 - **Contributors**: Submit pull requests to add or update the configuration
-- **Community members**: Propose improvements to how popular libraries are parsed
+- **Community members**: Propose improvements to the way popular libraries are parsed
 
 ## Best Practices
 
@@ -153,7 +153,7 @@ Keep documentation helpful for agents:
 
 - Review the rendered documentation after each release
 - Trim noisy sections (e.g., large changelogs) with `excludeFiles` or `excludeFolders`
-- Update `rules` when best practices change so AI assistants surface current guidance
+- Update `rules` when best practices change, so AI assistants surface current guidance
 
 ## Need Help?
 
