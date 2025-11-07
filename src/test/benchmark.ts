@@ -5,6 +5,8 @@ import { fileURLToPath } from "url";
 import { simulate } from "./simulate.js";
 import { generateText } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
+import { openai } from "@ai-sdk/openai";
+import { google } from "@ai-sdk/google";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -12,12 +14,40 @@ const __dirname = dirname(__filename);
 /**
  * Runs benchmarks by simulating questions from questions.txt
  *
- * Usage: npm run benchmark
+ * Usage:
+ * - npm run benchmark openai
+ * - npm run benchmark claude
+ * - npm run benchmark gemini
+ * - npm run benchmark openai --test (run only first question)
  */
 async function runBenchmark() {
+  // Parse arguments
+  const args = process.argv.slice(2);
+  const modelArg = args.find((a) => !a.startsWith("--"))?.toLowerCase() || "claude";
+  const isTestMode = args.includes("--test");
+
+  let scoringModel;
+  let modelName;
+
+  if (modelArg === "openai") {
+    scoringModel = openai("gpt-5");
+    modelName = "GPT-5";
+  } else if (modelArg === "gemini") {
+    scoringModel = google("gemini-2.5-pro");
+    modelName = "GEMINI-2.5-PRO";
+  } else {
+    // Default to claude
+    scoringModel = anthropic("claude-sonnet-4-5");
+    modelName = "CLAUDE-SONNET-4.5";
+  }
+
   console.log("=".repeat(80));
   console.log("Context7 MCP Benchmark");
   console.log("=".repeat(80));
+  console.log(`Scoring Model: ${modelName}`);
+  if (isTestMode) {
+    console.log(`Mode: TEST (first question only)`);
+  }
   console.log();
 
   // Read questions from questions.txt (in src/test directory)
@@ -30,21 +60,27 @@ async function runBenchmark() {
   }
 
   const questionsContent = readFileSync(questionsPath, "utf-8");
-  const questions = questionsContent
+  let questions = questionsContent
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && !line.startsWith("#")); // Filter empty lines and comments
 
-  console.log(`Found ${questions.length} questions to benchmark`);
+  // Limit to first question if in test mode
+  if (isTestMode) {
+    questions = questions.slice(0, 1);
+    console.log(`Test mode: Running only first question`);
+  } else {
+    console.log(`Found ${questions.length} questions to benchmark`);
+  }
   console.log();
 
-  // Create benchmark run directory
+  // Create benchmark run directory with model name
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-").split("Z")[0];
   const benchmarkRunDir = join(
     dirname(dirname(__dirname)),
     "reports",
     "benchmarks",
-    `run-${timestamp}`
+    `run-${timestamp}_${modelName.replace(/[.\s]/g, "-")}`
   );
   mkdirSync(benchmarkRunDir, { recursive: true });
   console.log(`Benchmark results will be saved to: ${benchmarkRunDir}`);
@@ -131,10 +167,8 @@ async function runBenchmark() {
   console.log("=".repeat(80));
   console.log("Scoring Phase");
   console.log("=".repeat(80));
-  console.log("Using Claude Sonnet 4.5 to score context quality...");
+  console.log(`Using ${modelName} to score context quality...`);
   console.log();
-
-  const scoringModel = anthropic("claude-sonnet-4-5");
 
   for (let i = 0; i < results.length; i++) {
     const result = results[i];
@@ -225,6 +259,7 @@ Respond with ONLY a JSON object in this format:
   // Generate result.md
   console.log("Generating result.md...");
   let resultMd = `# Benchmark Results\n\n`;
+  resultMd += `**Scoring Model**: ${modelName}\n`;
   resultMd += `**Date**: ${new Date().toISOString()}\n`;
   resultMd += `**Total Questions**: ${results.length}\n`;
   resultMd += `**Total Duration**: ${(duration / 1000).toFixed(2)}s\n\n`;
@@ -255,6 +290,7 @@ Respond with ONLY a JSON object in this format:
   console.log("=".repeat(80));
   console.log("Benchmark Complete");
   console.log("=".repeat(80));
+  console.log(`Scoring Model: ${modelName}`);
   console.log(`Total questions: ${questions.length}`);
   console.log(`Total time: ${(duration / 1000).toFixed(2)}s`);
   console.log(`Average time per question: ${(duration / questions.length / 1000).toFixed(2)}s`);

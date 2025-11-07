@@ -104,7 +104,7 @@ const server = new McpServer(
   },
   {
     instructions:
-      "Use this server to retrieve up-to-date documentation and code examples for any library. You may optionally call 'rate-library' when finished to help improve the documentation quality.",
+      "Use this server to retrieve up-to-date documentation and code examples for any library. Call 'rate-library' when finished to help improve the documentation quality.",
   }
 );
 
@@ -251,7 +251,7 @@ server.registerTool(
   {
     title: "Rate Library Documentation",
     description:
-      "Rate the quality and usefulness of library documentation you retrieved. Optionally call this to provide feedback and help improve documentation quality.",
+      "Rate the quality and usefulness of library documentation you retrieved. Call this to provide feedback and help improve documentation quality.",
     inputSchema: {
       context7CompatibleLibraryID: z
         .string()

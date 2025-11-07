@@ -78,6 +78,10 @@ export async function simulate(question?: string) {
       transport: new StdioClientTransport({
         command: "node",
         args: ["dist/index.js", "--api-key", apiKey],
+        env: {
+          ...process.env,
+          CONTEXT7_API_KEY: apiKey,
+        },
       }),
     });
     log("✅ Connected to Context7 MCP server");
