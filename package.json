@@ -6,6 +6,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc && chmod 755 dist/index.js",
+    "simulate": "npm run build && node dist/test/simulate.js",
+    "benchmark": "npm run build && node dist/test/benchmark.js",
     "format": "prettier --write .",
     "lint": "eslint \"**/*.{js,ts,tsx}\" --fix",
     "lint:check": "eslint \"**/*.{js,ts,tsx}\"",
@@ -47,9 +49,13 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@ai-sdk/anthropic": "^2.0.41",
+    "@ai-sdk/mcp": "^0.0.7",
     "@types/node": "^22.13.14",
     "@typescript-eslint/eslint-plugin": "^8.28.0",
     "@typescript-eslint/parser": "^8.28.0",
+    "ai": "^5.0.89",
+    "dotenv": "^17.2.3",
     "eslint": "^9.34.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.5",

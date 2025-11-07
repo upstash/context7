@@ -153,3 +153,51 @@ export async function fetchLibraryDocumentation(
     return errorMessage;
   }
 }
+
+/**
+ * Logs feedback for a library context (backend submission to be implemented later)
+ * @param libraryId The library ID to submit feedback for
+ * @param feedbackScore A score from 1-10 indicating usefulness of the context
+ * @param feedbackText Optional text explaining the feedback
+ * @param topic Optional topic that was queried
+ * @param clientIp Optional client IP address
+ * @param apiKey Optional API key
+ */
+export async function logLibraryFeedback(
+  libraryId: string,
+  feedbackScore: number,
+  feedbackText?: string,
+  topic?: string,
+  clientIp?: string,
+  apiKey?: string
+): Promise<void> {
+  const timestamp = new Date().toISOString();
+  const feedbackData = {
+    timestamp,
+    libraryId,
+    score: feedbackScore,
+    feedbackText,
+    topic,
+    event: "library_feedback",
+    clientIp,
+    apiKey,
+  };
+
+  // Log to console
+  console.error('[FEEDBACK]', JSON.stringify(feedbackData));
+
+  // TEMPORARY: Post to webhook.site for testing (set FEEDBACK_WEBHOOK_URL env var)
+  const webhookUrl = process.env.FEEDBACK_WEBHOOK_URL;
+  if (webhookUrl) {
+    try {
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(feedbackData),
+      });
+      console.error('[FEEDBACK] Sent to webhook:', webhookUrl);
+    } catch (error) {
+      console.error('[FEEDBACK] Failed to send to webhook:', error);
+    }
+  }
+}

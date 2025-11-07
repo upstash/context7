@@ -1,0 +1,9 @@
+- mcp client does not send your queries to server. instead it sends queries using topics generated from your query.
+
+- context7 does not store your source files. it only keeps your documenetation and code examples in vector database.
+
+- context7 uses soc-2 complaint infra of upstash. managed by upstash experienced team
+
+- all security practices and certificates of upstash applies to context7 projects.
+
+- in enterprise plans sso auth is possible

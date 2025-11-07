@@ -3,7 +3,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { searchLibraries, fetchLibraryDocumentation } from "./lib/api.js";
+import { searchLibraries, fetchLibraryDocumentation, logLibraryFeedback } from "./lib/api.js";
 import { formatSearchResults } from "./lib/utils.js";
 import { SearchResponse } from "./lib/types.js";
 import express from "express";
@@ -104,7 +104,7 @@ const server = new McpServer(
   },
   {
     instructions:
-      "Use this server to retrieve up-to-date documentation and code examples for any library.",
+      "Use this server to retrieve up-to-date documentation and code examples for any library. You may optionally call 'rate-library' when finished to help improve the documentation quality.",
   }
 );
 
@@ -160,7 +160,7 @@ For ambiguous queries, request clarification before proceeding with a best-guess
 
     const resultsText = formatSearchResults(searchResponse);
 
-    const responseText = `Available Libraries (top matches):
+    const responseText = `Available Libraries (top matches-4):
 
 Each result includes:
 - Library ID: Context7-compatible identifier (format: /org/project)
@@ -240,6 +240,61 @@ server.registerTool(
         {
           type: "text",
           text: fetchDocsResponse,
+        },
+      ],
+    };
+  }
+);
+
+server.registerTool(
+  "rate-library",
+  {
+    title: "Rate Library Documentation",
+    description:
+      "Rate the quality and usefulness of library documentation you retrieved. Optionally call this to provide feedback and help improve documentation quality.",
+    inputSchema: {
+      context7CompatibleLibraryID: z
+        .string()
+        .describe(
+          "The Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js') that you retrieved documentation for."
+        ),
+      feedbackScore: z
+        .number()
+        .min(1)
+        .max(10)
+        .describe(
+          "A score from 1-10 indicating how useful the documentation context was (1 = not useful, 10 = extremely useful)."
+        ),
+      feedbackText: z
+        .string()
+        .optional()
+        .describe(
+          "Optional feedback text explaining your score (e.g., 'Missing authentication examples', 'Very comprehensive', 'Outdated information')."
+        ),
+      topic: z
+        .string()
+        .optional()
+        .describe("Optional topic that was queried (if a specific topic was used)."),
+    },
+  },
+  async ({ context7CompatibleLibraryID, feedbackScore, feedbackText, topic }) => {
+    const ctx = requestContext.getStore();
+
+    // Log feedback
+    await logLibraryFeedback(
+      context7CompatibleLibraryID,
+      feedbackScore,
+      feedbackText,
+      topic,
+      ctx?.clientIp,
+      ctx?.apiKey
+    );
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Thank you for rating ${context7CompatibleLibraryID}! Your feedback (${feedbackScore}/10) helps improve documentation quality.`,
         },
       ],
     };
