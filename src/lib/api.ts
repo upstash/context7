@@ -108,7 +108,7 @@ export async function fetchLibraryDocumentation(
     if (libraryId.startsWith("/")) {
       libraryId = libraryId.slice(1);
     }
-    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/${libraryId}`);
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/docs/code/${libraryId}`);
     if (options.page) url.searchParams.set("page", options.page.toString());
     if (options.limit) url.searchParams.set("limit", options.limit.toString());
     if (options.topic) url.searchParams.set("topic", options.topic);
