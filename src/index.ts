@@ -164,7 +164,7 @@ For ambiguous queries, request clarification before proceeding with a best-guess
 
     const resultsText = formatSearchResults(searchResponse);
 
-    const responseText = `Available Libraries (top matches-4):
+    const responseText = `Available Libraries (top matches):
 
 Each result includes:
 - Library ID: Context7-compatible identifier (format: /org/project)
