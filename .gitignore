@@ -177,3 +177,6 @@ package-lock.json
 
 reports
 reports/*
+analyze-benchmarks.cjs
+.gitignore
+generate-benchmark-summary.cjs
