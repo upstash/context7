@@ -113,30 +113,36 @@ server.registerTool(
   "resolve-library-id",
   {
     title: "Resolve Context7 Library ID",
-    description: `Resolves a package/product name to a Context7-compatible library ID and returns a list of matching libraries.
+    description: `Resolves a package/product name to a library ID.
 
-You MUST call this function before 'get-library-docs' to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
+WHEN TO USE:
+Call this BEFORE 'get-library-docs' UNLESS user provides ID in '/org/project' format.
 
-Selection Process:
-1. Analyze the query to understand what library/package the user is looking for
-2. Return the most relevant match based on:
-- Name similarity to the query (exact matches prioritized)
-- Description relevance to the query's intent
-- Documentation coverage (prioritize libraries with higher Code Snippet counts)
-- Source reputation (consider libraries with High or Medium reputation more authoritative)
-- Benchmark Score: Quality indicator (100 is the highest score)
+RESPONSE FIELDS:
+- Library ID: /org/project
+- Name: Library/package name
+- Description: Short summary
+- Code Snippets: Number of available code examples (higher is better)
+- Source Reputation: Authority indicator (High, Medium, Low, Unknown)
+- Benchmark Score: Quality score (0-100, higher is better)
+- Versions: /org/project/version
 
-Response Format:
-- Return the selected library ID in a clearly marked section
-- Provide a brief explanation for why this library was chosen
-- If multiple good matches exist, acknowledge this but proceed with the most relevant one
-- If no good matches exist, clearly state this and suggest query refinements
+SELECTION CRITERIA (in priority order):
+1. Name match to query (exact matches first)
+2. Description relevance to user intent
+3. Source reputation (High/Medium preferred)
+4. Code Snippets count (more coverage = better)
+5. Benchmark Score (higher = better quality)
 
-For ambiguous queries, request clarification before proceeding with a best-guess match.`,
+OUTPUT INSTRUCTIONS:
+- Select the most relevant library ID and proceed to 'get-library-docs'
+- If 2-3 libraries are closely matched (similar scores/relevance), try each with 'get-library-docs' to compare results
+- If no good match exists, inform user and suggest refining their query
+- For ambiguous queries, ask user for clarification`,
     inputSchema: {
       libraryName: z
         .string()
-        .describe("Library name to search for and retrieve a Context7-compatible library ID."),
+        .describe("Package or library name (e.g., 'react', 'mongodb', 'express')."),
     },
   },
   async ({ libraryName }) => {
@@ -165,19 +171,6 @@ For ambiguous queries, request clarification before proceeding with a best-guess
 
     const responseText = `Available Libraries:
 
-Each result includes:
-- Library ID: Context7-compatible identifier (format: /org/project)
-- Name: Library or package name
-- Description: Short summary
-- Code Snippets: Number of available code examples
-- Source Reputation: Authority indicator (High, Medium, Low, or Unknown)
-- Benchmark Score: Quality indicator (100 is the highest score)
-- Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.
-
-For best results, select libraries based on name match, source reputation, snippet coverage, and relevance to your use case.
-
-----------
-
 ${resultsText}`;
 
     return {
@@ -195,33 +188,48 @@ server.registerTool(
   "get-library-docs",
   {
     title: "Get Library Docs",
-    description:
-      "Fetches up-to-date documentation for a library. You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.",
+    description: `Fetches up-to-date documentation and code examples for a library.
+
+WHEN TO USE:
+Call this AFTER 'resolve-library-id' OR when user provides ID in '/org/project' format.
+
+RESPONSE FORMAT:
+Returns markdown-formatted documentation including:
+- Code examples with syntax highlighting
+- Explanations and usage patterns
+- API references and best practices
+- Links to source documentation
+
+PAGINATION STRATEGY:
+- Start with page=1 for initial results
+- Use page=2, 3, 4... to get MORE results on the SAME topic
+- If results are too broad/narrow, refine the topic parameter instead of paginating
+- Stop when sufficient context is gathered or no new relevant information appears`,
     inputSchema: {
-      context7CompatibleLibraryID: z
+      libraryId: z
         .string()
         .describe(
-          "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
+          "Library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/vercel/next.js/v14.3.0-canary.87')."
         ),
       topic: z
         .string()
         .optional()
-        .describe("Topic to focus documentation on (e.g., 'hooks', 'routing')."),
+        .describe(
+          "Specific feature/concept (e.g., 'useState', 'authentication', 'connection pooling'). Omit for general overview. Avoid generic terms like 'overview'"
+        ),
       page: z
         .number()
         .int()
         .min(1)
         .max(10)
-        .describe(
-          "Page number for pagination (start: 1). If the context is not sufficient, try page=2, page=3, page=4, etc. with the same topic."
-        ),
+        .describe("Page number (1-10). Use page=2+ for more results on same topic."),
     },
   },
-  async ({ context7CompatibleLibraryID, page = 1, topic = "" }) => {
+  async ({ libraryId, page = 1, topic = "" }) => {
     const ctx = requestContext.getStore();
     const apiKey = ctx?.apiKey || globalApiKey;
     const fetchDocsResponse = await fetchLibraryDocumentation(
-      context7CompatibleLibraryID,
+      libraryId,
       {
         page,
         limit: DEFAULT_RESULTS_LIMIT,
@@ -236,7 +244,7 @@ server.registerTool(
         content: [
           {
             type: "text",
-            text: "Documentation not found or not finalized for this library. This might have happened because you used an invalid Context7-compatible library ID. To get a valid Context7-compatible library ID, use the 'resolve-library-id' with the package name you wish to retrieve documentation for.",
+            text: "Documentation not found. Verify library ID is correct or use 'resolve-library-id' to find the right ID.",
           },
         ],
       };
