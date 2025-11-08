@@ -126,6 +126,7 @@ Selection Process:
 - Description relevance to the query's intent
 - Documentation coverage (prioritize libraries with higher Code Snippet counts)
 - Source reputation (consider libraries with High or Medium reputation more authoritative)
+- Benchmark Score: Quality indicator (100 is the highest score)
 
 Response Format:
 - Return the selected library ID in a clearly marked section
@@ -172,6 +173,7 @@ Each result includes:
 - Description: Short summary
 - Code Snippets: Number of available code examples
 - Source Reputation: Authority indicator (High, Medium, Low, or Unknown)
+- Benchmark Score: Quality indicator (100 is the highest score)
 - Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.
 
 For best results, select libraries based on name match, source reputation, snippet coverage, and relevance to your use case.
