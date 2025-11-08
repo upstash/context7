@@ -12,7 +12,7 @@ import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
 
 /** Default number of results to return per page */
-const DEFAULT_RESULTS_LIMIT = 20;
+const DEFAULT_RESULTS_LIMIT = 30;
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
 
