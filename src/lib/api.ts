@@ -108,7 +108,7 @@ export async function fetchLibraryDocumentation(
     if (libraryId.startsWith("/")) {
       libraryId = libraryId.slice(1);
     }
-    const url = new URL(`${CONTEXT7_API_BASE_URL}/v1/${libraryId}`);
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/${libraryId}`);
     if (options.page) url.searchParams.set("page", options.page.toString());
     if (options.limit) url.searchParams.set("limit", options.limit.toString());
     if (options.topic) url.searchParams.set("topic", options.topic);
@@ -186,20 +186,20 @@ export async function logLibraryFeedback(
   };
 
   // Log to console
-  console.error('[FEEDBACK]', JSON.stringify(feedbackData));
+  console.error("[FEEDBACK]", JSON.stringify(feedbackData));
 
   // TEMPORARY: Post to webhook.site for testing (set FEEDBACK_WEBHOOK_URL env var)
   const webhookUrl = process.env.FEEDBACK_WEBHOOK_URL;
   if (webhookUrl) {
     try {
       await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(feedbackData),
       });
-      console.error('[FEEDBACK] Sent to webhook:', webhookUrl);
+      console.error("[FEEDBACK] Sent to webhook:", webhookUrl);
     } catch (error) {
-      console.error('[FEEDBACK] Failed to send to webhook:', error);
+      console.error("[FEEDBACK] Failed to send to webhook:", error);
     }
   }
 }
