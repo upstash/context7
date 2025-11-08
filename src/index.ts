@@ -11,10 +11,8 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
 
-/** Minimum allowed tokens for documentation retrieval */
-const MINIMUM_TOKENS = 1000;
-/** Default tokens when none specified */
-const DEFAULT_TOKENS = 5000;
+/** Default number of results to return per page */
+const DEFAULT_RESULTS_LIMIT = 10;
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
 
@@ -209,22 +207,26 @@ server.registerTool(
         .string()
         .optional()
         .describe("Topic to focus documentation on (e.g., 'hooks', 'routing')."),
-      tokens: z
-        .preprocess((val) => (typeof val === "string" ? Number(val) : val), z.number())
-        .transform((val) => (val < MINIMUM_TOKENS ? MINIMUM_TOKENS : val))
+      page: z
+        .number()
+        .int()
+        .min(1)
+        .max(10)
         .optional()
+        .default(1)
         .describe(
-          `Maximum number of tokens of documentation to retrieve (default: ${DEFAULT_TOKENS}). Higher values provide more context but consume more tokens.`
+          "Page number for pagination (default: 1). If the context is not sufficient, try page=2, page=3, page=4, etc. with the same topic."
         ),
     },
   },
-  async ({ context7CompatibleLibraryID, tokens = DEFAULT_TOKENS, topic = "" }) => {
+  async ({ context7CompatibleLibraryID, page = 1, topic = "" }) => {
     const ctx = requestContext.getStore();
     const apiKey = ctx?.apiKey || globalApiKey;
     const fetchDocsResponse = await fetchLibraryDocumentation(
       context7CompatibleLibraryID,
       {
-        tokens,
+        page,
+        limit: DEFAULT_RESULTS_LIMIT,
         topic,
       },
       ctx?.clientIp,
