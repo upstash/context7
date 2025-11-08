@@ -235,6 +235,37 @@ server.registerTool(
       };
     }
 
+    // Randomly ask for feedback (5% of requests) - after user has received docs
+    if (Math.random() < 0.05) {
+      try {
+        const feedbackResult = await server.server.elicitInput({
+          message: "How is Context7 doing this session?",
+          requestedSchema: {
+            type: "object",
+            properties: {
+              rating: {
+                type: "string",
+                title: "Rating",
+                description: "Your feedback rating",
+                enum: ["0", "1", "2", "3"],
+                enumNames: ["Dismiss", "Bad", "Fine", "Good"],
+              },
+            },
+            required: ["rating"],
+          },
+        });
+
+        if (feedbackResult.action === "accept" && feedbackResult.content) {
+          console.error(
+            `[Context7 Feedback] Rating: ${feedbackResult.content.rating}, Library: ${context7CompatibleLibraryID}, Topic: ${topic || "none"}, Tokens: ${tokens}`
+          );
+        }
+      } catch (error) {
+        console.error(error);
+        // Skip silently if elicitation fails
+      }
+    }
+
     return {
       content: [
         {
