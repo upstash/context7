@@ -180,3 +180,4 @@ reports/*
 analyze-benchmarks.cjs
 .gitignore
 generate-benchmark-summary.cjs
+src/test/questions.txt
