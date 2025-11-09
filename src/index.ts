@@ -206,6 +206,26 @@ Valid examples: '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/verc
 NEVER use: plain names ('mongodb'), server names ('Context7'), or other formats.
 Always get the ID from 'resolve-library-id' first unless user explicitly provides one.
 
+MODE PARAMETER:
+Two documentation modes available:
+
+**'code' (default)** - Code snippets, API references, implementation examples
+Use when:
+- User asks "how to" questions (e.g., "how to authenticate", "how to connect to database")
+- User needs practical code examples or API usage patterns
+- User wants function signatures, method parameters, return types
+- If unsure, use this mode
+
+**'info'** - Guides, tutorials, architecture, concepts, explanations
+Use when:
+- User asks "what is" or "why" questions (e.g., "what is middleware", "why use hooks")
+- User needs conceptual understanding or architecture overview
+- User wants high-level explanations without code details
+- When 'code' mode doesn't provide enough context or background
+- User asks about non-code topics (e.g., pricing, rate limits, model names, quotas, plans, features)
+
+Start with 'code' mode (default). Switch to 'info' if code examples don't address the conceptual aspects of the question.
+
 PAGE SIZE & PAGINATION:
 Each page returns 15 documentation snippets.
 - Simple queries: 1 page usually sufficient
@@ -265,6 +285,13 @@ With 15 results per page, 1-2 pages usually sufficient for most queries. Use pag
         .describe(
           "Context7-compatible library ID in format /org/project or /org/project/version (e.g., '/mongodb/docs', '/vercel/next.js', '/vercel/next.js/v14.3.0-canary.87'). Get from 'resolve-library-id' tool."
         ),
+      mode: z
+        .enum(["code", "info"])
+        .optional()
+        .default("code")
+        .describe(
+          "Documentation mode: 'code' for code snippets/API references (default), 'info' for guides/tutorials/architecture. Start with 'code', switch to 'info' if conceptual understanding needed."
+        ),
       topic: z
         .string()
         .optional()
@@ -281,12 +308,13 @@ With 15 results per page, 1-2 pages usually sufficient for most queries. Use pag
         ),
     },
   },
-  async ({ libraryId, page = 1, topic = "" }) => {
+  async ({ libraryId, mode = "code", page = 1, topic = "" }) => {
     const ctx = requestContext.getStore();
     const apiKey = ctx?.apiKey || globalApiKey;
     const fetchDocsResponse = await fetchLibraryDocumentation(
       libraryId,
       {
+        mode,
         page,
         limit: DEFAULT_RESULTS_LIMIT,
         topic,
