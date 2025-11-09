@@ -113,19 +113,24 @@ server.registerTool(
   "resolve-library-id",
   {
     title: "Resolve Context7 Library ID",
-    description: `Resolves a package/product name to a library ID.
+    description: `Resolves a package/product name to a Context7-compatible library ID.
 
 WHEN TO USE:
-Call this BEFORE 'get-library-docs' UNLESS user provides ID in '/org/project' format.
+Call this BEFORE 'get-library-docs' UNLESS user provides Context7-compatible library ID in '/org/project' format.
+
+LIBRARY ID FORMAT:
+Returns Context7-compatible library IDs in format: /org/project or /org/project/version
+Examples: '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87'
+IMPORTANT: These are NOT plain library names - they follow Context7's specific format.
 
 RESPONSE FIELDS:
-- Library ID: /org/project
+- Library ID: Context7-compatible identifier (format: /org/project)
 - Name: Library/package name
 - Description: Short summary
 - Code Snippets: Number of available code examples (higher is better)
 - Source Reputation: Authority indicator (High, Medium, Low, Unknown)
 - Benchmark Score: Quality score (0-100, higher is better)
-- Versions: /org/project/version
+- Versions: Available versions (format: /org/project/version)
 
 SELECTION CRITERIA (in priority order):
 1. Name match to query (exact matches first)
@@ -191,7 +196,13 @@ server.registerTool(
     description: `Fetches up-to-date documentation and code examples for a library.
 
 WHEN TO USE:
-Call this AFTER 'resolve-library-id' OR when user provides ID in '/org/project' format.
+Call this AFTER 'resolve-library-id' OR when user provides Context7-compatible library ID in '/org/project' format.
+
+LIBRARY ID FORMAT (CRITICAL):
+Must use Context7-compatible library ID: /org/project or /org/project/version
+Valid examples: '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87'
+NEVER use: plain names ('mongodb'), server names ('Context7'), or other formats.
+Always get the ID from 'resolve-library-id' first unless user explicitly provides one.
 
 RESPONSE FORMAT:
 Returns markdown-formatted documentation including:
@@ -209,13 +220,13 @@ PAGINATION STRATEGY:
       libraryId: z
         .string()
         .describe(
-          "Library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/vercel/next.js/v14.3.0-canary.87')."
+          "Context7-compatible library ID in format /org/project or /org/project/version (e.g., '/mongodb/docs', '/vercel/next.js', '/vercel/next.js/v14.3.0-canary.87'). Get from 'resolve-library-id' tool."
         ),
       topic: z
         .string()
         .optional()
         .describe(
-          "Specific feature/concept (e.g., 'useState', 'authentication', 'connection pooling'). Omit for general overview. Avoid generic terms like 'overview'"
+          "Specific feature/concept (e.g., 'useState', 'authentication', 'connection pooling'). Omit for general overview. Avoid generic terms like 'overview' or 'hooks'."
         ),
       page: z
         .number()
@@ -244,7 +255,7 @@ PAGINATION STRATEGY:
         content: [
           {
             type: "text",
-            text: "Documentation not found. Verify library ID is correct or use 'resolve-library-id' to find the right ID.",
+            text: "Documentation not found. Ensure you're using a valid Context7-compatible library ID in format '/org/project' (e.g., '/mongodb/docs'). Use 'resolve-library-id' to get the correct ID.",
           },
         ],
       };
