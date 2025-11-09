@@ -10,16 +10,23 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Capture all logs for markdown report
-let consoleLog = "";
-let structuredToolCalls: Array<{ tool: string; args: any; response: any }> = [];
+/**
+ * State object to hold simulation data
+ * This prevents race conditions when running multiple simulations in parallel
+ */
+interface SimulationState {
+  consoleLog: string;
+  structuredToolCalls: Array<{ tool: string; args: any; response: any }>;
+}
 
 /**
- * Unified logging function - logs to console and captures for console log
+ * Creates a logging function bound to a specific simulation state
  */
-function log(message: string) {
-  console.log(message);
-  consoleLog += message + "\n";
+function createLogger(state: SimulationState) {
+  return (message: string) => {
+    console.log(message);
+    state.consoleLog += message + "\n";
+  };
 }
 
 /**
@@ -29,10 +36,15 @@ function log(message: string) {
  * - CLI: npm run simulate "your question here"
  * - Programmatic: import { simulate } from './simulate.js'; await simulate("your question");
  */
-export async function simulate(question?: string) {
-  // Reset global state for fresh simulation
-  consoleLog = "";
-  structuredToolCalls = [];
+export async function simulate(question?: string, uniqueId?: string) {
+  // Create local state for this simulation (prevents race conditions)
+  const state: SimulationState = {
+    consoleLog: "",
+    structuredToolCalls: [],
+  };
+
+  // Create logger bound to this simulation's state
+  const log = createLogger(state);
 
   // If no question provided, try to get from command line args
   if (!question) {
@@ -126,7 +138,7 @@ export async function simulate(question?: string) {
             log("");
 
             // Store for structured report
-            structuredToolCalls.push({
+            state.structuredToolCalls.push({
               tool: tc.toolName,
               args: input,
               response: null,
@@ -149,9 +161,9 @@ export async function simulate(question?: string) {
             log("");
 
             // Store response for structured report
-            const lastCallIdx = structuredToolCalls.length - 1;
-            if (lastCallIdx >= 0 && structuredToolCalls[lastCallIdx].response === null) {
-              structuredToolCalls[lastCallIdx].response = (tr as any).output || tr;
+            const lastCallIdx = state.structuredToolCalls.length - 1;
+            if (lastCallIdx >= 0 && state.structuredToolCalls[lastCallIdx].response === null) {
+              state.structuredToolCalls[lastCallIdx].response = (tr as any).output || tr;
             }
           });
         }
@@ -180,8 +192,10 @@ export async function simulate(question?: string) {
     const reportsDir = join(dirname(dirname(__dirname)), "reports");
     mkdirSync(reportsDir, { recursive: true });
 
-    // Generate filenames with timestamp
-    const baseFilename = startTime.toISOString().replace(/[:.]/g, "-").split("Z")[0];
+    // Generate filenames with timestamp and optional unique identifier
+    const baseFilename = uniqueId
+      ? `${startTime.toISOString().replace(/[:.]/g, "-").split("Z")[0]}_${uniqueId}`
+      : startTime.toISOString().replace(/[:.]/g, "-").split("Z")[0];
     const reportPath = join(reportsDir, `${baseFilename}.md`);
     const rawReportPath = join(reportsDir, `${baseFilename}_raw.md`);
 
@@ -192,9 +206,9 @@ export async function simulate(question?: string) {
     structuredReport += `## Question\n\n${originalQuestion}\n\n`;
 
     // Add tool calls and responses
-    if (structuredToolCalls.length > 0) {
+    if (state.structuredToolCalls.length > 0) {
       structuredReport += `## Tool Calls\n\n`;
-      structuredToolCalls.forEach((call, idx) => {
+      state.structuredToolCalls.forEach((call, idx) => {
         structuredReport += `### Tool Call ${idx + 1}: ${call.tool}\n\n`;
         structuredReport += `**Parameters:**\n\`\`\`json\n${JSON.stringify(call.args, null, 2)}\n\`\`\`\n\n`;
         structuredReport += `**Response:**\n\`\`\`json\n`;
@@ -214,7 +228,7 @@ export async function simulate(question?: string) {
     structuredReport += `## AI Final Response\n\n${result.text}\n\n`;
 
     // Add console log section
-    structuredReport += `---\n\n## Console Log\n\n\`\`\`\n${consoleLog}\n\`\`\`\n`;
+    structuredReport += `---\n\n## Console Log\n\n\`\`\`\n${state.consoleLog}\n\`\`\`\n`;
 
     // Save structured markdown report
     writeFileSync(reportPath, structuredReport);
@@ -225,7 +239,7 @@ export async function simulate(question?: string) {
     rawReport += `CONTEXT:\n\n`;
 
     // Add raw tool responses (extract text content only, skip resolve-library-id)
-    structuredToolCalls.forEach((call) => {
+    state.structuredToolCalls.forEach((call) => {
       // Skip resolve-library-id tool responses
       if (call.tool === "resolve-library-id") {
         return;
