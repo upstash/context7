@@ -2,6 +2,7 @@ import "dotenv/config";
 import { readFileSync, mkdirSync, renameSync, existsSync, readdirSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { execSync } from "child_process";
 import { simulate } from "./simulate.js";
 import { generateText } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
@@ -10,6 +11,19 @@ import { google } from "@ai-sdk/google";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+/**
+ * Get the current git branch name
+ * @returns The branch name or "unknown" if not in a git repo
+ */
+function getCurrentBranch(): string {
+  try {
+    const branch = execSync("git rev-parse --abbrev-ref HEAD", { encoding: "utf-8" }).trim();
+    return branch;
+  } catch (error) {
+    return "unknown";
+  }
+}
 
 /**
  * Runs benchmarks by simulating questions from questions.txt
@@ -74,13 +88,16 @@ async function runBenchmark() {
   }
   console.log();
 
-  // Create benchmark run directory with model name
+  // Get current git branch name
+  const branchName = getCurrentBranch();
+
+  // Create benchmark run directory with branch name and model name
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-").split("Z")[0];
   const benchmarkRunDir = join(
     dirname(dirname(__dirname)),
     "reports",
     "benchmarks",
-    `run-${timestamp}_${modelName.replace(/[.\s]/g, "-")}`
+    `${branchName}-run-${timestamp}_${modelName.replace(/[.\s]/g, "-")}`
   );
   mkdirSync(benchmarkRunDir, { recursive: true });
   console.log(`Benchmark results will be saved to: ${benchmarkRunDir}`);
