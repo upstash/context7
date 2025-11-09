@@ -12,7 +12,7 @@ import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
 
 /** Default number of results to return per page */
-const DEFAULT_RESULTS_LIMIT = 30;
+const DEFAULT_RESULTS_LIMIT = 15;
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
 
@@ -195,33 +195,97 @@ server.registerTool(
   "get-library-docs",
   {
     title: "Get Library Docs",
-    description:
-      "Fetches up-to-date documentation for a library. You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.",
+    description: `Fetches up-to-date documentation and code examples for a library.
+
+WHEN TO USE:
+Call this AFTER 'resolve-library-id' OR when user provides Context7-compatible library ID in '/org/project' format.
+
+LIBRARY ID FORMAT (CRITICAL):
+Must use Context7-compatible library ID: /org/project or /org/project/version
+Valid examples: '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87'
+NEVER use: plain names ('mongodb'), server names ('Context7'), or other formats.
+Always get the ID from 'resolve-library-id' first unless user explicitly provides one.
+
+PAGE SIZE & PAGINATION:
+Each page returns 15 documentation snippets.
+- Simple queries: 1 page usually sufficient
+- Moderate queries: 1-2 pages recommended
+- Complex queries: 2-3 pages for comprehensive coverage
+
+RESPONSE FORMAT:
+Returns markdown-formatted documentation including:
+- Code examples with syntax highlighting
+- Explanations and usage patterns
+- API references and best practices
+- Links to source documentation
+
+PAGINATION STRATEGIES:
+
+**Strategy 1: Same Topic, More Pages (DEFAULT)**
+Use when: Initial results are relevant but incomplete
+- page=1: Get first 15 results
+- page=2,3...: Get more results on SAME topic if needed
+- With 15 results/page, 1-2 pages usually provides good coverage
+
+**Strategy 2: Different Topics (EXPLORATION)**
+Use when: Need different aspects of the library
+- Call with topic='feature A' (page 1-2)
+- Call with topic='feature B' (page 1)
+- Limit to 1-2 topics total to control API calls
+Example: For React, try topics: 'useState', 'useEffect', 'performance', 'testing'
+
+**Strategy 3: Broad + Specific (COMPREHENSIVE)**
+Use when: Complex questions needing multiple angles
+- First: Broad topic or no topic (page 1) for overview
+- Then: ONE specific topic (pages 1-2) for depth
+Example: Query='React forms', try: general (p1), then 'form validation' (p1-2)
+
+**Strategy 4: Multiple Libraries (COMPARISON)**
+Use when: 'resolve-library-id' returned 2-3 similar libraries
+- Try each library (1-2 pages) to compare quality
+- Use the library with best documentation
+
+STOPPING CRITERIA:
+Continue paginating if:
+- Results relevant but question not fully answered
+- Need more code examples or edge cases
+- User question has multiple aspects not yet covered
+- Less than 30 total snippets gathered (2 pages)
+
+Stop paginating if:
+- Question adequately answered with examples
+- Results becoming repetitive or off-topic
+- Already gathered 45+ snippets (3 pages same topic)
+- No more relevant documentation available
+
+With 15 results per page, 1-2 pages usually sufficient for most queries. Use page 3+ only for very complex or multi-part questions.`,
     inputSchema: {
-      context7CompatibleLibraryID: z
+      libraryId: z
         .string()
         .describe(
-          "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
+          "Context7-compatible library ID in format /org/project or /org/project/version (e.g., '/mongodb/docs', '/vercel/next.js', '/vercel/next.js/v14.3.0-canary.87'). Get from 'resolve-library-id' tool."
         ),
       topic: z
         .string()
         .optional()
-        .describe("Topic to focus documentation on (e.g., 'hooks', 'routing')."),
+        .describe(
+          "Specific topic/feature to focus on (e.g., 'useState hook', 'authentication', 'connection pooling'). For complex questions, try 1-2 different focused topics (1 page each preferred). Omit for general overview. Avoid generic terms like 'overview' or 'hooks'."
+        ),
       page: z
         .number()
         .int()
         .min(1)
         .max(10)
         .describe(
-          "Page number for pagination (start: 1). If the context is not sufficient, try page=2, page=3, page=4, etc. with the same topic."
+          "Page number (1-10). Each page returns 15 snippets. Typically 1-2 pages sufficient. Use page=3+ only when necessary for complex topics."
         ),
     },
   },
-  async ({ context7CompatibleLibraryID, page = 1, topic = "" }) => {
+  async ({ libraryId, page = 1, topic = "" }) => {
     const ctx = requestContext.getStore();
     const apiKey = ctx?.apiKey || globalApiKey;
     const fetchDocsResponse = await fetchLibraryDocumentation(
-      context7CompatibleLibraryID,
+      libraryId,
       {
         page,
         limit: DEFAULT_RESULTS_LIMIT,
