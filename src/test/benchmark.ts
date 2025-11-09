@@ -113,9 +113,15 @@ async function runBenchmark() {
   }
   const results: QuestionResult[] = [];
 
-  // Run simulation for questions in batches of 5 (parallel processing)
+  // Run simulation for questions in batches (parallel processing)
+  // BATCH_SIZE can be set via environment variable (e.g., BATCH_SIZE=1 for sequential)
   const startTime = Date.now();
-  const BATCH_SIZE = 5;
+  const BATCH_SIZE = process.env.BATCH_SIZE ? parseInt(process.env.BATCH_SIZE, 10) : 5;
+
+  console.log(
+    `Execution Mode: ${BATCH_SIZE === 1 ? "Sequential (1 question at a time)" : "Parallel (batch size: " + BATCH_SIZE + ")"}`
+  );
+  console.log();
 
   for (let batchStart = 0; batchStart < questions.length; batchStart += BATCH_SIZE) {
     const batchEnd = Math.min(batchStart + BATCH_SIZE, questions.length);
