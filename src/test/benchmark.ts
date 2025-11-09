@@ -96,73 +96,92 @@ async function runBenchmark() {
   }
   const results: QuestionResult[] = [];
 
-  // Run simulation for each question
+  // Run simulation for questions in batches of 5 (parallel processing)
   const startTime = Date.now();
-  for (let i = 0; i < questions.length; i++) {
-    const question = questions[i];
-    const questionNum = i + 1;
+  const BATCH_SIZE = 5;
 
-    console.log("─".repeat(80));
-    console.log(`Question ${questionNum}/${questions.length}`);
-    console.log("─".repeat(80));
-    console.log(`Q: ${question}`);
+  for (let batchStart = 0; batchStart < questions.length; batchStart += BATCH_SIZE) {
+    const batchEnd = Math.min(batchStart + BATCH_SIZE, questions.length);
+    const batch = questions.slice(batchStart, batchEnd);
+
+    console.log("═".repeat(80));
+    console.log(
+      `Processing Batch ${Math.floor(batchStart / BATCH_SIZE) + 1} (Questions ${batchStart + 1}-${batchEnd})`
+    );
+    console.log("═".repeat(80));
     console.log();
 
-    try {
-      // Run simulation
-      await simulate(question);
+    // Process batch in parallel
+    const batchPromises = batch.map(async (question, batchIndex) => {
+      const questionNum = batchStart + batchIndex + 1;
 
-      // The simulate function saves reports in reports/ directory
-      // We need to move them to our benchmark directory
+      console.log(`[Q${questionNum}] Starting: ${question.substring(0, 60)}...`);
 
-      // Find the most recent report files in reports/ directory
-      const reportsDir = join(dirname(dirname(__dirname)), "reports");
-      const files = readdirSync(reportsDir);
+      try {
+        // Run simulation with unique ID to prevent filename collisions
+        const uniqueId = `q${questionNum}`;
+        await simulate(question, uniqueId);
 
-      // Find the most recent .md and _raw.md files (just created)
-      const mdFiles = files
-        .filter((f: string) => f.endsWith(".md") && !f.endsWith("_raw.md"))
-        .sort()
-        .reverse();
-      const rawMdFiles = files
-        .filter((f: string) => f.endsWith("_raw.md"))
-        .sort()
-        .reverse();
+        // Wait a bit to ensure file system operations complete
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
-      if (mdFiles.length > 0 && rawMdFiles.length > 0) {
-        const latestMd = mdFiles[0];
-        const latestRawMd = rawMdFiles[0];
+        // Find the report files created for this question by unique ID
+        const reportsDir = join(dirname(dirname(__dirname)), "reports");
+        const files = readdirSync(reportsDir);
 
-        // Move files to benchmark directory with new names
-        const sourceMd = join(reportsDir, latestMd);
-        const sourceRawMd = join(reportsDir, latestRawMd);
-        const destMd = join(benchmarkRunDir, `q${questionNum}.md`);
-        const destRawMd = join(benchmarkRunDir, `q${questionNum}_raw.md`);
+        // Look for files containing the unique ID
+        const mdFile = files.find((f) => f.includes(`_${uniqueId}.md`) && !f.endsWith("_raw.md"));
+        const rawMdFile = files.find((f) => f.includes(`_${uniqueId}_raw.md`));
 
-        renameSync(sourceMd, destMd);
-        renameSync(sourceRawMd, destRawMd);
+        if (mdFile && rawMdFile) {
+          // Move files to benchmark directory with new names
+          const sourceMd = join(reportsDir, mdFile);
+          const sourceRawMd = join(reportsDir, rawMdFile);
+          const destMd = join(benchmarkRunDir, `q${questionNum}.md`);
+          const destRawMd = join(benchmarkRunDir, `q${questionNum}_raw.md`);
 
-        console.log(`✅ Moved reports to q${questionNum}.md and q${questionNum}_raw.md`);
+          renameSync(sourceMd, destMd);
+          renameSync(sourceRawMd, destRawMd);
 
-        // Store result for scoring later
-        results.push({
-          questionNum,
-          question,
-          toolCount: 0, // Will be calculated during scoring
-          tokenCount: 0, // Will be calculated during scoring
-          score: 0, // Will be calculated during scoring
-        });
+          console.log(`[Q${questionNum}] ✅ Completed and saved`);
+
+          return {
+            questionNum,
+            question,
+            toolCount: 0, // Will be calculated during scoring
+            tokenCount: 0, // Will be calculated during scoring
+            score: 0, // Will be calculated during scoring
+          };
+        } else {
+          console.error(`[Q${questionNum}] ⚠️  No report files found (expected: *_${uniqueId}.md)`);
+          return null;
+        }
+      } catch (error) {
+        console.error(`[Q${questionNum}] ❌ Error:`, error);
+        return null;
       }
-    } catch (error) {
-      console.error(`❌ Error running simulation for question ${questionNum}:`, error);
-    }
+    });
 
+    // Wait for all questions in this batch to complete
+    const batchResults = await Promise.all(batchPromises);
+
+    // Add successful results to the results array
+    batchResults.forEach((result) => {
+      if (result) {
+        results.push(result);
+      }
+    });
+
+    console.log();
+    console.log(
+      `Batch ${Math.floor(batchStart / BATCH_SIZE) + 1} completed: ${batchResults.filter((r) => r).length}/${batch.length} successful`
+    );
     console.log();
   }
 
   const duration = Date.now() - startTime;
 
-  // Scoring phase
+  // Scoring phase - also in batches of 5 for parallel processing
   console.log();
   console.log("=".repeat(80));
   console.log("Scoring Phase");
@@ -170,45 +189,53 @@ async function runBenchmark() {
   console.log(`Using ${modelName} to score context quality...`);
   console.log();
 
-  for (let i = 0; i < results.length; i++) {
-    const result = results[i];
-    const rawMdPath = join(benchmarkRunDir, `q${result.questionNum}_raw.md`);
-    const structuredMdPath = join(benchmarkRunDir, `q${result.questionNum}.md`);
+  for (let batchStart = 0; batchStart < results.length; batchStart += BATCH_SIZE) {
+    const batchEnd = Math.min(batchStart + BATCH_SIZE, results.length);
+    const batchResults = results.slice(batchStart, batchEnd);
 
-    try {
-      // Read raw markdown file
-      const rawContent = readFileSync(rawMdPath, "utf-8");
+    console.log(
+      `Scoring Batch ${Math.floor(batchStart / BATCH_SIZE) + 1} (Questions ${batchStart + 1}-${batchEnd})`
+    );
 
-      // Count tokens (approximate: split by whitespace and punctuation)
-      const tokenCount = rawContent.split(/[\s\n]+/).length;
-      result.tokenCount = tokenCount;
+    // Process scoring in parallel
+    const scoringPromises = batchResults.map(async (result) => {
+      const rawMdPath = join(benchmarkRunDir, `q${result.questionNum}_raw.md`);
+      const structuredMdPath = join(benchmarkRunDir, `q${result.questionNum}.md`);
 
-      // Count tool calls from structured report
-      const structuredContent = readFileSync(structuredMdPath, "utf-8");
-      const toolCallMatches = structuredContent.match(/### Tool Call \d+:/g);
-      result.toolCount = toolCallMatches ? toolCallMatches.length : 0;
+      try {
+        // Read raw markdown file
+        const rawContent = readFileSync(rawMdPath, "utf-8");
 
-      // Extract question and context from raw file
-      const lines = rawContent.split("\n");
-      const questionLine = lines.find((line) => line.startsWith("QUESTION:"));
-      const question = questionLine
-        ? questionLine.replace("QUESTION:", "").trim()
-        : result.question;
+        // Count tokens (approximate: split by whitespace and punctuation)
+        const tokenCount = rawContent.split(/[\s\n]+/).length;
+        result.tokenCount = tokenCount;
 
-      // Get context (everything after "CONTEXT:")
-      const contextStart = rawContent.indexOf("CONTEXT:");
-      const context =
-        contextStart !== -1 ? rawContent.substring(contextStart + 8).trim() : rawContent;
+        // Count tool calls from structured report
+        const structuredContent = readFileSync(structuredMdPath, "utf-8");
+        const toolCallMatches = structuredContent.match(/### Tool Call \d+:/g);
+        result.toolCount = toolCallMatches ? toolCallMatches.length : 0;
 
-      console.log(`Scoring Q${result.questionNum}...`);
+        // Extract question and context from raw file
+        const lines = rawContent.split("\n");
+        const questionLine = lines.find((line) => line.startsWith("QUESTION:"));
+        const question = questionLine
+          ? questionLine.replace("QUESTION:", "").trim()
+          : result.question;
 
-      // Ask Claude to score the context
-      const scoringResult = await generateText({
-        model: scoringModel,
-        messages: [
-          {
-            role: "user",
-            content: `You are evaluating the quality and usefulness of documentation context for a given question.
+        // Get context (everything after "CONTEXT:")
+        const contextStart = rawContent.indexOf("CONTEXT:");
+        const context =
+          contextStart !== -1 ? rawContent.substring(contextStart + 8).trim() : rawContent;
+
+        console.log(`[Q${result.questionNum}] Scoring...`);
+
+        // Ask the scoring model to evaluate the context
+        const scoringResult = await generateText({
+          model: scoringModel,
+          messages: [
+            {
+              role: "user",
+              content: `You are evaluating the quality and usefulness of documentation context for a given question.
 
 Question: ${question}
 
@@ -223,31 +250,38 @@ Rate how helpful and relevant this context is for answering the question on a sc
 
 Respond with ONLY a JSON object in this format:
 {"score": <number>, "reasoning": "<brief explanation>"}`,
-          },
-        ],
-      });
+            },
+          ],
+        });
 
-      // Parse the score
-      let scoreData: { score: number; reasoning: string };
-      try {
-        const jsonMatch = scoringResult.text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          scoreData = JSON.parse(jsonMatch[0]);
-          result.score = scoreData.score;
-          console.log(`  Score: ${scoreData.score}/10`);
-          console.log(`  Reasoning: ${scoreData.reasoning.substring(0, 80)}...`);
-        } else {
-          console.log(`  ⚠️  Could not parse score, defaulting to 0`);
+        // Parse the score
+        try {
+          const jsonMatch = scoringResult.text.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const scoreData = JSON.parse(jsonMatch[0]);
+            result.score = scoreData.score;
+            console.log(
+              `[Q${result.questionNum}] Score: ${scoreData.score}/10 - ${scoreData.reasoning.substring(0, 60)}...`
+            );
+          } else {
+            console.log(`[Q${result.questionNum}] ⚠️  Could not parse score, defaulting to 0`);
+            result.score = 0;
+          }
+        } catch (parseError) {
+          console.log(`[Q${result.questionNum}] ⚠️  Error parsing score: ${parseError}`);
           result.score = 0;
         }
-      } catch (parseError) {
-        console.log(`  ⚠️  Error parsing score: ${parseError}`);
-        result.score = 0;
+      } catch (error) {
+        console.error(`[Q${result.questionNum}] ❌ Error scoring:`, error);
       }
-    } catch (error) {
-      console.error(`❌ Error scoring Q${result.questionNum}:`, error);
-    }
+    });
 
+    // Wait for all scoring in this batch to complete
+    await Promise.all(scoringPromises);
+
+    console.log(
+      `Scoring Batch ${Math.floor(batchStart / BATCH_SIZE) + 1} completed: ${batchEnd - batchStart} questions`
+    );
     console.log();
   }
 
