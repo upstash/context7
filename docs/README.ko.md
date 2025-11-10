@@ -290,11 +290,9 @@ Visual Studio MCP 설정 파일에 다음을 추가하세요(자세한 내용은
 {
   "context_servers": {
     "Context7": {
-      "command": {
-        "path": "npx",
-        "args": ["-y", "@upstash/context7-mcp"]
-      },
-      "settings": {}
+      "source": "custom",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
     }
   }
 }
@@ -445,7 +443,7 @@ Claude Desktop의 `claude_desktop_config.json` 파일에 다음을 추가하세�
         "CONTEXT7_API_KEY": "YOUR_API_KEY"
       },
       "tools": [
-        "get-library-docs", 
+        "get-library-docs",
         "resolve-library-id"
       ]
     }
@@ -462,7 +460,7 @@ Claude Desktop의 `claude_desktop_config.json` 파일에 다음을 추가하세�
       "type": "local",
       "command": "npx",
       "tools": [
-        "get-library-docs", 
+        "get-library-docs",
         "resolve-library-id"
       ],
       "args": [
