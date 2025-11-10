@@ -140,11 +140,9 @@ Bunu VS Code MCP yapılandırma dosyanıza ekleyin. Daha fazla bilgi için [VS C
 {
   "context_servers": {
     "Context7": {
-      "command": {
-        "path": "npx",
-        "args": ["-y", "@upstash/context7-mcp@latest"]
-      },
-      "settings": {}
+      "source": "custom",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
     }
   }
 }

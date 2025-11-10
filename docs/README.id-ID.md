@@ -256,11 +256,9 @@ Dapat diinstal melalui [Ekstensi Zed](https://zed.dev/extensions?query=Context7)
 {
   "context_servers": {
     "Context7": {
-      "command": {
-        "path": "npx",
-        "args": ["-y", "@upstash/context7-mcp"]
-      },
-      "settings": {}
+      "source": "custom",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
     }
   }
 }
@@ -654,7 +652,7 @@ Untuk informasi lebih lanjut, lihat [dokumentasi resmi GitHub](https://docs.gith
         "CONTEXT7_API_KEY": "YOUR_API_KEY"
       },
       "tools": [
-        "get-library-docs", 
+        "get-library-docs",
         "resolve-library-id"
       ]
     }
@@ -671,7 +669,7 @@ Atau, untuk server lokal:
       "type": "local",
       "command": "npx",
       "tools": [
-        "get-library-docs", 
+        "get-library-docs",
         "resolve-library-id"
       ],
       "args": [

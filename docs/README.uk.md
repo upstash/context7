@@ -288,11 +288,9 @@ npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME>
 {
   "context_servers": {
     "Context7": {
-      "command": {
-        "path": "npx",
-        "args": ["-y", "@upstash/context7-mcp"]
-      },
-      "settings": {}
+      "source": "custom",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
     }
   }
 }
@@ -342,7 +340,7 @@ npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME>
         "CONTEXT7_API_KEY": "YOUR_API_KEY"
       },
       "tools": [
-        "get-library-docs", 
+        "get-library-docs",
         "resolve-library-id"
       ]
     }
@@ -359,7 +357,7 @@ npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME>
       "type": "local",
       "command": "npx",
       "tools": [
-        "get-library-docs", 
+        "get-library-docs",
         "resolve-library-id"
       ],
       "args": [
