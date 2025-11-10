@@ -16,7 +16,7 @@ const __dirname = dirname(__filename);
  */
 interface SimulationState {
   consoleLog: string;
-  structuredToolCalls: Array<{ tool: string; args: any; response: any }>;
+  toolCallsMap: Map<string, { tool: string; args: any; response: any }>;
 }
 
 /**
@@ -40,7 +40,7 @@ export async function simulate(question?: string, uniqueId?: string) {
   // Create local state for this simulation (prevents race conditions)
   const state: SimulationState = {
     consoleLog: "",
-    structuredToolCalls: [],
+    toolCallsMap: new Map(),
   };
 
   // Create logger bound to this simulation's state
@@ -137,8 +137,8 @@ export async function simulate(question?: string, uniqueId?: string) {
             log("```");
             log("");
 
-            // Store for structured report
-            state.structuredToolCalls.push({
+            // Store for structured report using toolCallId as key
+            state.toolCallsMap.set(tc.toolCallId, {
               tool: tc.toolName,
               args: input,
               response: null,
@@ -160,10 +160,10 @@ export async function simulate(question?: string, uniqueId?: string) {
             log("```");
             log("");
 
-            // Store response for structured report
-            const lastCallIdx = state.structuredToolCalls.length - 1;
-            if (lastCallIdx >= 0 && state.structuredToolCalls[lastCallIdx].response === null) {
-              state.structuredToolCalls[lastCallIdx].response = (tr as any).output || tr;
+            // Store response for structured report by matching toolCallId
+            const toolCall = state.toolCallsMap.get(tr.toolCallId);
+            if (toolCall) {
+              toolCall.response = (tr as any).output || tr;
             }
           });
         }
@@ -199,6 +199,9 @@ export async function simulate(question?: string, uniqueId?: string) {
     const reportPath = join(reportsDir, `${baseFilename}.md`);
     const rawReportPath = join(reportsDir, `${baseFilename}_raw.md`);
 
+    // Convert Map to array for report generation (preserves insertion order)
+    const structuredToolCalls = Array.from(state.toolCallsMap.values());
+
     // Generate structured markdown report
     let structuredReport = `# Context7 MCP Simulation Report\n\n`;
     structuredReport += `**Date**: ${startTime.toISOString()}\n`;
@@ -206,9 +209,9 @@ export async function simulate(question?: string, uniqueId?: string) {
     structuredReport += `## Question\n\n${originalQuestion}\n\n`;
 
     // Add tool calls and responses
-    if (state.structuredToolCalls.length > 0) {
+    if (structuredToolCalls.length > 0) {
       structuredReport += `## Tool Calls\n\n`;
-      state.structuredToolCalls.forEach((call, idx) => {
+      structuredToolCalls.forEach((call, idx) => {
         structuredReport += `### Tool Call ${idx + 1}: ${call.tool}\n\n`;
         structuredReport += `**Parameters:**\n\`\`\`json\n${JSON.stringify(call.args, null, 2)}\n\`\`\`\n\n`;
         structuredReport += `**Response:**\n\`\`\`json\n`;
@@ -239,7 +242,7 @@ export async function simulate(question?: string, uniqueId?: string) {
     rawReport += `CONTEXT:\n\n`;
 
     // Add raw tool responses (extract text content only, skip resolve-library-id)
-    state.structuredToolCalls.forEach((call) => {
+    structuredToolCalls.forEach((call) => {
       // Skip resolve-library-id tool responses
       if (call.tool === "resolve-library-id") {
         return;
