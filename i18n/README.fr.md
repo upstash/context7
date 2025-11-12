@@ -138,11 +138,9 @@ Peut être installé via [Zed Extensions](https://zed.dev/extensions?query=Conte
 {
   "context_servers": {
     "Context7": {
-      "command": {
-        "path": "npx",
-        "args": ["-y", "@upstash/context7-mcp@latest"]
-      },
-      "settings": {}
+      "source": "custom",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
     }
   }
 }
@@ -221,7 +219,7 @@ Pour plus d'informations, consultez la [documentation officielle GitHub](https:/
         "CONTEXT7_API_KEY": "YOUR_API_KEY"
       },
       "tools": [
-        "get-library-docs", 
+        "get-library-docs",
         "resolve-library-id"
       ]
     }
@@ -238,7 +236,7 @@ Ou, pour un serveur local :
       "type": "local",
       "command": "npx",
       "tools": [
-        "get-library-docs", 
+        "get-library-docs",
         "resolve-library-id"
       ],
       "args": [

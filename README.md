@@ -23,11 +23,13 @@ Context7 MCP pulls up-to-date, version-specific documentation and code examples 
 Add `use context7` to your prompt in Cursor:
 
 ```txt
-Create a Next.js middleware that checks for a valid JWT in cookies and redirects unauthenticated users to `/login`. use context7
+Create a Next.js middleware that checks for a valid JWT in cookies
+and redirects unauthenticated users to `/login`. use context7
 ```
 
 ```txt
-Configure a Cloudflare Worker script to cache JSON API responses for five minutes. use context7
+Configure a Cloudflare Worker script to cache
+JSON API responses for five minutes. use context7
 ```
 
 Context7 fetches up-to-date code examples and documentation right into your LLM's context.
