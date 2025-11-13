@@ -1,0 +1,229 @@
+---
+title: Security
+---
+
+Context7 takes security and privacy seriously. This page outlines our security practices, data handling, and compliance measures.
+
+## Highlights
+
+- Queries stay on your device; Context7 only receives derived topics for retrieval
+- Documentation is indexed inside SOC 2 compliant infrastructure operated by Upstash
+- API keys are encrypted, rate limited, and easy to rotate from your dashboard
+- Enterprise customers can enable SSO (SAML, OAuth, OIDC) and receive dedicated audit trails
+
+## Privacy-First Architecture
+
+### Query Privacy
+
+**Your queries never leave your machine.**
+
+When you use Context7 through the MCP client:
+
+1. Your query is analyzed locally to extract topics and relevant keywords
+2. Only these extracted topics are sent to the Context7 server
+3. Your original query and code remain on your local machine
+4. The server has no access to your actual prompts or conversations
+
+<Note>
+  The MCP client processes your queries locally and only transmits topic information needed to
+  retrieve relevant documentation. Your full prompts, code, and context remain private.
+</Note>
+
+### Data Storage
+
+**Context7 does not store your source files.**
+
+- We only index and store **documentation** and **code examples** from public repositories
+- Your private code, projects, and source files are never uploaded or stored
+- All indexed content is stored in a secure vector database optimized for retrieval
+
+**What we store:**
+
+- Public library documentation
+- Public code examples from documentation
+- Metadata about indexed libraries
+
+**What we don't store:**
+
+- Your source code
+- Your queries or prompts
+- Your private repositories (unless explicitly authorized)
+- Your conversations with AI assistants
+
+## Infrastructure Security
+
+### SOC 2 Compliance
+
+Context7 runs on **SOC 2 compliant infrastructure** provided by Upstash.
+
+- Type II SOC 2 certified infrastructure
+- Regular security audits and assessments
+- Continuous monitoring and compliance checks
+- Industry-standard security controls
+
+### Managed by Upstash
+
+Context7's infrastructure is managed by the experienced Upstash team:
+
+- 24/7 infrastructure monitoring
+- Automated security patching
+- DDoS protection and mitigation
+- Redundant backups and disaster recovery
+- Enterprise-grade reliability and uptime
+
+### Upstash Security Practices
+
+All security practices and certificates of Upstash apply to Context7 projects:
+
+- **Data Encryption**: Encryption at rest and in transit (TLS 1.2+)
+- **Network Security**: VPC isolation, firewall rules, and network segmentation
+- **Access Control**: Role-based access control (RBAC) and least privilege principles
+- **Audit Logging**: Comprehensive logging of all system activities
+- **Incident Response**: Documented incident response procedures
+- **Vulnerability Management**: Regular security scanning and penetration testing
+
+Learn more about Upstash security: [upstash.com/trust](https://upstash.com/trust)
+
+## Authentication and Access Control
+
+### API Key Security
+
+- API keys use cryptographic random generation
+- Keys are hashed and encrypted in our database
+- Keys can be rotated at any time from your dashboard
+- Rate limiting prevents abuse and unauthorized access
+
+### Enterprise SSO
+
+**Single Sign-On (SSO) is available for Enterprise plans.**
+
+Supported SSO providers:
+
+- SAML 2.0
+- OAuth 2.0
+- OpenID Connect (OIDC)
+
+Enterprise features include:
+
+- Centralized user management
+- Team access controls
+- Audit logs for compliance
+- Custom authentication policies
+
+Contact our sales team at [context7.com](https://context7.com) for Enterprise plan details.
+
+## Data Protection
+
+### Privacy by Design
+
+- **Data Minimization**: We only collect and store what's necessary
+- **Purpose Limitation**: Data is used only for documentation retrieval
+- **Storage Limitation**: Automated cleanup of outdated data
+- **Transparency**: Clear documentation of what we collect and why
+
+### GDPR Compliance
+
+For European users, Context7 provides:
+
+- The right to access your data
+- The right to delete your data
+- Data portability options
+- Clear consent mechanisms
+- Privacy-first data processing
+
+## Rate Limiting and Abuse Prevention
+
+- IP-based rate limiting for anonymous requests
+- API key-based rate limiting with tiered limits
+- Automatic detection and blocking of abusive patterns
+- Protection against DDoS and scraping attacks
+
+## Secure Development Practices
+
+- Regular security code reviews
+- Automated dependency scanning
+- Secure CI/CD pipelines
+- Principle of least privilege for all systems
+- Security testing in development lifecycle
+
+## Reporting Security Issues
+
+If you discover a security vulnerability:
+
+1. **Do not** publicly disclose the issue
+2. Report via [GitHub Security](https://github.com/upstash/context7/security)
+3. Include detailed steps to reproduce the issue
+4. Allow reasonable time for us to address the issue
+
+We take all security reports seriously and will respond promptly.
+
+## Transparency and Compliance
+
+### Open Source
+
+The Context7 MCP server is open source:
+
+- Code is publicly available on GitHub
+- Community can audit and contribute
+- Transparent implementation and practices
+
+Repository: [github.com/upstash/context7](https://github.com/upstash/context7)
+
+### Compliance Certifications
+
+Context7 benefits from Upstash's compliance certifications:
+
+- SOC 2 Type II
+- GDPR compliant
+- ISO 27001 (in progress)
+- CCPA compliant
+
+## Best Practices for Users
+
+### Secure Your API Keys
+
+- Never commit API keys to version control
+- Use environment variables for key storage
+- Rotate keys regularly
+- Use different keys for different environments
+- Revoke unused or compromised keys immediately
+
+### Private Repositories
+
+For private repository access:
+
+- Only grant minimum required permissions
+- Use dedicated API keys for private repos
+- Regularly audit access permissions
+- Consider using GitHub Apps with fine-grained permissions
+
+### Network Security
+
+- Use HTTPS for all API communications (enforced)
+- Configure proxy settings securely if behind a firewall
+- Monitor API usage for unusual patterns
+- Implement request timeouts and retries
+
+## Data Retention
+
+- **Library Documentation**: Retained while the library is active and public
+- **API Logs**: Retained for 30 days for debugging and analytics
+- **User Data**: Retained according to your account status
+- **Deleted Data**: Permanently removed within 30 days of deletion request
+
+## Questions and Support
+
+For security-related questions:
+
+- Review our documentation at [docs.context7.com](https://docs.context7.com)
+- Contact us through [GitHub Issues](https://github.com/upstash/context7/issues)
+- Join our [Discord Community](https://upstash.com/discord)
+- Enterprise customers: Contact your dedicated support team
+
+For privacy policy details, visit: [context7.com/privacy](https://context7.com/privacy)
+
+---
+
+**Last Updated**: January 2025
+
+We continuously improve our security practices. Check this page regularly for updates.

@@ -175,5 +175,4 @@ dist
 .DS_Store
 package-lock.json
 
-reports*
-src/test/questions*
+prompt.txt

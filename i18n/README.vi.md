@@ -290,11 +290,9 @@ Có thể cài đặt thông qua [Zed Extensions](https://zed.dev/extensions?que
 {
   "context_servers": {
     "Context7": {
-      "command": {
-        "path": "npx",
-        "args": ["-y", "@upstash/context7-mcp"]
-      },
-      "settings": {}
+      "source": "custom",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
     }
   }
 }
@@ -751,7 +749,7 @@ Thêm cấu hình sau vào phần `mcp` trong file cấu hình Copilot Coding Ag
         "CONTEXT7_API_KEY": "YOUR_API_KEY"
       },
       "tools": [
-        "get-library-docs", 
+        "get-library-docs",
         "resolve-library-id"
       ]
     }
@@ -768,7 +766,7 @@ Hoặc, đối với server cục bộ:
       "type": "local",
       "command": "npx",
       "tools": [
-        "get-library-docs", 
+        "get-library-docs",
         "resolve-library-id"
       ],
       "args": [
@@ -785,9 +783,9 @@ Hoặc, đối với server cục bộ:
 Nếu file `mcp-config.json` không tồn tại, hãy tạo nó.
 
 </details>
-  
+
 <details>
-  
+
 <summary><b>Cài đặt trong Kiro</b></summary>
 
 Xem [Tài liệu Kiro Model Context Protocol](https://kiro.dev/docs/mcp/configuration/) để biết chi tiết.
