@@ -448,6 +448,7 @@
               "totalPages": 1156,
               "stars": 131745,
               "trustScore": 10,
+              "benchmarkScore": 95.5,
               "versions": [
                 "v14.3.0-canary.87",
                 "v13.5.11",
@@ -521,10 +522,17 @@
           },
           "trustScore": {
             "type": "integer",
-            "description": "Authority score (0-10)",
+            "description": "Source reputation score (0-10, used internally to determine High/Medium/Low/Unknown reputation)",
             "minimum": 0,
             "maximum": 10,
             "example": 10
+          },
+          "benchmarkScore": {
+            "type": "number",
+            "description": "Quality indicator score (0-100, with 100 being the highest quality)",
+            "minimum": 0,
+            "maximum": 100,
+            "example": 95.5
           },
           "versions": {
             "type": "array",
