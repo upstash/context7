@@ -185,62 +185,19 @@ Lower token counts result in faster responses and lower costs.
 
 ## Work with Private Repositories
 
-Access your private documentation with Context7 Pro.
+Add your private GitHub, GitLab, or Bitbucket repositories to make internal documentation available through Context7. Requires a Pro or Enterprise plan.
 
-### Requirements
+For complete instructions on adding, refreshing, and managing private repositories, see the [Private Repositories](/dashboard/private-repositories) guide.
 
-- Pro plan ($7/seat/month)
-- GitHub, GitLab, or Bitbucket account connection
-- Repository access permissions
-
-### Add a Private Repository
-
-1. Go to [Dashboard → Libraries → Private Repositories](https://context7.com/dashboard)
-2. Click **Add Private Repository**
-3. Choose your source:
-   - **Connect Repository**: Link your GitHub, GitLab, or Bitbucket account
-   - **Upload OpenAPI Docs**: Upload your own OpenAPI documentation
-4. Enter repository URL (if connecting a repository)
-5. Authorize Context7 to access your repository
-6. Configure folders and exclusions (optional)
-7. Submit
-
-### Cost
-
-- **Adding**: $15 per 1M tokens parsed (one-time)
-- **Refreshing**: Only pay for new/changed content
-- **Querying**: Free (covered by seat cost)
-
-See [Plans & Pricing](/plans-pricing#parse-token-pricing) for examples.
+**Cost**: $15 per 1M tokens when parsing. See [Plans & Pricing](/plans-pricing) for details.
 
 ## Set Up Team Collaboration
 
-Share Context7 access with your team.
+Share Context7 access with your team. Create a team, invite members with different roles (Owner, Admin, Developer), and manage permissions from your dashboard.
 
-### Create a Team Project
+For complete instructions on creating teams, inviting members, and managing roles, see the [Team Management](/dashboard/team) guide.
 
-1. Visit [Dashboard](https://context7.com/dashboard)
-2. Click **Create Team Project**
-3. Name your project
-
-### Invite Team Members
-
-1. Go to **Dashboard → Members**
-2. Click **Invite Member**
-3. Enter their email and select a role:
-   - **Owner**: Full control
-   - **Admin**: Manage team and settings
-   - **Developer**: API access only
-
-Members will receive an email invitation.
-
-### Manage API Keys
-
-Each team member gets their own API key with independent rate limits (60 req/hour per member).
-
-You can regenerate keys from the Members tab if compromised.
-
-Visit the [Dashboard](https://context7.com/dashboard) for team management details.
+**Cost**: $7 per team member per month on Pro plan. See [Plans & Pricing](/plans-pricing) for details.
 
 ## Refresh Library Documentation
 
@@ -274,35 +231,9 @@ Authorization: Bearer YOUR_API_KEY
 
 ## Monitor Usage
 
-Track your Context7 usage and costs.
+Track your API usage, parse tokens, and costs from the dashboard. View metrics for search requests, query tokens, parse tokens, and total monthly costs with detailed breakdowns.
 
-### View Statistics
-
-Go to [Dashboard → Overview](https://context7.com/dashboard) to see:
-
-- **Search requests**: Library searches
-- **Query/fetch requests**: Documentation retrievals
-- **Query tokens**: Tokens returned in responses
-- **Parsing tokens**: Tokens processed when adding/refreshing
-
-Stats reflect usage from the last 30 days.
-
-### Understand Costs
-
-**Free Plan**: Always $0
-
-**Pro Plan**:
-
-- **Seats**: $7/month × team members
-- **Parse tokens**: $15 per 1M tokens (private repos only)
-
-**Example**:
-
-- 4 team members: $28/month
-- Added 800K token private repo: $12 one-time
-- Monthly total: $40
-
-Visit the [Dashboard](https://context7.com/dashboard) to monitor your usage and costs.
+For complete details on usage statistics and cost calculations, see the [Usage Statistics](/dashboard/usage) guide.
 
 ## Best Practices
 
