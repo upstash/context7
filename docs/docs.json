@@ -22,6 +22,17 @@
         ]
       },
       {
+        "group": "Dashboard",
+        "pages": [
+          "dashboard/api-keys",
+          "dashboard/libraries",
+          "dashboard/private-repositories",
+          "dashboard/team",
+          "dashboard/usage",
+          "dashboard/billing"
+        ]
+      },
+      {
         "group": "API Reference",
         "openapi": "openapi.json"
       },
@@ -39,11 +50,11 @@
     "playground": {"display": "simple"}
   },
   "logo": {
-    "light": "/logo/logo.svg",
-    "dark": "/logo/logo-dark.svg",
+    "light": "/public/logo/logo.svg",
+    "dark": "/public/logo/logo-dark.svg",
     "href": "https://context7.com"
   },
-  "favicon": "/logo/logo.png",
+  "favicon": "/public/favicon.ico",
   "navbar": {
     "links": [
       {
@@ -103,10 +114,5 @@
         ]
       }
     ]
-  },
-  "feedback": {
-    "thumbsRating": true,
-    "suggestEdit": true,
-    "raiseIssue": true
   }
 }
