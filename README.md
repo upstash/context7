@@ -56,9 +56,9 @@ Check out our [project addition guide](https://context7.com/docs/adding-librarie
 - Context7 API Key (Optional) for higher rate limits and private repositories (Get yours by creating an account at [context7.com/dashboard](https://context7.com/dashboard))
 
 > [!TIP]
-> **Recommended: Add a Rule to Auto-Invoke Context7**
+> **Recommended Post-Setup: Add a Rule to Auto-Invoke Context7**
 >
-> If you don't want to add `use context7` to every prompt, you can define a simple rule in your MCP client's rule section to automatically invoke Context7 on any code question:
+> After installing Context7 (see instructions below), enhance your workflow by adding a rule so you don't have to type `use context7` in every prompt. Define a simple rule in your MCP client's rule section to automatically invoke Context7 on any code question:
 >
 > - For Windsurf, in `.windsurfrules` file
 > - For Cursor, from `Cursor Settings > Rules` section
