@@ -97,7 +97,8 @@ export async function searchLibraries(
 export async function fetchLibraryDocumentation(
   libraryId: string,
   options: {
-    tokens?: number;
+    page?: number;
+    limit?: number;
     topic?: string;
   } = {},
   clientIp?: string,
@@ -107,8 +108,9 @@ export async function fetchLibraryDocumentation(
     if (libraryId.startsWith("/")) {
       libraryId = libraryId.slice(1);
     }
-    const url = new URL(`${CONTEXT7_API_BASE_URL}/v1/${libraryId}`);
-    if (options.tokens) url.searchParams.set("tokens", options.tokens.toString());
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/docs/code/${libraryId}`);
+    if (options.page) url.searchParams.set("page", options.page.toString());
+    if (options.limit) url.searchParams.set("limit", options.limit.toString());
     if (options.topic) url.searchParams.set("topic", options.topic);
     url.searchParams.set("type", DEFAULT_TYPE);
 

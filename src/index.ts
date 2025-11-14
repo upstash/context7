@@ -11,10 +11,8 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
 
-/** Minimum allowed tokens for documentation retrieval */
-const MINIMUM_TOKENS = 1000;
-/** Default tokens when none specified */
-const DEFAULT_TOKENS = 5000;
+/** Default number of results to return per page */
+const DEFAULT_RESULTS_LIMIT = 10;
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
 
@@ -70,6 +68,9 @@ const requestContext = new AsyncLocalStorage<{
   clientIp?: string;
   apiKey?: string;
 }>();
+
+// Store API key globally for stdio mode (where requestContext may not be available in tool handlers)
+let globalApiKey: string | undefined;
 
 function getClientIp(req: express.Request): string | undefined {
   const forwardedFor = req.headers["x-forwarded-for"] || req.headers["X-Forwarded-For"];
@@ -172,7 +173,7 @@ Each result includes:
 - Benchmark Score: Quality indicator (100 is the highest score)
 - Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.
 
-For best results, select libraries based on name match, source reputation, snippet coverage, and relevance to your use case.
+For best results, select libraries based on name match, source reputation, snippet coverage, benchmark score, and relevance to your use case.
 
 ----------
 
@@ -205,25 +206,28 @@ server.registerTool(
         .string()
         .optional()
         .describe("Topic to focus documentation on (e.g., 'hooks', 'routing')."),
-      tokens: z
-        .preprocess((val) => (typeof val === "string" ? Number(val) : val), z.number())
-        .transform((val) => (val < MINIMUM_TOKENS ? MINIMUM_TOKENS : val))
-        .optional()
+      page: z
+        .number()
+        .int()
+        .min(1)
+        .max(10)
         .describe(
-          `Maximum number of tokens of documentation to retrieve (default: ${DEFAULT_TOKENS}). Higher values provide more context but consume more tokens.`
+          "Page number for pagination (start: 1). If the context is not sufficient, try page=2, page=3, page=4, etc. with the same topic."
         ),
     },
   },
-  async ({ context7CompatibleLibraryID, tokens = DEFAULT_TOKENS, topic = "" }) => {
+  async ({ context7CompatibleLibraryID, page = 1, topic = "" }) => {
     const ctx = requestContext.getStore();
+    const apiKey = ctx?.apiKey || globalApiKey;
     const fetchDocsResponse = await fetchLibraryDocumentation(
       context7CompatibleLibraryID,
       {
-        tokens,
+        page,
+        limit: DEFAULT_RESULTS_LIMIT,
         topic,
       },
       ctx?.clientIp,
-      ctx?.apiKey
+      apiKey
     );
 
     if (!fetchDocsResponse) {
@@ -368,6 +372,7 @@ async function main() {
     startServer(initialPort);
   } else {
     const apiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
+    globalApiKey = apiKey; // Store globally for tool handlers in stdio mode
     const transport = new StdioServerTransport();
 
     await requestContext.run({ apiKey }, async () => {
