@@ -261,6 +261,76 @@ Or you can directly edit MCP servers configuration:
 </details>
 
 <details>
+<summary><b>Install in Kilo Code</b></summary>
+
+You can configure the Context7 MCP server in **Kilo Code** using either the UI or by editing your project's MCP configuration file.
+
+Kilo Code supports two configuration levels:
+
+- **Global MCP Configuration** — stored in `mcp_settings.json`
+- **Project-level MCP Configuration** — stored in `.kilocode/mcp.json` (recommended)
+
+If a server is defined in both places, the **project-level configuration overrides the global one**.
+
+---
+
+## Configure via Kilo Code UI
+
+1. Open **Kilo Code**.
+2. Click the **Settings** icon in the top-right corner.
+3. Navigate to **Settings → MCP Servers**.
+4. Click **Add Server**.
+5. Choose **HTTP Server** (Streamable HTTP Transport).
+6. Enter the details:
+
+**URL**
+`https://mcp.context7.com/mcp`
+
+**Headers → Add Header**
+- **Key:** `Authorization`
+- **Value:** `Bearer YOUR_API_KEY`
+
+7. Click **Save**.
+8. Ensure the server toggle is **enabled**.
+9. If needed, click **Refresh MCP Servers** to reload the configuration.
+
+---
+
+## Manual Configuration (`.kilocode/mcp.json`)
+
+To configure the server at the project level (recommended for team environments), create the following file:
+
+**`.kilocode/mcp.json`:**
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "streamable-http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      },
+      "alwaysAllow": [],
+      "disabled": false
+    }
+  }
+}
+```
+
+Replace YOUR_API_KEY with your actual Context7 API key.
+
+After saving the file:
+
+- Open Settings → MCP Servers
+
+- Click Refresh MCP Servers
+
+Kilo Code will automatically detect and load the configuration.
+
+</details>
+
+<details>
 <summary><b>Install in Zed</b></summary>
 
 It can be installed via [Zed Extensions](https://zed.dev/extensions?query=Context7) or you can add this to your Zed `settings.json`. See [Zed Context Server docs](https://zed.dev/docs/assistant/context-servers) for more info.
