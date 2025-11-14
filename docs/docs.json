@@ -38,16 +38,12 @@
       },
       {
         "group": "Resources",
-        "pages": [
-          "security",
-          "troubleshooting",
-          "contact"
-        ]
+        "pages": ["security", "troubleshooting", "contact"]
       }
     ]
   },
   "api": {
-    "playground": {"display": "simple"}
+    "playground": { "display": "simple" }
   },
   "logo": {
     "light": "/public/logo/logo.svg",

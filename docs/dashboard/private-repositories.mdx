@@ -18,9 +18,7 @@ Follow these steps to add a private repository:
 3. **Select a repository** from your account
 4. **Submit** for parsing
 
-<Note>
-You must have a Pro or Enterprise plan to add private repositories.
-</Note>
+<Note>You must have a Pro or Enterprise plan to add private repositories.</Note>
 
 ## Repository Management
 
@@ -33,13 +31,12 @@ Keep your private documentation up to date:
 3. **You're only charged for changed content** - cached pages are free
 
 **When to refresh**:
+
 - After major documentation updates
 - After releasing new features
 - When you notice outdated information
 
-<Tip>
-Refresh private repos only after significant documentation changes to minimize costs.
-</Tip>
+<Tip>Refresh private repos only after significant documentation changes to minimize costs.</Tip>
 
 ### Removing Repositories
 
@@ -50,7 +47,7 @@ To remove a private repository:
 3. Repository documentation becomes unavailable immediately
 
 <Warning>
-This action is permanent. The repository will no longer be accessible via the API.
+  This action is permanent. The repository will no longer be accessible via the API.
 </Warning>
 
 ## Permissions
@@ -73,10 +70,7 @@ Add a `context7.json` file to your repository root for better control over parsi
   "folders": ["docs", "guides"],
   "excludeFolders": ["tests", "dist", "node_modules"],
   "excludeFiles": ["CHANGELOG.md"],
-  "rules": [
-    "Always validate user input",
-    "Use TypeScript strict mode"
-  ]
+  "rules": ["Always validate user input", "Use TypeScript strict mode"]
 }
 ```
 
