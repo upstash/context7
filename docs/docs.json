@@ -22,6 +22,17 @@
         ]
       },
       {
+        "group": "Dashboard",
+        "pages": [
+          "dashboard/api-keys",
+          "dashboard/libraries",
+          "dashboard/private-repositories",
+          "dashboard/team",
+          "dashboard/usage",
+          "dashboard/billing"
+        ]
+      },
+      {
         "group": "API Reference",
         "openapi": "openapi.json"
       },
@@ -103,10 +114,5 @@
         ]
       }
     ]
-  },
-  "feedback": {
-    "thumbsRating": true,
-    "suggestEdit": true,
-    "raiseIssue": true
   }
 }
