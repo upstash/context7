@@ -176,3 +176,7 @@ dist
 package-lock.json
 
 prompt.txt
+
+reports
+reports-old
+src/test/questions*
