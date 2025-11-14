@@ -95,12 +95,12 @@ curl "https://context7.com/api/v1/vercel/next.js/v15.1.8" \
 
 The Context7 API uses standard HTTP status codes:
 
-| Code | Description                                   | Action                                        |
-| ---- | --------------------------------------------- | --------------------------------------------- |
-| 200  | Success                                       | Process the response normally                 |
-| 401  | Unauthorized - Invalid or missing API key     | Check your API key and authentication header  |
-| 404  | Not Found - Library or endpoint doesn't exist | Verify the library ID or endpoint URL         |
-| 429  | Too Many Requests - Rate limit exceeded       | Implement exponential backoff and retry       |
+| Code | Description                                   | Action                                                        |
+| ---- | --------------------------------------------- | ------------------------------------------------------------- |
+| 200  | Success                                       | Process the response normally                                 |
+| 401  | Unauthorized - Invalid or missing API key     | Check your API key and authentication header                  |
+| 404  | Not Found - Library or endpoint doesn't exist | Verify the library ID or endpoint URL                         |
+| 429  | Too Many Requests - Rate limit exceeded       | Implement exponential backoff and retry                       |
 | 500  | Internal Server Error                         | Retry with exponential backoff, contact support if persistent |
 
 ### Error Response Format
@@ -111,7 +111,7 @@ All errors return a JSON object with these fields:
 {
   "error": "Error message describing what went wrong",
   "status": 429,
-  "retryAfterSeconds": 60  // Only present for rate limit errors
+  "retryAfterSeconds": 60 // Only present for rate limit errors
 }
 ```
 
@@ -126,6 +126,7 @@ npm install @upstash/context7-mcp
 ```
 
 **Features:**
+
 - Automatic API key management
 - Built-in caching
 - Type-safe library resolution
@@ -138,12 +139,14 @@ See the [Installation guide](/installation) for detailed setup instructions.
 For custom integrations or non-MCP use cases, use the REST endpoints directly. The API is language-agnostic and works with any HTTP client.
 
 **Example (cURL):**
+
 ```bash
 curl "https://context7.com/api/v1/vercel/next.js?topic=routing" \
   -H "Authorization: Bearer CONTEXT7_API_KEY"
 ```
 
 **Example (Python):**
+
 ```python
 import requests
 
@@ -161,13 +164,14 @@ docs = response.json()
 ```
 
 **Example (JavaScript/Node.js):**
+
 ```javascript
 const response = await fetch(
   "https://context7.com/api/v1/vercel/next.js?topic=routing&tokens=5000",
   {
     headers: {
-      "Authorization": "Bearer CONTEXT7_API_KEY"
-    }
+      Authorization: "Bearer CONTEXT7_API_KEY",
+    },
   }
 );
 

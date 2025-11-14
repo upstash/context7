@@ -752,10 +752,7 @@ http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
       "headers": {
         "CONTEXT7_API_KEY": "YOUR_API_KEY"
       },
-      "tools": [
-        "get-library-docs",
-        "resolve-library-id"
-      ]
+      "tools": ["get-library-docs", "resolve-library-id"]
     }
   }
 }
@@ -769,16 +766,8 @@ http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
     "context7": {
       "type": "local",
       "command": "npx",
-      "tools": [
-        "get-library-docs",
-        "resolve-library-id"
-      ],
-      "args": [
-        "-y",
-        "@upstash/context7-mcp",
-        "--api-key",
-        "YOUR_API_KEY"
-      ]
+      "tools": ["get-library-docs", "resolve-library-id"],
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
     }
   }
 }

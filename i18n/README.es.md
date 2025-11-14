@@ -185,10 +185,7 @@ Para más información, consulta la [documentación oficial de GitHub](https://d
       "headers": {
         "CONTEXT7_API_KEY": "YOUR_API_KEY"
       },
-      "tools": [
-        "get-library-docs", 
-        "resolve-library-id"
-      ]
+      "tools": ["get-library-docs", "resolve-library-id"]
     }
   }
 }
@@ -202,16 +199,8 @@ O, para un servidor local:
     "context7": {
       "type": "local",
       "command": "npx",
-      "tools": [
-        "get-library-docs", 
-        "resolve-library-id"
-      ],
-      "args": [
-        "-y",
-        "@upstash/context7-mcp",
-        "--api-key",
-        "YOUR_API_KEY"
-      ]
+      "tools": ["get-library-docs", "resolve-library-id"],
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
     }
   }
 }

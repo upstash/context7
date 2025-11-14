@@ -857,10 +857,7 @@ For more information, see the [official GitHub documentation](https://docs.githu
       "headers": {
         "CONTEXT7_API_KEY": "YOUR_API_KEY"
       },
-      "tools": [
-        "get-library-docs", 
-        "resolve-library-id"
-      ]
+      "tools": ["get-library-docs", "resolve-library-id"]
     }
   }
 }
@@ -874,16 +871,8 @@ Or, for a local server:
     "context7": {
       "type": "local",
       "command": "npx",
-      "tools": [
-        "get-library-docs", 
-        "resolve-library-id"
-      ],
-      "args": [
-        "-y",
-        "@upstash/context7-mcp",
-        "--api-key",
-        "YOUR_API_KEY"
-      ]
+      "tools": ["get-library-docs", "resolve-library-id"],
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
     }
   }
 }

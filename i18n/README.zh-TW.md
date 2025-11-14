@@ -455,10 +455,7 @@ claude mcp add context7 -- npx -y @upstash/context7-mcp
       "headers": {
         "CONTEXT7_API_KEY": "YOUR_API_KEY"
       },
-      "tools": [
-        "get-library-docs",
-        "resolve-library-id"
-      ]
+      "tools": ["get-library-docs", "resolve-library-id"]
     }
   }
 }
@@ -472,16 +469,8 @@ claude mcp add context7 -- npx -y @upstash/context7-mcp
     "context7": {
       "type": "local",
       "command": "npx",
-      "tools": [
-        "get-library-docs",
-        "resolve-library-id"
-      ],
-      "args": [
-        "-y",
-        "@upstash/context7-mcp",
-        "--api-key",
-        "YOUR_API_KEY"
-      ]
+      "tools": ["get-library-docs", "resolve-library-id"],
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
     }
   }
 }
