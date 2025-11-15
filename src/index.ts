@@ -22,6 +22,7 @@ const DEFAULT_PORT = 3000;
 const program = new Command()
   .option("--transport <stdio|http>", "transport type", "stdio")
   .option("--port <number>", "port for HTTP transport", DEFAULT_PORT.toString())
+  .option("--host <address>", "host address to bind to (default: 127.0.0.1)", "127.0.0.1")
   .option("--api-key <key>", "API key for authentication (or set CONTEXT7_API_KEY env var)")
   .allowUnknownOption() // let MCP Inspector / other wrappers pass through extra flags
   .parse(process.argv);
@@ -29,6 +30,7 @@ const program = new Command()
 const cliOptions = program.opts<{
   transport: string;
   port: string;
+  host: string;
   apiKey?: string;
 }>();
 
@@ -258,9 +260,33 @@ async function main() {
     const app = express();
     app.use(express.json());
 
+    // CORS Configuration
+    // Get allowed origins from environment variable or default to localhost
+    const ALLOWED_ORIGINS = process.env.CORS_ALLOWED_ORIGINS
+      ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(o => o.trim())
+      : ['http://localhost:3000', 'http://127.0.0.1:3000'];
+
+    // Warn if using wildcard CORS in production
+    if (process.env.CORS_ALLOWED_ORIGINS === '*' && process.env.NODE_ENV === 'production') {
+      console.warn(
+        'WARNING: Using wildcard CORS (*) in production is a security risk. ' +
+        'Set CORS_ALLOWED_ORIGINS to specific origins.'
+      );
+    }
+
     app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
+      const origin = req.headers.origin;
+      
+      // Check if origin is allowed
+      if (origin && (ALLOWED_ORIGINS.includes('*') || ALLOWED_ORIGINS.includes(origin))) {
+        res.setHeader("Access-Control-Allow-Origin", origin);
+        res.setHeader("Access-Control-Allow-Credentials", "true");
+      } else if (!origin) {
+        // Allow requests with no origin (e.g., curl, Postman)
+        res.setHeader("Access-Control-Allow-Origin", "*");
+      }
+
+      res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
       res.setHeader(
         "Access-Control-Allow-Headers",
         "Content-Type, MCP-Session-Id, MCP-Protocol-Version, X-Context7-API-Key, Context7-API-Key, X-API-Key, Authorization"
@@ -346,11 +372,23 @@ async function main() {
       });
     });
 
+    const HOST = cliOptions.host || "127.0.0.1";
+    
+    // Warn if binding to all interfaces
+    if (HOST === "0.0.0.0") {
+      console.warn(
+        '\n' +
+        '⚠️  WARNING: Binding to 0.0.0.0 (all network interfaces)\n' +
+        'This makes the server accessible from other machines on your network.\n' +
+        'For local use only, bind to 127.0.0.1 (default)\n'
+      );
+    }
+
     const startServer = (port: number, maxAttempts = 10) => {
-      const httpServer = app.listen(port, () => {
+      const httpServer = app.listen(port, HOST, () => {
         actualPort = port;
         console.error(
-          `Context7 Documentation MCP Server running on HTTP at http://localhost:${actualPort}/mcp`
+          `Context7 Documentation MCP Server running on HTTP at http://${HOST}:${actualPort}/mcp`
         );
       });
 
