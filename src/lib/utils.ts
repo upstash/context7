@@ -1,6 +1,31 @@
 import { SearchResponse, SearchResult } from "./types.js";
 
 /**
+ * Redacts an API key for safe logging and error messages.
+ * Shows only the first 10 characters and last 4 characters.
+ * 
+ * @param apiKey The API key to redact (optional)
+ * @returns Redacted API key string safe for logging
+ * 
+ * @example
+ * redactApiKey("ctx7sk_1234567890abcdef1234567890abcdef")
+ * // Returns: "ctx7sk_123...cdef"
+ */
+export function redactApiKey(apiKey: string | undefined): string {
+	if (!apiKey) {
+		return "[no API key provided]";
+	}
+
+	if (apiKey.length < 14) {
+		return "[invalid key format]";
+	}
+
+	const start = apiKey.substring(0, 10);
+	const end = apiKey.substring(apiKey.length - 4);
+	return `${start}...${end}`;
+}
+
+/**
  * Maps numeric source reputation score to an interpretable label for LLM consumption.
  *
  * @returns One of: "High", "Medium", "Low", or "Unknown"

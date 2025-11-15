@@ -1,5 +1,6 @@
 import { SearchResponse } from "./types.js";
 import { generateHeaders } from "./encryption.js";
+import { redactApiKey } from "./utils.js";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 
 const CONTEXT7_API_BASE_URL = "https://context7.com/api";
@@ -61,14 +62,13 @@ export async function searchLibraries(
         } as SearchResponse;
       }
       if (errorCode === 401) {
-        const errorMessage =
-          "Unauthorized. Please check your API key. The API key you provided (possibly incorrect) is: " +
-          apiKey +
-          ". API keys should start with 'ctx7sk'";
-        console.error(errorMessage);
+        const redactedKey = redactApiKey(apiKey);
+        const logMessage =
+          `Unauthorized request with API key: ${redactedKey}. API keys should start with 'ctx7sk'`;
+        console.error(logMessage);
         return {
           results: [],
-          error: errorMessage,
+          error: "Unauthorized. Please check your API key. API keys should start with 'ctx7sk'",
         } as SearchResponse;
       }
       const errorMessage = `Failed to search libraries. Please try again later. Error code: ${errorCode}`;
@@ -131,12 +131,11 @@ export async function fetchLibraryDocumentation(
         return errorMessage;
       }
       if (errorCode === 401) {
-        const errorMessage =
-          "Unauthorized. Please check your API key. The API key you provided (possibly incorrect) is: " +
-          apiKey +
-          ". API keys should start with 'ctx7sk'";
-        console.error(errorMessage);
-        return errorMessage;
+        const redactedKey = redactApiKey(apiKey);
+        const logMessage =
+          `Unauthorized request with API key: ${redactedKey}. API keys should start with 'ctx7sk'`;
+        console.error(logMessage);
+        return "Unauthorized. Please check your API key. API keys should start with 'ctx7sk'";
       }
       const errorMessage = `Failed to fetch documentation. Please try again later. Error code: ${errorCode}`;
       console.error(errorMessage);
