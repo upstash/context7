@@ -315,26 +315,6 @@ La configuration sous Windows est légèrement différente par rapport à Linux 
 }
 ```
 
-### Variables d'environnement
-
-- `DEFAULT_MINIMUM_TOKENS`: Définissez le nombre minimum de tokens pour la récupération de documentation (par défaut: 10000).
-
-Exemples:
-
-```json
-{
-  "mcpServers": {
-    "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp@latest"],
-      "env": {
-        "DEFAULT_MINIMUM_TOKENS": "10000"
-      }
-    }
-  }
-}
-```
-
 ### Outils disponibles
 
 - `resolve-library-id` : Résout un nom de bibliothèque général en un ID compatible Context7.
@@ -342,7 +322,7 @@ Exemples:
 - `get-library-docs` : Récupère la documentation d’une bibliothèque via un ID Context7.
   - `context7CompatibleLibraryID` (obligatoire)
   - `topic` (optionnel) : Focaliser la doc sur un sujet précis (ex : "routing", "hooks")
-  - `tokens` (optionnel, par défaut 10000) : Nombre max de tokens à retourner. Les valeurs < 10000 sont automatiquement augmentées à 10000.
+  - `page` (optionnel, par défaut 1) : Numéro de page pour la pagination (1-10). Si le contexte n'est pas suffisant, essayez page=2, page=3, etc. avec le même sujet.
 
 ## Développement
 

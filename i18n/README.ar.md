@@ -227,29 +227,13 @@ docker build -t context7-mcp .
 }
 ```
 
-### المتغيرات البيئية
-
-```json
-{
-  "mcpServers": {
-    "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp@latest"],
-      "env": {
-        "DEFAULT_MINIMUM_TOKENS": "10000"
-      }
-    }
-  }
-}
-```
-
 ### الأدوات المتوفرة
 
 - `resolve-library-id`: يحول اسم مكتبة عام إلى معرف متوافق مع Context7.
 - `get-library-docs`: يستخرج التوثيق حسب المعرف.
   - `context7CompatibleLibraryID`: مطلوب
   - `topic`: موضوع معين مثل "routing"
-  - `tokens`: الحد الأعلى لعدد الرموز
+  - `page` (اختياري، افتراضي 1): رقم الصفحة للترقيم (1-10). إذا كان السياق غير كافٍ، جرب page=2، page=3، إلخ مع نفس الموضوع.
 
 ## التطوير
 

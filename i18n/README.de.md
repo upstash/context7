@@ -288,7 +288,7 @@ Wenn du den MCP-Server lieber in einem Docker-Container ausführen möchtest:
 - `get-library-docs`: Ruft die Dokumentation für eine Bibliothek mit einer Context7-kompatiblen Bibliotheks-ID ab.
   - `context7CompatibleLibraryID` (erforderlich)
   - `topic` (optional): Fokussiert die Dokumentation auf ein bestimmtes Thema (z.B. "routing", "hooks")
-  - `tokens` (optional, Standard 10000): Maximale Anzahl von zurückzugebenden Tokens. Werte unter 10000 werden automatisch auf 10000 erhöht.
+  - `page` (optional, Standard 1): Seitennummer für die Paginierung (1-10). Wenn der Kontext nicht ausreicht, versuchen Sie page=2, page=3 usw. mit demselben Thema.
 
 ## Entwicklung
 

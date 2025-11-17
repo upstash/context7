@@ -864,7 +864,7 @@ Context7 MCP cung cấp các công cụ sau mà LLM có thể sử dụng:
 - `get-library-docs`: Lấy tài liệu cho thư viện sử dụng Context7-compatible library ID.
   - `context7CompatibleLibraryID` (bắt buộc): Context7-compatible library ID chính xác (ví dụ: `/mongodb/docs`, `/vercel/next.js`)
   - `topic` (tùy chọn): Tập trung tài liệu vào một chủ đề cụ thể (ví dụ: "routing", "hooks")
-  - `tokens` (tùy chọn, mặc định 10000): Số token tối đa để trả về. Giá trị nhỏ hơn giá trị mặc định 10000 sẽ tự động tăng lên 10000.
+  - `page` (tùy chọn, mặc định 1): Số trang cho phân trang (1-10). Nếu ngữ cảnh không đủ, hãy thử page=2, page=3, v.v. với cùng chủ đề.
 
 ## 🛟 Mẹo
 
