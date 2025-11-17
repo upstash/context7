@@ -217,7 +217,7 @@ server.registerTool(
         ),
     },
   },
-  async ({ context7CompatibleLibraryID, page = 1, topic = "" }) => {
+  async ({ context7CompatibleLibraryID, page = 1, topic }) => {
     const ctx = requestContext.getStore();
     const apiKey = ctx?.apiKey || globalApiKey;
     const fetchDocsResponse = await fetchLibraryDocumentation(
