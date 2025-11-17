@@ -20,7 +20,7 @@ LLMs rely on outdated or generic information about the libraries you use. You ge
 
 Context7 MCP pulls up-to-date, version-specific documentation and code examples straight from the source — and places them directly into your prompt.
 
-Add `use context7` to your prompt in Cursor:
+Add `use context7` to your prompt (or [set up a rule](#️-installation) to auto-invoke):
 
 ```txt
 Create a Next.js middleware that checks for a valid JWT in cookies
@@ -35,7 +35,7 @@ JSON API responses for five minutes. use context7
 Context7 fetches up-to-date code examples and documentation right into your LLM's context.
 
 - 1️⃣ Write your prompt naturally
-- 2️⃣ Tell the LLM to `use context7`
+- 2️⃣ Tell the LLM to `use context7` (or [set up a rule](#️-installation) once)
 - 3️⃣ Get working code answers
 
 No tab-switching, no hallucinated APIs that don't exist, no outdated code generation.
@@ -54,6 +54,26 @@ Check out our [project addition guide](https://context7.com/docs/adding-librarie
 - Node.js >= v18.0.0
 - Cursor, Claude Code, VSCode, Windsurf or another MCP Client
 - Context7 API Key (Optional) for higher rate limits and private repositories (Get yours by creating an account at [context7.com/dashboard](https://context7.com/dashboard))
+
+> [!TIP]
+> **Recommended Post-Setup: Add a Rule to Auto-Invoke Context7**
+>
+> After installing Context7 (see instructions below), enhance your workflow by adding a rule so you don't have to type `use context7` in every prompt. Define a simple rule in your MCP client's rule section to automatically invoke Context7 on any code question:
+>
+> - For Windsurf, in `.windsurfrules` file
+> - For Cursor, from `Cursor Settings > Rules` section
+> - For Claude Code, in `CLAUDE.md` file
+> - Or the equivalent in your MCP client
+>
+> **Example Rule:**
+>
+> ```txt
+> Always use context7 when I need code generation, setup or configuration steps, or
+> library/API documentation. This means you should automatically use the Context7 MCP
+> tools to resolve library id and get library docs without me having to explicitly ask.
+> ```
+>
+> From then on, you'll get Context7's docs in any related conversation without typing anything extra. You can alter the rule to match your use cases.
 
 <details>
 <summary><b>Installing via Smithery</b></summary>
@@ -1249,23 +1269,7 @@ Context7 MCP provides the following tools that LLMs can use:
 
 ### Add a Rule
 
-If you don’t want to add `use context7` to every prompt, you can define a simple rule in your MCP client's rule section:
-
-- For Windsurf, in `.windsurfrules` file
-- For Cursor, from `Cursor Settings > Rules` section
-- For Claude Code, in `CLAUDE.md` file
-
-Or the equivalent in your MCP client to auto-invoke Context7 on any code question.
-
-#### Example Rule
-
-```txt
-Always use context7 when I need code generation, setup or configuration steps, or
-library/API documentation. This means you should automatically use the Context7 MCP
-tools to resolve library id and get library docs without me having to explicitly ask.
-```
-
-From then on, you’ll get Context7’s docs in any related conversation without typing anything extra. You can alter the rule to match your use cases.
+To avoid typing `use context7` in every prompt, you can add a rule to your MCP client that automatically invokes Context7 for code-related questions. See the [recommended setup in the Installation section](#️-installation) for detailed instructions and example rules.
 
 ### Use Library Id
 

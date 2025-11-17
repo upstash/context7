@@ -19,6 +19,29 @@ The Server-Sent Events (SSE) transport protocol has been removed and is no longe
 
 </Warning>
 
+<Tip>
+**Recommended Post-Setup: Add a Rule to Auto-Invoke Context7**
+
+After installing Context7 (see instructions below), enhance your workflow by adding a rule so you don't have to type `use context7` in every prompt. Define a simple rule in your MCP client's rule section to automatically invoke Context7 on any code question:
+
+- For Windsurf, in `.windsurfrules` file
+- For Cursor, from `Cursor Settings > Rules` section
+- For Claude Code, in `CLAUDE.md` file
+- Or the equivalent in your MCP client
+
+**Example Rule:**
+```txt
+Always use context7 when I need code generation, setup or 
+configuration steps, or library/API documentation. This means 
+you should automatically use the Context7 MCP tools to resolve 
+library id and get library docs without me having to 
+explicitly ask.
+```
+
+From then on, you'll get Context7's docs in any related conversation without typing anything extra. You can alter the rule to match your use cases.
+
+</Tip>
+
 ## Recommended Setup
 
 For most users, we recommend:
