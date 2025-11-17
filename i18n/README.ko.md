@@ -830,7 +830,7 @@ Context7 MCP는 LLM이 사용할 수 있는 다음 도구들을 제공합니다:
 - `get-library-docs`: Context7이 인식하는 라이브러리 ID를 사용하여 해당 라이브러리의 문서를 가져옵니다.
   - `context7CompatibleLibraryID` (필수): 정확한 Context7 호환 라이브러리 ID (예: `/mongodb/docs`, `/vercel/next.js`)
   - `topic` (선택): 특정 주제에 대한 문서에 집중합니다 (예: "routing", "hooks")
-  - `tokens` (선택, 기본값 10000): 가져올 문서의 최대 토큰 수. 기본값인 10000보다 작은 값은 자동으로 10000으로 증가합니다.
+  - `page` (선택, 기본값 1): 페이지네이션을 위한 페이지 번호 (1-10). 컨텍스트가 충분하지 않으면 동일한 주제로 page=2, page=3 등을 시도하세요.
 
 ## 🛟 팁
 

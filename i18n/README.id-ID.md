@@ -761,7 +761,7 @@ Context7 MCP menyediakan alat berikut yang dapat digunakan oleh LLM:
 - `get-library-docs`: Mengambil dokumentasi untuk pustaka menggunakan ID pustaka yang kompatibel dengan Context7.
   - `context7CompatibleLibraryID` (wajib): ID pustaka yang kompatibel dengan Context7 (contoh: `/mongodb/docs`, `/vercel/next.js`)
   - `topic` (opsional): Fokuskan dokumen pada topik tertentu (contoh: "routing", "hooks")
-  - `tokens` (opsional, default 10000): Jumlah maksimum token yang dikembalikan. Nilai kurang dari nilai default 10000 secara otomatis dinaikkan menjadi 10000.
+  - `page` (opsional, default 1): Nomor halaman untuk pagination (1-10). Jika konteksnya tidak cukup, coba page=2, page=3, dll. dengan topik yang sama.
 
 ## 🛟 Tips
 

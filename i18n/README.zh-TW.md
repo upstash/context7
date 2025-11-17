@@ -844,27 +844,6 @@ http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
 4. 可於右側 `Program` 下方或聊天框底部的插頭圖示切換 MCP 伺服器開關。
 
 </details>
-## 🔧 環境變數
-
-Context7 MCP 伺服器支援下列環境變數：
-
-- `DEFAULT_MINIMUM_TOKENS`：設定文件擷取的最小 token 數（預設：10000）
-
-範例設定：
-
-```json
-{
-  "mcpServers": {
-    "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"],
-      "env": {
-        "DEFAULT_MINIMUM_TOKENS": "6000"
-      }
-    }
-  }
-}
-```
 
 ## 🔨 可用工具
 
@@ -876,7 +855,7 @@ Context7 MCP 提供下列工具供 LLM 使用：
 - `get-library-docs`：根據 Context7 相容的函式庫 ID 取得文件。
   - `context7CompatibleLibraryID`（必填）：Context7 相容的函式庫 ID（如 `/mongodb/docs`, `/vercel/next.js`）
   - `topic`（選填）：聚焦於特定主題（如 "routing", "hooks"）
-  - `tokens`（選填，預設 10000）：最大回傳 token 數。小於預設或 `DEFAULT_MINIMUM_TOKENS` 的值會自動提升。
+  - `page`（選填，預設 1）：分頁的頁碼（1-10）。如果上下文不足，請嘗試使用相同主題的 page=2、page=3 等。
 
 ## 💻 開發
 

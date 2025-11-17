@@ -997,7 +997,7 @@ O Context7 MCP fornece as seguintes ferramentas que LLMs podem usar:
 - `get-library-docs`: Busca documentação para uma biblioteca usando um ID compatível com o Context7.
   - `context7CompatibleLibraryID` (obrigatório): ID exato compatível com Context7 (por exemplo, `/mongodb/docs`, `/vercel/next.js`)
   - `topic` (opcional): Focar os docs em um tópico específico (por exemplo, "routing", "hooks")
-  - `tokens` (opcional, padrão 10000): Número máximo de tokens para retornar. Valores menores que o padrão de 10000 são automaticamente aumentados para 10000.
+  - `page` (opcional, padrão 1): Número da página para paginação (1-10). Se o contexto não for suficiente, tente page=2, page=3, etc. com o mesmo tópico.
 
 ## 🛟 Dicas
 

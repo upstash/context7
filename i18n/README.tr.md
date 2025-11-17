@@ -246,26 +246,6 @@ MCP sunucusunu bir Docker konteynerinde çalıştırmayı tercih ederseniz:
 
     _Not: Bu bir örnek yapılandırmadır. Yapıyı uyarlamak için MCP istemcinize (Cursor, VS Code vb.) özel örneklere bakın (örneğin, `mcpServers` ve `servers` farkı). Ayrıca, `args` içindeki görüntü adının `docker build` komutu sırasında kullanılan etiketle eşleştiğinden emin olun._
 
-### Çevre Değişkenleri
-
-- `DEFAULT_MINIMUM_TOKENS`: Belge alımı için minimum token sayısını ayarlayın (varsayılan: 10000).
-
-Örnekler:
-
-```json
-{
-  "mcpServers": {
-    "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp@latest"],
-      "env": {
-        "DEFAULT_MINIMUM_TOKENS": "10000"
-      }
-    }
-  }
-}
-```
-
 ### Kullanılabilir Araçlar
 
 - `resolve-library-id`: Genel bir kütüphane adını Context7 uyumlu bir kütüphane ID'sine dönüştürür.
@@ -273,7 +253,7 @@ MCP sunucusunu bir Docker konteynerinde çalıştırmayı tercih ederseniz:
 - `get-library-docs`: Context7 uyumlu bir kütüphane ID'si kullanarak bir kütüphane için belgeleri getirir.
   - `context7CompatibleLibraryID` (gerekli)
   - `topic` (isteğe bağlı): Belgeleri belirli bir konuya odaklayın (örn. "routing", "hooks")
-  - `tokens` (isteğe bağlı, varsayılan 10000): Döndürülecek maksimum token sayısı. Yapılandırılmış `DEFAULT_MINIMUM_TOKENS` değerinden veya varsayılan 10000 değerinden düşük değerler otomatik olarak o değere yükseltilir.
+  - `page` (isteğe bağlı, varsayılan 1): Sayfalama için sayfa numarası (1-10). Bağlam yeterli değilse, aynı konu ile page=2, page=3, vb. deneyin.
 
 ## Geliştirme
 

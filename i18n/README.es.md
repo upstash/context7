@@ -215,7 +215,7 @@ Si el archivo `mcp-config.json` no existe, créalo.
 - `get-library-docs`: Obtiene documentación para una biblioteca utilizando un ID de biblioteca compatible con Context7.
   - `context7CompatibleLibraryID` (requerido)
   - `topic` (opcional): Enfoca la documentación en un tema específico (p. ej., "routing", "hooks")
-  - `tokens` (opcional, por defecto 10000): Número máximo de tokens a devolver. Los valores inferiores a 10000 se aumentan automáticamente a 10000.
+  - `page` (opcional, por defecto 1): Número de página para la paginación (1-10). Si el contexto no es suficiente, intente page=2, page=3, etc. con el mismo tema.
 
 ## Desarrollo
 

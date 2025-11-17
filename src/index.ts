@@ -211,12 +211,13 @@ server.registerTool(
         .int()
         .min(1)
         .max(10)
+        .optional()
         .describe(
-          "Page number for pagination (start: 1). If the context is not sufficient, try page=2, page=3, page=4, etc. with the same topic."
+          "Page number for pagination (start: 1, default: 1). If the context is not sufficient, try page=2, page=3, page=4, etc. with the same topic."
         ),
     },
   },
-  async ({ context7CompatibleLibraryID, page = 1, topic = "" }) => {
+  async ({ context7CompatibleLibraryID, page = 1, topic }) => {
     const ctx = requestContext.getStore();
     const apiKey = ctx?.apiKey || globalApiKey;
     const fetchDocsResponse = await fetchLibraryDocumentation(
