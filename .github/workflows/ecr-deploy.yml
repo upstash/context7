@@ -42,20 +42,10 @@ jobs:
                   cache-from: type=gha
                   cache-to: type=gha,mode=max
 
-            - name: Get image digest
-              id: image-digest
-              run: |
-                  echo "digest=${{ steps.build-push.outputs.digest }}" >> $GITHUB_OUTPUT
-                  echo "Image digest: ${{ steps.build-push.outputs.digest }}"
-
             - name: Create GitHub Summary
               run: |
                   echo "## Docker Image Deployed Successfully" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "**Image Tag:** \`${{ inputs.version }}\`" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "**Full Image:** \`${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ inputs.version }}\`" >> $GITHUB_STEP_SUMMARY
-                  echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "**Digest:** \`${{ steps.image-digest.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
-                  echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "**Region:** \`${{ secrets.AWS_REGION }}\`" >> $GITHUB_STEP_SUMMARY
+                  echo "**Status:** ✅ Image pushed to AWS ECR" >> $GITHUB_STEP_SUMMARY
