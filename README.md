@@ -426,14 +426,16 @@ Add this to your Antigravity MCP config file. See [Antigravity MCP docs](https:/
 
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "context7": {
-      "serverUrl": "https://mcp.context7.com/mcp",
+      "url": "https://mcp.context7.com/mcp",
+      "type": "http",
       "headers": {
         "CONTEXT7_API_KEY": "YOUR_API_KEY"
       }
     }
-  }
+  },
+  "inputs": []
 }
 ```
 
@@ -441,12 +443,14 @@ Add this to your Antigravity MCP config file. See [Antigravity MCP docs](https:/
 
 ```json
 {
-  "mcpServers": {
+  "servers": {
     "context7": {
+      "type": "stdio",
       "command": "npx",
       "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
     }
-  }
+  },
+  "inputs": []
 }
 ```
 
@@ -493,8 +497,8 @@ Add this to your Roo Code MCP configuration file. See [Roo Code MCP docs](https:
 
 See [Gemini CLI Configuration](https://google-gemini.github.io/gemini-cli/docs/tools/mcp-server.html) for details.
 
-1.  Open the Gemini CLI settings file. The location is `~/.gemini/settings.json` (where `~` is your home directory).
-2.  Add the following to the `mcpServers` object in your `settings.json` file:
+1. Open the Gemini CLI settings file. The location is `~/.gemini/settings.json` (where `~` is your home directory).
+2. Add the following to the `mcpServers` object in your `settings.json` file:
 
 ```json
 {
@@ -532,8 +536,8 @@ If the `mcpServers` object does not exist, create it.
 
 See [Qwen Coder MCP Configuration](https://qwenlm.github.io/qwen-code-docs/en/tools/mcp-server/#how-to-set-up-your-mcp-server) for details.
 
-1.  Open the Qwen Coder settings file. The location is `~/.qwen/settings.json` (where `~` is your home directory).
-2.  Add the following to the `mcpServers` object in your `settings.json` file:
+1. Open the Qwen Coder settings file. The location is `~/.qwen/settings.json` (where `~` is your home directory).
+2. Add the following to the `mcpServers` object in your `settings.json` file:
 
 ```json
 {
@@ -713,7 +717,7 @@ See [JetBrains AI Assistant Documentation](https://www.jetbrains.com/help/ai-ass
 </details>
 
 <details>
-  
+
 <summary><b>Install in Kiro</b></summary>
 
 See [Kiro Model Context Protocol Documentation](https://kiro.dev/docs/mcp/configuration/) for details.
@@ -971,8 +975,8 @@ For more information, see the [official GitHub documentation](https://docs.githu
 <details>
 <summary><b>Install in Copilot CLI</b></summary>
 
-1.  Open the Copilot CLI MCP config file. The location is `~/.copilot/mcp-config.json` (where `~` is your home directory).
-2.  Add the following to the `mcpServers` object in your `mcp-config.json` file:
+1. Open the Copilot CLI MCP config file. The location is `~/.copilot/mcp-config.json` (where `~` is your home directory).
+2. Add the following to the `mcpServers` object in your `mcp-config.json` file:
 
 ```json
 {
@@ -1013,11 +1017,11 @@ If the `mcp-config.json` file does not exist, create it.
 
 See [LM Studio MCP Support](https://lmstudio.ai/blog/lmstudio-v0.3.17) for more information.
 
-#### One-click install:
+#### One-click install
 
 [![Add MCP Server context7 to LM Studio](https://files.lmstudio.ai/deeplink/mcp-install-light.svg)](https://lmstudio.ai/install-mcp?name=context7&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIkB1cHN0YXNoL2NvbnRleHQ3LW1jcCJdfQ%3D%3D)
 
-#### Manual set-up:
+#### Manual set-up
 
 1. Navigate to `Program` (right side) > `Install` > `Edit mcp.json`.
 2. Paste the configuration given below:
@@ -1256,6 +1260,7 @@ See [Local and Remote MCPs for Perplexity](https://www.perplexity.ai/help-center
 ```
 
 7. Click `Save`.
+
 </details>
 
 <details>
