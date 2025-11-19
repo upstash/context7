@@ -170,6 +170,41 @@ amp mcp add context7 --header "CONTEXT7_API_KEY=YOUR_API_KEY" https://mcp.contex
 </details>
 
 <details>
+<summary><b>Install in Google Antigravity</b></summary>
+
+Add this to your Antigravity MCP config file. See [Antigravity MCP docs](https://antigravity.google/docs/mcp) for more info.
+
+#### Google Antigravity Remote Server Connection
+
+```json
+{
+    "mcpServers": {
+        "context7": {
+            "serverUrl": "https://mcp.context7.com/mcp",
+            "headers": {
+                "CONTEXT7_API_KEY": "YOUR_API_KEY"
+            }
+        }
+    }
+}
+```
+
+#### Google Antigravity Local Server Connection
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+    }
+  }
+}
+```
+
+</details>
+
+<details>
 <summary><b>Install in Windsurf</b></summary>
 
 Add this to your Windsurf MCP config file. See [Windsurf MCP docs](https://docs.windsurf.com/windsurf/cascade/mcp) for more info.
