@@ -3,7 +3,36 @@ import { generateHeaders } from "./encryption.js";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 
 const CONTEXT7_API_BASE_URL = "https://context7.com/api";
+const CONTEXT7_API_V1_URL = CONTEXT7_API_BASE_URL + "/v1";
+const CONTEXT7_API_V2_URL = CONTEXT7_API_BASE_URL + "/v2";
 const DEFAULT_TYPE = "txt";
+
+/**
+ * Parses a Context7-compatible library ID into its components
+ * @param libraryId The library ID (e.g., "/vercel/next.js" or "/vercel/next.js/v14.3.0")
+ * @returns Object with username, library, and optional tag
+ */
+function parseLibraryId(libraryId: string): {
+  username: string;
+  library: string;
+  tag?: string;
+} {
+  // Remove leading slash if present
+  const cleaned = libraryId.startsWith("/") ? libraryId.slice(1) : libraryId;
+  const parts = cleaned.split("/");
+
+  if (parts.length < 2) {
+    throw new Error(
+      `Invalid library ID format: ${libraryId}. Expected format: /username/library or /username/library/tag`
+    );
+  }
+
+  return {
+    username: parts[0],
+    library: parts[1],
+    tag: parts[2], // undefined if not present
+  };
+}
 
 // Pick up proxy configuration in a variety of common env var names.
 const PROXY_URL: string | null =
@@ -42,7 +71,7 @@ export async function searchLibraries(
   apiKey?: string
 ): Promise<SearchResponse> {
   try {
-    const url = new URL(`${CONTEXT7_API_BASE_URL}/v1/search`);
+    const url = new URL(`${CONTEXT7_API_V1_URL}/search`);
     url.searchParams.set("query", query);
 
     const headers = generateHeaders(clientIp, apiKey);
@@ -97,6 +126,7 @@ export async function searchLibraries(
 export async function fetchLibraryDocumentation(
   libraryId: string,
   options: {
+    mode?: "code" | "info";
     page?: number;
     limit?: number;
     topic?: string;
@@ -105,14 +135,22 @@ export async function fetchLibraryDocumentation(
   apiKey?: string
 ): Promise<string | null> {
   try {
-    if (libraryId.startsWith("/")) {
-      libraryId = libraryId.slice(1);
+    const { username, library, tag } = parseLibraryId(libraryId);
+
+    // Determine endpoint based on mode (default to 'code')
+    const endpoint = options.mode === "info" ? "info" : "code";
+
+    // Build URL path
+    let urlPath = `${CONTEXT7_API_V2_URL}/docs/${endpoint}/${username}/${library}`;
+    if (tag) {
+      urlPath += `/${tag}`;
     }
-    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/docs/code/${libraryId}`);
+
+    const url = new URL(urlPath);
+    url.searchParams.set("type", DEFAULT_TYPE);
+    if (options.topic) url.searchParams.set("topic", options.topic);
     if (options.page) url.searchParams.set("page", options.page.toString());
     if (options.limit) url.searchParams.set("limit", options.limit.toString());
-    if (options.topic) url.searchParams.set("topic", options.topic);
-    url.searchParams.set("type", DEFAULT_TYPE);
 
     const headers = generateHeaders(clientIp, apiKey, { "X-Context7-Source": "mcp-server" });
 
@@ -140,13 +178,15 @@ export async function fetchLibraryDocumentation(
         console.error(errorMessage);
         return errorMessage;
       }
-      const errorMessage = `Failed to fetch documentation. Please try again later. Error code: ${errorCode}`;
+      const modeType = endpoint === "info" ? "informational" : "code";
+      const errorMessage = `Failed to fetch ${modeType} documentation. Please try again later. Error code: ${errorCode}`;
       console.error(errorMessage);
       return errorMessage;
     }
     const text = await response.text();
     if (!text || text === "No content available" || text === "No context data available") {
-      return null;
+      const modeType = endpoint === "info" ? "informational" : "code";
+      return `No ${modeType} documentation available for this library.${endpoint === "code" ? " Try mode='info' for guides and tutorials." : " Try mode='code' for API references and code examples."}`;
     }
     return text;
   } catch (error) {

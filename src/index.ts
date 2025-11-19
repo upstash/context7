@@ -162,7 +162,7 @@ For ambiguous queries, request clarification before proceeding with a best-guess
 
     const resultsText = formatSearchResults(searchResponse);
 
-    const responseText = `Available Libraries (top matches):
+    const responseText = `Available Libraries:
 
 Each result includes:
 - Library ID: Context7-compatible identifier (format: /org/project)
@@ -195,12 +195,19 @@ server.registerTool(
   {
     title: "Get Library Docs",
     description:
-      "Fetches up-to-date documentation for a library. You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.",
+      "Fetches up-to-date documentation for a library. You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query. Use mode='code' (default) for API references and code examples, or mode='info' for conceptual guides, narrative information, and architectural questions.",
     inputSchema: {
       context7CompatibleLibraryID: z
         .string()
         .describe(
           "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
+        ),
+      mode: z
+        .enum(["code", "info"])
+        .optional()
+        .default("code")
+        .describe(
+          "Documentation mode: 'code' for API references and code examples (default), 'info' for conceptual guides, narrative information, and architectural questions."
         ),
       topic: z
         .string()
@@ -217,12 +224,13 @@ server.registerTool(
         ),
     },
   },
-  async ({ context7CompatibleLibraryID, page = 1, topic }) => {
+  async ({ context7CompatibleLibraryID, mode = "code", page = 1, topic = "" }) => {
     const ctx = requestContext.getStore();
     const apiKey = ctx?.apiKey || globalApiKey;
     const fetchDocsResponse = await fetchLibraryDocumentation(
       context7CompatibleLibraryID,
       {
+        mode,
         page,
         limit: DEFAULT_RESULTS_LIMIT,
         topic,
