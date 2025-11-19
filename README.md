@@ -1253,6 +1253,23 @@ Once configured, Context7 tools will be available in your droid sessions. Type `
 
 </details>
 
+<details>
+<summary><b>Install in Emdash</b></summary>
+
+[Emdash](https://github.com/generalaction/emdash) is an orchestration layer for running multiple coding agents in parallel. Provider-agnostic, worktree-isolated, and local-first. Emdash supports Context7 MCP to enable Context7 for your agents.
+
+**What Emdash provides:**
+- Global toggle: Settings → MCP → "Enable Context7 MCP"
+- Per-workspace enable: The Context7 button in the ProviderBar (off by default). First click enables it for that workspace. Clicking again disables it.
+- ProviderBar: The Context7 button shows status, a short explanation, and a link to docs
+
+**What you still need to do:**
+Configure your coding agent (Codex, Claude Code, Cursor, etc.) to connect to Context7 MCP. Emdash does not modify your agent's config. See the respective MCP configuration sections above for your agent (e.g., OpenAI Codex, Claude Code, Cursor).
+
+See the [Emdash repository](https://github.com/generalaction/emdash) for more information.
+
+</details>
+
 ## 🔨 Available Tools
 
 Context7 MCP provides the following tools that LLMs can use:
