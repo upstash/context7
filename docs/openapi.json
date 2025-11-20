@@ -605,7 +605,7 @@
       "PageParam": {
         "name": "page",
         "in": "query",
-        "description": "Page number for pagination (1-indexed). Maximum 10 pages accessible (100 snippets total).",
+        "description": "Page number for pagination (1-indexed). Maximum 10 pages accessible for each topic.",
         "required": false,
         "schema": {
           "type": "integer",
