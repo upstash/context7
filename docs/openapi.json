@@ -20,9 +20,9 @@
     "/v2/docs/code/{owner}/{repo}": {
       "get": {
         "summary": "Get code snippets for a library",
-        "description": "Retrieves paginated code snippets from a library's documentation. Supports filtering by topic and returns results in JSON or text format.",
+        "description": "Retrieves paginated code examples and API snippets from a library's documentation. Supports filtering by topic and returns results in JSON or text format.",
         "operationId": "getCodeSnippets",
-        "tags": ["Documentation"],
+        "tags": ["Retrieve Documentation"],
         "parameters": [
           {
             "$ref": "#/components/parameters/OwnerParam"
@@ -86,9 +86,9 @@
     "/v2/docs/code/{owner}/{repo}/{version}": {
       "get": {
         "summary": "Get code snippets for a specific library version",
-        "description": "Retrieves paginated code snippets from a specific version (tag or branch) of a library's documentation.",
+        "description": "Retrieves paginated code examples and API snippets from a specific version (tag or branch) of a library's documentation.",
         "operationId": "getCodeSnippetsByVersion",
-        "tags": ["Documentation"],
+        "tags": ["Retrieve Documentation"],
         "parameters": [
           {
             "$ref": "#/components/parameters/OwnerParam"
@@ -155,9 +155,9 @@
     "/v2/docs/info/{owner}/{repo}": {
       "get": {
         "summary": "Get documentation content for a library",
-        "description": "Retrieves paginated documentation/info snippets from a library. Supports filtering by topic and returns results in JSON or text format.",
+        "description": "Retrieves paginated informational documentation snippets from a library. Supports filtering by topic and returns results in JSON or text format.",
         "operationId": "getInfoSnippets",
-        "tags": ["Documentation"],
+        "tags": ["Retrieve Documentation"],
         "parameters": [
           {
             "$ref": "#/components/parameters/OwnerParam"
@@ -221,9 +221,9 @@
     "/v2/docs/info/{owner}/{repo}/{version}": {
       "get": {
         "summary": "Get documentation content for a specific library version",
-        "description": "Retrieves paginated documentation/info snippets from a specific version (tag or branch) of a library.",
+        "description": "Retrieves paginated informational documentation snippets from a specific version (tag or branch) of a library.",
         "operationId": "getInfoSnippetsByVersion",
-        "tags": ["Documentation"],
+        "tags": ["Retrieve Documentation"],
         "parameters": [
           {
             "$ref": "#/components/parameters/OwnerParam"
@@ -292,7 +292,7 @@
         "summary": "Search for libraries",
         "description": "Search across available libraries. Returns finalized public libraries and accessible private repositories based on authentication.",
         "operationId": "searchLibraries",
-        "tags": ["Search"],
+        "tags": ["Search Libraries"],
         "parameters": [
           {
             "name": "query",
@@ -585,8 +585,7 @@
         "required": false,
         "schema": {
           "type": "string",
-          "maxLength": 500,
-          "default": ""
+          "maxLength": 500
         },
         "example": "authentication"
       },
@@ -1269,11 +1268,11 @@
   },
   "tags": [
     {
-      "name": "Documentation",
+      "name": "Retrieve Documentation",
       "description": "Retrieve library documentation and code examples"
     },
     {
-      "name": "Search",
+      "name": "Search Libraries",
       "description": "Search for libraries in the Context7 database"
     },
     {
