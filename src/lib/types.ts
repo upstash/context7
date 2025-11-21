@@ -7,7 +7,6 @@ export interface SearchResult {
   state: DocumentState;
   totalTokens: number;
   totalSnippets: number;
-  totalPages: number;
   stars?: number;
   trustScore?: number;
   benchmarkScore?: number;

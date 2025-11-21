@@ -42,7 +42,7 @@ export async function searchLibraries(
   apiKey?: string
 ): Promise<SearchResponse> {
   try {
-    const url = new URL(`${CONTEXT7_API_BASE_URL}/v1/search`);
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/search`);
     url.searchParams.set("query", query);
 
     const headers = generateHeaders(clientIp, apiKey);

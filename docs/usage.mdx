@@ -9,7 +9,6 @@ Practical techniques for using Context7 effectively.
 - [Auto-invoke Context7](#auto-invoke-context7) so you never forget to pull fresh docs
 - [Target the exact library ID](#use-specific-library-ids) to skip search steps
 - [Tune networking and proxies](#configure-https-proxy) for locked-down environments
-- [Control token usage](#control-token-usage) to keep responses snappy
 - [Bring in private repositories](#work-with-private-repositories) for internal docs
 
 ## Auto-Invoke Context7
@@ -153,37 +152,6 @@ Both lowercase and uppercase environment variables are supported.
   connectivity before restarting your IDE.
 </Tip>
 
-## Control Token Usage
-
-Manage documentation size to control costs and response times.
-
-### Set Token Limits in Dashboard
-
-1. Go to [Dashboard → Libraries](https://context7.com/dashboard)
-2. Set "Maximum tokens per request"
-3. Default is 10,000, adjust based on your needs
-
-### Use Topic Filtering
-
-Focus documentation on specific topics:
-
-```txt
-Explain Next.js middleware authentication patterns. use context7
-```
-
-Context7 automatically extracts "authentication" as a topic and ranks relevant docs higher.
-
-### Direct API Usage
-
-When using the API directly, specify tokens:
-
-```bash
-curl "https://context7.com/api/v1/vercel/next.js?tokens=3000&topic=routing" \
-  -H "Authorization: Bearer YOUR_API_KEY"
-```
-
-Lower token counts result in faster responses and lower costs.
-
 ## Work with Private Repositories
 
 Add your private GitHub, GitLab, or Bitbucket repositories to make internal documentation available through Context7. Requires a Pro or Enterprise plan.
@@ -250,8 +218,8 @@ See [Security](/security) for comprehensive security guidelines.
 ### Performance
 
 - Use specific library IDs such as `/vercel/next.js` instead of general phrases like "next.js docs" when possible.
-- Set appropriate token limits -- use lower values for quick lookups, and higher values for comprehensive docs.
 - Focus results using topic filtering. Try adding specific topics like "authentication" or "routing".
+- Use pagination when you need more context — the API supports up to 10 pages per topic. Check the `hasNext` field in responses to know when more pages are available.
 - Cache frequently used documentation locally for 6-24 hours to reduce API calls.
 
 ### Library Management
