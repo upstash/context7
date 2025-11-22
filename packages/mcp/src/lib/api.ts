@@ -107,7 +107,8 @@ export async function searchLibraries(
         error: errorMessage,
       } as SearchResponse;
     }
-    return await response.json();
+    const searchData = await response.json();
+    return searchData as SearchResponse;
   } catch (error) {
     const errorMessage = `Error searching libraries: ${error}`;
     console.error(errorMessage);
