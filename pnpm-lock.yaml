@@ -67,15 +67,6 @@ importers:
         specifier: ^5.8.2
         version: 5.9.3
 
-  packages/sdk:
-    devDependencies:
-      '@types/node':
-        specifier: ^22.13.14
-        version: 22.19.1
-      typescript:
-        specifier: ^5.8.2
-        version: 5.9.3
-
 packages:
 
   '@babel/runtime@7.28.4':
