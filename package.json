@@ -8,16 +8,13 @@
   ],
   "scripts": {
     "build": "pnpm -r run build",
-    "build:mcp": "pnpm --filter @upstash/context7-mcp build",
     "test": "pnpm -r run test",
+    "clean": "pnpm -r run clean && rm -rf node_modules",
     "lint": "pnpm -r run lint",
     "lint:check": "pnpm -r run lint:check",
     "format": "prettier --write .",
-    "clean": "pnpm -r run clean && rm -rf node_modules",
-    "changeset": "changeset",
-    "version-packages": "changeset version",
-    "release": "pnpm build && changeset publish",
-    "dev:mcp": "pnpm --filter @upstash/context7-mcp dev"
+    "format:check": "prettier --check .",
+    "release": "pnpm build && changeset publish"
   },
   "repository": {
     "type": "git",
