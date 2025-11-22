@@ -1,52 +1,46 @@
 {
-  "name": "@upstash/context7-mcp",
+  "name": "@upstash/context7",
+  "private": true,
   "version": "1.0.0",
-  "mcpName": "io.github.upstash/context7",
-  "description": "MCP server for Context7",
+  "description": "Context7 monorepo - Documentation tools and SDKs",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc && chmod 755 dist/index.js",
+    "build": "pnpm -r run build",
+    "build:mcp": "pnpm --filter @upstash/context7-mcp build",
+    "build:sdk": "pnpm --filter @upstash/context7-sdk build",
+    "test": "pnpm -r run test",
+    "lint": "pnpm -r run lint",
+    "lint:check": "pnpm -r run lint:check",
     "format": "prettier --write .",
-    "lint": "eslint \"**/*.{js,ts,tsx}\" --fix",
-    "lint:check": "eslint \"**/*.{js,ts,tsx}\"",
-    "start": "node dist/index.js --transport http",
-    "pack-mcpb": "bun install && bun run build && rm -rf node_modules && bun install --production && mv mcpb/.mcpbignore .mcpbignore && mv mcpb/manifest.json manifest.json && mv public/icon.png icon.png && mcpb validate manifest.json && mcpb pack . mcpb/context7.mcpb && mv manifest.json mcpb/manifest.json && mv .mcpbignore mcpb/.mcpbignore && mv icon.png public/icon.png && bun install"
+    "clean": "pnpm -r run clean && rm -rf node_modules",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm build && changeset publish",
+    "dev:mcp": "pnpm --filter @upstash/context7-mcp dev",
+    "dev:sdk": "pnpm --filter @upstash/context7-sdk dev"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/upstash/context7.git"
   },
   "keywords": [
-    "modelcontextprotocol",
-    "mcp",
     "context7",
-    "vibe-coding",
-    "developer tools",
     "documentation",
-    "context"
+    "mcp",
+    "sdk",
+    "ai",
+    "upstash"
   ],
-  "author": "abdush",
+  "author": "Upstash",
   "license": "MIT",
-  "type": "module",
-  "bin": {
-    "context7-mcp": "dist/index.js"
-  },
-  "files": [
-    "dist"
-  ],
   "bugs": {
     "url": "https://github.com/upstash/context7/issues"
   },
   "homepage": "https://github.com/upstash/context7#readme",
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.5",
-    "@types/express": "^5.0.4",
-    "commander": "^14.0.0",
-    "express": "^5.1.0",
-    "undici": "^6.6.3",
-    "zod": "^3.24.2"
-  },
   "devDependencies": {
+    "@changesets/cli": "^2.29.7",
     "@types/node": "^22.13.14",
     "@typescript-eslint/eslint-plugin": "^8.28.0",
     "@typescript-eslint/parser": "^8.28.0",
