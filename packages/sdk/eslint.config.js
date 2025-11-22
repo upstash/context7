@@ -8,7 +8,10 @@ export default tseslint.config({
     ecmaVersion: 2020,
     sourceType: "module",
     parser: tseslint.parser,
-    parserOptions: {},
+    parserOptions: {
+      project: "./tsconfig.json",
+      tsconfigRootDir: import.meta.dirname,
+    },
     globals: {
       // Add Node.js globals
       process: "readonly",
