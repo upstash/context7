@@ -9,8 +9,8 @@ export default tseslint.config({
     sourceType: "module",
     parser: tseslint.parser,
     parserOptions: {
-      tsconfigRootDir: import.meta.dirname,
       project: "./tsconfig.json",
+      tsconfigRootDir: import.meta.dirname,
     },
     globals: {
       // Add Node.js globals
