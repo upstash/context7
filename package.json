@@ -21,14 +21,15 @@
     "url": "git+https://github.com/upstash/context7.git"
   },
   "keywords": [
-    "context7",
-    "documentation",
+    "modelcontextprotocol",
     "mcp",
-    "sdk",
-    "ai",
-    "upstash"
+    "context7",
+    "vibe-coding",
+    "developer tools",
+    "documentation",
+    "context"
   ],
-  "author": "Upstash",
+  "author": "abdush",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/upstash/context7/issues"
