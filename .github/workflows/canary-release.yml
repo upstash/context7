@@ -1,6 +1,7 @@
 name: Canary Release
 
 on:
+  pull_request:
   workflow_dispatch:
     inputs:
       package:
@@ -21,7 +22,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
@@ -48,29 +48,3 @@ jobs:
         run: pnpm release:snapshot
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      # MCP-specific publishing (only if MCP was selected and published)
-      - name: Check if MCP was published
-        id: check-mcp
-        if: inputs.package == 'mcp'
-        run: |
-          # Get the published version from npm
-          VERSION=$(npm view @upstash/context7-mcp dist-tags.canary 2>/dev/null || echo "")
-          if [ -n "$VERSION" ]; then
-            echo "mcp_published=true" >> $GITHUB_OUTPUT
-            echo "mcp_version=$VERSION" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Update server.json
-        if: steps.check-mcp.outputs.mcp_published == 'true'
-        run: |
-          VERSION="${{ steps.check-mcp.outputs.mcp_version }}"
-          echo $(jq --arg v "$VERSION" '.version = $v | .packages[0].version = $v' server.json) > server.json
-          echo "Updated server.json to version $VERSION"
-
-      - name: Publish to MCP Registry
-        if: steps.check-mcp.outputs.mcp_published == 'true'
-        run: |
-          curl -L "https://github.com/modelcontextprotocol/registry/releases/download/v1.3.3/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
-          ./mcp-publisher login github-oidc
-          ./mcp-publisher publish
