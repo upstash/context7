@@ -1,9 +1,11 @@
 name: Release
 
 on:
-  release:
-    types:
-      - published
+  push:
+    branches:
+      - master
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
   release:
@@ -11,17 +13,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write # Required for OIDC authentication with MCP Registry
-      contents: read
+      contents: write
+      pull-requests: write
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v3
-
-      - name: Set env
-        run: |
-          VERSION="${GITHUB_REF##refs/*/}"
-          # Remove 'v' prefix if it exists
-          VERSION="${VERSION#v}"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -33,54 +29,57 @@ jobs:
         with:
           version: 9
 
-      - name: Set package version
-        run: |
-          echo $(jq --arg v "${{ env.VERSION }}" '(.version) = $v' packages/mcp/package.json) > packages/mcp/package.json
-
-      - name: Update version in source file
-        run: |
-          sed -i "s/version: \"[0-9]*\.[0-9]*\.[0-9]*\"/version: \"${{ env.VERSION }}\"/" packages/mcp/src/index.ts
-
-      - name: Update package version in server.json
-        run: |
-          echo $(jq --arg v "${{ env.VERSION }}" '.version = $v | .packages[0].version = $v' server.json) > server.json
-
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
-        run: pnpm --filter @upstash/context7-mcp build
+      - name: Build all packages
+        run: pnpm build
 
-      - name: Set NPM_TOKEN
-        run: npm config set //registry.npmjs.org/:_authToken=${{secrets.NPM_TOKEN}}
+      - name: Create Release PR or Publish
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          publish: pnpm release
+          commit: "chore(release): version packages"
+          title: "chore(release): version packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Publish
-        if: ${{ !github.event.release.prerelease }}
-        working-directory: packages/mcp
+      - name: Check if MCP was published
+        id: check-mcp
+        if: steps.changesets.outputs.published == 'true'
         run: |
-          npm pkg delete scripts.prepare
-          npm publish --access public
+          PUBLISHED='${{ steps.changesets.outputs.publishedPackages }}'
+          if echo "$PUBLISHED" | jq -e '.[] | select(.name == "@upstash/context7-mcp")' > /dev/null; then
+            VERSION=$(echo "$PUBLISHED" | jq -r '.[] | select(.name == "@upstash/context7-mcp") | .version')
+            echo "mcp_published=true" >> $GITHUB_OUTPUT
+            echo "mcp_version=$VERSION" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Publish release candidate
-        if: ${{ github.event.release.prerelease }}
-        working-directory: packages/mcp
+      - name: Update version in MCP source file
+        if: steps.check-mcp.outputs.mcp_published == 'true'
         run: |
-          npm pkg delete scripts.prepare
-          npm publish --access public --tag=canary
+          VERSION="${{ steps.check-mcp.outputs.mcp_version }}"
+          sed -i "s/version: \"[0-9]*\.[0-9]*\.[0-9]*\"/version: \"$VERSION\"/" packages/mcp/src/index.ts
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add packages/mcp/src/index.ts
+          git commit -m "chore: update MCP version in source to $VERSION" || true
+          git push || true
 
-      - name: Validate server.json
-        if: ${{ !github.event.release.prerelease }}
-        run: npx mcp-registry-validator validate server.json
-
-      - name: Install MCP Publisher
-        if: ${{ !github.event.release.prerelease }}
+      - name: Update server.json
+        if: steps.check-mcp.outputs.mcp_published == 'true'
         run: |
-          curl -L "https://github.com/modelcontextprotocol/registry/releases/download/v1.3.3/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
-
-      - name: Login to MCP Registry
-        if: ${{ !github.event.release.prerelease }}
-        run: ./mcp-publisher login github-oidc
+          VERSION="${{ steps.check-mcp.outputs.mcp_version }}"
+          echo $(jq --arg v "$VERSION" '.version = $v | .packages[0].version = $v' server.json) > server.json
+          git add server.json
+          git commit -m "chore: update server.json to v$VERSION" || true
+          git push || true
 
       - name: Publish to MCP Registry
-        if: ${{ !github.event.release.prerelease }}
-        run: ./mcp-publisher publish
+        if: steps.check-mcp.outputs.mcp_published == 'true'
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/download/v1.3.3/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish
