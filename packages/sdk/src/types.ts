@@ -1,5 +1,5 @@
 export interface Context7Config {
-  apiKey: string;
+  apiKey?: string;
 }
 
 export interface SearchLibraryOptions {

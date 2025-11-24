@@ -15,15 +15,20 @@ export class Context7 {
   private apiKey: string;
   private httpClient: HttpClient;
 
-  constructor(config: Context7Config) {
-    if (!config.apiKey) {
-      throw new Context7Error("API key is required");
+  constructor(config: Context7Config = {}) {
+    const apiKey = config.apiKey || process.env.CONTEXT7_API_KEY || process.env.API_KEY;
+
+    if (!apiKey) {
+      throw new Context7Error(
+        "API key is required. Pass it in the config or set CONTEXT7_API_KEY or API_KEY environment variable."
+      );
     }
-    if (!config.apiKey.startsWith(API_KEY_PREFIX)) {
+
+    if (!apiKey.startsWith(API_KEY_PREFIX)) {
       console.warn(`API key should start with '${API_KEY_PREFIX}'`);
     }
 
-    this.apiKey = config.apiKey;
+    this.apiKey = apiKey;
 
     this.httpClient = new HttpClient({
       baseUrl: DEFAULT_BASE_URL,

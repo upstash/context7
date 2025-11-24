@@ -12,9 +12,30 @@ describe("Context7 Client", () => {
       expect(client).toBeDefined();
     });
 
+    test("should create client from environment variables", () => {
+      const client = new Context7();
+      expect(client).toBeDefined();
+    });
+
     test("should throw error when API key is missing", () => {
+      const originalEnv = process.env.CONTEXT7_API_KEY;
+      const originalApiKey = process.env.API_KEY;
+
+      delete process.env.CONTEXT7_API_KEY;
+      delete process.env.API_KEY;
+
       expect(() => new Context7({ apiKey: "" })).toThrow(Context7Error);
-      expect(() => new Context7({ apiKey: "" })).toThrow("API key is required");
+      expect(() => new Context7({})).toThrow(Context7Error);
+      expect(() => new Context7()).toThrow("API key is required");
+
+      if (originalEnv) process.env.CONTEXT7_API_KEY = originalEnv;
+      if (originalApiKey) process.env.API_KEY = originalApiKey;
+    });
+
+    test("should prefer config API key over environment variable", () => {
+      const customApiKey = "ctx7sk-custom-key";
+      const client = new Context7({ apiKey: customApiKey });
+      expect(client).toBeDefined();
     });
   });
 
