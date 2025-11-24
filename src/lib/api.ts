@@ -1,10 +1,10 @@
 import { SearchResponse } from "./types.js";
 import { generateHeaders } from "./encryption.js";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
+import { DocumentationMode, DOCUMENTATION_MODES } from "./types.js";
+import { maskApiKey } from "./utils.js";
 
 const CONTEXT7_API_BASE_URL = "https://context7.com/api";
-const CONTEXT7_API_V1_URL = CONTEXT7_API_BASE_URL + "/v1";
-const CONTEXT7_API_V2_URL = CONTEXT7_API_BASE_URL + "/v2";
 const DEFAULT_TYPE = "txt";
 
 /**
@@ -32,6 +32,30 @@ function parseLibraryId(libraryId: string): {
     library: parts[1],
     tag: parts[2], // undefined if not present
   };
+}
+
+/**
+ * Generates appropriate error messages based on HTTP status codes
+ * @param errorCode The HTTP error status code
+ * @param apiKey Optional API key (used for rate limit message)
+ * @returns Error message string
+ */
+function createErrorMessage(errorCode: number, apiKey?: string): string {
+  switch (errorCode) {
+    case 429:
+      return apiKey
+        ? "Rate limited due to too many requests. Please try again later."
+        : "Rate limited due to too many requests. You can create a free API key at https://context7.com/dashboard for higher rate limits.";
+    case 404:
+      return "The library you are trying to access does not exist. Please try with a different library ID.";
+    case 401:
+      if (!apiKey) {
+        return "Unauthorized. Please provide an API key.";
+      }
+      return `Unauthorized. Please check your API key. The API key you provided (possibly incorrect) is: ${maskApiKey(apiKey)}. API keys should start with 'ctx7sk'`;
+    default:
+      return `Failed to fetch documentation. Please try again later. Error code: ${errorCode}`;
+  }
 }
 
 // Pick up proxy configuration in a variety of common env var names.
@@ -71,7 +95,7 @@ export async function searchLibraries(
   apiKey?: string
 ): Promise<SearchResponse> {
   try {
-    const url = new URL(`${CONTEXT7_API_V1_URL}/search`);
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/search`);
     url.searchParams.set("query", query);
 
     const headers = generateHeaders(clientIp, apiKey);
@@ -79,28 +103,7 @@ export async function searchLibraries(
     const response = await fetch(url, { headers });
     if (!response.ok) {
       const errorCode = response.status;
-      if (errorCode === 429) {
-        const errorMessage = apiKey
-          ? "Rate limited due to too many requests. Please try again later."
-          : "Rate limited due to too many requests. You can create a free API key at https://context7.com/dashboard for higher rate limits.";
-        console.error(errorMessage);
-        return {
-          results: [],
-          error: errorMessage,
-        } as SearchResponse;
-      }
-      if (errorCode === 401) {
-        const errorMessage =
-          "Unauthorized. Please check your API key. The API key you provided (possibly incorrect) is: " +
-          apiKey +
-          ". API keys should start with 'ctx7sk'";
-        console.error(errorMessage);
-        return {
-          results: [],
-          error: errorMessage,
-        } as SearchResponse;
-      }
-      const errorMessage = `Failed to search libraries. Please try again later. Error code: ${errorCode}`;
+      const errorMessage = createErrorMessage(errorCode, apiKey);
       console.error(errorMessage);
       return {
         results: [],
@@ -118,15 +121,16 @@ export async function searchLibraries(
 /**
  * Fetches documentation context for a specific library
  * @param libraryId The library ID to fetch documentation for
- * @param options Options for the request
+ * @param docMode Documentation mode (CODE for API references and code examples, INFO for conceptual guides)
+ * @param options Optional request parameters (page, limit, topic)
  * @param clientIp Optional client IP address to include in headers
  * @param apiKey Optional API key for authentication
  * @returns The documentation text or null if the request fails
  */
 export async function fetchLibraryDocumentation(
   libraryId: string,
+  docMode: DocumentationMode,
   options: {
-    mode?: "code" | "info";
     page?: number;
     limit?: number;
     topic?: string;
@@ -137,11 +141,8 @@ export async function fetchLibraryDocumentation(
   try {
     const { username, library, tag } = parseLibraryId(libraryId);
 
-    // Determine endpoint based on mode (default to 'code')
-    const endpoint = options.mode === "info" ? "info" : "code";
-
     // Build URL path
-    let urlPath = `${CONTEXT7_API_V2_URL}/docs/${endpoint}/${username}/${library}`;
+    let urlPath = `${CONTEXT7_API_BASE_URL}/v2/docs/${docMode}/${username}/${library}`;
     if (tag) {
       urlPath += `/${tag}`;
     }
@@ -157,36 +158,17 @@ export async function fetchLibraryDocumentation(
     const response = await fetch(url, { headers });
     if (!response.ok) {
       const errorCode = response.status;
-      if (errorCode === 429) {
-        const errorMessage = apiKey
-          ? "Rate limited due to too many requests. Please try again later."
-          : "Rate limited due to too many requests. You can create a free API key at https://context7.com/dashboard for higher rate limits.";
-        console.error(errorMessage);
-        return errorMessage;
-      }
-      if (errorCode === 404) {
-        const errorMessage =
-          "The library you are trying to access does not exist. Please try with a different library ID.";
-        console.error(errorMessage);
-        return errorMessage;
-      }
-      if (errorCode === 401) {
-        const errorMessage =
-          "Unauthorized. Please check your API key. The API key you provided (possibly incorrect) is: " +
-          apiKey +
-          ". API keys should start with 'ctx7sk'";
-        console.error(errorMessage);
-        return errorMessage;
-      }
-      const modeType = endpoint === "info" ? "informational" : "code";
-      const errorMessage = `Failed to fetch ${modeType} documentation. Please try again later. Error code: ${errorCode}`;
+      const errorMessage = createErrorMessage(errorCode, apiKey);
       console.error(errorMessage);
       return errorMessage;
     }
     const text = await response.text();
     if (!text || text === "No content available" || text === "No context data available") {
-      const modeType = endpoint === "info" ? "informational" : "code";
-      return `No ${modeType} documentation available for this library.${endpoint === "code" ? " Try mode='info' for guides and tutorials." : " Try mode='code' for API references and code examples."}`;
+      const suggestion =
+        docMode === DOCUMENTATION_MODES.CODE
+          ? " Try mode='info' for guides and tutorials."
+          : " Try mode='code' for API references and code examples.";
+      return `No ${docMode} documentation available for this library.${suggestion}`;
     }
     return text;
   } catch (error) {
