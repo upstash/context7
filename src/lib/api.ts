@@ -125,15 +125,16 @@ export async function searchLibraries(
 /**
  * Fetches documentation context for a specific library
  * @param libraryId The library ID to fetch documentation for
- * @param options Options for the request
+ * @param docMode Documentation mode (CODE for API references and code examples, INFO for conceptual guides)
+ * @param options Optional request parameters (page, limit, topic)
  * @param clientIp Optional client IP address to include in headers
  * @param apiKey Optional API key for authentication
  * @returns The documentation text or null if the request fails
  */
 export async function fetchLibraryDocumentation(
   libraryId: string,
+  docMode: DocumentationMode,
   options: {
-    docMode?: DocumentationMode;
     page?: number;
     limit?: number;
     topic?: string;
@@ -143,9 +144,6 @@ export async function fetchLibraryDocumentation(
 ): Promise<string | null> {
   try {
     const { username, library, tag } = parseLibraryId(libraryId);
-
-    // Determine endpoint based on mode (defaults to CODE mode)
-    const docMode: DocumentationMode = options.docMode ?? DOCUMENTATION_MODES.CODE;
 
     // Build URL path
     let urlPath = `${CONTEXT7_API_BASE_URL}/v2/docs/${docMode}/${username}/${library}`;

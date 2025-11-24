@@ -229,8 +229,8 @@ server.registerTool(
     const apiKey = ctx?.apiKey || globalApiKey;
     const fetchDocsResponse = await fetchLibraryDocumentation(
       context7CompatibleLibraryID,
+      mode,
       {
-        docMode: mode,
         page,
         limit: DEFAULT_RESULTS_LIMIT,
         topic,
