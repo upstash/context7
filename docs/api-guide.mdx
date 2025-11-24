@@ -110,7 +110,6 @@ The response includes pagination metadata to help you navigate:
 ```
 
 **Tips:**
-
 - Use specific topics to reduce the total number of pages needed
 - Check `hasNext` before fetching additional pages
 - Combine with version pinning for consistent pagination
@@ -189,11 +188,14 @@ docs = response.json()
 **Example (JavaScript/Node.js):**
 
 ```javascript
-const response = await fetch("https://context7.com/api/v2/docs/code/vercel/next.js?topic=routing", {
-  headers: {
-    Authorization: "Bearer CONTEXT7_API_KEY",
-  },
-});
+const response = await fetch(
+  "https://context7.com/api/v2/docs/code/vercel/next.js?topic=routing",
+  {
+    headers: {
+      Authorization: "Bearer CONTEXT7_API_KEY",
+    },
+  }
+);
 
 const docs = await response.json();
 ```

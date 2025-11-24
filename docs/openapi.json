@@ -523,15 +523,7 @@
             }
           }
         },
-        "required": [
-          "codeTitle",
-          "codeDescription",
-          "codeLanguage",
-          "codeTokens",
-          "codeId",
-          "pageTitle",
-          "codeList"
-        ]
+        "required": ["codeTitle", "codeDescription", "codeLanguage", "codeTokens", "codeId", "pageTitle", "codeList"]
       },
       "CodeExample": {
         "type": "object",
