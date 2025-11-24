@@ -2,15 +2,13 @@ import { Command } from "@commands/command";
 import type { SearchLibraryOptions, SearchLibraryResponse } from "@types";
 
 export class SearchLibraryCommand extends Command<SearchLibraryResponse> {
-  constructor(query: string, options?: SearchLibraryOptions) {
-    const payload: Record<string, unknown> = {
-      query,
-    };
+  constructor(query: string, _options?: SearchLibraryOptions) {
+    const queryParams: Record<string, string | number | undefined> = {};
 
-    if (options?.limit !== undefined) {
-      payload.limit = options.limit;
+    if (query) {
+      queryParams.query = query;
     }
 
-    super(payload, "search");
+    super({ method: "GET", query: queryParams }, "v2/search");
   }
 }

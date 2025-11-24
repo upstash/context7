@@ -15,6 +15,15 @@ export type Context7Request = {
    * Request body will be serialized to json
    */
   body?: unknown;
+  /**
+   * HTTP method to use
+   * @default "POST"
+   */
+  method?: "GET" | "POST";
+  /**
+   * Query parameters for GET requests
+   */
+  query?: Record<string, string | number | boolean | undefined>;
 };
 export type Context7Response<TResult> = {
   result?: TResult;
@@ -107,20 +116,39 @@ export class HttpClient implements Requester {
     const signal = this.options.signal;
     const isSignalFunction = typeof signal === "function";
 
+    const method = req.method || "POST";
+
+    // Build URL with query parameters for GET requests
+    let url = [this.baseUrl, ...(req.path ?? [])].join("/");
+    if (method === "GET" && req.query) {
+      const queryParams = new URLSearchParams();
+      Object.entries(req.query).forEach(([key, value]) => {
+        if (value !== undefined) {
+          queryParams.append(key, String(value));
+        }
+      });
+      const queryString = queryParams.toString();
+      if (queryString) {
+        url += `?${queryString}`;
+      }
+    }
+
     const requestOptions = {
       cache: this.options.cache,
-      method: "POST",
+      method,
       headers: this.headers,
-      body: JSON.stringify(req.body),
+      body: req.body ? JSON.stringify(req.body) : undefined,
       keepalive: true,
       signal: isSignalFunction ? signal() : signal,
     };
 
     let res: Response | null = null;
     let error: Error | null = null;
+    // const abortSignal = requestOptions.signal as AbortSignal | undefined;
+
     for (let i = 0; i <= this.retry.attempts; i++) {
       try {
-        res = await fetch([this.baseUrl, ...(req.path ?? [])].join("/"), requestOptions);
+        res = await fetch(url, requestOptions as RequestInit);
         break;
       } catch (error_) {
         if (requestOptions.signal?.aborted && isSignalFunction) {
@@ -146,11 +174,27 @@ export class HttpClient implements Requester {
       throw error ?? new Error("Exhausted all retries");
     }
 
-    const body = (await res.json()) as Context7Response<TResult>;
     if (!res.ok) {
-      throw new Context7Error(`${body.error}`);
+      // Try to parse error as JSON first
+      try {
+        const errorBody = (await res.json()) as { error?: string; message?: string };
+        throw new Context7Error(errorBody.error || errorBody.message || res.statusText);
+      } catch {
+        throw new Context7Error(res.statusText);
+      }
     }
 
-    return { result: body.result, error: body.error };
+    // Check content type to determine how to parse response
+    const contentType = res.headers.get("content-type");
+
+    if (contentType?.includes("application/json")) {
+      // For JSON responses, the v2 API returns data directly (not wrapped in {result: ...})
+      const body = await res.json();
+      return { result: body as TResult };
+    } else {
+      // For text responses (text/plain, text/markdown, etc.)
+      const text = await res.text();
+      return { result: text as TResult };
+    }
   }
 }

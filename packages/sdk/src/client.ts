@@ -3,7 +3,8 @@ import type {
   SearchLibraryOptions,
   SearchLibraryResponse,
   GetDocsOptions,
-  DocsResponse,
+  CodeSnippetsResponse,
+  InfoSnippetsResponse,
 } from "@types";
 import { Context7Error } from "@error";
 import { DEFAULT_BASE_URL, API_KEY_PREFIX } from "./constants.js";
@@ -56,7 +57,22 @@ export class Context7 {
     return await command.exec(this.httpClient);
   }
 
-  async getDocs(libraryId: string, options?: GetDocsOptions): Promise<DocsResponse> {
+  async getDocs(
+    libraryId: string,
+    options: GetDocsOptions & { format: "json"; docType: "info" }
+  ): Promise<InfoSnippetsResponse>;
+
+  async getDocs(
+    libraryId: string,
+    options: GetDocsOptions & { format: "json"; docType?: "code" }
+  ): Promise<CodeSnippetsResponse>;
+
+  async getDocs(libraryId: string, options?: GetDocsOptions & { format?: "txt" }): Promise<string>;
+
+  async getDocs(
+    libraryId: string,
+    options?: GetDocsOptions
+  ): Promise<string | CodeSnippetsResponse | InfoSnippetsResponse> {
     const command = new GetDocsCommand(libraryId, options);
     return await command.exec(this.httpClient);
   }

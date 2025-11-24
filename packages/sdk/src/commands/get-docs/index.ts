@@ -1,7 +1,7 @@
 import { Command } from "@commands/command";
-import type { GetDocsOptions, DocsResponse } from "@types";
+import type { GetDocsOptions, CodeSnippetsResponse, InfoSnippetsResponse } from "@types";
 
-export class GetDocsCommand extends Command<DocsResponse> {
+export class GetDocsCommand extends Command<string | CodeSnippetsResponse | InfoSnippetsResponse> {
   constructor(libraryId: string, options?: GetDocsOptions) {
     const cleaned = libraryId.startsWith("/") ? libraryId.slice(1) : libraryId;
     const parts = cleaned.split("/");
@@ -12,33 +12,42 @@ export class GetDocsCommand extends Command<DocsResponse> {
       );
     }
 
-    const username = parts[0];
-    const library = parts[1];
-    const version = parts[2];
+    const owner = parts[0];
+    const repo = parts[1];
+    const version = parts[2] || options?.version;
 
-    const endpoint = options?.type === "info" ? "v1/docs/info" : "v1/docs/code";
+    const docType = options?.docType || "code";
 
-    const payload: Record<string, unknown> = {
-      username,
-      library,
-    };
-
+    const pathParts = ["v2", "docs", docType, owner, repo];
     if (version) {
-      payload.version = version;
+      pathParts.push(version);
+    }
+
+    const queryParams: Record<string, string | number | undefined> = {};
+
+    if (options?.topic) {
+      queryParams.topic = options.topic;
+    }
+
+    if (options?.format) {
+      queryParams.type = options.format;
     }
 
     if (options?.page !== undefined) {
-      payload.page = options.page;
-    }
-
-    if (options?.topic) {
-      payload.topic = options.topic;
+      queryParams.page = options.page;
     }
 
     if (options?.limit !== undefined) {
-      payload.limit = options.limit;
+      queryParams.limit = options.limit;
     }
 
-    super(payload, endpoint);
+    super(
+      {
+        method: "GET",
+        path: pathParts,
+        query: queryParams,
+      },
+      pathParts.slice(0, 3).join("/")
+    );
   }
 }

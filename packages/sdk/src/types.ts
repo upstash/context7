@@ -18,19 +18,66 @@ export interface SearchResult {
   description: string;
   branch: string;
   lastUpdateDate: string;
-  state: "initial" | "finalized" | "error" | "delete";
+  state: "initial" | "finalized" | "processing" | "error" | "delete";
   totalTokens: number;
   totalSnippets: number;
-  totalPages: number;
   stars?: number;
   trustScore?: number;
   benchmarkScore?: number;
   versions?: string[];
 }
 
+export interface APIResponseMetadata {
+  authentication: "none" | "personal" | "team";
+}
+
 export interface SearchLibraryResponse {
-  error?: string;
   results: SearchResult[];
+  metadata: APIResponseMetadata;
+}
+
+export interface CodeExample {
+  language: string;
+  code: string;
+}
+
+export interface CodeSnippet {
+  codeTitle: string;
+  codeDescription: string;
+  codeLanguage: string;
+  codeTokens: number;
+  codeId: string;
+  pageTitle: string;
+  codeList: CodeExample[];
+}
+
+export interface InfoSnippet {
+  pageId?: string;
+  breadcrumb?: string;
+  content: string;
+  contentTokens: number;
+}
+
+export interface Pagination {
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
+export interface CodeSnippetsResponse {
+  snippets: CodeSnippet[];
+  totalTokens: number;
+  pagination: Pagination;
+  metadata: APIResponseMetadata;
+}
+
+export interface InfoSnippetsResponse {
+  snippets: InfoSnippet[];
+  totalTokens: number;
+  pagination: Pagination;
+  metadata: APIResponseMetadata;
 }
 
 export interface GetDocsOptions {
@@ -38,12 +85,11 @@ export interface GetDocsOptions {
   page?: number;
   topic?: string;
   limit?: number;
-  type?: "info" | "code";
+  docType?: "info" | "code";
+  format?: "json" | "txt";
   apiKey?: string;
   clientIp?: string;
 }
-
-export type DocsResponse = string;
 
 export type GetLibraryResponse = SearchResult;
 

@@ -1,34 +1,52 @@
-import { describe, test } from "node:test";
-import assert from "node:assert";
+import { describe, test, expect } from "vitest";
 import { GetDocsCommand } from "./index";
 import { newHttpClient } from "../../utils/test-utils";
 import { Context7 } from "../../client";
+import { CodeSnippetsResponse } from "@types";
 
 const httpClient = newHttpClient();
 
 describe("GetDocsCommand", () => {
-  test("should get library code docs", async () => {
+  test("should get library code docs as text", async () => {
     const command = new GetDocsCommand("/facebook/react", {
-      type: "code",
+      docType: "code",
+      format: "txt",
       limit: 10,
     });
     const result = await command.exec(httpClient);
 
-    assert(result !== undefined);
-    assert(typeof result === "string");
-    assert(result.length > 0);
+    expect(result).toBeDefined();
+    expect(typeof result).toBe("string");
+    expect((result as string).length).toBeGreaterThan(0);
   });
 
-  test("should get library info docs", async () => {
+  test("should get library info docs as text", async () => {
     const command = new GetDocsCommand("/facebook/react", {
-      type: "info",
+      docType: "info",
+      format: "txt",
       limit: 10,
     });
     const result = await command.exec(httpClient);
 
-    assert(result !== undefined);
-    assert(typeof result === "string");
-    assert(result.length > 0);
+    expect(result).toBeDefined();
+    expect(typeof result).toBe("string");
+    expect((result as string).length).toBeGreaterThan(0);
+  });
+
+  test("should get library code docs as JSON", async () => {
+    const command = new GetDocsCommand("/facebook/react", {
+      docType: "code",
+      format: "json",
+      limit: 5,
+    });
+    const result = await command.exec(httpClient);
+
+    expect(result).toBeDefined();
+    expect(typeof result).toBe("object");
+    expect(result).toHaveProperty("snippets");
+    expect(Array.isArray((result as CodeSnippetsResponse).snippets)).toBe(true);
+    expect(result).toHaveProperty("pagination");
+    expect(result).toHaveProperty("metadata");
   });
 
   test("should get library code docs using client", async () => {
@@ -37,13 +55,14 @@ describe("GetDocsCommand", () => {
     });
 
     const result = await client.getDocs("/facebook/react", {
-      type: "code",
+      docType: "code",
+      format: "txt",
       limit: 10,
     });
 
-    assert(result !== undefined);
-    assert(typeof result === "string");
-    assert(result.length > 0);
+    expect(result).toBeDefined();
+    expect(typeof result).toBe("string");
+    expect(result.length).toBeGreaterThan(0);
   });
 
   test("should get library info docs using client", async () => {
@@ -52,12 +71,13 @@ describe("GetDocsCommand", () => {
     });
 
     const result = await client.getDocs("/facebook/react", {
-      type: "info",
+      docType: "info",
+      format: "txt",
       limit: 10,
     });
 
-    assert(result !== undefined);
-    assert(typeof result === "string");
-    assert(result.length > 0);
+    expect(result).toBeDefined();
+    expect(typeof result).toBe("string");
+    expect(result.length).toBeGreaterThan(0);
   });
 });

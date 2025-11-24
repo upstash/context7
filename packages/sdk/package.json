@@ -1,10 +1,11 @@
 {
   "name": "@upstash/context7-sdk",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "JavaScript/TypeScript SDK for Context7",
   "scripts": {
     "build": "tsc",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
     "lint": "eslint .",
@@ -34,9 +35,10 @@
     "url": "https://github.com/upstash/context7/issues"
   },
   "homepage": "https://github.com/upstash/context7#readme",
-  "dependencies": {},
   "devDependencies": {
     "@types/node": "^22.13.14",
-    "typescript": "^5.8.2"
+    "dotenv": "^17.2.3",
+    "typescript": "^5.8.2",
+    "vitest": "^4.0.13"
   }
 }
