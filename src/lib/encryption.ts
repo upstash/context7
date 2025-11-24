@@ -1,9 +1,12 @@
 import { createCipheriv, randomBytes } from "crypto";
 
-const ENCRYPTION_KEY =
-  process.env.CLIENT_IP_ENCRYPTION_KEY ||
-  "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
+const DEFAULT_ENCRYPTION_KEY = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
+const ENCRYPTION_KEY = process.env.CLIENT_IP_ENCRYPTION_KEY || DEFAULT_ENCRYPTION_KEY;
 const ALGORITHM = "aes-256-cbc";
+
+if (ENCRYPTION_KEY === DEFAULT_ENCRYPTION_KEY) {
+  console.warn("WARNING: Using default CLIENT_IP_ENCRYPTION_KEY.");
+}
 
 function validateEncryptionKey(key: string): boolean {
   // Must be exactly 64 hex characters (32 bytes)
