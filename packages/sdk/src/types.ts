@@ -87,8 +87,6 @@ export interface GetDocsOptions {
   limit?: number;
   docType?: "info" | "code";
   format?: "json" | "txt";
-  apiKey?: string;
-  clientIp?: string;
 }
 
 export type GetLibraryResponse = SearchResult;

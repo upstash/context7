@@ -71,7 +71,7 @@ export type HttpClientConfig = {
   headers?: Record<string, string>;
   baseUrl: string;
   retry?: RetryConfig;
-  signal?: AbortSignal | (() => AbortSignal);
+  signal?: () => AbortSignal;
 } & RequesterConfig;
 
 export class HttpClient implements Requester {
@@ -113,9 +113,6 @@ export class HttpClient implements Requester {
   }
 
   public async request<TResult>(req: Context7Request): Promise<Context7Response<TResult>> {
-    const signal = this.options.signal;
-    const isSignalFunction = typeof signal === "function";
-
     const method = req.method || "POST";
 
     // Build URL with query parameters for GET requests
@@ -139,7 +136,7 @@ export class HttpClient implements Requester {
       headers: this.headers,
       body: req.body ? JSON.stringify(req.body) : undefined,
       keepalive: true,
-      signal: isSignalFunction ? signal() : signal,
+      signal: this.options.signal?.(),
     };
 
     let res: Response | null = null;
@@ -151,18 +148,8 @@ export class HttpClient implements Requester {
         res = await fetch(url, requestOptions as RequestInit);
         break;
       } catch (error_) {
-        if (requestOptions.signal?.aborted && isSignalFunction) {
+        if (requestOptions.signal?.aborted) {
           throw error_;
-        } else if (requestOptions.signal?.aborted) {
-          const myBlob = new Blob([
-            JSON.stringify({ result: requestOptions.signal.reason ?? "Aborted" }),
-          ]);
-          const myOptions = {
-            status: 200,
-            statusText: requestOptions.signal.reason ?? "Aborted",
-          };
-          res = new Response(myBlob, myOptions);
-          break;
         }
         error = error_ as Error;
         if (i < this.retry.attempts) {
