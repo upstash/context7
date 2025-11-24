@@ -5,7 +5,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { searchLibraries, fetchLibraryDocumentation } from "./lib/api.js";
 import { formatSearchResults } from "./lib/utils.js";
-import { SearchResponse } from "./lib/types.js";
+import { SearchResponse, DOCUMENTATION_MODES } from "./lib/types.js";
 import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { Command } from "commander";
@@ -224,13 +224,13 @@ server.registerTool(
         ),
     },
   },
-  async ({ context7CompatibleLibraryID, mode = "code", page = 1, topic = "" }) => {
+  async ({ context7CompatibleLibraryID, mode = DOCUMENTATION_MODES.CODE, page = 1, topic }) => {
     const ctx = requestContext.getStore();
     const apiKey = ctx?.apiKey || globalApiKey;
     const fetchDocsResponse = await fetchLibraryDocumentation(
       context7CompatibleLibraryID,
+      mode,
       {
-        mode,
         page,
         limit: DEFAULT_RESULTS_LIMIT,
         topic,
@@ -360,14 +360,9 @@ async function main() {
     });
 
     const startServer = (port: number, maxAttempts = 10) => {
-      const httpServer = app.listen(port, () => {
-        actualPort = port;
-        console.error(
-          `Context7 Documentation MCP Server running on HTTP at http://localhost:${actualPort}/mcp`
-        );
-      });
+      const httpServer = app.listen(port);
 
-      httpServer.on("error", (err: NodeJS.ErrnoException) => {
+      httpServer.once("error", (err: NodeJS.ErrnoException) => {
         if (err.code === "EADDRINUSE" && port < initialPort + maxAttempts) {
           console.warn(`Port ${port} is in use, trying port ${port + 1}...`);
           startServer(port + 1, maxAttempts);
@@ -375,6 +370,13 @@ async function main() {
           console.error(`Failed to start server: ${err.message}`);
           process.exit(1);
         }
+      });
+
+      httpServer.once("listening", () => {
+        actualPort = port;
+        console.error(
+          `Context7 Documentation MCP Server running on HTTP at http://localhost:${actualPort}/mcp`
+        );
       });
     };
 

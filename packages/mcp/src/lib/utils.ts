@@ -67,3 +67,22 @@ export function formatSearchResults(searchResponse: SearchResponse): string {
   const formattedResults = searchResponse.results.map(formatSearchResult);
   return formattedResults.join("\n----------\n");
 }
+
+/**
+ * Masks an API key by showing only the first 10 characters and last 4 characters.
+ * This prevents full API keys from being exposed in logs while maintaining some
+ * identifiability for debugging.
+ *
+ * @param apiKey The API key to mask
+ * @returns Masked API key string (e.g., "ctx7sk-abc...xyz1") or "[NO-API-KEY]" if no key provided
+ */
+export function maskApiKey(apiKey: string): string {
+  if (apiKey.length <= 14) {
+    // If the key is too short to mask meaningfully, just show first part
+    return apiKey.substring(0, 7) + "...";
+  }
+
+  const firstPart = apiKey.substring(0, 10);
+  const lastPart = apiKey.substring(apiKey.length - 4);
+  return `${firstPart}...${lastPart}`;
+}
