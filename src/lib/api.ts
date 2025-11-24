@@ -2,6 +2,7 @@ import { SearchResponse } from "./types.js";
 import { generateHeaders } from "./encryption.js";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import { DocumentationMode, DOCUMENTATION_MODES } from "./types.js";
+import { maskApiKey } from "./utils.js";
 
 const CONTEXT7_API_BASE_URL = "https://context7.com/api";
 const DEFAULT_TYPE = "txt";
@@ -48,7 +49,10 @@ function createErrorMessage(errorCode: number, apiKey?: string): string {
     case 404:
       return "The library you are trying to access does not exist. Please try with a different library ID.";
     case 401:
-      return `Unauthorized. Please check your API key. The API key you provided (possibly incorrect) is: ${apiKey}. API keys should start with 'ctx7sk'`;
+      if (!apiKey) {
+        return "Unauthorized. Please provide an API key.";
+      }
+      return `Unauthorized. Please check your API key. The API key you provided (possibly incorrect) is: ${maskApiKey(apiKey)}. API keys should start with 'ctx7sk'`;
     default:
       return `Failed to fetch documentation. Please try again later. Error code: ${errorCode}`;
   }
