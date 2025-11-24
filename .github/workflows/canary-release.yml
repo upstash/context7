@@ -38,6 +38,10 @@ jobs:
         with:
           version: 9
 
+      - name: Configure npm authentication
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
+
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
