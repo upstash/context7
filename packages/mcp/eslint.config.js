@@ -5,13 +5,7 @@ import eslintPluginPrettier from "eslint-plugin-prettier";
 export default defineConfig(
   {
     // Base ESLint configuration
-    ignores: [
-      "node_modules/**",
-      "build/**",
-      "dist/**",
-      ".git/**",
-      ".github/**",
-    ],
+    ignores: ["node_modules/**", "build/**", "dist/**", ".git/**", ".github/**"],
   },
   {
     files: ["**/*.ts", "**/*.tsx"],
@@ -44,10 +38,7 @@ export default defineConfig(
       ...tseslint.configs.recommended.rules,
       // TypeScript rules
       "@typescript-eslint/explicit-module-boundary-types": "off",
-      "@typescript-eslint/no-unused-vars": [
-        "error",
-        { argsIgnorePattern: "^_" },
-      ],
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
       "@typescript-eslint/no-explicit-any": "warn",
       // Prettier integration
       "prettier/prettier": "error",
