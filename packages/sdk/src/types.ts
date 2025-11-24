@@ -1,15 +1,9 @@
 export interface Context7Config {
   apiKey: string;
-  baseUrl?: string;
-  timeout?: number;
-  encryptionKey?: string;
-  clientIp?: string;
 }
 
 export interface SearchLibraryOptions {
   limit?: number;
-  apiKey?: string;
-  clientIp?: string;
 }
 
 export interface SearchResult {

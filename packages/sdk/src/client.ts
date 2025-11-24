@@ -13,8 +13,6 @@ import { SearchLibraryCommand, GetDocsCommand } from "@commands/index";
 
 export class Context7 {
   private apiKey: string;
-  private baseUrl: string;
-  private clientIp?: string;
   private httpClient: HttpClient;
 
   constructor(config: Context7Config) {
@@ -26,25 +24,16 @@ export class Context7 {
     }
 
     this.apiKey = config.apiKey;
-    this.baseUrl = config.baseUrl || DEFAULT_BASE_URL;
-    this.clientIp = config.clientIp;
-
-    const headers: Record<string, string> = {
-      Authorization: `Bearer ${this.apiKey}`,
-    };
-
-    if (this.clientIp) {
-      headers["X-Client-IP"] = this.clientIp;
-    }
 
     this.httpClient = new HttpClient({
-      baseUrl: this.baseUrl,
-      headers,
+      baseUrl: DEFAULT_BASE_URL,
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+      },
       retry: {
         retries: 5,
         backoff: (retryCount) => Math.exp(retryCount) * 50,
       },
-
       cache: "no-store",
     });
   }
