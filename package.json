@@ -14,7 +14,8 @@
     "lint:check": "pnpm -r run lint:check",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "release": "pnpm build && changeset publish"
+    "release": "pnpm build && changeset publish",
+    "release:canary": "pnpm build && changeset publish --tag canary"
   },
   "repository": {
     "type": "git",

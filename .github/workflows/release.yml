@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - test-canary-release  # Test branch for canary releases
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
@@ -39,7 +40,7 @@ jobs:
         id: changesets
         uses: changesets/action@v1
         with:
-          publish: pnpm release
+          publish: ${{ github.ref == 'refs/heads/master' && 'pnpm release' || 'pnpm release:canary' }}
           commit: "chore(release): version packages"
           title: "chore(release): version packages"
         env:
