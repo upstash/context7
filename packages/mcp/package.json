@@ -1,6 +1,6 @@
 {
   "name": "@upstash/context7-mcp",
-  "version": "1.0.0",
+  "version": "1.0.30",
   "mcpName": "io.github.upstash/context7",
   "description": "MCP server for Context7",
   "scripts": {
@@ -31,7 +31,9 @@
     "context7-mcp": "dist/index.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "LICENSE",
+    "README.md"
   ],
   "bugs": {
     "url": "https://github.com/upstash/context7/issues"

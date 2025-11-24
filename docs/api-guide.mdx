@@ -23,27 +23,16 @@ Get your API key at [context7.com/dashboard](https://context7.com/dashboard). Le
 - **With API key**: Higher limits based on your plan
 - View current usage and reset windows in the [dashboard](https://context7.com/dashboard).
 
-When you exceed rate limits, the API returns a `429` status code with a `retryAfterSeconds` field indicating when you can retry:
+When you exceed rate limits, the API returns a `429` status code:
 
 ```json
 {
   "error": "Too many requests",
-  "status": 429,
-  "retryAfterSeconds": 60
+  "status": 429
 }
 ```
 
 ## Best Practices
-
-### Use Appropriate Token Limits
-
-Request only the amount of documentation you need to minimize token usage and response times:
-
-```bash
-# Fetches 2000 tokens of documentation
-curl "https://context7.com/api/v1/vercel/next.js?tokens=2000" \
-  -H "Authorization: Bearer CONTEXT7_API_KEY"
-```
 
 ### Specify Topics
 
@@ -51,7 +40,7 @@ Use the `topic` parameter to get more relevant results and reduce unnecessary co
 
 ```bash
 # Focus on routing-specific documentation
-curl "https://context7.com/api/v1/vercel/next.js?topic=routing" \
+curl "https://context7.com/api/v2/docs/code/vercel/next.js?topic=routing" \
   -H "Authorization: Bearer CONTEXT7_API_KEY"
 ```
 
@@ -72,8 +61,8 @@ def fetch_with_retry(url, headers, max_retries=3):
         response = requests.get(url, headers=headers)
 
         if response.status_code == 429:
-            retry_after = response.json().get('retryAfterSeconds', 60)
-            time.sleep(retry_after)
+            # Wait before retrying with exponential backoff
+            time.sleep(2 ** attempt)
             continue
 
         return response
@@ -87,9 +76,44 @@ Specify exact versions for consistent results across deployments:
 
 ```bash
 # Pin to a specific version
-curl "https://context7.com/api/v1/vercel/next.js/v15.1.8" \
+curl "https://context7.com/api/v2/docs/code/vercel/next.js/v15.1.8" \
   -H "Authorization: Bearer CONTEXT7_API_KEY"
 ```
+
+### Use Pagination for More Results
+
+When you need more documentation snippets, use the `page` parameter to fetch additional pages. The API supports up to 10 pages (100 snippets total) per topic:
+
+```bash
+# Fetch first page
+curl "https://context7.com/api/v2/docs/code/vercel/next.js?topic=routing&page=1" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY"
+
+# Fetch next page if needed
+curl "https://context7.com/api/v2/docs/code/vercel/next.js?topic=routing&page=2" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY"
+```
+
+The response includes pagination metadata to help you navigate:
+
+```json
+{
+  "snippets": [...],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "totalPages": 5,
+    "hasNext": true,
+    "hasPrev": false
+  }
+}
+```
+
+**Tips:**
+
+- Use specific topics to reduce the total number of pages needed
+- Check `hasNext` before fetching additional pages
+- Combine with version pinning for consistent pagination
 
 ## Error Handling
 
@@ -110,8 +134,7 @@ All errors return a JSON object with these fields:
 ```json
 {
   "error": "Error message describing what went wrong",
-  "status": 429,
-  "retryAfterSeconds": 60 // Only present for rate limit errors
+  "status": 429
 }
 ```
 
@@ -141,7 +164,7 @@ For custom integrations or non-MCP use cases, use the REST endpoints directly. T
 **Example (cURL):**
 
 ```bash
-curl "https://context7.com/api/v1/vercel/next.js?topic=routing" \
+curl "https://context7.com/api/v2/docs/code/vercel/next.js?topic=routing" \
   -H "Authorization: Bearer CONTEXT7_API_KEY"
 ```
 
@@ -155,9 +178,9 @@ headers = {
 }
 
 response = requests.get(
-    "https://context7.com/api/v1/vercel/next.js",
+    "https://context7.com/api/v2/docs/code/vercel/next.js",
     headers=headers,
-    params={"topic": "routing", "tokens": 5000}
+    params={"topic": "routing"}
 )
 
 docs = response.json()
@@ -166,14 +189,11 @@ docs = response.json()
 **Example (JavaScript/Node.js):**
 
 ```javascript
-const response = await fetch(
-  "https://context7.com/api/v1/vercel/next.js?topic=routing&tokens=5000",
-  {
-    headers: {
-      Authorization: "Bearer CONTEXT7_API_KEY",
-    },
-  }
-);
+const response = await fetch("https://context7.com/api/v2/docs/code/vercel/next.js?topic=routing", {
+  headers: {
+    Authorization: "Bearer CONTEXT7_API_KEY",
+  },
+});
 
 const docs = await response.json();
 ```

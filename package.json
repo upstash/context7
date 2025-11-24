@@ -14,21 +14,23 @@
     "lint:check": "pnpm -r run lint:check",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "release": "pnpm build && changeset publish"
+    "release": "pnpm build && changeset publish",
+    "release:snapshot": "changeset version --snapshot canary && pnpm build && changeset publish --tag canary --no-git-tag"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/upstash/context7.git"
   },
   "keywords": [
-    "context7",
-    "documentation",
+    "modelcontextprotocol",
     "mcp",
-    "sdk",
-    "ai",
-    "upstash"
+    "context7",
+    "vibe-coding",
+    "developer tools",
+    "documentation",
+    "context"
   ],
-  "author": "Upstash",
+  "author": "abdush",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/upstash/context7/issues"
