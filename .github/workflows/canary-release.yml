@@ -3,13 +3,6 @@ name: Canary Release
 on:
   workflow_dispatch:
     inputs:
-      package:
-        description: "Package to release (e.g., mcp, sdk)"
-        required: true
-        type: choice
-        options:
-          - mcp
-          - sdk
       branch:
         description: "Branch to release from (defaults to current branch)"
         required: false
