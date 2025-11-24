@@ -1,6 +1,7 @@
 import { SearchResponse } from "./types.js";
 import { generateHeaders } from "./encryption.js";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
+import { DocumentationMode, DOCUMENTATION_MODES } from "./types.js";
 
 const CONTEXT7_API_BASE_URL = "https://context7.com/api";
 const DEFAULT_TYPE = "txt";
@@ -36,16 +37,14 @@ function parseLibraryId(libraryId: string): {
  * Generates appropriate error messages based on HTTP status codes
  * @param errorCode The HTTP error status code
  * @param apiKey Optional API key (used for rate limit message)
- * @param endpoint Optional endpoint type for mode-aware messages ("code" or "info")
+ * @param docMode Optional documentation mode for mode-aware messages
  * @returns Error message string
  */
 function createErrorMessage(
   errorCode: number,
   apiKey?: string,
-  endpoint?: "code" | "info"
+  docMode?: DocumentationMode
 ): string {
-  const modeType = endpoint === "info" ? "informational" : endpoint === "code" ? "code" : "";
-
   switch (errorCode) {
     case 429:
       return apiKey
@@ -56,8 +55,8 @@ function createErrorMessage(
     case 401:
       return `Unauthorized. Please check your API key. The API key you provided (possibly incorrect) is: ${apiKey}. API keys should start with 'ctx7sk'`;
     default:
-      if (modeType) {
-        return `Failed to fetch ${modeType} documentation. Please try again later. Error code: ${errorCode}`;
+      if (docMode) {
+        return `Failed to fetch ${docMode} documentation. Please try again later. Error code: ${errorCode}`;
       }
       return `Failed to fetch documentation. Please try again later. Error code: ${errorCode}`;
   }
@@ -134,7 +133,7 @@ export async function searchLibraries(
 export async function fetchLibraryDocumentation(
   libraryId: string,
   options: {
-    mode?: "code" | "info";
+    docMode?: DocumentationMode;
     page?: number;
     limit?: number;
     topic?: string;
@@ -145,11 +144,11 @@ export async function fetchLibraryDocumentation(
   try {
     const { username, library, tag } = parseLibraryId(libraryId);
 
-    // Determine endpoint based on mode (default to 'code')
-    const endpoint = options.mode === "info" ? "info" : "code";
+    // Determine endpoint based on mode (defaults to CODE mode)
+    const docMode: DocumentationMode = options.docMode ?? DOCUMENTATION_MODES.CODE;
 
     // Build URL path
-    let urlPath = `${CONTEXT7_API_BASE_URL}/v2/docs/${endpoint}/${username}/${library}`;
+    let urlPath = `${CONTEXT7_API_BASE_URL}/v2/docs/${docMode}/${username}/${library}`;
     if (tag) {
       urlPath += `/${tag}`;
     }
@@ -165,14 +164,17 @@ export async function fetchLibraryDocumentation(
     const response = await fetch(url, { headers });
     if (!response.ok) {
       const errorCode = response.status;
-      const errorMessage = createErrorMessage(errorCode, apiKey, endpoint);
+      const errorMessage = createErrorMessage(errorCode, apiKey, docMode);
       console.error(errorMessage);
       return errorMessage;
     }
     const text = await response.text();
     if (!text || text === "No content available" || text === "No context data available") {
-      const modeType = endpoint === "info" ? "informational" : "code";
-      return `No ${modeType} documentation available for this library.${endpoint === "code" ? " Try mode='info' for guides and tutorials." : " Try mode='code' for API references and code examples."}`;
+      const suggestion =
+        docMode === DOCUMENTATION_MODES.CODE
+          ? " Try mode='info' for guides and tutorials."
+          : " Try mode='code' for API references and code examples.";
+      return `No ${docMode} documentation available for this library.${suggestion}`;
     }
     return text;
   } catch (error) {
