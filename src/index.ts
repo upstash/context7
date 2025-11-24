@@ -360,14 +360,9 @@ async function main() {
     });
 
     const startServer = (port: number, maxAttempts = 10) => {
-      const httpServer = app.listen(port, () => {
-        actualPort = port;
-        console.error(
-          `Context7 Documentation MCP Server running on HTTP at http://localhost:${actualPort}/mcp`
-        );
-      });
+      const httpServer = app.listen(port);
 
-      httpServer.on("error", (err: NodeJS.ErrnoException) => {
+      httpServer.once("error", (err: NodeJS.ErrnoException) => {
         if (err.code === "EADDRINUSE" && port < initialPort + maxAttempts) {
           console.warn(`Port ${port} is in use, trying port ${port + 1}...`);
           startServer(port + 1, maxAttempts);
@@ -375,6 +370,13 @@ async function main() {
           console.error(`Failed to start server: ${err.message}`);
           process.exit(1);
         }
+      });
+
+      httpServer.once("listening", () => {
+        actualPort = port;
+        console.error(
+          `Context7 Documentation MCP Server running on HTTP at http://localhost:${actualPort}/mcp`
+        );
       });
     };
 
