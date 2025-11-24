@@ -37,14 +37,9 @@ function parseLibraryId(libraryId: string): {
  * Generates appropriate error messages based on HTTP status codes
  * @param errorCode The HTTP error status code
  * @param apiKey Optional API key (used for rate limit message)
- * @param docMode Optional documentation mode for mode-aware messages
  * @returns Error message string
  */
-function createErrorMessage(
-  errorCode: number,
-  apiKey?: string,
-  docMode?: DocumentationMode
-): string {
+function createErrorMessage(errorCode: number, apiKey?: string): string {
   switch (errorCode) {
     case 429:
       return apiKey
@@ -55,9 +50,6 @@ function createErrorMessage(
     case 401:
       return `Unauthorized. Please check your API key. The API key you provided (possibly incorrect) is: ${apiKey}. API keys should start with 'ctx7sk'`;
     default:
-      if (docMode) {
-        return `Failed to fetch ${docMode} documentation. Please try again later. Error code: ${errorCode}`;
-      }
       return `Failed to fetch documentation. Please try again later. Error code: ${errorCode}`;
   }
 }
@@ -162,7 +154,7 @@ export async function fetchLibraryDocumentation(
     const response = await fetch(url, { headers });
     if (!response.ok) {
       const errorCode = response.status;
-      const errorMessage = createErrorMessage(errorCode, apiKey, docMode);
+      const errorMessage = createErrorMessage(errorCode, apiKey);
       console.error(errorMessage);
       return errorMessage;
     }
