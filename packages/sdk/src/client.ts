@@ -16,11 +16,11 @@ export class Context7 {
   private httpClient: HttpClient;
 
   constructor(config: Context7Config = {}) {
-    const apiKey = config.apiKey || process.env.CONTEXT7_API_KEY || process.env.API_KEY;
+    const apiKey = config.apiKey || process.env.CONTEXT7_API_KEY;
 
     if (!apiKey) {
       throw new Context7Error(
-        "API key is required. Pass it in the config or set CONTEXT7_API_KEY or API_KEY environment variable."
+        "API key is required. Pass it in the config or set CONTEXT7_API_KEY environment variable."
       );
     }
 
