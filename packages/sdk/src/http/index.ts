@@ -160,12 +160,8 @@ export class HttpClient implements Requester {
     }
 
     if (!res.ok) {
-      try {
-        const errorBody = (await res.json()) as { error?: string; message?: string };
-        throw new Context7Error(errorBody.error || errorBody.message || res.statusText);
-      } catch {
-        throw new Context7Error(res.statusText);
-      }
+      const errorBody = (await res.json()) as { error?: string; message?: string };
+      throw new Context7Error(errorBody.error || errorBody.message || res.statusText);
     }
 
     const contentType = res.headers.get("content-type");
