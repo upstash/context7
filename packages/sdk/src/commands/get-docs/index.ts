@@ -1,29 +1,37 @@
 import { Command } from "@commands/command";
-import type { GetDocsOptions, CodeSnippetsResponse, InfoSnippetsResponse } from "@commands/types";
+import type {
+  GetDocsOptions,
+  CodeSnippetsResponse,
+  InfoSnippetsResponse,
+  QueryParams,
+} from "@commands/types";
 
+const DEFAULT_DOC_TYPE = "code";
+
+const DEFAULT_FORMAT = "json";
 export class GetDocsCommand extends Command<string | CodeSnippetsResponse | InfoSnippetsResponse> {
   constructor(libraryId: string, options?: GetDocsOptions) {
     const cleaned = libraryId.startsWith("/") ? libraryId.slice(1) : libraryId;
     const parts = cleaned.split("/");
 
-    if (parts.length < 2) {
+    if (parts.length !== 2) {
       throw new Error(
-        `Invalid library ID format: ${libraryId}. Expected format: /username/library or /username/library/version`
+        `Invalid library ID format: ${libraryId}. Expected format: /username/library`
       );
     }
 
-    const owner = parts[0];
-    const repo = parts[1];
-    const version = parts[2] || options?.version;
+    const [owner, repo] = parts;
 
-    const docType = options?.docType || "code";
+    const version = options?.version;
+    const docType = options?.docType || DEFAULT_DOC_TYPE;
 
-    const pathParts = ["v2", "docs", docType, owner, repo];
+    const endpointParts = ["v2", "docs", docType, owner, repo];
     if (version) {
-      pathParts.push(version);
+      endpointParts.push(version);
     }
+    const endpoint = endpointParts.join("/");
 
-    const queryParams: Record<string, string | number | undefined> = {};
+    const queryParams: QueryParams = {};
 
     if (options?.topic) {
       queryParams.topic = options.topic;
@@ -31,6 +39,8 @@ export class GetDocsCommand extends Command<string | CodeSnippetsResponse | Info
 
     if (options?.format) {
       queryParams.type = options.format;
+    } else {
+      queryParams.type = DEFAULT_FORMAT;
     }
 
     if (options?.page !== undefined) {
@@ -44,10 +54,9 @@ export class GetDocsCommand extends Command<string | CodeSnippetsResponse | Info
     super(
       {
         method: "GET",
-        path: pathParts,
         query: queryParams,
       },
-      pathParts.slice(0, 3).join("/")
+      endpoint
     );
   }
 }

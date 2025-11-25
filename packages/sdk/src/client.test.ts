@@ -106,15 +106,15 @@ describe("Context7 Client", () => {
       expect(result.length).toBeGreaterThan(0);
     });
 
-    test("should get docs with default format (txt)", async () => {
+    test("should get docs with default format (json)", async () => {
       const result = await client.getDocs("/facebook/react", {
         docType: "code",
         limit: 5,
       });
 
       expect(result).toBeDefined();
-      expect(typeof result).toBe("string");
-      expect(result.length).toBeGreaterThan(0);
+      expect(typeof result).toBe("object");
+      expect(result).toHaveProperty("snippets");
     });
 
     test("should get docs with pagination", async () => {

@@ -71,11 +71,32 @@ export interface InfoSnippetsResponse {
 }
 
 export interface GetDocsOptions {
+  /**
+   * Library version to fetch docs for.
+   * @example "18.0.0"
+   */
   version?: string;
+  /**
+   * Page number for pagination.
+   */
   page?: number;
+  /**
+   * Filter docs by topic.
+   */
   topic?: string;
+  /**
+   * Number of results per page.
+   */
   limit?: number;
+  /**
+   * Type of documentation to fetch.
+   * @default "code"
+   */
   docType?: "info" | "code";
+  /**
+   * Response format.
+   * @default "json"
+   */
   format?: "json" | "txt";
 }
 
@@ -98,3 +119,5 @@ export interface AddLibraryResponse {
   message: string;
   status: "processing" | "finalized";
 }
+
+export type QueryParams = Record<string, string | number | boolean | undefined>;

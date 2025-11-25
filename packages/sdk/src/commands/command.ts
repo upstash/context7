@@ -8,7 +8,6 @@ export interface CommandRequest {
   method?: "GET" | "POST";
   body?: unknown;
   query?: Record<string, string | number | boolean | undefined>;
-  path?: string[];
 }
 
 export class Command<TResult> {
@@ -26,7 +25,7 @@ export class Command<TResult> {
   public async exec(client: Requester): Promise<TResult> {
     const { result } = await client.request<TResult>({
       method: this.request.method || "POST",
-      path: this.request.path || [this.endpoint],
+      path: [this.endpoint],
       query: this.request.query,
       body: this.request.body,
     });

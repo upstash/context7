@@ -27,7 +27,6 @@ export type Context7Request = {
 };
 export type Context7Response<TResult> = {
   result?: TResult;
-  error?: string;
 };
 
 export type Requester = {
