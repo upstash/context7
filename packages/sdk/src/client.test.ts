@@ -1,7 +1,7 @@
 import { describe, test, expect } from "vitest";
 import { Context7 } from "./client";
 import { Context7Error } from "@error";
-import type { CodeSnippetsResponse, InfoSnippetsResponse } from "@types";
+import type { CodeSnippetsResponse, InfoSnippetsResponse } from "@commands/types";
 
 describe("Context7 Client", () => {
   const apiKey = process.env.CONTEXT7_API_KEY || process.env.API_KEY!;

@@ -3,10 +3,10 @@
   "version": "0.0.1",
   "description": "JavaScript/TypeScript SDK for Context7",
   "scripts": {
-    "build": "tsc",
+    "build": "tsup",
     "test": "vitest run",
     "test:watch": "vitest",
-    "dev": "tsc --watch",
+    "dev": "tsup --watch",
     "clean": "rm -rf dist",
     "lint": "eslint .",
     "lint:check": "eslint ."
@@ -26,8 +26,15 @@
   "author": "Upstash",
   "license": "MIT",
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/client.js",
+      "require": "./dist/client.cjs"
+    }
+  },
+  "main": "./dist/client.cjs",
+  "module": "./dist/client.js",
+  "types": "./dist/client.d.ts",
   "files": [
     "dist"
   ],
@@ -38,6 +45,7 @@
   "devDependencies": {
     "@types/node": "^22.13.14",
     "dotenv": "^17.2.3",
+    "tsup": "^8.5.1",
     "typescript": "^5.8.2",
     "vitest": "^4.0.13"
   }

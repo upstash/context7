@@ -1,5 +1,5 @@
 import { Command } from "@commands/command";
-import type { GetDocsOptions, CodeSnippetsResponse, InfoSnippetsResponse } from "@types";
+import type { GetDocsOptions, CodeSnippetsResponse, InfoSnippetsResponse } from "@commands/types";
 
 export class GetDocsCommand extends Command<string | CodeSnippetsResponse | InfoSnippetsResponse> {
   constructor(libraryId: string, options?: GetDocsOptions) {

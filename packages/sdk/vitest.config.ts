@@ -14,9 +14,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "@commands": path.resolve(__dirname, "./src/commands"),
-      "@types": path.resolve(__dirname, "./src/types.ts"),
       "@http": path.resolve(__dirname, "./src/http"),
-      "@error": path.resolve(__dirname, "./src/error.ts"),
+      "@error": path.resolve(__dirname, "./src/error/index.ts"),
     },
   },
 });

@@ -16,10 +16,9 @@
     "paths": {
       "@error": ["./src/error/index.ts"],
       "@http": ["./src/http/index.ts"],
-      "@commands/*": ["./src/commands/*"],
-      "@types": ["./src/types.ts"]
+      "@commands/*": ["./src/commands/*"]
     }
   },
-  "include": ["src/**/*", "vitest.config.ts"],
+  "include": ["src/**/*", "tsup.config.ts", "vitest.config.ts"],
   "exclude": ["node_modules", "dist"]
 }

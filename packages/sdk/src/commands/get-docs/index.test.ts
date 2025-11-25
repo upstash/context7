@@ -2,7 +2,7 @@ import { describe, test, expect } from "vitest";
 import { GetDocsCommand } from "./index";
 import { newHttpClient } from "../../utils/test-utils";
 import { Context7 } from "../../client";
-import { CodeSnippetsResponse } from "@types";
+import { CodeSnippetsResponse } from "@commands/types";
 
 const httpClient = newHttpClient();
 

@@ -1,5 +1,5 @@
 import { Command } from "@commands/command";
-import type { SearchLibraryOptions, SearchLibraryResponse } from "@types";
+import type { SearchLibraryOptions, SearchLibraryResponse } from "@commands/types";
 
 export class SearchLibraryCommand extends Command<SearchLibraryResponse> {
   constructor(query: string, _options?: SearchLibraryOptions) {

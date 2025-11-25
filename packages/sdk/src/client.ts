@@ -5,11 +5,16 @@ import type {
   GetDocsOptions,
   CodeSnippetsResponse,
   InfoSnippetsResponse,
-} from "@types";
+} from "@commands/types";
 import { Context7Error } from "@error";
-import { DEFAULT_BASE_URL, API_KEY_PREFIX } from "./constants.js";
 import { HttpClient } from "@http";
 import { SearchLibraryCommand, GetDocsCommand } from "@commands/index";
+
+const DEFAULT_BASE_URL = "https://context7.com/api";
+const API_KEY_PREFIX = "ctx7sk";
+
+export type * from "@commands/types";
+export * from "@error";
 
 export class Context7 {
   private apiKey: string;
