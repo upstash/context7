@@ -1,6 +1,5 @@
 import type {
   Context7Config,
-  SearchLibraryOptions,
   SearchLibraryResponse,
   GetDocsOptions,
   CodeSnippetsResponse,
@@ -17,7 +16,6 @@ export type * from "@commands/types";
 export * from "@error";
 
 export class Context7 {
-  private apiKey: string;
   private httpClient: HttpClient;
 
   constructor(config: Context7Config = {}) {
@@ -33,12 +31,10 @@ export class Context7 {
       console.warn(`API key should start with '${API_KEY_PREFIX}'`);
     }
 
-    this.apiKey = apiKey;
-
     this.httpClient = new HttpClient({
       baseUrl: DEFAULT_BASE_URL,
       headers: {
-        Authorization: `Bearer ${this.apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       retry: {
         retries: 5,
@@ -48,11 +44,8 @@ export class Context7 {
     });
   }
 
-  async searchLibrary(
-    query: string,
-    options?: SearchLibraryOptions
-  ): Promise<SearchLibraryResponse> {
-    const command = new SearchLibraryCommand(query, options);
+  async searchLibrary(query: string): Promise<SearchLibraryResponse> {
+    const command = new SearchLibraryCommand(query);
     return await command.exec(this.httpClient);
   }
 

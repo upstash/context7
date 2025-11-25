@@ -1,8 +1,8 @@
 import { Command } from "@commands/command";
-import type { SearchLibraryOptions, SearchLibraryResponse } from "@commands/types";
+import type { SearchLibraryResponse } from "@commands/types";
 
 export class SearchLibraryCommand extends Command<SearchLibraryResponse> {
-  constructor(query: string, _options?: SearchLibraryOptions) {
+  constructor(query: string) {
     const queryParams: Record<string, string | number | undefined> = {};
 
     if (query) {

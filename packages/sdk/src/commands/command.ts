@@ -1,5 +1,4 @@
-import type { Requester, Context7Request } from "@http";
-import { Context7Error } from "@error";
+import type { Requester } from "@http";
 
 export const _ENDPOINTS = ["v2/search", "v2/docs/info", "v2/docs/code"];
 
@@ -25,18 +24,12 @@ export class Command<TResult> {
    * Execute the command using a client.
    */
   public async exec(client: Requester): Promise<TResult> {
-    const contextRequest: Context7Request = {
+    const { result } = await client.request<TResult>({
       method: this.request.method || "POST",
       path: this.request.path || [this.endpoint],
       query: this.request.query,
       body: this.request.body,
-    };
-
-    const { result, error } = await client.request<TResult>(contextRequest);
-
-    if (error) {
-      throw new Context7Error(error);
-    }
+    });
 
     if (result === undefined) {
       throw new TypeError("Request did not return a result");

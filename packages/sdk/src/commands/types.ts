@@ -2,10 +2,6 @@ export interface Context7Config {
   apiKey?: string;
 }
 
-export interface SearchLibraryOptions {
-  limit?: number;
-}
-
 export interface SearchResult {
   id: string;
   title: string;
