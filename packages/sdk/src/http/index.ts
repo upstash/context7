@@ -115,7 +115,6 @@ export class HttpClient implements Requester {
   public async request<TResult>(req: Context7Request): Promise<Context7Response<TResult>> {
     const method = req.method || "POST";
 
-    // Build URL with query parameters for GET requests
     let url = [this.baseUrl, ...(req.path ?? [])].join("/");
     if (method === "GET" && req.query) {
       const queryParams = new URLSearchParams();
@@ -141,7 +140,6 @@ export class HttpClient implements Requester {
 
     let res: Response | null = null;
     let error: Error | null = null;
-    // const abortSignal = requestOptions.signal as AbortSignal | undefined;
 
     for (let i = 0; i <= this.retry.attempts; i++) {
       try {
@@ -162,7 +160,6 @@ export class HttpClient implements Requester {
     }
 
     if (!res.ok) {
-      // Try to parse error as JSON first
       try {
         const errorBody = (await res.json()) as { error?: string; message?: string };
         throw new Context7Error(errorBody.error || errorBody.message || res.statusText);
@@ -171,15 +168,12 @@ export class HttpClient implements Requester {
       }
     }
 
-    // Check content type to determine how to parse response
     const contentType = res.headers.get("content-type");
 
     if (contentType?.includes("application/json")) {
-      // For JSON responses, the v2 API returns data directly (not wrapped in {result: ...})
       const body = await res.json();
       return { result: body as TResult };
     } else {
-      // For text responses (text/plain, text/markdown, etc.)
       const text = await res.text();
       return { result: text as TResult };
     }
