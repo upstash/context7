@@ -97,13 +97,14 @@ const codeDocs = await client.getDocs("/facebook/react", {
 console.log(`Retrieved ${codeDocs.snippets.length} code snippets`);
 console.log(`Total tokens: ${codeDocs.totalTokens}`);
 
+// Get info documentation as text
 const textDocs = await client.getDocs("/facebook/react", {
   docType: "info",
   format: "txt",
   limit: 3,
 });
 
-console.log(textDocs);
+console.log(textDocs.content);
 ```
 
 ## Error Handling

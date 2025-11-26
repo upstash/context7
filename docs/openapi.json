@@ -728,6 +728,57 @@
         ]
       }
     },
+    "headers": {
+      "X-Context7-Page": {
+        "description": "Current page number (1-indexed). Only returned for text/plain responses (type=txt).",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "example": 1
+      },
+      "X-Context7-Limit": {
+        "description": "Number of items per page. Only returned for text/plain responses (type=txt).",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "example": 10
+      },
+      "X-Context7-Total-Pages": {
+        "description": "Total number of pages available. Only returned for text/plain responses (type=txt).",
+        "schema": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "example": 10
+      },
+      "X-Context7-Has-Next": {
+        "description": "Whether a next page exists. Only returned for text/plain responses (type=txt).",
+        "schema": {
+          "type": "string",
+          "enum": ["true", "false"]
+        },
+        "example": "true"
+      },
+      "X-Context7-Has-Prev": {
+        "description": "Whether a previous page exists. Only returned for text/plain responses (type=txt).",
+        "schema": {
+          "type": "string",
+          "enum": ["true", "false"]
+        },
+        "example": "false"
+      },
+      "X-Context7-Total-Tokens": {
+        "description": "Total token count for the current page. Only returned for text/plain responses (type=txt).",
+        "schema": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "example": 1500
+      }
+    },
     "responses": {
       "CodeSnippetsJsonResponse": {
         "description": "Successful response with code snippets",
@@ -801,9 +852,30 @@
           },
           "text/plain": {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Plain text formatted documentation. Pagination metadata is returned via response headers."
             },
             "example": "### Create and Run Next.js App with create-next-app (Quick Start)\n\nSource: https://github.com/vercel/next.js/blob/canary/docs/01-app/01-getting-started/01-installation.mdx\n\nQuickly set up and start a new Next.js application using `create-next-app` with various package managers. This command creates a new project directory, installs dependencies, and starts the development server. The `--yes` flag skips interactive prompts, enabling a default setup with TypeScript, Tailwind, ESLint, App Router, and Turbopack.\n\n```bash\npnpm create next-app@latest my-app --yes\ncd my-app\npnpm dev\n```\n\n```bash\nnpx create-next-app@latest my-app --yes\ncd my-app\nnpm run dev\n```\n\n```bash\nyarn create next-app@latest my-app --yes\ncd my-app\nyarn dev\n```\n\n```bash\nbun create next-app@latest my-app --yes\ncd my-app\nbun dev\n```"
+          }
+        },
+        "headers": {
+          "X-Context7-Page": {
+            "$ref": "#/components/headers/X-Context7-Page"
+          },
+          "X-Context7-Limit": {
+            "$ref": "#/components/headers/X-Context7-Limit"
+          },
+          "X-Context7-Total-Pages": {
+            "$ref": "#/components/headers/X-Context7-Total-Pages"
+          },
+          "X-Context7-Has-Next": {
+            "$ref": "#/components/headers/X-Context7-Has-Next"
+          },
+          "X-Context7-Has-Prev": {
+            "$ref": "#/components/headers/X-Context7-Has-Prev"
+          },
+          "X-Context7-Total-Tokens": {
+            "$ref": "#/components/headers/X-Context7-Total-Tokens"
           }
         }
       },
@@ -859,9 +931,30 @@
           },
           "text/plain": {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Plain text formatted documentation. Pagination metadata is returned via response headers."
             },
             "example": "### How to Contribute > Writing MDX\n\nSource: https://github.com/vercel/next.js/blob/canary/docs/04-community/01-contribution-guide.mdx\n\nThe docs are written in [MDX](https://mdxjs.com/), a markdown format that supports JSX syntax. This allows us to embed React components in the docs. See the [GitHub Markdown Guide](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax) for a quick overview of markdown syntax."
+          }
+        },
+        "headers": {
+          "X-Context7-Page": {
+            "$ref": "#/components/headers/X-Context7-Page"
+          },
+          "X-Context7-Limit": {
+            "$ref": "#/components/headers/X-Context7-Limit"
+          },
+          "X-Context7-Total-Pages": {
+            "$ref": "#/components/headers/X-Context7-Total-Pages"
+          },
+          "X-Context7-Has-Next": {
+            "$ref": "#/components/headers/X-Context7-Has-Next"
+          },
+          "X-Context7-Has-Prev": {
+            "$ref": "#/components/headers/X-Context7-Has-Prev"
+          },
+          "X-Context7-Total-Tokens": {
+            "$ref": "#/components/headers/X-Context7-Total-Tokens"
           }
         }
       },

@@ -28,7 +28,7 @@ Retrieve documentation for a specific library. You can get code examples or info
       - `json`: Structured JSON with metadata
       - `txt`: Plain text format
 
-      Default: `"txt"`
+      Default: `"json"`
     </ParamField>
 
     <ParamField path="limit" type="number">
@@ -52,17 +52,46 @@ Retrieve documentation for a specific library. You can get code examples or info
 
 ## Response
 
-The response type is automatically inferred based on the `format` and `docType` parameters:
+The response type is automatically inferred based on the `format` and `docType` parameters. All response types extend a common base with pagination and token information.
 
 ### Text Format (`format: "txt"`)
 
-<ResponseField name="string" type="string">
-  Plain text documentation
+<ResponseField name="TextDocsResponse" type="object">
+  <Expandable title="properties">
+    <ResponseField name="content" type="string" required>
+      Plain text documentation content
+    </ResponseField>
+
+    <ResponseField name="totalTokens" type="number" required>
+      Total number of tokens in the content
+    </ResponseField>
+
+    <ResponseField name="pagination" type="Pagination" required>
+      <Expandable title="properties">
+        <ResponseField name="page" type="number" required>
+          Current page number
+        </ResponseField>
+        <ResponseField name="limit" type="number" required>
+          Number of items per page
+        </ResponseField>
+        <ResponseField name="totalPages" type="number" required>
+          Total number of pages available
+        </ResponseField>
+        <ResponseField name="hasNext" type="boolean" required>
+          Whether there is a next page
+        </ResponseField>
+        <ResponseField name="hasPrev" type="boolean" required>
+          Whether there is a previous page
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+
+  </Expandable>
 </ResponseField>
 
 ### JSON Format with Code Type (`format: "json"`, `docType: "code"`)
 
-<ResponseField name="CodeSnippetsResponse" type="object">
+<ResponseField name="CodeDocsResponse" type="object">
   <Expandable title="properties">
     <ResponseField name="snippets" type="CodeSnippet[]" required>
       Array of code snippets
@@ -136,7 +165,7 @@ The response type is automatically inferred based on the `format` and `docType` 
 
 ### JSON Format with Info Type (`format: "json"`, `docType: "info"`)
 
-<ResponseField name="InfoSnippetsResponse" type="object">
+<ResponseField name="InfoDocsResponse" type="object">
   <Expandable title="properties">
     <ResponseField name="snippets" type="InfoSnippet[]" required>
       Array of informational snippets
@@ -185,7 +214,7 @@ format: "txt",
 limit: 5,
 });
 
-console.log(docs);
+console.log(docs.content);
 
 ````
 
@@ -216,7 +245,7 @@ const docs = await client.getDocs("/facebook/react", {
   limit: 3,
 });
 
-console.log(docs);
+console.log(docs.content);
 ```
 
 ```typescript Info Docs (JSON)
