@@ -62,7 +62,7 @@ export class Context7 {
 
   async getDocs(
     libraryId: string,
-    options?: GetDocsOptions & { format?: "txt"; docType?: "info" | "code" }
+    options?: GetDocsOptions & { format?: "txt" }
   ): Promise<TextDocsResponse>;
 
   async getDocs(

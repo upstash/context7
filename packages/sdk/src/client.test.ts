@@ -375,13 +375,5 @@ describe("Context7 Client", () => {
       expect(result).toHaveProperty("snippets");
       expect((result as InfoDocsResponse).snippets).toBeDefined();
     });
-
-    test("aa", async () => {
-      const result = await client.getDocs("/facebook/react", {
-        format: "txt",
-      });
-
-      console.log(result);
-    });
   });
 });
