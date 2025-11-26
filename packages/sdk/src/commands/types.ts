@@ -56,18 +56,21 @@ export interface Pagination {
   hasPrev: boolean;
 }
 
-export interface CodeSnippetsResponse {
-  snippets: CodeSnippet[];
-  totalTokens: number;
+export interface DocsResponseBase {
   pagination: Pagination;
-  metadata: APIResponseMetadata;
+  totalTokens: number;
 }
 
-export interface InfoSnippetsResponse {
+export interface CodeDocsResponse extends DocsResponseBase {
+  snippets: CodeSnippet[];
+}
+
+export interface InfoDocsResponse extends DocsResponseBase {
   snippets: InfoSnippet[];
-  totalTokens: number;
-  pagination: Pagination;
-  metadata: APIResponseMetadata;
+}
+
+export interface TextDocsResponse extends DocsResponseBase {
+  content: string;
 }
 
 export interface GetDocsOptions {

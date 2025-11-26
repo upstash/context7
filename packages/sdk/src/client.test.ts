@@ -1,7 +1,7 @@
 import { describe, test, expect } from "vitest";
 import { Context7 } from "./client";
 import { Context7Error } from "@error";
-import type { CodeSnippetsResponse, InfoSnippetsResponse } from "@commands/types";
+import type { CodeDocsResponse, InfoDocsResponse } from "@commands/types";
 
 describe("Context7 Client", () => {
   const apiKey = process.env.CONTEXT7_API_KEY || process.env.API_KEY!;
@@ -82,7 +82,7 @@ describe("Context7 Client", () => {
   describe("getDocs - text format", () => {
     const client = new Context7({ apiKey });
 
-    test("should get code docs as text", async () => {
+    test("should get code docs as text with pagination and totalTokens", async () => {
       const result = await client.getDocs("/facebook/react", {
         docType: "code",
         format: "txt",
@@ -90,11 +90,15 @@ describe("Context7 Client", () => {
       });
 
       expect(result).toBeDefined();
-      expect(typeof result).toBe("string");
-      expect(result.length).toBeGreaterThan(0);
+      expect(result).toHaveProperty("content");
+      expect(result).toHaveProperty("pagination");
+      expect(result).toHaveProperty("totalTokens");
+      expect(typeof result.content).toBe("string");
+      expect(result.content.length).toBeGreaterThan(0);
+      expect(typeof result.totalTokens).toBe("number");
     });
 
-    test("should get info docs as text", async () => {
+    test("should get info docs as text with pagination and totalTokens", async () => {
       const result = await client.getDocs("/facebook/react", {
         docType: "info",
         format: "txt",
@@ -102,8 +106,12 @@ describe("Context7 Client", () => {
       });
 
       expect(result).toBeDefined();
-      expect(typeof result).toBe("string");
-      expect(result.length).toBeGreaterThan(0);
+      expect(result).toHaveProperty("content");
+      expect(result).toHaveProperty("pagination");
+      expect(result).toHaveProperty("totalTokens");
+      expect(typeof result.content).toBe("string");
+      expect(result.content.length).toBeGreaterThan(0);
+      expect(typeof result.totalTokens).toBe("number");
     });
 
     test("should get docs with default format (json)", async () => {
@@ -117,7 +125,7 @@ describe("Context7 Client", () => {
       expect(result).toHaveProperty("snippets");
     });
 
-    test("should get docs with pagination", async () => {
+    test("should get docs with pagination metadata", async () => {
       const page1 = await client.getDocs("/facebook/react", {
         docType: "code",
         format: "txt",
@@ -134,8 +142,12 @@ describe("Context7 Client", () => {
 
       expect(page1).toBeDefined();
       expect(page2).toBeDefined();
-      expect(typeof page1).toBe("string");
-      expect(typeof page2).toBe("string");
+      expect(page1).toHaveProperty("content");
+      expect(page1).toHaveProperty("pagination");
+      expect(page2).toHaveProperty("content");
+      expect(page2).toHaveProperty("pagination");
+      expect(page1.pagination.page).toBe(1);
+      expect(page2.pagination.page).toBe(2);
     });
 
     test("should get docs with topic filter", async () => {
@@ -147,7 +159,9 @@ describe("Context7 Client", () => {
       });
 
       expect(result).toBeDefined();
-      expect(typeof result).toBe("string");
+      expect(result).toHaveProperty("content");
+      expect(result).toHaveProperty("pagination");
+      expect(result).toHaveProperty("totalTokens");
     });
   });
 
@@ -164,14 +178,13 @@ describe("Context7 Client", () => {
       expect(result).toBeDefined();
       expect(typeof result).toBe("object");
 
-      const codeResult = result as CodeSnippetsResponse;
+      const codeResult = result as CodeDocsResponse;
       expect(codeResult.snippets).toBeDefined();
       expect(Array.isArray(codeResult.snippets)).toBe(true);
       expect(codeResult.snippets.length).toBeGreaterThan(0);
       expect(codeResult.totalTokens).toBeDefined();
       expect(typeof codeResult.totalTokens).toBe("number");
       expect(codeResult.pagination).toBeDefined();
-      expect(codeResult.metadata).toBeDefined();
     });
 
     test("should get info docs as JSON", async () => {
@@ -184,14 +197,13 @@ describe("Context7 Client", () => {
       expect(result).toBeDefined();
       expect(typeof result).toBe("object");
 
-      const infoResult = result as InfoSnippetsResponse;
+      const infoResult = result as InfoDocsResponse;
       expect(infoResult.snippets).toBeDefined();
       expect(Array.isArray(infoResult.snippets)).toBe(true);
       expect(infoResult.snippets.length).toBeGreaterThan(0);
       expect(infoResult.totalTokens).toBeDefined();
       expect(typeof infoResult.totalTokens).toBe("number");
       expect(infoResult.pagination).toBeDefined();
-      expect(infoResult.metadata).toBeDefined();
     });
 
     test("should have correct code snippet structure", async () => {
@@ -199,7 +211,7 @@ describe("Context7 Client", () => {
         docType: "code",
         format: "json",
         limit: 1,
-      })) as CodeSnippetsResponse;
+      })) as CodeDocsResponse;
 
       const snippet = result.snippets[0];
       expect(snippet).toHaveProperty("codeTitle");
@@ -217,7 +229,7 @@ describe("Context7 Client", () => {
         docType: "info",
         format: "json",
         limit: 1,
-      })) as InfoSnippetsResponse;
+      })) as InfoDocsResponse;
 
       const snippet = result.snippets[0];
       expect(snippet).toHaveProperty("content");
@@ -232,7 +244,7 @@ describe("Context7 Client", () => {
         format: "json",
         page: 1,
         limit: 5,
-      })) as CodeSnippetsResponse;
+      })) as CodeDocsResponse;
 
       expect(result.pagination).toBeDefined();
       expect(result.pagination.page).toBe(1);
@@ -248,7 +260,7 @@ describe("Context7 Client", () => {
         docType: "code",
         format: "json",
         limit,
-      })) as CodeSnippetsResponse;
+      })) as CodeDocsResponse;
 
       expect(result.snippets.length).toBeLessThanOrEqual(limit);
     });
@@ -265,7 +277,9 @@ describe("Context7 Client", () => {
       });
 
       expect(result).toBeDefined();
-      expect(typeof result).toBe("string");
+      expect(result).toHaveProperty("content");
+      expect(result).toHaveProperty("pagination");
+      expect(result).toHaveProperty("totalTokens");
     });
   });
 
@@ -280,8 +294,10 @@ describe("Context7 Client", () => {
       });
 
       expect(result).toBeDefined();
-      expect(typeof result).toBe("string");
-      expect(result.length).toBeGreaterThan(0);
+      expect(result).toHaveProperty("content");
+      expect(result).toHaveProperty("pagination");
+      expect(result).toHaveProperty("totalTokens");
+      expect(result.content.length).toBeGreaterThan(0);
     });
 
     test("should get docs for Express", async () => {
@@ -292,8 +308,10 @@ describe("Context7 Client", () => {
       });
 
       expect(result).toBeDefined();
-      expect(typeof result).toBe("string");
-      expect(result.length).toBeGreaterThan(0);
+      expect(result).toHaveProperty("content");
+      expect(result).toHaveProperty("pagination");
+      expect(result).toHaveProperty("totalTokens");
+      expect(result.content.length).toBeGreaterThan(0);
     });
   });
 
@@ -321,16 +339,20 @@ describe("Context7 Client", () => {
   describe("type inference", () => {
     const client = new Context7({ apiKey });
 
-    test("should infer string type for txt format", async () => {
+    test("should infer TextDocsResponse type for txt format", async () => {
       const result = await client.getDocs("/facebook/react", {
         format: "txt",
         limit: 1,
       });
 
-      expect(typeof result).toBe("string");
+      expect(result).toHaveProperty("content");
+      expect(result).toHaveProperty("pagination");
+      expect(result).toHaveProperty("totalTokens");
+      expect(typeof result.content).toBe("string");
+      expect(typeof result.totalTokens).toBe("number");
     });
 
-    test("should infer CodeSnippetsResponse for json format with code docType", async () => {
+    test("should infer CodeDocsResponse for json format with code docType", async () => {
       const result = await client.getDocs("/facebook/react", {
         format: "json",
         docType: "code",
@@ -338,10 +360,10 @@ describe("Context7 Client", () => {
       });
 
       expect(result).toHaveProperty("snippets");
-      expect((result as CodeSnippetsResponse).snippets).toBeDefined();
+      expect((result as CodeDocsResponse).snippets).toBeDefined();
     });
 
-    test("should infer InfoSnippetsResponse for json format with info docType", async () => {
+    test("should infer InfoDocsResponse for json format with info docType", async () => {
       const result = await client.getDocs("/facebook/react", {
         format: "json",
         docType: "info",
@@ -349,7 +371,7 @@ describe("Context7 Client", () => {
       });
 
       expect(result).toHaveProperty("snippets");
-      expect((result as InfoSnippetsResponse).snippets).toBeDefined();
+      expect((result as InfoDocsResponse).snippets).toBeDefined();
     });
   });
 });

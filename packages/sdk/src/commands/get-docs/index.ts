@@ -1,15 +1,21 @@
 import { Command } from "@commands/command";
 import type {
   GetDocsOptions,
-  CodeSnippetsResponse,
-  InfoSnippetsResponse,
+  CodeDocsResponse,
+  InfoDocsResponse,
+  TextDocsResponse,
   QueryParams,
 } from "@commands/types";
+import type { Requester } from "@http";
 
 const DEFAULT_DOC_TYPE = "code";
-
 const DEFAULT_FORMAT = "json";
-export class GetDocsCommand extends Command<string | CodeSnippetsResponse | InfoSnippetsResponse> {
+
+export class GetDocsCommand extends Command<
+  TextDocsResponse | CodeDocsResponse | InfoDocsResponse
+> {
+  private readonly format: "json" | "txt";
+
   constructor(libraryId: string, options?: GetDocsOptions) {
     const cleaned = libraryId.startsWith("/") ? libraryId.slice(1) : libraryId;
     const parts = cleaned.split("/");
@@ -37,11 +43,8 @@ export class GetDocsCommand extends Command<string | CodeSnippetsResponse | Info
       queryParams.topic = options.topic;
     }
 
-    if (options?.format) {
-      queryParams.type = options.format;
-    } else {
-      queryParams.type = DEFAULT_FORMAT;
-    }
+    const format = options?.format ?? DEFAULT_FORMAT;
+    queryParams.type = format;
 
     if (options?.page !== undefined) {
       queryParams.page = options.page;
@@ -58,5 +61,46 @@ export class GetDocsCommand extends Command<string | CodeSnippetsResponse | Info
       },
       endpoint
     );
+
+    this.format = format;
+  }
+
+  public override async exec(
+    client: Requester
+  ): Promise<TextDocsResponse | CodeDocsResponse | InfoDocsResponse> {
+    const { result, headers } = await client.request<string | CodeDocsResponse | InfoDocsResponse>({
+      method: this.request.method || "POST",
+      path: [this.endpoint],
+      query: this.request.query,
+      body: this.request.body,
+    });
+
+    if (result === undefined) {
+      throw new TypeError("Request did not return a result");
+    }
+
+    if (this.format === "txt" && typeof result === "string") {
+      const defaultPagination = {
+        page: 1,
+        limit: 10,
+        totalPages: 1,
+        hasNext: false,
+        hasPrev: false,
+      };
+
+      return {
+        content: result,
+        pagination: {
+          page: headers?.page ?? defaultPagination.page,
+          limit: headers?.limit ?? defaultPagination.limit,
+          totalPages: headers?.totalPages ?? defaultPagination.totalPages,
+          hasNext: headers?.hasNext ?? defaultPagination.hasNext,
+          hasPrev: headers?.hasPrev ?? defaultPagination.hasPrev,
+        },
+        totalTokens: headers?.totalTokens ?? 0,
+      } satisfies TextDocsResponse;
+    }
+
+    return result as CodeDocsResponse | InfoDocsResponse;
   }
 }

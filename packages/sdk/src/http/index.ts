@@ -25,8 +25,18 @@ export type Context7Request = {
    */
   query?: Record<string, string | number | boolean | undefined>;
 };
+export type TxtResponseHeaders = {
+  page: number;
+  limit: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+  totalTokens: number;
+};
+
 export type Context7Response<TResult> = {
   result?: TResult;
+  headers?: TxtResponseHeaders;
 };
 
 export type Requester = {
@@ -170,7 +180,30 @@ export class HttpClient implements Requester {
       return { result: body as TResult };
     } else {
       const text = await res.text();
-      return { result: text as TResult };
+      const headers = this.extractTxtResponseHeaders(res.headers);
+      return { result: text as TResult, headers };
     }
+  }
+
+  private extractTxtResponseHeaders(headers: Headers): TxtResponseHeaders | undefined {
+    const page = headers.get("x-context7-page");
+    const limit = headers.get("x-context7-limit");
+    const totalPages = headers.get("x-context7-total-pages");
+    const hasNext = headers.get("x-context7-has-next");
+    const hasPrev = headers.get("x-context7-has-prev");
+    const totalTokens = headers.get("x-context7-total-tokens");
+
+    if (!page || !limit || !totalPages || !hasNext || !hasPrev || !totalTokens) {
+      return undefined;
+    }
+
+    return {
+      page: parseInt(page, 10),
+      limit: parseInt(limit, 10),
+      totalPages: parseInt(totalPages, 10),
+      hasNext: hasNext === "true",
+      hasPrev: hasPrev === "true",
+      totalTokens: parseInt(totalTokens, 10),
+    };
   }
 }

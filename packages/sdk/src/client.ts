@@ -2,8 +2,9 @@ import type {
   Context7Config,
   SearchLibraryResponse,
   GetDocsOptions,
-  CodeSnippetsResponse,
-  InfoSnippetsResponse,
+  CodeDocsResponse,
+  InfoDocsResponse,
+  TextDocsResponse,
 } from "@commands/types";
 import { Context7Error } from "@error";
 import { HttpClient } from "@http";
@@ -52,19 +53,22 @@ export class Context7 {
   async getDocs(
     libraryId: string,
     options: GetDocsOptions & { format: "json"; docType: "info" }
-  ): Promise<InfoSnippetsResponse>;
+  ): Promise<InfoDocsResponse>;
 
   async getDocs(
     libraryId: string,
     options: GetDocsOptions & { format: "json"; docType?: "code" }
-  ): Promise<CodeSnippetsResponse>;
+  ): Promise<CodeDocsResponse>;
 
-  async getDocs(libraryId: string, options?: GetDocsOptions & { format?: "txt" }): Promise<string>;
+  async getDocs(
+    libraryId: string,
+    options?: GetDocsOptions & { format?: "txt" }
+  ): Promise<TextDocsResponse>;
 
   async getDocs(
     libraryId: string,
     options?: GetDocsOptions
-  ): Promise<string | CodeSnippetsResponse | InfoSnippetsResponse> {
+  ): Promise<TextDocsResponse | CodeDocsResponse | InfoDocsResponse> {
     const command = new GetDocsCommand(libraryId, options);
     return await command.exec(this.httpClient);
   }
