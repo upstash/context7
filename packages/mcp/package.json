@@ -6,6 +6,8 @@
   "scripts": {
     "build": "tsc && chmod 755 dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint .",
+    "lint:check": "eslint .",
     "dev": "tsc --watch",
     "start": "node dist/index.js --transport http",
     "pack-mcpb": "pnpm install && pnpm run build && rm -rf node_modules && pnpm install --prod && mv mcpb/.mcpbignore .mcpbignore && mv mcpb/manifest.json manifest.json && mv public/icon.png icon.png && mcpb validate manifest.json && mcpb pack . mcpb/context7.mcpb && mv manifest.json mcpb/manifest.json && mv .mcpbignore mcpb/.mcpbignore && mv icon.png public/icon.png && bun install"
