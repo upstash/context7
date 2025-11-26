@@ -41,10 +41,7 @@
               "sdks/ts/getting-started",
               {
                 "group": "Commands",
-                "pages": [
-                  "sdks/ts/commands/search-library",
-                  "sdks/ts/commands/get-docs"
-                ]
+                "pages": ["sdks/ts/commands/search-library", "sdks/ts/commands/get-docs"]
               }
             ]
           }
