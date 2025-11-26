@@ -103,24 +103,4 @@ export interface GetDocsOptions {
   format?: "json" | "txt";
 }
 
-export type GetLibraryResponse = SearchResult;
-
-export interface AddLibraryParams {
-  docsRepoUrl?: string;
-  llmstxtUrl?: string;
-  branch?: string;
-  folders?: string[];
-  excludeFolders?: string[];
-  apiKey?: string;
-}
-
-export interface AddLibraryResponse {
-  projectName: string;
-  metadata: {
-    authentication: string;
-  };
-  message: string;
-  status: "processing" | "finalized";
-}
-
 export type QueryParams = Record<string, string | number | boolean | undefined>;
