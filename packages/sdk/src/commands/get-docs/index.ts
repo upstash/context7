@@ -9,7 +9,7 @@ import type {
 import type { Requester } from "@http";
 
 const DEFAULT_DOC_TYPE = "code";
-const DEFAULT_FORMAT = "json";
+const DEFAULT_FORMAT = "txt";
 
 export class GetDocsCommand extends Command<
   TextDocsResponse | CodeDocsResponse | InfoDocsResponse

@@ -114,7 +114,7 @@ describe("Context7 Client", () => {
       expect(typeof result.totalTokens).toBe("number");
     });
 
-    test("should get docs with default format (json)", async () => {
+    test("should get docs with default format (txt)", async () => {
       const result = await client.getDocs("/facebook/react", {
         docType: "code",
         limit: 5,
@@ -122,7 +122,9 @@ describe("Context7 Client", () => {
 
       expect(result).toBeDefined();
       expect(typeof result).toBe("object");
-      expect(result).toHaveProperty("snippets");
+      expect(result).toHaveProperty("content");
+      expect(result).toHaveProperty("pagination");
+      expect(result).toHaveProperty("totalTokens");
     });
 
     test("should get docs with pagination metadata", async () => {
@@ -372,6 +374,14 @@ describe("Context7 Client", () => {
 
       expect(result).toHaveProperty("snippets");
       expect((result as InfoDocsResponse).snippets).toBeDefined();
+    });
+
+    test("aa", async () => {
+      const result = await client.getDocs("/facebook/react", {
+        format: "txt",
+      });
+
+      console.log(result);
     });
   });
 });
