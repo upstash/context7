@@ -9,7 +9,7 @@ const httpClient = newHttpClient();
 describe("GetDocsCommand", () => {
   test("should get library code docs as text with pagination and totalTokens", async () => {
     const command = new GetDocsCommand("/facebook/react", {
-      docType: "code",
+      mode: "code",
       format: "txt",
       limit: 10,
     });
@@ -32,7 +32,7 @@ describe("GetDocsCommand", () => {
 
   test("should get library info docs as text with pagination and totalTokens", async () => {
     const command = new GetDocsCommand("/facebook/react", {
-      docType: "info",
+      mode: "info",
       format: "txt",
       limit: 10,
     });
@@ -50,7 +50,7 @@ describe("GetDocsCommand", () => {
 
   test("should get library code docs as JSON", async () => {
     const command = new GetDocsCommand("/facebook/react", {
-      docType: "code",
+      mode: "code",
       format: "json",
       limit: 5,
     });
@@ -70,7 +70,7 @@ describe("GetDocsCommand", () => {
     });
 
     const result = await client.getDocs("/facebook/react", {
-      docType: "code",
+      mode: "code",
       format: "txt",
       limit: 10,
     });
@@ -89,7 +89,7 @@ describe("GetDocsCommand", () => {
     });
 
     const result = await client.getDocs("/facebook/react", {
-      docType: "info",
+      mode: "info",
       format: "txt",
       limit: 10,
     });

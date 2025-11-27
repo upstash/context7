@@ -15,8 +15,8 @@
     "clean": "pnpm -r run clean && rm -rf node_modules",
     "lint": "pnpm -r run lint",
     "lint:check": "pnpm -r run lint:check",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "pnpm -r run format",
+    "format:check": "pnpm -r run format:check",
     "release": "pnpm build && changeset publish",
     "release:snapshot": "changeset version --snapshot canary && pnpm build && changeset publish --tag canary --no-git-tag"
   },

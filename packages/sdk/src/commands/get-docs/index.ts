@@ -29,9 +29,9 @@ export class GetDocsCommand extends Command<
     const [owner, repo] = parts;
 
     const version = options?.version;
-    const docType = options?.docType || DEFAULT_DOC_TYPE;
+    const mode = options?.mode || DEFAULT_DOC_TYPE;
 
-    const endpointParts = ["v2", "docs", docType, owner, repo];
+    const endpointParts = ["v2", "docs", mode, owner, repo];
     if (version) {
       endpointParts.push(version);
     }

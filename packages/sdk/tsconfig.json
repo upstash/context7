@@ -19,6 +19,6 @@
       "@commands/*": ["./src/commands/*"]
     }
   },
-  "include": ["src/**/*", "tsup.config.ts", "vitest.config.ts"],
+  "include": ["src/**/*", "tsup.config.ts", "vitest.config.ts", "eslint.config.js"],
   "exclude": ["node_modules", "dist"]
 }
