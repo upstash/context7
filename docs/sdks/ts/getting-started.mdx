@@ -87,10 +87,9 @@ const client = new Context7();
 const searchResponse = await client.searchLibrary("react");
 console.log(`Found ${searchResponse.results.length} libraries`);
 
-// Get code documentation as JSON
+// Get code documentation (JSON is the default format)
 const codeDocs = await client.getDocs("/facebook/react", {
-  docType: "code",
-  format: "json",
+  mode: "code",
   limit: 5,
 });
 
@@ -99,7 +98,7 @@ console.log(`Total tokens: ${codeDocs.totalTokens}`);
 
 // Get info documentation as text
 const textDocs = await client.getDocs("/facebook/react", {
-  docType: "info",
+  mode: "info",
   format: "txt",
   limit: 3,
 });
@@ -120,7 +119,7 @@ const client = new Context7({
 
 try {
   const docs = await client.getDocs("/invalid/library", {
-    docType: "code",
+    mode: "code",
     format: "txt",
   });
 } catch (error) {

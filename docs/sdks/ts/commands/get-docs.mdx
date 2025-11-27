@@ -15,7 +15,7 @@ Retrieve documentation for a specific library. You can get code examples or info
 
 <ParamField path="options" type="GetDocsOptions">
   <Expandable title="properties">
-    <ParamField path="docType" type="'code' | 'info'">
+    <ParamField path="mode" type="'code' | 'info'">
       Type of documentation to retrieve
       - `code`: Code examples and API documentation
       - `info`: Informational documentation and guides
@@ -52,7 +52,7 @@ Retrieve documentation for a specific library. You can get code examples or info
 
 ## Response
 
-The response type is automatically inferred based on the `format` and `docType` parameters. All response types extend a common base with pagination and token information.
+The response type is automatically inferred based on the `format` and `mode` parameters. All response types extend a common base with pagination and token information.
 
 ### Text Format (`format: "txt"`)
 
@@ -89,7 +89,7 @@ The response type is automatically inferred based on the `format` and `docType` 
   </Expandable>
 </ResponseField>
 
-### JSON Format with Code Type (`format: "json"`, `docType: "code"`)
+### JSON Format with Code Type (`format: "json"`, `mode: "code"`)
 
 <ResponseField name="CodeDocsResponse" type="object">
   <Expandable title="properties">
@@ -163,7 +163,7 @@ The response type is automatically inferred based on the `format` and `docType` 
   </Expandable>
 </ResponseField>
 
-### JSON Format with Info Type (`format: "json"`, `docType: "info"`)
+### JSON Format with Info Type (`format: "json"`, `mode: "info"`)
 
 <ResponseField name="InfoDocsResponse" type="object">
   <Expandable title="properties">
@@ -203,34 +203,33 @@ The response type is automatically inferred based on the `format` and `docType` 
 ## Examples
 
 <RequestExample>
+```typescript Code Docs (JSON - Default)
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7();
+
+// JSON is the default format, no need to specify
+const docs = await client.getDocs("/facebook/react", {
+  mode: "code",
+  limit: 5,
+});
+
+console.log(`Retrieved ${docs.snippets.length} code snippets`);
+```
+
 ```typescript Code Docs (Text)
 import { Context7 } from "@upstash/context7-sdk";
 
 const client = new Context7();
 
 const docs = await client.getDocs("/facebook/react", {
-docType: "code",
-format: "txt",
-limit: 5,
-});
-
-console.log(docs.content);
-
-````
-
-```typescript Code Docs (JSON)
-import { Context7 } from "@upstash/context7-sdk";
-
-const client = new Context7();
-
-const docs = await client.getDocs("/facebook/react", {
-  docType: "code",
-  format: "json",
+  mode: "code",
+  format: "txt",
   limit: 5,
 });
 
-console.log(`Retrieved ${docs.snippets.length} code snippets`);
-````
+console.log(docs.content);
+```
 
 ```typescript Info Docs (Text)
 import { Context7 } from "@upstash/context7-sdk";
@@ -240,7 +239,7 @@ const client = new Context7({
 });
 
 const docs = await client.getDocs("/facebook/react", {
-  docType: "info",
+  mode: "info",
   format: "txt",
   limit: 3,
 });
@@ -256,7 +255,7 @@ const client = new Context7({
 });
 
 const docs = await client.getDocs("/facebook/react", {
-  docType: "info",
+  mode: "info",
   format: "json",
   limit: 3,
 });
@@ -274,7 +273,7 @@ const client = new Context7({
 });
 
 const page1 = await client.getDocs("/facebook/react", {
-  docType: "code",
+  mode: "code",
   format: "json",
   page: 1,
   limit: 10,
@@ -285,7 +284,7 @@ console.log(`Has next: ${page1.pagination.hasNext}`);
 
 if (page1.pagination.hasNext) {
   const page2 = await client.getDocs("/facebook/react", {
-    docType: "code",
+    mode: "code",
     format: "json",
     page: 2,
     limit: 10,
@@ -302,7 +301,7 @@ const client = new Context7({
 });
 
 const hooks = await client.getDocs("/facebook/react", {
-  docType: "code",
+  mode: "code",
   format: "json",
   topic: "hooks",
   limit: 5,
@@ -319,7 +318,7 @@ const client = new Context7({
 });
 
 const docs = await client.getDocs("/facebook/react", {
-  docType: "code",
+  mode: "code",
   format: "json",
   version: "18.0.0",
   limit: 5,
@@ -341,7 +340,7 @@ const client = new Context7({
 
 async function getRelevantDocs(library: string, topic: string) {
   const docs = await client.getDocs(library, {
-    docType: "code",
+    mode: "code",
     format: "json",
     topic,
     limit: 5,
@@ -374,7 +373,7 @@ async function getAllDocs(library: string) {
 
   while (hasMore) {
     const response = await client.getDocs(library, {
-      docType: "code",
+      mode: "code",
       format: "json",
       page,
       limit: 100,
@@ -402,7 +401,7 @@ const client = new Context7({
 });
 
 const docs = await client.getDocs("/facebook/react", {
-  docType: "code",
+  mode: "code",
   format: "json",
   limit: 20,
 });
