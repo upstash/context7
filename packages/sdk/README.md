@@ -48,16 +48,16 @@ const filteredDocs = await client.getDocs("/facebook/react", {
   page: 1,
 });
 
-// Get documentation as text
+// Get documentation as JSON by default
 const docs = await client.getDocs("/vercel/next.js");
-console.log(docs.content);
+console.log(docs.snippets);
 
-// Get documentation as JSON with code snippets
+// Get documentation as TXT
 const codeDocs = await client.getDocs("/mongodb/docs", {
-  format: "json",
+  format: "txt",
   mode: "code",
 });
-console.log(codeDocs.snippets);
+console.log(codeDocs.content);
 ```
 
 ## Configuration
