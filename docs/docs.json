@@ -33,6 +33,10 @@
         ]
       },
       {
+        "group": "Integrations",
+        "pages": ["integrations/code-rabbit"]
+      },
+      {
         "group": "API Reference",
         "openapi": "openapi.json"
       },

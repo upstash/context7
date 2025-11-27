@@ -1,0 +1,45 @@
+---
+title: CodeRabbit
+sidebarTitle: CodeRabbit
+description: AI-powered code review tool
+---
+
+[CodeRabbit](https://coderabbit.ai) is an AI-powered code review tool that automatically reviews pull requests. By connecting Context7 as an MCP server, CodeRabbit can access up-to-date library documentation during reviews, helping it verify implementations against the latest API references and best practices.
+
+## Setup
+
+1. Go to your [CodeRabbit dashboard](https://app.coderabbit.ai)
+2. Navigate to **Integrations** → **MCP Servers**
+3. Click **Add new MCP server** and select **Custom Server**
+4. Configure the server with:
+
+| Field | Value |
+|-------|-------|
+| Name | `context7` |
+| URL | `https://mcp.context7.com/mcp` |
+
+5. Add the following header for authentication:
+
+| Header | Value |
+|--------|-------|
+| `CONTEXT7_API_KEY` | Your API key from the [Context7 dashboard](https://context7.com/dashboard) |
+
+6. Save the configuration
+
+## Usage Guidance
+
+In the **Usage Guidance** field, you can instruct CodeRabbit on how to use Context7 during reviews. For example:
+
+```
+Use Context7 to look up documentation for any libraries used in the code being reviewed.
+Verify that API usage matches the latest documentation and flag any deprecated patterns.
+```
+
+## How It Works
+
+Once connected, CodeRabbit will query Context7 for relevant library documentation when reviewing pull requests. This helps CodeRabbit:
+
+- Verify correct API usage against the latest documentation
+- Identify deprecated methods or patterns
+- Suggest improvements based on library best practices
+- Provide more accurate and informed review comments
