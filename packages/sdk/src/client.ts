@@ -52,18 +52,18 @@ export class Context7 {
 
   async getDocs(
     libraryId: string,
-    options: GetDocsOptions & { format: "json"; docType: "info" }
+    options: GetDocsOptions & { format: "txt" }
+  ): Promise<TextDocsResponse>;
+
+  async getDocs(
+    libraryId: string,
+    options: GetDocsOptions & { format?: "json"; docType: "info" }
   ): Promise<InfoDocsResponse>;
 
   async getDocs(
     libraryId: string,
-    options: GetDocsOptions & { format: "json"; docType?: "code" }
+    options?: GetDocsOptions & { format?: "json"; docType?: "code" }
   ): Promise<CodeDocsResponse>;
-
-  async getDocs(
-    libraryId: string,
-    options?: GetDocsOptions & { format?: "txt" }
-  ): Promise<TextDocsResponse>;
 
   async getDocs(
     libraryId: string,

@@ -98,7 +98,7 @@ export interface GetDocsOptions {
   docType?: "info" | "code";
   /**
    * Response format.
-   * @default "txt"
+   * @default "json"
    */
   format?: "json" | "txt";
 }
