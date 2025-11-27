@@ -95,7 +95,7 @@ export interface GetDocsOptions {
    * Type of documentation to fetch.
    * @default "code"
    */
-  docType?: "info" | "code";
+  mode?: "info" | "code";
   /**
    * Response format.
    * @default "json"

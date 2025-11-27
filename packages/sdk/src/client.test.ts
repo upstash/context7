@@ -84,7 +84,7 @@ describe("Context7 Client", () => {
 
     test("should get code docs as text with pagination and totalTokens", async () => {
       const result = await client.getDocs("/facebook/react", {
-        docType: "code",
+        mode: "code",
         format: "txt",
         limit: 5,
       });
@@ -100,7 +100,7 @@ describe("Context7 Client", () => {
 
     test("should get info docs as text with pagination and totalTokens", async () => {
       const result = await client.getDocs("/facebook/react", {
-        docType: "info",
+        mode: "info",
         format: "txt",
         limit: 5,
       });
@@ -116,7 +116,7 @@ describe("Context7 Client", () => {
 
     test("should get docs with default format (json)", async () => {
       const result = await client.getDocs("/facebook/react", {
-        docType: "code",
+        mode: "code",
         limit: 5,
       });
 
@@ -127,14 +127,14 @@ describe("Context7 Client", () => {
 
     test("should get docs with pagination metadata", async () => {
       const page1 = await client.getDocs("/facebook/react", {
-        docType: "code",
+        mode: "code",
         format: "txt",
         page: 1,
         limit: 3,
       });
 
       const page2 = await client.getDocs("/facebook/react", {
-        docType: "code",
+        mode: "code",
         format: "txt",
         page: 2,
         limit: 3,
@@ -152,7 +152,7 @@ describe("Context7 Client", () => {
 
     test("should get docs with topic filter", async () => {
       const result = await client.getDocs("/facebook/react", {
-        docType: "code",
+        mode: "code",
         format: "txt",
         topic: "hooks",
         limit: 5,
@@ -170,7 +170,7 @@ describe("Context7 Client", () => {
 
     test("should get code docs as JSON", async () => {
       const result = await client.getDocs("/facebook/react", {
-        docType: "code",
+        mode: "code",
         format: "json",
         limit: 3,
       });
@@ -189,7 +189,7 @@ describe("Context7 Client", () => {
 
     test("should get info docs as JSON", async () => {
       const result = await client.getDocs("/facebook/react", {
-        docType: "info",
+        mode: "info",
         format: "json",
         limit: 3,
       });
@@ -208,7 +208,7 @@ describe("Context7 Client", () => {
 
     test("should have correct code snippet structure", async () => {
       const result = (await client.getDocs("/facebook/react", {
-        docType: "code",
+        mode: "code",
         format: "json",
         limit: 1,
       })) as CodeDocsResponse;
@@ -226,7 +226,7 @@ describe("Context7 Client", () => {
 
     test("should have correct info snippet structure", async () => {
       const result = (await client.getDocs("/facebook/react", {
-        docType: "info",
+        mode: "info",
         format: "json",
         limit: 1,
       })) as InfoDocsResponse;
@@ -240,7 +240,7 @@ describe("Context7 Client", () => {
 
     test("should have correct pagination structure", async () => {
       const result = (await client.getDocs("/facebook/react", {
-        docType: "code",
+        mode: "code",
         format: "json",
         page: 1,
         limit: 5,
@@ -257,7 +257,7 @@ describe("Context7 Client", () => {
     test("should respect limit parameter", async () => {
       const limit = 2;
       const result = (await client.getDocs("/facebook/react", {
-        docType: "code",
+        mode: "code",
         format: "json",
         limit,
       })) as CodeDocsResponse;
@@ -271,7 +271,7 @@ describe("Context7 Client", () => {
 
     test("should accept version parameter", async () => {
       const result = await client.getDocs("/facebook/react", {
-        docType: "code",
+        mode: "code",
         format: "txt",
         limit: 3,
       });
@@ -288,7 +288,7 @@ describe("Context7 Client", () => {
 
     test("should get docs for Vue", async () => {
       const result = await client.getDocs("/vuejs/core", {
-        docType: "code",
+        mode: "code",
         format: "txt",
         limit: 3,
       });
@@ -302,7 +302,7 @@ describe("Context7 Client", () => {
 
     test("should get docs for Express", async () => {
       const result = await client.getDocs("/expressjs/express", {
-        docType: "code",
+        mode: "code",
         format: "txt",
         limit: 3,
       });
@@ -321,7 +321,7 @@ describe("Context7 Client", () => {
     test("should handle invalid library ID gracefully", async () => {
       await expect(
         client.getDocs("/nonexistent/library", {
-          docType: "code",
+          mode: "code",
           format: "txt",
           limit: 1,
         })
@@ -352,10 +352,10 @@ describe("Context7 Client", () => {
       expect(typeof result.totalTokens).toBe("number");
     });
 
-    test("should infer CodeDocsResponse for json format with code docType", async () => {
+    test("should infer CodeDocsResponse for json format with code mode", async () => {
       const result = await client.getDocs("/facebook/react", {
         format: "json",
-        docType: "code",
+        mode: "code",
         limit: 1,
       });
 
@@ -363,10 +363,10 @@ describe("Context7 Client", () => {
       expect((result as CodeDocsResponse).snippets).toBeDefined();
     });
 
-    test("should infer InfoDocsResponse for json format with info docType", async () => {
+    test("should infer InfoDocsResponse for json format with info mode", async () => {
       const result = await client.getDocs("/facebook/react", {
         format: "json",
-        docType: "info",
+        mode: "info",
         limit: 1,
       });
 

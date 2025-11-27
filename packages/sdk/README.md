@@ -55,7 +55,7 @@ console.log(docs.content);
 // Get documentation as JSON with code snippets
 const codeDocs = await client.getDocs("/mongodb/docs", {
   format: "json",
-  docType: "code",
+  mode: "code",
 });
 console.log(codeDocs.snippets);
 ```
