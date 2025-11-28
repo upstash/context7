@@ -42,6 +42,9 @@
     "url": "https://github.com/upstash/context7/issues"
   },
   "homepage": "https://github.com/upstash/context7#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "@types/node": "^22.13.14",
     "dotenv": "^17.2.3",
