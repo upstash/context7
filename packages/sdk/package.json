@@ -1,6 +1,6 @@
 {
   "name": "@upstash/context7-sdk",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "JavaScript/TypeScript SDK for Context7",
   "scripts": {
     "build": "tsup",
@@ -42,6 +42,9 @@
     "url": "https://github.com/upstash/context7/issues"
   },
   "homepage": "https://github.com/upstash/context7#readme",
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "@types/node": "^22.13.14",
     "dotenv": "^17.2.3",

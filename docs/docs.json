@@ -52,6 +52,10 @@
         "openapi": "openapi.json"
       },
       {
+        "group": "Integrations",
+        "pages": ["integrations/code-rabbit"]
+      },
+      {
         "group": "Resources",
         "pages": ["security", "troubleshooting", "contact"]
       }
