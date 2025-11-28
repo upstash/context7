@@ -1,0 +1,415 @@
+---
+title: "Get Docs"
+description: "Retrieve library documentation in various formats"
+---
+
+# Get Docs
+
+Retrieve documentation for a specific library. You can get code examples or informational documentation in either JSON or text format.
+
+## Arguments
+
+<ParamField path="libraryId" type="string" required>
+  The library identifier in the format `/owner/repo` (e.g., `/facebook/react`)
+</ParamField>
+
+<ParamField path="options" type="GetDocsOptions">
+  <Expandable title="properties">
+    <ParamField path="mode" type="'code' | 'info'">
+      Type of documentation to retrieve
+      - `code`: Code examples and API documentation
+      - `info`: Informational documentation and guides
+
+      Default: `"code"`
+    </ParamField>
+
+    <ParamField path="format" type="'json' | 'txt'">
+      Format of the response
+      - `json`: Structured JSON with metadata
+      - `txt`: Plain text format
+
+      Default: `"json"`
+    </ParamField>
+
+    <ParamField path="limit" type="number">
+      Maximum number of snippets to return (1-100)
+    </ParamField>
+
+    <ParamField path="page" type="number">
+      Page number for pagination (starts at 1)
+    </ParamField>
+
+    <ParamField path="topic" type="string">
+      Filter documentation by topic (e.g., "hooks", "components", "api")
+    </ParamField>
+
+    <ParamField path="version" type="string">
+      Specific version to retrieve documentation for (e.g., "18.0.0")
+    </ParamField>
+
+  </Expandable>
+</ParamField>
+
+## Response
+
+The response type is automatically inferred based on the `format` and `mode` parameters. All response types extend a common base with pagination and token information.
+
+### Text Format (`format: "txt"`)
+
+<ResponseField name="TextDocsResponse" type="object">
+  <Expandable title="properties">
+    <ResponseField name="content" type="string" required>
+      Plain text documentation content
+    </ResponseField>
+
+    <ResponseField name="totalTokens" type="number" required>
+      Total number of tokens in the content
+    </ResponseField>
+
+    <ResponseField name="pagination" type="Pagination" required>
+      <Expandable title="properties">
+        <ResponseField name="page" type="number" required>
+          Current page number
+        </ResponseField>
+        <ResponseField name="limit" type="number" required>
+          Number of items per page
+        </ResponseField>
+        <ResponseField name="totalPages" type="number" required>
+          Total number of pages available
+        </ResponseField>
+        <ResponseField name="hasNext" type="boolean" required>
+          Whether there is a next page
+        </ResponseField>
+        <ResponseField name="hasPrev" type="boolean" required>
+          Whether there is a previous page
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+
+  </Expandable>
+</ResponseField>
+
+### JSON Format with Code Type (`format: "json"`, `mode: "code"`)
+
+<ResponseField name="CodeDocsResponse" type="object">
+  <Expandable title="properties">
+    <ResponseField name="snippets" type="CodeSnippet[]" required>
+      Array of code snippets
+      <Expandable title="CodeSnippet properties">
+        <ResponseField name="codeTitle" type="string" required>
+          Title of the code snippet
+        </ResponseField>
+        <ResponseField name="codeDescription" type="string" required>
+          Description of what the code does
+        </ResponseField>
+        <ResponseField name="codeLanguage" type="string" required>
+          Programming language (e.g., "typescript", "javascript")
+        </ResponseField>
+        <ResponseField name="codeTokens" type="number" required>
+          Number of tokens in the code
+        </ResponseField>
+        <ResponseField name="codeId" type="string" required>
+          Unique identifier for the code snippet
+        </ResponseField>
+        <ResponseField name="pageTitle" type="string" required>
+          Title of the source page
+        </ResponseField>
+        <ResponseField name="codeList" type="CodeExample[]" required>
+          List of code examples
+          <Expandable title="CodeExample properties">
+            <ResponseField name="language" type="string" required>
+              Programming language
+            </ResponseField>
+            <ResponseField name="code" type="string" required>
+              The actual code
+            </ResponseField>
+          </Expandable>
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+
+    <ResponseField name="totalTokens" type="number" required>
+      Total number of tokens across all snippets
+    </ResponseField>
+
+    <ResponseField name="pagination" type="Pagination" required>
+      <Expandable title="properties">
+        <ResponseField name="page" type="number" required>
+          Current page number
+        </ResponseField>
+        <ResponseField name="limit" type="number" required>
+          Number of items per page
+        </ResponseField>
+        <ResponseField name="totalPages" type="number" required>
+          Total number of pages available
+        </ResponseField>
+        <ResponseField name="hasNext" type="boolean" required>
+          Whether there is a next page
+        </ResponseField>
+        <ResponseField name="hasPrev" type="boolean" required>
+          Whether there is a previous page
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+
+    <ResponseField name="metadata" type="APIResponseMetadata" required>
+      <Expandable title="properties">
+        <ResponseField name="authentication" type="'none' | 'personal' | 'team'" required>
+          Authentication level used
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+
+  </Expandable>
+</ResponseField>
+
+### JSON Format with Info Type (`format: "json"`, `mode: "info"`)
+
+<ResponseField name="InfoDocsResponse" type="object">
+  <Expandable title="properties">
+    <ResponseField name="snippets" type="InfoSnippet[]" required>
+      Array of informational snippets
+      <Expandable title="InfoSnippet properties">
+        <ResponseField name="pageId" type="string">
+          Page identifier
+        </ResponseField>
+        <ResponseField name="breadcrumb" type="string">
+          Breadcrumb path to the content
+        </ResponseField>
+        <ResponseField name="content" type="string" required>
+          The documentation content
+        </ResponseField>
+        <ResponseField name="contentTokens" type="number" required>
+          Number of tokens in the content
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+
+    <ResponseField name="totalTokens" type="number" required>
+      Total number of tokens
+    </ResponseField>
+
+    <ResponseField name="pagination" type="Pagination" required>
+      Pagination information (same structure as code response)
+    </ResponseField>
+
+    <ResponseField name="metadata" type="APIResponseMetadata" required>
+      Response metadata (same structure as code response)
+    </ResponseField>
+
+  </Expandable>
+</ResponseField>
+
+## Examples
+
+<RequestExample>
+```typescript Code Docs (JSON - Default)
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7();
+
+// JSON is the default format, no need to specify
+const docs = await client.getDocs("/facebook/react", {
+  mode: "code",
+  limit: 5,
+});
+
+console.log(`Retrieved ${docs.snippets.length} code snippets`);
+```
+
+```typescript Code Docs (Text)
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7();
+
+const docs = await client.getDocs("/facebook/react", {
+  mode: "code",
+  format: "txt",
+  limit: 5,
+});
+
+console.log(docs.content);
+```
+
+```typescript Info Docs (Text)
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7({
+  apiKey: process.env.CONTEXT7_API_KEY!,
+});
+
+const docs = await client.getDocs("/facebook/react", {
+  mode: "info",
+  format: "txt",
+  limit: 3,
+});
+
+console.log(docs.content);
+```
+
+```typescript Info Docs (JSON)
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7({
+  apiKey: process.env.CONTEXT7_API_KEY!,
+});
+
+const docs = await client.getDocs("/facebook/react", {
+  mode: "info",
+  format: "json",
+  limit: 3,
+});
+
+docs.snippets.forEach((snippet) => {
+  console.log(`Tokens: ${snippet.contentTokens}`);
+});
+```
+
+```typescript With Pagination
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7({
+  apiKey: process.env.CONTEXT7_API_KEY!,
+});
+
+const page1 = await client.getDocs("/facebook/react", {
+  mode: "code",
+  format: "json",
+  page: 1,
+  limit: 10,
+});
+
+console.log(`Page ${page1.pagination.page} of ${page1.pagination.totalPages}`);
+console.log(`Has next: ${page1.pagination.hasNext}`);
+
+if (page1.pagination.hasNext) {
+  const page2 = await client.getDocs("/facebook/react", {
+    mode: "code",
+    format: "json",
+    page: 2,
+    limit: 10,
+  });
+  console.log(`Retrieved page 2 with ${page2.snippets.length} snippets`);
+}
+```
+
+```typescript With Topic Filter
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7({
+  apiKey: process.env.CONTEXT7_API_KEY!,
+});
+
+const hooks = await client.getDocs("/facebook/react", {
+  mode: "code",
+  format: "json",
+  topic: "hooks",
+  limit: 5,
+});
+
+console.log(`Found ${hooks.snippets.length} hook examples`);
+```
+
+```typescript With Version
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7({
+  apiKey: process.env.CONTEXT7_API_KEY!,
+});
+
+const docs = await client.getDocs("/facebook/react", {
+  mode: "code",
+  format: "json",
+  version: "18.0.0",
+  limit: 5,
+});
+```
+
+</RequestExample>
+
+## Use Cases
+
+### Building a Documentation Chat Bot
+
+```typescript
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7({
+  apiKey: process.env.CONTEXT7_API_KEY!,
+});
+
+async function getRelevantDocs(library: string, topic: string) {
+  const docs = await client.getDocs(library, {
+    mode: "code",
+    format: "json",
+    topic,
+    limit: 5,
+  });
+
+  return docs.snippets.map((snippet) => ({
+    title: snippet.codeTitle,
+    description: snippet.codeDescription,
+    code: snippet.codeList[0]?.code,
+    language: snippet.codeLanguage,
+  }));
+}
+
+const reactHooksDocs = await getRelevantDocs("/facebook/react", "hooks");
+```
+
+### Fetching All Documentation Pages
+
+```typescript
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7({
+  apiKey: process.env.CONTEXT7_API_KEY!,
+});
+
+async function getAllDocs(library: string) {
+  const allSnippets = [];
+  let page = 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    const response = await client.getDocs(library, {
+      mode: "code",
+      format: "json",
+      page,
+      limit: 100,
+    });
+
+    allSnippets.push(...response.snippets);
+    hasMore = response.pagination.hasNext;
+    page++;
+  }
+
+  return allSnippets;
+}
+
+const allReactDocs = await getAllDocs("/facebook/react");
+console.log(`Total snippets: ${allReactDocs.length}`);
+```
+
+### Extracting Code Examples
+
+```typescript
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7({
+  apiKey: process.env.CONTEXT7_API_KEY!,
+});
+
+const docs = await client.getDocs("/facebook/react", {
+  mode: "code",
+  format: "json",
+  limit: 20,
+});
+
+const tsExamples = docs.snippets
+  .filter((snippet) => snippet.codeLanguage === "typescript")
+  .map((snippet) => snippet.codeList)
+  .flat();
+
+console.log(`Found ${tsExamples.length} TypeScript examples`);
+```

@@ -1,0 +1,139 @@
+---
+title: "Getting Started"
+description: "Get started with the Context7 TypeScript SDK"
+---
+
+# Getting Started
+
+`@upstash/context7-sdk` is a TypeScript SDK for Context7, enabling easier access to library documentation with full type coverage.
+
+Using `@upstash/context7-sdk` you can:
+
+- Search across available libraries
+- Retrieve code documentation with contextual examples
+- Fetch informational documentation and guides
+- Access library metadata and versioning information
+- Filter documentation by topic and pagination
+
+You can find the Github Repository [here](https://github.com/upstash/context7/tree/master/packages/sdk).
+
+## Install
+
+<CodeGroup>
+  ```shell npm
+  npm install @upstash/context7-sdk
+  ```
+
+```shell pnpm
+pnpm add @upstash/context7-sdk
+```
+
+```shell yarn
+yarn add @upstash/context7-sdk
+```
+
+```shell bun
+bun add @upstash/context7-sdk
+```
+
+</CodeGroup>
+
+## Usage
+
+### Initializing the Client
+
+To use the Context7 SDK, you need an API key. You can get your API key from the [Context7 Dashboard](https://context7.com/dashboard).
+
+#### Using environment variables
+
+The SDK automatically reads from environment variables if no API key is provided in the config:
+
+```bash
+CONTEXT7_API_KEY="your_api_key_here"
+```
+
+When an environment variable is set, you can initialize the client without any parameters:
+
+```typescript
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7();
+```
+
+#### Using a configuration object
+
+If you prefer to pass configuration in code, the constructor accepts a config object containing the apiKey value. This could be useful if your application needs to interact with multiple projects, each with a different configuration.
+
+```typescript
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7({
+  apiKey: <CONTEXT7_API_KEY>,
+});
+```
+
+<Note>
+  The SDK checks for API keys in this order: 1. `config.apiKey` (if provided) 2.
+  `process.env.CONTEXT7_API_KEY`
+</Note>
+
+## Quick Start Example
+
+```typescript
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7();
+
+const searchResponse = await client.searchLibrary("react");
+console.log(`Found ${searchResponse.results.length} libraries`);
+
+// Get code documentation (JSON is the default format)
+const codeDocs = await client.getDocs("/facebook/react", {
+  mode: "code",
+  limit: 5,
+});
+
+console.log(`Retrieved ${codeDocs.snippets.length} code snippets`);
+console.log(`Total tokens: ${codeDocs.totalTokens}`);
+
+// Get info documentation as text
+const textDocs = await client.getDocs("/facebook/react", {
+  mode: "info",
+  format: "txt",
+  limit: 3,
+});
+
+console.log(textDocs.content);
+```
+
+## Error Handling
+
+The SDK throws `Context7Error` for API errors:
+
+```typescript
+import { Context7, Context7Error } from "@upstash/context7-sdk";
+
+const client = new Context7({
+  apiKey: process.env.CONTEXT7_API_KEY!,
+});
+
+try {
+  const docs = await client.getDocs("/invalid/library", {
+    mode: "code",
+    format: "txt",
+  });
+} catch (error) {
+  if (error instanceof Context7Error) {
+    console.error("Context7 API Error:", error.message);
+  } else {
+    console.error("Unexpected error:", error);
+  }
+}
+```
+
+## Next Steps
+
+Explore the SDK commands:
+
+- [Search Library](/sdks/ts/commands/search-library) - Search for libraries
+- [Get Docs](/sdks/ts/commands/get-docs) - Retrieve library documentation

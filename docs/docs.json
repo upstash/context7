@@ -33,6 +33,21 @@
         ]
       },
       {
+        "group": "SDKs",
+        "pages": [
+          {
+            "group": "TypeScript",
+            "pages": [
+              "sdks/ts/getting-started",
+              {
+                "group": "Commands",
+                "pages": ["sdks/ts/commands/search-library", "sdks/ts/commands/get-docs"]
+              }
+            ]
+          }
+        ]
+      },
+      {
         "group": "API Reference",
         "openapi": "openapi.json"
       },
