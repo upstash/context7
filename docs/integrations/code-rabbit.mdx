@@ -8,23 +8,35 @@ description: AI-powered code review tool
 
 ## Setup
 
-1. Go to your [CodeRabbit dashboard](https://app.coderabbit.ai)
-2. Navigate to **Integrations** → **MCP Servers**
-3. Click **Add new MCP server** and select **Custom Server**
-4. Configure the server with:
+<Steps>
+  <Step title="Navigate to MCP Servers">
+    Go to your [CodeRabbit dashboard](https://app.coderabbit.ai) and navigate to **Integrations** → **MCP Servers**.
 
-| Field | Value |
-|-------|-------|
-| Name | `context7` |
-| URL | `https://mcp.context7.com/mcp` |
+    ![Integrations tab](/images/integrations/coderabbit/integrations-tab.png)
+  </Step>
+  <Step title="Add Context7">
+    Click the **Add** button next to **Context7** MCP server.
 
-5. Add the following header for authentication:
+    Add the following header for higher rate limits:
 
-| Header | Value |
-|--------|-------|
-| `CONTEXT7_API_KEY` | Your API key from the [Context7 dashboard](https://context7.com/dashboard) |
+    | Header | Value |
+    |--------|-------|
+    | `CONTEXT7_API_KEY` | Your API key from the [Context7 dashboard](https://context7.com/dashboard) |
 
-6. Save the configuration
+    ```json
+    {
+      "CONTEXT7_API_KEY": "YOUR_API_KEY"
+    }
+    ```
+
+    ![Add server modal](/images/integrations/coderabbit/add-server-modal.png)
+  </Step>
+  <Step title="Connect">
+    Click the **Connect** button to connect the server.
+
+    ![Server connected](/images/integrations/coderabbit/server-connected.png)
+  </Step>
+</Steps>
 
 ## Usage Guidance
 
