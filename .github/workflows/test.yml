@@ -7,31 +7,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  detect-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      packages: ${{ steps.filter.outputs.changes }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            sdk:
-              - 'packages/sdk/**'
-            mcp:
-              - 'packages/mcp/**'
-            ai-sdk:
-              - 'packages/ai-sdk/**'
-
   test:
-    needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.packages != '[]' }}
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        package: ${{ fromJson(needs.detect-changes.outputs.packages) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -48,14 +25,14 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build dependencies
+      - name: Build
         run: pnpm build
 
-      - name: Typecheck ${{ matrix.package }}
-        run: pnpm --filter @upstash/context7-${{ matrix.package }} typecheck || true
+      - name: Typecheck
+        run: pnpm typecheck
 
-      - name: Test ${{ matrix.package }}
-        run: pnpm --filter @upstash/context7-${{ matrix.package }} test
+      - name: Test
+        run: pnpm test
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
