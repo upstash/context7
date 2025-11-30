@@ -8,4 +8,11 @@ export default defineConfig({
   format: ["cjs", "esm"],
   clean: true,
   dts: true,
+  esbuildOptions(options) {
+    options.alias = {
+      "@tools": "./src/tools/index.ts",
+      "@agents": "./src/agents/index.ts",
+      "@prompts": "./src/prompts/index.ts",
+    };
+  },
 });

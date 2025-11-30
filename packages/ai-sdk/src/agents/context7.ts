@@ -4,8 +4,8 @@ import {
   type LanguageModel,
   stepCountIs,
 } from "ai";
-import { resolveLibrary, getLibraryDocs, type Context7ToolsConfig } from "../tools";
-import { AGENT_PROMPT } from "../prompts";
+import { resolveLibrary, getLibraryDocs, type Context7ToolsConfig } from "@tools";
+import { AGENT_PROMPT } from "@prompts";
 
 /**
  * Configuration for Context7 agent

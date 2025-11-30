@@ -1,11 +1,11 @@
 // Agents
-export { context7Agent, type Context7AgentConfig } from "./agents";
+export { context7Agent, type Context7AgentConfig } from "@agents";
 
 // Tools
-export { resolveLibrary, getLibraryDocs, type Context7ToolsConfig } from "./tools";
+export { resolveLibrary, getLibraryDocs, type Context7ToolsConfig } from "@tools";
 
 // Prompts
-export { SYSTEM_PROMPT, AGENT_PROMPT, RESOLVE_LIBRARY_PROMPT } from "./prompts";
+export { SYSTEM_PROMPT, AGENT_PROMPT, RESOLVE_LIBRARY_PROMPT } from "@prompts";
 
 // Re-export useful types from SDK
 export type {

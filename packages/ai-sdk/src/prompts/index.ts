@@ -1,5 +1,1 @@
-export {
-  SYSTEM_PROMPT,
-  AGENT_PROMPT,
-  RESOLVE_LIBRARY_PROMPT,
-} from "./system";
+export { SYSTEM_PROMPT, AGENT_PROMPT, RESOLVE_LIBRARY_PROMPT } from "./system";

@@ -1,6 +1,6 @@
 import { describe, test, expect } from "vitest";
 import { generateText, stepCountIs } from "ai";
-import { openai } from "@ai-sdk/openai";
+import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import {
   resolveLibrary,
   getLibraryDocs,
@@ -9,6 +9,11 @@ import {
   AGENT_PROMPT,
   RESOLVE_LIBRARY_PROMPT,
 } from "./index";
+
+const bedrock = createAmazonBedrock({
+  region: process.env.AWS_REGION,
+  apiKey: process.env.AWS_BEARER_TOKEN_BEDROCK,
+});
 
 describe("@upstash/context7-ai-sdk", () => {
   describe("Tool structure", () => {
@@ -50,7 +55,7 @@ describe("@upstash/context7-ai-sdk", () => {
   describe("Tool usage with generateText", () => {
     test("resolveLibrary tool should be called when searching for a library", async () => {
       const result = await generateText({
-        model: openai("gpt-4o-mini"),
+        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
         tools: {
           resolveLibrary: resolveLibrary(),
         },
@@ -66,7 +71,7 @@ describe("@upstash/context7-ai-sdk", () => {
 
     test("getLibraryDocs tool should fetch documentation", async () => {
       const result = await generateText({
-        model: openai("gpt-4o-mini"),
+        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
         tools: {
           getLibraryDocs: getLibraryDocs(),
         },
@@ -82,7 +87,7 @@ describe("@upstash/context7-ai-sdk", () => {
 
     test("both tools can work together in a multi-step flow", async () => {
       const result = await generateText({
-        model: openai("gpt-4o-mini"),
+        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
         tools: {
           resolveLibrary: resolveLibrary(),
           getLibraryDocs: getLibraryDocs(),

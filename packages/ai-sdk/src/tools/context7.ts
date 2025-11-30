@@ -1,7 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { Context7, type SearchResult } from "@upstash/context7-sdk";
-import { RESOLVE_LIBRARY_PROMPT } from "../prompts";
+import { RESOLVE_LIBRARY_PROMPT } from "@prompts";
 
 /**
  * Configuration for Context7 tools

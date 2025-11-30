@@ -34,5 +34,6 @@ jobs:
       - name: Test
         run: pnpm test
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}

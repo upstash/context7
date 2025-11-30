@@ -34,24 +34,11 @@
     "zod": "^3.24.0"
   },
   "devDependencies": {
-    "@ai-sdk/anthropic": "^2.0.0",
-    "@ai-sdk/openai": "^2.0.74",
+    "@ai-sdk/amazon-bedrock": "^3.0.55",
     "@types/node": "^22.13.14",
     "tsup": "^8.5.1",
     "typescript": "^5.8.2",
     "vitest": "^4.0.13"
-  },
-  "peerDependencies": {
-    "@ai-sdk/anthropic": "^2.0.0",
-    "@ai-sdk/openai": "^2.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@ai-sdk/anthropic": {
-      "optional": true
-    },
-    "@ai-sdk/openai": {
-      "optional": true
-    }
   },
   "repository": {
     "type": "git",
