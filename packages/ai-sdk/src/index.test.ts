@@ -59,7 +59,7 @@ describe("@upstash/context7-ai-sdk", () => {
         tools: {
           resolveLibrary: resolveLibrary(),
         },
-        toolChoice: "required",
+        toolChoice: { type: "tool", toolName: "resolveLibrary" },
         stopWhen: stepCountIs(2),
         prompt: "Search for 'react' library",
       });
@@ -75,7 +75,7 @@ describe("@upstash/context7-ai-sdk", () => {
         tools: {
           getLibraryDocs: getLibraryDocs(),
         },
-        toolChoice: "required",
+        toolChoice: { type: "tool", toolName: "getLibraryDocs" },
         stopWhen: stepCountIs(2),
         prompt: "Fetch documentation for library ID '/facebook/react' with topic 'hooks'",
       });
