@@ -2,7 +2,6 @@ import { SearchResponse } from "./types.js";
 import { generateHeaders } from "./encryption.js";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import { DocumentationMode, DOCUMENTATION_MODES } from "./types.js";
-import { maskApiKey } from "./utils.js";
 
 const CONTEXT7_API_BASE_URL = "https://context7.com/api";
 const DEFAULT_TYPE = "txt";
@@ -52,7 +51,7 @@ function createErrorMessage(errorCode: number, apiKey?: string): string {
       if (!apiKey) {
         return "Unauthorized. Please provide an API key.";
       }
-      return `Unauthorized. Please check your API key. The API key you provided (possibly incorrect) is: ${maskApiKey(apiKey)}. API keys should start with 'ctx7sk'`;
+      return `Unauthorized. Please check your API key. API keys should start with 'ctx7sk'`;
     default:
       return `Failed to fetch documentation. Please try again later. Error code: ${errorCode}`;
   }
