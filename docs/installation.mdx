@@ -287,6 +287,71 @@ Get your Smithery key from your account at [smithery.ai](https://smithery.ai/ser
 
   </Accordion>
 
+  <Accordion title="Kilo Code" icon="code">
+    You can configure the Context7 MCP server in **Kilo Code** using either the UI or by editing your project's MCP configuration file.
+
+    Kilo Code supports two configuration levels:
+    - **Global MCP Configuration** — stored in `mcp_settings.json`
+    - **Project-level MCP Configuration** — stored in `.kilocode/mcp.json` (recommended)
+
+    **Via Kilo Code UI:**
+    1. Open **Kilo Code**
+    2. Click the **Settings** icon in the top-right corner
+    3. Navigate to **Settings → MCP Servers**
+    4. Click **Add Server**
+    5. Choose **HTTP Server** (Streamable HTTP Transport)
+    6. Enter URL: `https://mcp.context7.com/mcp`
+    7. Add Header - Key: `Authorization`, Value: `Bearer YOUR_API_KEY`
+    8. Click **Save**
+
+    **Manual Configuration** (`.kilocode/mcp.json`):
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "type": "streamable-http",
+          "url": "https://mcp.context7.com/mcp",
+          "headers": {
+            "Authorization": "Bearer YOUR_API_KEY"
+          },
+          "alwaysAllow": [],
+          "disabled": false
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Google Antigravity" icon="google">
+    **Remote Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "serverUrl": "https://mcp.context7.com/mcp",
+          "headers": {
+            "CONTEXT7_API_KEY": "YOUR_API_KEY"
+          }
+        }
+      }
+    }
+    ```
+
+    **Local Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
   <Accordion title="Gemini CLI" icon="google">
     Open `~/.gemini/settings.json` and add:
 
@@ -370,8 +435,14 @@ Get your Smithery key from your account at [smithery.ai](https://smithery.ai/ser
   </Accordion>
 
   <Accordion title="OpenAI Codex" icon="openai">
-    Add to your MCP server settings:
+    **Remote Server**:
+    ```toml
+    [mcp_servers.context7]
+    url = "https://mcp.context7.com/mcp"
+    http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
+    ```
 
+    **Local Server**:
     ```toml
     [mcp_servers.context7]
     args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
@@ -847,6 +918,21 @@ Get your Smithery key from your account at [smithery.ai](https://smithery.ai/ser
     ```
 
     Once configured, Context7 tools will be available in your droid sessions. Type `/mcp` within droid to manage servers, authenticate, and view available tools.
+
+  </Accordion>
+
+  <Accordion title="Emdash" icon="layer-group">
+    [Emdash](https://github.com/generalaction/emdash) is an orchestration layer for running multiple coding agents in parallel. Provider-agnostic, worktree-isolated, and local-first.
+
+    **What Emdash provides:**
+    - Global toggle: Settings → MCP → "Enable Context7 MCP"
+    - Per-workspace enable: The Context7 button in the ProviderBar (off by default). First click enables it for that workspace. Clicking again disables it.
+    - ProviderBar: The Context7 button shows status, a short explanation, and a link to docs
+
+    **What you still need to do:**
+    Configure your coding agent (Codex, Claude Code, Cursor, etc.) to connect to Context7 MCP. Emdash does not modify your agent's config. See the respective MCP configuration sections above for your agent.
+
+    See the [Emdash repository](https://github.com/generalaction/emdash) for more information.
 
   </Accordion>
 </AccordionGroup>
