@@ -26,6 +26,7 @@
         "pages": [
           "dashboard/api-keys",
           "dashboard/libraries",
+          "dashboard/claiming-libraries",
           "dashboard/private-repositories",
           "dashboard/team",
           "dashboard/usage",
