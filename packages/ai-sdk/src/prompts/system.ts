@@ -73,3 +73,6 @@ Response Format:
 - If no good matches exist, clearly state this and suggest query refinements
 
 For ambiguous queries, request clarification before proceeding with a best-guess match.`;
+
+export const GET_LIBRARY_DOCS_PROMPT =
+  "Fetches up-to-date documentation for a library. You must call 'resolveLibrary' first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query. Use mode='code' (default) for API references and code examples, or mode='info' for conceptual guides, narrative information, and architectural questions.";
