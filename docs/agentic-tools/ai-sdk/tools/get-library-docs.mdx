@@ -1,0 +1,285 @@
+---
+title: "getLibraryDocs"
+sidebarTitle: "getLibraryDocs"
+description: "Fetch up-to-date documentation for a specific library"
+---
+
+# getLibraryDocs
+
+The `getLibraryDocs` tool fetches documentation for a library using its Context7-compatible library ID. This tool is typically called after `resolveLibrary` has identified the correct library.
+
+## Usage
+
+```typescript
+import { resolveLibrary, getLibraryDocs } from "@upstash/context7-ai-sdk";
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
+
+const { text } = await generateText({
+  model: openai("gpt-4o"),
+  prompt: "How do I use React Server Components?",
+  tools: {
+    resolveLibrary: resolveLibrary(),
+    getLibraryDocs: getLibraryDocs(),
+  },
+  maxSteps: 5,
+});
+```
+
+## Configuration
+
+```typescript
+getLibraryDocs(config?: Context7ToolsConfig)
+```
+
+### Parameters
+
+<ParamField path="config" type="Context7ToolsConfig" optional>
+  Configuration options for the tool.
+
+  <Expandable title="properties">
+    <ParamField path="apiKey" type="string" optional>
+      Context7 API key. If not provided, uses the `CONTEXT7_API_KEY` environment variable.
+    </ParamField>
+    <ParamField path="defaultMaxResults" type="number" optional default="10">
+      Default maximum number of documentation results per request.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+### Returns
+
+Returns an AI SDK `tool` that can be used with `generateText`, `streamText`, or agents.
+
+## Tool Behavior
+
+When the AI model calls this tool, it:
+
+1. Takes a library ID and optional parameters from the model
+2. Fetches documentation from Context7's API
+3. Returns the documentation content with pagination info
+
+### Input Schema
+
+The tool accepts the following inputs from the AI model:
+
+<ParamField path="libraryId" type="string" required>
+  Context7-compatible library ID (e.g., `/reactjs/react.dev`, `/vercel/next.js`)
+</ParamField>
+
+<ParamField path="mode" type="string" default="code">
+  Documentation mode:
+  - `"code"` - API references and code examples (default)
+  - `"info"` - Conceptual guides, narrative information, and architectural questions
+</ParamField>
+
+<ParamField path="topic" type="string">
+  Topic to focus documentation on (e.g., "hooks", "routing", "authentication")
+</ParamField>
+
+<ParamField path="page" type="number" default="1">
+  Page number for pagination (1-10)
+</ParamField>
+
+### Output Format
+
+The output structure depends on the `mode` parameter.
+
+#### Code Mode (default)
+
+When `mode="code"`, the tool returns structured code snippets:
+
+```typescript
+{
+  success: true,
+  libraryId: "/reactjs/react.dev",
+  snippets: [
+    {
+      codeTitle: "Server Components",
+      codeDescription: "How to use React Server Components",
+      codeLanguage: "tsx",
+      codeTokens: 150,
+      codeId: "abc123",
+      pageTitle: "React Server Components",
+      codeList: [
+        {
+          language: "tsx",
+          code: "async function ServerComponent() {\n  const data = await fetchData();\n  return <div>{data}</div>;\n}"
+        }
+      ]
+    },
+    // ... more snippets
+  ],
+  pagination: {
+    page: 1,
+    limit: 10,
+    totalPages: 5,
+    hasNext: true,
+    hasPrev: false
+  },
+  totalTokens: 1500
+}
+```
+
+#### Info Mode
+
+When `mode="info"`, the tool returns conceptual documentation content:
+
+```typescript
+{
+  success: true,
+  libraryId: "/reactjs/react.dev",
+  snippets: [
+    {
+      pageId: "server-components-intro",
+      breadcrumb: "React > Advanced > Server Components",
+      content: "Server Components let you write UI that can be rendered and optionally cached on the server...",
+      contentTokens: 250
+    },
+    // ... more snippets
+  ],
+  pagination: {
+    page: 1,
+    limit: 10,
+    totalPages: 3,
+    hasNext: true,
+    hasPrev: false
+  },
+  totalTokens: 2500
+}
+```
+
+#### On Failure
+
+```typescript
+{
+  success: false,
+  error: "Documentation not found or not finalized for this library.",
+  libraryId: "/invalid/library"
+}
+```
+
+## Examples
+
+### Basic Usage with Both Tools
+
+```typescript
+import { resolveLibrary, getLibraryDocs } from "@upstash/context7-ai-sdk";
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
+
+const { text } = await generateText({
+  model: openai("gpt-4o"),
+  prompt: "Show me how to set up routing in Next.js App Router",
+  tools: {
+    resolveLibrary: resolveLibrary(),
+    getLibraryDocs: getLibraryDocs(),
+  },
+  maxSteps: 5,
+});
+
+// The model will:
+// 1. Call resolveLibrary("next.js") to get the library ID
+// 2. Call getLibraryDocs({ libraryId: "/vercel/next.js", topic: "routing" })
+// 3. Generate a response using the fetched documentation
+```
+
+### With Custom Configuration
+
+```typescript
+import { getLibraryDocs } from "@upstash/context7-ai-sdk";
+
+const tool = getLibraryDocs({
+  apiKey: process.env.CONTEXT7_API_KEY,
+  defaultMaxResults: 5, // Fetch fewer results by default
+});
+```
+
+### Direct Library ID (Skip resolveLibrary)
+
+If the user provides a library ID directly, the model can skip the resolution step:
+
+```typescript
+import { getLibraryDocs } from "@upstash/context7-ai-sdk";
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
+
+const { text } = await generateText({
+  model: openai("gpt-4o"),
+  prompt: "Using /vercel/next.js, explain middleware",
+  tools: {
+    getLibraryDocs: getLibraryDocs(),
+  },
+  maxSteps: 3,
+});
+
+// The model recognizes the /org/project format and calls getLibraryDocs directly
+```
+
+### Paginated Results
+
+For comprehensive documentation, the model can request multiple pages:
+
+```typescript
+import { resolveLibrary, getLibraryDocs } from "@upstash/context7-ai-sdk";
+import { generateText } from "ai";
+import { anthropic } from "@ai-sdk/anthropic";
+
+const { text } = await generateText({
+  model: anthropic("claude-sonnet-4-20250514"),
+  prompt: "Give me a comprehensive guide to Supabase authentication",
+  tools: {
+    resolveLibrary: resolveLibrary(),
+    getLibraryDocs: getLibraryDocs(),
+  },
+  maxSteps: 8, // Allow more steps for pagination
+});
+
+// The model may call getLibraryDocs multiple times with page=1, page=2, etc.
+// to gather comprehensive documentation
+```
+
+## Topic Filtering
+
+The `topic` parameter helps focus the documentation results. The AI model extracts relevant topics from the user's query:
+
+| User Query                         | Extracted Topic                |
+| ---------------------------------- | ------------------------------ |
+| "How do I use React hooks?"        | "hooks"                        |
+| "Set up authentication in Next.js" | "authentication"               |
+| "Supabase real-time subscriptions" | "real-time" or "subscriptions" |
+| "Vue component lifecycle"          | "lifecycle"                    |
+
+## Mode Selection
+
+The `mode` parameter determines the type of documentation returned:
+
+| Mode   | Best For                                              | Returns                              |
+| ------ | ----------------------------------------------------- | ------------------------------------ |
+| `code` | API references, code examples, implementation details | `CodeSnippet` with code blocks       |
+| `info` | Conceptual guides, architecture, explanations         | `InfoSnippet` with narrative content |
+
+The AI model automatically selects the appropriate mode based on the user's question:
+- "How do I implement..." → `mode: "code"`
+- "What is the architecture of..." → `mode: "info"`
+- "Show me an example of..." → `mode: "code"`
+- "Explain how ... works" → `mode: "info"`
+
+## Version-Specific Documentation
+
+Library IDs can include version specifiers:
+
+```typescript
+// Latest version
+"/vercel/next.js";
+
+// Specific version
+"/vercel/next.js/v14.3.0-canary.87";
+```
+
+The model can request documentation for specific versions when the user asks about a particular version.
+
+## Related
+
+- [resolveLibrary](/agentic-tools/ai-sdk/tools/resolve-library) - Search for libraries and get their IDs
+- [context7Agent](/agentic-tools/ai-sdk/agents/context7-agent) - Pre-built agent that handles the full workflow

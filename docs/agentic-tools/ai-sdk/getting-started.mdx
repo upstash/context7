@@ -1,0 +1,167 @@
+---
+title: "Getting Started"
+sidebarTitle: "Getting Started"
+description: "Add Context7 documentation tools to your Vercel AI SDK applications"
+---
+
+# Getting Started with AI SDK
+
+`@upstash/context7-ai-sdk` provides [Vercel AI SDK](https://sdk.vercel.ai/) compatible tools and agents that give your AI applications access to up-to-date library documentation.
+
+When building AI-powered applications with the Vercel AI SDK, your models often need accurate information about libraries and frameworks. Instead of relying on potentially outdated training data, Context7 tools let your AI fetch current documentation on-demand, ensuring responses include correct API usage, current best practices, and working code examples.
+
+The package gives you two ways to integrate:
+
+1. **Individual tools** (`resolveLibrary` and `getLibraryDocs`) that you add to your existing `generateText` or `streamText` calls
+2. **A pre-built agent** (`context7Agent`) that handles the entire documentation lookup workflow automatically
+
+Both approaches work with any AI provider supported by the Vercel AI SDK, including OpenAI, Anthropic, Google, and others.
+
+## Installation
+
+<CodeGroup>
+```bash npm
+npm install @upstash/context7-ai-sdk
+```
+
+```bash pnpm
+pnpm add @upstash/context7-ai-sdk
+```
+
+```bash yarn
+yarn add @upstash/context7-ai-sdk
+```
+
+```bash bun
+bun add @upstash/context7-ai-sdk
+```
+
+</CodeGroup>
+
+## Prerequisites
+
+You'll need:
+
+1. A Context7 API key from the [Context7 Dashboard](https://context7.com/dashboard)
+2. An AI provider SDK (e.g., `@ai-sdk/openai`, `@ai-sdk/anthropic`)
+
+## Configuration
+
+Set your Context7 API key as an environment variable:
+
+```bash
+CONTEXT7_API_KEY=ctx7sk-...
+```
+
+The tools and agents will automatically use this key.
+
+## Quick Start
+
+### Using Tools with generateText
+
+The simplest way to add documentation lookup to your AI application:
+
+```typescript
+import { resolveLibrary, getLibraryDocs } from "@upstash/context7-ai-sdk";
+import { generateText } from "ai";
+import { openai } from "@ai-sdk/openai";
+
+const { text } = await generateText({
+  model: openai("gpt-4o"),
+  prompt: "How do I create a server action in Next.js?",
+  tools: {
+    resolveLibrary: resolveLibrary(),
+    getLibraryDocs: getLibraryDocs(),
+  },
+  maxSteps: 5,
+});
+
+console.log(text);
+```
+
+### Using the Context7 Agent
+
+For a more streamlined experience, use the pre-configured agent:
+
+```typescript
+import { context7Agent } from "@upstash/context7-ai-sdk";
+import { anthropic } from "@ai-sdk/anthropic";
+
+const agent = context7Agent({
+  model: anthropic("claude-sonnet-4-20250514"),
+});
+
+const { text } = await agent.generate({
+  prompt: "How do I use React Server Components?",
+});
+
+console.log(text);
+```
+
+### Using Tools with streamText
+
+For streaming responses:
+
+```typescript
+import { resolveLibrary, getLibraryDocs } from "@upstash/context7-ai-sdk";
+import { streamText } from "ai";
+import { openai } from "@ai-sdk/openai";
+
+const { textStream } = streamText({
+  model: openai("gpt-4o"),
+  prompt: "Explain how to use Tanstack Query for data fetching",
+  tools: {
+    resolveLibrary: resolveLibrary(),
+    getLibraryDocs: getLibraryDocs(),
+  },
+  maxSteps: 5,
+});
+
+for await (const chunk of textStream) {
+  process.stdout.write(chunk);
+}
+```
+
+## Explicit Configuration
+
+You can also pass the API key directly if needed:
+
+```typescript
+import { resolveLibrary, getLibraryDocs } from "@upstash/context7-ai-sdk";
+
+const tools = {
+  resolveLibrary: resolveLibrary({ apiKey: "your-api-key" }),
+  getLibraryDocs: getLibraryDocs({ apiKey: "your-api-key" }),
+};
+```
+
+## How It Works
+
+The tools follow a two-step workflow:
+
+1. **`resolveLibrary`** - Searches Context7's database to find the correct library ID for a given query (e.g., "react" → `/reactjs/react.dev`)
+
+2. **`getLibraryDocs`** - Fetches documentation for the resolved library with options for:
+   - **mode** - `"code"` for API references and examples, `"info"` for conceptual guides
+   - **topic** - Filter documentation by topic (e.g., "hooks", "routing")
+   - **page** - Pagination for comprehensive results
+
+The AI model orchestrates these tools automatically based on the user's prompt, fetching relevant documentation before generating a response.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card
+    title="resolveLibrary"
+    icon="magnifying-glass"
+    href="/agentic-tools/ai-sdk/tools/resolve-library"
+  >
+    Search for libraries and get Context7-compatible IDs
+  </Card>
+  <Card title="getLibraryDocs" icon="book" href="/agentic-tools/ai-sdk/tools/get-library-docs">
+    Fetch documentation for a specific library
+  </Card>
+  <Card title="context7Agent" icon="robot" href="/agentic-tools/ai-sdk/agents/context7-agent">
+    Use the pre-built documentation agent
+  </Card>
+</CardGroup>
