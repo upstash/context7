@@ -36,6 +36,7 @@
   "devDependencies": {
     "@ai-sdk/amazon-bedrock": "^3.0.55",
     "@types/node": "^22.13.14",
+    "dotenv": "^17.2.3",
     "tsup": "^8.5.1",
     "typescript": "^5.8.2",
     "vitest": "^4.0.13"

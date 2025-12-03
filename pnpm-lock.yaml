@@ -57,6 +57,9 @@ importers:
       '@types/node':
         specifier: ^22.13.14
         version: 22.19.1
+      dotenv:
+        specifier: ^17.2.3
+        version: 17.2.3
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(postcss@8.5.6)(typescript@5.9.3)
