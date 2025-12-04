@@ -1,8 +1,8 @@
 ---
-"@upstash/context7-ai-sdk": minor
+"@upstash/context7-tools-ai-sdk": minor
 ---
 
-Initial release of `@upstash/context7-ai-sdk` - Vercel AI SDK integration for Context7.
+Initial release of `@upstash/context7-tools-ai-sdk` - Vercel AI SDK integration for Context7.
 
 ### Features
 

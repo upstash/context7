@@ -1,7 +1,7 @@
 {
-  "name": "@upstash/context7-ai-sdk",
+  "name": "@upstash/context7-tools-ai-sdk",
   "version": "0.1.0",
-  "description": "Context7 AI SDK integration for Vercel AI SDK",
+  "description": "Context7 tools for Vercel AI SDK",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -47,7 +47,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/upstash/context7.git",
-    "directory": "packages/ai-sdk"
+    "directory": "packages/tools-ai-sdk"
   },
   "keywords": [
     "context7",

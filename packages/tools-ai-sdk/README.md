@@ -1,6 +1,6 @@
 # Upstash Context7 AI SDK
 
-`@upstash/context7-ai-sdk` provides [Vercel AI SDK](https://sdk.vercel.ai/) compatible tools and agents that give your AI applications access to up to date library documentation through Context7.
+`@upstash/context7-tools-ai-sdk` provides [Vercel AI SDK](https://sdk.vercel.ai/) compatible tools and agents that give your AI applications access to up to date library documentation through Context7.
 
 Use this package to:
 
@@ -18,7 +18,7 @@ The package provides two main tools:
 ### Install
 
 ```bash
-npm install @upstash/context7-ai-sdk @upstash/context7-sdk ai zod
+npm install @upstash/context7-tools-ai-sdk @upstash/context7-sdk ai zod
 ```
 
 ### Get API Key
@@ -30,7 +30,7 @@ Get your API key from [Context7](https://context7.com)
 ### Using Tools with `generateText`
 
 ```typescript
-import { resolveLibrary, getLibraryDocs } from "@upstash/context7-ai-sdk";
+import { resolveLibrary, getLibraryDocs } from "@upstash/context7-tools-ai-sdk";
 import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
@@ -52,7 +52,7 @@ console.log(text);
 The package provides a pre-configured agent that handles the multi-step workflow automatically:
 
 ```typescript
-import { Context7Agent } from "@upstash/context7-ai-sdk";
+import { Context7Agent } from "@upstash/context7-tools-ai-sdk";
 import { anthropic } from "@ai-sdk/anthropic";
 
 const agent = Context7Agent({
