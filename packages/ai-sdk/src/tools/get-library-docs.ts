@@ -16,7 +16,7 @@ import { GET_LIBRARY_DOCS_PROMPT } from "@prompts";
  * @example
  * ```typescript
  * import { resolveLibrary, getLibraryDocs } from '@upstash/context7-ai-sdk';
- * import { generateText } from 'ai';
+ * import { generateText, stepCountIs } from 'ai';
  * import { openai } from '@ai-sdk/openai';
  *
  * const { text } = await generateText({
@@ -26,11 +26,12 @@ import { GET_LIBRARY_DOCS_PROMPT } from "@prompts";
  *     resolveLibrary: resolveLibrary(),
  *     getLibraryDocs: getLibraryDocs(),
  *   },
+ *   stopWhen: stepCountIs(5),
  * });
  * ```
  */
 export function getLibraryDocs(config: Context7ToolsConfig = {}) {
-  const { apiKey = process.env.CONTEXT7_API_KEY, defaultMaxResults = 10 } = config;
+  const { apiKey, defaultMaxResults = 10 } = config;
   const getClient = () => new Context7({ apiKey });
 
   return tool({
