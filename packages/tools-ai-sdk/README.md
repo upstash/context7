@@ -1,6 +1,6 @@
 # Upstash Context7 AI SDK
 
-`@upstash/context7-tools-ai-sdk` provides [Vercel AI SDK](https://sdk.vercel.ai/) compatible tools and agents that give your AI applications access to up to date library documentation through Context7.
+`@upstash/context7-tools-ai-sdk` provides [Vercel AI SDK](https://ai-sdk.dev/) compatible tools and agents that give your AI applications access to up to date library documentation through Context7.
 
 Use this package to:
 
@@ -84,7 +84,7 @@ const tool = resolveLibrary(); // Uses CONTEXT7_API_KEY automatically
 
 ## Docs
 
-See the [documentation](https://context7.com/docs/sdks/ai-sdk/getting-started) for details.
+See the [documentation](https://context7.com/docs/agentic-tools/ai-sdk/getting-started) for details.
 
 ## Contributing
 

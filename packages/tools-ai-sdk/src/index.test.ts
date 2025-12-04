@@ -1,6 +1,7 @@
 import { describe, test, expect } from "vitest";
-import { generateText, stepCountIs } from "ai";
+import { generateText, stepCountIs, tool } from "ai";
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
+import { z } from "zod";
 import {
   resolveLibrary,
   getLibraryDocs,
@@ -109,17 +110,19 @@ describe("@upstash/context7-tools-ai-sdk", () => {
   });
 
   describe("Context7Agent class", () => {
-    test("should create an agent instance", () => {
-      const agent = new Context7Agent();
+    test("should create an agent instance with model", () => {
+      const agent = new Context7Agent({
+        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+      });
 
       expect(agent).toBeDefined();
       expect(agent).toHaveProperty("generate");
+      expect(agent).toHaveProperty("stream");
     });
 
-    test("should accept custom stopWhen condition", async () => {
-      const { stepCountIs } = await import("ai");
-
+    test("should accept custom stopWhen condition", () => {
       const agent = new Context7Agent({
+        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
         stopWhen: stepCountIs(3),
       });
 
@@ -128,7 +131,37 @@ describe("@upstash/context7-tools-ai-sdk", () => {
 
     test("should accept custom system prompt", () => {
       const agent = new Context7Agent({
+        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
         system: "Custom system prompt for testing",
+      });
+
+      expect(agent).toBeDefined();
+    });
+
+    test("should accept Context7 config options", () => {
+      const agent = new Context7Agent({
+        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+        apiKey: "ctx7sk-test-key",
+        defaultMaxResults: 5,
+      });
+
+      expect(agent).toBeDefined();
+    });
+
+    test("should accept additional tools alongside Context7 tools", () => {
+      const customTool = tool({
+        description: "A custom test tool",
+        inputSchema: z.object({
+          input: z.string().describe("Test input"),
+        }),
+        execute: async ({ input }) => ({ result: `processed: ${input}` }),
+      });
+
+      const agent = new Context7Agent({
+        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+        tools: {
+          customTool,
+        },
       });
 
       expect(agent).toBeDefined();
@@ -150,6 +183,26 @@ describe("@upstash/context7-tools-ai-sdk", () => {
       const allToolCalls = result.steps.flatMap((step) => step.toolCalls);
       const toolNames = allToolCalls.map((call) => call.toolName);
       expect(toolNames).toContain("resolveLibrary");
+    }, 60000);
+
+    test("should include Context7 tools in generate result", async () => {
+      const agent = new Context7Agent({
+        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+        stopWhen: stepCountIs(5),
+      });
+
+      const result = await agent.generate({
+        prompt:
+          "Use resolveLibrary to search for Next.js, then use getLibraryDocs to get routing documentation",
+      });
+
+      expect(result).toBeDefined();
+
+      const allToolCalls = result.steps.flatMap((step) => step.toolCalls);
+      const toolNames = allToolCalls.map((call) => call.toolName);
+
+      expect(toolNames).toContain("resolveLibrary");
+      expect(toolNames).toContain("getLibraryDocs");
     }, 60000);
   });
 
