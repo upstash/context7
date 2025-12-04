@@ -1,7 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { Context7 } from "@upstash/context7-sdk";
-import { RESOLVE_LIBRARY_PROMPT } from "@prompts";
+import { RESOLVE_LIBRARY_DESCRIPTION } from "@prompts";
 import type { Context7ToolsConfig } from "./types";
 
 /**
@@ -35,7 +35,7 @@ export function resolveLibrary(config: Context7ToolsConfig = {}) {
   const getClient = () => new Context7({ apiKey });
 
   return tool({
-    description: RESOLVE_LIBRARY_PROMPT,
+    description: RESOLVE_LIBRARY_DESCRIPTION,
     inputSchema: z.object({
       libraryName: z
         .string()

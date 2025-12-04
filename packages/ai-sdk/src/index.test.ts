@@ -7,7 +7,7 @@ import {
   Context7Agent,
   SYSTEM_PROMPT,
   AGENT_PROMPT,
-  RESOLVE_LIBRARY_PROMPT,
+  RESOLVE_LIBRARY_DESCRIPTION,
 } from "./index";
 
 const bedrock = createAmazonBedrock({
@@ -148,10 +148,10 @@ describe("@upstash/context7-ai-sdk", () => {
       expect(AGENT_PROMPT).toContain("Context7");
     });
 
-    test("should export RESOLVE_LIBRARY_PROMPT", () => {
-      expect(RESOLVE_LIBRARY_PROMPT).toBeDefined();
-      expect(typeof RESOLVE_LIBRARY_PROMPT).toBe("string");
-      expect(RESOLVE_LIBRARY_PROMPT).toContain("library");
+    test("should export RESOLVE_LIBRARY_DESCRIPTION", () => {
+      expect(RESOLVE_LIBRARY_DESCRIPTION).toBeDefined();
+      expect(typeof RESOLVE_LIBRARY_DESCRIPTION).toBe("string");
+      expect(RESOLVE_LIBRARY_DESCRIPTION).toContain("library");
     });
   });
 });

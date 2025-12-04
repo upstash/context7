@@ -2,7 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import { Context7 } from "@upstash/context7-sdk";
 import type { Context7ToolsConfig } from "./types";
-import { GET_LIBRARY_DOCS_PROMPT } from "@prompts";
+import { GET_LIBRARY_DOCS_DESCRIPTION } from "@prompts";
 
 /**
  * Tool to fetch documentation for a library using its Context7 library ID.
@@ -35,7 +35,7 @@ export function getLibraryDocs(config: Context7ToolsConfig = {}) {
   const getClient = () => new Context7({ apiKey });
 
   return tool({
-    description: GET_LIBRARY_DOCS_PROMPT,
+    description: GET_LIBRARY_DOCS_DESCRIPTION,
     inputSchema: z.object({
       libraryId: z
         .string()

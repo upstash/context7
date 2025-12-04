@@ -8,8 +8,8 @@ export { resolveLibrary, getLibraryDocs, type Context7ToolsConfig } from "@tools
 export {
   SYSTEM_PROMPT,
   AGENT_PROMPT,
-  RESOLVE_LIBRARY_PROMPT,
-  GET_LIBRARY_DOCS_PROMPT,
+  RESOLVE_LIBRARY_DESCRIPTION,
+  GET_LIBRARY_DOCS_DESCRIPTION,
 } from "@prompts";
 
 // Re-export useful types from SDK

@@ -51,9 +51,9 @@ IMPORTANT:
 - Always cite which library ID you used`;
 
 /**
- * Library resolution instructions for the resolveLibrary tool
+ * Library resolution tool description
  */
-export const RESOLVE_LIBRARY_PROMPT = `Resolves a package/product name to a Context7-compatible library ID and returns a list of matching libraries.
+export const RESOLVE_LIBRARY_DESCRIPTION = `Resolves a package/product name to a Context7-compatible library ID and returns a list of matching libraries.
 
 You MUST call this function before 'getLibraryDocs' to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
@@ -74,5 +74,8 @@ Response Format:
 
 For ambiguous queries, request clarification before proceeding with a best-guess match.`;
 
-export const GET_LIBRARY_DOCS_PROMPT =
+/**
+ * Get library docs tool description
+ */
+export const GET_LIBRARY_DOCS_DESCRIPTION =
   "Fetches up-to-date documentation for a library. You must call 'resolveLibrary' first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query. Use mode='code' (default) for API references and code examples, or mode='info' for conceptual guides, narrative information, and architectural questions.";
