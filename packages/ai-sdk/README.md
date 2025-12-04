@@ -18,7 +18,7 @@ The package provides two main tools:
 ### Install
 
 ```bash
-npm install @upstash/context7-ai-sdk
+npm install @upstash/context7-ai-sdk @upstash/context7-sdk ai zod
 ```
 
 ### Get API Key
