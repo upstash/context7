@@ -4,7 +4,7 @@ import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import {
   resolveLibrary,
   getLibraryDocs,
-  context7Agent,
+  Context7Agent,
   SYSTEM_PROMPT,
   AGENT_PROMPT,
   RESOLVE_LIBRARY_PROMPT,
@@ -108,9 +108,9 @@ describe("@upstash/context7-ai-sdk", () => {
     }, 60000);
   });
 
-  describe("context7Agent factory", () => {
+  describe("Context7Agent factory", () => {
     test("should create an agent instance", () => {
-      const agent = context7Agent();
+      const agent = Context7Agent();
 
       expect(agent).toBeDefined();
       expect(agent).toHaveProperty("generate");
@@ -119,7 +119,7 @@ describe("@upstash/context7-ai-sdk", () => {
     test("should accept custom stopWhen condition", async () => {
       const { stepCountIs } = await import("ai");
 
-      const agent = context7Agent({
+      const agent = Context7Agent({
         stopWhen: stepCountIs(3),
       });
 
@@ -127,7 +127,7 @@ describe("@upstash/context7-ai-sdk", () => {
     });
 
     test("should accept custom system prompt", () => {
-      const agent = context7Agent({
+      const agent = Context7Agent({
         system: "Custom system prompt for testing",
       });
 

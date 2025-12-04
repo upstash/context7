@@ -5,7 +5,7 @@
 Use this package to:
 
 - Add documentation lookup tools to your AI SDK workflows with `generateText` or `streamText`
-- Create documentation aware agents using the pre-configured `context7Agent`
+- Create documentation aware agents using the pre-configured `Context7Agent`
 - Build RAG pipelines that retrieve accurate, version specific code examples
 
 The package provides two main tools:
@@ -52,10 +52,10 @@ console.log(text);
 The package provides a pre-configured agent that handles the multi-step workflow automatically:
 
 ```typescript
-import { context7Agent } from "@upstash/context7-ai-sdk";
+import { Context7Agent } from "@upstash/context7-ai-sdk";
 import { anthropic } from "@ai-sdk/anthropic";
 
-const agent = context7Agent({
+const agent = Context7Agent({
   model: anthropic("claude-sonnet-4-20250514"),
 });
 

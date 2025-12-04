@@ -1,5 +1,5 @@
 // Agents
-export { context7Agent, type Context7AgentConfig } from "@agents";
+export { Context7Agent, type Context7AgentConfig } from "@agents";
 
 // Tools
 export { resolveLibrary, getLibraryDocs, type Context7ToolsConfig } from "@tools";
