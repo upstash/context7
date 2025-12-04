@@ -1,29 +1,26 @@
 import {
   Experimental_Agent as Agent,
   type Experimental_AgentSettings as AgentSettings,
-  type LanguageModel,
+  type ToolSet,
   stepCountIs,
 } from "ai";
-import { resolveLibrary, getLibraryDocs, type Context7ToolsConfig } from "@tools";
+import { resolveLibrary, getLibraryDocs } from "@tools";
 import { AGENT_PROMPT } from "@prompts";
 
 /**
- * Configuration for Context7 agent
+ * Configuration for Context7 agent.
  */
-export interface Context7AgentConfig
-  extends Context7ToolsConfig,
-    Partial<
-      AgentSettings<{
-        resolveLibrary: ReturnType<typeof resolveLibrary>;
-        getLibraryDocs: ReturnType<typeof getLibraryDocs>;
-      }>
-    > {
+export interface Context7AgentConfig extends AgentSettings<ToolSet> {
   /**
-   * Language model to use. Must be a LanguageModel instance from an AI SDK provider.
-   * @example anthropic('claude-sonnet-4-20250514')
-   * @example openai('gpt-4o')
+   * Context7 API key. If not provided, uses the CONTEXT7_API_KEY environment variable.
    */
-  model?: LanguageModel;
+  apiKey?: string;
+
+  /**
+   * Default maximum number of documentation results per request.
+   * @default 10
+   */
+  defaultMaxResults?: number;
 }
 
 /**
@@ -49,27 +46,26 @@ export interface Context7AgentConfig
  * });
  * ```
  */
-export class Context7Agent extends Agent<{
-  resolveLibrary: ReturnType<typeof resolveLibrary>;
-  getLibraryDocs: ReturnType<typeof getLibraryDocs>;
-}> {
-  constructor(config?: Context7AgentConfig) {
+export class Context7Agent extends Agent<ToolSet> {
+  constructor(config: Context7AgentConfig) {
     const {
       model,
       stopWhen = stepCountIs(5),
       system,
       apiKey,
       defaultMaxResults,
+      tools,
       ...agentSettings
-    } = config || {};
+    } = config;
 
-    const context7Config: Context7ToolsConfig = { apiKey, defaultMaxResults };
+    const context7Config = { apiKey, defaultMaxResults };
 
     super({
       ...agentSettings,
-      model: model as LanguageModel,
+      model,
       system: system || AGENT_PROMPT,
       tools: {
+        ...tools,
         resolveLibrary: resolveLibrary(context7Config),
         getLibraryDocs: getLibraryDocs(context7Config),
       },
