@@ -1,7 +1,7 @@
 {
-  "name": "@upstash/context7-ai-sdk",
+  "name": "@upstash/context7-tools-ai-sdk",
   "version": "0.1.0",
-  "description": "Context7 AI SDK integration for Vercel AI SDK",
+  "description": "Context7 tools for Vercel AI SDK",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -28,14 +28,18 @@
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
-  "dependencies": {
-    "@upstash/context7-sdk": "workspace:*",
-    "ai": "^5.0.0",
-    "zod": "^3.24.0"
+  "peerDependencies": {
+    "@upstash/context7-sdk": ">=0.1.0",
+    "ai": ">=5.0.0",
+    "zod": ">=3.24.0"
   },
   "devDependencies": {
+    "@upstash/context7-sdk": "workspace:*",
+    "ai": "^5.0.0",
+    "zod": "^3.24.0",
     "@ai-sdk/amazon-bedrock": "^3.0.55",
     "@types/node": "^22.13.14",
+    "dotenv": "^17.2.3",
     "tsup": "^8.5.1",
     "typescript": "^5.8.2",
     "vitest": "^4.0.13"
@@ -43,7 +47,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/upstash/context7.git",
-    "directory": "packages/ai-sdk"
+    "directory": "packages/tools-ai-sdk"
   },
   "keywords": [
     "context7",

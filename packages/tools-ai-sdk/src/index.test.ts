@@ -4,10 +4,10 @@ import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import {
   resolveLibrary,
   getLibraryDocs,
-  context7Agent,
+  Context7Agent,
   SYSTEM_PROMPT,
   AGENT_PROMPT,
-  RESOLVE_LIBRARY_PROMPT,
+  RESOLVE_LIBRARY_DESCRIPTION,
 } from "./index";
 
 const bedrock = createAmazonBedrock({
@@ -67,6 +67,8 @@ describe("@upstash/context7-ai-sdk", () => {
       expect(result.toolCalls.length).toBeGreaterThan(0);
       expect(result.toolCalls[0].toolName).toBe("resolveLibrary");
       expect(result.toolResults.length).toBeGreaterThan(0);
+      const toolResult = result.toolResults[0] as unknown as { output: { success: boolean } };
+      expect(toolResult.output.success).toBe(true);
     }, 30000);
 
     test("getLibraryDocs tool should fetch documentation", async () => {
@@ -83,6 +85,8 @@ describe("@upstash/context7-ai-sdk", () => {
       expect(result.toolCalls.length).toBeGreaterThan(0);
       expect(result.toolCalls[0].toolName).toBe("getLibraryDocs");
       expect(result.toolResults.length).toBeGreaterThan(0);
+      const toolResult = result.toolResults[0] as unknown as { output: { success: boolean } };
+      expect(toolResult.output.success).toBe(true);
     }, 30000);
 
     test("both tools can work together in a multi-step flow", async () => {
@@ -104,9 +108,9 @@ describe("@upstash/context7-ai-sdk", () => {
     }, 60000);
   });
 
-  describe("context7Agent factory", () => {
+  describe("Context7Agent factory", () => {
     test("should create an agent instance", () => {
-      const agent = context7Agent();
+      const agent = Context7Agent();
 
       expect(agent).toBeDefined();
       expect(agent).toHaveProperty("generate");
@@ -115,7 +119,7 @@ describe("@upstash/context7-ai-sdk", () => {
     test("should accept custom stopWhen condition", async () => {
       const { stepCountIs } = await import("ai");
 
-      const agent = context7Agent({
+      const agent = Context7Agent({
         stopWhen: stepCountIs(3),
       });
 
@@ -123,7 +127,7 @@ describe("@upstash/context7-ai-sdk", () => {
     });
 
     test("should accept custom system prompt", () => {
-      const agent = context7Agent({
+      const agent = Context7Agent({
         system: "Custom system prompt for testing",
       });
 
@@ -144,10 +148,10 @@ describe("@upstash/context7-ai-sdk", () => {
       expect(AGENT_PROMPT).toContain("Context7");
     });
 
-    test("should export RESOLVE_LIBRARY_PROMPT", () => {
-      expect(RESOLVE_LIBRARY_PROMPT).toBeDefined();
-      expect(typeof RESOLVE_LIBRARY_PROMPT).toBe("string");
-      expect(RESOLVE_LIBRARY_PROMPT).toContain("library");
+    test("should export RESOLVE_LIBRARY_DESCRIPTION", () => {
+      expect(RESOLVE_LIBRARY_DESCRIPTION).toBeDefined();
+      expect(typeof RESOLVE_LIBRARY_DESCRIPTION).toBe("string");
+      expect(RESOLVE_LIBRARY_DESCRIPTION).toContain("library");
     });
   });
 });

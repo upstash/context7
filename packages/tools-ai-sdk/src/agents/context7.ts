@@ -39,10 +39,10 @@ export interface Context7AgentConfig
  *
  * @example
  * ```typescript
- * import { context7Agent } from '@upstash/context7-ai-sdk';
+ * import { Context7Agent } from '@upstash/context7-ai-sdk';
  * import { anthropic } from '@ai-sdk/anthropic';
  *
- * const agent = context7Agent({
+ * const agent = Context7Agent({
  *   model: anthropic('claude-sonnet-4-20250514'),
  *   apiKey: 'your-context7-api-key',
  * });
@@ -52,7 +52,7 @@ export interface Context7AgentConfig
  * });
  * ```
  */
-export function context7Agent(config: Context7AgentConfig = {}) {
+export function Context7Agent(config?: Context7AgentConfig) {
   const {
     model,
     stopWhen = stepCountIs(5),
@@ -60,7 +60,7 @@ export function context7Agent(config: Context7AgentConfig = {}) {
     apiKey,
     defaultMaxResults,
     ...agentSettings
-  } = config;
+  } = config || {};
 
   const context7Config: Context7ToolsConfig = { apiKey, defaultMaxResults };
 

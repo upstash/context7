@@ -1,7 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { Context7 } from "@upstash/context7-sdk";
-import { RESOLVE_LIBRARY_PROMPT } from "@prompts";
+import { RESOLVE_LIBRARY_DESCRIPTION } from "@prompts";
 import type { Context7ToolsConfig } from "./types";
 
 /**
@@ -16,7 +16,7 @@ import type { Context7ToolsConfig } from "./types";
  * @example
  * ```typescript
  * import { resolveLibrary, getLibraryDocs } from '@upstash/context7-ai-sdk';
- * import { generateText } from 'ai';
+ * import { generateText, stepCountIs } from 'ai';
  * import { openai } from '@ai-sdk/openai';
  *
  * const { text } = await generateText({
@@ -26,15 +26,16 @@ import type { Context7ToolsConfig } from "./types";
  *     resolveLibrary: resolveLibrary(),
  *     getLibraryDocs: getLibraryDocs(),
  *   },
+ *   stopWhen: stepCountIs(5),
  * });
  * ```
  */
 export function resolveLibrary(config: Context7ToolsConfig = {}) {
-  const { apiKey = process.env.CONTEXT7_API_KEY } = config;
+  const { apiKey } = config;
   const getClient = () => new Context7({ apiKey });
 
   return tool({
-    description: RESOLVE_LIBRARY_PROMPT,
+    description: RESOLVE_LIBRARY_DESCRIPTION,
     inputSchema: z.object({
       libraryName: z
         .string()
