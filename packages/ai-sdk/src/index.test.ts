@@ -67,6 +67,8 @@ describe("@upstash/context7-ai-sdk", () => {
       expect(result.toolCalls.length).toBeGreaterThan(0);
       expect(result.toolCalls[0].toolName).toBe("resolveLibrary");
       expect(result.toolResults.length).toBeGreaterThan(0);
+      const toolResult = result.toolResults[0] as unknown as { output: { success: boolean } };
+      expect(toolResult.output.success).toBe(true);
     }, 30000);
 
     test("getLibraryDocs tool should fetch documentation", async () => {
@@ -83,6 +85,8 @@ describe("@upstash/context7-ai-sdk", () => {
       expect(result.toolCalls.length).toBeGreaterThan(0);
       expect(result.toolCalls[0].toolName).toBe("getLibraryDocs");
       expect(result.toolResults.length).toBeGreaterThan(0);
+      const toolResult = result.toolResults[0] as unknown as { output: { success: boolean } };
+      expect(toolResult.output.success).toBe(true);
     }, 30000);
 
     test("both tools can work together in a multi-step flow", async () => {
