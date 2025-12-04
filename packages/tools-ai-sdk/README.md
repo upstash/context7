@@ -55,7 +55,7 @@ The package provides a pre-configured agent that handles the multi-step workflow
 import { Context7Agent } from "@upstash/context7-tools-ai-sdk";
 import { anthropic } from "@ai-sdk/anthropic";
 
-const agent = Context7Agent({
+const agent = new Context7Agent({
   model: anthropic("claude-sonnet-4-20250514"),
 });
 

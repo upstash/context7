@@ -14,7 +14,7 @@
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test",
     "test:sdk": "pnpm --filter @upstash/context7-sdk test",
-    "test:ai-sdk": "pnpm --filter @upstash/context7-ai-sdk test",
+    "test:tools-ai-sdk": "pnpm --filter @upstash/context7-tools-ai-sdk test",
     "clean": "pnpm -r run clean && rm -rf node_modules",
     "lint": "pnpm -r run lint",
     "lint:check": "pnpm -r run lint:check",

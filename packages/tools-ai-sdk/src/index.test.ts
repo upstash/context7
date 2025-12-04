@@ -108,9 +108,9 @@ describe("@upstash/context7-ai-sdk", () => {
     }, 60000);
   });
 
-  describe("Context7Agent factory", () => {
+  describe("Context7Agent class", () => {
     test("should create an agent instance", () => {
-      const agent = Context7Agent();
+      const agent = new Context7Agent();
 
       expect(agent).toBeDefined();
       expect(agent).toHaveProperty("generate");
@@ -119,7 +119,7 @@ describe("@upstash/context7-ai-sdk", () => {
     test("should accept custom stopWhen condition", async () => {
       const { stepCountIs } = await import("ai");
 
-      const agent = Context7Agent({
+      const agent = new Context7Agent({
         stopWhen: stepCountIs(3),
       });
 
@@ -127,7 +127,7 @@ describe("@upstash/context7-ai-sdk", () => {
     });
 
     test("should accept custom system prompt", () => {
-      const agent = Context7Agent({
+      const agent = new Context7Agent({
         system: "Custom system prompt for testing",
       });
 
