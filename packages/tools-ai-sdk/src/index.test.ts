@@ -133,6 +133,24 @@ describe("@upstash/context7-tools-ai-sdk", () => {
 
       expect(agent).toBeDefined();
     });
+
+    test("should generate response using agent workflow", async () => {
+      const agent = new Context7Agent({
+        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+        stopWhen: stepCountIs(5),
+      });
+
+      const result = await agent.generate({
+        prompt: "Find the React library and get documentation about hooks",
+      });
+
+      expect(result).toBeDefined();
+      expect(result.steps.length).toBeGreaterThan(0);
+
+      const allToolCalls = result.steps.flatMap((step) => step.toolCalls);
+      const toolNames = allToolCalls.map((call) => call.toolName);
+      expect(toolNames).toContain("resolveLibrary");
+    }, 60000);
   });
 
   describe("Prompt exports", () => {
