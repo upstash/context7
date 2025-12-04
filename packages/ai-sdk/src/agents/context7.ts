@@ -52,7 +52,7 @@ export interface Context7AgentConfig
  * });
  * ```
  */
-export function Context7Agent(config: Context7AgentConfig = {}) {
+export function Context7Agent(config?: Context7AgentConfig) {
   const {
     model,
     stopWhen = stepCountIs(5),
@@ -60,7 +60,7 @@ export function Context7Agent(config: Context7AgentConfig = {}) {
     apiKey,
     defaultMaxResults,
     ...agentSettings
-  } = config;
+  } = config || {};
 
   const context7Config: Context7ToolsConfig = { apiKey, defaultMaxResults };
 
