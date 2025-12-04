@@ -31,7 +31,7 @@ Get your API key from [Context7](https://context7.com)
 
 ```typescript
 import { resolveLibrary, getLibraryDocs } from "@upstash/context7-ai-sdk";
-import { generateText } from "ai";
+import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { text } = await generateText({
@@ -41,7 +41,7 @@ const { text } = await generateText({
     resolveLibrary: resolveLibrary(),
     getLibraryDocs: getLibraryDocs(),
   },
-  maxSteps: 5,
+  stopWhen: stepCountIs(5),
 });
 
 console.log(text);
