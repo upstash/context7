@@ -317,10 +317,34 @@ async function main() {
       );
     };
 
-    app.all("/mcp", async (req: express.Request, res: express.Response) => {
+    // Shared MCP request handler
+    const handleMcpRequest = async (
+      req: express.Request,
+      res: express.Response,
+      requireAuth: boolean
+    ) => {
       try {
         const clientIp = getClientIp(req);
         const apiKey = extractApiKey(req);
+        const resourceUrl = process.env.RESOURCE_URL || `http://localhost:${actualPort}`;
+
+        // Always add WWW-Authenticate header with OAuth discovery info
+        res.set(
+          "WWW-Authenticate",
+          `Bearer resource_metadata="${resourceUrl}/.well-known/oauth-protected-resource"`
+        );
+
+        // If auth required and no API key, return 401 to trigger OAuth flow
+        if (requireAuth && !apiKey) {
+          return res.status(401).json({
+            jsonrpc: "2.0",
+            error: {
+              code: -32001,
+              message: "Authentication required. Please authenticate to use this MCP server.",
+            },
+            id: null,
+          });
+        }
 
         const transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: undefined,
@@ -345,11 +369,38 @@ async function main() {
           });
         }
       }
-    });
+    };
+
+    // Anonymous access endpoint - no authentication required
+    app.all("/mcp", (req, res) => handleMcpRequest(req, res, false));
+
+    // OAuth-protected endpoint - requires authentication (returns 401 if no API key)
+    app.all("/mcp/oauth", (req, res) => handleMcpRequest(req, res, true));
 
     app.get("/ping", (_req: express.Request, res: express.Response) => {
       res.json({ status: "ok", message: "pong" });
     });
+
+    // OAuth 2.0 Protected Resource Metadata (RFC 9728)
+    // This enables MCP clients to discover the authorization server
+    app.get(
+      "/.well-known/oauth-protected-resource",
+      (_req: express.Request, res: express.Response) => {
+        // Use environment variables or defaults
+        // For local testing: AUTH_SERVER_URL=http://localhost:3000
+        // For production: AUTH_SERVER_URL=https://context7.com
+        console.log("WELL KNOWN OAUTH PROTECTED RESOURCE", _req.body);
+        const authServerUrl = process.env.AUTH_SERVER_URL || "http://localhost:3000";
+        const resourceUrl = process.env.RESOURCE_URL || `http://localhost:${actualPort}`;
+
+        res.json({
+          resource: resourceUrl,
+          authorization_servers: [authServerUrl],
+          scopes_supported: ["mcp:read", "mcp:write"],
+          bearer_methods_supported: ["header"],
+        });
+      }
+    );
 
     // Catch-all 404 handler - must be after all other routes
     app.use((_req: express.Request, res: express.Response) => {

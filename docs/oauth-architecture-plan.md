@@ -24,9 +24,10 @@ This document outlines the OAuth 2.1 implementation for the Context7 MCP server,
 | **Authorization Server** | context7app (Next.js)       | Already has Clerk auth and Supabase                  |
 | **Resource Server**      | context7 MCP                | Validates API keys, serves MCP tools                 |
 | **Token Type**           | API Key (not JWT)           | Zero changes to existing API validation              |
-| **Client Registration**  | Dynamic (RFC 7591)          | Required by MCP spec                                 |
+| **Client Registration**  | Dynamic (RFC 7591) or Client ID Metadata Documents | MCP spec supports both                |
 | **User Authentication**  | Clerk                       | Existing auth system                                 |
 | **Storage**              | Supabase                    | Existing database                                    |
+| **Resource Parameter**   | Required (RFC 8707)         | Token audience binding per MCP spec                  |
 
 ### Why API Keys Instead of JWT?
 
@@ -360,6 +361,27 @@ The server creates a record in `mcp_oauth_clients` and responds:
 
 The client saves this `client_id` for future use.
 
+**Alternative: Client ID Metadata Documents**
+
+Instead of Dynamic Client Registration, clients can use **Client ID Metadata Documents** (recommended by MCP spec for clients without prior relationship):
+
+1. Client hosts a metadata JSON at an HTTPS URL (e.g., `https://cursor.com/oauth/client.json`)
+2. Client uses this URL as its `client_id` in the authorization request
+3. Server fetches the metadata document to validate redirect URIs
+
+Example metadata document hosted by the client:
+```json
+{
+  "client_id": "https://cursor.com/oauth/client.json",
+  "client_name": "Cursor",
+  "redirect_uris": ["http://127.0.0.1:54321/callback"],
+  "grant_types": ["authorization_code"],
+  "token_endpoint_auth_method": "none"
+}
+```
+
+This approach eliminates the need for the `/register` endpoint when the client supports it.
+
 ---
 
 #### Phase 3: Authorization (PKCE Flow)
@@ -377,6 +399,7 @@ https://context7.com/api/mcp-auth/authorize
   &code_challenge=E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM
   &code_challenge_method=S256
   &state=xyz123
+  &resource=https://mcp.context7.com  ← RFC 8707 resource indicator (REQUIRED)
 ```
 
 **Step 10-11 — Context7app checks for Clerk session**
@@ -410,6 +433,7 @@ A random authorization code is generated and stored in `mcp_auth_codes` along wi
 - The `client_id`
 - The `user_id`
 - The `code_challenge` (for PKCE verification later)
+- The `resource` (for token endpoint validation)
 - Expiration time (10 minutes)
 
 **Step 19 — Context7app redirects to client with code**
@@ -441,16 +465,19 @@ grant_type=authorization_code
 &code=SplxlOBeZQQYbYS6WxSbIA
 &code_verifier=dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk
 &redirect_uri=http://127.0.0.1:54321/callback
+&resource=https://mcp.context7.com  ← Must match the authorization request
 ```
 
-**Step 21 — Context7app validates code and PKCE**
+**Step 21 — Context7app validates code, PKCE, and resource**
 
 The server:
 1. Looks up the code in `mcp_auth_codes`
 2. Checks it hasn't expired or been used
-3. Computes `SHA256(code_verifier)` and verifies it matches the stored `code_challenge`
+3. Verifies `redirect_uri` matches the stored value
+4. Verifies `resource` matches the stored value (RFC 8707)
+5. Computes `SHA256(code_verifier)` and verifies it matches the stored `code_challenge`
 
-This proves the same client that started the flow is completing it (prevents code interception attacks).
+This proves the same client that started the flow is completing it (prevents code interception attacks) and that the token is bound to the intended resource.
 
 **Step 22 — Context7app creates/regenerates API key**
 
@@ -563,8 +590,9 @@ export async function GET() {
     scopes_supported: ["mcp:read", "mcp:write"],
     response_types_supported: ["code"],
     grant_types_supported: ["authorization_code"],
-    code_challenge_methods_supported: ["S256"],
+    code_challenge_methods_supported: ["S256"],  // REQUIRED by MCP spec
     token_endpoint_auth_methods_supported: ["none"],
+    client_id_metadata_document_supported: true,  // Support Client ID Metadata Documents
   });
 }
 ```
@@ -662,6 +690,7 @@ export async function GET(request: Request) {
   const code_challenge = url.searchParams.get("code_challenge");
   const code_challenge_method = url.searchParams.get("code_challenge_method");
   const scope = url.searchParams.get("scope") || "mcp:read";
+  const resource = url.searchParams.get("resource");  // RFC 8707 resource indicator
 
   // Validate required parameters
   if (!client_id) {
@@ -686,22 +715,57 @@ export async function GET(request: Request) {
     );
   }
 
-  // Validate client exists and redirect_uri is registered
+  // Validate client - supports both Dynamic Registration and Client ID Metadata Documents
   const supabase = createClient();
-  const { data: client } = await supabase
-    .from("mcp_oauth_clients")
-    .select("*")
-    .eq("client_id", client_id)
-    .single();
+  let clientRedirectUris: string[];
 
-  if (!client) {
-    return NextResponse.json(
-      { error: "invalid_client", error_description: "Unknown client_id" },
-      { status: 400 }
-    );
+  // Check if client_id is a URL (Client ID Metadata Document)
+  if (client_id.startsWith("https://")) {
+    // Fetch client metadata from the URL
+    try {
+      const metadataResponse = await fetch(client_id);
+      if (!metadataResponse.ok) {
+        return NextResponse.json(
+          { error: "invalid_client", error_description: "Failed to fetch client metadata" },
+          { status: 400 }
+        );
+      }
+      const metadata = await metadataResponse.json();
+
+      // Validate client_id in metadata matches the URL
+      if (metadata.client_id !== client_id) {
+        return NextResponse.json(
+          { error: "invalid_client", error_description: "client_id mismatch in metadata" },
+          { status: 400 }
+        );
+      }
+
+      clientRedirectUris = metadata.redirect_uris || [];
+    } catch {
+      return NextResponse.json(
+        { error: "invalid_client", error_description: "Failed to fetch client metadata" },
+        { status: 400 }
+      );
+    }
+  } else {
+    // Look up in registered clients (Dynamic Registration)
+    const { data: client } = await supabase
+      .from("mcp_oauth_clients")
+      .select("*")
+      .eq("client_id", client_id)
+      .single();
+
+    if (!client) {
+      return NextResponse.json(
+        { error: "invalid_client", error_description: "Unknown client_id" },
+        { status: 400 }
+      );
+    }
+
+    clientRedirectUris = client.redirect_uris;
   }
 
-  if (!client.redirect_uris.includes(redirect_uri)) {
+  if (!clientRedirectUris.includes(redirect_uri)) {
     return NextResponse.json(
       { error: "invalid_request", error_description: "redirect_uri not registered" },
       { status: 400 }
@@ -721,7 +785,7 @@ export async function GET(request: Request) {
   const authCode = crypto.randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-  // Store auth code with PKCE challenge
+  // Store auth code with PKCE challenge and resource
   const { error: insertError } = await supabase.from("mcp_auth_codes").insert({
     code: authCode,
     client_id: client_id,
@@ -729,6 +793,7 @@ export async function GET(request: Request) {
     redirect_uri: redirect_uri,
     code_challenge: code_challenge,
     scope: scope,
+    resource: resource,  // Store resource for token endpoint validation
     expires_at: expiresAt.toISOString(),
   });
 
@@ -780,7 +845,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { grant_type, code, code_verifier, redirect_uri } = params;
+  const { grant_type, code, code_verifier, redirect_uri, resource } = params;
 
   // Only support authorization_code grant
   if (grant_type !== "authorization_code") {
@@ -826,6 +891,14 @@ export async function POST(request: Request) {
   if (authCode.redirect_uri !== redirect_uri) {
     return NextResponse.json(
       { error: "invalid_grant", error_description: "redirect_uri mismatch" },
+      { status: 400 }
+    );
+  }
+
+  // Verify resource matches (RFC 8707)
+  if (authCode.resource && authCode.resource !== resource) {
+    return NextResponse.json(
+      { error: "invalid_grant", error_description: "resource mismatch" },
       { status: 400 }
     );
   }
@@ -1002,6 +1075,7 @@ CREATE TABLE mcp_auth_codes (
   redirect_uri TEXT NOT NULL,
   code_challenge TEXT NOT NULL,  -- PKCE challenge
   scope TEXT DEFAULT 'mcp:read',
+  resource TEXT,  -- RFC 8707 resource indicator (MCP server URI)
   expires_at TIMESTAMPTZ NOT NULL,
   consumed BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
