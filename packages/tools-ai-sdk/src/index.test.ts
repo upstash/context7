@@ -15,7 +15,7 @@ const bedrock = createAmazonBedrock({
   apiKey: process.env.AWS_BEARER_TOKEN_BEDROCK,
 });
 
-describe("@upstash/context7-ai-sdk", () => {
+describe("@upstash/context7-tools-ai-sdk", () => {
   describe("Tool structure", () => {
     test("resolveLibrary() should return a tool object with correct structure", () => {
       const tool = resolveLibrary();
@@ -108,9 +108,9 @@ describe("@upstash/context7-ai-sdk", () => {
     }, 60000);
   });
 
-  describe("Context7Agent factory", () => {
+  describe("Context7Agent class", () => {
     test("should create an agent instance", () => {
-      const agent = Context7Agent();
+      const agent = new Context7Agent();
 
       expect(agent).toBeDefined();
       expect(agent).toHaveProperty("generate");
@@ -119,7 +119,7 @@ describe("@upstash/context7-ai-sdk", () => {
     test("should accept custom stopWhen condition", async () => {
       const { stepCountIs } = await import("ai");
 
-      const agent = Context7Agent({
+      const agent = new Context7Agent({
         stopWhen: stepCountIs(3),
       });
 
@@ -127,12 +127,30 @@ describe("@upstash/context7-ai-sdk", () => {
     });
 
     test("should accept custom system prompt", () => {
-      const agent = Context7Agent({
+      const agent = new Context7Agent({
         system: "Custom system prompt for testing",
       });
 
       expect(agent).toBeDefined();
     });
+
+    test("should generate response using agent workflow", async () => {
+      const agent = new Context7Agent({
+        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+        stopWhen: stepCountIs(5),
+      });
+
+      const result = await agent.generate({
+        prompt: "Find the React library and get documentation about hooks",
+      });
+
+      expect(result).toBeDefined();
+      expect(result.steps.length).toBeGreaterThan(0);
+
+      const allToolCalls = result.steps.flatMap((step) => step.toolCalls);
+      const toolNames = allToolCalls.map((call) => call.toolName);
+      expect(toolNames).toContain("resolveLibrary");
+    }, 60000);
   });
 
   describe("Prompt exports", () => {

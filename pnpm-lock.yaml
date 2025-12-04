@@ -39,36 +39,6 @@ importers:
         specifier: ^8.28.0
         version: 8.47.0(eslint@9.39.1)(typescript@5.9.3)
 
-  packages/ai-sdk:
-    devDependencies:
-      '@ai-sdk/amazon-bedrock':
-        specifier: ^3.0.55
-        version: 3.0.62(zod@3.25.76)
-      '@types/node':
-        specifier: ^22.13.14
-        version: 22.19.1
-      '@upstash/context7-sdk':
-        specifier: workspace:*
-        version: link:../sdk
-      ai:
-        specifier: ^5.0.0
-        version: 5.0.104(zod@3.25.76)
-      dotenv:
-        specifier: ^17.2.3
-        version: 17.2.3
-      tsup:
-        specifier: ^8.5.1
-        version: 8.5.1(postcss@8.5.6)(typescript@5.9.3)
-      typescript:
-        specifier: ^5.8.2
-        version: 5.9.3
-      vitest:
-        specifier: ^4.0.13
-        version: 4.0.14(@opentelemetry/api@1.9.0)(@types/node@22.19.1)
-      zod:
-        specifier: ^3.24.0
-        version: 3.25.76
-
   packages/mcp:
     dependencies:
       '@modelcontextprotocol/sdk':
@@ -114,6 +84,36 @@ importers:
       vitest:
         specifier: ^4.0.13
         version: 4.0.14(@opentelemetry/api@1.9.0)(@types/node@22.19.1)
+
+  packages/tools-ai-sdk:
+    devDependencies:
+      '@ai-sdk/amazon-bedrock':
+        specifier: ^3.0.55
+        version: 3.0.62(zod@3.25.76)
+      '@types/node':
+        specifier: ^22.13.14
+        version: 22.19.1
+      '@upstash/context7-sdk':
+        specifier: workspace:*
+        version: link:../sdk
+      ai:
+        specifier: ^5.0.0
+        version: 5.0.104(zod@3.25.76)
+      dotenv:
+        specifier: ^17.2.3
+        version: 17.2.3
+      tsup:
+        specifier: ^8.5.1
+        version: 8.5.1(postcss@8.5.6)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.8.2
+        version: 5.9.3
+      vitest:
+        specifier: ^4.0.13
+        version: 4.0.14(@opentelemetry/api@1.9.0)(@types/node@22.19.1)
+      zod:
+        specifier: ^3.24.0
+        version: 3.25.76
 
 packages:
 

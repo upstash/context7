@@ -15,7 +15,7 @@ import type { Context7ToolsConfig } from "./types";
  *
  * @example
  * ```typescript
- * import { resolveLibrary, getLibraryDocs } from '@upstash/context7-ai-sdk';
+ * import { resolveLibrary, getLibraryDocs } from '@upstash/context7-tools-ai-sdk';
  * import { generateText, stepCountIs } from 'ai';
  * import { openai } from '@ai-sdk/openai';
  *
