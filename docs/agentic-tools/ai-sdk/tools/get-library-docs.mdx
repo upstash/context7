@@ -11,8 +11,8 @@ The `getLibraryDocs` tool fetches documentation for a library using its Context7
 ## Usage
 
 ```typescript
-import { resolveLibrary, getLibraryDocs } from "@upstash/context7-ai-sdk";
-import { generateText } from "ai";
+import { resolveLibrary, getLibraryDocs } from "@upstash/context7-tools-ai-sdk";
+import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { text } = await generateText({
@@ -22,7 +22,7 @@ const { text } = await generateText({
     resolveLibrary: resolveLibrary(),
     getLibraryDocs: getLibraryDocs(),
   },
-  maxSteps: 5,
+  stopWhen: stepCountIs(5),
 });
 ```
 
@@ -164,8 +164,8 @@ When `mode="info"`, the tool returns conceptual documentation content:
 ### Basic Usage with Both Tools
 
 ```typescript
-import { resolveLibrary, getLibraryDocs } from "@upstash/context7-ai-sdk";
-import { generateText } from "ai";
+import { resolveLibrary, getLibraryDocs } from "@upstash/context7-tools-ai-sdk";
+import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { text } = await generateText({
@@ -175,7 +175,7 @@ const { text } = await generateText({
     resolveLibrary: resolveLibrary(),
     getLibraryDocs: getLibraryDocs(),
   },
-  maxSteps: 5,
+  stopWhen: stepCountIs(5),
 });
 
 // The model will:
@@ -187,7 +187,7 @@ const { text } = await generateText({
 ### With Custom Configuration
 
 ```typescript
-import { getLibraryDocs } from "@upstash/context7-ai-sdk";
+import { getLibraryDocs } from "@upstash/context7-tools-ai-sdk";
 
 const tool = getLibraryDocs({
   apiKey: process.env.CONTEXT7_API_KEY,
@@ -200,8 +200,8 @@ const tool = getLibraryDocs({
 If the user provides a library ID directly, the model can skip the resolution step:
 
 ```typescript
-import { getLibraryDocs } from "@upstash/context7-ai-sdk";
-import { generateText } from "ai";
+import { getLibraryDocs } from "@upstash/context7-tools-ai-sdk";
+import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { text } = await generateText({
@@ -210,7 +210,7 @@ const { text } = await generateText({
   tools: {
     getLibraryDocs: getLibraryDocs(),
   },
-  maxSteps: 3,
+  stopWhen: stepCountIs(3),
 });
 
 // The model recognizes the /org/project format and calls getLibraryDocs directly
@@ -221,8 +221,8 @@ const { text } = await generateText({
 For comprehensive documentation, the model can request multiple pages:
 
 ```typescript
-import { resolveLibrary, getLibraryDocs } from "@upstash/context7-ai-sdk";
-import { generateText } from "ai";
+import { resolveLibrary, getLibraryDocs } from "@upstash/context7-tools-ai-sdk";
+import { generateText, stepCountIs } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 
 const { text } = await generateText({
@@ -232,7 +232,7 @@ const { text } = await generateText({
     resolveLibrary: resolveLibrary(),
     getLibraryDocs: getLibraryDocs(),
   },
-  maxSteps: 8, // Allow more steps for pagination
+  stopWhen: stepCountIs(8), // Allow more steps for pagination
 });
 
 // The model may call getLibraryDocs multiple times with page=1, page=2, etc.
@@ -282,4 +282,4 @@ The model can request documentation for specific versions when the user asks abo
 ## Related
 
 - [resolveLibrary](/agentic-tools/ai-sdk/tools/resolve-library) - Search for libraries and get their IDs
-- [context7Agent](/agentic-tools/ai-sdk/agents/context7-agent) - Pre-built agent that handles the full workflow
+- [Context7Agent](/agentic-tools/ai-sdk/agents/context7-agent) - Pre-built agent that handles the full workflow

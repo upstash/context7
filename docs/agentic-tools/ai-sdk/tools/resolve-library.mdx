@@ -11,8 +11,8 @@ The `resolveLibrary` tool searches Context7's library database and returns match
 ## Usage
 
 ```typescript
-import { resolveLibrary } from "@upstash/context7-ai-sdk";
-import { generateText } from "ai";
+import { resolveLibrary } from "@upstash/context7-tools-ai-sdk";
+import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { text } = await generateText({
@@ -21,7 +21,7 @@ const { text } = await generateText({
   tools: {
     resolveLibrary: resolveLibrary(),
   },
-  maxSteps: 3,
+  stopWhen: stepCountIs(3),
 });
 ```
 
@@ -106,8 +106,8 @@ On failure:
 ### Basic Usage
 
 ```typescript
-import { resolveLibrary, getLibraryDocs } from "@upstash/context7-ai-sdk";
-import { generateText } from "ai";
+import { resolveLibrary, getLibraryDocs } from "@upstash/context7-tools-ai-sdk";
+import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { text, toolCalls } = await generateText({
@@ -117,7 +117,7 @@ const { text, toolCalls } = await generateText({
     resolveLibrary: resolveLibrary(),
     getLibraryDocs: getLibraryDocs(),
   },
-  maxSteps: 5,
+  stopWhen: stepCountIs(5),
 });
 
 // The model will call resolveLibrary("react") and receive a list of matching libraries
@@ -127,7 +127,7 @@ console.log(text);
 ### With Custom API Key
 
 ```typescript
-import { resolveLibrary } from "@upstash/context7-ai-sdk";
+import { resolveLibrary } from "@upstash/context7-tools-ai-sdk";
 
 const tool = resolveLibrary({
   apiKey: process.env.CONTEXT7_API_KEY,
@@ -137,8 +137,8 @@ const tool = resolveLibrary({
 ### Inspecting Tool Calls
 
 ```typescript
-import { resolveLibrary } from "@upstash/context7-ai-sdk";
-import { generateText } from "ai";
+import { resolveLibrary } from "@upstash/context7-tools-ai-sdk";
+import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { toolCalls, toolResults } = await generateText({
@@ -147,7 +147,7 @@ const { toolCalls, toolResults } = await generateText({
   tools: {
     resolveLibrary: resolveLibrary(),
   },
-  maxSteps: 3,
+  stopWhen: stepCountIs(3),
 });
 
 // See what the model searched for
@@ -174,4 +174,4 @@ The tool's description instructs the AI model to select libraries based on:
 ## Related
 
 - [getLibraryDocs](/agentic-tools/ai-sdk/tools/get-library-docs) - Fetch documentation using the resolved library ID
-- [context7Agent](/agentic-tools/ai-sdk/agents/context7-agent) - Pre-built agent that handles the full workflow
+- [Context7Agent](/agentic-tools/ai-sdk/agents/context7-agent) - Pre-built agent that handles the full workflow

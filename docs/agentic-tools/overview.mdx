@@ -27,7 +27,7 @@ Context7's agentic tools solve these problems by giving your agents direct acces
     href="/agentic-tools/ai-sdk/getting-started"
   >
     Add Context7 tools to your AI SDK workflows with `generateText`, `streamText`, or use the
-    pre-built `context7Agent` for automatic documentation lookup.
+    pre-built `Context7Agent` for automatic documentation lookup.
   </Card>
 </CardGroup>
 
@@ -57,9 +57,9 @@ sequenceDiagram
     Build chatbots that answer framework questions with accurate, version-specific information:
 
     ```typescript
-    import { generateText } from "ai";
+    import { generateText, stepCountIs } from "ai";
     import { openai } from "@ai-sdk/openai";
-    import { resolveLibrary, getLibraryDocs } from "@upstash/context7-ai-sdk";
+    import { resolveLibrary, getLibraryDocs } from "@upstash/context7-tools-ai-sdk";
 
     const { text } = await generateText({
       model: openai("gpt-4o"),
@@ -68,7 +68,7 @@ sequenceDiagram
         resolveLibrary: resolveLibrary(),
         getLibraryDocs: getLibraryDocs(),
       },
-      maxSteps: 5,
+      stopWhen: stepCountIs(5),
     });
     ```
   </Accordion>
@@ -77,10 +77,10 @@ sequenceDiagram
     Ensure generated code uses current APIs and best practices:
 
     ```typescript
-    import { context7Agent } from "@upstash/context7-ai-sdk";
+    import { Context7Agent } from "@upstash/context7-tools-ai-sdk";
     import { anthropic } from "@ai-sdk/anthropic";
 
-    const agent = context7Agent({
+    const agent = new Context7Agent({
       model: anthropic("claude-sonnet-4-20250514"),
     });
 
@@ -94,9 +94,9 @@ sequenceDiagram
     Build code review agents that verify implementations against current API documentation:
 
     ```typescript
-    import { generateText } from "ai";
+    import { generateText, stepCountIs } from "ai";
     import { anthropic } from "@ai-sdk/anthropic";
-    import { resolveLibrary, getLibraryDocs } from "@upstash/context7-ai-sdk";
+    import { resolveLibrary, getLibraryDocs } from "@upstash/context7-tools-ai-sdk";
 
     const codeToReview = `
       const { data } = await supabase
@@ -117,7 +117,7 @@ sequenceDiagram
         resolveLibrary: resolveLibrary(),
         getLibraryDocs: getLibraryDocs(),
       },
-      maxSteps: 5,
+      stopWhen: stepCountIs(5),
     });
 
     // Agent fetches current Supabase docs to verify:

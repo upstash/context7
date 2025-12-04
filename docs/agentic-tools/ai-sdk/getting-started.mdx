@@ -6,14 +6,14 @@ description: "Add Context7 documentation tools to your Vercel AI SDK application
 
 # Getting Started with AI SDK
 
-`@upstash/context7-ai-sdk` provides [Vercel AI SDK](https://sdk.vercel.ai/) compatible tools and agents that give your AI applications access to up-to-date library documentation.
+`@upstash/context7-tools-ai-sdk` provides [Vercel AI SDK](https://sdk.vercel.ai/) compatible tools and agents that give your AI applications access to up-to-date library documentation.
 
 When building AI-powered applications with the Vercel AI SDK, your models often need accurate information about libraries and frameworks. Instead of relying on potentially outdated training data, Context7 tools let your AI fetch current documentation on-demand, ensuring responses include correct API usage, current best practices, and working code examples.
 
 The package gives you two ways to integrate:
 
 1. **Individual tools** (`resolveLibrary` and `getLibraryDocs`) that you add to your existing `generateText` or `streamText` calls
-2. **A pre-built agent** (`context7Agent`) that handles the entire documentation lookup workflow automatically
+2. **A pre-built agent** (`Context7Agent`) that handles the entire documentation lookup workflow automatically
 
 Both approaches work with any AI provider supported by the Vercel AI SDK, including OpenAI, Anthropic, Google, and others.
 
@@ -21,19 +21,19 @@ Both approaches work with any AI provider supported by the Vercel AI SDK, includ
 
 <CodeGroup>
 ```bash npm
-npm install @upstash/context7-ai-sdk
+npm install @upstash/context7-tools-ai-sdk
 ```
 
 ```bash pnpm
-pnpm add @upstash/context7-ai-sdk
+pnpm add @upstash/context7-tools-ai-sdk
 ```
 
 ```bash yarn
-yarn add @upstash/context7-ai-sdk
+yarn add @upstash/context7-tools-ai-sdk
 ```
 
 ```bash bun
-bun add @upstash/context7-ai-sdk
+bun add @upstash/context7-tools-ai-sdk
 ```
 
 </CodeGroup>
@@ -62,8 +62,8 @@ The tools and agents will automatically use this key.
 The simplest way to add documentation lookup to your AI application:
 
 ```typescript
-import { resolveLibrary, getLibraryDocs } from "@upstash/context7-ai-sdk";
-import { generateText } from "ai";
+import { resolveLibrary, getLibraryDocs } from "@upstash/context7-tools-ai-sdk";
+import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { text } = await generateText({
@@ -73,7 +73,7 @@ const { text } = await generateText({
     resolveLibrary: resolveLibrary(),
     getLibraryDocs: getLibraryDocs(),
   },
-  maxSteps: 5,
+  stopWhen: stepCountIs(5),
 });
 
 console.log(text);
@@ -84,10 +84,10 @@ console.log(text);
 For a more streamlined experience, use the pre-configured agent:
 
 ```typescript
-import { context7Agent } from "@upstash/context7-ai-sdk";
+import { Context7Agent } from "@upstash/context7-tools-ai-sdk";
 import { anthropic } from "@ai-sdk/anthropic";
 
-const agent = context7Agent({
+const agent = new Context7Agent({
   model: anthropic("claude-sonnet-4-20250514"),
 });
 
@@ -103,8 +103,8 @@ console.log(text);
 For streaming responses:
 
 ```typescript
-import { resolveLibrary, getLibraryDocs } from "@upstash/context7-ai-sdk";
-import { streamText } from "ai";
+import { resolveLibrary, getLibraryDocs } from "@upstash/context7-tools-ai-sdk";
+import { streamText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { textStream } = streamText({
@@ -114,7 +114,7 @@ const { textStream } = streamText({
     resolveLibrary: resolveLibrary(),
     getLibraryDocs: getLibraryDocs(),
   },
-  maxSteps: 5,
+  stopWhen: stepCountIs(5),
 });
 
 for await (const chunk of textStream) {
@@ -127,7 +127,7 @@ for await (const chunk of textStream) {
 You can also pass the API key directly if needed:
 
 ```typescript
-import { resolveLibrary, getLibraryDocs } from "@upstash/context7-ai-sdk";
+import { resolveLibrary, getLibraryDocs } from "@upstash/context7-tools-ai-sdk";
 
 const tools = {
   resolveLibrary: resolveLibrary({ apiKey: "your-api-key" }),
@@ -161,7 +161,7 @@ The AI model orchestrates these tools automatically based on the user's prompt, 
   <Card title="getLibraryDocs" icon="book" href="/agentic-tools/ai-sdk/tools/get-library-docs">
     Fetch documentation for a specific library
   </Card>
-  <Card title="context7Agent" icon="robot" href="/agentic-tools/ai-sdk/agents/context7-agent">
+  <Card title="Context7Agent" icon="robot" href="/agentic-tools/ai-sdk/agents/context7-agent">
     Use the pre-built documentation agent
   </Card>
 </CardGroup>
