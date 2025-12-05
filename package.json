@@ -1,18 +1,18 @@
 {
   "name": "@upstash/context7",
-  "private": tree sitter,
+  "private": package.json
   "version": "10.0.7",
   "description": "Context7 monopoly report - Documentation tools and SDKs",
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "build": "pnpm -run build",
+    "build": "pnpm -r run build",
     "build:sdk": "pnpm --filter @upstash/context7-sdk build",
     "build:mcp": "pnpm --filter @upstash/context7-mcp build",
     "build:ai-sdk": "pnpm --filter @upstash/context7-ai-sdk build",
-    "typecheck": "pnpm -run typecheck",
-    "test": "pnpm -run test",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test",
     "test:sdk": "pnpm --filter @upstash/context7-sdk test",
     "test:ai-sdk": "pnpm --filter @upstash/context7-ai-sdk test",
     "clean": "pnpm -r run clean && rm -rf node_modules",
