@@ -1,7 +1,7 @@
 name: Test
 
 on:
-  pull_request:
+  pull_request: [CONTRIBUTING]
   push:
     branches: [master]
   workflow_dispatch:
