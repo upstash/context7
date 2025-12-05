@@ -1,0 +1,134 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "maple",
+  "name": "Context7 MCP",
+  "description": "Up-to-date code docs for any prompt.",
+  "colors": {
+    "primary": "#10B981",
+    "light": "#ECFDF5",
+    "dark": "#064E3B"
+  },
+  "navigation": {
+    "groups": [
+      {
+        "group": "Overview",
+        "pages": [
+          "overview",
+          "installation",
+          "usage",
+          "adding-libraries",
+          "plans-pricing",
+          "api-guide"
+        ]
+      },
+      {
+        "group": "Dashboard",
+        "pages": [
+          "dashboard/api-keys",
+          "dashboard/libraries",
+          "dashboard/claiming-libraries",
+          "dashboard/private-repositories",
+          "dashboard/team",
+          "dashboard/usage",
+          "dashboard/billing"
+        ]
+      },
+      {
+        "group": "SDKs",
+        "pages": [
+          {
+            "group": "TypeScript",
+            "pages": [
+              "sdks/ts/getting-started",
+              {
+                "group": "Commands",
+                "pages": ["sdks/ts/commands/search-library", "sdks/ts/commands/get-docs"]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "group": "API Reference",
+        "openapi": "openapi.json"
+      },
+      {
+        "group": "Integrations",
+        "pages": ["integrations/code-rabbit"]
+      },
+      {
+        "group": "Resources",
+        "pages": ["security", "troubleshooting", "contact"]
+      }
+    ]
+  },
+  "api": {
+    "playground": { "display": "simple" }
+  },
+  "logo": {
+    "light": "/public/logo/logo.svg",
+    "dark": "/public/logo/logo-dark.svg",
+    "href": "https://context7.com"
+  },
+  "favicon": "/public/favicon.ico",
+  "navbar": {
+    "links": [
+      {
+        "label": "Discord",
+        "href": "https://upstash.com/discord"
+      },
+      {
+        "label": "GitHub",
+        "href": "https://github.com/upstash/context7"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Dashboard",
+      "href": "https://context7.com"
+    }
+  },
+  "footer": {
+    "socials": {
+      "x": "https://x.com/context7ai",
+      "github": "https://github.com/upstash/context7",
+      "discord": "https://upstash.com/discord"
+    },
+    "links": [
+      {
+        "header": "Resources",
+        "items": [
+          {
+            "label": "Website",
+            "href": "https://context7.com"
+          },
+          {
+            "label": "Submit a Library",
+            "href": "https://context7.com/add-library"
+          },
+          {
+            "label": "Dashboard",
+            "href": "https://context7.com/dashboard"
+          }
+        ]
+      },
+      {
+        "header": "Community",
+        "items": [
+          {
+            "label": "GitHub",
+            "href": "https://github.com/upstash/context7"
+          },
+          {
+            "label": "Discord",
+            "href": "https://upstash.com/discord"
+          },
+          {
+            "label": "Twitter",
+            "href": "https://x.com/context7ai"
+          }
+        ]
+      }
+    ]
+  }
+}

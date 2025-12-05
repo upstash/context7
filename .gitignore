@@ -171,6 +171,14 @@ dist
 # IntelliJ based IDEs
 .idea
 
+.cursor
+
 # Finder (MacOS) folder config
 .DS_Store
 package-lock.json
+
+prompt.txt
+
+reports
+reports-old
+src/test/questions*

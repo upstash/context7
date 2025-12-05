@@ -1,0 +1,64 @@
+---
+title: Usage Statistics
+description: Monitor your Context7 API usage and track costs
+---
+
+Track your Context7 usage with real-time metrics from the Overview tab.
+
+![Usage statistics card showing metrics and cost breakdown](/images/dashboard/usage-stats.png)
+
+## Metrics Overview
+
+Context7 tracks four key metrics to help you understand your usage patterns:
+
+### Search & Query Requests
+
+The total number of API calls made to Context7:
+
+- **Search Requests**: Library search queries
+- **Query Requests**: Documentation retrieval calls
+
+### Query Tokens
+
+The total number of tokens returned in API responses. This reflects how much documentation content you've retrieved.
+
+<Tip>Search requests, Query requests, and Query tokens do not affect cost.</Tip>
+
+### Parsing Tokens
+
+The total tokens processed when parsing private repository documentation (Pro and Enterprise only).
+
+**How it works**:
+
+- Charged when adding a new private repository
+- Charged for changed content when refreshing
+- No charge for cached content when refreshing
+
+**Cost**: $15 per 1M tokens
+
+### Total Cost
+
+Your monthly cost in USD (Pro and Enterprise only).
+
+**Calculation**:
+
+```
+Total Cost = Parsing Cost + Team Cost
+
+Parsing Cost = (Parsing Tokens / 1,000,000) × $15
+Team Cost = Number of Members × $7
+```
+
+**Example**:
+
+- Team: 4 members
+- Parsing: 800K tokens this month
+- Cost: (800K / 1M × $15) + (4 × $7) = $12 + $28 = **$40**
+
+Hover over the Total Cost to see the detailed breakdown.
+
+## Reporting Periods
+
+**Free Plan**: Metrics display daily usage (resets every 24 hours)
+
+**Pro & Enterprise Plans**: Metrics display monthly usage (resets on your billing date)

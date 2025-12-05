@@ -1,0 +1,347 @@
+---
+title: Troubleshooting
+---
+
+This guide helps you resolve common issues when setting up or using Context7 MCP.
+
+## Quick Checklist
+
+- Confirm Node.js v18+ is installed (`node --version`)
+- Update to the latest Context7 MCP package (`@upstash/context7-mcp@latest`)
+- Verify connectivity with `curl https://mcp.context7.com/mcp/ping`
+- Add your API key to the configuration if you hit rate limits
+- Enable debug logs (`DEBUG=*`) before collecting support information
+
+## Installation Issues
+
+### Module Not Found Errors
+
+If you encounter `ERR_MODULE_NOT_FOUND`, try using `bunx` instead of `npx`:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "bunx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    }
+  }
+}
+```
+
+Use this when you see module resolution errors with npx.
+
+### ESM Resolution Issues
+
+For errors such as `Error: Cannot find module 'uriTemplate.js'`, try the `--experimental-vm-modules` flag:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
+    }
+  }
+}
+```
+
+### TLS/Certificate Issues
+
+Use the `--experimental-fetch` flag to bypass TLS-related problems:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "--node-options=--experimental-fetch", "@upstash/context7-mcp"]
+    }
+  }
+}
+```
+
+## Quick Fixes
+
+1. **Try adding `@latest`** to the package name to ensure you're using the most recent version:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest", "--api-key", "YOUR_API_KEY"]
+    }
+  }
+}
+```
+
+2. **Use `bunx` as an alternative** to `npx`:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "bunx",
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+    }
+  }
+}
+```
+
+3. **Consider using `deno`** as another alternative runtime:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "deno",
+      "args": [
+        "run",
+        "--allow-env=NO_DEPRECATION,TRACE_DEPRECATION",
+        "--allow-net",
+        "npm:@upstash/context7-mcp"
+      ]
+    }
+  }
+}
+```
+
+4. **Ensure you're using Node.js v18 or higher** for native fetch support:
+
+```bash
+node --version
+```
+
+If you're on an older version, upgrade Node.js to v18 or later.
+
+## Platform-Specific Issues
+
+### Windows Issues
+
+#### Request Timeout Errors
+
+On Windows, some users may encounter request timeout errors with the default configuration. Try using the full path to Node.js and the installed package:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "C:\\Program Files\\nodejs\\node.exe",
+      "args": [
+        "C:\\Users\\yourname\\AppData\\Roaming\\npm\\node_modules\\@upstash\\context7-mcp\\dist\\index.js",
+        "--transport",
+        "stdio",
+        "--api-key",
+        "YOUR_API_KEY"
+      ]
+    }
+  }
+}
+```
+
+Alternatively, use this configuration with `cmd`:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+    }
+  }
+}
+```
+
+### macOS Issues
+
+#### Request Timeout Errors
+
+On macOS, some users may encounter the same request timeout errors. Use the full path to Node.js and the installed package:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "/Users/yourname/.nvm/versions/node/v22.14.0/bin/node",
+      "args": [
+        "/Users/yourname/.nvm/versions/node/v22.14.0/lib/node_modules/@upstash/context7-mcp/dist/index.js",
+        "--transport",
+        "stdio",
+        "--api-key",
+        "YOUR_API_KEY"
+      ]
+    }
+  }
+}
+```
+
+<Note>
+  Replace `yourname` and the Node.js version (`v22.14.0`) with your actual username and installed
+  Node.js version.
+</Note>
+
+## API and Connection Issues
+
+### Rate Limiting
+
+If you encounter rate limit errors:
+
+- **Get an API key**: Sign up at [context7.com/dashboard](https://context7.com/dashboard) for higher rate limits
+- **Add the API key to your configuration**:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+
+### Authentication Errors
+
+If you see `401 Unauthorized` errors:
+
+1. **Verify your API key** is correct and starts with `ctx7sk`
+2. **Check the header format** - ensure the API key is properly set:
+
+For HTTP transport:
+
+```json
+{
+  "headers": {
+    "CONTEXT7_API_KEY": "YOUR_API_KEY"
+  }
+}
+```
+
+For stdio transport:
+
+```json
+{
+  "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+}
+```
+
+### Library Not Found
+
+If you get `404 Not Found` errors:
+
+1. **Verify the library ID** format is correct: `/owner/repo` or `/owner/repo/version`
+2. **Search for the library** first using `resolve-library-id` tool
+3. **Check if the library exists** at [context7.com](https://context7.com)
+
+## MCP Client-Specific Issues
+
+### Cursor
+
+- Make sure you're using Cursor 1.0 or later for the best MCP support
+- Try both global (`~/.cursor/mcp.json`) and project-specific (`.cursor/mcp.json`) configurations
+- Restart Cursor after changing the MCP configuration
+
+### VS Code
+
+- Ensure you have the latest version of VS Code with MCP support
+- Check that the Copilot extension is installed and updated
+- Restart VS Code after configuration changes
+
+### Claude Code
+
+- Verify the MCP server is added correctly with `claude mcp list`
+- Check logs with `claude mcp logs context7`
+- Try removing and re-adding the server
+
+## Proxy Issues
+
+If you're behind a corporate proxy:
+
+1. **Set environment variables** before starting your MCP client:
+
+```bash
+export https_proxy=http://proxy.example.com:8080
+export HTTPS_PROXY=http://proxy.example.com:8080
+```
+
+2. **Or add to your MCP configuration**:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
+      "env": {
+        "https_proxy": "http://proxy.example.com:8080",
+        "HTTPS_PROXY": "http://proxy.example.com:8080"
+      }
+    }
+  }
+}
+```
+
+See [Usage Guide - Configure HTTPS Proxy](/usage#configure-https-proxy) for more details.
+
+## Debugging Tips
+
+### Enable Verbose Logging
+
+Add debug output to your configuration:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
+      "env": {
+        "DEBUG": "*"
+      }
+    }
+  }
+}
+```
+
+### Test with MCP Inspector
+
+Test your setup independently:
+
+```bash
+npx -y @modelcontextprotocol/inspector npx @upstash/context7-mcp
+```
+
+This opens an interactive inspector to test Context7 tools.
+
+### Check Server Status
+
+Test that the remote server is reachable:
+
+```bash
+curl https://mcp.context7.com/mcp/ping
+```
+
+Expected response: `{"status": "ok", "message": "pong"}`
+
+## Additional Support
+
+If these solutions don't resolve your issue:
+
+1. **Check GitHub Issues**: Search for similar problems at [github.com/upstash/context7/issues](https://github.com/upstash/context7/issues)
+2. **Create a new issue**: Include your:
+   - Operating system and version
+   - Node.js version (`node --version`)
+   - MCP client and version
+   - Configuration (remove sensitive data like API keys)
+   - Error messages and logs
+3. **Join Discord**: Get help from the community at [upstash.com/discord](https://upstash.com/discord)
+
+## Additional Resources
+
+- [Getting Started Guide](/overview)
+- [Installation Instructions](/installation)
+- [API Documentation](/api)
+- [Security & Privacy](/security)

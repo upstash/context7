@@ -1,0 +1,174 @@
+---
+title: Library Owners
+---
+
+Context7 allows you to add your favorite libraries and frameworks so developers always receive current, trustworthy documentation inside their coding environment.
+
+## Quick Submission
+
+The fastest way to add a library is through our web interface:
+
+**[Submit a Library ->](https://context7.com/add-library?tab=github)**
+
+1. Paste the GitHub repository URL.
+2. (Optional) Adjust folders and exclusions.
+3. Submit and let Context7 parse and index the documentation.
+
+<Note>
+  For private repositories, see the [Private Repositories](/dashboard/private-repositories) guide.
+  Requires a Pro or Enterprise plan.
+</Note>
+
+## Advanced Configuration with `context7.json`
+
+For more control over how Context7 parses and presents your library, you can add a `context7.json` file to the root of your repository. This file works similarly to `robots.txt` and tells Context7 how to handle your project.
+
+### Configuration Fields
+
+Here's an example `context7.json` file with all available options:
+
+```json
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "Upstash Ratelimit",
+  "description": "Ratelimiting library based on Upstash Redis",
+  "folders": [],
+  "excludeFolders": ["src"],
+  "excludeFiles": [],
+  "rules": ["Use Upstash Redis as a database", "Use single region set up"],
+  "previousVersions": [
+    {
+      "tag": "v1.2.1"
+    }
+  ]
+}
+```
+
+<Note>
+  **Pro Tip**: Including the `$schema` field enables autocomplete, validation, and helpful tooltips
+  in modern code editors like VS Code, making it easier to create and maintain your configuration.
+</Note>
+
+## Field Descriptions
+
+- **`projectTitle`** (string): Suggested display name for your project in Context7. Only used when the LLM cannot generate a name with high confidence.
+
+- **`description`** (string): Suggested description for your project in Context7. Only used when the LLM cannot generate a description with high confidence.
+
+- **`branch`** (string): The name of the git branch to parse. If not provided, the default branch will be used.
+
+- **`folders`** (array): Specific folder paths to include when parsing. If empty, Context7 scans the entire repository. Root-level markdown files are always included.
+
+- **`excludeFolders`** (array): Patterns to exclude from documentation parsing. Supports simple names, paths, and glob patterns (see Exclusion Patterns below).
+
+- **`excludeFiles`** (array): Specific file names to exclude. Use only the filename, not the full path. Examples: `CHANGELOG.md`, license files, or non-documentation content.
+
+- **`rules`** (array): Best practices or important guidelines that coding agents should follow when using your library. These appear as recommendations in the documentation context provided to coding agents.
+
+- **`previousVersions`** (array): Information about previous versions of your library that should also be available in Context7.
+  - **`tag`**: The Git tag or version identifier
+
+- **`branchVersions`** (array): Information about previous versions (branch-based) of your library that should also
+  be available in Context7.
+  - **`branch`**: The Git branch
+
+### Exclusion Patterns
+
+The `excludeFolders` parameter supports various pattern types for flexible exclusion:
+
+- **Simple folder names**: `"node_modules"` - Excludes any folder named "node_modules" anywhere in the tree
+- **Root-specific patterns**: `"./xyz"` - Excludes the folder only at repository root (e.g., excludes `/xyz` but not `/dist/xyz`)
+- **Path patterns**: `"app-sdk/v2.3"` - Excludes specific paths and everything under them
+- **Glob patterns**: `"*.test"`, `"temp*"` - Excludes folders matching the pattern
+- **Globstar patterns**: `"**/dist"`, `"docs/**/internal"` - Advanced path matching
+- **Complex patterns**: `"src/**/*.test.js"` - Exclude test files in the src directory
+
+Examples:
+
+- `"node_modules"` - Excludes all node_modules folders anywhere
+- `"./build"` - Excludes the build folder only at root (not `src/build`)
+- `"app-sdk/v2.3"` - Excludes the app-sdk/v2.3 path and all its contents
+- `"*.test"` - Excludes folders ending with .test
+- `"docs/**/internal"` - Excludes any "internal" folder under docs
+- `"**/temp"` - Excludes any folder named "temp" anywhere
+
+### Default Exclusions
+
+If you don't specify `excludeFiles` or `excludeFolders` in your `context7.json` file, Context7 uses these default patterns:
+
+#### Default Excluded Files
+
+```
+CHANGELOG.md, changelog.md, CHANGELOG.mdx, changelog.mdx
+LICENSE.md, license.md
+CODE_OF_CONDUCT.md, code_of_conduct.md
+```
+
+#### Default Excluded Folders
+
+```
+*archive*, *archived*, old, docs/old, *deprecated*, *legacy*
+*previous*, *outdated*, *superseded*
+i18n/zh*, i18n/es*, i18n/fr*, i18n/de*, i18n/ja*, i18n/ko*
+i18n/ru*, i18n/pt*, i18n/it*, i18n/ar*, i18n/hi*, i18n/tr*
+i18n/nl*, i18n/pl*, i18n/sv*, i18n/vi*, i18n/th*
+zh-cn, zh-tw, zh-hk, zh-mo, zh-sg
+```
+
+These defaults help coding agents avoid irrelevant, outdated, and non-technical content.
+
+## Claiming Your Library
+
+If you're the library owner, you can claim your library on Context7 to unlock a web-based admin panel for managing configuration. This allows you to:
+
+- Edit settings through a user interface instead of committing file changes
+- Invite team members to collaborate on configuration
+- Add and manage multiple versions of your library documentation
+- Get higher rate limits for refresh operations
+
+**[Learn more about claiming libraries →](/dashboard/claiming-libraries)**
+
+## Who Can Manage Configuration?
+
+- **Library authors**: Claim ownership via `context7.json` and manage settings through the admin panel, or add configuration directly to your repository
+- **Contributors**: Submit pull requests to add or update the configuration
+- **Community members**: Propose improvements to the way popular libraries are parsed
+
+## Best Practices
+
+1. **Keep descriptions concise**: One sentence explaining your library's purpose. Example: "Serverless Redis SDK for edge and browser environments."
+2. **Exclude irrelevant folders**: Use `excludeFolders` to skip source code, tests, or build artifacts. Example: `["src", "test", "dist", "node_modules"]`
+3. **Add helpful rules**: Include common gotchas or best practices. Example: "Always call `.close()` on Redis connections" or "Use environment variables for API keys, never hardcode them"
+4. **Maintain version history**: Keep important previous versions accessible. Users on v1.x still need v1.x documentation, not just the latest v2.x
+
+## Adding a Version
+
+To add a new version to your existing library:
+
+1. **Add version to the `context7.json` file**: Update the `previousVersions` array with your new version:
+
+   ```json
+   "previousVersions": [
+     {
+       "tag": "v2.0.0",
+       "title": "version 2.0.0"
+     }
+   ]
+   ```
+
+   <Note>The `tag` value must exactly match an existing Git tag in your GitHub repository.</Note>
+
+2. **Refresh your library**: Go to your library page on Context7 and trigger a refresh to index the new version.
+3. **Confirm availability**: Search for the new version or run `resolve-library-id` from an MCP client to confirm it appears in results.
+
+## Monitor Parsing and Quality
+
+Keep documentation helpful for agents:
+
+- Review the rendered documentation after each release
+- Trim noisy sections (e.g., large changelogs) with `excludeFiles` or `excludeFolders`
+- Update `rules` when best practices change, so AI assistants surface current guidance
+
+## Need Help?
+
+If you encounter issues or need assistance adding your project, please [open an issue](https://github.com/upstash/context7/issues/new/choose) or reach out to our community.

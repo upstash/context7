@@ -1,0 +1,77 @@
+---
+title: Private Repositories
+description: Add and manage private repository documentation
+---
+
+Add your private GitHub, GitLab, or Bitbucket repositories to Context7 to make your internal documentation available to AI coding assistants.
+
+![Private Repositories card showing a table of added repositories](/images/dashboard/private-repos-card.png)
+
+## Adding Private Repositories
+
+Follow these steps to add a private repository:
+
+1. Go to the [Add Library](https://context7.com/add-library) page
+2. **Connect your account**
+   - Choose GitHub, GitLab, or Bitbucket
+   - Authorize Context7 to access your repositories
+3. **Select a repository** from your account
+4. **Submit** for parsing
+
+<Note>You must have a Pro or Enterprise plan to add private repositories.</Note>
+
+## Repository Management
+
+### Refreshing Documentation
+
+Keep your private documentation up to date:
+
+1. **Click "Refresh"** next to the repository
+2. Context7 re-parses the repository
+3. **You're only charged for changed content** - cached pages are free
+
+**When to refresh**:
+
+- After major documentation updates
+- After releasing new features
+- When you notice outdated information
+
+<Tip>Refresh private repos only after significant documentation changes to minimize costs.</Tip>
+
+### Removing Repositories
+
+To remove a private repository:
+
+1. **Click "Remove"** next to the repository
+2. **Confirm deletion** in the modal
+3. Repository documentation becomes unavailable immediately
+
+<Warning>
+  This action is permanent. The repository will no longer be accessible via the API.
+</Warning>
+
+## Permissions
+
+Access to private repository management is restricted by role. Only Owners and Admins can add, refresh, or remove private repositories. Developers can view repository documentation but cannot manage repositories.
+
+See [Team Management](/dashboard/team#roles) for the complete permissions table for all team roles.
+
+## Configuration
+
+### Using `context7.json`
+
+Add a `context7.json` file to your repository root for better control over parsing:
+
+```json
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "Your Project Name",
+  "description": "Brief description of your project",
+  "folders": ["docs", "guides"],
+  "excludeFolders": ["tests", "dist", "node_modules"],
+  "excludeFiles": ["CHANGELOG.md"],
+  "rules": ["Always validate user input", "Use TypeScript strict mode"]
+}
+```
+
+See the [Adding Libraries](/adding-libraries) page for complete configuration options.

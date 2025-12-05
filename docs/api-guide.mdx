@@ -1,0 +1,198 @@
+---
+title: API Guide
+description: Authentication, rate limits, best practices, and integration guides for the Context7 API
+---
+
+## Authentication
+
+All API requests require authentication using an API key. Include your API key in the `Authorization` header:
+
+```bash
+Authorization: Bearer CONTEXT7_API_KEY
+```
+
+Get your API key at [context7.com/dashboard](https://context7.com/dashboard). Learn more about [creating and managing API keys](/dashboard/api-keys).
+
+<Warning>
+  Store your API key in an environment variable or secret manager. Rotate it if compromised.
+</Warning>
+
+## Rate Limits
+
+- **Without API key**: Low rate limits and no custom configuration
+- **With API key**: Higher limits based on your plan
+- View current usage and reset windows in the [dashboard](https://context7.com/dashboard).
+
+When you exceed rate limits, the API returns a `429` status code:
+
+```json
+{
+  "error": "Too many requests",
+  "status": 429
+}
+```
+
+## Best Practices
+
+### Specify Topics
+
+Use the `topic` parameter to get more relevant results and reduce unnecessary content:
+
+```bash
+# Focus on routing-specific documentation
+curl "https://context7.com/api/v2/docs/code/vercel/next.js?topic=routing" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY"
+```
+
+### Cache Responses
+
+Store documentation locally to reduce API calls and improve performance. Documentation updates are relatively infrequent, so caching for several hours or days is usually appropriate.
+
+### Handle Rate Limits
+
+Implement exponential backoff for rate limit errors:
+
+```python
+import time
+import requests
+
+def fetch_with_retry(url, headers, max_retries=3):
+    for attempt in range(max_retries):
+        response = requests.get(url, headers=headers)
+
+        if response.status_code == 429:
+            # Wait before retrying with exponential backoff
+            time.sleep(2 ** attempt)
+            continue
+
+        return response
+
+    raise Exception("Max retries exceeded")
+```
+
+### Use Specific Versions
+
+Specify exact versions for consistent results across deployments:
+
+```bash
+# Pin to a specific version
+curl "https://context7.com/api/v2/docs/code/vercel/next.js/v15.1.8" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY"
+```
+
+### Use Pagination for More Results
+
+When you need more documentation snippets, use the `page` parameter to fetch additional pages. The API supports up to 10 pages (100 snippets total) per topic:
+
+```bash
+# Fetch first page
+curl "https://context7.com/api/v2/docs/code/vercel/next.js?topic=routing&page=1" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY"
+
+# Fetch next page if needed
+curl "https://context7.com/api/v2/docs/code/vercel/next.js?topic=routing&page=2" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY"
+```
+
+The response includes pagination metadata to help you navigate:
+
+```json
+{
+  "snippets": [...],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "totalPages": 5,
+    "hasNext": true,
+    "hasPrev": false
+  }
+}
+```
+
+**Tips:**
+
+- Use specific topics to reduce the total number of pages needed
+- Check `hasNext` before fetching additional pages
+- Combine with version pinning for consistent pagination
+
+## Error Handling
+
+The Context7 API uses standard HTTP status codes:
+
+| Code | Description                                   | Action                                                        |
+| ---- | --------------------------------------------- | ------------------------------------------------------------- |
+| 200  | Success                                       | Process the response normally                                 |
+| 401  | Unauthorized - Invalid or missing API key     | Check your API key and authentication header                  |
+| 404  | Not Found - Library or endpoint doesn't exist | Verify the library ID or endpoint URL                         |
+| 429  | Too Many Requests - Rate limit exceeded       | Implement exponential backoff and retry                       |
+| 500  | Internal Server Error                         | Retry with exponential backoff, contact support if persistent |
+
+### Error Response Format
+
+All errors return a JSON object with these fields:
+
+```json
+{
+  "error": "Error message describing what went wrong",
+  "status": 429
+}
+```
+
+## SDK and Libraries
+
+### MCP Server (Recommended)
+
+The Context7 Model Context Protocol (MCP) server provides seamless integration with Claude and other AI tools:
+
+```bash
+npm install @upstash/context7-mcp
+```
+
+**Features:**
+
+- Automatic API key management
+- Built-in caching
+- Type-safe library resolution
+- Optimized for AI workflows
+
+See the [Installation guide](/installation) for detailed setup instructions.
+
+### Direct API Integration
+
+For custom integrations or non-MCP use cases, use the REST endpoints directly. The API is language-agnostic and works with any HTTP client.
+
+**Example (cURL):**
+
+```bash
+curl "https://context7.com/api/v2/docs/code/vercel/next.js?topic=routing" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY"
+```
+
+**Example (Python):**
+
+```python
+import requests
+
+headers = {
+    "Authorization": "Bearer CONTEXT7_API_KEY"
+}
+
+response = requests.get(
+    "https://context7.com/api/v2/docs/code/vercel/next.js",
+    headers=headers,
+    params={"topic": "routing"}
+)
+
+docs = response.json()
+```
+
+**Example (JavaScript/Node.js):**
+
+```javascript
+const response = await fetch("https://context7.com/api/v2/docs/code/vercel/next.js?topic=routing", {
+  headers: {
+    Authorization: "Bearer CONTEXT7_API_KEY",
+  },
+});
+const docs = await response.json();
+```

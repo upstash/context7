@@ -1,0 +1,153 @@
+---
+title: "Search Library"
+description: "Search available libraries"
+---
+
+# Search Library
+
+Search across available libraries. Returns finalized public libraries and accessible private repositories based on authentication.
+
+## Arguments
+
+<ParamField path="query" type="string" required>
+  The search query to find libraries
+</ParamField>
+
+## Response
+
+<ResponseField name="SearchLibraryResponse" type="object">
+  <Expandable title="properties">
+    <ResponseField name="results" type="SearchResult[]" required>
+      Array of library search results
+      <Expandable title="SearchResult properties">
+        <ResponseField name="id" type="string" required>
+          Unique identifier for the library (e.g., "/facebook/react")
+        </ResponseField>
+        <ResponseField name="title" type="string" required>
+          Display name of the library
+        </ResponseField>
+        <ResponseField name="description" type="string" required>
+          Brief description of the library
+        </ResponseField>
+        <ResponseField name="branch" type="string" required>
+          Default branch name
+        </ResponseField>
+        <ResponseField name="lastUpdateDate" type="string" required>
+          ISO 8601 timestamp of last update
+        </ResponseField>
+        <ResponseField
+          name="state"
+          type="'initial' | 'finalized' | 'processing' | 'error' | 'delete'"
+          required
+        >
+          Current processing state of the library
+        </ResponseField>
+        <ResponseField name="totalTokens" type="number" required>
+          Total number of tokens in documentation
+        </ResponseField>
+        <ResponseField name="totalSnippets" type="number" required>
+          Total number of code snippets
+        </ResponseField>
+        <ResponseField name="stars" type="number">
+          Number of GitHub stars
+        </ResponseField>
+        <ResponseField name="trustScore" type="number">
+          Trust score of the library
+        </ResponseField>
+        <ResponseField name="benchmarkScore" type="number">
+          Benchmark score
+        </ResponseField>
+        <ResponseField name="versions" type="string[]">
+          Available versions
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+    <ResponseField name="metadata" type="APIResponseMetadata" required>
+      <Expandable title="properties">
+        <ResponseField name="authentication" type="'none' | 'personal' | 'team'" required>
+          Authentication level used for the request
+        </ResponseField>
+      </Expandable>
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Examples
+
+<RequestExample>
+  ```typescript Basic Search
+  import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7();
+
+const response = await client.searchLibrary("react");
+
+console.log(`Found ${response.results.length} libraries`);
+response.results.forEach(library => {
+console.log(`${library.title}: ${library.description}`);
+});
+
+````
+
+```typescript Error Handling
+import { Context7, Context7Error } from "@upstash/context7-sdk";
+
+const client = new Context7();
+
+try {
+  const response = await client.searchLibrary("express");
+
+  if (response.results.length === 0) {
+    console.log("No libraries found");
+  } else {
+    console.log(`Found ${response.results.length} libraries`);
+  }
+} catch (error) {
+  if (error instanceof Context7Error) {
+    console.error("API Error:", error.message);
+  } else {
+    throw error;
+  }
+}
+```
+
+</RequestExample>
+
+## Use Cases
+
+### Finding Popular Libraries
+
+```typescript
+const response = await client.searchLibrary("react");
+
+// Sort by stars
+const popular = response.results
+  .filter((lib) => lib.stars !== undefined)
+  .sort((a, b) => (b.stars || 0) - (a.stars || 0));
+
+console.log("Most popular:", popular[0].title);
+```
+
+### Checking Documentation Availability
+
+```typescript
+const response = await client.searchLibrary("axios");
+
+response.results.forEach((lib) => {
+  console.log(`${lib.title}:`);
+  console.log(`  - State: ${lib.state}`);
+  console.log(`  - Snippets: ${lib.totalSnippets}`);
+  console.log(`  - Tokens: ${lib.totalTokens}`);
+});
+```
+
+### Getting Library Versions
+
+```typescript
+const response = await client.searchLibrary("lodash");
+
+const library = response.results[0];
+if (library.versions) {
+  console.log(`Available versions: ${library.versions.join(", ")}`);
+}
+```

@@ -1,0 +1,295 @@
+---
+title: Claiming & Configuring Libraries
+description: Verify ownership and manage your library's configuration via the admin panel
+---
+
+As a library owner, you can claim your library on Context7 to unlock advanced configuration options through a web-based admin panel. This gives you full control over how your documentation is parsed and presented to developers.
+
+<Note>Library claiming is currently only available for GitHub repositories.</Note>
+
+## Why Claim Your Library?
+
+Claiming ownership provides several benefits:
+
+- **Web-based configuration**: Edit settings through a user-friendly interface instead of committing changes
+- **Team management**: All project members can manage the library configuration
+- **Version management**: Add and manage multiple versions of your library documentation
+- **Usage analytics**: View metrics on how developers use your library's documentation
+- **Higher refresh limits**: Get higher rate limits for refresh operations to better manage your content
+
+## Claiming Process
+
+<Steps>
+  <Step title="Navigate to the Admin Page">
+    You can access the admin page in two ways:
+
+    **From the Dashboard:**
+    Find your library in the dashboard and click the "Manage" button to open the admin configuration page.
+
+    <Frame>
+      <img src="/images/dashboard/admin/library-manage-button.png" alt="Manage button on library card" />
+    </Frame>
+
+    **Via Direct URL:**
+    Go directly to your library's admin page at:
+
+    ```
+    https://context7.com/{owner}/{repo}/admin
+    ```
+
+    For example: `https://context7.com/vercel/next.js/admin`
+
+  </Step>
+
+  <Step title="Open the Claim Modal">
+    If you haven't claimed the library yet, you'll see a "Claim Library" button in the header. Click it to open the claiming modal.
+
+    <Frame>
+      <img src="/images/dashboard/admin/claim-library-button.png" alt="Claim Library button" />
+    </Frame>
+
+  </Step>
+
+  <Step title="Get Your Public Key">
+    In the claiming modal, you'll see a generated `context7.json` configuration with your unique public key:
+
+    <Frame>
+      <img src="/images/dashboard/admin/claim-modal.png" alt="Claim library modal" />
+    </Frame>
+
+    The modal provides a JSON snippet like this:
+
+    ```json
+    {
+      "url": "https://context7.com/vercel/next.js",
+      "public_key": "pk_abc123xyz..."
+    }
+    ```
+
+    Click "Copy" to copy the configuration to your clipboard.
+
+  </Step>
+
+  <Step title="Add context7.json to Your Repository">
+    Create a `context7.json` file in the **root** of your repository with the copied content:
+
+    ```json
+    {
+      "url": "https://context7.com/vercel/next.js",
+      "public_key": "pk_abc123xyz..."
+    }
+    ```
+
+    <Warning>
+      The `url` must exactly match your library's URL on Context7, and the `public_key` must match the key shown in the modal.
+    </Warning>
+
+    Commit and push the file to your repository's default branch.
+
+  </Step>
+
+  <Step title="Verify Ownership">
+    Return to the claiming modal and click "Claim Library". Context7 will:
+
+    1. Fetch `context7.json` from your repository
+    2. Verify the URL matches your library
+    3. Verify the public key matches your project
+
+    Once verified, you'll see a success message and gain access to the admin panel.
+
+    <Note>
+      For private repositories, ensure you have the Context7 GitHub App installed with access to the repository.
+    </Note>
+
+  </Step>
+</Steps>
+
+## Admin Panel Overview
+
+After claiming your library, the admin page shows a full configuration editor with three main tabs:
+
+- **Configuration**: Edit all library settings
+- **Versions**: Manage previous versions of your library
+- **Metrics**: View usage statistics
+
+## Configuration Fields
+
+### Basic Information
+
+| Field             | Description                                                                                               | Limits             |
+| ----------------- | --------------------------------------------------------------------------------------------------------- | ------------------ |
+| **Project Title** | Display name for your library in Context7. Used when the LLM cannot generate a name with high confidence. | Max 100 characters |
+| **Description**   | Brief description of your library's purpose.                                                              | Max 500 characters |
+
+### Repository Settings
+
+| Field                  | Description                                                                               | Limits                          |
+| ---------------------- | ----------------------------------------------------------------------------------------- | ------------------------------- |
+| **Branch**             | Git branch to parse. Leave empty for default branch.                                      | Max 100 characters              |
+| **Folders to Include** | Specific folder paths to include when parsing. Leave empty to scan the entire repository. | Max 50 folders, 255 chars each  |
+| **Folders to Exclude** | Folder paths or patterns to exclude from parsing. Supports glob patterns.                 | Max 50 patterns, 255 chars each |
+| **Files to Exclude**   | Specific file names to exclude (filename only, not full path).                            | Max 100 files, 255 chars each   |
+
+#### Exclusion Pattern Examples
+
+The exclusion fields support various pattern types:
+
+```
+node_modules     → Excludes any folder named "node_modules" anywhere
+./build          → Excludes "build" only at repository root
+**/dist          → Excludes any "dist" folder anywhere (globstar)
+docs/**/internal → Excludes "internal" folders under docs
+*.test           → Excludes folders ending with .test
+```
+
+<Note>
+  `excludeFiles` only accepts filenames, not paths. Use `CHANGELOG.md` instead of
+  `docs/CHANGELOG.md`.
+</Note>
+
+### LLM Configuration
+
+| Field            | Description                                                                     | Limits                       |
+| ---------------- | ------------------------------------------------------------------------------- | ---------------------------- |
+| **Custom Rules** | Best practices and guidelines for AI coding assistants when using your library. | Max 50 rules, 255 chars each |
+
+Example rules:
+
+- "Always use TypeScript for better type safety"
+- "Import components from the main package, not internal paths"
+- "Use environment variables for API keys, never hardcode them"
+
+### Advanced Settings
+
+| Field                 | Description                                                                                                 | Limits             |
+| --------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------ |
+| **Redirect URL**      | Redirect users to a different library. Leave empty to disable.                                              | Max 500 characters |
+| **Disallow Indexing** | Opt-out from Context7. When enabled, documentation content is removed and the library becomes inaccessible. | Boolean            |
+
+<Warning>
+  Enabling "Disallow Indexing" removes all documentation content from Context7. Only metadata and
+  settings are preserved.
+</Warning>
+
+## Managing Versions
+
+The Versions tab lets you configure previous versions of your library that should be available in Context7.
+
+<Frame>
+  <img src="/images/dashboard/admin/managing-versions.png" alt="Versions tab" />
+</Frame>
+
+You can add versions using either:
+
+- **Git tags**: Reference a specific release tag (e.g., `v1.2.0`)
+- **Git branches**: Reference a branch for version-specific documentation (e.g., `release-1.x`)
+
+| Limit            | Value             |
+| ---------------- | ----------------- |
+| Maximum versions | 20                |
+| Tag/branch name  | Max 50 characters |
+
+## Library Metrics
+
+The Metrics tab provides insights into how developers are using your library through Context7.
+
+<Frame>
+  <img src="/images/dashboard/admin/library-metrics.png" alt="Metrics tab" />
+</Frame>
+
+### Usage Statistics
+
+At the top of the metrics page, you'll see key usage numbers:
+
+| Metric                 | Description                                                           |
+| ---------------------- | --------------------------------------------------------------------- |
+| **Page Views**         | Number of times your library page was viewed on Context7              |
+| **API Requests (TXT)** | Documentation requests via the REST API                               |
+| **MCP Requests**       | Documentation requests via the MCP server (from AI coding assistants) |
+
+### Usage Chart
+
+A time-series chart shows your library's usage over the past days, with separate lines for each metric type. This helps you identify trends and see how adoption changes over time.
+
+### Topic Queries
+
+See what developers are asking about when they query your library's documentation. This table shows:
+
+- The specific topics and keywords in queries
+- How many times each topic combination was requested
+
+This data helps you understand which parts of your documentation are most used and where developers might need more guidance.
+
+### Country Distribution
+
+View the geographic distribution of requests to your library, showing the country name and number of requests from each country.
+
+This helps you understand your global user base and can inform decisions about localization or regional documentation needs.
+
+## Team Access
+
+Library ownership is project-based, meaning all members of your Context7 project can:
+
+- View the admin configuration
+- Edit and save changes
+- Manage versions
+
+This enables team collaboration on library settings without sharing individual credentials.
+
+## Removing Ownership
+
+<Steps>
+  <Step title="Go to the Admin Page">
+    Navigate to your library's admin page at `https://context7.com/admin/{owner}/{repo}`.
+  </Step>
+  <Step title="Open the Ownership Menu">Click the ownership menu in the header area.</Step>
+  <Step title="Remove Ownership">Select "Remove Ownership" and confirm the action.</Step>
+</Steps>
+
+<Warning>
+  Removing ownership keeps the admin configuration intact. Another user can claim the library and
+  inherit the existing settings.
+</Warning>
+
+## Troubleshooting
+
+### "context7.json not found"
+
+Ensure the file is:
+
+- Named exactly `context7.json` (lowercase)
+- Located in the repository root, not a subdirectory
+- Committed and pushed to the default branch
+
+### "URL mismatch"
+
+The `url` field in your `context7.json` must exactly match:
+
+```
+https://context7.com/{owner}/{repo}
+```
+
+Check for typos, case sensitivity, and trailing slashes.
+
+### "Public key mismatch"
+
+The `public_key` in your file must match the key shown in the claiming modal. Copy the entire key including the `pk_` prefix.
+
+### "Access denied to repository"
+
+For private repositories, install the [Context7 GitHub App](https://github.com/apps/context7) with access to your repository.
+
+### Changes not appearing
+
+After saving configuration changes, you may need to:
+
+- Manually trigger a refresh from the library page
+- Clear any cached documentation on your end
+
+## Need Help?
+
+If you encounter issues claiming your library or configuring settings, please:
+
+- Check the [troubleshooting guide](/troubleshooting)
+- [Open an issue](https://github.com/upstash/context7/issues/new/choose)
+- Reach out on [Discord](https://upstash.com/discord)

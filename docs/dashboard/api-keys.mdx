@@ -1,0 +1,43 @@
+---
+title: API Keys
+description: Create and manage API keys for Context7 authentication
+---
+
+API keys authenticate your requests to Context7's documentation services.
+
+## Managing API Keys
+
+![API Keys card showing list of keys with details](/images/dashboard/api-keys-card.png)
+
+### Creating API Keys
+
+Generate a new API key in four simple steps:
+
+1. **Click "Create API Key"** in the API Keys card
+2. **Enter a name** (optional but recommended)
+   - Use descriptive names like "Cursor", "Claude", "VS Code", or "Windsurf"
+   - This helps you identify keys later
+3. **Copy the key immediately**
+   - Keys are shown only once for security
+   - Format: `ctx7sk-**********************`
+4. **Use in your requests or add to your MCP configuration**:
+
+```bash
+curl "https://context7.com/api/v2/docs/code/vercel/next.js" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+<Warning>Store your API key securely. You won't be able to see it again after creation.</Warning>
+
+### Revoking Keys
+
+Remove API keys you no longer need:
+
+1. **Click the delete button** next to the key
+2. **Confirm deletion** in the modal
+3. **Key deactivates immediately** - all requests using it will fail
+
+<Note>
+  Revoking a key is permanent and cannot be undone. Update any applications using the key before
+  revoking.
+</Note>

@@ -1,0 +1,1024 @@
+---
+title: Installation
+sidebarTitle: Installation
+---
+
+Get the Context7 MCP up and running in your favorite AI coding assistant in minutes.
+
+## Requirements
+
+Before you begin:
+
+- **MCP Client**: Cursor, Claude Code, VS Code, Windsurf, or another MCP-compatible IDE
+- **API Key (Recommended)**: For higher rate limits and private repositories. Get yours at [context7.com/dashboard](https://context7.com/dashboard)
+
+<Warning>
+**SSE Protocol Removed**
+
+The Server-Sent Events (SSE) transport protocol has been removed and is no longer available. Please use HTTP or stdio transport methods instead.
+
+</Warning>
+
+<Tip>
+**Recommended Post-Setup: Add a Rule to Auto-Invoke Context7**
+
+After installing Context7 (see instructions below), enhance your workflow by adding a rule so you don't have to type `use context7` in every prompt. Define a simple rule in your MCP client's rule section to automatically invoke Context7 on any code question:
+
+- For Windsurf, in `.windsurfrules` file
+- For Cursor, from `Cursor Settings > Rules` section
+- For Claude Code, in `CLAUDE.md` file
+- Or the equivalent in your MCP client
+
+**Example Rule:**
+
+```txt
+Always use context7 when I need code generation, setup or
+configuration steps, or library/API documentation. This means
+you should automatically use the Context7 MCP tools to resolve
+library id and get library docs without me having to
+explicitly ask.
+```
+
+From then on, you'll get Context7's docs in any related conversation without typing anything extra. You can alter the rule to match your use cases.
+
+</Tip>
+
+## Recommended Setup
+
+For most users, we recommend:
+
+- **Remote Server** (HTTP) - Easier setup with no local dependencies
+- **With API Key** - Higher rate limits and access to private repositories
+
+## Quick Install
+
+### Via Smithery
+
+Install the Context7 MCP automatically for any client via [Smithery](https://smithery.ai/server/@upstash/context7-mcp):
+
+```bash
+npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME> --key <YOUR_SMITHERY_KEY>
+```
+
+Get your Smithery key from your account at [smithery.ai](https://smithery.ai/server/@upstash/context7-mcp).
+
+## Client-Specific Installation
+
+<AccordionGroup>
+  <Accordion title="Cursor" icon="code">
+    Go to: `Settings` → `Cursor Settings` → `MCP` → `Add new global MCP server`
+
+    In Cursor 1.0 and later, use the one-click button below or manually edit `~/.cursor/mcp.json`.
+
+    **Remote Server (Recommended)**:
+
+    [![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D)
+
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "url": "https://mcp.context7.com/mcp",
+          "headers": {
+            "CONTEXT7_API_KEY": "YOUR_API_KEY"
+          }
+        }
+      }
+    }
+    ```
+
+    **Local Server**:
+
+    [![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJjb21tYW5kIjoibnB4IC15IEB1cHN0YXNoL2NvbnRleHQ3LW1jcCJ9)
+
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Claude Code" icon="code">
+    **Remote Server**:
+    ```bash
+    claude mcp add --transport http context7 https://mcp.context7.com/mcp \
+      --header "CONTEXT7_API_KEY: YOUR_API_KEY"
+    ```
+
+    **Local Server**:
+    ```bash
+    claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+    ```
+
+  </Accordion>
+
+  <Accordion title="VS Code" icon="code">
+    Add to your VS Code MCP config:
+
+    **Remote Server**:
+    ```json
+    "mcp": {
+      "servers": {
+        "context7": {
+          "type": "http",
+          "url": "https://mcp.context7.com/mcp",
+          "headers": {
+            "CONTEXT7_API_KEY": "YOUR_API_KEY"
+          }
+        }
+      }
+    }
+    ```
+
+    **Local Server**:
+    ```json
+    "mcp": {
+      "servers": {
+        "context7": {
+          "type": "stdio",
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Windsurf" icon="wind">
+    **Remote Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "serverUrl": "https://mcp.context7.com/mcp",
+          "headers": {
+            "CONTEXT7_API_KEY": "YOUR_API_KEY"
+          }
+        }
+      }
+    }
+    ```
+
+    **Local Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Amp" icon="terminal">
+    **Without API Key**:
+    ```sh
+    amp mcp add context7 https://mcp.context7.com/mcp
+    ```
+
+    **With API Key**:
+    ```sh
+    amp mcp add context7 --header "CONTEXT7_API_KEY=YOUR_API_KEY" https://mcp.context7.com/mcp
+    ```
+
+  </Accordion>
+
+  <Accordion title="Cline" icon="robot">
+    Install through the [Cline MCP Server Marketplace](https://cline.bot/mcp-marketplace):
+
+    1. Open **Cline**
+    2. Click the hamburger menu (☰) → **MCP Servers**
+    3. Search for **Context7** in the **Marketplace** tab
+    4. Click **Install**
+
+    Or manually edit the configuration:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "url": "https://mcp.context7.com/mcp",
+          "type": "streamableHttp",
+          "headers": {
+            "Authorization": "Bearer YOUR_API_KEY"
+          }
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Zed" icon="text">
+    Install via [Zed Extensions](https://zed.dev/extensions?query=Context7) or add to `settings.json`:
+
+    ```json
+    {
+      "context_servers": {
+        "Context7": {
+          "source": "custom",
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Augment Code" icon="a">
+    **Via UI**:
+    1. Hamburger menu → **Settings** → **Tools**
+    2. Click **+ Add MCP**
+    3. Enter command: `npx -y @upstash/context7-mcp@latest`
+    4. Name: **Context7**
+
+    **Manual Configuration**:
+    ```json
+    "augment.advanced": {
+      "mcpServers": [
+        {
+          "name": "context7",
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      ]
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Roo Code" icon="code">
+    **Remote Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "type": "streamable-http",
+          "url": "https://mcp.context7.com/mcp",
+          "headers": {
+            "CONTEXT7_API_KEY": "YOUR_API_KEY"
+          }
+        }
+      }
+    }
+    ```
+
+    **Local Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Kilo Code" icon="code">
+    You can configure the Context7 MCP server in **Kilo Code** using either the UI or by editing your project's MCP configuration file.
+
+    Kilo Code supports two configuration levels:
+    - **Global MCP Configuration** — stored in `mcp_settings.json`
+    - **Project-level MCP Configuration** — stored in `.kilocode/mcp.json` (recommended)
+
+    **Via Kilo Code UI:**
+    1. Open **Kilo Code**
+    2. Click the **Settings** icon in the top-right corner
+    3. Navigate to **Settings → MCP Servers**
+    4. Click **Add Server**
+    5. Choose **HTTP Server** (Streamable HTTP Transport)
+    6. Enter URL: `https://mcp.context7.com/mcp`
+    7. Add Header - Key: `Authorization`, Value: `Bearer YOUR_API_KEY`
+    8. Click **Save**
+
+    **Manual Configuration** (`.kilocode/mcp.json`):
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "type": "streamable-http",
+          "url": "https://mcp.context7.com/mcp",
+          "headers": {
+            "Authorization": "Bearer YOUR_API_KEY"
+          },
+          "alwaysAllow": [],
+          "disabled": false
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Google Antigravity" icon="google">
+    **Remote Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "serverUrl": "https://mcp.context7.com/mcp",
+          "headers": {
+            "CONTEXT7_API_KEY": "YOUR_API_KEY"
+          }
+        }
+      }
+    }
+    ```
+
+    **Local Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Gemini CLI" icon="google">
+    Open `~/.gemini/settings.json` and add:
+
+    **Remote Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "httpUrl": "https://mcp.context7.com/mcp",
+          "headers": {
+            "CONTEXT7_API_KEY": "YOUR_API_KEY",
+            "Accept": "application/json, text/event-stream"
+          }
+        }
+      }
+    }
+    ```
+
+    **Local Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Claude Desktop" icon="message">
+    **Remote Server**:
+    Settings → Connectors → Add Custom Connector
+    - Name: `Context7`
+    - URL: `https://mcp.context7.com/mcp`
+
+    **Local Server** (`claude_desktop_config.json`):
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Opencode" icon="code">
+    **Remote Server**:
+    ```json
+    "mcp": {
+      "context7": {
+        "type": "remote",
+        "url": "https://mcp.context7.com/mcp",
+        "headers": {
+          "CONTEXT7_API_KEY": "YOUR_API_KEY"
+        },
+        "enabled": true
+      }
+    }
+    ```
+
+    **Local Server**:
+    ```json
+    {
+      "mcp": {
+        "context7": {
+          "type": "local",
+          "command": ["npx", "-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
+          "enabled": true
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="OpenAI Codex" icon="openai">
+    **Remote Server**:
+    ```toml
+    [mcp_servers.context7]
+    url = "https://mcp.context7.com/mcp"
+    http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
+    ```
+
+    **Local Server**:
+    ```toml
+    [mcp_servers.context7]
+    args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+    command = "npx"
+    ```
+
+    **Windows**: Use full paths if you encounter timeout errors:
+    ```toml
+    [mcp_servers.context7]
+    command = "C:\\Program Files\\nodejs\\node.exe"
+    args = [
+      "C:\\Users\\yourname\\AppData\\Roaming\\npm\\node_modules\\@upstash\\context7-mcp\\dist\\index.js",
+      "--transport", "stdio", "--api-key", "YOUR_API_KEY"
+    ]
+    ```
+
+    **macOS**: Use full Node.js path if needed:
+    ```toml
+    [mcp_servers.context7]
+    command = "/Users/yourname/.nvm/versions/node/v22.14.0/bin/node"
+    args = [
+      "/Users/yourname/.nvm/versions/node/v22.14.0/lib/node_modules/@upstash/context7-mcp/dist/index.js",
+      "--transport", "stdio", "--api-key", "YOUR_API_KEY"
+    ]
+    ```
+
+  </Accordion>
+
+  <Accordion title="JetBrains AI Assistant" icon="code">
+    1. Go to `Settings` → `Tools` → `AI Assistant` → `Model Context Protocol (MCP)`
+    2. Click `+ Add`
+    3. Select `As JSON` from the top-left dropdown
+    4. Add configuration:
+
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+
+    5. Click `Apply`
+
+  </Accordion>
+
+  <Accordion title="Kiro" icon="k">
+    1. Navigate `Kiro` → `MCP Servers`
+    2. Click `+ Add`
+    3. Add configuration:
+
+    ```json
+    {
+      "mcpServers": {
+        "Context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
+          "env": {},
+          "disabled": false,
+          "autoApprove": []
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Trae" icon="robot">
+    **Remote Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "url": "https://mcp.context7.com/mcp"
+        }
+      }
+    }
+    ```
+
+    **Local Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="LM Studio" icon="microchip">
+    [![Add MCP Server context7 to LM Studio](https://files.lmstudio.ai/deeplink/mcp-install-light.svg)](https://lmstudio.ai/install-mcp?name=context7&config=eyJjb21tYW5kIjoibnB4IiwiYXJncyI6WyIteSIsIkB1cHN0YXNoL2NvbnRleHQ3LW1jcCJdfQ%3D%3D)
+
+    Or manually: `Program` → `Install` → `Edit mcp.json`:
+
+    ```json
+    {
+      "mcpServers": {
+        "Context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Visual Studio 2022" icon="microsoft">
+    **Remote Server**:
+    ```json
+    {
+      "inputs": [],
+      "servers": {
+        "context7": {
+          "type": "http",
+          "url": "https://mcp.context7.com/mcp",
+          "headers": {
+            "CONTEXT7_API_KEY": "YOUR_API_KEY"
+          }
+        }
+      }
+    }
+    ```
+
+    **Local Server**:
+    ```json
+    {
+      "mcp": {
+        "servers": {
+          "context7": {
+            "type": "stdio",
+            "command": "npx",
+            "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+          }
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Crush" icon="terminal">
+    **Remote Server**:
+    ```json
+    {
+      "$schema": "https://charm.land/crush.json",
+      "mcp": {
+        "context7": {
+          "type": "http",
+          "url": "https://mcp.context7.com/mcp",
+          "headers": {
+            "CONTEXT7_API_KEY": "YOUR_API_KEY"
+          }
+        }
+      }
+    }
+    ```
+
+    **Local Server**:
+    ```json
+    {
+      "$schema": "https://charm.land/crush.json",
+      "mcp": {
+        "context7": {
+          "type": "stdio",
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="BoltAI" icon="bolt">
+    Open Settings → Plugins, then add:
+
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+
+    Use `get-library-docs` in the chat with your Context7 documentation ID.
+
+  </Accordion>
+
+  <Accordion title="Rovo Dev CLI" icon="terminal">
+    Edit your config:
+    ```bash
+    acli rovodev mcp
+    ```
+
+    **Remote Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "url": "https://mcp.context7.com/mcp"
+        }
+      }
+    }
+    ```
+
+    **Local Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Zencoder" icon="code">
+    1. Go to Zencoder menu (...)
+    2. Select **Agent tools**
+    3. Click **Add custom MCP**
+    4. Add configuration:
+
+    ```json
+    {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Qodo Gen" icon="code">
+    1. Open the Qodo Gen chat panel
+    2. Click **Connect more tools**
+    3. Click **+ Add new MCP**
+
+    **Local Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+
+    **Remote Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "url": "https://mcp.context7.com/mcp"
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Qwen Coder" icon="code">
+    See [Qwen Coder MCP Configuration](https://qwenlm.github.io/qwen-code-docs/en/tools/mcp-server/#how-to-set-up-your-mcp-server) for details.
+
+    1. Open the Qwen Coder settings file. The location is `~/.qwen/settings.json` (where `~` is your home directory).
+    2. Add the following to the `mcpServers` object in your `settings.json` file:
+
+    **Remote Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "httpUrl": "https://mcp.context7.com/mcp",
+          "headers": {
+            "CONTEXT7_API_KEY": "YOUR_API_KEY",
+            "Accept": "application/json, text/event-stream"
+          }
+        }
+      }
+    }
+    ```
+
+    **Local Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+
+    If the `mcpServers` object does not exist, create it.
+
+  </Accordion>
+
+  <Accordion title="Perplexity Desktop" icon="search">
+    1. Navigate to `Perplexity` → `Settings` → `Connectors`
+    2. Click `Add Connector` → `Advanced`
+    3. Server Name: `Context7`
+    4. Add configuration:
+
+    ```json
+    {
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
+      "command": "npx",
+      "env": {}
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Warp" icon="terminal">
+    1. Navigate to `Settings` → `AI` → `Manage MCP servers`
+    2. Click `+ Add`
+    3. Add configuration:
+
+    ```json
+    {
+      "Context7": {
+        "command": "npx",
+        "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
+        "env": {},
+        "working_directory": null,
+        "start_on_launch": true
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Copilot Coding Agent" icon="github">
+    Add the following to your Copilot configuration at:
+    
+    Repository → Settings → Copilot → Coding agent → MCP configuration
+
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "type": "http",
+          "url": "https://mcp.context7.com/mcp",
+          "headers": {
+            "CONTEXT7_API_KEY": "YOUR_API_KEY"
+          },
+          "tools": ["get-library-docs", "resolve-library-id"]
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Copilot CLI" icon="github">
+    1. Open the Copilot CLI MCP config file. The location is `~/.copilot/mcp-config.json` (where `~` is your home directory).
+    2. Add the following to the `mcpServers` object in your `mcp-config.json` file:
+
+    **Remote Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "type": "http",
+          "url": "https://mcp.context7.com/mcp",
+          "headers": {
+            "CONTEXT7_API_KEY": "YOUR_API_KEY"
+          },
+          "tools": [
+            "get-library-docs",
+            "resolve-library-id"
+          ]
+        }
+      }
+    }
+    ```
+
+    **Local Server**:
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "type": "local",
+          "command": "npx",
+          "tools": [
+            "get-library-docs",
+            "resolve-library-id"
+          ],
+          "args": [
+            "-y",
+            "@upstash/context7-mcp",
+            "--api-key",
+            "YOUR_API_KEY"
+          ]
+        }
+      }
+    }
+    ```
+
+    If the `mcp-config.json` file does not exist, create it.
+
+  </Accordion>
+
+  <Accordion title="Amazon Q Developer CLI" icon="amazon">
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Windows Configuration" icon="windows">
+    On Windows, configuration differs slightly. Use `cmd` with `/c`:
+
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "cmd",
+          "args": ["/c", "npx", "-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
+          "disabled": false,
+          "autoApprove": []
+        }
+      }
+    }
+    ```
+
+  </Accordion>
+
+  <Accordion title="Factory" icon="terminal">
+    Factory's droid supports MCP servers through its CLI. See [Factory MCP docs](https://docs.factory.ai/cli/configuration/mcp) for more info.
+
+    **Remote Server Connection (HTTP)**:
+
+    Run this command in your terminal:
+
+    ```sh
+    droid mcp add context7 https://mcp.context7.com/mcp --type http --header "CONTEXT7_API_KEY: YOUR_API_KEY"
+    ```
+
+    Or without an API key (basic usage with rate limits):
+
+    ```sh
+    droid mcp add context7 https://mcp.context7.com/mcp --type http
+    ```
+
+    **Local Server Connection (Stdio)**:
+
+    Run this command in your terminal:
+
+    ```sh
+    droid mcp add context7 "npx -y @upstash/context7-mcp" --env CONTEXT7_API_KEY=YOUR_API_KEY
+    ```
+
+    Once configured, Context7 tools will be available in your droid sessions. Type `/mcp` within droid to manage servers, authenticate, and view available tools.
+
+  </Accordion>
+
+  <Accordion title="Emdash" icon="layer-group">
+    [Emdash](https://github.com/generalaction/emdash) is an orchestration layer for running multiple coding agents in parallel. Provider-agnostic, worktree-isolated, and local-first.
+
+    **What Emdash provides:**
+    - Global toggle: Settings → MCP → "Enable Context7 MCP"
+    - Per-workspace enable: The Context7 button in the ProviderBar (off by default). First click enables it for that workspace. Clicking again disables it.
+    - ProviderBar: The Context7 button shows status, a short explanation, and a link to docs
+
+    **What you still need to do:**
+    Configure your coding agent (Codex, Claude Code, Cursor, etc.) to connect to Context7 MCP. Emdash does not modify your agent's config. See the respective MCP configuration sections above for your agent.
+
+    See the [Emdash repository](https://github.com/generalaction/emdash) for more information.
+
+  </Accordion>
+</AccordionGroup>
+
+## Alternative Runtimes
+
+### Using Bun
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "bunx",
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+    }
+  }
+}
+```
+
+### Using Deno
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "deno",
+      "args": [
+        "run",
+        "--allow-env=NO_DEPRECATION,TRACE_DEPRECATION",
+        "--allow-net",
+        "npm:@upstash/context7-mcp"
+      ]
+    }
+  }
+}
+```
+
+## Using Docker
+
+Create a `Dockerfile`:
+
+```dockerfile
+FROM node:18-alpine
+WORKDIR /app
+RUN npm install -g @upstash/context7-mcp
+CMD ["context7-mcp"]
+```
+
+Build and configure:
+
+```bash
+docker build -t context7-mcp .
+```
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "context7-mcp"]
+    }
+  }
+}
+```
+
+## Desktop Extension
+
+Install the [context7.mcpb](https://github.com/upstash/context7/blob/master/mcpb/context7.mcpb) file. See [MCP bundles docs](https://github.com/anthropics/mcpb#mcp-bundles-mcpb) for details.
+
+## Verify Installation
+
+Test your setup with the MCP Inspector:
+
+```bash
+npx -y @modelcontextprotocol/inspector npx @upstash/context7-mcp
+```
+
+<Tip>
+  Having trouble? Check our [Troubleshooting Guide](/troubleshooting) for common issues and
+  solutions.
+</Tip>
+
+## Next Steps
+
+Now that Context7 is installed:
+
+- **Learn usage patterns** - See the [How-To Guides](/usage) to master Context7 features like auto-invoke, specific library IDs, and token control
+- **Get an API key** - Visit the [Dashboard](https://context7.com/dashboard) to create an API key for higher rate limits and access to private repositories
+- **Explore the API** - Read the [API Guide](/api-guide) for direct API integration and best practices
