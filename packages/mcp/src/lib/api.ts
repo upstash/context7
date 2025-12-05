@@ -3,7 +3,7 @@ import { generateHeaders } from "./encryption.js";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import { DocumentationMode, DOCUMENTATION_MODES } from "./types.js";
 
-const CONTEXT7_API_BASE_URL = "https://context7.com/api";
+const CONTEXT7_API_BASE_URL = process.env.CONTEXT7_API_BASE_URL || "https://context7.com/api";
 const DEFAULT_TYPE = "txt";
 
 /**

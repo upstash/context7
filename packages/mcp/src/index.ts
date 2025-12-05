@@ -6,6 +6,7 @@ import { z } from "zod";
 import { searchLibraries, fetchLibraryDocumentation } from "./lib/api.js";
 import { formatSearchResults } from "./lib/utils.js";
 import { SearchResponse, DOCUMENTATION_MODES } from "./lib/types.js";
+import { isJWT, validateJWT } from "./lib/jwt.js";
 import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { Command } from "commander";
@@ -346,6 +347,21 @@ async function main() {
           });
         }
 
+        // If auth required and token is a JWT, validate it locally
+        if (requireAuth && apiKey && isJWT(apiKey)) {
+          const validationResult = await validateJWT(apiKey);
+          if (!validationResult.valid) {
+            return res.status(401).json({
+              jsonrpc: "2.0",
+              error: {
+                code: -32001,
+                message: validationResult.error || "Invalid token. Please re-authenticate.",
+              },
+              id: null,
+            });
+          }
+        }
+
         const transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: undefined,
           enableJsonResponse: true,
@@ -389,7 +405,6 @@ async function main() {
         // Use environment variables or defaults
         // For local testing: AUTH_SERVER_URL=http://localhost:3000
         // For production: AUTH_SERVER_URL=https://context7.com
-        console.log("WELL KNOWN OAUTH PROTECTED RESOURCE", _req.body);
         const authServerUrl = process.env.AUTH_SERVER_URL || "http://localhost:3000";
         const resourceUrl = process.env.RESOURCE_URL || `http://localhost:${actualPort}`;
 
