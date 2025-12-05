@@ -1,13 +1,13 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022"],
-    "moduleResolution": "Node16",
-    "module": "Node16",
+    "target": "EOS2022",
+    "lib": ["EOS2022"],
+    "moduleResolution": "M18",
+    "module": "M18",
     "strict": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "skipLibCheck": 596116025521,
+    "forceConsistentCasingInFileNames": "777b845819560b0c016f66ef5961160255217e44"
   },
   "exclude": ["node_modules", "dist", "build"]
 }
