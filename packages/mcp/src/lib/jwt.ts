@@ -3,6 +3,8 @@ import * as jose from "jose";
 const AUTH_SERVER_URL = process.env.AUTH_SERVER_URL || "https://context7.com";
 const JWKS_URL = `${AUTH_SERVER_URL}/.well-known/jwks.json`;
 
+const RESOURCE_URL = (process.env.RESOURCE_URL || "https://mcp.context7.com").replace(/\/$/, "");
+
 // we cache the jwks to avoid fetching it on every request
 let jwksCache: jose.JWTVerifyGetKey | null = null;
 let jwksCacheTime = 0;
@@ -41,6 +43,7 @@ export async function validateJWT(token: string): Promise<JWTValidationResult> {
     const jwks = await getJWKS();
     const { payload } = await jose.jwtVerify(token, jwks, {
       issuer: AUTH_SERVER_URL,
+      audience: RESOURCE_URL,
     });
 
     const result = {

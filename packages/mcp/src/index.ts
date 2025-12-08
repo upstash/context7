@@ -328,11 +328,12 @@ async function main() {
         const clientIp = getClientIp(req);
         const apiKey = extractApiKey(req);
         const resourceUrl = process.env.RESOURCE_URL || `http://localhost:${actualPort}`;
+        const baseUrl = new URL(resourceUrl).origin;
 
         // OAuth discovery info header, used by MCP clients to discover the authorization server
         res.set(
           "WWW-Authenticate",
-          `Bearer resource_metadata="${resourceUrl}/.well-known/oauth-protected-resource"`
+          `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
         );
 
         if (requireAuth) {
@@ -403,7 +404,7 @@ async function main() {
       "/.well-known/oauth-protected-resource",
       (_req: express.Request, res: express.Response) => {
         const authServerUrl = process.env.AUTH_SERVER_URL || "https://context7.com";
-        const resourceUrl = process.env.RESOURCE_URL || `https://mcp.context7.com/mcp`;
+        const resourceUrl = process.env.RESOURCE_URL || "https://mcp.context7.com";
 
         res.json({
           resource: resourceUrl,
