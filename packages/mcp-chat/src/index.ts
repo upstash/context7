@@ -15,6 +15,27 @@ interface ChatQueryErrorResponse {
   error: string;
 }
 
+/**
+ * Generates appropriate error messages based on HTTP status codes
+ */
+function createErrorMessage(errorCode: number, apiKey?: string): string {
+  switch (errorCode) {
+    case 401:
+      if (!apiKey) {
+        return "Unauthorized. API key is required. Get your API key at https://context7.com/dashboard";
+      }
+      return "Unauthorized. Please check your API key. API keys should start with 'ctx7sk-'.";
+    case 429:
+      return "Rate limited due to too many requests. Please try again later.";
+    case 400:
+      return "Bad request. Please check your query parameters.";
+    case 500:
+      return "Server error. Please try again later.";
+    default:
+      return `Request failed with status ${errorCode}. Please try again later.`;
+  }
+}
+
 const program = new Command()
   .option("--api-key <key>", "API key for authentication (or set CONTEXT7_API_KEY env var)")
   .allowUnknownOption()
@@ -106,11 +127,14 @@ Examples:
       });
 
       if (!response.ok) {
-        const errorData = (await response.json().catch(() => ({
-          error: `Request failed with status ${response.status}`,
-        }))) as ChatQueryErrorResponse;
+        const errorCode = response.status;
+        // Try to get error message from response, fall back to our error messages
+        const errorData = (await response
+          .json()
+          .catch(() => null)) as ChatQueryErrorResponse | null;
+        const errorMessage = errorData?.error || createErrorMessage(errorCode, apiKey);
         return {
-          content: [{ type: "text", text: `Error: ${errorData.error}` }],
+          content: [{ type: "text", text: `Error: ${errorMessage}` }],
         };
       }
 
