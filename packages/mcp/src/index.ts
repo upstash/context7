@@ -329,36 +329,36 @@ async function main() {
         const apiKey = extractApiKey(req);
         const resourceUrl = process.env.RESOURCE_URL || `http://localhost:${actualPort}`;
 
-        // Always add WWW-Authenticate header with OAuth discovery info
+        // OAuth discovery info header, used by MCP clients to discover the authorization server
         res.set(
           "WWW-Authenticate",
           `Bearer resource_metadata="${resourceUrl}/.well-known/oauth-protected-resource"`
         );
 
-        // If auth required and no API key, return 401 to trigger OAuth flow
-        if (requireAuth && !apiKey) {
-          return res.status(401).json({
-            jsonrpc: "2.0",
-            error: {
-              code: -32001,
-              message: "Authentication required. Please authenticate to use this MCP server.",
-            },
-            id: null,
-          });
-        }
-
-        // If auth required and token is a JWT, validate it locally
-        if (requireAuth && apiKey && isJWT(apiKey)) {
-          const validationResult = await validateJWT(apiKey);
-          if (!validationResult.valid) {
+        if (requireAuth) {
+          if (!apiKey) {
             return res.status(401).json({
               jsonrpc: "2.0",
               error: {
                 code: -32001,
-                message: validationResult.error || "Invalid token. Please re-authenticate.",
+                message: "Authentication required. Please authenticate to use this MCP server.",
               },
               id: null,
             });
+          }
+
+          if (isJWT(apiKey)) {
+            const validationResult = await validateJWT(apiKey);
+            if (!validationResult.valid) {
+              return res.status(401).json({
+                jsonrpc: "2.0",
+                error: {
+                  code: -32001,
+                  message: validationResult.error || "Invalid token. Please re-authenticate.",
+                },
+                id: null,
+              });
+            }
           }
         }
 
@@ -390,7 +390,7 @@ async function main() {
     // Anonymous access endpoint - no authentication required
     app.all("/mcp", (req, res) => handleMcpRequest(req, res, false));
 
-    // OAuth-protected endpoint - requires authentication (returns 401 if no API key)
+    // OAuth-protected endpoint - requires authentication
     app.all("/mcp/oauth", (req, res) => handleMcpRequest(req, res, true));
 
     app.get("/ping", (_req: express.Request, res: express.Response) => {
@@ -398,15 +398,12 @@ async function main() {
     });
 
     // OAuth 2.0 Protected Resource Metadata (RFC 9728)
-    // This enables MCP clients to discover the authorization server
+    // Used by MCP clients to discover the authorization server
     app.get(
       "/.well-known/oauth-protected-resource",
       (_req: express.Request, res: express.Response) => {
-        // Use environment variables or defaults
-        // For local testing: AUTH_SERVER_URL=http://localhost:3000
-        // For production: AUTH_SERVER_URL=https://context7.com
-        const authServerUrl = process.env.AUTH_SERVER_URL || "http://localhost:3000";
-        const resourceUrl = process.env.RESOURCE_URL || `http://localhost:${actualPort}`;
+        const authServerUrl = process.env.AUTH_SERVER_URL || "https://context7.com";
+        const resourceUrl = process.env.RESOURCE_URL || `https://mcp.context7.com/mcp`;
 
         res.json({
           resource: resourceUrl,
