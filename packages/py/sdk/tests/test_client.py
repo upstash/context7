@@ -233,21 +233,24 @@ class TestGetDocsSync:
 
     def test_get_docs_invalid_library_id(self, api_key: str) -> None:
         """Test that invalid library ID raises validation error (sync)."""
-        with Context7(api_key=api_key) as client:
-            with pytest.raises(Context7ValidationError, match="Invalid library ID"):
-                client.get_docs("invalid-id")
+        with (
+            Context7(api_key=api_key) as client,
+            pytest.raises(Context7ValidationError, match="Invalid library ID"),
+        ):
+            client.get_docs("invalid-id")
 
     def test_get_docs_invalid_library_id_no_slash(self, api_key: str) -> None:
         """Test that library ID without leading slash raises error (sync)."""
-        with Context7(api_key=api_key) as client:
-            with pytest.raises(Context7ValidationError, match="Expected format"):
-                client.get_docs("facebook/react")
+        with (
+            Context7(api_key=api_key) as client,
+            pytest.raises(Context7ValidationError, match="Expected format"),
+        ):
+            client.get_docs("facebook/react")
 
     def test_get_docs_invalid_library_id_single_segment(self, api_key: str) -> None:
         """Test that single segment library ID raises error."""
-        with Context7(api_key=api_key) as client:
-            with pytest.raises(Context7ValidationError):
-                client.get_docs("/react")
+        with Context7(api_key=api_key) as client, pytest.raises(Context7ValidationError):
+            client.get_docs("/react")
 
 
 class TestGetDocsAsync:
