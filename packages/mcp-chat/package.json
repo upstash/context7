@@ -1,0 +1,51 @@
+{
+  "name": "@upstash/context7-chat-mcp",
+  "version": "0.0.1",
+  "description": "MCP server for Context7 Chat - AI-powered answers about library documentation",
+  "scripts": {
+    "build": "tsc && chmod 755 dist/index.js",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "lint": "eslint . --fix",
+    "lint:check": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/upstash/context7.git",
+    "directory": "packages/mcp-chat"
+  },
+  "keywords": [
+    "modelcontextprotocol",
+    "mcp",
+    "context7",
+    "chat",
+    "documentation",
+    "ai"
+  ],
+  "author": "abdush",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "context7-chat-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "bugs": {
+    "url": "https://github.com/upstash/context7/issues"
+  },
+  "homepage": "https://github.com/upstash/context7#readme",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.22.0",
+    "commander": "^14.0.2",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.1",
+    "typescript": "^5.9.3"
+  }
+}

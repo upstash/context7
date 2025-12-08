@@ -67,6 +67,25 @@ importers:
         specifier: ^5.8.2
         version: 5.9.3
 
+  packages/mcp-chat:
+    dependencies:
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.22.0
+        version: 1.22.0
+      commander:
+        specifier: ^14.0.2
+        version: 14.0.2
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@types/node':
+        specifier: ^22.19.1
+        version: 22.19.1
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   packages/sdk:
     devDependencies:
       '@types/node':
