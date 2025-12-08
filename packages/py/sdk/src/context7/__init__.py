@@ -7,7 +7,7 @@ documentation from Context7, optimized for AI agents and LLMs.
 Example:
     ```python
     import asyncio
-    from context7 import Context7
+    from context7-sdk import Context7
 
     async def main():
         async with Context7(api_key="ctx7sk_...") as client:
