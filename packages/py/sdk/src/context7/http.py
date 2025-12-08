@@ -146,17 +146,13 @@ class HttpClient:
 
         raise last_error or Context7APIError("Exhausted all retries")
 
-    def _handle_response(
-        self, response: httpx.Response
-    ) -> tuple[Any, TxtResponseHeaders | None]:
+    def _handle_response(self, response: httpx.Response) -> tuple[Any, TxtResponseHeaders | None]:
         """Handle HTTP response (shared between sync and async)."""
         if not response.is_success:
             try:
                 error_body = response.json()
                 message = (
-                    error_body.get("error")
-                    or error_body.get("message")
-                    or response.reason_phrase
+                    error_body.get("error") or error_body.get("message") or response.reason_phrase
                 )
             except (ValueError, KeyError, TypeError):
                 message = response.reason_phrase or "Unknown error"

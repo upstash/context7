@@ -45,9 +45,7 @@ class TestContext7Init:
         assert client is not None
         assert client._http is not None
 
-    def test_init_with_invalid_prefix_warns(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_init_with_invalid_prefix_warns(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test that invalid API key prefix produces a warning."""
         monkeypatch.delenv("CONTEXT7_API_KEY", raising=False)
         with pytest.warns(UserWarning, match="API key should start with"):
@@ -325,9 +323,7 @@ class TestGetDocsAsync:
                 await client.get_docs_async("invalid-id")
 
     @pytest.mark.asyncio
-    async def test_get_docs_async_invalid_library_id_no_slash(
-        self, api_key: str
-    ) -> None:
+    async def test_get_docs_async_invalid_library_id_no_slash(self, api_key: str) -> None:
         """Test that library ID without leading slash raises error (async)."""
         async with Context7(api_key=api_key) as client:
             with pytest.raises(Context7ValidationError, match="Expected format"):

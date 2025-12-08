@@ -335,9 +335,7 @@ class Context7:
             docs = client.get_docs("/facebook/react", version="18.0.0")
             ```
         """
-        path, query = _build_docs_request(
-            library_id, version, page, topic, limit, mode, format
-        )
+        path, query = _build_docs_request(library_id, version, page, topic, limit, mode, format)
         result, headers = self._http.request(
             method="GET",
             path=path,
@@ -479,9 +477,7 @@ class Context7:
             docs = await client.get_docs_async("/facebook/react", version="18.0.0")
             ```
         """
-        path, query = _build_docs_request(
-            library_id, version, page, topic, limit, mode, format
-        )
+        path, query = _build_docs_request(library_id, version, page, topic, limit, mode, format)
         result, headers = await self._http.request_async(
             method="GET",
             path=path,
