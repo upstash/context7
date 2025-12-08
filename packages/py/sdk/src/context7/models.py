@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Literal, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class LibraryState(str, Enum):
@@ -42,7 +42,7 @@ class SearchResult(BaseModel):
     benchmark_score: float | None = Field(default=None, alias="benchmarkScore")
     versions: list[str] | None = None
 
-    model_config = {"populate_by_name": True}
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
 class APIResponseMetadata(BaseModel):
@@ -76,7 +76,7 @@ class CodeSnippet(BaseModel):
     page_title: str = Field(alias="pageTitle")
     code_list: list[CodeExample] = Field(alias="codeList")
 
-    model_config = {"populate_by_name": True}
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
 class InfoSnippet(BaseModel):
@@ -87,7 +87,7 @@ class InfoSnippet(BaseModel):
     content: str
     content_tokens: int = Field(alias="contentTokens")
 
-    model_config = {"populate_by_name": True}
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
 class Pagination(BaseModel):
@@ -99,7 +99,7 @@ class Pagination(BaseModel):
     has_next: bool = Field(alias="hasNext")
     has_prev: bool = Field(alias="hasPrev")
 
-    model_config = {"populate_by_name": True}
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
 class DocsResponseBase(BaseModel):
@@ -108,7 +108,7 @@ class DocsResponseBase(BaseModel):
     pagination: Pagination
     total_tokens: int = Field(alias="totalTokens")
 
-    model_config = {"populate_by_name": True}
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True)
 
 
 class CodeDocsResponse(DocsResponseBase):
@@ -151,5 +151,4 @@ class GetDocsOptions(BaseModel):
     """Response format. Defaults to "json"."""
 
 
-# Type alias for any docs response
 DocsResponse = Union[CodeDocsResponse, InfoDocsResponse, TextDocsResponse]

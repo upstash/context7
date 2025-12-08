@@ -21,5 +21,3 @@ class Context7APIError(Context7Error):
 
 class Context7ValidationError(Context7Error):
     """Raised when input validation fails."""
-
-    pass

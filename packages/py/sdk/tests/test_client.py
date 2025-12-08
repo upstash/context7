@@ -42,23 +42,21 @@ class TestContext7Init:
             Context7(api_key="invalid_key")
 
 
-class TestSearchLibrary:
-    """Tests for the search_library method."""
+class TestSearchLibrarySync:
+    """Tests for the synchronous search_library method."""
 
-    @pytest.mark.asyncio
-    async def test_search_library(self, api_key: str) -> None:
-        """Test basic library search."""
-        async with Context7(api_key=api_key) as client:
-            response = await client.search_library("react")
+    def test_search_library(self, api_key: str) -> None:
+        """Test basic library search (sync)."""
+        with Context7(api_key=api_key) as client:
+            response = client.search_library("react")
             assert response.results is not None
             assert len(response.results) > 0
             assert response.metadata is not None
 
-    @pytest.mark.asyncio
-    async def test_search_library_result_fields(self, api_key: str) -> None:
-        """Test that search results have expected fields."""
-        async with Context7(api_key=api_key) as client:
-            response = await client.search_library("react")
+    def test_search_library_result_fields(self, api_key: str) -> None:
+        """Test that search results have expected fields (sync)."""
+        with Context7(api_key=api_key) as client:
+            response = client.search_library("react")
             if response.results:
                 result = response.results[0]
                 assert result.id is not None
@@ -66,74 +64,161 @@ class TestSearchLibrary:
                 assert result.total_tokens >= 0
 
 
-class TestGetDocs:
-    """Tests for the get_docs method."""
+class TestSearchLibraryAsync:
+    """Tests for the asynchronous search_library_async method."""
 
     @pytest.mark.asyncio
-    async def test_get_docs_code_default(self, api_key: str) -> None:
-        """Test getting code documentation (default mode)."""
+    async def test_search_library_async(self, api_key: str) -> None:
+        """Test basic library search (async)."""
         async with Context7(api_key=api_key) as client:
-            response = await client.get_docs("/facebook/react")
+            response = await client.search_library_async("react")
+            assert response.results is not None
+            assert len(response.results) > 0
+            assert response.metadata is not None
+
+    @pytest.mark.asyncio
+    async def test_search_library_async_result_fields(self, api_key: str) -> None:
+        """Test that search results have expected fields (async)."""
+        async with Context7(api_key=api_key) as client:
+            response = await client.search_library_async("react")
+            if response.results:
+                result = response.results[0]
+                assert result.id is not None
+                assert result.title is not None
+                assert result.total_tokens >= 0
+
+
+class TestGetDocsSync:
+    """Tests for the synchronous get_docs method."""
+
+    def test_get_docs_code_default(self, api_key: str) -> None:
+        """Test getting code documentation (default mode, sync)."""
+        with Context7(api_key=api_key) as client:
+            response = client.get_docs("/facebook/react")
+            assert response.snippets is not None
+            assert response.pagination is not None
+            assert response.total_tokens >= 0
+
+    def test_get_docs_info_mode(self, api_key: str) -> None:
+        """Test getting info documentation (sync)."""
+        with Context7(api_key=api_key) as client:
+            response = client.get_docs("/facebook/react", mode="info")
+            assert response.snippets is not None
+            assert response.pagination is not None
+
+    def test_get_docs_txt_format(self, api_key: str) -> None:
+        """Test getting plain text documentation (sync)."""
+        with Context7(api_key=api_key) as client:
+            response = client.get_docs("/facebook/react", format="txt")
+            assert response.content is not None
+            assert isinstance(response.content, str)
+            assert len(response.content) > 0
+
+    def test_get_docs_with_pagination(self, api_key: str) -> None:
+        """Test documentation pagination (sync)."""
+        with Context7(api_key=api_key) as client:
+            response = client.get_docs("/facebook/react", page=1, limit=5)
+            assert response.pagination is not None
+            assert response.pagination.page == 1
+            assert response.pagination.limit == 5
+
+    def test_get_docs_invalid_library_id(self, api_key: str) -> None:
+        """Test that invalid library ID raises validation error (sync)."""
+        with Context7(api_key=api_key) as client:
+            with pytest.raises(Context7ValidationError, match="Invalid library ID"):
+                client.get_docs("invalid-id")
+
+    def test_get_docs_invalid_library_id_no_slash(self, api_key: str) -> None:
+        """Test that library ID without leading slash raises error (sync)."""
+        with Context7(api_key=api_key) as client:
+            with pytest.raises(Context7ValidationError):
+                client.get_docs("facebook/react")
+
+
+class TestGetDocsAsync:
+    """Tests for the asynchronous get_docs_async method."""
+
+    @pytest.mark.asyncio
+    async def test_get_docs_async_code_default(self, api_key: str) -> None:
+        """Test getting code documentation (default mode, async)."""
+        async with Context7(api_key=api_key) as client:
+            response = await client.get_docs_async("/facebook/react")
             assert response.snippets is not None
             assert response.pagination is not None
             assert response.total_tokens >= 0
 
     @pytest.mark.asyncio
-    async def test_get_docs_info_mode(self, api_key: str) -> None:
-        """Test getting info documentation."""
+    async def test_get_docs_async_info_mode(self, api_key: str) -> None:
+        """Test getting info documentation (async)."""
         async with Context7(api_key=api_key) as client:
-            response = await client.get_docs("/facebook/react", mode="info")
+            response = await client.get_docs_async("/facebook/react", mode="info")
             assert response.snippets is not None
             assert response.pagination is not None
 
     @pytest.mark.asyncio
-    async def test_get_docs_txt_format(self, api_key: str) -> None:
-        """Test getting plain text documentation."""
+    async def test_get_docs_async_txt_format(self, api_key: str) -> None:
+        """Test getting plain text documentation (async)."""
         async with Context7(api_key=api_key) as client:
-            response = await client.get_docs("/facebook/react", format="txt")
+            response = await client.get_docs_async("/facebook/react", format="txt")
             assert response.content is not None
             assert isinstance(response.content, str)
             assert len(response.content) > 0
 
     @pytest.mark.asyncio
-    async def test_get_docs_with_pagination(self, api_key: str) -> None:
-        """Test documentation pagination."""
+    async def test_get_docs_async_with_pagination(self, api_key: str) -> None:
+        """Test documentation pagination (async)."""
         async with Context7(api_key=api_key) as client:
-            response = await client.get_docs("/facebook/react", page=1, limit=5)
+            response = await client.get_docs_async("/facebook/react", page=1, limit=5)
             assert response.pagination is not None
             assert response.pagination.page == 1
             assert response.pagination.limit == 5
 
     @pytest.mark.asyncio
-    async def test_get_docs_invalid_library_id(self, api_key: str) -> None:
-        """Test that invalid library ID raises validation error."""
+    async def test_get_docs_async_invalid_library_id(self, api_key: str) -> None:
+        """Test that invalid library ID raises validation error (async)."""
         async with Context7(api_key=api_key) as client:
             with pytest.raises(Context7ValidationError, match="Invalid library ID"):
-                await client.get_docs("invalid-id")
+                await client.get_docs_async("invalid-id")
 
     @pytest.mark.asyncio
-    async def test_get_docs_invalid_library_id_no_slash(self, api_key: str) -> None:
-        """Test that library ID without leading slash raises error."""
+    async def test_get_docs_async_invalid_library_id_no_slash(self, api_key: str) -> None:
+        """Test that library ID without leading slash raises error (async)."""
         async with Context7(api_key=api_key) as client:
             with pytest.raises(Context7ValidationError):
-                await client.get_docs("facebook/react")
+                await client.get_docs_async("facebook/react")
 
 
-class TestContextManager:
+class TestSyncContextManager:
+    """Tests for sync context manager behavior."""
+
+    def test_context_manager(self, api_key: str) -> None:
+        """Test that sync context manager properly opens and closes."""
+        with Context7(api_key=api_key) as client:
+            response = client.search_library("react")
+            assert response is not None
+
+    def test_manual_close(self, api_key: str) -> None:
+        """Test manual close method (sync)."""
+        client = Context7(api_key=api_key)
+        response = client.search_library("react")
+        assert response is not None
+        client.close()
+
+
+class TestAsyncContextManager:
     """Tests for async context manager behavior."""
 
     @pytest.mark.asyncio
-    async def test_context_manager(self, api_key: str) -> None:
-        """Test that context manager properly opens and closes."""
+    async def test_context_manager_async(self, api_key: str) -> None:
+        """Test that async context manager properly opens and closes."""
         async with Context7(api_key=api_key) as client:
-            # Should work inside context
-            response = await client.search_library("react")
+            response = await client.search_library_async("react")
             assert response is not None
 
     @pytest.mark.asyncio
-    async def test_manual_close(self, api_key: str) -> None:
-        """Test manual close method."""
+    async def test_manual_close_async(self, api_key: str) -> None:
+        """Test manual close method (async)."""
         client = Context7(api_key=api_key)
-        response = await client.search_library("react")
+        response = await client.search_library_async("react")
         assert response is not None
-        await client.close()
+        await client.close_async()
