@@ -7,7 +7,7 @@ import warnings
 from typing import Literal, overload
 
 from context7.errors import Context7Error, Context7ValidationError
-from context7.http import AsyncHttpClient, SyncHttpClient
+from context7.http import HttpClient
 from context7.models import (
     CodeDocsResponse,
     InfoDocsResponse,
@@ -79,7 +79,7 @@ def _build_docs_request(
 
 
 def _process_docs_response(
-    result: str | dict,  # type: ignore[type-arg]
+    result: str | dict,
     headers: object | None,
     mode: Literal["info", "code"],
     format: Literal["json", "txt"],  # pylint: disable=redefined-builtin
@@ -87,16 +87,16 @@ def _process_docs_response(
     """Process the docs response based on format and mode."""
     if format == "txt":
         pagination = Pagination(
-            page=headers.page if headers else 1,  # type: ignore[union-attr]
-            limit=headers.limit if headers else 0,  # type: ignore[union-attr]
-            totalPages=headers.total_pages if headers else 1,  # type: ignore[union-attr]
-            hasNext=headers.has_next if headers else False,  # type: ignore[union-attr]
-            hasPrev=headers.has_prev if headers else False,  # type: ignore[union-attr]
+            page=headers.page if headers else 1,
+            limit=headers.limit if headers else 0,
+            totalPages=headers.total_pages if headers else 1,
+            hasNext=headers.has_next if headers else False,
+            hasPrev=headers.has_prev if headers else False,
         )
         return TextDocsResponse(
-            content=result,  # type: ignore[arg-type]
+            content=result,
             pagination=pagination,
-            totalTokens=headers.total_tokens if headers else 0,  # type: ignore[union-attr]
+            totalTokens=headers.total_tokens if headers else 0,
         )
 
     if mode == "info":
@@ -170,11 +170,7 @@ class Context7:
         http_headers = {"Authorization": f"Bearer {resolved_api_key}"}
         resolved_base_url = base_url or DEFAULT_BASE_URL
 
-        self._sync_http = SyncHttpClient(
-            base_url=resolved_base_url,
-            headers=http_headers,
-        )
-        self._async_http = AsyncHttpClient(
+        self._http = HttpClient(
             base_url=resolved_base_url,
             headers=http_headers,
         )
@@ -199,16 +195,13 @@ class Context7:
 
     def close(self) -> None:
         """Close the sync HTTP client connection."""
-        self._sync_http.close()
+        self._http.close()
 
     async def close_async(self) -> None:
         """Close the async HTTP client connection."""
-        await self._async_http.close()
+        await self._http.close_async()
 
-    # -------------------------------------------------------------------------
-    # Synchronous Methods (default)
-    # -------------------------------------------------------------------------
-
+    # Synchronous methods
     def search_library(self, query: str) -> SearchLibraryResponse:
         """
         Search for libraries by name or description.
@@ -226,7 +219,7 @@ class Context7:
                 print(f"{lib.id}: {lib.title} ({lib.total_tokens} tokens)")
             ```
         """
-        result, _ = self._sync_http.request(
+        result, _ = self._http.request(
             method="GET",
             path=["v2", "search"],
             query={"query": query},
@@ -345,17 +338,14 @@ class Context7:
         path, query = _build_docs_request(
             library_id, version, page, topic, limit, mode, format
         )
-        result, headers = self._sync_http.request(
+        result, headers = self._http.request(
             method="GET",
             path=path,
             query=query,
         )
         return _process_docs_response(result, headers, mode, format)
 
-    # -------------------------------------------------------------------------
-    # Asynchronous Methods (_async suffix)
-    # -------------------------------------------------------------------------
-
+    # Asynchronous methods
     async def search_library_async(self, query: str) -> SearchLibraryResponse:
         """
         Search for libraries by name or description (async version).
@@ -373,7 +363,7 @@ class Context7:
                 print(f"{lib.id}: {lib.title} ({lib.total_tokens} tokens)")
             ```
         """
-        result, _ = await self._async_http.request(
+        result, _ = await self._http.request_async(
             method="GET",
             path=["v2", "search"],
             query={"query": query},
@@ -492,7 +482,7 @@ class Context7:
         path, query = _build_docs_request(
             library_id, version, page, topic, limit, mode, format
         )
-        result, headers = await self._async_http.request(
+        result, headers = await self._http.request_async(
             method="GET",
             path=path,
             query=query,

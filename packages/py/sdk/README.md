@@ -21,7 +21,6 @@ import asyncio
 from context7 import Context7
 
 async def main():
-    # Initialize with API key (or set CONTEXT7_API_KEY env var)
     async with Context7(api_key="ctx7sk_...") as client:
         # Search for libraries
         results = await client.search_library("react")
@@ -54,6 +53,7 @@ Search for libraries by name or description.
 Get documentation for a library.
 
 **Parameters:**
+
 - `library_id`: Library identifier in format `/owner/repo` (e.g., `/facebook/react`)
 - `version`: Optional library version (e.g., `"18.0.0"`)
 - `page`: Page number for pagination
