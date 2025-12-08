@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import os
 import warnings
-from typing import Literal, overload
+from typing import Any, Literal, overload
 
 from context7.errors import Context7Error, Context7ValidationError
-from context7.http import HttpClient
+from context7.http import HttpClient, TxtResponseHeaders
 from context7.models import (
     CodeDocsResponse,
     InfoDocsResponse,
@@ -79,8 +79,8 @@ def _build_docs_request(
 
 
 def _process_docs_response(
-    result: str | dict,
-    headers: object | None,
+    result: str | dict[str, Any],
+    headers: TxtResponseHeaders | None,
     mode: Literal["info", "code"],
     format: Literal["json", "txt"],  # pylint: disable=redefined-builtin
 ) -> TextDocsResponse | CodeDocsResponse | InfoDocsResponse:
@@ -93,8 +93,10 @@ def _process_docs_response(
             hasNext=headers.has_next if headers else False,
             hasPrev=headers.has_prev if headers else False,
         )
+        # When format is "txt", result is always a string from the HTTP response
+        content = result if isinstance(result, str) else ""
         return TextDocsResponse(
-            content=result,
+            content=content,
             pagination=pagination,
             totalTokens=headers.total_tokens if headers else 0,
         )
