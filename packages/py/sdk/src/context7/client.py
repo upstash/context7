@@ -115,7 +115,7 @@ class Context7:
 
     Synchronous Usage:
         ```python
-        from context7 import Context7
+        from context7-sdk import Context7
 
         # Initialize with API key (or set CONTEXT7_API_KEY env var)
         with Context7(api_key="ctx7sk_...") as client:
@@ -133,7 +133,7 @@ class Context7:
     Asynchronous Usage:
         ```python
         import asyncio
-        from context7 import Context7
+        from context7-sdk import Context7
 
         async def main():
             async with Context7(api_key="ctx7sk_...") as client:
@@ -337,7 +337,9 @@ class Context7:
             docs = client.get_docs("/facebook/react", version="18.0.0")
             ```
         """
-        path, query = _build_docs_request(library_id, version, page, topic, limit, mode, format)
+        path, query = _build_docs_request(
+            library_id, version, page, topic, limit, mode, format
+        )
         result, headers = self._http.request(
             method="GET",
             path=path,
@@ -479,7 +481,9 @@ class Context7:
             docs = await client.get_docs_async("/facebook/react", version="18.0.0")
             ```
         """
-        path, query = _build_docs_request(library_id, version, page, topic, limit, mode, format)
+        path, query = _build_docs_request(
+            library_id, version, page, topic, limit, mode, format
+        )
         result, headers = await self._http.request_async(
             method="GET",
             path=path,
