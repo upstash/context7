@@ -39,7 +39,7 @@ importers:
         specifier: ^8.28.0
         version: 8.47.0(eslint@9.39.1)(typescript@5.9.3)
 
-  packages/mcp:
+  packages/ts/mcp:
     dependencies:
       '@modelcontextprotocol/sdk':
         specifier: ^1.17.5
@@ -67,7 +67,7 @@ importers:
         specifier: ^5.8.2
         version: 5.9.3
 
-  packages/sdk:
+  packages/ts/sdk:
     devDependencies:
       '@types/node':
         specifier: ^22.13.14

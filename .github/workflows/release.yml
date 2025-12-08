@@ -65,10 +65,10 @@ jobs:
         if: steps.check-mcp.outputs.mcp_published == 'true'
         run: |
           VERSION="${{ steps.check-mcp.outputs.mcp_version }}"
-          sed -i "s/version: \"[0-9]*\.[0-9]*\.[0-9]*\"/version: \"$VERSION\"/" packages/mcp/src/index.ts
+          sed -i "s/version: \"[0-9]*\.[0-9]*\.[0-9]*\"/version: \"$VERSION\"/" packages/ts/mcp/src/index.ts
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add packages/mcp/src/index.ts
+          git add packages/ts/mcp/src/index.ts
           git commit -m "chore: update MCP version in source to $VERSION" || true
           git push || true
 
