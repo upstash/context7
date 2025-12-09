@@ -1,5 +1,7 @@
 # Upstash Context7 SDK
 
+> ⚠️ **Work in Progress**: This SDK is currently under active development. The API is subject to change and may introduce breaking changes in future releases.
+
 `@upstash/context7-sdk` is an HTTP/REST based client for TypeScript, built on top of the [Context7 API](https://context7.com).
 
 ## Why Context7?
