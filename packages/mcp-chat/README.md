@@ -13,23 +13,6 @@ Unlike the main Context7 MCP server which retrieves raw documentation, this serv
 - Node.js >= v18.0.0
 - Context7 API Key (required) - Get yours at [context7.com/dashboard](https://context7.com/dashboard)
 
-## Installation
-
-### Using npx (recommended)
-
-No installation required. Use `npx` to run the server directly:
-
-```bash
-npx -y @upstash/context7-chat-mcp --api-key YOUR_API_KEY
-```
-
-### Global installation
-
-```bash
-npm install -g @upstash/context7-chat-mcp
-context7-chat-mcp --api-key YOUR_API_KEY
-```
-
 ## Usage
 
 ### Adding to Cursor
@@ -106,11 +89,46 @@ library: "nextjs"
 query: "What are React hooks and how do I use useState?"
 ```
 
-## Environment Variables
+## Configuration Options
+
+| Option      | Description                                                                                      |
+| ----------- | ------------------------------------------------------------------------------------------------ |
+| `--api-key` | Your Context7 API key (required)                                                                 |
+| `--model`   | OpenRouter model ID to use for generating responses (e.g., `google/gemini-2.5-flash`) (optional) |
+
+### Environment Variables
 
 | Variable           | Description                                             |
 | ------------------ | ------------------------------------------------------- |
 | `CONTEXT7_API_KEY` | Your Context7 API key (alternative to `--api-key` flag) |
+
+### Using a Custom Model
+
+You can specify which OpenRouter model to use for generating responses:
+
+```bash
+npx -y @upstash/context7-chat-mcp --api-key YOUR_API_KEY --model google/gemini-2.5-flash
+```
+
+**Cursor configuration with custom model:**
+
+```json
+{
+  "mcpServers": {
+    "context7-chat": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-chat-mcp",
+        "--api-key",
+        "YOUR_API_KEY",
+        "--model",
+        "google/gemini-2.5-flash"
+      ]
+    }
+  }
+}
+```
 
 ## Local Development
 

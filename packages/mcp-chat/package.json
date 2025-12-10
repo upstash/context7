@@ -1,6 +1,6 @@
 {
   "name": "@upstash/context7-chat-mcp",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "MCP server for Context7 Chat - AI-powered answers about library documentation",
   "scripts": {
     "build": "tsc && chmod 755 dist/index.js",
