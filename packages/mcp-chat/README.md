@@ -85,10 +85,10 @@ Ask a question about any library and get an AI-powered answer.
 
 **Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `query` | string | Yes | Your question about a library |
-| `library` | string | No | Library to focus the search on (recommended for better results) |
+| Parameter | Type   | Required | Description                                                     |
+| --------- | ------ | -------- | --------------------------------------------------------------- |
+| `query`   | string | Yes      | Your question about a library                                   |
+| `library` | string | No       | Library to focus the search on (recommended for better results) |
 
 **Examples:**
 
@@ -108,8 +108,8 @@ query: "What are React hooks and how do I use useState?"
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
+| Variable           | Description                                             |
+| ------------------ | ------------------------------------------------------- |
 | `CONTEXT7_API_KEY` | Your Context7 API key (alternative to `--api-key` flag) |
 
 ## Local Development
@@ -149,7 +149,12 @@ For local development, you can configure your MCP client to use the TypeScript s
   "mcpServers": {
     "context7-chat": {
       "command": "npx",
-      "args": ["tsx", "/path/to/context7/packages/mcp-chat/src/index.ts", "--api-key", "YOUR_API_KEY"]
+      "args": [
+        "tsx",
+        "/path/to/context7/packages/mcp-chat/src/index.ts",
+        "--api-key",
+        "YOUR_API_KEY"
+      ]
     }
   }
 }
@@ -164,7 +169,12 @@ For local development, you can configure your MCP client to use the TypeScript s
       "context7-chat": {
         "type": "stdio",
         "command": "npx",
-        "args": ["tsx", "/path/to/context7/packages/mcp-chat/src/index.ts", "--api-key", "YOUR_API_KEY"]
+        "args": [
+          "tsx",
+          "/path/to/context7/packages/mcp-chat/src/index.ts",
+          "--api-key",
+          "YOUR_API_KEY"
+        ]
       }
     }
   }

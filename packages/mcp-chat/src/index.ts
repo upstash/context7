@@ -38,11 +38,16 @@ function createErrorMessage(errorCode: number, apiKey?: string): string {
 
 const program = new Command()
   .option("--api-key <key>", "API key for authentication (or set CONTEXT7_API_KEY env var)")
+  .option(
+    "--model <id>",
+    "OpenRouter model ID to use for generating responses (e.g., 'google/gemini-2.5-flash', 'openai/gpt-oss-120b')"
+  )
   .allowUnknownOption()
   .parse(process.argv);
 
-const cliOptions = program.opts<{ apiKey?: string }>();
+const cliOptions = program.opts<{ apiKey?: string; model?: string }>();
 const apiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
+const model = cliOptions.model;
 
 if (!apiKey) {
   console.error(
@@ -123,6 +128,7 @@ Examples:
         body: JSON.stringify({
           query,
           library,
+          ...(model && { model }),
         }),
       });
 
