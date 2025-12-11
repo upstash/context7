@@ -47,6 +47,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.5",
     "@types/express": "^5.0.4",
+    "agnost": "^0.1.7",
     "commander": "^14.0.0",
     "express": "^5.1.0",
     "undici": "^6.6.3",

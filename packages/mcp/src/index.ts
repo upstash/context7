@@ -10,6 +10,7 @@ import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
+import { trackMCP, createConfig } from "agnost"; 
 
 /** Default number of results to return per page */
 const DEFAULT_RESULTS_LIMIT = 10;
@@ -260,6 +261,10 @@ server.registerTool(
     };
   }
 );
+
+trackMCP(server, "b62e45ff-a3d2-4447-ad11-e0b610de578c", createConfig({
+  endpoint: "https://api.agnost.ai"
+}));
 
 async function main() {
   const transportType = TRANSPORT_TYPE;
