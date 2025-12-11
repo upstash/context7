@@ -1,4 +1,4 @@
-![Cover](../public/cover.png)
+![Cover](https://github.com/upstash/context7/blob/master/public/cover.png?raw=true)
 
 # Context7 MCP - 为所有 Prompt 获取最新文档
 
