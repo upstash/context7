@@ -321,12 +321,9 @@
                       "items": {
                         "$ref": "#/components/schemas/Library"
                       }
-                    },
-                    "metadata": {
-                      "$ref": "#/components/schemas/APIResponseMetadata"
                     }
                   },
-                  "required": ["results", "metadata"]
+                  "required": ["results"]
                 },
                 "examples": {
                   "withResults": {
@@ -354,19 +351,13 @@
                             "v11.1.3"
                           ]
                         }
-                      ],
-                      "metadata": {
-                        "authentication": "none"
-                      }
+                      ]
                     }
                   },
                   "emptyQuery": {
                     "summary": "Empty query returns no results",
                     "value": {
-                      "results": [],
-                      "metadata": {
-                        "authentication": "none"
-                      }
+                      "results": []
                     }
                   }
                 }
@@ -602,18 +593,6 @@
         },
         "required": ["page", "limit", "totalPages", "hasNext", "hasPrev"]
       },
-      "APIResponseMetadata": {
-        "type": "object",
-        "description": "Response metadata",
-        "properties": {
-          "authentication": {
-            "type": "string",
-            "enum": ["none", "personal", "team"],
-            "description": "Authentication type used for this request"
-          }
-        },
-        "required": ["authentication"]
-      },
       "Library": {
         "type": "object",
         "description": "Library metadata",
@@ -801,12 +780,9 @@
                 },
                 "pagination": {
                   "$ref": "#/components/schemas/Pagination"
-                },
-                "metadata": {
-                  "$ref": "#/components/schemas/APIResponseMetadata"
                 }
               },
-              "required": ["snippets", "totalTokens", "pagination", "metadata"]
+              "required": ["snippets", "totalTokens", "pagination"]
             },
             "example": {
               "snippets": [
@@ -844,16 +820,13 @@
                 "totalPages": 10,
                 "hasNext": true,
                 "hasPrev": false
-              },
-              "metadata": {
-                "authentication": "none"
               }
             }
           },
           "text/plain": {
             "schema": {
               "type": "string",
-              "description": "Plain text formatted documentation. Pagination metadata is returned via response headers."
+              "description": "Plain text formatted documentation."
             },
             "example": "### Create and Run Next.js App with create-next-app (Quick Start)\n\nSource: https://github.com/vercel/next.js/blob/canary/docs/01-app/01-getting-started/01-installation.mdx\n\nQuickly set up and start a new Next.js application using `create-next-app` with various package managers. This command creates a new project directory, installs dependencies, and starts the development server. The `--yes` flag skips interactive prompts, enabling a default setup with TypeScript, Tailwind, ESLint, App Router, and Turbopack.\n\n```bash\npnpm create next-app@latest my-app --yes\ncd my-app\npnpm dev\n```\n\n```bash\nnpx create-next-app@latest my-app --yes\ncd my-app\nnpm run dev\n```\n\n```bash\nyarn create next-app@latest my-app --yes\ncd my-app\nyarn dev\n```\n\n```bash\nbun create next-app@latest my-app --yes\ncd my-app\nbun dev\n```"
           }
@@ -900,12 +873,9 @@
                 },
                 "pagination": {
                   "$ref": "#/components/schemas/Pagination"
-                },
-                "metadata": {
-                  "$ref": "#/components/schemas/APIResponseMetadata"
                 }
               },
-              "required": ["snippets", "totalTokens", "pagination", "metadata"]
+              "required": ["snippets", "totalTokens", "pagination"]
             },
             "example": {
               "snippets": [
@@ -923,16 +893,13 @@
                 "totalPages": 10,
                 "hasNext": true,
                 "hasPrev": false
-              },
-              "metadata": {
-                "authentication": "none"
               }
             }
           },
           "text/plain": {
             "schema": {
               "type": "string",
-              "description": "Plain text formatted documentation. Pagination metadata is returned via response headers."
+              "description": "Plain text formatted documentation."
             },
             "example": "### How to Contribute > Writing MDX\n\nSource: https://github.com/vercel/next.js/blob/canary/docs/04-community/01-contribution-guide.mdx\n\nThe docs are written in [MDX](https://mdxjs.com/), a markdown format that supports JSX syntax. This allows us to embed React components in the docs. See the [GitHub Markdown Guide](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax) for a quick overview of markdown syntax."
           }
