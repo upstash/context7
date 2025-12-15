@@ -389,10 +389,14 @@ async function main() {
     };
 
     // Anonymous access endpoint - no authentication required
-    app.all("/mcp", (req, res) => handleMcpRequest(req, res, false));
+    app.all("/mcp", (req, res) => {
+      handleMcpRequest(req, res, false);
+    });
 
     // OAuth-protected endpoint - requires authentication
-    app.all("/mcp/oauth", (req, res) => handleMcpRequest(req, res, true));
+    app.all("/mcp/oauth", (req, res) => {
+      handleMcpRequest(req, res, true);
+    });
 
     app.get("/ping", (_req: express.Request, res: express.Response) => {
       res.json({ status: "ok", message: "pong" });
@@ -412,6 +416,34 @@ async function main() {
           scopes_supported: ["mcp:read", "mcp:write"],
           bearer_methods_supported: ["header"],
         });
+      }
+    );
+
+    // workaround for Cursor's MCP client to work
+    // Cursor tries to fetch the authorization server metadata from the resource server, but it should've used the response of '/.well-known/oauth-protected-resource'
+    app.get(
+      "/.well-known/oauth-authorization-server",
+      async (_req: express.Request, res: express.Response) => {
+        const authServerUrl = process.env.AUTH_SERVER_URL || "https://context7.com";
+
+        try {
+          const response = await fetch(`${authServerUrl}/.well-known/oauth-authorization-server`);
+          if (!response.ok) {
+            console.error("[OAuth] Upstream error:", response.status);
+            return res.status(response.status).json({
+              error: "upstream_error",
+              message: "Failed to fetch authorization server metadata",
+            });
+          }
+          const metadata = await response.json();
+          res.json(metadata);
+        } catch (error) {
+          console.error("[OAuth] Error fetching OAuth metadata:", error);
+          res.status(502).json({
+            error: "proxy_error",
+            message: "Failed to proxy authorization server metadata",
+          });
+        }
       }
     );
 

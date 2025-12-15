@@ -1,9 +1,9 @@
 import * as jose from "jose";
 
-const AUTH_SERVER_URL = process.env.AUTH_SERVER_URL || "https://context7.com";
-const JWKS_URL = `${AUTH_SERVER_URL}/.well-known/jwks.json`;
-
-const RESOURCE_URL = (process.env.RESOURCE_URL || "https://mcp.context7.com").replace(/\/$/, "");
+// Clerk is the OAuth token issuer
+const CLERK_DOMAIN = process.env.CLERK_DOMAIN || "clerk.context7.com";
+const JWKS_URL = `https://${CLERK_DOMAIN}/.well-known/jwks.json`;
+const ISSUER = `https://${CLERK_DOMAIN}`;
 
 // we cache the jwks to avoid fetching it on every request
 let jwksCache: jose.JWTVerifyGetKey | null = null;
@@ -42,18 +42,15 @@ export async function validateJWT(token: string): Promise<JWTValidationResult> {
   try {
     const jwks = await getJWKS();
     const { payload } = await jose.jwtVerify(token, jwks, {
-      issuer: AUTH_SERVER_URL,
-      audience: RESOURCE_URL,
+      issuer: ISSUER,
     });
 
-    const result = {
+    return {
       valid: true,
       userId: payload.sub,
-      clientId: payload.client_id as string,
-      scope: payload.scope as string,
+      clientId: (payload.azp as string) || (payload.client_id as string),
+      scope: (payload.scope as string) || "",
     };
-
-    return result;
   } catch (error) {
     if (error instanceof jose.errors.JWTExpired) {
       return { valid: false, error: "Token expired" };
