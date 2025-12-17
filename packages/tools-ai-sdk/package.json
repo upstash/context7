@@ -1,6 +1,6 @@
 {
   "name": "@upstash/context7-tools-ai-sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Context7 tools for Vercel AI SDK",
   "type": "module",
   "main": "./dist/index.cjs",
