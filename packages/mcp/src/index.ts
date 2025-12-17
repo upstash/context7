@@ -141,10 +141,11 @@ For ambiguous queries, request clarification before proceeding with a best-guess
   },
   async ({ libraryName }) => {
     const ctx = requestContext.getStore();
+    const apiKey = ctx?.apiKey || globalApiKey;
     const searchResponse: SearchResponse = await searchLibraries(
       libraryName,
       ctx?.clientIp,
-      ctx?.apiKey
+      apiKey
     );
 
     if (!searchResponse.results || searchResponse.results.length === 0) {
