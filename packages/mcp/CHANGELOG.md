@@ -1,5 +1,11 @@
 # @upstash/context7-mcp
 
+## 1.0.33
+
+### Patch Changes
+
+- a5228fd: Fix API key not being passed in resolve-library-id tool when using stdio transport
+
 ## 1.0.32
 
 ### Patch Changes
