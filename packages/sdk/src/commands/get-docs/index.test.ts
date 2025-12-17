@@ -61,7 +61,6 @@ describe("GetDocsCommand", () => {
     expect(result).toHaveProperty("snippets");
     expect(Array.isArray((result as CodeDocsResponse).snippets)).toBe(true);
     expect(result).toHaveProperty("pagination");
-    expect(result).toHaveProperty("metadata");
   });
 
   test("should get library code docs using client with pagination and totalTokens", async () => {

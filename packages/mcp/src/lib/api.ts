@@ -34,27 +34,36 @@ function parseLibraryId(libraryId: string): {
 }
 
 /**
- * Generates appropriate error messages based on HTTP status codes
- * @param errorCode The HTTP error status code
- * @param apiKey Optional API key (used for rate limit message)
+ * Parses error response from the Context7 API
+ * Extracts the server's error message, falling back to status-based messages if parsing fails
+ * @param response The fetch Response object
+ * @param apiKey Optional API key (used for fallback messages)
  * @returns Error message string
  */
-function createErrorMessage(errorCode: number, apiKey?: string): string {
-  switch (errorCode) {
-    case 429:
-      return apiKey
-        ? "Rate limited due to too many requests. Please try again later."
-        : "Rate limited due to too many requests. You can create a free API key at https://context7.com/dashboard for higher rate limits.";
-    case 404:
-      return "The library you are trying to access does not exist. Please try with a different library ID.";
-    case 401:
-      if (!apiKey) {
-        return "Unauthorized. Please provide an API key.";
-      }
-      return `Unauthorized. Please check your API key. API keys should start with 'ctx7sk'`;
-    default:
-      return `Failed to fetch documentation. Please try again later. Error code: ${errorCode}`;
+async function parseErrorResponse(response: Response, apiKey?: string): Promise<string> {
+  try {
+    const json = (await response.json()) as { message?: string };
+    if (json.message) {
+      return json.message;
+    }
+  } catch {
+    // JSON parsing failed, fall through to default
   }
+
+  // Fallback for non-JSON responses
+  const status = response.status;
+  if (status === 429) {
+    return apiKey
+      ? "Rate limited or quota exceeded. Upgrade your plan at https://context7.com/plans for higher limits."
+      : "Rate limited or quota exceeded. Create a free API key at https://context7.com/dashboard for higher limits.";
+  }
+  if (status === 404) {
+    return "The library you are trying to access does not exist. Please try with a different library ID.";
+  }
+  if (status === 401) {
+    return "Invalid API key. Please check your API key. API keys should start with 'ctx7sk' prefix.";
+  }
+  return `Request failed with status ${status}. Please try again later.`;
 }
 
 // Pick up proxy configuration in a variety of common env var names.
@@ -101,8 +110,7 @@ export async function searchLibraries(
 
     const response = await fetch(url, { headers });
     if (!response.ok) {
-      const errorCode = response.status;
-      const errorMessage = createErrorMessage(errorCode, apiKey);
+      const errorMessage = await parseErrorResponse(response, apiKey);
       console.error(errorMessage);
       return {
         results: [],
@@ -157,8 +165,7 @@ export async function fetchLibraryDocumentation(
 
     const response = await fetch(url, { headers });
     if (!response.ok) {
-      const errorCode = response.status;
-      const errorMessage = createErrorMessage(errorCode, apiKey);
+      const errorMessage = await parseErrorResponse(response, apiKey);
       console.error(errorMessage);
       return errorMessage;
     }
