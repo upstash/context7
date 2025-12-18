@@ -2,8 +2,7 @@ import { ContextRequest, ContextResponse } from "./types.js";
 import { generateHeaders } from "./encryption.js";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 
-const CONTEXT7_API_BASE_URL = "http://localhost:3000";
-// || "https://context7.com/api";
+const CONTEXT7_API_BASE_URL = "https://context7.com/api";
 
 /**
  * Parses error response from the Context7 API
@@ -75,7 +74,7 @@ export async function fetchLibraryContext(
   apiKey?: string
 ): Promise<ContextResponse> {
   try {
-    const url = new URL(`${CONTEXT7_API_BASE_URL}/api/v2/context`);
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/context`);
     url.searchParams.set("query", request.query);
     if (request.topic) url.searchParams.set("topic", request.topic);
     if (request.library) url.searchParams.set("library", request.library);
