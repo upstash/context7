@@ -1,4 +1,4 @@
-import { SearchResponse } from "./types.js";
+import { ContextRequest, ContextResponse, SearchResponse } from "./types.js";
 import { generateHeaders } from "./encryption.js";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import { DocumentationMode, DOCUMENTATION_MODES } from "./types.js";
@@ -182,5 +182,60 @@ export async function fetchLibraryDocumentation(
     const errorMessage = `Error fetching library documentation. Please try again later. ${error}`;
     console.error(errorMessage);
     return errorMessage;
+  }
+}
+
+/**
+ * Fetches intelligent, reranked context for a natural language query
+ * @param request The context request parameters (query, topic, library, mode)
+ * @param clientIp Optional client IP address to include in headers
+ * @param apiKey Optional API key for authentication
+ * @returns Context response with data, token usage, and used libraries
+ */
+export async function fetchLibraryContext(
+  request: ContextRequest,
+  clientIp?: string,
+  apiKey?: string
+): Promise<ContextResponse> {
+  try {
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/context`);
+    url.searchParams.set("query", request.query);
+    if (request.topic) url.searchParams.set("topic", request.topic);
+    if (request.library) url.searchParams.set("library", request.library);
+    if (request.mode) url.searchParams.set("mode", request.mode);
+
+    const headers = generateHeaders(clientIp, apiKey, { "X-Context7-Source": "mcp-server" });
+
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      const errorMessage = await parseErrorResponse(response, apiKey);
+      console.error(errorMessage);
+      return {
+        data: errorMessage,
+        usage: {
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+          reasoningTokens: 0,
+          cachedInputTokens: 0,
+        },
+      };
+    }
+
+    const json = (await response.json()) as ContextResponse;
+    return json;
+  } catch (error) {
+    const errorMessage = `Error fetching library context. Please try again later. ${error}`;
+    console.error(errorMessage);
+    return {
+      data: errorMessage,
+      usage: {
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+        reasoningTokens: 0,
+        cachedInputTokens: 0,
+      },
+    };
   }
 }
