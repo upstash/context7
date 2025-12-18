@@ -66,7 +66,7 @@ if (PROXY_URL && !PROXY_URL.startsWith("$") && /^(http|https):\/\//i.test(PROXY_
  * @param request The context request parameters (query, topic, library, mode)
  * @param clientIp Optional client IP address to include in headers
  * @param apiKey Optional API key for authentication
- * @returns Context response with data, token usage, and used libraries
+ * @returns Context response with data
  */
 export async function fetchLibraryContext(
   request: ContextRequest,
@@ -86,34 +86,14 @@ export async function fetchLibraryContext(
     if (!response.ok) {
       const errorMessage = await parseErrorResponse(response, apiKey);
       console.error(errorMessage);
-      return {
-        data: errorMessage,
-        usage: {
-          inputTokens: 0,
-          outputTokens: 0,
-          totalTokens: 0,
-          reasoningTokens: 0,
-          cachedInputTokens: 0,
-        },
-      };
+      return { data: errorMessage };
     }
 
     const text = await response.text();
-    return {
-      data: text,
-    };
+    return { data: text };
   } catch (error) {
     const errorMessage = `Error fetching library context. Please try again later. ${error}`;
     console.error(errorMessage);
-    return {
-      data: errorMessage,
-      usage: {
-        inputTokens: 0,
-        outputTokens: 0,
-        totalTokens: 0,
-        reasoningTokens: 0,
-        cachedInputTokens: 0,
-      },
-    };
+    return { data: errorMessage };
   }
 }

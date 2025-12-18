@@ -167,17 +167,11 @@ USE THIS TOOL TO:
       };
     }
 
-    let responseText = response.data;
-
-    if (response.usedLibraries?.length) {
-      responseText = `[Context from: ${response.usedLibraries.join(", ")}]\n\n${responseText}`;
-    }
-
     return {
       content: [
         {
           type: "text",
-          text: responseText,
+          text: response.data,
         },
       ],
     };
