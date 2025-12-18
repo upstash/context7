@@ -111,16 +111,14 @@ const server = new McpServer(
 server.registerTool(
   "get-docs",
   {
-    title: "Get Documentation Context",
-    description: `Fetches relevant documentation snippets and code examples for a programming task or question. Returns contextual information from library documentation that helps answer questions or implement features.
+    title: "Get Library Documentation",
+    description: `Retrieves up-to-date documentation and code examples from Context7 for any programming library or framework.
 
-WHEN TO USE THIS TOOL:
-- When you need to answer "how do I..." questions about a library
-- When implementing a feature and need relevant code examples
-- When you need focused, query-specific context rather than browsing full documentation
-- When you're unsure which library to use (omit 'library' parameter for auto-selection)
-
-IMPORTANT: Always provide a specific, descriptive query for best results. Vague queries return less relevant context.`,
+USE THIS TOOL TO:
+- Get current, accurate documentation for libraries (e.g., React, Next.js, Express, LangChain)
+- Find working code examples and implementation patterns
+- Answer "how do I..." questions about specific libraries
+- Look up API references, configuration options, and best practices`,
     inputSchema: {
       query: z
         .string()
