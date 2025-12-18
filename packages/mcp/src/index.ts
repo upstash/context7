@@ -258,8 +258,6 @@ async function main() {
 
         await requestContext.run({ clientIp, apiKey }, async () => {
           await server.connect(transport);
-          // Notify client of current tool list
-          server.sendToolListChanged();
           await transport.handleRequest(req, res, req.body);
         });
       } catch (error) {
