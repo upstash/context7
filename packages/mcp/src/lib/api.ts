@@ -3,7 +3,8 @@ import { generateHeaders } from "./encryption.js";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import { DocumentationMode, DOCUMENTATION_MODES } from "./types.js";
 
-const CONTEXT7_API_BASE_URL = "https://context7.com/api";
+const CONTEXT7_API_BASE_URL = "http://localhost:3000";
+// || "https://context7.com/api";
 const DEFAULT_TYPE = "txt";
 
 /**
@@ -198,7 +199,7 @@ export async function fetchLibraryContext(
   apiKey?: string
 ): Promise<ContextResponse> {
   try {
-    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/context`);
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/api/v2/context`);
     url.searchParams.set("query", request.query);
     if (request.topic) url.searchParams.set("topic", request.topic);
     if (request.library) url.searchParams.set("library", request.library);
