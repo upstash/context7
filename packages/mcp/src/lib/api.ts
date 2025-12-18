@@ -99,8 +99,10 @@ export async function fetchLibraryContext(
       };
     }
 
-    const json = (await response.json()) as ContextResponse;
-    return json;
+    const text = await response.text();
+    return {
+      data: text,
+    };
   } catch (error) {
     const errorMessage = `Error fetching library context. Please try again later. ${error}`;
     console.error(errorMessage);

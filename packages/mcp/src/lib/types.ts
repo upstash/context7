@@ -15,6 +15,6 @@ export type TokenUsage = {
 
 export type ContextResponse = {
   data: string;
-  usage: TokenUsage;
+  usage?: TokenUsage;
   usedLibraries?: string[];
 };

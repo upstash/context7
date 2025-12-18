@@ -129,7 +129,7 @@ USE THIS TOOL TO:
         .string()
         .optional()
         .describe(
-          "Library or framework name to search within (e.g., 'react', 'nextjs', 'express', 'langchain'). If omitted, the most relevant library will be automatically selected based on your query. Provide this when you know the specific library you need."
+          "Library or framework name (e.g., 'react', 'express') OR exact library ID with optional version (e.g., '/vercel/next.js', '/vercel/next.js@v14.3.0-canary.87'). If omitted, auto-selects based on query."
         ),
       topic: z
         .string()
