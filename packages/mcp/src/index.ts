@@ -120,13 +120,7 @@ USE THIS TOOL TO:
         .string()
         .optional()
         .describe(
-          "Library or framework name (e.g., 'react', 'express') OR exact library ID if provided by the user with or without version (e.g., '/vercel/next.js', '/vercel/next.js@v14.3.0-canary.87'). If omitted, auto-selects based on query."
-        ),
-      topic: z
-        .string()
-        .optional()
-        .describe(
-          "Narrow down results to a specific topic within the library. Examples: 'hooks', 'routing', 'middleware', 'authentication', 'state management'."
+          "Library or framework name (e.g., 'react', 'express') OR exact library ID if provided by the user with or without version (e.g., '/vercel/next.js', '/vercel/next.js@v14.3.0-canary.87'). Only omit if the question is generic and not relevant to any specific library or product."
         ),
       mode: z
         .enum(["code", "info"])
@@ -137,15 +131,11 @@ USE THIS TOOL TO:
         ),
     },
   },
-  async ({ query, library, topic, mode = "code" }) => {
+  async ({ query, library, mode = "code" }) => {
     const ctx = requestContext.getStore();
     const apiKey = ctx?.apiKey || globalApiKey;
 
-    const response = await fetchLibraryContext(
-      { query, library, topic, mode },
-      ctx?.clientIp,
-      apiKey
-    );
+    const response = await fetchLibraryContext({ query, library, mode }, ctx?.clientIp, apiKey);
 
     return {
       content: [
