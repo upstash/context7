@@ -1,8 +1,10 @@
+export type Mode = "code" | "info";
+
 export type ContextRequest = {
   query: string;
   topic?: string;
   library?: string;
-  mode?: "code" | "info";
+  mode?: Mode;
 };
 
 export type ContextResponse = {

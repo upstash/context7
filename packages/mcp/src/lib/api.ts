@@ -29,7 +29,7 @@ async function parseErrorResponse(response: Response, apiKey?: string): Promise<
       : "Rate limited or quota exceeded. Create a free API key at https://context7.com/dashboard for higher limits.";
   }
   if (status === 404) {
-    return "The library you are trying to access does not exist. Please try with a different library ID.";
+    return "No documentation found. Try a different library name or refine your query.";
   }
   if (status === 401) {
     return "Invalid API key. Please check your API key. API keys should start with 'ctx7sk' prefix.";

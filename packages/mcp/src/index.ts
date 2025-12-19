@@ -68,30 +68,21 @@ const requestContext = new AsyncLocalStorage<{
 // Store API key globally for stdio mode (where requestContext may not be available in tool handlers)
 let globalApiKey: string | undefined;
 
+const stripIpv6Prefix = (ip: string) => ip.replace(/^::ffff:/, "");
+
+const isPrivateIp = (ip: string) =>
+  ip.startsWith("10.") || ip.startsWith("192.168.") || /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(ip);
+
 function getClientIp(req: express.Request): string | undefined {
-  const forwardedFor = req.headers["x-forwarded-for"] || req.headers["X-Forwarded-For"];
+  const forwardedFor = req.headers["x-forwarded-for"];
 
   if (forwardedFor) {
     const ips = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor;
-    const ipList = ips.split(",").map((ip) => ip.trim());
-
-    for (const ip of ipList) {
-      const plainIp = ip.replace(/^::ffff:/, "");
-      if (
-        !plainIp.startsWith("10.") &&
-        !plainIp.startsWith("192.168.") &&
-        !/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(plainIp)
-      ) {
-        return plainIp;
-      }
-    }
-    return ipList[0].replace(/^::ffff:/, "");
+    const ipList = ips.split(",").map((ip) => stripIpv6Prefix(ip.trim()));
+    return ipList.find((ip) => !isPrivateIp(ip)) ?? ipList[0];
   }
 
-  if (req.socket?.remoteAddress) {
-    return req.socket.remoteAddress.replace(/^::ffff:/, "");
-  }
-  return undefined;
+  return req.socket?.remoteAddress ? stripIpv6Prefix(req.socket.remoteAddress) : undefined;
 }
 
 const server = new McpServer(
@@ -183,7 +174,6 @@ async function main() {
 
   if (transportType === "http") {
     const initialPort = CLI_PORT ?? DEFAULT_PORT;
-    let actualPort = initialPort;
 
     const app = express();
     app.use(express.json());
@@ -223,14 +213,8 @@ async function main() {
     const extractApiKey = (req: express.Request): string | undefined => {
       return (
         extractBearerToken(req.headers.authorization) ||
-        extractHeaderValue(req.headers["Context7-API-Key"]) ||
-        extractHeaderValue(req.headers["X-API-Key"]) ||
         extractHeaderValue(req.headers["context7-api-key"]) ||
-        extractHeaderValue(req.headers["x-api-key"]) ||
-        extractHeaderValue(req.headers["Context7_API_Key"]) ||
-        extractHeaderValue(req.headers["X_API_Key"]) ||
-        extractHeaderValue(req.headers["context7_api_key"]) ||
-        extractHeaderValue(req.headers["x_api_key"])
+        extractHeaderValue(req.headers["x-api-key"])
       );
     };
 
@@ -290,9 +274,8 @@ async function main() {
       });
 
       httpServer.once("listening", () => {
-        actualPort = port;
         console.error(
-          `Context7 Documentation MCP Server running on HTTP at http://localhost:${actualPort}/mcp`
+          `Context7 Documentation MCP Server running on HTTP at http://localhost:${port}/mcp`
         );
       });
     };

@@ -50,7 +50,9 @@ async function compareBenchmarks() {
     console.error("Usage: pnpm run compare-benchmark <prefix-a> <prefix-b>");
     console.error("Example: pnpm run compare-benchmark CTX7-943-run-3 single-params-run-0");
     console.error("");
-    console.error("This compares folders matching pattern: {prefix}-file-questions{1-8}-model-claude");
+    console.error(
+      "This compares folders matching pattern: {prefix}-file-questions{1-8}-model-claude"
+    );
     process.exit(1);
   }
 
@@ -321,7 +323,8 @@ If both are roughly equal in quality, respond with "tie".`,
     report += `| Q# | Question | Winner | Reasoning |\n`;
     report += `|----|----------|--------|----------|\n`;
     qsr.results.forEach((r) => {
-      const shortQuestion = r.question.length > 35 ? r.question.substring(0, 35) + "..." : r.question;
+      const shortQuestion =
+        r.question.length > 35 ? r.question.substring(0, 35) + "..." : r.question;
       const winnerLabel = r.winner === "A" ? "A" : r.winner === "B" ? "B" : "Tie";
       report += `| ${r.questionNum} | ${shortQuestion} | ${winnerLabel} | ${r.reasoning.replace(/\|/g, "\\|")} |\n`;
     });
