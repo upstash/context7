@@ -327,10 +327,7 @@ describe("Context7 Client", () => {
     });
 
     test("should handle invalid search query", async () => {
-      const result = await client.searchLibrary("");
-      expect(result).toBeDefined();
-      expect(result.results).toBeDefined();
-      expect(Array.isArray(result.results)).toBe(true);
+      await expect(client.searchLibrary("")).rejects.toThrow(Context7Error);
     });
   });
 
