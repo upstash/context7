@@ -90,6 +90,9 @@ export async function fetchLibraryContext(
     }
 
     const text = await response.text();
+    if (!text) {
+      return { data: "No documentation found for this query." };
+    }
     return { data: text };
   } catch (error) {
     const errorMessage = `Error fetching library context. Please try again later. ${error}`;

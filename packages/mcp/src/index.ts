@@ -147,17 +147,6 @@ USE THIS TOOL TO:
       apiKey
     );
 
-    if (!response.data) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: "No context found for your query. Try refining your search terms or specifying a library.",
-          },
-        ],
-      };
-    }
-
     return {
       content: [
         {
