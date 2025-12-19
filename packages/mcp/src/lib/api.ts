@@ -76,7 +76,6 @@ export async function fetchLibraryContext(
   try {
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/context`);
     url.searchParams.set("query", request.query);
-    if (request.topic) url.searchParams.set("topic", request.topic);
     if (request.library) url.searchParams.set("library", request.library);
     if (request.mode) url.searchParams.set("mode", request.mode);
 
