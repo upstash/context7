@@ -129,20 +129,20 @@ USE THIS TOOL TO:
         .string()
         .optional()
         .describe(
-          "Library or framework name (e.g., 'react', 'express') OR exact library ID with optional version (e.g., '/vercel/next.js', '/vercel/next.js@v14.3.0-canary.87'). If omitted, auto-selects based on query."
+          "Library or framework name (e.g., 'react', 'express') OR exact library ID if provided by the user with or without version (e.g., '/vercel/next.js', '/vercel/next.js@v14.3.0-canary.87'). If omitted, auto-selects based on query."
         ),
       topic: z
         .string()
         .optional()
         .describe(
-          "Narrow down results to a specific topic within the library. Examples: 'hooks', 'routing', 'middleware', 'authentication', 'state management'. Use this to filter when queries might match multiple areas."
+          "Narrow down results to a specific topic within the library. Examples: 'hooks', 'routing', 'middleware', 'authentication', 'state management'."
         ),
       mode: z
         .enum(["code", "info"])
         .optional()
         .default("code")
         .describe(
-          "Type of content to prioritize. Use 'code' (default) when you need working code examples, API usage patterns, and implementation snippets. Use 'info' when you need conceptual explanations, architectural overviews, or understanding how something works."
+          "Type of content to prioritize. Use 'code' (default) when you need working code examples, API usage patterns, and implementation snippets. Use 'info' when you need conceptual narrative explanations, architectural overviews, or understanding how something works."
         ),
     },
   },

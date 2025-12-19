@@ -13,7 +13,8 @@
     "format:check": "prettier --check .",
     "dev": "tsc --watch",
     "start": "node dist/index.js --transport http",
-    "pack-mcpb": "pnpm install && pnpm run build && rm -rf node_modules && pnpm install --prod && mv mcpb/.mcpbignore .mcpbignore && mv mcpb/manifest.json manifest.json && mv public/icon.png icon.png && mcpb validate manifest.json && mcpb pack . mcpb/context7.mcpb && mv manifest.json mcpb/manifest.json && mv .mcpbignore mcpb/.mcpbignore && mv icon.png public/icon.png && bun install"
+    "pack-mcpb": "pnpm install && pnpm run build && rm -rf node_modules && pnpm install --prod && mv mcpb/.mcpbignore .mcpbignore && mv mcpb/manifest.json manifest.json && mv public/icon.png icon.png && mcpb validate manifest.json && mcpb pack . mcpb/context7.mcpb && mv manifest.json mcpb/manifest.json && mv .mcpbignore mcpb/.mcpbignore && mv icon.png public/icon.png && bun install",
+    "run-benchmark": "pnpm run build && node dist/benchmark/run-benchmark.js"
   },
   "repository": {
     "type": "git",
@@ -53,7 +54,13 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@ai-sdk/anthropic": "^1.2.12",
+    "@ai-sdk/google": "^1.2.7",
+    "@ai-sdk/mcp": "^0.2.0",
+    "@ai-sdk/openai": "^1.3.22",
     "@types/node": "^22.13.14",
+    "ai": "^4.3.16",
+    "dotenv": "^16.5.0",
     "typescript": "^5.8.2"
   }
 }
