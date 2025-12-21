@@ -138,6 +138,9 @@ For ambiguous queries, request clarification before proceeding with a best-guess
         .string()
         .describe("Library name to search for and retrieve a Context7-compatible library ID."),
     },
+    annotations: {
+      readOnlyHint: true,
+    },
   },
   async ({ libraryName }) => {
     const ctx = requestContext.getStore();
@@ -223,6 +226,9 @@ server.registerTool(
         .describe(
           "Page number for pagination (start: 1, default: 1). If the context is not sufficient, try page=2, page=3, page=4, etc. with the same topic."
         ),
+    },
+    annotations: {
+      readOnlyHint: true,
     },
   },
   async ({ context7CompatibleLibraryID, mode = DOCUMENTATION_MODES.CODE, page = 1, topic }) => {
