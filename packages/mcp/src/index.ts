@@ -98,7 +98,7 @@ function getClientIp(req: express.Request): string | undefined {
 const server = new McpServer(
   {
     name: "Context7",
-    version: "1.0.13",
+    version: "2.0.0",
   },
   {
     instructions:
@@ -121,7 +121,7 @@ Select the best match based on: name similarity, description relevance, snippet 
       query: z
         .string()
         .describe(
-          "The user's original question or task. This is used to rank library results by relevance to what the user is trying to accomplish."
+          "The user's original question or task. This is used to rank library results by relevance to what the user is trying to accomplish. IMPORTANT: Do not include any sensitive or confidential information such as API keys, passwords, credentials, or personal data in your query."
         ),
       libraryName: z
         .string()
