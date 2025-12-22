@@ -47,7 +47,7 @@
     "access": "public"
   },
   "devDependencies": {
-    "@types/node": "^22.13.14",
+    "@types/node": "^24.10.2",
     "dotenv": "^17.2.3",
     "tsup": "^8.5.1",
     "typescript": "^5.8.2",
