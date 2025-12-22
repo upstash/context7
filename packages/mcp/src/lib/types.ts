@@ -21,16 +21,6 @@ export interface SearchResponse {
 // Version state is still needed for validating search results
 export type DocumentState = "initial" | "finalized" | "error" | "delete";
 
-/**
- * Documentation modes for fetching library documentation
- */
-export const DOCUMENTATION_MODES = {
-  CODE: "code",
-  INFO: "info",
-} as const;
-
-export type DocumentationMode = (typeof DOCUMENTATION_MODES)[keyof typeof DOCUMENTATION_MODES];
-
 export type ContextRequest = {
   query: string;
   libraryId: string;
