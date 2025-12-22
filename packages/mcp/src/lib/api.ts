@@ -1,4 +1,4 @@
-import { SearchResponse } from "./types.js";
+import { SearchResponse, ContextRequest, ContextResponse } from "./types.js";
 import { generateHeaders } from "./encryption.js";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import { DocumentationMode, DOCUMENTATION_MODES } from "./types.js";
@@ -92,19 +92,22 @@ if (PROXY_URL && !PROXY_URL.startsWith("$") && /^(http|https):\/\//i.test(PROXY_
 
 /**
  * Searches for libraries matching the given query
- * @param query The search query
+ * @param query The user's question or task (used for LLM relevance ranking)
+ * @param libraryName The library name to search for in the database
  * @param clientIp Optional client IP address to include in headers
  * @param apiKey Optional API key for authentication
  * @returns Search results or null if the request fails
  */
 export async function searchLibraries(
   query: string,
+  libraryName: string,
   clientIp?: string,
   apiKey?: string
 ): Promise<SearchResponse> {
   try {
-    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/search`);
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/libs/search`);
     url.searchParams.set("query", query);
+    url.searchParams.set("libraryName", libraryName);
 
     const headers = generateHeaders(clientIp, apiKey);
 
@@ -182,5 +185,43 @@ export async function fetchLibraryDocumentation(
     const errorMessage = `Error fetching library documentation. Please try again later. ${error}`;
     console.error(errorMessage);
     return errorMessage;
+  }
+}
+
+/**
+ * Fetches intelligent, reranked context for a natural language query
+ * @param request The context request parameters (query, topic, library, mode)
+ * @param clientIp Optional client IP address to include in headers
+ * @param apiKey Optional API key for authentication
+ * @returns Context response with data
+ */
+export async function fetchLibraryContext(
+  request: ContextRequest,
+  clientIp?: string,
+  apiKey?: string
+): Promise<ContextResponse> {
+  try {
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/context`);
+    url.searchParams.set("query", request.query);
+    url.searchParams.set("libraryId", request.libraryId);
+
+    const headers = generateHeaders(clientIp, apiKey, { "X-Context7-Source": "mcp-server" });
+
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      const errorMessage = await parseErrorResponse(response, apiKey);
+      console.error(errorMessage);
+      return { data: errorMessage };
+    }
+
+    const text = await response.text();
+    if (!text) {
+      return { data: "No documentation found for this query." };
+    }
+    return { data: text };
+  } catch (error) {
+    const errorMessage = `Error fetching library context. Please try again later. ${error}`;
+    console.error(errorMessage);
+    return { data: errorMessage };
   }
 }

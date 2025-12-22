@@ -30,3 +30,12 @@ export const DOCUMENTATION_MODES = {
 } as const;
 
 export type DocumentationMode = (typeof DOCUMENTATION_MODES)[keyof typeof DOCUMENTATION_MODES];
+
+export type ContextRequest = {
+  query: string;
+  libraryId: string;
+};
+
+export type ContextResponse = {
+  data: string;
+};
