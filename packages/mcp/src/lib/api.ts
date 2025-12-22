@@ -128,7 +128,9 @@ export async function fetchLibraryContext(
 
     const text = await response.text();
     if (!text) {
-      return { data: "No documentation found for this query." };
+      return {
+        data: "Documentation not found or not finalized for this library. This might have happened because you used an invalid Context7-compatible library ID. To get a valid Context7-compatible library ID, use the 'resolve-library-id' with the package name you wish to retrieve documentation for.",
+      };
     }
     return { data: text };
   } catch (error) {

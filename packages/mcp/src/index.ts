@@ -114,9 +114,22 @@ server.registerTool(
 
 You MUST call this function before 'query-docs' to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
-Each result includes: Library ID (format: /org/project), name, description, code snippet count, source reputation (High/Medium/Low/Unknown), benchmark score (0-100), and available versions (/org/project/version format).
+Selection Process:
+1. Analyze the query to understand what library/package the user is looking for
+2. Return the most relevant match based on:
+- Name similarity to the query (exact matches prioritized)
+- Description relevance to the query's intent
+- Documentation coverage (prioritize libraries with higher Code Snippet counts)
+- Source reputation (consider libraries with High or Medium reputation more authoritative)
+- Benchmark Score: Quality indicator (100 is the highest score)
 
-Select the best match based on: name similarity, description relevance, snippet coverage, source reputation, and benchmark score. For ambiguous queries, ask for clarification.`,
+Response Format:
+- Return the selected library ID in a clearly marked section
+- Provide a brief explanation for why this library was chosen
+- If multiple good matches exist, acknowledge this but proceed with the most relevant one
+- If no good matches exist, clearly state this and suggest query refinements
+
+For ambiguous queries, request clarification before proceeding with a best-guess match.`,
     inputSchema: {
       query: z
         .string()
@@ -131,7 +144,6 @@ Select the best match based on: name similarity, description relevance, snippet 
   async ({ query, libraryName }) => {
     const ctx = requestContext.getStore();
     const apiKey = ctx?.apiKey || globalApiKey;
-
     const searchResponse = await searchLibraries(query, libraryName, ctx?.clientIp, apiKey);
 
     if (!searchResponse.results || searchResponse.results.length === 0) {
@@ -147,11 +159,30 @@ Select the best match based on: name similarity, description relevance, snippet 
       };
     }
 
+    const resultsText = formatSearchResults(searchResponse);
+
+    const responseText = `Available Libraries:
+
+Each result includes:
+- Library ID: Context7-compatible identifier (format: /org/project)
+- Name: Library or package name
+- Description: Short summary
+- Code Snippets: Number of available code examples
+- Source Reputation: Authority indicator (High, Medium, Low, or Unknown)
+- Benchmark Score: Quality indicator (100 is the highest score)
+- Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.
+
+For best results, select libraries based on name match, source reputation, snippet coverage, benchmark score, and relevance to your use case.
+
+----------
+
+${resultsText}`;
+
     return {
       content: [
         {
           type: "text",
-          text: formatSearchResults(searchResponse),
+          text: responseText,
         },
       ],
     };
@@ -164,23 +195,17 @@ server.registerTool(
     title: "Query Documentation",
     description: `Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
 
-You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
-
-USE THIS TOOL TO:
-- Get current, accurate documentation for libraries (e.g., React, Next.js, Express, LangChain)
-- Find working code examples and implementation patterns
-- Answer "how do I..." questions about specific libraries
-- Look up API references, configuration options, and best practices`,
+You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.`,
     inputSchema: {
+      libraryId: z
+        .string()
+        .describe(
+          "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
+        ),
       query: z
         .string()
         .describe(
           "The question or task you need help with. Be specific and include relevant details. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad: 'auth' or 'hooks'. IMPORTANT: Do not include any sensitive or confidential information such as API keys, passwords, credentials, or personal data in your query."
-        ),
-      libraryId: z
-        .string()
-        .describe(
-          "Context7-compatible library ID (e.g., '/mongodb/docs' or '/vercel/next.js'). Retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
         ),
     },
   },
