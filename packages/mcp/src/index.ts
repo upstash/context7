@@ -10,7 +10,9 @@ import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
+import { createHash, randomUUID } from "crypto";
 
+const SERVER_VERSION = "1.0.33";
 /** Default number of results to return per page */
 const DEFAULT_RESULTS_LIMIT = 10;
 /** Default HTTP server port */
@@ -64,13 +66,60 @@ const CLI_PORT = (() => {
   return isNaN(parsed) ? undefined : parsed;
 })();
 
-const requestContext = new AsyncLocalStorage<{
+interface RequestContextData {
   clientIp?: string;
   apiKey?: string;
-}>();
+  clientInfo?: {
+    ide?: string;
+    version?: string;
+  };
+}
 
-// Store API key globally for stdio mode (where requestContext may not be available in tool handlers)
+const requestContext = new AsyncLocalStorage<RequestContextData>();
+
 let globalApiKey: string | undefined;
+let globalClientInfo: { ide?: string; version?: string } | undefined;
+
+const clientInfoCache = new Map<string, { ide?: string; version?: string; timestamp: number }>();
+const CLIENT_INFO_CACHE_TTL = 30 * 60 * 1000;
+
+function getClientInfoCacheKey(
+  sessionId?: string,
+  clientIp?: string,
+  apiKey?: string
+): string | undefined {
+  if (sessionId) {
+    return `session:${sessionId}`;
+  }
+  if (apiKey) {
+    return `apikey:${hashApiKey(apiKey)}`;
+  }
+  if (clientIp) {
+    return `ip:${clientIp}`;
+  }
+  return undefined;
+}
+
+/**
+ * Clean up expired entries from the client info cache.
+ */
+function cleanupClientInfoCache(): void {
+  const now = Date.now();
+  for (const [key, value] of clientInfoCache.entries()) {
+    if (now - value.timestamp > CLIENT_INFO_CACHE_TTL) {
+      clientInfoCache.delete(key);
+    }
+  }
+}
+
+/**
+ * Hash an API key for telemetry user identification.
+ * Uses SHA-256 to create a deterministic but non-reversible identifier.
+ */
+function hashApiKey(apiKey: string): string {
+  return createHash("sha256").update(apiKey).digest("hex");
+}
+
 
 function getClientIp(req: express.Request): string | undefined {
   const forwardedFor = req.headers["x-forwarded-for"] || req.headers["X-Forwarded-For"];
@@ -101,13 +150,30 @@ function getClientIp(req: express.Request): string | undefined {
 const server = new McpServer(
   {
     name: "Context7",
-    version: "1.0.13",
+    version: SERVER_VERSION,
   },
   {
     instructions:
       "Use this server to retrieve up-to-date documentation and code examples for any library.",
   }
 );
+
+server.server.oninitialized = () => {
+  const clientVersion = server.server.getClientVersion();
+  if (clientVersion) {
+    const clientInfo = {
+      ide: clientVersion.name,
+      version: clientVersion.version,
+    };
+
+    const ctx = requestContext.getStore();
+    if (ctx) {
+      ctx.clientInfo = clientInfo;
+    }
+
+    globalClientInfo = clientInfo;
+  }
+};
 
 server.registerTool(
   "resolve-library-id",
@@ -142,11 +208,13 @@ For ambiguous queries, request clarification before proceeding with a best-guess
   async ({ libraryName }) => {
     const ctx = requestContext.getStore();
     const apiKey = ctx?.apiKey || globalApiKey;
-    const searchResponse: SearchResponse = await searchLibraries(
-      libraryName,
-      ctx?.clientIp,
-      apiKey
-    );
+    const clientInfo = ctx?.clientInfo || globalClientInfo;
+
+    const searchResponse: SearchResponse = await searchLibraries(libraryName, {
+      clientIp: ctx?.clientIp,
+      apiKey,
+      clientInfo,
+    });
 
     if (!searchResponse.results || searchResponse.results.length === 0) {
       return {
@@ -228,6 +296,8 @@ server.registerTool(
   async ({ context7CompatibleLibraryID, mode = DOCUMENTATION_MODES.CODE, page = 1, topic }) => {
     const ctx = requestContext.getStore();
     const apiKey = ctx?.apiKey || globalApiKey;
+    const clientInfo = ctx?.clientInfo || globalClientInfo;
+
     const fetchDocsResponse = await fetchLibraryDocumentation(
       context7CompatibleLibraryID,
       mode,
@@ -236,8 +306,11 @@ server.registerTool(
         limit: DEFAULT_RESULTS_LIMIT,
         topic,
       },
-      ctx?.clientIp,
-      apiKey
+      {
+        clientIp: ctx?.clientIp,
+        apiKey,
+        clientInfo,
+      }
     );
 
     if (!fetchDocsResponse) {
@@ -318,13 +391,51 @@ async function main() {
       );
     };
 
+    const extractClientInfoFromBody = (
+      body: unknown
+    ): { ide?: string; version?: string } | undefined => {
+      if (!body || typeof body !== "object") return undefined;
+
+      const request = body as {
+        method?: string;
+        params?: { clientInfo?: { name?: string; version?: string } };
+      };
+      if (request.method === "initialize" && request.params?.clientInfo) {
+        return {
+          ide: request.params.clientInfo.name,
+          version: request.params.clientInfo.version,
+        };
+      }
+
+      return undefined;
+    };
+
     app.all("/mcp", async (req: express.Request, res: express.Response) => {
       try {
         const clientIp = getClientIp(req);
         const apiKey = extractApiKey(req);
+        const mcpSessionId = req.headers["mcp-session-id"] as string | undefined;
+
+        const cacheKey = getClientInfoCacheKey(mcpSessionId, clientIp, apiKey);
+
+        let clientInfo = extractClientInfoFromBody(req.body);
+
+        if (clientInfo && cacheKey) {
+          clientInfoCache.set(cacheKey, { ...clientInfo, timestamp: Date.now() });
+        } else if (!clientInfo && cacheKey) {
+          const cached = clientInfoCache.get(cacheKey);
+          if (cached) {
+            clientInfo = { ide: cached.ide, version: cached.version };
+            cached.timestamp = Date.now();
+          }
+        }
+
+        if (Math.random() < 0.01) {
+          cleanupClientInfoCache();
+        }
 
         const transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: undefined,
+          sessionIdGenerator: () => randomUUID(),
           enableJsonResponse: true,
         });
 
@@ -332,7 +443,7 @@ async function main() {
           transport.close();
         });
 
-        await requestContext.run({ clientIp, apiKey }, async () => {
+        await requestContext.run({ clientIp, apiKey, clientInfo }, async () => {
           await server.connect(transport);
           await transport.handleRequest(req, res, req.body);
         });

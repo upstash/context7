@@ -2,6 +2,52 @@ import { SearchResponse } from "./types.js";
 import { generateHeaders } from "./encryption.js";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import { DocumentationMode, DOCUMENTATION_MODES } from "./types.js";
+import crypto from "crypto";
+
+const SERVER_VERSION = "1.0.33";
+
+/**
+ * Client context for telemetry headers
+ */
+export interface ClientContext {
+  clientIp?: string;
+  apiKey?: string;
+  clientInfo?: {
+    ide?: string;
+    version?: string;
+  };
+  transport?: "stdio" | "http";
+}
+
+// Session ID for stdio mode (stable for process lifetime)
+let stdioSessionId: string | null = null;
+
+function getOrCreateStdioSessionId(): string {
+  if (!stdioSessionId) {
+    stdioSessionId = `stdio_session_${crypto.randomUUID()}`;
+  }
+  return stdioSessionId;
+}
+
+/**
+ * Generate a client ID from context for unique user tracking
+ */
+function generateClientId(ctx: ClientContext): string {
+  // Priority 1: API key hash (authenticated user)
+  if (ctx.apiKey) {
+    const hash = crypto.createHash("sha256").update(ctx.apiKey).digest("hex");
+    return `apikey_${hash.substring(0, 16)}`;
+  }
+
+  // Priority 2: Client IP hash (HTTP anonymous user)
+  if (ctx.clientIp) {
+    const hash = crypto.createHash("sha256").update(ctx.clientIp).digest("hex");
+    return `ip_${hash.substring(0, 16)}`;
+  }
+
+  // Priority 3: Session ID (stdio mode)
+  return getOrCreateStdioSessionId();
+}
 
 const CONTEXT7_API_BASE_URL = "https://context7.com/api";
 const DEFAULT_TYPE = "txt";
@@ -93,24 +139,40 @@ if (PROXY_URL && !PROXY_URL.startsWith("$") && /^(http|https):\/\//i.test(PROXY_
 /**
  * Searches for libraries matching the given query
  * @param query The search query
- * @param clientIp Optional client IP address to include in headers
- * @param apiKey Optional API key for authentication
- * @returns Search results or null if the request fails
+ * @param context Client context for headers (IP, API key, client info)
+ * @returns Search results or error
  */
 export async function searchLibraries(
   query: string,
-  clientIp?: string,
-  apiKey?: string
+  context: ClientContext = {}
 ): Promise<SearchResponse> {
   try {
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/search`);
     url.searchParams.set("query", query);
 
-    const headers = generateHeaders(clientIp, apiKey);
+    const clientId = generateClientId(context);
+    const baseHeaders = generateHeaders(context.clientIp, context.apiKey);
+
+    const headers: Record<string, string> = {
+      ...baseHeaders,
+      "X-Context7-Source": "mcp-server",
+      "X-Context7-Server-Version": SERVER_VERSION,
+      "X-Context7-Client-Id": clientId,
+    };
+
+    if (context.clientInfo?.ide) {
+      headers["X-Context7-Client-IDE"] = context.clientInfo.ide;
+    }
+    if (context.clientInfo?.version) {
+      headers["X-Context7-Client-Version"] = context.clientInfo.version;
+    }
+    if (context.transport) {
+      headers["X-Context7-Transport"] = context.transport;
+    }
 
     const response = await fetch(url, { headers });
     if (!response.ok) {
-      const errorMessage = await parseErrorResponse(response, apiKey);
+      const errorMessage = await parseErrorResponse(response, context.apiKey);
       console.error(errorMessage);
       return {
         results: [],
@@ -131,8 +193,7 @@ export async function searchLibraries(
  * @param libraryId The library ID to fetch documentation for
  * @param docMode Documentation mode (CODE for API references and code examples, INFO for conceptual guides)
  * @param options Optional request parameters (page, limit, topic)
- * @param clientIp Optional client IP address to include in headers
- * @param apiKey Optional API key for authentication
+ * @param context Client context for headers (IP, API key, client info)
  * @returns The documentation text or null if the request fails
  */
 export async function fetchLibraryDocumentation(
@@ -143,8 +204,7 @@ export async function fetchLibraryDocumentation(
     limit?: number;
     topic?: string;
   } = {},
-  clientIp?: string,
-  apiKey?: string
+  context: ClientContext = {}
 ): Promise<string | null> {
   try {
     const { username, library, tag } = parseLibraryId(libraryId);
@@ -161,11 +221,29 @@ export async function fetchLibraryDocumentation(
     if (options.page) url.searchParams.set("page", options.page.toString());
     if (options.limit) url.searchParams.set("limit", options.limit.toString());
 
-    const headers = generateHeaders(clientIp, apiKey, { "X-Context7-Source": "mcp-server" });
+    const clientId = generateClientId(context);
+    const baseHeaders = generateHeaders(context.clientIp, context.apiKey);
+
+    const headers: Record<string, string> = {
+      ...baseHeaders,
+      "X-Context7-Source": "mcp-server",
+      "X-Context7-Server-Version": SERVER_VERSION,
+      "X-Context7-Client-Id": clientId,
+    };
+
+    if (context.clientInfo?.ide) {
+      headers["X-Context7-Client-IDE"] = context.clientInfo.ide;
+    }
+    if (context.clientInfo?.version) {
+      headers["X-Context7-Client-Version"] = context.clientInfo.version;
+    }
+    if (context.transport) {
+      headers["X-Context7-Transport"] = context.transport;
+    }
 
     const response = await fetch(url, { headers });
     if (!response.ok) {
-      const errorMessage = await parseErrorResponse(response, apiKey);
+      const errorMessage = await parseErrorResponse(response, context.apiKey);
       console.error(errorMessage);
       return errorMessage;
     }
