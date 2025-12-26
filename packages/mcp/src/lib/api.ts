@@ -2,6 +2,7 @@ import { SearchResponse } from "./types.js";
 import { generateHeaders } from "./encryption.js";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import { DocumentationMode, DOCUMENTATION_MODES } from "./types.js";
+import { trackApiCall, classifyError } from "./telemetry.js";
 
 const CONTEXT7_API_BASE_URL = "https://context7.com/api";
 const DEFAULT_TYPE = "txt";
@@ -102,28 +103,36 @@ export async function searchLibraries(
   clientIp?: string,
   apiKey?: string
 ): Promise<SearchResponse> {
-  try {
-    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/search`);
-    url.searchParams.set("query", query);
+  return trackApiCall(
+    "search_libraries",
+    async () => {
+      try {
+        const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/search`);
+        url.searchParams.set("query", query);
 
-    const headers = generateHeaders(clientIp, apiKey);
+        const headers = generateHeaders(clientIp, apiKey);
 
-    const response = await fetch(url, { headers });
-    if (!response.ok) {
-      const errorMessage = await parseErrorResponse(response, apiKey);
-      console.error(errorMessage);
-      return {
-        results: [],
-        error: errorMessage,
-      } as SearchResponse;
-    }
-    const searchData = await response.json();
-    return searchData as SearchResponse;
-  } catch (error) {
-    const errorMessage = `Error searching libraries: ${error}`;
-    console.error(errorMessage);
-    return { results: [], error: errorMessage } as SearchResponse;
-  }
+        const response = await fetch(url, { headers });
+        if (!response.ok) {
+          const errorMessage = await parseErrorResponse(response, apiKey);
+          console.error(errorMessage);
+          return {
+            results: [],
+            error: errorMessage,
+            _statusCode: response.status,
+            _errorType: classifyError(response.status),
+          } as SearchResponse & { _statusCode: number; _errorType: string };
+        }
+        const searchData = await response.json();
+        return searchData as SearchResponse;
+      } catch (error) {
+        const errorMessage = `Error searching libraries: ${error}`;
+        console.error(errorMessage);
+        return { results: [], error: errorMessage } as SearchResponse;
+      }
+    },
+    { query }
+  );
 }
 
 /**
@@ -146,41 +155,47 @@ export async function fetchLibraryDocumentation(
   clientIp?: string,
   apiKey?: string
 ): Promise<string | null> {
-  try {
-    const { username, library, tag } = parseLibraryId(libraryId);
+  return trackApiCall(
+    "fetch_docs",
+    async () => {
+      try {
+        const { username, library, tag } = parseLibraryId(libraryId);
 
-    // Build URL path
-    let urlPath = `${CONTEXT7_API_BASE_URL}/v2/docs/${docMode}/${username}/${library}`;
-    if (tag) {
-      urlPath += `/${tag}`;
-    }
+        // Build URL path
+        let urlPath = `${CONTEXT7_API_BASE_URL}/v2/docs/${docMode}/${username}/${library}`;
+        if (tag) {
+          urlPath += `/${tag}`;
+        }
 
-    const url = new URL(urlPath);
-    url.searchParams.set("type", DEFAULT_TYPE);
-    if (options.topic) url.searchParams.set("topic", options.topic);
-    if (options.page) url.searchParams.set("page", options.page.toString());
-    if (options.limit) url.searchParams.set("limit", options.limit.toString());
+        const url = new URL(urlPath);
+        url.searchParams.set("type", DEFAULT_TYPE);
+        if (options.topic) url.searchParams.set("topic", options.topic);
+        if (options.page) url.searchParams.set("page", options.page.toString());
+        if (options.limit) url.searchParams.set("limit", options.limit.toString());
 
-    const headers = generateHeaders(clientIp, apiKey, { "X-Context7-Source": "mcp-server" });
+        const headers = generateHeaders(clientIp, apiKey, { "X-Context7-Source": "mcp-server" });
 
-    const response = await fetch(url, { headers });
-    if (!response.ok) {
-      const errorMessage = await parseErrorResponse(response, apiKey);
-      console.error(errorMessage);
-      return errorMessage;
-    }
-    const text = await response.text();
-    if (!text || text === "No content available" || text === "No context data available") {
-      const suggestion =
-        docMode === DOCUMENTATION_MODES.CODE
-          ? " Try mode='info' for guides and tutorials."
-          : " Try mode='code' for API references and code examples.";
-      return `No ${docMode} documentation available for this library.${suggestion}`;
-    }
-    return text;
-  } catch (error) {
-    const errorMessage = `Error fetching library documentation. Please try again later. ${error}`;
-    console.error(errorMessage);
-    return errorMessage;
-  }
+        const response = await fetch(url, { headers });
+        if (!response.ok) {
+          const errorMessage = await parseErrorResponse(response, apiKey);
+          console.error(errorMessage);
+          return errorMessage;
+        }
+        const text = await response.text();
+        if (!text || text === "No content available" || text === "No context data available") {
+          const suggestion =
+            docMode === DOCUMENTATION_MODES.CODE
+              ? " Try mode='info' for guides and tutorials."
+              : " Try mode='code' for API references and code examples.";
+          return `No ${docMode} documentation available for this library.${suggestion}`;
+        }
+        return text;
+      } catch (error) {
+        const errorMessage = `Error fetching library documentation. Please try again later. ${error}`;
+        console.error(errorMessage);
+        return errorMessage;
+      }
+    },
+    { libraryId, docMode, topic: options.topic, page: options.page }
+  );
 }
