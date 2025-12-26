@@ -10,13 +10,6 @@ import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
-import {
-  initTelemetry,
-  setClientContext,
-  trackToolCall,
-  shutdown as shutdownTelemetry,
-  RequestUserContext,
-} from "./lib/telemetry.js";
 import { createHash, randomUUID } from "crypto";
 
 const SERVER_VERSION = "1.0.33";
@@ -127,19 +120,6 @@ function hashApiKey(apiKey: string): string {
   return createHash("sha256").update(apiKey).digest("hex");
 }
 
-function buildUserContext(): RequestUserContext | undefined {
-  const ctx = requestContext.getStore();
-
-  const clientInfo = ctx?.clientInfo || globalClientInfo;
-
-  if (!ctx && !clientInfo) return undefined;
-
-  return {
-    apiKeyHash: ctx?.apiKey ? hashApiKey(ctx.apiKey) : undefined,
-    clientIp: ctx?.clientIp,
-    clientInfo,
-  };
-}
 
 function getClientIp(req: express.Request): string | undefined {
   const forwardedFor = req.headers["x-forwarded-for"] || req.headers["X-Forwarded-For"];
@@ -192,8 +172,6 @@ server.server.oninitialized = () => {
     }
 
     globalClientInfo = clientInfo;
-
-    setClientContext(clientInfo);
   }
 };
 
@@ -228,34 +206,32 @@ For ambiguous queries, request clarification before proceeding with a best-guess
     },
   },
   async ({ libraryName }) => {
-    const userContext = buildUserContext();
-    return trackToolCall(
-      "resolve-library-id",
-      async () => {
-        const ctx = requestContext.getStore();
-        const apiKey = ctx?.apiKey || globalApiKey;
-        const searchResponse: SearchResponse = await searchLibraries(
-          libraryName,
-          ctx?.clientIp,
-          apiKey
-        );
+    const ctx = requestContext.getStore();
+    const apiKey = ctx?.apiKey || globalApiKey;
+    const clientInfo = ctx?.clientInfo || globalClientInfo;
 
-        if (!searchResponse.results || searchResponse.results.length === 0) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: searchResponse.error
-                  ? searchResponse.error
-                  : "Failed to retrieve library documentation data from Context7",
-              },
-            ],
-          };
-        }
+    const searchResponse: SearchResponse = await searchLibraries(libraryName, {
+      clientIp: ctx?.clientIp,
+      apiKey,
+      clientInfo,
+    });
 
-        const resultsText = formatSearchResults(searchResponse);
+    if (!searchResponse.results || searchResponse.results.length === 0) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: searchResponse.error
+              ? searchResponse.error
+              : "Failed to retrieve library documentation data from Context7",
+          },
+        ],
+      };
+    }
 
-        const responseText = `Available Libraries:
+    const resultsText = formatSearchResults(searchResponse);
+
+    const responseText = `Available Libraries:
 
 Each result includes:
 - Library ID: Context7-compatible identifier (format: /org/project)
@@ -272,18 +248,14 @@ For best results, select libraries based on name match, source reputation, snipp
 
 ${resultsText}`;
 
-        return {
-          content: [
-            {
-              type: "text",
-              text: responseText,
-            },
-          ],
-        };
-      },
-      undefined, // no metadata
-      userContext
-    );
+    return {
+      content: [
+        {
+          type: "text",
+          text: responseText,
+        },
+      ],
+    };
   }
 );
 
@@ -322,64 +294,49 @@ server.registerTool(
     },
   },
   async ({ context7CompatibleLibraryID, mode = DOCUMENTATION_MODES.CODE, page = 1, topic }) => {
-    const userContext = buildUserContext();
-    return trackToolCall(
-      "get-library-docs",
-      async () => {
-        const ctx = requestContext.getStore();
-        const apiKey = ctx?.apiKey || globalApiKey;
-        const fetchDocsResponse = await fetchLibraryDocumentation(
-          context7CompatibleLibraryID,
-          mode,
-          {
-            page,
-            limit: DEFAULT_RESULTS_LIMIT,
-            topic,
-          },
-          ctx?.clientIp,
-          apiKey
-        );
+    const ctx = requestContext.getStore();
+    const apiKey = ctx?.apiKey || globalApiKey;
+    const clientInfo = ctx?.clientInfo || globalClientInfo;
 
-        if (!fetchDocsResponse) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: "Documentation not found or not finalized for this library. This might have happened because you used an invalid Context7-compatible library ID. To get a valid Context7-compatible library ID, use the 'resolve-library-id' with the package name you wish to retrieve documentation for.",
-              },
-            ],
-          };
-        }
-
-        return {
-          content: [
-            {
-              type: "text",
-              text: fetchDocsResponse,
-            },
-          ],
-        };
+    const fetchDocsResponse = await fetchLibraryDocumentation(
+      context7CompatibleLibraryID,
+      mode,
+      {
+        page,
+        limit: DEFAULT_RESULTS_LIMIT,
+        topic,
       },
-      { libraryId: context7CompatibleLibraryID },
-      userContext
+      {
+        clientIp: ctx?.clientIp,
+        apiKey,
+        clientInfo,
+      }
     );
+
+    if (!fetchDocsResponse) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: "Documentation not found or not finalized for this library. This might have happened because you used an invalid Context7-compatible library ID. To get a valid Context7-compatible library ID, use the 'resolve-library-id' with the package name you wish to retrieve documentation for.",
+          },
+        ],
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: fetchDocsResponse,
+        },
+      ],
+    };
   }
 );
 
 async function main() {
   const transportType = TRANSPORT_TYPE;
-
-  initTelemetry({
-    serverVersion: SERVER_VERSION,
-    transport: transportType,
-  });
-
-  const gracefulShutdown = async () => {
-    await shutdownTelemetry();
-    process.exit(0);
-  };
-  process.on("SIGINT", gracefulShutdown);
-  process.on("SIGTERM", gracefulShutdown);
 
   if (transportType === "http") {
     const initialPort = CLI_PORT ?? DEFAULT_PORT;
