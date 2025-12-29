@@ -638,7 +638,7 @@ Get your Smithery key from your account at [smithery.ai](https://smithery.ai/ser
     }
     ```
 
-    Use `get-library-docs` in the chat with your Context7 documentation ID.
+    Use `query-docs` in the chat with your Context7 documentation ID.
 
   </Accordion>
 
@@ -804,7 +804,7 @@ Get your Smithery key from your account at [smithery.ai](https://smithery.ai/ser
           "headers": {
             "CONTEXT7_API_KEY": "YOUR_API_KEY"
           },
-          "tools": ["get-library-docs", "resolve-library-id"]
+          "tools": ["query-docs", "resolve-library-id"]
         }
       }
     }
@@ -827,7 +827,7 @@ Get your Smithery key from your account at [smithery.ai](https://smithery.ai/ser
             "CONTEXT7_API_KEY": "YOUR_API_KEY"
           },
           "tools": [
-            "get-library-docs",
+            "query-docs",
             "resolve-library-id"
           ]
         }
@@ -843,7 +843,7 @@ Get your Smithery key from your account at [smithery.ai](https://smithery.ai/ser
           "type": "local",
           "command": "npx",
           "tools": [
-            "get-library-docs",
+            "query-docs",
             "resolve-library-id"
           ],
           "args": [
