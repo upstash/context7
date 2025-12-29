@@ -1,5 +1,5 @@
 import { SearchResponse } from "./types.js";
-import { generateHeaders } from "./encryption.js";
+import { generateHeaders, HeaderContext } from "./encryption.js";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import { DocumentationMode, DOCUMENTATION_MODES } from "./types.js";
 import { SERVER_VERSION } from "../index.js";
@@ -7,19 +7,12 @@ import { SERVER_VERSION } from "../index.js";
 const CONTEXT7_API_BASE_URL = "https://context7.com/api";
 const DEFAULT_TYPE = "txt";
 
-export interface ClientContext {
-  clientIp?: string;
-  apiKey?: string;
-  clientInfo?: {
-    ide?: string;
-    version?: string;
-  };
-  transport?: "stdio" | "http";
-}
+export type ClientContext = Omit<HeaderContext, "serverVersion">;
 
 /**
- * Parse a library ID into its components.
- * @param libraryId - Library ID in format /username/library or /username/library/tag
+ * Parses a Context7-compatible library ID into its components
+ * @param libraryId The library ID (e.g., "/vercel/next.js" or "/vercel/next.js/v14.3.0")
+ * @returns Object with username, library, and optional tag
  */
 function parseLibraryId(libraryId: string): {
   username: string;
@@ -43,7 +36,11 @@ function parseLibraryId(libraryId: string): {
 }
 
 /**
- * Parse error response and return a user-friendly error message.
+ * Parses error response from the Context7 API
+ * Extracts the server's error message, falling back to status-based messages if parsing fails
+ * @param response The fetch Response object
+ * @param apiKey Optional API key (used for fallback messages)
+ * @returns Error message string
  */
 async function parseErrorResponse(response: Response, apiKey?: string): Promise<string> {
   try {
@@ -101,22 +98,7 @@ export async function searchLibraries(
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/search`);
     url.searchParams.set("query", query);
 
-    const baseHeaders = generateHeaders(context.clientIp, context.apiKey);
-    const headers: Record<string, string> = {
-      ...baseHeaders,
-      "X-Context7-Source": "mcp-server",
-      "X-Context7-Server-Version": SERVER_VERSION,
-    };
-
-    if (context.clientInfo?.ide) {
-      headers["X-Context7-Client-IDE"] = context.clientInfo.ide;
-    }
-    if (context.clientInfo?.version) {
-      headers["X-Context7-Client-Version"] = context.clientInfo.version;
-    }
-    if (context.transport) {
-      headers["X-Context7-Transport"] = context.transport;
-    }
+    const headers = generateHeaders({ ...context, serverVersion: SERVER_VERSION });
 
     const response = await fetch(url, { headers });
     if (!response.ok) {
@@ -159,19 +141,7 @@ export async function fetchLibraryDocumentation(
     if (options.page) url.searchParams.set("page", options.page.toString());
     if (options.limit) url.searchParams.set("limit", options.limit.toString());
 
-    const baseHeaders = generateHeaders(context.clientIp, context.apiKey);
-    const headers: Record<string, string> = {
-      ...baseHeaders,
-      "X-Context7-Source": "mcp-server",
-      "X-Context7-Server-Version": SERVER_VERSION,
-    };
-
-    if (context.clientInfo?.ide) {
-      headers["X-Context7-Client-IDE"] = context.clientInfo.ide;
-    }
-    if (context.clientInfo?.version) {
-      headers["X-Context7-Client-Version"] = context.clientInfo.version;
-    }
+    const headers = generateHeaders({ ...context, serverVersion: SERVER_VERSION });
 
     const response = await fetch(url, { headers });
     if (!response.ok) {
