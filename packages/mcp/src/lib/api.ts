@@ -17,6 +17,10 @@ export interface ClientContext {
   transport?: "stdio" | "http";
 }
 
+/**
+ * Parse a library ID into its components.
+ * @param libraryId - Library ID in format /username/library or /username/library/tag
+ */
 function parseLibraryId(libraryId: string): {
   username: string;
   library: string;
@@ -38,6 +42,9 @@ function parseLibraryId(libraryId: string): {
   };
 }
 
+/**
+ * Parse error response and return a user-friendly error message.
+ */
 async function parseErrorResponse(response: Response, apiKey?: string): Promise<string> {
   try {
     const json = (await response.json()) as { message?: string };
@@ -81,6 +88,11 @@ if (PROXY_URL && !PROXY_URL.startsWith("$") && /^(http|https):\/\//i.test(PROXY_
   }
 }
 
+/**
+ * Search for libraries matching the given query.
+ * @param query - Search query string
+ * @param context - Client context including IP, API key, and client info
+ */
 export async function searchLibraries(
   query: string,
   context: ClientContext = {}
@@ -120,6 +132,13 @@ export async function searchLibraries(
   }
 }
 
+/**
+ * Fetch documentation for a specific library.
+ * @param libraryId - Context7-compatible library ID
+ * @param docMode - Documentation mode ('code' or 'info')
+ * @param options - Pagination and topic options
+ * @param context - Client context including IP, API key, and client info
+ */
 export async function fetchLibraryDocumentation(
   libraryId: string,
   docMode: DocumentationMode,

@@ -10,7 +10,7 @@ import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
-import { createHash, randomUUID } from "crypto";
+import { randomUUID } from "crypto";
 
 export const SERVER_VERSION = "1.0.33";
 
@@ -81,46 +81,10 @@ const requestContext = new AsyncLocalStorage<RequestContextData>();
 let globalApiKey: string | undefined;
 let globalClientInfo: { ide?: string; version?: string } | undefined;
 
-const clientInfoCache = new Map<string, { ide?: string; version?: string; timestamp: number }>();
-const CLIENT_INFO_CACHE_TTL = 30 * 60 * 1000;
-
-function getClientInfoCacheKey(
-  sessionId?: string,
-  clientIp?: string,
-  apiKey?: string
-): string | undefined {
-  if (sessionId) {
-    return `session:${sessionId}`;
-  }
-  if (apiKey) {
-    return `apikey:${hashApiKey(apiKey)}`;
-  }
-  if (clientIp) {
-    return `ip:${clientIp}`;
-  }
-  return undefined;
-}
-
 /**
- * Clean up expired entries from the client info cache.
+ * Extract client IP address from request headers.
+ * Handles X-Forwarded-For header for proxied requests.
  */
-function cleanupClientInfoCache(): void {
-  const now = Date.now();
-  for (const [key, value] of clientInfoCache.entries()) {
-    if (now - value.timestamp > CLIENT_INFO_CACHE_TTL) {
-      clientInfoCache.delete(key);
-    }
-  }
-}
-
-/**
- * Hash an API key for telemetry user identification.
- * Uses SHA-256 to create a deterministic but non-reversible identifier.
- */
-function hashApiKey(apiKey: string): string {
-  return createHash("sha256").update(apiKey).digest("hex");
-}
-
 function getClientIp(req: express.Request): string | undefined {
   const forwardedFor = req.headers["x-forwarded-for"] || req.headers["X-Forwarded-For"];
 
@@ -414,25 +378,7 @@ async function main() {
       try {
         const clientIp = getClientIp(req);
         const apiKey = extractApiKey(req);
-        const mcpSessionId = req.headers["mcp-session-id"] as string | undefined;
-
-        const cacheKey = getClientInfoCacheKey(mcpSessionId, clientIp, apiKey);
-
-        let clientInfo = extractClientInfoFromBody(req.body);
-
-        if (clientInfo && cacheKey) {
-          clientInfoCache.set(cacheKey, { ...clientInfo, timestamp: Date.now() });
-        } else if (!clientInfo && cacheKey) {
-          const cached = clientInfoCache.get(cacheKey);
-          if (cached) {
-            clientInfo = { ide: cached.ide, version: cached.version };
-            cached.timestamp = Date.now();
-          }
-        }
-
-        if (Math.random() < 0.01) {
-          cleanupClientInfoCache();
-        }
+        const clientInfo = extractClientInfoFromBody(req.body);
 
         const transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: () => randomUUID(),
