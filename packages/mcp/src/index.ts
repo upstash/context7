@@ -235,7 +235,6 @@ async function main() {
 
   if (transportType === "http") {
     const initialPort = CLI_PORT ?? DEFAULT_PORT;
-    let actualPort = initialPort;
 
     const app = express();
     app.use(express.json());
@@ -275,12 +274,8 @@ async function main() {
     const extractApiKey = (req: express.Request): string | undefined => {
       return (
         extractBearerToken(req.headers.authorization) ||
-        extractHeaderValue(req.headers["Context7-API-Key"]) ||
-        extractHeaderValue(req.headers["X-API-Key"]) ||
         extractHeaderValue(req.headers["context7-api-key"]) ||
         extractHeaderValue(req.headers["x-api-key"]) ||
-        extractHeaderValue(req.headers["Context7_API_Key"]) ||
-        extractHeaderValue(req.headers["X_API_Key"]) ||
         extractHeaderValue(req.headers["context7_api_key"]) ||
         extractHeaderValue(req.headers["x_api_key"])
       );
@@ -342,9 +337,8 @@ async function main() {
       });
 
       httpServer.once("listening", () => {
-        actualPort = port;
         console.error(
-          `Context7 Documentation MCP Server running on HTTP at http://localhost:${actualPort}/mcp`
+          `Context7 Documentation MCP Server running on HTTP at http://localhost:${port}/mcp`
         );
       });
     };
