@@ -1,13 +1,10 @@
 import { SearchResponse } from "./types.js";
-import { generateHeaders, HeaderContext } from "./encryption.js";
+import { ClientContext, generateHeaders } from "./encryption.js";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import { DocumentationMode, DOCUMENTATION_MODES } from "./types.js";
-import { SERVER_VERSION } from "../index.js";
 
 const CONTEXT7_API_BASE_URL = "https://context7.com/api";
 const DEFAULT_TYPE = "txt";
-
-export type ClientContext = Omit<HeaderContext, "serverVersion">;
 
 /**
  * Parses a Context7-compatible library ID into its components
@@ -98,7 +95,7 @@ export async function searchLibraries(
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/search`);
     url.searchParams.set("query", query);
 
-    const headers = generateHeaders({ ...context, serverVersion: SERVER_VERSION });
+    const headers = generateHeaders(context);
 
     const response = await fetch(url, { headers });
     if (!response.ok) {
@@ -106,7 +103,8 @@ export async function searchLibraries(
       console.error(errorMessage);
       return { results: [], error: errorMessage };
     }
-    return (await response.json()) as SearchResponse;
+    const searchData = await response.json();
+    return searchData as SearchResponse;
   } catch (error) {
     const errorMessage = `Error searching libraries: ${error}`;
     console.error(errorMessage);
@@ -141,7 +139,7 @@ export async function fetchLibraryDocumentation(
     if (options.page) url.searchParams.set("page", options.page.toString());
     if (options.limit) url.searchParams.set("limit", options.limit.toString());
 
-    const headers = generateHeaders({ ...context, serverVersion: SERVER_VERSION });
+    const headers = generateHeaders(context);
 
     const response = await fetch(url, { headers });
     if (!response.ok) {

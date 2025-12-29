@@ -4,6 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { searchLibraries, fetchLibraryDocumentation } from "./lib/api.js";
+import { ClientContext } from "./lib/encryption.js";
 import { formatSearchResults } from "./lib/utils.js";
 import { SearchResponse, DOCUMENTATION_MODES } from "./lib/types.js";
 import express from "express";
@@ -67,16 +68,7 @@ const CLI_PORT = (() => {
   return isNaN(parsed) ? undefined : parsed;
 })();
 
-interface RequestContextData {
-  clientIp?: string;
-  apiKey?: string;
-  clientInfo?: {
-    ide?: string;
-    version?: string;
-  };
-}
-
-const requestContext = new AsyncLocalStorage<RequestContextData>();
+const requestContext = new AsyncLocalStorage<ClientContext>();
 
 let globalApiKey: string | undefined;
 let globalClientInfo: { ide?: string; version?: string } | undefined;

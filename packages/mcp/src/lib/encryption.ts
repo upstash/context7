@@ -1,4 +1,5 @@
 import { createCipheriv, randomBytes } from "crypto";
+import { SERVER_VERSION } from "../index.js";
 
 const DEFAULT_ENCRYPTION_KEY = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
 const ENCRYPTION_KEY = process.env.CLIENT_IP_ENCRYPTION_KEY || DEFAULT_ENCRYPTION_KEY;
@@ -31,14 +32,13 @@ function encryptClientIp(clientIp: string): string {
   }
 }
 
-export interface HeaderContext {
+export interface ClientContext {
   clientIp?: string;
   apiKey?: string;
   clientInfo?: {
     ide?: string;
     version?: string;
   };
-  serverVersion?: string;
   transport?: "stdio" | "http";
 }
 
@@ -46,9 +46,10 @@ export interface HeaderContext {
  * Generate headers for Context7 API requests.
  * Handles client IP encryption, authentication, and telemetry headers.
  */
-export function generateHeaders(context: HeaderContext): Record<string, string> {
+export function generateHeaders(context: ClientContext): Record<string, string> {
   const headers: Record<string, string> = {
     "X-Context7-Source": "mcp-server",
+    "X-Context7-Server-Version": SERVER_VERSION,
   };
 
   if (context.clientIp) {
@@ -56,9 +57,6 @@ export function generateHeaders(context: HeaderContext): Record<string, string> 
   }
   if (context.apiKey) {
     headers["Authorization"] = `Bearer ${context.apiKey}`;
-  }
-  if (context.serverVersion) {
-    headers["X-Context7-Server-Version"] = context.serverVersion;
   }
   if (context.clientInfo?.ide) {
     headers["X-Context7-Client-IDE"] = context.clientInfo.ide;
