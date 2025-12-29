@@ -958,7 +958,7 @@ Add the following configuration to the `mcp` section of your Copilot Coding Agen
       "headers": {
         "CONTEXT7_API_KEY": "YOUR_API_KEY"
       },
-      "tools": ["get-library-docs", "resolve-library-id"]
+      "tools": ["query-docs", "resolve-library-id"]
     }
   }
 }
@@ -983,7 +983,7 @@ For more information, see the [official GitHub documentation](https://docs.githu
       "headers": {
         "CONTEXT7_API_KEY": "YOUR_API_KEY"
       },
-      "tools": ["get-library-docs", "resolve-library-id"]
+      "tools": ["query-docs", "resolve-library-id"]
     }
   }
 }
@@ -997,7 +997,7 @@ Or, for a local server:
     "context7": {
       "type": "local",
       "command": "npx",
-      "tools": ["get-library-docs", "resolve-library-id"],
+      "tools": ["query-docs", "resolve-library-id"],
       "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
     }
   }
@@ -1135,7 +1135,7 @@ Open the "Settings" page of the app, navigate to "Plugins," and enter the follow
 }
 ```
 
-Once saved, enter in the chat `get-library-docs` followed by your Context7 documentation ID (e.g., `get-library-docs /nuxt/ui`). More information is available on [BoltAI's Documentation site](https://docs.boltai.com/docs/plugins/mcp-servers). For BoltAI on iOS, [see this guide](https://docs.boltai.com/docs/boltai-mobile/mcp-servers).
+Once saved, enter in the chat `query-docs` followed by your Context7 documentation ID (e.g., `query-docs /nuxt/ui`). More information is available on [BoltAI's Documentation site](https://docs.boltai.com/docs/plugins/mcp-servers). For BoltAI on iOS, [see this guide](https://docs.boltai.com/docs/boltai-mobile/mcp-servers).
 
 </details>
 
@@ -1312,12 +1312,12 @@ See the [Emdash repository](https://github.com/generalaction/emdash) for more in
 Context7 MCP provides the following tools that LLMs can use:
 
 - `resolve-library-id`: Resolves a general library name into a Context7-compatible library ID.
+  - `query` (required): The user's question or task (used to rank results by relevance)
   - `libraryName` (required): The name of the library to search for
 
-- `get-library-docs`: Fetches documentation for a library using a Context7-compatible library ID.
-  - `context7CompatibleLibraryID` (required): Exact Context7-compatible library ID (e.g., `/mongodb/docs`, `/vercel/next.js`)
-  - `topic` (optional): Focus the docs on a specific topic (e.g., "routing", "hooks")
-  - `page` (optional, default 1): Page number for pagination (1-10). If the context is not sufficient, try page=2, page=3, etc. with the same topic.
+- `query-docs`: Retrieves documentation for a library using a Context7-compatible library ID.
+  - `libraryId` (required): Exact Context7-compatible library ID (e.g., `/mongodb/docs`, `/vercel/next.js`)
+  - `query` (required): The question or task to get relevant documentation for
 
 ## 🛟 Tips
 
