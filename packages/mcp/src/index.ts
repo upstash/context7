@@ -74,6 +74,19 @@ let globalApiKey: string | undefined;
 let globalClientInfo: { ide?: string; version?: string } | undefined;
 
 /**
+ * Get the effective client context by merging request context with global fallbacks.
+ * Used by tool handlers to get the full context for API calls.
+ */
+function getClientContext(): ClientContext {
+  const ctx = requestContext.getStore();
+  return {
+    clientIp: ctx?.clientIp,
+    apiKey: ctx?.apiKey || globalApiKey,
+    clientInfo: ctx?.clientInfo || globalClientInfo,
+  };
+}
+
+/**
  * Extract client IP address from request headers.
  * Handles X-Forwarded-For header for proxied requests.
  */
@@ -162,15 +175,7 @@ For ambiguous queries, request clarification before proceeding with a best-guess
     },
   },
   async ({ libraryName }) => {
-    const ctx = requestContext.getStore();
-    const apiKey = ctx?.apiKey || globalApiKey;
-    const clientInfo = ctx?.clientInfo || globalClientInfo;
-
-    const searchResponse: SearchResponse = await searchLibraries(libraryName, {
-      clientIp: ctx?.clientIp,
-      apiKey,
-      clientInfo,
-    });
+    const searchResponse: SearchResponse = await searchLibraries(libraryName, getClientContext());
 
     if (!searchResponse.results || searchResponse.results.length === 0) {
       return {
@@ -250,10 +255,6 @@ server.registerTool(
     },
   },
   async ({ context7CompatibleLibraryID, mode = DOCUMENTATION_MODES.CODE, page = 1, topic }) => {
-    const ctx = requestContext.getStore();
-    const apiKey = ctx?.apiKey || globalApiKey;
-    const clientInfo = ctx?.clientInfo || globalClientInfo;
-
     const fetchDocsResponse = await fetchLibraryDocumentation(
       context7CompatibleLibraryID,
       mode,
@@ -262,11 +263,7 @@ server.registerTool(
         limit: DEFAULT_RESULTS_LIMIT,
         topic,
       },
-      {
-        clientIp: ctx?.clientIp,
-        apiKey,
-        clientInfo,
-      }
+      getClientContext()
     );
 
     if (!fetchDocsResponse) {
