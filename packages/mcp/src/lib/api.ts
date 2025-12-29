@@ -1,36 +1,8 @@
-import { SearchResponse } from "./types.js";
+import { SearchResponse, ContextRequest, ContextResponse } from "./types.js";
 import { ClientContext, generateHeaders } from "./encryption.js";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
-import { DocumentationMode, DOCUMENTATION_MODES } from "./types.js";
 
 const CONTEXT7_API_BASE_URL = "https://context7.com/api";
-const DEFAULT_TYPE = "txt";
-
-/**
- * Parses a Context7-compatible library ID into its components
- * @param libraryId The library ID (e.g., "/vercel/next.js" or "/vercel/next.js/v14.3.0")
- * @returns Object with username, library, and optional tag
- */
-function parseLibraryId(libraryId: string): {
-  username: string;
-  library: string;
-  tag?: string;
-} {
-  const cleaned = libraryId.startsWith("/") ? libraryId.slice(1) : libraryId;
-  const parts = cleaned.split("/");
-
-  if (parts.length < 2) {
-    throw new Error(
-      `Invalid library ID format: ${libraryId}. Expected format: /username/library or /username/library/tag`
-    );
-  }
-
-  return {
-    username: parts[0],
-    library: parts[1],
-    tag: parts[2],
-  };
-}
 
 /**
  * Parses error response from the Context7 API
@@ -83,17 +55,21 @@ if (PROXY_URL && !PROXY_URL.startsWith("$") && /^(http|https):\/\//i.test(PROXY_
 }
 
 /**
- * Search for libraries matching the given query.
- * @param query - Search query string
- * @param context - Client context including IP, API key, and client info
+ * Searches for libraries matching the given query
+ * @param query The user's question or task (used for LLM relevance ranking)
+ * @param libraryName The library name to search for in the database
+ * @param context Client context including IP, API key, and client info
+ * @returns Search results or error
  */
 export async function searchLibraries(
   query: string,
+  libraryName: string,
   context: ClientContext = {}
 ): Promise<SearchResponse> {
   try {
-    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/search`);
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/libs/search`);
     url.searchParams.set("query", query);
+    url.searchParams.set("libraryName", libraryName);
 
     const headers = generateHeaders(context);
 
@@ -113,31 +89,19 @@ export async function searchLibraries(
 }
 
 /**
- * Fetch documentation for a specific library.
- * @param libraryId - Context7-compatible library ID
- * @param docMode - Documentation mode ('code' or 'info')
- * @param options - Pagination and topic options
- * @param context - Client context including IP, API key, and client info
+ * Fetches intelligent, reranked context for a natural language query
+ * @param request The context request parameters (query, libraryId)
+ * @param context Client context including IP, API key, and client info
+ * @returns Context response with data
  */
-export async function fetchLibraryDocumentation(
-  libraryId: string,
-  docMode: DocumentationMode,
-  options: { page?: number; limit?: number; topic?: string } = {},
+export async function fetchLibraryContext(
+  request: ContextRequest,
   context: ClientContext = {}
-): Promise<string | null> {
+): Promise<ContextResponse> {
   try {
-    const { username, library, tag } = parseLibraryId(libraryId);
-
-    let urlPath = `${CONTEXT7_API_BASE_URL}/v2/docs/${docMode}/${username}/${library}`;
-    if (tag) {
-      urlPath += `/${tag}`;
-    }
-
-    const url = new URL(urlPath);
-    url.searchParams.set("type", DEFAULT_TYPE);
-    if (options.topic) url.searchParams.set("topic", options.topic);
-    if (options.page) url.searchParams.set("page", options.page.toString());
-    if (options.limit) url.searchParams.set("limit", options.limit.toString());
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/context`);
+    url.searchParams.set("query", request.query);
+    url.searchParams.set("libraryId", request.libraryId);
 
     const headers = generateHeaders(context);
 
@@ -145,20 +109,19 @@ export async function fetchLibraryDocumentation(
     if (!response.ok) {
       const errorMessage = await parseErrorResponse(response, context.apiKey);
       console.error(errorMessage);
-      return errorMessage;
+      return { data: errorMessage };
     }
+
     const text = await response.text();
-    if (!text || text === "No content available" || text === "No context data available") {
-      const suggestion =
-        docMode === DOCUMENTATION_MODES.CODE
-          ? " Try mode='info' for guides and tutorials."
-          : " Try mode='code' for API references and code examples.";
-      return `No ${docMode} documentation available for this library.${suggestion}`;
+    if (!text) {
+      return {
+        data: "Documentation not found or not finalized for this library. This might have happened because you used an invalid Context7-compatible library ID. To get a valid Context7-compatible library ID, use the 'resolve-library-id' with the package name you wish to retrieve documentation for.",
+      };
     }
-    return text;
+    return { data: text };
   } catch (error) {
-    const errorMessage = `Error fetching library documentation. Please try again later. ${error}`;
+    const errorMessage = `Error fetching library context. Please try again later. ${error}`;
     console.error(errorMessage);
-    return errorMessage;
+    return { data: errorMessage };
   }
 }
