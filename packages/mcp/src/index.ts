@@ -12,7 +12,8 @@ import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
 import { createHash, randomUUID } from "crypto";
 
-const SERVER_VERSION = "1.0.33";
+export const SERVER_VERSION = "1.0.33";
+
 /** Default number of results to return per page */
 const DEFAULT_RESULTS_LIMIT = 10;
 /** Default HTTP server port */
