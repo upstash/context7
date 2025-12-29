@@ -1344,19 +1344,19 @@ If you are behind an HTTP proxy, Context7 uses the standard `https_proxy` / `HTT
 Clone the project and install dependencies:
 
 ```bash
-bun i
+pnpm i
 ```
 
 Build:
 
 ```bash
-bun run build
+pnpm run build
 ```
 
 Run the server:
 
 ```bash
-bun run dist/index.js
+node packages/mcp/dist/index.js
 ```
 
 ### CLI Arguments
@@ -1370,13 +1370,13 @@ bun run dist/index.js
 Example with HTTP transport and port 8080:
 
 ```bash
-bun run dist/index.js --transport http --port 8080
+node packages/mcp/dist/index.js --transport http --port 8080
 ```
 
 Another example with stdio transport:
 
 ```bash
-bun run dist/index.js --transport stdio --api-key YOUR_API_KEY
+node packages/mcp/dist/index.js --transport stdio --api-key YOUR_API_KEY
 ```
 
 ### Environment Variables
