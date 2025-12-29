@@ -3,16 +3,13 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { searchLibraries, fetchLibraryDocumentation } from "./lib/api.js";
+import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
 import { formatSearchResults } from "./lib/utils.js";
-import { SearchResponse, DOCUMENTATION_MODES } from "./lib/types.js";
 import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
 
-/** Default number of results to return per page */
-const DEFAULT_RESULTS_LIMIT = 10;
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
 
@@ -101,7 +98,7 @@ function getClientIp(req: express.Request): string | undefined {
 const server = new McpServer(
   {
     name: "Context7",
-    version: "1.0.13",
+    version: "2.0.0",
   },
   {
     instructions:
@@ -113,9 +110,9 @@ server.registerTool(
   "resolve-library-id",
   {
     title: "Resolve Context7 Library ID",
-    description: `Resolves a package/product name to a Context7-compatible library ID and returns a list of matching libraries.
+    description: `Resolves a package/product name to a Context7-compatible library ID and returns matching libraries.
 
-You MUST call this function before 'get-library-docs' to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
+You MUST call this function before 'query-docs' to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
 Selection Process:
 1. Analyze the query to understand what library/package the user is looking for
@@ -132,21 +129,24 @@ Response Format:
 - If multiple good matches exist, acknowledge this but proceed with the most relevant one
 - If no good matches exist, clearly state this and suggest query refinements
 
-For ambiguous queries, request clarification before proceeding with a best-guess match.`,
+For ambiguous queries, request clarification before proceeding with a best-guess match.
+
+IMPORTANT: Do not call this tool more than 3 times per question. If you cannot find what you need after 3 calls, use the best result you have.`,
     inputSchema: {
+      query: z
+        .string()
+        .describe(
+          "The user's original question or task. This is used to rank library results by relevance to what the user is trying to accomplish. IMPORTANT: Do not include any sensitive or confidential information such as API keys, passwords, credentials, or personal data in your query."
+        ),
       libraryName: z
         .string()
         .describe("Library name to search for and retrieve a Context7-compatible library ID."),
     },
   },
-  async ({ libraryName }) => {
+  async ({ query, libraryName }) => {
     const ctx = requestContext.getStore();
     const apiKey = ctx?.apiKey || globalApiKey;
-    const searchResponse: SearchResponse = await searchLibraries(
-      libraryName,
-      ctx?.clientIp,
-      apiKey
-    );
+    const searchResponse = await searchLibraries(query, libraryName, ctx?.clientIp, apiKey);
 
     if (!searchResponse.results || searchResponse.results.length === 0) {
       return {
@@ -155,7 +155,7 @@ For ambiguous queries, request clarification before proceeding with a best-guess
             type: "text",
             text: searchResponse.error
               ? searchResponse.error
-              : "Failed to retrieve library documentation data from Context7",
+              : "No libraries found matching the provided name.",
           },
         ],
       };
@@ -192,70 +192,38 @@ ${resultsText}`;
 );
 
 server.registerTool(
-  "get-library-docs",
+  "query-docs",
   {
-    title: "Get Library Docs",
-    description:
-      "Fetches up-to-date documentation for a library. You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query. Use mode='code' (default) for API references and code examples, or mode='info' for conceptual guides, narrative information, and architectural questions.",
+    title: "Query Documentation",
+    description: `Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
+
+You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
+
+IMPORTANT: Do not call this tool more than 3 times per question. If you cannot find what you need after 3 calls, use the best information you have.`,
     inputSchema: {
-      context7CompatibleLibraryID: z
+      libraryId: z
         .string()
         .describe(
           "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
         ),
-      mode: z
-        .enum(["code", "info"])
-        .optional()
-        .default("code")
-        .describe(
-          "Documentation mode: 'code' for API references and code examples (default), 'info' for conceptual guides, narrative information, and architectural questions."
-        ),
-      topic: z
+      query: z
         .string()
-        .optional()
-        .describe("Topic to focus documentation on (e.g., 'hooks', 'routing')."),
-      page: z
-        .number()
-        .int()
-        .min(1)
-        .max(10)
-        .optional()
         .describe(
-          "Page number for pagination (start: 1, default: 1). If the context is not sufficient, try page=2, page=3, page=4, etc. with the same topic."
+          "The question or task you need help with. Be specific and include relevant details. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad: 'auth' or 'hooks'. IMPORTANT: Do not include any sensitive or confidential information such as API keys, passwords, credentials, or personal data in your query."
         ),
     },
   },
-  async ({ context7CompatibleLibraryID, mode = DOCUMENTATION_MODES.CODE, page = 1, topic }) => {
+  async ({ query, libraryId }) => {
     const ctx = requestContext.getStore();
     const apiKey = ctx?.apiKey || globalApiKey;
-    const fetchDocsResponse = await fetchLibraryDocumentation(
-      context7CompatibleLibraryID,
-      mode,
-      {
-        page,
-        limit: DEFAULT_RESULTS_LIMIT,
-        topic,
-      },
-      ctx?.clientIp,
-      apiKey
-    );
 
-    if (!fetchDocsResponse) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: "Documentation not found or not finalized for this library. This might have happened because you used an invalid Context7-compatible library ID. To get a valid Context7-compatible library ID, use the 'resolve-library-id' with the package name you wish to retrieve documentation for.",
-          },
-        ],
-      };
-    }
+    const response = await fetchLibraryContext({ query, libraryId }, ctx?.clientIp, apiKey);
 
     return {
       content: [
         {
           type: "text",
-          text: fetchDocsResponse,
+          text: response.data,
         },
       ],
     };
@@ -267,7 +235,6 @@ async function main() {
 
   if (transportType === "http") {
     const initialPort = CLI_PORT ?? DEFAULT_PORT;
-    let actualPort = initialPort;
 
     const app = express();
     app.use(express.json());
@@ -307,12 +274,8 @@ async function main() {
     const extractApiKey = (req: express.Request): string | undefined => {
       return (
         extractBearerToken(req.headers.authorization) ||
-        extractHeaderValue(req.headers["Context7-API-Key"]) ||
-        extractHeaderValue(req.headers["X-API-Key"]) ||
         extractHeaderValue(req.headers["context7-api-key"]) ||
         extractHeaderValue(req.headers["x-api-key"]) ||
-        extractHeaderValue(req.headers["Context7_API_Key"]) ||
-        extractHeaderValue(req.headers["X_API_Key"]) ||
         extractHeaderValue(req.headers["context7_api_key"]) ||
         extractHeaderValue(req.headers["x_api_key"])
       );
@@ -374,9 +337,8 @@ async function main() {
       });
 
       httpServer.once("listening", () => {
-        actualPort = port;
         console.error(
-          `Context7 Documentation MCP Server running on HTTP at http://localhost:${actualPort}/mcp`
+          `Context7 Documentation MCP Server running on HTTP at http://localhost:${port}/mcp`
         );
       });
     };
