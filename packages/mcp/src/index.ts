@@ -142,6 +142,9 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
         .string()
         .describe("Library name to search for and retrieve a Context7-compatible library ID."),
     },
+    annotations: {
+      readOnlyHint: true,
+    },
   },
   async ({ query, libraryName }) => {
     const ctx = requestContext.getStore();
@@ -211,6 +214,9 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
         .describe(
           "The question or task you need help with. Be specific and include relevant details. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad: 'auth' or 'hooks'. IMPORTANT: Do not include any sensitive or confidential information such as API keys, passwords, credentials, or personal data in your query."
         ),
+    },
+    annotations: {
+      readOnlyHint: true,
     },
   },
   async ({ query, libraryId }) => {
