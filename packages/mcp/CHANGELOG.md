@@ -1,5 +1,11 @@
 # @upstash/context7-mcp
 
+## 2.0.1
+
+### Patch Changes
+
+- 93a2d5b: Adds MCP tool annotations (readOnlyHint) to all tools to help MCP clients better understand tool behavior and make safer decisions about tool execution.
+
 ## 2.0.0
 
 ### Major Changes
