@@ -76,19 +76,6 @@ Check out our [project addition guide](https://context7.com/docs/adding-librarie
 > From then on, you'll get Context7's docs in any related conversation without typing anything extra. You can alter the rule to match your use cases.
 
 <details>
-<summary><b>Installing via Smithery</b></summary>
-
-To install Context7 MCP Server for any client automatically via [Smithery](https://smithery.ai/server/@upstash/context7-mcp):
-
-```bash
-npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME> --key <YOUR_SMITHERY_KEY>
-```
-
-You can find your Smithery key in the [Smithery.ai webpage](https://smithery.ai/server/@upstash/context7-mcp).
-
-</details>
-
-<details>
 <summary><b>Install in Cursor</b></summary>
 
 Go to: `Settings` -> `Cursor Settings` -> `MCP` -> `Add new global MCP server`
@@ -146,6 +133,42 @@ claude mcp add --transport http context7 https://mcp.context7.com/mcp --header "
 
 ```sh
 claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+```
+
+</details>
+
+<details>
+<summary><b>Install in Opencode</b></summary>
+
+Add this to your Opencode configuration file. See [Opencode MCP docs](https://opencode.ai/docs/mcp-servers) for more info.
+
+#### Opencode Remote Server Connection
+
+```json
+"mcp": {
+  "context7": {
+    "type": "remote",
+    "url": "https://mcp.context7.com/mcp",
+    "headers": {
+      "CONTEXT7_API_KEY": "YOUR_API_KEY"
+    },
+    "enabled": true
+  }
+}
+```
+
+#### Opencode Local Server Connection
+
+```json
+{
+  "mcp": {
+    "context7": {
+      "type": "local",
+      "command": ["npx", "-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
+      "enabled": true
+    }
+  }
+}
 ```
 
 </details>
@@ -296,6 +319,19 @@ It can be installed via [Zed Extensions](https://zed.dev/extensions?query=Contex
   }
 }
 ```
+
+</details>
+
+<details>
+<summary><b>Installing via Smithery</b></summary>
+
+To install Context7 MCP Server for any client automatically via [Smithery](https://smithery.ai/server/@upstash/context7-mcp):
+
+```bash
+npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME> --key <YOUR_SMITHERY_KEY>
+```
+
+You can find your Smithery key in the [Smithery.ai webpage](https://smithery.ai/server/@upstash/context7-mcp).
 
 </details>
 
@@ -583,42 +619,6 @@ Open Claude Desktop developer settings and edit your `claude_desktop_config.json
     "context7": {
       "command": "npx",
       "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
-    }
-  }
-}
-```
-
-</details>
-
-<details>
-<summary><b>Install in Opencode</b></summary>
-
-Add this to your Opencode configuration file. See [Opencode MCP docs](https://opencode.ai/docs/mcp-servers) for more info.
-
-#### Opencode Remote Server Connection
-
-```json
-"mcp": {
-  "context7": {
-    "type": "remote",
-    "url": "https://mcp.context7.com/mcp",
-    "headers": {
-      "CONTEXT7_API_KEY": "YOUR_API_KEY"
-    },
-    "enabled": true
-  }
-}
-```
-
-#### Opencode Local Server Connection
-
-```json
-{
-  "mcp": {
-    "context7": {
-      "type": "local",
-      "command": ["npx", "-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
-      "enabled": true
     }
   }
 }
