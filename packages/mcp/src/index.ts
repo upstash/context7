@@ -5,12 +5,11 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
 import { ClientContext } from "./lib/encryption.js";
-import { formatSearchResults } from "./lib/utils.js";
+import { formatSearchResults, extractClientInfoFromUserAgent } from "./lib/utils.js";
 import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
-import { randomUUID } from "crypto";
 
 export const SERVER_VERSION = "2.0.0";
 
@@ -69,6 +68,7 @@ const requestContext = new AsyncLocalStorage<ClientContext>();
 
 let globalApiKey: string | undefined;
 let globalClientInfo: { ide?: string; version?: string } | undefined;
+let globalTransport: "stdio" | "http" | undefined;
 
 /**
  * Get the effective client context by merging request context with global fallbacks.
@@ -76,11 +76,13 @@ let globalClientInfo: { ide?: string; version?: string } | undefined;
  */
 function getClientContext(): ClientContext {
   const ctx = requestContext.getStore();
-  return {
+  const context = {
     clientIp: ctx?.clientIp,
     apiKey: ctx?.apiKey || globalApiKey,
     clientInfo: ctx?.clientInfo || globalClientInfo,
+    transport: ctx?.transport || globalTransport,
   };
+  return context;
 }
 
 /**
@@ -311,33 +313,14 @@ async function main() {
       );
     };
 
-    const extractClientInfoFromBody = (
-      body: unknown
-    ): { ide?: string; version?: string } | undefined => {
-      if (!body || typeof body !== "object") return undefined;
-
-      const request = body as {
-        method?: string;
-        params?: { clientInfo?: { name?: string; version?: string } };
-      };
-      if (request.method === "initialize" && request.params?.clientInfo) {
-        return {
-          ide: request.params.clientInfo.name,
-          version: request.params.clientInfo.version,
-        };
-      }
-
-      return undefined;
-    };
-
     app.all("/mcp", async (req: express.Request, res: express.Response) => {
       try {
         const clientIp = getClientIp(req);
         const apiKey = extractApiKey(req);
-        const clientInfo = extractClientInfoFromBody(req.body);
+        const clientInfo = extractClientInfoFromUserAgent(req.headers["user-agent"]);
 
         const transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: () => randomUUID(),
+          sessionIdGenerator: undefined,
           enableJsonResponse: true,
         });
 
@@ -345,7 +328,7 @@ async function main() {
           transport.close();
         });
 
-        await requestContext.run({ clientIp, apiKey, clientInfo }, async () => {
+        await requestContext.run({ clientIp, apiKey, clientInfo, transport: "http" }, async () => {
           await server.connect(transport);
           await transport.handleRequest(req, res, req.body);
         });
@@ -397,11 +380,10 @@ async function main() {
   } else {
     const apiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
     globalApiKey = apiKey; // Store globally for tool handlers in stdio mode
+    globalTransport = "stdio"; // Store globally for tool handlers in stdio mode
     const transport = new StdioServerTransport();
 
-    await requestContext.run({ apiKey }, async () => {
-      await server.connect(transport);
-    });
+    await server.connect(transport);
 
     console.error("Context7 Documentation MCP Server running on stdio");
   }
