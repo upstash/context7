@@ -1,0 +1,116 @@
+---
+title: Developer Guide
+description: Set up and run Context7 MCP locally for development
+---
+
+This guide covers how to set up the Context7 MCP server locally for development and testing.
+
+## Getting Started
+
+Clone the project and install dependencies:
+
+```bash
+git clone https://github.com/upstash/context7.git
+cd context7
+pnpm i
+```
+
+Build:
+
+```bash
+pnpm run build
+```
+
+Run the server:
+
+```bash
+node packages/mcp/dist/index.js
+```
+
+## CLI Arguments
+
+`context7-mcp` accepts the following CLI flags:
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--transport <stdio\|http>` | Transport to use. Use `http` for remote HTTP server or `stdio` for local integration. | `stdio` |
+| `--port <number>` | Port to listen on when using `http` transport. | `3000` |
+| `--api-key <key>` | API key for authentication (or set `CONTEXT7_API_KEY` env var). | - |
+
+<Note>
+  Get your API key by creating an account at [context7.com/dashboard](https://context7.com/dashboard).
+</Note>
+
+### Examples
+
+HTTP transport on port 8080:
+
+```bash
+node packages/mcp/dist/index.js --transport http --port 8080
+```
+
+Stdio transport with API key:
+
+```bash
+node packages/mcp/dist/index.js --transport stdio --api-key YOUR_API_KEY
+```
+
+## Environment Variables
+
+You can use the `CONTEXT7_API_KEY` environment variable instead of passing the `--api-key` flag. This is useful for:
+
+- Storing API keys securely in `.env` files
+- Integration with MCP server setups that use dotenv
+- Tools that prefer environment variable configuration
+
+<Warning>
+  The `--api-key` CLI flag takes precedence over the environment variable when both are provided.
+</Warning>
+
+### Using .env File
+
+```bash
+# .env
+CONTEXT7_API_KEY=your_api_key_here
+```
+
+### MCP Configuration with Environment Variable
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"],
+      "env": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+
+## Local Development Configuration
+
+When developing locally, use this configuration to run from source:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["tsx", "/path/to/folder/context7/src/index.ts", "--api-key", "YOUR_API_KEY"]
+    }
+  }
+}
+```
+
+## Testing with MCP Inspector
+
+Test your setup using the MCP Inspector:
+
+```bash
+npx -y @modelcontextprotocol/inspector npx @upstash/context7-mcp
+```
+
+This opens an interactive inspector to verify Context7 tools are working correctly.
