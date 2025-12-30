@@ -2,13 +2,15 @@ export interface Context7Config {
   apiKey?: string;
 }
 
+export type DocumentState = "initial" | "finalized" | "error" | "delete";
+
 export interface SearchResult {
   id: string;
   title: string;
   description: string;
   branch: string;
   lastUpdateDate: string;
-  state: "initial" | "finalized" | "processing" | "error" | "delete";
+  state: DocumentState;
   totalTokens: number;
   totalSnippets: number;
   stars?: number;
@@ -17,13 +19,9 @@ export interface SearchResult {
   versions?: string[];
 }
 
-export interface APIResponseMetadata {
-  authentication: "none" | "personal" | "team";
-}
-
 export interface SearchLibraryResponse {
   results: SearchResult[];
-  metadata: APIResponseMetadata;
+  error?: string;
 }
 
 export interface CodeExample {
@@ -48,59 +46,23 @@ export interface InfoSnippet {
   contentTokens: number;
 }
 
-export interface Pagination {
-  page: number;
-  limit: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrev: boolean;
+export interface ContextJsonResponse {
+  selectedLibrary: string;
+  codeSnippets: CodeSnippet[];
+  infoSnippets: InfoSnippet[];
+  rules?: string[];
 }
 
-export interface DocsResponseBase {
-  pagination: Pagination;
-  totalTokens: number;
+export interface ContextTextResponse {
+  data: string;
 }
 
-export interface CodeDocsResponse extends DocsResponseBase {
-  snippets: CodeSnippet[];
-}
-
-export interface InfoDocsResponse extends DocsResponseBase {
-  snippets: InfoSnippet[];
-}
-
-export interface TextDocsResponse extends DocsResponseBase {
-  content: string;
-}
-
-export interface GetDocsOptions {
-  /**
-   * Library version to fetch docs for.
-   * @example "18.0.0"
-   */
-  version?: string;
-  /**
-   * Page number for pagination.
-   */
-  page?: number;
-  /**
-   * Filter docs by topic.
-   */
-  topic?: string;
-  /**
-   * Number of results per page.
-   */
-  limit?: number;
-  /**
-   * Type of documentation to fetch.
-   * @default "code"
-   */
-  mode?: "info" | "code";
+export interface GetContextOptions {
   /**
    * Response format.
-   * @default "json"
+   * @default "txt"
    */
-  format?: "json" | "txt";
+  type?: "json" | "txt";
 }
 
 export type QueryParams = Record<string, string | number | boolean | undefined>;

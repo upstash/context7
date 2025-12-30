@@ -1,14 +1,13 @@
 import type {
   Context7Config,
   SearchLibraryResponse,
-  GetDocsOptions,
-  CodeDocsResponse,
-  InfoDocsResponse,
-  TextDocsResponse,
+  GetContextOptions,
+  ContextJsonResponse,
+  ContextTextResponse,
 } from "@commands/types";
 import { Context7Error } from "@error";
 import { HttpClient } from "@http";
-import { SearchLibraryCommand, GetDocsCommand } from "@commands/index";
+import { SearchLibraryCommand, GetContextCommand } from "@commands/index";
 
 const DEFAULT_BASE_URL = "https://context7.com/api";
 const API_KEY_PREFIX = "ctx7sk";
@@ -45,31 +44,29 @@ export class Context7 {
     });
   }
 
-  async searchLibrary(query: string): Promise<SearchLibraryResponse> {
-    const command = new SearchLibraryCommand(query);
+  async searchLibrary(query: string, libraryName: string): Promise<SearchLibraryResponse> {
+    const command = new SearchLibraryCommand(query, libraryName);
     return await command.exec(this.httpClient);
   }
 
-  async getDocs(
+  async getContext(
+    query: string,
     libraryId: string,
-    options: GetDocsOptions & { format: "txt" }
-  ): Promise<TextDocsResponse>;
+    options: GetContextOptions & { type: "json" }
+  ): Promise<ContextJsonResponse>;
 
-  async getDocs(
+  async getContext(
+    query: string,
     libraryId: string,
-    options: GetDocsOptions & { format?: "json"; mode: "info" }
-  ): Promise<InfoDocsResponse>;
+    options?: GetContextOptions & { type?: "txt" }
+  ): Promise<ContextTextResponse>;
 
-  async getDocs(
+  async getContext(
+    query: string,
     libraryId: string,
-    options?: GetDocsOptions & { format?: "json"; mode?: "code" }
-  ): Promise<CodeDocsResponse>;
-
-  async getDocs(
-    libraryId: string,
-    options?: GetDocsOptions
-  ): Promise<TextDocsResponse | CodeDocsResponse | InfoDocsResponse> {
-    const command = new GetDocsCommand(libraryId, options);
+    options?: GetContextOptions
+  ): Promise<ContextJsonResponse | ContextTextResponse> {
+    const command = new GetContextCommand(query, libraryId, options);
     return await command.exec(this.httpClient);
   }
 }

@@ -7,7 +7,7 @@ const httpClient = newHttpClient();
 
 describe("SearchLibraryCommand", () => {
   test("should search for a library", async () => {
-    const command = new SearchLibraryCommand("react");
+    const command = new SearchLibraryCommand("I need to build a UI", "react");
     const result = await command.exec(httpClient);
 
     expect(result).toBeDefined();
@@ -21,7 +21,7 @@ describe("SearchLibraryCommand", () => {
       apiKey: process.env.CONTEXT7_API_KEY || process.env.API_KEY!,
     });
 
-    const result = await client.searchLibrary("react");
+    const result = await client.searchLibrary("I need to build a UI", "react");
 
     expect(result).toBeDefined();
     expect(result.results).toBeDefined();
