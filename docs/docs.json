@@ -17,10 +17,15 @@
         "group": "Overview",
         "pages": [
           "overview",
-          "installation",
-          "usage",
+          {
+            "title": "Installation",
+            "url": "https://github.com/upstash/context7?tab=readme-ov-file#%EF%B8%8F-installation"
+          },
           "adding-libraries",
-          "plans-pricing",
+          {
+            "title": "Plans & Pricing",
+            "url": "https://context7.com/plans"
+          },
           "api-guide"
         ]
       },
