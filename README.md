@@ -141,7 +141,7 @@ Add this to your VS Code MCP config file. See [VS Code MCP docs](https://code.vi
 
 </details>
 
-**[Other IDEs and Clients →](https://context7.com/docs/all-clients)**
+**[Other IDEs and Clients →](https://context7.com/docs/resources/all-clients)**
 
 ## Important Tips
 
