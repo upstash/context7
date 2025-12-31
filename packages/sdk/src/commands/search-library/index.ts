@@ -1,25 +1,9 @@
 import { Command } from "@commands/command";
 import type { Library } from "@commands/types";
+import type { ApiSearchResponse } from "./types";
 import type { Requester } from "@http";
-
-interface ApiSearchResult {
-  id: string;
-  title: string;
-  description: string;
-  versions?: string[];
-  totalSnippets?: number;
-  trustScore?: number;
-  benchmarkScore?: number;
-  branch?: string;
-  lastUpdateDate?: string;
-  state?: string;
-  totalTokens?: number;
-  stars?: number;
-}
-
-interface ApiSearchResponse {
-  results: ApiSearchResult[];
-}
+import { Context7Error } from "@error";
+import { formatLibrary } from "@utils/format";
 
 export class SearchLibraryCommand extends Command<Library[]> {
   constructor(query: string, libraryName: string) {
@@ -39,17 +23,9 @@ export class SearchLibraryCommand extends Command<Library[]> {
     });
 
     if (result === undefined) {
-      throw new TypeError("Request did not return a result");
+      throw new Context7Error("Request did not return a result");
     }
 
-    return result.results.map((r) => ({
-      id: r.id,
-      name: r.title,
-      description: r.description,
-      totalSnippets: r.totalSnippets ?? 0,
-      trustScore: r.trustScore ?? 0,
-      benchmarkScore: r.benchmarkScore ?? 0,
-      versions: r.versions,
-    }));
+    return result.results.map(formatLibrary);
   }
 }
