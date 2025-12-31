@@ -1,9 +1,4 @@
-import type {
-  Context7Config,
-  GetContextOptions,
-  Library,
-  Documentation,
-} from "@commands/types";
+import type { Context7Config, GetContextOptions, Library, Documentation } from "@commands/types";
 import { Context7Error } from "@error";
 import { HttpClient } from "@http";
 import { SearchLibraryCommand, GetContextCommand } from "@commands/index";
