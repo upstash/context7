@@ -22,15 +22,9 @@ export interface Library {
   versions?: string[];
 }
 
-/**
- * A piece of documentation content
- */
 export interface Documentation {
-  /** Title of the documentation section */
   title: string;
-  /** The documentation content */
   content: string;
-  /** Source URL (codeId for code snippets, pageId for info snippets) */
   source: string;
 }
 
