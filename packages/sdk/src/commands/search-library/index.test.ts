@@ -14,6 +14,12 @@ describe("SearchLibraryCommand", () => {
     expect(result.results).toBeDefined();
     expect(Array.isArray(result.results)).toBe(true);
     expect(result.results.length).toBeGreaterThan(0);
+
+    // Verify simplified Library type structure
+    const library = result.results[0];
+    expect(library).toHaveProperty("id");
+    expect(library).toHaveProperty("name");
+    expect(library).toHaveProperty("description");
   });
 
   test("should search for a library using client", async () => {
@@ -27,5 +33,11 @@ describe("SearchLibraryCommand", () => {
     expect(result.results).toBeDefined();
     expect(Array.isArray(result.results)).toBe(true);
     expect(result.results.length).toBeGreaterThan(0);
+
+    // Verify simplified Library type structure
+    const library = result.results[0];
+    expect(library).toHaveProperty("id");
+    expect(library).toHaveProperty("name");
+    expect(library).toHaveProperty("description");
   });
 });

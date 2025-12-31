@@ -2,58 +2,48 @@ export interface Context7Config {
   apiKey?: string;
 }
 
-export type DocumentState = "initial" | "finalized" | "error" | "delete";
-
-export interface SearchResult {
+/**
+ * A library available in Context7
+ */
+export interface Library {
+  /** Context7 library ID (e.g., "/facebook/react") */
   id: string;
-  title: string;
+  /** Library display name */
+  name: string;
+  /** Library description */
   description: string;
-  branch: string;
-  lastUpdateDate: string;
-  state: DocumentState;
-  totalTokens: number;
-  totalSnippets: number;
-  stars?: number;
-  trustScore?: number;
-  benchmarkScore?: number;
+  /** Available versions/tags */
   versions?: string[];
 }
 
 export interface SearchLibraryResponse {
-  results: SearchResult[];
+  results: Library[];
   error?: string;
 }
 
-export interface CodeExample {
-  language: string;
-  code: string;
-}
-
-export interface CodeSnippet {
-  codeTitle: string;
-  codeDescription: string;
-  codeLanguage: string;
-  codeTokens: number;
-  codeId: string;
-  pageTitle: string;
-  codeList: CodeExample[];
-}
-
-export interface InfoSnippet {
-  pageId?: string;
-  breadcrumb?: string;
+/**
+ * A piece of documentation content
+ */
+export interface Documentation {
+  /** Title of the documentation section */
+  title: string;
+  /** The documentation content */
   content: string;
-  contentTokens: number;
+  /** Programming language (for code snippets) */
+  language?: string;
 }
 
 export interface ContextJsonResponse {
-  selectedLibrary: string;
-  codeSnippets: CodeSnippet[];
-  infoSnippets: InfoSnippet[];
+  /** The library ID that was queried */
+  library: string;
+  /** Documentation snippets */
+  docs: Documentation[];
+  /** Library-specific rules/guidelines */
   rules?: string[];
 }
 
 export interface ContextTextResponse {
+  /** Plain text documentation content */
   data: string;
 }
 

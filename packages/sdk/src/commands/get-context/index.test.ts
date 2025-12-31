@@ -18,7 +18,7 @@ describe("GetContextCommand", () => {
     expect((result as ContextTextResponse).data.length).toBeGreaterThan(0);
   });
 
-  test("should get library context as JSON", async () => {
+  test("should get library context as JSON with simplified Documentation type", async () => {
     const command = new GetContextCommand("How to use hooks", "/facebook/react", {
       type: "json",
     });
@@ -26,11 +26,18 @@ describe("GetContextCommand", () => {
 
     expect(result).toBeDefined();
     expect(typeof result).toBe("object");
-    expect(result).toHaveProperty("selectedLibrary");
-    expect(result).toHaveProperty("codeSnippets");
-    expect(result).toHaveProperty("infoSnippets");
-    expect(Array.isArray((result as ContextJsonResponse).codeSnippets)).toBe(true);
-    expect(Array.isArray((result as ContextJsonResponse).infoSnippets)).toBe(true);
+
+    const jsonResult = result as ContextJsonResponse;
+    expect(jsonResult).toHaveProperty("library");
+    expect(jsonResult).toHaveProperty("docs");
+    expect(Array.isArray(jsonResult.docs)).toBe(true);
+
+    // Verify simplified Documentation structure
+    if (jsonResult.docs.length > 0) {
+      const doc = jsonResult.docs[0];
+      expect(doc).toHaveProperty("title");
+      expect(doc).toHaveProperty("content");
+    }
   });
 
   test("should get library context as text using client", async () => {
@@ -45,7 +52,7 @@ describe("GetContextCommand", () => {
     expect(result.data.length).toBeGreaterThan(0);
   });
 
-  test("should get library context as JSON using client", async () => {
+  test("should get library context as JSON using client with simplified types", async () => {
     const client = new Context7({
       apiKey: process.env.CONTEXT7_API_KEY || process.env.API_KEY!,
     });
@@ -55,10 +62,15 @@ describe("GetContextCommand", () => {
     });
 
     expect(result).toBeDefined();
-    expect(result).toHaveProperty("selectedLibrary");
-    expect(result).toHaveProperty("codeSnippets");
-    expect(result).toHaveProperty("infoSnippets");
-    expect(Array.isArray(result.codeSnippets)).toBe(true);
-    expect(Array.isArray(result.infoSnippets)).toBe(true);
+    expect(result).toHaveProperty("library");
+    expect(result).toHaveProperty("docs");
+    expect(Array.isArray(result.docs)).toBe(true);
+
+    // Verify simplified Documentation structure
+    if (result.docs.length > 0) {
+      const doc = result.docs[0];
+      expect(doc).toHaveProperty("title");
+      expect(doc).toHaveProperty("content");
+    }
   });
 });
