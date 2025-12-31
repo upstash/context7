@@ -32,89 +32,6 @@ When you exceed rate limits, the API returns a `429` status code:
 }
 ```
 
-## Endpoints
-
-### Search Libraries
-
-Search for libraries with intelligent ranking based on your query context:
-
-```bash
-curl "https://context7.com/api/v2/libs/search?libraryName=react&query=hooks%20state%20management" \
-  -H "Authorization: Bearer CONTEXT7_API_KEY"
-```
-
-**Parameters:**
-- `libraryName` (required): Library name to search for
-- `query` (required): Your question or task for relevance ranking
-
-**Response:**
-
-```json
-{
-  "results": [
-    {
-      "id": "/facebook/react",
-      "title": "React",
-      "description": "A JavaScript library for building user interfaces",
-      "totalSnippets": 2500,
-      "trustScore": 10,
-      "benchmarkScore": 95.5,
-      "versions": ["v18.2.0", "v17.0.2"]
-    }
-  ]
-}
-```
-
-### Get Documentation Context
-
-Retrieve relevant documentation for natural language queries:
-
-```bash
-# Get text response (default)
-curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js&query=How%20to%20setup%20authentication" \
-  -H "Authorization: Bearer CONTEXT7_API_KEY"
-
-# Get JSON response
-curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js&query=middleware&type=json" \
-  -H "Authorization: Bearer CONTEXT7_API_KEY"
-```
-
-**Parameters:**
-- `libraryId` (required): Library ID in format `/owner/repo` or `/owner/repo/version`
-- `query` (required): Question or task needing help
-- `type` (optional): Response format - `json` or `txt` (default: `txt`)
-
-**JSON Response:**
-
-```json
-{
-  "selectedLibrary": "/vercel/next.js",
-  "codeSnippets": [
-    {
-      "codeTitle": "Middleware Example",
-      "codeDescription": "How to use middleware",
-      "codeLanguage": "typescript",
-      "codeList": [{ "language": "typescript", "code": "..." }]
-    }
-  ],
-  "infoSnippets": [
-    {
-      "breadcrumb": "Routing > Middleware",
-      "content": "Middleware allows you to run code before a request is completed..."
-    }
-  ]
-}
-```
-
-### Version-Specific Queries
-
-Query documentation for a specific library version:
-
-```bash
-curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js/v14.3.0&query=app%20router" \
-  -H "Authorization: Bearer CONTEXT7_API_KEY"
-```
-
 ## Best Practices
 
 ### Be Specific with Queries
@@ -123,15 +40,17 @@ Use detailed, natural language queries for better results:
 
 ```bash
 # Good - specific question
-curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js&query=How%20to%20implement%20authentication%20with%20middleware"
+curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js&query=How%20to%20implement%20authentication%20with%20middleware" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY"
 
 # Less optimal - vague query
-curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js&query=auth"
+curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js&query=auth" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY"
 ```
 
 ### Cache Responses
 
-Store documentation locally to reduce API calls. Documentation updates are relatively infrequent, so caching for several hours is appropriate.
+Store documentation locally to reduce API calls and improve performance. Documentation updates are relatively infrequent, so caching for several hours or days is usually appropriate.
 
 ### Handle Rate Limits
 
@@ -144,11 +63,25 @@ import requests
 def fetch_with_retry(url, headers, max_retries=3):
     for attempt in range(max_retries):
         response = requests.get(url, headers=headers)
+
         if response.status_code == 429:
+            # Wait before retrying with exponential backoff
             time.sleep(2 ** attempt)
             continue
+
         return response
+
     raise Exception("Max retries exceeded")
+```
+
+### Use Specific Versions
+
+Specify exact versions for consistent results across deployments:
+
+```bash
+# Pin to a specific version
+curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js/v15.1.8&query=app%20router" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY"
 ```
 
 ## Error Handling
@@ -171,6 +104,8 @@ The Context7 API uses standard HTTP status codes:
 
 ### Error Response Format
 
+All errors return a JSON object with these fields:
+
 ```json
 {
   "error": "library_not_found",
@@ -182,7 +117,7 @@ The Context7 API uses standard HTTP status codes:
 
 ### MCP Server (Recommended)
 
-The Context7 MCP server provides seamless integration with Claude and other AI tools:
+The Context7 Model Context Protocol (MCP) server provides seamless integration with Claude and other AI tools:
 
 ```bash
 npm install @upstash/context7-mcp
@@ -196,12 +131,23 @@ See the [Installation guide](https://github.com/upstash/context7#installation) f
 
 ### Direct API Integration
 
-**Python:**
+For custom integrations or non-MCP use cases, use the REST endpoints directly. The API is language-agnostic and works with any HTTP client.
+
+**Example (cURL):**
+
+```bash
+curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js&query=routing" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY"
+```
+
+**Example (Python):**
 
 ```python
 import requests
 
-headers = {"Authorization": "Bearer CONTEXT7_API_KEY"}
+headers = {
+    "Authorization": "Bearer CONTEXT7_API_KEY"
+}
 
 # Search for a library
 search = requests.get(
@@ -212,15 +158,15 @@ search = requests.get(
 library_id = search.json()["results"][0]["id"]
 
 # Get documentation context
-docs = requests.get(
+response = requests.get(
     "https://context7.com/api/v2/context",
     headers=headers,
     params={"libraryId": library_id, "query": "How to setup dynamic routes"}
 )
-print(docs.text)
+print(response.text)
 ```
 
-**JavaScript/Node.js:**
+**Example (JavaScript/Node.js):**
 
 ```javascript
 const headers = { Authorization: "Bearer CONTEXT7_API_KEY" };
