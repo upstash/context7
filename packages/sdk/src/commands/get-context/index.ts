@@ -1,44 +1,33 @@
 import { Command } from "@commands/command";
-import type {
-  GetContextOptions,
-  ContextJsonResponse,
-  ContextTextResponse,
-  Documentation,
-} from "@commands/types";
+import type { GetContextOptions, Documentation } from "@commands/types";
 import type { Requester } from "@http";
 
 const DEFAULT_TYPE = "txt";
 
-/** Raw API code snippet */
 interface ApiCodeSnippet {
   codeTitle: string;
   codeDescription: string;
   codeLanguage: string;
   codeList: { language: string; code: string }[];
-  // Internal fields we don't expose
+  codeId: string;
   codeTokens?: number;
-  codeId?: string;
   pageTitle?: string;
 }
 
-/** Raw API info snippet */
 interface ApiInfoSnippet {
   content: string;
   breadcrumb?: string;
-  // Internal fields we don't expose
-  pageId?: string;
+  pageId: string;
   contentTokens?: number;
 }
 
-/** Raw API JSON response */
 interface ApiContextJsonResponse {
   selectedLibrary: string;
   codeSnippets: ApiCodeSnippet[];
   infoSnippets: ApiInfoSnippet[];
-  rules?: string[];
 }
 
-export class GetContextCommand extends Command<ContextJsonResponse | ContextTextResponse> {
+export class GetContextCommand extends Command<Documentation[] | string> {
   private readonly responseType: "json" | "txt";
 
   constructor(query: string, libraryId: string, options?: GetContextOptions) {
@@ -55,9 +44,7 @@ export class GetContextCommand extends Command<ContextJsonResponse | ContextText
     this.responseType = responseType;
   }
 
-  public override async exec(
-    client: Requester
-  ): Promise<ContextJsonResponse | ContextTextResponse> {
+  public override async exec(client: Requester): Promise<Documentation[] | string> {
     const { result } = await client.request<string | ApiContextJsonResponse>({
       method: this.request.method || "GET",
       path: [this.endpoint],
@@ -70,28 +57,33 @@ export class GetContextCommand extends Command<ContextJsonResponse | ContextText
     }
 
     if (this.responseType === "txt" && typeof result === "string") {
-      return { data: result } satisfies ContextTextResponse;
+      return result;
     }
 
     const apiResult = result as ApiContextJsonResponse;
 
-    // Transform code snippets to Documentation
-    const codeDocs: Documentation[] = apiResult.codeSnippets.map((snippet) => ({
-      title: snippet.codeTitle,
-      content: snippet.codeList.map((c) => c.code).join("\n\n"),
-      language: snippet.codeLanguage,
-    }));
+    const codeDocs: Documentation[] = apiResult.codeSnippets.map((snippet) => {
+      const codeBlocks = snippet.codeList
+        .map((c) => `\`\`\`${c.language}\n${c.code}\n\`\`\``)
+        .join("\n\n");
 
-    // Transform info snippets to Documentation
+      const content = snippet.codeDescription
+        ? `${snippet.codeDescription}\n\n${codeBlocks}`
+        : codeBlocks;
+
+      return {
+        title: snippet.codeTitle,
+        content,
+        source: snippet.codeId,
+      };
+    });
+
     const infoDocs: Documentation[] = apiResult.infoSnippets.map((snippet) => ({
       title: snippet.breadcrumb || "Documentation",
       content: snippet.content,
+      source: snippet.pageId,
     }));
 
-    return {
-      library: apiResult.selectedLibrary,
-      docs: [...codeDocs, ...infoDocs],
-      rules: apiResult.rules,
-    } satisfies ContextJsonResponse;
+    return [...codeDocs, ...infoDocs];
   }
 }

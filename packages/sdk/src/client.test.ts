@@ -1,7 +1,6 @@
 import { describe, test, expect } from "vitest";
 import { Context7 } from "./client";
 import { Context7Error } from "@error";
-import type { ContextJsonResponse } from "@commands/types";
 
 describe("Context7 Client", () => {
   const apiKey = process.env.CONTEXT7_API_KEY || process.env.API_KEY!;
@@ -42,25 +41,26 @@ describe("Context7 Client", () => {
   describe("searchLibrary", () => {
     const client = new Context7({ apiKey });
 
-    test("should search for libraries", async () => {
+    test("should search for libraries and return array directly", async () => {
       const result = await client.searchLibrary("I need to build a UI", "react");
 
       expect(result).toBeDefined();
-      expect(result.results).toBeDefined();
-      expect(Array.isArray(result.results)).toBe(true);
-      expect(result.results.length).toBeGreaterThan(0);
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBeGreaterThan(0);
     });
 
-    test("should return results with simplified Library structure", async () => {
+    test("should return Library objects with all fields", async () => {
       const result = await client.searchLibrary("I want to use TypeScript", "typescript");
 
-      expect(result.results.length).toBeGreaterThan(0);
-      const library = result.results[0];
+      expect(result.length).toBeGreaterThan(0);
+      const library = result[0];
 
-      // Simplified Library type
       expect(library).toHaveProperty("id");
       expect(library).toHaveProperty("name");
       expect(library).toHaveProperty("description");
+      expect(library).toHaveProperty("totalSnippets");
+      expect(library).toHaveProperty("trustScore");
+      expect(library).toHaveProperty("benchmarkScore");
     });
 
     test("should search with different queries", async () => {
@@ -68,7 +68,7 @@ describe("Context7 Client", () => {
 
       for (const query of queries) {
         const result = await client.searchLibrary(`I want to use ${query}`, query);
-        expect(result.results.length).toBeGreaterThan(0);
+        expect(result.length).toBeGreaterThan(0);
       }
     });
   });
@@ -76,13 +76,12 @@ describe("Context7 Client", () => {
   describe("getContext - text format", () => {
     const client = new Context7({ apiKey });
 
-    test("should get context as text (default)", async () => {
+    test("should get context as text string (default)", async () => {
       const result = await client.getContext("How to use hooks", "/facebook/react");
 
       expect(result).toBeDefined();
-      expect(result).toHaveProperty("data");
-      expect(typeof result.data).toBe("string");
-      expect(result.data.length).toBeGreaterThan(0);
+      expect(typeof result).toBe("string");
+      expect(result.length).toBeGreaterThan(0);
     });
 
     test("should get context with explicit txt type", async () => {
@@ -91,43 +90,37 @@ describe("Context7 Client", () => {
       });
 
       expect(result).toBeDefined();
-      expect(result).toHaveProperty("data");
-      expect(typeof result.data).toBe("string");
-      expect(result.data.length).toBeGreaterThan(0);
+      expect(typeof result).toBe("string");
+      expect(result.length).toBeGreaterThan(0);
     });
   });
 
   describe("getContext - JSON format", () => {
     const client = new Context7({ apiKey });
 
-    test("should get context as JSON with simplified types", async () => {
+    test("should get context as Documentation array", async () => {
       const result = await client.getContext("How to use hooks", "/facebook/react", {
         type: "json",
       });
 
       expect(result).toBeDefined();
-      expect(typeof result).toBe("object");
-
-      const jsonResult = result as ContextJsonResponse;
-      expect(jsonResult.library).toBeDefined();
-      expect(jsonResult.docs).toBeDefined();
-      expect(Array.isArray(jsonResult.docs)).toBe(true);
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBeGreaterThan(0);
     });
 
-    test("should have correct simplified Documentation structure", async () => {
+    test("should have correct Documentation structure", async () => {
       const result = await client.getContext("How to use hooks", "/facebook/react", {
         type: "json",
       });
 
-      const jsonResult = result as ContextJsonResponse;
-      if (jsonResult.docs.length > 0) {
-        const doc = jsonResult.docs[0];
-        // Simplified Documentation type
-        expect(doc).toHaveProperty("title");
-        expect(doc).toHaveProperty("content");
-        expect(typeof doc.title).toBe("string");
-        expect(typeof doc.content).toBe("string");
-      }
+      expect(result.length).toBeGreaterThan(0);
+      const doc = result[0];
+      expect(doc).toHaveProperty("title");
+      expect(doc).toHaveProperty("content");
+      expect(doc).toHaveProperty("source");
+      expect(typeof doc.title).toBe("string");
+      expect(typeof doc.content).toBe("string");
+      expect(typeof doc.source).toBe("string");
     });
   });
 
@@ -138,16 +131,16 @@ describe("Context7 Client", () => {
       const result = await client.getContext("How to create components", "/vuejs/core");
 
       expect(result).toBeDefined();
-      expect(result).toHaveProperty("data");
-      expect(result.data.length).toBeGreaterThan(0);
+      expect(typeof result).toBe("string");
+      expect(result.length).toBeGreaterThan(0);
     });
 
     test("should get context for Express", async () => {
       const result = await client.getContext("How to create routes", "/expressjs/express");
 
       expect(result).toBeDefined();
-      expect(result).toHaveProperty("data");
-      expect(result.data.length).toBeGreaterThan(0);
+      expect(typeof result).toBe("string");
+      expect(result.length).toBeGreaterThan(0);
     });
   });
 
@@ -155,9 +148,7 @@ describe("Context7 Client", () => {
     const client = new Context7({ apiKey });
 
     test("should handle invalid library ID gracefully", async () => {
-      await expect(
-        client.getContext("test query", "/nonexistent/library")
-      ).rejects.toThrow();
+      await expect(client.getContext("test query", "/nonexistent/library")).rejects.toThrow();
     });
 
     test("should handle invalid search query", async () => {
@@ -168,20 +159,21 @@ describe("Context7 Client", () => {
   describe("type inference", () => {
     const client = new Context7({ apiKey });
 
-    test("should infer ContextTextResponse type for txt format", async () => {
+    test("should infer string type for txt format", async () => {
       const result = await client.getContext("How to use hooks", "/facebook/react");
 
-      expect(result).toHaveProperty("data");
-      expect(typeof result.data).toBe("string");
+      expect(typeof result).toBe("string");
     });
 
-    test("should infer ContextJsonResponse for json format", async () => {
+    test("should infer Documentation[] for json format", async () => {
       const result = await client.getContext("How to use hooks", "/facebook/react", {
         type: "json",
       });
 
-      expect(result).toHaveProperty("library");
-      expect(result).toHaveProperty("docs");
+      expect(Array.isArray(result)).toBe(true);
+      expect(result[0]).toHaveProperty("title");
+      expect(result[0]).toHaveProperty("content");
+      expect(result[0]).toHaveProperty("source");
     });
   });
 });

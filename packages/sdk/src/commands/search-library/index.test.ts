@@ -11,15 +11,16 @@ describe("SearchLibraryCommand", () => {
     const result = await command.exec(httpClient);
 
     expect(result).toBeDefined();
-    expect(result.results).toBeDefined();
-    expect(Array.isArray(result.results)).toBe(true);
-    expect(result.results.length).toBeGreaterThan(0);
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
 
-    // Verify simplified Library type structure
-    const library = result.results[0];
+    const library = result[0];
     expect(library).toHaveProperty("id");
     expect(library).toHaveProperty("name");
     expect(library).toHaveProperty("description");
+    expect(library).toHaveProperty("totalSnippets");
+    expect(library).toHaveProperty("trustScore");
+    expect(library).toHaveProperty("benchmarkScore");
   });
 
   test("should search for a library using client", async () => {
@@ -30,14 +31,15 @@ describe("SearchLibraryCommand", () => {
     const result = await client.searchLibrary("I need to build a UI", "react");
 
     expect(result).toBeDefined();
-    expect(result.results).toBeDefined();
-    expect(Array.isArray(result.results)).toBe(true);
-    expect(result.results.length).toBeGreaterThan(0);
+    expect(Array.isArray(result)).toBe(true);
+    expect(result.length).toBeGreaterThan(0);
 
-    // Verify simplified Library type structure
-    const library = result.results[0];
+    const library = result[0];
     expect(library).toHaveProperty("id");
     expect(library).toHaveProperty("name");
     expect(library).toHaveProperty("description");
+    expect(library).toHaveProperty("totalSnippets");
+    expect(library).toHaveProperty("trustScore");
+    expect(library).toHaveProperty("benchmarkScore");
   });
 });

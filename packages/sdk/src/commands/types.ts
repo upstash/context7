@@ -12,13 +12,14 @@ export interface Library {
   name: string;
   /** Library description */
   description: string;
+  /** Number of documentation snippets available */
+  totalSnippets: number;
+  /** Source reputation score (0-10) */
+  trustScore: number;
+  /** Quality indicator score (0-100) */
+  benchmarkScore: number;
   /** Available versions/tags */
   versions?: string[];
-}
-
-export interface SearchLibraryResponse {
-  results: Library[];
-  error?: string;
 }
 
 /**
@@ -29,22 +30,8 @@ export interface Documentation {
   title: string;
   /** The documentation content */
   content: string;
-  /** Programming language (for code snippets) */
-  language?: string;
-}
-
-export interface ContextJsonResponse {
-  /** The library ID that was queried */
-  library: string;
-  /** Documentation snippets */
-  docs: Documentation[];
-  /** Library-specific rules/guidelines */
-  rules?: string[];
-}
-
-export interface ContextTextResponse {
-  /** Plain text documentation content */
-  data: string;
+  /** Source URL (codeId for code snippets, pageId for info snippets) */
+  source: string;
 }
 
 export interface GetContextOptions {
