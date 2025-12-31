@@ -7,6 +7,10 @@ import { formatLibrary } from "@utils/format";
 
 export class SearchLibraryCommand extends Command<Library[]> {
   constructor(query: string, libraryName: string) {
+    if (!query || !libraryName) {
+      throw new Context7Error("query and libraryName are required");
+    }
+
     const queryParams: Record<string, string | number | undefined> = {};
 
     queryParams.query = query;
