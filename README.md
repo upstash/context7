@@ -193,11 +193,11 @@ Context7 MCP provides the following tools that LLMs can use:
 
 ## More Documentation
 
-- [More MCP Clients](https://context7.com/docs/all-clients) - Installation for 30+ clients
+- [More MCP Clients](https://context7.com/docs/resources/all-clients) - Installation for 30+ clients
 - [Adding Libraries](https://context7.com/docs/adding-libraries) - Submit your library to Context7
-- [Troubleshooting](https://context7.com/docs/troubleshooting) - Common issues and solutions
-- [API Reference](https://context7.com/docs/api) - REST API documentation
-- [Developer Guide](https://context7.com/docs/developer) - Run Context7 locally
+- [Troubleshooting](https://context7.com/docs/resources/troubleshooting) - Common issues and solutions
+- [API Reference](https://context7.com/docs/api-guide) - REST API documentation
+- [Developer Guide](https://context7.com/docs/resources/developer) - Run Context7 MCP locally
 
 ## Disclaimer
 
