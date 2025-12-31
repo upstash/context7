@@ -110,7 +110,6 @@
                   "$ref": "#/components/schemas/ContextResponse"
                 },
                 "example": {
-                  "selectedLibrary": "/vercel/next.js",
                   "codeSnippets": [
                     {
                       "codeTitle": "Middleware Authentication Example",
@@ -420,10 +419,6 @@
         "type": "object",
         "description": "Documentation context response",
         "properties": {
-          "selectedLibrary": {
-            "type": "string",
-            "description": "Library ID used for the query"
-          },
           "codeSnippets": {
             "type": "array",
             "description": "Relevant code snippets",
@@ -443,7 +438,7 @@
             "description": "Optional library-specific rules"
           }
         },
-        "required": ["selectedLibrary", "codeSnippets", "infoSnippets"]
+        "required": ["codeSnippets", "infoSnippets"]
       },
       "Error": {
         "type": "object",
