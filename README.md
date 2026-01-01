@@ -85,7 +85,7 @@ Pasting the following configuration into your Cursor `~/.cursor/mcp.json` file i
 <details>
 <summary><b>Install in Claude Code</b></summary>
 
-Run this command. See [Claude Code MCP docs](https://docs.anthropic.com/en/docs/claude-code/mcp) for more info.
+Run this command. See [Claude Code MCP docs](https://code.claude.com/docs/en/mcp) for more info.
 
 #### Claude Code Remote Server Connection
 
