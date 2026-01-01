@@ -36,7 +36,7 @@
   "devDependencies": {
     "@upstash/context7-sdk": "workspace:*",
     "ai": "^5.0.0",
-    "zod": "^3.24.0",
+    "zod": "^4.3.4",
     "@ai-sdk/amazon-bedrock": "^3.0.55",
     "@types/node": "^22.13.14",
     "dotenv": "^17.2.3",
