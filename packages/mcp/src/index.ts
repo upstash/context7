@@ -5,11 +5,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
 import { ClientContext } from "./lib/encryption.js";
-import {
-  formatSearchResults,
-  extractClientInfoFromUserAgent,
-  normalizeClientName,
-} from "./lib/utils.js";
+import { formatSearchResults, extractClientInfoFromUserAgent } from "./lib/utils.js";
 import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { Command } from "commander";
@@ -138,7 +134,7 @@ server.server.oninitialized = () => {
   const clientVersion = server.server.getClientVersion();
   if (clientVersion) {
     stdioClientInfo = {
-      ide: normalizeClientName(clientVersion.name),
+      ide: clientVersion.name,
       version: clientVersion.version,
     };
   }
