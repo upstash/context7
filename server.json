@@ -34,7 +34,7 @@
     },
     {
       "registryType": "mcpb",
-      "identifier": "https://raw.githubusercontent.com/upstash/context7/master/packages/mcp/mcpb/context7.mcpb",
+      "identifier": "https://github.com/upstash/context7/blob/master/packages/mcp/mcpb/context7.mcpb",
       "version": "1.0.1",
       "fileSha256": "aea76f179ceb92d22c289147c9d8343fb558d6dec93b144c9794e99239bb8194",
       "transport": {
