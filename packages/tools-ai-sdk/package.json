@@ -42,7 +42,7 @@
     "dotenv": "^17.2.3",
     "tsup": "^8.5.1",
     "typescript": "^5.8.2",
-    "vitest": "^4.0.13"
+    "vitest": "^4.0.16"
   },
   "repository": {
     "type": "git",
