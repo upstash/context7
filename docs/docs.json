@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "maple",
+  "theme": "mint",
   "name": "Context7 MCP",
   "description": "Up-to-date code docs for any prompt.",
   "colors": {
@@ -18,22 +18,20 @@
         "pages": [
           "overview",
           "installation",
-          "usage",
-          "adding-libraries",
           "plans-pricing",
-          "api-guide"
+          "adding-libraries",
+          "api-guide",
+          "tips"
         ]
       },
       {
-        "group": "Dashboard",
+        "group": "How To",
         "pages": [
-          "dashboard/api-keys",
-          "dashboard/libraries",
-          "dashboard/claiming-libraries",
-          "dashboard/private-repositories",
-          "dashboard/team",
-          "dashboard/usage",
-          "dashboard/billing"
+          "howto/api-keys",
+          "howto/claiming-libraries",
+          "howto/private-repositories",
+          "howto/team",
+          "howto/usage"
         ]
       },
       {
@@ -61,7 +59,7 @@
       },
       {
         "group": "Resources",
-        "pages": ["security", "troubleshooting", "contact"]
+        "pages": ["resources/all-clients", "resources/developer", "resources/security", "resources/troubleshooting"]
       }
     ]
   },
@@ -77,8 +75,8 @@
   "navbar": {
     "links": [
       {
-        "label": "Discord",
-        "href": "https://upstash.com/discord"
+        "label": "Contact",
+        "href": "https://context7.com/contact"
       },
       {
         "label": "GitHub",

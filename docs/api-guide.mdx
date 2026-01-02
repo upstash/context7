@@ -34,13 +34,17 @@ When you exceed rate limits, the API returns a `429` status code:
 
 ## Best Practices
 
-### Specify Topics
+### Be Specific with Queries
 
-Use the `topic` parameter to get more relevant results and reduce unnecessary content:
+Use detailed, natural language queries for better results:
 
 ```bash
-# Focus on routing-specific documentation
-curl "https://context7.com/api/v2/docs/code/vercel/next.js?topic=routing" \
+# Good - specific question
+curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js&query=How%20to%20implement%20authentication%20with%20middleware" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY"
+
+# Less optimal - vague query
+curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js&query=auth" \
   -H "Authorization: Bearer CONTEXT7_API_KEY"
 ```
 
@@ -76,56 +80,27 @@ Specify exact versions for consistent results across deployments:
 
 ```bash
 # Pin to a specific version
-curl "https://context7.com/api/v2/docs/code/vercel/next.js/v15.1.8" \
+curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js/v15.1.8&query=app%20router" \
   -H "Authorization: Bearer CONTEXT7_API_KEY"
 ```
-
-### Use Pagination for More Results
-
-When you need more documentation snippets, use the `page` parameter to fetch additional pages. The API supports up to 10 pages (100 snippets total) per topic:
-
-```bash
-# Fetch first page
-curl "https://context7.com/api/v2/docs/code/vercel/next.js?topic=routing&page=1" \
-  -H "Authorization: Bearer CONTEXT7_API_KEY"
-
-# Fetch next page if needed
-curl "https://context7.com/api/v2/docs/code/vercel/next.js?topic=routing&page=2" \
-  -H "Authorization: Bearer CONTEXT7_API_KEY"
-```
-
-The response includes pagination metadata to help you navigate:
-
-```json
-{
-  "snippets": [...],
-  "pagination": {
-    "page": 1,
-    "limit": 10,
-    "totalPages": 5,
-    "hasNext": true,
-    "hasPrev": false
-  }
-}
-```
-
-**Tips:**
-
-- Use specific topics to reduce the total number of pages needed
-- Check `hasNext` before fetching additional pages
-- Combine with version pinning for consistent pagination
 
 ## Error Handling
 
 The Context7 API uses standard HTTP status codes:
 
-| Code | Description                                   | Action                                                        |
-| ---- | --------------------------------------------- | ------------------------------------------------------------- |
-| 200  | Success                                       | Process the response normally                                 |
-| 401  | Unauthorized - Invalid or missing API key     | Check your API key and authentication header                  |
-| 404  | Not Found - Library or endpoint doesn't exist | Verify the library ID or endpoint URL                         |
-| 429  | Too Many Requests - Rate limit exceeded       | Implement exponential backoff and retry                       |
-| 500  | Internal Server Error                         | Retry with exponential backoff, contact support if persistent |
+| Code | Description                               | Action                                       |
+| ---- | ----------------------------------------- | -------------------------------------------- |
+| 200  | Success                                   | Process the response normally                |
+| 202  | Accepted - Library not finalized          | Wait and retry later                         |
+| 301  | Moved - Library redirected                | Use the new library ID from `redirectUrl`    |
+| 400  | Bad Request - Invalid parameters          | Check query parameters                       |
+| 401  | Unauthorized - Invalid API key            | Check your API key format (starts with `ctx7sk`) |
+| 403  | Forbidden - Access denied                 | Check library access permissions             |
+| 404  | Not Found - Library doesn't exist         | Verify the library ID                        |
+| 422  | Unprocessable - Library too large/no code | Try a different library                      |
+| 429  | Too Many Requests - Rate limit exceeded   | Wait for `Retry-After` header, then retry    |
+| 500  | Internal Server Error                     | Retry with backoff                           |
+| 503  | Service Unavailable - Search failed       | Retry later                                  |
 
 ### Error Response Format
 
@@ -133,8 +108,8 @@ All errors return a JSON object with these fields:
 
 ```json
 {
-  "error": "Error message describing what went wrong",
-  "status": 429
+  "error": "library_not_found",
+  "message": "Library \"/owner/repo\" not found."
 }
 ```
 
@@ -148,14 +123,11 @@ The Context7 Model Context Protocol (MCP) server provides seamless integration w
 npm install @upstash/context7-mcp
 ```
 
-**Features:**
+**Tools provided:**
+- `resolve-library-id`: Search for libraries and get their Context7 IDs
+- `query-docs`: Get documentation context for your questions
 
-- Automatic API key management
-- Built-in caching
-- Type-safe library resolution
-- Optimized for AI workflows
-
-See the [Installation guide](/installation) for detailed setup instructions.
+See the [Installation guide](https://github.com/upstash/context7#installation) for setup instructions.
 
 ### Direct API Integration
 
@@ -164,7 +136,7 @@ For custom integrations or non-MCP use cases, use the REST endpoints directly. T
 **Example (cURL):**
 
 ```bash
-curl "https://context7.com/api/v2/docs/code/vercel/next.js?topic=routing" \
+curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js&query=routing" \
   -H "Authorization: Bearer CONTEXT7_API_KEY"
 ```
 
@@ -177,22 +149,39 @@ headers = {
     "Authorization": "Bearer CONTEXT7_API_KEY"
 }
 
-response = requests.get(
-    "https://context7.com/api/v2/docs/code/vercel/next.js",
+# Search for a library
+search = requests.get(
+    "https://context7.com/api/v2/libs/search",
     headers=headers,
-    params={"topic": "routing"}
+    params={"libraryName": "nextjs", "query": "routing"}
 )
+library_id = search.json()["results"][0]["id"]
 
-docs = response.json()
+# Get documentation context
+response = requests.get(
+    "https://context7.com/api/v2/context",
+    headers=headers,
+    params={"libraryId": library_id, "query": "How to setup dynamic routes"}
+)
+print(response.text)
 ```
 
 **Example (JavaScript/Node.js):**
 
 ```javascript
-const response = await fetch("https://context7.com/api/v2/docs/code/vercel/next.js?topic=routing", {
-  headers: {
-    Authorization: "Bearer CONTEXT7_API_KEY",
-  },
-});
-const docs = await response.json();
+const headers = { Authorization: "Bearer CONTEXT7_API_KEY" };
+
+// Search for a library
+const search = await fetch(
+  "https://context7.com/api/v2/libs/search?libraryName=react&query=state",
+  { headers }
+);
+const { results } = await search.json();
+
+// Get documentation context
+const docs = await fetch(
+  `https://context7.com/api/v2/context?libraryId=${results[0].id}&query=useState hook`,
+  { headers }
+);
+const context = await docs.text();
 ```
