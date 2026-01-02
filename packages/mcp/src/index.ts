@@ -10,8 +10,7 @@ import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
-
-export const SERVER_VERSION = "2.0.0";
+import { SERVER_VERSION } from "./lib/constants.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -377,7 +376,7 @@ async function main() {
 
       httpServer.once("listening", () => {
         console.error(
-          `Context7 Documentation MCP Server running on HTTP at http://localhost:${port}/mcp`
+          `Context7 Documentation MCP Server v${SERVER_VERSION} running on HTTP at http://localhost:${port}/mcp`
         );
       });
     };
@@ -391,7 +390,7 @@ async function main() {
 
     await server.connect(transport);
 
-    console.error("Context7 Documentation MCP Server running on stdio");
+    console.error(`Context7 Documentation MCP Server v${SERVER_VERSION} running on stdio`);
   }
 }
 
