@@ -16,7 +16,8 @@
     "paths": {
       "@error": ["./src/error/index.ts"],
       "@http": ["./src/http/index.ts"],
-      "@commands/*": ["./src/commands/*"]
+      "@commands/*": ["./src/commands/*"],
+      "@utils/*": ["./src/utils/*"]
     }
   },
   "include": ["src/**/*", "tsup.config.ts", "vitest.config.ts", "eslint.config.js"],

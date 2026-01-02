@@ -16,6 +16,7 @@ export default defineConfig({
       "@commands": path.resolve(__dirname, "./src/commands"),
       "@http": path.resolve(__dirname, "./src/http"),
       "@error": path.resolve(__dirname, "./src/error/index.ts"),
+      "@utils": path.resolve(__dirname, "./src/utils"),
     },
   },
 });
