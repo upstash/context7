@@ -57,8 +57,8 @@ importers:
         specifier: ^6.6.3
         version: 6.22.0
       zod:
-        specifier: ^3.24.2
-        version: 3.25.76
+        specifier: ^4.3.4
+        version: 4.3.4
     devDependencies:
       '@types/node':
         specifier: ^22.13.14
@@ -89,7 +89,7 @@ importers:
     devDependencies:
       '@ai-sdk/amazon-bedrock':
         specifier: ^3.0.55
-        version: 3.0.62(zod@3.25.76)
+        version: 3.0.62(zod@4.3.4)
       '@types/node':
         specifier: ^22.13.14
         version: 22.19.1
@@ -98,7 +98,7 @@ importers:
         version: link:../sdk
       ai:
         specifier: ^5.0.0
-        version: 5.0.104(zod@3.25.76)
+        version: 5.0.104(zod@4.3.4)
       dotenv:
         specifier: ^17.2.3
         version: 17.2.3
@@ -112,8 +112,8 @@ importers:
         specifier: ^4.0.13
         version: 4.0.14(@opentelemetry/api@1.9.0)(@types/node@22.19.1)
       zod:
-        specifier: ^3.24.0
-        version: 3.25.76
+        specifier: ^4.3.4
+        version: 4.3.4
 
 packages:
 
@@ -2135,37 +2135,40 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
+  zod@4.3.4:
+    resolution: {integrity: sha512-Zw/uYiiyF6pUT1qmKbZziChgNPRu+ZRneAsMUDU6IwmXdWt5JwcUfy2bvLOCUtz5UniaN/Zx5aFttZYbYc7O/A==}
+
 snapshots:
 
-  '@ai-sdk/amazon-bedrock@3.0.62(zod@3.25.76)':
+  '@ai-sdk/amazon-bedrock@3.0.62(zod@4.3.4)':
     dependencies:
-      '@ai-sdk/anthropic': 2.0.50(zod@3.25.76)
+      '@ai-sdk/anthropic': 2.0.50(zod@4.3.4)
       '@ai-sdk/provider': 2.0.0
-      '@ai-sdk/provider-utils': 3.0.18(zod@3.25.76)
+      '@ai-sdk/provider-utils': 3.0.18(zod@4.3.4)
       '@smithy/eventstream-codec': 4.2.5
       '@smithy/util-utf8': 4.2.0
       aws4fetch: 1.0.20
-      zod: 3.25.76
+      zod: 4.3.4
 
-  '@ai-sdk/anthropic@2.0.50(zod@3.25.76)':
+  '@ai-sdk/anthropic@2.0.50(zod@4.3.4)':
     dependencies:
       '@ai-sdk/provider': 2.0.0
-      '@ai-sdk/provider-utils': 3.0.18(zod@3.25.76)
-      zod: 3.25.76
+      '@ai-sdk/provider-utils': 3.0.18(zod@4.3.4)
+      zod: 4.3.4
 
-  '@ai-sdk/gateway@2.0.17(zod@3.25.76)':
+  '@ai-sdk/gateway@2.0.17(zod@4.3.4)':
     dependencies:
       '@ai-sdk/provider': 2.0.0
-      '@ai-sdk/provider-utils': 3.0.18(zod@3.25.76)
+      '@ai-sdk/provider-utils': 3.0.18(zod@4.3.4)
       '@vercel/oidc': 3.0.5
-      zod: 3.25.76
+      zod: 4.3.4
 
-  '@ai-sdk/provider-utils@3.0.18(zod@3.25.76)':
+  '@ai-sdk/provider-utils@3.0.18(zod@4.3.4)':
     dependencies:
       '@ai-sdk/provider': 2.0.0
       '@standard-schema/spec': 1.0.0
       eventsource-parser: 3.0.6
-      zod: 3.25.76
+      zod: 4.3.4
 
   '@ai-sdk/provider@2.0.0':
     dependencies:
@@ -2936,13 +2939,13 @@ snapshots:
 
   acorn@8.15.0: {}
 
-  ai@5.0.104(zod@3.25.76):
+  ai@5.0.104(zod@4.3.4):
     dependencies:
-      '@ai-sdk/gateway': 2.0.17(zod@3.25.76)
+      '@ai-sdk/gateway': 2.0.17(zod@4.3.4)
       '@ai-sdk/provider': 2.0.0
-      '@ai-sdk/provider-utils': 3.0.18(zod@3.25.76)
+      '@ai-sdk/provider-utils': 3.0.18(zod@4.3.4)
       '@opentelemetry/api': 1.9.0
-      zod: 3.25.76
+      zod: 4.3.4
 
   ajv-formats@3.0.1(ajv@8.17.1):
     optionalDependencies:
@@ -4101,3 +4104,5 @@ snapshots:
       zod: 3.25.76
 
   zod@3.25.76: {}
+
+  zod@4.3.4: {}
