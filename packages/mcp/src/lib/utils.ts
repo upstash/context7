@@ -68,6 +68,45 @@ export function formatSearchResults(searchResponse: SearchResponse): string {
   return formattedResults.join("\n----------\n");
 }
 
+const CLIENT_SLUG_MAP: Record<string, string> = {
+  "cursor-vscode": "cursor",
+  cursor: "cursor",
+
+  "claude-code": "claude-code",
+  "claude code": "claude-code",
+  claudecode: "claude-code",
+
+  "visual-studio-code": "vscode",
+  "visual studio code": "vscode",
+  "vs code": "vscode",
+  vscode: "vscode",
+};
+
+/**
+ * Normalizes a client name to a canonical slug format for consistent storage.
+ * Unknown clients are converted to lowercase kebab-case.
+ *
+ * @example
+ * normalizeClientName("Claude Code") // "claude-code"
+ * normalizeClientName("cursor-vscode") // "cursor"
+ * normalizeClientName("My Custom IDE") // "my-custom-ide"
+ */
+export function normalizeClientName(clientName: string | undefined): string | undefined {
+  if (!clientName) return undefined;
+
+  const normalized = clientName.toLowerCase().trim();
+
+  if (CLIENT_SLUG_MAP[normalized]) {
+    return CLIENT_SLUG_MAP[normalized];
+  }
+
+  return normalized
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 /**
  * Extract client info from User-Agent header.
  * Parses formats like "Cursor/2.2.44 (darwin arm64)" or "claude-code/2.0.71"
@@ -78,7 +117,7 @@ export function extractClientInfoFromUserAgent(
   if (!userAgent) return undefined;
   const match = userAgent.match(/^([^\/\s]+)\/([^\s(]+)/);
   if (match) {
-    return { ide: match[1], version: match[2] };
+    return { ide: normalizeClientName(match[1]), version: match[2] };
   }
   return undefined;
 }
