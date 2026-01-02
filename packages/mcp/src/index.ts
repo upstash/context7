@@ -65,23 +65,27 @@ const CLI_PORT = (() => {
 
 const requestContext = new AsyncLocalStorage<ClientContext>();
 
-let globalApiKey: string | undefined;
-let globalClientInfo: { ide?: string; version?: string } | undefined;
-let globalTransport: "stdio" | "http" | undefined;
+// Global state for stdio mode only
+let stdioApiKey: string | undefined;
+let stdioClientInfo: { ide?: string; version?: string } | undefined;
 
 /**
- * Get the effective client context by merging request context with global fallbacks.
- * Used by tool handlers to get the full context for API calls.
+ * Get the effective client context
  */
 function getClientContext(): ClientContext {
   const ctx = requestContext.getStore();
-  const context = {
-    clientIp: ctx?.clientIp,
-    apiKey: ctx?.apiKey || globalApiKey,
-    clientInfo: ctx?.clientInfo || globalClientInfo,
-    transport: ctx?.transport || globalTransport,
+
+  // HTTP mode: context is fully populated from request
+  if (ctx) {
+    return ctx;
+  }
+
+  // stdio mode: use globals
+  return {
+    apiKey: stdioApiKey,
+    clientInfo: stdioClientInfo,
+    transport: "stdio",
   };
-  return context;
 }
 
 /**
@@ -125,20 +129,14 @@ const server = new McpServer(
   }
 );
 
+// Capture client info from MCP initialize handshake
 server.server.oninitialized = () => {
   const clientVersion = server.server.getClientVersion();
   if (clientVersion) {
-    const clientInfo = {
+    stdioClientInfo = {
       ide: clientVersion.name,
       version: clientVersion.version,
     };
-
-    const ctx = requestContext.getStore();
-    if (ctx) {
-      ctx.clientInfo = clientInfo;
-    }
-
-    globalClientInfo = clientInfo;
   }
 };
 
@@ -320,9 +318,12 @@ async function main() {
 
     app.all("/mcp", async (req: express.Request, res: express.Response) => {
       try {
-        const clientIp = getClientIp(req);
-        const apiKey = extractApiKey(req);
-        const clientInfo = extractClientInfoFromUserAgent(req.headers["user-agent"]);
+        const context: ClientContext = {
+          clientIp: getClientIp(req),
+          apiKey: extractApiKey(req),
+          clientInfo: extractClientInfoFromUserAgent(req.headers["user-agent"]),
+          transport: "http",
+        };
 
         const transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: undefined,
@@ -333,7 +334,7 @@ async function main() {
           transport.close();
         });
 
-        await requestContext.run({ clientIp, apiKey, clientInfo, transport: "http" }, async () => {
+        await requestContext.run(context, async () => {
           await server.connect(transport);
           await transport.handleRequest(req, res, req.body);
         });
@@ -383,9 +384,7 @@ async function main() {
 
     startServer(initialPort);
   } else {
-    const apiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
-    globalApiKey = apiKey; // Store globally for tool handlers in stdio mode
-    globalTransport = "stdio"; // Store globally for tool handlers in stdio mode
+    stdioApiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
     const transport = new StdioServerTransport();
 
     await server.connect(transport);
