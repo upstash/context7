@@ -1,11 +1,5 @@
 # @upstash/context7-mcp
 
-## 2.0.2
-
-### Patch Changes
-
-- 368b143: Collect client and server version metrics
-
 ## 2.0.1
 
 ### Patch Changes
