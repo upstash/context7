@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "lib": ["ESNext"],
+    "module": "esnext",
+    "target": "esnext",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "strict": true,
+    "downlevelIteration": true,
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowJs": true,
+    "baseUrl": ".",
+    "paths": {
+      "@tools": ["./src/tools/index.ts"],
+      "@agents": ["./src/agents/index.ts"],
+      "@prompts": ["./src/prompts/index.ts"]
+    }
+  },
+  "include": ["src/**/*", "tsup.config.ts", "vitest.config.ts", "eslint.config.js"],
+  "exclude": ["node_modules", "dist", "examples"]
+}

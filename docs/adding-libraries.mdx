@@ -132,43 +132,6 @@ If you're the library owner, you can claim your library on Context7 to unlock a 
 
 - **Library authors**: Claim ownership via `context7.json` and manage settings through the admin panel, or add configuration directly to your repository
 - **Contributors**: Submit pull requests to add or update the configuration
-- **Community members**: Propose improvements to the way popular libraries are parsed
-
-## Best Practices
-
-1. **Keep descriptions concise**: One sentence explaining your library's purpose. Example: "Serverless Redis SDK for edge and browser environments."
-2. **Exclude irrelevant folders**: Use `excludeFolders` to skip source code, tests, or build artifacts. Example: `["src", "test", "dist", "node_modules"]`
-3. **Add helpful rules**: Include common gotchas or best practices. Example: "Always call `.close()` on Redis connections" or "Use environment variables for API keys, never hardcode them"
-4. **Maintain version history**: Keep important previous versions accessible. Users on v1.x still need v1.x documentation, not just the latest v2.x
-
-## Adding a Version
-
-To add a new version to your existing library:
-
-1. **Add version to the `context7.json` file**: Update the `previousVersions` array with your new version:
-
-   ```json
-   "previousVersions": [
-     {
-       "tag": "v2.0.0",
-       "title": "version 2.0.0"
-     }
-   ]
-   ```
-
-   <Note>The `tag` value must exactly match an existing Git tag in your GitHub repository.</Note>
-
-2. **Refresh your library**: Go to your library page on Context7 and trigger a refresh to index the new version.
-3. **Confirm availability**: Search for the new version or run `resolve-library-id` from an MCP client to confirm it appears in results.
-
-## Monitor Parsing and Quality
-
-Keep documentation helpful for agents:
-
-- Review the rendered documentation after each release
-- Trim noisy sections (e.g., large changelogs) with `excludeFiles` or `excludeFolders`
-- Update `rules` when best practices change, so AI assistants surface current guidance
 
 ## Need Help?
-
 If you encounter issues or need assistance adding your project, please [open an issue](https://github.com/upstash/context7/issues/new/choose) or reach out to our community.

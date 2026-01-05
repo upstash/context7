@@ -1,4 +1,5 @@
 import { createCipheriv, randomBytes } from "crypto";
+import { SERVER_VERSION } from "./constants.js";
 
 const DEFAULT_ENCRYPTION_KEY = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
 const ENCRYPTION_KEY = process.env.CLIENT_IP_ENCRYPTION_KEY || DEFAULT_ENCRYPTION_KEY;
@@ -31,17 +32,41 @@ function encryptClientIp(clientIp: string): string {
   }
 }
 
-export function generateHeaders(
-  clientIp?: string,
-  apiKey?: string,
-  extraHeaders: Record<string, string> = {}
-): Record<string, string> {
-  const headers: Record<string, string> = { ...extraHeaders };
-  if (clientIp) {
-    headers["mcp-client-ip"] = encryptClientIp(clientIp);
+export interface ClientContext {
+  clientIp?: string;
+  apiKey?: string;
+  clientInfo?: {
+    ide?: string;
+    version?: string;
+  };
+  transport?: "stdio" | "http";
+}
+
+/**
+ * Generate headers for Context7 API requests.
+ * Handles client IP encryption, authentication, and telemetry headers.
+ */
+export function generateHeaders(context: ClientContext): Record<string, string> {
+  const headers: Record<string, string> = {
+    "X-Context7-Source": "mcp-server",
+    "X-Context7-Server-Version": SERVER_VERSION,
+  };
+
+  if (context.clientIp) {
+    headers["mcp-client-ip"] = encryptClientIp(context.clientIp);
   }
-  if (apiKey) {
-    headers["Authorization"] = `Bearer ${apiKey}`;
+  if (context.apiKey) {
+    headers["Authorization"] = `Bearer ${context.apiKey}`;
   }
+  if (context.clientInfo?.ide) {
+    headers["X-Context7-Client-IDE"] = context.clientInfo.ide;
+  }
+  if (context.clientInfo?.version) {
+    headers["X-Context7-Client-Version"] = context.clientInfo.version;
+  }
+  if (context.transport) {
+    headers["X-Context7-Transport"] = context.transport;
+  }
+
   return headers;
 }

@@ -17,361 +17,150 @@
     }
   ],
   "paths": {
-    "/v2/docs/code/{owner}/{repo}": {
-      "get": {
-        "summary": "Get code snippets for a library",
-        "description": "Retrieves paginated code examples and API snippets from a library's documentation. Supports filtering by topic and returns results in JSON or text format.",
-        "operationId": "getCodeSnippets",
-        "tags": ["Retrieve Documentation"],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/OwnerParam"
-          },
-          {
-            "$ref": "#/components/parameters/RepoParam"
-          },
-          {
-            "$ref": "#/components/parameters/TopicParam"
-          },
-          {
-            "$ref": "#/components/parameters/TypeParam"
-          },
-          {
-            "$ref": "#/components/parameters/PageParam"
-          },
-          {
-            "$ref": "#/components/parameters/LimitParam"
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/CodeSnippetsJsonResponse"
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequestError"
-          },
-          "401": {
-            "$ref": "#/components/responses/UnauthorizedError"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFoundError"
-          },
-          "202": {
-            "$ref": "#/components/responses/AcceptedError"
-          },
-          "301": {
-            "$ref": "#/components/responses/RedirectError"
-          },
-          "403": {
-            "$ref": "#/components/responses/ForbiddenError"
-          },
-          "422": {
-            "$ref": "#/components/responses/UnprocessableEntityError"
-          },
-          "429": {
-            "$ref": "#/components/responses/RateLimitError"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "security": [
-          {},
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/v2/docs/code/{owner}/{repo}/{version}": {
-      "get": {
-        "summary": "Get code snippets for a specific library version",
-        "description": "Retrieves paginated code examples and API snippets from a specific version (tag or branch) of a library's documentation.",
-        "operationId": "getCodeSnippetsByVersion",
-        "tags": ["Retrieve Documentation"],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/OwnerParam"
-          },
-          {
-            "$ref": "#/components/parameters/RepoParam"
-          },
-          {
-            "$ref": "#/components/parameters/VersionParam"
-          },
-          {
-            "$ref": "#/components/parameters/TopicParam"
-          },
-          {
-            "$ref": "#/components/parameters/TypeParam"
-          },
-          {
-            "$ref": "#/components/parameters/PageParam"
-          },
-          {
-            "$ref": "#/components/parameters/LimitParam"
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/CodeSnippetsJsonResponse"
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequestError"
-          },
-          "401": {
-            "$ref": "#/components/responses/UnauthorizedError"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFoundError"
-          },
-          "202": {
-            "$ref": "#/components/responses/AcceptedError"
-          },
-          "301": {
-            "$ref": "#/components/responses/RedirectError"
-          },
-          "403": {
-            "$ref": "#/components/responses/ForbiddenError"
-          },
-          "422": {
-            "$ref": "#/components/responses/UnprocessableEntityError"
-          },
-          "429": {
-            "$ref": "#/components/responses/RateLimitError"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "security": [
-          {},
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/v2/docs/info/{owner}/{repo}": {
-      "get": {
-        "summary": "Get documentation content for a library",
-        "description": "Retrieves paginated informational documentation snippets from a library. Supports filtering by topic and returns results in JSON or text format.",
-        "operationId": "getInfoSnippets",
-        "tags": ["Retrieve Documentation"],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/OwnerParam"
-          },
-          {
-            "$ref": "#/components/parameters/RepoParam"
-          },
-          {
-            "$ref": "#/components/parameters/TopicParam"
-          },
-          {
-            "$ref": "#/components/parameters/TypeParam"
-          },
-          {
-            "$ref": "#/components/parameters/PageParam"
-          },
-          {
-            "$ref": "#/components/parameters/LimitParam"
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/InfoSnippetsJsonResponse"
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequestError"
-          },
-          "401": {
-            "$ref": "#/components/responses/UnauthorizedError"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFoundError"
-          },
-          "202": {
-            "$ref": "#/components/responses/AcceptedError"
-          },
-          "301": {
-            "$ref": "#/components/responses/RedirectError"
-          },
-          "403": {
-            "$ref": "#/components/responses/ForbiddenError"
-          },
-          "422": {
-            "$ref": "#/components/responses/UnprocessableEntityError"
-          },
-          "429": {
-            "$ref": "#/components/responses/RateLimitError"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "security": [
-          {},
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/v2/docs/info/{owner}/{repo}/{version}": {
-      "get": {
-        "summary": "Get documentation content for a specific library version",
-        "description": "Retrieves paginated informational documentation snippets from a specific version (tag or branch) of a library.",
-        "operationId": "getInfoSnippetsByVersion",
-        "tags": ["Retrieve Documentation"],
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/OwnerParam"
-          },
-          {
-            "$ref": "#/components/parameters/RepoParam"
-          },
-          {
-            "$ref": "#/components/parameters/VersionParam"
-          },
-          {
-            "$ref": "#/components/parameters/TopicParam"
-          },
-          {
-            "$ref": "#/components/parameters/TypeParam"
-          },
-          {
-            "$ref": "#/components/parameters/PageParam"
-          },
-          {
-            "$ref": "#/components/parameters/LimitParam"
-          }
-        ],
-        "responses": {
-          "200": {
-            "$ref": "#/components/responses/InfoSnippetsJsonResponse"
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequestError"
-          },
-          "401": {
-            "$ref": "#/components/responses/UnauthorizedError"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFoundError"
-          },
-          "202": {
-            "$ref": "#/components/responses/AcceptedError"
-          },
-          "301": {
-            "$ref": "#/components/responses/RedirectError"
-          },
-          "403": {
-            "$ref": "#/components/responses/ForbiddenError"
-          },
-          "422": {
-            "$ref": "#/components/responses/UnprocessableEntityError"
-          },
-          "429": {
-            "$ref": "#/components/responses/RateLimitError"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          }
-        },
-        "security": [
-          {},
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/v2/search": {
+    "/v2/libs/search": {
       "get": {
         "summary": "Search for libraries",
-        "description": "Search across available libraries. Returns finalized public libraries and accessible private repositories based on authentication.",
+        "description": "Search for libraries by name with intelligent LLM-powered ranking based on your query context.",
         "operationId": "searchLibraries",
-        "tags": ["Search Libraries"],
+        "tags": ["Search"],
         "parameters": [
           {
-            "name": "query",
-            "in": "query",
-            "description": "Search query string. Returns empty results if not provided.",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "maxLength": 500
-            },
-            "example": "react hooks"
+            "$ref": "#/components/parameters/LibraryNameParam"
+          },
+          {
+            "$ref": "#/components/parameters/QueryParam"
           }
         ],
         "responses": {
           "200": {
-            "description": "Successful search response",
+            "description": "Search results ranked by relevance",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "description": "Search results response",
-                  "properties": {
-                    "results": {
-                      "type": "array",
-                      "description": "Array of matching libraries",
-                      "items": {
-                        "$ref": "#/components/schemas/Library"
-                      }
-                    },
-                    "metadata": {
-                      "$ref": "#/components/schemas/APIResponseMetadata"
-                    }
-                  },
-                  "required": ["results", "metadata"]
+                  "$ref": "#/components/schemas/SearchResponse"
                 },
-                "examples": {
-                  "withResults": {
-                    "summary": "Search with results",
-                    "value": {
-                      "results": [
-                        {
-                          "id": "/vercel/next.js",
-                          "title": "Next.js",
-                          "description": "Next.js enables you to create full-stack web applications by extending the latest React features and integrating powerful Rust-based JavaScript tooling for the fastest builds.",
-                          "branch": "canary",
-                          "lastUpdateDate": "2025-11-17T22:20:15.784Z",
-                          "state": "finalized",
-                          "totalTokens": 824953,
-                          "totalSnippets": 3336,
-                          "stars": 131745,
-                          "trustScore": 10,
-                          "benchmarkScore": 91.1,
-                          "versions": [
-                            "v14.3.0-canary.87",
-                            "v13.5.11",
-                            "v15.1.8",
-                            "v15.4.0-canary.82",
-                            "v12.3.7",
-                            "v11.1.3"
-                          ]
-                        }
-                      ],
-                      "metadata": {
-                        "authentication": "none"
-                      }
+                "example": {
+                  "results": [
+                    {
+                      "id": "/facebook/react",
+                      "title": "React",
+                      "description": "A JavaScript library for building user interfaces",
+                      "branch": "main",
+                      "lastUpdateDate": "2025-01-15T10:30:00.000Z",
+                      "state": "finalized",
+                      "totalTokens": 500000,
+                      "totalSnippets": 2500,
+                      "stars": 220000,
+                      "trustScore": 10,
+                      "benchmarkScore": 95.5,
+                      "versions": ["v18.2.0", "v17.0.2"]
                     }
-                  },
-                  "emptyQuery": {
-                    "summary": "Empty query returns no results",
-                    "value": {
-                      "results": [],
-                      "metadata": {
-                        "authentication": "none"
-                      }
-                    }
-                  }
+                  ]
                 }
               }
             }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailableError"
+          }
+        },
+        "security": [
+          {},
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v2/context": {
+      "get": {
+        "summary": "Get documentation context",
+        "description": "Retrieve intelligent, LLM-reranked documentation context for natural language queries. Returns the most relevant code snippets and documentation for your specific question.",
+        "operationId": "getContext",
+        "tags": ["Context"],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/LibraryIdParam"
+          },
+          {
+            "$ref": "#/components/parameters/QueryParam"
+          },
+          {
+            "$ref": "#/components/parameters/TypeParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Documentation context",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContextResponse"
+                },
+                "example": {
+                  "codeSnippets": [
+                    {
+                      "codeTitle": "Middleware Authentication Example",
+                      "codeDescription": "Shows how to implement authentication checks in Next.js middleware",
+                      "codeLanguage": "typescript",
+                      "codeTokens": 150,
+                      "codeId": "https://github.com/vercel/next.js/blob/canary/docs/middleware.mdx#_snippet_0",
+                      "pageTitle": "Middleware",
+                      "codeList": [
+                        {
+                          "language": "typescript",
+                          "code": "import { NextResponse } from 'next/server'\nimport type { NextRequest } from 'next/server'\n\nexport function middleware(request: NextRequest) {\n  const token = request.cookies.get('token')\n  if (!token) {\n    return NextResponse.redirect(new URL('/login', request.url))\n  }\n  return NextResponse.next()\n}"
+                        }
+                      ]
+                    }
+                  ],
+                  "infoSnippets": [
+                    {
+                      "pageId": "https://github.com/vercel/next.js/blob/canary/docs/middleware.mdx",
+                      "breadcrumb": "Routing > Middleware",
+                      "content": "Middleware allows you to run code before a request is completed...",
+                      "contentTokens": 200
+                    }
+                  ]
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "### Middleware Authentication Example\n\nSource: https://github.com/vercel/next.js/blob/canary/docs/middleware.mdx\n\nShows how to implement authentication checks in Next.js middleware\n\n```typescript\nimport { NextResponse } from 'next/server'\n...\n```"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "202": {
+            "$ref": "#/components/responses/AcceptedError"
+          },
+          "301": {
+            "$ref": "#/components/responses/RedirectError"
+          },
+          "422": {
+            "$ref": "#/components/responses/UnprocessableEntityError"
           },
           "401": {
             "$ref": "#/components/responses/UnauthorizedError"
@@ -401,52 +190,51 @@
       }
     },
     "parameters": {
-      "OwnerParam": {
-        "name": "owner",
-        "in": "path",
-        "description": "Repository owner - GitHub username or organization name (case-insensitive)",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 500
-        },
-        "example": "vercel"
-      },
-      "RepoParam": {
-        "name": "repo",
-        "in": "path",
-        "description": "Repository name (case-insensitive)",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 500
-        },
-        "example": "next.js"
-      },
-      "VersionParam": {
-        "name": "version",
-        "in": "path",
-        "description": "Specific version (tag or branch) of the library",
-        "required": true,
-        "schema": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 500
-        },
-        "example": "v14.0.0"
-      },
-      "TopicParam": {
-        "name": "topic",
+      "LibraryNameParam": {
+        "name": "libraryName",
         "in": "query",
-        "description": "Filter snippets by topic or search term",
-        "required": false,
+        "description": "Library name to search for (e.g., 'react', 'nextjs', 'express')",
+        "required": true,
         "schema": {
           "type": "string",
+          "minLength": 1,
           "maxLength": 500
         },
-        "example": "authentication"
+        "example": "react"
+      },
+      "QueryParam": {
+        "name": "query",
+        "in": "query",
+        "description": "User's original question or task - used for intelligent relevance ranking",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "example": "How to manage state with hooks"
+      },
+      "LibraryIdParam": {
+        "name": "libraryId",
+        "in": "query",
+        "description": "Context7-compatible library ID in format `/owner/repo` or `/owner/repo/version`",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "pattern": "^/[^/]+/[^/]+(/[^/]+)?$"
+        },
+        "examples": {
+          "basic": {
+            "summary": "Basic library ID",
+            "value": "/vercel/next.js"
+          },
+          "withVersion": {
+            "summary": "With specific version",
+            "value": "/vercel/next.js/v14.3.0"
+          }
+        }
       },
       "TypeParam": {
         "name": "type",
@@ -459,161 +247,9 @@
           "default": "txt"
         },
         "example": "json"
-      },
-      "PageParam": {
-        "name": "page",
-        "in": "query",
-        "description": "Page number for pagination (1-indexed). Maximum 10 pages accessible for each topic.",
-        "required": false,
-        "schema": {
-          "type": "integer",
-          "minimum": 1,
-          "default": 1
-        },
-        "example": 1
-      },
-      "LimitParam": {
-        "name": "limit",
-        "in": "query",
-        "description": "Number of items per page",
-        "required": false,
-        "schema": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 10,
-          "default": 10
-        },
-        "example": 10
       }
     },
     "schemas": {
-      "CodeSnippet": {
-        "type": "object",
-        "description": "A code snippet from library documentation",
-        "properties": {
-          "codeTitle": {
-            "type": "string",
-            "description": "Title of the code snippet"
-          },
-          "codeDescription": {
-            "type": "string",
-            "description": "Description of what the code does"
-          },
-          "codeLanguage": {
-            "type": "string",
-            "description": "Primary programming language of the snippet"
-          },
-          "codeTokens": {
-            "type": "integer",
-            "description": "Token count for the snippet"
-          },
-          "codeId": {
-            "type": "string",
-            "description": "Unique identifier for the code snippet"
-          },
-          "pageTitle": {
-            "type": "string",
-            "description": "Title of the documentation page containing this snippet"
-          },
-          "codeList": {
-            "type": "array",
-            "description": "List of code examples in different languages",
-            "items": {
-              "$ref": "#/components/schemas/CodeExample"
-            }
-          }
-        },
-        "required": [
-          "codeTitle",
-          "codeDescription",
-          "codeLanguage",
-          "codeTokens",
-          "codeId",
-          "pageTitle",
-          "codeList"
-        ]
-      },
-      "CodeExample": {
-        "type": "object",
-        "description": "A single code example",
-        "properties": {
-          "language": {
-            "type": "string",
-            "description": "Programming language of this code example"
-          },
-          "code": {
-            "type": "string",
-            "description": "The actual code content"
-          }
-        },
-        "required": ["language", "code"]
-      },
-      "InfoSnippet": {
-        "type": "object",
-        "description": "A documentation/info snippet from library",
-        "properties": {
-          "pageId": {
-            "type": "string",
-            "description": "Unique page identifier"
-          },
-          "breadcrumb": {
-            "type": "string",
-            "description": "Navigation breadcrumb path"
-          },
-          "content": {
-            "type": "string",
-            "description": "The documentation content"
-          },
-          "contentTokens": {
-            "type": "integer",
-            "description": "Token count for the content"
-          }
-        },
-        "required": ["content", "contentTokens"]
-      },
-      "Pagination": {
-        "type": "object",
-        "description": "Pagination metadata",
-        "properties": {
-          "page": {
-            "type": "integer",
-            "description": "Current page number (1-indexed)",
-            "minimum": 1
-          },
-          "limit": {
-            "type": "integer",
-            "description": "Items per page",
-            "minimum": 1,
-            "maximum": 10
-          },
-          "totalPages": {
-            "type": "integer",
-            "description": "Total number of pages available for a topic",
-            "minimum": 0
-          },
-          "hasNext": {
-            "type": "boolean",
-            "description": "Whether a next page exists"
-          },
-          "hasPrev": {
-            "type": "boolean",
-            "description": "Whether a previous page exists"
-          }
-        },
-        "required": ["page", "limit", "totalPages", "hasNext", "hasPrev"]
-      },
-      "APIResponseMetadata": {
-        "type": "object",
-        "description": "Response metadata",
-        "properties": {
-          "authentication": {
-            "type": "string",
-            "enum": ["none", "personal", "team"],
-            "description": "Authentication type used for this request"
-          }
-        },
-        "required": ["authentication"]
-      },
       "Library": {
         "type": "object",
         "description": "Library metadata",
@@ -642,7 +278,7 @@
             "type": "string",
             "format": "date-time",
             "description": "ISO 8601 timestamp of last update",
-            "example": "2025-07-27T06:56:26.691Z"
+            "example": "2025-01-15T10:30:00.000Z"
           },
           "state": {
             "type": "string",
@@ -667,14 +303,14 @@
           },
           "trustScore": {
             "type": "integer",
-            "description": "Source reputation score (0-10, used internally to determine High/Medium/Low/Unknown reputation)",
+            "description": "Source reputation score (0-10)",
             "minimum": 0,
             "maximum": 10,
             "example": 10
           },
           "benchmarkScore": {
             "type": "number",
-            "description": "Quality indicator score (0-100, with 100 being the highest quality)",
+            "description": "Quality indicator score (0-100)",
             "minimum": 0,
             "maximum": 100,
             "example": 95.5
@@ -685,12 +321,128 @@
             "items": {
               "type": "string"
             },
-            "example": ["v15.1.8", "v14.3.0-canary.87"]
+            "example": ["v15.1.8", "v14.3.0"]
           }
         }
       },
+      "SearchResponse": {
+        "type": "object",
+        "description": "Search results response",
+        "properties": {
+          "results": {
+            "type": "array",
+            "description": "Array of matching libraries ranked by relevance",
+            "items": {
+              "$ref": "#/components/schemas/Library"
+            }
+          }
+        },
+        "required": ["results"]
+      },
+      "CodeSnippet": {
+        "type": "object",
+        "description": "A code snippet from library documentation",
+        "properties": {
+          "codeTitle": {
+            "type": "string",
+            "description": "Title of the code snippet"
+          },
+          "codeDescription": {
+            "type": "string",
+            "description": "Description of what the code does"
+          },
+          "codeLanguage": {
+            "type": "string",
+            "description": "Primary programming language"
+          },
+          "codeTokens": {
+            "type": "integer",
+            "description": "Token count for the snippet"
+          },
+          "codeId": {
+            "type": "string",
+            "description": "URL to source location"
+          },
+          "pageTitle": {
+            "type": "string",
+            "description": "Title of the documentation page"
+          },
+          "codeList": {
+            "type": "array",
+            "description": "Code examples in different languages",
+            "items": {
+              "$ref": "#/components/schemas/CodeExample"
+            }
+          }
+        },
+        "required": ["codeTitle", "codeDescription", "codeLanguage", "codeTokens", "codeId", "pageTitle", "codeList"]
+      },
+      "CodeExample": {
+        "type": "object",
+        "description": "A single code example",
+        "properties": {
+          "language": {
+            "type": "string",
+            "description": "Programming language"
+          },
+          "code": {
+            "type": "string",
+            "description": "The actual code content"
+          }
+        },
+        "required": ["language", "code"]
+      },
+      "InfoSnippet": {
+        "type": "object",
+        "description": "A documentation snippet",
+        "properties": {
+          "pageId": {
+            "type": "string",
+            "description": "URL to source page"
+          },
+          "breadcrumb": {
+            "type": "string",
+            "description": "Navigation breadcrumb path"
+          },
+          "content": {
+            "type": "string",
+            "description": "The documentation content"
+          },
+          "contentTokens": {
+            "type": "integer",
+            "description": "Token count for the content"
+          }
+        },
+        "required": ["content", "contentTokens"]
+      },
+      "ContextResponse": {
+        "type": "object",
+        "description": "Documentation context response",
+        "properties": {
+          "codeSnippets": {
+            "type": "array",
+            "description": "Relevant code snippets",
+            "items": {
+              "$ref": "#/components/schemas/CodeSnippet"
+            }
+          },
+          "infoSnippets": {
+            "type": "array",
+            "description": "Relevant documentation snippets",
+            "items": {
+              "$ref": "#/components/schemas/InfoSnippet"
+            }
+          },
+          "rules": {
+            "type": "object",
+            "description": "Optional library-specific rules"
+          }
+        },
+        "required": ["codeSnippets", "infoSnippets"]
+      },
       "Error": {
         "type": "object",
+        "description": "Standard error response",
         "properties": {
           "error": {
             "type": "string",
@@ -707,7 +459,7 @@
         },
         "required": ["error"]
       },
-      "ValidationError": {
+      "RedirectErrorResponse": {
         "allOf": [
           {
             "$ref": "#/components/schemas/Error"
@@ -715,342 +467,36 @@
           {
             "type": "object",
             "properties": {
-              "maxLimit": {
-                "type": "integer",
-                "description": "Maximum allowed limit value (only present for limit exceeded errors)"
-              },
               "redirectUrl": {
                 "type": "string",
-                "description": "New location of the library (only present for redirect errors)"
+                "description": "New location of the library"
               }
             }
           }
         ]
       }
     },
-    "headers": {
-      "X-Context7-Page": {
-        "description": "Current page number (1-indexed). Only returned for text/plain responses (type=txt).",
-        "schema": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "example": 1
-      },
-      "X-Context7-Limit": {
-        "description": "Number of items per page. Only returned for text/plain responses (type=txt).",
-        "schema": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 10
-        },
-        "example": 10
-      },
-      "X-Context7-Total-Pages": {
-        "description": "Total number of pages available. Only returned for text/plain responses (type=txt).",
-        "schema": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "example": 10
-      },
-      "X-Context7-Has-Next": {
-        "description": "Whether a next page exists. Only returned for text/plain responses (type=txt).",
-        "schema": {
-          "type": "string",
-          "enum": ["true", "false"]
-        },
-        "example": "true"
-      },
-      "X-Context7-Has-Prev": {
-        "description": "Whether a previous page exists. Only returned for text/plain responses (type=txt).",
-        "schema": {
-          "type": "string",
-          "enum": ["true", "false"]
-        },
-        "example": "false"
-      },
-      "X-Context7-Total-Tokens": {
-        "description": "Total token count for the current page. Only returned for text/plain responses (type=txt).",
-        "schema": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "example": 1500
-      }
-    },
     "responses": {
-      "CodeSnippetsJsonResponse": {
-        "description": "Successful response with code snippets",
-        "content": {
-          "application/json": {
-            "schema": {
-              "type": "object",
-              "description": "Response containing code snippets",
-              "properties": {
-                "snippets": {
-                  "type": "array",
-                  "description": "Array of code snippets",
-                  "items": {
-                    "$ref": "#/components/schemas/CodeSnippet"
-                  }
-                },
-                "totalTokens": {
-                  "type": "integer",
-                  "description": "Total token count for all returned snippets"
-                },
-                "pagination": {
-                  "$ref": "#/components/schemas/Pagination"
-                },
-                "metadata": {
-                  "$ref": "#/components/schemas/APIResponseMetadata"
-                }
-              },
-              "required": ["snippets", "totalTokens", "pagination", "metadata"]
-            },
-            "example": {
-              "snippets": [
-                {
-                  "codeTitle": "Create and Run Next.js App with create-next-app (Quick Start)",
-                  "codeDescription": "Quickly set up and start a new Next.js application using `create-next-app` with various package managers. This command creates a new project directory, installs dependencies, and starts the development server. The `--yes` flag skips interactive prompts, enabling a default setup with TypeScript, Tailwind, ESLint, App Router, and Turbopack.",
-                  "codeLanguage": "bash",
-                  "codeTokens": 185,
-                  "codeId": "https://github.com/vercel/next.js/blob/canary/docs/01-app/01-getting-started/01-installation.mdx#_snippet_0",
-                  "pageTitle": "Installation",
-                  "codeList": [
-                    {
-                      "language": "bash",
-                      "code": "pnpm create next-app@latest my-app --yes\ncd my-app\npnpm dev"
-                    },
-                    {
-                      "language": "bash",
-                      "code": "npx create-next-app@latest my-app --yes\ncd my-app\nnpm run dev"
-                    },
-                    {
-                      "language": "bash",
-                      "code": "yarn create next-app@latest my-app --yes\ncd my-app\nyarn dev"
-                    },
-                    {
-                      "language": "bash",
-                      "code": "bun create next-app@latest my-app --yes\ncd my-app\nbun dev"
-                    }
-                  ]
-                }
-              ],
-              "totalTokens": 185,
-              "pagination": {
-                "page": 1,
-                "limit": 10,
-                "totalPages": 10,
-                "hasNext": true,
-                "hasPrev": false
-              },
-              "metadata": {
-                "authentication": "none"
-              }
-            }
-          },
-          "text/plain": {
-            "schema": {
-              "type": "string",
-              "description": "Plain text formatted documentation. Pagination metadata is returned via response headers."
-            },
-            "example": "### Create and Run Next.js App with create-next-app (Quick Start)\n\nSource: https://github.com/vercel/next.js/blob/canary/docs/01-app/01-getting-started/01-installation.mdx\n\nQuickly set up and start a new Next.js application using `create-next-app` with various package managers. This command creates a new project directory, installs dependencies, and starts the development server. The `--yes` flag skips interactive prompts, enabling a default setup with TypeScript, Tailwind, ESLint, App Router, and Turbopack.\n\n```bash\npnpm create next-app@latest my-app --yes\ncd my-app\npnpm dev\n```\n\n```bash\nnpx create-next-app@latest my-app --yes\ncd my-app\nnpm run dev\n```\n\n```bash\nyarn create next-app@latest my-app --yes\ncd my-app\nyarn dev\n```\n\n```bash\nbun create next-app@latest my-app --yes\ncd my-app\nbun dev\n```"
-          }
-        },
-        "headers": {
-          "X-Context7-Page": {
-            "$ref": "#/components/headers/X-Context7-Page"
-          },
-          "X-Context7-Limit": {
-            "$ref": "#/components/headers/X-Context7-Limit"
-          },
-          "X-Context7-Total-Pages": {
-            "$ref": "#/components/headers/X-Context7-Total-Pages"
-          },
-          "X-Context7-Has-Next": {
-            "$ref": "#/components/headers/X-Context7-Has-Next"
-          },
-          "X-Context7-Has-Prev": {
-            "$ref": "#/components/headers/X-Context7-Has-Prev"
-          },
-          "X-Context7-Total-Tokens": {
-            "$ref": "#/components/headers/X-Context7-Total-Tokens"
-          }
-        }
-      },
-      "InfoSnippetsJsonResponse": {
-        "description": "Successful response with info/documentation snippets",
-        "content": {
-          "application/json": {
-            "schema": {
-              "type": "object",
-              "description": "Response containing info/documentation snippets",
-              "properties": {
-                "snippets": {
-                  "type": "array",
-                  "description": "Array of info snippets",
-                  "items": {
-                    "$ref": "#/components/schemas/InfoSnippet"
-                  }
-                },
-                "totalTokens": {
-                  "type": "integer",
-                  "description": "Total token count for all returned snippets"
-                },
-                "pagination": {
-                  "$ref": "#/components/schemas/Pagination"
-                },
-                "metadata": {
-                  "$ref": "#/components/schemas/APIResponseMetadata"
-                }
-              },
-              "required": ["snippets", "totalTokens", "pagination", "metadata"]
-            },
-            "example": {
-              "snippets": [
-                {
-                  "pageId": "https://github.com/vercel/next.js/blob/canary/docs/04-community/01-contribution-guide.mdx",
-                  "breadcrumb": "How to Contribute > Writing MDX",
-                  "content": "The docs are written in [MDX](https://mdxjs.com/), a markdown format that supports JSX syntax. This allows us to embed React components in the docs. See the [GitHub Markdown Guide](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax) for a quick overview of markdown syntax.",
-                  "contentTokens": 84
-                }
-              ],
-              "totalTokens": 84,
-              "pagination": {
-                "page": 1,
-                "limit": 10,
-                "totalPages": 10,
-                "hasNext": true,
-                "hasPrev": false
-              },
-              "metadata": {
-                "authentication": "none"
-              }
-            }
-          },
-          "text/plain": {
-            "schema": {
-              "type": "string",
-              "description": "Plain text formatted documentation. Pagination metadata is returned via response headers."
-            },
-            "example": "### How to Contribute > Writing MDX\n\nSource: https://github.com/vercel/next.js/blob/canary/docs/04-community/01-contribution-guide.mdx\n\nThe docs are written in [MDX](https://mdxjs.com/), a markdown format that supports JSX syntax. This allows us to embed React components in the docs. See the [GitHub Markdown Guide](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax) for a quick overview of markdown syntax."
-          }
-        },
-        "headers": {
-          "X-Context7-Page": {
-            "$ref": "#/components/headers/X-Context7-Page"
-          },
-          "X-Context7-Limit": {
-            "$ref": "#/components/headers/X-Context7-Limit"
-          },
-          "X-Context7-Total-Pages": {
-            "$ref": "#/components/headers/X-Context7-Total-Pages"
-          },
-          "X-Context7-Has-Next": {
-            "$ref": "#/components/headers/X-Context7-Has-Next"
-          },
-          "X-Context7-Has-Prev": {
-            "$ref": "#/components/headers/X-Context7-Has-Prev"
-          },
-          "X-Context7-Total-Tokens": {
-            "$ref": "#/components/headers/X-Context7-Total-Tokens"
-          }
-        }
-      },
       "BadRequestError": {
         "description": "Bad Request - Invalid input parameters",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ValidationError"
-            },
-            "examples": {
-              "invalidInput": {
-                "summary": "Multiple source parameters provided",
-                "value": {
-                  "error": "invalid_input",
-                  "message": "Provide exactly one of: docsRepoUrl or llmstxtUrl",
-                  "status": 400
-                }
-              },
-              "invalidFormat": {
-                "summary": "Invalid library format (v2 endpoints)",
-                "value": {
-                  "error": "invalid_format",
-                  "message": "Invalid library format. Expected: owner/repo[/version]"
-                }
-              },
-              "invalidLength": {
-                "summary": "Invalid parameter length",
-                "value": {
-                  "error": "invalid_length",
-                  "message": "Invalid owner or repo name. Must be 1-500 characters."
-                }
-              },
-              "invalidType": {
-                "summary": "Invalid type parameter",
-                "value": {
-                  "error": "invalid_type",
-                  "message": "Invalid type parameter. Supported values: json, txt"
-                }
-              },
-              "invalidPage": {
-                "summary": "Invalid page number",
-                "value": {
-                  "error": "invalid_page",
-                  "message": "Invalid page number. Must be a positive integer."
-                }
-              },
-              "invalidLimit": {
-                "summary": "Limit exceeds maximum",
-                "value": {
-                  "error": "invalid_limit",
-                  "message": "Items per page exceeds maximum allowed (10)",
-                  "maxLimit": 10
-                }
-              },
-              "invalidLlmstxtUrl": {
-                "summary": "Invalid llms.txt URL",
-                "value": {
-                  "error": "invalid_llmstxt_url",
-                  "message": "llmstxtUrl must end with llms.txt, llms-full.txt, or llms-small.txt",
-                  "status": 400
-                }
-              }
-            }
-          }
-        }
-      },
-      "UnauthorizedError": {
-        "description": "Unauthorized - Invalid or missing API key, or access denied",
         "content": {
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/Error"
             },
             "examples": {
-              "invalidApiKey": {
-                "summary": "Invalid API key",
+              "validationError": {
+                "summary": "Validation error",
                 "value": {
-                  "error": "invalid_api_key",
-                  "message": "Invalid or expired API key",
-                  "status": 401
+                  "error": "validation_error",
+                  "message": "Library name is required"
                 }
               },
-              "accessDenied": {
-                "summary": "Access denied to library",
+              "invalidLibraryId": {
+                "summary": "Invalid library ID format",
                 "value": {
-                  "error": "access_denied",
-                  "message": "Access denied: Library /vercel/next.js is not included in your allowed libraries"
-                }
-              },
-              "authenticationFailed": {
-                "summary": "Authentication failed",
-                "value": {
-                  "error": "authentication_failed",
-                  "message": "Failed to authenticate API key",
-                  "status": 401
+                  "error": "invalid_library_id",
+                  "message": "Invalid library ID format. Expected: /owner/repo or /owner/repo/version"
                 }
               }
             }
@@ -1058,34 +504,21 @@
         }
       },
       "ForbiddenError": {
-        "description": "Forbidden - Insufficient permissions or blocked library",
+        "description": "Forbidden - Access denied",
         "content": {
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/Error"
             },
-            "examples": {
-              "insufficientPermissions": {
-                "summary": "Insufficient permissions",
-                "value": {
-                  "error": "insufficient_permissions",
-                  "message": "Insufficient permissions",
-                  "status": 403
-                }
-              },
-              "libraryBlocked": {
-                "summary": "Library has been blocked",
-                "value": {
-                  "error": "library_blocked",
-                  "message": "Library /owner/repo has been blocked by system."
-                }
-              }
+            "example": {
+              "error": "access_denied",
+              "message": "Access denied: Library /owner/repo is not included in your allowed libraries"
             }
           }
         }
       },
       "NotFoundError": {
-        "description": "Not Found - Library, project, or resource doesn't exist",
+        "description": "Not Found - Library or resource doesn't exist",
         "content": {
           "application/json": {
             "schema": {
@@ -1096,17 +529,52 @@
                 "summary": "Library not found",
                 "value": {
                   "error": "library_not_found",
-                  "message": "Library /owner/repo not found. You can add it at context7.com/add-library",
-                  "status": 404
+                  "message": "Library \"/owner/repo\" not found. Please check the library ID or your access permissions."
                 }
               },
               "tagNotFound": {
-                "summary": "Version/tag not found",
+                "summary": "Version tag not found",
                 "value": {
                   "error": "tag_not_found",
-                  "message": "Tag 'v1.0.0' not found for library /owner/repo"
+                  "message": "Tag \"v1.0.0\" not found for library \"/owner/repo\". Available tags: v2.0.0, v1.5.0"
+                }
+              },
+              "noSnippetsFound": {
+                "summary": "No snippets found",
+                "value": {
+                  "error": "no_snippets_found",
+                  "message": "Could not fetch documentation snippets from the library."
                 }
               }
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Internal Server Error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "internal_server_error",
+              "message": "An internal error occurred while processing your request.",
+              "status": 500
+            }
+          }
+        }
+      },
+      "ServiceUnavailableError": {
+        "description": "Service Unavailable - Search failed",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "search_failed",
+              "message": "Search failed: Service temporarily unavailable"
             }
           }
         }
@@ -1130,7 +598,7 @@
         "content": {
           "application/json": {
             "schema": {
-              "$ref": "#/components/schemas/ValidationError"
+              "$ref": "#/components/schemas/RedirectErrorResponse"
             },
             "example": {
               "error": "library_redirected",
@@ -1166,60 +634,56 @@
           }
         }
       },
-      "RateLimitError": {
-        "description": "Too Many Requests - Rate limit exceeded",
+      "UnauthorizedError": {
+        "description": "Unauthorized - Invalid or missing API key",
         "content": {
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/Error"
             },
             "example": {
-              "error": "Too many requests",
-              "status": 429
+              "error": "invalid_api_key",
+              "message": "Invalid API key. Please check your API key. API keys should start with 'ctx7sk' prefix."
             }
           }
         }
       },
-      "InternalServerError": {
-        "description": "Internal Server Error",
+      "RateLimitError": {
+        "description": "Too Many Requests - Rate limit exceeded",
+        "headers": {
+          "Retry-After": {
+            "description": "Seconds until rate limit resets",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          "RateLimit-Limit": {
+            "description": "Request limit",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          "RateLimit-Remaining": {
+            "description": "Remaining requests",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          "RateLimit-Reset": {
+            "description": "Unix timestamp when limit resets",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        },
         "content": {
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/Error"
             },
-            "examples": {
-              "generic": {
-                "summary": "Generic internal error",
-                "value": {
-                  "error": "internal_server_error",
-                  "message": "An internal error occurred while processing your request.",
-                  "status": 500
-                }
-              },
-              "serverConfiguration": {
-                "summary": "Server configuration error",
-                "value": {
-                  "error": "server_configuration",
-                  "message": "Server configuration error",
-                  "status": 500
-                }
-              },
-              "databaseError": {
-                "summary": "Database operation failed",
-                "value": {
-                  "error": "database_error",
-                  "message": "Failed to save private repository",
-                  "status": 500
-                }
-              },
-              "processingFailed": {
-                "summary": "Library processing failed",
-                "value": {
-                  "error": "processing_failed",
-                  "message": "Failed to process library",
-                  "status": 500
-                }
-              }
+            "example": {
+              "error": "Too Many Requests",
+              "message": "Rate limit exceeded. Please try again in 60 seconds."
             }
           }
         }
@@ -1228,12 +692,12 @@
   },
   "tags": [
     {
-      "name": "Retrieve Documentation",
-      "description": "Retrieve library documentation and code examples"
+      "name": "Search",
+      "description": "Search for libraries in the Context7 database"
     },
     {
-      "name": "Search Libraries",
-      "description": "Search for libraries in the Context7 database"
+      "name": "Context",
+      "description": "Retrieve documentation context for queries"
     }
   ]
 }

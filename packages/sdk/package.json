@@ -6,6 +6,7 @@
     "build": "tsup",
     "test": "vitest run",
     "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
     "dev": "tsup --watch",
     "clean": "rm -rf dist",
     "lint": "eslint .",

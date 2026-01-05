@@ -1,5 +1,5 @@
 {
-  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-10-17/server.schema.json",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.upstash/context7",
   "title": "Context7",
   "description": "Up-to-date code docs for any prompt",
@@ -7,6 +7,13 @@
     "url": "https://github.com/upstash/context7",
     "source": "github"
   },
+  "websiteUrl": "https://context7.com",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/upstash/context7/master/public/icon.png",
+      "mimeType": "image/png"
+    }
+  ],
   "version": "1.0.0",
   "packages": [
     {
@@ -18,11 +25,41 @@
       },
       "environmentVariables": [
         {
+          "name": "CONTEXT7_API_KEY",
           "description": "API key for authentication",
           "isRequired": false,
-          "format": "string",
-          "isSecret": true,
-          "name": "CONTEXT7_API_KEY"
+          "isSecret": true
+        }
+      ]
+    },
+    {
+      "registryType": "mcpb",
+      "identifier": "https://github.com/upstash/context7/blob/master/packages/mcp/mcpb/context7.mcpb",
+      "version": "1.0.1",
+      "fileSha256": "aea76f179ceb92d22c289147c9d8343fb558d6dec93b144c9794e99239bb8194",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "CONTEXT7_API_KEY",
+          "description": "API key for authentication",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": [
+        {
+          "name": "CONTEXT7_API_KEY",
+          "description": "API key for authentication",
+          "isRequired": false,
+          "isSecret": true
         }
       ]
     }
