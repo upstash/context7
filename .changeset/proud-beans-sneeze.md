@@ -2,7 +2,7 @@
 "@upstash/context7-tools-ai-sdk": minor
 ---
 
-BREAKING: Rename tools to match MCP naming conventions
+feat: Rename tools to match MCP naming conventions
 
 - Rename `resolveLibrary` to `resolveLibraryId` with new `query` parameter
 - Rename `getLibraryDocs` to `queryDocs` with new `query` parameter (replaces `topic`)
