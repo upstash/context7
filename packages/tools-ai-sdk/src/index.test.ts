@@ -3,12 +3,12 @@ import { generateText, stepCountIs, tool } from "ai";
 import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
 import { z } from "zod";
 import {
-  resolveLibrary,
-  getLibraryDocs,
+  resolveLibraryId,
+  queryDocs,
   Context7Agent,
   SYSTEM_PROMPT,
   AGENT_PROMPT,
-  RESOLVE_LIBRARY_DESCRIPTION,
+  RESOLVE_LIBRARY_ID_DESCRIPTION,
 } from "./index";
 
 const bedrock = createAmazonBedrock({
@@ -18,8 +18,8 @@ const bedrock = createAmazonBedrock({
 
 describe("@upstash/context7-tools-ai-sdk", () => {
   describe("Tool structure", () => {
-    test("resolveLibrary() should return a tool object with correct structure", () => {
-      const tool = resolveLibrary();
+    test("resolveLibraryId() should return a tool object with correct structure", () => {
+      const tool = resolveLibraryId();
 
       expect(tool).toBeDefined();
       expect(tool).toHaveProperty("execute");
@@ -28,8 +28,8 @@ describe("@upstash/context7-tools-ai-sdk", () => {
       expect(tool.description).toContain("library");
     });
 
-    test("getLibraryDocs() should return a tool object with correct structure", () => {
-      const tool = getLibraryDocs();
+    test("queryDocs() should return a tool object with correct structure", () => {
+      const tool = queryDocs();
 
       expect(tool).toBeDefined();
       expect(tool).toHaveProperty("execute");
@@ -39,11 +39,11 @@ describe("@upstash/context7-tools-ai-sdk", () => {
     });
 
     test("tools should accept custom config", () => {
-      const resolveTool = resolveLibrary({
+      const resolveTool = resolveLibraryId({
         apiKey: "ctx7sk-test-key",
       });
 
-      const docsTool = getLibraryDocs({
+      const docsTool = queryDocs({
         apiKey: "ctx7sk-test-key",
       });
 
@@ -53,37 +53,37 @@ describe("@upstash/context7-tools-ai-sdk", () => {
   });
 
   describe("Tool usage with generateText", () => {
-    test("resolveLibrary tool should be called when searching for a library", async () => {
+    test("resolveLibraryId tool should be called when searching for a library", async () => {
       const result = await generateText({
         model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
         tools: {
-          resolveLibrary: resolveLibrary(),
+          resolveLibraryId: resolveLibraryId(),
         },
-        toolChoice: { type: "tool", toolName: "resolveLibrary" },
+        toolChoice: { type: "tool", toolName: "resolveLibraryId" },
         stopWhen: stepCountIs(2),
         prompt: "Search for 'react' library",
       });
 
       expect(result.toolCalls.length).toBeGreaterThan(0);
-      expect(result.toolCalls[0].toolName).toBe("resolveLibrary");
+      expect(result.toolCalls[0].toolName).toBe("resolveLibraryId");
       expect(result.toolResults.length).toBeGreaterThan(0);
       const toolResult = result.toolResults[0] as unknown as { output: { success: boolean } };
       expect(toolResult.output.success).toBe(true);
     }, 30000);
 
-    test("getLibraryDocs tool should fetch documentation", async () => {
+    test("queryDocs tool should fetch documentation", async () => {
       const result = await generateText({
         model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
         tools: {
-          getLibraryDocs: getLibraryDocs(),
+          queryDocs: queryDocs(),
         },
-        toolChoice: { type: "tool", toolName: "getLibraryDocs" },
+        toolChoice: { type: "tool", toolName: "queryDocs" },
         stopWhen: stepCountIs(2),
-        prompt: "Fetch documentation for library ID '/facebook/react' with topic 'hooks'",
+        prompt: "Fetch documentation for library ID '/facebook/react' about hooks",
       });
 
       expect(result.toolCalls.length).toBeGreaterThan(0);
-      expect(result.toolCalls[0].toolName).toBe("getLibraryDocs");
+      expect(result.toolCalls[0].toolName).toBe("queryDocs");
       expect(result.toolResults.length).toBeGreaterThan(0);
       const toolResult = result.toolResults[0] as unknown as { output: { success: boolean } };
       expect(toolResult.output.success).toBe(true);
@@ -93,18 +93,18 @@ describe("@upstash/context7-tools-ai-sdk", () => {
       const result = await generateText({
         model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
         tools: {
-          resolveLibrary: resolveLibrary(),
-          getLibraryDocs: getLibraryDocs(),
+          resolveLibraryId: resolveLibraryId(),
+          queryDocs: queryDocs(),
         },
         stopWhen: stepCountIs(5),
         prompt:
-          "First use resolveLibrary to find the Next.js library, then use getLibraryDocs to get documentation about routing",
+          "First use resolveLibraryId to find the Next.js library, then use queryDocs to get documentation about routing",
       });
 
       const allToolCalls = result.steps.flatMap((step) => step.toolCalls);
       const toolNames = allToolCalls.map((call) => call.toolName);
-      expect(toolNames).toContain("resolveLibrary");
-      expect(toolNames).toContain("getLibraryDocs");
+      expect(toolNames).toContain("resolveLibraryId");
+      expect(toolNames).toContain("queryDocs");
     }, 60000);
   });
 
@@ -180,7 +180,7 @@ describe("@upstash/context7-tools-ai-sdk", () => {
 
       const allToolCalls = result.steps.flatMap((step) => step.toolCalls);
       const toolNames = allToolCalls.map((call) => call.toolName);
-      expect(toolNames).toContain("resolveLibrary");
+      expect(toolNames).toContain("resolveLibraryId");
     }, 60000);
 
     test("should include Context7 tools in generate result", async () => {
@@ -191,7 +191,7 @@ describe("@upstash/context7-tools-ai-sdk", () => {
 
       const result = await agent.generate({
         prompt:
-          "Use resolveLibrary to search for Next.js, then use getLibraryDocs to get routing documentation",
+          "Use resolveLibraryId to search for Next.js, then use queryDocs to get routing documentation",
       });
 
       expect(result).toBeDefined();
@@ -199,8 +199,8 @@ describe("@upstash/context7-tools-ai-sdk", () => {
       const allToolCalls = result.steps.flatMap((step) => step.toolCalls);
       const toolNames = allToolCalls.map((call) => call.toolName);
 
-      expect(toolNames).toContain("resolveLibrary");
-      expect(toolNames).toContain("getLibraryDocs");
+      expect(toolNames).toContain("resolveLibraryId");
+      expect(toolNames).toContain("queryDocs");
     }, 60000);
   });
 
@@ -217,10 +217,10 @@ describe("@upstash/context7-tools-ai-sdk", () => {
       expect(AGENT_PROMPT).toContain("Context7");
     });
 
-    test("should export RESOLVE_LIBRARY_DESCRIPTION", () => {
-      expect(RESOLVE_LIBRARY_DESCRIPTION).toBeDefined();
-      expect(typeof RESOLVE_LIBRARY_DESCRIPTION).toBe("string");
-      expect(RESOLVE_LIBRARY_DESCRIPTION).toContain("library");
+    test("should export RESOLVE_LIBRARY_ID_DESCRIPTION", () => {
+      expect(RESOLVE_LIBRARY_ID_DESCRIPTION).toBeDefined();
+      expect(typeof RESOLVE_LIBRARY_ID_DESCRIPTION).toBe("string");
+      expect(RESOLVE_LIBRARY_ID_DESCRIPTION).toContain("library");
     });
   });
 });

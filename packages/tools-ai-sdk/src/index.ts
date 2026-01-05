@@ -2,14 +2,14 @@
 export { Context7Agent, type Context7AgentConfig } from "@agents";
 
 // Tools
-export { resolveLibrary, getLibraryDocs, type Context7ToolsConfig } from "@tools";
+export { resolveLibraryId, queryDocs, type Context7ToolsConfig } from "@tools";
 
 // Prompts
 export {
   SYSTEM_PROMPT,
   AGENT_PROMPT,
-  RESOLVE_LIBRARY_DESCRIPTION,
-  GET_LIBRARY_DOCS_DESCRIPTION,
+  RESOLVE_LIBRARY_ID_DESCRIPTION,
+  QUERY_DOCS_DESCRIPTION,
 } from "@prompts";
 
 // Re-export useful types from SDK

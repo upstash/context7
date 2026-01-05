@@ -4,7 +4,7 @@ import {
   type ToolSet,
   stepCountIs,
 } from "ai";
-import { resolveLibrary, getLibraryDocs } from "@tools";
+import { resolveLibraryId, queryDocs } from "@tools";
 import { AGENT_PROMPT } from "@prompts";
 
 /**
@@ -52,8 +52,8 @@ export class Context7Agent extends Agent<ToolSet> {
       system: system || AGENT_PROMPT,
       tools: {
         ...tools,
-        resolveLibrary: resolveLibrary(context7Config),
-        getLibraryDocs: getLibraryDocs(context7Config),
+        resolveLibraryId: resolveLibraryId(context7Config),
+        queryDocs: queryDocs(context7Config),
       },
       stopWhen,
     });
