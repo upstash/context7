@@ -45,7 +45,6 @@ describe("@upstash/context7-tools-ai-sdk", () => {
 
       const docsTool = getLibraryDocs({
         apiKey: "ctx7sk-test-key",
-        defaultMaxResults: 5,
       });
 
       expect(resolveTool).toHaveProperty("execute");
@@ -142,7 +141,6 @@ describe("@upstash/context7-tools-ai-sdk", () => {
       const agent = new Context7Agent({
         model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
         apiKey: "ctx7sk-test-key",
-        defaultMaxResults: 5,
       });
 
       expect(agent).toBeDefined();
