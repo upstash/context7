@@ -2,9 +2,12 @@
 "@upstash/context7-tools-ai-sdk": minor
 ---
 
-fix(tools-ai-sdk): update to use new SDK API
+BREAKING: Rename tools to match MCP naming conventions
 
-- Update type re-exports to match new SDK types (Library, Documentation, GetContextOptions instead of SearchResult, SearchLibraryResponse, etc.)
-- Update resolveLibrary tool to use new searchLibrary(query, libraryName) API
-- Update getLibraryDocs tool to use new getContext() API instead of getDocs()
-- Remove deprecated defaultMaxResults option from Context7ToolsConfig and Context7AgentConfig
+- Rename `resolveLibrary` to `resolveLibraryId` with new `query` parameter
+- Rename `getLibraryDocs` to `queryDocs` with new `query` parameter (replaces `topic`)
+- Rename `RESOLVE_LIBRARY_DESCRIPTION` to `RESOLVE_LIBRARY_ID_DESCRIPTION`
+- Rename `GET_LIBRARY_DOCS_DESCRIPTION` to `QUERY_DOCS_DESCRIPTION`
+- Update type re-exports to match new SDK types (Library, Documentation, GetContextOptions)
+- Remove deprecated `defaultMaxResults` option from Context7ToolsConfig and Context7AgentConfig
+- Add rate limiting guidance to tool descriptions
