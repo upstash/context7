@@ -14,10 +14,8 @@ export {
 
 // Re-export useful types from SDK
 export type {
-  SearchResult,
-  SearchLibraryResponse,
-  CodeDocsResponse,
-  TextDocsResponse,
-  InfoDocsResponse,
-  Pagination,
+  Context7Config,
+  Library,
+  Documentation,
+  GetContextOptions,
 } from "@upstash/context7-sdk";

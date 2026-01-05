@@ -44,9 +44,9 @@ export function resolveLibrary(config: Context7ToolsConfig = {}) {
     execute: async ({ libraryName }: { libraryName: string }) => {
       try {
         const client = getClient();
-        const response = await client.searchLibrary(libraryName);
+        const results = await client.searchLibrary(libraryName, libraryName);
 
-        if (!response.results || response.results.length === 0) {
+        if (!results || results.length === 0) {
           return {
             success: false,
             error: "No libraries found matching your query.",
@@ -56,8 +56,8 @@ export function resolveLibrary(config: Context7ToolsConfig = {}) {
 
         return {
           success: true,
-          results: response.results,
-          totalResults: response.results.length,
+          results,
+          totalResults: results.length,
         };
       } catch (error) {
         return {

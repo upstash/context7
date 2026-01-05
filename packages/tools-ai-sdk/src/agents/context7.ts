@@ -15,12 +15,6 @@ export interface Context7AgentConfig extends AgentSettings<ToolSet> {
    * Context7 API key. If not provided, uses the CONTEXT7_API_KEY environment variable.
    */
   apiKey?: string;
-
-  /**
-   * Default maximum number of documentation results per request.
-   * @default 10
-   */
-  defaultMaxResults?: number;
 }
 
 /**
@@ -48,17 +42,9 @@ export interface Context7AgentConfig extends AgentSettings<ToolSet> {
  */
 export class Context7Agent extends Agent<ToolSet> {
   constructor(config: Context7AgentConfig) {
-    const {
-      model,
-      stopWhen = stepCountIs(5),
-      system,
-      apiKey,
-      defaultMaxResults,
-      tools,
-      ...agentSettings
-    } = config;
+    const { model, stopWhen = stepCountIs(5), system, apiKey, tools, ...agentSettings } = config;
 
-    const context7Config = { apiKey, defaultMaxResults };
+    const context7Config = { apiKey };
 
     super({
       ...agentSettings,
