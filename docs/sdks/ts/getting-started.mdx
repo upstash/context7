@@ -14,10 +14,8 @@ description: "Get started with the Context7 TypeScript SDK"
 Using `@upstash/context7-sdk` you can:
 
 - Search across available libraries
-- Retrieve code documentation with contextual examples
-- Fetch informational documentation and guides
-- Access library metadata and versioning information
-- Filter documentation by topic and pagination
+- Get documentation context for any library
+- Access library metadata including trust scores and versions
 
 You can find the Github Repository [here](https://github.com/upstash/context7/tree/master/packages/sdk).
 
@@ -88,26 +86,26 @@ import { Context7 } from "@upstash/context7-sdk";
 
 const client = new Context7();
 
-const searchResponse = await client.searchLibrary("react");
-console.log(`Found ${searchResponse.results.length} libraries`);
+// Search for libraries
+const libraries = await client.searchLibrary(
+  "I need to build a UI with components",
+  "react"
+);
+console.log(`Found ${libraries.length} libraries`);
+console.log(libraries[0].id); // "/facebook/react"
 
-// Get code documentation (JSON is the default format)
-const codeDocs = await client.getDocs("/facebook/react", {
-  mode: "code",
-  limit: 5,
+// Get documentation context as plain text (default)
+const context = await client.getContext(
+  "How do I use hooks?",
+  "/facebook/react"
+);
+console.log(context);
+
+// Get documentation as JSON array
+const docs = await client.getContext("How do I use hooks?", "/facebook/react", {
+  type: "json",
 });
-
-console.log(`Retrieved ${codeDocs.snippets.length} code snippets`);
-console.log(`Total tokens: ${codeDocs.totalTokens}`);
-
-// Get info documentation as text
-const textDocs = await client.getDocs("/facebook/react", {
-  mode: "info",
-  format: "txt",
-  limit: 3,
-});
-
-console.log(textDocs.content);
+console.log(docs[0].title, docs[0].content);
 ```
 
 ## Error Handling
@@ -117,15 +115,10 @@ The SDK throws `Context7Error` for API errors:
 ```typescript
 import { Context7, Context7Error } from "@upstash/context7-sdk";
 
-const client = new Context7({
-  apiKey: process.env.CONTEXT7_API_KEY!,
-});
+const client = new Context7();
 
 try {
-  const docs = await client.getDocs("/invalid/library", {
-    mode: "code",
-    format: "txt",
-  });
+  const context = await client.getContext("query", "/invalid/library");
 } catch (error) {
   if (error instanceof Context7Error) {
     console.error("Context7 API Error:", error.message);
@@ -140,4 +133,4 @@ try {
 Explore the SDK commands:
 
 - [Search Library](/sdks/ts/commands/search-library) - Search for libraries
-- [Get Docs](/sdks/ts/commands/get-docs) - Retrieve library documentation
+- [Get Context](/sdks/ts/commands/get-context) - Retrieve library documentation context

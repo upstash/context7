@@ -1,0 +1,154 @@
+---
+title: "Get Context"
+description: "Retrieve documentation context for a library"
+---
+
+# Get Context
+
+Retrieve documentation context for a specific library. Returns documentation as plain text (default) or as a JSON array of documentation snippets.
+
+## Arguments
+
+<ParamField path="query" type="string" required>
+  The user's question or task (used for relevance ranking)
+</ParamField>
+
+<ParamField path="libraryId" type="string" required>
+  The library identifier (e.g., `/facebook/react`)
+</ParamField>
+
+<ParamField path="options" type="GetContextOptions">
+  <Expandable title="properties">
+    <ParamField path="type" type="'json' | 'txt'">
+      Format of the response
+      - `txt`: Plain text format (default)
+      - `json`: Array of Documentation objects
+
+      Default: `"txt"`
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Response
+
+The response type depends on the `type` option.
+
+### Text Format (`type: "txt"` or default)
+
+Returns a `string` containing the documentation context ready to use in LLM prompts.
+
+### JSON Format (`type: "json"`)
+
+Returns `Documentation[]` - an array of documentation objects.
+
+<ResponseField name="Documentation" type="object">
+  <Expandable title="properties">
+    <ResponseField name="title" type="string" required>
+      Title of the documentation snippet
+    </ResponseField>
+    <ResponseField name="content" type="string" required>
+      The documentation content (includes code blocks in markdown format)
+    </ResponseField>
+    <ResponseField name="source" type="string" required>
+      Source identifier for the snippet
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Examples
+
+<RequestExample>
+```typescript Text Format (Default)
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7();
+
+const context = await client.getContext(
+  "How do I use hooks?",
+  "/facebook/react"
+);
+
+console.log(context);
+```
+
+```typescript JSON Format
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7();
+
+const docs = await client.getContext(
+  "How do I use hooks?",
+  "/facebook/react",
+  { type: "json" }
+);
+
+docs.forEach((doc) => {
+  console.log(doc.title);
+  console.log(doc.content);
+  console.log(doc.source);
+});
+```
+
+```typescript Error Handling
+import { Context7, Context7Error } from "@upstash/context7-sdk";
+
+const client = new Context7();
+
+try {
+  const context = await client.getContext(
+    "How to get started?",
+    "/invalid/library"
+  );
+} catch (error) {
+  if (error instanceof Context7Error) {
+    console.error("API Error:", error.message);
+  } else {
+    throw error;
+  }
+}
+```
+</RequestExample>
+
+## Use Cases
+
+### Providing Context to LLMs
+
+```typescript
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7();
+
+async function getDocsForPrompt(library: string, question: string) {
+  const context = await client.getContext(question, library);
+
+  return `
+Here is the relevant documentation:
+
+${context}
+
+User question: ${question}
+`;
+}
+
+const prompt = await getDocsForPrompt("/facebook/react", "How do I use useEffect?");
+```
+
+### Processing Individual Snippets
+
+```typescript
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7();
+
+const docs = await client.getContext(
+  "How to create components?",
+  "/facebook/react",
+  { type: "json" }
+);
+
+docs.forEach((doc) => {
+  console.log(`Title: ${doc.title}`);
+  console.log(`Source: ${doc.source}`);
+  console.log(`Content length: ${doc.content.length} chars`);
+});
+```
