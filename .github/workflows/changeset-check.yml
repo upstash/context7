@@ -34,8 +34,20 @@ jobs:
               { encoding: 'utf-8' }
             );
 
-            const hasChangeset = diff
-              .split('\n')
+            const changedFiles = diff.split('\n').filter(f => f.length > 0);
+
+            // Skip changeset check if only Python files are changed
+            const onlyPythonChanges = changedFiles.every(file =>
+              file.startsWith('packages/python/') ||
+              file === '.github/workflows/python-ci.yml'
+            );
+
+            if (onlyPythonChanges && changedFiles.length > 0) {
+              console.log('Skipping changeset check - only Python package changes detected');
+              return;
+            }
+
+            const hasChangeset = changedFiles
               .some(file => file.startsWith('.changeset/') && file.endsWith('.md') && !file.includes('README'));
 
             if (!hasChangeset) {

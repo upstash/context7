@@ -4,17 +4,17 @@ on:
   push:
     branches: [main, master]
     paths:
-      - "packages/py/**"
+      - "packages/python/**"
       - ".github/workflows/python-ci.yml"
   pull_request:
     branches: [main, master]
     paths:
-      - "packages/py/**"
+      - "packages/python/**"
       - ".github/workflows/python-ci.yml"
 
 defaults:
   run:
-    working-directory: packages/py
+    working-directory: packages/python
 
 jobs:
   test:
@@ -62,14 +62,14 @@ jobs:
         uses: astral-sh/setup-uv@v4
 
       - name: Build package
-        working-directory: packages/py/sdk
+        working-directory: packages/python/sdk
         run: uv build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: python-sdk-dist
-          path: packages/py/sdk/dist/
+          path: packages/python/sdk/dist/
 
   publish:
     runs-on: ubuntu-latest
@@ -87,10 +87,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: python-sdk-dist
-          path: packages/py/sdk/dist/
+          path: packages/python/sdk/dist/
 
       - name: Publish to PyPI
-        working-directory: packages/py/sdk
+        working-directory: packages/python/sdk
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
         run: uv publish
