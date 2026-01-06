@@ -27,24 +27,15 @@ Example:
 """
 
 from context7.client import Context7
-from context7.errors import Context7APIError, Context7Error, Context7ValidationError
-from context7.models import (
-    Documentation,
-    GetContextOptions,
-    Library,
-)
+from context7.errors import Context7APIError, Context7Error
+from context7.models import Documentation, Library
 
 __all__ = [
-    # Client
     "Context7",
-    # Errors
     "Context7Error",
     "Context7APIError",
-    "Context7ValidationError",
-    # Models
     "Library",
     "Documentation",
-    "GetContextOptions",
 ]
 
 __version__ = "0.1.0"

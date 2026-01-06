@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Literal
-
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -45,14 +43,6 @@ class Documentation(BaseModel):
     """Source URL or identifier for the snippet"""
 
 
-class GetContextOptions(BaseModel):
-    """Options for fetching documentation context."""
-
-    type: Literal["json", "txt"] = "txt"
-    """Response format. Defaults to "txt"."""
-
-
-# Internal API response types (for JSON format parsing)
 class ApiCodeSnippet(BaseModel):
     """Internal: A code snippet from the API response."""
 
