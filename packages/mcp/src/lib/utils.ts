@@ -67,3 +67,18 @@ export function formatSearchResults(searchResponse: SearchResponse): string {
   const formattedResults = searchResponse.results.map(formatSearchResult);
   return formattedResults.join("\n----------\n");
 }
+
+/**
+ * Extract client info from User-Agent header.
+ * Parses formats like "Cursor/2.2.44 (darwin arm64)" or "claude-code/2.0.71"
+ */
+export function extractClientInfoFromUserAgent(
+  userAgent: string | undefined
+): { ide?: string; version?: string } | undefined {
+  if (!userAgent) return undefined;
+  const match = userAgent.match(/^([^\/\s]+)\/([^\s(]+)/);
+  if (match) {
+    return { ide: match[1], version: match[2] };
+  }
+  return undefined;
+}

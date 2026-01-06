@@ -1,63 +1,41 @@
-import { SearchResponse } from "./types.js";
-import { generateHeaders } from "./encryption.js";
+import { SearchResponse, ContextRequest, ContextResponse } from "./types.js";
+import { ClientContext, generateHeaders } from "./encryption.js";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
-import { DocumentationMode, DOCUMENTATION_MODES } from "./types.js";
 
 const CONTEXT7_API_BASE_URL = "https://context7.com/api";
-const DEFAULT_TYPE = "txt";
 
 /**
- * Parses a Context7-compatible library ID into its components
- * @param libraryId The library ID (e.g., "/vercel/next.js" or "/vercel/next.js/v14.3.0")
- * @returns Object with username, library, and optional tag
- */
-function parseLibraryId(libraryId: string): {
-  username: string;
-  library: string;
-  tag?: string;
-} {
-  // Remove leading slash if present
-  const cleaned = libraryId.startsWith("/") ? libraryId.slice(1) : libraryId;
-  const parts = cleaned.split("/");
-
-  if (parts.length < 2) {
-    throw new Error(
-      `Invalid library ID format: ${libraryId}. Expected format: /username/library or /username/library/tag`
-    );
-  }
-
-  return {
-    username: parts[0],
-    library: parts[1],
-    tag: parts[2], // undefined if not present
-  };
-}
-
-/**
- * Generates appropriate error messages based on HTTP status codes
- * @param errorCode The HTTP error status code
- * @param apiKey Optional API key (used for rate limit message)
+ * Parses error response from the Context7 API
+ * Extracts the server's error message, falling back to status-based messages if parsing fails
+ * @param response The fetch Response object
+ * @param apiKey Optional API key (used for fallback messages)
  * @returns Error message string
  */
-function createErrorMessage(errorCode: number, apiKey?: string): string {
-  switch (errorCode) {
-    case 429:
-      return apiKey
-        ? "Rate limited due to too many requests. Please try again later."
-        : "Rate limited due to too many requests. You can create a free API key at https://context7.com/dashboard for higher rate limits.";
-    case 404:
-      return "The library you are trying to access does not exist. Please try with a different library ID.";
-    case 401:
-      if (!apiKey) {
-        return "Unauthorized. Please provide an API key.";
-      }
-      return `Unauthorized. Please check your API key. API keys should start with 'ctx7sk'`;
-    default:
-      return `Failed to fetch documentation. Please try again later. Error code: ${errorCode}`;
+async function parseErrorResponse(response: Response, apiKey?: string): Promise<string> {
+  try {
+    const json = (await response.json()) as { message?: string };
+    if (json.message) {
+      return json.message;
+    }
+  } catch {
+    // JSON parsing failed, fall through to default
   }
+
+  const status = response.status;
+  if (status === 429) {
+    return apiKey
+      ? "Rate limited or quota exceeded. Upgrade your plan at https://context7.com/plans for higher limits."
+      : "Rate limited or quota exceeded. Create a free API key at https://context7.com/dashboard for higher limits.";
+  }
+  if (status === 404) {
+    return "The library you are trying to access does not exist. Please try with a different library ID.";
+  }
+  if (status === 401) {
+    return "Invalid API key. Please check your API key. API keys should start with 'ctx7sk' prefix.";
+  }
+  return `Request failed with status ${status}. Please try again later.`;
 }
 
-// Pick up proxy configuration in a variety of common env var names.
 const PROXY_URL: string | null =
   process.env.HTTPS_PROXY ??
   process.env.https_proxy ??
@@ -67,13 +45,8 @@ const PROXY_URL: string | null =
 
 if (PROXY_URL && !PROXY_URL.startsWith("$") && /^(http|https):\/\//i.test(PROXY_URL)) {
   try {
-    // Configure a global proxy agent once at startup. Subsequent fetch calls will
-    // automatically use this dispatcher.
-    // Using `any` cast because ProxyAgent implements the Dispatcher interface but
-    // TS may not infer it correctly in some versions.
     setGlobalDispatcher(new ProxyAgent(PROXY_URL));
   } catch (error) {
-    // Don't crash the app if proxy initialisation fails – just log a warning.
     console.error(
       `[Context7] Failed to configure proxy agent for provided proxy URL: ${PROXY_URL}:`,
       error
@@ -83,97 +56,72 @@ if (PROXY_URL && !PROXY_URL.startsWith("$") && /^(http|https):\/\//i.test(PROXY_
 
 /**
  * Searches for libraries matching the given query
- * @param query The search query
- * @param clientIp Optional client IP address to include in headers
- * @param apiKey Optional API key for authentication
- * @returns Search results or null if the request fails
+ * @param query The user's question or task (used for LLM relevance ranking)
+ * @param libraryName The library name to search for in the database
+ * @param context Client context including IP, API key, and client info
+ * @returns Search results or error
  */
 export async function searchLibraries(
   query: string,
-  clientIp?: string,
-  apiKey?: string
+  libraryName: string,
+  context: ClientContext = {}
 ): Promise<SearchResponse> {
   try {
-    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/search`);
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/libs/search`);
     url.searchParams.set("query", query);
+    url.searchParams.set("libraryName", libraryName);
 
-    const headers = generateHeaders(clientIp, apiKey);
+    const headers = generateHeaders(context);
 
     const response = await fetch(url, { headers });
     if (!response.ok) {
-      const errorCode = response.status;
-      const errorMessage = createErrorMessage(errorCode, apiKey);
+      const errorMessage = await parseErrorResponse(response, context.apiKey);
       console.error(errorMessage);
-      return {
-        results: [],
-        error: errorMessage,
-      } as SearchResponse;
+      return { results: [], error: errorMessage };
     }
     const searchData = await response.json();
     return searchData as SearchResponse;
   } catch (error) {
     const errorMessage = `Error searching libraries: ${error}`;
     console.error(errorMessage);
-    return { results: [], error: errorMessage } as SearchResponse;
+    return { results: [], error: errorMessage };
   }
 }
 
 /**
- * Fetches documentation context for a specific library
- * @param libraryId The library ID to fetch documentation for
- * @param docMode Documentation mode (CODE for API references and code examples, INFO for conceptual guides)
- * @param options Optional request parameters (page, limit, topic)
- * @param clientIp Optional client IP address to include in headers
- * @param apiKey Optional API key for authentication
- * @returns The documentation text or null if the request fails
+ * Fetches intelligent, reranked context for a natural language query
+ * @param request The context request parameters (query, libraryId)
+ * @param context Client context including IP, API key, and client info
+ * @returns Context response with data
  */
-export async function fetchLibraryDocumentation(
-  libraryId: string,
-  docMode: DocumentationMode,
-  options: {
-    page?: number;
-    limit?: number;
-    topic?: string;
-  } = {},
-  clientIp?: string,
-  apiKey?: string
-): Promise<string | null> {
+export async function fetchLibraryContext(
+  request: ContextRequest,
+  context: ClientContext = {}
+): Promise<ContextResponse> {
   try {
-    const { username, library, tag } = parseLibraryId(libraryId);
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/context`);
+    url.searchParams.set("query", request.query);
+    url.searchParams.set("libraryId", request.libraryId);
 
-    // Build URL path
-    let urlPath = `${CONTEXT7_API_BASE_URL}/v2/docs/${docMode}/${username}/${library}`;
-    if (tag) {
-      urlPath += `/${tag}`;
-    }
-
-    const url = new URL(urlPath);
-    url.searchParams.set("type", DEFAULT_TYPE);
-    if (options.topic) url.searchParams.set("topic", options.topic);
-    if (options.page) url.searchParams.set("page", options.page.toString());
-    if (options.limit) url.searchParams.set("limit", options.limit.toString());
-
-    const headers = generateHeaders(clientIp, apiKey, { "X-Context7-Source": "mcp-server" });
+    const headers = generateHeaders(context);
 
     const response = await fetch(url, { headers });
     if (!response.ok) {
-      const errorCode = response.status;
-      const errorMessage = createErrorMessage(errorCode, apiKey);
+      const errorMessage = await parseErrorResponse(response, context.apiKey);
       console.error(errorMessage);
-      return errorMessage;
+      return { data: errorMessage };
     }
+
     const text = await response.text();
-    if (!text || text === "No content available" || text === "No context data available") {
-      const suggestion =
-        docMode === DOCUMENTATION_MODES.CODE
-          ? " Try mode='info' for guides and tutorials."
-          : " Try mode='code' for API references and code examples.";
-      return `No ${docMode} documentation available for this library.${suggestion}`;
+    if (!text) {
+      return {
+        data: "Documentation not found or not finalized for this library. This might have happened because you used an invalid Context7-compatible library ID. To get a valid Context7-compatible library ID, use the 'resolve-library-id' with the package name you wish to retrieve documentation for.",
+      };
     }
-    return text;
+    return { data: text };
   } catch (error) {
-    const errorMessage = `Error fetching library documentation. Please try again later. ${error}`;
+    const errorMessage = `Error fetching library context. Please try again later. ${error}`;
     console.error(errorMessage);
-    return errorMessage;
+    return { data: errorMessage };
   }
 }

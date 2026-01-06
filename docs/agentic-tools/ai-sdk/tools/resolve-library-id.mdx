@@ -1,15 +1,15 @@
 ---
-title: "resolveLibrary"
-sidebarTitle: "resolveLibrary"
+title: "resolveLibraryId"
+sidebarTitle: "resolveLibraryId"
 description: "Search for libraries and resolve them to Context7-compatible IDs"
 ---
 
-The `resolveLibrary` tool searches Context7's library database and returns matching results with their Context7-compatible library IDs. This is typically the first step in a documentation lookup workflow.
+The `resolveLibraryId` tool searches Context7's library database and returns matching results with their Context7-compatible library IDs. This is typically the first step in a documentation lookup workflow.
 
 ## Usage
 
 ```typescript
-import { resolveLibrary } from "@upstash/context7-tools-ai-sdk";
+import { resolveLibraryId } from "@upstash/context7-tools-ai-sdk";
 import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
@@ -17,7 +17,7 @@ const { text } = await generateText({
   model: openai("gpt-4o"),
   prompt: "Find documentation for React hooks",
   tools: {
-    resolveLibrary: resolveLibrary(),
+    resolveLibraryId: resolveLibraryId(),
   },
   stopWhen: stepCountIs(3),
 });
@@ -26,7 +26,7 @@ const { text } = await generateText({
 ## Configuration
 
 ```typescript
-resolveLibrary(config?: Context7ToolsConfig)
+resolveLibraryId(config?: Context7ToolsConfig)
 ```
 
 ### Parameters
@@ -49,7 +49,7 @@ Returns an AI SDK `tool` that can be used with `generateText`, `streamText`, or 
 
 When the AI model calls this tool, it:
 
-1. Takes a `libraryName` parameter from the model
+1. Takes a `query` and `libraryName` parameter from the model
 2. Searches Context7's database for matching libraries
 3. Returns formatted results including:
    - Library ID (e.g., `/reactjs/react.dev`)
@@ -61,6 +61,10 @@ When the AI model calls this tool, it:
 ### Input Schema
 
 The tool accepts the following input from the AI model:
+
+<ParamField path="query" type="string" required>
+  The user's original question or task. This is used to rank library results by relevance to what the user is trying to accomplish.
+</ParamField>
 
 <ParamField path="libraryName" type="string" required>
   Library name to search for (e.g., "react", "next.js", "vue")
@@ -104,7 +108,7 @@ On failure:
 ### Basic Usage
 
 ```typescript
-import { resolveLibrary, getLibraryDocs } from "@upstash/context7-tools-ai-sdk";
+import { resolveLibraryId, queryDocs } from "@upstash/context7-tools-ai-sdk";
 import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
@@ -112,22 +116,22 @@ const { text, toolCalls } = await generateText({
   model: openai("gpt-4o"),
   prompt: "What libraries are available for React?",
   tools: {
-    resolveLibrary: resolveLibrary(),
-    getLibraryDocs: getLibraryDocs(),
+    resolveLibraryId: resolveLibraryId(),
+    queryDocs: queryDocs(),
   },
   stopWhen: stepCountIs(5),
 });
 
-// The model will call resolveLibrary("react") and receive a list of matching libraries
+// The model will call resolveLibraryId and receive a list of matching libraries
 console.log(text);
 ```
 
 ### With Custom API Key
 
 ```typescript
-import { resolveLibrary } from "@upstash/context7-tools-ai-sdk";
+import { resolveLibraryId } from "@upstash/context7-tools-ai-sdk";
 
-const tool = resolveLibrary({
+const tool = resolveLibraryId({
   apiKey: process.env.CONTEXT7_API_KEY,
 });
 ```
@@ -135,7 +139,7 @@ const tool = resolveLibrary({
 ### Inspecting Tool Calls
 
 ```typescript
-import { resolveLibrary } from "@upstash/context7-tools-ai-sdk";
+import { resolveLibraryId } from "@upstash/context7-tools-ai-sdk";
 import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
@@ -143,7 +147,7 @@ const { toolCalls, toolResults } = await generateText({
   model: openai("gpt-4o"),
   prompt: "Find the official Next.js documentation",
   tools: {
-    resolveLibrary: resolveLibrary(),
+    resolveLibraryId: resolveLibraryId(),
   },
   stopWhen: stepCountIs(3),
 });
@@ -171,5 +175,5 @@ The tool's description instructs the AI model to select libraries based on:
 
 ## Related
 
-- [getLibraryDocs](/agentic-tools/ai-sdk/tools/get-library-docs) - Fetch documentation using the resolved library ID
+- [queryDocs](/agentic-tools/ai-sdk/tools/query-docs) - Fetch documentation using the resolved library ID
 - [Context7Agent](/agentic-tools/ai-sdk/agents/context7-agent) - Pre-built agent that handles the full workflow

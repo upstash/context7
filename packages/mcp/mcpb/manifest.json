@@ -2,7 +2,7 @@
   "dxt_version": "0.1",
   "name": "context7",
   "display_name": "Context7",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "description": "Up-to-date Code Docs For Any Prompt",
   "long_description": "Context7 MCP pulls up-to-date, version-specific documentation and code examples straight from the source — and places them directly into your prompt.",
   "author": {
@@ -25,11 +25,11 @@
   "tools": [
     {
       "name": "Resolve Context7 Library ID",
-      "description": "Resolves a package/product name to a Context7-compatible library ID and returns a list of matching libraries."
+      "description": "Resolves a package/product name to a Context7-compatible library ID and returns matching libraries."
     },
     {
-      "name": "Get Library Docs",
-      "description": "Fetches up-to-date documentation for a library."
+      "name": "Query Documentation",
+      "description": "Retrieves and queries up-to-date documentation and code examples from Context7."
     }
   ],
   "compatibility": {

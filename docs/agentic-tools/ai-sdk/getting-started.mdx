@@ -10,7 +10,7 @@ When building AI-powered applications with the Vercel AI SDK, your models often 
 
 The package gives you two ways to integrate:
 
-1. **Individual tools** (`resolveLibrary` and `getLibraryDocs`) that you add to your existing `generateText` or `streamText` calls
+1. **Individual tools** (`resolveLibraryId` and `queryDocs`) that you add to your existing `generateText` or `streamText` calls
 2. **A pre-built agent** (`Context7Agent`) that handles the entire documentation lookup workflow automatically
 
 Both approaches work with any AI provider supported by the Vercel AI SDK, including OpenAI, Anthropic, Google, and others.
@@ -60,7 +60,7 @@ The tools and agents will automatically use this key.
 The simplest way to add documentation lookup to your AI application:
 
 ```typescript
-import { resolveLibrary, getLibraryDocs } from "@upstash/context7-tools-ai-sdk";
+import { resolveLibraryId, queryDocs } from "@upstash/context7-tools-ai-sdk";
 import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
@@ -68,8 +68,8 @@ const { text } = await generateText({
   model: openai("gpt-4o"),
   prompt: "How do I create a server action in Next.js?",
   tools: {
-    resolveLibrary: resolveLibrary(),
-    getLibraryDocs: getLibraryDocs(),
+    resolveLibraryId: resolveLibraryId(),
+    queryDocs: queryDocs(),
   },
   stopWhen: stepCountIs(5),
 });
@@ -101,7 +101,7 @@ console.log(text);
 For streaming responses:
 
 ```typescript
-import { resolveLibrary, getLibraryDocs } from "@upstash/context7-tools-ai-sdk";
+import { resolveLibraryId, queryDocs } from "@upstash/context7-tools-ai-sdk";
 import { streamText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
@@ -109,8 +109,8 @@ const { textStream } = streamText({
   model: openai("gpt-4o"),
   prompt: "Explain how to use Tanstack Query for data fetching",
   tools: {
-    resolveLibrary: resolveLibrary(),
-    getLibraryDocs: getLibraryDocs(),
+    resolveLibraryId: resolveLibraryId(),
+    queryDocs: queryDocs(),
   },
   stopWhen: stepCountIs(5),
 });
@@ -125,11 +125,11 @@ for await (const chunk of textStream) {
 You can also pass the API key directly if needed:
 
 ```typescript
-import { resolveLibrary, getLibraryDocs } from "@upstash/context7-tools-ai-sdk";
+import { resolveLibraryId, queryDocs } from "@upstash/context7-tools-ai-sdk";
 
 const tools = {
-  resolveLibrary: resolveLibrary({ apiKey: "your-api-key" }),
-  getLibraryDocs: getLibraryDocs({ apiKey: "your-api-key" }),
+  resolveLibraryId: resolveLibraryId({ apiKey: "your-api-key" }),
+  queryDocs: queryDocs({ apiKey: "your-api-key" }),
 };
 ```
 
@@ -137,12 +137,9 @@ const tools = {
 
 The tools follow a two-step workflow:
 
-1. **`resolveLibrary`** - Searches Context7's database to find the correct library ID for a given query (e.g., "react" → `/reactjs/react.dev`)
+1. **`resolveLibraryId`** - Searches Context7's database to find the correct library ID for a given query (e.g., "react" → `/reactjs/react.dev`)
 
-2. **`getLibraryDocs`** - Fetches documentation for the resolved library with options for:
-   - **mode** - `"code"` for API references and examples, `"info"` for conceptual guides
-   - **topic** - Filter documentation by topic (e.g., "hooks", "routing")
-   - **page** - Pagination for comprehensive results
+2. **`queryDocs`** - Fetches documentation for the resolved library using the user's query to retrieve relevant content
 
 The AI model orchestrates these tools automatically based on the user's prompt, fetching relevant documentation before generating a response.
 
@@ -150,13 +147,13 @@ The AI model orchestrates these tools automatically based on the user's prompt, 
 
 <CardGroup cols={2}>
   <Card
-    title="resolveLibrary"
+    title="resolveLibraryId"
     icon="magnifying-glass"
-    href="/agentic-tools/ai-sdk/tools/resolve-library"
+    href="/agentic-tools/ai-sdk/tools/resolve-library-id"
   >
     Search for libraries and get Context7-compatible IDs
   </Card>
-  <Card title="getLibraryDocs" icon="book" href="/agentic-tools/ai-sdk/tools/get-library-docs">
+  <Card title="queryDocs" icon="book" href="/agentic-tools/ai-sdk/tools/query-docs">
     Fetch documentation for a specific library
   </Card>
   <Card title="Context7Agent" icon="robot" href="/agentic-tools/ai-sdk/agents/context7-agent">

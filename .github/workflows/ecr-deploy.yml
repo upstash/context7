@@ -34,7 +34,7 @@ jobs:
         id: build-push
         uses: docker/build-push-action@v6
         with:
-          context: packages/mcp
+          context: .
           file: packages/mcp/Dockerfile
           platforms: linux/amd64
           push: true

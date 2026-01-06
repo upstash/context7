@@ -1,14 +1,7 @@
-import type {
-  Context7Config,
-  SearchLibraryResponse,
-  GetDocsOptions,
-  CodeDocsResponse,
-  InfoDocsResponse,
-  TextDocsResponse,
-} from "@commands/types";
+import type { Context7Config, GetContextOptions, Library, Documentation } from "@commands/types";
 import { Context7Error } from "@error";
 import { HttpClient } from "@http";
-import { SearchLibraryCommand, GetDocsCommand } from "@commands/index";
+import { SearchLibraryCommand, GetContextCommand } from "@commands/index";
 
 const DEFAULT_BASE_URL = "https://context7.com/api";
 const API_KEY_PREFIX = "ctx7sk";
@@ -45,31 +38,48 @@ export class Context7 {
     });
   }
 
-  async searchLibrary(query: string): Promise<SearchLibraryResponse> {
-    const command = new SearchLibraryCommand(query);
+  /**
+   * Search for libraries matching the given query
+   * @param query The user's question or task (used for relevance ranking)
+   * @param libraryName The library name to search for
+   * @returns Array of matching libraries
+   */
+  async searchLibrary(query: string, libraryName: string): Promise<Library[]> {
+    const command = new SearchLibraryCommand(query, libraryName);
     return await command.exec(this.httpClient);
   }
 
-  async getDocs(
+  /**
+   * Get documentation context for a library as JSON (array of documentation snippets)
+   */
+  async getContext(
+    query: string,
     libraryId: string,
-    options: GetDocsOptions & { format: "txt" }
-  ): Promise<TextDocsResponse>;
+    options: GetContextOptions & { type: "json" }
+  ): Promise<Documentation[]>;
 
-  async getDocs(
+  /**
+   * Get documentation context for a library as plain text (default)
+   */
+  async getContext(
+    query: string,
     libraryId: string,
-    options: GetDocsOptions & { format?: "json"; mode: "info" }
-  ): Promise<InfoDocsResponse>;
+    options?: GetContextOptions & { type?: "txt" }
+  ): Promise<string>;
 
-  async getDocs(
+  /**
+   * Get documentation context for a library
+   * @param query The user's question or task
+   * @param libraryId Context7 library ID (e.g., "/facebook/react")
+   * @param options Response format options
+   * @returns Documentation as string (txt) or Documentation[] (json)
+   */
+  async getContext(
+    query: string,
     libraryId: string,
-    options?: GetDocsOptions & { format?: "json"; mode?: "code" }
-  ): Promise<CodeDocsResponse>;
-
-  async getDocs(
-    libraryId: string,
-    options?: GetDocsOptions
-  ): Promise<TextDocsResponse | CodeDocsResponse | InfoDocsResponse> {
-    const command = new GetDocsCommand(libraryId, options);
+    options?: GetContextOptions
+  ): Promise<Documentation[] | string> {
+    const command = new GetContextCommand(query, libraryId, options);
     return await command.exec(this.httpClient);
   }
 }

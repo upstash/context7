@@ -12,28 +12,56 @@ This guide helps you resolve common issues when setting up or using Context7 MCP
 - Add your API key to the configuration if you hit rate limits
 - Enable debug logs (`DEBUG=*`) before collecting support information
 
-## Installation Issues
+<Tip>
+  **Skip Node.js issues entirely**: Use the remote server connection instead of local npx. Most MCP clients support connecting to `https://mcp.context7.com/mcp` directly, which requires no local Node.js installation. See [All MCP Clients](/resources/all-clients) for configuration examples.
+</Tip>
 
-### Module Not Found Errors
+## Common Fixes
 
-If you encounter `ERR_MODULE_NOT_FOUND`, try using `bunx` instead of `npx`:
+### Use Latest Version
+
+Add `@latest` to ensure you're using the most recent version:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest", "--api-key", "YOUR_API_KEY"]
+    }
+  }
+}
+```
+
+### Module Not Found / Use Alternative Runtimes
+
+If you encounter `ERR_MODULE_NOT_FOUND`, try `bunx` or `deno` instead of `npx`:
 
 ```json
 {
   "mcpServers": {
     "context7": {
       "command": "bunx",
-      "args": ["-y", "@upstash/context7-mcp"]
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
     }
   }
 }
 ```
 
-Use this when you see module resolution errors with npx.
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "deno",
+      "args": ["run", "--allow-env=NO_DEPRECATION,TRACE_DEPRECATION", "--allow-net", "npm:@upstash/context7-mcp"]
+    }
+  }
+}
+```
 
 ### ESM Resolution Issues
 
-For errors such as `Error: Cannot find module 'uriTemplate.js'`, try the `--experimental-vm-modules` flag:
+For `Error: Cannot find module 'uriTemplate.js'`, use the `--experimental-vm-modules` flag:
 
 ```json
 {
@@ -48,7 +76,7 @@ For errors such as `Error: Cannot find module 'uriTemplate.js'`, try the `--expe
 
 ### TLS/Certificate Issues
 
-Use the `--experimental-fetch` flag to bypass TLS-related problems:
+Use the `--experimental-fetch` flag:
 
 ```json
 {
@@ -61,59 +89,9 @@ Use the `--experimental-fetch` flag to bypass TLS-related problems:
 }
 ```
 
-## Quick Fixes
+### Node.js Version
 
-1. **Try adding `@latest`** to the package name to ensure you're using the most recent version:
-
-```json
-{
-  "mcpServers": {
-    "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp@latest", "--api-key", "YOUR_API_KEY"]
-    }
-  }
-}
-```
-
-2. **Use `bunx` as an alternative** to `npx`:
-
-```json
-{
-  "mcpServers": {
-    "context7": {
-      "command": "bunx",
-      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
-    }
-  }
-}
-```
-
-3. **Consider using `deno`** as another alternative runtime:
-
-```json
-{
-  "mcpServers": {
-    "context7": {
-      "command": "deno",
-      "args": [
-        "run",
-        "--allow-env=NO_DEPRECATION,TRACE_DEPRECATION",
-        "--allow-net",
-        "npm:@upstash/context7-mcp"
-      ]
-    }
-  }
-}
-```
-
-4. **Ensure you're using Node.js v18 or higher** for native fetch support:
-
-```bash
-node --version
-```
-
-If you're on an older version, upgrade Node.js to v18 or later.
+Ensure you're using Node.js v18 or higher (`node --version`).
 
 ## Platform-Specific Issues
 
@@ -256,18 +234,50 @@ If you get `404 Not Found` errors:
 - Check logs with `claude mcp logs context7`
 - Try removing and re-adding the server
 
-## Proxy Issues
+## Configure HTTPS Proxy
 
-If you're behind a corporate proxy:
+If you're behind a corporate proxy, configure Context7 to route through it.
 
-1. **Set environment variables** before starting your MCP client:
+### Set Environment Variables
 
-```bash
-export https_proxy=http://proxy.example.com:8080
-export HTTPS_PROXY=http://proxy.example.com:8080
-```
+<AccordionGroup>
+  <Accordion title="Linux/macOS" icon="terminal">
+    ```bash
+    export https_proxy=http://proxy.example.com:8080
+    export HTTPS_PROXY=http://proxy.example.com:8080
+    ```
 
-2. **Or add to your MCP configuration**:
+    With authentication:
+    ```bash
+    export https_proxy=http://username:password@proxy.example.com:8080
+    ```
+
+  </Accordion>
+
+  <Accordion title="Windows (Command Prompt)" icon="windows">
+    ```cmd
+    set https_proxy=http://proxy.example.com:8080
+    set HTTPS_PROXY=http://proxy.example.com:8080
+    ```
+
+    With authentication:
+    ```cmd
+    set https_proxy=http://username:password@proxy.example.com:8080
+    ```
+
+  </Accordion>
+
+  <Accordion title="Windows (PowerShell)" icon="windows">
+    ```powershell
+    $env:https_proxy = "http://proxy.example.com:8080"
+    $env:HTTPS_PROXY = "http://proxy.example.com:8080"
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Or Configure in MCP Settings
+
+Add proxy directly to your MCP configuration:
 
 ```json
 {
@@ -284,7 +294,12 @@ export HTTPS_PROXY=http://proxy.example.com:8080
 }
 ```
 
-See [Usage Guide - Configure HTTPS Proxy](/usage#configure-https-proxy) for more details.
+Both lowercase and uppercase environment variables are supported.
+
+<Tip>
+  After updating proxy settings, run `curl https://mcp.context7.com/mcp/ping` to confirm outbound
+  connectivity before restarting your IDE.
+</Tip>
 
 ## Debugging Tips
 
@@ -342,6 +357,6 @@ If these solutions don't resolve your issue:
 ## Additional Resources
 
 - [Getting Started Guide](/overview)
-- [Installation Instructions](/installation)
+- [Installation Instructions](https://github.com/upstash/context7#installation)
 - [API Documentation](/api)
-- [Security & Privacy](/security)
+- [Security & Privacy](/resources/security)

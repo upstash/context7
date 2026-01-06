@@ -1,7 +1,6 @@
 import { describe, test, expect } from "vitest";
 import { Context7 } from "./client";
 import { Context7Error } from "@error";
-import type { CodeDocsResponse, InfoDocsResponse } from "@commands/types";
 
 describe("Context7 Client", () => {
   const apiKey = process.env.CONTEXT7_API_KEY || process.env.API_KEY!;
@@ -42,276 +41,106 @@ describe("Context7 Client", () => {
   describe("searchLibrary", () => {
     const client = new Context7({ apiKey });
 
-    test("should search for libraries", async () => {
-      const result = await client.searchLibrary("react");
+    test("should search for libraries and return array directly", async () => {
+      const result = await client.searchLibrary("I need to build a UI", "react");
 
       expect(result).toBeDefined();
-      expect(result.results).toBeDefined();
-      expect(Array.isArray(result.results)).toBe(true);
-      expect(result.results.length).toBeGreaterThan(0);
-      expect(result.metadata).toBeDefined();
-      expect(result.metadata.authentication).toBeDefined();
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBeGreaterThan(0);
     });
 
-    test("should return results with correct structure", async () => {
-      const result = await client.searchLibrary("typescript");
+    test("should return Library objects with all fields", async () => {
+      const result = await client.searchLibrary("I want to use TypeScript", "typescript");
 
-      expect(result.results.length).toBeGreaterThan(0);
-      const firstResult = result.results[0];
+      expect(result.length).toBeGreaterThan(0);
+      const library = result[0];
 
-      expect(firstResult).toHaveProperty("id");
-      expect(firstResult).toHaveProperty("title");
-      expect(firstResult).toHaveProperty("description");
-      expect(firstResult).toHaveProperty("branch");
-      expect(firstResult).toHaveProperty("lastUpdateDate");
-      expect(firstResult).toHaveProperty("state");
-      expect(firstResult).toHaveProperty("totalTokens");
-      expect(firstResult).toHaveProperty("totalSnippets");
+      expect(library).toHaveProperty("id");
+      expect(library).toHaveProperty("name");
+      expect(library).toHaveProperty("description");
+      expect(library).toHaveProperty("totalSnippets");
+      expect(library).toHaveProperty("trustScore");
+      expect(library).toHaveProperty("benchmarkScore");
     });
 
     test("should search with different queries", async () => {
       const queries = ["vue", "express", "next"];
 
       for (const query of queries) {
-        const result = await client.searchLibrary(query);
-        expect(result.results.length).toBeGreaterThan(0);
+        const result = await client.searchLibrary(`I want to use ${query}`, query);
+        expect(result.length).toBeGreaterThan(0);
       }
     });
   });
 
-  describe("getDocs - text format", () => {
+  describe("getContext - text format", () => {
     const client = new Context7({ apiKey });
 
-    test("should get code docs as text with pagination and totalTokens", async () => {
-      const result = await client.getDocs("/facebook/react", {
-        mode: "code",
-        format: "txt",
-        limit: 5,
+    test("should get context as text string (default)", async () => {
+      const result = await client.getContext("How to use hooks", "/facebook/react");
+
+      expect(result).toBeDefined();
+      expect(typeof result).toBe("string");
+      expect(result.length).toBeGreaterThan(0);
+    });
+
+    test("should get context with explicit txt type", async () => {
+      const result = await client.getContext("How to use hooks", "/facebook/react", {
+        type: "txt",
       });
 
       expect(result).toBeDefined();
-      expect(result).toHaveProperty("content");
-      expect(result).toHaveProperty("pagination");
-      expect(result).toHaveProperty("totalTokens");
-      expect(typeof result.content).toBe("string");
-      expect(result.content.length).toBeGreaterThan(0);
-      expect(typeof result.totalTokens).toBe("number");
-    });
-
-    test("should get info docs as text with pagination and totalTokens", async () => {
-      const result = await client.getDocs("/facebook/react", {
-        mode: "info",
-        format: "txt",
-        limit: 5,
-      });
-
-      expect(result).toBeDefined();
-      expect(result).toHaveProperty("content");
-      expect(result).toHaveProperty("pagination");
-      expect(result).toHaveProperty("totalTokens");
-      expect(typeof result.content).toBe("string");
-      expect(result.content.length).toBeGreaterThan(0);
-      expect(typeof result.totalTokens).toBe("number");
-    });
-
-    test("should get docs with default format (json)", async () => {
-      const result = await client.getDocs("/facebook/react", {
-        mode: "code",
-        limit: 5,
-      });
-
-      expect(result).toBeDefined();
-      expect(typeof result).toBe("object");
-      expect(result).toHaveProperty("snippets");
-    });
-
-    test("should get docs with pagination metadata", async () => {
-      const page1 = await client.getDocs("/facebook/react", {
-        mode: "code",
-        format: "txt",
-        page: 1,
-        limit: 3,
-      });
-
-      const page2 = await client.getDocs("/facebook/react", {
-        mode: "code",
-        format: "txt",
-        page: 2,
-        limit: 3,
-      });
-
-      expect(page1).toBeDefined();
-      expect(page2).toBeDefined();
-      expect(page1).toHaveProperty("content");
-      expect(page1).toHaveProperty("pagination");
-      expect(page2).toHaveProperty("content");
-      expect(page2).toHaveProperty("pagination");
-      expect(page1.pagination.page).toBe(1);
-      expect(page2.pagination.page).toBe(2);
-    });
-
-    test("should get docs with topic filter", async () => {
-      const result = await client.getDocs("/facebook/react", {
-        mode: "code",
-        format: "txt",
-        topic: "hooks",
-        limit: 5,
-      });
-
-      expect(result).toBeDefined();
-      expect(result).toHaveProperty("content");
-      expect(result).toHaveProperty("pagination");
-      expect(result).toHaveProperty("totalTokens");
+      expect(typeof result).toBe("string");
+      expect(result.length).toBeGreaterThan(0);
     });
   });
 
-  describe("getDocs - JSON format", () => {
+  describe("getContext - JSON format", () => {
     const client = new Context7({ apiKey });
 
-    test("should get code docs as JSON", async () => {
-      const result = await client.getDocs("/facebook/react", {
-        mode: "code",
-        format: "json",
-        limit: 3,
+    test("should get context as Documentation array", async () => {
+      const result = await client.getContext("How to use hooks", "/facebook/react", {
+        type: "json",
       });
 
       expect(result).toBeDefined();
-      expect(typeof result).toBe("object");
-
-      const codeResult = result as CodeDocsResponse;
-      expect(codeResult.snippets).toBeDefined();
-      expect(Array.isArray(codeResult.snippets)).toBe(true);
-      expect(codeResult.snippets.length).toBeGreaterThan(0);
-      expect(codeResult.totalTokens).toBeDefined();
-      expect(typeof codeResult.totalTokens).toBe("number");
-      expect(codeResult.pagination).toBeDefined();
+      expect(Array.isArray(result)).toBe(true);
+      expect(result.length).toBeGreaterThan(0);
     });
 
-    test("should get info docs as JSON", async () => {
-      const result = await client.getDocs("/facebook/react", {
-        mode: "info",
-        format: "json",
-        limit: 3,
+    test("should have correct Documentation structure", async () => {
+      const result = await client.getContext("How to use hooks", "/facebook/react", {
+        type: "json",
       });
 
-      expect(result).toBeDefined();
-      expect(typeof result).toBe("object");
-
-      const infoResult = result as InfoDocsResponse;
-      expect(infoResult.snippets).toBeDefined();
-      expect(Array.isArray(infoResult.snippets)).toBe(true);
-      expect(infoResult.snippets.length).toBeGreaterThan(0);
-      expect(infoResult.totalTokens).toBeDefined();
-      expect(typeof infoResult.totalTokens).toBe("number");
-      expect(infoResult.pagination).toBeDefined();
-    });
-
-    test("should have correct code snippet structure", async () => {
-      const result = (await client.getDocs("/facebook/react", {
-        mode: "code",
-        format: "json",
-        limit: 1,
-      })) as CodeDocsResponse;
-
-      const snippet = result.snippets[0];
-      expect(snippet).toHaveProperty("codeTitle");
-      expect(snippet).toHaveProperty("codeDescription");
-      expect(snippet).toHaveProperty("codeLanguage");
-      expect(snippet).toHaveProperty("codeTokens");
-      expect(snippet).toHaveProperty("codeId");
-      expect(snippet).toHaveProperty("pageTitle");
-      expect(snippet).toHaveProperty("codeList");
-      expect(Array.isArray(snippet.codeList)).toBe(true);
-    });
-
-    test("should have correct info snippet structure", async () => {
-      const result = (await client.getDocs("/facebook/react", {
-        mode: "info",
-        format: "json",
-        limit: 1,
-      })) as InfoDocsResponse;
-
-      const snippet = result.snippets[0];
-      expect(snippet).toHaveProperty("content");
-      expect(snippet).toHaveProperty("contentTokens");
-      expect(typeof snippet.content).toBe("string");
-      expect(typeof snippet.contentTokens).toBe("number");
-    });
-
-    test("should have correct pagination structure", async () => {
-      const result = (await client.getDocs("/facebook/react", {
-        mode: "code",
-        format: "json",
-        page: 1,
-        limit: 5,
-      })) as CodeDocsResponse;
-
-      expect(result.pagination).toBeDefined();
-      expect(result.pagination.page).toBe(1);
-      expect(result.pagination.limit).toBe(5);
-      expect(typeof result.pagination.totalPages).toBe("number");
-      expect(typeof result.pagination.hasNext).toBe("boolean");
-      expect(typeof result.pagination.hasPrev).toBe("boolean");
-    });
-
-    test("should respect limit parameter", async () => {
-      const limit = 2;
-      const result = (await client.getDocs("/facebook/react", {
-        mode: "code",
-        format: "json",
-        limit,
-      })) as CodeDocsResponse;
-
-      expect(result.snippets.length).toBeLessThanOrEqual(limit);
+      expect(result.length).toBeGreaterThan(0);
+      const doc = result[0];
+      expect(doc).toHaveProperty("title");
+      expect(doc).toHaveProperty("content");
+      expect(doc).toHaveProperty("source");
+      expect(typeof doc.title).toBe("string");
+      expect(typeof doc.content).toBe("string");
+      expect(typeof doc.source).toBe("string");
     });
   });
 
-  describe("getDocs - with version", () => {
+  describe("getContext - different libraries", () => {
     const client = new Context7({ apiKey });
 
-    test("should accept version parameter", async () => {
-      const result = await client.getDocs("/facebook/react", {
-        mode: "code",
-        format: "txt",
-        limit: 3,
-      });
+    test("should get context for Vue", async () => {
+      const result = await client.getContext("How to create components", "/vuejs/core");
 
       expect(result).toBeDefined();
-      expect(result).toHaveProperty("content");
-      expect(result).toHaveProperty("pagination");
-      expect(result).toHaveProperty("totalTokens");
-    });
-  });
-
-  describe("getDocs - different libraries", () => {
-    const client = new Context7({ apiKey });
-
-    test("should get docs for Vue", async () => {
-      const result = await client.getDocs("/vuejs/core", {
-        mode: "code",
-        format: "txt",
-        limit: 3,
-      });
-
-      expect(result).toBeDefined();
-      expect(result).toHaveProperty("content");
-      expect(result).toHaveProperty("pagination");
-      expect(result).toHaveProperty("totalTokens");
-      expect(result.content.length).toBeGreaterThan(0);
+      expect(typeof result).toBe("string");
+      expect(result.length).toBeGreaterThan(0);
     });
 
-    test("should get docs for Express", async () => {
-      const result = await client.getDocs("/expressjs/express", {
-        mode: "code",
-        format: "txt",
-        limit: 3,
-      });
+    test("should get context for Express", async () => {
+      const result = await client.getContext("How to create routes", "/expressjs/express");
 
       expect(result).toBeDefined();
-      expect(result).toHaveProperty("content");
-      expect(result).toHaveProperty("pagination");
-      expect(result).toHaveProperty("totalTokens");
-      expect(result.content.length).toBeGreaterThan(0);
+      expect(typeof result).toBe("string");
+      expect(result.length).toBeGreaterThan(0);
     });
   });
 
@@ -319,59 +148,32 @@ describe("Context7 Client", () => {
     const client = new Context7({ apiKey });
 
     test("should handle invalid library ID gracefully", async () => {
-      await expect(
-        client.getDocs("/nonexistent/library", {
-          mode: "code",
-          format: "txt",
-          limit: 1,
-        })
-      ).rejects.toThrow();
+      await expect(client.getContext("test query", "/nonexistent/library")).rejects.toThrow();
     });
 
     test("should handle invalid search query", async () => {
-      const result = await client.searchLibrary("");
-      expect(result).toBeDefined();
-      expect(result.results).toBeDefined();
-      expect(Array.isArray(result.results)).toBe(true);
+      await expect(client.searchLibrary("", "")).rejects.toThrow(Context7Error);
     });
   });
 
   describe("type inference", () => {
     const client = new Context7({ apiKey });
 
-    test("should infer TextDocsResponse type for txt format", async () => {
-      const result = await client.getDocs("/facebook/react", {
-        format: "txt",
-        limit: 1,
-      });
+    test("should infer string type for txt format", async () => {
+      const result = await client.getContext("How to use hooks", "/facebook/react");
 
-      expect(result).toHaveProperty("content");
-      expect(result).toHaveProperty("pagination");
-      expect(result).toHaveProperty("totalTokens");
-      expect(typeof result.content).toBe("string");
-      expect(typeof result.totalTokens).toBe("number");
+      expect(typeof result).toBe("string");
     });
 
-    test("should infer CodeDocsResponse for json format with code mode", async () => {
-      const result = await client.getDocs("/facebook/react", {
-        format: "json",
-        mode: "code",
-        limit: 1,
+    test("should infer Documentation[] for json format", async () => {
+      const result = await client.getContext("How to use hooks", "/facebook/react", {
+        type: "json",
       });
 
-      expect(result).toHaveProperty("snippets");
-      expect((result as CodeDocsResponse).snippets).toBeDefined();
-    });
-
-    test("should infer InfoDocsResponse for json format with info mode", async () => {
-      const result = await client.getDocs("/facebook/react", {
-        format: "json",
-        mode: "info",
-        limit: 1,
-      });
-
-      expect(result).toHaveProperty("snippets");
-      expect((result as InfoDocsResponse).snippets).toBeDefined();
+      expect(Array.isArray(result)).toBe(true);
+      expect(result[0]).toHaveProperty("title");
+      expect(result[0]).toHaveProperty("content");
+      expect(result[0]).toHaveProperty("source");
     });
   });
 });

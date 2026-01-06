@@ -41,9 +41,9 @@ sequenceDiagram
     participant Docs
 
     User->>Agent: "How do I use React Server Components?"
-    Agent->>Context7: resolveLibrary("react")
+    Agent->>Context7: resolveLibraryId("react")
     Context7-->>Agent: Library ID: /reactjs/react.dev
-    Agent->>Context7: getLibraryDocs("/reactjs/react.dev", topic: "server components")
+    Agent->>Context7: queryDocs("/reactjs/react.dev", query: "server components")
     Context7->>Docs: Fetch latest documentation
     Docs-->>Context7: Current docs with examples
     Context7-->>Agent: Documentation content
@@ -59,14 +59,14 @@ sequenceDiagram
     ```typescript
     import { generateText, stepCountIs } from "ai";
     import { openai } from "@ai-sdk/openai";
-    import { resolveLibrary, getLibraryDocs } from "@upstash/context7-tools-ai-sdk";
+    import { resolveLibraryId, queryDocs } from "@upstash/context7-tools-ai-sdk";
 
     const { text } = await generateText({
       model: openai("gpt-4o"),
       prompt: "How do I set up authentication in Next.js 15?",
       tools: {
-        resolveLibrary: resolveLibrary(),
-        getLibraryDocs: getLibraryDocs(),
+        resolveLibraryId: resolveLibraryId(),
+        queryDocs: queryDocs(),
       },
       stopWhen: stepCountIs(5),
     });
@@ -98,7 +98,7 @@ sequenceDiagram
     ```typescript
     import { generateText, stepCountIs } from "ai";
     import { anthropic } from "@ai-sdk/anthropic";
-    import { resolveLibrary, getLibraryDocs } from "@upstash/context7-tools-ai-sdk";
+    import { resolveLibraryId, queryDocs } from "@upstash/context7-tools-ai-sdk";
 
     const codeToReview = `
       const { data } = await supabase
@@ -116,8 +116,8 @@ sequenceDiagram
 
     Check against the latest Supabase documentation.`,
       tools: {
-        resolveLibrary: resolveLibrary(),
-        getLibraryDocs: getLibraryDocs(),
+        resolveLibraryId: resolveLibraryId(),
+        queryDocs: queryDocs(),
       },
       stopWhen: stepCountIs(5),
     });

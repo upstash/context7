@@ -4,7 +4,7 @@ sidebarTitle: "Context7Agent"
 description: "Pre-built AI agent for documentation lookup workflows"
 ---
 
-The `Context7Agent` class is a pre-configured AI agent that handles the complete documentation lookup workflow automatically. It combines both `resolveLibrary` and `getLibraryDocs` tools with an optimized system prompt.
+The `Context7Agent` class is a pre-configured AI agent that handles the complete documentation lookup workflow automatically. It combines both `resolveLibraryId` and `queryDocs` tools with an optimized system prompt.
 
 ## Usage
 
@@ -46,9 +46,6 @@ new Context7Agent(config?: Context7AgentConfig)
     <ParamField path="apiKey" type="string" optional>
       Context7 API key. If not provided, uses the `CONTEXT7_API_KEY` environment variable.
     </ParamField>
-    <ParamField path="defaultMaxResults" type="number" optional default="10">
-      Default maximum number of documentation results per request.
-    </ParamField>
     <ParamField path="system" type="string" optional>
       Custom system prompt. Overrides the default `AGENT_PROMPT`.
     </ParamField>
@@ -70,14 +67,14 @@ The agent follows a structured multi-step workflow:
 ```mermaid
 flowchart TD
     A[User Query] --> B[Extract Library Name]
-    B --> C[Call resolveLibrary]
+    B --> C[Call resolveLibraryId]
     C --> D{Results Found?}
     D -->|Yes| E[Select Best Match]
     D -->|No| F[Report No Results]
-    E --> G[Call getLibraryDocs]
+    E --> G[Call queryDocs]
     G --> H{Sufficient Context?}
     H -->|Yes| I[Generate Response]
-    H -->|No| J[Fetch More Pages]
+    H -->|No| J[Fetch More Docs]
     J --> H
     I --> K[Return Answer with Examples]
 ```
@@ -85,10 +82,10 @@ flowchart TD
 ### Step-by-Step
 
 1. **Extract library name** - Identifies the library/framework from the user's query
-2. **Resolve library** - Calls `resolveLibrary` to find the Context7 library ID
+2. **Resolve library** - Calls `resolveLibraryId` to find the Context7 library ID
 3. **Select best match** - Analyzes results based on reputation, coverage, and relevance
-4. **Fetch documentation** - Calls `getLibraryDocs` with the selected library ID and relevant topic
-5. **Paginate if needed** - Fetches additional pages if initial context is insufficient
+4. **Fetch documentation** - Calls `queryDocs` with the selected library ID and user's query
+5. **Query if needed** - Makes additional queries if initial context is insufficient
 6. **Generate response** - Provides an answer with code examples from the documentation
 
 ## Examples
@@ -154,7 +151,6 @@ import { stepCountIs } from "ai";
 const agent = new Context7Agent({
   model: anthropic("claude-sonnet-4-20250514"),
   apiKey: process.env.CONTEXT7_API_KEY,
-  defaultMaxResults: 5,
   stopWhen: stepCountIs(8), // Allow more steps for complex queries
 });
 ```
@@ -201,6 +197,6 @@ Additional instructions:
 
 ## Related
 
-- [resolveLibrary](/agentic-tools/ai-sdk/tools/resolve-library) - The library search tool used by the agent
-- [getLibraryDocs](/agentic-tools/ai-sdk/tools/get-library-docs) - The documentation fetch tool used by the agent
+- [resolveLibraryId](/agentic-tools/ai-sdk/tools/resolve-library-id) - The library search tool used by the agent
+- [queryDocs](/agentic-tools/ai-sdk/tools/query-docs) - The documentation fetch tool used by the agent
 - [Getting Started](/agentic-tools/ai-sdk/getting-started) - Overview of the AI SDK integration
