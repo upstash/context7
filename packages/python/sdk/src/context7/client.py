@@ -217,7 +217,7 @@ class Context7:
                 print(f"{lib.id}: {lib.name} ({lib.total_snippets} snippets)")
             ```
         """
-        result, _ = self._http.request(
+        result = self._http.request(
             method="GET",
             path=["v2", "libs", "search"],
             query={"query": query, "libraryName": library_name},
@@ -279,7 +279,7 @@ class Context7:
                 print(f"{doc.title}: {doc.content[:100]}...")
             ```
         """
-        result, _ = self._http.request(
+        result = self._http.request(
             method="GET",
             path=["v2", "context"],
             query={
@@ -311,7 +311,7 @@ class Context7:
                 print(f"{lib.id}: {lib.name} ({lib.total_snippets} snippets)")
             ```
         """
-        result, _ = await self._http.request_async(
+        result = await self._http.request_async(
             method="GET",
             path=["v2", "libs", "search"],
             query={"query": query, "libraryName": library_name},
@@ -375,7 +375,7 @@ class Context7:
                 print(f"{doc.title}: {doc.content[:100]}...")
             ```
         """
-        result, _ = await self._http.request_async(
+        result = await self._http.request_async(
             method="GET",
             path=["v2", "context"],
             query={

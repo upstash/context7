@@ -8,20 +8,8 @@ import time
 from typing import Any
 
 import httpx
-from pydantic import BaseModel
 
 from context7.errors import Context7APIError
-
-
-class TxtResponseHeaders(BaseModel):
-    """Headers extracted from text response for pagination."""
-
-    page: int
-    limit: int
-    total_pages: int
-    has_next: bool
-    has_prev: bool
-    total_tokens: int
 
 
 class HttpClient:
@@ -92,7 +80,7 @@ class HttpClient:
         path: list[str] | None = None,
         query: dict[str, Any] | None = None,
         body: dict[str, Any] | None = None,
-    ) -> tuple[Any, TxtResponseHeaders | None]:
+    ) -> Any:
         """Make a synchronous HTTP request with retry logic."""
         url = "/".join([self.base_url, *(path or [])])
         params = {k: v for k, v in (query or {}).items() if v is not None}
@@ -122,7 +110,7 @@ class HttpClient:
         path: list[str] | None = None,
         query: dict[str, Any] | None = None,
         body: dict[str, Any] | None = None,
-    ) -> tuple[Any, TxtResponseHeaders | None]:
+    ) -> Any:
         """Make an asynchronous HTTP request with retry logic."""
         url = "/".join([self.base_url, *(path or [])])
         params = {k: v for k, v in (query or {}).items() if v is not None}
@@ -146,7 +134,7 @@ class HttpClient:
 
         raise last_error or Context7APIError("Exhausted all retries")
 
-    def _handle_response(self, response: httpx.Response) -> tuple[Any, TxtResponseHeaders | None]:
+    def _handle_response(self, response: httpx.Response) -> Any:
         """Handle HTTP response (shared between sync and async)."""
         if not response.is_success:
             try:
@@ -161,21 +149,6 @@ class HttpClient:
         content_type = response.headers.get("content-type", "")
 
         if "application/json" in content_type:
-            return response.json(), None
+            return response.json()
         else:
-            headers = self._extract_txt_headers(response.headers)
-            return response.text, headers
-
-    def _extract_txt_headers(self, headers: httpx.Headers) -> TxtResponseHeaders | None:
-        """Extract pagination headers from text response."""
-        try:
-            return TxtResponseHeaders(
-                page=int(headers.get("x-context7-page", 0)),
-                limit=int(headers.get("x-context7-limit", 0)),
-                total_pages=int(headers.get("x-context7-total-pages", 0)),
-                has_next=headers.get("x-context7-has-next", "false").lower() == "true",
-                has_prev=headers.get("x-context7-has-prev", "false").lower() == "true",
-                total_tokens=int(headers.get("x-context7-total-tokens", 0)),
-            )
-        except (ValueError, TypeError):
-            return None
+            return response.text
