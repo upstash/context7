@@ -31,7 +31,7 @@ jobs:
             # Remove 'v' prefix if it exists
             VERSION="${VERSION#v}"
           else
-            VERSION=$(node -p "require('./packages/ts/mcp/package.json').version")
+            VERSION=$(node -p "require('./packages/mcp/package.json').version")
           fi
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "Publishing version: $VERSION"

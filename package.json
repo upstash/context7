@@ -4,7 +4,8 @@
   "version": "1.0.0",
   "description": "Context7 monorepo - Documentation tools and SDKs",
   "workspaces": [
-    "packages/ts/*"
+    "packages/*",
+    "!packages/python"
   ],
   "scripts": {
     "build": "pnpm -r run build",
@@ -19,13 +20,13 @@
     "format:check": "pnpm -r run format:check",
     "release": "pnpm build && changeset publish",
     "release:snapshot": "changeset version --snapshot canary && pnpm build && changeset publish --tag canary --no-git-tag",
-    "py:install": "cd packages/py && uv sync --all-packages",
-    "py:test": "cd packages/py && uv run pytest sdk/tests -v",
-    "py:lint": "cd packages/py && uv run ruff check .",
-    "py:format": "cd packages/py && uv run ruff format .",
-    "py:typecheck": "cd packages/py && uv run mypy sdk/src/context7",
-    "py:build": "cd packages/py/sdk && uv build",
-    "py:clean": "rm -rf packages/py/.venv packages/py/uv.lock packages/py/sdk/dist"
+    "py:install": "cd packages/python && uv sync --all-packages",
+    "py:test": "cd packages/python && uv run pytest sdk/tests -v",
+    "py:lint": "cd packages/python && uv run ruff check .",
+    "py:format": "cd packages/python && uv run ruff format .",
+    "py:typecheck": "cd packages/python && uv run mypy sdk/src/context7",
+    "py:build": "cd packages/python/sdk && uv build",
+    "py:clean": "rm -rf packages/python/.venv packages/python/uv.lock packages/python/sdk/dist"
   },
   "repository": {
     "type": "git",

@@ -1,2 +1,3 @@
 packages:
-  - "packages/ts/*"
+  - "packages/*"
+  - "!packages/python"
