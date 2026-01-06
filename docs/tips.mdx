@@ -1,0 +1,38 @@
+---
+title: Best Practices
+description: Get the most out of Context7 with these best practices
+---
+
+## Add a Rule
+
+To avoid typing `use context7` in every prompt, add a rule to your MCP client to automatically invoke Context7 for code-related questions:
+
+- **Cursor**: `Cursor Settings > Rules`
+- **Claude Code**: `CLAUDE.md`
+- Or the equivalent in your MCP client
+
+**Example rule:**
+
+```txt
+Always use Context7 MCP when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
+```
+
+## Use Library ID
+
+If you already know exactly which library you want to use, add its Context7 ID to your prompt. That way, Context7 MCP server can skip the library-matching step and directly continue with retrieving docs.
+
+```txt
+Implement basic authentication with Supabase. use library /supabase/supabase for API and docs.
+```
+
+The slash syntax tells the MCP tool exactly which library to load docs for.
+
+## Specify a Version
+
+To get documentation for a specific library version, just mention the version in your prompt:
+
+```txt
+How do I set up Next.js 14 middleware? use context7
+```
+
+Context7 will automatically match the appropriate version.

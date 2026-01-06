@@ -1,18 +1,19 @@
 {
   "name": "@upstash/context7-mcp",
-  "version": "1.0.31",
+  "version": "2.0.2",
   "mcpName": "io.github.upstash/context7",
   "description": "MCP server for Context7",
   "scripts": {
     "build": "tsc && chmod 755 dist/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "echo \"No tests yet\"",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:check": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "dev": "tsc --watch",
     "start": "node dist/index.js --transport http",
-    "pack-mcpb": "pnpm install && pnpm run build && rm -rf node_modules && pnpm install --prod && mv mcpb/.mcpbignore .mcpbignore && mv mcpb/manifest.json manifest.json && mv public/icon.png icon.png && mcpb validate manifest.json && mcpb pack . mcpb/context7.mcpb && mv manifest.json mcpb/manifest.json && mv .mcpbignore mcpb/.mcpbignore && mv icon.png public/icon.png && bun install"
+    "pack-mcpb": "pnpm install && pnpm run build && rm -rf node_modules && pnpm install --prod && cp mcpb/manifest.json manifest.json && cp ../../public/icon.png icon.png && mcpb validate manifest.json && mcpb pack . mcpb/context7.mcpb && rm manifest.json icon.png && pnpm install"
   },
   "repository": {
     "type": "git",

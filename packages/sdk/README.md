@@ -1,5 +1,7 @@
 # Upstash Context7 SDK
 
+> ⚠️ **Work in Progress**: This SDK is currently under active development. The API is subject to change and may introduce breaking changes in future releases.
+
 `@upstash/context7-sdk` is an HTTP/REST based client for TypeScript, built on top of the [Context7 API](https://context7.com).
 
 ## Why Context7?
@@ -37,27 +39,25 @@ const client = new Context7({
   apiKey: "<CONTEXT7_API_KEY>",
 });
 
-// Search for libraries in the Context7 database
-const libraries = await client.searchLibrary("react");
-console.log(libraries.results);
+// Search for libraries
+const libraries = await client.searchLibrary(
+  "I need to build a UI with components",
+  "react"
+);
+console.log(libraries[0].id); // "/facebook/react"
 
-// Query the documentation with specific topics
-const filteredDocs = await client.getDocs("/facebook/react", {
-  topic: "hooks",
-  limit: 10,
-  page: 1,
+// Get documentation context as plain text (default)
+const context = await client.getContext(
+  "How do I use hooks?",
+  "/facebook/react"
+);
+console.log(context);
+
+// Get documentation as JSON array
+const docs = await client.getContext("How do I use hooks?", "/facebook/react", {
+  type: "json",
 });
-
-// Get documentation as JSON by default
-const docs = await client.getDocs("/vercel/next.js");
-console.log(docs.snippets);
-
-// Get documentation as TXT
-const codeDocs = await client.getDocs("/mongodb/docs", {
-  format: "txt",
-  mode: "code",
-});
-console.log(codeDocs.content);
+console.log(docs[0].title, docs[0].content);
 ```
 
 ## Configuration

@@ -1,6 +1,6 @@
 import type { Requester } from "@http";
 
-export const _ENDPOINTS = ["v2/search", "v2/docs/info", "v2/docs/code"];
+export const _ENDPOINTS = ["v2/libs/search", "v2/context"];
 
 export type EndpointVariants = (typeof _ENDPOINTS)[number];
 
