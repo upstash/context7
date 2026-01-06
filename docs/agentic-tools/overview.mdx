@@ -41,9 +41,9 @@ sequenceDiagram
     participant Docs
 
     User->>Agent: "How do I use React Server Components?"
-    Agent->>Context7: resolveLibraryId("react")
+    Agent->>Context7: resolveLibraryId(query: "React Server Components", libraryName: "react")
     Context7-->>Agent: Library ID: /reactjs/react.dev
-    Agent->>Context7: queryDocs("/reactjs/react.dev", query: "server components")
+    Agent->>Context7: queryDocs(libraryId: "/reactjs/react.dev", query: "server components")
     Context7->>Docs: Fetch latest documentation
     Docs-->>Context7: Current docs with examples
     Context7-->>Agent: Documentation content
