@@ -36,10 +36,10 @@ jobs:
 
             const changedFiles = diff.split('\n').filter(f => f.length > 0);
 
-            // Skip changeset check if only Python files are changed
+            // Skip changeset check if only Python files or workflow files are changed
             const onlyPythonChanges = changedFiles.every(file =>
               file.startsWith('packages/python/') ||
-              file === '.github/workflows/python-ci.yml'
+              file.startsWith('.github/workflows/')
             );
 
             if (onlyPythonChanges && changedFiles.length > 0) {

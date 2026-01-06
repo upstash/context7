@@ -44,8 +44,7 @@ def _validate_api_key(api_key: str | None) -> str:
 def _format_code_snippet(snippet: ApiCodeSnippet) -> Documentation:
     """Format a code snippet into a Documentation object."""
     code_blocks = "\n\n".join(
-        f"```{item.get('language', '')}\n{item.get('code', '')}\n```"
-        for item in snippet.code_list
+        f"```{item.get('language', '')}\n{item.get('code', '')}\n```" for item in snippet.code_list
     )
     content = f"{snippet.code_description}\n\n{code_blocks}"
 
@@ -292,9 +291,7 @@ class Context7:
         return _process_context_response(result, type)
 
     # Asynchronous methods
-    async def search_library_async(
-        self, query: str, library_name: str
-    ) -> list[Library]:
+    async def search_library_async(self, query: str, library_name: str) -> list[Library]:
         """
         Search for libraries matching the given query (async version).
 

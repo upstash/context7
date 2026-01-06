@@ -14,7 +14,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/upstash/context7.git",
-    "directory": "packages/ts/sdk"
+    "directory": "packages/sdk"
   },
   "keywords": [
     "context7",
