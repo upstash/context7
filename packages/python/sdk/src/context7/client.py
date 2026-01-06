@@ -6,14 +6,15 @@ import os
 import warnings
 from typing import Any, Literal, overload
 
-from context7.errors import Context7Error, Context7ValidationError
-from context7.http import HttpClient, TxtResponseHeaders
+from context7.errors import Context7Error
+from context7.http import HttpClient
 from context7.models import (
-    CodeDocsResponse,
-    InfoDocsResponse,
-    Pagination,
-    SearchLibraryResponse,
-    TextDocsResponse,
+    ApiCodeSnippet,
+    ApiContextJsonResponse,
+    ApiInfoSnippet,
+    ApiSearchResult,
+    Documentation,
+    Library,
 )
 
 DEFAULT_BASE_URL = "https://context7.com/api"
@@ -40,70 +41,63 @@ def _validate_api_key(api_key: str | None) -> str:
     return resolved_api_key
 
 
-def _validate_library_id(library_id: str) -> tuple[str, str]:
-    """Validate library_id format and return (owner, repo)."""
-    if not library_id.startswith("/") or library_id.count("/") < 2:
-        raise Context7ValidationError(
-            f"Invalid library ID: {library_id}. Expected format: /owner/repo"
-        )
+def _format_code_snippet(snippet: ApiCodeSnippet) -> Documentation:
+    """Format a code snippet into a Documentation object."""
+    code_blocks = "\n\n".join(
+        f"```{item.get('language', '')}\n{item.get('code', '')}\n```"
+        for item in snippet.code_list
+    )
+    content = f"{snippet.code_description}\n\n{code_blocks}"
 
-    parts = library_id.lstrip("/").split("/")
-    owner, repo = parts[0], "/".join(parts[1:])
-    return owner, repo
-
-
-def _build_docs_request(
-    library_id: str,
-    version: str | None,
-    page: int | None,
-    topic: str | None,
-    limit: int | None,
-    mode: Literal["info", "code"],
-    format: Literal["json", "txt"],  # pylint: disable=redefined-builtin
-) -> tuple[list[str], dict[str, str | int | None]]:
-    """Build path and query for docs request."""
-    owner, repo = _validate_library_id(library_id)
-
-    path = ["v2", "docs", mode, owner, repo]
-    if version:
-        path.append(version)
-
-    query: dict[str, str | int | None] = {
-        "type": format,
-        "page": page,
-        "limit": limit,
-        "topic": topic,
-    }
-
-    return path, query
+    return Documentation(
+        title=snippet.code_title,
+        content=content,
+        source=snippet.page_title or snippet.code_id,
+    )
 
 
-def _process_docs_response(
+def _format_info_snippet(snippet: ApiInfoSnippet) -> Documentation:
+    """Format an info snippet into a Documentation object."""
+    return Documentation(
+        title=snippet.breadcrumb or "Documentation",
+        content=snippet.content,
+        source=snippet.page_id,
+    )
+
+
+def _format_library(result: ApiSearchResult) -> Library:
+    """Format an API search result into a Library object."""
+    return Library(
+        id=result.id,
+        name=result.title,
+        description=result.description,
+        total_snippets=result.total_snippets or 0,
+        trust_score=result.trust_score or 0.0,
+        benchmark_score=result.benchmark_score or 0.0,
+        versions=result.versions,
+    )
+
+
+def _process_context_response(
     result: str | dict[str, Any],
-    headers: TxtResponseHeaders | None,
-    mode: Literal["info", "code"],
-    format: Literal["json", "txt"],  # pylint: disable=redefined-builtin
-) -> TextDocsResponse | CodeDocsResponse | InfoDocsResponse:
-    """Process the docs response based on format and mode."""
-    if format == "txt":
-        pagination = Pagination(
-            page=headers.page if headers else 1,
-            limit=headers.limit if headers else 0,
-            totalPages=headers.total_pages if headers else 1,
-            hasNext=headers.has_next if headers else False,
-            hasPrev=headers.has_prev if headers else False,
-        )
-        # When format is "txt", result is always a string from the HTTP response
-        content = result if isinstance(result, str) else ""
-        return TextDocsResponse(
-            content=content,
-            pagination=pagination,
-            totalTokens=headers.total_tokens if headers else 0,
-        )
+    response_type: Literal["json", "txt"],
+) -> str | list[Documentation]:
+    """Process the context API response based on type."""
+    if response_type == "txt":
+        if isinstance(result, str):
+            return result
+        return ""
 
-    if mode == "info":
-        return InfoDocsResponse.model_validate(result)
-    return CodeDocsResponse.model_validate(result)
+    # Parse JSON response
+    api_response = ApiContextJsonResponse.model_validate(result)
+
+    docs: list[Documentation] = []
+    for code_snippet in api_response.code_snippets:
+        docs.append(_format_code_snippet(code_snippet))
+    for info_snippet in api_response.info_snippets:
+        docs.append(_format_info_snippet(info_snippet))
+
+    return docs
 
 
 class Context7:
@@ -115,37 +109,39 @@ class Context7:
 
     Synchronous Usage:
         ```python
-        from context7-sdk import Context7
+        from context7 import Context7
 
         # Initialize with API key (or set CONTEXT7_API_KEY env var)
         with Context7(api_key="ctx7sk_...") as client:
             # Search for libraries
-            results = client.search_library("react")
-            for lib in results.results:
-                print(f"{lib.id}: {lib.title}")
+            libraries = client.search_library("I need a UI library", "react")
+            for lib in libraries:
+                print(f"{lib.id}: {lib.name}")
 
-            # Get documentation
-            docs = client.get_docs("/facebook/react")
-            for snippet in docs.snippets:
-                print(f"{snippet.code_title}: {snippet.code_description}")
+            # Get documentation context
+            context = client.get_context("How to use hooks", "/facebook/react")
+            print(context)
         ```
 
     Asynchronous Usage:
         ```python
         import asyncio
-        from context7-sdk import Context7
+        from context7 import Context7
 
         async def main():
             async with Context7(api_key="ctx7sk_...") as client:
                 # Search for libraries
-                results = await client.search_library_async("react")
-                for lib in results.results:
-                    print(f"{lib.id}: {lib.title}")
+                libraries = await client.search_library_async(
+                    "I need a UI library", "react"
+                )
+                for lib in libraries:
+                    print(f"{lib.id}: {lib.name}")
 
-                # Get documentation
-                docs = await client.get_docs_async("/facebook/react")
-                for snippet in docs.snippets:
-                    print(f"{snippet.code_title}: {snippet.code_description}")
+                # Get documentation context
+                context = await client.get_context_async(
+                    "How to use hooks", "/facebook/react"
+                )
+                print(context)
 
         asyncio.run(main())
         ```
@@ -204,289 +200,191 @@ class Context7:
         await self._http.close_async()
 
     # Synchronous methods
-    def search_library(self, query: str) -> SearchLibraryResponse:
+    def search_library(self, query: str, library_name: str) -> list[Library]:
         """
-        Search for libraries by name or description.
+        Search for libraries matching the given query.
 
         Args:
-            query: Search query string.
+            query: The user's question or task (used for relevance ranking).
+            library_name: The library name to search for.
 
         Returns:
-            SearchLibraryResponse containing matching libraries and metadata.
+            List of matching libraries.
 
         Example:
             ```python
-            results = client.search_library("react")
-            for lib in results.results:
-                print(f"{lib.id}: {lib.title} ({lib.total_tokens} tokens)")
+            libraries = client.search_library("I need a UI library", "react")
+            for lib in libraries:
+                print(f"{lib.id}: {lib.name} ({lib.total_snippets} snippets)")
             ```
         """
         result, _ = self._http.request(
             method="GET",
-            path=["v2", "search"],
-            query={"query": query},
+            path=["v2", "libs", "search"],
+            query={"query": query, "libraryName": library_name},
         )
-        return SearchLibraryResponse.model_validate(result)
+        api_results = [ApiSearchResult.model_validate(item) for item in result["results"]]
+        return [_format_library(r) for r in api_results]
 
     @overload
-    def get_docs(
+    def get_context(
         self,
+        query: str,
         library_id: str,
         *,
-        format: Literal["txt"],  # pylint: disable=redefined-builtin
-        version: str | None = None,
-        page: int | None = None,
-        topic: str | None = None,
-        limit: int | None = None,
-        mode: Literal["info", "code"] = "code",
-    ) -> TextDocsResponse: ...
+        type: Literal["txt"] = "txt",  # pylint: disable=redefined-builtin
+    ) -> str: ...
 
     @overload
-    def get_docs(
+    def get_context(
         self,
+        query: str,
         library_id: str,
         *,
-        mode: Literal["info"],
-        format: Literal["json"] = "json",  # pylint: disable=redefined-builtin
-        version: str | None = None,
-        page: int | None = None,
-        topic: str | None = None,
-        limit: int | None = None,
-    ) -> InfoDocsResponse: ...
+        type: Literal["json"],  # pylint: disable=redefined-builtin
+    ) -> list[Documentation]: ...
 
-    @overload
-    def get_docs(
+    def get_context(
         self,
+        query: str,
         library_id: str,
         *,
-        mode: Literal["code"] = "code",
-        format: Literal["json"] = "json",  # pylint: disable=redefined-builtin
-        version: str | None = None,
-        page: int | None = None,
-        topic: str | None = None,
-        limit: int | None = None,
-    ) -> CodeDocsResponse: ...
-
-    @overload
-    def get_docs(
-        self,
-        library_id: str,
-        *,
-        version: str | None = None,
-        page: int | None = None,
-        topic: str | None = None,
-        limit: int | None = None,
-        mode: Literal["info", "code"] = "code",
-        format: Literal["json", "txt"] = "json",  # pylint: disable=redefined-builtin
-    ) -> TextDocsResponse | CodeDocsResponse | InfoDocsResponse: ...
-
-    def get_docs(
-        self,
-        library_id: str,
-        *,
-        version: str | None = None,
-        page: int | None = None,
-        topic: str | None = None,
-        limit: int | None = None,
-        mode: Literal["info", "code"] = "code",
-        format: Literal["json", "txt"] = "json",  # pylint: disable=redefined-builtin
-    ) -> TextDocsResponse | CodeDocsResponse | InfoDocsResponse:
+        type: Literal["json", "txt"] = "txt",  # pylint: disable=redefined-builtin
+    ) -> str | list[Documentation]:
         """
-        Get documentation for a library.
+        Get documentation context for a library.
 
         Args:
-            library_id: Library identifier in format "/owner/repo"
-                (e.g., "/facebook/react", "/vercel/next.js").
-            version: Optional library version (e.g., "18.0.0").
-            page: Page number for pagination.
-            topic: Filter docs by topic.
-            limit: Number of results per page.
-            mode: Type of documentation to fetch:
-                - "code": Code snippets with examples (default)
-                - "info": Text content and explanations
-            format: Response format:
-                - "json": Structured JSON data (default)
-                - "txt": Plain text documentation
+            query: The user's question or task.
+            library_id: Context7 library ID (e.g., "/facebook/react").
+            type: Response format:
+                - "txt": Plain text documentation (default)
+                - "json": List of Documentation objects
 
         Returns:
-            Documentation response. The type depends on mode and format:
-            - format="txt": TextDocsResponse with content string
-            - mode="code", format="json": CodeDocsResponse with code snippets
-            - mode="info", format="json": InfoDocsResponse with info snippets
-
-        Raises:
-            Context7ValidationError: If library_id format is invalid.
+            Documentation as string (txt) or list of Documentation objects (json).
 
         Example:
             ```python
-            # Get code snippets (default)
-            docs = client.get_docs("/facebook/react")
-            for snippet in docs.snippets:
-                print(snippet.code_title)
+            # Get context as text (default)
+            context = client.get_context("How to use hooks", "/facebook/react")
+            print(context)
 
-            # Get info documentation
-            info = client.get_docs("/facebook/react", mode="info")
-            for snippet in info.snippets:
-                print(snippet.content)
-
-            # Get plain text
-            text = client.get_docs("/facebook/react", format="txt")
-            print(text.content)
-
-            # With version
-            docs = client.get_docs("/facebook/react", version="18.0.0")
+            # Get context as structured data
+            docs = client.get_context(
+                "How to use hooks",
+                "/facebook/react",
+                type="json"
+            )
+            for doc in docs:
+                print(f"{doc.title}: {doc.content[:100]}...")
             ```
         """
-        path, query = _build_docs_request(
-            library_id, version, page, topic, limit, mode, format
-        )
-        result, headers = self._http.request(
+        result, _ = self._http.request(
             method="GET",
-            path=path,
-            query=query,
+            path=["v2", "context"],
+            query={
+                "query": query,
+                "libraryId": library_id,
+                "type": type,
+            },
         )
-        return _process_docs_response(result, headers, mode, format)
+        return _process_context_response(result, type)
 
     # Asynchronous methods
-    async def search_library_async(self, query: str) -> SearchLibraryResponse:
+    async def search_library_async(
+        self, query: str, library_name: str
+    ) -> list[Library]:
         """
-        Search for libraries by name or description (async version).
+        Search for libraries matching the given query (async version).
 
         Args:
-            query: Search query string.
+            query: The user's question or task (used for relevance ranking).
+            library_name: The library name to search for.
 
         Returns:
-            SearchLibraryResponse containing matching libraries and metadata.
+            List of matching libraries.
 
         Example:
             ```python
-            results = await client.search_library_async("react")
-            for lib in results.results:
-                print(f"{lib.id}: {lib.title} ({lib.total_tokens} tokens)")
+            libraries = await client.search_library_async(
+                "I need a UI library", "react"
+            )
+            for lib in libraries:
+                print(f"{lib.id}: {lib.name} ({lib.total_snippets} snippets)")
             ```
         """
         result, _ = await self._http.request_async(
             method="GET",
-            path=["v2", "search"],
-            query={"query": query},
+            path=["v2", "libs", "search"],
+            query={"query": query, "libraryName": library_name},
         )
-        return SearchLibraryResponse.model_validate(result)
+        api_results = [ApiSearchResult.model_validate(item) for item in result["results"]]
+        return [_format_library(r) for r in api_results]
 
     @overload
-    async def get_docs_async(
+    async def get_context_async(
         self,
+        query: str,
         library_id: str,
         *,
-        format: Literal["txt"],  # pylint: disable=redefined-builtin
-        version: str | None = None,
-        page: int | None = None,
-        topic: str | None = None,
-        limit: int | None = None,
-        mode: Literal["info", "code"] = "code",
-    ) -> TextDocsResponse: ...
+        type: Literal["txt"] = "txt",  # pylint: disable=redefined-builtin
+    ) -> str: ...
 
     @overload
-    async def get_docs_async(
+    async def get_context_async(
         self,
+        query: str,
         library_id: str,
         *,
-        mode: Literal["info"],
-        format: Literal["json"] = "json",  # pylint: disable=redefined-builtin
-        version: str | None = None,
-        page: int | None = None,
-        topic: str | None = None,
-        limit: int | None = None,
-    ) -> InfoDocsResponse: ...
+        type: Literal["json"],  # pylint: disable=redefined-builtin
+    ) -> list[Documentation]: ...
 
-    @overload
-    async def get_docs_async(
+    async def get_context_async(
         self,
+        query: str,
         library_id: str,
         *,
-        mode: Literal["code"] = "code",
-        format: Literal["json"] = "json",  # pylint: disable=redefined-builtin
-        version: str | None = None,
-        page: int | None = None,
-        topic: str | None = None,
-        limit: int | None = None,
-    ) -> CodeDocsResponse: ...
-
-    @overload
-    async def get_docs_async(
-        self,
-        library_id: str,
-        *,
-        version: str | None = None,
-        page: int | None = None,
-        topic: str | None = None,
-        limit: int | None = None,
-        mode: Literal["info", "code"] = "code",
-        format: Literal["json", "txt"] = "json",  # pylint: disable=redefined-builtin
-    ) -> TextDocsResponse | CodeDocsResponse | InfoDocsResponse: ...
-
-    async def get_docs_async(
-        self,
-        library_id: str,
-        *,
-        version: str | None = None,
-        page: int | None = None,
-        topic: str | None = None,
-        limit: int | None = None,
-        mode: Literal["info", "code"] = "code",
-        format: Literal["json", "txt"] = "json",  # pylint: disable=redefined-builtin
-    ) -> TextDocsResponse | CodeDocsResponse | InfoDocsResponse:
+        type: Literal["json", "txt"] = "txt",  # pylint: disable=redefined-builtin
+    ) -> str | list[Documentation]:
         """
-        Get documentation for a library (async version).
+        Get documentation context for a library (async version).
 
         Args:
-            library_id: Library identifier in format "/owner/repo"
-                (e.g., "/facebook/react", "/vercel/next.js").
-            version: Optional library version (e.g., "18.0.0").
-            page: Page number for pagination.
-            topic: Filter docs by topic.
-            limit: Number of results per page.
-            mode: Type of documentation to fetch:
-                - "code": Code snippets with examples (default)
-                - "info": Text content and explanations
-            format: Response format:
-                - "json": Structured JSON data (default)
-                - "txt": Plain text documentation
+            query: The user's question or task.
+            library_id: Context7 library ID (e.g., "/facebook/react").
+            type: Response format:
+                - "txt": Plain text documentation (default)
+                - "json": List of Documentation objects
 
         Returns:
-            Documentation response. The type depends on mode and format:
-            - format="txt": TextDocsResponse with content string
-            - mode="code", format="json": CodeDocsResponse with code snippets
-            - mode="info", format="json": InfoDocsResponse with info snippets
-
-        Raises:
-            Context7ValidationError: If library_id format is invalid.
+            Documentation as string (txt) or list of Documentation objects (json).
 
         Example:
             ```python
-            # Get code snippets (default)
-            docs = await client.get_docs_async("/facebook/react")
-            for snippet in docs.snippets:
-                print(snippet.code_title)
+            # Get context as text (default)
+            context = await client.get_context_async(
+                "How to use hooks", "/facebook/react"
+            )
+            print(context)
 
-            # Get info documentation
-            info = await client.get_docs_async("/facebook/react", mode="info")
-            for snippet in info.snippets:
-                print(snippet.content)
-
-            # Get plain text
-            text = await client.get_docs_async("/facebook/react", format="txt")
-            print(text.content)
-
-            # With version
-            docs = await client.get_docs_async("/facebook/react", version="18.0.0")
+            # Get context as structured data
+            docs = await client.get_context_async(
+                "How to use hooks",
+                "/facebook/react",
+                type="json"
+            )
+            for doc in docs:
+                print(f"{doc.title}: {doc.content[:100]}...")
             ```
         """
-        path, query = _build_docs_request(
-            library_id, version, page, topic, limit, mode, format
-        )
-        result, headers = await self._http.request_async(
+        result, _ = await self._http.request_async(
             method="GET",
-            path=path,
-            query=query,
+            path=["v2", "context"],
+            query={
+                "query": query,
+                "libraryId": library_id,
+                "type": type,
+            },
         )
-        return _process_docs_response(result, headers, mode, format)
+        return _process_context_response(result, type)

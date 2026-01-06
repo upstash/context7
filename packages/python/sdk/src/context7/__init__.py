@@ -7,15 +7,20 @@ documentation from Context7, optimized for AI agents and LLMs.
 Example:
     ```python
     import asyncio
-    from context7-sdk import Context7
+    from context7 import Context7
 
     async def main():
         async with Context7(api_key="ctx7sk_...") as client:
             # Search for libraries
-            results = await client.search_library("react")
+            libraries = await client.search_library_async(
+                "I need a UI library", "react"
+            )
 
-            # Get documentation
-            docs = await client.get_docs("/facebook/react")
+            # Get documentation context
+            context = await client.get_context_async(
+                "How to use hooks", "/facebook/react"
+            )
+            print(context)
 
     asyncio.run(main())
     ```
@@ -24,21 +29,9 @@ Example:
 from context7.client import Context7
 from context7.errors import Context7APIError, Context7Error, Context7ValidationError
 from context7.models import (
-    APIResponseMetadata,
-    AuthenticationType,
-    CodeDocsResponse,
-    CodeExample,
-    CodeSnippet,
-    DocsResponse,
-    DocsResponseBase,
-    GetDocsOptions,
-    InfoDocsResponse,
-    InfoSnippet,
-    LibraryState,
-    Pagination,
-    SearchLibraryResponse,
-    SearchResult,
-    TextDocsResponse,
+    Documentation,
+    GetContextOptions,
+    Library,
 )
 
 __all__ = [
@@ -48,24 +41,10 @@ __all__ = [
     "Context7Error",
     "Context7APIError",
     "Context7ValidationError",
-    # Models - Search
-    "SearchResult",
-    "SearchLibraryResponse",
-    "APIResponseMetadata",
-    # Models - Docs
-    "CodeSnippet",
-    "CodeExample",
-    "InfoSnippet",
-    "Pagination",
-    "DocsResponseBase",
-    "CodeDocsResponse",
-    "InfoDocsResponse",
-    "TextDocsResponse",
-    "DocsResponse",
-    "GetDocsOptions",
-    # Enums
-    "LibraryState",
-    "AuthenticationType",
+    # Models
+    "Library",
+    "Documentation",
+    "GetContextOptions",
 ]
 
 __version__ = "0.1.0"
