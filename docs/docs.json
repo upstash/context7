@@ -35,6 +35,10 @@
         ]
       },
       {
+        "group": "Clients",
+        "pages": ["clients/cursor", "clients/claude-code"]
+      },
+      {
         "group": "SDKs",
         "pages": [
           {
