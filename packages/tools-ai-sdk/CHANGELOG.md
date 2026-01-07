@@ -4,6 +4,17 @@
 
 ### Minor Changes
 
+- 9412e62: feat: Change SDK default response type from "txt" to "json" for both searchLibrary and getContext methods. AI SDK tools now explicitly use type: "txt" for LLM-friendly text responses.
+
+### Patch Changes
+
+- Updated dependencies [9412e62]
+  - @upstash/context7-sdk@0.3.0
+
+## 1.0.0
+
+### Minor Changes
+
 - b3cd38a: feat: Rename tools to match MCP naming conventions
   - Rename `resolveLibrary` to `resolveLibraryId` with new `query` parameter
   - Rename `getLibraryDocs` to `queryDocs` with new `query` parameter (replaces `topic`)
