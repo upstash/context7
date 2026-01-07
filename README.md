@@ -20,7 +20,7 @@ LLMs rely on outdated or generic information about the libraries you use. You ge
 
 Context7 MCP pulls up-to-date, version-specific documentation and code examples straight from the source — and places them directly into your prompt.
 
-Add `use context7` to your prompt (or [set up a rule](#️-installation) to auto-invoke):
+Add `use context7` to your prompt (or [set up a rule](#add-a-rule) to auto-invoke):
 
 ```txt
 Create a Next.js middleware that checks for a valid JWT in cookies
