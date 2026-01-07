@@ -65,7 +65,7 @@ import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { text } = await generateText({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   prompt: "How do I create a server action in Next.js?",
   tools: {
     resolveLibraryId: resolveLibraryId(),
@@ -106,7 +106,7 @@ import { streamText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { textStream } = streamText({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   prompt: "Explain how to use Tanstack Query for data fetching",
   tools: {
     resolveLibraryId: resolveLibraryId(),

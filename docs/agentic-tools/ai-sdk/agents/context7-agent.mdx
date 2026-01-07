@@ -40,7 +40,7 @@ new Context7Agent(config?: Context7AgentConfig)
 
       Examples:
       - `anthropic('claude-sonnet-4-20250514')`
-      - `openai('gpt-4o')`
+      - `openai('gpt-5.2')`
       - `google('gemini-1.5-pro')`
     </ParamField>
     <ParamField path="apiKey" type="string" optional>
@@ -114,7 +114,7 @@ import { Context7Agent } from "@upstash/context7-tools-ai-sdk";
 import { openai } from "@ai-sdk/openai";
 
 const agent = new Context7Agent({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
 });
 
 const { text } = await agent.generate({
@@ -162,7 +162,7 @@ import { Context7Agent, AGENT_PROMPT } from "@upstash/context7-tools-ai-sdk";
 import { openai } from "@ai-sdk/openai";
 
 const agent = new Context7Agent({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   system: `${AGENT_PROMPT}
 
 Additional instructions:

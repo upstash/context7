@@ -14,7 +14,7 @@ import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { text } = await generateText({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   prompt: "How do I use React Server Components?",
   tools: {
     resolveLibraryId: resolveLibraryId(),
@@ -68,37 +68,33 @@ The tool accepts the following inputs from the AI model:
 
 ### Output Format
 
-On success, the tool returns the documentation:
+On success, the tool returns the documentation as plain text, formatted for easy consumption by the AI model:
 
-```typescript
-{
-  success: true,
-  libraryId: "/reactjs/react.dev",
-  documentation: [
-    {
-      title: "Server Components",
-      content: "Server Components let you write UI that can be rendered...",
-      codeExamples: [
-        {
-          language: "tsx",
-          code: "async function ServerComponent() {\n  const data = await fetchData();\n  return <div>{data}</div>;\n}"
-        }
-      ]
-    },
-    // ... more documentation
-  ],
-  totalResults: 5
+```
+# Server Components
+
+Server Components let you write UI that can be rendered and optionally cached on the server.
+
+## Example
+
+\`\`\`tsx
+async function ServerComponent() {
+  const data = await fetchData();
+  return <div>{data}</div>;
 }
+\`\`\`
+
+---
+
+# Using Server Components with Client Components
+
+You can import Server Components into Client Components...
 ```
 
 #### On Failure
 
-```typescript
-{
-  success: false,
-  error: "Documentation not found or not finalized for this library.",
-  libraryId: "/invalid/library"
-}
+```
+No documentation found for library "/invalid/library". This might have happened because you used an invalid Context7-compatible library ID. Use 'resolveLibraryId' to get a valid ID.
 ```
 
 ## Examples
@@ -111,7 +107,7 @@ import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { text } = await generateText({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   prompt: "Show me how to set up routing in Next.js App Router",
   tools: {
     resolveLibraryId: resolveLibraryId(),
@@ -146,7 +142,7 @@ import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { text } = await generateText({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   prompt: "Using /vercel/next.js, explain middleware",
   tools: {
     queryDocs: queryDocs(),

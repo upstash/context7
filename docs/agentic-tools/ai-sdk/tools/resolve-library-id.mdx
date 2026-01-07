@@ -14,7 +14,7 @@ import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { text } = await generateText({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   prompt: "Find documentation for React hooks",
   tools: {
     resolveLibraryId: resolveLibraryId(),
@@ -72,35 +72,30 @@ The tool accepts the following input from the AI model:
 
 ### Output Format
 
-On success, the tool returns the search results as JSON:
+On success, the tool returns the search results as plain text, formatted for easy consumption by the AI model:
 
-```typescript
-{
-  success: true,
-  results: [
-    {
-      id: "/reactjs/react.dev",
-      title: "React Documentation",
-      description: "The library for web and native user interfaces",
-      totalSnippets: 1250,
-      trustScore: 0.95,
-      benchmarkScore: 98,
-      versions: ["19.0.0", "18.3.1", "18.2.0"]
-    },
-    // ... more results
-  ],
-  totalResults: 5
-}
+```
+- Title: React Documentation
+- Context7-compatible library ID: /reactjs/react.dev
+- Description: The library for web and native user interfaces
+- Code Snippets: 1250
+- Trust Score: High
+- Benchmark Score: 98
+- Versions: 19.0.0, 18.3.1, 18.2.0
+----------
+- Title: React Native
+- Context7-compatible library ID: /facebook/react-native
+- Description: A framework for building native applications using React
+- Code Snippets: 890
+- Trust Score: High
+- Benchmark Score: 95
+- Versions: 0.76.0, 0.75.4
 ```
 
 On failure:
 
-```typescript
-{
-  success: false,
-  error: "No libraries found matching your query.",
-  suggestions: "Try a different search term or check the library name."
-}
+```
+No libraries found matching "unknown-lib". Try a different search term or check the library name.
 ```
 
 ## Examples
@@ -113,7 +108,7 @@ import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { text, toolCalls } = await generateText({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   prompt: "What libraries are available for React?",
   tools: {
     resolveLibraryId: resolveLibraryId(),
@@ -144,7 +139,7 @@ import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { toolCalls, toolResults } = await generateText({
-  model: openai("gpt-4o"),
+  model: openai("gpt-5.2"),
   prompt: "Find the official Next.js documentation",
   tools: {
     resolveLibraryId: resolveLibraryId(),

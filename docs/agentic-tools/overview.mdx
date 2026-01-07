@@ -62,7 +62,7 @@ sequenceDiagram
     import { resolveLibraryId, queryDocs } from "@upstash/context7-tools-ai-sdk";
 
     const { text } = await generateText({
-      model: openai("gpt-4o"),
+      model: openai("gpt-5.2"),
       prompt: "How do I set up authentication in Next.js 15?",
       tools: {
         resolveLibraryId: resolveLibraryId(),
