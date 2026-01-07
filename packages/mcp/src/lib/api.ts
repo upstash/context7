@@ -1,5 +1,5 @@
 import { SearchResponse, ContextRequest, ContextResponse } from "./types.js";
-import { generateHeaders } from "./encryption.js";
+import { ClientContext, generateHeaders } from "./encryption.js";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 
 const CONTEXT7_API_BASE_URL = "https://context7.com/api";
@@ -21,7 +21,6 @@ async function parseErrorResponse(response: Response, apiKey?: string): Promise<
     // JSON parsing failed, fall through to default
   }
 
-  // Fallback for non-JSON responses
   const status = response.status;
   if (status === 429) {
     return apiKey
@@ -37,7 +36,6 @@ async function parseErrorResponse(response: Response, apiKey?: string): Promise<
   return `Request failed with status ${status}. Please try again later.`;
 }
 
-// Pick up proxy configuration in a variety of common env var names.
 const PROXY_URL: string | null =
   process.env.HTTPS_PROXY ??
   process.env.https_proxy ??
@@ -47,13 +45,8 @@ const PROXY_URL: string | null =
 
 if (PROXY_URL && !PROXY_URL.startsWith("$") && /^(http|https):\/\//i.test(PROXY_URL)) {
   try {
-    // Configure a global proxy agent once at startup. Subsequent fetch calls will
-    // automatically use this dispatcher.
-    // Using `any` cast because ProxyAgent implements the Dispatcher interface but
-    // TS may not infer it correctly in some versions.
     setGlobalDispatcher(new ProxyAgent(PROXY_URL));
   } catch (error) {
-    // Don't crash the app if proxy initialisation fails – just log a warning.
     console.error(
       `[Context7] Failed to configure proxy agent for provided proxy URL: ${PROXY_URL}:`,
       error
@@ -65,63 +58,56 @@ if (PROXY_URL && !PROXY_URL.startsWith("$") && /^(http|https):\/\//i.test(PROXY_
  * Searches for libraries matching the given query
  * @param query The user's question or task (used for LLM relevance ranking)
  * @param libraryName The library name to search for in the database
- * @param clientIp Optional client IP address to include in headers
- * @param apiKey Optional API key for authentication
- * @returns Search results or null if the request fails
+ * @param context Client context including IP, API key, and client info
+ * @returns Search results or error
  */
 export async function searchLibraries(
   query: string,
   libraryName: string,
-  clientIp?: string,
-  apiKey?: string
+  context: ClientContext = {}
 ): Promise<SearchResponse> {
   try {
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/libs/search`);
     url.searchParams.set("query", query);
     url.searchParams.set("libraryName", libraryName);
 
-    const headers = generateHeaders(clientIp, apiKey);
+    const headers = generateHeaders(context);
 
     const response = await fetch(url, { headers });
     if (!response.ok) {
-      const errorMessage = await parseErrorResponse(response, apiKey);
+      const errorMessage = await parseErrorResponse(response, context.apiKey);
       console.error(errorMessage);
-      return {
-        results: [],
-        error: errorMessage,
-      } as SearchResponse;
+      return { results: [], error: errorMessage };
     }
     const searchData = await response.json();
     return searchData as SearchResponse;
   } catch (error) {
     const errorMessage = `Error searching libraries: ${error}`;
     console.error(errorMessage);
-    return { results: [], error: errorMessage } as SearchResponse;
+    return { results: [], error: errorMessage };
   }
 }
 
 /**
  * Fetches intelligent, reranked context for a natural language query
- * @param request The context request parameters (query, topic, library, mode)
- * @param clientIp Optional client IP address to include in headers
- * @param apiKey Optional API key for authentication
+ * @param request The context request parameters (query, libraryId)
+ * @param context Client context including IP, API key, and client info
  * @returns Context response with data
  */
 export async function fetchLibraryContext(
   request: ContextRequest,
-  clientIp?: string,
-  apiKey?: string
+  context: ClientContext = {}
 ): Promise<ContextResponse> {
   try {
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/context`);
     url.searchParams.set("query", request.query);
     url.searchParams.set("libraryId", request.libraryId);
 
-    const headers = generateHeaders(clientIp, apiKey, { "X-Context7-Source": "mcp-server" });
+    const headers = generateHeaders(context);
 
     const response = await fetch(url, { headers });
     if (!response.ok) {
-      const errorMessage = await parseErrorResponse(response, apiKey);
+      const errorMessage = await parseErrorResponse(response, context.apiKey);
       console.error(errorMessage);
       return { data: errorMessage };
     }

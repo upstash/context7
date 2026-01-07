@@ -4,11 +4,13 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
-import { formatSearchResults } from "./lib/utils.js";
+import { ClientContext } from "./lib/encryption.js";
+import { formatSearchResults, extractClientInfoFromUserAgent } from "./lib/utils.js";
 import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
+import { SERVER_VERSION } from "./lib/constants.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -61,14 +63,35 @@ const CLI_PORT = (() => {
   return isNaN(parsed) ? undefined : parsed;
 })();
 
-const requestContext = new AsyncLocalStorage<{
-  clientIp?: string;
-  apiKey?: string;
-}>();
+const requestContext = new AsyncLocalStorage<ClientContext>();
 
-// Store API key globally for stdio mode (where requestContext may not be available in tool handlers)
-let globalApiKey: string | undefined;
+// Global state for stdio mode only
+let stdioApiKey: string | undefined;
+let stdioClientInfo: { ide?: string; version?: string } | undefined;
 
+/**
+ * Get the effective client context
+ */
+function getClientContext(): ClientContext {
+  const ctx = requestContext.getStore();
+
+  // HTTP mode: context is fully populated from request
+  if (ctx) {
+    return ctx;
+  }
+
+  // stdio mode: use globals
+  return {
+    apiKey: stdioApiKey,
+    clientInfo: stdioClientInfo,
+    transport: "stdio",
+  };
+}
+
+/**
+ * Extract client IP address from request headers.
+ * Handles X-Forwarded-For header for proxied requests.
+ */
 function getClientIp(req: express.Request): string | undefined {
   const forwardedFor = req.headers["x-forwarded-for"] || req.headers["X-Forwarded-For"];
 
@@ -98,13 +121,24 @@ function getClientIp(req: express.Request): string | undefined {
 const server = new McpServer(
   {
     name: "Context7",
-    version: "2.0.0",
+    version: SERVER_VERSION,
   },
   {
     instructions:
       "Use this server to retrieve up-to-date documentation and code examples for any library.",
   }
 );
+
+// Capture client info from MCP initialize handshake
+server.server.oninitialized = () => {
+  const clientVersion = server.server.getClientVersion();
+  if (clientVersion) {
+    stdioClientInfo = {
+      ide: clientVersion.name,
+      version: clientVersion.version,
+    };
+  }
+};
 
 server.registerTool(
   "resolve-library-id",
@@ -147,9 +181,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
     },
   },
   async ({ query, libraryName }) => {
-    const ctx = requestContext.getStore();
-    const apiKey = ctx?.apiKey || globalApiKey;
-    const searchResponse = await searchLibraries(query, libraryName, ctx?.clientIp, apiKey);
+    const searchResponse = await searchLibraries(query, libraryName, getClientContext());
 
     if (!searchResponse.results || searchResponse.results.length === 0) {
       return {
@@ -220,10 +252,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
     },
   },
   async ({ query, libraryId }) => {
-    const ctx = requestContext.getStore();
-    const apiKey = ctx?.apiKey || globalApiKey;
-
-    const response = await fetchLibraryContext({ query, libraryId }, ctx?.clientIp, apiKey);
+    const response = await fetchLibraryContext({ query, libraryId }, getClientContext());
 
     return {
       content: [
@@ -289,8 +318,12 @@ async function main() {
 
     app.all("/mcp", async (req: express.Request, res: express.Response) => {
       try {
-        const clientIp = getClientIp(req);
-        const apiKey = extractApiKey(req);
+        const context: ClientContext = {
+          clientIp: getClientIp(req),
+          apiKey: extractApiKey(req),
+          clientInfo: extractClientInfoFromUserAgent(req.headers["user-agent"]),
+          transport: "http",
+        };
 
         const transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: undefined,
@@ -301,7 +334,7 @@ async function main() {
           transport.close();
         });
 
-        await requestContext.run({ clientIp, apiKey }, async () => {
+        await requestContext.run(context, async () => {
           await server.connect(transport);
           await transport.handleRequest(req, res, req.body);
         });
@@ -344,22 +377,19 @@ async function main() {
 
       httpServer.once("listening", () => {
         console.error(
-          `Context7 Documentation MCP Server running on HTTP at http://localhost:${port}/mcp`
+          `Context7 Documentation MCP Server v${SERVER_VERSION} running on HTTP at http://localhost:${port}/mcp`
         );
       });
     };
 
     startServer(initialPort);
   } else {
-    const apiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
-    globalApiKey = apiKey; // Store globally for tool handlers in stdio mode
+    stdioApiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
     const transport = new StdioServerTransport();
 
-    await requestContext.run({ apiKey }, async () => {
-      await server.connect(transport);
-    });
+    await server.connect(transport);
 
-    console.error("Context7 Documentation MCP Server running on stdio");
+    console.error(`Context7 Documentation MCP Server v${SERVER_VERSION} running on stdio`);
   }
 }
 

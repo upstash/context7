@@ -1,6 +1,6 @@
 {
   "name": "@upstash/context7-sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "JavaScript/TypeScript SDK for Context7",
   "scripts": {
     "build": "tsup",
