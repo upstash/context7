@@ -7,30 +7,22 @@ Context7 brings up-to-date library documentation directly into Cursor. Instead o
 
 ## Installation
 
-Choose between **Remote** (simpler, no dependencies) or **Local** (runs on your machine).
-
-<Accordion title="What's the difference between Remote and Local?">
-| | Remote | Local |
-|---|---|---|
-| **Setup** | No dependencies | Requires Node.js 18+ |
-| **Startup** | Instant | Spawns local process |
-| **Updates** | Always latest | Manual `npm update` |
-
-Most users should start with **Remote** — it's simpler and works out of the box.
-
-</Accordion>
+<Tip>
+Context7 works without an API key for basic usage. Adding an API key gives you higher rate limits, access to private repositories, and team usage tracking. Get one at [context7.com/dashboard](https://context7.com/dashboard).
+</Tip>
 
 <Tabs>
-<Tab title="Remote Server" icon="cloud">
-### One-Click Install
+<Tab title="Remote Server (Recommended)" icon="cloud">
+No dependencies required. Connects to Context7's hosted server.
+
+Click the button to add Context7 to Cursor automatically.
 
 [![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D)
 
-### Manual Setup
+Or add manually to `~/.cursor/mcp.json`:
 
-Add to `~/.cursor/mcp.json`:
-
-```json
+<CodeGroup>
+```json With API Key
 {
   "mcpServers": {
     "context7": {
@@ -43,20 +35,28 @@ Add to `~/.cursor/mcp.json`:
 }
 ```
 
-<Warning>
-Replace `YOUR_API_KEY` with your key from [context7.com/dashboard](https://context7.com/dashboard), then restart Cursor.
-</Warning>
+```json Without API Key
+{
+  "mcpServers": {
+    "context7": {
+      "url": "https://mcp.context7.com/mcp"
+    }
+  }
+}
+```
+</CodeGroup>
 </Tab>
 <Tab title="Local Server" icon="computer">
-### One-Click Install
+Runs on your machine. Requires Node.js 18+.
+
+Click the button to add Context7 to Cursor automatically.
 
 [![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJjb21tYW5kIjoibnB4IC15IEB1cHN0YXNoL2NvbnRleHQ3LW1jcCJ9)
 
-### Manual Setup
+Or add manually to `~/.cursor/mcp.json`:
 
-Add to `~/.cursor/mcp.json`:
-
-```json
+<CodeGroup>
+```json With API Key
 {
   "mcpServers": {
     "context7": {
@@ -67,12 +67,17 @@ Add to `~/.cursor/mcp.json`:
 }
 ```
 
-<Warning>
-Replace `YOUR_API_KEY` with your key from [context7.com/dashboard](https://context7.com/dashboard), then restart Cursor.
-</Warning>
-<Note>
-Requires Node.js 18+ installed on your machine.
-</Note>
+```json Without API Key
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    }
+  }
+}
+```
+</CodeGroup>
 </Tab>
 </Tabs>
 
@@ -85,12 +90,6 @@ You can also configure Context7 for a specific project by creating `.cursor/mcp.
 - A project requires specific Context7 settings
 
 The project config uses the same format as the global config.
-
-<Note>
-  Context7 works without an API key for basic usage. Adding an API key gives you higher rate limits,
-  access to private repositories, and team usage tracking. Get one at
-  [context7.com/dashboard](https://context7.com/dashboard).
-</Note>
 
 ---
 
@@ -106,7 +105,8 @@ Go to `Settings` → `Cursor Settings` → `Rules`
 </Step>
 <Step title="Add the Rule">
 ```
-Always use Context7 MCP when I ask about library documentation, API references, or need code examples from external packages.
+Always use Context7 MCP when I ask about library documentation,
+API references, or need code examples from external packages.
 ```
 </Step>
 </Steps>
@@ -155,24 +155,6 @@ Set up routing with /vercel/next.js for reference.
 ```
 
 The slash prefix tells Context7 to use that library directly.
-
-### Version Pinning
-
-When you're working with a specific version, mention it in your prompt:
-
-```
-How do I set up Next.js 14 middleware?
-Show me React 18 Suspense examples
-```
-
-Context7 matches the appropriate version automatically.
-
-For exact version control, use the full version ID:
-
-```
-Use /vercel/next.js/v15.1.8 for the middleware docs.
-Reference /facebook/react/v19.0.0 for the new hooks.
-```
 
 ### Example Prompts That Work Well
 

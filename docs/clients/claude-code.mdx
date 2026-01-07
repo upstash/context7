@@ -7,59 +7,51 @@ Context7 integrates with Claude Code to provide current library documentation in
 
 ## Installation
 
+<Tip>
+Context7 works without an API key for basic usage. Adding an API key gives you higher rate limits, access to private repositories, and team usage tracking. Get one at [context7.com/dashboard](https://context7.com/dashboard).
+</Tip>
+
 <Tabs>
-  <Tab title="Remote Server" icon="cloud">
-    Run this command to add Context7:
+<Tab title="Remote Server (Recommended)" icon="cloud">
+No dependencies required. Connects to Context7's hosted server.
 
-    ```bash
-    claude mcp add --transport http context7 https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: YOUR_API_KEY"
-    ```
+<CodeGroup>
+```bash With API Key
+claude mcp add --transport http context7 https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: YOUR_API_KEY"
+```
 
-    Without an API key (basic usage):
+```bash Without API Key
+claude mcp add --transport http context7 https://mcp.context7.com/mcp
+```
+</CodeGroup>
+</Tab>
+<Tab title="Local Server" icon="computer">
+Runs on your machine. Requires Node.js 18+.
 
-    ```bash
-    claude mcp add --transport http context7 https://mcp.context7.com/mcp
-    ```
+<CodeGroup>
+```bash With API Key
+claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+```
 
-    Connects to Context7's hosted server. No local installation needed.
-  </Tab>
-  <Tab title="Local Server" icon="computer">
-    Runs the MCP server on your machine:
+```bash Without API Key
+claude mcp add context7 -- npx -y @upstash/context7-mcp
+```
+</CodeGroup>
 
-    ```bash
-    claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
-    ```
-
-    Requires Node.js installed locally.
-  </Tab>
-</Tabs>
-
-### Environment Variables
+**Using environment variables:**
 
 Instead of passing the API key in the command, you can set it as an environment variable:
 
 ```bash
 export CONTEXT7_API_KEY=your_api_key_here
-```
-
-Then add the server without the key flag:
-
-```bash
 claude mcp add context7 -- npx -y @upstash/context7-mcp
 ```
+</Tab>
+</Tabs>
 
 ### Verifying the Connection
 
-<Steps>
-  <Step title="List MCP servers">
-    ```bash
-    claude mcp list
-    ```
-  </Step>
-  <Step title="Check for Context7">
-    You should see `context7` in the list with its tools: `resolve-library-id` and `query-docs`.
-  </Step>
-</Steps>
+Run `claude mcp list` — you should see `context7` in the list with its tools: `resolve-library-id` and `query-docs`.
 
 ---
 
@@ -68,18 +60,18 @@ claude mcp add context7 -- npx -y @upstash/context7-mcp
 The full Context7 plugin for Claude Code includes more than just the MCP server:
 
 <CardGroup cols={2}>
-  <Card title="MCP Server" icon="server">
-    The tools for fetching documentation (`resolve-library-id`, `query-docs`)
-  </Card>
-  <Card title="Skills" icon="sparkles">
-    Auto-triggers documentation lookups when you ask about libraries
-  </Card>
-  <Card title="Agents" icon="robot">
-    A `docs-researcher` agent for focused lookups that keep context lean
-  </Card>
-  <Card title="Commands" icon="terminal">
-    `/context7:docs` for manual documentation queries
-  </Card>
+<Card title="MCP Server" icon="server">
+The tools for fetching documentation (`resolve-library-id`, `query-docs`)
+</Card>
+<Card title="Skills" icon="sparkles">
+Auto-triggers documentation lookups when you ask about libraries
+</Card>
+<Card title="Agents" icon="robot">
+A `docs-researcher` agent for focused lookups that keep context lean
+</Card>
+<Card title="Commands" icon="terminal">
+`/context7:docs` for manual documentation queries
+</Card>
 </CardGroup>
 
 ### Installing the Plugin
@@ -101,34 +93,22 @@ Or copy the plugin folder manually to your Claude Code plugins directory.
 This skill triggers automatically when you ask about libraries, frameworks, or need code examples. You don't need to type "use context7" — the skill recognizes when documentation would help.
 
 <AccordionGroup>
-  <Accordion title="What triggers the skill">
-    - Setup questions: "How do I configure Next.js middleware?"
-    - Code generation: "Write a Prisma query for user relations"
-    - API references: "What are the Supabase auth methods?"
-    - Framework mentions: React, Vue, Svelte, Express, Tailwind, etc.
-  </Accordion>
-
-  <Accordion title="How it works">
-    <Steps>
-      <Step title="Resolve">
-        Finds the library ID using `resolve-library-id` with your question as context
-      </Step>
-      <Step title="Select">
-        Picks the best match based on name accuracy and quality scores
-      </Step>
-      <Step title="Fetch">
-        Calls `query-docs` with the library ID and your specific question
-      </Step>
-      <Step title="Return">
-        Provides code examples and explanations from current documentation
-      </Step>
-    </Steps>
-  </Accordion>
-
-  <Accordion title="Limits">
-    - Maximum 3 documentation calls per question
-    - Uses version-specific IDs when you mention versions
-  </Accordion>
+<Accordion title="What triggers the skill">
+- Setup questions: "How do I configure Next.js middleware?"
+- Code generation: "Write a Prisma query for user relations"
+- API references: "What are the Supabase auth methods?"
+- Framework mentions: React, Vue, Svelte, Express, Tailwind, etc.
+</Accordion>
+<Accordion title="How it works">
+1. **Resolve**: Finds the library ID using `resolve-library-id` with your question as context
+2. **Select**: Picks the best match based on name accuracy and quality scores
+3. **Fetch**: Calls `query-docs` with the library ID and your specific question
+4. **Return**: Provides code examples and explanations from current documentation
+</Accordion>
+<Accordion title="Limits">
+- Maximum 3 documentation calls per question
+- Uses version-specific IDs when you mention versions
+</Accordion>
 </AccordionGroup>
 
 ### Manual Skill Invocation
@@ -148,24 +128,18 @@ use context7 skill to look up React hooks documentation
 When you're in the middle of a long task and don't want documentation tool calls cluttering your context, spawn the `docs-researcher` agent. It runs in a separate context and returns just the answer.
 
 <Tabs>
-  <Tab title="When to Use" icon="question">
-    - You need docs but want to keep your main context clean
-    - You're working on something complex and context is getting long
-    - You want a focused answer without side effects
-  </Tab>
-  <Tab title="Examples" icon="code">
-    ```
-    spawn docs-researcher to look up React hooks documentation
-    ```
-
-    ```
-    spawn docs-researcher: how do I set up Prisma with PostgreSQL?
-    ```
-
-    ```
-    spawn docs-researcher to find Tailwind CSS grid utilities
-    ```
-  </Tab>
+<Tab title="When to Use" icon="question">
+- You need docs but want to keep your main context clean
+- You're working on something complex and context is getting long
+- You want a focused answer without side effects
+</Tab>
+<Tab title="Examples" icon="code">
+```
+spawn docs-researcher to look up React hooks documentation
+spawn docs-researcher: how do I set up Prisma with PostgreSQL?
+spawn docs-researcher to find Tailwind CSS grid utilities
+```
+</Tab>
 </Tabs>
 
 The agent uses the same tools (`resolve-library-id` and `query-docs`) but runs on a lighter model (Sonnet) to keep things fast.
@@ -197,21 +171,21 @@ Manual command for documentation lookups.
 **Examples:**
 
 <Tabs>
-  <Tab title="Basic" icon="search">
-    ```
-    /context7:docs react hooks
-    /context7:docs next.js authentication
-    /context7:docs prisma relations
-    ```
-  </Tab>
-  <Tab title="With Library ID" icon="link">
-    ```
-    /context7:docs /vercel/next.js/v15.1.8 app router
-    /context7:docs /supabase/supabase row level security
-    ```
+<Tab title="Basic" icon="search">
+```
+/context7:docs react hooks
+/context7:docs next.js authentication
+/context7:docs prisma relations
+```
+</Tab>
+<Tab title="With Library ID" icon="link">
+```
+/context7:docs /vercel/next.js app router
+/context7:docs /supabase/supabase row level security
+```
 
-    Using a library ID directly skips the resolution step.
-  </Tab>
+Using a library ID directly skips the resolution step.
+</Tab>
 </Tabs>
 
 **When to use:**
@@ -224,73 +198,56 @@ Manual command for documentation lookups.
 ## Tips
 
 <AccordionGroup>
-  <Accordion title="Setting Up CLAUDE.md Rules">
-    Add rules to your project's `CLAUDE.md` file to make Context7 trigger automatically:
+<Accordion title="Setting Up CLAUDE.md Rules">
+Add rules to your project's `CLAUDE.md` file to make Context7 trigger automatically:
 
-    ```markdown
-    ## Documentation
+```markdown
+## Documentation
 
-    When I ask about library APIs, framework setup, or need code examples:
-    - Use Context7 to fetch current documentation
-    - Don't rely on training data for library-specific code
-    - Prefer version-specific docs when I mention a version
-    ```
+When I ask about library APIs, framework setup, or need code examples:
+- Use Context7 to fetch current documentation
+- Don't rely on training data for library-specific code
+```
 
-    This makes Context7 part of your project's workflow without explicit prompting.
-  </Accordion>
+This makes Context7 part of your project's workflow without explicit prompting.
+</Accordion>
+<Accordion title="Library IDs vs Letting Context7 Resolve">
+**Let Context7 resolve** when:
+- You're not sure of the exact library name
+- Multiple libraries might match (e.g., "supabase" could mean the JS client or the platform)
+- You want Context7 to pick the best match
 
-  <Accordion title="Library IDs vs Letting Context7 Resolve">
-    **Let Context7 resolve** when:
-    - You're not sure of the exact library name
-    - Multiple libraries might match (e.g., "supabase" could mean the JS client or the platform)
-    - You want Context7 to pick the best match
+**Use library IDs directly** when:
+- You know exactly which library you need
+- You want faster lookups (skips resolution step)
 
-    **Use library IDs directly** when:
-    - You know exactly which library you need
-    - You want faster lookups (skips resolution step)
-    - You need a specific version
+Library ID format: `/org/project`
 
-    Library ID format: `/org/project` or `/org/project/version`
+```
+/vercel/next.js
+/supabase/supabase
+/facebook/react
+/prisma/prisma
+```
+</Accordion>
+<Accordion title="Agent vs Inline Tool Calls">
+The `docs-researcher` agent is useful for keeping context lean, but it adds a small overhead (spawning a new context).
 
-    ```
-    /vercel/next.js
-    /supabase/supabase
-    /facebook/react/v19.0.0
-    /prisma/prisma/v6.0.0
-    ```
-  </Accordion>
+**Rule of thumb:**
+- First few documentation lookups: use inline tools
+- After 5+ tool calls or when context feels heavy: switch to agents
+- For quick one-off questions during complex tasks: use agents
+</Accordion>
+<Accordion title="Combining with Codebase Exploration">
+Context7 works well alongside codebase exploration. A typical workflow:
 
-  <Accordion title="Version Pinning">
-    For consistent documentation across your project, pin to specific versions:
+1. Ask Claude Code to explore your codebase for existing patterns
+2. Use Context7 to fetch docs for libraries you're integrating
+3. Have Claude Code implement based on both your codebase and current docs
 
-    ```
-    Use /vercel/next.js/v15.1.8 for all Next.js documentation lookups.
-    ```
-
-    This is especially useful when:
-    - Your project uses a specific version
-    - You're debugging version-specific behavior
-    - New versions have breaking changes
-  </Accordion>
-
-  <Accordion title="Agent vs Inline Tool Calls">
-    The `docs-researcher` agent is useful for keeping context lean, but it adds a small overhead (spawning a new context).
-
-    **Rule of thumb:**
-    - First few documentation lookups: use inline tools
-    - After 5+ tool calls or when context feels heavy: switch to agents
-    - For quick one-off questions during complex tasks: use agents
-  </Accordion>
-
-  <Accordion title="Combining with Codebase Exploration">
-    Context7 works well alongside codebase exploration. A typical workflow:
-
-    1. Ask Claude Code to explore your codebase for existing patterns
-    2. Use Context7 to fetch docs for libraries you're integrating
-    3. Have Claude Code implement based on both your codebase and current docs
-
-    ```
-    Look at how we're using Prisma in src/db/. Then use Context7 to check if there's a better way to handle relations in Prisma 6.
-    ```
-  </Accordion>
+```
+Look at how we're using Prisma in src/db/.
+Then use Context7 to check if there's a better way to handle relations.
+```
+</Accordion>
 </AccordionGroup>
