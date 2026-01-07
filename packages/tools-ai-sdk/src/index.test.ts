@@ -128,10 +128,10 @@ describe("@upstash/context7-tools-ai-sdk", () => {
       expect(agent).toBeDefined();
     });
 
-    test("should accept custom system prompt", () => {
+    test("should accept custom instructions", () => {
       const agent = new Context7Agent({
         model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
-        system: "Custom system prompt for testing",
+        instructions: "Custom instructions for testing",
       });
 
       expect(agent).toBeDefined();

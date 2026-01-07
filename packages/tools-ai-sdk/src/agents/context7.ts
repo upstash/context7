@@ -1,16 +1,11 @@
-import {
-  Experimental_Agent as Agent,
-  type Experimental_AgentSettings as AgentSettings,
-  type ToolSet,
-  stepCountIs,
-} from "ai";
+import { ToolLoopAgent, type ToolLoopAgentSettings, type ToolSet, stepCountIs } from "ai";
 import { resolveLibraryId, queryDocs } from "@tools";
 import { AGENT_PROMPT } from "@prompts";
 
 /**
  * Configuration for Context7 agent.
  */
-export interface Context7AgentConfig extends AgentSettings<ToolSet> {
+export interface Context7AgentConfig extends ToolLoopAgentSettings<never, ToolSet> {
   /**
    * Context7 API key. If not provided, uses the CONTEXT7_API_KEY environment variable.
    */
@@ -40,16 +35,24 @@ export interface Context7AgentConfig extends AgentSettings<ToolSet> {
  * });
  * ```
  */
-export class Context7Agent extends Agent<ToolSet> {
+export class Context7Agent extends ToolLoopAgent<never, ToolSet> {
   constructor(config: Context7AgentConfig) {
-    const { model, stopWhen = stepCountIs(5), system, apiKey, tools, ...agentSettings } = config;
+    const {
+      model,
+      stopWhen = stepCountIs(5),
+      instructions,
+      apiKey,
+
+      tools,
+      ...agentSettings
+    } = config;
 
     const context7Config = { apiKey };
 
     super({
       ...agentSettings,
       model,
-      system: system || AGENT_PROMPT,
+      instructions: instructions || AGENT_PROMPT,
       tools: {
         ...tools,
         resolveLibraryId: resolveLibraryId(context7Config),
