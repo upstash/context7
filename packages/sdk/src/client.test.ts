@@ -73,32 +73,18 @@ describe("Context7 Client", () => {
     });
   });
 
-  describe("getContext - text format", () => {
+  describe("getContext - JSON format (default)", () => {
     const client = new Context7({ apiKey });
 
-    test("should get context as text string (default)", async () => {
+    test("should get context as Documentation array (default)", async () => {
       const result = await client.getContext("How to use hooks", "/facebook/react");
 
       expect(result).toBeDefined();
-      expect(typeof result).toBe("string");
+      expect(Array.isArray(result)).toBe(true);
       expect(result.length).toBeGreaterThan(0);
     });
 
-    test("should get context with explicit txt type", async () => {
-      const result = await client.getContext("How to use hooks", "/facebook/react", {
-        type: "txt",
-      });
-
-      expect(result).toBeDefined();
-      expect(typeof result).toBe("string");
-      expect(result.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe("getContext - JSON format", () => {
-    const client = new Context7({ apiKey });
-
-    test("should get context as Documentation array", async () => {
+    test("should get context with explicit json type", async () => {
       const result = await client.getContext("How to use hooks", "/facebook/react", {
         type: "json",
       });
@@ -124,6 +110,20 @@ describe("Context7 Client", () => {
     });
   });
 
+  describe("getContext - text format", () => {
+    const client = new Context7({ apiKey });
+
+    test("should get context as text string with type: txt", async () => {
+      const result = await client.getContext("How to use hooks", "/facebook/react", {
+        type: "txt",
+      });
+
+      expect(result).toBeDefined();
+      expect(typeof result).toBe("string");
+      expect(result.length).toBeGreaterThan(0);
+    });
+  });
+
   describe("getContext - different libraries", () => {
     const client = new Context7({ apiKey });
 
@@ -131,7 +131,7 @@ describe("Context7 Client", () => {
       const result = await client.getContext("How to create components", "/vuejs/core");
 
       expect(result).toBeDefined();
-      expect(typeof result).toBe("string");
+      expect(Array.isArray(result)).toBe(true);
       expect(result.length).toBeGreaterThan(0);
     });
 
@@ -139,7 +139,7 @@ describe("Context7 Client", () => {
       const result = await client.getContext("How to create routes", "/expressjs/express");
 
       expect(result).toBeDefined();
-      expect(typeof result).toBe("string");
+      expect(Array.isArray(result)).toBe(true);
       expect(result.length).toBeGreaterThan(0);
     });
   });
@@ -159,21 +159,21 @@ describe("Context7 Client", () => {
   describe("type inference", () => {
     const client = new Context7({ apiKey });
 
-    test("should infer string type for txt format", async () => {
+    test("should infer Documentation[] for default (json) format", async () => {
       const result = await client.getContext("How to use hooks", "/facebook/react");
-
-      expect(typeof result).toBe("string");
-    });
-
-    test("should infer Documentation[] for json format", async () => {
-      const result = await client.getContext("How to use hooks", "/facebook/react", {
-        type: "json",
-      });
 
       expect(Array.isArray(result)).toBe(true);
       expect(result[0]).toHaveProperty("title");
       expect(result[0]).toHaveProperty("content");
       expect(result[0]).toHaveProperty("source");
+    });
+
+    test("should infer string type for txt format", async () => {
+      const result = await client.getContext("How to use hooks", "/facebook/react", {
+        type: "txt",
+      });
+
+      expect(typeof result).toBe("string");
     });
   });
 });

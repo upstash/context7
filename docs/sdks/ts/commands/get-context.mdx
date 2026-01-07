@@ -5,7 +5,7 @@ description: "Retrieve documentation context for a library"
 
 # Get Context
 
-Retrieve documentation context for a specific library. Returns documentation as plain text (default) or as a JSON array of documentation snippets.
+Retrieve documentation context for a specific library. Returns documentation as a JSON array of documentation snippets (default) or as plain text.
 
 ## Arguments
 
@@ -21,10 +21,10 @@ Retrieve documentation context for a specific library. Returns documentation as 
   <Expandable title="properties">
     <ParamField path="type" type="'json' | 'txt'">
       Format of the response
-      - `txt`: Plain text format (default)
-      - `json`: Array of Documentation objects
+      - `json`: Array of Documentation objects (default)
+      - `txt`: Plain text format
 
-      Default: `"txt"`
+      Default: `"json"`
     </ParamField>
   </Expandable>
 </ParamField>
@@ -33,13 +33,13 @@ Retrieve documentation context for a specific library. Returns documentation as 
 
 The response type depends on the `type` option.
 
-### Text Format (`type: "txt"` or default)
-
-Returns a `string` containing the documentation context ready to use in LLM prompts.
-
-### JSON Format (`type: "json"`)
+### JSON Format (`type: "json"` or default)
 
 Returns `Documentation[]` - an array of documentation objects.
+
+### Text Format (`type: "txt"`)
+
+Returns a `string` containing the documentation context ready to use in LLM prompts.
 
 <ResponseField name="Documentation" type="object">
   <Expandable title="properties">
@@ -58,28 +58,14 @@ Returns `Documentation[]` - an array of documentation objects.
 ## Examples
 
 <RequestExample>
-```typescript Text Format (Default)
-import { Context7 } from "@upstash/context7-sdk";
-
-const client = new Context7();
-
-const context = await client.getContext(
-  "How do I use hooks?",
-  "/facebook/react"
-);
-
-console.log(context);
-```
-
-```typescript JSON Format
+```typescript JSON Format (Default)
 import { Context7 } from "@upstash/context7-sdk";
 
 const client = new Context7();
 
 const docs = await client.getContext(
   "How do I use hooks?",
-  "/facebook/react",
-  { type: "json" }
+  "/facebook/react"
 );
 
 docs.forEach((doc) => {
@@ -87,6 +73,20 @@ docs.forEach((doc) => {
   console.log(doc.content);
   console.log(doc.source);
 });
+```
+
+```typescript Text Format
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7();
+
+const context = await client.getContext(
+  "How do I use hooks?",
+  "/facebook/react",
+  { type: "txt" }
+);
+
+console.log(context);
 ```
 
 ```typescript Error Handling
