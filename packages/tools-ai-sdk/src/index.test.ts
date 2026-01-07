@@ -67,8 +67,9 @@ describe("@upstash/context7-tools-ai-sdk", () => {
       expect(result.toolCalls.length).toBeGreaterThan(0);
       expect(result.toolCalls[0].toolName).toBe("resolveLibraryId");
       expect(result.toolResults.length).toBeGreaterThan(0);
-      const toolResult = result.toolResults[0] as unknown as { output: { success: boolean } };
-      expect(toolResult.output.success).toBe(true);
+      const toolResult = result.toolResults[0] as unknown as { output: string };
+      expect(typeof toolResult.output).toBe("string");
+      expect(toolResult.output).toContain("Context7-compatible library ID");
     }, 30000);
 
     test("queryDocs tool should fetch documentation", async () => {
@@ -85,8 +86,9 @@ describe("@upstash/context7-tools-ai-sdk", () => {
       expect(result.toolCalls.length).toBeGreaterThan(0);
       expect(result.toolCalls[0].toolName).toBe("queryDocs");
       expect(result.toolResults.length).toBeGreaterThan(0);
-      const toolResult = result.toolResults[0] as unknown as { output: { success: boolean } };
-      expect(toolResult.output.success).toBe(true);
+      const toolResult = result.toolResults[0] as unknown as { output: string };
+      expect(typeof toolResult.output).toBe("string");
+      expect(toolResult.output.length).toBeGreaterThan(0);
     }, 30000);
 
     test("both tools can work together in a multi-step flow", async () => {

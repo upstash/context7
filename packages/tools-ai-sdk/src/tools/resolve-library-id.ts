@@ -49,27 +49,16 @@ export function resolveLibraryId(config: Context7ToolsConfig = {}) {
     execute: async ({ query, libraryName }: { query: string; libraryName: string }) => {
       try {
         const client = getClient();
-        const results = await client.searchLibrary(query, libraryName);
+        const results = await client.searchLibrary(query, libraryName, { type: "txt" });
 
         if (!results || results.length === 0) {
-          return {
-            success: false,
-            error: "No libraries found matching your query.",
-            suggestions: "Try a different search term or check the library name.",
-          };
+          return `No libraries found matching "${libraryName}". Try a different search term or check the library name.`;
         }
 
-        return {
-          success: true,
-          results,
-          totalResults: results.length,
-        };
+        return results;
       } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Failed to search libraries",
-          suggestions: "Check your API key and try again, or try a different search term.",
-        };
+        const errorMessage = error instanceof Error ? error.message : "Failed to search libraries";
+        return `Error searching for libraries: ${errorMessage}. Check your API key and try again.`;
       }
     },
   });
