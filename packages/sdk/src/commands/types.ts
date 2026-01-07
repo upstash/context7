@@ -37,7 +37,19 @@ export interface Documentation {
 export interface GetContextOptions {
   /**
    * Response format.
-   * @default "txt"
+   * - "json": Returns Documentation[] array (default)
+   * - "txt": Returns formatted text string
+   * @default "json"
+   */
+  type?: "json" | "txt";
+}
+
+export interface SearchLibraryOptions {
+  /**
+   * Response format.
+   * - "json": Returns Library[] array (default)
+   * - "txt": Returns formatted text string
+   * @default "json"
    */
   type?: "json" | "txt";
 }

@@ -51,29 +51,17 @@ export function queryDocs(config: Context7ToolsConfig = {}) {
     execute: async ({ libraryId, query }: { libraryId: string; query: string }) => {
       try {
         const client = getClient();
-        const documentation = await client.getContext(query, libraryId, { type: "json" });
+        const documentation = await client.getContext(query, libraryId, { type: "txt" });
 
         if (!documentation || documentation.length === 0) {
-          return {
-            success: false,
-            error:
-              "Documentation not found or not finalized for this library. This might have happened because you used an invalid Context7-compatible library ID. To get a valid Context7-compatible library ID, use the 'resolveLibraryId' with the package name you wish to retrieve documentation for.",
-            libraryId,
-          };
+          return `No documentation found for library "${libraryId}". This might have happened because you used an invalid Context7-compatible library ID. Use 'resolveLibraryId' to get a valid ID.`;
         }
 
-        return {
-          success: true,
-          libraryId,
-          documentation,
-          totalResults: documentation.length,
-        };
+        return documentation;
       } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Failed to fetch documentation",
-          libraryId,
-        };
+        const errorMessage =
+          error instanceof Error ? error.message : "Failed to fetch documentation";
+        return `Error fetching documentation for "${libraryId}": ${errorMessage}`;
       }
     },
   });
