@@ -1,0 +1,208 @@
+---
+title: Cursor
+description: Using Context7 with Cursor
+---
+
+Context7 brings up-to-date library documentation directly into Cursor. Instead of getting outdated code examples from training data, you get current documentation from source repositories.
+
+## Installation
+
+### One-Click Install
+
+Since Cursor 1.0, you can install Context7 with a single click:
+
+<Tabs>
+  <Tab title="Remote Server" icon="cloud">
+    [![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D)
+
+    Connects to Context7's hosted server. No local installation needed.
+  </Tab>
+  <Tab title="Local Server" icon="computer">
+    [![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJjb21tYW5kIjoibnB4IC15IEB1cHN0YXNoL2NvbnRleHQ3LW1jcCJ9)
+
+    Runs the MCP server on your machine via npx.
+  </Tab>
+</Tabs>
+
+### Manual Installation
+
+Add this to your Cursor MCP config file at `~/.cursor/mcp.json`:
+
+<Tabs>
+  <Tab title="Remote Server" icon="cloud">
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "url": "https://mcp.context7.com/mcp",
+          "headers": {
+            "CONTEXT7_API_KEY": "YOUR_API_KEY"
+          }
+        }
+      }
+    }
+    ```
+    Simpler setup, no local dependencies.
+  </Tab>
+  <Tab title="Local Server" icon="computer">
+    ```json
+    {
+      "mcpServers": {
+        "context7": {
+          "command": "npx",
+          "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+        }
+      }
+    }
+    ```
+    Runs on your machine, requires Node.js.
+  </Tab>
+</Tabs>
+
+### Project-Level Configuration
+
+You can also configure Context7 for a specific project by creating `.cursor/mcp.json` in your project folder. This is useful when:
+
+- Different projects need different API keys
+- You want to share the config with your team via version control
+- A project requires specific Context7 settings
+
+The project config uses the same format as the global config.
+
+<Note>
+Context7 works without an API key for basic usage. Adding an API key gives you higher rate limits, access to private repositories, and team usage tracking. Get one at [context7.com/dashboard](https://context7.com/dashboard).
+</Note>
+
+---
+
+## Setting Up Rules
+
+To make Context7 trigger automatically (without typing "use context7" every time), add a rule in Cursor.
+
+<Tabs>
+  <Tab title="Cursor Settings" icon="settings">
+    <Steps>
+      <Step title="Open Settings">
+        Go to `Settings` → `Cursor Settings` → `Rules`
+      </Step>
+      <Step title="Add the Rule">
+        ```
+        Always use Context7 MCP when I ask about library documentation, API references, or need code examples from external packages.
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title=".cursorrules File" icon="file">
+    Create a `.cursorrules` file in your project root:
+
+    ```
+    # Context7 Integration
+
+    When the user asks about:
+    - Library APIs or documentation
+    - Framework setup or configuration
+    - Code examples for external packages
+    - How to use a specific library feature
+
+    Automatically use Context7 MCP to fetch current documentation. Don't rely on training data for library-specific code.
+    ```
+
+    This makes Context7 part of your project's standard workflow and can be version-controlled.
+  </Tab>
+</Tabs>
+
+---
+
+## Using Context7
+
+### Basic Usage
+
+Just ask about any library and Context7 will fetch the docs:
+
+```
+How do I set up middleware in Next.js 15?
+Show me Prisma query examples for relations
+What's the Supabase syntax for row-level security?
+```
+
+### Using Library IDs Directly
+
+If you already know the Context7 library ID, include it in your prompt to skip the resolution step:
+
+```
+Implement authentication using /supabase/supabase for the API docs.
+Set up routing with /vercel/next.js for reference.
+```
+
+The slash prefix tells Context7 to use that library directly.
+
+### Version Pinning
+
+When you're working with a specific version, mention it in your prompt:
+
+```
+How do I set up Next.js 14 middleware?
+Show me React 18 Suspense examples
+```
+
+Context7 matches the appropriate version automatically.
+
+For exact version control, use the full version ID:
+
+```
+Use /vercel/next.js/v15.1.8 for the middleware docs.
+Reference /facebook/react/v19.0.0 for the new hooks.
+```
+
+### Example Prompts That Work Well
+
+```
+I'm setting up a new Next.js 15 project. How do I configure the app router for API routes?
+
+I need to add Supabase auth to my React app. Show me the client-side setup.
+
+What's the correct way to define Prisma relations for a user with many posts?
+
+How do I use Tailwind's new container queries?
+```
+
+---
+
+## Tips
+
+<AccordionGroup>
+  <Accordion title="Project vs Global Config">
+    Use **global config** (`~/.cursor/mcp.json`) when:
+    - You want Context7 available in all projects
+    - You're using a personal API key
+
+    Use **project config** (`.cursor/mcp.json`) when:
+    - The project has specific Context7 requirements
+    - You want to share the setup with teammates
+    - Different projects need different API keys
+  </Accordion>
+
+  <Accordion title="Combining with Cursor Composer">
+    Context7 works well with Cursor's Composer feature. When you're building something that involves external libraries:
+
+    1. Start with a prompt that mentions the libraries you need
+    2. Context7 fetches the relevant docs
+    3. Composer uses those docs to generate accurate code
+
+    This is especially useful for newer library versions that might not be in Cursor's training data.
+  </Accordion>
+
+  <Accordion title="Getting Better Results">
+    - Be specific about what you're trying to do, not just which library
+    - Mention versions when they matter
+    - If the first result isn't right, ask for a different part of the docs
+
+    ```
+    # Good
+    How do I handle file uploads with the Supabase Storage API?
+
+    # Less specific
+    How does Supabase storage work?
+    ```
+  </Accordion>
+</AccordionGroup>
