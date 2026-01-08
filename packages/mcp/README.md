@@ -1428,6 +1428,19 @@ CONTEXT7_API_KEY=your_api_key_here
 
 </details>
 
+### OAuth Authentication
+
+Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization).
+
+To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client configuration:
+
+```diff
+- "url": "https://mcp.context7.com/mcp"
++ "url": "https://mcp.context7.com/mcp/oauth"
+```
+
+> **Note:** OAuth is not supported with stdio transport. For local MCP connections, use API key authentication instead.
+
 <details>
 <summary><b>Testing with MCP Inspector</b></summary>
 
