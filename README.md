@@ -39,9 +39,6 @@ Context7 fetches up-to-date code examples and documentation right into your LLM'
 > [!NOTE]
 > **API Key Recommended**: Get a free API key at [context7.com/dashboard](https://context7.com/dashboard) for higher rate limits.
 
-> [!WARNING]
-> **OAuth Support**: Currently, only **Claude Code** and **Cursor** are confirmed to work with OAuth authentication. Use API key authentication for other clients.
-
 <details>
 <summary><b>Install in Cursor</b></summary>
 
@@ -141,6 +138,24 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
 </details>
 
 **[Other IDEs and Clients →](https://context7.com/docs/resources/all-clients)**
+
+<details>
+<summary><b>OAuth Authentication</b></summary>
+
+> **Warning:** Currently, only **Claude Code** and **Cursor** are confirmed to work with OAuth. Other clients should use API key authentication instead.
+
+Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization).
+
+To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client configuration:
+
+```diff
+- "url": "https://mcp.context7.com/mcp"
++ "url": "https://mcp.context7.com/mcp/oauth"
+```
+
+OAuth is only available for remote HTTP connections. For local MCP connections using stdio transport, use API key authentication instead.
+
+</details>
 
 ## Important Tips
 
