@@ -11,7 +11,7 @@ import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
-import { SERVER_VERSION } from "./lib/constants.js";
+import { SERVER_VERSION, RESOURCE_URL, AUTH_SERVER_URL } from "./lib/constants.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -324,7 +324,7 @@ async function main() {
     ) => {
       try {
         const apiKey = extractApiKey(req);
-        const resourceUrl = process.env.RESOURCE_URL || `http://localhost:${initialPort}`;
+        const resourceUrl = RESOURCE_URL;
         const baseUrl = new URL(resourceUrl).origin;
 
         // OAuth discovery info header, used by MCP clients to discover the authorization server
@@ -411,12 +411,9 @@ async function main() {
     app.get(
       "/.well-known/oauth-protected-resource",
       (_req: express.Request, res: express.Response) => {
-        const authServerUrl = process.env.AUTH_SERVER_URL || "https://context7.com";
-        const resourceUrl = process.env.RESOURCE_URL || "https://mcp.context7.com";
-
         res.json({
-          resource: resourceUrl,
-          authorization_servers: [authServerUrl],
+          resource: RESOURCE_URL,
+          authorization_servers: [AUTH_SERVER_URL],
           scopes_supported: ["mcp:read", "mcp:write"],
           bearer_methods_supported: ["header"],
         });

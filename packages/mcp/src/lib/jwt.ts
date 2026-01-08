@@ -1,7 +1,6 @@
 import * as jose from "jose";
+import { CLERK_DOMAIN } from "./constants.js";
 
-// Clerk is the OAuth token issuer
-const CLERK_DOMAIN = process.env.CLERK_DOMAIN || "clerk.context7.com";
 const JWKS_URL = `https://${CLERK_DOMAIN}/.well-known/jwks.json`;
 const ISSUER = `https://${CLERK_DOMAIN}`;
 

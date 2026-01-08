@@ -1,8 +1,7 @@
 import { SearchResponse, ContextRequest, ContextResponse } from "./types.js";
 import { ClientContext, generateHeaders } from "./encryption.js";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
-
-const CONTEXT7_API_BASE_URL = process.env.CONTEXT7_API_URL || "https://context7.com/api";
+import { CONTEXT7_API_BASE_URL } from "./constants.js";
 
 /**
  * Parses error response from the Context7 API
