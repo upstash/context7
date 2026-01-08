@@ -1,5 +1,11 @@
 # @upstash/context7-tools-ai-sdk
 
+## 0.2.1
+
+### Patch Changes
+
+- 07a53dc: Upgrade ai peer dependency to >=6.0.0 for AI SDK v6 compatibility
+
 ## 0.2.0
 
 ### Minor Changes
