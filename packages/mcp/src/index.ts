@@ -393,13 +393,13 @@ async function main() {
     };
 
     // Anonymous access endpoint - no authentication required
-    app.all("/mcp", (req, res) => {
-      handleMcpRequest(req, res, false);
+    app.all("/mcp", async (req, res) => {
+      await handleMcpRequest(req, res, false);
     });
 
     // OAuth-protected endpoint - requires authentication
-    app.all("/mcp/oauth", (req, res) => {
-      handleMcpRequest(req, res, true);
+    app.all("/mcp/oauth", async (req, res) => {
+      await handleMcpRequest(req, res, true);
     });
 
     app.get("/ping", (_req: express.Request, res: express.Response) => {
