@@ -27,7 +27,10 @@
       {
         "group": "How To",
         "pages": [
-          "howto/api-keys",
+          {
+            "group": "Authentication",
+            "pages": ["howto/api-keys", "howto/oauth"]
+          },
           "howto/claiming-libraries",
           "howto/private-repositories",
           "howto/team",
