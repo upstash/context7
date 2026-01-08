@@ -3,6 +3,10 @@ title: OAuth
 description: Authenticate with Context7 MCP server using OAuth 2.0
 ---
 
+<Warning>
+  **Currently, only Claude Code and Cursor are confirmed to work with OAuth.** Other clients should use [API key authentication](/howto/api-keys) instead.
+</Warning>
+
 <Note>
   OAuth is only available for remote HTTP connections. For local MCP connections using stdio
   transport, use [API key authentication](/howto/api-keys) instead.
@@ -36,4 +40,4 @@ To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client con
 
 ## Client Support
 
-OAuth authentication requires your MCP client to support the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization). Check your client's documentation to see if OAuth is supported. If your client doesn't support OAuth, use [API key authentication](/howto/api-keys) instead.
+OAuth authentication requires your MCP client to support the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization). If your client doesn't support OAuth, use [API key authentication](/howto/api-keys) instead.

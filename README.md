@@ -39,6 +39,9 @@ Context7 fetches up-to-date code examples and documentation right into your LLM'
 > [!NOTE]
 > **API Key Recommended**: Get a free API key at [context7.com/dashboard](https://context7.com/dashboard) for higher rate limits.
 
+> [!WARNING]
+> **OAuth Support**: Currently, only **Claude Code** and **Cursor** are confirmed to work with OAuth authentication. Use API key authentication for other clients.
+
 <details>
 <summary><b>Install in Cursor</b></summary>
 
