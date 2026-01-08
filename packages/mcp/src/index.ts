@@ -414,7 +414,7 @@ async function main() {
         res.json({
           resource: RESOURCE_URL,
           authorization_servers: [AUTH_SERVER_URL],
-          scopes_supported: ["mcp:read", "mcp:write"],
+          scopes_supported: ["profile", "email"],
           bearer_methods_supported: ["header"],
         });
       }
