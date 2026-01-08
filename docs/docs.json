@@ -53,6 +53,31 @@
         ]
       },
       {
+        "group": "Agentic Tools",
+        "pages": [
+          "agentic-tools/overview",
+          {
+            "group": "Vercel AI SDK",
+            "pages": [
+              "agentic-tools/ai-sdk/getting-started",
+              {
+                "group": "Tools",
+                "pages": [
+                  "agentic-tools/ai-sdk/tools/resolve-library-id",
+                  "agentic-tools/ai-sdk/tools/query-docs"
+                ]
+              },
+              {
+                "group": "Agents",
+                "pages": [
+                  "agentic-tools/ai-sdk/agents/context7-agent"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
         "group": "API Reference",
         "openapi": "openapi.json"
       },
