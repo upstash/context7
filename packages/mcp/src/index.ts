@@ -420,6 +420,32 @@ async function main() {
       }
     );
 
+    app.get(
+      "/.well-known/oauth-authorization-server",
+      async (_req: express.Request, res: express.Response) => {
+        const authServerUrl = AUTH_SERVER_URL;
+
+        try {
+          const response = await fetch(`${authServerUrl}/.well-known/oauth-authorization-server`);
+          if (!response.ok) {
+            console.error("[OAuth] Upstream error:", response.status);
+            return res.status(response.status).json({
+              error: "upstream_error",
+              message: "Failed to fetch authorization server metadata",
+            });
+          }
+          const metadata = await response.json();
+          res.json(metadata);
+        } catch (error) {
+          console.error("[OAuth] Error fetching OAuth metadata:", error);
+          res.status(502).json({
+            error: "proxy_error",
+            message: "Failed to proxy authorization server metadata",
+          });
+        }
+      }
+    );
+
     // Catch-all 404 handler - must be after all other routes
     app.use((_req: express.Request, res: express.Response) => {
       res.status(404).json({
