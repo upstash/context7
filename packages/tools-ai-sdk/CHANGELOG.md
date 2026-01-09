@@ -1,6 +1,23 @@
 # @upstash/context7-tools-ai-sdk
 
-## 1.0.0
+## 0.2.1
+
+### Patch Changes
+
+- 07a53dc: Upgrade ai peer dependency to >=6.0.0 for AI SDK v6 compatibility
+
+## 0.2.0
+
+### Minor Changes
+
+- 9412e62: feat: Change SDK default response type from "txt" to "json" for both searchLibrary and getContext methods. AI SDK tools now explicitly use type: "txt" for LLM-friendly text responses.
+
+### Patch Changes
+
+- Updated dependencies [9412e62]
+  - @upstash/context7-sdk@0.3.0
+
+## 0.1.0
 
 ### Minor Changes
 

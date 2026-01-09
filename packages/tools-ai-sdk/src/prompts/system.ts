@@ -80,4 +80,3 @@ export const QUERY_DOCS_DESCRIPTION = `Retrieves and queries up-to-date document
 You must call 'resolveLibraryId' first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
 IMPORTANT: Do not call this tool more than 3 times per question. If you cannot find what you need after 3 calls, use the best information you have.`;
-

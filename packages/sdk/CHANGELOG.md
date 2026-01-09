@@ -1,5 +1,11 @@
 # @upstash/context7-sdk
 
+## 0.3.0
+
+### Minor Changes
+
+- 9412e62: feat: Change SDK default response type from "txt" to "json" for both searchLibrary and getContext methods. AI SDK tools now explicitly use type: "txt" for LLM-friendly text responses.
+
 ## 0.2.0
 
 ### Minor Changes

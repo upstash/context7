@@ -1,6 +1,6 @@
 {
   "name": "@upstash/context7-mcp",
-  "version": "2.0.2",
+  "version": "2.1.0",
   "mcpName": "io.github.upstash/context7",
   "description": "MCP server for Context7",
   "scripts": {
@@ -49,11 +49,12 @@
     "@types/express": "^5.0.4",
     "commander": "^14.0.0",
     "express": "^5.1.0",
+    "jose": "^6.1.3",
     "undici": "^6.6.3",
     "zod": "^4.3.5"
   },
   "devDependencies": {
-    "@types/node": "^22.13.14",
+    "@types/node": "^25.0.3",
     "typescript": "^5.8.2"
   }
 }

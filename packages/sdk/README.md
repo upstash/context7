@@ -46,18 +46,17 @@ const libraries = await client.searchLibrary(
 );
 console.log(libraries[0].id); // "/facebook/react"
 
-// Get documentation context as plain text (default)
+// Get documentation as JSON array (default)
+const docs = await client.getContext("How do I use hooks?", "/facebook/react");
+console.log(docs[0].title, docs[0].content);
+
+// Get documentation context as plain text
 const context = await client.getContext(
   "How do I use hooks?",
-  "/facebook/react"
+  "/facebook/react",
+  { type: "txt" }
 );
 console.log(context);
-
-// Get documentation as JSON array
-const docs = await client.getContext("How do I use hooks?", "/facebook/react", {
-  type: "json",
-});
-console.log(docs[0].title, docs[0].content);
 ```
 
 ## Configuration

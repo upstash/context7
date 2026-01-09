@@ -5,7 +5,7 @@ import type { Requester } from "@http";
 import { Context7Error } from "@error";
 import { formatCodeSnippet, formatInfoSnippet } from "@utils/format";
 
-const DEFAULT_TYPE = "txt";
+const DEFAULT_TYPE = "json";
 
 export class GetContextCommand extends Command<Documentation[] | string> {
   private readonly responseType: "json" | "txt";
