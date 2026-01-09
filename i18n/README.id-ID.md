@@ -266,13 +266,13 @@ Jika objek `mcpServers` tidak ada, buatlah.
 <details>
 <summary><b>Instal di Claude Code</b></summary>
 Jalankan perintah ini. Lihat [dokumentasi MCP Claude Code](https://docs.anthropic.com/id/docs/claude-code/mcp) untuk info lebih lanjut.
-#### Koneksi Server Remote Claude Code
-```sh
-claude mcp add --transport http context7 https://mcp.context7.com/mcp
-```
 #### Koneksi Server Lokal Claude Code
 ```sh
 claude mcp add context7 -- npx -y @upstash/context7-mcp
+```
+#### Koneksi Server Remote Claude Code
+```sh
+claude mcp add --transport http context7 https://mcp.context7.com/mcp
 ```
 </details>
 <details>

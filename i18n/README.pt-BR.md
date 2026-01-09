@@ -85,13 +85,13 @@ Colar a seguinte configuração no arquivo `~/.cursor/mcp.json` do Cursor é a a
 <details>
 <summary><b>Instalar no Claude Code</b></summary>
 Execute este comando. Veja mais em [Claude Code MCP docs](https://docs.anthropic.com/pt/docs/claude-code/mcp).
-#### Conexão Remota do Servidor Claude Code
-```sh
-claude mcp add --transport http context7 https://mcp.context7.com/mcp
-```
 #### Conexão Local do Servidor Claude Code
 ```sh
 claude mcp add context7 -- npx -y @upstash/context7-mcp
+```
+#### Conexão Remota do Servidor Claude Code
+```sh
+claude mcp add --transport http context7 https://mcp.context7.com/mcp
 ```
 </details>
 <details>
