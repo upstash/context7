@@ -16,12 +16,12 @@ Context7 works without an API key for basic usage. Adding an API key gives you h
 No dependencies required. Connects to Context7's hosted server.
 
 <CodeGroup>
-```bash With API Key
-claude mcp add --transport http context7 https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: YOUR_API_KEY"
+```bash With OAuth (Recommended)
+claude mcp add --transport http context7 https://mcp.context7.com/mcp/oauth
 ```
 
-```bash With OAuth
-claude mcp add --transport http context7 https://mcp.context7.com/mcp/oauth
+```bash With API Key
+claude mcp add --transport http context7 https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: YOUR_API_KEY"
 ```
 
 ```bash Without API Key
