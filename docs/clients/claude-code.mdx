@@ -103,13 +103,14 @@ A `docs-researcher` agent for focused lookups that keep context lean
 
 ### Installing the Plugin
 
-The plugin is available in the Context7 repository at `plugins/claude/context7/`.
+The plugin is available from the Context7 marketplace. Run these commands in Claude Code:
 
-```bash
-claude plugins install context7
+```
+/plugin marketplace add upstash/context7
+/plugin install context7
 ```
 
-Or copy the plugin folder manually to your Claude Code plugins directory.
+This adds the Context7 marketplace and installs the plugin with skills, agents, and commands.
 
 ---
 
@@ -220,61 +221,3 @@ Using a library ID directly skips the resolution step.
 - You want a quick lookup without explaining your full context
 - You're testing what documentation is available
 
----
-
-## Tips
-
-<AccordionGroup>
-<Accordion title="Setting Up CLAUDE.md Rules">
-Add rules to your project's `CLAUDE.md` file to make Context7 trigger automatically:
-
-```markdown
-## Documentation
-
-When I ask about library APIs, framework setup, or need code examples:
-- Use Context7 to fetch current documentation
-- Don't rely on training data for library-specific code
-```
-
-This makes Context7 part of your project's workflow without explicit prompting.
-</Accordion>
-<Accordion title="Library IDs vs Letting Context7 Resolve">
-**Let Context7 resolve** when:
-- You're not sure of the exact library name
-- Multiple libraries might match (e.g., "supabase" could mean the JS client or the platform)
-- You want Context7 to pick the best match
-
-**Use library IDs directly** when:
-- You know exactly which library you need
-- You want faster lookups (skips resolution step)
-
-Library ID format: `/org/project`
-
-```
-/vercel/next.js
-/supabase/supabase
-/facebook/react
-/prisma/prisma
-```
-</Accordion>
-<Accordion title="Agent vs Inline Tool Calls">
-The `docs-researcher` agent is useful for keeping context lean, but it adds a small overhead (spawning a new context).
-
-**Rule of thumb:**
-- First few documentation lookups: use inline tools
-- After 5+ tool calls or when context feels heavy: switch to agents
-- For quick one-off questions during complex tasks: use agents
-</Accordion>
-<Accordion title="Combining with Codebase Exploration">
-Context7 works well alongside codebase exploration. A typical workflow:
-
-1. Ask Claude Code to explore your codebase for existing patterns
-2. Use Context7 to fetch docs for libraries you're integrating
-3. Have Claude Code implement based on both your codebase and current docs
-
-```
-Look at how we're using Prisma in src/db/.
-Then use Context7 to check if there's a better way to handle relations.
-```
-</Accordion>
-</AccordionGroup>
