@@ -183,9 +183,7 @@ class TestGetContextAsync:
     async def test_get_context_async_json_fields(self, api_key: str) -> None:
         """Test that JSON documentation has all expected fields (async)."""
         async with Context7(api_key=api_key) as client:
-            docs = await client.get_context_async(
-                "How to use hooks", "/facebook/react"
-            )
+            docs = await client.get_context_async("How to use hooks", "/facebook/react")
             assert len(docs) > 0
             doc = docs[0]
             assert isinstance(doc, Documentation)
