@@ -18,19 +18,18 @@ uv add context7
 
 ```python
 import asyncio
-from context7-sdk import Context7
+from context7 import Context7
 
 async def main():
     async with Context7(api_key="ctx7sk_...") as client:
         # Search for libraries
-        results = await client.search_library("react")
-        for lib in results.results:
-            print(f"{lib.id}: {lib.title}")
+        libraries = await client.search_library_async("I need a UI library", "react")
+        for lib in libraries:
+            print(f"{lib.id}: {lib.name}")
 
-        # Get documentation
-        docs = await client.get_docs("/facebook/react")
-        for snippet in docs.snippets:
-            print(f"{snippet.code_title}: {snippet.code_description}")
+        # Get documentation context
+        context = await client.get_context_async("How to use hooks", "/facebook/react")
+        print(context)
 
 asyncio.run(main())
 ```
@@ -44,23 +43,26 @@ Initialize the Context7 client.
 - `api_key`: API key for authentication. Falls back to `CONTEXT7_API_KEY` environment variable.
 - `base_url`: Optional custom base URL for the API.
 
-### `await client.search_library(query: str) -> SearchLibraryResponse`
+### `client.search_library(query: str, library_name: str) -> list[Library]`
 
-Search for libraries by name or description.
+Search for libraries matching the given query.
 
-### `await client.get_docs(library_id: str, **options) -> DocsResponse`
+- `query`: The user's question or task (used for relevance ranking)
+- `library_name`: The library name to search for
 
-Get documentation for a library.
+Async version: `await client.search_library_async(query, library_name)`
+
+### `client.get_context(query: str, library_id: str, *, type="txt") -> str | list[Documentation]`
+
+Get documentation context for a library.
 
 **Parameters:**
 
-- `library_id`: Library identifier in format `/owner/repo` (e.g., `/facebook/react`)
-- `version`: Optional library version (e.g., `"18.0.0"`)
-- `page`: Page number for pagination
-- `topic`: Filter docs by topic
-- `limit`: Number of results per page
-- `mode`: Type of documentation - `"code"` (default) or `"info"`
-- `format`: Response format - `"json"` (default) or `"txt"`
+- `query`: The user's question or task
+- `library_id`: Context7 library ID (e.g., `/facebook/react`)
+- `type`: Response format - `"txt"` (default) returns plain text, `"json"` returns list of Documentation objects
+
+Async version: `await client.get_context_async(query, library_id, type=...)`
 
 ## License
 

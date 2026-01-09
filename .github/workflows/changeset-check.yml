@@ -36,14 +36,15 @@ jobs:
 
             const changedFiles = diff.split('\n').filter(f => f.length > 0);
 
-            // Skip changeset check if only Python files or workflow files are changed
-            const onlyPythonChanges = changedFiles.every(file =>
+            // Skip changeset check if only Python files, workflow files, or markdown files are changed
+            const onlySkippableChanges = changedFiles.every(file =>
               file.startsWith('packages/python/') ||
-              file.startsWith('.github/workflows/')
+              file.startsWith('.github/workflows/') ||
+              file.endsWith('.md')
             );
 
-            if (onlyPythonChanges && changedFiles.length > 0) {
-              console.log('Skipping changeset check - only Python package changes detected');
+            if (onlySkippableChanges && changedFiles.length > 0) {
+              console.log('Skipping changeset check - only Python package, workflow, or markdown changes detected');
               return;
             }
 
