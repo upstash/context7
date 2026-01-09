@@ -129,24 +129,24 @@ class TestSearchLibraryAsync:
 class TestGetContextSync:
     """Tests for the synchronous get_context method."""
 
-    def test_get_context_text_default(self, api_key: str) -> None:
-        """Test getting context as text (default, sync)."""
+    def test_get_context_json_default(self, api_key: str) -> None:
+        """Test getting context as JSON (default, sync)."""
         with Context7(api_key=api_key) as client:
-            context = client.get_context("How to use hooks", "/facebook/react")
-            assert isinstance(context, str)
-            assert len(context) > 0
-
-    def test_get_context_json(self, api_key: str) -> None:
-        """Test getting context as JSON (sync)."""
-        with Context7(api_key=api_key) as client:
-            docs = client.get_context("How to use hooks", "/facebook/react", type="json")
+            docs = client.get_context("How to use hooks", "/facebook/react")
             assert isinstance(docs, list)
             assert len(docs) > 0
+
+    def test_get_context_text(self, api_key: str) -> None:
+        """Test getting context as text (sync)."""
+        with Context7(api_key=api_key) as client:
+            context = client.get_context("How to use hooks", "/facebook/react", type="txt")
+            assert isinstance(context, str)
+            assert len(context) > 0
 
     def test_get_context_json_fields(self, api_key: str) -> None:
         """Test that JSON documentation has all expected fields."""
         with Context7(api_key=api_key) as client:
-            docs = client.get_context("How to use hooks", "/facebook/react", type="json")
+            docs = client.get_context("How to use hooks", "/facebook/react")
             assert len(docs) > 0
             doc = docs[0]
             assert isinstance(doc, Documentation)
@@ -162,29 +162,29 @@ class TestGetContextAsync:
     """Tests for the asynchronous get_context_async method."""
 
     @pytest.mark.asyncio
-    async def test_get_context_async_text_default(self, api_key: str) -> None:
-        """Test getting context as text (default, async)."""
+    async def test_get_context_async_json_default(self, api_key: str) -> None:
+        """Test getting context as JSON (default, async)."""
         async with Context7(api_key=api_key) as client:
-            context = await client.get_context_async("How to use hooks", "/facebook/react")
-            assert isinstance(context, str)
-            assert len(context) > 0
-
-    @pytest.mark.asyncio
-    async def test_get_context_async_json(self, api_key: str) -> None:
-        """Test getting context as JSON (async)."""
-        async with Context7(api_key=api_key) as client:
-            docs = await client.get_context_async(
-                "How to use hooks", "/facebook/react", type="json"
-            )
+            docs = await client.get_context_async("How to use hooks", "/facebook/react")
             assert isinstance(docs, list)
             assert len(docs) > 0
+
+    @pytest.mark.asyncio
+    async def test_get_context_async_text(self, api_key: str) -> None:
+        """Test getting context as text (async)."""
+        async with Context7(api_key=api_key) as client:
+            context = await client.get_context_async(
+                "How to use hooks", "/facebook/react", type="txt"
+            )
+            assert isinstance(context, str)
+            assert len(context) > 0
 
     @pytest.mark.asyncio
     async def test_get_context_async_json_fields(self, api_key: str) -> None:
         """Test that JSON documentation has all expected fields (async)."""
         async with Context7(api_key=api_key) as client:
             docs = await client.get_context_async(
-                "How to use hooks", "/facebook/react", type="json"
+                "How to use hooks", "/facebook/react"
             )
             assert len(docs) > 0
             doc = docs[0]
@@ -223,10 +223,11 @@ class TestSyncContextManager:
         with Context7(api_key=api_key) as client:
             libraries1 = client.search_library("I need a UI library", "react")
             libraries2 = client.search_library("I need a UI library", "vue")
-            context = client.get_context("How to use hooks", "/facebook/react")
+            docs = client.get_context("How to use hooks", "/facebook/react")
             assert libraries1 is not None
             assert libraries2 is not None
-            assert context is not None
+            assert docs is not None
+            assert isinstance(docs, list)
 
 
 class TestAsyncContextManager:
@@ -258,7 +259,8 @@ class TestAsyncContextManager:
         async with Context7(api_key=api_key) as client:
             libraries1 = await client.search_library_async("I need a UI library", "react")
             libraries2 = await client.search_library_async("I need a UI library", "vue")
-            context = await client.get_context_async("How to use hooks", "/facebook/react")
+            docs = await client.get_context_async("How to use hooks", "/facebook/react")
             assert libraries1 is not None
             assert libraries2 is not None
-            assert context is not None
+            assert docs is not None
+            assert isinstance(docs, list)

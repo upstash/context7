@@ -118,8 +118,9 @@ class Context7:
                 print(f"{lib.id}: {lib.name}")
 
             # Get documentation context
-            context = client.get_context("How to use hooks", "/facebook/react")
-            print(context)
+            docs = client.get_context("How to use hooks", "/facebook/react")
+            for doc in docs:
+                print(f"{doc.title}: {doc.content[:100]}...")
         ```
 
     Asynchronous Usage:
@@ -137,10 +138,11 @@ class Context7:
                     print(f"{lib.id}: {lib.name}")
 
                 # Get documentation context
-                context = await client.get_context_async(
+                docs = await client.get_context_async(
                     "How to use hooks", "/facebook/react"
                 )
-                print(context)
+                for doc in docs:
+                    print(f"{doc.title}: {doc.content[:100]}...")
 
         asyncio.run(main())
         ```
@@ -231,8 +233,8 @@ class Context7:
         query: str,
         library_id: str,
         *,
-        type: Literal["txt"] = "txt",  # pylint: disable=redefined-builtin
-    ) -> str: ...
+        type: Literal["json"] = "json",  # pylint: disable=redefined-builtin
+    ) -> list[Documentation]: ...
 
     @overload
     def get_context(
@@ -240,16 +242,16 @@ class Context7:
         query: str,
         library_id: str,
         *,
-        type: Literal["json"],  # pylint: disable=redefined-builtin
-    ) -> list[Documentation]: ...
+        type: Literal["txt"],  # pylint: disable=redefined-builtin
+    ) -> str: ...
 
     def get_context(
         self,
         query: str,
         library_id: str,
         *,
-        type: Literal["json", "txt"] = "txt",  # pylint: disable=redefined-builtin
-    ) -> str | list[Documentation]:
+        type: Literal["json", "txt"] = "json",  # pylint: disable=redefined-builtin
+    ) -> list[Documentation] | str:
         """
         Get documentation context for a library.
 
@@ -257,26 +259,26 @@ class Context7:
             query: The user's question or task.
             library_id: Context7 library ID (e.g., "/facebook/react").
             type: Response format:
-                - "txt": Plain text documentation (default)
-                - "json": List of Documentation objects
+                - "json": List of Documentation objects (default)
+                - "txt": Plain text documentation
 
         Returns:
-            Documentation as string (txt) or list of Documentation objects (json).
+            Documentation as list of Documentation objects (json) or string (txt).
 
         Example:
             ```python
-            # Get context as text (default)
-            context = client.get_context("How to use hooks", "/facebook/react")
-            print(context)
-
-            # Get context as structured data
-            docs = client.get_context(
-                "How to use hooks",
-                "/facebook/react",
-                type="json"
-            )
+            # Get context as structured data (default)
+            docs = client.get_context("How to use hooks", "/facebook/react")
             for doc in docs:
                 print(f"{doc.title}: {doc.content[:100]}...")
+
+            # Get context as plain text
+            context = client.get_context(
+                "How to use hooks",
+                "/facebook/react",
+                type="txt"
+            )
+            print(context)
             ```
         """
         result = self._http.request(
@@ -325,8 +327,8 @@ class Context7:
         query: str,
         library_id: str,
         *,
-        type: Literal["txt"] = "txt",  # pylint: disable=redefined-builtin
-    ) -> str: ...
+        type: Literal["json"] = "json",  # pylint: disable=redefined-builtin
+    ) -> list[Documentation]: ...
 
     @overload
     async def get_context_async(
@@ -334,16 +336,16 @@ class Context7:
         query: str,
         library_id: str,
         *,
-        type: Literal["json"],  # pylint: disable=redefined-builtin
-    ) -> list[Documentation]: ...
+        type: Literal["txt"],  # pylint: disable=redefined-builtin
+    ) -> str: ...
 
     async def get_context_async(
         self,
         query: str,
         library_id: str,
         *,
-        type: Literal["json", "txt"] = "txt",  # pylint: disable=redefined-builtin
-    ) -> str | list[Documentation]:
+        type: Literal["json", "txt"] = "json",  # pylint: disable=redefined-builtin
+    ) -> list[Documentation] | str:
         """
         Get documentation context for a library (async version).
 
@@ -351,28 +353,28 @@ class Context7:
             query: The user's question or task.
             library_id: Context7 library ID (e.g., "/facebook/react").
             type: Response format:
-                - "txt": Plain text documentation (default)
-                - "json": List of Documentation objects
+                - "json": List of Documentation objects (default)
+                - "txt": Plain text documentation
 
         Returns:
-            Documentation as string (txt) or list of Documentation objects (json).
+            Documentation as list of Documentation objects (json) or string (txt).
 
         Example:
             ```python
-            # Get context as text (default)
-            context = await client.get_context_async(
-                "How to use hooks", "/facebook/react"
-            )
-            print(context)
-
-            # Get context as structured data
+            # Get context as structured data (default)
             docs = await client.get_context_async(
-                "How to use hooks",
-                "/facebook/react",
-                type="json"
+                "How to use hooks", "/facebook/react"
             )
             for doc in docs:
                 print(f"{doc.title}: {doc.content[:100]}...")
+
+            # Get context as plain text
+            context = await client.get_context_async(
+                "How to use hooks",
+                "/facebook/react",
+                type="txt"
+            )
+            print(context)
             ```
         """
         result = await self._http.request_async(
