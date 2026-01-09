@@ -1,0 +1,174 @@
+---
+title: "resolveLibraryId"
+sidebarTitle: "resolveLibraryId"
+description: "Search for libraries and resolve them to Context7-compatible IDs"
+---
+
+The `resolveLibraryId` tool searches Context7's library database and returns matching results with their Context7-compatible library IDs. This is typically the first step in a documentation lookup workflow.
+
+## Usage
+
+```typescript
+import { resolveLibraryId } from "@upstash/context7-tools-ai-sdk";
+import { generateText, stepCountIs } from "ai";
+import { openai } from "@ai-sdk/openai";
+
+const { text } = await generateText({
+  model: openai("gpt-5.2"),
+  prompt: "Find documentation for React hooks",
+  tools: {
+    resolveLibraryId: resolveLibraryId(),
+  },
+  stopWhen: stepCountIs(3),
+});
+```
+
+## Configuration
+
+```typescript
+resolveLibraryId(config?: Context7ToolsConfig)
+```
+
+### Parameters
+
+<ParamField path="config" type="Context7ToolsConfig" optional>
+  Configuration options for the tool.
+
+  <Expandable title="properties">
+    <ParamField path="apiKey" type="string" optional>
+      Context7 API key. If not provided, uses the `CONTEXT7_API_KEY` environment variable.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+### Returns
+
+Returns an AI SDK `tool` that can be used with `generateText`, `streamText`, or agents.
+
+## Tool Behavior
+
+When the AI model calls this tool, it:
+
+1. Takes a `query` and `libraryName` parameter from the model
+2. Searches Context7's database for matching libraries
+3. Returns formatted results including:
+   - Library ID (e.g., `/reactjs/react.dev`)
+   - Title and description
+   - Number of code snippets available
+   - Source reputation score
+   - Available versions
+
+### Input Schema
+
+The tool accepts the following input from the AI model:
+
+<ParamField path="query" type="string" required>
+  The user's original question or task. This is used to rank library results by relevance to what the user is trying to accomplish.
+</ParamField>
+
+<ParamField path="libraryName" type="string" required>
+  Library name to search for (e.g., "react", "next.js", "vue")
+</ParamField>
+
+### Output Format
+
+On success, the tool returns the search results as plain text, formatted for easy consumption by the AI model:
+
+```
+- Title: React Documentation
+- Context7-compatible library ID: /reactjs/react.dev
+- Description: The library for web and native user interfaces
+- Code Snippets: 1250
+- Trust Score: High
+- Benchmark Score: 98
+- Versions: 19.0.0, 18.3.1, 18.2.0
+----------
+- Title: React Native
+- Context7-compatible library ID: /facebook/react-native
+- Description: A framework for building native applications using React
+- Code Snippets: 890
+- Trust Score: High
+- Benchmark Score: 95
+- Versions: 0.76.0, 0.75.4
+```
+
+On failure:
+
+```
+No libraries found matching "unknown-lib". Try a different search term or check the library name.
+```
+
+## Examples
+
+### Basic Usage
+
+```typescript
+import { resolveLibraryId, queryDocs } from "@upstash/context7-tools-ai-sdk";
+import { generateText, stepCountIs } from "ai";
+import { openai } from "@ai-sdk/openai";
+
+const { text, toolCalls } = await generateText({
+  model: openai("gpt-5.2"),
+  prompt: "What libraries are available for React?",
+  tools: {
+    resolveLibraryId: resolveLibraryId(),
+    queryDocs: queryDocs(),
+  },
+  stopWhen: stepCountIs(5),
+});
+
+// The model will call resolveLibraryId and receive a list of matching libraries
+console.log(text);
+```
+
+### With Custom API Key
+
+```typescript
+import { resolveLibraryId } from "@upstash/context7-tools-ai-sdk";
+
+const tool = resolveLibraryId({
+  apiKey: process.env.CONTEXT7_API_KEY,
+});
+```
+
+### Inspecting Tool Calls
+
+```typescript
+import { resolveLibraryId } from "@upstash/context7-tools-ai-sdk";
+import { generateText, stepCountIs } from "ai";
+import { openai } from "@ai-sdk/openai";
+
+const { toolCalls, toolResults } = await generateText({
+  model: openai("gpt-5.2"),
+  prompt: "Find the official Next.js documentation",
+  tools: {
+    resolveLibraryId: resolveLibraryId(),
+  },
+  stopWhen: stepCountIs(3),
+});
+
+// See what the model searched for
+for (const call of toolCalls) {
+  console.log("Searched for:", call.args.libraryName);
+}
+
+// See the results
+for (const result of toolResults) {
+  console.log("Found:", result.result);
+}
+```
+
+## Selection Guidance
+
+The tool's description instructs the AI model to select libraries based on:
+
+1. **Name similarity** - Exact matches are prioritized
+2. **Description relevance** - How well the description matches the query intent
+3. **Documentation coverage** - Libraries with more code snippets are preferred
+4. **Source reputation** - High/Medium reputation sources are more authoritative
+5. **Benchmark score** - Quality indicator (100 is the highest)
+
+## Related
+
+- [queryDocs](/agentic-tools/ai-sdk/tools/query-docs) - Fetch documentation using the resolved library ID
+- [Context7Agent](/agentic-tools/ai-sdk/agents/context7-agent) - Pre-built agent that handles the full workflow

@@ -1,4 +1,10 @@
-import type { Context7Config, GetContextOptions, Library, Documentation } from "@commands/types";
+import type {
+  Context7Config,
+  GetContextOptions,
+  SearchLibraryOptions,
+  Library,
+  Documentation,
+} from "@commands/types";
 import { Context7Error } from "@error";
 import { HttpClient } from "@http";
 import { SearchLibraryCommand, GetContextCommand } from "@commands/index";
@@ -39,13 +45,45 @@ export class Context7 {
   }
 
   /**
+   * Search for libraries matching the given query as JSON (array of Library objects)
+   */
+  async searchLibrary(
+    query: string,
+    libraryName: string,
+    options: SearchLibraryOptions & { type: "json" }
+  ): Promise<Library[]>;
+
+  /**
+   * Search for libraries matching the given query as plain text
+   */
+  async searchLibrary(
+    query: string,
+    libraryName: string,
+    options: SearchLibraryOptions & { type: "txt" }
+  ): Promise<string>;
+
+  /**
+   * Search for libraries matching the given query (defaults to JSON)
+   */
+  async searchLibrary(
+    query: string,
+    libraryName: string,
+    options?: SearchLibraryOptions
+  ): Promise<Library[]>;
+
+  /**
    * Search for libraries matching the given query
    * @param query The user's question or task (used for relevance ranking)
    * @param libraryName The library name to search for
-   * @returns Array of matching libraries
+   * @param options Response format options
+   * @returns Array of matching libraries (json) or formatted text (txt)
    */
-  async searchLibrary(query: string, libraryName: string): Promise<Library[]> {
-    const command = new SearchLibraryCommand(query, libraryName);
+  async searchLibrary(
+    query: string,
+    libraryName: string,
+    options?: SearchLibraryOptions
+  ): Promise<Library[] | string> {
+    const command = new SearchLibraryCommand(query, libraryName, options);
     return await command.exec(this.httpClient);
   }
 
@@ -59,20 +97,29 @@ export class Context7 {
   ): Promise<Documentation[]>;
 
   /**
-   * Get documentation context for a library as plain text (default)
+   * Get documentation context for a library as plain text
    */
   async getContext(
     query: string,
     libraryId: string,
-    options?: GetContextOptions & { type?: "txt" }
+    options: GetContextOptions & { type: "txt" }
   ): Promise<string>;
+
+  /**
+   * Get documentation context for a library (defaults to JSON)
+   */
+  async getContext(
+    query: string,
+    libraryId: string,
+    options?: GetContextOptions
+  ): Promise<Documentation[]>;
 
   /**
    * Get documentation context for a library
    * @param query The user's question or task
    * @param libraryId Context7 library ID (e.g., "/facebook/react")
    * @param options Response format options
-   * @returns Documentation as string (txt) or Documentation[] (json)
+   * @returns Documentation as Documentation[] (json, default) or string (txt)
    */
   async getContext(
     query: string,

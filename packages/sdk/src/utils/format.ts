@@ -44,3 +44,51 @@ export function formatLibrary(r: {
     versions: r.versions,
   };
 }
+
+/**
+ * Maps numeric trust score to an interpretable label.
+ */
+function getTrustScoreLabel(trustScore?: number): "High" | "Medium" | "Low" | "Unknown" {
+  if (trustScore === undefined || trustScore < 0) return "Unknown";
+  if (trustScore >= 7) return "High";
+  if (trustScore >= 4) return "Medium";
+  return "Low";
+}
+
+/**
+ * Formats a single library as a human-readable text block.
+ */
+export function formatLibraryAsText(library: Library): string {
+  const lines = [
+    `- Title: ${library.name}`,
+    `- Context7-compatible library ID: ${library.id}`,
+    `- Description: ${library.description}`,
+  ];
+
+  if (library.totalSnippets > 0) {
+    lines.push(`- Code Snippets: ${library.totalSnippets}`);
+  }
+
+  lines.push(`- Trust Score: ${getTrustScoreLabel(library.trustScore)}`);
+
+  if (library.benchmarkScore > 0) {
+    lines.push(`- Benchmark Score: ${library.benchmarkScore}`);
+  }
+
+  if (library.versions && library.versions.length > 0) {
+    lines.push(`- Versions: ${library.versions.join(", ")}`);
+  }
+
+  return lines.join("\n");
+}
+
+/**
+ * Formats an array of libraries as human-readable text.
+ */
+export function formatLibrariesAsText(libraries: Library[]): string {
+  if (libraries.length === 0) {
+    return "No documentation libraries found matching your query.";
+  }
+
+  return libraries.map(formatLibraryAsText).join("\n----------\n");
+}
