@@ -20,10 +20,18 @@ No dependencies required. Connects to Context7's hosted server.
 claude mcp add --transport http context7 https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: YOUR_API_KEY"
 ```
 
+```bash With OAuth
+claude mcp add --transport http context7 https://mcp.context7.com/mcp/oauth
+```
+
 ```bash Without API Key
 claude mcp add --transport http context7 https://mcp.context7.com/mcp
 ```
 </CodeGroup>
+
+<Tip>
+Using OAuth? You'll be redirected to sign in the first time you connect. After that, tokens refresh automatically. See [OAuth authentication](/howto/oauth) for details.
+</Tip>
 </Tab>
 <Tab title="Local Server" icon="computer">
 Runs on your machine. Requires Node.js 18+.

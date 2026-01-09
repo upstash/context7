@@ -1,0 +1,196 @@
+---
+title: "queryDocs"
+sidebarTitle: "queryDocs"
+description: "Fetch up-to-date documentation for a specific library"
+---
+
+The `queryDocs` tool fetches documentation for a library using its Context7-compatible library ID and a query. This tool is typically called after `resolveLibraryId` has identified the correct library.
+
+## Usage
+
+```typescript
+import { resolveLibraryId, queryDocs } from "@upstash/context7-tools-ai-sdk";
+import { generateText, stepCountIs } from "ai";
+import { openai } from "@ai-sdk/openai";
+
+const { text } = await generateText({
+  model: openai("gpt-5.2"),
+  prompt: "How do I use React Server Components?",
+  tools: {
+    resolveLibraryId: resolveLibraryId(),
+    queryDocs: queryDocs(),
+  },
+  stopWhen: stepCountIs(5),
+});
+```
+
+## Configuration
+
+```typescript
+queryDocs(config?: Context7ToolsConfig)
+```
+
+### Parameters
+
+<ParamField path="config" type="Context7ToolsConfig" optional>
+  Configuration options for the tool.
+
+  <Expandable title="properties">
+    <ParamField path="apiKey" type="string" optional>
+      Context7 API key. If not provided, uses the `CONTEXT7_API_KEY` environment variable.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+### Returns
+
+Returns an AI SDK `tool` that can be used with `generateText`, `streamText`, or agents.
+
+## Tool Behavior
+
+When the AI model calls this tool, it:
+
+1. Takes a library ID and query from the model
+2. Fetches documentation from Context7's API
+3. Returns the documentation content
+
+### Input Schema
+
+The tool accepts the following inputs from the AI model:
+
+<ParamField path="libraryId" type="string" required>
+  Context7-compatible library ID (e.g., `/reactjs/react.dev`, `/vercel/next.js`)
+</ParamField>
+
+<ParamField path="query" type="string" required>
+  The question or task you need help with. Be specific and include relevant details. Good: "How to set up authentication with JWT in Express.js" or "React useEffect cleanup function examples". Bad: "auth" or "hooks".
+</ParamField>
+
+### Output Format
+
+On success, the tool returns the documentation as plain text, formatted for easy consumption by the AI model:
+
+```
+# Server Components
+
+Server Components let you write UI that can be rendered and optionally cached on the server.
+
+## Example
+
+\`\`\`tsx
+async function ServerComponent() {
+  const data = await fetchData();
+  return <div>{data}</div>;
+}
+\`\`\`
+
+---
+
+# Using Server Components with Client Components
+
+You can import Server Components into Client Components...
+```
+
+#### On Failure
+
+```
+No documentation found for library "/invalid/library". This might have happened because you used an invalid Context7-compatible library ID. Use 'resolveLibraryId' to get a valid ID.
+```
+
+## Examples
+
+### Basic Usage with Both Tools
+
+```typescript
+import { resolveLibraryId, queryDocs } from "@upstash/context7-tools-ai-sdk";
+import { generateText, stepCountIs } from "ai";
+import { openai } from "@ai-sdk/openai";
+
+const { text } = await generateText({
+  model: openai("gpt-5.2"),
+  prompt: "Show me how to set up routing in Next.js App Router",
+  tools: {
+    resolveLibraryId: resolveLibraryId(),
+    queryDocs: queryDocs(),
+  },
+  stopWhen: stepCountIs(5),
+});
+
+// The model will:
+// 1. Call resolveLibraryId to get the library ID
+// 2. Call queryDocs({ libraryId: "/vercel/next.js", query: "routing in App Router" })
+// 3. Generate a response using the fetched documentation
+```
+
+### With Custom Configuration
+
+```typescript
+import { queryDocs } from "@upstash/context7-tools-ai-sdk";
+
+const tool = queryDocs({
+  apiKey: process.env.CONTEXT7_API_KEY,
+});
+```
+
+### Direct Library ID (Skip resolveLibraryId)
+
+If the user provides a library ID directly, the model can skip the resolution step:
+
+```typescript
+import { queryDocs } from "@upstash/context7-tools-ai-sdk";
+import { generateText, stepCountIs } from "ai";
+import { openai } from "@ai-sdk/openai";
+
+const { text } = await generateText({
+  model: openai("gpt-5.2"),
+  prompt: "Using /vercel/next.js, explain middleware",
+  tools: {
+    queryDocs: queryDocs(),
+  },
+  stopWhen: stepCountIs(3),
+});
+
+// The model recognizes the /org/project format and calls queryDocs directly
+```
+
+### Multi-Step Documentation Lookup
+
+For comprehensive documentation, the model can make multiple queries:
+
+```typescript
+import { resolveLibraryId, queryDocs } from "@upstash/context7-tools-ai-sdk";
+import { generateText, stepCountIs } from "ai";
+import { anthropic } from "@ai-sdk/anthropic";
+
+const { text } = await generateText({
+  model: anthropic("claude-sonnet-4-20250514"),
+  prompt: "Give me a comprehensive guide to Supabase authentication",
+  tools: {
+    resolveLibraryId: resolveLibraryId(),
+    queryDocs: queryDocs(),
+  },
+  stopWhen: stepCountIs(8), // Allow more steps for multiple queries
+});
+
+// The model may call queryDocs multiple times with different queries
+// to gather comprehensive documentation
+```
+
+## Version-Specific Documentation
+
+Library IDs can include version specifiers:
+
+```typescript
+// Latest version
+"/vercel/next.js";
+
+// Specific version
+"/vercel/next.js/v14.3.0-canary.87";
+```
+
+The model can request documentation for specific versions when the user asks about a particular version.
+
+## Related
+
+- [resolveLibraryId](/agentic-tools/ai-sdk/tools/resolve-library-id) - Search for libraries and get their IDs
+- [Context7Agent](/agentic-tools/ai-sdk/agents/context7-agent) - Pre-built agent that handles the full workflow

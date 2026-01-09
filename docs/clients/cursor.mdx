@@ -35,6 +35,16 @@ Or add manually to `~/.cursor/mcp.json`:
 }
 ```
 
+```json With OAuth
+{
+  "mcpServers": {
+    "context7": {
+      "url": "https://mcp.context7.com/mcp/oauth"
+    }
+  }
+}
+```
+
 ```json Without API Key
 {
   "mcpServers": {
@@ -45,6 +55,10 @@ Or add manually to `~/.cursor/mcp.json`:
 }
 ```
 </CodeGroup>
+
+<Tip>
+Using OAuth? You'll be redirected to sign in the first time you connect. After that, tokens refresh automatically. See [OAuth authentication](/howto/oauth) for details.
+</Tip>
 </Tab>
 <Tab title="Local Server" icon="computer">
 Runs on your machine. Requires Node.js 18+.

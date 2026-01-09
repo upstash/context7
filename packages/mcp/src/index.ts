@@ -6,11 +6,12 @@ import { z } from "zod";
 import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
 import { ClientContext } from "./lib/encryption.js";
 import { formatSearchResults, extractClientInfoFromUserAgent } from "./lib/utils.js";
+import { isJWT, validateJWT } from "./lib/jwt.js";
 import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
-import { SERVER_VERSION } from "./lib/constants.js";
+import { SERVER_VERSION, RESOURCE_URL, AUTH_SERVER_URL } from "./lib/constants.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -316,11 +317,52 @@ async function main() {
       );
     };
 
-    app.all("/mcp", async (req: express.Request, res: express.Response) => {
+    const handleMcpRequest = async (
+      req: express.Request,
+      res: express.Response,
+      requireAuth: boolean
+    ) => {
       try {
+        const apiKey = extractApiKey(req);
+        const resourceUrl = RESOURCE_URL;
+        const baseUrl = new URL(resourceUrl).origin;
+
+        // OAuth discovery info header, used by MCP clients to discover the authorization server
+        res.set(
+          "WWW-Authenticate",
+          `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
+        );
+
+        if (requireAuth) {
+          if (!apiKey) {
+            return res.status(401).json({
+              jsonrpc: "2.0",
+              error: {
+                code: -32001,
+                message: "Authentication required. Please authenticate to use this MCP server.",
+              },
+              id: null,
+            });
+          }
+
+          if (isJWT(apiKey)) {
+            const validationResult = await validateJWT(apiKey);
+            if (!validationResult.valid) {
+              return res.status(401).json({
+                jsonrpc: "2.0",
+                error: {
+                  code: -32001,
+                  message: validationResult.error || "Invalid token. Please re-authenticate.",
+                },
+                id: null,
+              });
+            }
+          }
+        }
+
         const context: ClientContext = {
           clientIp: getClientIp(req),
-          apiKey: extractApiKey(req),
+          apiKey: apiKey,
           clientInfo: extractClientInfoFromUserAgent(req.headers["user-agent"]),
           transport: "http",
         };
@@ -348,11 +390,61 @@ async function main() {
           });
         }
       }
+    };
+
+    // Anonymous access endpoint - no authentication required
+    app.all("/mcp", async (req, res) => {
+      await handleMcpRequest(req, res, false);
+    });
+
+    // OAuth-protected endpoint - requires authentication
+    app.all("/mcp/oauth", async (req, res) => {
+      await handleMcpRequest(req, res, true);
     });
 
     app.get("/ping", (_req: express.Request, res: express.Response) => {
       res.json({ status: "ok", message: "pong" });
     });
+
+    // OAuth 2.0 Protected Resource Metadata (RFC 9728)
+    // Used by MCP clients to discover the authorization server
+    app.get(
+      "/.well-known/oauth-protected-resource",
+      (_req: express.Request, res: express.Response) => {
+        res.json({
+          resource: RESOURCE_URL,
+          authorization_servers: [AUTH_SERVER_URL],
+          scopes_supported: ["profile", "email"],
+          bearer_methods_supported: ["header"],
+        });
+      }
+    );
+
+    app.get(
+      "/.well-known/oauth-authorization-server",
+      async (_req: express.Request, res: express.Response) => {
+        const authServerUrl = AUTH_SERVER_URL;
+
+        try {
+          const response = await fetch(`${authServerUrl}/.well-known/oauth-authorization-server`);
+          if (!response.ok) {
+            console.error("[OAuth] Upstream error:", response.status);
+            return res.status(response.status).json({
+              error: "upstream_error",
+              message: "Failed to fetch authorization server metadata",
+            });
+          }
+          const metadata = await response.json();
+          res.json(metadata);
+        } catch (error) {
+          console.error("[OAuth] Error fetching OAuth metadata:", error);
+          res.status(502).json({
+            error: "proxy_error",
+            message: "Failed to proxy authorization server metadata",
+          });
+        }
+      }
+    );
 
     // Catch-all 404 handler - must be after all other routes
     app.use((_req: express.Request, res: express.Response) => {
