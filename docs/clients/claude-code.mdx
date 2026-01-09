@@ -59,7 +59,26 @@ claude mcp add context7 -- npx -y @upstash/context7-mcp
 
 ### Verifying the Connection
 
-Run `claude mcp list` — you should see `context7` in the list with its tools: `resolve-library-id` and `query-docs`.
+Run `/mcp` in Claude Code to see all servers and manage authentication:
+
+<Frame>
+  <img src="/images/clients/claude-code/mcp-list.png" alt="Claude Code MCP List" />
+</Frame>
+
+Select a server to see details including status, authentication, and available tools:
+
+<Frame>
+  <img src="/images/clients/claude-code/mcp-details.png" alt="Claude Code MCP Details" />
+</Frame>
+
+You can also run `claude mcp list` in your terminal:
+
+```bash
+$ claude mcp list
+Checking MCP server health...
+
+context7: https://mcp.context7.com/mcp (HTTP) - ✓ Connected
+```
 
 ---
 

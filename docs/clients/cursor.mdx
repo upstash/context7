@@ -3,23 +3,80 @@ title: Cursor
 description: Using Context7 with Cursor
 ---
 
+export const CursorInstallButton = ({ url, type = "remote" }) => {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group flex items-center gap-3 px-5 py-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-gradient-to-b from-white to-zinc-50 dark:from-zinc-800 dark:to-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-600 hover:shadow-md transition-all duration-200 no-underline w-fit"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 21 22"
+        className="w-8 h-8 text-zinc-900 dark:text-zinc-100"
+        fill="currentColor"
+      >
+        <path d="M19.162 5.452 10.698.565a.88.88 0 0 0-.879 0L1.356 5.452a.74.74 0 0 0-.37.64v9.853a.74.74 0 0 0 .37.64l8.464 4.887a.879.879 0 0 0 .879 0l8.464-4.886a.74.74 0 0 0 .37-.64V6.091a.74.74 0 0 0-.37-.64Zm-.531 1.035L10.46 20.639c-.055.095-.201.056-.201-.055v-9.266a.52.52 0 0 0-.26-.45L1.975 6.237c-.096-.056-.057-.202.054-.202h16.34c.233 0 .378.252.262.453Z" />
+      </svg>
+      <div className="flex flex-col">
+        <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+          Add to Cursor
+        </span>
+        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+          {type === "remote"
+            ? "Remote server • No dependencies"
+            : "Local server • Requires Node.js"}
+        </span>
+      </div>
+      <svg
+        className="w-4 h-4 text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 group-hover:translate-x-0.5 transition-all"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+      </svg>
+    </a>
+  );
+};
+
 Context7 brings up-to-date library documentation directly into Cursor. Instead of getting outdated code examples from training data, you get current documentation from source repositories.
 
-## Installation
-
 <Tip>
-Context7 works without an API key for basic usage. Adding an API key gives you higher rate limits, access to private repositories, and team usage tracking. Get one at [context7.com/dashboard](https://context7.com/dashboard).
+  Context7 works without an API key for basic usage. Adding an API key gives you higher rate limits,
+  access to private repositories, and team usage tracking. Get one at
+  [context7.com/dashboard](https://context7.com/dashboard).
 </Tip>
+
+## Installation
 
 <Tabs>
 <Tab title="Remote Server (Recommended)" icon="cloud">
 No dependencies required. Connects to Context7's hosted server.
 
-Click the button to add Context7 to Cursor automatically.
+You can either use the one-click install button,
 
-[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D)
+<CursorInstallButton
+  url="https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D"
+  type="remote"
+/>
 
-Or add manually to `~/.cursor/mcp.json`:
+or install manually:
+
+<Steps>
+<Step title="Open Cursor Settings">
+Go to `Cursor` → `Settings...` → `Cursor Settings` → `MCP`.
+
+You can also press `Cmd+Shift+P` (or `Ctrl+Shift+P` on Windows/Linux) and type "Cursor Settings".
+
+<Frame>
+  <img src="/images/clients/cursor/mcp-settings.png" alt="Cursor MCP Settings" />
+</Frame>
+</Step>
+<Step title="Add Context7 server">
+Click "Add new global MCP server" in Cursor Settings, or edit `~/.cursor/mcp.json` directly:
 
 <CodeGroup>
 ```json With API Key
@@ -54,20 +111,39 @@ Or add manually to `~/.cursor/mcp.json`:
   }
 }
 ```
+
 </CodeGroup>
 
 <Tip>
 Using OAuth? You'll be redirected to sign in the first time you connect. After that, tokens refresh automatically. See [OAuth authentication](/howto/oauth) for details.
 </Tip>
+</Step>
+</Steps>
 </Tab>
 <Tab title="Local Server" icon="computer">
 Runs on your machine. Requires Node.js 18+.
 
-Click the button to add Context7 to Cursor automatically.
+You can either use the one-click install button,
 
-[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJjb21tYW5kIjoibnB4IC15IEB1cHN0YXNoL2NvbnRleHQ3LW1jcCJ9)
+<CursorInstallButton
+  url="https://cursor.com/en/install-mcp?name=context7&config=eyJjb21tYW5kIjoibnB4IC15IEB1cHN0YXNoL2NvbnRleHQ3LW1jcCJ9"
+  type="local"
+/>
 
-Or add manually to `~/.cursor/mcp.json`:
+or install manually:
+
+<Steps>
+<Step title="Open Cursor Settings">
+Go to `Cursor` → `Settings...` → `Cursor Settings` → `MCP`.
+
+You can also press `Cmd+Shift+P` (or `Ctrl+Shift+P` on Windows/Linux) and type "Cursor Settings".
+
+<Frame>
+  <img src="/images/clients/cursor/mcp-settings.png" alt="Cursor MCP Settings" />
+</Frame>
+</Step>
+<Step title="Add Context7 server">
+Click "Add new global MCP server" in Cursor Settings, or edit `~/.cursor/mcp.json` directly:
 
 <CodeGroup>
 ```json With API Key
@@ -91,7 +167,10 @@ Or add manually to `~/.cursor/mcp.json`:
   }
 }
 ```
+
 </CodeGroup>
+</Step>
+</Steps>
 </Tab>
 </Tabs>
 
@@ -115,7 +194,11 @@ To make Context7 trigger automatically (without typing "use context7" every time
 <Tab title="Cursor Settings" icon="settings">
 <Steps>
 <Step title="Open Settings">
-Go to `Settings` → `Cursor Settings` → `Rules`
+Go to `Cursor` → `Settings...` → `Cursor Settings` → `Rules and Commands`. You can also press `Cmd+Shift+P` (or `Ctrl+Shift+P` on Windows/Linux) and type "Cursor Settings".
+
+<Frame>
+  <img src="/images/clients/cursor/rules.png" alt="Cursor Rules and Commands" />
+</Frame>
 </Step>
 <Step title="Add the Rule">
 ```
