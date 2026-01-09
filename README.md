@@ -142,8 +142,6 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
 <details>
 <summary><b>OAuth Authentication</b></summary>
 
-> **Warning:** Currently, only **Claude Code** and **Cursor** are confirmed to work with OAuth. Other clients should use API key authentication instead.
-
 Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization).
 
 To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client configuration:
