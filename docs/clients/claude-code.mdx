@@ -5,11 +5,11 @@ description: Using Context7 with Claude Code
 
 Context7 integrates with Claude Code to provide current library documentation instead of relying on training data. Beyond the basic MCP connection, Claude Code supports skills, agents, and commands that make documentation lookups more powerful.
 
-## Installation
-
 <Tip>
 Context7 works without an API key for basic usage. Adding an API key gives you higher rate limits, access to private repositories, and team usage tracking. Get one at [context7.com/dashboard](https://context7.com/dashboard).
 </Tip>
+
+## Installation
 
 <Tabs>
 <Tab title="Remote Server (Recommended)" icon="cloud">
@@ -82,6 +82,29 @@ context7: https://mcp.context7.com/mcp (HTTP) - ✓ Connected
 
 ---
 
+## Using Context7
+
+Add "use context7" to your prompts to fetch current documentation:
+
+```
+use context7 to show me how to set up middleware in Next.js 15
+use context7 for Prisma query examples with relations
+use context7 for the Supabase syntax for row-level security
+```
+
+If you know the library ID, use it directly to skip resolution:
+
+```
+use context7 with /supabase/supabase for authentication docs
+use context7 with /vercel/next.js for app router setup
+```
+
+<Tip>
+With the [Context7 plugin](#the-context7-plugin) installed, the skill triggers automatically — no need to say "use context7".
+</Tip>
+
+---
+
 ## The Context7 Plugin
 
 The full Context7 plugin for Claude Code includes more than just the MCP server:
@@ -112,11 +135,9 @@ The plugin is available from the Context7 marketplace. Run these commands in Cla
 
 This adds the Context7 marketplace and installs the plugin with skills, agents, and commands.
 
----
+### Skills
 
-## Skills
-
-### Documentation Lookup Skill
+#### Documentation Lookup Skill
 
 This skill triggers automatically when you ask about libraries, frameworks, or need code examples. You don't need to type "use context7" — the skill recognizes when documentation would help.
 
@@ -139,19 +160,9 @@ This skill triggers automatically when you ask about libraries, frameworks, or n
 </Accordion>
 </AccordionGroup>
 
-### Manual Skill Invocation
+### Agents
 
-If the skill doesn't trigger automatically, you can invoke it:
-
-```
-use context7 skill to look up React hooks documentation
-```
-
----
-
-## Agents
-
-### docs-researcher Agent
+#### docs-researcher Agent
 
 When you're in the middle of a long task and don't want documentation tool calls cluttering your context, spawn the `docs-researcher` agent. It runs in a separate context and returns just the answer.
 
@@ -172,22 +183,18 @@ spawn docs-researcher to find Tailwind CSS grid utilities
 
 The agent uses the same tools (`resolve-library-id` and `query-docs`) but runs on a lighter model (Sonnet) to keep things fast.
 
-### When to Use Agents vs Inline Tools
+#### When to Use Agents vs Inline Tools
 
 | Scenario | Use |
 |----------|-----|
-| Starting a new task | Inline tools |
-| Context is still short | Inline tools |
+| Deep into a task with long context | Agent |
+| Want to avoid context bloat | Agent |
+| Context is short | Inline tools |
 | Want docs visible in conversation | Inline tools |
-| Deep into a task with lots of context | Agent |
-| Quick one-off question | Agent |
-| Avoiding context bloat | Agent |
 
----
+### Commands
 
-## Commands
-
-### /context7:docs
+#### /context7:docs
 
 Manual command for documentation lookups.
 

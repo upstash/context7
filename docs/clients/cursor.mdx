@@ -259,37 +259,19 @@ This makes Context7 part of your project's standard workflow and can be version-
 
 ## Using Context7
 
-### Basic Usage
-
-Just ask about any library and Context7 will fetch the docs:
+Add "use context7" to your prompts to fetch current documentation:
 
 ```
-How do I set up middleware in Next.js 15?
-Show me Prisma query examples for relations
-What's the Supabase syntax for row-level security?
+use context7 to show me how to set up middleware in Next.js 15
+use context7 for Prisma query examples with relations
+use context7 for the Supabase syntax for row-level security
 ```
 
-### Using Library IDs Directly
-
-If you already know the Context7 library ID, include it in your prompt to skip the resolution step:
+If you know the library ID, use it directly to skip resolution:
 
 ```
-Implement authentication using /supabase/supabase for the API docs.
-Set up routing with /vercel/next.js for reference.
-```
-
-The slash prefix tells Context7 to use that library directly.
-
-### Example Prompts That Work Well
-
-```
-I'm setting up a new Next.js 15 project. How do I configure the app router for API routes?
-
-I need to add Supabase auth to my React app. Show me the client-side setup.
-
-What's the correct way to define Prisma relations for a user with many posts?
-
-How do I use Tailwind's new container queries?
+use context7 with /supabase/supabase for authentication docs
+use context7 with /vercel/next.js for app router setup
 ```
 
 ---
