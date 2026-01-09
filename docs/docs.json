@@ -49,6 +49,16 @@
                 "pages": ["sdks/ts/commands/search-library", "sdks/ts/commands/get-context"]
               }
             ]
+          },
+          {
+            "group": "Python",
+            "pages": [
+              "sdks/python/getting-started",
+              {
+                "group": "Commands",
+                "pages": ["sdks/python/commands/search-library", "sdks/python/commands/get-context"]
+              }
+            ]
           }
         ]
       },
