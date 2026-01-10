@@ -137,7 +137,7 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
 
 </details>
 
-**[Other IDEs and Clients →](https://context7.com/docs/resources/all-clients)**
+**[Other IDEs and Clients →](https://context7.com/docs/installation)**
 
 <details>
 <summary><b>OAuth Authentication</b></summary>
@@ -205,7 +205,7 @@ Context7 MCP provides the following tools that LLMs can use:
 
 ## More Documentation
 
-- [More MCP Clients](https://context7.com/docs/resources/all-clients) - Installation for 30+ clients
+- [More MCP Clients](https://context7.com/docs/installation) - Installation for 40+ clients
 - [Adding Libraries](https://context7.com/docs/adding-libraries) - Submit your library to Context7
 - [Troubleshooting](https://context7.com/docs/resources/troubleshooting) - Common issues and solutions
 - [API Reference](https://context7.com/docs/api-guide) - REST API documentation
