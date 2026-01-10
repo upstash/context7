@@ -1,9 +1,6 @@
 ---
 name: docs-researcher
 description: Lightweight agent for fetching library documentation without cluttering your main conversation context.
-tools:
-  - resolve-library-id
-  - query-docs
 model: sonnet
 ---
 
