@@ -182,3 +182,20 @@ prompt.txt
 reports
 reports-old
 src/test/questions*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+uv.lock
