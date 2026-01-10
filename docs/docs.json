@@ -87,7 +87,7 @@
       },
       {
         "group": "Resources",
-        "pages": ["resources/all-clients", "resources/developer", "resources/security", "resources/troubleshooting"]
+        "pages": ["resources/developer", "resources/security", "resources/troubleshooting"]
       }
     ]
   },
