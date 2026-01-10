@@ -1,5 +1,6 @@
 ---
 description: Look up documentation for any library
+argument-hint: <library> [query]
 ---
 
 # /context7:docs

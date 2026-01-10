@@ -39,7 +39,7 @@
       },
       {
         "group": "Clients",
-        "pages": ["clients/cursor", "clients/claude-code"]
+        "pages": ["clients/claude-code","clients/cursor"]
       },
       {
         "group": "SDKs",

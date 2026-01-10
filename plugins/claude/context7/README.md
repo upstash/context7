@@ -13,10 +13,11 @@ This plugin provides:
 
 ## Installation
 
-Copy this plugin folder to your Claude Code plugins directory, or run:
+Add the marketplace and install the plugin:
 
 ```bash
-claude plugins install context7
+claude plugin marketplace add upstash/context7
+claude plugin install context7-plugin@context7-marketplace
 ```
 
 ## Available Tools
