@@ -5,26 +5,22 @@ description: Installation examples for MCP clients
 
 Context7 supports all MCP clients. Below are configuration examples for popular clients. If your client isn't listed, check its documentation for MCP server installation.
 
-<Note>
-  **OAuth Support:** Currently, only **Claude Code** and **Cursor** are confirmed to work with [OAuth authentication](/howto/oauth). For other clients, use API key authentication as shown in the examples below.
-</Note>
-
 <AccordionGroup>
 
 <Accordion title="Claude Code">
 
 Run this command. See [Claude Code MCP docs](https://docs.anthropic.com/en/docs/claude-code/mcp) for more info.
 
-#### Remote Server Connection
-
-```sh
-claude mcp add --transport http context7 https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: YOUR_API_KEY"
-```
-
 #### Local Server Connection
 
 ```sh
 claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+```
+
+#### Remote Server Connection
+
+```sh
+claude mcp add --transport http context7 https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: YOUR_API_KEY"
 ```
 
 </Accordion>

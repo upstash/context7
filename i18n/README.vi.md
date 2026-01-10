@@ -271,13 +271,13 @@ Nếu object `mcpServers` không tồn tại, hãy tạo nó.
 <details>
 <summary><b>Cài đặt trong Claude Code</b></summary>
 Chạy lệnh này. Xem [tài liệu Claude Code MCP](https://docs.anthropic.com/en/docs/claude-code/mcp) để biết thêm thông tin.
-#### Kết nối Claude Code Remote Server
-```sh
-claude mcp add --transport http context7 https://mcp.context7.com/mcp
-```
 #### Kết nối Claude Code Local Server
 ```sh
 claude mcp add context7 -- npx -y @upstash/context7-mcp
+```
+#### Kết nối Claude Code Remote Server
+```sh
+claude mcp add --transport http context7 https://mcp.context7.com/mcp
 ```
 </details>
 <details>
