@@ -135,7 +135,7 @@ Opencode 설정 파일에 이것을 추가하세요. 자세한 내용은 [Openco
 
 </details>
 
-**[기타 IDE 및 클라이언트 →](https://context7.com/docs/resources/all-clients)**
+**[기타 IDE 및 클라이언트 →](https://context7.com/docs/installation)**
 
 ## 중요 팁
 
@@ -187,7 +187,7 @@ Context7 MCP는 LLM이 사용할 수 있는 다음 도구들을 제공합니다:
 
 ## 추가 문서
 
-- [더 많은 MCP 클라이언트](https://context7.com/docs/resources/all-clients) - 30개 이상의 클라이언트에 대한 설치 방법
+- [더 많은 MCP 클라이언트](https://context7.com/docs/installation) - 40개 이상의 클라이언트에 대한 설치 방법
 - [라이브러리 추가](https://context7.com/docs/adding-libraries) - Context7에 라이브러리 제출하기
 - [문제 해결](https://context7.com/docs/resources/troubleshooting) - 일반적인 문제 및 해결 방법
 - [API 참조](https://context7.com/docs/api-guide) - REST API 문서
