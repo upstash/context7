@@ -26,3 +26,6 @@ out
 
 # Changesets
 .changeset/*.md
+
+# Documentation
+docs

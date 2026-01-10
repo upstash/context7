@@ -1,0 +1,14 @@
+{
+  "name": "context7-marketplace",
+  "owner": {
+    "name": "Upstash"
+  },
+  "plugins": [
+    {
+      "name": "context7-plugin",
+      "source": "./plugins/claude/context7",
+      "description": "Up-to-date documentation lookup. Pull version-specific documentation and code examples directly from source repositories into your LLM context.",
+      "version": "1.0.0"
+    }
+  ]
+}
