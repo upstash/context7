@@ -1,5 +1,11 @@
 # @upstash/context7-mcp
 
+## 2.1.1
+
+### Patch Changes
+
+- 02148ff: Bump zod from 3.x to 4.x
+
 ## 2.1.0
 
 ### Minor Changes
