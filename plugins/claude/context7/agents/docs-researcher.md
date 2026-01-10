@@ -34,7 +34,6 @@ When given a question about a library or framework, fetch the relevant documenta
 
 ## Guidelines
 
-- Maximum 3 `query-docs` calls per question to keep context lean
 - Pass the user's full question as the query parameter for better relevance
 - When the user mentions a version (e.g., "Next.js 15"), use version-specific library IDs if available
 - If `resolve-library-id` returns multiple matches, prefer official/primary packages over community forks
