@@ -39,7 +39,7 @@
       },
       {
         "group": "Clients",
-        "pages": ["clients/claude-code", "clients/cursor", "clients/opencode"]
+        "pages": ["clients/claude-code", "clients/cursor", "clients/opencode", "resources/all-clients"]
       },
       {
         "group": "SDKs",
@@ -91,7 +91,7 @@
       },
       {
         "group": "Resources",
-        "pages": ["resources/all-clients", "resources/developer", "resources/security", "resources/troubleshooting"]
+        "pages": ["resources/developer", "resources/security", "resources/troubleshooting"]
       }
     ]
   },
