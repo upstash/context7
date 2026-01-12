@@ -1,0 +1,178 @@
+---
+title: OpenCode
+description: Using Context7 with OpenCode
+---
+
+Context7 integrates with [OpenCode](https://opencode.ai/) to provide current library documentation instead of relying on training data. Get accurate, up-to-date code examples directly in your coding sessions.
+
+<Info>
+For more details on MCP server configuration in OpenCode, see the [OpenCode MCP documentation](https://opencode.ai/docs/mcp-servers/).
+</Info>
+
+<Tip>
+Context7 works without an API key for basic usage. Adding an API key gives you higher rate limits, access to private repositories, and team usage tracking. Get one at [context7.com/dashboard](https://context7.com/dashboard).
+</Tip>
+
+## Installation
+
+<Tabs>
+<Tab title="Remote Server (Recommended)" icon="cloud">
+No dependencies required. Connects to Context7's hosted server.
+
+<Steps>
+<Step title="Open your OpenCode config">
+Create or edit `opencode.json` in your project root, or `~/.config/opencode/opencode.json` for global config. See the [OpenCode config docs](https://opencode.ai/docs/config/) for more details.
+
+```bash
+# Global config
+vim ~/.config/opencode/opencode.json
+
+# Or project level config
+vim opencode.json
+```
+</Step>
+<Step title="Add Context7 MCP server">
+Add the Context7 MCP server to the `mcp` section:
+
+<CodeGroup>
+```json With API Key (Recommended)
+{
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      },
+      "enabled": true
+    }
+  }
+}
+```
+
+```json Without API Key
+{
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "enabled": true
+    }
+  }
+}
+```
+</CodeGroup>
+
+<Tip>
+You can use environment variable syntax for your API key: `"CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}"`. This reads from your environment instead of hardcoding the key.
+</Tip>
+</Step>
+</Steps>
+</Tab>
+<Tab title="Local Server" icon="computer">
+Runs on your machine. Requires Node.js 18+.
+
+<Steps>
+<Step title="Open your OpenCode config">
+Create or edit `opencode.json` in your project root, or `~/.config/opencode/opencode.json` for global config. See the [OpenCode config docs](https://opencode.ai/docs/config/) for more details.
+
+```bash
+# Global config
+vim ~/.config/opencode/opencode.json
+
+# Or project level config
+vim opencode.json
+```
+</Step>
+<Step title="Add Context7 MCP server">
+Add the Context7 MCP server to the `mcp` section:
+
+<CodeGroup>
+```json With API Key
+{
+  "mcp": {
+    "context7": {
+      "type": "local",
+      "command": ["npx", "-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
+      "enabled": true
+    }
+  }
+}
+```
+
+```json Without API Key
+{
+  "mcp": {
+    "context7": {
+      "type": "local",
+      "command": ["npx", "-y", "@upstash/context7-mcp"],
+      "enabled": true
+    }
+  }
+}
+```
+</CodeGroup>
+
+<Tip>
+**Using environment variables:** Instead of passing the API key in the command, set `CONTEXT7_API_KEY` as an environment variable and configure OpenCode without the `--api-key` flag.
+</Tip>
+</Step>
+</Steps>
+</Tab>
+</Tabs>
+
+See the [OpenCode MCP documentation](https://opencode.ai/docs/mcp-servers) for more details on MCP server configuration.
+
+---
+
+## Using Context7
+
+Add "use context7" to your prompts to fetch current documentation:
+
+```
+use context7 to show me how to set up middleware in Next.js 15
+use context7 for Prisma query examples with relations
+use context7 for the Supabase syntax for row-level security
+```
+
+If you know the library ID, use it directly to skip resolution:
+
+```
+use context7 with /supabase/supabase for authentication docs
+use context7 with /vercel/next.js for app router setup
+```
+
+You can also add instructions to your `AGENTS.md` file for automatic Context7 usage:
+
+```markdown AGENTS.md
+When you need to search docs, use `context7` tools.
+```
+
+---
+
+## Tips
+
+<AccordionGroup>
+<Accordion title="Getting Better Results">
+- Be specific about what you're trying to do, not just which library
+- Mention versions when they matter
+- If the first result isn't right, ask for a different part of the docs
+
+```
+# Good
+How do I handle file uploads with the Supabase Storage API?
+
+# Less specific
+How does Supabase storage work?
+```
+</Accordion>
+
+<Accordion title="Project-Level Configuration">
+You can place your `opencode.json` in your project directory to have project-specific configurations. This is useful when:
+
+- Different projects need different API keys
+- You want to share the config with your team via version control
+- A project requires specific Context7 settings
+</Accordion>
+
+</AccordionGroup>
