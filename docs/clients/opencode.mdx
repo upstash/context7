@@ -30,8 +30,11 @@ vim opencode.json
 <Step title="Add Context7 MCP server">
 Add the Context7 MCP server to the `mcp` section:
 
-<CodeGroup>
-```json With API Key (Recommended)
+<Tabs>
+<Tab title="With API Key (Recommended)">
+Add this to your config file:
+
+```json
 {
   "mcp": {
     "context7": {
@@ -46,7 +49,47 @@ Add the Context7 MCP server to the `mcp` section:
 }
 ```
 
-```json Without API Key
+<Tip>
+You can use environment variable syntax for your API key: `"CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}"`. This reads from your environment instead of hardcoding the key.
+</Tip>
+</Tab>
+<Tab title="With OAuth">
+Add this to your config file:
+
+```json
+{
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp/oauth",
+      "enabled": true
+    }
+  }
+}
+```
+
+Then run the following command in your terminal to authenticate:
+
+```bash
+opencode mcp auth context7
+```
+
+This will open your browser for authorization. After you authorize, tokens are stored securely and refresh automatically. See [OAuth authentication](/howto/oauth) for details.
+
+**Other OAuth commands**
+
+```bash
+# List all MCP servers and their auth status
+opencode mcp auth list
+
+# Remove stored credentials
+opencode mcp logout context7
+```
+</Tab>
+<Tab title="Without API Key">
+Add this to your config file:
+
+```json
 {
   "mcp": {
     "context7": {
@@ -57,11 +100,8 @@ Add the Context7 MCP server to the `mcp` section:
   }
 }
 ```
-</CodeGroup>
-
-<Tip>
-You can use environment variable syntax for your API key: `"CONTEXT7_API_KEY": "{env:CONTEXT7_API_KEY}"`. This reads from your environment instead of hardcoding the key.
-</Tip>
+</Tab>
+</Tabs>
 </Step>
 </Steps>
 </Tab>
@@ -83,8 +123,11 @@ vim opencode.json
 <Step title="Add Context7 MCP server">
 Add the Context7 MCP server to the `mcp` section:
 
-<CodeGroup>
-```json With API Key
+<Tabs>
+<Tab title="With API Key (Recommended)">
+Add this to your config file:
+
+```json
 {
   "mcp": {
     "context7": {
@@ -96,7 +139,14 @@ Add the Context7 MCP server to the `mcp` section:
 }
 ```
 
-```json Without API Key
+<Tip>
+Instead of passing the API key in the command, you can set `CONTEXT7_API_KEY` as an environment variable and omit the `--api-key` flag.
+</Tip>
+</Tab>
+<Tab title="Without API Key">
+Add this to your config file:
+
+```json
 {
   "mcp": {
     "context7": {
@@ -107,11 +157,8 @@ Add the Context7 MCP server to the `mcp` section:
   }
 }
 ```
-</CodeGroup>
-
-<Tip>
-**Using environment variables:** Instead of passing the API key in the command, set `CONTEXT7_API_KEY` as an environment variable and configure OpenCode without the `--api-key` flag.
-</Tip>
+</Tab>
+</Tabs>
 </Step>
 </Steps>
 </Tab>
