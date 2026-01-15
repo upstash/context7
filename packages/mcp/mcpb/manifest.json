@@ -1,6 +1,6 @@
 {
   "dxt_version": "0.1",
-  "name": "context7",
+  "name": "@upstash/context7",
   "display_name": "Context7",
   "version": "2.0.0",
   "description": "Up-to-date Code Docs For Any Prompt",
