@@ -119,11 +119,6 @@ function getClientIp(req: express.Request): string | undefined {
   return undefined;
 }
 
-/**
- * Creates a new McpServer instance with all tools registered.
- * For stateless HTTP mode, a new server is created per request.
- * For stdio mode, a single server instance is used.
- */
 function createServer(): McpServer {
   const server = new McpServer(
     {
@@ -365,7 +360,6 @@ async function main() {
           transport: "http",
         };
 
-        // Create a new server instance per request (stateless pattern)
         const server = createServer();
 
         const transport = new StreamableHTTPServerTransport({
@@ -479,11 +473,8 @@ async function main() {
     startServer(initialPort);
   } else {
     stdioApiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
-
-    // For stdio mode, use a single server instance (single connection)
     const server = createServer();
 
-    // Capture client info from MCP initialize handshake
     server.server.oninitialized = () => {
       const clientVersion = server.server.getClientVersion();
       if (clientVersion) {
