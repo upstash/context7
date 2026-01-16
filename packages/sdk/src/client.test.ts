@@ -63,18 +63,14 @@ describe("Context7 Client", () => {
       expect(library).toHaveProperty("benchmarkScore");
     });
 
-    test(
-      "should search with different queries",
-      async () => {
-        const queries = ["vue", "express", "next"];
+    test("should search with different queries", async () => {
+      const queries = ["vue", "express", "next"];
 
-        for (const query of queries) {
-          const result = await client.searchLibrary(`I want to use ${query}`, query);
-          expect(result.length).toBeGreaterThan(0);
-        }
-      },
-      15000
-    );
+      for (const query of queries) {
+        const result = await client.searchLibrary(`I want to use ${query}`, query);
+        expect(result.length).toBeGreaterThan(0);
+      }
+    }, 15000);
   });
 
   describe("getContext - JSON format (default)", () => {
