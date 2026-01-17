@@ -13,9 +13,116 @@ Authorization: Bearer CONTEXT7_API_KEY
 
 Get your API key at [context7.com/dashboard](https://context7.com/dashboard). Learn more about [creating and managing API keys](/howto/api-keys).
 
-<Warning>
-  Store your API key in an environment variable or secret manager. Rotate it if compromised.
-</Warning>
+
+## API Methods
+
+Context7 provides two core API methods for retrieving documentation context.
+
+### Search Library
+
+Search for available libraries by name. Use this to find the correct library ID before fetching documentation.
+
+**Endpoint:** `GET /api/v2/libs/search`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `query` | string | Yes | Your question or task (used for relevance ranking) |
+| `libraryName` | string | Yes | Library name to search for (e.g., "react", "nextjs") |
+
+**Response:** Returns an array of matching libraries:
+
+```json
+[
+  {
+    "id": "/facebook/react",
+    "name": "React",
+    "description": "A JavaScript library for building user interfaces",
+    "totalSnippets": 1250,
+    "trustScore": 95,
+    "benchmarkScore": 88,
+    "versions": ["v18.2.0", "v17.0.2"]
+  }
+]
+```
+
+**Example:**
+
+```bash
+curl "https://context7.com/api/v2/libs/search?libraryName=react&query=hooks" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY"
+```
+
+### Get Context
+
+Retrieve documentation context for a specific library. Returns relevant documentation snippets based on your query.
+
+**Endpoint:** `GET /api/v2/context`
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `query` | string | Yes | Your question or task (used for relevance ranking) |
+| `libraryId` | string | Yes | Library identifier from search (e.g., `/facebook/react`) |
+| `type` | string | No | Response format: `json` (default) or `txt` |
+
+**Response (JSON format):** Returns an array of documentation snippets:
+
+```json
+[
+  {
+    "title": "Using the Effect Hook",
+    "content": "The Effect Hook lets you perform side effects...",
+    "source": "react.dev/reference/react/useEffect"
+  }
+]
+```
+
+**Response (Text format):** Returns plain text ready for LLM prompts.
+
+**Example:**
+
+```bash
+# JSON format (default)
+curl "https://context7.com/api/v2/context?libraryId=/facebook/react&query=useEffect" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY"
+
+# Text format
+curl "https://context7.com/api/v2/context?libraryId=/facebook/react&query=useEffect&type=txt" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY"
+```
+
+### Complete Workflow Example
+
+```python
+import requests
+
+headers = {"Authorization": "Bearer CONTEXT7_API_KEY"}
+
+# Step 1: Search for the library
+search_response = requests.get(
+    "https://context7.com/api/v2/libs/search",
+    headers=headers,
+    params={"libraryName": "react", "query": "I need to manage state"}
+)
+libraries = search_response.json()
+best_match = libraries[0]
+print(f"Found: {best_match['name']} ({best_match['id']})")
+
+# Step 2: Get documentation context
+context_response = requests.get(
+    "https://context7.com/api/v2/context",
+    headers=headers,
+    params={"libraryId": best_match["id"], "query": "How do I use useState?"}
+)
+docs = context_response.json()
+
+for doc in docs:
+    print(f"Title: {doc['title']}")
+    print(f"Content: {doc['content'][:200]}...")
+```
+
+<Info>
+  For TypeScript SDK usage with additional features, see [Search Library](/sdks/ts/commands/search-library) and [Get Context](/sdks/ts/commands/get-context).
+</Info>
 
 ## Rate Limits
 
@@ -115,73 +222,4 @@ All errors return a JSON object with these fields:
 
 ## SDK and Libraries
 
-### MCP Server (Recommended)
-
-The Context7 Model Context Protocol (MCP) server provides seamless integration with Claude and other AI tools:
-
-```bash
-npm install @upstash/context7-mcp
-```
-
-**Tools provided:**
-- `resolve-library-id`: Search for libraries and get their Context7 IDs
-- `query-docs`: Get documentation context for your questions
-
-See the [Installation guide](https://github.com/upstash/context7#installation) for setup instructions.
-
-### Direct API Integration
-
-For custom integrations or non-MCP use cases, use the REST endpoints directly. The API is language-agnostic and works with any HTTP client.
-
-**Example (cURL):**
-
-```bash
-curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js&query=routing" \
-  -H "Authorization: Bearer CONTEXT7_API_KEY"
-```
-
-**Example (Python):**
-
-```python
-import requests
-
-headers = {
-    "Authorization": "Bearer CONTEXT7_API_KEY"
-}
-
-# Search for a library
-search = requests.get(
-    "https://context7.com/api/v2/libs/search",
-    headers=headers,
-    params={"libraryName": "nextjs", "query": "routing"}
-)
-library_id = search.json()["results"][0]["id"]
-
-# Get documentation context
-response = requests.get(
-    "https://context7.com/api/v2/context",
-    headers=headers,
-    params={"libraryId": library_id, "query": "How to setup dynamic routes"}
-)
-print(response.text)
-```
-
-**Example (JavaScript/Node.js):**
-
-```javascript
-const headers = { Authorization: "Bearer CONTEXT7_API_KEY" };
-
-// Search for a library
-const search = await fetch(
-  "https://context7.com/api/v2/libs/search?libraryName=react&query=state",
-  { headers }
-);
-const { results } = await search.json();
-
-// Get documentation context
-const docs = await fetch(
-  `https://context7.com/api/v2/context?libraryId=${results[0].id}&query=useState hook`,
-  { headers }
-);
-const context = await docs.text();
-```
+For TypeScript SDK installation and usage, see the [Getting Started guide](/sdks/ts/getting-started).
