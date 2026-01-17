@@ -1,5 +1,12 @@
 # @upstash/context7-mcp
 
+## 2.1.1
+
+### Patch Changes
+
+- 02148ff: Bump zod from 3.x to 4.x
+- 8a2ad1a: Use stateless pattern for HTTP transport to prevent connection leaks. Creates a new McpServer instance per HTTP request instead of sharing a single global instance.
+
 ## 2.1.0
 
 ### Minor Changes
