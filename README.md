@@ -33,11 +33,6 @@ JSON API responses for five minutes. use context7
 ```
 
 Context7 fetches up-to-date code examples and documentation right into your LLM's context. No tab-switching, no hallucinated APIs that don't exist, no outdated code generation.
-This is a great observation. For most users, "Local Server" sounds like something they need to set up themselves, while "Remote" sounds like the standard way to use a cloud service.
-
-To make this more intuitive, I've renamed **Remote Server** to **Cloud (Recommended)** and **Local Server** to **Self-Hosted (Advanced)**. I also reordered the sections so the easiest, most common method (Cloud) always comes first.
-
----
 
 ## Installation
 
