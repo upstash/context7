@@ -1,0 +1,7 @@
+{
+  "name": "context7-plugin",
+  "description": "Upstash Context7 MCP server for up-to-date documentation lookup. Pull version-specific documentation and code examples directly from source repositories into your LLM context.",
+  "author": {
+    "name": "Upstash"
+  }
+}

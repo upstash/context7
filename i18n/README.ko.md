@@ -85,16 +85,16 @@ Cursor의 `~/.cursor/mcp.json` 파일에 다음 설정을 붙여넣는 것이 �
 
 이 명령어를 실행하세요. 자세한 내용은 [Claude Code MCP 문서](https://code.claude.com/docs/en/mcp)를 참조하세요.
 
-#### Claude Code 원격 서버 연결
-
-```sh
-claude mcp add --transport http context7 https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: YOUR_API_KEY"
-```
-
 #### Claude Code 로컬 서버 연결
 
 ```sh
 claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+```
+
+#### Claude Code 원격 서버 연결
+
+```sh
+claude mcp add --header "CONTEXT7_API_KEY: YOUR_API_KEY" --transport http context7 https://mcp.context7.com/mcp
 ```
 
 </details>

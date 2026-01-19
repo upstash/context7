@@ -136,16 +136,16 @@ Pasting the following configuration into your Cursor `~/.cursor/mcp.json` file i
 
 Run this command. See [Claude Code MCP docs](https://docs.anthropic.com/en/docs/claude-code/mcp) for more info.
 
-#### Claude Code Remote Server Connection
-
-```sh
-claude mcp add --transport http context7 https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: YOUR_API_KEY"
-```
-
 #### Claude Code Local Server Connection
 
 ```sh
 claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+```
+
+#### Claude Code Remote Server Connection
+
+```sh
+claude mcp add --header "CONTEXT7_API_KEY: YOUR_API_KEY" --transport http context7 https://mcp.context7.com/mcp
 ```
 
 </details>

@@ -87,16 +87,16 @@ Pasting the following configuration into your Cursor `~/.cursor/mcp.json` file i
 
 Run this command. See [Claude Code MCP docs](https://code.claude.com/docs/en/mcp) for more info.
 
-#### Claude Code Remote Server Connection
-
-```sh
-claude mcp add --transport http context7 https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: YOUR_API_KEY"
-```
-
 #### Claude Code Local Server Connection
 
 ```sh
 claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+```
+
+#### Claude Code Remote Server Connection
+
+```sh
+claude mcp add --header "CONTEXT7_API_KEY: YOUR_API_KEY" --transport http context7 https://mcp.context7.com/mcp
 ```
 
 </details>
@@ -141,8 +141,6 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
 
 <details>
 <summary><b>OAuth Authentication</b></summary>
-
-> **Warning:** Currently, only **Claude Code** and **Cursor** are confirmed to work with OAuth. Other clients should use API key authentication instead.
 
 Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization).
 

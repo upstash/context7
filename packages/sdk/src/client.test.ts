@@ -70,7 +70,7 @@ describe("Context7 Client", () => {
         const result = await client.searchLibrary(`I want to use ${query}`, query);
         expect(result.length).toBeGreaterThan(0);
       }
-    });
+    }, 15000);
   });
 
   describe("getContext - JSON format (default)", () => {

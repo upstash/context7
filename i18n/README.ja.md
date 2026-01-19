@@ -241,13 +241,13 @@ Smithery キーは [Smithery.ai Web ページ](https://smithery.ai/server/@upsta
 <details>
 <summary><b>Claude Code へのインストール</b></summary>
 このコマンドを実行します。詳細は [Claude Code MCP ドキュメント](https://docs.anthropic.com/ja/docs/claude-code/mcp) を参照してください。
-#### Claude Code リモートサーバー接続
-```sh
-claude mcp add --transport http context7 https://mcp.context7.com/mcp
-```
 #### Claude Code ローカルサーバー接続
 ```sh
 claude mcp add context7 -- npx -y @upstash/context7-mcp
+```
+#### Claude Code リモートサーバー接続
+```sh
+claude mcp add --transport http context7 https://mcp.context7.com/mcp
 ```
 </details>
 <details>
