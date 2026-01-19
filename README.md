@@ -33,24 +33,25 @@ JSON API responses for five minutes. use context7
 ```
 
 Context7 fetches up-to-date code examples and documentation right into your LLM's context. No tab-switching, no hallucinated APIs that don't exist, no outdated code generation.
+This is a great observation. For most users, "Local Server" sounds like something they need to set up themselves, while "Remote" sounds like the standard way to use a cloud service.
+
+To make this more intuitive, I've renamed **Remote Server** to **Cloud (Recommended)** and **Local Server** to **Self-Hosted (Advanced)**. I also reordered the sections so the easiest, most common method (Cloud) always comes first.
+
+---
 
 ## Installation
 
-> [!NOTE]
-> **API Key Recommended**: Get a free API key at [context7.com/dashboard](https://context7.com/dashboard) for higher rate limits.
+> [!TIP]
+> **API Key Recommended**: Get a free API key at [context7.com/dashboard](https://context7.com/dashboard) for higher rate limits and persistent context.
 
-<details>
+<details open>
 <summary><b>Install in Cursor</b></summary>
 
-Go to: `Settings` -> `Cursor Settings` -> `MCP` -> `Add new global MCP server`
+The fastest way to use Context7 in Cursor is via our Cloud endpoint.
 
-Pasting the following configuration into your Cursor `~/.cursor/mcp.json` file is the recommended approach. You may also install in a specific project by creating `.cursor/mcp.json` in your project folder. See [Cursor MCP docs](https://docs.cursor.com/context/model-context-protocol) for more info.
+#### 1. Cloud (Recommended)
 
-> Since Cursor 1.0, you can click the install button below for instant one-click installation.
-
-#### Cursor Remote Server Connection
-
-[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D)
+Click the button below for instant one-click installation, or manually add the JSON config to your `~/.cursor/mcp.json`.
 
 ```json
 {
@@ -63,11 +64,12 @@ Pasting the following configuration into your Cursor `~/.cursor/mcp.json` file i
     }
   }
 }
+
 ```
 
-#### Cursor Local Server Connection
+#### 2. Self-Hosted (Advanced)
 
-[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJjb21tYW5kIjoibnB4IC15IEB1cHN0YXNoL2NvbnRleHQ3LW1jcCJ9)
+Use this if you prefer to run the MCP server binary locally on your machine via Node.js.
 
 ```json
 {
@@ -78,6 +80,7 @@ Pasting the following configuration into your Cursor `~/.cursor/mcp.json` file i
     }
   }
 }
+
 ```
 
 </details>
@@ -85,18 +88,20 @@ Pasting the following configuration into your Cursor `~/.cursor/mcp.json` file i
 <details>
 <summary><b>Install in Claude Code</b></summary>
 
-Run this command. See [Claude Code MCP docs](https://code.claude.com/docs/en/mcp) for more info.
+Run the following commands in your terminal. See [Claude Code MCP docs](https://code.claude.com/docs/en/mcp) for more info.
 
-#### Claude Code Local Server Connection
-
-```sh
-claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
-```
-
-#### Claude Code Remote Server Connection
+#### Cloud (Recommended)
 
 ```sh
 claude mcp add --header "CONTEXT7_API_KEY: YOUR_API_KEY" --transport http context7 https://mcp.context7.com/mcp
+
+```
+
+#### Self-Hosted (Advanced)
+
+```sh
+claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+
 ```
 
 </details>
@@ -104,9 +109,9 @@ claude mcp add --header "CONTEXT7_API_KEY: YOUR_API_KEY" --transport http contex
 <details>
 <summary><b>Install in Opencode</b></summary>
 
-Add this to your Opencode configuration file. See [Opencode MCP docs](https://opencode.ai/docs/mcp-servers) for more info.
+Add this to your Opencode configuration file.
 
-#### Opencode Remote Server Connection
+#### Cloud (Recommended)
 
 ```json
 "mcp": {
@@ -119,9 +124,10 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
     "enabled": true
   }
 }
+
 ```
 
-#### Opencode Local Server Connection
+#### Self-Hosted (Advanced)
 
 ```json
 {
@@ -133,27 +139,31 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
     }
   }
 }
+
 ```
 
 </details>
 
 **[Other IDEs and Clients →](https://context7.com/docs/resources/all-clients)**
 
-<details>
-<summary><b>OAuth Authentication</b></summary>
+---
 
-Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization).
+### Authentication Options
 
-To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client configuration:
+| Method | Description | Best For |
+| --- | --- | --- |
+| **API Key** | Default method. Pass via headers or CLI flags. | All users / Quick start |
+| **OAuth** | Connect via the [MCP OAuth spec](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization). | Enterprise / Teams |
+
+To use **OAuth**, change your Cloud endpoint URL:
 
 ```diff
 - "url": "https://mcp.context7.com/mcp"
 + "url": "https://mcp.context7.com/mcp/oauth"
+
 ```
 
-OAuth is only available for remote HTTP connections. For local MCP connections using stdio transport, use API key authentication instead.
-
-</details>
+*Note: OAuth is only available for Cloud (HTTP) connections.*
 
 ## Important Tips
 
