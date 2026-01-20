@@ -120,7 +120,7 @@ function getSelectedIde(options: AddOptions | ListOptions | RemoveOptions): IDE 
   if ("opencode" in options && options.opencode) return "opencode";
   if ("amp" in options && options.amp) return "amp";
   if ("antigravity" in options && options.antigravity) return "antigravity";
-  return null; // no explicit selection
+  return null;
 }
 
 function hasExplicitIdeOption(options: AddOptions | ListOptions | RemoveOptions): boolean {
@@ -144,7 +144,6 @@ interface InstallTargets {
 async function promptForInstallTargets(options: AddOptions): Promise<InstallTargets | null> {
   const config = await loadConfig();
 
-  // If explicit IDE flags are provided, use those
   if (hasExplicitIdeOption(options)) {
     const ide = getSelectedIde(options);
     const scope: Scope =
@@ -155,10 +154,8 @@ async function promptForInstallTargets(options: AddOptions): Promise<InstallTarg
     };
   }
 
-  // Interactive mode: ask user for clients and scope
-  console.log(""); // spacing
+  console.log("");
 
-  // Build IDE choices
   const ideChoices = (Object.keys(IDE_NAMES) as IDE[]).map((ide) => ({
     name: `${IDE_NAMES[ide]} ${pc.dim(`(${IDE_PATHS[ide]})`)}`,
     value: ide,
@@ -183,10 +180,9 @@ async function promptForInstallTargets(options: AddOptions): Promise<InstallTarg
     ]);
     selectedIdes = ideResult.ides;
   } catch {
-    return null; // cancelled
+    return null;
   }
 
-  // Ask for scope (project and/or global) - multiselect
   let selectedScopes: Scope[];
   if (options.global !== undefined) {
     selectedScopes = options.global ? ["global"] : ["project"];
@@ -219,7 +215,7 @@ async function promptForInstallTargets(options: AddOptions): Promise<InstallTarg
       ]);
       selectedScopes = scopeResult.scopes;
     } catch {
-      return null; // cancelled
+      return null;
     }
   }
 
@@ -270,7 +266,6 @@ async function addSkills(input: string, skillNames: string[], options: AddOption
 
     spinner.stop(`Fetched ${data.skill.name}`);
 
-    // Prompt for install targets
     const targets = await promptForInstallTargets(options);
     if (!targets) {
       p.cancel("Installation cancelled");
@@ -309,7 +304,6 @@ async function addSkills(input: string, skillNames: string[], options: AddOption
 
     spinner.stop(`Fetched ${data.skill.name}`);
 
-    // Prompt for install targets
     const targets = await promptForInstallTargets(options);
     if (!targets) {
       p.cancel("Installation cancelled");
@@ -352,13 +346,11 @@ async function addSkills(input: string, skillNames: string[], options: AddOption
 
   let selectedSkills: SkillRecord[];
 
-  // If specific skill names provided, filter and install those
   if (skillNames.length > 0) {
     selectedSkills = data.skills.filter((s) =>
       skillNames.some((name) => s.name.toLowerCase() === name.toLowerCase())
     );
 
-    // Check for skills that weren't found
     const foundNames = selectedSkills.map((s) => s.name.toLowerCase());
     const notFound = skillNames.filter((name) => !foundNames.includes(name.toLowerCase()));
 
@@ -379,10 +371,7 @@ async function addSkills(input: string, skillNames: string[], options: AddOption
   } else {
     const sourceLabel = data.source === "cache" ? "(cached)" : "(indexed)";
     spinner.stop(`Found ${data.skills.length} skill(s) ${sourceLabel}`);
-    // Calculate max skill name length for alignment
     const maxNameLen = Math.min(35, Math.max(...data.skills.map((s) => s.name.length)));
-
-    // Build inquirer choices
     const choices = data.skills.map((s) => {
       const paddedName = s.name.padEnd(maxNameLen);
       const downloads = s.installCount || 0;
@@ -397,7 +386,7 @@ async function addSkills(input: string, skillNames: string[], options: AddOption
       };
     });
 
-    console.log(""); // Add spacing before prompt
+    console.log("");
 
     try {
       const result = await inquirer.prompt<{ selectedSkills: SkillRecord[] }>([
@@ -421,7 +410,6 @@ async function addSkills(input: string, skillNames: string[], options: AddOption
     return;
   }
 
-  // Prompt for install targets (clients and scope)
   const targets = await promptForInstallTargets(options);
   if (!targets) {
     p.cancel("Installation cancelled");
@@ -509,7 +497,6 @@ async function searchSkillsCommand(query: string): Promise<void> {
 
   const allSkills: SkillSearchResult[] = data.results.flatMap((r) => r.skills);
 
-  // Group skills by repo
   const groupedByRepo = allSkills.reduce(
     (acc, skill) => {
       if (!acc[skill.repoId]) acc[skill.repoId] = [];
@@ -519,20 +506,15 @@ async function searchSkillsCommand(query: string): Promise<void> {
     {} as Record<string, SkillSearchResult[]>
   );
 
-  // Build inquirer checkbox choices with separators for repos
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const choices: any[] = [];
-
-  // Calculate max skill name length for alignment
   const maxNameLen = Math.min(35, Math.max(...allSkills.map((s) => s.name.length)));
 
   for (const [repoId, skills] of Object.entries(groupedByRepo)) {
-    // Add repo as a separator/header
     choices.push(
       new inquirer.Separator(`\n${pc.bold(pc.cyan(repoId))} ${pc.dim(`(${skills.length})`)}`)
     );
 
-    // Add individual skills
     for (const s of skills) {
       const downloads = s.installCount || 0;
       const paddedName = s.name.padEnd(maxNameLen);
@@ -548,7 +530,7 @@ async function searchSkillsCommand(query: string): Promise<void> {
     }
   }
 
-  console.log(""); // Add spacing before prompt
+  console.log("");
 
   let selectedSkills: SkillSearchResult[];
   try {
@@ -563,7 +545,6 @@ async function searchSkillsCommand(query: string): Promise<void> {
     ]);
     selectedSkills = result.selectedSkills;
   } catch {
-    // User pressed Ctrl+C or Escape
     p.cancel("Installation cancelled");
     return;
   }
@@ -573,7 +554,6 @@ async function searchSkillsCommand(query: string): Promise<void> {
     return;
   }
 
-  // Prompt for install targets (clients and scope)
   const targets = await promptForInstallTargets({});
   if (!targets) {
     p.cancel("Installation cancelled");

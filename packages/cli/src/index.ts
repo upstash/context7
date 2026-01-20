@@ -12,7 +12,6 @@ const __dirname = dirname(__filename);
 
 config({ path: join(__dirname, "..", ".env") });
 
-// Context7 brand colors
 const brand = {
   primary: chalk.hex("#059669"),
   dark: chalk.hex("#292524"),

@@ -69,14 +69,13 @@ export interface DownloadResponse {
   error?: string;
 }
 
-// IDE types and configurations
 export type IDE = "claude" | "cursor" | "codex" | "opencode" | "amp" | "antigravity";
 
 export const IDE_PATHS: Record<IDE, string> = {
   claude: ".claude/skills",
   cursor: ".cursor/skills",
   codex: ".codex/skills",
-  opencode: ".opencode/skill", // singular
+  opencode: ".opencode/skill",
   amp: ".agents/skills",
   antigravity: ".agent/skills",
 };
