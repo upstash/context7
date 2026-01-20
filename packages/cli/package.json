@@ -1,0 +1,67 @@
+{
+  "name": "@upstash/context7-cli",
+  "version": "0.1.0",
+  "description": "Context7 CLI - Manage AI coding skills and documentation context",
+  "type": "module",
+  "bin": {
+    "c7": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --fix",
+    "lint:check": "eslint src",
+    "format": "prettier --write src",
+    "format:check": "prettier --check src",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.10.1",
+    "@types/inquirer": "^9.0.9",
+    "chalk": "^5.6.2",
+    "commander": "^13.1.0",
+    "dotenv": "^16.4.7",
+    "figlet": "^1.9.4",
+    "inquirer": "^13.2.0",
+    "picocolors": "^1.1.1",
+    "tabtab": "^3.0.2"
+  },
+  "devDependencies": {
+    "@types/figlet": "^1.7.0",
+    "@types/node": "^22.19.1",
+    "@typescript-eslint/eslint-plugin": "^8.28.0",
+    "@typescript-eslint/parser": "^8.28.0",
+    "eslint": "^9.34.0",
+    "eslint-plugin-prettier": "^5.2.5",
+    "prettier": "^3.6.2",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.28.0"
+  },
+  "keywords": [
+    "context7",
+    "cli",
+    "ai",
+    "skills",
+    "documentation",
+    "mcp"
+  ],
+  "author": "Upstash",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/upstash/context7.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/upstash/context7/issues"
+  },
+  "homepage": "https://context7.com",
+  "engines": {
+    "node": ">=18"
+  }
+}
