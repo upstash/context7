@@ -51,17 +51,17 @@ export function registerSkillCommands(program: Command): void {
     .command("install")
     .alias("i")
     .alias("add")
-    .argument("<project>", "Project (/owner/repo)")
+    .argument("<repository>", "GitHub repository (/owner/repo)")
     .argument("[skills...]", "Specific skill names to install")
     .option("--all", "Install all skills without prompting")
-    .option("--claude", "Install to .claude/skills/ (default)")
-    .option("--cursor", "Install to .cursor/skills/")
-    .option("--codex", "Install to .codex/skills/")
-    .option("--opencode", "Install to .opencode/skills/")
-    .option("--amp", "Install to .agents/skills/")
-    .option("--antigravity", "Install to .agent/skills/")
-    .option("--global", "Install globally instead of project-level")
-    .description("Install skills from a project")
+    .option("--global", "Install globally instead of current directory")
+    .option("--claude", "Claude Code (.claude/skills/)")
+    .option("--cursor", "Cursor (.cursor/skills/)")
+    .option("--codex", "Codex (.codex/skills/)")
+    .option("--opencode", "OpenCode (.opencode/skills/)")
+    .option("--amp", "Amp (.agents/skills/)")
+    .option("--antigravity", "Antigravity (.agent/skills/)")
+    .description("Install skills from a repository")
     .action(async (project: string, skillNames: string[], options: AddOptions) => {
       await installCommand(project, skillNames, options);
     });
@@ -78,13 +78,13 @@ export function registerSkillCommands(program: Command): void {
   skill
     .command("list")
     .alias("ls")
-    .option("--claude", "List from .claude/skills/")
-    .option("--cursor", "List from .cursor/skills/")
-    .option("--codex", "List from .codex/skills/")
-    .option("--opencode", "List from .opencode/skills/")
-    .option("--amp", "List from .agents/skills/")
-    .option("--antigravity", "List from .agent/skills/")
     .option("--global", "List global skills")
+    .option("--claude", "Claude Code (.claude/skills/)")
+    .option("--cursor", "Cursor (.cursor/skills/)")
+    .option("--codex", "Codex (.codex/skills/)")
+    .option("--opencode", "OpenCode (.opencode/skills/)")
+    .option("--amp", "Amp (.agents/skills/)")
+    .option("--antigravity", "Antigravity (.agent/skills/)")
     .description("List installed skills")
     .action(async (options: ListOptions) => {
       await listCommand(options);
@@ -95,13 +95,13 @@ export function registerSkillCommands(program: Command): void {
     .alias("rm")
     .alias("delete")
     .argument("<name>", "Skill name to remove")
-    .option("--claude", "Remove from .claude/skills/")
-    .option("--cursor", "Remove from .cursor/skills/")
-    .option("--codex", "Remove from .codex/skills/")
-    .option("--opencode", "Remove from .opencode/skills/")
-    .option("--amp", "Remove from .agents/skills/")
-    .option("--antigravity", "Remove from .agent/skills/")
     .option("--global", "Remove from global skills")
+    .option("--claude", "Claude Code (.claude/skills/)")
+    .option("--cursor", "Cursor (.cursor/skills/)")
+    .option("--codex", "Codex (.codex/skills/)")
+    .option("--opencode", "OpenCode (.opencode/skills/)")
+    .option("--amp", "Amp (.agents/skills/)")
+    .option("--antigravity", "Antigravity (.agent/skills/)")
     .description("Remove an installed skill")
     .action(async (name: string, options: RemoveOptions) => {
       await removeCommand(name, options);
@@ -109,8 +109,8 @@ export function registerSkillCommands(program: Command): void {
 
   skill
     .command("info")
-    .argument("<project>", "Project to show info for (/owner/repo)")
-    .description("Show information about skills in a project")
+    .argument("<repository>", "GitHub repository (/owner/repo)")
+    .description("Show skills in a repository")
     .action(async (project: string) => {
       await infoCommand(project);
     });
@@ -119,16 +119,16 @@ export function registerSkillCommands(program: Command): void {
 export function registerSkillAliases(program: Command): void {
   program
     .command("si", { hidden: true })
-    .argument("<project>", "Project (/owner/repo)")
+    .argument("<repository>", "GitHub repository (/owner/repo)")
     .argument("[skills...]", "Specific skill names to install")
     .option("--all", "Install all skills without prompting")
-    .option("--claude", "Install to .claude/skills/ (default)")
-    .option("--cursor", "Install to .cursor/skills/")
-    .option("--codex", "Install to .codex/skills/")
-    .option("--opencode", "Install to .opencode/skills/")
-    .option("--amp", "Install to .agents/skills/")
-    .option("--antigravity", "Install to .agent/skills/")
-    .option("--global", "Install globally instead of project-level")
+    .option("--global", "Install globally instead of current directory")
+    .option("--claude", "Claude Code (.claude/skills/)")
+    .option("--cursor", "Cursor (.cursor/skills/)")
+    .option("--codex", "Codex (.codex/skills/)")
+    .option("--opencode", "OpenCode (.opencode/skills/)")
+    .option("--amp", "Amp (.agents/skills/)")
+    .option("--antigravity", "Antigravity (.agent/skills/)")
     .description("Install skills (alias for: skills install)")
     .action(async (project: string, skillNames: string[], options: AddOptions) => {
       await installCommand(project, skillNames, options);
@@ -152,16 +152,16 @@ async function installCommand(
   if (!parsed) {
     log.error(`Invalid input format: ${input}`);
     log.info(`Expected: /owner/repo or full GitHub URL`);
-    log.info(`To install specific skills, use: ctx7 skills install /owner/repo skill1 skill2`);
+    log.info(`Example: ctx7 skills install /anthropics/skills pdf`);
     log.blank();
     return;
   }
-  const project = `/${parsed.owner}/${parsed.repo}`;
+  const repo = `/${parsed.owner}/${parsed.repo}`;
 
   log.blank();
-  const spinner = ora(`Fetching skills from ${project}...`).start();
+  const spinner = ora(`Fetching skills from ${repo}...`).start();
 
-  const data = await listProjectSkills(project);
+  const data = await listProjectSkills(repo);
 
   if (data.error) {
     spinner.fail(pc.red(`Error: ${data.message || data.error}`));
@@ -169,16 +169,16 @@ async function installCommand(
   }
 
   if (!data.skills || data.skills.length === 0) {
-    spinner.warn(pc.yellow(`No skills found in ${project}`));
+    spinner.warn(pc.yellow(`No skills found in ${repo}`));
     return;
   }
 
-  const skillsWithProject = data.skills.map((s) => ({ ...s, project }));
+  const skillsWithRepo = data.skills.map((s) => ({ ...s, project: repo }));
 
   let selectedSkills: (Skill & { project: string })[];
 
   if (skillNames.length > 0) {
-    selectedSkills = skillsWithProject.filter((s) =>
+    selectedSkills = skillsWithRepo.filter((s) =>
       skillNames.some((name) => s.name.toLowerCase() === name.toLowerCase())
     );
 
@@ -197,11 +197,11 @@ async function installCommand(
     }
   } else if (options.all || data.skills.length === 1) {
     spinner.succeed(`Found ${data.skills.length} skill(s)`);
-    selectedSkills = skillsWithProject;
+    selectedSkills = skillsWithRepo;
   } else {
     spinner.succeed(`Found ${data.skills.length} skill(s)`);
     const maxNameLen = Math.min(25, Math.max(...data.skills.map((s) => s.name.length)));
-    const choices = skillsWithProject.map((s) => {
+    const choices = skillsWithRepo.map((s) => {
       const paddedName = s.name.padEnd(maxNameLen);
       const desc = s.description?.trim()
         ? s.description.slice(0, 60) + (s.description.length > 60 ? "..." : "")
@@ -572,12 +572,12 @@ async function infoCommand(input: string): Promise<void> {
     log.blank();
     return;
   }
-  const project = `/${parsed.owner}/${parsed.repo}`;
+  const repo = `/${parsed.owner}/${parsed.repo}`;
 
   log.blank();
-  const spinner = ora(`Fetching skills from ${project}...`).start();
+  const spinner = ora(`Fetching skills from ${repo}...`).start();
 
-  const data = await listProjectSkills(project);
+  const data = await listProjectSkills(repo);
 
   if (data.error) {
     spinner.fail(pc.red(`Error: ${data.message || data.error}`));
@@ -585,7 +585,7 @@ async function infoCommand(input: string): Promise<void> {
   }
 
   if (!data.skills || data.skills.length === 0) {
-    spinner.warn(pc.yellow(`No skills found in ${project}`));
+    spinner.warn(pc.yellow(`No skills found in ${repo}`));
     return;
   }
 
@@ -601,7 +601,7 @@ async function infoCommand(input: string): Promise<void> {
 
   log.plain(
     `${pc.bold("Quick commands:")}\n` +
-      `  Install all: ${pc.cyan(`ctx7 skills install ${project} --all`)}\n` +
-      `  Install one: ${pc.cyan(`ctx7 skills install ${project} ${data.skills[0]?.name}`)}\n`
+      `  Install all: ${pc.cyan(`ctx7 skills install ${repo} --all`)}\n` +
+      `  Install one: ${pc.cyan(`ctx7 skills install ${repo} ${data.skills[0]?.name}`)}\n`
   );
 }
