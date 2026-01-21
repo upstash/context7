@@ -3,6 +3,7 @@ import pc from "picocolors";
 import figlet from "figlet";
 import { registerSkillCommands, registerSkillAliases } from "./commands/skill.js";
 import { setBaseUrl } from "./utils/api.js";
+import { VERSION } from "./constants.js";
 
 const brand = {
   primary: pc.green,
@@ -14,7 +15,7 @@ const program = new Command();
 program
   .name("ctx7")
   .description("Context7 CLI - Manage AI coding skills and documentation context")
-  .version("0.1.0")
+  .version(VERSION)
   .option("--base-url <url>")
   .hook("preAction", (thisCommand) => {
     const opts = thisCommand.opts();

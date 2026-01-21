@@ -9,7 +9,7 @@ CLI for the Context7 Skills Registry - manage AI coding skills across different 
 npx ctx7
 
 # Or install globally
-npm install -g @upstash/context7-cli
+npm install -g ctx7
 ```
 
 ## Usage

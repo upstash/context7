@@ -23,6 +23,7 @@ export function registerSkillCommands(program: Command): void {
   skill
     .command("install")
     .alias("i")
+    .alias("add")
     .argument("<project>", "Project (/owner/repo)")
     .argument("[skills...]", "Specific skill names to install")
     .option("--all", "Install all skills without prompting")
@@ -65,6 +66,7 @@ export function registerSkillCommands(program: Command): void {
   skill
     .command("remove")
     .alias("rm")
+    .alias("delete")
     .argument("<name>", "Skill name to remove")
     .option("--claude", "Remove from .claude/skills/")
     .option("--cursor", "Remove from .cursor/skills/")
