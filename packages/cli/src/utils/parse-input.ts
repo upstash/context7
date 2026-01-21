@@ -23,11 +23,3 @@ export function parseSkillInput(input: string): ParsedSkillInput | null {
 
   return null;
 }
-
-export function buildSkillId(owner: string, repo: string, skillName: string): string {
-  return `/${owner}/${repo}/${skillName}`;
-}
-
-export function buildRepoId(owner: string, repo: string): string {
-  return `/${owner}/${repo}`;
-}

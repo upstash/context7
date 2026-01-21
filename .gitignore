@@ -172,6 +172,7 @@ dist
 .idea
 
 .cursor
+.opencode
 .claude
 
 # Finder (MacOS) folder config

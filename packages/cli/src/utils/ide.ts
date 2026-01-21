@@ -14,16 +14,18 @@ import type {
   RemoveOptions,
   InstallTargets,
 } from "../types.js";
-import { IDE_PATHS, IDE_NAMES, DEFAULT_CONFIG } from "../types.js";
+import { IDE_PATHS, IDE_GLOBAL_PATHS, IDE_NAMES, DEFAULT_CONFIG } from "../types.js";
+import { dirname } from "path";
 
-export function getSelectedIde(options: IDEOptions): IDE | null {
-  if (options.claude) return "claude";
-  if (options.cursor) return "cursor";
-  if (options.codex) return "codex";
-  if (options.opencode) return "opencode";
-  if (options.amp) return "amp";
-  if (options.antigravity) return "antigravity";
-  return null;
+export function getSelectedIdes(options: IDEOptions): IDE[] {
+  const ides: IDE[] = [];
+  if (options.claude) ides.push("claude");
+  if (options.cursor) ides.push("cursor");
+  if (options.codex) ides.push("codex");
+  if (options.opencode) ides.push("opencode");
+  if (options.amp) ides.push("amp");
+  if (options.antigravity) ides.push("antigravity");
+  return ides;
 }
 
 export function hasExplicitIdeOption(options: IDEOptions): boolean {
@@ -42,13 +44,29 @@ interface DetectedIdes {
   scope: Scope;
 }
 
-export async function detectInstalledIdes(): Promise<DetectedIdes | null> {
+export async function detectInstalledIdes(preferredScope?: Scope): Promise<DetectedIdes | null> {
   const allIdes = Object.keys(IDE_PATHS) as IDE[];
+
+  if (preferredScope === "global") {
+    const globalIdes: IDE[] = [];
+    for (const ide of allIdes) {
+      const detectionPath = dirname(IDE_GLOBAL_PATHS[ide]);
+      const globalParent = join(homedir(), detectionPath);
+      try {
+        await access(globalParent);
+        globalIdes.push(ide);
+      } catch {}
+    }
+    if (globalIdes.length > 0) {
+      return { ides: globalIdes, scope: "global" };
+    }
+    return null;
+  }
 
   const projectIdes: IDE[] = [];
   for (const ide of allIdes) {
-    const idePath = IDE_PATHS[ide];
-    const projectParent = join(process.cwd(), idePath.split("/")[0]);
+    const detectionPath = dirname(IDE_PATHS[ide]);
+    const projectParent = join(process.cwd(), detectionPath);
     try {
       await access(projectParent);
       projectIdes.push(ide);
@@ -59,38 +77,29 @@ export async function detectInstalledIdes(): Promise<DetectedIdes | null> {
     return { ides: projectIdes, scope: "project" };
   }
 
-  const globalIdes: IDE[] = [];
-  for (const ide of allIdes) {
-    const idePath = IDE_PATHS[ide];
-    const globalParent = join(homedir(), idePath.split("/")[0]);
-    try {
-      await access(globalParent);
-      globalIdes.push(ide);
-    } catch {}
-  }
-
-  if (globalIdes.length > 0) {
-    return { ides: globalIdes, scope: "global" };
-  }
-
   return null;
 }
 
 export async function promptForInstallTargets(options: AddOptions): Promise<InstallTargets | null> {
   if (hasExplicitIdeOption(options)) {
-    const ide = getSelectedIde(options);
+    const ides = getSelectedIdes(options);
     const scope: Scope = options.global ? "global" : "project";
     return {
-      ides: [ide || DEFAULT_CONFIG.defaultIde],
+      ides: ides.length > 0 ? ides : [DEFAULT_CONFIG.defaultIde],
       scopes: [scope],
     };
   }
 
-  const detected = await detectInstalledIdes();
+  const preferredScope: Scope | undefined = options.global ? "global" : undefined;
+  const detected = await detectInstalledIdes(preferredScope);
 
   if (detected) {
-    const scope: Scope = options.global ? "global" : "project";
+    const scope: Scope = options.global ? "global" : detected.scope;
     return { ides: detected.ides, scopes: [scope] };
+  }
+
+  if (!options.global) {
+    return { ides: [DEFAULT_CONFIG.defaultIde], scopes: ["project"] };
   }
 
   log.blank();
@@ -126,7 +135,8 @@ export async function promptForSingleTarget(
   options: ListOptions | RemoveOptions
 ): Promise<{ ide: IDE; scope: Scope } | null> {
   if (hasExplicitIdeOption(options)) {
-    const ide = getSelectedIde(options) || DEFAULT_CONFIG.defaultIde;
+    const ides = getSelectedIdes(options);
+    const ide = ides[0] || DEFAULT_CONFIG.defaultIde;
     const scope: Scope = options.global ? "global" : "project";
     return { ide, scope };
   }
@@ -179,12 +189,11 @@ export async function promptForSingleTarget(
 export function getTargetDirs(targets: InstallTargets): string[] {
   const dirs: string[] = [];
   for (const ide of targets.ides) {
-    const idePath = IDE_PATHS[ide];
     for (const scope of targets.scopes) {
       if (scope === "global") {
-        dirs.push(join(homedir(), idePath));
+        dirs.push(join(homedir(), IDE_GLOBAL_PATHS[ide]));
       } else {
-        dirs.push(join(process.cwd(), idePath));
+        dirs.push(join(process.cwd(), IDE_PATHS[ide]));
       }
     }
   }
@@ -192,9 +201,8 @@ export function getTargetDirs(targets: InstallTargets): string[] {
 }
 
 export function getTargetDirFromSelection(ide: IDE, scope: Scope): string {
-  const idePath = IDE_PATHS[ide];
   if (scope === "global") {
-    return join(homedir(), idePath);
+    return join(homedir(), IDE_GLOBAL_PATHS[ide]);
   }
-  return join(process.cwd(), idePath);
+  return join(process.cwd(), IDE_PATHS[ide]);
 }

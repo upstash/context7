@@ -15,7 +15,34 @@ import {
   getTargetDirFromSelection,
 } from "../utils/ide.js";
 import { installSkillFiles, symlinkSkill } from "../utils/installer.js";
-import type { Skill, SkillSearchResult, AddOptions, ListOptions, RemoveOptions } from "../types.js";
+import type {
+  Skill,
+  SkillSearchResult,
+  AddOptions,
+  ListOptions,
+  RemoveOptions,
+  InstallTargets,
+} from "../types.js";
+import { IDE_NAMES } from "../types.js";
+
+function logInstallSummary(
+  targets: InstallTargets,
+  targetDirs: string[],
+  skillNames: string[]
+): void {
+  log.blank();
+  let dirIndex = 0;
+  for (const ide of targets.ides) {
+    for (let i = 0; i < targets.scopes.length; i++) {
+      const dir = targetDirs[dirIndex++];
+      log.dim(`${IDE_NAMES[ide]}: ${dir}`);
+      for (const name of skillNames) {
+        log.itemAdd(name);
+      }
+    }
+  }
+  log.blank();
+}
 
 export function registerSkillCommands(program: Command): void {
   const skill = program.command("skills").alias("skill").description("Manage AI coding skills");
@@ -30,7 +57,7 @@ export function registerSkillCommands(program: Command): void {
     .option("--claude", "Install to .claude/skills/ (default)")
     .option("--cursor", "Install to .cursor/skills/")
     .option("--codex", "Install to .codex/skills/")
-    .option("--opencode", "Install to .opencode/skill/")
+    .option("--opencode", "Install to .opencode/skills/")
     .option("--amp", "Install to .agents/skills/")
     .option("--antigravity", "Install to .agent/skills/")
     .option("--global", "Install globally instead of project-level")
@@ -54,7 +81,7 @@ export function registerSkillCommands(program: Command): void {
     .option("--claude", "List from .claude/skills/")
     .option("--cursor", "List from .cursor/skills/")
     .option("--codex", "List from .codex/skills/")
-    .option("--opencode", "List from .opencode/skill/")
+    .option("--opencode", "List from .opencode/skills/")
     .option("--amp", "List from .agents/skills/")
     .option("--antigravity", "List from .agent/skills/")
     .option("--global", "List global skills")
@@ -71,7 +98,7 @@ export function registerSkillCommands(program: Command): void {
     .option("--claude", "Remove from .claude/skills/")
     .option("--cursor", "Remove from .cursor/skills/")
     .option("--codex", "Remove from .codex/skills/")
-    .option("--opencode", "Remove from .opencode/skill/")
+    .option("--opencode", "Remove from .opencode/skills/")
     .option("--amp", "Remove from .agents/skills/")
     .option("--antigravity", "Remove from .agent/skills/")
     .option("--global", "Remove from global skills")
@@ -98,7 +125,7 @@ export function registerSkillAliases(program: Command): void {
     .option("--claude", "Install to .claude/skills/ (default)")
     .option("--cursor", "Install to .cursor/skills/")
     .option("--codex", "Install to .codex/skills/")
-    .option("--opencode", "Install to .opencode/skill/")
+    .option("--opencode", "Install to .opencode/skills/")
     .option("--amp", "Install to .agents/skills/")
     .option("--antigravity", "Install to .agent/skills/")
     .option("--global", "Install globally instead of project-level")
@@ -178,12 +205,11 @@ async function installCommand(
       const paddedName = s.name.padEnd(maxNameLen);
       const desc = s.description?.trim()
         ? s.description.slice(0, 60) + (s.description.length > 60 ? "..." : "")
-        : "No description";
+        : "";
 
       return {
-        name: `${paddedName} ${pc.dim(desc)}`,
+        name: desc ? `${paddedName} ${pc.dim(desc)}` : s.name,
         value: s,
-        short: s.name,
       };
     });
 
@@ -191,9 +217,15 @@ async function installCommand(
 
     try {
       selectedSkills = await checkbox({
-        message: "Select skills to install (space to select, enter to confirm):",
+        message: "Select skills:",
         choices,
         pageSize: 15,
+        theme: {
+          style: {
+            renderSelectedChoices: (selected: Array<{ name?: string; value: unknown }>) =>
+              selected.map((c) => (c.value as { name: string }).name).join(", "),
+          },
+        },
       });
     } catch {
       log.warn("Installation cancelled");
@@ -284,23 +316,8 @@ async function installCommand(
 
   installSpinner.succeed(`Installed ${installedCount} skill(s)`);
 
-  const [primaryDir, ...symlinkedDirs] = targetDirs;
   const installedNames = selectedSkills.map((s) => s.name);
-
-  log.blank();
-  log.dim(primaryDir);
-  for (const name of installedNames) {
-    log.itemAdd(name);
-  }
-
-  for (const dir of symlinkedDirs) {
-    log.dim(dir);
-    for (const name of installedNames) {
-      log.itemAdd(name);
-    }
-  }
-
-  log.blank();
+  logInstallSummary(targets, targetDirs, installedNames);
 }
 
 async function searchCommand(query: string): Promise<void> {
@@ -337,7 +354,7 @@ async function searchCommand(query: string): Promise<void> {
   );
 
   type ChoiceValue = SkillSearchResult | { _selectAll: string };
-  const choices: Array<{ name: string; value: ChoiceValue; short?: string } | Separator> = [];
+  const choices: Array<{ name: string; value: ChoiceValue } | Separator> = [];
   const allSkills = data.results;
   const maxNameLen = Math.min(25, Math.max(...allSkills.map((s) => s.name.length)));
 
@@ -345,11 +362,9 @@ async function searchCommand(query: string): Promise<void> {
     choices.push(new Separator(`\n${pc.bold(pc.cyan(project))} ${pc.dim(`(${skills.length})`)}`));
 
     if (skills.length > 1) {
-      const skillNames = skills.map((s) => s.name).join(", ");
       choices.push({
         name: pc.italic(`  ↳ Select all ${skills.length} skills from this repo`),
         value: { _selectAll: project },
-        short: skillNames,
       });
     }
 
@@ -357,10 +372,10 @@ async function searchCommand(query: string): Promise<void> {
       const paddedName = s.name.padEnd(maxNameLen);
       const desc = s.description?.trim()
         ? s.description.slice(0, 60) + (s.description.length > 60 ? "..." : "")
-        : "No description";
+        : "";
 
       choices.push({
-        name: `${paddedName} ${pc.dim(desc)}`,
+        name: desc ? `${paddedName} ${pc.dim(desc)}` : s.name,
         value: s,
       });
     }
@@ -371,9 +386,22 @@ async function searchCommand(query: string): Promise<void> {
   let rawSelection: ChoiceValue[];
   try {
     rawSelection = await checkbox({
-      message: "Select skills to install (space to select, enter to confirm):",
+      message: "Select skills:",
       choices,
       pageSize: 18,
+      theme: {
+        style: {
+          renderSelectedChoices: (selected: Array<{ name?: string; value: unknown }>) => {
+            return selected
+              .map((c) => {
+                const val = c.value as ChoiceValue;
+                if ("_selectAll" in val) return `all from ${val._selectAll}`;
+                return val.name;
+              })
+              .join(", ");
+          },
+        },
+      },
     });
   } catch {
     log.warn("Installation cancelled");
@@ -476,23 +504,8 @@ async function searchCommand(query: string): Promise<void> {
 
   installSpinner.succeed(`Installed ${installedCount} skill(s)`);
 
-  const [primaryDir, ...symlinkedDirs] = targetDirs;
   const installedNames = uniqueSkills.map((s) => s.name);
-
-  log.blank();
-  log.dim(primaryDir);
-  for (const name of installedNames) {
-    log.itemAdd(name);
-  }
-
-  for (const dir of symlinkedDirs) {
-    log.dim(dir);
-    for (const name of installedNames) {
-      log.itemAdd(name);
-    }
-  }
-
-  log.blank();
+  logInstallSummary(targets, targetDirs, installedNames);
 }
 
 async function listCommand(options: ListOptions): Promise<void> {
@@ -506,7 +519,7 @@ async function listCommand(options: ListOptions): Promise<void> {
 
   try {
     const entries = await readdir(skillsDir, { withFileTypes: true });
-    const skillFolders = entries.filter((e) => e.isDirectory());
+    const skillFolders = entries.filter((e) => e.isDirectory() || e.isSymbolicLink());
 
     if (skillFolders.length === 0) {
       log.warn(`No skills installed in ${skillsDir}`);

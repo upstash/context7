@@ -68,8 +68,17 @@ export const IDE_PATHS: Record<IDE, string> = {
   claude: ".claude/skills",
   cursor: ".cursor/skills",
   codex: ".codex/skills",
-  opencode: ".opencode/skill",
+  opencode: ".opencode/skills",
   amp: ".agents/skills",
+  antigravity: ".agent/skills",
+};
+
+export const IDE_GLOBAL_PATHS: Record<IDE, string> = {
+  claude: ".claude/skills",
+  cursor: ".cursor/skills",
+  codex: ".codex/skills",
+  opencode: ".config/opencode/skills",
+  amp: ".config/agents/skills",
   antigravity: ".agent/skills",
 };
 
