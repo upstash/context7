@@ -1,32 +1,27 @@
 export interface ParsedSkillInput {
-  type: "repo" | "skill" | "url";
+  type: "repo" | "url";
   owner: string;
   repo: string;
-  skillName?: string;
   branch?: string;
   path?: string;
 }
 
-export function parseSkillInput(input: string): ParsedSkillInput {
+export function parseSkillInput(input: string): ParsedSkillInput | null {
   const urlMatch = input.match(
     /(?:https?:\/\/)?github\.com\/([^\/]+)\/([^\/]+)\/tree\/([^\/]+)\/(.+)/
   );
   if (urlMatch) {
     const [, owner, repo, branch, path] = urlMatch;
-    const skillName = path.split("/").pop();
-    return { type: "url", owner, repo, branch, path, skillName };
+    return { type: "url", owner, repo, branch, path };
   }
 
-  const shortMatch = input.match(/^\/?([^\/]+)\/([^\/]+)(?:\/(.+))?$/);
+  const shortMatch = input.match(/^\/?([^\/]+)\/([^\/]+)$/);
   if (shortMatch) {
-    const [, owner, repo, skillName] = shortMatch;
-    return { type: skillName ? "skill" : "repo", owner, repo, skillName };
+    const [, owner, repo] = shortMatch;
+    return { type: "repo", owner, repo };
   }
 
-  throw new Error(
-    `Invalid input format: ${input}\n` +
-      `Expected: /owner/repo, /owner/repo/skill, or full GitHub URL`
-  );
+  return null;
 }
 
 export function buildSkillId(owner: string, repo: string, skillName: string): string {

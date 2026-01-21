@@ -122,6 +122,13 @@ async function installCommand(
   options: AddOptions
 ): Promise<void> {
   const parsed = parseSkillInput(input);
+  if (!parsed) {
+    log.error(`Invalid input format: ${input}`);
+    log.info(`Expected: /owner/repo or full GitHub URL`);
+    log.info(`To install specific skills, use: ctx7 skills install /owner/repo skill1 skill2`);
+    log.blank();
+    return;
+  }
   const project = `/${parsed.owner}/${parsed.repo}`;
 
   log.blank();
@@ -545,6 +552,13 @@ async function removeCommand(name: string, options: RemoveOptions): Promise<void
 
 async function infoCommand(input: string): Promise<void> {
   const parsed = parseSkillInput(input);
+  if (!parsed) {
+    log.blank();
+    log.error(`Invalid input format: ${input}`);
+    log.info(`Expected: /owner/repo or full GitHub URL`);
+    log.blank();
+    return;
+  }
   const project = `/${parsed.owner}/${parsed.repo}`;
 
   log.blank();
