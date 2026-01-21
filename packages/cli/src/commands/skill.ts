@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import pc from "picocolors";
-import { checkbox, Separator } from "@inquirer/prompts";
+import { checkbox } from "@inquirer/prompts";
 import ora from "ora";
 import { readdir, rm } from "fs/promises";
 import { join } from "path";
@@ -344,62 +344,32 @@ async function searchCommand(query: string): Promise<void> {
 
   spinner.succeed(`Found ${data.results.length} skill(s)`);
 
-  const groupedByProject = data.results.reduce(
-    (acc, skill) => {
-      if (!acc[skill.project]) acc[skill.project] = [];
-      acc[skill.project].push(skill);
-      return acc;
-    },
-    {} as Record<string, SkillSearchResult[]>
-  );
+  const maxNameLen = Math.min(25, Math.max(...data.results.map((s) => s.name.length)));
+  const choices = data.results.map((s) => {
+    const paddedName = s.name.padEnd(maxNameLen);
+    const repoName = pc.dim(`(${s.project})`);
+    const desc = s.description?.trim()
+      ? s.description.slice(0, 50) + (s.description.length > 50 ? "..." : "")
+      : "";
 
-  type ChoiceValue = SkillSearchResult | { _selectAll: string };
-  const choices: Array<{ name: string; value: ChoiceValue } | Separator> = [];
-  const allSkills = data.results;
-  const maxNameLen = Math.min(25, Math.max(...allSkills.map((s) => s.name.length)));
-
-  for (const [project, skills] of Object.entries(groupedByProject)) {
-    choices.push(new Separator(`\n${pc.bold(pc.cyan(project))} ${pc.dim(`(${skills.length})`)}`));
-
-    if (skills.length > 1) {
-      choices.push({
-        name: pc.italic(`  ↳ Select all ${skills.length} skills from this repo`),
-        value: { _selectAll: project },
-      });
-    }
-
-    for (const s of skills) {
-      const paddedName = s.name.padEnd(maxNameLen);
-      const desc = s.description?.trim()
-        ? s.description.slice(0, 60) + (s.description.length > 60 ? "..." : "")
-        : "";
-
-      choices.push({
-        name: desc ? `${paddedName} ${pc.dim(desc)}` : s.name,
-        value: s,
-      });
-    }
-  }
+    return {
+      name: desc ? `${paddedName} ${repoName} ${pc.dim(desc)}` : `${paddedName} ${repoName}`,
+      value: s,
+    };
+  });
 
   log.blank();
 
-  let rawSelection: ChoiceValue[];
+  let selectedSkills: SkillSearchResult[];
   try {
-    rawSelection = await checkbox({
-      message: "Select skills:",
+    selectedSkills = await checkbox({
+      message: "Select skills to install:",
       choices,
-      pageSize: 18,
+      pageSize: 15,
       theme: {
         style: {
-          renderSelectedChoices: (selected: Array<{ name?: string; value: unknown }>) => {
-            return selected
-              .map((c) => {
-                const val = c.value as ChoiceValue;
-                if ("_selectAll" in val) return `all from ${val._selectAll}`;
-                return val.name;
-              })
-              .join(", ");
-          },
+          renderSelectedChoices: (selected: Array<{ name?: string; value: unknown }>) =>
+            selected.map((c) => (c.value as SkillSearchResult).name).join(", "),
         },
       },
     });
@@ -408,18 +378,7 @@ async function searchCommand(query: string): Promise<void> {
     return;
   }
 
-  const selectedSkills: SkillSearchResult[] = [];
-  for (const item of rawSelection) {
-    if ("_selectAll" in item) {
-      selectedSkills.push(...groupedByProject[item._selectAll]);
-    } else {
-      selectedSkills.push(item);
-    }
-  }
-
-  const uniqueSkills = [
-    ...new Map(selectedSkills.map((s) => [`${s.project}:${s.name}`, s])).values(),
-  ];
+  const uniqueSkills = selectedSkills;
 
   if (uniqueSkills.length === 0) {
     log.warn("No skills selected");
