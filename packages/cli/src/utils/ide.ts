@@ -187,8 +187,15 @@ export async function promptForSingleTarget(
 }
 
 export function getTargetDirs(targets: InstallTargets): string[] {
+  // Prioritize Claude to receive original files (others get symlinks)
+  const sortedIdes = [...targets.ides].sort((a, b) => {
+    if (a === "claude") return -1;
+    if (b === "claude") return 1;
+    return 0;
+  });
+
   const dirs: string[] = [];
-  for (const ide of targets.ides) {
+  for (const ide of sortedIdes) {
     for (const scope of targets.scopes) {
       if (scope === "global") {
         dirs.push(join(homedir(), IDE_GLOBAL_PATHS[ide]));

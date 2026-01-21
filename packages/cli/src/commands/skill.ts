@@ -69,10 +69,10 @@ export function registerSkillCommands(program: Command): void {
   skill
     .command("search")
     .alias("s")
-    .argument("<query>", "Search query")
-    .description("Search for skills across all indexed projects")
-    .action(async (query: string) => {
-      await searchCommand(query);
+    .argument("<keywords...>", "Search keywords")
+    .description("Search for skills across all indexed repositories")
+    .action(async (keywords: string[]) => {
+      await searchCommand(keywords.join(" "));
     });
 
   skill
@@ -136,10 +136,10 @@ export function registerSkillAliases(program: Command): void {
 
   program
     .command("ss", { hidden: true })
-    .argument("<query>", "Search query")
+    .argument("<keywords...>", "Search keywords")
     .description("Search for skills (alias for: skills search)")
-    .action(async (query: string) => {
-      await searchCommand(query);
+    .action(async (keywords: string[]) => {
+      await searchCommand(keywords.join(" "));
     });
 }
 
