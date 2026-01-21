@@ -172,6 +172,7 @@ dist
 .idea
 
 .cursor
+.claude
 
 # Finder (MacOS) folder config
 .DS_Store

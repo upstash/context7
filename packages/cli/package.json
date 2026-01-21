@@ -4,7 +4,7 @@
   "description": "Context7 CLI - Manage AI coding skills and documentation context",
   "type": "module",
   "bin": {
-    "c7": "./dist/index.js"
+    "ctx7": "./dist/index.js"
   },
   "files": [
     "dist"
@@ -20,13 +20,12 @@
     "clean": "rm -rf dist node_modules"
   },
   "dependencies": {
-    "@clack/prompts": "^0.10.1",
-    "@types/inquirer": "^9.0.9",
+    "@inquirer/prompts": "^8.2.0",
     "chalk": "^5.6.2",
     "commander": "^13.1.0",
     "dotenv": "^16.4.7",
     "figlet": "^1.9.4",
-    "inquirer": "^13.2.0",
+    "ora": "^9.0.0",
     "picocolors": "^1.1.1",
     "tabtab": "^3.0.2"
   },

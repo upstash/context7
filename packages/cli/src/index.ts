@@ -4,8 +4,7 @@ import { dirname, join } from "path";
 import { Command } from "commander";
 import chalk from "chalk";
 import figlet from "figlet";
-import { registerSkillCommands } from "./commands/skill.js";
-import { registerConfigCommands } from "./commands/config.js";
+import { registerSkillCommands, registerSkillAliases } from "./commands/skill.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -22,12 +21,12 @@ const brand = {
 const program = new Command();
 
 program
-  .name("c7")
+  .name("ctx7")
   .description("Context7 CLI - Manage AI coding skills and documentation context")
   .version("0.1.0");
 
 registerSkillCommands(program);
-registerConfigCommands(program);
+registerSkillAliases(program);
 
 program.action(() => {
   console.log("");
@@ -37,20 +36,19 @@ program.action(() => {
   console.log("");
   console.log("  Commands:");
   console.log(
-    brand.primary("    c7 skill add <input>") + "    Add skills from a repository or URL"
+    brand.primary("    ctx7 skills install <input>") + " Install skills from a repository"
   );
-  console.log(brand.primary("    c7 skill search <query>") + " Search for skills");
-  console.log(brand.primary("    c7 skill list") + "           List installed skills");
-  console.log(brand.primary("    c7 skill info <repo>") + "    Show skill information");
-  console.log(brand.primary("    c7 skill remove <name>") + "  Remove a skill");
-  console.log(brand.primary("    c7 config edit") + "          Configure default IDE and scope");
+  console.log(brand.primary("    ctx7 skills search <query>") + "  Search for skills");
+  console.log(brand.primary("    ctx7 skills list") + "            List installed skills");
+  console.log(brand.primary("    ctx7 skills info <repo>") + "     Show skill information");
+  console.log(brand.primary("    ctx7 skills remove <name>") + "   Remove a skill");
   console.log("");
   console.log("  Examples:");
-  console.log(brand.dim("    c7 skill add /anthropics/skills"));
-  console.log(brand.dim("    c7 skill add /anthropics/skills/pdf --cursor"));
-  console.log(brand.dim("    c7 skill search pdf"));
+  console.log(brand.dim("    ctx7 skills install /anthropics/skills"));
+  console.log(brand.dim("    ctx7 skills install /anthropics/skills pdf --cursor"));
+  console.log(brand.dim("    ctx7 skills search pdf"));
   console.log("");
-  console.log(`  Run ${brand.primary("c7 --help")} for more information`);
+  console.log(`  Run ${brand.primary("ctx7 --help")} for more information`);
   console.log("");
 });
 

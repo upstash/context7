@@ -3,73 +3,66 @@ export interface SkillFile {
   content: string;
 }
 
-export interface SkillRecord {
-  id: string;
-  repoId: string;
+export interface Skill {
   name: string;
   description: string;
-  path: string;
-  branch: string;
-  folderUrl: string;
-  hasScripts: boolean;
-  hasReferences: boolean;
-  hasAssets: boolean;
-  indexedAt?: number;
-  installCount?: number;
+  url: string;
 }
 
-export interface RepoSkillsResponse {
-  repoId: string;
-  skills: SkillRecord[];
-  indexedAt: number;
-  totalSkills: number;
-  source: "cache" | "indexed";
+export interface SkillSearchResult extends Skill {
+  project: string;
+}
+
+export interface ListSkillsResponse {
+  project: string;
+  skills: Skill[];
   error?: string;
+  message?: string;
 }
 
-export interface SkillResponse extends SkillRecord {
-  content?: string;
-  source: "cache" | "indexed";
+export interface SingleSkillResponse extends Skill {
+  project: string;
   error?: string;
-}
-
-export interface SkillSearchResult {
-  id: string;
-  name: string;
-  description: string;
-  repoId: string;
-  path: string;
-  folderUrl: string;
-  hasScripts: boolean;
-  hasReferences: boolean;
-  hasAssets: boolean;
-  score?: number;
-  installCount?: number;
+  message?: string;
 }
 
 export interface SearchResponse {
-  query: string;
-  results: Array<{
-    repoId: string;
-    skills: SkillSearchResult[];
-  }>;
-  totalSkills: number;
+  results: SkillSearchResult[];
   error?: string;
-}
-
-export interface IndexResponse {
-  skill: SkillRecord;
-  source: "indexed";
-  error?: string;
+  message?: string;
 }
 
 export interface DownloadResponse {
-  skill: SkillRecord;
+  skill: Skill & { project: string };
   files: SkillFile[];
   error?: string;
 }
 
 export type IDE = "claude" | "cursor" | "codex" | "opencode" | "amp" | "antigravity";
+
+export type Scope = "project" | "global";
+
+export interface IDEOptions {
+  claude?: boolean;
+  cursor?: boolean;
+  codex?: boolean;
+  opencode?: boolean;
+  amp?: boolean;
+  antigravity?: boolean;
+}
+
+export interface ScopeOptions {
+  global?: boolean;
+}
+
+export type AddOptions = IDEOptions & ScopeOptions & { all?: boolean };
+export type ListOptions = IDEOptions & ScopeOptions;
+export type RemoveOptions = IDEOptions & ScopeOptions;
+
+export interface InstallTargets {
+  ides: IDE[];
+  scopes: Scope[];
+}
 
 export const IDE_PATHS: Record<IDE, string> = {
   claude: ".claude/skills",

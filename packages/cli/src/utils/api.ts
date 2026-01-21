@@ -1,47 +1,54 @@
 import type {
-  RepoSkillsResponse,
-  SkillResponse,
+  ListSkillsResponse,
+  SingleSkillResponse,
   SearchResponse,
-  IndexResponse,
   DownloadResponse,
 } from "../types.js";
+import { downloadSkillFromGitHub } from "./github.js";
 
-const CONTEXT7_API = process.env.CONTEXT7_API_URL || "http://localhost:3001/api/v1";
+const CONTEXT7_API = "http://localhost:3000/api/v2";
 
-export async function getRepoSkills(
-  repoId: string,
-  forceReindex = false
-): Promise<RepoSkillsResponse> {
-  const params = new URLSearchParams({ id: repoId });
-  if (forceReindex) params.set("reindex", "true");
-
-  const response = await fetch(`${CONTEXT7_API}/skills/repo?${params}`);
-  return (await response.json()) as RepoSkillsResponse;
+export async function listProjectSkills(project: string): Promise<ListSkillsResponse> {
+  const params = new URLSearchParams({ project });
+  const response = await fetch(`${CONTEXT7_API}/skills?${params}`);
+  return (await response.json()) as ListSkillsResponse;
 }
 
-export async function getSkill(skillId: string): Promise<SkillResponse> {
-  const params = new URLSearchParams({ id: skillId });
-  const response = await fetch(`${CONTEXT7_API}/skills/skill?${params}`);
-  return (await response.json()) as SkillResponse;
+export async function getSkill(project: string, skillName: string): Promise<SingleSkillResponse> {
+  const params = new URLSearchParams({ project, skill: skillName });
+  const response = await fetch(`${CONTEXT7_API}/skills?${params}`);
+  return (await response.json()) as SingleSkillResponse;
 }
 
 export async function searchSkills(query: string): Promise<SearchResponse> {
-  const params = new URLSearchParams({ q: query });
-  const response = await fetch(`${CONTEXT7_API}/skills/search?${params}`);
+  const params = new URLSearchParams({ query });
+  const response = await fetch(`${CONTEXT7_API}/skills?${params}`);
   return (await response.json()) as SearchResponse;
 }
 
-export async function indexSkillFromUrl(url: string): Promise<IndexResponse> {
-  const response = await fetch(`${CONTEXT7_API}/skills/index`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url }),
-  });
-  return (await response.json()) as IndexResponse;
-}
+export async function downloadSkill(project: string, skillName: string): Promise<DownloadResponse> {
+  const skillData = await getSkill(project, skillName);
 
-export async function downloadSkill(skillId: string): Promise<DownloadResponse> {
-  const params = new URLSearchParams({ id: skillId });
-  const response = await fetch(`${CONTEXT7_API}/skills/download?${params}`);
-  return (await response.json()) as DownloadResponse;
+  if (skillData.error) {
+    return {
+      skill: { name: skillName, description: "", url: "", project },
+      files: [],
+      error: skillData.message || skillData.error,
+    };
+  }
+
+  const skill = {
+    name: skillData.name,
+    description: skillData.description,
+    url: skillData.url,
+    project: skillData.project,
+  };
+
+  const { files, error } = await downloadSkillFromGitHub(skill);
+
+  if (error) {
+    return { skill, files: [], error };
+  }
+
+  return { skill, files };
 }
