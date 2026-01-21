@@ -6,23 +6,27 @@ import type {
 } from "../types.js";
 import { downloadSkillFromGitHub } from "./github.js";
 
-const CONTEXT7_API = "http://localhost:3000/api/v2";
+let baseUrl = "https://context7.com";
+
+export function setBaseUrl(url: string): void {
+  baseUrl = url;
+}
 
 export async function listProjectSkills(project: string): Promise<ListSkillsResponse> {
   const params = new URLSearchParams({ project });
-  const response = await fetch(`${CONTEXT7_API}/skills?${params}`);
+  const response = await fetch(`${baseUrl}/api/v2/skills?${params}`);
   return (await response.json()) as ListSkillsResponse;
 }
 
 export async function getSkill(project: string, skillName: string): Promise<SingleSkillResponse> {
   const params = new URLSearchParams({ project, skill: skillName });
-  const response = await fetch(`${CONTEXT7_API}/skills?${params}`);
+  const response = await fetch(`${baseUrl}/api/v2/skills?${params}`);
   return (await response.json()) as SingleSkillResponse;
 }
 
 export async function searchSkills(query: string): Promise<SearchResponse> {
   const params = new URLSearchParams({ query });
-  const response = await fetch(`${CONTEXT7_API}/skills?${params}`);
+  const response = await fetch(`${baseUrl}/api/v2/skills?${params}`);
   return (await response.json()) as SearchResponse;
 }
 

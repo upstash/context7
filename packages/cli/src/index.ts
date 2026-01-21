@@ -1,21 +1,12 @@
-import { config } from "dotenv";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
 import { Command } from "commander";
-import chalk from "chalk";
+import pc from "picocolors";
 import figlet from "figlet";
 import { registerSkillCommands, registerSkillAliases } from "./commands/skill.js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-config({ path: join(__dirname, "..", ".env") });
+import { setBaseUrl } from "./utils/api.js";
 
 const brand = {
-  primary: chalk.hex("#059669"),
-  dark: chalk.hex("#292524"),
-  light: chalk.hex("#fafaf9"),
-  dim: chalk.hex("#78716c"),
+  primary: pc.green,
+  dim: pc.dim,
 };
 
 const program = new Command();
@@ -23,7 +14,14 @@ const program = new Command();
 program
   .name("ctx7")
   .description("Context7 CLI - Manage AI coding skills and documentation context")
-  .version("0.1.0");
+  .version("0.1.0")
+  .option("--base-url <url>")
+  .hook("preAction", (thisCommand) => {
+    const opts = thisCommand.opts();
+    if (opts.baseUrl) {
+      setBaseUrl(opts.baseUrl);
+    }
+  });
 
 registerSkillCommands(program);
 registerSkillAliases(program);
