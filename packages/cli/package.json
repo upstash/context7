@@ -1,0 +1,63 @@
+{
+  "name": "ctx7",
+  "version": "0.1.0-canary.3",
+  "description": "Context7 CLI - Manage AI coding skills and documentation context",
+  "type": "module",
+  "bin": {
+    "ctx7": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --fix",
+    "lint:check": "eslint src",
+    "format": "prettier --write src",
+    "format:check": "prettier --check src",
+    "clean": "rm -rf dist node_modules"
+  },
+  "dependencies": {
+    "@inquirer/prompts": "^8.2.0",
+    "commander": "^13.1.0",
+    "figlet": "^1.9.4",
+    "ora": "^9.0.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/figlet": "^1.7.0",
+    "@types/node": "^22.19.1",
+    "@typescript-eslint/eslint-plugin": "^8.28.0",
+    "@typescript-eslint/parser": "^8.28.0",
+    "eslint": "^9.34.0",
+    "eslint-plugin-prettier": "^5.2.5",
+    "prettier": "^3.6.2",
+    "tsup": "^8.5.0",
+    "typescript": "^5.8.2",
+    "typescript-eslint": "^8.28.0"
+  },
+  "keywords": [
+    "context7",
+    "cli",
+    "ai",
+    "skills",
+    "documentation",
+    "mcp"
+  ],
+  "author": "Upstash",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/upstash/context7.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/upstash/context7/issues"
+  },
+  "homepage": "https://context7.com",
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -172,6 +172,8 @@ dist
 .idea
 
 .cursor
+.opencode
+.claude
 
 # Finder (MacOS) folder config
 .DS_Store
