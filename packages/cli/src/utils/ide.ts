@@ -1,5 +1,5 @@
 import pc from "picocolors";
-import { select, checkbox } from "@inquirer/prompts";
+import { select, checkbox, confirm } from "@inquirer/prompts";
 import { access } from "fs/promises";
 import { join } from "path";
 import { homedir } from "os";
@@ -95,17 +95,40 @@ export async function promptForInstallTargets(options: AddOptions): Promise<Inst
 
   if (detected) {
     const scope: Scope = options.global ? "global" : detected.scope;
+    const pathMap = scope === "global" ? IDE_GLOBAL_PATHS : IDE_PATHS;
+    const baseDir = scope === "global" ? homedir() : process.cwd();
+
+    const paths = detected.ides.map((ide) => join(baseDir, pathMap[ide]));
+    const pathList = paths.join("\n");
+
+    log.blank();
+    let confirmed: boolean;
+    try {
+      confirmed = await confirm({
+        message: `Install to detected location(s)?\n${pc.dim(pathList)}`,
+        default: true,
+      });
+    } catch {
+      return null;
+    }
+
+    if (!confirmed) {
+      log.warn("Installation cancelled");
+      return null;
+    }
+
     return { ides: detected.ides, scopes: [scope] };
   }
 
-  if (!options.global) {
-    return { ides: [DEFAULT_CONFIG.defaultIde], scopes: ["project"] };
-  }
-
+  // No IDE detected - prompt user to select which client(s) to install for
   log.blank();
 
+  const scope: Scope = options.global ? "global" : "project";
+  const pathMap = scope === "global" ? IDE_GLOBAL_PATHS : IDE_PATHS;
+  const baseDir = scope === "global" ? homedir() : process.cwd();
+
   const ideChoices = (Object.keys(IDE_NAMES) as IDE[]).map((ide) => ({
-    name: `${IDE_NAMES[ide]} ${pc.dim(`(${IDE_PATHS[ide]})`)}`,
+    name: `${IDE_NAMES[ide]} ${pc.dim(`(${pathMap[ide]})`)}`,
     value: ide,
     checked: ide === DEFAULT_CONFIG.defaultIde,
   }));
@@ -113,7 +136,7 @@ export async function promptForInstallTargets(options: AddOptions): Promise<Inst
   let selectedIdes: IDE[];
   try {
     selectedIdes = await checkbox({
-      message: "Which clients do you want to install the skill(s) for?",
+      message: `Which clients do you want to install the skill(s) for?\n${pc.dim(baseDir)}`,
       choices: ideChoices,
       required: true,
     });
@@ -126,9 +149,7 @@ export async function promptForInstallTargets(options: AddOptions): Promise<Inst
     return null;
   }
 
-  const selectedScopes: Scope[] = options.global ? ["global"] : ["project"];
-
-  return { ides: selectedIdes, scopes: selectedScopes };
+  return { ides: selectedIdes, scopes: [scope] };
 }
 
 export async function promptForSingleTarget(
