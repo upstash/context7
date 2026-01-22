@@ -1,0 +1,105 @@
+---
+title: Skills
+description: Install, search, and manage AI coding assistant skills from the Context7 registry
+---
+
+Skills are reusable prompt templates that extend the capabilities of your AI coding assistants. They allow you to share and install common workflows like code reviews, commit message generation, PDF processing, and more across projects and teams.
+
+Context7 maintains a registry of skills that can be installed directly into your AI coding assistant's configuration with a single command.
+
+## Prerequisites
+
+To use skills, you need the [Context7 CLI](https://github.com/upstash/context7/tree/master/packages/cli). Install it globally:
+
+```bash
+npm install -g ctx7
+```
+
+Or run directly with npx (no installation required):
+
+```bash
+npx ctx7 skills search pdf
+```
+
+## Install Skills
+
+Install skills from a project repository to your AI coding assistant's skills directory.
+
+```bash
+# Install all skills from a project (interactive selection)
+ctx7 skills install /anthropics/skills
+
+# Install a specific skill
+ctx7 skills install /anthropics/skills pdf
+
+# Install multiple skills at once
+ctx7 skills install /anthropics/skills pdf commit
+
+# Install to a specific client
+ctx7 skills install /anthropics/skills pdf --cursor
+ctx7 skills install /anthropics/skills pdf --claude
+
+# Install globally (home directory instead of current project)
+ctx7 skills install /anthropics/skills pdf --global
+```
+
+## Search for Skills
+
+Find skills across all indexed projects in the registry.
+
+```bash
+ctx7 skills search pdf
+ctx7 skills search typescript
+ctx7 skills search react testing
+```
+
+## List Installed Skills
+
+View skills installed in your project or globally.
+
+```bash
+ctx7 skills list
+ctx7 skills list --claude
+ctx7 skills list --cursor
+ctx7 skills list --global
+```
+
+## Show Skill Information
+
+Get details about available skills in a project.
+
+```bash
+ctx7 skills info /anthropics/skills
+```
+
+## Remove a Skill
+
+Uninstall a skill from your project.
+
+```bash
+ctx7 skills remove pdf
+ctx7 skills remove pdf --claude
+ctx7 skills remove pdf --global
+```
+
+## Supported Clients
+
+The CLI automatically detects which AI coding assistants you have installed and offers to install skills for them:
+
+| Client | Skills Directory |
+|--------|------------------|
+| Claude Code | `.claude/skills/` |
+| Cursor | `.cursor/skills/` |
+| Codex | `.codex/skills/` |
+| OpenCode | `.opencode/skills/` |
+| Amp | `.agents/skills/` |
+| Antigravity | `.agent/skills/` |
+
+## Shortcuts
+
+For faster usage, the CLI provides short aliases:
+
+```bash
+ctx7 si /anthropics/skills pdf   # skills install
+ctx7 ss pdf                       # skills search
+```

@@ -9,7 +9,12 @@
     "dark": "#064E3B"
   },
   "contextual": {
-    "options": ["copy", "view", "chatgpt", "claude"]
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude"
+    ]
   },
   "navigation": {
     "groups": [
@@ -21,6 +26,7 @@
           "plans-pricing",
           "adding-libraries",
           "api-guide",
+          "skills",
           "tips"
         ]
       },
@@ -29,7 +35,10 @@
         "pages": [
           {
             "group": "Authentication",
-            "pages": ["howto/api-keys", "howto/oauth"]
+            "pages": [
+              "howto/api-keys",
+              "howto/oauth"
+            ]
           },
           "howto/claiming-libraries",
           "howto/private-repositories",
@@ -39,7 +48,13 @@
       },
       {
         "group": "Clients",
-        "pages": ["clients/claude-code", "clients/cursor", "clients/opencode", "resources/all-clients"]
+        "pages": [
+          "clients/claude-code",
+          "clients/cursor",
+          "clients/opencode",
+          "resources/all-clients",
+          "clients/cli"
+        ]
       },
       {
         "group": "SDKs",
@@ -50,7 +65,10 @@
               "sdks/ts/getting-started",
               {
                 "group": "Commands",
-                "pages": ["sdks/ts/commands/search-library", "sdks/ts/commands/get-context"]
+                "pages": [
+                  "sdks/ts/commands/search-library",
+                  "sdks/ts/commands/get-context"
+                ]
               }
             ]
           }
@@ -87,16 +105,24 @@
       },
       {
         "group": "Integrations",
-        "pages": ["integrations/code-rabbit"]
+        "pages": [
+          "integrations/code-rabbit"
+        ]
       },
       {
         "group": "Resources",
-        "pages": ["resources/developer", "resources/security", "resources/troubleshooting"]
+        "pages": [
+          "resources/developer",
+          "resources/security",
+          "resources/troubleshooting"
+        ]
       }
     ]
   },
   "api": {
-    "playground": { "display": "simple" }
+    "playground": {
+      "display": "simple"
+    }
   },
   "logo": {
     "light": "/public/logo/logo.svg",
