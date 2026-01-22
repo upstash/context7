@@ -58,6 +58,11 @@ export interface ScopeOptions {
 export type AddOptions = IDEOptions & ScopeOptions & { all?: boolean };
 export type ListOptions = IDEOptions & ScopeOptions;
 export type RemoveOptions = IDEOptions & ScopeOptions;
+export type GenerateOptions = IDEOptions &
+  ScopeOptions & {
+    output?: string;
+    all?: boolean;
+  };
 
 export interface InstallTargets {
   ides: IDE[];

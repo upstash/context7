@@ -65,3 +65,72 @@ export async function downloadSkill(project: string, skillName: string): Promise
 
   return { skill, files };
 }
+
+export interface GenerateSkillResponse {
+  content: string;
+  libraryName: string;
+  error?: string;
+}
+
+export async function generateSkill(
+  library: string,
+  topic?: string,
+  onProgress?: (message: string) => void
+): Promise<GenerateSkillResponse> {
+  const response = await fetch(`${baseUrl}/api/v2/skills/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ library, topic }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    return {
+      content: "",
+      libraryName: library,
+      error: (errorData as { message?: string }).message || `HTTP error ${response.status}`,
+    };
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    return { content: "", libraryName: library, error: "No response body" };
+  }
+
+  const decoder = new TextDecoder();
+  let content = "";
+  let libraryName = library;
+  let error: string | undefined;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const chunk = decoder.decode(value, { stream: true });
+    const lines = chunk.split("\n").filter((line) => line.trim());
+
+    for (const line of lines) {
+      try {
+        const data = JSON.parse(line) as {
+          type: string;
+          message?: string;
+          content?: string;
+          libraryName?: string;
+        };
+
+        if (data.type === "progress" && onProgress && data.message) {
+          onProgress(data.message);
+        } else if (data.type === "complete") {
+          content = data.content || "";
+          libraryName = data.libraryName || library;
+        } else if (data.type === "error") {
+          error = data.message;
+        }
+      } catch {
+        // Ignore malformed JSON lines
+      }
+    }
+  }
+
+  return { content, libraryName, error };
+}
