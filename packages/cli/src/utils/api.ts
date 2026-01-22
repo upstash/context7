@@ -30,6 +30,15 @@ export async function searchSkills(query: string): Promise<SearchResponse> {
   return (await response.json()) as SearchResponse;
 }
 
+export function trackInstalls(skills: string[], ides: string[]): void {
+  if (process.env.CTX7_TELEMETRY_DISABLED || !skills.length) return;
+  fetch(`${baseUrl}/api/v2/skills/track`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ skills, ides }),
+  }).catch(() => {});
+}
+
 export async function downloadSkill(project: string, skillName: string): Promise<DownloadResponse> {
   const skillData = await getSkill(project, skillName);
 
