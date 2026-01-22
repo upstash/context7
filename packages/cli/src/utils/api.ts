@@ -1,7 +1,6 @@
 import type {
   ListSkillsResponse,
   SingleSkillResponse,
-  BatchSkillsResponse,
   SearchResponse,
   DownloadResponse,
 } from "../types.js";

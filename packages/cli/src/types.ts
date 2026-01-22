@@ -26,14 +26,6 @@ export interface SingleSkillResponse extends Skill {
   message?: string;
 }
 
-export interface BatchSkillsResponse {
-  project: string;
-  skills: Skill[];
-  errors?: string[];
-  error?: string;
-  message?: string;
-}
-
 export interface SearchResponse {
   results: SkillSearchResult[];
   error?: string;
