@@ -6,7 +6,13 @@ import { readdir, rm } from "fs/promises";
 import { join } from "path";
 
 import { parseSkillInput } from "../utils/parse-input.js";
-import { listProjectSkills, searchSkills, downloadSkill, getSkill } from "../utils/api.js";
+import {
+  listProjectSkills,
+  searchSkills,
+  downloadSkill,
+  getSkill,
+  trackInstalls,
+} from "../utils/api.js";
 import { log } from "../utils/logger.js";
 import {
   promptForInstallTargets,
@@ -252,9 +258,9 @@ async function installCommand(
 
   const installSpinner = ora("Installing skills...").start();
 
-  let installedCount = 0;
   let permissionError = false;
   const failedDirs: Set<string> = new Set();
+  const installedSkills: string[] = [];
 
   for (const skill of selectedSkills) {
     try {
@@ -295,7 +301,7 @@ async function installCommand(
         }
       }
 
-      installedCount++;
+      installedSkills.push(`${skill.project}/${skill.name}`);
     } catch (err) {
       const error = err as NodeJS.ErrnoException;
       if (error.code === "EACCES" || error.code === "EPERM") {
@@ -318,7 +324,8 @@ async function installCommand(
     return;
   }
 
-  installSpinner.succeed(`Installed ${installedCount} skill(s)`);
+  installSpinner.succeed(`Installed ${installedSkills.length} skill(s)`);
+  trackInstalls(installedSkills, targets.ides);
 
   const installedNames = selectedSkills.map((s) => s.name);
   logInstallSummary(targets, targetDirs, installedNames);
@@ -399,9 +406,9 @@ async function searchCommand(query: string): Promise<void> {
 
   const installSpinner = ora("Installing skills...").start();
 
-  let installedCount = 0;
   let permissionError = false;
   const failedDirs: Set<string> = new Set();
+  const installedSkills: string[] = [];
 
   for (const skill of uniqueSkills) {
     try {
@@ -442,7 +449,7 @@ async function searchCommand(query: string): Promise<void> {
         }
       }
 
-      installedCount++;
+      installedSkills.push(`${skill.project}/${skill.name}`);
     } catch (err) {
       const error = err as NodeJS.ErrnoException;
       if (error.code === "EACCES" || error.code === "EPERM") {
@@ -465,7 +472,8 @@ async function searchCommand(query: string): Promise<void> {
     return;
   }
 
-  installSpinner.succeed(`Installed ${installedCount} skill(s)`);
+  installSpinner.succeed(`Installed ${installedSkills.length} skill(s)`);
+  trackInstalls(installedSkills, targets.ides);
 
   const installedNames = uniqueSkills.map((s) => s.name);
   logInstallSummary(targets, targetDirs, installedNames);
