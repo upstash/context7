@@ -6,7 +6,13 @@ import { readdir, rm } from "fs/promises";
 import { join } from "path";
 
 import { parseSkillInput } from "../utils/parse-input.js";
-import { listProjectSkills, searchSkills, downloadSkill, trackInstalls } from "../utils/api.js";
+import {
+  listProjectSkills,
+  searchSkills,
+  downloadSkill,
+  getSkill,
+  trackInstalls,
+} from "../utils/api.js";
 import { log } from "../utils/logger.js";
 import {
   promptForInstallTargets,
@@ -52,7 +58,7 @@ export function registerSkillCommands(program: Command): void {
     .alias("i")
     .alias("add")
     .argument("<repository>", "GitHub repository (/owner/repo)")
-    .argument("[skills...]", "Specific skill names to install")
+    .argument("[skill]", "Specific skill name to install")
     .option("--all", "Install all skills without prompting")
     .option("--global", "Install globally instead of current directory")
     .option("--claude", "Claude Code (.claude/skills/)")
@@ -62,8 +68,8 @@ export function registerSkillCommands(program: Command): void {
     .option("--amp", "Amp (.agents/skills/)")
     .option("--antigravity", "Antigravity (.agent/skills/)")
     .description("Install skills from a repository")
-    .action(async (project: string, skillNames: string[], options: AddOptions) => {
-      await installCommand(project, skillNames, options);
+    .action(async (project: string, skillName: string | undefined, options: AddOptions) => {
+      await installCommand(project, skillName, options);
     });
 
   skill
@@ -120,7 +126,7 @@ export function registerSkillAliases(program: Command): void {
   program
     .command("si", { hidden: true })
     .argument("<repository>", "GitHub repository (/owner/repo)")
-    .argument("[skills...]", "Specific skill names to install")
+    .argument("[skill]", "Specific skill name to install")
     .option("--all", "Install all skills without prompting")
     .option("--global", "Install globally instead of current directory")
     .option("--claude", "Claude Code (.claude/skills/)")
@@ -130,8 +136,8 @@ export function registerSkillAliases(program: Command): void {
     .option("--amp", "Amp (.agents/skills/)")
     .option("--antigravity", "Antigravity (.agent/skills/)")
     .description("Install skills (alias for: skills install)")
-    .action(async (project: string, skillNames: string[], options: AddOptions) => {
-      await installCommand(project, skillNames, options);
+    .action(async (project: string, skillName: string | undefined, options: AddOptions) => {
+      await installCommand(project, skillName, options);
     });
 
   program
@@ -145,7 +151,7 @@ export function registerSkillAliases(program: Command): void {
 
 async function installCommand(
   input: string,
-  skillNames: string[],
+  skillName: string | undefined,
   options: AddOptions
 ): Promise<void> {
   const parsed = parseSkillInput(input);
@@ -161,75 +167,79 @@ async function installCommand(
   log.blank();
   const spinner = ora(`Fetching skills from ${repo}...`).start();
 
-  const data = await listProjectSkills(repo);
-
-  if (data.error) {
-    spinner.fail(pc.red(`Error: ${data.message || data.error}`));
-    return;
-  }
-
-  if (!data.skills || data.skills.length === 0) {
-    spinner.warn(pc.yellow(`No skills found in ${repo}`));
-    return;
-  }
-
-  const skillsWithRepo = data.skills.map((s) => ({ ...s, project: repo }));
-
   let selectedSkills: (Skill & { project: string })[];
 
-  if (skillNames.length > 0) {
-    selectedSkills = skillsWithRepo.filter((s) =>
-      skillNames.some((name) => s.name.toLowerCase() === name.toLowerCase())
-    );
+  // When a specific skill name is provided, fetch only that skill
+  if (skillName) {
+    spinner.text = `Fetching skill: ${skillName}...`;
+    const skillData = await getSkill(repo, skillName);
 
-    const foundNames = selectedSkills.map((s) => s.name.toLowerCase());
-    const notFound = skillNames.filter((name) => !foundNames.includes(name.toLowerCase()));
-
-    if (selectedSkills.length === 0) {
-      spinner.fail(pc.red(`Skills not found: ${skillNames.join(", ")}`));
+    if (skillData.error || !skillData.name) {
+      spinner.fail(pc.red(`Skill not found: ${skillName}`));
       return;
     }
 
-    spinner.succeed(`Found ${selectedSkills.length} of ${skillNames.length} requested skill(s)`);
-
-    if (notFound.length > 0) {
-      log.warn(`Not found: ${notFound.join(", ")}`);
-    }
-  } else if (options.all || data.skills.length === 1) {
-    spinner.succeed(`Found ${data.skills.length} skill(s)`);
-    selectedSkills = skillsWithRepo;
+    spinner.succeed(`Found skill: ${skillName}`);
+    selectedSkills = [
+      {
+        name: skillData.name,
+        description: skillData.description,
+        url: skillData.url,
+        project: repo,
+      },
+    ];
   } else {
-    spinner.succeed(`Found ${data.skills.length} skill(s)`);
-    const maxNameLen = Math.min(25, Math.max(...data.skills.map((s) => s.name.length)));
-    const choices = skillsWithRepo.map((s) => {
-      const paddedName = s.name.padEnd(maxNameLen);
-      const desc = s.description?.trim()
-        ? s.description.slice(0, 60) + (s.description.length > 60 ? "..." : "")
-        : "";
+    // Fetch all skills when no specific names provided
+    const data = await listProjectSkills(repo);
 
-      return {
-        name: desc ? `${paddedName} ${pc.dim(desc)}` : s.name,
-        value: s,
-      };
-    });
-
-    log.blank();
-
-    try {
-      selectedSkills = await checkbox({
-        message: "Select skills:",
-        choices,
-        pageSize: 15,
-        theme: {
-          style: {
-            renderSelectedChoices: (selected: Array<{ name?: string; value: unknown }>) =>
-              selected.map((c) => (c.value as { name: string }).name).join(", "),
-          },
-        },
-      });
-    } catch {
-      log.warn("Installation cancelled");
+    if (data.error) {
+      spinner.fail(pc.red(`Error: ${data.message || data.error}`));
       return;
+    }
+
+    if (!data.skills || data.skills.length === 0) {
+      spinner.warn(pc.yellow(`No skills found in ${repo}`));
+      return;
+    }
+
+    const skillsWithRepo = data.skills.map((s) => ({ ...s, project: repo }));
+
+    if (options.all || data.skills.length === 1) {
+      spinner.succeed(`Found ${data.skills.length} skill(s)`);
+      selectedSkills = skillsWithRepo;
+    } else {
+      spinner.succeed(`Found ${data.skills.length} skill(s)`);
+      const maxNameLen = Math.min(25, Math.max(...data.skills.map((s) => s.name.length)));
+      const choices = skillsWithRepo.map((s) => {
+        const paddedName = s.name.padEnd(maxNameLen);
+        const desc = s.description?.trim()
+          ? s.description.slice(0, 60) + (s.description.length > 60 ? "..." : "")
+          : "";
+
+        return {
+          name: desc ? `${paddedName} ${pc.dim(desc)}` : s.name,
+          value: s,
+        };
+      });
+
+      log.blank();
+
+      try {
+        selectedSkills = await checkbox({
+          message: "Select skills:",
+          choices,
+          pageSize: 15,
+          theme: {
+            style: {
+              renderSelectedChoices: (selected: Array<{ name?: string; value: unknown }>) =>
+                selected.map((c) => (c.value as { name: string }).name).join(", "),
+            },
+          },
+        });
+      } catch {
+        log.warn("Installation cancelled");
+        return;
+      }
     }
   }
 
