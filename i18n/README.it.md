@@ -64,6 +64,7 @@ Incollare la seguente configurazione nel file `~/.cursor/mcp.json` di Cursor è 
 
 <details>
 <summary>Alternativa: Usa Bun</summary>
+
 ```json
 {
   "mcpServers": {
@@ -75,8 +76,10 @@ Incollare la seguente configurazione nel file `~/.cursor/mcp.json` di Cursor è 
 }
 ```
 </details>
+
 <details>
 <summary>Alternativa: Usa Deno</summary>
+
 ```json
 {
   "mcpServers": {
@@ -88,6 +91,7 @@ Incollare la seguente configurazione nel file `~/.cursor/mcp.json` di Cursor è 
 }
 ```
 </details>
+
 ### Installare in Windsurf
 Aggiungi questo al tuo file di configurazione Windsurf MCP. Vedi [Windsurf MCP docs](https://docs.windsurf.com/windsurf/mcp) per ulteriori informazioni.
 ```json
@@ -100,6 +104,7 @@ Aggiungi questo al tuo file di configurazione Windsurf MCP. Vedi [Windsurf MCP d
   }
 }
 ```
+
 ### Installare in VS Code
 [<img alt="Installa in VS Code (npx)" src="https://img.shields.io/badge/VS_Code-VS_Code?style=flat-square&label=Installa%20Context7%20MCP&color=0098FF">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22context7%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40upstash%2Fcontext7-mcp%40latest%22%5D%7D)
 [<img alt="Installa in VS Code Insiders (npx)" src="https://img.shields.io/badge/VS_Code_Insiders-VS_Code_Insiders?style=flat-square&label=Installa%20Context7%20MCP&color=24bfa5">](https://insiders.vscode.dev/redirect?url=vscode-insiders%3Amcp%2Finstall%3F%7B%22name%22%3A%22context7%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40upstash%2Fcontext7-mcp%40latest%22%5D%7D)
@@ -115,6 +120,7 @@ Aggiungi questo al tuo file di configurazione MCP di VS Code. Vedi [VS Code MCP 
   }
 }
 ```
+
 ### Installare in Zed
 Può essere installato tramite [Zed Extensions](https://zed.dev/extensions?query=Context7) oppure puoi aggiungere questo al tuo `settings.json` di Zed. Vedi [Zed Context Server docs](https://zed.dev/docs/assistant/context-servers) per ulteriori informazioni.
 ```json
@@ -128,11 +134,13 @@ Può essere installato tramite [Zed Extensions](https://zed.dev/extensions?query
   }
 }
 ```
+
 ### Installare in Claude Code
 Esegui questo comando. Vedi [Claude Code MCP docs](https://docs.anthropic.com/it/docs/claude-code/mcp) per ulteriori informazioni.
 ```sh
 claude mcp add context7 -- npx -y @upstash/context7-mcp@latest
 ```
+
 ### Installare in Claude Desktop
 Aggiungi questo al tuo file `claude_desktop_config.json` di Claude Desktop. Vedi [Claude Desktop MCP docs](https://modelcontextprotocol.io/quickstart/user) per ulteriori informazioni.
 ```json
@@ -145,6 +153,7 @@ Aggiungi questo al tuo file `claude_desktop_config.json` di Claude Desktop. Vedi
   }
 }
 ```
+
 ### Installazione in Copilot Coding Agent
 Aggiungi la seguente configurazione alla sezione `mcp` del file di configurazione di Copilot Coding Agent (Repository->Settings->Copilot->Coding agent->MCP configuration):
 ```json
@@ -159,6 +168,7 @@ Aggiungi la seguente configurazione alla sezione `mcp` del file di configurazion
 }
 ```
 Per maggiori informazioni, consulta la [documentazione ufficiale GitHub](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/agents/copilot-coding-agent/extending-copilot-coding-agent-with-mcp).
+
 ### Installazione in Copilot CLI
 1.  Apri il file di configurazione MCP di Copilot CLI. La posizione è `~/.copilot/mcp-config.json` (dove `~` è la tua home directory).
 2.  Aggiungi quanto segue all'oggetto `mcpServers` nel tuo file `mcp-config.json`:
@@ -190,12 +200,14 @@ Oppure, per un server locale:
 }
 ```
 Se il file `mcp-config.json` non esiste, crealo.
+
 ### Utilizzo di Docker
 Se preferisci eseguire il server MCP in un contenitore Docker:
 1.  **Costruisci l'immagine Docker:**
     Prima, crea un `Dockerfile` nella radice del progetto (o ovunque tu preferisca):
     <details>
     <summary>Clicca per visualizzare il contenuto del Dockerfile</summary>
+
     ```Dockerfile
     FROM node:18-alpine
     WORKDIR /app
@@ -207,6 +219,7 @@ Se preferisci eseguire il server MCP in un contenitore Docker:
     CMD ["context7-mcp"]
     ```
     </details>
+
     Poi, costruisci l'immagine utilizzando un tag (ad esempio, `context7-mcp`). **Assicurati che Docker Desktop (o il demone Docker) sia in esecuzione.** Esegui il seguente comando nella stessa directory in cui hai salvato il `Dockerfile`:
     ```bash
     docker build -t context7-mcp .
@@ -229,6 +242,7 @@ Se preferisci eseguire il server MCP in un contenitore Docker:
     }
     ```
     _Nota: Questa è una configurazione di esempio. Consulta gli esempi specifici per il tuo client MCP (come Cursor, VS Code, ecc.) precedentemente in questo README per adattare la struttura (ad es., `mcpServers` vs `servers`). Inoltre, assicurati che il nome dell'immagine in `args` corrisponda al tag utilizzato durante il comando `docker build`._
+
 ### Strumenti Disponibili
 - `resolve-library-id`: Converte un nome generico di libreria in un ID di libreria compatibile con Context7.
   - `query` (obbligatorio): La domanda o il compito dell'utente (per il ranking di rilevanza)
@@ -236,6 +250,7 @@ Se preferisci eseguire il server MCP in un contenitore Docker:
 - `query-docs`: Recupera la documentazione per una libreria utilizzando un ID di libreria compatibile con Context7.
   - `libraryId` (obbligatorio): ID esatto compatibile con Context7 (ad esempio, `/mongodb/docs`, `/vercel/next.js`)
   - `query` (obbligatorio): La domanda o il compito per ottenere documentazione pertinente
+
 ## Sviluppo
 Clona il progetto e installa le dipendenze:
 ```bash
@@ -245,6 +260,7 @@ Compila:
 ```bash
 pnpm run build
 ```
+
 ### Esempio di Configurazione Locale
 ```json
 {
@@ -256,11 +272,14 @@ pnpm run build
   }
 }
 ```
+
 ### Test con MCP Inspector
 ```bash
 npx -y @modelcontextprotocol/inspector npx @upstash/context7-mcp@latest
 ```
+
 ## Risoluzione dei problemi
+
 ### ERR_MODULE_NOT_FOUND
 Se vedi questo errore, prova a usare `bunx` invece di `npx`.
 ```json
@@ -274,6 +293,7 @@ Se vedi questo errore, prova a usare `bunx` invece di `npx`.
 }
 ```
 Questo spesso risolve i problemi di risoluzione dei moduli, specialmente negli ambienti dove `npx` non installa o risolve correttamente i pacchetti.
+
 ### Problemi di risoluzione ESM
 Se riscontri un errore come: `Error: Cannot find module 'uriTemplate.js'` prova a eseguire con il flag `--experimental-vm-modules`:
 ```json
@@ -286,13 +306,16 @@ Se riscontri un errore come: `Error: Cannot find module 'uriTemplate.js'` prova 
   }
 }
 ```
+
 ### Errori del Client MCP
 1. Prova a rimuovere `@latest` dal nome del pacchetto.
 2. Prova a usare `bunx` come alternativa.
 3. Prova a usare `deno` come alternativa.
 4. Assicurati di utilizzare Node v18 o superiore per avere il supporto nativo di fetch con `npx`.
+
 ## Dichiarazione di non responsabilità
 I progetti Context7 sono contributi della comunità e, sebbene ci impegniamo a mantenere un'alta qualità, non possiamo garantire l'accuratezza, la completezza o la sicurezza di tutta la documentazione delle librerie. I progetti elencati in Context7 sono sviluppati e gestiti dai rispettivi proprietari, non da Context7. Se riscontri contenuti sospetti, inappropriati o potenzialmente dannosi, utilizza il pulsante "Segnala" sulla pagina del progetto per informarci immediatamente. Prendiamo sul serio tutte le segnalazioni e esamineremo prontamente i contenuti segnalati per mantenere l'integrità e la sicurezza della nostra piattaforma. Utilizzando Context7, riconosci di farlo a tua discrezione e a tuo rischio.
+
 ## Context7 nei Media
 - [Better Stack: "Free Tool Makes Cursor 10x Smarter"](https://youtu.be/52FC3qObp9E)
 - [Cole Medin: "This is Hands Down the BEST MCP Server for AI Coding Assistants"](https://www.youtube.com/watch?v=G7gK8H6u7Rs)
@@ -300,7 +323,9 @@ I progetti Context7 sono contributi della comunità e, sebbene ci impegniamo a m
 - [Julian Goldie SEO: "Context7: New MCP AI Agent Update"](https://www.youtube.com/watch?v=CTZm6fBYisc)
 - [JeredBlu: "Context 7 MCP: Get Documentation Instantly + VS Code Setup"](https://www.youtube.com/watch?v=-ls0D-rtET4)
 - [Income stream surfers: "Context7: The New MCP Server That Will CHANGE AI Coding"](https://www.youtube.com/watch?v=PS-2Azb-C3M)
+
 ## Storico delle Stelle
 [![Star History Chart](https://api.star-history.com/svg?repos=upstash/context7&type=Date)](https://www.star-history.com/#upstash/context7&Date)
+
 ## Licenza
 MIT
