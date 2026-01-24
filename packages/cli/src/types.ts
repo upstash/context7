@@ -16,6 +16,7 @@ export interface SkillSearchResult extends Skill {
 export interface ListSkillsResponse {
   project: string;
   skills: Skill[];
+  blockedSkillsCount?: number;
   error?: string;
   message?: string;
 }

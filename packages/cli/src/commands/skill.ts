@@ -175,7 +175,12 @@ async function installCommand(
     const skillData = await getSkill(repo, skillName);
 
     if (skillData.error || !skillData.name) {
-      spinner.fail(pc.red(`Skill not found: ${skillName}`));
+      if (skillData.error === "prompt_injection_detected") {
+        spinner.fail(pc.red(`Prompt injection detected in skill: ${skillName}`));
+        log.warn("This skill contains potentially malicious content and cannot be installed.");
+      } else {
+        spinner.fail(pc.red(`Skill not found: ${skillName}`));
+      }
       return;
     }
 
@@ -204,11 +209,19 @@ async function installCommand(
 
     const skillsWithRepo = data.skills.map((s) => ({ ...s, project: repo }));
 
+    spinner.succeed(`Found ${data.skills.length} skill(s)`);
+
+    if (data.blockedSkillsCount && data.blockedSkillsCount > 0) {
+      log.blank();
+      log.error(
+        `${data.blockedSkillsCount} skill(s) blocked due to prompt injection and not shown.`
+      );
+      log.warn("Review other skills from this repository carefully before installing.");
+    }
+
     if (options.all || data.skills.length === 1) {
-      spinner.succeed(`Found ${data.skills.length} skill(s)`);
       selectedSkills = skillsWithRepo;
     } else {
-      spinner.succeed(`Found ${data.skills.length} skill(s)`);
       const maxNameLen = Math.min(25, Math.max(...data.skills.map((s) => s.name.length)));
       const choices = skillsWithRepo.map((s) => {
         const paddedName = s.name.padEnd(maxNameLen);
@@ -268,7 +281,11 @@ async function installCommand(
       const downloadData = await downloadSkill(skill.project, skill.name);
 
       if (downloadData.error) {
-        log.warn(`Failed to download ${skill.name}: ${downloadData.error}`);
+        if (downloadData.error.toLowerCase().includes("injection")) {
+          log.error(`Prompt injection detected in ${skill.name}. Skipping.`);
+        } else {
+          log.warn(`Failed to download ${skill.name}: ${downloadData.error}`);
+        }
         continue;
       }
 
@@ -416,7 +433,11 @@ async function searchCommand(query: string): Promise<void> {
       const downloadData = await downloadSkill(skill.project, skill.name);
 
       if (downloadData.error) {
-        log.warn(`Failed to download ${skill.name}: ${downloadData.error}`);
+        if (downloadData.error.toLowerCase().includes("injection")) {
+          log.error(`Prompt injection detected in ${skill.name}. Skipping.`);
+        } else {
+          log.warn(`Failed to download ${skill.name}: ${downloadData.error}`);
+        }
         continue;
       }
 
