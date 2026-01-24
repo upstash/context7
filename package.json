@@ -53,5 +53,9 @@
     "prettier": "^3.6.2",
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.28.0"
+  },
+  "dependencies": {
+    "@inquirer/core": "^11.1.1",
+    "@inquirer/type": "^4.0.3"
   }
 }

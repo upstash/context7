@@ -3,6 +3,9 @@ import type {
   SingleSkillResponse,
   SearchResponse,
   DownloadResponse,
+  LibrarySearchResponse,
+  SkillQuestionsResponse,
+  StructuredGenerateInput,
 } from "../types.js";
 import { downloadSkillFromGitHub } from "./github.js";
 
@@ -72,6 +75,36 @@ export interface GenerateSkillResponse {
   error?: string;
 }
 
+// Search for libraries based on a query/motivation
+export async function searchLibraries(query: string): Promise<LibrarySearchResponse> {
+  const params = new URLSearchParams({ query });
+  const response = await fetch(`${baseUrl}/api/v2/libs/search?${params}`);
+  return (await response.json()) as LibrarySearchResponse;
+}
+
+// Get clarifying questions for skill generation
+export async function getSkillQuestions(
+  libraries: Array<{ id: string; name: string }>,
+  motivation: string
+): Promise<SkillQuestionsResponse> {
+  const response = await fetch(`${baseUrl}/api/v2/skills/questions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ libraries, motivation }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    return {
+      questions: [],
+      error: (errorData as { message?: string }).message || `HTTP error ${response.status}`,
+    };
+  }
+
+  return (await response.json()) as SkillQuestionsResponse;
+}
+
+// Legacy generate skill function (backwards compatible)
 export async function generateSkill(
   library: string,
   topic?: string,
@@ -83,23 +116,48 @@ export async function generateSkill(
     body: JSON.stringify({ library, topic }),
   });
 
+  return handleGenerateResponse(response, library, onProgress);
+}
+
+// New structured generate skill function
+export async function generateSkillStructured(
+  input: StructuredGenerateInput,
+  onProgress?: (message: string) => void
+): Promise<GenerateSkillResponse> {
+  const response = await fetch(`${baseUrl}/api/v2/skills/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+
+  // Use first library name as the default
+  const libraryName = input.libraries[0]?.name || "skill";
+  return handleGenerateResponse(response, libraryName, onProgress);
+}
+
+// Shared response handler for generate endpoints
+async function handleGenerateResponse(
+  response: Response,
+  libraryName: string,
+  onProgress?: (message: string) => void
+): Promise<GenerateSkillResponse> {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     return {
       content: "",
-      libraryName: library,
+      libraryName,
       error: (errorData as { message?: string }).message || `HTTP error ${response.status}`,
     };
   }
 
   const reader = response.body?.getReader();
   if (!reader) {
-    return { content: "", libraryName: library, error: "No response body" };
+    return { content: "", libraryName, error: "No response body" };
   }
 
   const decoder = new TextDecoder();
   let content = "";
-  let libraryName = library;
+  let finalLibraryName = libraryName;
   let error: string | undefined;
 
   while (true) {
@@ -122,7 +180,7 @@ export async function generateSkill(
           onProgress(data.message);
         } else if (data.type === "complete") {
           content = data.content || "";
-          libraryName = data.libraryName || library;
+          finalLibraryName = data.libraryName || libraryName;
         } else if (data.type === "error") {
           error = data.message;
         }
@@ -132,5 +190,5 @@ export async function generateSkill(
     }
   }
 
-  return { content, libraryName, error };
+  return { content, libraryName: finalLibraryName, error };
 }

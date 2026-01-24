@@ -38,6 +38,57 @@ export interface DownloadResponse {
   error?: string;
 }
 
+// Library search types
+export interface LibrarySearchResult {
+  id: string;
+  title: string;
+  description: string;
+  branch: string;
+  totalSnippets: number;
+  totalTokens?: number;
+  stars?: number;
+  trustScore?: number;
+  benchmarkScore?: number;
+  versions?: string[];
+  vip?: boolean;
+}
+
+export interface LibrarySearchResponse {
+  results: LibrarySearchResult[];
+  error?: string;
+  message?: string;
+}
+
+// Skill generation types
+export interface SkillQuestion {
+  question: string;
+  options: string[];
+  recommendedIndex: number;
+}
+
+export interface SkillQuestionsResponse {
+  questions: SkillQuestion[];
+  error?: string;
+  message?: string;
+}
+
+export interface SkillAnswer {
+  question: string;
+  answer: string;
+}
+
+export interface LibraryInput {
+  id: string;
+  name: string;
+}
+
+export interface StructuredGenerateInput {
+  motivation: string;
+  libraries: LibraryInput[];
+  answers: SkillAnswer[];
+  feedback?: string;
+}
+
 export type IDE = "claude" | "cursor" | "codex" | "opencode" | "amp" | "antigravity";
 
 export type Scope = "project" | "global";
