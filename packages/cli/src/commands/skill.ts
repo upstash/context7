@@ -281,11 +281,7 @@ async function installCommand(
       const downloadData = await downloadSkill(skill.project, skill.name);
 
       if (downloadData.error) {
-        if (downloadData.error.toLowerCase().includes("injection")) {
-          log.error(`Prompt injection detected in ${skill.name}. Skipping.`);
-        } else {
-          log.warn(`Failed to download ${skill.name}: ${downloadData.error}`);
-        }
+        log.warn(`Failed to download ${skill.name}: ${downloadData.error}`);
         continue;
       }
 
@@ -433,11 +429,7 @@ async function searchCommand(query: string): Promise<void> {
       const downloadData = await downloadSkill(skill.project, skill.name);
 
       if (downloadData.error) {
-        if (downloadData.error.toLowerCase().includes("injection")) {
-          log.error(`Prompt injection detected in ${skill.name}. Skipping.`);
-        } else {
-          log.warn(`Failed to download ${skill.name}: ${downloadData.error}`);
-        }
+        log.warn(`Failed to download ${skill.name}: ${downloadData.error}`);
         continue;
       }
 
