@@ -63,6 +63,7 @@ La méthode recommandée est de coller la configuration suivante dans votre fich
 
 <details>
 <summary>Alternative : Utiliser Bun</summary>
+
 ```json
 {
   "mcpServers": {
@@ -74,8 +75,10 @@ La méthode recommandée est de coller la configuration suivante dans votre fich
 }
 ```
 </details>
+
 <details>
 <summary>Alternative : Utiliser Deno</summary>
+
 ```json
 {
   "mcpServers": {
@@ -87,6 +90,7 @@ La méthode recommandée est de coller la configuration suivante dans votre fich
 }
 ```
 </details>
+
 ### Installation dans Windsurf
 Ajoutez ceci à votre fichier de configuration MCP Windsurf. Voir la [documentation Windsurf MCP](https://docs.windsurf.com/windsurf/mcp) pour plus d’informations.
 ```json
@@ -99,6 +103,7 @@ Ajoutez ceci à votre fichier de configuration MCP Windsurf. Voir la [documentat
   }
 }
 ```
+
 ### Installation dans VS Code
 [<img alt="Installer dans VS Code (npx)" src="https://img.shields.io/badge/VS_Code-VS_Code?style=flat-square&label=Installer%20Context7%20MCP&color=0098FF">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22context7%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40upstash%2Fcontext7-mcp%40latest%22%5D%7D)
 [<img alt="Installer dans VS Code Insiders (npx)" src="https://img.shields.io/badge/VS_Code_Insiders-VS_Code_Insiders?style=flat-square&label=Installer%20Context7%20MCP&color=24bfa5">](https://insiders.vscode.dev/redirect?url=vscode-insiders%3Amcp%2Finstall%3F%7B%22name%22%3A%22context7%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40upstash%2Fcontext7-mcp%40latest%22%5D%7D)
@@ -114,6 +119,7 @@ Ajoutez ceci à votre fichier de configuration MCP VS Code. Voir la [documentati
   }
 }
 ```
+
 ### Installation dans Zed
 Peut être installé via [Zed Extensions](https://zed.dev/extensions?query=Context7) ou en ajoutant ceci à votre `settings.json` Zed. Voir la [documentation Zed Context Server](https://zed.dev/docs/assistant/context-servers).
 ```json
@@ -127,11 +133,13 @@ Peut être installé via [Zed Extensions](https://zed.dev/extensions?query=Conte
   }
 }
 ```
+
 ### Installation dans Claude Code
 Exécutez cette commande. Voir la [documentation Claude Code MCP](https://docs.anthropic.com/fr/docs/claude-code/mcp).
 ```sh
 claude mcp add context7 -- npx -y @upstash/context7-mcp@latest
 ```
+
 ### Installation dans Claude Desktop
 Ajoutez ceci à votre fichier `claude_desktop_config.json`. Voir la [documentation Claude Desktop MCP](https://modelcontextprotocol.io/quickstart/user).
 ```json
@@ -144,6 +152,7 @@ Ajoutez ceci à votre fichier `claude_desktop_config.json`. Voir la [documentati
   }
 }
 ```
+
 ### Installation dans BoltAI
 Ouvrez la page "Settings" de l'application, naviguez jusqu'à "Plugins", et entrez le JSON suivant :
 ```json
@@ -157,6 +166,7 @@ Ouvrez la page "Settings" de l'application, naviguez jusqu'à "Plugins", et entr
 }
 ```
 Une fois enregistré, saisissez dans le chat `query-docs` suivi de votre ID de documentation Context7 (par exemple, `query-docs /nuxt/ui`). Plus d'informations sont disponibles sur le [site de documentation BoltAI](https://docs.boltai.com/docs/plugins/mcp-servers). Pour BoltAI sur iOS, [consultez ce guide](https://docs.boltai.com/docs/boltai-mobile/mcp-servers).
+
 ### Installation dans Copilot Coding Agent
 Ajoutez la configuration suivante à la section `mcp` de votre fichier de configuration Copilot Coding Agent (Repository->Settings->Copilot->Coding agent->MCP configuration) :
 ```json
@@ -171,6 +181,7 @@ Ajoutez la configuration suivante à la section `mcp` de votre fichier de config
 }
 ```
 Pour plus d'informations, consultez la [documentation officielle GitHub](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/agents/copilot-coding-agent/extending-copilot-coding-agent-with-mcp).
+
 ### Installation dans Copilot CLI
 1.  Ouvrez le fichier de configuration MCP de Copilot CLI. L'emplacement est `~/.copilot/mcp-config.json` (où `~` est votre répertoire personnel).
 2.  Ajoutez ce qui suit à l'objet `mcpServers` dans votre fichier `mcp-config.json` :
@@ -202,12 +213,14 @@ Ou, pour un serveur local :
 }
 ```
 Si le fichier `mcp-config.json` n'existe pas, créez-le.
+
 ### Utilisation avec Docker
 Si vous préférez exécuter le serveur MCP dans un conteneur Docker :
 1.  **Construisez l’image Docker :**
     Créez un `Dockerfile` à la racine du projet (ou ailleurs) :
     <details>
     <summary>Voir le contenu du Dockerfile</summary>
+
     ```Dockerfile
     FROM node:18-alpine
     WORKDIR /app
@@ -219,6 +232,7 @@ Si vous préférez exécuter le serveur MCP dans un conteneur Docker :
     CMD ["context7-mcp"]
     ```
     </details>
+
     Puis, construisez l’image :
     ```bash
     docker build -t context7-mcp .
@@ -241,6 +255,7 @@ Si vous préférez exécuter le serveur MCP dans un conteneur Docker :
     }
     ```
     _Note : Ceci est un exemple. Adaptez la structure selon votre client MCP (voir plus haut dans ce README). Assurez-vous que le nom de l’image dans `args` correspond au tag utilisé lors du build._
+
 ### Installation sous Windows
 La configuration sous Windows est légèrement différente par rapport à Linux ou macOS (_`Cline` est utilisé dans l'exemple_). Le même principe s'applique à d'autres éditeurs; référez-vous à la configuration de `command` et `args`.
 ```json
@@ -255,11 +270,13 @@ La configuration sous Windows est légèrement différente par rapport à Linux 
   }
 }
 ```
+
 ### Outils disponibles
 - `resolve-library-id` : Résout un nom de bibliothèque général en un ID compatible Context7.
   - `libraryName` (obligatoire)
 - `query-docs` : Récupère la documentation d’une bibliothèque via un ID Context7.
   - `libraryId` (obligatoire)
+
 ## Développement
 Clonez le projet et installez les dépendances :
 ```bash
@@ -269,6 +286,7 @@ Build :
 ```bash
 pnpm run build
 ```
+
 ### Exemple de configuration locale
 ```json
 {
@@ -280,11 +298,14 @@ pnpm run build
   }
 }
 ```
+
 ### Tester avec MCP Inspector
 ```bash
 npx -y @modelcontextprotocol/inspector npx @upstash/context7-mcp@latest
 ```
+
 ## Dépannage
+
 ### ERR_MODULE_NOT_FOUND
 Si vous voyez cette erreur, essayez d’utiliser `bunx` à la place de `npx`.
 ```json
@@ -298,6 +319,7 @@ Si vous voyez cette erreur, essayez d’utiliser `bunx` à la place de `npx`.
 }
 ```
 Cela résout souvent les problèmes de résolution de modules, surtout si `npx` n’installe ou ne résout pas correctement les packages.
+
 ### Problèmes de résolution ESM
 Si vous rencontrez une erreur comme : `Error: Cannot find module 'uriTemplate.js'` essayez d'exécuter avec le drapeau `--experimental-vm-modules` :
 ```json
@@ -310,13 +332,16 @@ Si vous rencontrez une erreur comme : `Error: Cannot find module 'uriTemplate.js
   }
 }
 ```
+
 ### Erreurs client MCP
 1. Essayez de retirer `@latest` du nom du package.
 2. Essayez d'utiliser `bunx` comme alternative.
 3. Essayez d'utiliser `deno` comme alternative.
 4. Assurez-vous d'utiliser Node v18 ou supérieur pour avoir le support natif de fetch avec `npx`.
+
 ## Clause de non-responsabilité
 Les projets Context7 sont des contributions de la communauté, et bien que nous nous efforcions de maintenir une haute qualité, nous ne pouvons garantir l'exactitude, l'exhaustivité ou la sécurité de toute la documentation des bibliothèques. Les projets listés dans Context7 sont développés et maintenus par leurs propriétaires respectifs, et non par Context7. Si vous rencontrez un contenu suspect, inapproprié ou potentiellement nuisible, veuillez utiliser le bouton "Signaler" sur la page du projet pour nous le faire savoir immédiatement. Nous prenons tous les signalements au sérieux et examinerons rapidement les contenus signalés pour maintenir l'intégrité et la sécurité de notre plateforme. En utilisant Context7, vous reconnaissez que vous le faites à votre propre discrétion et à vos risques et périls.
+
 ## Context7 dans les médias
 - [Better Stack: "Free Tool Makes Cursor 10x Smarter"](https://youtu.be/52FC3qObp9E)
 - [Cole Medin: "This is Hands Down the BEST MCP Server for AI Coding Assistants"](https://www.youtube.com/watch?v=G7gK8H6u7Rs)
@@ -326,7 +351,9 @@ Les projets Context7 sont des contributions de la communauté, et bien que nous 
 - [Income stream surfers: "Context7: The New MCP Server That Will CHANGE AI Coding"](https://www.youtube.com/watch?v=PS-2Azb-C3M)
 - [AICodeKing: "Context7 + Cline & RooCode: This MCP Server Makes CLINE 100X MORE EFFECTIVE!"](https://www.youtube.com/watch?v=qZfENAPMnyo)
 - [Sean Kochel: "5 MCP Servers For Vibe Coding Glory (Just Plug-In & Go)"](https://www.youtube.com/watch?v=LqTQi8qexJM)
+
 ## Historique des stars
 [![Graphique d'historique des stars](https://api.star-history.com/svg?repos=upstash/context7&type=Date)](https://www.star-history.com/#upstash/context7&Date)
+
 ## Licence
 MIT
