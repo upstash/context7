@@ -53,7 +53,7 @@ export type RetryConfig =
        */
       retries?: number;
       /**
-       * A backoff function receives the current retry cound and returns a number in milliseconds to wait before retrying.
+       * A backoff function receives the current retry count and returns a number in milliseconds to wait before retrying.
        *
        * @default
        * ```ts
