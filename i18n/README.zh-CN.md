@@ -2,7 +2,7 @@
 
 [![安装 MCP 服务器](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D)
 
-# Context7 MCP - 为所有 Prompt 获取最新文档
+# Context7 MCP - 为所有Prompt获取最新文档
 
 [![Website](https://img.shields.io/badge/Website-context7.com-blue)](https://context7.com) [![smithery badge](https://smithery.ai/badge/@upstash/context7-mcp)](https://smithery.ai/server/@upstash/context7-mcp) [![NPM Version](https://img.shields.io/npm/v/%40upstash%2Fcontext7-mcp?color=red)](https://www.npmjs.com/package/@upstash/context7-mcp) [![MIT licensed](https://img.shields.io/npm/l/%40upstash%2Fcontext7-mcp)](./LICENSE)
 
@@ -23,12 +23,12 @@ Context7 MCP 直接从源头获取最新的、特定版本的文档和代码示�
 在你的提示中添加 `use context7`（或[设置规则](#添加规则)自动调用）：
 
 ```txt
-创建一个 Next.js 中间件，检查 cookies 中的有效 JWT，
+创建一个Next.js中间件，检查cookies中的有效JWT，
 并将未认证用户重定向到 `/login`。use context7
 ```
 
 ```txt
-配置 Cloudflare Worker 脚本，将 JSON API 响应
+配置Cloudflare Worker脚本，将JSON API响应
 缓存五分钟。use context7
 ```
 
@@ -176,7 +176,7 @@ OAuth 仅适用于远程 HTTP 连接。对于使用 stdio 传输的本地 MCP �
 如果你已经确切知道要使用哪个库，请将其 Context7 ID 添加到你的提示中。这样，Context7 MCP 服务器可以跳过库匹配步骤，直接获取文档。
 
 ```txt
-使用 Supabase 实现基本身份验证。use library /supabase/supabase 获取 API 和文档。
+使用Supabase实现基本身份验证。use library /supabase/supabase获取API和文档。
 ```
 
 斜杠语法告诉 MCP 工具确切要为哪个库加载文档。
@@ -186,7 +186,7 @@ OAuth 仅适用于远程 HTTP 连接。对于使用 stdio 传输的本地 MCP �
 要获取特定库版本的文档，只需在提示中提及版本：
 
 ```txt
-如何设置 Next.js 14 中间件？use context7
+如何设置Next.js 14中间件？use context7
 ```
 
 Context7 将自动匹配适当的版本。
@@ -195,25 +195,25 @@ Context7 将自动匹配适当的版本。
 
 Context7 MCP 提供以下 LLM 可使用的工具：
 
-- `resolve-library-id`：将通用库名称解析为 Context7 兼容的库 ID。
+- `resolve-library-id`：将通用库名称解析为Context7兼容的库ID。
   - `query`（必需）：用户的问题或任务（用于按相关性排名结果）
   - `libraryName`（必需）：要搜索的库名称
 
-- `query-docs`：使用 Context7 兼容的库 ID 获取库的文档。
-  - `libraryId`（必需）：精确的 Context7 兼容库 ID（例如 `/mongodb/docs`、`/vercel/next.js`）
+- `query-docs`：使用Context7兼容的库ID获取库的文档。
+  - `libraryId`（必需）：精确的Context7兼容库ID（例如 `/mongodb/docs`、`/vercel/next.js`）
   - `query`（必需）：用于获取相关文档的问题或任务
 
 ## 更多文档
 
-- [更多 MCP 客户端](https://context7.com/docs/resources/all-clients) - 30+ 客户端的安装说明
-- [添加库](https://context7.com/docs/adding-libraries) - 将你的库提交到 Context7
+- [更多 MCP 客户端](https://context7.com/docs/resources/all-clients) - 30+客户端的安装说明
+- [添加库](https://context7.com/docs/adding-libraries) - 将你的库提交到Context7
 - [故障排除](https://context7.com/docs/resources/troubleshooting) - 常见问题和解决方案
 - [API 参考](https://context7.com/docs/api-guide) - REST API 文档
-- [开发者指南](https://context7.com/docs/resources/developer) - 本地运行 Context7 MCP
+- [开发者指南](https://context7.com/docs/resources/developer) - 本地运行Context7 MCP
 
 ## 免责声明
 
-1- Context7 项目由社区贡献，虽然我们努力保持高质量，但我们不能保证所有库文档的准确性、完整性或安全性。Context7 中列出的项目由其各自所有者开发和维护，而非由 Context7 开发和维护。如果你遇到任何可疑、不当或潜在有害的内容，请使用项目页面上的"举报"按钮立即通知我们。我们认真对待所有举报，并将及时审查标记的内容，以维护我们平台的完整性和安全性。使用 Context7 即表示你承认自行承担风险。
+1- Context7项目由社区贡献，虽然我们努力保持高质量，但我们不能保证所有库文档的准确性、完整性或安全性。Context7中列出的项目由其各自所有者开发和维护，而非由Context7开发和维护。如果你遇到任何可疑、不当或潜在有害的内容，请使用项目页面上的"举报"按钮立即通知我们。我们认真对待所有举报，并将及时审查标记的内容，以维护我们平台的完整性和安全性。使用Context7即表示你承认自行承担风险。
 
 2- 本仓库托管 MCP 服务器的源代码。支持组件——API 后端、解析引擎和爬取引擎——是私有的，不包含在本仓库中。
 
