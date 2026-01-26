@@ -18,37 +18,37 @@
 
 ## ✅ 使用Context7
 
-Context7 MCP 直接从源头获取最新的、特定版本的文档和代码示例——并将它们直接放入你的提示中。
+Context7 MCP直接从源头获取最新的、特定版本的文档和代码示例——并将它们直接放入你的提示词中。
 
-在你的提示中添加 `use context7`（或[设置规则](#添加规则)自动调用）：
+在你的提示词中附上`用context7`（或[设置规则](#添加规则)自动调用）：
 
 ```txt
 创建一个Next.js中间件，检查cookies中的有效JWT，
-并将未认证用户重定向到 `/login`。use context7
+并将未认证用户重定向到 `/login`。用context7
 ```
 
 ```txt
 配置Cloudflare Worker脚本，将JSON API响应
-缓存五分钟。use context7
+缓存五分钟。用context7
 ```
 
-Context7 将最新的代码示例和文档直接获取到你的 LLM 上下文中。无需切换标签页，不会产生不存在的幻觉 API，不会生成过时的代码。
+Context7将最新的代码示例和文档直接获取到你的LLM上下文中。无需切换标签页，不会产生不存在的幻觉API，不会生成过时的代码。
 
 ## 安装
 
 > [!NOTE]
-> **推荐使用API密钥**：在 [context7.com/dashboard](https://context7.com/dashboard) 获取免费 API 密钥，可获得更高的请求速率限制。
+> **推荐使用API密钥**：在[context7.com/dashboard](https://context7.com/dashboard)s获取免费API密钥，使用秘钥后速率限制更高。
 
 <details>
 <summary><b>在Cursor中安装</b></summary>
 
 前往：`Settings` -> `Cursor Settings` -> `MCP` -> `Add new global MCP server`
 
-推荐将以下配置粘贴到你的 Cursor `~/.cursor/mcp.json` 文件中。你也可以通过在项目文件夹中创建 `.cursor/mcp.json` 在特定项目中安装。更多信息请参阅 [Cursor MCP 文档](https://docs.cursor.com/context/model-context-protocol)。
+推荐将以下配置粘贴到你的Cursor `~/.cursor/mcp.json` 文件中。你也可以通过在项目文件夹中创建 `.cursor/mcp.json` 在特定项目中安装。更多信息请参阅 [Cursor MCP 文档](https://docs.cursor.com/context/model-context-protocol)。
 
-> 自 Cursor 1.0 起，你可以点击下面的安装按钮进行即时一键安装。
+> 自Cursor 1.0起，你可以点击下面的安装按钮一键安装。
 
-#### Cursor 远程服务器连接
+#### Cursor远程服务器连接
 
 [![安装 MCP 服务器](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D)
 
@@ -67,7 +67,7 @@ Context7 将最新的代码示例和文档直接获取到你的 LLM 上下文中
 
 #### Cursor本地服务器连接
 
-[![安装 MCP 服务器](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJjb21tYW5kIjoibnB4IC15IEB1cHN0YXNoL2NvbnRleHQ3LW1jcCJ9)
+[![安装MCP服务器](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJjb21tYW5kIjoibnB4IC15IEB1cHN0YXNoL2NvbnRleHQ3LW1jcCJ9)
 
 ```json
 {
@@ -85,7 +85,7 @@ Context7 将最新的代码示例和文档直接获取到你的 LLM 上下文中
 <details>
 <summary><b>在Claude Code中安装</b></summary>
 
-运行以下命令。更多信息请参见 [Claude Code MCP 文档](https://code.claude.com/docs/en/mcp)。
+运行以下命令。更多信息请参见[Claude Code MCP文档](https://code.claude.com/docs/zh-CN/mcp)。
 
 #### Claude Code本地服务器连接
 
@@ -104,7 +104,7 @@ claude mcp add --header "CONTEXT7_API_KEY: YOUR_API_KEY" --transport http contex
 <details>
 <summary><b>在Opencode中安装</b></summary>
 
-将此内容添加到你的 Opencode 配置文件中。更多信息请参见 [Opencode MCP 文档](https://opencode.ai/docs/mcp-servers)。
+将此内容添加到你的Opencode配置文件中。更多信息请参见[Opencode MCP 文档](https://opencode.ai/docs/mcp-servers)。
 
 #### Opencode远程服务器连接
 
@@ -142,9 +142,9 @@ claude mcp add --header "CONTEXT7_API_KEY: YOUR_API_KEY" --transport http contex
 <details>
 <summary><b>OAuth认证</b></summary>
 
-Context7 MCP服务器支持OAuth 2.0认证，适用于实现了[MCP OAuth规范](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization)的 MCP 客户端。
+Context7 MCP服务器支持OAuth 2.0认证，适用于实现了[MCP OAuth规范](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization)的MCP客户端。
 
-要使用OAuth，请在客户端配置中将端点从 `/mcp` 更改为 `/mcp/oauth`：
+要使用OAuth，请在客户端配置中将端点从`/mcp`更改为`/mcp/oauth`：
 
 ```diff
 - "url": "https://mcp.context7.com/mcp"
@@ -155,11 +155,11 @@ OAuth仅适用于远程HTTP连接。对于使用stdio传输的本地MCP连接，
 
 </details>
 
-## 重要提示
+## 重点技巧
 
 ### 添加规则
 
-为避免每次都在提示中输入`use context7`，你可以在MCP客户端中添加规则，自动为代码相关问题调用 Context7：
+为避免每次都在提示中输入`用context7`，你可以在MCP客户端中添加规则，自动为代码相关问题调用 Context7：
 
 - **Cursor**：`Cursor Settings > Rules`
 - **Claude Code**：`CLAUDE.md`
@@ -173,27 +173,27 @@ OAuth仅适用于远程HTTP连接。对于使用stdio传输的本地MCP连接，
 
 ### 使用库 ID
 
-如果你已经确切知道要使用哪个库，请将其Context7 ID添加到你的提示中。这样，Context7 MCP 服务器可以跳过库匹配步骤，直接获取文档。
+如果你已经确切知道要使用哪个库，请将其Context7 ID添加到你的提示词中。这样，Context7 MCP服务器可以跳过库匹配步骤，直接检索文档。
 
 ```txt
-使用Supabase实现基本身份验证。use library /supabase/supabase获取API和文档。
+使用Supabase实现基本身份验证。用/supabase/supabase作为库ID获取API和文档。
 ```
 
-斜杠语法告诉MCP工具确切要为哪个库加载文档。
+斜杠语法明确告知MCP工具需加载文档的库。
 
 ### 指定版本
 
-要获取特定库版本的文档，只需在提示中提及版本：
+要获取特定库版本的文档，只需在提示词中提及版本：
 
 ```txt
-如何设置Next.js 14中间件？use context7
+如何设置Next.js 14中间件？用context7
 ```
 
 Context7 将自动匹配适当的版本。
 
 ## 可用工具
 
-Context7 MCP提供以下LLM可使用的工具：
+Context7 MCP提供以下工具供LLM使用：
 
 - `resolve-library-id`：将通用库名称解析为Context7兼容的库ID。
   - `query`（必需）：用户的问题或任务（用于按相关性排名结果）
@@ -229,12 +229,12 @@ Context7 MCP提供以下LLM可使用的工具：
 
 - [Better Stack："免费工具让Cursor智能10倍"](https://youtu.be/52FC3qObp9E)
 - [Cole Medin："这绝对是AI编码助手的最佳MCP服务器"](https://www.youtube.com/watch?v=G7gK8H6u7Rs)
-- [Income Stream Surfers："Context7 + SequentialThinking MCPs：这是AGI吗？"](https://www.youtube.com/watch?v=-ggvzyLpK6o)
+- [Income Stream Surfers："Context7 + SequentialThinking MCP：这是AGI吗？"](https://www.youtube.com/watch?v=-ggvzyLpK6o)
 - [Julian Goldie SEO："Context7：新的MCP AI代理更新"](https://www.youtube.com/watch?v=CTZm6fBYisc)
 - [JeredBlu："Context 7 MCP：即时获取文档 + VS Code设置"](https://www.youtube.com/watch?v=-ls0D-rtET4)
-- [Income Stream Surfers："Context7：将改变AI编码的新 MCP 服务器"](https://www.youtube.com/watch?v=PS-2Azb-C3M)
-- [AICodeKing："Context7 + Cline & RooCode：这个MCP服务器让 CLINE 效果提升 100 倍！"](https://www.youtube.com/watch?v=qZfENAPMnyo)
-- [Sean Kochel："5 个让编码更爽的 MCP 服务器（即插即用）"](https://www.youtube.com/watch?v=LqTQi8qexJM)
+- [Income Stream Surfers："Context7：将改变AI编码的新MCP服务器"](https://www.youtube.com/watch?v=PS-2Azb-C3M)
+- [AICodeKing："Context7 + Cline & RooCode：这个MCP服务器让CLINE效果提升100倍！"](https://www.youtube.com/watch?v=qZfENAPMnyo)
+- [Sean Kochel："5个让编码更爽的MCP服务器（即插即用）"](https://www.youtube.com/watch?v=LqTQi8qexJM)
 
 ## ⭐ Star 历史
 
