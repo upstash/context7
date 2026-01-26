@@ -168,7 +168,7 @@ OAuth仅适用于远程HTTP连接。对于使用stdio传输的本地MCP连接，
 **规则示例：**
 
 ```txt
-当我需要库或API文档、代码生成、设置或配置步骤时，始终使用Context7 MCP，无需我明确要求。
+无需我明确要求，当我需要库或API文档、生成代码、创建项目基架时或配置步骤时，始终使用Context7 MCP。
 ```
 
 ### 使用库 ID
@@ -200,7 +200,7 @@ Context7 MCP提供以下工具供LLM使用：
   - `libraryName`（必需）：要搜索的库名称
 
 - `query-docs`：使用Context7兼容的库ID获取库的文档。
-  - `libraryId`（必需）：精确的Context7兼容库ID（例如 `/mongodb/docs`、`/vercel/next.js`）
+  - `libraryId`（必需）：精确的Context7兼容的库ID（例如 `/mongodb/docs`、`/vercel/next.js`）
   - `query`（必需）：用于获取相关文档的问题或任务
 
 ## 更多文档
@@ -213,7 +213,7 @@ Context7 MCP提供以下工具供LLM使用：
 
 ## 免责声明
 
-1- Context7项目由社区贡献，虽然我们努力保持高质量，但我们不能保证所有库文档的准确性、完整性或安全性。Context7中列出的项目由其各自所有者开发和维护，而非由Context7开发和维护。如果你遇到任何可疑、不当或潜在有害的内容，请使用项目页面上的"举报"按钮立即通知我们。我们认真对待所有举报，并将及时审查标记的内容，以维护我们平台的完整性和安全性。使用Context7即表示你承认自行承担风险。
+1- Context7项目由社区贡献，虽然我们努力保持高质量，但我们不能保证所有库文档的准确性、完整性或安全性。Context7中列出的项目由其各自所有者开发和维护，而非由Context7开发和维护。如果你遇到任何可疑、不当或潜在有害的内容，请使用项目页面上的“Report”按钮立即通知我们。我们认真对待所有举报，并将及时审查被举报的内容，以维护我们平台的完整性和安全性。使用Context7即表示你承认自行承担风险。
 
 2- 本仓库托管MCP服务器的源代码。支持组件——API 后端、解析引擎和爬取引擎——是私有的，不包含在本仓库中。
 
@@ -231,7 +231,7 @@ Context7 MCP提供以下工具供LLM使用：
 - [Cole Medin："这绝对是AI编码助手的最佳MCP服务器"](https://www.youtube.com/watch?v=G7gK8H6u7Rs)
 - [Income Stream Surfers："Context7 + SequentialThinking MCP：这是AGI吗？"](https://www.youtube.com/watch?v=-ggvzyLpK6o)
 - [Julian Goldie SEO："Context7：新的MCP AI代理更新"](https://www.youtube.com/watch?v=CTZm6fBYisc)
-- [JeredBlu："Context 7 MCP：即时获取文档 + VS Code设置"](https://www.youtube.com/watch?v=-ls0D-rtET4)
+- [JeredBlu："Context 7 MCP：即时获取文档 + VS Code配置方法"](https://www.youtube.com/watch?v=-ls0D-rtET4)
 - [Income Stream Surfers："Context7：将改变AI编码的新MCP服务器"](https://www.youtube.com/watch?v=PS-2Azb-C3M)
 - [AICodeKing："Context7 + Cline & RooCode：这个MCP服务器让CLINE效果提升100倍！"](https://www.youtube.com/watch?v=qZfENAPMnyo)
 - [Sean Kochel："5个让编码更爽的MCP服务器（即插即用）"](https://www.youtube.com/watch?v=LqTQi8qexJM)
