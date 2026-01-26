@@ -138,7 +138,7 @@ export async function promptForInstallTargets(options: AddOptions): Promise<Inst
     selectedIdes = await checkbox({
       message: `Which clients do you want to install the skill(s) for?\n${pc.dim(baseDir)}`,
       choices: ideChoices,
-      required: true,
+      validate: (selected) => selected.length > 0 || "Please select at least one client",
     });
   } catch {
     return null;
