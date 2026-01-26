@@ -2,7 +2,7 @@
 
 [![安装 MCP 服务器](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D)
 
-# Context7 MCP - 为所有Prompt获取最新文档
+# Context7 MCP - 最新文档赋能每个提示词
 
 [![Website](https://img.shields.io/badge/Website-context7.com-blue)](https://context7.com) [![smithery badge](https://smithery.ai/badge/@upstash/context7-mcp)](https://smithery.ai/server/@upstash/context7-mcp) [![NPM Version](https://img.shields.io/npm/v/%40upstash%2Fcontext7-mcp?color=red)](https://www.npmjs.com/package/@upstash/context7-mcp) [![MIT licensed](https://img.shields.io/npm/l/%40upstash%2Fcontext7-mcp)](./LICENSE)
 
@@ -159,7 +159,7 @@ OAuth仅适用于远程HTTP连接。对于使用stdio传输的本地MCP连接，
 
 ### 添加规则
 
-为避免每次都在提示中输入`用context7`，你可以在MCP客户端中添加规则，自动为代码相关问题调用 Context7：
+为避免每次都在提示词中输入`用context7`，你可以在MCP客户端中添加规则，自动为代码相关问题调用 Context7：
 
 - **Cursor**：`Cursor Settings > Rules`
 - **Claude Code**：`CLAUDE.md`
