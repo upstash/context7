@@ -242,6 +242,7 @@ async function installCommand(
           message: "Select skills:",
           choices,
           pageSize: 15,
+          loop: false,
           theme: {
             style: {
               renderSelectedChoices: (selected: Array<{ name?: string; value: unknown }>) =>
@@ -390,6 +391,7 @@ async function searchCommand(query: string): Promise<void> {
       message: "Select skills to install:",
       choices,
       pageSize: 15,
+      loop: false,
       theme: {
         style: {
           renderSelectedChoices: (selected: Array<{ name?: string; value: unknown }>) =>
