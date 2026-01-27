@@ -1,6 +1,5 @@
 import { Command } from "commander";
 import pc from "picocolors";
-import { checkbox } from "@inquirer/prompts";
 import ora from "ora";
 import { readdir, rm } from "fs/promises";
 import { join } from "path";
@@ -20,6 +19,7 @@ import {
   getTargetDirs,
   getTargetDirFromSelection,
 } from "../utils/ide.js";
+import { checkboxWithHover } from "../utils/prompts.js";
 import { installSkillFiles, symlinkSkill } from "../utils/installer.js";
 import type {
   Skill,
@@ -240,17 +240,11 @@ async function installCommand(
       log.blank();
 
       try {
-        selectedSkills = await checkbox({
+        selectedSkills = await checkboxWithHover({
           message: "Select skills:",
           choices,
           pageSize: 15,
           loop: false,
-          theme: {
-            style: {
-              renderSelectedChoices: (selected: Array<{ name?: string; value: unknown }>) =>
-                selected.map((c) => (c.value as { name: string }).name).join(", "),
-            },
-          },
         });
       } catch {
         log.warn("Installation cancelled");
@@ -393,17 +387,11 @@ async function searchCommand(query: string): Promise<void> {
 
   let selectedSkills: SkillSearchResult[];
   try {
-    selectedSkills = await checkbox({
+    selectedSkills = await checkboxWithHover({
       message: "Select skills to install:",
       choices,
       pageSize: 15,
       loop: false,
-      theme: {
-        style: {
-          renderSelectedChoices: (selected: Array<{ name?: string; value: unknown }>) =>
-            selected.map((c) => (c.value as SkillSearchResult).name).join(", "),
-        },
-      },
     });
   } catch {
     log.warn("Installation cancelled");
