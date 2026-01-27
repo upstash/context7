@@ -243,6 +243,7 @@ async function installCommand(
           choices,
           pageSize: 15,
           validate: (selected) => selected.length > 0 || "Please select at least one skill",
+          loop: false,
           theme: {
             style: {
               renderSelectedChoices: (selected: Array<{ name?: string; value: unknown }>) =>
@@ -392,6 +393,7 @@ async function searchCommand(query: string): Promise<void> {
       choices,
       pageSize: 15,
       validate: (selected) => selected.length > 0 || "Please select at least one skill",
+      loop: false,
       theme: {
         style: {
           renderSelectedChoices: (selected: Array<{ name?: string; value: unknown }>) =>

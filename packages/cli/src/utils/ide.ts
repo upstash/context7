@@ -139,6 +139,7 @@ export async function promptForInstallTargets(options: AddOptions): Promise<Inst
       message: `Which clients do you want to install the skill(s) for?\n${pc.dim(baseDir)}`,
       choices: ideChoices,
       validate: (selected) => selected.length > 0 || "Please select at least one client",
+      loop: false,
     });
   } catch {
     return null;
@@ -175,6 +176,7 @@ export async function promptForSingleTarget(
       message: "Which client?",
       choices: ideChoices,
       default: DEFAULT_CONFIG.defaultIde,
+      loop: false,
     });
   } catch {
     return null;
@@ -198,6 +200,7 @@ export async function promptForSingleTarget(
           },
         ],
         default: DEFAULT_CONFIG.defaultScope,
+        loop: false,
       });
     } catch {
       return null;
