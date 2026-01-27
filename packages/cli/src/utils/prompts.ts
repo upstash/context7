@@ -4,6 +4,37 @@ import readline from "readline";
 
 type CheckboxConfig<T> = Parameters<typeof checkbox<T>>[0];
 type CheckboxChoice<T> = Exclude<CheckboxConfig<T>["choices"][number], Separator | string>;
+
+/**
+ * Creates a clickable terminal hyperlink using OSC 8 escape sequence.
+ */
+export function terminalLink(text: string, url: string, color?: (s: string) => string): string {
+  const colorFn = color ?? ((s: string) => s);
+  return `\x1b]8;;${url}\x07${colorFn(text)}\x1b]8;;\x07`;
+}
+
+/**
+ * Formats install count with rounded display showing highest round number.
+ * Examples: 5→"5", 15→"10+", 67→"50+", 150→"100+", 350→"300+", 1500→"1k+"
+ */
+export function formatInstallCount(count: number | undefined): string {
+  if (count === undefined || count === 0) return "";
+
+  let display: string;
+  if (count >= 1000) {
+    display = `${Math.floor(count / 1000)}k+`;
+  } else if (count >= 100) {
+    const hundreds = Math.floor(count / 100) * 100;
+    display = `${hundreds}+`;
+  } else if (count >= 10) {
+    const tens = Math.floor(count / 10) * 10;
+    display = `${tens}+`;
+  } else {
+    display = String(count);
+  }
+
+  return `\x1b[38;5;214m↓${display}\x1b[0m`;
+}
 export async function checkboxWithHover<T extends { name: string }>(
   config: CheckboxConfig<T>
 ): Promise<T[]> {
@@ -32,6 +63,7 @@ export async function checkboxWithHover<T extends { name: string }>(
       ...config.theme,
       style: {
         ...config.theme?.style,
+        highlight: (text: string) => pc.green(text),
         renderSelectedChoices: (
           selected: CheckboxChoice<T>[],
           _allChoices: CheckboxChoice<T>[]

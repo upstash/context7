@@ -19,7 +19,7 @@ import {
   getTargetDirs,
   getTargetDirFromSelection,
 } from "../utils/ide.js";
-import { checkboxWithHover } from "../utils/prompts.js";
+import { checkboxWithHover, terminalLink, formatInstallCount } from "../utils/prompts.js";
 import { installSkillFiles, symlinkSkill } from "../utils/installer.js";
 import type {
   Skill,
@@ -222,18 +222,30 @@ async function installCommand(
     if (options.all || data.skills.length === 1) {
       selectedSkills = skillsWithRepo;
     } else {
-      const maxNameLen = Math.min(25, Math.max(...data.skills.map((s) => s.name.length)));
       const indexWidth = data.skills.length.toString().length;
+      const maxNameLen = Math.max(...data.skills.map((s) => s.name.length));
       const choices = skillsWithRepo.map((s, index) => {
         const indexStr = pc.dim(`${(index + 1).toString().padStart(indexWidth)}.`);
         const paddedName = s.name.padEnd(maxNameLen);
-        const desc = s.description?.trim()
-          ? s.description.slice(0, 60) + (s.description.length > 60 ? "..." : "")
-          : "";
+        const installs = formatInstallCount(s.installCount);
+
+        // Build metadata panel shown when item is hovered
+        const skillUrl = `https://context7.com/skills${s.project}/${s.name}`;
+        const skillLink = terminalLink(s.name, skillUrl, pc.white);
+        const repoLink = terminalLink(s.project, `https://github.com${s.project}`, pc.white);
+        const metadataLines = [
+          pc.dim("─".repeat(50)),
+          "",
+          `${pc.yellow("Skill:")}       ${skillLink}`,
+          `${pc.yellow("Repo:")}        ${repoLink}`,
+          `${pc.yellow("Description:")}`,
+          pc.white(s.description || "No description"),
+        ];
 
         return {
-          name: desc ? `${indexStr} ${paddedName} ${pc.dim(desc)}` : `${indexStr} ${s.name}`,
+          name: installs ? `${indexStr} ${paddedName} ${installs}` : `${indexStr} ${paddedName}`,
           value: s,
+          description: metadataLines.join("\n"),
         };
       });
 
@@ -365,21 +377,33 @@ async function searchCommand(query: string): Promise<void> {
 
   spinner.succeed(`Found ${data.results.length} skill(s)`);
 
-  const maxNameLen = Math.min(25, Math.max(...data.results.map((s) => s.name.length)));
   const indexWidth = data.results.length.toString().length;
+  const maxNameLen = Math.max(...data.results.map((s) => s.name.length));
   const choices = data.results.map((s, index) => {
     const indexStr = pc.dim(`${(index + 1).toString().padStart(indexWidth)}.`);
     const paddedName = s.name.padEnd(maxNameLen);
-    const repoName = pc.dim(`(${s.project})`);
-    const desc = s.description?.trim()
-      ? s.description.slice(0, 50) + (s.description.length > 50 ? "..." : "")
-      : "";
+    const installs = formatInstallCount(s.installCount);
+
+    // Build metadata panel shown when item is hovered
+    const skillLink = terminalLink(
+      s.name,
+      `https://context7.com/skills${s.project}/${s.name}`,
+      pc.white
+    );
+    const repoLink = terminalLink(s.project, `https://github.com${s.project}`, pc.white);
+    const metadataLines = [
+      pc.dim("─".repeat(50)),
+      "",
+      `${pc.yellow("Skill:")}       ${skillLink}`,
+      `${pc.yellow("Repo:")}        ${repoLink}`,
+      `${pc.yellow("Description:")}`,
+      pc.white(s.description || "No description"),
+    ];
 
     return {
-      name: desc
-        ? `${indexStr} ${paddedName} ${repoName} ${pc.dim(desc)}`
-        : `${indexStr} ${paddedName} ${repoName}`,
+      name: installs ? `${indexStr} ${paddedName} ${installs}` : `${indexStr} ${paddedName}`,
       value: s,
+      description: metadataLines.join("\n"),
     };
   });
 
