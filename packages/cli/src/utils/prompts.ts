@@ -1,19 +1,21 @@
 import pc from "picocolors";
-import { checkbox } from "@inquirer/prompts";
+import { checkbox, type Separator } from "@inquirer/prompts";
 import readline from "readline";
 
+type CheckboxConfig<T> = Parameters<typeof checkbox<T>>[0];
+type CheckboxChoice<T> = Exclude<CheckboxConfig<T>["choices"][number], Separator | string>;
 export async function checkboxWithHover<T extends { name: string }>(
-  config: Parameters<typeof checkbox<T>>[0]
+  config: CheckboxConfig<T>
 ): Promise<T[]> {
   const choices = config.choices.filter(
-    (c): c is { value: T; name?: string } =>
+    (c): c is CheckboxChoice<T> =>
       typeof c === "object" && c !== null && !("type" in c && c.type === "separator")
   );
   const values = choices.map((c) => c.value);
   const totalItems = values.length;
   let cursorPosition = 0;
 
-  const keypressHandler = (_str: string, key: readline.Key) => {
+  const keypressHandler = (_str: string | undefined, key: readline.Key) => {
     if (key.name === "up" && cursorPosition > 0) {
       cursorPosition--;
     } else if (key.name === "down" && cursorPosition < totalItems - 1) {
@@ -31,13 +33,13 @@ export async function checkboxWithHover<T extends { name: string }>(
       style: {
         ...config.theme?.style,
         renderSelectedChoices: (
-          selected: Array<{ name?: string; value: unknown }>,
-          _allChoices: Array<{ name?: string; value: unknown }>
+          selected: CheckboxChoice<T>[],
+          _allChoices: CheckboxChoice<T>[]
         ): string => {
           if (selected.length === 0) {
             return pc.dim(values[cursorPosition].name);
           }
-          return selected.map((c) => (c.value as T).name).join(", ");
+          return selected.map((c) => c.value.name).join(", ");
         },
       },
     },
