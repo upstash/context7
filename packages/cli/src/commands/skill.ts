@@ -19,6 +19,8 @@ import {
   promptForSingleTarget,
   getTargetDirs,
   getTargetDirFromSelection,
+  getSelectedIdes,
+  hasExplicitIdeOption,
 } from "../utils/ide.js";
 import { installSkillFiles, symlinkSkill } from "../utils/installer.js";
 import type {
@@ -29,7 +31,9 @@ import type {
   RemoveOptions,
   InstallTargets,
 } from "../types.js";
-import { IDE_NAMES } from "../types.js";
+import { IDE_NAMES, IDE_PATHS, IDE_GLOBAL_PATHS } from "../types.js";
+import type { IDE, Scope } from "../types.js";
+import { homedir } from "os";
 
 function logInstallSummary(
   targets: InstallTargets,
@@ -495,32 +499,46 @@ async function searchCommand(query: string): Promise<void> {
 }
 
 async function listCommand(options: ListOptions): Promise<void> {
-  const target = await promptForSingleTarget(options);
-  if (!target) {
-    log.warn("Cancelled");
+  const scope: Scope = options.global ? "global" : "project";
+  const pathMap = scope === "global" ? IDE_GLOBAL_PATHS : IDE_PATHS;
+  const baseDir = scope === "global" ? homedir() : process.cwd();
+
+  const idesToCheck: IDE[] = hasExplicitIdeOption(options)
+    ? getSelectedIdes(options)
+    : (Object.keys(IDE_NAMES) as IDE[]);
+
+  const results: { ide: IDE; skills: string[] }[] = [];
+
+  for (const ide of idesToCheck) {
+    const skillsDir = join(baseDir, pathMap[ide]);
+    try {
+      const entries = await readdir(skillsDir, { withFileTypes: true });
+      const skillFolders = entries
+        .filter((e) => e.isDirectory() || e.isSymbolicLink())
+        .map((e) => e.name);
+      if (skillFolders.length > 0) {
+        results.push({ ide, skills: skillFolders });
+      }
+    } catch {
+      // Directory doesn't exist, skip
+    }
+  }
+
+  if (results.length === 0) {
+    log.warn("No skills installed");
     return;
   }
 
-  const skillsDir = getTargetDirFromSelection(target.ide, target.scope);
+  log.blank();
 
-  try {
-    const entries = await readdir(skillsDir, { withFileTypes: true });
-    const skillFolders = entries.filter((e) => e.isDirectory() || e.isSymbolicLink());
-
-    if (skillFolders.length === 0) {
-      log.warn(`No skills installed in ${skillsDir}`);
-      return;
+  for (const { ide, skills } of results) {
+    const ideName = IDE_NAMES[ide];
+    const path = pathMap[ide];
+    log.plain(`${pc.bold(ideName)} ${pc.dim(path)}`);
+    for (const skill of skills) {
+      log.plain(`  ${pc.green(skill)}`);
     }
-
-    log.info(`\n◆ Installed skills (${skillsDir}):`);
-
-    for (const folder of skillFolders) {
-      log.item(folder.name);
-    }
-
-    log.success(`${skillFolders.length} skill(s) installed\n`);
-  } catch {
-    log.warn(`No skills directory found at ${skillsDir}`);
+    log.blank();
   }
 }
 
