@@ -223,14 +223,16 @@ async function installCommand(
       selectedSkills = skillsWithRepo;
     } else {
       const maxNameLen = Math.min(25, Math.max(...data.skills.map((s) => s.name.length)));
-      const choices = skillsWithRepo.map((s) => {
+      const indexWidth = data.skills.length.toString().length;
+      const choices = skillsWithRepo.map((s, index) => {
+        const indexStr = pc.dim(`${(index + 1).toString().padStart(indexWidth)}.`);
         const paddedName = s.name.padEnd(maxNameLen);
         const desc = s.description?.trim()
           ? s.description.slice(0, 60) + (s.description.length > 60 ? "..." : "")
           : "";
 
         return {
-          name: desc ? `${paddedName} ${pc.dim(desc)}` : s.name,
+          name: desc ? `${indexStr} ${paddedName} ${pc.dim(desc)}` : `${indexStr} ${s.name}`,
           value: s,
         };
       });
@@ -370,7 +372,9 @@ async function searchCommand(query: string): Promise<void> {
   spinner.succeed(`Found ${data.results.length} skill(s)`);
 
   const maxNameLen = Math.min(25, Math.max(...data.results.map((s) => s.name.length)));
-  const choices = data.results.map((s) => {
+  const indexWidth = data.results.length.toString().length;
+  const choices = data.results.map((s, index) => {
+    const indexStr = pc.dim(`${(index + 1).toString().padStart(indexWidth)}.`);
     const paddedName = s.name.padEnd(maxNameLen);
     const repoName = pc.dim(`(${s.project})`);
     const desc = s.description?.trim()
@@ -378,7 +382,9 @@ async function searchCommand(query: string): Promise<void> {
       : "";
 
     return {
-      name: desc ? `${paddedName} ${repoName} ${pc.dim(desc)}` : `${paddedName} ${repoName}`,
+      name: desc
+        ? `${indexStr} ${paddedName} ${repoName} ${pc.dim(desc)}`
+        : `${indexStr} ${paddedName} ${repoName}`,
       value: s,
     };
   });
