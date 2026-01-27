@@ -140,6 +140,7 @@ export async function promptForInstallTargets(options: AddOptions): Promise<Inst
       choices: ideChoices,
       required: true,
       loop: false,
+      theme: { style: { highlight: (text: string) => pc.green(text) } },
     });
   } catch {
     return null;
@@ -177,6 +178,7 @@ export async function promptForSingleTarget(
       choices: ideChoices,
       default: DEFAULT_CONFIG.defaultIde,
       loop: false,
+      theme: { style: { highlight: (text: string) => pc.green(text) } },
     });
   } catch {
     return null;
@@ -201,6 +203,7 @@ export async function promptForSingleTarget(
         ],
         default: DEFAULT_CONFIG.defaultScope,
         loop: false,
+        theme: { style: { highlight: (text: string) => pc.green(text) } },
       });
     } catch {
       return null;
