@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.5
+
+### Improvements
+- Improved skill selection UX with metadata panel showing Skill, Repo, and Description
+- Clickable links in metadata (Skill → context7.com, Repo → GitHub)
+- Display install counts next to skill names (e.g., `↓100+`, `↓50+`)
+- Numbered list items for easier reference
+- Select hovered item on Enter without needing to Space-select first
+- Green highlight for hovered row
+- Fix circular scrolling - navigation now stops at list boundaries
+
 ## 0.1.4
 
 - Add prompt injection detection with warning messages for blocked skills
