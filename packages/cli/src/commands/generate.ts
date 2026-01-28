@@ -159,16 +159,6 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
   }
 
   log.blank();
-  console.log(
-    pc.green(
-      `✓ Selected ${selectedLibraries.length} ${selectedLibraries.length === 1 ? "library" : "libraries"}:`
-    )
-  );
-  for (const lib of selectedLibraries) {
-    const projectId = lib.id.startsWith("/") ? lib.id.slice(1) : lib.id;
-    console.log(pc.dim(`  • ${lib.title} (${projectId})`));
-  }
-  log.blank();
 
   const questionsSpinner = ora("Preparing a few quick questions...").start();
   const librariesInput = selectedLibraries.map((lib) => ({ id: lib.id, name: lib.title }));
@@ -292,6 +282,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
       libraries: librariesInput,
       answers,
       feedback,
+      previousContent: feedback && generatedContent ? generatedContent : undefined,
     };
 
     queryLog.length = 0;
@@ -363,7 +354,6 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
           { name: `${pc.green("✓")} Install skill`, value: "install" },
           ...(hasMoreLines ? [{ name: `${pc.blue("⤢")} View full skill`, value: "expand" }] : []),
           { name: `${pc.yellow("✎")} Request changes`, value: "feedback" },
-          { name: `${pc.cyan("↻")} Regenerate completely`, value: "regenerate" },
           { name: `${pc.red("✕")} Cancel`, value: "cancel" },
         ];
 
@@ -386,15 +376,12 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
         return;
       } else if (action === "feedback") {
         feedback = await input({
-          message: "What changes would you like?",
+          message: "What changes would you like? (press Enter to skip)",
         });
 
         if (!feedback.trim()) {
           feedback = undefined;
         }
-        log.blank();
-      } else if (action === "regenerate") {
-        feedback = undefined;
         log.blank();
       }
     } catch {

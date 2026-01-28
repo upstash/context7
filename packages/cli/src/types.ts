@@ -90,6 +90,7 @@ export interface StructuredGenerateInput {
   libraries: LibraryInput[];
   answers: SkillAnswer[];
   feedback?: string;
+  previousContent?: string;
 }
 
 export interface ToolResultSnippet {
