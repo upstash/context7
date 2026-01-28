@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.0
+
+### Features
+- AI-powered skill generation with `skills generate` command
+- Library search and selection with project ID disambiguation
+- Clarifying questions to focus generated skills
+- Real-time query progress display with documentation snippets
+- Feedback loop for iterating on generated skills
+- Weekly generation quota management (free: 6, pro: 10)
+- OAuth 2.0 authentication with `login`, `logout`, and `whoami` commands
+
+### Improvements
+- Simplify `skills list` command to show all detected IDE skill directories without prompts
+
 ## 0.1.5
 
 ### Improvements
