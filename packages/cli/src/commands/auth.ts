@@ -52,7 +52,9 @@ async function loginCommand(options: { browser: boolean }): Promise<void> {
     const expired = isTokenExpired(existingTokens);
     if (!expired || existingTokens.refresh_token) {
       console.log(pc.yellow("You are already logged in."));
-      console.log(pc.dim("Run 'ctx7 logout' first if you want to log in with a different account."));
+      console.log(
+        pc.dim("Run 'ctx7 logout' first if you want to log in with a different account.")
+      );
       return;
     }
     clearTokens();
@@ -142,37 +144,20 @@ async function whoamiCommand(): Promise<void> {
     return;
   }
 
+  console.log(pc.green("Logged in"));
+
   try {
     const userInfo = await fetchUserInfo(tokens.access_token);
-    console.log(pc.green("Logged in"));
-    console.log("");
     if (userInfo.name) {
-      console.log(`  ${pc.dim("Name:")}  ${userInfo.name}`);
+      console.log(`${pc.dim("Name:".padEnd(9))}${userInfo.name}`);
     }
     if (userInfo.email) {
-      console.log(`  ${pc.dim("Email:")} ${userInfo.email}`);
+      console.log(`${pc.dim("Email:".padEnd(9))}${userInfo.email}`);
     }
-    printTokenExpiration(tokens);
   } catch {
     if (isTokenExpired(tokens) && !tokens.refresh_token) {
-      console.log(pc.yellow("Session expired."));
-      console.log(pc.dim("Run 'ctx7 login' to authenticate."));
-    } else {
-      console.log(pc.green("Logged in"));
-      printTokenExpiration(tokens);
+      console.log(pc.dim("(Session may be expired - run 'ctx7 login' to refresh)"));
     }
-  }
-}
-
-function printTokenExpiration(tokens: { expires_at?: number }): void {
-  if (!tokens.expires_at) return;
-
-  const expiresIn = tokens.expires_at - Date.now();
-  if (expiresIn > 0) {
-    const minutes = Math.floor(expiresIn / 60000);
-    const hours = Math.floor(minutes / 60);
-    const timeStr = hours > 0 ? `${hours}h ${minutes % 60}m` : `${minutes}m`;
-    console.log(`  ${pc.dim("Expires:")} in ${timeStr}`);
   }
 }
 
