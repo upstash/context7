@@ -119,23 +119,33 @@ function getClientIp(req: express.Request): string | undefined {
   return undefined;
 }
 
-function createServer(): McpServer {
-  const server = new McpServer(
-    {
-      name: "Context7",
-      version: SERVER_VERSION,
-    },
-    {
-      instructions:
-        "Use this server to retrieve up-to-date documentation and code examples for any library.",
-    }
-  );
+const server = new McpServer(
+  {
+    name: "Context7",
+    version: SERVER_VERSION,
+  },
+  {
+    instructions:
+      "Use this server to retrieve up-to-date documentation and code examples for any library.",
+  }
+);
 
-  server.registerTool(
-    "resolve-library-id",
-    {
-      title: "Resolve Context7 Library ID",
-      description: `Resolves a package/product name to a Context7-compatible library ID and returns matching libraries.
+// Capture client info from MCP initialize handshake
+server.server.oninitialized = () => {
+  const clientVersion = server.server.getClientVersion();
+  if (clientVersion) {
+    stdioClientInfo = {
+      ide: clientVersion.name,
+      version: clientVersion.version,
+    };
+  }
+};
+
+server.registerTool(
+  "resolve-library-id",
+  {
+    title: "Resolve Context7 Library ID",
+    description: `Resolves a package/product name to a Context7-compatible library ID and returns matching libraries.
 
 You MUST call this function before 'query-docs' to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
@@ -157,39 +167,39 @@ Response Format:
 For ambiguous queries, request clarification before proceeding with a best-guess match.
 
 IMPORTANT: Do not call this tool more than 3 times per question. If you cannot find what you need after 3 calls, use the best result you have.`,
-      inputSchema: {
-        query: z
-          .string()
-          .describe(
-            "The user's original question or task. This is used to rank library results by relevance to what the user is trying to accomplish. IMPORTANT: Do not include any sensitive or confidential information such as API keys, passwords, credentials, or personal data in your query."
-          ),
-        libraryName: z
-          .string()
-          .describe("Library name to search for and retrieve a Context7-compatible library ID."),
-      },
-      annotations: {
-        readOnlyHint: true,
-      },
+    inputSchema: {
+      query: z
+        .string()
+        .describe(
+          "The user's original question or task. This is used to rank library results by relevance to what the user is trying to accomplish. IMPORTANT: Do not include any sensitive or confidential information such as API keys, passwords, credentials, or personal data in your query."
+        ),
+      libraryName: z
+        .string()
+        .describe("Library name to search for and retrieve a Context7-compatible library ID."),
     },
-    async ({ query, libraryName }) => {
-      const searchResponse = await searchLibraries(query, libraryName, getClientContext());
+    annotations: {
+      readOnlyHint: true,
+    },
+  },
+  async ({ query, libraryName }) => {
+    const searchResponse = await searchLibraries(query, libraryName, getClientContext());
 
-      if (!searchResponse.results || searchResponse.results.length === 0) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: searchResponse.error
-                ? searchResponse.error
-                : "No libraries found matching the provided name.",
-            },
-          ],
-        };
-      }
+    if (!searchResponse.results || searchResponse.results.length === 0) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: searchResponse.error
+              ? searchResponse.error
+              : "No libraries found matching the provided name.",
+          },
+        ],
+      };
+    }
 
-      const resultsText = formatSearchResults(searchResponse);
+    const resultsText = formatSearchResults(searchResponse);
 
-      const responseText = `Available Libraries:
+    const responseText = `Available Libraries:
 
 Each result includes:
 - Library ID: Context7-compatible identifier (format: /org/project)
@@ -206,58 +216,55 @@ For best results, select libraries based on name match, source reputation, snipp
 
 ${resultsText}`;
 
-      return {
-        content: [
-          {
-            type: "text",
-            text: responseText,
-          },
-        ],
-      };
-    }
-  );
+    return {
+      content: [
+        {
+          type: "text",
+          text: responseText,
+        },
+      ],
+    };
+  }
+);
 
-  server.registerTool(
-    "query-docs",
-    {
-      title: "Query Documentation",
-      description: `Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
+server.registerTool(
+  "query-docs",
+  {
+    title: "Query Documentation",
+    description: `Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
 
 You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
 IMPORTANT: Do not call this tool more than 3 times per question. If you cannot find what you need after 3 calls, use the best information you have.`,
-      inputSchema: {
-        libraryId: z
-          .string()
-          .describe(
-            "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
-          ),
-        query: z
-          .string()
-          .describe(
-            "The question or task you need help with. Be specific and include relevant details. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad: 'auth' or 'hooks'. IMPORTANT: Do not include any sensitive or confidential information such as API keys, passwords, credentials, or personal data in your query."
-          ),
-      },
-      annotations: {
-        readOnlyHint: true,
-      },
+    inputSchema: {
+      libraryId: z
+        .string()
+        .describe(
+          "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
+        ),
+      query: z
+        .string()
+        .describe(
+          "The question or task you need help with. Be specific and include relevant details. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad: 'auth' or 'hooks'. IMPORTANT: Do not include any sensitive or confidential information such as API keys, passwords, credentials, or personal data in your query."
+        ),
     },
-    async ({ query, libraryId }) => {
-      const response = await fetchLibraryContext({ query, libraryId }, getClientContext());
+    annotations: {
+      readOnlyHint: true,
+    },
+  },
+  async ({ query, libraryId }) => {
+    const response = await fetchLibraryContext({ query, libraryId }, getClientContext());
 
-      return {
-        content: [
-          {
-            type: "text",
-            text: response.data,
-          },
-        ],
-      };
-    }
-  );
-
-  return server;
-}
+    return {
+      content: [
+        {
+          type: "text",
+          text: response.data,
+        },
+      ],
+    };
+  }
+);
 
 async function main() {
   const transportType = TRANSPORT_TYPE;
@@ -360,16 +367,13 @@ async function main() {
           transport: "http",
         };
 
-        const server = createServer();
-
         const transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: undefined,
           enableJsonResponse: true,
         });
 
-        res.on("close", async () => {
-          await transport.close();
-          await server.close();
+        res.on("close", () => {
+          transport.close();
         });
 
         await requestContext.run(context, async () => {
@@ -473,18 +477,6 @@ async function main() {
     startServer(initialPort);
   } else {
     stdioApiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
-    const server = createServer();
-
-    server.server.oninitialized = () => {
-      const clientVersion = server.server.getClientVersion();
-      if (clientVersion) {
-        stdioClientInfo = {
-          ide: clientVersion.name,
-          version: clientVersion.version,
-        };
-      }
-    };
-
     const transport = new StdioServerTransport();
 
     await server.connect(transport);

@@ -720,13 +720,32 @@ See [JetBrains AI Assistant Documentation](https://www.jetbrains.com/help/ai-ass
 
 </Accordion>
 
-<Accordion title="Qwen Coder">
+<Accordion title="Qwen Code">
 
-See [Qwen Coder MCP Configuration](https://qwenlm.github.io/qwen-code-docs/en/tools/mcp-server/#how-to-set-up-your-mcp-server) for details.
+See [Qwen Code MCP Configuration](https://qwenlm.github.io/qwen-code-docs/en/users/features/mcp/) for details.
 
-1. Open the Qwen Coder settings file at `~/.qwen/settings.json`
+### Using CLI Command
+
+By default, configurations are saved to the project scope (`.qwen/settings.json`). Use the `--scope user` flag to save to the user scope (`~/.qwen/settings.json`) instead.
+
+#### Remote Server Connection
+```sh
+qwen mcp add --transport http context7 https://mcp.context7.com/mcp \
+  --header "CONTEXT7_API_KEY: YOUR_API_KEY" \
+  --header "Accept: application/json, text/event-stream"
+```
+
+#### Local Server Connection
+```sh
+qwen mcp add context7 npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+```
+
+### Manual Configuration
+
+1. Open the Qwen Code settings file at `~/.qwen/settings.json` (user scope) or `.qwen/settings.json` (project scope)
 2. Add the following to the `mcpServers` object:
 
+#### Remote Server Connection
 ```json
 {
   "mcpServers": {
@@ -741,8 +760,7 @@ See [Qwen Coder MCP Configuration](https://qwenlm.github.io/qwen-code-docs/en/to
 }
 ```
 
-Or, for a local server:
-
+#### Local Server Connection
 ```json
 {
   "mcpServers": {

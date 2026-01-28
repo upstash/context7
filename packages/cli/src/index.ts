@@ -2,6 +2,7 @@ import { Command } from "commander";
 import pc from "picocolors";
 import figlet from "figlet";
 import { registerSkillCommands, registerSkillAliases } from "./commands/skill.js";
+import { registerAuthCommands, setAuthBaseUrl } from "./commands/auth.js";
 import { setBaseUrl } from "./utils/api.js";
 import { VERSION } from "./constants.js";
 
@@ -21,6 +22,7 @@ program
     const opts = thisCommand.opts();
     if (opts.baseUrl) {
       setBaseUrl(opts.baseUrl);
+      setAuthBaseUrl(opts.baseUrl);
     }
   })
   .addHelpText(
@@ -49,6 +51,7 @@ Visit ${brand.primary("https://context7.com")} to browse skills
 
 registerSkillCommands(program);
 registerSkillAliases(program);
+registerAuthCommands(program);
 
 program.action(() => {
   console.log("");
