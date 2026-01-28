@@ -11,6 +11,7 @@ import {
   loadTokens,
   clearTokens,
   buildAuthorizationUrl,
+  isTokenExpired,
 } from "../utils/auth.js";
 
 const CLI_CLIENT_ID = "2veBSofhicRBguUT";
@@ -48,9 +49,13 @@ export function registerAuthCommands(program: Command): void {
 async function loginCommand(options: { browser: boolean }): Promise<void> {
   const existingTokens = loadTokens();
   if (existingTokens) {
-    console.log(pc.yellow("You are already logged in."));
-    console.log(pc.dim("Run 'ctx7 logout' first if you want to log in with a different account."));
-    return;
+    const expired = isTokenExpired(existingTokens);
+    if (!expired || existingTokens.refresh_token) {
+      console.log(pc.yellow("You are already logged in."));
+      console.log(pc.dim("Run 'ctx7 logout' first if you want to log in with a different account."));
+      return;
+    }
+    clearTokens();
   }
 
   const spinner = ora("Preparing login...").start();
@@ -137,10 +142,9 @@ async function whoamiCommand(): Promise<void> {
     return;
   }
 
-  console.log(pc.green("Logged in"));
-
   try {
     const userInfo = await fetchUserInfo(tokens.access_token);
+    console.log(pc.green("Logged in"));
     console.log("");
     if (userInfo.name) {
       console.log(`  ${pc.dim("Name:")}  ${userInfo.name}`);
@@ -148,13 +152,19 @@ async function whoamiCommand(): Promise<void> {
     if (userInfo.email) {
       console.log(`  ${pc.dim("Email:")} ${userInfo.email}`);
     }
-    printTokenExpiration(tokens, true);
+    printTokenExpiration(tokens);
   } catch {
-    printTokenExpiration(tokens, false);
+    if (isTokenExpired(tokens) && !tokens.refresh_token) {
+      console.log(pc.yellow("Session expired."));
+      console.log(pc.dim("Run 'ctx7 login' to authenticate."));
+    } else {
+      console.log(pc.green("Logged in"));
+      printTokenExpiration(tokens);
+    }
   }
 }
 
-function printTokenExpiration(tokens: { expires_at?: number; refresh_token?: string }, showExpired: boolean): void {
+function printTokenExpiration(tokens: { expires_at?: number }): void {
   if (!tokens.expires_at) return;
 
   const expiresIn = tokens.expires_at - Date.now();
@@ -163,11 +173,6 @@ function printTokenExpiration(tokens: { expires_at?: number; refresh_token?: str
     const hours = Math.floor(minutes / 60);
     const timeStr = hours > 0 ? `${hours}h ${minutes % 60}m` : `${minutes}m`;
     console.log(`  ${pc.dim("Expires:")} in ${timeStr}`);
-  } else if (showExpired) {
-    console.log(`  ${pc.dim("Status:")} ${pc.yellow("Token expired")}`);
-    if (tokens.refresh_token) {
-      console.log(pc.dim("  Token will be refreshed on next API call."));
-    }
   }
 }
 

@@ -41,7 +41,7 @@ export function saveTokens(tokens: TokenData): void {
   ensureConfigDir();
   const data = {
     ...tokens,
-    expires_at: tokens.expires_in ? Date.now() + tokens.expires_in * 1000 : undefined,
+    expires_at: tokens.expires_at ?? (tokens.expires_in ? Date.now() + tokens.expires_in * 1000 : undefined),
   };
   fs.writeFileSync(CREDENTIALS_FILE, JSON.stringify(data, null, 2), { mode: 0o600 });
 }
@@ -71,51 +71,6 @@ export function isTokenExpired(tokens: TokenData): boolean {
     return false;
   }
   return Date.now() > tokens.expires_at - 60000;
-}
-
-export async function getAccessToken(baseUrl: string): Promise<string | null> {
-  const tokens = loadTokens();
-  if (!tokens) {
-    return null;
-  }
-
-  if (!isTokenExpired(tokens)) {
-    return tokens.access_token;
-  }
-
-  if (tokens.refresh_token) {
-    const newTokens = await refreshAccessToken(baseUrl, tokens.refresh_token);
-    if (newTokens) {
-      saveTokens(newTokens);
-      return newTokens.access_token;
-    }
-  }
-
-  return null;
-}
-
-async function refreshAccessToken(
-  baseUrl: string,
-  refreshToken: string
-): Promise<TokenData | null> {
-  try {
-    const response = await fetch(`${baseUrl}/api/oauth/token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        refresh_token: refreshToken,
-      }).toString(),
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    return (await response.json()) as TokenData;
-  } catch {
-    return null;
-  }
 }
 
 export interface CallbackResult {
