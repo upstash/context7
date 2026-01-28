@@ -27,41 +27,30 @@ const selectOrInput: (config: SelectOrInputConfig) => Promise<string> = createPr
   const prefix = usePrefix({});
 
   useKeypress((key: KeypressEvent, rl) => {
-    // Handle arrow keys
     if (isUpKey(key)) {
       setCursor(Math.max(0, cursor - 1));
       return;
     }
 
     if (isDownKey(key)) {
-      setCursor(Math.min(options.length, cursor + 1)); // length = custom input position
+      setCursor(Math.min(options.length, cursor + 1));
       return;
     }
 
     if (isEnterKey(key)) {
-      // Submit
       if (cursor === options.length) {
-        // Custom input selected
         const finalValue = inputValue.trim();
-        if (finalValue) {
-          done(finalValue);
-        } else {
-          // Empty custom input, use recommended
-          done(options[recommendedIndex]);
-        }
+        done(finalValue || options[recommendedIndex]);
       } else {
-        // Option selected
         done(options[cursor]);
       }
       return;
     }
 
-    // Only allow typing when cursor is on custom input line
+    // Text input handling (only when on custom input line)
     if (cursor === options.length && key.name !== "return") {
-      // Ctrl+W or Option+Delete - delete word backward
       if ((key.name === "w" && key.ctrl) || key.name === "backspace") {
         if (key.name === "w" && key.ctrl) {
-          // Delete word backward
           const words = inputValue.trimEnd().split(/\s+/);
           if (words.length > 0) {
             words.pop();
@@ -70,34 +59,22 @@ const selectOrInput: (config: SelectOrInputConfig) => Promise<string> = createPr
             );
           }
         } else {
-          // Regular backspace
           setInputValue(inputValue.slice(0, -1));
         }
-      }
-      // Ctrl+U or Cmd+Delete - delete to beginning of line
-      else if (key.name === "u" && key.ctrl) {
+      } else if (key.name === "u" && key.ctrl) {
         setInputValue("");
-      }
-      // Space
-      else if (key.name === "space") {
+      } else if (key.name === "space") {
         setInputValue(inputValue + " ");
-      }
-      // Single character keys (letters, numbers, punctuation)
-      else if (key.name && key.name.length === 1 && !key.ctrl) {
+      } else if (key.name && key.name.length === 1 && !key.ctrl) {
         setInputValue(inputValue + key.name);
       }
-    } else {
-      // When NOT on input line, clear any readline buffer to prevent cursor movement
-      if (rl.line) {
-        rl.line = "";
-      }
+    } else if (rl.line) {
+      rl.line = "";
     }
   });
 
-  // Build the output
   let output = `${prefix} ${pc.bold(message)}\n\n`;
 
-  // Render options
   options.forEach((opt: string, idx: number) => {
     const isRecommended = idx === recommendedIndex;
     const isCursor = idx === cursor;
@@ -111,7 +88,6 @@ const selectOrInput: (config: SelectOrInputConfig) => Promise<string> = createPr
     }
   });
 
-  // Render custom input option
   const isCustomCursor = cursor === options.length;
   if (isCustomCursor) {
     output += pc.cyan(`❯ ${pc.yellow("✎")} ${inputValue || pc.dim("Type your own...")}`);

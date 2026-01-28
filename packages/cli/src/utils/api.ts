@@ -6,6 +6,7 @@ import type {
   LibrarySearchResponse,
   SkillQuestionsResponse,
   StructuredGenerateInput,
+  GenerateStreamEvent,
 } from "../types.js";
 import { downloadSkillFromGitHub } from "./github.js";
 
@@ -75,14 +76,12 @@ export interface GenerateSkillResponse {
   error?: string;
 }
 
-// Search for libraries based on a query/motivation
 export async function searchLibraries(query: string): Promise<LibrarySearchResponse> {
   const params = new URLSearchParams({ query });
   const response = await fetch(`${baseUrl}/api/v2/libs/search?${params}`);
   return (await response.json()) as LibrarySearchResponse;
 }
 
-// Get clarifying questions for skill generation
 export async function getSkillQuestions(
   libraries: Array<{ id: string; name: string }>,
   motivation: string
@@ -104,25 +103,9 @@ export async function getSkillQuestions(
   return (await response.json()) as SkillQuestionsResponse;
 }
 
-// Legacy generate skill function (backwards compatible)
-export async function generateSkill(
-  library: string,
-  topic?: string,
-  onProgress?: (message: string) => void
-): Promise<GenerateSkillResponse> {
-  const response = await fetch(`${baseUrl}/api/v2/skills/generate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ library, topic }),
-  });
-
-  return handleGenerateResponse(response, library, onProgress);
-}
-
-// New structured generate skill function
 export async function generateSkillStructured(
   input: StructuredGenerateInput,
-  onProgress?: (message: string) => void
+  onEvent?: (event: GenerateStreamEvent) => void
 ): Promise<GenerateSkillResponse> {
   const response = await fetch(`${baseUrl}/api/v2/skills/generate`, {
     method: "POST",
@@ -130,16 +113,14 @@ export async function generateSkillStructured(
     body: JSON.stringify(input),
   });
 
-  // Use first library name as the default
   const libraryName = input.libraries[0]?.name || "skill";
-  return handleGenerateResponse(response, libraryName, onProgress);
+  return handleGenerateResponse(response, libraryName, onEvent);
 }
 
-// Shared response handler for generate endpoints
 async function handleGenerateResponse(
   response: Response,
   libraryName: string,
-  onProgress?: (message: string) => void
+  onEvent?: (event: GenerateStreamEvent) => void
 ): Promise<GenerateSkillResponse> {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
@@ -169,16 +150,13 @@ async function handleGenerateResponse(
 
     for (const line of lines) {
       try {
-        const data = JSON.parse(line) as {
-          type: string;
-          message?: string;
-          content?: string;
-          libraryName?: string;
-        };
+        const data = JSON.parse(line) as GenerateStreamEvent;
 
-        if (data.type === "progress" && onProgress && data.message) {
-          onProgress(data.message);
-        } else if (data.type === "complete") {
+        if (onEvent) {
+          onEvent(data);
+        }
+
+        if (data.type === "complete") {
           content = data.content || "";
           finalLibraryName = data.libraryName || libraryName;
         } else if (data.type === "error") {
