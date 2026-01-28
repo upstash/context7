@@ -169,11 +169,15 @@ interface UserInfo {
 }
 
 async function fetchUserInfo(accessToken: string): Promise<UserInfo> {
-  const response = await fetch("https://clerk.context7.com/oauth/userinfo", {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  // const response = await fetch("https://clerk.context7.com/oauth/userinfo", { // prod
+  const response = await fetch(
+    "https://supreme-foal-19.clerk.accounts.dev/oauth/userinfo", // dev
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
 
   if (!response.ok) {
     throw new Error("Failed to fetch user info");

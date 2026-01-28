@@ -6,7 +6,13 @@ import { join } from "path";
 import { homedir } from "os";
 import { input, select } from "@inquirer/prompts";
 
-import { searchLibraries, getSkillQuestions, generateSkillStructured } from "../utils/api.js";
+import {
+  searchLibraries,
+  getSkillQuestions,
+  generateSkillStructured,
+  getSkillQuota,
+} from "../utils/api.js";
+import { loadTokens, isTokenExpired } from "../utils/auth.js";
 import { log } from "../utils/logger.js";
 import { promptForInstallTargets, getTargetDirs } from "../utils/ide.js";
 import selectOrInput from "../utils/selectOrInput.js";
@@ -49,6 +55,50 @@ export function registerGenerateCommand(skillCommand: Command): void {
 async function generateCommand(options: GenerateOptions): Promise<void> {
   log.blank();
 
+  // Check authentication
+  const tokens = loadTokens();
+  if (!tokens) {
+    log.error("Authentication required. Please run 'ctx7 login' first.");
+    return;
+  }
+
+  if (isTokenExpired(tokens)) {
+    log.error("Session expired. Please run 'ctx7 login' to refresh.");
+    return;
+  }
+
+  const accessToken = tokens.access_token;
+
+  const initSpinner = ora().start();
+  const quota = await getSkillQuota(accessToken);
+
+  if (quota.error) {
+    initSpinner.fail(pc.red("Failed to initialize"));
+    return;
+  }
+
+  if (quota.tier !== "unlimited" && quota.remaining < 1) {
+    initSpinner.fail(pc.red("Weekly skill generation limit reached"));
+    log.blank();
+    console.log(
+      `  You've used ${pc.bold(pc.white(quota.used.toString()))}/${pc.bold(pc.white(quota.limit.toString()))} skill generations this week.`
+    );
+    console.log(
+      `  Your quota resets on ${pc.yellow(new Date(quota.resetDate!).toLocaleDateString())}.`
+    );
+    log.blank();
+    if (quota.tier === "free") {
+      console.log(
+        `  ${pc.yellow("Tip:")} Upgrade to Pro for ${pc.bold("10")} generations per week.`
+      );
+      console.log(`  Visit ${pc.green("https://context7.com/dashboard")} to upgrade.`);
+    }
+    return;
+  }
+
+  initSpinner.stop();
+  initSpinner.clear();
+
   console.log(pc.bold("What should your agent become an expert at?\n"));
   console.log(
     pc.dim("Skills teach agents best practices, design patterns, and domain expertise.\n")
@@ -77,7 +127,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
   }
 
   const searchSpinner = ora("Finding relevant libraries...").start();
-  const searchResult = await searchLibraries(motivation);
+  const searchResult = await searchLibraries(motivation, accessToken);
 
   if (searchResult.error || !searchResult.results?.length) {
     searchSpinner.fail(pc.red("No libraries found"));
@@ -146,7 +196,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
         pageSize: 10,
         loop: false,
       },
-      { getName: (lib) => lib.title }
+      { getName: (lib) => `${lib.title} (${formatProjectId(lib.id)})` }
     );
 
     if (!selectedLibraries || selectedLibraries.length === 0) {
@@ -160,9 +210,9 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
 
   log.blank();
 
-  const questionsSpinner = ora("Preparing a few quick questions...").start();
+  const questionsSpinner = ora("Preparing questions...").start();
   const librariesInput = selectedLibraries.map((lib) => ({ id: lib.id, name: lib.title }));
-  const questionsResult = await getSkillQuestions(librariesInput, motivation);
+  const questionsResult = await getSkillQuestions(librariesInput, motivation, accessToken);
 
   if (questionsResult.error || !questionsResult.questions?.length) {
     questionsSpinner.fail(pc.red("Failed to generate questions"));
@@ -170,7 +220,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
     return;
   }
 
-  questionsSpinner.succeed(pc.green("Questions ready"));
+  questionsSpinner.succeed(pc.green("Questions prepared"));
   log.blank();
 
   const answers: SkillAnswer[] = [];
@@ -253,12 +303,13 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
   const handleStreamEvent = (event: GenerateStreamEvent) => {
     if (event.type === "progress") {
       if (genSpinner) {
-        if (event.message === "Generating skill content..." && !isGeneratingContent) {
+        if (event.message.startsWith("Generating skill content...") && !isGeneratingContent) {
           isGeneratingContent = true;
-          const queryCount = queryLog.length;
-          genSpinner.succeed(
-            pc.green(`Researched ${queryCount} ${queryCount === 1 ? "topic" : "topics"}`)
-          );
+          if (queryLog.length > 0) {
+            genSpinner.succeed(pc.green(`Queried documentation`));
+          } else {
+            genSpinner.succeed(pc.green(`Ready to generate`));
+          }
           genSpinner = ora("Generating skill content...").start();
         } else if (!isGeneratingContent) {
           genSpinner.text = event.message + formatQueryLogText();
@@ -293,7 +344,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
 
     genSpinner = ora(initialStatus).start();
 
-    const result = await generateSkillStructured(generateInput, handleStreamEvent);
+    const result = await generateSkillStructured(generateInput, handleStreamEvent, accessToken);
 
     if (result.error) {
       genSpinner.fail(pc.red(`Error: ${result.error}`));

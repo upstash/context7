@@ -191,3 +191,13 @@ export const DEFAULT_CONFIG: C7Config = {
   defaultIde: "claude",
   defaultScope: "project",
 };
+
+export interface SkillQuotaResponse {
+  used: number;
+  limit: number;
+  remaining: number;
+  tier: "free" | "pro" | "unlimited";
+  resetDate: string | null;
+  message?: string;
+  error?: string;
+}

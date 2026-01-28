@@ -7,6 +7,7 @@ import type {
   SkillQuestionsResponse,
   StructuredGenerateInput,
   GenerateStreamEvent,
+  SkillQuotaResponse,
 } from "../types.js";
 import { downloadSkillFromGitHub } from "./github.js";
 
@@ -76,19 +77,52 @@ export interface GenerateSkillResponse {
   error?: string;
 }
 
-export async function searchLibraries(query: string): Promise<LibrarySearchResponse> {
+export async function searchLibraries(
+  query: string,
+  accessToken?: string
+): Promise<LibrarySearchResponse> {
   const params = new URLSearchParams({ query });
-  const response = await fetch(`${baseUrl}/api/v2/libs/search?${params}`);
+  const headers: Record<string, string> = {};
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
+  const response = await fetch(`${baseUrl}/api/v2/libs/search?${params}`, { headers });
   return (await response.json()) as LibrarySearchResponse;
+}
+
+export async function getSkillQuota(accessToken: string): Promise<SkillQuotaResponse> {
+  const response = await fetch(`${baseUrl}/api/v2/skills/quota`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    return {
+      used: 0,
+      limit: 0,
+      remaining: 0,
+      tier: "free",
+      resetDate: null,
+      error: (errorData as { message?: string }).message || `HTTP error ${response.status}`,
+    };
+  }
+
+  return (await response.json()) as SkillQuotaResponse;
 }
 
 export async function getSkillQuestions(
   libraries: Array<{ id: string; name: string }>,
-  motivation: string
+  motivation: string,
+  accessToken?: string
 ): Promise<SkillQuestionsResponse> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
+
   const response = await fetch(`${baseUrl}/api/v2/skills/questions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ libraries, motivation }),
   });
 
@@ -105,11 +139,17 @@ export async function getSkillQuestions(
 
 export async function generateSkillStructured(
   input: StructuredGenerateInput,
-  onEvent?: (event: GenerateStreamEvent) => void
+  onEvent?: (event: GenerateStreamEvent) => void,
+  accessToken?: string
 ): Promise<GenerateSkillResponse> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
+
   const response = await fetch(`${baseUrl}/api/v2/skills/generate`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(input),
   });
 
@@ -140,17 +180,26 @@ async function handleGenerateResponse(
   let content = "";
   let finalLibraryName = libraryName;
   let error: string | undefined;
+  let buffer = ""; // Buffer for incomplete lines across chunks
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
 
     const chunk = decoder.decode(value, { stream: true });
-    const lines = chunk.split("\n").filter((line) => line.trim());
+    buffer += chunk;
+
+    // Split by newline but keep track of incomplete lines
+    const lines = buffer.split("\n");
+    // Keep the last element (may be incomplete) in the buffer
+    buffer = lines.pop() || "";
 
     for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (!trimmedLine) continue;
+
       try {
-        const data = JSON.parse(line) as GenerateStreamEvent;
+        const data = JSON.parse(trimmedLine) as GenerateStreamEvent;
 
         if (onEvent) {
           onEvent(data);
@@ -165,6 +214,24 @@ async function handleGenerateResponse(
       } catch {
         // Ignore malformed JSON lines
       }
+    }
+  }
+
+  // Process any remaining data in the buffer
+  if (buffer.trim()) {
+    try {
+      const data = JSON.parse(buffer.trim()) as GenerateStreamEvent;
+      if (onEvent) {
+        onEvent(data);
+      }
+      if (data.type === "complete") {
+        content = data.content || "";
+        finalLibraryName = data.libraryName || libraryName;
+      } else if (data.type === "error") {
+        error = data.message;
+      }
+    } catch {
+      // Ignore malformed JSON
     }
   }
 
