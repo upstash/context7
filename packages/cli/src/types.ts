@@ -7,15 +7,18 @@ export interface Skill {
   name: string;
   description: string;
   url: string;
+  installCount?: number;
 }
 
 export interface SkillSearchResult extends Skill {
   project: string;
+  installCount?: number;
 }
 
 export interface ListSkillsResponse {
   project: string;
   skills: Skill[];
+  blockedSkillsCount?: number;
   error?: string;
   message?: string;
 }

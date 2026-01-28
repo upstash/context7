@@ -1,19 +1,27 @@
 import { Command } from "commander";
 import pc from "picocolors";
-import { checkbox } from "@inquirer/prompts";
 import ora from "ora";
 import { readdir, rm } from "fs/promises";
 import { join } from "path";
 
 import { parseSkillInput } from "../utils/parse-input.js";
-import { listProjectSkills, searchSkills, downloadSkill, trackInstalls } from "../utils/api.js";
+import {
+  listProjectSkills,
+  searchSkills,
+  downloadSkill,
+  getSkill,
+  trackInstalls,
+} from "../utils/api.js";
 import { log } from "../utils/logger.js";
 import {
   promptForInstallTargets,
   promptForSingleTarget,
   getTargetDirs,
   getTargetDirFromSelection,
+  getSelectedIdes,
+  hasExplicitIdeOption,
 } from "../utils/ide.js";
+import { checkboxWithHover, terminalLink, formatInstallCount } from "../utils/prompts.js";
 import { installSkillFiles, symlinkSkill } from "../utils/installer.js";
 import { registerGenerateCommand } from "./generate.js";
 import type {
@@ -24,7 +32,9 @@ import type {
   RemoveOptions,
   InstallTargets,
 } from "../types.js";
-import { IDE_NAMES } from "../types.js";
+import { IDE_NAMES, IDE_PATHS, IDE_GLOBAL_PATHS } from "../types.js";
+import type { IDE, Scope } from "../types.js";
+import { homedir } from "os";
 
 function logInstallSummary(
   targets: InstallTargets,
@@ -56,7 +66,7 @@ export function registerSkillCommands(program: Command): void {
     .alias("i")
     .alias("add")
     .argument("<repository>", "GitHub repository (/owner/repo)")
-    .argument("[skills...]", "Specific skill names to install")
+    .argument("[skill]", "Specific skill name to install")
     .option("--all", "Install all skills without prompting")
     .option("--global", "Install globally instead of current directory")
     .option("--claude", "Claude Code (.claude/skills/)")
@@ -66,8 +76,8 @@ export function registerSkillCommands(program: Command): void {
     .option("--amp", "Amp (.agents/skills/)")
     .option("--antigravity", "Antigravity (.agent/skills/)")
     .description("Install skills from a repository")
-    .action(async (project: string, skillNames: string[], options: AddOptions) => {
-      await installCommand(project, skillNames, options);
+    .action(async (project: string, skillName: string | undefined, options: AddOptions) => {
+      await installCommand(project, skillName, options);
     });
 
   skill
@@ -124,7 +134,7 @@ export function registerSkillAliases(program: Command): void {
   program
     .command("si", { hidden: true })
     .argument("<repository>", "GitHub repository (/owner/repo)")
-    .argument("[skills...]", "Specific skill names to install")
+    .argument("[skill]", "Specific skill name to install")
     .option("--all", "Install all skills without prompting")
     .option("--global", "Install globally instead of current directory")
     .option("--claude", "Claude Code (.claude/skills/)")
@@ -134,8 +144,8 @@ export function registerSkillAliases(program: Command): void {
     .option("--amp", "Amp (.agents/skills/)")
     .option("--antigravity", "Antigravity (.agent/skills/)")
     .description("Install skills (alias for: skills install)")
-    .action(async (project: string, skillNames: string[], options: AddOptions) => {
-      await installCommand(project, skillNames, options);
+    .action(async (project: string, skillName: string | undefined, options: AddOptions) => {
+      await installCommand(project, skillName, options);
     });
 
   program
@@ -149,7 +159,7 @@ export function registerSkillAliases(program: Command): void {
 
 async function installCommand(
   input: string,
-  skillNames: string[],
+  skillName: string | undefined,
   options: AddOptions
 ): Promise<void> {
   const parsed = parseSkillInput(input);
@@ -165,75 +175,101 @@ async function installCommand(
   log.blank();
   const spinner = ora(`Fetching skills from ${repo}...`).start();
 
-  const data = await listProjectSkills(repo);
-
-  if (data.error) {
-    spinner.fail(pc.red(`Error: ${data.message || data.error}`));
-    return;
-  }
-
-  if (!data.skills || data.skills.length === 0) {
-    spinner.warn(pc.yellow(`No skills found in ${repo}`));
-    return;
-  }
-
-  const skillsWithRepo = data.skills.map((s) => ({ ...s, project: repo }));
-
   let selectedSkills: (Skill & { project: string })[];
 
-  if (skillNames.length > 0) {
-    selectedSkills = skillsWithRepo.filter((s) =>
-      skillNames.some((name) => s.name.toLowerCase() === name.toLowerCase())
-    );
+  // When a specific skill name is provided, fetch only that skill
+  if (skillName) {
+    spinner.text = `Fetching skill: ${skillName}...`;
+    const skillData = await getSkill(repo, skillName);
 
-    const foundNames = selectedSkills.map((s) => s.name.toLowerCase());
-    const notFound = skillNames.filter((name) => !foundNames.includes(name.toLowerCase()));
-
-    if (selectedSkills.length === 0) {
-      spinner.fail(pc.red(`Skills not found: ${skillNames.join(", ")}`));
+    if (skillData.error || !skillData.name) {
+      if (skillData.error === "prompt_injection_detected") {
+        spinner.fail(pc.red(`Prompt injection detected in skill: ${skillName}`));
+        log.warn("This skill contains potentially malicious content and cannot be installed.");
+      } else {
+        spinner.fail(pc.red(`Skill not found: ${skillName}`));
+      }
       return;
     }
 
-    spinner.succeed(`Found ${selectedSkills.length} of ${skillNames.length} requested skill(s)`);
-
-    if (notFound.length > 0) {
-      log.warn(`Not found: ${notFound.join(", ")}`);
-    }
-  } else if (options.all || data.skills.length === 1) {
-    spinner.succeed(`Found ${data.skills.length} skill(s)`);
-    selectedSkills = skillsWithRepo;
+    spinner.succeed(`Found skill: ${skillName}`);
+    selectedSkills = [
+      {
+        name: skillData.name,
+        description: skillData.description,
+        url: skillData.url,
+        project: repo,
+      },
+    ];
   } else {
-    spinner.succeed(`Found ${data.skills.length} skill(s)`);
-    const maxNameLen = Math.min(25, Math.max(...data.skills.map((s) => s.name.length)));
-    const choices = skillsWithRepo.map((s) => {
-      const paddedName = s.name.padEnd(maxNameLen);
-      const desc = s.description?.trim()
-        ? s.description.slice(0, 60) + (s.description.length > 60 ? "..." : "")
-        : "";
+    // Fetch all skills when no specific names provided
+    const data = await listProjectSkills(repo);
 
-      return {
-        name: desc ? `${paddedName} ${pc.dim(desc)}` : s.name,
-        value: s,
-      };
-    });
-
-    log.blank();
-
-    try {
-      selectedSkills = await checkbox({
-        message: "Select skills:",
-        choices,
-        pageSize: 15,
-        theme: {
-          style: {
-            renderSelectedChoices: (selected: Array<{ name?: string; value: unknown }>) =>
-              selected.map((c) => (c.value as { name: string }).name).join(", "),
-          },
-        },
-      });
-    } catch {
-      log.warn("Installation cancelled");
+    if (data.error) {
+      spinner.fail(pc.red(`Error: ${data.message || data.error}`));
       return;
+    }
+
+    if (!data.skills || data.skills.length === 0) {
+      spinner.warn(pc.yellow(`No skills found in ${repo}`));
+      return;
+    }
+
+    const skillsWithRepo = data.skills.map((s) => ({ ...s, project: repo }));
+
+    spinner.succeed(`Found ${data.skills.length} skill(s)`);
+
+    if (data.blockedSkillsCount && data.blockedSkillsCount > 0) {
+      log.blank();
+      log.error(
+        `${data.blockedSkillsCount} skill(s) blocked due to prompt injection and not shown.`
+      );
+      log.warn("Review other skills from this repository carefully before installing.");
+    }
+
+    if (options.all || data.skills.length === 1) {
+      selectedSkills = skillsWithRepo;
+    } else {
+      const indexWidth = data.skills.length.toString().length;
+      const maxNameLen = Math.max(...data.skills.map((s) => s.name.length));
+      const choices = skillsWithRepo.map((s, index) => {
+        const indexStr = pc.dim(`${(index + 1).toString().padStart(indexWidth)}.`);
+        const paddedName = s.name.padEnd(maxNameLen);
+        const installs = formatInstallCount(s.installCount);
+
+        // Build metadata panel shown when item is hovered
+        const skillUrl = `https://context7.com/skills${s.project}/${s.name}`;
+        const skillLink = terminalLink(s.name, skillUrl, pc.white);
+        const repoLink = terminalLink(s.project, `https://github.com${s.project}`, pc.white);
+        const metadataLines = [
+          pc.dim("─".repeat(50)),
+          "",
+          `${pc.yellow("Skill:")}       ${skillLink}`,
+          `${pc.yellow("Repo:")}        ${repoLink}`,
+          `${pc.yellow("Description:")}`,
+          pc.white(s.description || "No description"),
+        ];
+
+        return {
+          name: installs ? `${indexStr} ${paddedName} ${installs}` : `${indexStr} ${paddedName}`,
+          value: s,
+          description: metadataLines.join("\n"),
+        };
+      });
+
+      log.blank();
+
+      try {
+        selectedSkills = await checkboxWithHover({
+          message: "Select skills:",
+          choices,
+          pageSize: 15,
+          loop: false,
+        });
+      } catch {
+        log.warn("Installation cancelled");
+        return;
+      }
     }
   }
 
@@ -349,17 +385,33 @@ async function searchCommand(query: string): Promise<void> {
 
   spinner.succeed(`Found ${data.results.length} skill(s)`);
 
-  const maxNameLen = Math.min(25, Math.max(...data.results.map((s) => s.name.length)));
-  const choices = data.results.map((s) => {
+  const indexWidth = data.results.length.toString().length;
+  const maxNameLen = Math.max(...data.results.map((s) => s.name.length));
+  const choices = data.results.map((s, index) => {
+    const indexStr = pc.dim(`${(index + 1).toString().padStart(indexWidth)}.`);
     const paddedName = s.name.padEnd(maxNameLen);
-    const repoName = pc.dim(`(${s.project})`);
-    const desc = s.description?.trim()
-      ? s.description.slice(0, 50) + (s.description.length > 50 ? "..." : "")
-      : "";
+    const installs = formatInstallCount(s.installCount);
+
+    // Build metadata panel shown when item is hovered
+    const skillLink = terminalLink(
+      s.name,
+      `https://context7.com/skills${s.project}/${s.name}`,
+      pc.white
+    );
+    const repoLink = terminalLink(s.project, `https://github.com${s.project}`, pc.white);
+    const metadataLines = [
+      pc.dim("─".repeat(50)),
+      "",
+      `${pc.yellow("Skill:")}       ${skillLink}`,
+      `${pc.yellow("Repo:")}        ${repoLink}`,
+      `${pc.yellow("Description:")}`,
+      pc.white(s.description || "No description"),
+    ];
 
     return {
-      name: desc ? `${paddedName} ${repoName} ${pc.dim(desc)}` : `${paddedName} ${repoName}`,
+      name: installs ? `${indexStr} ${paddedName} ${installs}` : `${indexStr} ${paddedName}`,
       value: s,
+      description: metadataLines.join("\n"),
     };
   });
 
@@ -367,16 +419,11 @@ async function searchCommand(query: string): Promise<void> {
 
   let selectedSkills: SkillSearchResult[];
   try {
-    selectedSkills = await checkbox({
+    selectedSkills = await checkboxWithHover({
       message: "Select skills to install:",
       choices,
       pageSize: 15,
-      theme: {
-        style: {
-          renderSelectedChoices: (selected: Array<{ name?: string; value: unknown }>) =>
-            selected.map((c) => (c.value as SkillSearchResult).name).join(", "),
-        },
-      },
+      loop: false,
     });
   } catch {
     log.warn("Installation cancelled");
@@ -474,32 +521,46 @@ async function searchCommand(query: string): Promise<void> {
 }
 
 async function listCommand(options: ListOptions): Promise<void> {
-  const target = await promptForSingleTarget(options);
-  if (!target) {
-    log.warn("Cancelled");
+  const scope: Scope = options.global ? "global" : "project";
+  const pathMap = scope === "global" ? IDE_GLOBAL_PATHS : IDE_PATHS;
+  const baseDir = scope === "global" ? homedir() : process.cwd();
+
+  const idesToCheck: IDE[] = hasExplicitIdeOption(options)
+    ? getSelectedIdes(options)
+    : (Object.keys(IDE_NAMES) as IDE[]);
+
+  const results: { ide: IDE; skills: string[] }[] = [];
+
+  for (const ide of idesToCheck) {
+    const skillsDir = join(baseDir, pathMap[ide]);
+    try {
+      const entries = await readdir(skillsDir, { withFileTypes: true });
+      const skillFolders = entries
+        .filter((e) => e.isDirectory() || e.isSymbolicLink())
+        .map((e) => e.name);
+      if (skillFolders.length > 0) {
+        results.push({ ide, skills: skillFolders });
+      }
+    } catch {
+      // Directory doesn't exist, skip
+    }
+  }
+
+  if (results.length === 0) {
+    log.warn("No skills installed");
     return;
   }
 
-  const skillsDir = getTargetDirFromSelection(target.ide, target.scope);
+  log.blank();
 
-  try {
-    const entries = await readdir(skillsDir, { withFileTypes: true });
-    const skillFolders = entries.filter((e) => e.isDirectory() || e.isSymbolicLink());
-
-    if (skillFolders.length === 0) {
-      log.warn(`No skills installed in ${skillsDir}`);
-      return;
+  for (const { ide, skills } of results) {
+    const ideName = IDE_NAMES[ide];
+    const path = pathMap[ide];
+    log.plain(`${pc.bold(ideName)} ${pc.dim(path)}`);
+    for (const skill of skills) {
+      log.plain(`  ${pc.green(skill)}`);
     }
-
-    log.info(`\n◆ Installed skills (${skillsDir}):`);
-
-    for (const folder of skillFolders) {
-      log.item(folder.name);
-    }
-
-    log.success(`${skillFolders.length} skill(s) installed\n`);
-  } catch {
-    log.warn(`No skills directory found at ${skillsDir}`);
+    log.blank();
   }
 }
 

@@ -1,0 +1,155 @@
+---
+title: Library Verification
+description: Get your library verified to increase visibility and build trust with developers
+---
+
+Verified libraries receive a special badge that signals quality and trustworthiness to developers. Verification helps your library rank higher in search results and gives users confidence that your documentation is reliable.
+
+<Note>Only library owners can apply for verification. You must [claim your library](/howto/claiming-libraries) before applying.</Note>
+
+## Why Get Verified?
+
+Verification provides several benefits for your library:
+
+- **Higher search ranking**: Verified libraries are prioritized in search results and recommendations
+- **Trust badge**: A verified badge is displayed on your library page, building confidence with users
+- **Increased visibility**: Verified libraries appear more prominently across Context7
+- **Broader access**: Teams can restrict their library access to "verified only" - without verification, your library won't be accessible to these users
+
+## Verification Badge
+
+Once verified, your library displays a green checkmark badge next to its name:
+
+<Frame>
+  <img src="/images/howto/verification/verification-badge.png" alt="Verified badge on library" />
+</Frame>
+
+This badge appears on:
+- Your library's main page
+- Search results
+- Library listings and tables
+- Skills associated with your library
+
+## How to Get Verified
+
+There are two paths to verification:
+
+### Automatic Verification
+
+Libraries are automatically verified when they meet certain quality thresholds:
+
+- **High trust score**: Libraries with a trust score of 9 or above. Trust score is calculated based on the GitHub organization/user profile, considering factors like total stars, number of repositories, account age, recent activity, followers, and profile completeness.
+- **Top 100 libraries**: Most-used libraries by API requests
+- **Top 100 skills**: Libraries with the most-installed skills
+
+Automatic verification is checked daily. If your library qualifies, it will be verified automatically without any action required.
+
+### Manual Verification
+
+If your library doesn't qualify for automatic verification, you can apply manually:
+
+<Steps>
+  <Step title="Claim Your Library">
+    You must be a verified owner of the library. See [Claim Your Library](/howto/claiming-libraries) for instructions.
+  </Step>
+
+  <Step title="Go to the Admin Page">
+    Navigate to your library's admin page at:
+
+    ```
+    https://context7.com/{owner}/{repo}/admin
+    ```
+  </Step>
+
+  <Step title="Apply for Verification">
+    If your library is not yet verified, you'll see a banner at the top of the configuration page with an "Apply for Verification" button. Click it to open the application form.
+
+    <Frame>
+      <img src="/images/howto/verification/apply-button.png" alt="Apply for Verification button" />
+    </Frame>
+  </Step>
+
+  <Step title="Complete the Application">
+    Fill out the verification application form:
+
+    | Field | Description | Required |
+    | --- | --- | --- |
+    | **Website/Docs URL** | Link to your library's official website or documentation | Yes |
+    | **Library Description** | Brief description of what your library does | Yes |
+    | **Developer Value** | How your library helps developers | Yes |
+
+    <Frame>
+      <img src="/images/howto/verification/apply-modal.png" alt="Verification application modal" />
+    </Frame>
+  </Step>
+
+  <Step title="Submit for Review">
+    Click "Submit Application" to send your request to the Context7 team. You'll be redirected to a GitHub issue where you can track the status of your application.
+  </Step>
+
+  <Step title="Wait for Review">
+    The Context7 team will review your application and respond on the GitHub issue. Review typically takes 1-3 business days.
+  </Step>
+</Steps>
+
+## Verification Requirements
+
+To be approved for manual verification, your library should:
+
+- **Be a legitimate project**: Real libraries with actual users and documentation
+- **Have quality documentation**: Well-organized, up-to-date documentation that helps developers
+- **Be actively maintained**: Regular updates and responsive to issues
+- **Follow best practices**: Clear README, proper licensing, and good code organization
+
+<Note>
+  Verification is free and always will be. We verify libraries based on quality, not payment.
+</Note>
+
+## Verification Status
+
+You can check your library's verification status on the admin page:
+
+| Status | Description |
+| --- | --- |
+| **Verified** | Green badge displayed, full verification benefits |
+| **Not Verified** | No badge, apply to get verified |
+
+## Skills and Verification
+
+Skills inherit the verification status of their parent library. When your library is verified:
+
+- All skills associated with your library display the verified badge
+- Skills rank higher in skill search results
+
+## FAQ
+
+### How long does manual verification take?
+
+Most applications are reviewed within 1-3 business days. Complex cases may take longer.
+
+### Can verification be revoked?
+
+Yes, in rare cases. Verification may be revoked if:
+- The library becomes abandoned or unmaintained
+- Documentation quality significantly degrades
+- The library violates Context7's terms of service
+
+### Does verification cost anything?
+
+No. Verification is completely free and based solely on library quality.
+
+### I was automatically verified. Can I lose it?
+
+Automatic verification is recalculated daily. If your library no longer meets the automatic criteria, you'll retain your verification status but may need to apply manually if it's ever revoked.
+
+### My library is popular but not verified. Why?
+
+Automatic verification considers multiple factors including trust score, usage statistics, and skill installs. If you believe your library should be verified, please apply manually.
+
+## Need Help?
+
+If you have questions about verification or encounter issues with the application process:
+
+- [Open a GitHub issue](https://github.com/upstash/context7/issues/new/choose)
+- Join our [Discord community](https://upstash.com/discord)
+- Contact us at [support@context7.com](mailto:support@context7.com)
