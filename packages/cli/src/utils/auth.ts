@@ -42,7 +42,6 @@ export function saveTokens(tokens: TokenData): void {
   const data = {
     ...tokens,
     expires_at: tokens.expires_in ? Date.now() + tokens.expires_in * 1000 : undefined,
-    saved_at: Date.now(),
   };
   fs.writeFileSync(CREDENTIALS_FILE, JSON.stringify(data, null, 2), { mode: 0o600 });
 }

@@ -13,8 +13,6 @@ import {
   buildAuthorizationUrl,
 } from "../utils/auth.js";
 
-// Default OAuth client ID for the CLI
-// This should be registered in your OAuth provider (Clerk)
 const CLI_CLIENT_ID = "2veBSofhicRBguUT";
 
 let baseUrl = "https://context7.com";
@@ -35,8 +33,8 @@ export function registerAuthCommands(program: Command): void {
   program
     .command("logout")
     .description("Log out of Context7")
-    .action(async () => {
-      await logoutCommand();
+    .action(() => {
+      logoutCommand();
     });
 
   program
@@ -58,16 +56,11 @@ async function loginCommand(options: { browser: boolean }): Promise<void> {
   const spinner = ora("Preparing login...").start();
 
   try {
-    // Generate PKCE challenge and state
     const { codeVerifier, codeChallenge } = generatePKCE();
     const state = generateState();
-
-    // Start local callback server
     const callbackServer = createCallbackServer(state);
     const port = await callbackServer.port;
     const redirectUri = `http://localhost:${port}/callback`;
-
-    // Build authorization URL
     const authUrl = buildAuthorizationUrl(
       baseUrl,
       CLI_CLIENT_ID,
@@ -94,12 +87,9 @@ async function loginCommand(options: { browser: boolean }): Promise<void> {
     const waitingSpinner = ora("Waiting for login...").start();
 
     try {
-      // Wait for the callback
       const { code } = await callbackServer.result;
-
       waitingSpinner.text = "Exchanging code for tokens...";
 
-      // Exchange code for tokens
       const tokens = await exchangeCodeForTokens(
         baseUrl,
         code,
@@ -107,11 +97,7 @@ async function loginCommand(options: { browser: boolean }): Promise<void> {
         redirectUri,
         CLI_CLIENT_ID
       );
-
-      // Save tokens
       saveTokens(tokens);
-
-      // Clean up the callback server
       callbackServer.close();
 
       waitingSpinner.succeed(pc.green("Login successful!"));
@@ -134,10 +120,8 @@ async function loginCommand(options: { browser: boolean }): Promise<void> {
   }
 }
 
-async function logoutCommand(): Promise<void> {
-  const cleared = clearTokens();
-
-  if (cleared) {
+function logoutCommand(): void {
+  if (clearTokens()) {
     console.log(pc.green("Logged out successfully."));
   } else {
     console.log(pc.yellow("You are not logged in."));
@@ -153,53 +137,36 @@ async function whoamiCommand(): Promise<void> {
     return;
   }
 
-  // Fetch user info from the userinfo endpoint
+  console.log(pc.green("Logged in"));
+
   try {
     const userInfo = await fetchUserInfo(tokens.access_token);
-
-    console.log(pc.green("Logged in"));
     console.log("");
-
     if (userInfo.name) {
       console.log(`  ${pc.dim("Name:")}  ${userInfo.name}`);
     }
     if (userInfo.email) {
       console.log(`  ${pc.dim("Email:")} ${userInfo.email}`);
     }
-
-    // Check expiration
-    if (tokens.expires_at) {
-      const expiresIn = tokens.expires_at - Date.now();
-      if (expiresIn > 0) {
-        const minutes = Math.floor(expiresIn / 60000);
-        const hours = Math.floor(minutes / 60);
-        if (hours > 0) {
-          console.log(`  ${pc.dim("Expires:")} in ${hours}h ${minutes % 60}m`);
-        } else {
-          console.log(`  ${pc.dim("Expires:")} in ${minutes}m`);
-        }
-      } else {
-        console.log(`  ${pc.dim("Status:")} ${pc.yellow("Token expired")}`);
-        if (tokens.refresh_token) {
-          console.log(pc.dim("  Token will be refreshed on next API call."));
-        }
-      }
-    }
+    printTokenExpiration(tokens, true);
   } catch {
-    console.log(pc.green("Logged in"));
+    printTokenExpiration(tokens, false);
+  }
+}
 
-    // Show expiration even if we can't fetch user details
-    if (tokens.expires_at) {
-      const expiresIn = tokens.expires_at - Date.now();
-      if (expiresIn > 0) {
-        const minutes = Math.floor(expiresIn / 60000);
-        const hours = Math.floor(minutes / 60);
-        if (hours > 0) {
-          console.log(`  ${pc.dim("Expires:")} in ${hours}h ${minutes % 60}m`);
-        } else {
-          console.log(`  ${pc.dim("Expires:")} in ${minutes}m`);
-        }
-      }
+function printTokenExpiration(tokens: { expires_at?: number; refresh_token?: string }, showExpired: boolean): void {
+  if (!tokens.expires_at) return;
+
+  const expiresIn = tokens.expires_at - Date.now();
+  if (expiresIn > 0) {
+    const minutes = Math.floor(expiresIn / 60000);
+    const hours = Math.floor(minutes / 60);
+    const timeStr = hours > 0 ? `${hours}h ${minutes % 60}m` : `${minutes}m`;
+    console.log(`  ${pc.dim("Expires:")} in ${timeStr}`);
+  } else if (showExpired) {
+    console.log(`  ${pc.dim("Status:")} ${pc.yellow("Token expired")}`);
+    if (tokens.refresh_token) {
+      console.log(pc.dim("  Token will be refreshed on next API call."));
     }
   }
 }
@@ -212,7 +179,6 @@ interface UserInfo {
 }
 
 async function fetchUserInfo(accessToken: string): Promise<UserInfo> {
-  // Clerk's userinfo endpoint
   const response = await fetch("https://clerk.context7.com/oauth/userinfo", {
     headers: {
       Authorization: `Bearer ${accessToken}`,
