@@ -124,7 +124,8 @@ export interface CallbackResult {
   state: string;
 }
 
-const CALLBACK_PORT = 9876;
+// Port for OAuth callback server - must match registered redirect URI
+const CALLBACK_PORT = 52417;
 
 export function createCallbackServer(expectedState: string): {
   port: Promise<number>;
@@ -232,7 +233,17 @@ function successPage(): string {
 </html>`;
 }
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function errorPage(message: string): string {
+  const safeMessage = escapeHtml(message);
   return `<!DOCTYPE html>
 <html>
   <head><title>Login Failed</title></head>
@@ -244,7 +255,7 @@ function errorPage(message: string): string {
         </svg>
       </div>
       <h1 style="color: #dc2626; margin: 0 0 0.5rem;">Login Failed</h1>
-      <p style="color: #6b7280; margin: 0;">${message}</p>
+      <p style="color: #6b7280; margin: 0;">${safeMessage}</p>
       <p style="color: #9ca3af; margin: 1rem 0 0; font-size: 0.875rem;">You can close this window.</p>
     </div>
   </body>
