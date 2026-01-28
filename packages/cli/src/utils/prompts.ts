@@ -35,8 +35,14 @@ export function formatInstallCount(count: number | undefined): string {
 
   return `\x1b[38;5;214m↓${display}\x1b[0m`;
 }
-export async function checkboxWithHover<T extends { name: string }>(
-  config: CheckboxConfig<T>
+export interface CheckboxWithHoverOptions<T> {
+  /** Function to extract display name from value. Defaults to (v) => v.name */
+  getName?: (value: T) => string;
+}
+
+export async function checkboxWithHover<T>(
+  config: CheckboxConfig<T>,
+  options?: CheckboxWithHoverOptions<T>
 ): Promise<T[]> {
   const choices = config.choices.filter(
     (c): c is CheckboxChoice<T> =>
@@ -45,6 +51,9 @@ export async function checkboxWithHover<T extends { name: string }>(
   const values = choices.map((c) => c.value);
   const totalItems = values.length;
   let cursorPosition = 0;
+
+  // Default getName assumes object has 'name' property
+  const getName = options?.getName ?? ((v: T) => (v as { name: string }).name);
 
   const keypressHandler = (_str: string | undefined, key: readline.Key) => {
     if (key.name === "up" && cursorPosition > 0) {
@@ -69,9 +78,9 @@ export async function checkboxWithHover<T extends { name: string }>(
           _allChoices: CheckboxChoice<T>[]
         ): string => {
           if (selected.length === 0) {
-            return pc.dim(values[cursorPosition].name);
+            return pc.dim(getName(values[cursorPosition]));
           }
-          return selected.map((c) => c.value.name).join(", ");
+          return selected.map((c) => getName(c.value)).join(", ");
         },
       },
     },

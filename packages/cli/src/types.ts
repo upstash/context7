@@ -92,6 +92,37 @@ export interface StructuredGenerateInput {
   feedback?: string;
 }
 
+export interface ToolResultSnippet {
+  title: string;
+  content: string;
+}
+
+export interface ProgressEvent {
+  type: "progress";
+  message: string;
+}
+
+export interface ToolResultEvent {
+  type: "tool_result";
+  toolName: string;
+  query: string;
+  libraryId?: string;
+  results: ToolResultSnippet[];
+}
+
+export interface CompleteEvent {
+  type: "complete";
+  content: string;
+  libraryName: string;
+}
+
+export interface ErrorEvent {
+  type: "error";
+  message: string;
+}
+
+export type GenerateStreamEvent = ProgressEvent | ToolResultEvent | CompleteEvent | ErrorEvent;
+
 export type IDE = "claude" | "cursor" | "codex" | "opencode" | "amp" | "antigravity";
 
 export type Scope = "project" | "global";
