@@ -5,13 +5,7 @@ import { readdir, rm } from "fs/promises";
 import { join } from "path";
 
 import { parseSkillInput } from "../utils/parse-input.js";
-import {
-  listProjectSkills,
-  searchSkills,
-  downloadSkill,
-  getSkill,
-  trackInstalls,
-} from "../utils/api.js";
+import { listProjectSkills, searchSkills, downloadSkill, getSkill } from "../utils/api.js";
 import { log } from "../utils/logger.js";
 import {
   promptForInstallTargets,
@@ -23,6 +17,7 @@ import {
 } from "../utils/ide.js";
 import { checkboxWithHover, terminalLink, formatInstallCount } from "../utils/prompts.js";
 import { installSkillFiles, symlinkSkill } from "../utils/installer.js";
+import { trackEvent } from "../utils/tracking.js";
 import { registerGenerateCommand } from "./generate.js";
 import type {
   Skill,
@@ -162,6 +157,7 @@ async function installCommand(
   skillName: string | undefined,
   options: AddOptions
 ): Promise<void> {
+  trackEvent("command", { name: "install" });
   const parsed = parseSkillInput(input);
   if (!parsed) {
     log.error(`Invalid input format: ${input}`);
@@ -363,13 +359,14 @@ async function installCommand(
   }
 
   installSpinner.succeed(`Installed ${installedSkills.length} skill(s)`);
-  trackInstalls(installedSkills, targets.ides);
+  trackEvent("install", { skills: installedSkills, ides: targets.ides });
 
   const installedNames = selectedSkills.map((s) => s.name);
   logInstallSummary(targets, targetDirs, installedNames);
 }
 
 async function searchCommand(query: string): Promise<void> {
+  trackEvent("command", { name: "search" });
   log.blank();
   const spinner = ora(`Searching for "${query}"...`).start();
 
@@ -392,6 +389,7 @@ async function searchCommand(query: string): Promise<void> {
   }
 
   spinner.succeed(`Found ${data.results.length} skill(s)`);
+  trackEvent("search_query", { query, resultCount: data.results.length });
 
   const indexWidth = data.results.length.toString().length;
   const maxNameLen = Math.max(...data.results.map((s) => s.name.length));
@@ -526,13 +524,14 @@ async function searchCommand(query: string): Promise<void> {
   }
 
   installSpinner.succeed(`Installed ${installedSkills.length} skill(s)`);
-  trackInstalls(installedSkills, targets.ides);
+  trackEvent("install", { skills: installedSkills, ides: targets.ides });
 
   const installedNames = uniqueSkills.map((s) => s.name);
   logInstallSummary(targets, targetDirs, installedNames);
 }
 
 async function listCommand(options: ListOptions): Promise<void> {
+  trackEvent("command", { name: "list" });
   const scope: Scope = options.global ? "global" : "project";
   const pathMap = scope === "global" ? IDE_GLOBAL_PATHS : IDE_PATHS;
   const baseDir = scope === "global" ? homedir() : process.cwd();
@@ -577,6 +576,7 @@ async function listCommand(options: ListOptions): Promise<void> {
 }
 
 async function removeCommand(name: string, options: RemoveOptions): Promise<void> {
+  trackEvent("command", { name: "remove" });
   const target = await promptForSingleTarget(options);
   if (!target) {
     log.warn("Cancelled");
@@ -602,6 +602,7 @@ async function removeCommand(name: string, options: RemoveOptions): Promise<void
 }
 
 async function infoCommand(input: string): Promise<void> {
+  trackEvent("command", { name: "info" });
   const parsed = parseSkillInput(input);
   if (!parsed) {
     log.blank();
