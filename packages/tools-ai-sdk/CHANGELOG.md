@@ -1,5 +1,11 @@
 # @upstash/context7-tools-ai-sdk
 
+## 0.2.2
+
+### Patch Changes
+
+- 02148ff: Bump zod from 3.x to 4.x
+
 ## 0.2.1
 
 ### Patch Changes
