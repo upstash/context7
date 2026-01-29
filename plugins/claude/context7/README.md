@@ -70,4 +70,4 @@ To get documentation for a specific version, include the version in the library 
 /supabase/supabase/v2.45.0
 ```
 
-The `resolve-library-id` tool returns available versions, so you can pick the one that matches your project.
+The `context7_resolve-library-id` tool returns available versions, so you can pick the one that matches your project.

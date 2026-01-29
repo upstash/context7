@@ -29,8 +29,8 @@ Fetches up-to-date documentation and code examples for a library.
 ## How It Works
 
 1. If the library starts with `/`, it's used directly as the Context7 ID
-2. Otherwise, `resolve-library-id` finds the best matching library
-3. `query-docs` fetches documentation relevant to your query
+2. Otherwise, `context7_resolve-library-id` finds the best matching library
+3. `context7_query-docs` fetches documentation relevant to your query
 4. Results include code examples and explanations
 
 ## Version-Specific Lookups
