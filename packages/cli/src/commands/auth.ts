@@ -14,6 +14,8 @@ import {
   isTokenExpired,
 } from "../utils/auth.js";
 
+import { trackEvent } from "../utils/tracking.js";
+
 const CLI_CLIENT_ID = "2veBSofhicRBguUT";
 
 let baseUrl = "https://context7.com";
@@ -47,6 +49,7 @@ export function registerAuthCommands(program: Command): void {
 }
 
 async function loginCommand(options: { browser: boolean }): Promise<void> {
+  trackEvent("command", { name: "login" });
   const existingTokens = loadTokens();
   if (existingTokens) {
     const expired = isTokenExpired(existingTokens);
@@ -128,6 +131,7 @@ async function loginCommand(options: { browser: boolean }): Promise<void> {
 }
 
 function logoutCommand(): void {
+  trackEvent("command", { name: "logout" });
   if (clearTokens()) {
     console.log(pc.green("Logged out successfully."));
   } else {
@@ -136,6 +140,7 @@ function logoutCommand(): void {
 }
 
 async function whoamiCommand(): Promise<void> {
+  trackEvent("command", { name: "whoami" });
   const tokens = loadTokens();
 
   if (!tokens) {

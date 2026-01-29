@@ -17,6 +17,7 @@ import { log } from "../utils/logger.js";
 import { promptForInstallTargets, getTargetDirs } from "../utils/ide.js";
 import selectOrInput from "../utils/selectOrInput.js";
 import { checkboxWithHover, terminalLink } from "../utils/prompts.js";
+import { trackEvent } from "../utils/tracking.js";
 import type {
   GenerateOptions,
   LibrarySearchResult,
@@ -53,6 +54,7 @@ export function registerGenerateCommand(skillCommand: Command): void {
 }
 
 async function generateCommand(options: GenerateOptions): Promise<void> {
+  trackEvent("command", { name: "generate" });
   log.blank();
 
   // Check authentication
@@ -426,6 +428,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
         log.warn("Generation cancelled");
         return;
       } else if (action === "feedback") {
+        trackEvent("gen_feedback");
         feedback = await input({
           message: "What changes would you like? (press Enter to skip)",
         });
@@ -489,6 +492,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
   }
 
   writeSpinner.succeed(pc.green(`Created skill in ${targetDirs.length} location(s)`));
+  trackEvent("gen_install");
 
   log.blank();
   console.log(pc.green(pc.bold("Skill saved successfully")));
