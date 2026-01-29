@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1
+
+### Patch Changes
+
+- 2f7cc42: Show exact install counts instead of rounded values, sort skills by install count in the install command, and display "installs" column header inline with the prompt
+- 85b905e: Add CLI telemetry for usage metrics collection (commands, searches, installs, generation feedback) via fire-and-forget events to /api/v2/cli/events. Respects CTX7_TELEMETRY_DISABLED env var.
+
 ## 0.2.0
 
 ### Minor Changes
