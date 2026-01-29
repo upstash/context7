@@ -7,6 +7,13 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@inquirer/core':
+        specifier: ^11.1.1
+        version: 11.1.1(@types/node@25.0.3)
+      '@inquirer/type':
+        specifier: ^4.0.3
+        version: 4.0.3(@types/node@25.0.3)
     devDependencies:
       '@changesets/cli':
         specifier: ^2.29.7
@@ -2941,6 +2948,18 @@ snapshots:
     optionalDependencies:
       '@types/node': 22.19.7
 
+  '@inquirer/core@11.1.1(@types/node@25.0.3)':
+    dependencies:
+      '@inquirer/ansi': 2.0.3
+      '@inquirer/figures': 2.0.3
+      '@inquirer/type': 4.0.3(@types/node@25.0.3)
+      cli-width: 4.1.0
+      mute-stream: 3.0.0
+      signal-exit: 4.1.0
+      wrap-ansi: 9.0.2
+    optionalDependencies:
+      '@types/node': 25.0.3
+
   '@inquirer/editor@5.0.4(@types/node@22.19.7)':
     dependencies:
       '@inquirer/core': 11.1.1(@types/node@22.19.7)
@@ -3036,6 +3055,10 @@ snapshots:
   '@inquirer/type@4.0.3(@types/node@22.19.7)':
     optionalDependencies:
       '@types/node': 22.19.7
+
+  '@inquirer/type@4.0.3(@types/node@25.0.3)':
+    optionalDependencies:
+      '@types/node': 25.0.3
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:

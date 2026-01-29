@@ -41,6 +41,89 @@ export interface DownloadResponse {
   error?: string;
 }
 
+// Library search types
+export interface LibrarySearchResult {
+  id: string;
+  title: string;
+  description: string;
+  branch: string;
+  totalSnippets: number;
+  totalTokens?: number;
+  stars?: number;
+  trustScore?: number;
+  benchmarkScore?: number;
+  versions?: string[];
+  vip?: boolean;
+}
+
+export interface LibrarySearchResponse {
+  results: LibrarySearchResult[];
+  error?: string;
+  message?: string;
+}
+
+// Skill generation types
+export interface SkillQuestion {
+  question: string;
+  options: string[];
+  recommendedIndex: number;
+}
+
+export interface SkillQuestionsResponse {
+  questions: SkillQuestion[];
+  error?: string;
+  message?: string;
+}
+
+export interface SkillAnswer {
+  question: string;
+  answer: string;
+}
+
+export interface LibraryInput {
+  id: string;
+  name: string;
+}
+
+export interface StructuredGenerateInput {
+  motivation: string;
+  libraries: LibraryInput[];
+  answers: SkillAnswer[];
+  feedback?: string;
+  previousContent?: string;
+}
+
+export interface ToolResultSnippet {
+  title: string;
+  content: string;
+}
+
+export interface ProgressEvent {
+  type: "progress";
+  message: string;
+}
+
+export interface ToolResultEvent {
+  type: "tool_result";
+  toolName: string;
+  query: string;
+  libraryId?: string;
+  results: ToolResultSnippet[];
+}
+
+export interface CompleteEvent {
+  type: "complete";
+  content: string;
+  libraryName: string;
+}
+
+export interface ErrorEvent {
+  type: "error";
+  message: string;
+}
+
+export type GenerateStreamEvent = ProgressEvent | ToolResultEvent | CompleteEvent | ErrorEvent;
+
 export type IDE = "claude" | "cursor" | "codex" | "opencode" | "amp" | "antigravity";
 
 export type Scope = "project" | "global";
@@ -61,6 +144,11 @@ export interface ScopeOptions {
 export type AddOptions = IDEOptions & ScopeOptions & { all?: boolean };
 export type ListOptions = IDEOptions & ScopeOptions;
 export type RemoveOptions = IDEOptions & ScopeOptions;
+export type GenerateOptions = IDEOptions &
+  ScopeOptions & {
+    output?: string;
+    all?: boolean;
+  };
 
 export interface InstallTargets {
   ides: IDE[];
@@ -103,3 +191,13 @@ export const DEFAULT_CONFIG: C7Config = {
   defaultIde: "claude",
   defaultScope: "project",
 };
+
+export interface SkillQuotaResponse {
+  used: number;
+  limit: number;
+  remaining: number;
+  tier: "free" | "pro" | "unlimited";
+  resetDate: string | null;
+  message?: string;
+  error?: string;
+}

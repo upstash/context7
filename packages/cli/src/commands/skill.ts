@@ -23,6 +23,7 @@ import {
 } from "../utils/ide.js";
 import { checkboxWithHover, terminalLink, formatInstallCount } from "../utils/prompts.js";
 import { installSkillFiles, symlinkSkill } from "../utils/installer.js";
+import { registerGenerateCommand } from "./generate.js";
 import type {
   Skill,
   SkillSearchResult,
@@ -56,6 +57,9 @@ function logInstallSummary(
 
 export function registerSkillCommands(program: Command): void {
   const skill = program.command("skills").alias("skill").description("Manage AI coding skills");
+
+  // Register generate subcommand
+  registerGenerateCommand(skill);
 
   skill
     .command("install")

@@ -1,0 +1,499 @@
+import { Command } from "commander";
+import pc from "picocolors";
+import ora from "ora";
+import { mkdir, writeFile } from "fs/promises";
+import { join } from "path";
+import { homedir } from "os";
+import { input, select } from "@inquirer/prompts";
+
+import {
+  searchLibraries,
+  getSkillQuestions,
+  generateSkillStructured,
+  getSkillQuota,
+} from "../utils/api.js";
+import { loadTokens, isTokenExpired } from "../utils/auth.js";
+import { log } from "../utils/logger.js";
+import { promptForInstallTargets, getTargetDirs } from "../utils/ide.js";
+import selectOrInput from "../utils/selectOrInput.js";
+import { checkboxWithHover, terminalLink } from "../utils/prompts.js";
+import type {
+  GenerateOptions,
+  LibrarySearchResult,
+  SkillAnswer,
+  StructuredGenerateInput,
+  GenerateStreamEvent,
+  ToolResultSnippet,
+} from "../types.js";
+
+interface QueryLogEntry {
+  query: string;
+  libraryId?: string;
+  results: ToolResultSnippet[];
+}
+
+export function registerGenerateCommand(skillCommand: Command): void {
+  skillCommand
+    .command("generate")
+    .alias("gen")
+    .alias("g")
+    .option("-o, --output <dir>", "Output directory (default: current directory)")
+    .option("--all", "Generate for all detected IDEs")
+    .option("--global", "Generate in global skills directory")
+    .option("--claude", "Claude Code (.claude/skills/)")
+    .option("--cursor", "Cursor (.cursor/skills/)")
+    .option("--codex", "Codex (.codex/skills/)")
+    .option("--opencode", "OpenCode (.opencode/skills/)")
+    .option("--amp", "Amp (.agents/skills/)")
+    .option("--antigravity", "Antigravity (.agent/skills/)")
+    .description("Generate a skill for a library using AI")
+    .action(async (options: GenerateOptions) => {
+      await generateCommand(options);
+    });
+}
+
+async function generateCommand(options: GenerateOptions): Promise<void> {
+  log.blank();
+
+  // Check authentication
+  const tokens = loadTokens();
+  if (!tokens) {
+    log.error("Authentication required. Please run 'ctx7 login' first.");
+    return;
+  }
+
+  if (isTokenExpired(tokens)) {
+    log.error("Session expired. Please run 'ctx7 login' to refresh.");
+    return;
+  }
+
+  const accessToken = tokens.access_token;
+
+  const initSpinner = ora().start();
+  const quota = await getSkillQuota(accessToken);
+
+  if (quota.error) {
+    initSpinner.fail(pc.red("Failed to initialize"));
+    return;
+  }
+
+  if (quota.tier !== "unlimited" && quota.remaining < 1) {
+    initSpinner.fail(pc.red("Weekly skill generation limit reached"));
+    log.blank();
+    console.log(
+      `  You've used ${pc.bold(pc.white(quota.used.toString()))}/${pc.bold(pc.white(quota.limit.toString()))} skill generations this week.`
+    );
+    console.log(
+      `  Your quota resets on ${pc.yellow(new Date(quota.resetDate!).toLocaleDateString())}.`
+    );
+    log.blank();
+    if (quota.tier === "free") {
+      console.log(
+        `  ${pc.yellow("Tip:")} Upgrade to Pro for ${pc.bold("10")} generations per week.`
+      );
+      console.log(`  Visit ${pc.green("https://context7.com/dashboard")} to upgrade.`);
+    }
+    return;
+  }
+
+  initSpinner.stop();
+  initSpinner.clear();
+
+  console.log(pc.bold("What should your agent become an expert at?\n"));
+  console.log(
+    pc.dim("Skills teach agents best practices, design patterns, and domain expertise.\n")
+  );
+  console.log(pc.yellow("Examples:"));
+  console.log(pc.dim('  "React component optimization and performance best practices"'));
+  console.log(pc.dim('  "Responsive web design with Tailwind CSS"'));
+  console.log(pc.dim('  "Writing effective landing page copy"'));
+  console.log(pc.dim('  "Deploying Next.js apps to Vercel"'));
+  console.log(pc.dim('  "OAuth authentication with NextAuth.js"\n'));
+
+  let motivation: string;
+  try {
+    motivation = await input({
+      message: "Describe the expertise:",
+    });
+
+    if (!motivation.trim()) {
+      log.warn("Expertise description is required");
+      return;
+    }
+    motivation = motivation.trim();
+  } catch {
+    log.warn("Generation cancelled");
+    return;
+  }
+
+  const searchSpinner = ora("Finding relevant libraries...").start();
+  const searchResult = await searchLibraries(motivation, accessToken);
+
+  if (searchResult.error || !searchResult.results?.length) {
+    searchSpinner.fail(pc.red("No libraries found"));
+    log.warn(searchResult.message || "Try a different description");
+    return;
+  }
+
+  searchSpinner.succeed(pc.green(`Found ${searchResult.results.length} relevant libraries`));
+  log.blank();
+
+  let selectedLibraries: LibrarySearchResult[];
+  try {
+    const formatProjectId = (id: string) => {
+      return id.startsWith("/") ? id.slice(1) : id;
+    };
+
+    const isGitHubRepo = (id: string): boolean => {
+      const cleanId = id.startsWith("/") ? id.slice(1) : id;
+      const parts = cleanId.split("/");
+      if (parts.length !== 2) return false;
+      const nonGitHubPrefixes = ["websites", "packages", "npm", "docs", "libraries", "llmstxt"];
+      return !nonGitHubPrefixes.includes(parts[0].toLowerCase());
+    };
+
+    const libraries = searchResult.results.slice(0, 5);
+    const indexWidth = libraries.length.toString().length;
+    const maxNameLen = Math.max(...libraries.map((lib) => lib.title.length));
+
+    const libraryChoices = libraries.map((lib, index) => {
+      const projectId = formatProjectId(lib.id);
+      const isGitHub = isGitHubRepo(lib.id);
+      const indexStr = pc.dim(`${(index + 1).toString().padStart(indexWidth)}.`);
+      const paddedName = lib.title.padEnd(maxNameLen);
+
+      const libUrl = `https://context7.com${lib.id}`;
+      const libLink = terminalLink(lib.title, libUrl, pc.white);
+      const repoLink = isGitHub
+        ? terminalLink(projectId, `https://github.com/${projectId}`, pc.white)
+        : pc.white(projectId);
+
+      const starsLine =
+        lib.stars && isGitHub ? [`${pc.yellow("Stars:")}       ${lib.stars.toLocaleString()}`] : [];
+
+      const metadataLines = [
+        pc.dim("─".repeat(50)),
+        "",
+        `${pc.yellow("Library:")}     ${libLink}`,
+        `${pc.yellow("Source:")}      ${repoLink}`,
+        `${pc.yellow("Snippets:")}    ${lib.totalSnippets.toLocaleString()}`,
+        ...starsLine,
+        `${pc.yellow("Description:")}`,
+        pc.white(lib.description || "No description"),
+      ];
+
+      return {
+        name: `${indexStr} ${paddedName}  ${pc.dim(`(${projectId})`)}`,
+        value: lib,
+        description: metadataLines.join("\n"),
+      };
+    });
+
+    selectedLibraries = await checkboxWithHover(
+      {
+        message: "Select libraries:",
+        choices: libraryChoices,
+        pageSize: 10,
+        loop: false,
+      },
+      { getName: (lib) => `${lib.title} (${formatProjectId(lib.id)})` }
+    );
+
+    if (!selectedLibraries || selectedLibraries.length === 0) {
+      log.info("No libraries selected. Try running the command again.");
+      return;
+    }
+  } catch {
+    log.warn("Generation cancelled");
+    return;
+  }
+
+  log.blank();
+
+  const questionsSpinner = ora("Preparing questions...").start();
+  const librariesInput = selectedLibraries.map((lib) => ({ id: lib.id, name: lib.title }));
+  const questionsResult = await getSkillQuestions(librariesInput, motivation, accessToken);
+
+  if (questionsResult.error || !questionsResult.questions?.length) {
+    questionsSpinner.fail(pc.red("Failed to generate questions"));
+    log.warn(questionsResult.message || "Please try again");
+    return;
+  }
+
+  questionsSpinner.succeed(pc.green("Questions prepared"));
+  log.blank();
+
+  const answers: SkillAnswer[] = [];
+  try {
+    for (let i = 0; i < questionsResult.questions.length; i++) {
+      const q = questionsResult.questions[i];
+      const questionNum = i + 1;
+      const totalQuestions = questionsResult.questions.length;
+
+      const answer = await selectOrInput({
+        message: `${pc.dim(`[${questionNum}/${totalQuestions}]`)} ${q.question}`,
+        options: q.options,
+        recommendedIndex: q.recommendedIndex,
+      });
+
+      answers.push({
+        question: q.question,
+        answer,
+      });
+
+      const linesToClear = 3 + q.options.length;
+      process.stdout.write(`\x1b[${linesToClear}A\x1b[J`);
+
+      const truncatedAnswer = answer.length > 50 ? answer.slice(0, 47) + "..." : answer;
+      console.log(`${pc.green("✓")} ${pc.dim(`[${questionNum}/${totalQuestions}]`)} ${q.question}`);
+      console.log(`  ${pc.cyan(truncatedAnswer)}`);
+      log.blank();
+    }
+  } catch {
+    log.warn("Generation cancelled");
+    return;
+  }
+
+  let generatedContent: string | null = null;
+  let skillName: string = "";
+  let feedback: string | undefined;
+
+  const libraryNames = selectedLibraries.map((lib) => lib.title).join(", ");
+  const queryLog: QueryLogEntry[] = [];
+  let genSpinner: ReturnType<typeof ora> | null = null;
+
+  const formatQueryLogText = (): string => {
+    if (queryLog.length === 0) return "";
+
+    const lines: string[] = [];
+    const latestEntry = queryLog[queryLog.length - 1];
+
+    lines.push(pc.dim(`(${queryLog.length} ${queryLog.length === 1 ? "query" : "queries"})`));
+    lines.push("");
+
+    for (const result of latestEntry.results.slice(0, 3)) {
+      const cleanContent = result.content.replace(/Source:\s*https?:\/\/[^\s]+/gi, "").trim();
+      if (cleanContent) {
+        lines.push(`  ${pc.yellow("•")} ${pc.white(result.title)}`);
+        const maxLen = 400;
+        const content =
+          cleanContent.length > maxLen ? cleanContent.slice(0, maxLen - 3) + "..." : cleanContent;
+        const words = content.split(" ");
+        let currentLine = "    ";
+        for (const word of words) {
+          if (currentLine.length + word.length > 84) {
+            lines.push(pc.dim(currentLine));
+            currentLine = "    " + word + " ";
+          } else {
+            currentLine += word + " ";
+          }
+        }
+        if (currentLine.trim()) {
+          lines.push(pc.dim(currentLine));
+        }
+        lines.push("");
+      }
+    }
+
+    return "\n" + lines.join("\n");
+  };
+
+  let isGeneratingContent = false;
+
+  const handleStreamEvent = (event: GenerateStreamEvent) => {
+    if (event.type === "progress") {
+      if (genSpinner) {
+        if (event.message.startsWith("Generating skill content...") && !isGeneratingContent) {
+          isGeneratingContent = true;
+          if (queryLog.length > 0) {
+            genSpinner.succeed(pc.green(`Queried documentation`));
+          } else {
+            genSpinner.succeed(pc.green(`Ready to generate`));
+          }
+          genSpinner = ora("Generating skill content...").start();
+        } else if (!isGeneratingContent) {
+          genSpinner.text = event.message + formatQueryLogText();
+        }
+      }
+    } else if (event.type === "tool_result") {
+      queryLog.push({
+        query: event.query,
+        libraryId: event.libraryId,
+        results: event.results,
+      });
+      if (genSpinner && !isGeneratingContent) {
+        genSpinner.text = genSpinner.text.split("\n")[0] + formatQueryLogText();
+      }
+    }
+  };
+
+  while (true) {
+    const generateInput: StructuredGenerateInput = {
+      motivation,
+      libraries: librariesInput,
+      answers,
+      feedback,
+      previousContent: feedback && generatedContent ? generatedContent : undefined,
+    };
+
+    queryLog.length = 0;
+    isGeneratingContent = false;
+    const initialStatus = feedback
+      ? "Regenerating skill with your feedback..."
+      : `Generating skill for "${libraryNames}"...`;
+
+    genSpinner = ora(initialStatus).start();
+
+    const result = await generateSkillStructured(generateInput, handleStreamEvent, accessToken);
+
+    if (result.error) {
+      genSpinner.fail(pc.red(`Error: ${result.error}`));
+      return;
+    }
+
+    if (!result.content) {
+      genSpinner.fail(pc.red("No content generated"));
+      return;
+    }
+
+    genSpinner.succeed(pc.green(`Generated skill for "${result.libraryName}"`));
+    generatedContent = result.content;
+    skillName = result.libraryName.toLowerCase().replace(/[^a-z0-9-]/g, "-");
+
+    const contentLines = generatedContent.split("\n");
+    const previewLineCount = 20;
+    const hasMoreLines = contentLines.length > previewLineCount;
+    const previewContent = contentLines.slice(0, previewLineCount).join("\n");
+    const remainingLines = contentLines.length - previewLineCount;
+
+    const showPreview = () => {
+      log.blank();
+      console.log(pc.dim("━".repeat(70)));
+      console.log(pc.bold(`Generated Skill: `) + pc.green(pc.bold(skillName)));
+      console.log(pc.dim("━".repeat(70)));
+      log.blank();
+      console.log(previewContent);
+      if (hasMoreLines) {
+        log.blank();
+        console.log(pc.dim(`... ${remainingLines} more lines`));
+      }
+      log.blank();
+      console.log(pc.dim("━".repeat(70)));
+      log.blank();
+    };
+
+    const showFullContent = () => {
+      log.blank();
+      console.log(pc.dim("━".repeat(70)));
+      console.log(pc.bold(`Generated Skill: `) + pc.green(pc.bold(skillName)));
+      console.log(pc.dim("━".repeat(70)));
+      log.blank();
+      console.log(generatedContent);
+      log.blank();
+      console.log(pc.dim("━".repeat(70)));
+      log.blank();
+    };
+
+    showPreview();
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    try {
+      let action: string;
+      while (true) {
+        const choices = [
+          { name: `${pc.green("✓")} Install skill`, value: "install" },
+          ...(hasMoreLines ? [{ name: `${pc.blue("⤢")} View full skill`, value: "expand" }] : []),
+          { name: `${pc.yellow("✎")} Request changes`, value: "feedback" },
+          { name: `${pc.red("✕")} Cancel`, value: "cancel" },
+        ];
+
+        action = await select({
+          message: "What would you like to do?",
+          choices,
+        });
+
+        if (action === "expand") {
+          showFullContent();
+          continue;
+        }
+        break;
+      }
+
+      if (action === "install") {
+        break;
+      } else if (action === "cancel") {
+        log.warn("Generation cancelled");
+        return;
+      } else if (action === "feedback") {
+        feedback = await input({
+          message: "What changes would you like? (press Enter to skip)",
+        });
+
+        if (!feedback.trim()) {
+          feedback = undefined;
+        }
+        log.blank();
+      }
+    } catch {
+      log.warn("Generation cancelled");
+      return;
+    }
+  }
+
+  const targets = await promptForInstallTargets(options);
+  if (!targets) {
+    log.warn("Generation cancelled");
+    return;
+  }
+
+  const targetDirs = getTargetDirs(targets);
+
+  const writeSpinner = ora("Writing skill files...").start();
+
+  let permissionError = false;
+  const failedDirs: Set<string> = new Set();
+
+  for (const targetDir of targetDirs) {
+    let finalDir = targetDir;
+    if (options.output && !targetDir.includes("/.config/") && !targetDir.startsWith(homedir())) {
+      finalDir = targetDir.replace(process.cwd(), options.output);
+    }
+    const skillDir = join(finalDir, skillName);
+    const skillPath = join(skillDir, "SKILL.md");
+
+    try {
+      await mkdir(skillDir, { recursive: true });
+      await writeFile(skillPath, generatedContent!, "utf-8");
+    } catch (err) {
+      const error = err as NodeJS.ErrnoException;
+      if (error.code === "EACCES" || error.code === "EPERM") {
+        permissionError = true;
+        failedDirs.add(skillDir);
+      } else {
+        log.warn(`Failed to write to ${skillPath}: ${error.message}`);
+      }
+    }
+  }
+
+  if (permissionError) {
+    writeSpinner.fail(pc.red("Permission denied"));
+    log.blank();
+    console.log(pc.yellow("Fix permissions with:"));
+    for (const dir of failedDirs) {
+      const parentDir = join(dir, "..");
+      console.log(pc.dim(`  sudo chown -R $(whoami) "${parentDir}"`));
+    }
+    log.blank();
+    return;
+  }
+
+  writeSpinner.succeed(pc.green(`Created skill in ${targetDirs.length} location(s)`));
+
+  log.blank();
+  console.log(pc.green(pc.bold("Skill saved successfully")));
+  for (const targetDir of targetDirs) {
+    console.log(pc.dim(`  ${targetDir}/`) + pc.green(skillName));
+  }
+  log.blank();
+}

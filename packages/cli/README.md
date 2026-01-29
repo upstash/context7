@@ -23,11 +23,61 @@ ctx7 skills search pdf
 # Install a skill
 ctx7 skills install /anthropics/skills pdf
 
+# Generate a custom skill with AI
+ctx7 skills generate
+
 # List installed skills
 ctx7 skills list --claude
 ```
 
 ## Usage
+
+### Generate skills
+
+Generate custom skills tailored to your use case using AI. Requires authentication.
+
+```bash
+# Log in first
+ctx7 login
+
+# Generate a skill (interactive)
+ctx7 skills generate
+
+# Short aliases
+ctx7 skills gen
+ctx7 skills g
+
+# Generate and install to a specific client
+ctx7 skills generate --cursor
+ctx7 skills generate --claude
+
+# Generate globally
+ctx7 skills generate --global
+```
+
+The generate flow:
+
+1. Describe the expertise you want (e.g., "OAuth authentication with NextAuth.js")
+2. Select relevant libraries from search results
+3. Answer 3 clarifying questions to focus the skill
+4. Review the generated skill, request changes if needed, then install
+
+Weekly generation limits apply: free accounts get 6 generations/week, Pro accounts get 10.
+
+### Authentication
+
+Log in to access skill generation and other authenticated features.
+
+```bash
+# Log in (opens browser for OAuth)
+ctx7 login
+
+# Check login status
+ctx7 whoami
+
+# Log out
+ctx7 logout
+```
 
 ### Install skills
 
@@ -110,6 +160,8 @@ For faster usage, the CLI provides short aliases:
 ```bash
 ctx7 si /anthropics/skills pdf   # skills install
 ctx7 ss pdf                       # skills search
+ctx7 skills gen                   # skills generate
+ctx7 skills g                     # skills generate
 ```
 
 ## Learn More

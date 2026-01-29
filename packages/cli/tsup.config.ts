@@ -9,4 +9,12 @@ export default defineConfig({
   banner: {
     js: "#!/usr/bin/env node",
   },
+  noExternal: [],
+  external: [
+    "@inquirer/core",
+    "@inquirer/type",
+    "@inquirer/prompts",
+    "mute-stream",
+    "stream",
+  ],
 });
