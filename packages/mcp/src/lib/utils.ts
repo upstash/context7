@@ -1,5 +1,8 @@
 import { SearchResponse, SearchResult } from "./types.js";
 
+
+
+
 /**
  * Maps numeric source reputation score to an interpretable label for LLM consumption.
  *
@@ -81,4 +84,48 @@ export function extractClientInfoFromUserAgent(
     return { ide: match[1], version: match[2] };
   }
   return undefined;
+}
+
+/**
+ * Generates a Markdown comparison between two libraries to help the developer make a decision
+ * @param libA  first search result
+ * @param libB  second search result
+ * @returns string formatted as a Markdown table
+ */
+
+export function formatComparison(libA: SearchResult, libB: SearchResult): string {
+
+  const getReputation = (val?: number) => getSourceReputationLabel(val);
+
+
+
+  return [
+
+    `### Comparison: ${libA.title} vs ${libB.title}`,
+
+    "",
+
+    "| Metric | " + libA.title + " | " + libB.title + " |",
+
+    "| :--- | :--- | :--- |",
+
+    `| **Context7 ID** | \`${libA.id}\` | \`${libB.id}\` |`,
+
+    `| **Benchmark Score** | ${libA.benchmarkScore ?? "N/A"} | ${libB.benchmarkScore ?? "N/A"} |`,
+
+    `| **Trust Score** | ${libA.trustScore ?? "N/A"} | ${libB.trustScore ?? "N/A"} |`,
+
+    `| **Reputation** | ${getReputation(libA.trustScore)} | ${getReputation(libB.trustScore)} |`,
+
+    `| **Snippets** | ${libA.totalSnippets !== -1 ? libA.totalSnippets : "N/A"} | ${libB.totalSnippets !== -1 ? libB.totalSnippets : "N/A"} |`,
+
+    `| **Stars** | ${libA.stars && libA.stars !== -1 ? libA.stars : "N/A"} | ${libB.stars && libB.stars !== -1 ? libB.stars : "N/A"} |`,
+
+    "",
+
+    `**Description ${libA.title}:** ${libA.description}`,
+
+    `**Description ${libB.title}:** ${libB.description}`
+
+  ].join("\n");
 }

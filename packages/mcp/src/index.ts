@@ -5,7 +5,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
 import { ClientContext } from "./lib/encryption.js";
-import { formatSearchResults, extractClientInfoFromUserAgent } from "./lib/utils.js";
+import { formatSearchResults, extractClientInfoFromUserAgent, formatComparison } from "./lib/utils.js";
 import { isJWT, validateJWT } from "./lib/jwt.js";
 import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -265,6 +265,47 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
     };
   }
 );
+
+server.registerTool(
+  "compare-libraries",
+  {
+    description: "Compares metrics of two libraries to help choose the best technical option.",
+    inputSchema: z.object({
+      libraryIdA: z.string().describe("The ID or name of the first library (e.g., 'express')"),
+      libraryIdB: z.string().describe("The ID or name of the second library (e.g., 'fastify')"),
+    }),
+  },
+  async ({ libraryIdA, libraryIdB }: { libraryIdA: string; libraryIdB: string }) => {
+    // 1. Perform searches in parallel
+    const [searchA, searchB] = await Promise.all([
+      searchLibraries(libraryIdA, libraryIdA, getClientContext()),
+      searchLibraries(libraryIdB, libraryIdB, getClientContext())
+    ]);
+
+    const libA = searchA.results?.[0];
+    const libB = searchB.results?.[0];
+
+    if (!libA || !libB) {
+      return {
+        content: [{ 
+          type: "text", 
+          text: `Error: Unable to find data for one or both libraries. IDs: ${libraryIdA}, ${libraryIdB}.` 
+        }],
+        isError: true,
+      };
+    }
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: formatComparison(libA, libB),
+        },
+      ],
+    };
+  }
+);
+
 
 async function main() {
   const transportType = TRANSPORT_TYPE;
