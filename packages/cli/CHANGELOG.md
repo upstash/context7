@@ -1,8 +1,20 @@
 # Changelog
 
+## 0.2.0
+
+### Minor Changes
+
+- 8ba484c: Add AI-powered skill generation with `skills generate` command, including library search, clarifying questions, real-time query progress, feedback loop, and weekly quota management.
+- aacfd31: Add OAuth 2.0 authentication with login, logout, and whoami commands.
+
+### Patch Changes
+
+- 572c3ca: Simplify `skills list` command to show all detected IDE skill directories without prompts.
+
 ## 0.1.5
 
 ### Improvements
+
 - Improved skill selection UX with metadata panel showing Skill, Repo, and Description
 - Clickable links in metadata (Skill → context7.com, Repo → GitHub)
 - Display install counts next to skill names (e.g., `↓100+`, `↓50+`)
