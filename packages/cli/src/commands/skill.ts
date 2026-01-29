@@ -215,7 +215,9 @@ async function installCommand(
       return;
     }
 
-    const skillsWithRepo = data.skills.map((s) => ({ ...s, project: repo }));
+    const skillsWithRepo = data.skills
+      .map((s) => ({ ...s, project: repo }))
+      .sort((a, b) => (b.installCount ?? 0) - (a.installCount ?? 0));
 
     spinner.succeed(`Found ${data.skills.length} skill(s)`);
 
@@ -259,9 +261,15 @@ async function installCommand(
 
       log.blank();
 
+      // Align "installs" column header with the count values
+      // "? " prefix = 2 chars, checkbox prefix "❯◯ " = 4 chars, index + dot + space, padded name + space
+      const installsOffset = 4 + indexWidth + 1 + 1 + maxNameLen + 1 - 3;
+      const message =
+        "Select skills:" + " ".repeat(Math.max(1, installsOffset - 14)) + pc.dim("installs");
+
       try {
         selectedSkills = await checkboxWithHover({
-          message: "Select skills:",
+          message,
           choices,
           pageSize: 15,
           loop: false,
@@ -417,10 +425,14 @@ async function searchCommand(query: string): Promise<void> {
 
   log.blank();
 
+  const installsOffset = 4 + indexWidth + 1 + 1 + maxNameLen + 1 - 3;
+  const message =
+    "Select skills to install:" + " ".repeat(Math.max(1, installsOffset - 25)) + pc.dim("installs");
+
   let selectedSkills: SkillSearchResult[];
   try {
     selectedSkills = await checkboxWithHover({
-      message: "Select skills to install:",
+      message,
       choices,
       pageSize: 15,
       loop: false,
