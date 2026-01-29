@@ -142,12 +142,12 @@ server.server.oninitialized = () => {
 };
 
 server.registerTool(
-  "resolve-library-id",
+  "context7_resolve-library-id",
   {
     title: "Resolve Context7 Library ID",
     description: `Resolves a package/product name to a Context7-compatible library ID and returns matching libraries.
 
-You MUST call this function before 'query-docs' to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
+You MUST call this function before 'context7_query-docs' to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
 Selection Process:
 1. Analyze the query to understand what library/package the user is looking for
@@ -228,12 +228,12 @@ ${resultsText}`;
 );
 
 server.registerTool(
-  "query-docs",
+  "context7_query-docs",
   {
     title: "Query Documentation",
     description: `Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
 
-You must call 'resolve-library-id' first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
+You must call 'context7_resolve-library-id' first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
 IMPORTANT: Do not call this tool more than 3 times per question. If you cannot find what you need after 3 calls, use the best information you have.`,
     inputSchema: {

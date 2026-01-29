@@ -14,7 +14,7 @@ When given a question about a library or framework, fetch the relevant documenta
 
 1. **Identify the library**: Extract the library/framework name from the user's question.
 
-2. **Resolve the library ID**: Call `resolve-library-id` with:
+2. **Resolve the library ID**: Call `context7_resolve-library-id` with:
    - `libraryName`: The library name (e.g., "react", "next.js", "prisma")
    - `query`: The user's full question for relevance ranking
 
@@ -23,7 +23,7 @@ When given a question about a library or framework, fetch the relevant documenta
    - Highest benchmark score
    - Appropriate version if the user specified one (e.g., "React 19" → look for v19.x)
 
-4. **Fetch documentation**: Call `query-docs` with:
+4. **Fetch documentation**: Call `context7_query-docs` with:
    - `libraryId`: The selected Context7 library ID (e.g., `/vercel/next.js`)
    - `query`: The user's specific question for targeted results
 
@@ -36,5 +36,5 @@ When given a question about a library or framework, fetch the relevant documenta
 
 - Pass the user's full question as the query parameter for better relevance
 - When the user mentions a version (e.g., "Next.js 15"), use version-specific library IDs if available
-- If `resolve-library-id` returns multiple matches, prefer official/primary packages over community forks
+- If `context7_resolve-library-id` returns multiple matches, prefer official/primary packages over community forks
 - Keep responses concise - the goal is to answer the question, not dump entire documentation

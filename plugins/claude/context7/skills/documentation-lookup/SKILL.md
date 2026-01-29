@@ -18,7 +18,7 @@ Activate this skill when the user:
 
 ### Step 1: Resolve the Library ID
 
-Call `resolve-library-id` with:
+Call `context7_resolve-library-id` with:
 
 - `libraryName`: The library name extracted from the user's question
 - `query`: The user's full question (improves relevance ranking)
@@ -33,7 +33,7 @@ From the resolution results, choose based on:
 
 ### Step 3: Fetch the Documentation
 
-Call `query-docs` with:
+Call `context7_query-docs` with:
 
 - `libraryId`: The selected Context7 library ID (e.g., `/vercel/next.js`)
 - `query`: The user's specific question

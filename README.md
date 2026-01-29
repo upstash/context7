@@ -195,11 +195,11 @@ Context7 will automatically match the appropriate version.
 
 Context7 MCP provides the following tools that LLMs can use:
 
-- `resolve-library-id`: Resolves a general library name into a Context7-compatible library ID.
+- `context7_resolve-library-id`: Resolves a general library name into a Context7-compatible library ID.
   - `query` (required): The user's question or task (used to rank results by relevance)
   - `libraryName` (required): The name of the library to search for
 
-- `query-docs`: Retrieves documentation for a library using a Context7-compatible library ID.
+- `context7_query-docs`: Retrieves documentation for a library using a Context7-compatible library ID.
   - `libraryId` (required): Exact Context7-compatible library ID (e.g., `/mongodb/docs`, `/vercel/next.js`)
   - `query` (required): The question or task to get relevant documentation for
 
