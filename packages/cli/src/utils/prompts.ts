@@ -17,13 +17,13 @@ export function terminalLink(text: string, url: string, color?: (s: string) => s
  * Formats install count for display.
  */
 export function formatInstallCount(count: number | undefined): string {
-  if (count === undefined || count === 0) return "";
+  if (count === undefined || count === 0) return pc.dim("-");
 
   return pc.yellow(String(count));
 }
 
 export function formatTrustScore(score: number | undefined): string {
-  if (score === undefined || score < 0) return "";
+  if (score === undefined || score < 0) return pc.dim("-");
 
   if (score < 3) return pc.red(score.toFixed(1));
   return pc.yellow(score.toFixed(1));

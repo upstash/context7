@@ -402,10 +402,9 @@ async function searchCommand(query: string): Promise<void> {
   const choices = data.results.map((s, index) => {
     const indexStr = pc.dim(`${(index + 1).toString().padStart(indexWidth)}.`);
     const paddedName = s.name.padEnd(maxNameLen);
-    const installsRaw = s.installCount ? String(s.installCount) : "";
-    const paddedInstalls = installsRaw
-      ? formatInstallCount(s.installCount) + " ".repeat(installsColWidth - installsRaw.length)
-      : " ".repeat(installsColWidth);
+    const installsRaw = s.installCount ? String(s.installCount) : "-";
+    const paddedInstalls =
+      formatInstallCount(s.installCount) + " ".repeat(installsColWidth - installsRaw.length);
     const trust = formatTrustScore(s.trustScore);
 
     const skillLink = terminalLink(
