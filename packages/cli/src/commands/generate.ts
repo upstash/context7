@@ -106,14 +106,23 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
 
   console.log(pc.bold("What should your agent become an expert at?\n"));
   console.log(
-    pc.dim("Skills teach agents best practices, design patterns, and domain expertise.\n")
+    pc.dim(
+      "Skills should encode best practices, constraints, and decision-making —\nnot step-by-step tutorials or one-off tasks.\n"
+    )
   );
   console.log(pc.yellow("Examples:"));
-  console.log(pc.dim('  "React component optimization and performance best practices"'));
-  console.log(pc.dim('  "Responsive web design with Tailwind CSS"'));
-  console.log(pc.dim('  "Writing effective landing page copy"'));
-  console.log(pc.dim('  "Deploying Next.js apps to Vercel"'));
-  console.log(pc.dim('  "OAuth authentication with NextAuth.js"\n'));
+  // prettier-ignore
+  {
+    console.log(pc.red('  ✕ "Deploy a Next.js app to Vercel"'));
+    console.log(pc.green('  ✓ "Best practices and constraints for deploying Next.js apps to Vercel"'));
+    log.blank();
+    console.log(pc.red('  ✕ "Use Tailwind for responsive design"'));
+    console.log(pc.green('  ✓ "Responsive layout decision-making with Tailwind CSS"'));
+    log.blank();
+    console.log(pc.red('  ✕ "Build OAuth with NextAuth"'));
+    console.log(pc.green('  ✓ "OAuth authentication patterns and pitfalls with NextAuth.js"'));
+  }
+  log.blank();
 
   let motivation: string;
   try {
@@ -131,17 +140,22 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
     return;
   }
 
-  const searchSpinner = ora("Finding relevant libraries...").start();
+  const searchSpinner = ora("Finding relevant sources...").start();
   const searchResult = await searchLibraries(motivation, accessToken);
 
   if (searchResult.error || !searchResult.results?.length) {
-    searchSpinner.fail(pc.red("No libraries found"));
+    searchSpinner.fail(pc.red("No sources found"));
     log.warn(searchResult.message || "Try a different description");
     return;
   }
 
-  searchSpinner.succeed(pc.green(`Found ${searchResult.results.length} relevant libraries`));
+  searchSpinner.succeed(pc.green(`Found ${searchResult.results.length} relevant sources`));
   log.blank();
+  console.log(
+    pc.dim(
+      "These sources are used to extract best practices, compare patterns,\nand avoid outdated guidance. You can adjust which sources the skill is based on.\n"
+    )
+  );
 
   let selectedLibraries: LibrarySearchResult[];
   try {
@@ -196,7 +210,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
 
     selectedLibraries = await checkboxWithHover(
       {
-        message: "Select libraries:",
+        message: "Select sources:",
         choices: libraryChoices,
         pageSize: 10,
         loop: false,
@@ -205,7 +219,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
     );
 
     if (!selectedLibraries || selectedLibraries.length === 0) {
-      log.info("No libraries selected. Try running the command again.");
+      log.info("No sources selected. Try running the command again.");
       return;
     }
   } catch {
@@ -215,7 +229,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
 
   log.blank();
 
-  const questionsSpinner = ora("Preparing questions...").start();
+  const questionsSpinner = ora("Preparing follow-up questions to clarify scope...").start();
   const librariesInput = selectedLibraries.map((lib) => ({ id: lib.id, name: lib.title }));
   const questionsResult = await getSkillQuestions(librariesInput, motivation, accessToken);
 
@@ -263,7 +277,6 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
   let skillName: string = "";
   let feedback: string | undefined;
 
-  const libraryNames = selectedLibraries.map((lib) => lib.title).join(", ");
   const queryLog: QueryLogEntry[] = [];
   let genSpinner: ReturnType<typeof ora> | null = null;
 
@@ -345,7 +358,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
     isGeneratingContent = false;
     const initialStatus = feedback
       ? "Regenerating skill with your feedback..."
-      : `Generating skill for "${libraryNames}"...`;
+      : "Reading selected sources to generate the skill...";
 
     genSpinner = ora(initialStatus).start();
 
