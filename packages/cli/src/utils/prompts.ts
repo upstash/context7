@@ -10,7 +10,7 @@ type CheckboxChoice<T> = Exclude<CheckboxConfig<T>["choices"][number], Separator
  */
 export function terminalLink(text: string, url: string, color?: (s: string) => string): string {
   const colorFn = color ?? ((s: string) => s);
-  return `\x1b]8;;${url}\x07${colorFn(text)}\x1b]8;;\x07`;
+  return `\x1b]8;;${url}\x07${colorFn(text)}\x1b]8;;\x07 ${pc.white("↗")}`;
 }
 
 /**
