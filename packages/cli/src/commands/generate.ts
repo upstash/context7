@@ -140,6 +140,19 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
     return;
   }
 
+  log.blank();
+  console.log(
+    pc.dim(
+      "To generate this skill, we will read relevant documentation and examples\nfrom Context7.\n"
+    )
+  );
+  console.log(
+    pc.dim(
+      "These sources are used to:\n• extract best practices and constraints\n• compare patterns across official docs and examples\n• avoid outdated or incorrect guidance\n"
+    )
+  );
+  console.log(pc.dim("You can adjust which sources the skill is based on.\n"));
+
   const searchSpinner = ora("Finding relevant sources...").start();
   const searchResult = await searchLibraries(motivation, accessToken);
 
@@ -151,11 +164,6 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
 
   searchSpinner.succeed(pc.green(`Found ${searchResult.results.length} relevant sources`));
   log.blank();
-  console.log(
-    pc.dim(
-      "These sources are used to extract best practices, compare patterns,\nand avoid outdated guidance. You can adjust which sources the skill is based on.\n"
-    )
-  );
 
   let selectedLibraries: LibrarySearchResult[];
   try {
@@ -230,7 +238,9 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
 
   log.blank();
 
-  const questionsSpinner = ora("Preparing follow-up questions to clarify scope...").start();
+  const questionsSpinner = ora(
+    "Preparing follow-up questions to clarify scope and constraints..."
+  ).start();
   const librariesInput = selectedLibraries.map((lib) => ({ id: lib.id, name: lib.title }));
   const questionsResult = await getSkillQuestions(librariesInput, motivation, accessToken);
 
@@ -295,7 +305,6 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
     const lines: string[] = [];
     const latestEntry = queryLog[queryLog.length - 1];
 
-    lines.push(pc.dim(`(${queryLog.length} ${queryLog.length === 1 ? "query" : "queries"})`));
     lines.push("");
 
     for (const result of latestEntry.results.slice(0, 3)) {
@@ -326,6 +335,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
   };
 
   let isGeneratingContent = false;
+  let initialStatus = "Reading selected Context7 sources to generate the skill...";
 
   const handleStreamEvent = (event: GenerateStreamEvent) => {
     if (event.type === "progress") {
@@ -333,13 +343,13 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
         if (event.message.startsWith("Generating skill content...") && !isGeneratingContent) {
           isGeneratingContent = true;
           if (queryLog.length > 0) {
-            genSpinner.succeed(pc.green(`Queried documentation`));
+            genSpinner.succeed(pc.green(`Read Context7 sources`));
           } else {
             genSpinner.succeed(pc.green(`Ready to generate`));
           }
           genSpinner = ora("Generating skill content...").start();
         } else if (!isGeneratingContent) {
-          genSpinner.text = event.message + formatQueryLogText();
+          genSpinner.text = initialStatus + formatQueryLogText();
         }
       }
     } else if (event.type === "tool_result") {
@@ -365,9 +375,9 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
 
     queryLog.length = 0;
     isGeneratingContent = false;
-    const initialStatus = feedback
+    initialStatus = feedback
       ? "Regenerating skill with your feedback..."
-      : "Reading selected sources to generate the skill...";
+      : "Reading selected Context7 sources to generate the skill...";
 
     genSpinner = ora(initialStatus).start();
 
@@ -429,7 +439,6 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
       }
     };
 
-
     showPreview();
 
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -438,8 +447,8 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
       let action: string;
       while (true) {
         const choices = [
-          { name: `${pc.green("✓")} Install skill`, value: "install" },
-          { name: `${pc.blue("⤢")} View skill in editor`, value: "view" },
+          { name: `${pc.green("✓")} Install skill (save locally)`, value: "install" },
+          { name: `${pc.blue("⤢")} Edit skill in editor`, value: "view" },
           { name: `${pc.yellow("✎")} Request changes`, value: "feedback" },
           { name: `${pc.red("✕")} Cancel`, value: "cancel" },
         ];
@@ -532,7 +541,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
   trackEvent("gen_install");
 
   log.blank();
-  console.log(pc.green(pc.bold("Skill saved successfully")));
+  console.log(pc.green("Skill saved successfully"));
   for (const targetDir of targetDirs) {
     console.log(pc.dim(`  ${targetDir}/`) + pc.green(skillName));
   }
