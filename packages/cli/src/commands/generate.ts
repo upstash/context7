@@ -13,6 +13,7 @@ import {
   getSkillQuota,
 } from "../utils/api.js";
 import { loadTokens, isTokenExpired } from "../utils/auth.js";
+import { performLogin } from "./auth.js";
 import { log } from "../utils/logger.js";
 import { promptForInstallTargets, getTargetDirs } from "../utils/ide.js";
 import selectOrInput from "../utils/selectOrInput.js";
@@ -57,19 +58,20 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
   trackEvent("command", { name: "generate" });
   log.blank();
 
-  // Check authentication
+  let accessToken: string | null = null;
   const tokens = loadTokens();
-  if (!tokens) {
-    log.error("Authentication required. Please run 'ctx7 login' first.");
-    return;
+  if (tokens && !isTokenExpired(tokens)) {
+    accessToken = tokens.access_token;
+  } else {
+    log.info("Authentication required. Logging in...");
+    log.blank();
+    accessToken = await performLogin();
+    if (!accessToken) {
+      log.error("Login failed. Please try again.");
+      return;
+    }
+    log.blank();
   }
-
-  if (isTokenExpired(tokens)) {
-    log.error("Session expired. Please run 'ctx7 login' to refresh.");
-    return;
-  }
-
-  const accessToken = tokens.access_token;
 
   const initSpinner = ora().start();
   const quota = await getSkillQuota(accessToken);
