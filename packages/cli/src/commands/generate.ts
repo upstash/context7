@@ -1,9 +1,9 @@
 import { Command } from "commander";
 import pc from "picocolors";
 import ora from "ora";
-import { mkdir, writeFile, mkdtemp } from "fs/promises";
+import { mkdir, writeFile, readFile, unlink } from "fs/promises";
 import { join } from "path";
-import { homedir, tmpdir } from "os";
+import { homedir } from "os";
 import { execFile } from "child_process";
 import { input, select } from "@inquirer/prompts";
 
@@ -183,9 +183,10 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
 
       const libUrl = `https://context7.com${lib.id}`;
       const libLink = terminalLink(lib.title, libUrl, pc.white);
-      const repoLink = isGitHub
-        ? terminalLink(projectId, `https://github.com/${projectId}`, pc.white)
-        : pc.white(projectId);
+      const sourceUrl = isGitHub
+        ? `https://github.com/${projectId}`
+        : `https://context7.com${lib.id}`;
+      const repoLink = terminalLink(projectId, sourceUrl, pc.white);
 
       const starsLine =
         lib.stars && isGitHub ? [`${pc.yellow("Stars:")}       ${lib.stars.toLocaleString()}`] : [];
@@ -276,6 +277,14 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
   let generatedContent: string | null = null;
   let skillName: string = "";
   let feedback: string | undefined;
+  let previewFile: string | null = null;
+  let previewFileWritten = false;
+
+  const cleanupPreviewFile = async () => {
+    if (previewFile) {
+      await unlink(previewFile).catch(() => {});
+    }
+  };
 
   const queryLog: QueryLogEntry[] = [];
   let genSpinner: ReturnType<typeof ora> | null = null;
@@ -401,14 +410,25 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
     };
 
     const openInEditor = async () => {
-      const tmpDir = await mkdtemp(join(tmpdir(), "ctx7-skill-"));
-      const tmpFile = join(tmpDir, `${skillName}.md`);
-      await writeFile(tmpFile, generatedContent!, "utf-8");
+      const previewDir = join(homedir(), ".context7", "previews");
+      await mkdir(previewDir, { recursive: true });
+      previewFile = join(previewDir, `${skillName}.md`);
+      if (!previewFileWritten) {
+        await writeFile(previewFile, generatedContent!, "utf-8");
+        previewFileWritten = true;
+      }
       const editor = process.env.EDITOR || "open";
-      return new Promise<void>((resolve) => {
-        execFile(editor, [tmpFile], () => resolve());
+      await new Promise<void>((resolve) => {
+        execFile(editor, [previewFile!], () => resolve());
       });
     };
+
+    const syncFromPreviewFile = async () => {
+      if (previewFile) {
+        generatedContent = await readFile(previewFile, "utf-8");
+      }
+    };
+
 
     showPreview();
 
@@ -419,7 +439,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
       while (true) {
         const choices = [
           { name: `${pc.green("✓")} Install skill`, value: "install" },
-          { name: `${pc.blue("⤢")} View skill`, value: "view" },
+          { name: `${pc.blue("⤢")} View skill in editor`, value: "view" },
           { name: `${pc.yellow("✎")} Request changes`, value: "feedback" },
           { name: `${pc.red("✕")} Cancel`, value: "cancel" },
         ];
@@ -433,12 +453,14 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
           await openInEditor();
           continue;
         }
+        await syncFromPreviewFile();
         break;
       }
 
       if (action === "install") {
         break;
       } else if (action === "cancel") {
+        await cleanupPreviewFile();
         log.warn("Generation cancelled");
         return;
       } else if (action === "feedback") {
@@ -453,6 +475,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
         log.blank();
       }
     } catch {
+      await cleanupPreviewFile();
       log.warn("Generation cancelled");
       return;
     }
@@ -514,4 +537,6 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
     console.log(pc.dim(`  ${targetDir}/`) + pc.green(skillName));
   }
   log.blank();
+
+  await cleanupPreviewFile();
 }
