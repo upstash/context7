@@ -1,9 +1,10 @@
 import { Command } from "commander";
 import pc from "picocolors";
 import ora from "ora";
-import { mkdir, writeFile } from "fs/promises";
+import { mkdir, writeFile, mkdtemp } from "fs/promises";
 import { join } from "path";
-import { homedir } from "os";
+import { homedir, tmpdir } from "os";
+import { execFile } from "child_process";
 import { input, select } from "@inquirer/prompts";
 
 import {
@@ -386,16 +387,14 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
       log.blank();
     };
 
-    const showFullContent = () => {
-      log.blank();
-      console.log(pc.dim("━".repeat(70)));
-      console.log(pc.bold(`Generated Skill: `) + pc.green(pc.bold(skillName)));
-      console.log(pc.dim("━".repeat(70)));
-      log.blank();
-      console.log(generatedContent);
-      log.blank();
-      console.log(pc.dim("━".repeat(70)));
-      log.blank();
+    const openInEditor = async () => {
+      const tmpDir = await mkdtemp(join(tmpdir(), "ctx7-skill-"));
+      const tmpFile = join(tmpDir, `${skillName}.md`);
+      await writeFile(tmpFile, generatedContent!, "utf-8");
+      const editor = process.env.EDITOR || "open";
+      return new Promise<void>((resolve) => {
+        execFile(editor, [tmpFile], () => resolve());
+      });
     };
 
     showPreview();
@@ -407,7 +406,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
       while (true) {
         const choices = [
           { name: `${pc.green("✓")} Install skill`, value: "install" },
-          ...(hasMoreLines ? [{ name: `${pc.blue("⤢")} View full skill`, value: "expand" }] : []),
+          { name: `${pc.blue("⤢")} View skill`, value: "view" },
           { name: `${pc.yellow("✎")} Request changes`, value: "feedback" },
           { name: `${pc.red("✕")} Cancel`, value: "cancel" },
         ];
@@ -417,8 +416,8 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
           choices,
         });
 
-        if (action === "expand") {
-          showFullContent();
+        if (action === "view") {
+          await openInEditor();
           continue;
         }
         break;
