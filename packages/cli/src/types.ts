@@ -13,6 +13,7 @@ export interface Skill {
 export interface SkillSearchResult extends Skill {
   project: string;
   installCount?: number;
+  trustScore?: number;
 }
 
 export interface ListSkillsResponse {

@@ -21,6 +21,13 @@ export function formatInstallCount(count: number | undefined): string {
 
   return pc.yellow(String(count));
 }
+
+export function formatTrustScore(score: number | undefined): string {
+  if (score === undefined || score < 0) return "";
+
+  if (score < 3) return pc.red(score.toFixed(1));
+  return pc.yellow(score.toFixed(1));
+}
 export interface CheckboxWithHoverOptions<T> {
   /** Function to extract display name from value. Defaults to (v) => v.name */
   getName?: (value: T) => string;
