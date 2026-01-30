@@ -16,12 +16,22 @@ export interface SelectOrInputConfig {
   recommendedIndex?: number;
 }
 
+function reorderOptions(options: string[], recommendedIndex: number): string[] {
+  if (recommendedIndex === 0) return options;
+  const reordered = [options[recommendedIndex]];
+  for (let i = 0; i < options.length; i++) {
+    if (i !== recommendedIndex) reordered.push(options[i]);
+  }
+  return reordered;
+}
+
 const selectOrInput: (config: SelectOrInputConfig) => Promise<string> = createPrompt<
   string,
   SelectOrInputConfig
 >((config, done): string => {
-  const { message, options, recommendedIndex = 0 } = config;
-  const [cursor, setCursor] = useState(recommendedIndex);
+  const { message, options: rawOptions, recommendedIndex = 0 } = config;
+  const options = reorderOptions(rawOptions, recommendedIndex);
+  const [cursor, setCursor] = useState(0);
   const [inputValue, setInputValue] = useState("");
 
   const prefix = usePrefix({});
@@ -40,7 +50,7 @@ const selectOrInput: (config: SelectOrInputConfig) => Promise<string> = createPr
     if (isEnterKey(key)) {
       if (cursor === options.length) {
         const finalValue = inputValue.trim();
-        done(finalValue || options[recommendedIndex]);
+        done(finalValue || options[0]);
       } else {
         done(options[cursor]);
       }
@@ -76,7 +86,7 @@ const selectOrInput: (config: SelectOrInputConfig) => Promise<string> = createPr
   let output = `${prefix} ${pc.bold(message)}\n\n`;
 
   options.forEach((opt: string, idx: number) => {
-    const isRecommended = idx === recommendedIndex;
+    const isRecommended = idx === 0;
     const isCursor = idx === cursor;
     const number = pc.cyan(`${idx + 1}.`);
     const text = isRecommended ? `${opt} ${pc.green("✓ Recommended")}` : opt;
