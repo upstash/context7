@@ -47,6 +47,8 @@ export function registerGenerateCommand(skillCommand: Command): void {
     .option("--opencode", "OpenCode (.opencode/skills/)")
     .option("--amp", "Amp (.agents/skills/)")
     .option("--antigravity", "Antigravity (.agent/skills/)")
+    .option("--copilot", "GitHub Copilot (.github/skills/)")
+    .option("--gemini", "Gemini CLI (.gemini/skills/)")
     .description("Generate a skill for a library using AI")
     .action(async (options: GenerateOptions) => {
       await generateCommand(options);

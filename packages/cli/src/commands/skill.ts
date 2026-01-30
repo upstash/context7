@@ -70,6 +70,8 @@ export function registerSkillCommands(program: Command): void {
     .option("--opencode", "OpenCode (.opencode/skills/)")
     .option("--amp", "Amp (.agents/skills/)")
     .option("--antigravity", "Antigravity (.agent/skills/)")
+    .option("--copilot", "GitHub Copilot (.github/skills/)")
+    .option("--gemini", "Gemini CLI (.gemini/skills/)")
     .description("Install skills from a repository")
     .action(async (project: string, skillName: string | undefined, options: AddOptions) => {
       await installCommand(project, skillName, options);
@@ -94,6 +96,8 @@ export function registerSkillCommands(program: Command): void {
     .option("--opencode", "OpenCode (.opencode/skills/)")
     .option("--amp", "Amp (.agents/skills/)")
     .option("--antigravity", "Antigravity (.agent/skills/)")
+    .option("--copilot", "GitHub Copilot (.github/skills/)")
+    .option("--gemini", "Gemini CLI (.gemini/skills/)")
     .description("List installed skills")
     .action(async (options: ListOptions) => {
       await listCommand(options);
@@ -111,6 +115,8 @@ export function registerSkillCommands(program: Command): void {
     .option("--opencode", "OpenCode (.opencode/skills/)")
     .option("--amp", "Amp (.agents/skills/)")
     .option("--antigravity", "Antigravity (.agent/skills/)")
+    .option("--copilot", "GitHub Copilot (.github/skills/)")
+    .option("--gemini", "Gemini CLI (.gemini/skills/)")
     .description("Remove an installed skill")
     .action(async (name: string, options: RemoveOptions) => {
       await removeCommand(name, options);
@@ -138,6 +144,8 @@ export function registerSkillAliases(program: Command): void {
     .option("--opencode", "OpenCode (.opencode/skills/)")
     .option("--amp", "Amp (.agents/skills/)")
     .option("--antigravity", "Antigravity (.agent/skills/)")
+    .option("--copilot", "GitHub Copilot (.github/skills/)")
+    .option("--gemini", "Gemini CLI (.gemini/skills/)")
     .description("Install skills (alias for: skills install)")
     .action(async (project: string, skillName: string | undefined, options: AddOptions) => {
       await installCommand(project, skillName, options);

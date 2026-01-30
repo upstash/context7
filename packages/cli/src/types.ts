@@ -124,7 +124,7 @@ export interface ErrorEvent {
 
 export type GenerateStreamEvent = ProgressEvent | ToolResultEvent | CompleteEvent | ErrorEvent;
 
-export type IDE = "claude" | "cursor" | "codex" | "opencode" | "amp" | "antigravity";
+export type IDE = "claude" | "cursor" | "codex" | "opencode" | "amp" | "antigravity" | "copilot" | "gemini";
 
 export type Scope = "project" | "global";
 
@@ -162,6 +162,8 @@ export const IDE_PATHS: Record<IDE, string> = {
   opencode: ".opencode/skills",
   amp: ".agents/skills",
   antigravity: ".agent/skills",
+  copilot: ".github/skills",
+  gemini: ".gemini/skills",
 };
 
 export const IDE_GLOBAL_PATHS: Record<IDE, string> = {
@@ -171,6 +173,8 @@ export const IDE_GLOBAL_PATHS: Record<IDE, string> = {
   opencode: ".config/opencode/skills",
   amp: ".config/agents/skills",
   antigravity: ".agent/skills",
+  copilot: ".github/skills",
+  gemini: ".gemini/skills",
 };
 
 export const IDE_NAMES: Record<IDE, string> = {
@@ -180,6 +184,8 @@ export const IDE_NAMES: Record<IDE, string> = {
   opencode: "OpenCode",
   amp: "Amp",
   antigravity: "Antigravity",
+  copilot: "GitHub Copilot",
+  gemini: "Gemini CLI",
 };
 
 export interface C7Config {
