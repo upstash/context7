@@ -52,8 +52,8 @@ importers:
         specifier: ^8.2.0
         version: 8.2.0(@types/node@22.19.7)
       commander:
-        specifier: ^13.1.0
-        version: 13.1.0
+        specifier: ^14.0.3
+        version: 14.0.3
       figlet:
         specifier: ^1.9.4
         version: 1.9.4
@@ -107,8 +107,8 @@ importers:
         specifier: ^5.0.4
         version: 5.0.5
       commander:
-        specifier: ^14.0.0
-        version: 14.0.2
+        specifier: ^14.0.3
+        version: 14.0.3
       express:
         specifier: ^5.1.0
         version: 5.1.0
@@ -1309,12 +1309,8 @@ packages:
   color-name@1.1.4:
     resolution: {integrity: sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==}
 
-  commander@13.1.0:
-    resolution: {integrity: sha512-/rFeCpNJQbhSZjGVwO9RFV3xPqbnERS8MmIQzCtD/zl6gpJuV/bMLuN92oG3F7d8oDEHHRrujSXNUr8fpjntKw==}
-    engines: {node: '>=18'}
-
-  commander@14.0.2:
-    resolution: {integrity: sha512-TywoWNNRbhoD0BXs1P3ZEScW8W5iKrnbithIl0YH+uCmBd0QpPOA8yc82DS3BIE5Ma6FnBVUsJ7wVUDz4dvOWQ==}
+  commander@14.0.3:
+    resolution: {integrity: sha512-H+y0Jo/T1RZ9qPP4Eh1pkcQcLRglraJaSLoyOtHxu6AapkjWVCy2Sit1QQ4x3Dng8qDlSsZEet7g5Pq06MvTgw==}
     engines: {node: '>=20'}
 
   commander@4.1.1:
@@ -3595,9 +3591,7 @@ snapshots:
 
   color-name@1.1.4: {}
 
-  commander@13.1.0: {}
-
-  commander@14.0.2: {}
+  commander@14.0.3: {}
 
   commander@4.1.1: {}
 
@@ -3901,7 +3895,7 @@ snapshots:
 
   figlet@1.9.4:
     dependencies:
-      commander: 14.0.2
+      commander: 14.0.3
 
   file-entry-cache@8.0.0:
     dependencies:
