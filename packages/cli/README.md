@@ -1,6 +1,6 @@
 # ctx7
 
-CLI for the [Context7 Skills Registry](https://context7.com) - install and manage AI coding skills across different AI coding assistants.
+CLI for [Context7](https://context7.com) - install and manage AI coding skills, and query up-to-date library documentation.
 
 Skills are reusable prompt instructions that enhance your AI coding assistant with specialized capabilities like working with specific frameworks, libraries, or coding patterns.
 
@@ -28,6 +28,10 @@ ctx7 skills generate
 
 # List installed skills
 ctx7 skills list --claude
+
+# Get library documentation
+ctx7 docs resolve react "how to use hooks"
+ctx7 docs get /facebook/react "useEffect examples"
 ```
 
 ## Usage
@@ -140,6 +144,36 @@ ctx7 skills remove pdf --claude
 ctx7 skills remove pdf --global
 ```
 
+### Library documentation
+
+Query up-to-date documentation for any library indexed by Context7.
+
+#### Resolve a library
+
+Find the Context7 library ID for a library name.
+
+```bash
+ctx7 docs resolve react "how to use hooks"
+ctx7 docs resolve nextjs "app router setup"
+ctx7 docs resolve prisma "database relations"
+
+# Output as JSON
+ctx7 docs resolve react "hooks" --json
+```
+
+#### Get documentation
+
+Fetch documentation for a specific library using its Context7 ID.
+
+```bash
+ctx7 docs get /facebook/react "useEffect cleanup"
+ctx7 docs get /vercel/next.js "middleware authentication"
+ctx7 docs get /prisma/prisma "one-to-many relations"
+
+# Output as JSON
+ctx7 docs get /facebook/react "hooks" --json
+```
+
 ## Supported Clients
 
 The CLI automatically detects which AI coding assistants you have installed and offers to install skills for them:
@@ -162,6 +196,9 @@ ctx7 si /anthropics/skills pdf   # skills install
 ctx7 ss pdf                       # skills search
 ctx7 skills gen                   # skills generate
 ctx7 skills g                     # skills generate
+ctx7 docs r react "hooks"        # docs resolve
+ctx7 docs g /facebook/react "hooks"  # docs get
+ctx7 resolve react "hooks"       # docs resolve (top-level alias)
 ```
 
 ## Learn More
