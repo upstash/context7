@@ -10,16 +10,23 @@ type CheckboxChoice<T> = Exclude<CheckboxConfig<T>["choices"][number], Separator
  */
 export function terminalLink(text: string, url: string, color?: (s: string) => string): string {
   const colorFn = color ?? ((s: string) => s);
-  return `\x1b]8;;${url}\x07${colorFn(text)}\x1b]8;;\x07`;
+  return `\x1b]8;;${url}\x07${colorFn(text)}\x1b]8;;\x07 ${pc.white("↗")}`;
 }
 
 /**
  * Formats install count for display.
  */
-export function formatInstallCount(count: number | undefined): string {
-  if (count === undefined || count === 0) return "";
+export function formatInstallCount(count: number | undefined, placeholder = ""): string {
+  if (count === undefined || count === 0) return placeholder;
 
   return pc.yellow(String(count));
+}
+
+export function formatTrustScore(score: number | undefined): string {
+  if (score === undefined || score < 0) return pc.dim("-");
+
+  if (score < 3) return pc.red(score.toFixed(1));
+  return pc.yellow(score.toFixed(1));
 }
 export interface CheckboxWithHoverOptions<T> {
   /** Function to extract display name from value. Defaults to (v) => v.name */

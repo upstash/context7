@@ -48,21 +48,7 @@ export function registerAuthCommands(program: Command): void {
     });
 }
 
-async function loginCommand(options: { browser: boolean }): Promise<void> {
-  trackEvent("command", { name: "login" });
-  const existingTokens = loadTokens();
-  if (existingTokens) {
-    const expired = isTokenExpired(existingTokens);
-    if (!expired || existingTokens.refresh_token) {
-      console.log(pc.yellow("You are already logged in."));
-      console.log(
-        pc.dim("Run 'ctx7 logout' first if you want to log in with a different account.")
-      );
-      return;
-    }
-    clearTokens();
-  }
-
+export async function performLogin(openBrowser = true): Promise<string | null> {
   const spinner = ora("Preparing login...").start();
 
   try {
@@ -85,7 +71,7 @@ async function loginCommand(options: { browser: boolean }): Promise<void> {
     console.log(pc.bold("Opening browser to log in..."));
     console.log("");
 
-    if (options.browser) {
+    if (openBrowser) {
       await open(authUrl);
       console.log(pc.dim("If the browser didn't open, visit this URL:"));
     } else {
@@ -111,23 +97,45 @@ async function loginCommand(options: { browser: boolean }): Promise<void> {
       callbackServer.close();
 
       waitingSpinner.succeed(pc.green("Login successful!"));
-      console.log("");
-      console.log(pc.dim("You can now use authenticated Context7 features."));
+      return tokens.access_token;
     } catch (error) {
       callbackServer.close();
       waitingSpinner.fail(pc.red("Login failed"));
       if (error instanceof Error) {
         console.error(pc.red(error.message));
       }
-      process.exit(1);
+      return null;
     }
   } catch (error) {
     spinner.fail(pc.red("Login failed"));
     if (error instanceof Error) {
       console.error(pc.red(error.message));
     }
+    return null;
+  }
+}
+
+async function loginCommand(options: { browser: boolean }): Promise<void> {
+  trackEvent("command", { name: "login" });
+  const existingTokens = loadTokens();
+  if (existingTokens) {
+    const expired = isTokenExpired(existingTokens);
+    if (!expired || existingTokens.refresh_token) {
+      console.log(pc.yellow("You are already logged in."));
+      console.log(
+        pc.dim("Run 'ctx7 logout' first if you want to log in with a different account.")
+      );
+      return;
+    }
+    clearTokens();
+  }
+
+  const token = await performLogin(options.browser);
+  if (!token) {
     process.exit(1);
   }
+  console.log("");
+  console.log(pc.dim("You can now use authenticated Context7 features."));
 }
 
 function logoutCommand(): void {

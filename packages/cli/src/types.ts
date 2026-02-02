@@ -8,11 +8,11 @@ export interface Skill {
   description: string;
   url: string;
   installCount?: number;
+  trustScore?: number;
 }
 
 export interface SkillSearchResult extends Skill {
   project: string;
-  installCount?: number;
 }
 
 export interface ListSkillsResponse {

@@ -15,7 +15,12 @@ import {
   getSelectedIdes,
   hasExplicitIdeOption,
 } from "../utils/ide.js";
-import { checkboxWithHover, terminalLink, formatInstallCount } from "../utils/prompts.js";
+import {
+  checkboxWithHover,
+  terminalLink,
+  formatInstallCount,
+  formatTrustScore,
+} from "../utils/prompts.js";
 import { installSkillFiles, symlinkSkill } from "../utils/installer.js";
 import { trackEvent } from "../utils/tracking.js";
 import { registerGenerateCommand } from "./generate.js";
@@ -393,12 +398,16 @@ async function searchCommand(query: string): Promise<void> {
 
   const indexWidth = data.results.length.toString().length;
   const maxNameLen = Math.max(...data.results.map((s) => s.name.length));
+  const installsColWidth = 10;
   const choices = data.results.map((s, index) => {
     const indexStr = pc.dim(`${(index + 1).toString().padStart(indexWidth)}.`);
     const paddedName = s.name.padEnd(maxNameLen);
-    const installs = formatInstallCount(s.installCount);
+    const installsRaw = s.installCount ? String(s.installCount) : "-";
+    const paddedInstalls =
+      formatInstallCount(s.installCount, pc.dim("-")) +
+      " ".repeat(installsColWidth - installsRaw.length);
+    const trust = formatTrustScore(s.trustScore);
 
-    // Build metadata panel shown when item is hovered
     const skillLink = terminalLink(
       s.name,
       `https://context7.com/skills${s.project}/${s.name}`,
@@ -415,7 +424,7 @@ async function searchCommand(query: string): Promise<void> {
     ];
 
     return {
-      name: installs ? `${indexStr} ${paddedName} ${installs}` : `${indexStr} ${paddedName}`,
+      name: `${indexStr} ${paddedName} ${paddedInstalls}${trust}`,
       value: s,
       description: metadataLines.join("\n"),
     };
@@ -423,9 +432,11 @@ async function searchCommand(query: string): Promise<void> {
 
   log.blank();
 
-  const installsOffset = 4 + indexWidth + 1 + 1 + maxNameLen + 1 - 3;
-  const message =
-    "Select skills to install:" + " ".repeat(Math.max(1, installsOffset - 25)) + pc.dim("installs");
+  const checkboxPrefixWidth = 3; // "❯◯ " or " ◯ "
+  const headerPad = " ".repeat(checkboxPrefixWidth + indexWidth + 1 + 1 + maxNameLen + 1);
+  const headerLine =
+    headerPad + pc.dim("Installs".padEnd(installsColWidth)) + pc.dim("Trust(0-10)");
+  const message = "Select skills to install:\n" + headerLine;
 
   let selectedSkills: SkillSearchResult[];
   try {
