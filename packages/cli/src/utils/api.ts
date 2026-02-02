@@ -8,6 +8,8 @@ import type {
   StructuredGenerateInput,
   GenerateStreamEvent,
   SkillQuotaResponse,
+  LibraryResolveResponse,
+  ContextResponse,
 } from "../types.js";
 import { downloadSkillFromGitHub } from "./github.js";
 
@@ -231,4 +233,81 @@ async function handleGenerateResponse(
   }
 
   return { content, libraryName: finalLibraryName, error };
+}
+
+export async function resolveLibrary(
+  libraryName: string,
+  query: string,
+  accessToken?: string
+): Promise<LibraryResolveResponse> {
+  const params = new URLSearchParams({ libraryName, query });
+  const headers: Record<string, string> = {};
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
+  const response = await fetch(`${baseUrl}/api/v2/libs/search?${params}`, { headers });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    return {
+      results: [],
+      error: (errorData as { error?: string }).error || `HTTP error ${response.status}`,
+      message: (errorData as { message?: string }).message,
+    };
+  }
+
+  return (await response.json()) as LibraryResolveResponse;
+}
+
+export interface GetContextOptions {
+  type?: "json" | "txt";
+}
+
+export async function getLibraryContext(
+  libraryId: string,
+  query: string,
+  options?: GetContextOptions,
+  accessToken?: string
+): Promise<ContextResponse | string> {
+  const params = new URLSearchParams({ libraryId, query });
+  if (options?.type) {
+    params.set("type", options.type);
+  }
+
+  const headers: Record<string, string> = {};
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
+
+  const response = await fetch(`${baseUrl}/api/v2/context?${params}`, { headers });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const error = errorData as { error?: string; message?: string; redirectUrl?: string };
+
+    // Handle redirect case
+    if (response.status === 301 && error.redirectUrl) {
+      return {
+        codeSnippets: [],
+        infoSnippets: [],
+        error: error.error || "library_redirected",
+        message: error.message,
+        redirectUrl: error.redirectUrl,
+      };
+    }
+
+    return {
+      codeSnippets: [],
+      infoSnippets: [],
+      error: error.error || `HTTP error ${response.status}`,
+      message: error.message,
+    };
+  }
+
+  // If type is txt, return as string
+  if (options?.type === "txt") {
+    return await response.text();
+  }
+
+  return (await response.json()) as ContextResponse;
 }
