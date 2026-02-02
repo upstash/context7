@@ -4,7 +4,7 @@ import ora from "ora";
 import { mkdir, writeFile, readFile, unlink } from "fs/promises";
 import { join } from "path";
 import { homedir } from "os";
-import { execFile } from "child_process";
+import { spawn } from "child_process";
 import { input, select } from "@inquirer/prompts";
 
 import {
@@ -375,6 +375,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
 
     queryLog.length = 0;
     isGeneratingContent = false;
+    previewFileWritten = false;
     initialStatus = feedback
       ? "Regenerating skill with your feedback..."
       : "Reading selected Context7 sources to generate the skill...";
@@ -429,7 +430,11 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
       }
       const editor = process.env.EDITOR || "open";
       await new Promise<void>((resolve) => {
-        execFile(editor, [previewFile!], () => resolve());
+        const child = spawn(editor, [previewFile!], {
+          stdio: "inherit",
+          shell: true,
+        });
+        child.on("close", () => resolve());
       });
     };
 

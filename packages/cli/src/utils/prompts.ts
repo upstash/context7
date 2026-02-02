@@ -16,8 +16,8 @@ export function terminalLink(text: string, url: string, color?: (s: string) => s
 /**
  * Formats install count for display.
  */
-export function formatInstallCount(count: number | undefined): string {
-  if (count === undefined || count === 0) return pc.dim("-");
+export function formatInstallCount(count: number | undefined, placeholder = ""): string {
+  if (count === undefined || count === 0) return placeholder;
 
   return pc.yellow(String(count));
 }

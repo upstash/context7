@@ -404,7 +404,8 @@ async function searchCommand(query: string): Promise<void> {
     const paddedName = s.name.padEnd(maxNameLen);
     const installsRaw = s.installCount ? String(s.installCount) : "-";
     const paddedInstalls =
-      formatInstallCount(s.installCount) + " ".repeat(installsColWidth - installsRaw.length);
+      formatInstallCount(s.installCount, pc.dim("-")) +
+      " ".repeat(installsColWidth - installsRaw.length);
     const trust = formatTrustScore(s.trustScore);
 
     const skillLink = terminalLink(
