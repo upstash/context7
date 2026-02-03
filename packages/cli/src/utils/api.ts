@@ -41,11 +41,16 @@ export async function searchSkills(query: string): Promise<SearchResponse> {
 }
 
 export async function suggestSkills(
-  dependencies: Array<{ name: string; ecosystem: string }>
+  dependencies: Array<{ name: string; ecosystem: string }>,
+  accessToken?: string
 ): Promise<SuggestResponse> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
   const response = await fetch(`${baseUrl}/api/v2/skills/suggest`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify({ dependencies }),
   });
   return (await response.json()) as SuggestResponse;

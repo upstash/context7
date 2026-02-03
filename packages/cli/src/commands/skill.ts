@@ -43,6 +43,7 @@ import { IDE_NAMES, IDE_PATHS, IDE_GLOBAL_PATHS } from "../types.js";
 import type { IDE, Scope } from "../types.js";
 import { homedir } from "os";
 import { detectProjectDependencies } from "../utils/deps.js";
+import { loadTokens, isTokenExpired } from "../utils/auth.js";
 
 function logInstallSummary(
   targets: InstallTargets,
@@ -713,9 +714,16 @@ async function suggestCommand(options: DiscoverOptions): Promise<void> {
 
   type SuggestedSkill = SkillSearchResult & { matchedDep: string };
 
+  // Load auth token if available
+  const tokens = loadTokens();
+  const accessToken = tokens && !isTokenExpired(tokens) ? tokens.access_token : undefined;
+
   let data;
   try {
-    data = await suggestSkills(deps.map((d) => ({ name: d.name, ecosystem: d.ecosystem })));
+    data = await suggestSkills(
+      deps.map((d) => ({ name: d.name, ecosystem: d.ecosystem })),
+      accessToken
+    );
   } catch {
     searchSpinner.fail(pc.red("Failed to connect to Context7"));
     return;
