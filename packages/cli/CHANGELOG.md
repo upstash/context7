@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.3
+
+### Patch Changes
+
+- 0981656: Add `skills suggest` command that scans your project's dependencies (package.json, requirements.txt, pyproject.toml) and recommends relevant skills. Results show install counts, trust scores, and which dependency each skill matches.
+
 ## 0.2.2
 
 ### Patch Changes
