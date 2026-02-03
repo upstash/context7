@@ -128,6 +128,41 @@ Search results display:
 
 You can install directly from search results by selecting a skill interactively.
 
+### Suggest Skills
+
+Automatically discover relevant skills based on your project's dependencies. The CLI scans your `package.json`, `requirements.txt`, or `pyproject.toml` and suggests matching skills from the registry.
+
+```bash
+# Scan current project and suggest skills
+ctx7 skills suggest
+
+# Suggest and install to a specific client
+ctx7 skills suggest --claude
+ctx7 skills suggest --cursor
+
+# Suggest and install globally
+ctx7 skills suggest --global
+```
+
+**How it works:**
+
+1. Scans your project for dependencies (Node.js and Python supported)
+2. Queries Context7 for skills that match your dependencies
+3. Shows results with install count, trust score, and which dependency matched
+4. Lets you select and install skills interactively
+
+**Supported dependency files:**
+
+| File | Language |
+|------|----------|
+| `package.json` | Node.js (dependencies + devDependencies) |
+| `requirements.txt` | Python |
+| `pyproject.toml` | Python (PEP 621 + Poetry) |
+
+<Tip>
+Run `ctx7 skills suggest` when starting on a new project to quickly find skills for your tech stack.
+</Tip>
+
 ### List Installed Skills
 
 View skills installed in your project or globally.
@@ -288,6 +323,7 @@ For faster usage, the CLI provides short aliases:
 |----------|--------------|
 | `ctx7 si` | `ctx7 skills install` |
 | `ctx7 ss` | `ctx7 skills search` |
+| `ctx7 ssg` | `ctx7 skills suggest` |
 | `ctx7 skills i` | `ctx7 skills install` |
 | `ctx7 skills s` | `ctx7 skills search` |
 | `ctx7 skills ls` | `ctx7 skills list` |
