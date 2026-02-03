@@ -8,7 +8,6 @@
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "strict": true,
-    "downlevelIteration": true,
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
