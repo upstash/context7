@@ -2,6 +2,7 @@ import type {
   ListSkillsResponse,
   SingleSkillResponse,
   SearchResponse,
+  SuggestResponse,
   DownloadResponse,
   LibrarySearchResponse,
   SkillQuestionsResponse,
@@ -37,6 +38,17 @@ export async function searchSkills(query: string): Promise<SearchResponse> {
   const params = new URLSearchParams({ query });
   const response = await fetch(`${baseUrl}/api/v2/skills?${params}`);
   return (await response.json()) as SearchResponse;
+}
+
+export async function suggestSkills(
+  dependencies: Array<{ name: string; ecosystem: string }>
+): Promise<SuggestResponse> {
+  const response = await fetch(`${baseUrl}/api/v2/skills/suggest`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ dependencies }),
+  });
+  return (await response.json()) as SuggestResponse;
 }
 
 export async function downloadSkill(project: string, skillName: string): Promise<DownloadResponse> {

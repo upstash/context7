@@ -193,6 +193,18 @@ export const DEFAULT_CONFIG: C7Config = {
   defaultScope: "project",
 };
 
+// Suggest endpoint types
+export interface SuggestGroup {
+  dependency: string;
+  skills: SkillSearchResult[];
+}
+
+export interface SuggestResponse {
+  groups: SuggestGroup[];
+  error?: string;
+  message?: string;
+}
+
 export interface SkillQuotaResponse {
   used: number;
   limit: number;

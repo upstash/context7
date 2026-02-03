@@ -5,7 +5,13 @@ import { readdir, rm } from "fs/promises";
 import { join } from "path";
 
 import { parseSkillInput } from "../utils/parse-input.js";
-import { listProjectSkills, searchSkills, downloadSkill, getSkill } from "../utils/api.js";
+import {
+  listProjectSkills,
+  searchSkills,
+  suggestSkills,
+  downloadSkill,
+  getSkill,
+} from "../utils/api.js";
 import { log } from "../utils/logger.js";
 import {
   promptForInstallTargets,
@@ -36,7 +42,7 @@ import type {
 import { IDE_NAMES, IDE_PATHS, IDE_GLOBAL_PATHS } from "../types.js";
 import type { IDE, Scope } from "../types.js";
 import { homedir } from "os";
-import { detectProjectDependencies, buildSearchQueries } from "../utils/deps.js";
+import { detectProjectDependencies } from "../utils/deps.js";
 
 function logInstallSummary(
   targets: InstallTargets,
@@ -695,55 +701,40 @@ async function suggestCommand(options: DiscoverOptions): Promise<void> {
   const deps = await detectProjectDependencies(process.cwd());
 
   if (deps.length === 0) {
-    scanSpinner.warn(pc.yellow("No well-known frameworks or libraries detected"));
+    scanSpinner.warn(pc.yellow("No dependencies detected"));
     log.info(`Try ${pc.cyan("ctx7 skills search <keyword>")} to search manually`);
     return;
   }
 
-  const depNames = deps.map((d) => d.name);
-  scanSpinner.succeed(`Found ${pc.cyan(depNames.join(", "))}`);
+  scanSpinner.succeed(`Found ${deps.length} dependencies`);
 
-  // Step 2: Build queries and search
-  const queries = buildSearchQueries(deps);
+  // Step 2: Single API call to backend
+  const searchSpinner = ora("Finding matching skills...").start();
 
-  const searchSpinner = ora(
-    `Searching for skills matching ${queries.length} dependencies...`
-  ).start();
-
-  const results = await Promise.allSettled(
-    queries.map((q) => searchSkills(q.query).catch(() => null))
-  );
-
-  // Collect results per dep, dedup by skill name, post-filter by relevance
-  const MAX_PER_QUERY = 3;
   type SuggestedSkill = SkillSearchResult & { matchedDep: string };
+
+  let data;
+  try {
+    data = await suggestSkills(deps.map((d) => ({ name: d.name, ecosystem: d.ecosystem })));
+  } catch {
+    searchSpinner.fail(pc.red("Failed to connect to Context7"));
+    return;
+  }
+
+  if (data.error) {
+    searchSpinner.fail(pc.red(`Error: ${data.message || data.error}`));
+    return;
+  }
+
+  // Convert groups into the depGroups map for display
   const depGroups = new Map<string, SuggestedSkill[]>();
-  const seenNames = new Set<string>();
-
-  for (let i = 0; i < results.length; i++) {
-    const result = results[i];
-    const dep = queries[i].dep;
-    const depLower = dep.toLowerCase().replace(/@.*\//, "");
-
-    if (result.status !== "fulfilled" || !result.value?.results) continue;
-
-    const topResults = result.value.results.slice(0, MAX_PER_QUERY);
-    const filtered: SuggestedSkill[] = [];
-
-    for (const skill of topResults) {
-      const nameKey = skill.name.toLowerCase();
-      if (seenNames.has(nameKey)) continue;
-
-      // Post-filter: skill name or description must mention the dep
-      const text = `${skill.name} ${skill.description || ""}`.toLowerCase();
-      if (!text.includes(depLower)) continue;
-
-      seenNames.add(nameKey);
-      filtered.push({ ...skill, matchedDep: dep });
-    }
-
-    if (filtered.length > 0) {
-      depGroups.set(dep, filtered);
+  for (const group of data.groups) {
+    const skills: SuggestedSkill[] = group.skills.map((s) => ({
+      ...s,
+      matchedDep: group.dependency,
+    }));
+    if (skills.length > 0) {
+      depGroups.set(group.dependency, skills);
     }
   }
 
@@ -767,9 +758,9 @@ async function suggestCommand(options: DiscoverOptions): Promise<void> {
   // Pre-compute max widths across all groups for consistent alignment
   const allGroupSkills = [...depGroups.values()].flat();
   const maxNameLen = Math.max(...allGroupSkills.map((s) => s.name.length));
-  const maxInstallRaw = Math.max(
-    ...allGroupSkills.map((s) => String(s.installCount ?? 0).length)
-  );
+  const installsColWidth = 10;
+  const trustColWidth = 12; // "Trust(0-10) " = 11 + 1 padding
+  const maxMatchedLen = Math.max(...allGroupSkills.map((s) => s.matchedDep.length));
   const totalItems = allGroupSkills.length;
   const indexWidth = totalItems.toString().length;
 
@@ -781,9 +772,14 @@ async function suggestCommand(options: DiscoverOptions): Promise<void> {
       globalIndex++;
       const indexStr = pc.dim(`${globalIndex.toString().padStart(indexWidth)}.`);
       const paddedName = s.name.padEnd(maxNameLen);
-      const installRaw = String(s.installCount ?? 0);
-      const paddedInstall = installRaw.padStart(maxInstallRaw);
-      const installs = s.installCount ? pc.yellow(paddedInstall) : " ".repeat(maxInstallRaw);
+      const installsRaw = s.installCount ? String(s.installCount) : "-";
+      const paddedInstalls =
+        formatInstallCount(s.installCount, pc.dim("-")) +
+        " ".repeat(installsColWidth - installsRaw.length);
+      const trustRaw =
+        s.trustScore !== undefined && s.trustScore >= 0 ? s.trustScore.toFixed(1) : "-";
+      const trust = formatTrustScore(s.trustScore) + " ".repeat(trustColWidth - trustRaw.length);
+      const matched = pc.yellow(s.matchedDep.padEnd(maxMatchedLen));
 
       const skillLink = terminalLink(
         s.name,
@@ -796,13 +792,13 @@ async function suggestCommand(options: DiscoverOptions): Promise<void> {
         "",
         `${pc.yellow("Skill:")}       ${skillLink}`,
         `${pc.yellow("Repo:")}        ${repoLink}`,
-        `${pc.yellow("Matched:")}     ${pc.cyan(s.matchedDep)}`,
+        `${pc.yellow("Relevant:")}    ${pc.cyan(s.matchedDep)}`,
         `${pc.yellow("Description:")}`,
         pc.white(s.description || "No description"),
       ];
 
       choices.push({
-        name: `${indexStr} ${paddedName}  ${installs}`,
+        name: `${indexStr} ${paddedName} ${paddedInstalls}${trust}${matched}`,
         value: s,
         description: metadataLines.join("\n"),
       });
@@ -810,12 +806,14 @@ async function suggestCommand(options: DiscoverOptions): Promise<void> {
   }
 
   // Build header
-  const nameColWidth = 4 + indexWidth + 1 + 1 + maxNameLen + 2;
-  const headerPad = Math.max(1, nameColWidth - "Select skills to install:".length);
-  const message =
-    "Select skills to install:" +
-    " ".repeat(headerPad) +
-    pc.dim("installs".padStart(maxInstallRaw));
+  const checkboxPrefixWidth = 3; // "❯◯ " or " ◯ "
+  const headerPad = " ".repeat(checkboxPrefixWidth + indexWidth + 1 + 1 + maxNameLen + 1);
+  const headerLine =
+    headerPad +
+    pc.dim("Installs".padEnd(installsColWidth)) +
+    pc.dim("Trust(0-10)".padEnd(trustColWidth)) +
+    pc.dim("Relevant");
+  const message = "Select skills to install:\n" + headerLine;
 
   let selectedSkills: SkillSearchResult[];
   try {
