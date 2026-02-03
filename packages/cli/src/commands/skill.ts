@@ -769,7 +769,7 @@ async function suggestCommand(options: DiscoverOptions): Promise<void> {
       "",
       `${pc.yellow("Skill:")}       ${skillLink}`,
       `${pc.yellow("Repo:")}        ${repoLink}`,
-      `${pc.yellow("Relevant:")}    ${pc.cyan(s.matchedDep)}`,
+      `${pc.yellow("Relevant:")}    ${pc.white(s.matchedDep)}`,
       `${pc.yellow("Description:")}`,
       pc.white(s.description || "No description"),
     ];
