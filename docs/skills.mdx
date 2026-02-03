@@ -3,7 +3,7 @@ title: Skills
 description: Install, search, and manage AI coding assistant skills from the Context7 registry
 ---
 
-Skills are reusable prompt templates that extend the capabilities of your AI coding assistants. They allow you to share and install common workflows like code reviews, commit message generation, PDF processing, and more across projects and teams.
+Skills are reusable prompt templates that extend the capabilities of your AI coding assistants. They allow you to share and install common workflows like React best practices, web design guidelines, PDF processing, and more across projects and teams.
 
 Context7 maintains a registry of skills at [context7.com/skills](https://context7.com/skills) that can be installed directly into your AI coding assistant with a single command.
 
@@ -17,12 +17,16 @@ Skills follow the [Agent Skills](https://agentskills.io) open standard — a spe
 - **Share expertise**: Package domain knowledge (e.g., "how we handle authentication") as reusable prompts
 - **Save time**: Install pre-built skills instead of repeatedly explaining the same patterns to your AI assistant
 
-**Example use cases:**
+**Popular skills:**
 
-- Generate commit messages following your team's conventions
-- Review code for security vulnerabilities
-- Process PDFs and extract structured data
-- Scaffold components using your preferred patterns
+| Skill | What it does |
+|-------|--------------|
+| `vercel-react-best-practices` | Teaches Claude modern React patterns, Server Components, and performance optimization |
+| `web-design-guidelines` | Guides Claude on UI/UX principles, spacing, typography, and responsive layouts |
+| `pdf` / `docx` / `xlsx` | Enables Claude to read, create, and manipulate Office documents and PDFs |
+| `supabase-postgres-best-practices` | Helps Claude write optimized Postgres queries, RLS policies, and auth flows |
+| `seo-audit` | Lets Claude analyze pages for SEO issues and suggest improvements |
+| `browser-use` | Allows Claude to control browsers for testing and automation |
 
 ## The Context7 Skills Registry
 
@@ -36,6 +40,16 @@ When browsing or searching skills, you'll see:
 | **Description** | What the skill does and when to use it |
 | **Install Count** | Number of times the skill has been installed |
 | **Trust Score** | Quality and safety indicator (0-10) |
+
+**Quick start:**
+
+```bash
+# Search for a skill
+npx ctx7 skills search react
+
+# Install a popular skill
+npx ctx7 skills install /vercel-labs/agent-skills vercel-react-best-practices
+```
 
 ## Trust Scores
 
@@ -77,33 +91,33 @@ Install skills from a repository to your AI coding assistant's skills directory.
 
 ```bash
 # Interactive selection from a repository
-ctx7 skills install /anthropics/skills
+npx ctx7 skills install /anthropics/skills
 
 # Install a specific skill
-ctx7 skills install /anthropics/skills pdf
+npx ctx7 skills install /anthropics/skills pdf
 
 # Install multiple skills at once
-ctx7 skills install /anthropics/skills pdf commit
+npx ctx7 skills install /anthropics/skills pdf commit
 
 # Install all skills without prompting
-ctx7 skills install /anthropics/skills --all
+npx ctx7 skills install /anthropics/skills --all
 ```
 
 **Target a specific client:**
 
 ```bash
-ctx7 skills install /anthropics/skills pdf --claude
-ctx7 skills install /anthropics/skills pdf --cursor
-ctx7 skills install /anthropics/skills pdf --codex
-ctx7 skills install /anthropics/skills pdf --opencode
-ctx7 skills install /anthropics/skills pdf --amp
-ctx7 skills install /anthropics/skills pdf --antigravity
+npx ctx7 skills install /anthropics/skills pdf --claude
+npx ctx7 skills install /anthropics/skills pdf --cursor
+npx ctx7 skills install /anthropics/skills pdf --codex
+npx ctx7 skills install /anthropics/skills pdf --opencode
+npx ctx7 skills install /anthropics/skills pdf --amp
+npx ctx7 skills install /anthropics/skills pdf --antigravity
 ```
 
 **Install globally** (available in all projects):
 
 ```bash
-ctx7 skills install /anthropics/skills pdf --global
+npx ctx7 skills install /anthropics/skills pdf --global
 ```
 
 <Note>
@@ -115,9 +129,9 @@ When installing to multiple clients, the CLI creates the skill files in your pri
 Find skills across all indexed repositories in the registry.
 
 ```bash
-ctx7 skills search pdf
-ctx7 skills search typescript
-ctx7 skills search "react testing"
+npx ctx7 skills search pdf
+npx ctx7 skills search typescript
+npx ctx7 skills search "react testing"
 ```
 
 Search results display:
@@ -134,14 +148,14 @@ Automatically discover relevant skills based on your project's dependencies. The
 
 ```bash
 # Scan current project and suggest skills
-ctx7 skills suggest
+npx ctx7 skills suggest
 
 # Suggest and install to a specific client
-ctx7 skills suggest --claude
-ctx7 skills suggest --cursor
+npx ctx7 skills suggest --claude
+npx ctx7 skills suggest --cursor
 
 # Suggest and install globally
-ctx7 skills suggest --global
+npx ctx7 skills suggest --global
 ```
 
 **How it works:**
@@ -160,7 +174,7 @@ ctx7 skills suggest --global
 | `pyproject.toml` | Python (PEP 621 + Poetry) |
 
 <Tip>
-Run `ctx7 skills suggest` when starting on a new project to quickly find skills for your tech stack.
+Run `npx ctx7 skills suggest` when starting on a new project to quickly find skills for your tech stack.
 </Tip>
 
 ### List Installed Skills
@@ -169,14 +183,14 @@ View skills installed in your project or globally.
 
 ```bash
 # List all installed skills
-ctx7 skills list
+npx ctx7 skills list
 
 # List for a specific client
-ctx7 skills list --claude
-ctx7 skills list --cursor
+npx ctx7 skills list --claude
+npx ctx7 skills list --cursor
 
 # List globally installed skills
-ctx7 skills list --global
+npx ctx7 skills list --global
 ```
 
 ### Show Skill Information
@@ -184,7 +198,7 @@ ctx7 skills list --global
 Get details about all available skills in a repository.
 
 ```bash
-ctx7 skills info /anthropics/skills
+npx ctx7 skills info /anthropics/skills
 ```
 
 This displays:
@@ -199,13 +213,13 @@ Uninstall a skill from your project or global directory.
 
 ```bash
 # Remove with interactive prompts
-ctx7 skills remove pdf
+npx ctx7 skills remove pdf
 
 # Remove from a specific client
-ctx7 skills remove pdf --claude
+npx ctx7 skills remove pdf --claude
 
 # Remove from global directory
-ctx7 skills remove pdf --global
+npx ctx7 skills remove pdf --global
 ```
 
 ## Generate Custom Skills
@@ -216,27 +230,27 @@ Create custom skills tailored to your specific needs using AI. This feature requ
 
 ```bash
 # Log in (opens browser for OAuth)
-ctx7 login
+npx ctx7 login
 
 # Check your login status
-ctx7 whoami
+npx ctx7 whoami
 
 # Log out
-ctx7 logout
+npx ctx7 logout
 ```
 
 ### Generate a Skill
 
 ```bash
 # Start interactive generation
-ctx7 skills generate
+npx ctx7 skills generate
 
 # Generate for a specific client
-ctx7 skills generate --cursor
-ctx7 skills generate --claude
+npx ctx7 skills generate --cursor
+npx ctx7 skills generate --claude
 
 # Generate as a global skill
-ctx7 skills generate --global
+npx ctx7 skills generate --global
 ```
 
 ### Generation Workflow
@@ -250,19 +264,6 @@ ctx7 skills generate --global
 <Tip>
 Describe best practices and constraints, not step-by-step tutorials. For example, "TypeScript strict mode patterns" is better than "how to write TypeScript."
 </Tip>
-
-### Generation Limits
-
-| Plan | Generations per Week |
-|------|---------------------|
-| Free | 6 |
-| Pro | 10 |
-
-Check your remaining quota:
-
-```bash
-ctx7 whoami
-```
 
 ## Supported Clients
 
@@ -321,15 +322,15 @@ For faster usage, the CLI provides short aliases:
 
 | Shortcut | Full Command |
 |----------|--------------|
-| `ctx7 si` | `ctx7 skills install` |
-| `ctx7 ss` | `ctx7 skills search` |
-| `ctx7 ssg` | `ctx7 skills suggest` |
-| `ctx7 skills i` | `ctx7 skills install` |
-| `ctx7 skills s` | `ctx7 skills search` |
-| `ctx7 skills ls` | `ctx7 skills list` |
-| `ctx7 skills rm` | `ctx7 skills remove` |
-| `ctx7 skills gen` | `ctx7 skills generate` |
-| `ctx7 skills g` | `ctx7 skills generate` |
+| `npx ctx7 si` | `npx ctx7 skills install` |
+| `npx ctx7 ss` | `npx ctx7 skills search` |
+| `npx ctx7 ssg` | `npx ctx7 skills suggest` |
+| `npx ctx7 skills i` | `npx ctx7 skills install` |
+| `npx ctx7 skills s` | `npx ctx7 skills search` |
+| `npx ctx7 skills ls` | `npx ctx7 skills list` |
+| `npx ctx7 skills rm` | `npx ctx7 skills remove` |
+| `npx ctx7 skills gen` | `npx ctx7 skills generate` |
+| `npx ctx7 skills g` | `npx ctx7 skills generate` |
 
 ## Troubleshooting
 
@@ -339,7 +340,7 @@ If you see permission errors when installing or removing skills:
 
 ```bash
 # Try with sudo for global installations
-sudo ctx7 skills install /anthropics/skills pdf --global
+sudo npx ctx7 skills install /anthropics/skills pdf --global
 ```
 
 Or fix directory permissions:
@@ -376,10 +377,10 @@ If login fails or tokens expire:
 
 ```bash
 # Clear stored credentials
-ctx7 logout
+npx ctx7 logout
 
 # Log in again
-ctx7 login
+npx ctx7 login
 ```
 
 ## Next Steps
