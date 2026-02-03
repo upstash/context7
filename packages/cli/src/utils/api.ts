@@ -41,7 +41,7 @@ export async function searchSkills(query: string): Promise<SearchResponse> {
 }
 
 export async function suggestSkills(
-  dependencies: Array<{ name: string; ecosystem: string }>,
+  dependencies: string[],
   accessToken?: string
 ): Promise<SuggestResponse> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };

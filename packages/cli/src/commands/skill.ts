@@ -712,18 +712,12 @@ async function suggestCommand(options: DiscoverOptions): Promise<void> {
   // Step 2: Single API call to backend
   const searchSpinner = ora("Finding matching skills...").start();
 
-  type SuggestedSkill = SkillSearchResult & { matchedDep: string };
-
-  // Load auth token if available
   const tokens = loadTokens();
   const accessToken = tokens && !isTokenExpired(tokens) ? tokens.access_token : undefined;
 
   let data;
   try {
-    data = await suggestSkills(
-      deps.map((d) => ({ name: d.name, ecosystem: d.ecosystem })),
-      accessToken
-    );
+    data = await suggestSkills(deps, accessToken);
   } catch {
     searchSpinner.fail(pc.red("Failed to connect to Context7"));
     return;
@@ -734,84 +728,58 @@ async function suggestCommand(options: DiscoverOptions): Promise<void> {
     return;
   }
 
-  // Convert groups into the depGroups map for display
-  const depGroups = new Map<string, SuggestedSkill[]>();
-  for (const group of data.groups) {
-    const skills: SuggestedSkill[] = group.skills.map((s) => ({
-      ...s,
-      matchedDep: group.dependency,
-    }));
-    if (skills.length > 0) {
-      depGroups.set(group.dependency, skills);
-    }
-  }
+  const skills = data.skills;
 
-  const totalFound = [...depGroups.values()].reduce((sum, g) => sum + g.length, 0);
-
-  if (totalFound === 0) {
+  if (skills.length === 0) {
     searchSpinner.warn(pc.yellow("No matching skills found for your dependencies"));
     return;
   }
 
-  searchSpinner.succeed(`Found ${totalFound} relevant skill(s)`);
-  trackEvent("suggest_results", { depCount: deps.length, skillCount: totalFound });
+  searchSpinner.succeed(`Found ${skills.length} relevant skill(s)`);
+  trackEvent("suggest_results", { depCount: deps.length, skillCount: skills.length });
 
-  // Step 3: Interactive selection — grouped by dependency
   log.blank();
 
-  // Build choices grouped by dep
-  const choices: { name: string; value: SuggestedSkill; description: string }[] = [];
-  let globalIndex = 0;
-
-  // Pre-compute max widths across all groups for consistent alignment
-  const allGroupSkills = [...depGroups.values()].flat();
-  const maxNameLen = Math.max(...allGroupSkills.map((s) => s.name.length));
+  const maxNameLen = Math.max(...skills.map((s) => s.name.length));
   const installsColWidth = 10;
-  const trustColWidth = 12; // "Trust(0-10) " = 11 + 1 padding
-  const maxMatchedLen = Math.max(...allGroupSkills.map((s) => s.matchedDep.length));
-  const totalItems = allGroupSkills.length;
-  const indexWidth = totalItems.toString().length;
+  const trustColWidth = 12;
+  const maxMatchedLen = Math.max(...skills.map((s) => s.matchedDep.length));
+  const indexWidth = skills.length.toString().length;
 
-  for (const [, skills] of depGroups) {
-    // Sort within group by install count
-    skills.sort((a, b) => (b.installCount ?? 0) - (a.installCount ?? 0));
+  const choices = skills.map((s, index) => {
+    const indexStr = pc.dim(`${(index + 1).toString().padStart(indexWidth)}.`);
+    const paddedName = s.name.padEnd(maxNameLen);
+    const installsRaw = s.installCount ? String(s.installCount) : "-";
+    const paddedInstalls =
+      formatInstallCount(s.installCount, pc.dim("-")) +
+      " ".repeat(installsColWidth - installsRaw.length);
+    const trustRaw =
+      s.trustScore !== undefined && s.trustScore >= 0 ? s.trustScore.toFixed(1) : "-";
+    const trust = formatTrustScore(s.trustScore) + " ".repeat(trustColWidth - trustRaw.length);
+    const matched = pc.yellow(s.matchedDep.padEnd(maxMatchedLen));
 
-    for (const s of skills) {
-      globalIndex++;
-      const indexStr = pc.dim(`${globalIndex.toString().padStart(indexWidth)}.`);
-      const paddedName = s.name.padEnd(maxNameLen);
-      const installsRaw = s.installCount ? String(s.installCount) : "-";
-      const paddedInstalls =
-        formatInstallCount(s.installCount, pc.dim("-")) +
-        " ".repeat(installsColWidth - installsRaw.length);
-      const trustRaw =
-        s.trustScore !== undefined && s.trustScore >= 0 ? s.trustScore.toFixed(1) : "-";
-      const trust = formatTrustScore(s.trustScore) + " ".repeat(trustColWidth - trustRaw.length);
-      const matched = pc.yellow(s.matchedDep.padEnd(maxMatchedLen));
+    const skillLink = terminalLink(
+      s.name,
+      `https://context7.com/skills${s.project}/${s.name}`,
+      pc.white
+    );
+    const repoLink = terminalLink(s.project, `https://github.com${s.project}`, pc.white);
+    const metadataLines = [
+      pc.dim("─".repeat(50)),
+      "",
+      `${pc.yellow("Skill:")}       ${skillLink}`,
+      `${pc.yellow("Repo:")}        ${repoLink}`,
+      `${pc.yellow("Relevant:")}    ${pc.cyan(s.matchedDep)}`,
+      `${pc.yellow("Description:")}`,
+      pc.white(s.description || "No description"),
+    ];
 
-      const skillLink = terminalLink(
-        s.name,
-        `https://context7.com/skills${s.project}/${s.name}`,
-        pc.white
-      );
-      const repoLink = terminalLink(s.project, `https://github.com${s.project}`, pc.white);
-      const metadataLines = [
-        pc.dim("─".repeat(50)),
-        "",
-        `${pc.yellow("Skill:")}       ${skillLink}`,
-        `${pc.yellow("Repo:")}        ${repoLink}`,
-        `${pc.yellow("Relevant:")}    ${pc.cyan(s.matchedDep)}`,
-        `${pc.yellow("Description:")}`,
-        pc.white(s.description || "No description"),
-      ];
-
-      choices.push({
-        name: `${indexStr} ${paddedName} ${paddedInstalls}${trust}${matched}`,
-        value: s,
-        description: metadataLines.join("\n"),
-      });
-    }
-  }
+    return {
+      name: `${indexStr} ${paddedName} ${paddedInstalls}${trust}${matched}`,
+      value: s,
+      description: metadataLines.join("\n"),
+    };
+  });
 
   // Build header
   const checkboxPrefixWidth = 3; // "❯◯ " or " ◯ "

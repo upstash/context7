@@ -1,12 +1,6 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
 
-export interface DetectedDependency {
-  name: string;
-  source: string;
-  ecosystem: string;
-}
-
 async function readFileOrNull(path: string): Promise<string | null> {
   try {
     return await readFile(path, "utf-8");
@@ -15,16 +9,12 @@ async function readFileOrNull(path: string): Promise<string | null> {
   }
 }
 
-/**
- * Basic client-side filter to reduce payload size.
- * The real SKIP_SET lives on the backend.
- */
+/** Basic client-side filter. The real SKIP_SET lives on the backend. */
 function isSkippedLocally(name: string): boolean {
-  if (name.startsWith("@types/")) return true;
-  return false;
+  return name.startsWith("@types/");
 }
 
-async function parsePackageJson(cwd: string): Promise<DetectedDependency[]> {
+async function parsePackageJson(cwd: string): Promise<string[]> {
   const content = await readFileOrNull(join(cwd, "package.json"));
   if (!content) return [];
 
@@ -39,40 +29,35 @@ async function parsePackageJson(cwd: string): Promise<DetectedDependency[]> {
       if (!isSkippedLocally(key)) names.add(key);
     }
 
-    return [...names].map((name) => ({
-      name,
-      source: "package.json",
-      ecosystem: "node",
-    }));
+    return [...names];
   } catch {
     return [];
   }
 }
 
-async function parseRequirementsTxt(cwd: string): Promise<DetectedDependency[]> {
+async function parseRequirementsTxt(cwd: string): Promise<string[]> {
   const content = await readFileOrNull(join(cwd, "requirements.txt"));
   if (!content) return [];
 
-  const deps: DetectedDependency[] = [];
+  const deps: string[] = [];
   for (const line of content.split("\n")) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith("-")) continue;
     const name = trimmed.split(/[=<>!~;@\s\[]/)[0].trim();
     if (name && !isSkippedLocally(name)) {
-      deps.push({ name, source: "requirements.txt", ecosystem: "python" });
+      deps.push(name);
     }
   }
   return deps;
 }
 
-async function parsePyprojectToml(cwd: string): Promise<DetectedDependency[]> {
+async function parsePyprojectToml(cwd: string): Promise<string[]> {
   const content = await readFileOrNull(join(cwd, "pyproject.toml"));
   if (!content) return [];
 
-  const deps: DetectedDependency[] = [];
+  const deps: string[] = [];
   const seen = new Set<string>();
 
-  // Match dependencies in [project.dependencies] array
   const projectDepsMatch = content.match(/\[project\]\s[\s\S]*?dependencies\s*=\s*\[([\s\S]*?)\]/);
   if (projectDepsMatch) {
     const entries = projectDepsMatch[1].match(/"([^"]+)"/g) || [];
@@ -83,12 +68,11 @@ async function parsePyprojectToml(cwd: string): Promise<DetectedDependency[]> {
         .trim();
       if (name && !isSkippedLocally(name) && !seen.has(name)) {
         seen.add(name);
-        deps.push({ name, source: "pyproject.toml", ecosystem: "python" });
+        deps.push(name);
       }
     }
   }
 
-  // Match [tool.poetry.dependencies] section
   const poetryMatch = content.match(/\[tool\.poetry\.dependencies\]([\s\S]*?)(?:\n\[|$)/);
   if (poetryMatch) {
     const lines = poetryMatch[1].split("\n");
@@ -98,7 +82,7 @@ async function parsePyprojectToml(cwd: string): Promise<DetectedDependency[]> {
         const name = match[1].trim();
         if (name && !isSkippedLocally(name) && name !== "python" && !seen.has(name)) {
           seen.add(name);
-          deps.push({ name, source: "pyproject.toml", ecosystem: "python" });
+          deps.push(name);
         }
       }
     }
@@ -107,12 +91,12 @@ async function parsePyprojectToml(cwd: string): Promise<DetectedDependency[]> {
   return deps;
 }
 
-export async function detectProjectDependencies(cwd: string): Promise<DetectedDependency[]> {
+export async function detectProjectDependencies(cwd: string): Promise<string[]> {
   const results = await Promise.all([
     parsePackageJson(cwd),
     parseRequirementsTxt(cwd),
     parsePyprojectToml(cwd),
   ]);
 
-  return results.flat();
+  return [...new Set(results.flat())];
 }

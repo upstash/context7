@@ -194,13 +194,12 @@ export const DEFAULT_CONFIG: C7Config = {
 };
 
 // Suggest endpoint types
-export interface SuggestGroup {
-  dependency: string;
-  skills: SkillSearchResult[];
+export interface SuggestSkill extends SkillSearchResult {
+  matchedDep: string;
 }
 
 export interface SuggestResponse {
-  groups: SuggestGroup[];
+  skills: SuggestSkill[];
   error?: string;
   message?: string;
 }
