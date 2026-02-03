@@ -5,7 +5,13 @@ import { readdir, rm } from "fs/promises";
 import { join } from "path";
 
 import { parseSkillInput } from "../utils/parse-input.js";
-import { listProjectSkills, searchSkills, downloadSkill, getSkill } from "../utils/api.js";
+import {
+  listProjectSkills,
+  searchSkills,
+  suggestSkills,
+  downloadSkill,
+  getSkill,
+} from "../utils/api.js";
 import { log } from "../utils/logger.js";
 import {
   promptForInstallTargets,
@@ -30,11 +36,14 @@ import type {
   AddOptions,
   ListOptions,
   RemoveOptions,
+  SuggestOptions,
   InstallTargets,
 } from "../types.js";
 import { IDE_NAMES, IDE_PATHS, IDE_GLOBAL_PATHS } from "../types.js";
 import type { IDE, Scope } from "../types.js";
 import { homedir } from "os";
+import { detectProjectDependencies } from "../utils/deps.js";
+import { loadTokens, isTokenExpired } from "../utils/auth.js";
 
 function logInstallSummary(
   targets: InstallTargets,
@@ -128,6 +137,20 @@ export function registerSkillCommands(program: Command): void {
     .action(async (project: string) => {
       await infoCommand(project);
     });
+
+  skill
+    .command("suggest")
+    .option("--global", "Install globally instead of current directory")
+    .option("--claude", "Claude Code (.claude/skills/)")
+    .option("--cursor", "Cursor (.cursor/skills/)")
+    .option("--codex", "Codex (.codex/skills/)")
+    .option("--opencode", "OpenCode (.opencode/skills/)")
+    .option("--amp", "Amp (.agents/skills/)")
+    .option("--antigravity", "Antigravity (.agent/skills/)")
+    .description("Suggest skills based on your project dependencies")
+    .action(async (options: SuggestOptions) => {
+      await suggestCommand(options);
+    });
 }
 
 export function registerSkillAliases(program: Command): void {
@@ -154,6 +177,20 @@ export function registerSkillAliases(program: Command): void {
     .description("Search for skills (alias for: skills search)")
     .action(async (keywords: string[]) => {
       await searchCommand(keywords.join(" "));
+    });
+
+  program
+    .command("ssg", { hidden: true })
+    .option("--global", "Install globally instead of current directory")
+    .option("--claude", "Claude Code (.claude/skills/)")
+    .option("--cursor", "Cursor (.cursor/skills/)")
+    .option("--codex", "Codex (.codex/skills/)")
+    .option("--opencode", "OpenCode (.opencode/skills/)")
+    .option("--amp", "Amp (.agents/skills/)")
+    .option("--antigravity", "Antigravity (.agent/skills/)")
+    .description("Suggest skills (alias for: skills suggest)")
+    .action(async (options: SuggestOptions) => {
+      await suggestCommand(options);
     });
 }
 
@@ -654,4 +691,203 @@ async function infoCommand(input: string): Promise<void> {
       `  Install all: ${pc.cyan(`ctx7 skills install ${repo} --all`)}\n` +
       `  Install one: ${pc.cyan(`ctx7 skills install ${repo} ${data.skills[0]?.name}`)}\n`
   );
+}
+
+async function suggestCommand(options: SuggestOptions): Promise<void> {
+  trackEvent("command", { name: "suggest" });
+  log.blank();
+
+  // Step 1: Detect dependencies
+  const scanSpinner = ora("Scanning project dependencies...").start();
+  const deps = await detectProjectDependencies(process.cwd());
+
+  if (deps.length === 0) {
+    scanSpinner.warn(pc.yellow("No dependencies detected"));
+    log.info(`Try ${pc.cyan("ctx7 skills search <keyword>")} to search manually`);
+    return;
+  }
+
+  scanSpinner.succeed(`Found ${deps.length} dependencies`);
+
+  // Step 2: Single API call to backend
+  const searchSpinner = ora("Finding matching skills...").start();
+
+  const tokens = loadTokens();
+  const accessToken = tokens && !isTokenExpired(tokens) ? tokens.access_token : undefined;
+
+  let data;
+  try {
+    data = await suggestSkills(deps, accessToken);
+  } catch {
+    searchSpinner.fail(pc.red("Failed to connect to Context7"));
+    return;
+  }
+
+  if (data.error) {
+    searchSpinner.fail(pc.red(`Error: ${data.message || data.error}`));
+    return;
+  }
+
+  const skills = data.skills;
+
+  if (skills.length === 0) {
+    searchSpinner.warn(pc.yellow("No matching skills found for your dependencies"));
+    return;
+  }
+
+  searchSpinner.succeed(`Found ${skills.length} relevant skill(s)`);
+  trackEvent("suggest_results", { depCount: deps.length, skillCount: skills.length });
+
+  log.blank();
+
+  const maxNameLen = Math.max(...skills.map((s) => s.name.length));
+  const installsColWidth = 10;
+  const trustColWidth = 12;
+  const maxMatchedLen = Math.max(...skills.map((s) => s.matchedDep.length));
+  const indexWidth = skills.length.toString().length;
+
+  const choices = skills.map((s, index) => {
+    const indexStr = pc.dim(`${(index + 1).toString().padStart(indexWidth)}.`);
+    const paddedName = s.name.padEnd(maxNameLen);
+    const installsRaw = s.installCount ? String(s.installCount) : "-";
+    const paddedInstalls =
+      formatInstallCount(s.installCount, pc.dim("-")) +
+      " ".repeat(installsColWidth - installsRaw.length);
+    const trustRaw =
+      s.trustScore !== undefined && s.trustScore >= 0 ? s.trustScore.toFixed(1) : "-";
+    const trust = formatTrustScore(s.trustScore) + " ".repeat(trustColWidth - trustRaw.length);
+    const matched = pc.yellow(s.matchedDep.padEnd(maxMatchedLen));
+
+    const skillLink = terminalLink(
+      s.name,
+      `https://context7.com/skills${s.project}/${s.name}`,
+      pc.white
+    );
+    const repoLink = terminalLink(s.project, `https://github.com${s.project}`, pc.white);
+    const metadataLines = [
+      pc.dim("─".repeat(50)),
+      "",
+      `${pc.yellow("Skill:")}       ${skillLink}`,
+      `${pc.yellow("Repo:")}        ${repoLink}`,
+      `${pc.yellow("Relevant:")}    ${pc.white(s.matchedDep)}`,
+      `${pc.yellow("Description:")}`,
+      pc.white(s.description || "No description"),
+    ];
+
+    return {
+      name: `${indexStr} ${paddedName} ${paddedInstalls}${trust}${matched}`,
+      value: s,
+      description: metadataLines.join("\n"),
+    };
+  });
+
+  // Build header
+  const checkboxPrefixWidth = 3; // "❯◯ " or " ◯ "
+  const headerPad = " ".repeat(checkboxPrefixWidth + indexWidth + 1 + 1 + maxNameLen + 1);
+  const headerLine =
+    headerPad +
+    pc.dim("Installs".padEnd(installsColWidth)) +
+    pc.dim("Trust(0-10)".padEnd(trustColWidth)) +
+    pc.dim("Relevant");
+  const message = "Select skills to install:\n" + headerLine;
+
+  let selectedSkills: SkillSearchResult[];
+  try {
+    selectedSkills = await checkboxWithHover({
+      message,
+      choices,
+      pageSize: 15,
+      loop: false,
+    });
+  } catch {
+    log.warn("Installation cancelled");
+    return;
+  }
+
+  if (selectedSkills.length === 0) {
+    log.warn("No skills selected");
+    return;
+  }
+
+  // Step 4: Install (same pattern as searchCommand)
+  const targets = await promptForInstallTargets(options);
+  if (!targets) {
+    log.warn("Installation cancelled");
+    return;
+  }
+
+  const targetDirs = getTargetDirs(targets);
+  const installSpinner = ora("Installing skills...").start();
+
+  let permissionError = false;
+  const failedDirs: Set<string> = new Set();
+  const installedSkills: string[] = [];
+
+  for (const skill of selectedSkills) {
+    try {
+      installSpinner.text = `Downloading ${skill.name}...`;
+      const downloadData = await downloadSkill(skill.project, skill.name);
+
+      if (downloadData.error) {
+        log.warn(`Failed to download ${skill.name}: ${downloadData.error}`);
+        continue;
+      }
+
+      installSpinner.text = `Installing ${skill.name}...`;
+
+      const [primaryDir, ...symlinkDirs] = targetDirs;
+
+      try {
+        await installSkillFiles(skill.name, downloadData.files, primaryDir);
+      } catch (dirErr) {
+        const error = dirErr as NodeJS.ErrnoException;
+        if (error.code === "EACCES" || error.code === "EPERM") {
+          permissionError = true;
+          failedDirs.add(primaryDir);
+        }
+        throw dirErr;
+      }
+
+      const primarySkillDir = join(primaryDir, skill.name);
+      for (const targetDir of symlinkDirs) {
+        try {
+          await symlinkSkill(skill.name, primarySkillDir, targetDir);
+        } catch (dirErr) {
+          const error = dirErr as NodeJS.ErrnoException;
+          if (error.code === "EACCES" || error.code === "EPERM") {
+            permissionError = true;
+            failedDirs.add(targetDir);
+          }
+          throw dirErr;
+        }
+      }
+
+      installedSkills.push(`${skill.project}/${skill.name}`);
+    } catch (err) {
+      const error = err as NodeJS.ErrnoException;
+      if (error.code === "EACCES" || error.code === "EPERM") {
+        continue;
+      }
+      const errMsg = err instanceof Error ? err.message : String(err);
+      log.warn(`Failed to install ${skill.name}: ${errMsg}`);
+    }
+  }
+
+  if (permissionError) {
+    installSpinner.fail("Permission denied");
+    log.blank();
+    log.warn("Fix permissions with:");
+    for (const dir of failedDirs) {
+      const parentDir = join(dir, "..");
+      log.dim(`  sudo chown -R $(whoami) "${parentDir}"`);
+    }
+    log.blank();
+    return;
+  }
+
+  installSpinner.succeed(`Installed ${installedSkills.length} skill(s)`);
+  trackEvent("suggest_install", { skills: installedSkills, ides: targets.ides });
+
+  const installedNames = selectedSkills.map((s) => s.name);
+  logInstallSummary(targets, targetDirs, installedNames);
 }
