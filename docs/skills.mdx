@@ -5,28 +5,78 @@ description: Install, search, and manage AI coding assistant skills from the Con
 
 Skills are reusable prompt templates that extend the capabilities of your AI coding assistants. They allow you to share and install common workflows like code reviews, commit message generation, PDF processing, and more across projects and teams.
 
-Context7 maintains a registry of skills that can be installed directly into your AI coding assistant's configuration with a single command.
+Context7 maintains a registry of skills at [context7.com/skills](https://context7.com/skills) that can be installed directly into your AI coding assistant with a single command.
+
+## What Are Skills?
+
+Skills follow the [Agent Skills](https://agentskills.io) open standard — a specification that works across multiple AI coding tools. A skill is a directory containing a `SKILL.md` file with instructions that your AI assistant loads when relevant.
+
+**Why use skills?**
+
+- **Standardize workflows**: Ensure consistent code reviews, commit messages, or documentation across your team
+- **Share expertise**: Package domain knowledge (e.g., "how we handle authentication") as reusable prompts
+- **Save time**: Install pre-built skills instead of repeatedly explaining the same patterns to your AI assistant
+
+**Example use cases:**
+
+- Generate commit messages following your team's conventions
+- Review code for security vulnerabilities
+- Process PDFs and extract structured data
+- Scaffold components using your preferred patterns
+
+## The Context7 Skills Registry
+
+The [Context7 Skills Registry](https://context7.com/skills) is a searchable marketplace of skills indexed from GitHub repositories. Each skill is identified by its repository path (e.g., `/anthropics/skills`) and skill name.
+
+When browsing or searching skills, you'll see:
+
+| Field | Description |
+|-------|-------------|
+| **Name** | The skill identifier used for installation |
+| **Description** | What the skill does and when to use it |
+| **Install Count** | Number of times the skill has been installed |
+| **Trust Score** | Quality and safety indicator (0-10) |
+
+## Trust Scores
+
+Every skill in the registry has a **trust score** from 0 to 10 that indicates the reliability and safety of the skill source.
+
+| Score | Level | Meaning |
+|-------|-------|---------|
+| 7.0 - 10.0 | High | Verified or well-established source |
+| 3.0 - 6.9 | Medium | Standard community contribution |
+| 0.0 - 2.9 | Low | New or unverified — review before using |
+
+Trust scores help you make informed decisions about which skills to install. Higher scores indicate skills from reputable sources with community validation.
+
+### Security Features
+
+Context7 automatically scans skills for potential security issues:
+
+- **Prompt injection detection**: Skills containing potentially malicious instructions are blocked from installation
+- **Blocked skill warnings**: When viewing a repository, you'll see how many skills were blocked due to security concerns
+- **Clear error messages**: If you try to install a blocked skill, you'll receive a specific warning explaining why
 
 ## Prerequisites
 
-To use skills, you need the [Context7 CLI](https://github.com/upstash/context7/tree/master/packages/cli). Install it globally:
+Skills require the Context7 CLI. You need Node.js 18 or later.
 
 ```bash
+# Run directly with npx (no installation required)
+npx ctx7 skills search pdf
+
+# Or install globally for faster access
 npm install -g ctx7
 ```
 
-Or run directly with npx (no installation required):
+## CLI Commands
+
+### Install Skills
+
+Install skills from a repository to your AI coding assistant's skills directory.
 
 ```bash
-npx ctx7 skills search pdf
-```
-
-## Install Skills
-
-Install skills from a project repository to your AI coding assistant's skills directory.
-
-```bash
-# Install all skills from a project (interactive selection)
+# Interactive selection from a repository
 ctx7 skills install /anthropics/skills
 
 # Install a specific skill
@@ -35,71 +85,280 @@ ctx7 skills install /anthropics/skills pdf
 # Install multiple skills at once
 ctx7 skills install /anthropics/skills pdf commit
 
-# Install to a specific client
-ctx7 skills install /anthropics/skills pdf --cursor
-ctx7 skills install /anthropics/skills pdf --claude
+# Install all skills without prompting
+ctx7 skills install /anthropics/skills --all
+```
 
-# Install globally (home directory instead of current project)
+**Target a specific client:**
+
+```bash
+ctx7 skills install /anthropics/skills pdf --claude
+ctx7 skills install /anthropics/skills pdf --cursor
+ctx7 skills install /anthropics/skills pdf --codex
+ctx7 skills install /anthropics/skills pdf --opencode
+ctx7 skills install /anthropics/skills pdf --amp
+ctx7 skills install /anthropics/skills pdf --antigravity
+```
+
+**Install globally** (available in all projects):
+
+```bash
 ctx7 skills install /anthropics/skills pdf --global
 ```
 
-## Search for Skills
+<Note>
+When installing to multiple clients, the CLI creates the skill files in your primary client's directory and symlinks them to other clients.
+</Note>
 
-Find skills across all indexed projects in the registry.
+### Search Skills
+
+Find skills across all indexed repositories in the registry.
 
 ```bash
 ctx7 skills search pdf
 ctx7 skills search typescript
-ctx7 skills search react testing
+ctx7 skills search "react testing"
 ```
 
-## List Installed Skills
+Search results display:
+- Skill name and repository
+- Description
+- Install count
+- Trust score
+
+You can install directly from search results by selecting a skill interactively.
+
+### List Installed Skills
 
 View skills installed in your project or globally.
 
 ```bash
+# List all installed skills
 ctx7 skills list
+
+# List for a specific client
 ctx7 skills list --claude
 ctx7 skills list --cursor
+
+# List globally installed skills
 ctx7 skills list --global
 ```
 
-## Show Skill Information
+### Show Skill Information
 
-Get details about available skills in a project.
+Get details about all available skills in a repository.
 
 ```bash
 ctx7 skills info /anthropics/skills
 ```
 
-## Remove a Skill
+This displays:
+- Available skill names
+- Descriptions
+- Direct URLs
+- Quick install commands
 
-Uninstall a skill from your project.
+### Remove Skills
+
+Uninstall a skill from your project or global directory.
 
 ```bash
+# Remove with interactive prompts
 ctx7 skills remove pdf
+
+# Remove from a specific client
 ctx7 skills remove pdf --claude
+
+# Remove from global directory
 ctx7 skills remove pdf --global
+```
+
+## Generate Custom Skills
+
+Create custom skills tailored to your specific needs using AI. This feature requires authentication.
+
+### Authentication
+
+```bash
+# Log in (opens browser for OAuth)
+ctx7 login
+
+# Check your login status
+ctx7 whoami
+
+# Log out
+ctx7 logout
+```
+
+### Generate a Skill
+
+```bash
+# Start interactive generation
+ctx7 skills generate
+
+# Generate for a specific client
+ctx7 skills generate --cursor
+ctx7 skills generate --claude
+
+# Generate as a global skill
+ctx7 skills generate --global
+```
+
+### Generation Workflow
+
+1. **Describe your expertise**: Enter what you want the skill to do (e.g., "OAuth authentication with NextAuth.js best practices")
+2. **Select documentation**: Search and choose relevant libraries to inform the skill
+3. **Answer questions**: Respond to 3 clarifying questions to focus the skill
+4. **Review**: See the generated skill and optionally request changes
+5. **Install**: Save the skill to your selected client(s)
+
+<Tip>
+Describe best practices and constraints, not step-by-step tutorials. For example, "TypeScript strict mode patterns" is better than "how to write TypeScript."
+</Tip>
+
+### Generation Limits
+
+| Plan | Generations per Week |
+|------|---------------------|
+| Free | 6 |
+| Pro | 10 |
+
+Check your remaining quota:
+
+```bash
+ctx7 whoami
 ```
 
 ## Supported Clients
 
-The CLI automatically detects which AI coding assistants you have installed and offers to install skills for them:
+The CLI automatically detects installed AI coding assistants and offers to install skills for them.
 
-| Client | Skills Directory |
-|--------|------------------|
-| Claude Code | `.claude/skills/` |
-| Cursor | `.cursor/skills/` |
-| Codex | `.codex/skills/` |
-| OpenCode | `.opencode/skills/` |
-| Amp | `.agents/skills/` |
-| Antigravity | `.agent/skills/` |
+| Client | Project Directory | Global Directory |
+|--------|-------------------|------------------|
+| Claude Code | `.claude/skills/` | `~/.claude/skills/` |
+| Cursor | `.cursor/skills/` | `~/.cursor/skills/` |
+| Codex | `.codex/skills/` | `~/.codex/skills/` |
+| OpenCode | `.opencode/skills/` | `~/.config/opencode/skills/` |
+| Amp | `.agents/skills/` | `~/.agents/skills/` |
+| Antigravity | `.agent/skills/` | `~/.agent/skills/` |
 
-## Shortcuts
+**Project vs Global:**
+- **Project skills** (default): Installed in your current project directory, available only in that project
+- **Global skills** (`--global`): Installed in your home directory, available across all projects
+
+## Skill File Structure
+
+Each skill is a directory containing at minimum a `SKILL.md` file:
+
+```
+my-skill/
+├── SKILL.md           # Main instructions (required)
+├── templates/         # Optional templates
+├── examples/          # Optional example outputs
+└── scripts/           # Optional executable scripts
+```
+
+### SKILL.md Format
+
+Skills use YAML frontmatter followed by markdown instructions:
+
+```yaml
+---
+name: my-skill
+description: What this skill does and when to use it
+---
+
+Instructions for the AI assistant go here.
+
+Use markdown formatting, code examples, and clear steps.
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Identifier for the skill (lowercase, hyphens allowed) |
+| `description` | Yes | Explains what the skill does — used for discovery |
+
+The markdown body contains the actual instructions your AI assistant follows when the skill is invoked.
+
+## Command Shortcuts
 
 For faster usage, the CLI provides short aliases:
 
+| Shortcut | Full Command |
+|----------|--------------|
+| `ctx7 si` | `ctx7 skills install` |
+| `ctx7 ss` | `ctx7 skills search` |
+| `ctx7 skills i` | `ctx7 skills install` |
+| `ctx7 skills s` | `ctx7 skills search` |
+| `ctx7 skills ls` | `ctx7 skills list` |
+| `ctx7 skills rm` | `ctx7 skills remove` |
+| `ctx7 skills gen` | `ctx7 skills generate` |
+| `ctx7 skills g` | `ctx7 skills generate` |
+
+## Troubleshooting
+
+### Permission Denied
+
+If you see permission errors when installing or removing skills:
+
 ```bash
-ctx7 si /anthropics/skills pdf   # skills install
-ctx7 ss pdf                       # skills search
+# Try with sudo for global installations
+sudo ctx7 skills install /anthropics/skills pdf --global
 ```
+
+Or fix directory permissions:
+
+```bash
+sudo chown -R $(whoami) ~/.claude/skills
+```
+
+### Skill Blocked Due to Prompt Injection
+
+If a skill is blocked, it contains content flagged as potentially malicious. This is a security feature — the skill cannot be installed.
+
+```
+Error: This skill contains potentially malicious content and cannot be installed.
+```
+
+Consider using an alternative skill or contacting the skill author.
+
+### Client Not Detected
+
+If your AI coding assistant isn't detected, ensure its configuration directory exists:
+
+```bash
+# For Claude Code
+mkdir -p .claude
+
+# For Cursor
+mkdir -p .cursor
+```
+
+### Authentication Issues
+
+If login fails or tokens expire:
+
+```bash
+# Clear stored credentials
+ctx7 logout
+
+# Log in again
+ctx7 login
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Browse Skills" icon="magnifying-glass" href="https://context7.com/skills">
+    Explore the skills registry
+  </Card>
+  <Card title="Claude Code Skills Docs" icon="book" href="https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/skills">
+    Learn more about how skills work in Claude Code
+  </Card>
+  <Card title="Agent Skills Spec" icon="code" href="https://agentskills.io">
+    Read the open standard specification
+  </Card>
+  <Card title="Get Pro" icon="rocket" href="/plans-pricing">
+    Unlock more skill generations
+  </Card>
+</CardGroup>
