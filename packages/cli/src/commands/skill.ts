@@ -36,7 +36,7 @@ import type {
   AddOptions,
   ListOptions,
   RemoveOptions,
-  DiscoverOptions,
+  SuggestOptions,
   InstallTargets,
 } from "../types.js";
 import { IDE_NAMES, IDE_PATHS, IDE_GLOBAL_PATHS } from "../types.js";
@@ -148,7 +148,7 @@ export function registerSkillCommands(program: Command): void {
     .option("--amp", "Amp (.agents/skills/)")
     .option("--antigravity", "Antigravity (.agent/skills/)")
     .description("Suggest skills based on your project dependencies")
-    .action(async (options: DiscoverOptions) => {
+    .action(async (options: SuggestOptions) => {
       await suggestCommand(options);
     });
 }
@@ -189,7 +189,7 @@ export function registerSkillAliases(program: Command): void {
     .option("--amp", "Amp (.agents/skills/)")
     .option("--antigravity", "Antigravity (.agent/skills/)")
     .description("Suggest skills (alias for: skills suggest)")
-    .action(async (options: DiscoverOptions) => {
+    .action(async (options: SuggestOptions) => {
       await suggestCommand(options);
     });
 }
@@ -693,7 +693,7 @@ async function infoCommand(input: string): Promise<void> {
   );
 }
 
-async function suggestCommand(options: DiscoverOptions): Promise<void> {
+async function suggestCommand(options: SuggestOptions): Promise<void> {
   trackEvent("command", { name: "suggest" });
   log.blank();
 
