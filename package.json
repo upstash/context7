@@ -7,6 +7,7 @@
     "packages/*"
   ],
   "scripts": {
+    "postinstall": "ctx7 skills suggest --detect-new || true",
     "build": "pnpm -r run build",
     "build:sdk": "pnpm --filter @upstash/context7-sdk build",
     "build:mcp": "pnpm --filter @upstash/context7-mcp build",

@@ -705,28 +705,34 @@ async function suggestCommand(options: SuggestOptions): Promise<void> {
 
   const cwd = process.cwd();
 
-  // Step 1: Detect dependencies
+  // Raw ANSI codes for postinstall (picocolors doesn't work in pnpm collapsed output)
+  const ansi = {
+    reset: "\x1b[0m",
+    bold: "\x1b[1m",
+    dim: "\x1b[2m",
+    cyan: "\x1b[36m",
+    green: "\x1b[32m",
+    yellow: "\x1b[33m",
+  };
+
   let deps: string[];
   let fromCache = false;
 
   if (options.detectNew) {
-    // Detect newly installed packages (for postinstall hooks)
     const scanSpinner = ora("Detecting newly installed packages...").start();
     deps = await detectNewlyInstalledPackages(cwd);
 
     if (deps.length === 0) {
       scanSpinner.stop();
       scanSpinner.clear();
-      // Silent exit when no new packages - this is normal for most installs
       return;
     }
 
-    // Save to cache for later interactive installation
     await appendPendingPackages(cwd, deps);
-
-    scanSpinner.succeed(`Detected ${deps.length} new package(s): ${pc.cyan(deps.join(", "))}`);
+    scanSpinner.succeed(
+      `Detected ${deps.length} new package(s): ${ansi.yellow}${deps.join(", ")}${ansi.reset}`
+    );
   } else {
-    // Check for pending packages from postinstall cache first
     const pendingPackages = await loadPendingPackages(cwd);
 
     if (pendingPackages.length > 0) {
@@ -778,29 +784,31 @@ async function suggestCommand(options: SuggestOptions): Promise<void> {
   searchSpinner.succeed(`Found ${skills.length} relevant skill(s)`);
   trackEvent("suggest_results", { depCount: deps.length, skillCount: skills.length });
 
-  // In detect-new mode (postinstall), just notify and exit - don't prompt interactively
   if (options.detectNew) {
-    log.blank();
-    log.info(`${pc.bold(String(skills.length))} skill(s) available for new packages:`);
-    log.blank();
+    const a = ansi;
+    console.log();
+    console.log(
+      `${a.cyan}${a.bold}${skills.length}${a.reset} skill(s) available for new packages:`
+    );
     for (const skill of skills.slice(0, 5)) {
       console.log(
-        `  ${pc.green("+")} ${pc.bold(pc.green(skill.name))} ${pc.dim("for")} ${pc.yellow(skill.matchedDep)}`
+        `${a.dim}│${a.reset} ${a.green}+${a.reset} ${a.bold}${a.green}${skill.name}${a.reset} ${a.dim}for${a.reset} ${a.yellow}${skill.matchedDep}${a.reset}`
       );
       if (skill.description) {
         const desc =
           skill.description.length > 55
             ? skill.description.slice(0, 52) + "..."
             : skill.description;
-        console.log(`    ${pc.dim(desc)}`);
+        console.log(`${a.dim}│   ${desc}${a.reset}`);
       }
     }
     if (skills.length > 5) {
-      console.log(`  ${pc.dim(`... and ${skills.length - 5} more`)}`);
+      console.log(`${a.dim}│ ... and ${skills.length - 5} more${a.reset}`);
     }
-    log.blank();
-    log.dim(`  Run ${pc.cyan("ctx7 skills suggest")} to install`);
-    log.blank();
+    console.log(
+      `${a.dim}└${a.reset} Run ${a.cyan}${a.bold}ctx7 skills suggest${a.reset} to install`
+    );
+    console.log();
     return;
   }
 
