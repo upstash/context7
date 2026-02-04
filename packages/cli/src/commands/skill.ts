@@ -714,20 +714,50 @@ async function detectCommand(): Promise<void> {
   trackEvent("command", { name: "detect" });
 
   const cwd = process.cwd();
+  const isInteractive = process.stdout.isTTY;
 
-  const scanSpinner = ora("Detecting newly installed packages...").start();
-  const deps = await detectNewlyInstalledPackages(cwd);
+  let deps: string[];
 
-  if (deps.length === 0) {
-    scanSpinner.stop();
-    scanSpinner.clear();
-    return;
+  if (isInteractive) {
+    const pendingPackages = await loadPendingPackages(cwd);
+    if (pendingPackages.length > 0) {
+      deps = pendingPackages;
+      log.blank();
+      log.info(
+        `Found ${pc.bold(String(deps.length))} pending package(s) from recent installs: ${pc.cyan(deps.join(", "))}`
+      );
+    } else {
+      const scanSpinner = ora("Detecting newly installed packages...").start();
+      deps = await detectNewlyInstalledPackages(cwd);
+
+      if (deps.length === 0) {
+        scanSpinner.stop();
+        scanSpinner.clear();
+        log.blank();
+        log.warn("No new packages detected");
+        return;
+      }
+
+      await appendPendingPackages(cwd, deps);
+      scanSpinner.succeed(
+        `Detected ${deps.length} new package(s): ${ansi.yellow}${deps.join(", ")}${ansi.reset}`
+      );
+    }
+  } else {
+    const scanSpinner = ora("Detecting newly installed packages...").start();
+    deps = await detectNewlyInstalledPackages(cwd);
+
+    if (deps.length === 0) {
+      scanSpinner.stop();
+      scanSpinner.clear();
+      return;
+    }
+
+    await appendPendingPackages(cwd, deps);
+    scanSpinner.succeed(
+      `Detected ${deps.length} new package(s): ${ansi.yellow}${deps.join(", ")}${ansi.reset}`
+    );
   }
-
-  await appendPendingPackages(cwd, deps);
-  scanSpinner.succeed(
-    `Detected ${deps.length} new package(s): ${ansi.yellow}${deps.join(", ")}${ansi.reset}`
-  );
 
   const searchSpinner = ora("Finding matching skills...").start();
 
@@ -757,74 +787,203 @@ async function detectCommand(): Promise<void> {
 
   searchSpinner.succeed(`Found ${skills.length} relevant skill(s)`);
 
-  console.log();
-  console.log(
-    `${ansi.cyan}${ansi.bold}${skills.length}${ansi.reset} skill(s) available for new packages:`
-  );
-  for (const skill of skills.slice(0, 5)) {
+  if (!isInteractive) {
+    console.log();
     console.log(
-      `${ansi.dim}│${ansi.reset} ${ansi.green}+${ansi.reset} ${ansi.bold}${ansi.green}${skill.name}${ansi.reset} ${ansi.dim}for${ansi.reset} ${ansi.yellow}${skill.matchedDep}${ansi.reset}`
+      `${ansi.cyan}${ansi.bold}${skills.length}${ansi.reset} skill(s) available for new packages:`
     );
-    if (skill.description) {
-      const desc =
-        skill.description.length > 55 ? skill.description.slice(0, 52) + "..." : skill.description;
-      console.log(`${ansi.dim}│   ${desc}${ansi.reset}`);
+    for (const skill of skills.slice(0, 5)) {
+      console.log(
+        `${ansi.dim}│${ansi.reset} ${ansi.green}+${ansi.reset} ${ansi.bold}${ansi.green}${skill.name}${ansi.reset} ${ansi.dim}for${ansi.reset} ${ansi.yellow}${skill.matchedDep}${ansi.reset}`
+      );
+      if (skill.description) {
+        const desc =
+          skill.description.length > 55
+            ? skill.description.slice(0, 52) + "..."
+            : skill.description;
+        console.log(`${ansi.dim}│   ${desc}${ansi.reset}`);
+      }
+    }
+    if (skills.length > 5) {
+      console.log(`${ansi.dim}│ ... and ${skills.length - 5} more${ansi.reset}`);
+    }
+    console.log(
+      `${ansi.dim}└${ansi.reset} Run ${ansi.cyan}${ansi.bold}ctx7 skills detect${ansi.reset} to install`
+    );
+    console.log();
+    return;
+  }
+
+  log.blank();
+
+  const maxNameLen = Math.max(...skills.map((s) => s.name.length));
+  const installsColWidth = 10;
+  const trustColWidth = 12;
+  const maxMatchedLen = Math.max(...skills.map((s) => s.matchedDep.length));
+  const indexWidth = skills.length.toString().length;
+
+  const choices = skills.map((s, index) => {
+    const indexStr = pc.dim(`${(index + 1).toString().padStart(indexWidth)}.`);
+    const paddedName = s.name.padEnd(maxNameLen);
+    const installsRaw = s.installCount ? String(s.installCount) : "-";
+    const paddedInstalls =
+      formatInstallCount(s.installCount, pc.dim("-")) +
+      " ".repeat(installsColWidth - installsRaw.length);
+    const trustRaw =
+      s.trustScore !== undefined && s.trustScore >= 0 ? s.trustScore.toFixed(1) : "-";
+    const trust = formatTrustScore(s.trustScore) + " ".repeat(trustColWidth - trustRaw.length);
+    const matched = pc.yellow(s.matchedDep.padEnd(maxMatchedLen));
+
+    const skillLink = terminalLink(
+      s.name,
+      `https://context7.com/skills${s.project}/${s.name}`,
+      pc.white
+    );
+    const repoLink = terminalLink(s.project, `https://github.com${s.project}`, pc.white);
+    const metadataLines = [
+      pc.dim("─".repeat(50)),
+      "",
+      `${pc.yellow("Skill:")}       ${skillLink}`,
+      `${pc.yellow("Repo:")}        ${repoLink}`,
+      `${pc.yellow("Relevant:")}    ${pc.white(s.matchedDep)}`,
+      `${pc.yellow("Description:")}`,
+      pc.white(s.description || "No description"),
+    ];
+
+    return {
+      name: `${indexStr} ${paddedName} ${paddedInstalls}${trust}${matched}`,
+      value: s,
+      description: metadataLines.join("\n"),
+    };
+  });
+
+  const checkboxPrefixWidth = 3;
+  const headerPad = " ".repeat(checkboxPrefixWidth + indexWidth + 1 + 1 + maxNameLen + 1);
+  const headerLine =
+    headerPad +
+    pc.dim("Installs".padEnd(installsColWidth)) +
+    pc.dim("Trust(0-10)".padEnd(trustColWidth)) +
+    pc.dim("Relevant");
+  const message = "Select skills to install:\n" + headerLine;
+
+  let selectedSkills: SkillSearchResult[];
+  try {
+    selectedSkills = await checkboxWithHover({
+      message,
+      choices,
+      pageSize: 15,
+      loop: false,
+    });
+  } catch {
+    log.warn("Installation cancelled");
+    return;
+  }
+
+  if (selectedSkills.length === 0) {
+    log.warn("No skills selected");
+    return;
+  }
+
+  const targets = await promptForInstallTargets({});
+  if (!targets) {
+    log.warn("Installation cancelled");
+    return;
+  }
+
+  const targetDirs = getTargetDirs(targets);
+  const installSpinner = ora("Installing skills...").start();
+
+  let permissionError = false;
+  const failedDirs: Set<string> = new Set();
+  const installedSkills: string[] = [];
+
+  for (const skill of selectedSkills) {
+    try {
+      installSpinner.text = `Downloading ${skill.name}...`;
+      const downloadData = await downloadSkill(skill.project, skill.name);
+
+      if (downloadData.error) {
+        log.warn(`Failed to download ${skill.name}: ${downloadData.error}`);
+        continue;
+      }
+
+      installSpinner.text = `Installing ${skill.name}...`;
+
+      const [primaryDir, ...symlinkDirs] = targetDirs;
+
+      try {
+        await installSkillFiles(skill.name, downloadData.files, primaryDir);
+      } catch (dirErr) {
+        const error = dirErr as NodeJS.ErrnoException;
+        if (error.code === "EACCES" || error.code === "EPERM") {
+          permissionError = true;
+          failedDirs.add(primaryDir);
+        }
+        throw dirErr;
+      }
+
+      const primarySkillDir = join(primaryDir, skill.name);
+      for (const targetDir of symlinkDirs) {
+        try {
+          await symlinkSkill(skill.name, primarySkillDir, targetDir);
+        } catch (dirErr) {
+          const error = dirErr as NodeJS.ErrnoException;
+          if (error.code === "EACCES" || error.code === "EPERM") {
+            permissionError = true;
+            failedDirs.add(targetDir);
+          }
+          throw dirErr;
+        }
+      }
+
+      installedSkills.push(`${skill.project}/${skill.name}`);
+    } catch (err) {
+      const error = err as NodeJS.ErrnoException;
+      if (error.code === "EACCES" || error.code === "EPERM") {
+        continue;
+      }
+      const errMsg = err instanceof Error ? err.message : String(err);
+      log.warn(`Failed to install ${skill.name}: ${errMsg}`);
     }
   }
-  if (skills.length > 5) {
-    console.log(`${ansi.dim}│ ... and ${skills.length - 5} more${ansi.reset}`);
+
+  if (permissionError) {
+    installSpinner.fail("Permission denied");
+    log.blank();
+    log.warn("Fix permissions with:");
+    for (const dir of failedDirs) {
+      const parentDir = join(dir, "..");
+      log.dim(`  sudo chown -R $(whoami) "${parentDir}"`);
+    }
+    log.blank();
+    return;
   }
-  console.log(
-    `${ansi.dim}└${ansi.reset} Run ${ansi.cyan}${ansi.bold}ctx7 skills suggest${ansi.reset} to install`
-  );
-  console.log();
+
+  installSpinner.succeed(`Installed ${installedSkills.length} skill(s)`);
+  trackEvent("detect_install", { skills: installedSkills, ides: targets.ides });
+
+  await clearPendingPackages(cwd);
+
+  const installedNames = selectedSkills.map((s) => s.name);
+  logInstallSummary(targets, targetDirs, installedNames);
 }
 
 async function suggestCommand(options: SuggestOptions): Promise<void> {
-  trackEvent("command", { name: "suggest", detectNew: options.detectNew });
+  trackEvent("command", { name: "suggest" });
   log.blank();
 
   const cwd = process.cwd();
 
-  let deps: string[];
-  let fromCache = false;
+  const scanSpinner = ora("Scanning project dependencies...").start();
+  const deps = await detectProjectDependencies(cwd);
 
-  if (options.detectNew) {
-    const scanSpinner = ora("Detecting newly installed packages...").start();
-    deps = await detectNewlyInstalledPackages(cwd);
-
-    if (deps.length === 0) {
-      scanSpinner.stop();
-      scanSpinner.clear();
-      return;
-    }
-
-    await appendPendingPackages(cwd, deps);
-    scanSpinner.succeed(
-      `Detected ${deps.length} new package(s): ${ansi.yellow}${deps.join(", ")}${ansi.reset}`
-    );
-  } else {
-    const pendingPackages = await loadPendingPackages(cwd);
-
-    if (pendingPackages.length > 0) {
-      deps = pendingPackages;
-      fromCache = true;
-      log.info(
-        `Found ${pc.bold(String(deps.length))} pending package(s) from recent installs: ${pc.cyan(deps.join(", "))}`
-      );
-    } else {
-      const scanSpinner = ora("Scanning project dependencies...").start();
-      deps = await detectProjectDependencies(cwd);
-
-      if (deps.length === 0) {
-        scanSpinner.warn(pc.yellow("No dependencies detected"));
-        log.info(`Try ${pc.cyan("ctx7 skills search <keyword>")} to search manually`);
-        return;
-      }
-
-      scanSpinner.succeed(`Found ${deps.length} dependencies`);
-    }
+  if (deps.length === 0) {
+    scanSpinner.warn(pc.yellow("No dependencies detected"));
+    log.info(`Try ${pc.cyan("ctx7 skills search <keyword>")} to search manually`);
+    return;
   }
+
+  scanSpinner.succeed(`Found ${deps.length} dependencies`);
 
   // Step 2: Single API call to backend
   const searchSpinner = ora("Finding matching skills...").start();
@@ -854,34 +1013,6 @@ async function suggestCommand(options: SuggestOptions): Promise<void> {
 
   searchSpinner.succeed(`Found ${skills.length} relevant skill(s)`);
   trackEvent("suggest_results", { depCount: deps.length, skillCount: skills.length });
-
-  if (options.detectNew) {
-    const a = ansi;
-    console.log();
-    console.log(
-      `${a.cyan}${a.bold}${skills.length}${a.reset} skill(s) available for new packages:`
-    );
-    for (const skill of skills.slice(0, 5)) {
-      console.log(
-        `${a.dim}│${a.reset} ${a.green}+${a.reset} ${a.bold}${a.green}${skill.name}${a.reset} ${a.dim}for${a.reset} ${a.yellow}${skill.matchedDep}${a.reset}`
-      );
-      if (skill.description) {
-        const desc =
-          skill.description.length > 55
-            ? skill.description.slice(0, 52) + "..."
-            : skill.description;
-        console.log(`${a.dim}│   ${desc}${a.reset}`);
-      }
-    }
-    if (skills.length > 5) {
-      console.log(`${a.dim}│ ... and ${skills.length - 5} more${a.reset}`);
-    }
-    console.log(
-      `${a.dim}└${a.reset} Run ${a.cyan}${a.bold}ctx7 skills suggest${a.reset} to install`
-    );
-    console.log();
-    return;
-  }
 
   log.blank();
 
@@ -1032,11 +1163,6 @@ async function suggestCommand(options: SuggestOptions): Promise<void> {
 
   installSpinner.succeed(`Installed ${installedSkills.length} skill(s)`);
   trackEvent("suggest_install", { skills: installedSkills, ides: targets.ides });
-
-  // Clear pending cache after successful installation
-  if (fromCache) {
-    await clearPendingPackages(cwd);
-  }
 
   const installedNames = selectedSkills.map((s) => s.name);
   logInstallSummary(targets, targetDirs, installedNames);
