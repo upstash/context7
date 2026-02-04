@@ -116,9 +116,7 @@ async function parseLockfileDeps(cwd: string): Promise<string[] | null> {
       ];
       return deps.filter((d) => !isSkippedLocally(d));
     }
-  } catch {
-    // Failed to parse
-  }
+  } catch {}
   return null;
 }
 
@@ -141,9 +139,7 @@ export async function detectNewlyInstalledPackages(cwd: string): Promise<string[
           for (const pkg of packages) {
             if (!pkg.startsWith(".")) scopedPackages.push(`${scope}/${pkg}`);
           }
-        } catch {
-          // Skip unreadable scope dirs
-        }
+        } catch {}
       }
 
       const installed = [...regularPackages, ...scopedPackages];

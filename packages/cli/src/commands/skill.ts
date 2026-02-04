@@ -49,6 +49,7 @@ import {
   appendPendingPackages,
   clearPendingPackages,
 } from "../utils/cache.js";
+import { ansi } from "../utils/ansi.js";
 
 function logInstallSummary(
   targets: InstallTargets,
@@ -152,10 +153,16 @@ export function registerSkillCommands(program: Command): void {
     .option("--opencode", "OpenCode (.opencode/skills/)")
     .option("--amp", "Amp (.agents/skills/)")
     .option("--antigravity", "Antigravity (.agent/skills/)")
-    .option("--detect-new", "Detect newly installed packages (for postinstall hooks)")
-    .description("Suggest skills based on your project dependencies")
+    .description("Suggest and install skills based on your project dependencies")
     .action(async (options: SuggestOptions) => {
       await suggestCommand(options);
+    });
+
+  skill
+    .command("detect")
+    .description("Detect newly installed packages (for postinstall hooks)")
+    .action(async () => {
+      await detectCommand();
     });
 }
 
@@ -699,21 +706,85 @@ async function infoCommand(input: string): Promise<void> {
   );
 }
 
+async function detectCommand(): Promise<void> {
+  if (process.env.CI || process.env.NODE_ENV === "production") {
+    return;
+  }
+
+  trackEvent("command", { name: "detect" });
+
+  const cwd = process.cwd();
+
+  const scanSpinner = ora("Detecting newly installed packages...").start();
+  const deps = await detectNewlyInstalledPackages(cwd);
+
+  if (deps.length === 0) {
+    scanSpinner.stop();
+    scanSpinner.clear();
+    return;
+  }
+
+  await appendPendingPackages(cwd, deps);
+  scanSpinner.succeed(
+    `Detected ${deps.length} new package(s): ${ansi.yellow}${deps.join(", ")}${ansi.reset}`
+  );
+
+  const searchSpinner = ora("Finding matching skills...").start();
+
+  const tokens = loadTokens();
+  const accessToken = tokens && !isTokenExpired(tokens) ? tokens.access_token : undefined;
+
+  let data;
+  try {
+    data = await suggestSkills(deps, accessToken);
+  } catch {
+    searchSpinner.fail(pc.red("Failed to connect to Context7"));
+    return;
+  }
+
+  if (data.error) {
+    searchSpinner.fail(pc.red(`Error: ${data.message || data.error}`));
+    return;
+  }
+
+  const skills = data.skills;
+
+  if (skills.length === 0) {
+    searchSpinner.stop();
+    searchSpinner.clear();
+    return;
+  }
+
+  searchSpinner.succeed(`Found ${skills.length} relevant skill(s)`);
+
+  console.log();
+  console.log(
+    `${ansi.cyan}${ansi.bold}${skills.length}${ansi.reset} skill(s) available for new packages:`
+  );
+  for (const skill of skills.slice(0, 5)) {
+    console.log(
+      `${ansi.dim}│${ansi.reset} ${ansi.green}+${ansi.reset} ${ansi.bold}${ansi.green}${skill.name}${ansi.reset} ${ansi.dim}for${ansi.reset} ${ansi.yellow}${skill.matchedDep}${ansi.reset}`
+    );
+    if (skill.description) {
+      const desc =
+        skill.description.length > 55 ? skill.description.slice(0, 52) + "..." : skill.description;
+      console.log(`${ansi.dim}│   ${desc}${ansi.reset}`);
+    }
+  }
+  if (skills.length > 5) {
+    console.log(`${ansi.dim}│ ... and ${skills.length - 5} more${ansi.reset}`);
+  }
+  console.log(
+    `${ansi.dim}└${ansi.reset} Run ${ansi.cyan}${ansi.bold}ctx7 skills suggest${ansi.reset} to install`
+  );
+  console.log();
+}
+
 async function suggestCommand(options: SuggestOptions): Promise<void> {
   trackEvent("command", { name: "suggest", detectNew: options.detectNew });
   log.blank();
 
   const cwd = process.cwd();
-
-  // Raw ANSI codes for postinstall (picocolors doesn't work in pnpm collapsed output)
-  const ansi = {
-    reset: "\x1b[0m",
-    bold: "\x1b[1m",
-    dim: "\x1b[2m",
-    cyan: "\x1b[36m",
-    green: "\x1b[32m",
-    yellow: "\x1b[33m",
-  };
 
   let deps: string[];
   let fromCache = false;
