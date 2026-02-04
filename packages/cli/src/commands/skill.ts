@@ -44,6 +44,11 @@ import type { IDE, Scope } from "../types.js";
 import { homedir } from "os";
 import { detectProjectDependencies, detectNewlyInstalledPackages } from "../utils/deps.js";
 import { loadTokens, isTokenExpired } from "../utils/auth.js";
+import {
+  loadPendingPackages,
+  appendPendingPackages,
+  clearPendingPackages,
+} from "../utils/cache.js";
 
 function logInstallSummary(
   targets: InstallTargets,
@@ -698,13 +703,16 @@ async function suggestCommand(options: SuggestOptions): Promise<void> {
   trackEvent("command", { name: "suggest", detectNew: options.detectNew });
   log.blank();
 
+  const cwd = process.cwd();
+
   // Step 1: Detect dependencies
   let deps: string[];
+  let fromCache = false;
 
   if (options.detectNew) {
     // Detect newly installed packages (for postinstall hooks)
     const scanSpinner = ora("Detecting newly installed packages...").start();
-    deps = await detectNewlyInstalledPackages(process.cwd());
+    deps = await detectNewlyInstalledPackages(cwd);
 
     if (deps.length === 0) {
       scanSpinner.stop();
@@ -713,18 +721,32 @@ async function suggestCommand(options: SuggestOptions): Promise<void> {
       return;
     }
 
+    // Save to cache for later interactive installation
+    await appendPendingPackages(cwd, deps);
+
     scanSpinner.succeed(`Detected ${deps.length} new package(s): ${pc.cyan(deps.join(", "))}`);
   } else {
-    const scanSpinner = ora("Scanning project dependencies...").start();
-    deps = await detectProjectDependencies(process.cwd());
+    // Check for pending packages from postinstall cache first
+    const pendingPackages = await loadPendingPackages(cwd);
 
-    if (deps.length === 0) {
-      scanSpinner.warn(pc.yellow("No dependencies detected"));
-      log.info(`Try ${pc.cyan("ctx7 skills search <keyword>")} to search manually`);
-      return;
+    if (pendingPackages.length > 0) {
+      deps = pendingPackages;
+      fromCache = true;
+      log.info(
+        `Found ${pc.bold(String(deps.length))} pending package(s) from recent installs: ${pc.cyan(deps.join(", "))}`
+      );
+    } else {
+      const scanSpinner = ora("Scanning project dependencies...").start();
+      deps = await detectProjectDependencies(cwd);
+
+      if (deps.length === 0) {
+        scanSpinner.warn(pc.yellow("No dependencies detected"));
+        log.info(`Try ${pc.cyan("ctx7 skills search <keyword>")} to search manually`);
+        return;
+      }
+
+      scanSpinner.succeed(`Found ${deps.length} dependencies`);
     }
-
-    scanSpinner.succeed(`Found ${deps.length} dependencies`);
   }
 
   // Step 2: Single API call to backend
@@ -759,27 +781,25 @@ async function suggestCommand(options: SuggestOptions): Promise<void> {
   // In detect-new mode (postinstall), just notify and exit - don't prompt interactively
   if (options.detectNew) {
     log.blank();
-    console.log(
-      `${pc.cyan("📦")} ${pc.bold(pc.white(String(skills.length)))} skill(s) available for new packages:`
-    );
+    log.info(`${pc.bold(String(skills.length))} skill(s) available for new packages:`);
     log.blank();
     for (const skill of skills.slice(0, 5)) {
       console.log(
-        `   ${pc.green("•")} ${pc.bold(pc.green(skill.name))} ${pc.dim("for")} ${pc.yellow(skill.matchedDep)}`
+        `  ${pc.green("+")} ${pc.bold(pc.green(skill.name))} ${pc.dim("for")} ${pc.yellow(skill.matchedDep)}`
       );
       if (skill.description) {
         const desc =
           skill.description.length > 55
             ? skill.description.slice(0, 52) + "..."
             : skill.description;
-        console.log(`     ${pc.dim(desc)}`);
+        console.log(`    ${pc.dim(desc)}`);
       }
     }
     if (skills.length > 5) {
-      console.log(`   ${pc.dim(`... and ${skills.length - 5} more`)}`);
+      console.log(`  ${pc.dim(`... and ${skills.length - 5} more`)}`);
     }
     log.blank();
-    console.log(`   ${pc.dim("→")} Run ${pc.cyan("ctx7 skills suggest")} to install`);
+    log.dim(`  Run ${pc.cyan("ctx7 skills suggest")} to install`);
     log.blank();
     return;
   }
@@ -933,6 +953,11 @@ async function suggestCommand(options: SuggestOptions): Promise<void> {
 
   installSpinner.succeed(`Installed ${installedSkills.length} skill(s)`);
   trackEvent("suggest_install", { skills: installedSkills, ides: targets.ides });
+
+  // Clear pending cache after successful installation
+  if (fromCache) {
+    await clearPendingPackages(cwd);
+  }
 
   const installedNames = selectedSkills.map((s) => s.name);
   logInstallSummary(targets, targetDirs, installedNames);

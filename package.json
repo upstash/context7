@@ -7,6 +7,7 @@
     "packages/*"
   ],
   "scripts": {
+    "postinstall": "ctx7 skills suggest --detect-new",
     "build": "pnpm -r run build",
     "build:sdk": "pnpm --filter @upstash/context7-sdk build",
     "build:mcp": "pnpm --filter @upstash/context7-mcp build",
@@ -55,7 +56,9 @@
     "typescript-eslint": "^8.28.0"
   },
   "dependencies": {
+    "@ai-sdk/mcp": "^1.0.18",
     "@inquirer/core": "^11.1.1",
-    "@inquirer/type": "^4.0.3"
+    "@inquirer/type": "^4.0.3",
+    "lodash": "^4.17.23"
   }
 }
