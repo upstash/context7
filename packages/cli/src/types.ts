@@ -142,7 +142,7 @@ export interface ScopeOptions {
 }
 
 export type AddOptions = IDEOptions & ScopeOptions & { all?: boolean };
-export type SuggestOptions = IDEOptions & ScopeOptions;
+export type SuggestOptions = IDEOptions & ScopeOptions & { detectNew?: boolean };
 export type ListOptions = IDEOptions & ScopeOptions;
 export type RemoveOptions = IDEOptions & ScopeOptions;
 export type GenerateOptions = IDEOptions &

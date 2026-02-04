@@ -42,7 +42,7 @@ import type {
 import { IDE_NAMES, IDE_PATHS, IDE_GLOBAL_PATHS } from "../types.js";
 import type { IDE, Scope } from "../types.js";
 import { homedir } from "os";
-import { detectProjectDependencies } from "../utils/deps.js";
+import { detectProjectDependencies, detectNewlyInstalledPackages } from "../utils/deps.js";
 import { loadTokens, isTokenExpired } from "../utils/auth.js";
 
 function logInstallSummary(
@@ -147,6 +147,7 @@ export function registerSkillCommands(program: Command): void {
     .option("--opencode", "OpenCode (.opencode/skills/)")
     .option("--amp", "Amp (.agents/skills/)")
     .option("--antigravity", "Antigravity (.agent/skills/)")
+    .option("--detect-new", "Detect newly installed packages (for postinstall hooks)")
     .description("Suggest skills based on your project dependencies")
     .action(async (options: SuggestOptions) => {
       await suggestCommand(options);
@@ -694,20 +695,37 @@ async function infoCommand(input: string): Promise<void> {
 }
 
 async function suggestCommand(options: SuggestOptions): Promise<void> {
-  trackEvent("command", { name: "suggest" });
+  trackEvent("command", { name: "suggest", detectNew: options.detectNew });
   log.blank();
 
   // Step 1: Detect dependencies
-  const scanSpinner = ora("Scanning project dependencies...").start();
-  const deps = await detectProjectDependencies(process.cwd());
+  let deps: string[];
 
-  if (deps.length === 0) {
-    scanSpinner.warn(pc.yellow("No dependencies detected"));
-    log.info(`Try ${pc.cyan("ctx7 skills search <keyword>")} to search manually`);
-    return;
+  if (options.detectNew) {
+    // Detect newly installed packages (for postinstall hooks)
+    const scanSpinner = ora("Detecting newly installed packages...").start();
+    deps = await detectNewlyInstalledPackages(process.cwd());
+
+    if (deps.length === 0) {
+      scanSpinner.stop();
+      scanSpinner.clear();
+      // Silent exit when no new packages - this is normal for most installs
+      return;
+    }
+
+    scanSpinner.succeed(`Detected ${deps.length} new package(s): ${pc.cyan(deps.join(", "))}`);
+  } else {
+    const scanSpinner = ora("Scanning project dependencies...").start();
+    deps = await detectProjectDependencies(process.cwd());
+
+    if (deps.length === 0) {
+      scanSpinner.warn(pc.yellow("No dependencies detected"));
+      log.info(`Try ${pc.cyan("ctx7 skills search <keyword>")} to search manually`);
+      return;
+    }
+
+    scanSpinner.succeed(`Found ${deps.length} dependencies`);
   }
-
-  scanSpinner.succeed(`Found ${deps.length} dependencies`);
 
   // Step 2: Single API call to backend
   const searchSpinner = ora("Finding matching skills...").start();
@@ -737,6 +755,34 @@ async function suggestCommand(options: SuggestOptions): Promise<void> {
 
   searchSpinner.succeed(`Found ${skills.length} relevant skill(s)`);
   trackEvent("suggest_results", { depCount: deps.length, skillCount: skills.length });
+
+  // In detect-new mode (postinstall), just notify and exit - don't prompt interactively
+  if (options.detectNew) {
+    log.blank();
+    console.log(
+      `${pc.cyan("📦")} ${pc.bold(pc.white(String(skills.length)))} skill(s) available for new packages:`
+    );
+    log.blank();
+    for (const skill of skills.slice(0, 5)) {
+      console.log(
+        `   ${pc.green("•")} ${pc.bold(pc.green(skill.name))} ${pc.dim("for")} ${pc.yellow(skill.matchedDep)}`
+      );
+      if (skill.description) {
+        const desc =
+          skill.description.length > 55
+            ? skill.description.slice(0, 52) + "..."
+            : skill.description;
+        console.log(`     ${pc.dim(desc)}`);
+      }
+    }
+    if (skills.length > 5) {
+      console.log(`   ${pc.dim(`... and ${skills.length - 5} more`)}`);
+    }
+    log.blank();
+    console.log(`   ${pc.dim("→")} Run ${pc.cyan("ctx7 skills suggest")} to install`);
+    log.blank();
+    return;
+  }
 
   log.blank();
 
