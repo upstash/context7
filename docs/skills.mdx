@@ -383,6 +383,18 @@ npx ctx7 logout
 npx ctx7 login
 ```
 
+## Disabling Telemetry
+
+The CLI collects anonymous usage data to help improve the product. To disable telemetry, set the `CTX7_TELEMETRY_DISABLED` environment variable:
+
+```bash
+# For a single command
+CTX7_TELEMETRY_DISABLED=1 npx ctx7 skills search pdf
+
+# Or export in your shell profile (~/.bashrc, ~/.zshrc, etc.)
+export CTX7_TELEMETRY_DISABLED=1
+```
+
 ## Next Steps
 
 <CardGroup cols={2}>

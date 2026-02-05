@@ -164,6 +164,18 @@ ctx7 skills gen                   # skills generate
 ctx7 skills g                     # skills generate
 ```
 
+## Disabling Telemetry
+
+The CLI collects anonymous usage data to help improve the product. To disable telemetry, set the `CTX7_TELEMETRY_DISABLED` environment variable:
+
+```bash
+# For a single command
+CTX7_TELEMETRY_DISABLED=1 ctx7 skills search pdf
+
+# Or export in your shell profile (~/.bashrc, ~/.zshrc, etc.)
+export CTX7_TELEMETRY_DISABLED=1
+```
+
 ## Learn More
 
 Visit [context7.com](https://context7.com) to browse the skills registry and discover available skills.
