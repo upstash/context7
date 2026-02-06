@@ -8,11 +8,11 @@ export interface Skill {
   description: string;
   url: string;
   installCount?: number;
+  trustScore?: number;
 }
 
 export interface SkillSearchResult extends Skill {
   project: string;
-  installCount?: number;
 }
 
 export interface ListSkillsResponse {
@@ -142,6 +142,7 @@ export interface ScopeOptions {
 }
 
 export type AddOptions = IDEOptions & ScopeOptions & { all?: boolean };
+export type SuggestOptions = IDEOptions & ScopeOptions;
 export type ListOptions = IDEOptions & ScopeOptions;
 export type RemoveOptions = IDEOptions & ScopeOptions;
 export type GenerateOptions = IDEOptions &
@@ -197,6 +198,17 @@ export const DEFAULT_CONFIG: C7Config = {
   defaultIde: "claude",
   defaultScope: "project",
 };
+
+// Suggest endpoint types
+export interface SuggestSkill extends SkillSearchResult {
+  matchedDep: string;
+}
+
+export interface SuggestResponse {
+  skills: SuggestSkill[];
+  error?: string;
+  message?: string;
+}
 
 export interface SkillQuotaResponse {
   used: number;

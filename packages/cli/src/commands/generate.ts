@@ -1,9 +1,10 @@
 import { Command } from "commander";
 import pc from "picocolors";
 import ora from "ora";
-import { mkdir, writeFile } from "fs/promises";
+import { mkdir, writeFile, readFile, unlink } from "fs/promises";
 import { join } from "path";
 import { homedir } from "os";
+import { spawn } from "child_process";
 import { input, select } from "@inquirer/prompts";
 
 import {
@@ -13,6 +14,7 @@ import {
   getSkillQuota,
 } from "../utils/api.js";
 import { loadTokens, isTokenExpired } from "../utils/auth.js";
+import { performLogin } from "./auth.js";
 import { log } from "../utils/logger.js";
 import { promptForInstallTargets, getTargetDirs } from "../utils/ide.js";
 import selectOrInput from "../utils/selectOrInput.js";
@@ -59,19 +61,20 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
   trackEvent("command", { name: "generate" });
   log.blank();
 
-  // Check authentication
+  let accessToken: string | null = null;
   const tokens = loadTokens();
-  if (!tokens) {
-    log.error("Authentication required. Please run 'ctx7 login' first.");
-    return;
+  if (tokens && !isTokenExpired(tokens)) {
+    accessToken = tokens.access_token;
+  } else {
+    log.info("Authentication required. Logging in...");
+    log.blank();
+    accessToken = await performLogin();
+    if (!accessToken) {
+      log.error("Login failed. Please try again.");
+      return;
+    }
+    log.blank();
   }
-
-  if (isTokenExpired(tokens)) {
-    log.error("Session expired. Please run 'ctx7 login' to refresh.");
-    return;
-  }
-
-  const accessToken = tokens.access_token;
 
   const initSpinner = ora().start();
   const quota = await getSkillQuota(accessToken);
@@ -105,14 +108,23 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
 
   console.log(pc.bold("What should your agent become an expert at?\n"));
   console.log(
-    pc.dim("Skills teach agents best practices, design patterns, and domain expertise.\n")
+    pc.dim(
+      "Skills should encode best practices, constraints, and decision-making —\nnot step-by-step tutorials or one-off tasks.\n"
+    )
   );
   console.log(pc.yellow("Examples:"));
-  console.log(pc.dim('  "React component optimization and performance best practices"'));
-  console.log(pc.dim('  "Responsive web design with Tailwind CSS"'));
-  console.log(pc.dim('  "Writing effective landing page copy"'));
-  console.log(pc.dim('  "Deploying Next.js apps to Vercel"'));
-  console.log(pc.dim('  "OAuth authentication with NextAuth.js"\n'));
+  // prettier-ignore
+  {
+    console.log(pc.red('  ✕ "Deploy a Next.js app to Vercel"'));
+    console.log(pc.green('  ✓ "Best practices and constraints for deploying Next.js apps to Vercel"'));
+    log.blank();
+    console.log(pc.red('  ✕ "Use Tailwind for responsive design"'));
+    console.log(pc.green('  ✓ "Responsive layout decision-making with Tailwind CSS"'));
+    log.blank();
+    console.log(pc.red('  ✕ "Build OAuth with NextAuth"'));
+    console.log(pc.green('  ✓ "OAuth authentication patterns and pitfalls with NextAuth.js"'));
+  }
+  log.blank();
 
   let motivation: string;
   try {
@@ -130,16 +142,29 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
     return;
   }
 
-  const searchSpinner = ora("Finding relevant libraries...").start();
+  log.blank();
+  console.log(
+    pc.dim(
+      "To generate this skill, we will read relevant documentation and examples\nfrom Context7.\n"
+    )
+  );
+  console.log(
+    pc.dim(
+      "These sources are used to:\n• extract best practices and constraints\n• compare patterns across official docs and examples\n• avoid outdated or incorrect guidance\n"
+    )
+  );
+  console.log(pc.dim("You can adjust which sources the skill is based on.\n"));
+
+  const searchSpinner = ora("Finding relevant sources...").start();
   const searchResult = await searchLibraries(motivation, accessToken);
 
   if (searchResult.error || !searchResult.results?.length) {
-    searchSpinner.fail(pc.red("No libraries found"));
+    searchSpinner.fail(pc.red("No sources found"));
     log.warn(searchResult.message || "Try a different description");
     return;
   }
 
-  searchSpinner.succeed(pc.green(`Found ${searchResult.results.length} relevant libraries`));
+  searchSpinner.succeed(pc.green(`Found ${searchResult.results.length} relevant sources`));
   log.blank();
 
   let selectedLibraries: LibrarySearchResult[];
@@ -168,9 +193,10 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
 
       const libUrl = `https://context7.com${lib.id}`;
       const libLink = terminalLink(lib.title, libUrl, pc.white);
-      const repoLink = isGitHub
-        ? terminalLink(projectId, `https://github.com/${projectId}`, pc.white)
-        : pc.white(projectId);
+      const sourceUrl = isGitHub
+        ? `https://github.com/${projectId}`
+        : `https://context7.com${lib.id}`;
+      const repoLink = terminalLink(projectId, sourceUrl, pc.white);
 
       const starsLine =
         lib.stars && isGitHub ? [`${pc.yellow("Stars:")}       ${lib.stars.toLocaleString()}`] : [];
@@ -195,7 +221,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
 
     selectedLibraries = await checkboxWithHover(
       {
-        message: "Select libraries:",
+        message: "Select sources:",
         choices: libraryChoices,
         pageSize: 10,
         loop: false,
@@ -204,7 +230,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
     );
 
     if (!selectedLibraries || selectedLibraries.length === 0) {
-      log.info("No libraries selected. Try running the command again.");
+      log.info("No sources selected. Try running the command again.");
       return;
     }
   } catch {
@@ -214,7 +240,9 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
 
   log.blank();
 
-  const questionsSpinner = ora("Preparing questions...").start();
+  const questionsSpinner = ora(
+    "Preparing follow-up questions to clarify scope and constraints..."
+  ).start();
   const librariesInput = selectedLibraries.map((lib) => ({ id: lib.id, name: lib.title }));
   const questionsResult = await getSkillQuestions(librariesInput, motivation, accessToken);
 
@@ -261,8 +289,15 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
   let generatedContent: string | null = null;
   let skillName: string = "";
   let feedback: string | undefined;
+  let previewFile: string | null = null;
+  let previewFileWritten = false;
 
-  const libraryNames = selectedLibraries.map((lib) => lib.title).join(", ");
+  const cleanupPreviewFile = async () => {
+    if (previewFile) {
+      await unlink(previewFile).catch(() => {});
+    }
+  };
+
   const queryLog: QueryLogEntry[] = [];
   let genSpinner: ReturnType<typeof ora> | null = null;
 
@@ -272,7 +307,6 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
     const lines: string[] = [];
     const latestEntry = queryLog[queryLog.length - 1];
 
-    lines.push(pc.dim(`(${queryLog.length} ${queryLog.length === 1 ? "query" : "queries"})`));
     lines.push("");
 
     for (const result of latestEntry.results.slice(0, 3)) {
@@ -303,6 +337,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
   };
 
   let isGeneratingContent = false;
+  let initialStatus = "Reading selected Context7 sources to generate the skill...";
 
   const handleStreamEvent = (event: GenerateStreamEvent) => {
     if (event.type === "progress") {
@@ -310,13 +345,13 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
         if (event.message.startsWith("Generating skill content...") && !isGeneratingContent) {
           isGeneratingContent = true;
           if (queryLog.length > 0) {
-            genSpinner.succeed(pc.green(`Queried documentation`));
+            genSpinner.succeed(pc.green(`Read Context7 sources`));
           } else {
             genSpinner.succeed(pc.green(`Ready to generate`));
           }
           genSpinner = ora("Generating skill content...").start();
         } else if (!isGeneratingContent) {
-          genSpinner.text = event.message + formatQueryLogText();
+          genSpinner.text = initialStatus + formatQueryLogText();
         }
       }
     } else if (event.type === "tool_result") {
@@ -342,9 +377,10 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
 
     queryLog.length = 0;
     isGeneratingContent = false;
-    const initialStatus = feedback
+    previewFileWritten = false;
+    initialStatus = feedback
       ? "Regenerating skill with your feedback..."
-      : `Generating skill for "${libraryNames}"...`;
+      : "Reading selected Context7 sources to generate the skill...";
 
     genSpinner = ora(initialStatus).start();
 
@@ -386,16 +422,28 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
       log.blank();
     };
 
-    const showFullContent = () => {
-      log.blank();
-      console.log(pc.dim("━".repeat(70)));
-      console.log(pc.bold(`Generated Skill: `) + pc.green(pc.bold(skillName)));
-      console.log(pc.dim("━".repeat(70)));
-      log.blank();
-      console.log(generatedContent);
-      log.blank();
-      console.log(pc.dim("━".repeat(70)));
-      log.blank();
+    const openInEditor = async () => {
+      const previewDir = join(homedir(), ".context7", "previews");
+      await mkdir(previewDir, { recursive: true });
+      previewFile = join(previewDir, `${skillName}.md`);
+      if (!previewFileWritten) {
+        await writeFile(previewFile, generatedContent!, "utf-8");
+        previewFileWritten = true;
+      }
+      const editor = process.env.EDITOR || "open";
+      await new Promise<void>((resolve) => {
+        const child = spawn(editor, [previewFile!], {
+          stdio: "inherit",
+          shell: true,
+        });
+        child.on("close", () => resolve());
+      });
+    };
+
+    const syncFromPreviewFile = async () => {
+      if (previewFile) {
+        generatedContent = await readFile(previewFile, "utf-8");
+      }
     };
 
     showPreview();
@@ -406,8 +454,8 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
       let action: string;
       while (true) {
         const choices = [
-          { name: `${pc.green("✓")} Install skill`, value: "install" },
-          ...(hasMoreLines ? [{ name: `${pc.blue("⤢")} View full skill`, value: "expand" }] : []),
+          { name: `${pc.green("✓")} Install skill (save locally)`, value: "install" },
+          { name: `${pc.blue("⤢")} Edit skill in editor`, value: "view" },
           { name: `${pc.yellow("✎")} Request changes`, value: "feedback" },
           { name: `${pc.red("✕")} Cancel`, value: "cancel" },
         ];
@@ -417,16 +465,18 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
           choices,
         });
 
-        if (action === "expand") {
-          showFullContent();
+        if (action === "view") {
+          await openInEditor();
           continue;
         }
+        await syncFromPreviewFile();
         break;
       }
 
       if (action === "install") {
         break;
       } else if (action === "cancel") {
+        await cleanupPreviewFile();
         log.warn("Generation cancelled");
         return;
       } else if (action === "feedback") {
@@ -441,6 +491,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
         log.blank();
       }
     } catch {
+      await cleanupPreviewFile();
       log.warn("Generation cancelled");
       return;
     }
@@ -497,9 +548,11 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
   trackEvent("gen_install");
 
   log.blank();
-  console.log(pc.green(pc.bold("Skill saved successfully")));
+  console.log(pc.green("Skill saved successfully"));
   for (const targetDir of targetDirs) {
     console.log(pc.dim(`  ${targetDir}/`) + pc.green(skillName));
   }
   log.blank();
+
+  await cleanupPreviewFile();
 }

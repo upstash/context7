@@ -1,0 +1,13 @@
+{
+  "name": "context7",
+  "version": "1.0.0",
+  "description": "Upstash Context7 MCP server for up-to-date documentation lookup. Pull version-specific documentation and code examples directly from source repositories into your LLM context.",
+  "author": {
+    "name": "Context7",
+    "email": "context7@upstash.com",
+    "url": "https://context7.com"
+  },
+  "keywords": ["documentation", "mcp", "context7", "libraries", "frameworks"],
+  "logo": "https://context7.com/brand/context7-logo-light.svg",
+  "primaryColor": "#059669"
+}

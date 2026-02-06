@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.2.3
+
+### Patch Changes
+
+- 0981656: Add `skills suggest` command that scans your project's dependencies (package.json, requirements.txt, pyproject.toml) and recommends relevant skills. Results show install counts, trust scores, and which dependency each skill matches.
+
+## 0.2.2
+
+### Patch Changes
+
+- 6328ed1: Skill search & generate command improvements:
+  - Add "Installs" and "Trust(0-10)" columns to skill search results with aligned column headers
+  - Auto-login via OAuth when the generate command requires authentication instead of showing an error
+  - Reorder question options so the recommended choice always appears first with a "✓ Recommended" badge
+  - Add "View skill" action that opens generated content in the user's default editor (`$EDITOR`)
+  - Revamp generate wizard copy: do/don't examples for skill descriptions, rename "libraries" to "sources", and clarify follow-up question and generation spinner text
+
 ## 0.2.1
 
 ### Patch Changes
