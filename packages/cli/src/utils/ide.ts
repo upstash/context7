@@ -1,10 +1,11 @@
 import pc from "picocolors";
-import { select, checkbox, confirm } from "@inquirer/prompts";
+import { select, confirm } from "@inquirer/prompts";
 import { access } from "fs/promises";
-import { join } from "path";
+import { join, dirname } from "path";
 import { homedir } from "os";
 
 import { log } from "./logger.js";
+import { checkboxWithHover } from "./prompts.js";
 import type {
   IDE,
   IDEOptions,
@@ -14,8 +15,17 @@ import type {
   RemoveOptions,
   InstallTargets,
 } from "../types.js";
-import { IDE_PATHS, IDE_GLOBAL_PATHS, IDE_NAMES, DEFAULT_CONFIG } from "../types.js";
-import { dirname } from "path";
+import {
+  IDE_PATHS,
+  IDE_GLOBAL_PATHS,
+  IDE_NAMES,
+  UNIVERSAL_SKILLS_PATH,
+  UNIVERSAL_SKILLS_GLOBAL_PATH,
+  UNIVERSAL_AGENTS,
+  UNIVERSAL_AGENTS_LABEL,
+  VENDOR_SPECIFIC_AGENTS,
+  DEFAULT_CONFIG,
+} from "../types.js";
 
 export function getSelectedIdes(options: IDEOptions): IDE[] {
   const ides: IDE[] = [];
@@ -39,45 +49,28 @@ export function hasExplicitIdeOption(options: IDEOptions): boolean {
   );
 }
 
-interface DetectedIdes {
-  ides: IDE[];
-  scope: Scope;
-}
+/** Detect vendor-specific agents whose parent directory exists. */
+async function detectVendorSpecificAgents(scope: Scope): Promise<IDE[]> {
+  const baseDir = scope === "global" ? homedir() : process.cwd();
+  const pathMap = scope === "global" ? IDE_GLOBAL_PATHS : IDE_PATHS;
+  const detected: IDE[] = [];
 
-export async function detectInstalledIdes(preferredScope?: Scope): Promise<DetectedIdes | null> {
-  const allIdes = Object.keys(IDE_PATHS) as IDE[];
-
-  if (preferredScope === "global") {
-    const globalIdes: IDE[] = [];
-    for (const ide of allIdes) {
-      const detectionPath = dirname(IDE_GLOBAL_PATHS[ide]);
-      const globalParent = join(homedir(), detectionPath);
-      try {
-        await access(globalParent);
-        globalIdes.push(ide);
-      } catch {}
-    }
-    if (globalIdes.length > 0) {
-      return { ides: globalIdes, scope: "global" };
-    }
-    return null;
-  }
-
-  const projectIdes: IDE[] = [];
-  for (const ide of allIdes) {
-    const detectionPath = dirname(IDE_PATHS[ide]);
-    const projectParent = join(process.cwd(), detectionPath);
+  for (const ide of VENDOR_SPECIFIC_AGENTS) {
+    const parentDir = dirname(pathMap[ide]);
     try {
-      await access(projectParent);
-      projectIdes.push(ide);
+      await access(join(baseDir, parentDir));
+      detected.push(ide);
     } catch {}
   }
 
-  if (projectIdes.length > 0) {
-    return { ides: projectIdes, scope: "project" };
-  }
+  return detected;
+}
 
-  return null;
+export function getUniversalDir(scope: Scope): string {
+  if (scope === "global") {
+    return join(homedir(), UNIVERSAL_SKILLS_GLOBAL_PATH);
+  }
+  return join(process.cwd(), UNIVERSAL_SKILLS_PATH);
 }
 
 export async function promptForInstallTargets(options: AddOptions): Promise<InstallTargets | null> {
@@ -90,22 +83,40 @@ export async function promptForInstallTargets(options: AddOptions): Promise<Inst
     };
   }
 
-  const preferredScope: Scope | undefined = options.global ? "global" : undefined;
-  const detected = await detectInstalledIdes(preferredScope);
+  const scope: Scope = options.global ? "global" : "project";
+  const baseDir = scope === "global" ? homedir() : process.cwd();
+  const pathMap = scope === "global" ? IDE_GLOBAL_PATHS : IDE_PATHS;
+  const universalPath = scope === "global" ? UNIVERSAL_SKILLS_GLOBAL_PATH : UNIVERSAL_SKILLS_PATH;
 
-  if (detected) {
-    const scope: Scope = options.global ? "global" : detected.scope;
-    const pathMap = scope === "global" ? IDE_GLOBAL_PATHS : IDE_PATHS;
-    const baseDir = scope === "global" ? homedir() : process.cwd();
+  // Detect universal (.agents/) and vendor-specific agent directories
+  const detectedVendor = await detectVendorSpecificAgents(scope);
+  let hasUniversalDir = false;
+  try {
+    await access(join(baseDir, dirname(universalPath)));
+    hasUniversalDir = true;
+  } catch {}
 
-    const paths = detected.ides.map((ide) => join(baseDir, pathMap[ide]));
-    const pathList = paths.join("\n");
+  const detectedIdes: IDE[] = [
+    ...(hasUniversalDir ? (["universal"] as IDE[]) : []),
+    ...detectedVendor,
+  ];
+
+  if (detectedIdes.length > 0) {
+    // Detected — just confirm
+    const pathLines: string[] = [];
+    if (hasUniversalDir) {
+      pathLines.push(join(baseDir, universalPath));
+    }
+    for (const ide of detectedVendor) {
+      pathLines.push(join(baseDir, pathMap[ide]));
+    }
 
     log.blank();
+
     let confirmed: boolean;
     try {
       confirmed = await confirm({
-        message: `Install to detected location(s)?\n${pc.dim(pathList)}`,
+        message: `Install to detected location(s)?\n${pc.dim(pathLines.join("\n"))}`,
         default: true,
       });
     } catch {
@@ -117,41 +128,52 @@ export async function promptForInstallTargets(options: AddOptions): Promise<Inst
       return null;
     }
 
-    return { ides: detected.ides, scopes: [scope] };
+    return { ides: detectedIdes, scopes: [scope] };
   }
 
-  // No IDE detected - prompt user to select which client(s) to install for
+  // Nothing detected — show checkbox to pick
+  const universalLabel = `Universal \u2014 ${UNIVERSAL_AGENTS_LABEL} ${pc.dim(`(${universalPath})`)}`;
+  const choices: { name: string; value: IDE; checked: boolean }[] = [
+    { name: universalLabel, value: "universal", checked: true },
+  ];
+
+  for (const ide of VENDOR_SPECIFIC_AGENTS) {
+    choices.push({
+      name: `${IDE_NAMES[ide]} ${pc.dim(`(${pathMap[ide]})`)}`,
+      value: ide,
+      checked: false,
+    });
+  }
+
   log.blank();
-
-  const scope: Scope = options.global ? "global" : "project";
-  const pathMap = scope === "global" ? IDE_GLOBAL_PATHS : IDE_PATHS;
-  const baseDir = scope === "global" ? homedir() : process.cwd();
-
-  const ideChoices = (Object.keys(IDE_NAMES) as IDE[]).map((ide) => ({
-    name: `${IDE_NAMES[ide]} ${pc.dim(`(${pathMap[ide]})`)}`,
-    value: ide,
-    checked: ide === DEFAULT_CONFIG.defaultIde,
-  }));
 
   let selectedIdes: IDE[];
   try {
-    selectedIdes = await checkbox({
-      message: `Which clients do you want to install the skill(s) for?\n${pc.dim(baseDir)}`,
-      choices: ideChoices,
-      required: true,
-      loop: false,
-      theme: { style: { highlight: (text: string) => pc.green(text) } },
-    });
+    selectedIdes = await checkboxWithHover(
+      {
+        message: `Which agents do you want to install to?\n${pc.dim(`  ${baseDir}`)}`,
+        choices,
+        loop: false,
+        theme: {
+          style: {
+            highlight: (text: string) => pc.green(text),
+            message: (text: string, status: string) => {
+              if (status === "done") return pc.dim(text.split("\n")[0]);
+              return pc.bold(text);
+            },
+          },
+        },
+      },
+      { getName: (ide: IDE) => IDE_NAMES[ide] }
+    );
   } catch {
     return null;
   }
 
-  if (selectedIdes.length === 0) {
-    log.warn("You must select at least one client");
-    return null;
-  }
+  // Universal is always included
+  const ides: IDE[] = ["universal", ...selectedIdes.filter((ide) => ide !== "universal")];
 
-  return { ides: selectedIdes, scopes: [scope] };
+  return { ides, scopes: [scope] };
 }
 
 export async function promptForSingleTarget(
@@ -166,16 +188,21 @@ export async function promptForSingleTarget(
 
   log.blank();
 
-  const ideChoices = (Object.keys(IDE_NAMES) as IDE[]).map((ide) => ({
-    name: `${IDE_NAMES[ide]} ${pc.dim(`(${IDE_PATHS[ide]})`)}`,
-    value: ide,
-  }));
+  const universalLabel = `Universal ${pc.dim(`(${UNIVERSAL_SKILLS_PATH})`)}`;
+  const choices: { name: string; value: IDE }[] = [{ name: universalLabel, value: "universal" }];
+
+  for (const ide of VENDOR_SPECIFIC_AGENTS) {
+    choices.push({
+      name: `${IDE_NAMES[ide]} ${pc.dim(`(${IDE_PATHS[ide]})`)}`,
+      value: ide,
+    });
+  }
 
   let selectedIde: IDE;
   try {
     selectedIde = await select({
-      message: "Which client?",
-      choices: ideChoices,
+      message: "Which location?",
+      choices,
       default: DEFAULT_CONFIG.defaultIde,
       loop: false,
       theme: { style: { highlight: (text: string) => pc.green(text) } },
@@ -214,27 +241,31 @@ export async function promptForSingleTarget(
 }
 
 export function getTargetDirs(targets: InstallTargets): string[] {
-  // Prioritize Claude to receive original files (others get symlinks)
-  const sortedIdes = [...targets.ides].sort((a, b) => {
-    if (a === "claude") return -1;
-    if (b === "claude") return 1;
-    return 0;
-  });
-
+  const hasUniversal = targets.ides.some((ide) => UNIVERSAL_AGENTS.has(ide));
   const dirs: string[] = [];
-  for (const ide of sortedIdes) {
-    for (const scope of targets.scopes) {
-      if (scope === "global") {
-        dirs.push(join(homedir(), IDE_GLOBAL_PATHS[ide]));
-      } else {
-        dirs.push(join(process.cwd(), IDE_PATHS[ide]));
-      }
+
+  for (const scope of targets.scopes) {
+    const baseDir = scope === "global" ? homedir() : process.cwd();
+
+    if (hasUniversal) {
+      const uniPath = scope === "global" ? UNIVERSAL_SKILLS_GLOBAL_PATH : UNIVERSAL_SKILLS_PATH;
+      dirs.push(join(baseDir, uniPath));
+    }
+
+    for (const ide of targets.ides) {
+      if (UNIVERSAL_AGENTS.has(ide)) continue;
+      const pathMap = scope === "global" ? IDE_GLOBAL_PATHS : IDE_PATHS;
+      dirs.push(join(baseDir, pathMap[ide]));
     }
   }
+
   return dirs;
 }
 
 export function getTargetDirFromSelection(ide: IDE, scope: Scope): string {
+  if (UNIVERSAL_AGENTS.has(ide)) {
+    return getUniversalDir(scope);
+  }
   if (scope === "global") {
     return join(homedir(), IDE_GLOBAL_PATHS[ide]);
   }
