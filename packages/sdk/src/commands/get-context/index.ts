@@ -41,8 +41,8 @@ export class GetContextCommand extends Command<Documentation[] | string> {
     }
 
     const apiResult = result as ApiContextJsonResponse;
-    const codeDocs = apiResult.codeSnippets.map(formatCodeSnippet);
-    const infoDocs = apiResult.infoSnippets.map(formatInfoSnippet);
+    const codeDocs = (apiResult.codeSnippets ?? []).map(formatCodeSnippet);
+    const infoDocs = (apiResult.infoSnippets ?? []).map(formatInfoSnippet);
 
     return [...codeDocs, ...infoDocs];
   }
