@@ -273,10 +273,34 @@ async function main() {
     const initialPort = CLI_PORT ?? DEFAULT_PORT;
 
     const app = express();
-    app.use(express.json());
+    app.use(express.json({ limit: "1mb" }));
+
+    // Optional CORS allowlist for browser clients. If not set, keep permissive CORS for compatibility.
+    const allowedOrigins = (() => {
+      const raw = process.env.CONTEXT7_ALLOWED_ORIGINS || process.env.ALLOWED_ORIGINS || "";
+      const parts = raw
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      return parts.length ? new Set(parts) : null;
+    })();
 
     app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
-      res.setHeader("Access-Control-Allow-Origin", "*");
+      const origin = String(req.headers.origin ?? "");
+
+      if (allowedOrigins) {
+        if (origin) {
+          if (!allowedOrigins.has(origin)) {
+            res.status(403).send("Origin not allowed");
+            return;
+          }
+          res.setHeader("Access-Control-Allow-Origin", origin);
+          res.setHeader("Vary", "Origin");
+        }
+      } else {
+        res.setHeader("Access-Control-Allow-Origin", "*");
+      }
+
       res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
       res.setHeader(
         "Access-Control-Allow-Headers",
@@ -285,6 +309,10 @@ async function main() {
       res.setHeader("Access-Control-Expose-Headers", "MCP-Session-Id");
 
       if (req.method === "OPTIONS") {
+        if (allowedOrigins && origin && !allowedOrigins.has(origin)) {
+          res.status(403).send("Origin not allowed");
+          return;
+        }
         res.sendStatus(200);
         return;
       }
