@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.4
+
+### Patch Changes
+
+- 4663c15: - Adopt `.agents/skills` as universal install target, supporting multiple agents with a single installation
+  - Replace `--codex`, `--opencode`, and `--amp` flags with single `--universal` flag
+  - Improve checkbox UI with aligned column headers for better readability
+
 ## 0.2.3
 
 ### Patch Changes
