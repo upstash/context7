@@ -124,16 +124,14 @@ export interface ErrorEvent {
 
 export type GenerateStreamEvent = ProgressEvent | ToolResultEvent | CompleteEvent | ErrorEvent;
 
-export type IDE = "claude" | "cursor" | "codex" | "opencode" | "amp" | "antigravity";
+export type IDE = "claude" | "cursor" | "antigravity" | "universal";
 
 export type Scope = "project" | "global";
 
 export interface IDEOptions {
   claude?: boolean;
   cursor?: boolean;
-  codex?: boolean;
-  opencode?: boolean;
-  amp?: boolean;
+  universal?: boolean;
   antigravity?: boolean;
 }
 
@@ -159,29 +157,34 @@ export interface InstallTargets {
 export const IDE_PATHS: Record<IDE, string> = {
   claude: ".claude/skills",
   cursor: ".cursor/skills",
-  codex: ".codex/skills",
-  opencode: ".opencode/skills",
-  amp: ".agents/skills",
   antigravity: ".agent/skills",
+  universal: ".agents/skills",
 };
 
 export const IDE_GLOBAL_PATHS: Record<IDE, string> = {
   claude: ".claude/skills",
   cursor: ".cursor/skills",
-  codex: ".codex/skills",
-  opencode: ".config/opencode/skills",
-  amp: ".config/agents/skills",
   antigravity: ".agent/skills",
+  universal: ".config/agents/skills",
 };
 
 export const IDE_NAMES: Record<IDE, string> = {
   claude: "Claude Code",
   cursor: "Cursor",
-  codex: "Codex",
-  opencode: "OpenCode",
-  amp: "Amp",
   antigravity: "Antigravity",
+  universal: "Universal",
 };
+
+// Universal .agents/skills standard
+// These agents read from .agents/skills/ natively — one install covers all of them.
+export const UNIVERSAL_SKILLS_PATH = ".agents/skills";
+export const UNIVERSAL_SKILLS_GLOBAL_PATH = ".config/agents/skills";
+
+// Display label for agents that read .agents/skills/ (includes agents beyond our IDE type)
+export const UNIVERSAL_AGENTS_LABEL = "Amp, Codex, Gemini CLI, GitHub Copilot, OpenCode + more";
+
+// Agents that still require their own vendor-specific skill directory.
+export const VENDOR_SPECIFIC_AGENTS: IDE[] = ["claude", "cursor", "antigravity"];
 
 export interface C7Config {
   defaultIde: IDE;
@@ -189,7 +192,7 @@ export interface C7Config {
 }
 
 export const DEFAULT_CONFIG: C7Config = {
-  defaultIde: "claude",
+  defaultIde: "universal",
   defaultScope: "project",
 };
 

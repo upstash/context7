@@ -175,6 +175,7 @@ dist
 !plugins/cursor/context7/.cursor
 .opencode
 .claude
+.agents
 
 # Finder (MacOS) folder config
 .DS_Store
