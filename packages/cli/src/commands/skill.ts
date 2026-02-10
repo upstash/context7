@@ -46,7 +46,6 @@ import {
   IDE_GLOBAL_PATHS,
   UNIVERSAL_SKILLS_PATH,
   UNIVERSAL_SKILLS_GLOBAL_PATH,
-  UNIVERSAL_AGENTS,
   UNIVERSAL_AGENTS_LABEL,
   VENDOR_SPECIFIC_AGENTS,
 } from "../types.js";
@@ -60,8 +59,8 @@ function logInstallSummary(
   skillNames: string[]
 ): void {
   log.blank();
-  const hasUniversal = targets.ides.some((ide) => UNIVERSAL_AGENTS.has(ide));
-  const vendorIdes = targets.ides.filter((ide) => !UNIVERSAL_AGENTS.has(ide));
+  const hasUniversal = targets.ides.some((ide) => ide === "universal");
+  const vendorIdes = targets.ides.filter((ide) => ide !== "universal");
 
   let dirIndex = 0;
   if (hasUniversal && dirIndex < targetDirs.length) {
@@ -624,10 +623,11 @@ async function listCommand(options: ListOptions): Promise<void> {
     // Explicit flag mode — check the specific IDE paths
     const ides = getSelectedIdes(options);
     for (const ide of ides) {
-      const dir = UNIVERSAL_AGENTS.has(ide)
-        ? join(baseDir, scope === "global" ? UNIVERSAL_SKILLS_GLOBAL_PATH : UNIVERSAL_SKILLS_PATH)
-        : join(baseDir, (scope === "global" ? IDE_GLOBAL_PATHS : IDE_PATHS)[ide]);
-      const label = UNIVERSAL_AGENTS.has(ide) ? UNIVERSAL_AGENTS_LABEL : IDE_NAMES[ide];
+      const dir =
+        ide === "universal"
+          ? join(baseDir, scope === "global" ? UNIVERSAL_SKILLS_GLOBAL_PATH : UNIVERSAL_SKILLS_PATH)
+          : join(baseDir, (scope === "global" ? IDE_GLOBAL_PATHS : IDE_PATHS)[ide]);
+      const label = ide === "universal" ? UNIVERSAL_AGENTS_LABEL : IDE_NAMES[ide];
       const skills = await scanDir(dir);
       if (skills.length > 0) {
         results.push({ label, path: dir, skills });

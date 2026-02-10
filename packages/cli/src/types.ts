@@ -124,7 +124,7 @@ export interface ErrorEvent {
 
 export type GenerateStreamEvent = ProgressEvent | ToolResultEvent | CompleteEvent | ErrorEvent;
 
-export type IDE = "claude" | "cursor" | "codex" | "opencode" | "amp" | "antigravity" | "universal";
+export type IDE = "claude" | "cursor" | "antigravity" | "universal";
 
 export type Scope = "project" | "global";
 
@@ -157,9 +157,6 @@ export interface InstallTargets {
 export const IDE_PATHS: Record<IDE, string> = {
   claude: ".claude/skills",
   cursor: ".cursor/skills",
-  codex: ".codex/skills",
-  opencode: ".opencode/skills",
-  amp: ".agents/skills",
   antigravity: ".agent/skills",
   universal: ".agents/skills",
 };
@@ -167,9 +164,6 @@ export const IDE_PATHS: Record<IDE, string> = {
 export const IDE_GLOBAL_PATHS: Record<IDE, string> = {
   claude: ".claude/skills",
   cursor: ".cursor/skills",
-  codex: ".codex/skills",
-  opencode: ".config/opencode/skills",
-  amp: ".config/agents/skills",
   antigravity: ".agent/skills",
   universal: ".config/agents/skills",
 };
@@ -177,9 +171,6 @@ export const IDE_GLOBAL_PATHS: Record<IDE, string> = {
 export const IDE_NAMES: Record<IDE, string> = {
   claude: "Claude Code",
   cursor: "Cursor",
-  codex: "Codex",
-  opencode: "OpenCode",
-  amp: "Amp",
   antigravity: "Antigravity",
   universal: "Universal",
 };
@@ -188,7 +179,6 @@ export const IDE_NAMES: Record<IDE, string> = {
 // These agents read from .agents/skills/ natively — one install covers all of them.
 export const UNIVERSAL_SKILLS_PATH = ".agents/skills";
 export const UNIVERSAL_SKILLS_GLOBAL_PATH = ".config/agents/skills";
-export const UNIVERSAL_AGENTS: Set<IDE> = new Set(["amp", "codex", "opencode", "universal"]);
 
 // Display label for agents that read .agents/skills/ (includes agents beyond our IDE type)
 export const UNIVERSAL_AGENTS_LABEL = "Amp, Codex, Gemini CLI, GitHub Copilot, OpenCode + more";

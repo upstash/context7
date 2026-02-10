@@ -50,6 +50,7 @@ ctx7 skills g
 # Generate and install to a specific client
 ctx7 skills generate --cursor
 ctx7 skills generate --claude
+ctx7 skills generate --universal
 
 # Generate globally
 ctx7 skills generate --global
@@ -96,6 +97,7 @@ ctx7 skills install /anthropics/skills pdf commit
 # Install to a specific client
 ctx7 skills install /anthropics/skills pdf --cursor
 ctx7 skills install /anthropics/skills pdf --claude
+ctx7 skills install /anthropics/skills pdf --universal
 
 # Install globally (home directory instead of current project)
 ctx7 skills install /anthropics/skills pdf --global
@@ -119,6 +121,7 @@ View skills installed in your project or globally.
 ctx7 skills list
 ctx7 skills list --claude
 ctx7 skills list --cursor
+ctx7 skills list --universal
 ctx7 skills list --global
 ```
 
@@ -137,6 +140,7 @@ Uninstall a skill from your project.
 ```bash
 ctx7 skills remove pdf
 ctx7 skills remove pdf --claude
+ctx7 skills remove pdf --universal
 ctx7 skills remove pdf --global
 ```
 
@@ -148,9 +152,7 @@ The CLI automatically detects which AI coding assistants you have installed and 
 |--------|-----------------|
 | Claude Code | `.claude/skills/` |
 | Cursor | `.cursor/skills/` |
-| Codex | `.codex/skills/` |
-| OpenCode | `.opencode/skills/` |
-| Amp | `.agents/skills/` |
+| Universal (Amp, Codex, Gemini CLI, GitHub Copilot, OpenCode + more) | `.agents/skills/` |
 | Antigravity | `.agent/skills/` |
 
 ## Shortcuts

@@ -21,7 +21,6 @@ import {
   IDE_NAMES,
   UNIVERSAL_SKILLS_PATH,
   UNIVERSAL_SKILLS_GLOBAL_PATH,
-  UNIVERSAL_AGENTS,
   UNIVERSAL_AGENTS_LABEL,
   VENDOR_SPECIFIC_AGENTS,
   DEFAULT_CONFIG,
@@ -232,7 +231,7 @@ export async function promptForSingleTarget(
 }
 
 export function getTargetDirs(targets: InstallTargets): string[] {
-  const hasUniversal = targets.ides.some((ide) => UNIVERSAL_AGENTS.has(ide));
+  const hasUniversal = targets.ides.some((ide) => ide === "universal");
   const dirs: string[] = [];
 
   for (const scope of targets.scopes) {
@@ -244,7 +243,7 @@ export function getTargetDirs(targets: InstallTargets): string[] {
     }
 
     for (const ide of targets.ides) {
-      if (UNIVERSAL_AGENTS.has(ide)) continue;
+      if (ide === "universal") continue;
       const pathMap = scope === "global" ? IDE_GLOBAL_PATHS : IDE_PATHS;
       dirs.push(join(baseDir, pathMap[ide]));
     }
@@ -254,7 +253,7 @@ export function getTargetDirs(targets: InstallTargets): string[] {
 }
 
 export function getTargetDirFromSelection(ide: IDE, scope: Scope): string {
-  if (UNIVERSAL_AGENTS.has(ide)) {
+  if (ide === "universal") {
     return getUniversalDir(scope);
   }
   if (scope === "global") {
