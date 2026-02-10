@@ -131,9 +131,7 @@ export type Scope = "project" | "global";
 export interface IDEOptions {
   claude?: boolean;
   cursor?: boolean;
-  codex?: boolean;
-  opencode?: boolean;
-  amp?: boolean;
+  universal?: boolean;
   antigravity?: boolean;
 }
 

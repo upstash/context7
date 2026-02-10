@@ -31,22 +31,13 @@ export function getSelectedIdes(options: IDEOptions): IDE[] {
   const ides: IDE[] = [];
   if (options.claude) ides.push("claude");
   if (options.cursor) ides.push("cursor");
-  if (options.codex) ides.push("codex");
-  if (options.opencode) ides.push("opencode");
-  if (options.amp) ides.push("amp");
+  if (options.universal) ides.push("universal");
   if (options.antigravity) ides.push("antigravity");
   return ides;
 }
 
 export function hasExplicitIdeOption(options: IDEOptions): boolean {
-  return !!(
-    options.claude ||
-    options.cursor ||
-    options.codex ||
-    options.opencode ||
-    options.amp ||
-    options.antigravity
-  );
+  return !!(options.claude || options.cursor || options.universal || options.antigravity);
 }
 
 /** Detect vendor-specific agents whose parent directory exists. */
