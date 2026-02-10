@@ -150,9 +150,9 @@ The CLI automatically detects which AI coding assistants you have installed and 
 
 | Client | Skills Directory |
 |--------|-----------------|
+| Universal (Amp, Codex, Gemini CLI, GitHub Copilot, OpenCode + more) | `.agents/skills/` |
 | Claude Code | `.claude/skills/` |
 | Cursor | `.cursor/skills/` |
-| Universal (Amp, Codex, Gemini CLI, GitHub Copilot, OpenCode + more) | `.agents/skills/` |
 | Antigravity | `.agent/skills/` |
 
 ## Shortcuts
