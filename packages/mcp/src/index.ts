@@ -171,7 +171,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       query: z
         .string()
         .describe(
-          "The user's original question or task. This is used to rank library results by relevance to what the user is trying to accomplish. IMPORTANT: Do not include any sensitive or confidential information such as API keys, passwords, credentials, or personal data in your query."
+          "The question or task you need help with. This is used to rank library results by relevance to what the user is trying to accomplish. IMPORTANT: Do not include any sensitive or confidential information such as API keys, passwords, credentials, or personal data in your query."
         ),
       libraryName: z
         .string()
