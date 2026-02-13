@@ -108,9 +108,7 @@ npx ctx7 skills install /anthropics/skills --all
 ```bash
 npx ctx7 skills install /anthropics/skills pdf --claude
 npx ctx7 skills install /anthropics/skills pdf --cursor
-npx ctx7 skills install /anthropics/skills pdf --codex
-npx ctx7 skills install /anthropics/skills pdf --opencode
-npx ctx7 skills install /anthropics/skills pdf --amp
+npx ctx7 skills install /anthropics/skills pdf --universal
 npx ctx7 skills install /anthropics/skills pdf --antigravity
 ```
 
@@ -153,6 +151,7 @@ npx ctx7 skills suggest
 # Suggest and install to a specific client
 npx ctx7 skills suggest --claude
 npx ctx7 skills suggest --cursor
+npx ctx7 skills suggest --universal
 
 # Suggest and install globally
 npx ctx7 skills suggest --global
@@ -188,6 +187,7 @@ npx ctx7 skills list
 # List for a specific client
 npx ctx7 skills list --claude
 npx ctx7 skills list --cursor
+npx ctx7 skills list --universal
 
 # List globally installed skills
 npx ctx7 skills list --global
@@ -217,6 +217,7 @@ npx ctx7 skills remove pdf
 
 # Remove from a specific client
 npx ctx7 skills remove pdf --claude
+npx ctx7 skills remove pdf --universal
 
 # Remove from global directory
 npx ctx7 skills remove pdf --global
@@ -248,6 +249,7 @@ npx ctx7 skills generate
 # Generate for a specific client
 npx ctx7 skills generate --cursor
 npx ctx7 skills generate --claude
+npx ctx7 skills generate --universal
 
 # Generate as a global skill
 npx ctx7 skills generate --global
@@ -271,11 +273,9 @@ The CLI automatically detects installed AI coding assistants and offers to insta
 
 | Client | Project Directory | Global Directory |
 |--------|-------------------|------------------|
+| Universal (Amp, Codex, Gemini CLI, GitHub Copilot, OpenCode + more) | `.agents/skills/` | `~/.config/agents/skills/` |
 | Claude Code | `.claude/skills/` | `~/.claude/skills/` |
 | Cursor | `.cursor/skills/` | `~/.cursor/skills/` |
-| Codex | `.codex/skills/` | `~/.codex/skills/` |
-| OpenCode | `.opencode/skills/` | `~/.config/opencode/skills/` |
-| Amp | `.agents/skills/` | `~/.agents/skills/` |
 | Antigravity | `.agent/skills/` | `~/.agent/skills/` |
 
 **Project vs Global:**
@@ -381,6 +381,18 @@ npx ctx7 logout
 
 # Log in again
 npx ctx7 login
+```
+
+## Disabling Telemetry
+
+The CLI collects anonymous usage data to help improve the product. To disable telemetry, set the `CTX7_TELEMETRY_DISABLED` environment variable:
+
+```bash
+# For a single command
+CTX7_TELEMETRY_DISABLED=1 npx ctx7 skills search pdf
+
+# Or export in your shell profile (~/.bashrc, ~/.zshrc, etc.)
+export CTX7_TELEMETRY_DISABLED=1
 ```
 
 ## Next Steps

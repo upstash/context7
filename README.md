@@ -137,6 +137,19 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
 
 </details>
 
+<details>
+<summary><b>Install with add-mcp</b></summary>
+
+Install the MCP server for all your coding agents:
+
+```bash
+npx add-mcp https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: YOUR_API_KEY"
+```
+
+Add `-y` to skip the confirmation prompt and install to all detected agents already in use in the project directory.
+
+</details>
+
 **[Other IDEs and Clients →](https://context7.com/docs/resources/all-clients)**
 
 <details>

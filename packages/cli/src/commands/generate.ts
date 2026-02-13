@@ -45,9 +45,7 @@ export function registerGenerateCommand(skillCommand: Command): void {
     .option("--global", "Generate in global skills directory")
     .option("--claude", "Claude Code (.claude/skills/)")
     .option("--cursor", "Cursor (.cursor/skills/)")
-    .option("--codex", "Codex (.codex/skills/)")
-    .option("--opencode", "OpenCode (.opencode/skills/)")
-    .option("--amp", "Amp (.agents/skills/)")
+    .option("--universal", "Universal (.agents/skills/)")
     .option("--antigravity", "Antigravity (.agent/skills/)")
     .description("Generate a skill for a library using AI")
     .action(async (options: GenerateOptions) => {

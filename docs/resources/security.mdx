@@ -6,48 +6,91 @@ Context7 takes security and privacy seriously. This page outlines our security p
 
 ## Highlights
 
-- Queries stay on your device; Context7 only receives derived topics for retrieval
+- Your original prompts stay with your AI assistant; Context7 only receives search queries formulated by the MCP client, which is instructed to strip sensitive data before sending
 - Documentation is indexed inside SOC 2 compliant infrastructure operated by Upstash
 - API keys are encrypted, rate limited, and easy to rotate from your dashboard
 - Enterprise customers can enable SSO (SAML, OAuth, OIDC) and receive dedicated audit trails
+- The [Context7 Addendum](https://upstash.com/trust/context7addendum.pdf), [Upstash Terms and Privacy Policy](https://upstash.com/docs/common/help/legal) applies to all users; see [trust.upstash.com](https://trust.upstash.com/) for full infrastructure compliance details, certifications
 
 ## Privacy-First Architecture
 
 ### Query Privacy
 
-**Your queries never leave your machine.**
+**Your original prompts and code stay with your AI assistant.**
 
-When you use Context7 through the MCP client:
+When you use Context7 through an MCP client, the AI assistant (not the user directly) formulates search queries to retrieve relevant documentation. Here is what happens:
 
-1. Your query is analyzed locally to extract topics and relevant keywords
-2. Only these extracted topics are sent to the Context7 server
-3. Your original query and code remain on your local machine
-4. The server has no access to your actual prompts or conversations
+1. Your prompt is processed locally by your AI assistant (e.g., Cursor, Claude Code)
+2. The AI assistant formulates a search query and library name based on your request
+3. Only these formulated queries are sent to the Context7 API — your full prompt, source code, and conversation history are never transmitted
+4. The MCP tool descriptions explicitly instruct the AI assistant to strip sensitive information (API keys, passwords, credentials, personal data, and proprietary code) from queries before sending
+
+**What is sent to the Context7 API:**
+
+- `query` — a search query formulated by the MCP client (not your original prompt)
+- `libraryName` or `libraryId` — the library to look up
+- API key (if provided, for authentication)
+- MCP client name and version (e.g., IDE info, for analytics)
+- Transport type (`stdio` or `http`)
+- Client IP address, encrypted with AES-256-CBC (HTTP transport only, for rate limiting)
 
 <Note>
-  The MCP client processes your queries locally and only transmits topic information needed to
-  retrieve relevant documentation. Your full prompts, code, and context remain private.
+  The MCP client formulates search queries on your behalf and is instructed not to include
+  sensitive or confidential information. Your full prompts, code, and conversation context
+  remain with your AI assistant and are never sent to Context7.
 </Note>
+
+### Use of MCP Queries
+
+The search queries formulated by the MCP client (not your original prompts) are used server-side in two ways:
+
+**Documentation Reranking**
+
+MCP-formulated queries are passed to LLMs to rerank and select the most relevant documentation for your request. Context7 uses well-known, trusted LLM providers for this purpose — including **OpenAI**, **Google Gemini**, and **Anthropic**.
+
+**Benchmarking and Quality Improvement**
+
+MCP-formulated queries are anonymously stored and used to benchmark retrieval accuracy and improve the documentation matching pipeline over time.
+
+**Enterprise Controls**
+
+- On-premise Enterprise plans can use their own LLM provider for code extraction and private library ranking
+- On-premise Enterprise plans can disable public documentation usage, limiting context retrieval to privately indexed documentation only
+- Enterprise plans can disable query storage for benchmarking — however, this may affect the quality of context retrieval over time
+
+Contact our sales team at [context7.com](https://context7.com/contact) for Enterprise and on-premise plan details.
+
+### Customizing What Is Shared
+
+The Context7 MCP server is [open source](https://github.com/upstash/context7). If you want full control over what is sent as the `query` parameter, you can:
+
+1. Fork the [Context7 MCP repository](https://github.com/upstash/context7)
+2. Edit the tool input descriptions in [`packages/mcp/src/index.ts`](https://github.com/upstash/context7/blob/master/packages/mcp/src/index.ts) — these descriptions instruct the AI assistant on how to formulate the query
+3. Build and run your custom MCP server locally
+
+<Warning>
+  The `query` parameter is used server-side for LLM-based reranking of documentation results. Modifying, redacting, or omitting the query can significantly reduce the relevance and quality of returned documentation.
+</Warning>
 
 ### Data Storage
 
 **Context7 does not store your source files.**
 
-- We only index and store **documentation** and **code examples** from public repositories
-- Your private code, projects, and source files are never uploaded or stored
+- We only index and store **documentation** and **code examples** from repositories
+- Your code, and source files are not stored or shared
 - All indexed content is stored in a secure vector database optimized for retrieval
 
 **What we store:**
 
-- Public library documentation
-- Public code examples from documentation
+- Library documentation
+- Code examples from documentation
 - Metadata about indexed libraries
+- Queries formulated by the MCP client
 
 **What we don't store:**
 
 - Your source code
-- Your queries or prompts
-- Your private repositories (unless explicitly authorized)
+- Your original prompts or conversations
 - Your conversations with AI assistants
 
 ## Infrastructure Security
@@ -73,7 +116,7 @@ Context7's infrastructure is managed by the experienced Upstash team:
 
 ### Upstash Security Practices
 
-All security practices and certificates of Upstash apply to Context7 projects:
+All security practices and certificates of Upstash apply to Context7 products:
 
 - **Data Encryption**: Encryption at rest and in transit (TLS 1.2+)
 - **Network Security**: VPC isolation, firewall rules, and network segmentation
@@ -82,7 +125,7 @@ All security practices and certificates of Upstash apply to Context7 projects:
 - **Incident Response**: Documented incident response procedures
 - **Vulnerability Management**: Regular security scanning and penetration testing
 
-Learn more about Upstash security: [upstash.com/trust](https://upstash.com/trust)
+Learn more about Upstash security: [trust.upstash.com](https://trust.upstash.com/)
 
 ## Authentication and Access Control
 
@@ -117,19 +160,24 @@ Contact our sales team at [context7.com](https://context7.com) for Enterprise pl
 ### Privacy by Design
 
 - **Data Minimization**: We only collect and store what's necessary
-- **Purpose Limitation**: Data is used only for documentation retrieval
+- **Purpose Limitation**: Documentation data is used only for documentation retrieval
 - **Storage Limitation**: Automated cleanup of outdated data
 - **Transparency**: Clear documentation of what we collect and why
 
 ### GDPR Compliance
 
-For European users, Context7 provides:
+Context7 provides:
 
 - The right to access your data
 - The right to delete your data
 - Data portability options
 - Clear consent mechanisms
 - Privacy-first data processing
+
+## Data Residency
+
+All indexed documentation and metadata are stored within Upstash's SOC 2 compliant infrastructure in the United States and the European Union. 
+Cross-border data transfers comply with the EU General Data Protection Regulation (GDPR) and the EU-U.S. Data Privacy Framework (DPF), and enterprise customers can request region-specific data residency to meet local regulatory requirements.
 
 ## Rate Limiting and Abuse Prevention
 
@@ -176,7 +224,6 @@ Context7 benefits from Upstash's compliance certifications:
 - SOC 2 Type II
 - GDPR compliant
 - ISO 27001 (in progress)
-- CCPA compliant
 
 ## Best Practices for Users
 
@@ -223,6 +270,6 @@ For privacy policy details, visit: [context7.com/privacy](https://context7.com/p
 
 ---
 
-**Last Updated**: January 2025
+**Last Updated**: February 2026
 
 We continuously improve our security practices. Check this page regularly for updates.
