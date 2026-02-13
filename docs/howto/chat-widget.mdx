@@ -1,0 +1,197 @@
+---
+title: Chat Widget
+description: Embed an AI-powered chat assistant on your documentation site
+---
+
+Add an AI chat widget to your documentation site so visitors can ask questions and get instant answers powered by your library's documentation on Context7.
+
+The widget is a lightweight JavaScript snippet that renders a floating chat button. When clicked, it opens a chat panel where users can ask questions about your library and receive AI-generated answers grounded in your documentation.
+
+<Note>The chat widget is available to library owners who have [claimed their library](/dashboard/libraries).</Note>
+
+## How It Works
+
+1. A visitor clicks the chat bubble on your site
+2. They type a question about your library
+3. The widget searches your library's documentation on Context7
+4. An AI model generates an answer using the relevant documentation
+5. The response streams back in real time with markdown formatting
+
+## Setup
+
+<Steps>
+  <Step title="Claim Your Library">
+    You must be a verified owner of the library on Context7. If you haven't claimed it yet, follow the [Claim Your Library](/dashboard/libraries) guide.
+  </Step>
+
+  <Step title="Enable the Widget">
+    Navigate to your library's admin page:
+
+    ```
+    https://context7.com/{owner}/{repo}/admin
+    ```
+
+    Open the **Chat** tab and toggle **Widget enabled** on.
+  </Step>
+
+  <Step title="Add Allowed Domains">
+    Add the domains where the widget will be embedded. The widget will only work on domains you explicitly allow.
+
+    Examples:
+    - `docs.example.com` — exact domain match
+    - `*.example.com` — matches all subdomains (e.g., `docs.example.com`, `blog.example.com`)
+    - `example.com` — matches the root domain only
+
+    <Warning>
+      The widget will not work on any external site until you add at least one allowed domain.
+    </Warning>
+  </Step>
+
+  <Step title="Save Settings">
+    Click **Save** to persist your widget configuration.
+  </Step>
+
+  <Step title="Add the Script Tag">
+    Copy the embed code from the admin panel and add it to your site's HTML:
+
+    ```html
+    <script
+      src="https://context7.com/widget.js"
+      data-library="/owner/repo"
+    ></script>
+    ```
+
+    Place this tag in your root layout or HTML file so the widget loads on every page. The script loads asynchronously and does not block page rendering.
+  </Step>
+</Steps>
+
+## Adding with AI
+
+You can use an AI coding assistant to add the widget automatically. Copy the following prompt and paste it into Claude Code, Cursor, or any AI coding assistant. Replace `/owner/repo` with your library identifier. The assistant will detect your framework and place the script tag in the correct location.
+
+```
+Add the Context7 chat widget to my documentation site. This is a lightweight
+JavaScript widget that adds an AI-powered chat assistant to any webpage. It
+loads asynchronously and renders a floating chat button.
+
+The widget is loaded via a script tag:
+<script src="https://context7.com/widget.js" data-library="/owner/repo"></script>
+
+Detect which framework this project uses and add the widget accordingly. Place
+it in the root layout or HTML file so it loads on every page.
+
+Optional attributes: data-color (hex color, default #059669), data-position
+(bottom-right or bottom-left), data-placeholder (input placeholder text).
+```
+
+## Framework Examples
+
+<Tabs>
+  <Tab title="Next.js">
+    Use the `next/script` component in your root layout so the widget loads on every page:
+
+    ```tsx app/layout.tsx
+    import Script from "next/script";
+
+    export default function RootLayout({ children }) {
+      return (
+        <html lang="en">
+          <body>
+            {children}
+            <Script
+              src="https://context7.com/widget.js"
+              data-library="/owner/repo"
+              strategy="afterInteractive"
+            />
+          </body>
+        </html>
+      );
+    }
+    ```
+  </Tab>
+
+  <Tab title="Docusaurus">
+    Add the script to the `scripts` array in your Docusaurus config:
+
+    ```js docusaurus.config.js
+    export default {
+      // ...other config
+      scripts: [
+        {
+          src: "https://context7.com/widget.js",
+          "data-library": "/owner/repo",
+          async: true,
+        },
+      ],
+    };
+    ```
+  </Tab>
+
+</Tabs>
+
+## Customization
+
+The widget supports optional attributes for customization:
+
+| Attribute            | Description                            | Default              |
+| -------------------- | -------------------------------------- | -------------------- |
+| `data-library`       | Your library identifier (required)     | —                    |
+| `data-color`         | Brand color for the widget (hex code)  | `#059669`            |
+| `data-position`      | Widget position on the page            | `bottom-right`       |
+| `data-placeholder`   | Placeholder text in the input field    | `Ask about the docs...` |
+
+### Examples
+
+**Custom color and position:**
+
+```html
+<script
+  src="https://context7.com/widget.js"
+  data-library="/vercel/next.js"
+  data-color="#0070F3"
+  data-position="bottom-left"
+></script>
+```
+
+**Custom placeholder text:**
+
+```html
+<script
+  src="https://context7.com/widget.js"
+  data-library="/vercel/next.js"
+  data-placeholder="Ask me anything about Next.js..."
+></script>
+```
+
+### Position Options
+
+| Value          | Description                       |
+| -------------- | --------------------------------- |
+| `bottom-right` | Fixed to the bottom-right corner  |
+| `bottom-left`  | Fixed to the bottom-left corner   |
+
+## Domain Configuration
+
+### Allowed Domains
+
+You can configure up to **20 allowed domains** per library. The widget validates the requesting origin against this list on every chat request.
+
+| Pattern            | Matches                                             |
+| ------------------ | --------------------------------------------------- |
+| `docs.example.com` | Only `docs.example.com`                             |
+| `*.example.com`    | Any subdomain: `docs.example.com`, `blog.example.com`, and `example.com` itself |
+| `example.com`      | Only the root domain `example.com`                  |
+
+<Note>
+  Domain validation is enforced server-side. Requests from domains not in your allowed list are rejected with a 403 error.
+</Note>
+
+### Adding and Removing Domains
+
+Manage domains from the **Chat** tab on your library's admin page:
+
+1. Click **Add domain** to add a new entry
+2. Enter the domain (e.g., `docs.example.com` or `*.example.com`)
+3. Click **Save** to apply changes
+
+To remove a domain, click the trash icon next to it and save.
