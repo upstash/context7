@@ -90,14 +90,16 @@ Run this command. See [Claude Code MCP docs](https://code.claude.com/docs/en/mcp
 #### Claude Code Local Server Connection
 
 ```sh
-claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 ```
 
 #### Claude Code Remote Server Connection
 
 ```sh
-claude mcp add --header "CONTEXT7_API_KEY: YOUR_API_KEY" --transport http context7 https://mcp.context7.com/mcp
+claude mcp add --scope user --header "CONTEXT7_API_KEY: YOUR_API_KEY" --transport http context7 https://mcp.context7.com/mcp
 ```
+
+> Remove `--scope user` to install for the current project only.
 
 </details>
 
