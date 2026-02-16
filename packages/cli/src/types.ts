@@ -216,3 +216,41 @@ export interface SkillQuotaResponse {
   message?: string;
   error?: string;
 }
+
+// Library docs types
+export interface LibraryResolveResponse {
+  results: LibrarySearchResult[];
+  error?: string;
+  message?: string;
+}
+
+export interface CodeExample {
+  language: string;
+  code: string;
+}
+
+export interface CodeSnippet {
+  codeTitle: string;
+  codeDescription: string;
+  codeLanguage: string;
+  codeTokens: number;
+  codeId: string;
+  pageTitle: string;
+  codeList: CodeExample[];
+}
+
+export interface InfoSnippet {
+  pageId?: string;
+  breadcrumb?: string;
+  content: string;
+  contentTokens: number;
+}
+
+export interface ContextResponse {
+  codeSnippets: CodeSnippet[];
+  infoSnippets: InfoSnippet[];
+  rules?: Record<string, unknown>;
+  error?: string;
+  message?: string;
+  redirectUrl?: string;
+}

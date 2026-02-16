@@ -3,6 +3,7 @@ import pc from "picocolors";
 import figlet from "figlet";
 import { registerSkillCommands, registerSkillAliases } from "./commands/skill.js";
 import { registerAuthCommands, setAuthBaseUrl } from "./commands/auth.js";
+import { registerDocsCommands, registerDocsAliases } from "./commands/docs.js";
 import { setBaseUrl } from "./utils/api.js";
 import { VERSION } from "./constants.js";
 
@@ -45,6 +46,10 @@ Examples:
   ${brand.primary("npx ctx7 skills list --claude")}
   ${brand.primary("npx ctx7 skills remove pdf")}
 
+  ${brand.dim("# Get library documentation")}
+  ${brand.primary('npx ctx7 docs resolve react "how to use hooks"')}
+  ${brand.primary('npx ctx7 docs get /facebook/react "useEffect examples"')}
+
 Visit ${brand.primary("https://context7.com")} to browse skills
 `
   );
@@ -52,6 +57,8 @@ Visit ${brand.primary("https://context7.com")} to browse skills
 registerSkillCommands(program);
 registerSkillAliases(program);
 registerAuthCommands(program);
+registerDocsCommands(program);
+registerDocsAliases(program);
 
 program.action(() => {
   console.log("");
