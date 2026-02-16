@@ -21,7 +21,12 @@ import {
   detectAgents,
 } from "../setup/agents.js";
 import { RULE_CONTENT } from "../setup/templates.js";
-import { readJsonConfig, mergeServerEntry, mergeInstructions, writeJsonConfig } from "../setup/mcp-writer.js";
+import {
+  readJsonConfig,
+  mergeServerEntry,
+  mergeInstructions,
+  writeJsonConfig,
+} from "../setup/mcp-writer.js";
 
 type Scope = "global" | "project";
 
