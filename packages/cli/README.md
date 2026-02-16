@@ -17,6 +17,18 @@ npm install -g ctx7
 ## Quick Start
 
 ```bash
+# Set up Context7 MCP for your coding agents
+ctx7 setup
+
+# Target a specific agent
+ctx7 setup --cursor
+ctx7 setup --claude
+ctx7 setup --opencode
+```
+
+### Skills
+
+```bash
 # Search for skills
 ctx7 skills search pdf
 
@@ -31,6 +43,32 @@ ctx7 skills list --claude
 ```
 
 ## Usage
+
+### Setup
+
+Configure Context7 MCP and a rule for your AI coding agents. Authenticates via OAuth, generates an API key, and writes the config.
+
+```bash
+# Interactive (prompts for agent selection)
+ctx7 setup
+
+# Target specific agents
+ctx7 setup --cursor
+ctx7 setup --claude
+ctx7 setup --opencode
+
+# Use an existing API key instead of OAuth
+ctx7 setup --api-key YOUR_API_KEY
+
+# Use OAuth endpoint (IDE handles auth flow)
+ctx7 setup --oauth
+
+# Configure for current project only (default is global)
+ctx7 setup --project
+
+# Skip prompts
+ctx7 setup --yes
+```
 
 ### Generate skills
 

@@ -3,6 +3,7 @@ import pc from "picocolors";
 import figlet from "figlet";
 import { registerSkillCommands, registerSkillAliases } from "./commands/skill.js";
 import { registerAuthCommands, setAuthBaseUrl } from "./commands/auth.js";
+import { registerSetupCommand } from "./commands/setup.js";
 import { setBaseUrl } from "./utils/api.js";
 import { VERSION } from "./constants.js";
 
@@ -52,6 +53,7 @@ Visit ${brand.primary("https://context7.com")} to browse skills
 registerSkillCommands(program);
 registerSkillAliases(program);
 registerAuthCommands(program);
+registerSetupCommand(program);
 
 program.action(() => {
   console.log("");
