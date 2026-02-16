@@ -138,15 +138,15 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
 </details>
 
 <details>
-<summary><b>Install with add-mcp</b></summary>
+<summary><b>Install with ctx7 setup</b></summary>
 
-Install the MCP server for all your coding agents:
+Set up Context7 MCP for your coding agents:
 
 ```bash
-npx add-mcp https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: YOUR_API_KEY"
+npx ctx7 setup
 ```
 
-Add `-y` to skip the confirmation prompt and install to all detected agents already in use in the project directory.
+Authenticates via OAuth, generates an API key, and configures the MCP server and rule for your agents. Use `--cursor`, `--claude`, or `--opencode` to target a specific agent.
 
 </details>
 
