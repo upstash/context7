@@ -2,6 +2,13 @@
   "name": "context7",
   "description": "Up-to-date code docs for any prompt",
   "version": "1.0.0",
+  "settings": [
+    {
+      "name": "API Key",
+      "description": "Context7 API key. Create new key at https://context7.com/dashboard.",
+      "envVar": "CONTEXT7_API_KEY"
+    }
+  ],
   "mcpServers": {
     "context7": {
       "command": "npx",
