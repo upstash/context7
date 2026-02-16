@@ -16,7 +16,7 @@ import {
 
 import { trackEvent } from "../utils/tracking.js";
 
-const CLI_CLIENT_ID = "uy0Zgy4FwVamVW4O";
+const CLI_CLIENT_ID = "2veBSofhicRBguUT";
 
 let baseUrl = "https://context7.com";
 
