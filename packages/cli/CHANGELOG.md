@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+### Minor Changes
+
+- 3d66191: Add `ctx7 setup` command for configuring Context7 MCP and rules across Claude Code, Cursor, and OpenCode
+
 ## 0.2.4
 
 ### Patch Changes
