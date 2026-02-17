@@ -53,7 +53,6 @@ export interface LibrarySearchResult {
   trustScore?: number;
   benchmarkScore?: number;
   versions?: string[];
-  vip?: boolean;
 }
 
 export interface LibrarySearchResponse {

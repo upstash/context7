@@ -217,13 +217,13 @@
       "LibraryIdParam": {
         "name": "libraryId",
         "in": "query",
-        "description": "Context7-compatible library ID in format `/owner/repo` or `/owner/repo/version`",
+        "description": "Context7-compatible library ID in format `/owner/repo`, `/owner/repo/version`, or `/owner/repo@version`",
         "required": true,
         "schema": {
           "type": "string",
           "minLength": 1,
           "maxLength": 500,
-          "pattern": "^/[^/]+/[^/]+(/[^/]+)?$"
+          "pattern": "^/[^/]+/[^/]+([/@][^/]+)?$"
         },
         "examples": {
           "basic": {
@@ -231,8 +231,12 @@
             "value": "/vercel/next.js"
           },
           "withVersion": {
-            "summary": "With specific version",
+            "summary": "With specific version (slash)",
             "value": "/vercel/next.js/v14.3.0"
+          },
+          "withVersionAt": {
+            "summary": "With specific version (@ syntax)",
+            "value": "/vercel/next.js@v14.3.0"
           }
         }
       },
@@ -375,7 +379,15 @@
             }
           }
         },
-        "required": ["codeTitle", "codeDescription", "codeLanguage", "codeTokens", "codeId", "pageTitle", "codeList"]
+        "required": [
+          "codeTitle",
+          "codeDescription",
+          "codeLanguage",
+          "codeTokens",
+          "codeId",
+          "pageTitle",
+          "codeList"
+        ]
       },
       "CodeExample": {
         "type": "object",
@@ -435,7 +447,30 @@
           },
           "rules": {
             "type": "object",
-            "description": "Optional library-specific rules"
+            "description": "Optional library-specific rules and guidelines",
+            "properties": {
+              "global": {
+                "type": "array",
+                "description": "Global team rules",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "libraryOwn": {
+                "type": "array",
+                "description": "Rules defined by the library owner",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "libraryTeam": {
+                "type": "array",
+                "description": "Library-specific rules from the team",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
           }
         },
         "required": ["codeSnippets", "infoSnippets"]
@@ -566,15 +601,27 @@
         }
       },
       "ServiceUnavailableError": {
-        "description": "Service Unavailable - Search failed",
+        "description": "Service Unavailable - Search failed or no results",
         "content": {
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/Error"
             },
-            "example": {
-              "error": "search_failed",
-              "message": "Search failed: Service temporarily unavailable"
+            "examples": {
+              "searchFailed": {
+                "summary": "Search service failure",
+                "value": {
+                  "error": "search_failed",
+                  "message": "Search failed: Service temporarily unavailable"
+                }
+              },
+              "noLibrariesFound": {
+                "summary": "No libraries matched",
+                "value": {
+                  "error": "no_libraries_found",
+                  "message": "No libraries found matching your search query."
+                }
+              }
             }
           }
         }
