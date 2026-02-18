@@ -159,11 +159,11 @@ ChatGPT supports MCP servers through remote connectors via [Developer Mode](http
 
 #### 1. Enable Developer Mode
 
-Go to: `Settings` → `Apps & Connectors` → `Advanced settings` → Enable `Developer Mode`
+Go to: `Settings` → `Apps` → `Advanced settings` → Enable `Developer Mode`
 
-#### 2. Create a Connector
+#### 2. Create an App
 
-Go to: `Settings` → `Apps & Connectors` → `Create`
+Go to: `Settings` → `Apps` → `Create App`
 
 Fill in the following:
 
@@ -177,7 +177,9 @@ Fill in the following:
 
 #### 3. Use in a Conversation
 
-Start a new chat → Click the model selector → Choose `Developer Mode` → Select the `Context7` connector.
+Start a new chat → Click the plus icon → Hover over `More` → Select the `Context7` app.
+
+Alternatively, you can say `use context7` in your prompt and ChatGPT will automatically use the `Context7` app.
 
 See [OpenAI MCP docs](https://platform.openai.com/docs/mcp) for more info.
 
@@ -186,15 +188,15 @@ See [OpenAI MCP docs](https://platform.openai.com/docs/mcp) for more info.
 <details>
 <summary><b>Install in ChatGPT (Desktop)</b></summary>
 
-The ChatGPT desktop app shares connectors configured on the web. Set up the connector on [chatgpt.com](https://chatgpt.com) first.
+The ChatGPT desktop app shares apps configured on the web. Set up the app on [chatgpt.com](https://chatgpt.com) first.
 
 #### 1. Enable Developer Mode (on the Web)
 
-Go to: `Settings` → `Apps & Connectors` → `Advanced settings` → Enable `Developer Mode`
+Go to: `Settings` → `Apps` → `Advanced settings` → Enable `Developer Mode`
 
-#### 2. Create a Connector (on the Web)
+#### 2. Create an App (on the Web)
 
-Go to: `Settings` → `Apps & Connectors` → `Create`
+Go to: `Settings` → `Apps` → `Create App`
 
 Fill in the following:
 
@@ -208,9 +210,9 @@ Fill in the following:
 
 #### 3. Use in the Desktop App
 
-Open the ChatGPT desktop app → Start a new chat → Select `Developer Mode` from the model selector → Choose the `Context7` connector.
+Open the ChatGPT desktop app → Start a new chat → ChatGPT will automatically use the `Context7` app when you ask it to.
 
-Connectors configured on the web are automatically available in the desktop app.
+Apps configured on the web are automatically available in the desktop app.
 
 See [OpenAI MCP docs](https://platform.openai.com/docs/mcp) for more info.
 
