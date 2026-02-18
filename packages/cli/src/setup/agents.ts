@@ -38,6 +38,10 @@ export interface AgentConfig {
     /** When set, the rule path is registered in the agent's config `instructions` array */
     instructionsGlob?: (scope: "project" | "global") => string;
   };
+  skill: {
+    name: string;
+    dir: (scope: "project" | "global") => string;
+  };
   detect: {
     projectPaths: string[];
     globalPaths: string[];
@@ -70,6 +74,11 @@ const agents: Record<SetupAgent, AgentConfig> = {
         scope === "global" ? join(homedir(), ".claude", "rules") : join(".claude", "rules"),
       filename: "context7.md",
     },
+    skill: {
+      name: "documentation-lookup",
+      dir: (scope) =>
+        scope === "global" ? join(homedir(), ".claude", "skills") : join(".claude", "skills"),
+    },
     detect: {
       projectPaths: [".mcp.json", ".claude"],
       globalPaths: [join(homedir(), ".claude")],
@@ -89,6 +98,11 @@ const agents: Record<SetupAgent, AgentConfig> = {
       dir: (scope) =>
         scope === "global" ? join(homedir(), ".cursor", "rules") : join(".cursor", "rules"),
       filename: "context7.mdc",
+    },
+    skill: {
+      name: "documentation-lookup",
+      dir: (scope) =>
+        scope === "global" ? join(homedir(), ".cursor", "skills") : join(".cursor", "skills"),
     },
     detect: {
       projectPaths: [".cursor"],
@@ -115,6 +129,11 @@ const agents: Record<SetupAgent, AgentConfig> = {
         scope === "global"
           ? join(homedir(), ".config", "opencode", "rules", "*.md")
           : ".opencode/rules/*.md",
+    },
+    skill: {
+      name: "documentation-lookup",
+      dir: (scope) =>
+        scope === "global" ? join(homedir(), ".agents", "skills") : join(".agents", "skills"),
     },
     detect: {
       projectPaths: [".opencode.json"],
