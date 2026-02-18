@@ -167,13 +167,13 @@ Go to: `Settings` → `Apps & Connectors` → `Create`
 
 Fill in the following:
 
-| Field            | Value                                                                                       |
-| ---------------- | ------------------------------------------------------------------------------------------- |
-| **Name**         | `Context7`                                                                                  |
-| **Description**  | `Fetch up-to-date documentation and code examples for any library directly from the source` |
-| **MCP Server URL** | `https://mcp.context7.com/mcp`                                                           |
+| Field              | Value                                                                                       |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| **Name**           | `Context7`                                                                                  |
+| **Description**    | `Fetch up-to-date documentation and code examples for any library directly from the source` |
+| **MCP Server URL** | `https://mcp.context7.com/mcp/oauth`                                                       |
 
-> Accept the security notice and confirm you trust this application.
+> Accept the security notice and complete the one-time OAuth authorization.
 
 #### 3. Use in a Conversation
 
@@ -198,13 +198,13 @@ Go to: `Settings` → `Apps & Connectors` → `Create`
 
 Fill in the following:
 
-| Field            | Value                                                                                       |
-| ---------------- | ------------------------------------------------------------------------------------------- |
-| **Name**         | `Context7`                                                                                  |
-| **Description**  | `Fetch up-to-date documentation and code examples for any library directly from the source` |
-| **MCP Server URL** | `https://mcp.context7.com/mcp`                                                           |
+| Field              | Value                                                                                       |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| **Name**           | `Context7`                                                                                  |
+| **Description**    | `Fetch up-to-date documentation and code examples for any library directly from the source` |
+| **MCP Server URL** | `https://mcp.context7.com/mcp/oauth`                                                       |
 
-> Accept the security notice and confirm you trust this application.
+> Accept the security notice and complete the one-time OAuth authorization.
 
 #### 3. Use in the Desktop App
 
