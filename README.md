@@ -152,6 +152,70 @@ Authenticates via OAuth, generates an API key, and configures the MCP server and
 
 </details>
 
+<details>
+<summary><b>Install in ChatGPT (Web)</b></summary>
+
+ChatGPT supports MCP servers through remote connectors via [Developer Mode](https://platform.openai.com/docs/guides/developer-mode) (beta). Available for Pro, Plus, Team, Enterprise, and Edu plans.
+
+#### 1. Enable Developer Mode
+
+Go to: `Settings` → `Apps & Connectors` → `Advanced settings` → Enable `Developer Mode`
+
+#### 2. Create a Connector
+
+Go to: `Settings` → `Apps & Connectors` → `Create`
+
+Fill in the following:
+
+| Field            | Value                                                                                       |
+| ---------------- | ------------------------------------------------------------------------------------------- |
+| **Name**         | `Context7`                                                                                  |
+| **Description**  | `Fetch up-to-date documentation and code examples for any library directly from the source` |
+| **MCP Server URL** | `https://mcp.context7.com/mcp`                                                           |
+
+> Accept the security notice and confirm you trust this application.
+
+#### 3. Use in a Conversation
+
+Start a new chat → Click the model selector → Choose `Developer Mode` → Select the `Context7` connector.
+
+See [OpenAI MCP docs](https://platform.openai.com/docs/mcp) for more info.
+
+</details>
+
+<details>
+<summary><b>Install in ChatGPT (Desktop)</b></summary>
+
+The ChatGPT desktop app shares connectors configured on the web. Set up the connector on [chatgpt.com](https://chatgpt.com) first.
+
+#### 1. Enable Developer Mode (on the Web)
+
+Go to: `Settings` → `Apps & Connectors` → `Advanced settings` → Enable `Developer Mode`
+
+#### 2. Create a Connector (on the Web)
+
+Go to: `Settings` → `Apps & Connectors` → `Create`
+
+Fill in the following:
+
+| Field            | Value                                                                                       |
+| ---------------- | ------------------------------------------------------------------------------------------- |
+| **Name**         | `Context7`                                                                                  |
+| **Description**  | `Fetch up-to-date documentation and code examples for any library directly from the source` |
+| **MCP Server URL** | `https://mcp.context7.com/mcp`                                                           |
+
+> Accept the security notice and confirm you trust this application.
+
+#### 3. Use in the Desktop App
+
+Open the ChatGPT desktop app → Start a new chat → Select `Developer Mode` from the model selector → Choose the `Context7` connector.
+
+Connectors configured on the web are automatically available in the desktop app.
+
+See [OpenAI MCP docs](https://platform.openai.com/docs/mcp) for more info.
+
+</details>
+
 **[Other IDEs and Clients →](https://context7.com/docs/resources/all-clients)**
 
 <details>
