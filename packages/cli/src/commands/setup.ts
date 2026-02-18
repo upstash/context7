@@ -20,7 +20,7 @@ import {
   getAgent,
   detectAgents,
 } from "../setup/agents.js";
-import { RULE_CONTENT } from "../setup/templates.js";
+import { RULE_CONTENT, SKILL_CONTENT } from "../setup/templates.js";
 import {
   readJsonConfig,
   mergeServerEntry,
@@ -190,6 +190,8 @@ async function setupAgent(
   mcpPath: string;
   ruleStatus: string;
   rulePath: string;
+  skillStatus: string;
+  skillPath: string;
 }> {
   const agent = getAgent(agentName);
 
@@ -237,7 +239,30 @@ async function setupAgent(
     ruleStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
   }
 
-  return { agent: agent.displayName, mcpStatus, mcpPath, ruleStatus, rulePath };
+  const skillDir =
+    scope === "global"
+      ? agent.skill.dir("global")
+      : join(process.cwd(), agent.skill.dir("project"));
+  const skillPath = join(skillDir, agent.skill.name, "SKILL.md");
+
+  let skillStatus: string;
+  try {
+    await mkdir(dirname(skillPath), { recursive: true });
+    await writeFile(skillPath, SKILL_CONTENT, "utf-8");
+    skillStatus = "installed";
+  } catch (err) {
+    skillStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
+  }
+
+  return {
+    agent: agent.displayName,
+    mcpStatus,
+    mcpPath,
+    ruleStatus,
+    rulePath,
+    skillStatus,
+    skillPath,
+  };
 }
 
 async function setupCommand(options: SetupOptions): Promise<void> {
@@ -273,6 +298,9 @@ async function setupCommand(options: SetupOptions): Promise<void> {
     const ruleIcon = r.ruleStatus === "installed" ? pc.green("+") : pc.dim("~");
     log.plain(`    ${ruleIcon} Rule ${r.ruleStatus}`);
     log.plain(`      ${pc.dim(r.rulePath)}`);
+    const skillIcon = r.skillStatus === "installed" ? pc.green("+") : pc.dim("~");
+    log.plain(`    ${skillIcon} Skill ${r.skillStatus}`);
+    log.plain(`      ${pc.dim(r.skillPath)}`);
   }
   log.blank();
 
