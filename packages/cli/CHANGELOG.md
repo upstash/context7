@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+### Patch Changes
+
+- c66950a: Install documentation-lookup skill during `ctx7 setup`
+
 ## 0.3.0
 
 ### Minor Changes
