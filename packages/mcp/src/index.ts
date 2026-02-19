@@ -149,6 +149,17 @@ server.registerTool(
 
 You MUST call this function before 'Query Documentation' tool to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
+Each result includes:
+- Library ID: Context7-compatible identifier (format: /org/project)
+- Name: Library or package name
+- Description: Short summary
+- Code Snippets: Number of available code examples
+- Source Reputation: Authority indicator (High, Medium, Low, or Unknown)
+- Benchmark Score: Quality indicator (100 is the highest score)
+- Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.
+
+For best results, select libraries based on name match, source reputation, snippet coverage, benchmark score, and relevance to your use case.
+
 Selection Process:
 1. Analyze the query to understand what library/package the user is looking for
 2. Return the most relevant match based on:
@@ -200,19 +211,6 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
     const resultsText = formatSearchResults(searchResponse);
 
     const responseText = `Available Libraries:
-
-Each result includes:
-- Library ID: Context7-compatible identifier (format: /org/project)
-- Name: Library or package name
-- Description: Short summary
-- Code Snippets: Number of available code examples
-- Source Reputation: Authority indicator (High, Medium, Low, or Unknown)
-- Benchmark Score: Quality indicator (100 is the highest score)
-- Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.
-
-For best results, select libraries based on name match, source reputation, snippet coverage, benchmark score, and relevance to your use case.
-
-----------
 
 ${resultsText}`;
 
