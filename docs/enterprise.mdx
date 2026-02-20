@@ -1,0 +1,95 @@
+---
+title: Enterprise
+sidebarTitle: Enterprise
+---
+
+Context7 Enterprise converts your internal documentation into structured, high-quality context optimized for LLMs — enabling human developers, coding agents, and engineering leaders to build faster and operate with clarity.
+
+## Core Use Cases
+
+### Assist Human Developers
+
+Cut onboarding time and reduce internal support load.
+
+- Faster onboarding and fewer interruptions
+- Immediate API/service reference inside IDEs
+- Always-up-to-date documentation context
+- Reduced Slack/Teams dependency
+
+### Power Coding Agents With Correct Documentation
+
+Let your agents write correct code on the first try.
+
+- Supply agents with accurate repo + docs context
+- Reduce hallucinations and incorrect API calls
+- Enable autonomous generation, refactoring, and analysis
+- Feed structured context into LangGraph/agent frameworks
+
+### Engineering Management & Knowledge Governance
+
+One source of truth. Zero stale docs.
+
+- Enforce documentation and context rules across projects
+- Automatically parse APIs, RST/Sphinx, MDX, OpenAPI
+- Detect outdated or inconsistent sections
+- Maintain a single source of truth across engineering
+
+## Enterprise Features
+
+- **SOC 2 certified** cloud infrastructure
+- **SSO** (SAML / OIDC)
+- Unlimited seats and teams
+- Custom volume expansions and high-usage plans
+- Private GitHub / GitLab / Bitbucket repository ingestion
+- Professional support with response time SLA
+- Self-hosted deployment options available
+
+## Security & Compliance
+
+Context7 runs on **SOC 2 Type II** compliant infrastructure provided by [Upstash](https://upstash.com). Key security highlights include:
+
+- **Privacy-first architecture** — your original prompts and code never leave your AI assistant. Only MCP-formulated search queries reach the Context7 API, and sensitive data is stripped before transmission.
+- **Encryption** at rest and in transit (TLS 1.2+)
+- **VPC isolation**, RBAC, DDoS protection, and 24/7 monitoring
+- **API key security** — cryptographically generated, hashed, encrypted, and rate-limited
+- **Enterprise SSO** — supports SAML 2.0, OAuth 2.0, and OpenID Connect (OIDC)
+- **GDPR compliant** with data access, deletion, and portability rights
+- Data stored in the US and EU with cross-border transfers following GDPR and EU-U.S. Data Privacy Framework
+- **ISO 27001** certification in progress
+- Open-source MCP server — publicly auditable at [github.com/upstash/context7](https://github.com/upstash/context7)
+
+Enterprise customers can also disable query storage, use their own LLM provider for code extraction and private library ranking, and limit context retrieval to privately indexed documentation only.
+
+For full details, see the [Security](/resources/security) page and the [Upstash Trust Center](https://trust.upstash.com/).
+
+## Quality & Safety
+
+Context7 is built with retrieval quality and trust at its core:
+
+- **Benchmark-driven retrieval** — a library benchmark system generates developer-style questions and measures how effectively each library answers them. Scores are publicly visible and help prioritize better-performing libraries during retrieval.
+- **Trust scores** — every library receives a trust score based on repository signals (stars, activity, account age) and website signals (TLS, domain authority, backlinks). This ensures reliable, well-established libraries are surfaced first.
+- **Deduplication** — exact match checking and cosine similarity filtering remove redundant code snippets and overlapping documentation content.
+- **Version-aware parsing** — a version analyzer detects multi-version documentation structures, ensuring only current docs are stored by default while older versions remain accessible.
+- **Prompt injection protection** — a two-pass detection pipeline combining complementary stages blocks malicious documentation content while minimizing false positives. Pipelines are regularly updated to address evolving attack methods.
+- **Minimal data ingestion** — Context7 does not ingest user code, conversation history, or other sensitive data.
+
+For more details, see the [Quality and Safety in Context7](https://upstash.com/blog/context7-quality-and-safety) blog post.
+
+## Pricing
+
+For pricing details and custom plans, [contact us](mailto:context7@upstash.com).
+
+## About Upstash
+
+Context7 is built by [Upstash](https://upstash.com), a serverless data platform powering 80,000+ active databases worldwide. Upstash delivers managed Redis, Vector, Queue, and Search services — processing 850+ billion requests per month with 99.99%+ uptime. Backed by Andreessen Horowitz (a16z) and headquartered in California, Upstash brings deep distributed systems expertise. Context7 follows the same engineering, reliability, and security standards.
+
+## Contact
+
+<CardGroup cols={2}>
+  <Card title="Email" icon="envelope" href="mailto:context7@upstash.com">
+    context7@upstash.com
+  </Card>
+  <Card title="Website" icon="globe" href="https://context7.com">
+    context7.com
+  </Card>
+</CardGroup>

@@ -186,6 +186,19 @@ Cross-border data transfers comply with the EU General Data Protection Regulatio
 - Automatic detection and blocking of abusive patterns
 - Protection against DDoS and scraping attacks
 
+## Prompt Injection Detection
+
+Context7 indexes documentation from public and private repositories. To protect against malicious content being served to AI assistants, Context7 employs a **two-pass prompt injection detection pipeline**.
+
+- **Complementary detection stages** — two independent classifiers run in sequence, combining different detection approaches to maximize coverage while minimizing false positives
+- **Skills.md pipeline** — a separate but related detection pipeline is used for [Skills](/skills) files, adapted to their distinct structure and intent
+- **Continuous monitoring** — flagged content is tracked and reviewed on an ongoing basis
+- **Regular updates** — classifier pipelines are updated to address evolving attack methods and new injection techniques
+
+This ensures that documentation retrieved through Context7 is safe to consume by both human developers and AI coding agents.
+
+For more details on how Context7 handles quality and safety, see the [Quality and Safety in Context7](https://upstash.com/blog/context7-quality-and-safety) blog post.
+
 ## Secure Development Practices
 
 - Regular security code reviews
