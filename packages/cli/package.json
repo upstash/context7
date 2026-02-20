@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "@types/figlet": "^1.7.0",
-    "@types/node": "^22.19.1",
+    "@types/node": "^25.3.0",
     "@typescript-eslint/eslint-plugin": "^8.28.0",
     "@typescript-eslint/parser": "^8.28.0",
     "eslint": "^9.34.0",
