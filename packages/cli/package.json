@@ -20,7 +20,7 @@
     "clean": "rm -rf dist node_modules"
   },
   "dependencies": {
-    "@inquirer/prompts": "^8.2.0",
+    "@inquirer/prompts": "^8.2.1",
     "commander": "^13.1.0",
     "figlet": "^1.9.4",
     "open": "^10.1.0",
