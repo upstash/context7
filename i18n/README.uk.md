@@ -356,13 +356,13 @@ npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME>
 #### Підключення до локального сервера Claude Code
 
 ```sh
-claude mcp add context7 -- npx -y @upstash/context7-mcp
+claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
 ```
 
 #### Підключення до віддаленого сервера Claude Code
 
 ```sh
-claude mcp add --transport http context7 https://mcp.context7.com/mcp
+claude mcp add --scope user --transport http context7 https://mcp.context7.com/mcp
 ```
 </details>
 

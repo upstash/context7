@@ -131,7 +131,7 @@ npx -y @smithery/cli install @upstash/context7-mcp --client claude
 ### التثبيت في Claude Code
 
 ```sh
-claude mcp add context7 -- npx -y @upstash/context7-mcp@latest
+claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp@latest
 ```
 
 ### التثبيت في Claude Desktop

@@ -88,13 +88,13 @@ Cursor의 `~/.cursor/mcp.json` 파일에 다음 설정을 붙여넣는 것이 �
 #### Claude Code 로컬 서버 연결
 
 ```sh
-claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 ```
 
 #### Claude Code 원격 서버 연결
 
 ```sh
-claude mcp add --header "CONTEXT7_API_KEY: YOUR_API_KEY" --transport http context7 https://mcp.context7.com/mcp
+claude mcp add --scope user --header "CONTEXT7_API_KEY: YOUR_API_KEY" --transport http context7 https://mcp.context7.com/mcp
 ```
 
 </details>

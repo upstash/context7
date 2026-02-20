@@ -90,13 +90,13 @@ Context7 將最新的程式碼範例與文件直接取得到你的 LLM 上下文
 #### Claude Code 本地伺服器連線
 
 ```sh
-claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 ```
 
 #### Claude Code 遠端伺服器連線
 
 ```sh
-claude mcp add --header "CONTEXT7_API_KEY: YOUR_API_KEY" --transport http context7 https://mcp.context7.com/mcp
+claude mcp add --scope user --header "CONTEXT7_API_KEY: YOUR_API_KEY" --transport http context7 https://mcp.context7.com/mcp
 ```
 
 </details>

@@ -310,13 +310,13 @@ Chạy lệnh này. Xem [tài liệu Claude Code MCP](https://docs.anthropic.com
 #### Kết nối Claude Code Local Server
 
 ```sh
-claude mcp add context7 -- npx -y @upstash/context7-mcp
+claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
 ```
 
 #### Kết nối Claude Code Remote Server
 
 ```sh
-claude mcp add --transport http context7 https://mcp.context7.com/mcp
+claude mcp add --scope user --transport http context7 https://mcp.context7.com/mcp
 ```
 </details>
 

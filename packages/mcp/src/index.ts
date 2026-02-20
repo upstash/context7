@@ -305,6 +305,7 @@ async function main() {
       return header;
     };
 
+    
     const extractApiKey = (req: express.Request): string | undefined => {
       return (
         extractBearerToken(req.headers.authorization) ||

@@ -137,7 +137,7 @@ Peut être installé via [Zed Extensions](https://zed.dev/extensions?query=Conte
 ### Installation dans Claude Code
 Exécutez cette commande. Voir la [documentation Claude Code MCP](https://docs.anthropic.com/fr/docs/claude-code/mcp).
 ```sh
-claude mcp add context7 -- npx -y @upstash/context7-mcp@latest
+claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp@latest
 ```
 
 ### Installation dans Claude Desktop

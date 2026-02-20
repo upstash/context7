@@ -16,7 +16,7 @@ No dependencies required. Connects to Context7's hosted server.
 Run this command in your terminal:
 
 ```bash
-claude mcp add --header "CONTEXT7_API_KEY: YOUR_API_KEY" --transport http context7 https://mcp.context7.com/mcp
+claude mcp add --scope user --header "CONTEXT7_API_KEY: YOUR_API_KEY" --transport http context7 https://mcp.context7.com/mcp
 ```
 </Tab>
 <Tab title="With OAuth">
@@ -25,7 +25,7 @@ claude mcp add --header "CONTEXT7_API_KEY: YOUR_API_KEY" --transport http contex
 Run this command in your terminal:
 
 ```bash
-claude mcp add --transport http context7 https://mcp.context7.com/mcp/oauth
+claude mcp add --scope user --transport http context7 https://mcp.context7.com/mcp/oauth
 ```
 </Step>
 <Step title="Authenticate with Context7">
@@ -43,7 +43,7 @@ This will open your browser for authorization. After you authorize, tokens are s
 Run this command in your terminal:
 
 ```bash
-claude mcp add --transport http context7 https://mcp.context7.com/mcp
+claude mcp add --scope user --transport http context7 https://mcp.context7.com/mcp
 ```
 </Tab>
 </Tabs>
@@ -56,7 +56,7 @@ Runs on your machine. Requires Node.js 18+.
 Run this command in your terminal:
 
 ```bash
-claude mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 ```
 
 <Tip>
@@ -67,7 +67,7 @@ Instead of passing the API key in the command, you can set `CONTEXT7_API_KEY` as
 Run this command in your terminal:
 
 ```bash
-claude mcp add context7 -- npx -y @upstash/context7-mcp
+claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
 ```
 </Tab>
 </Tabs>

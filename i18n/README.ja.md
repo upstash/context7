@@ -274,13 +274,13 @@ Smithery キーは [Smithery.ai Web ページ](https://smithery.ai/server/@upsta
 #### Claude Code ローカルサーバー接続
 
 ```sh
-claude mcp add context7 -- npx -y @upstash/context7-mcp
+claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
 ```
 
 #### Claude Code リモートサーバー接続
 
 ```sh
-claude mcp add --transport http context7 https://mcp.context7.com/mcp
+claude mcp add --scope user --transport http context7 https://mcp.context7.com/mcp
 ```
 </details>
 

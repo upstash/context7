@@ -123,7 +123,7 @@ Añade esto a tu archivo de configuración MCP de VS Code. Consulta la [document
 ### Instalar en Claude Code
 Ejecuta este comando. Consulta la [documentación de MCP de Claude Code](https://docs.anthropic.com/es/docs/claude-code/mcp) para más información.
 ```sh
-claude mcp add context7 -- npx -y @upstash/context7-mcp@latest
+claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp@latest
 ```
 
 ### Instalar en Claude Desktop
