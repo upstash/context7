@@ -44,7 +44,7 @@
   "homepage": "https://github.com/upstash/context7#readme",
   "devDependencies": {
     "@changesets/cli": "^2.29.7",
-    "@types/node": "^25.0.3",
+    "@types/node": "^25.3.0",
     "@typescript-eslint/eslint-plugin": "^8.28.0",
     "@typescript-eslint/parser": "^8.28.0",
     "eslint": "^9.34.0",
