@@ -1,5 +1,11 @@
 # @upstash/context7-mcp
 
+## 2.1.2
+
+### Patch Changes
+
+- 617d8ed: Remove unnecessary warning and update tool descriptions
+
 ## 2.1.1
 
 ### Patch Changes
