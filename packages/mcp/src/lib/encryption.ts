@@ -5,10 +5,6 @@ const DEFAULT_ENCRYPTION_KEY = "000102030405060708090a0b0c0d0e0f1011121314151617
 const ENCRYPTION_KEY = process.env.CLIENT_IP_ENCRYPTION_KEY || DEFAULT_ENCRYPTION_KEY;
 const ALGORITHM = "aes-256-cbc";
 
-if (ENCRYPTION_KEY === DEFAULT_ENCRYPTION_KEY) {
-  console.warn("WARNING: Using default CLIENT_IP_ENCRYPTION_KEY.");
-}
-
 function validateEncryptionKey(key: string): boolean {
   // Must be exactly 64 hex characters (32 bytes)
   return /^[0-9a-fA-F]{64}$/.test(key);
