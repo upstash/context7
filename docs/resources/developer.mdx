@@ -63,6 +63,16 @@ You can use the `CONTEXT7_API_KEY` environment variable instead of passing the `
 - Integration with MCP server setups that use dotenv
 - Tools that prefer environment variable configuration
 
+### HTTP Transport CORS (Optional)
+
+When running with `--transport http`, you can optionally restrict browser origins by setting:
+
+```bash
+CONTEXT7_ALLOWED_ORIGINS="https://chatgpt.com,https://chat.openai.com"
+```
+
+If `CONTEXT7_ALLOWED_ORIGINS` is not set, CORS remains permissive for compatibility.
+
 <Warning>
   The `--api-key` CLI flag takes precedence over the environment variable when both are provided.
 </Warning>
