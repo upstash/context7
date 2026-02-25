@@ -451,7 +451,7 @@
             "properties": {
               "global": {
                 "type": "array",
-                "description": "Global team rules",
+                "description": "Global teamspace rules",
                 "items": {
                   "type": "string"
                 }
@@ -465,7 +465,7 @@
               },
               "libraryTeam": {
                 "type": "array",
-                "description": "Library-specific rules from the team",
+                "description": "Library-specific rules from the teamspace",
                 "items": {
                   "type": "string"
                 }
