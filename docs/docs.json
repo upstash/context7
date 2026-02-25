@@ -74,6 +74,16 @@
                 ]
               }
             ]
+          },
+          {
+            "group": "Python",
+            "pages": [
+              "sdks/python/getting-started",
+              {
+                "group": "Commands",
+                "pages": ["sdks/python/commands/search-library", "sdks/python/commands/get-context"]
+              }
+            ]
           }
         ]
       },
