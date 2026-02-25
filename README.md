@@ -140,6 +140,25 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
 </details>
 
 <details>
+<summary><b>Install in AdaL CLI</b></summary>
+
+Run one of the following commands directly within your AdaL session. See [AdaL CLI MCP docs](https://github.com/SylphAI-Inc/AdaL?tab=readme-ov-file#mcp-servers) for more info.
+
+#### AdaL CLI Remote Server Connection
+
+```bash
+/mcp add context7 --transport http --url https://mcp.context7.com/mcp --header "CONTEXT7_API_KEY: YOUR_API_KEY"
+```
+
+#### AdaL CLI Local Server Connection
+
+```bash
+/mcp add context7 --command npx --args "-y,@upstash/context7-mcp,--api-key,YOUR_API_KEY"
+```
+
+</details>
+
+<details>
 <summary><b>Install with ctx7 setup</b></summary>
 
 Set up Context7 MCP for your coding agents:
