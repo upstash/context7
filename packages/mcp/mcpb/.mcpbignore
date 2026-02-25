@@ -1,9 +1,39 @@
-schema/context7.json
+# npx-based bundle - exclude all source code
+# Only manifest.json and icon.png are needed
+
+# Source and build
+*.ts
+*.js
+dist/
+src/
+node_modules/
+
+# Config files
+*.json
+!manifest.json
+*.yaml
+*.mjs
+tsconfig.json
+eslint.config.js
 prettier.config.mjs
 smithery.yaml
-Dockerfile
-eslint.config.js
+
+# Documentation
 *.md
-*.ts
 LICENSE
+
+# Docker
+Dockerfile
+
+# Schema
+schema/
+
+# Public assets (icon is copied separately)
 public/*
+
+# Package files
+package.json
+pnpm-lock.yaml
+
+# Old bundle
+*.mcpb

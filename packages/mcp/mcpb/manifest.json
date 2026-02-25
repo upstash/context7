@@ -1,8 +1,8 @@
 {
-  "dxt_version": "0.1",
+  "manifest_version": "0.3",
   "name": "context7",
   "display_name": "Context7",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Up-to-date Code Docs For Any Prompt",
   "long_description": "Context7 MCP pulls up-to-date, version-specific documentation and code examples straight from the source — and places them directly into your prompt.",
   "author": {
@@ -12,13 +12,15 @@
   },
   "homepage": "https://context7.com",
   "documentation": "https://github.com/upstash/context7",
+  "support": "https://github.com/upstash/context7/issues",
+  "privacy_policies": ["https://upstash.com/privacy"],
   "icon": "icon.png",
   "server": {
     "type": "node",
     "entry_point": "dist/index.js",
     "mcp_config": {
-      "command": "node",
-      "args": ["${__dirname}/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "--package=@upstash/context7-mcp", "context7-mcp"],
       "env": {}
     }
   },
