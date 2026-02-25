@@ -167,7 +167,7 @@ Set up Context7 MCP for your coding agents:
 npx ctx7 setup
 ```
 
-Authenticates via OAuth, generates an API key, and configures the MCP server and rule for your agents. Use `--cursor`, `--claude`, `--opencode`, or `--adal` to target a specific agent.
+Authenticates via OAuth, generates an API key, and configures the MCP server and rule for your agents. Use `--cursor`, `--claude`, or `--opencode` to target a specific agent.
 
 </details>
 
