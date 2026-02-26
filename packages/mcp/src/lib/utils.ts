@@ -48,6 +48,10 @@ export function formatSearchResult(result: SearchResult): string {
     formattedResult.push(`- Versions: ${result.versions.join(", ")}`);
   }
 
+  if (result.source) {
+    formattedResult.push(`- Source: ${result.source}`);
+  }
+
   // Join all parts with newlines
   return formattedResult.join("\n");
 }
