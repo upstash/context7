@@ -90,7 +90,7 @@ Run this command. See [Claude Code MCP docs](https://code.claude.com/docs/en/mcp
 #### Claude Code Local Server Connection
 
 ```sh
-claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+claude mcp add --scope user context7 --npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 ```
 
 #### Claude Code Remote Server Connection
