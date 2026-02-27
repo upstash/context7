@@ -37,7 +37,7 @@ Use your license key to get a registry token and log in:
 TOKEN=$(curl -s -H "Authorization: Bearer <your-license-key>" \
   https://context7.com/api/v1/license/registry-token | jq -r '.token')
 
-echo "$TOKEN" | docker login ghcr.io -u x-access-token --password-stdin
+docker login ghcr.io -u x-access-token -p $TOKEN
 ```
 
 Docker stores these credentials locally — `docker compose` will use them automatically when pulling the image. You can also pull manually:
@@ -207,7 +207,7 @@ If your registry login has expired, re-authenticate first:
 TOKEN=$(curl -s -H "Authorization: Bearer <your-license-key>" \
   https://context7.com/api/v1/license/registry-token | jq -r '.token')
 
-echo "$TOKEN" | docker login ghcr.io -u x-access-token --password-stdin
+docker login ghcr.io -u x-access-token -p $TOKEN
 ```
 
 ## Support
