@@ -9,6 +9,7 @@ on:
         type: string
 
 permissions:
+
   contents: read
 
 jobs:
