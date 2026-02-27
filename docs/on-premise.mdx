@@ -31,18 +31,17 @@ Go to [context7.com/plans](https://context7.com/plans) and click **On-Premise Tr
 
 <Step title="Pull the Docker image">
 
-Use your license key to get a time-limited download URL and pull the image:
+Use your license key to authenticate with the container registry and pull the image:
 
 ```bash
-curl -s -H "Authorization: Bearer <your-license-key>" \
-  "https://context7.com/api/v1/license/registry-token?arch=amd64" \
-  | jq -r '.downloads.amd64' \
-  | xargs curl -L -o context7-enterprise.tar.gz
+# Get a registry token
+TOKEN=$(curl -s -H "Authorization: Bearer <your-license-key>" \
+  https://context7.com/api/v1/license/registry-token | jq -r '.token')
 
-docker load < context7-enterprise.tar.gz
+# Login and pull
+echo "$TOKEN" | docker login ghcr.io -u x-access-token --password-stdin
+docker pull ghcr.io/context7/enterprise:latest
 ```
-
-Replace `arch=amd64` with `arch=arm64` for ARM hosts.
 
 </Step>
 
@@ -53,7 +52,7 @@ Create a `docker-compose.yml`:
 ```yaml
 services:
   context7:
-    image: context7-enterprise:latest
+    image: ghcr.io/context7/enterprise:latest
     container_name: context7
     restart: unless-stopped
     ports:
@@ -192,16 +191,20 @@ Returns a JSON object with license status, LLM configuration, and storage health
 ## Updating the Image
 
 ```bash
-curl -s -H "Authorization: Bearer <your-license-key>" \
-  "https://context7.com/api/v1/license/registry-token?arch=amd64" \
-  | jq -r '.downloads.amd64' \
-  | xargs curl -L -o context7-enterprise.tar.gz
-
-docker load < context7-enterprise.tar.gz
+docker compose pull
 docker compose up -d
 ```
 
 Data persists in the named Docker volume across updates.
+
+If your registry login has expired, re-authenticate first:
+
+```bash
+TOKEN=$(curl -s -H "Authorization: Bearer <your-license-key>" \
+  https://context7.com/api/v1/license/registry-token | jq -r '.token')
+
+echo "$TOKEN" | docker login ghcr.io -u x-access-token --password-stdin
+```
 
 ## Support
 
