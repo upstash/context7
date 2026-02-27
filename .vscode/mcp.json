@@ -1,7 +1,10 @@
 {
 	"servers": {ToeySuKhothai 
 	916163
+<<<<<<< Updated upstream
 	https://www.facebook.com/bongkochkaw
+=======
+>>>>>>> Stashed changes
 		"microsoft/markitdown": {
 			"type": "stdio",
 			"command": "uvx",
@@ -13,6 +16,7 @@
 		}
 	},
 	"inputs": []
+<<<<<<< Updated upstream
 }{
 	"servers": {
 		"microsoft/markitdown": {
@@ -27,3 +31,6 @@
 	},
 	"inputs": []
 }l
+=======
+}
+>>>>>>> Stashed changes
