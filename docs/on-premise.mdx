@@ -1,0 +1,215 @@
+---
+title: "On-Premise Deployment"
+sidebarTitle: "On-Premise"
+hidden: true
+---
+
+Context7 On-Premise lets you run the full Context7 stack inside your own infrastructure. Your code, documentation, and embeddings never leave your environment.
+
+## What's Included
+
+- Full Context7 parsing and indexing pipeline
+- Local vector storage (no external vector DB required)
+- Built-in MCP server — works with any MCP-compatible AI client
+- Web UI for managing indexed libraries
+- REST API compatible with the public Context7 API
+- Private GitHub and GitLab repository ingestion
+
+<Frame>
+  ![On-Premise Architecture](/images/on-premise-architecture.png)
+</Frame>
+
+## Setup
+
+<Steps>
+
+<Step title="Request a trial">
+
+Go to [context7.com/plans](https://context7.com/plans) and click **On-Premise Trial**. Fill out the request form — no credit card required. You'll receive a 30-day full-featured license key via email once approved.
+
+</Step>
+
+<Step title="Authenticate with the registry">
+
+Use your license key to get a registry token and log in:
+
+```bash
+TOKEN=$(curl -s -H "Authorization: Bearer <your-license-key>" \
+  https://context7.com/api/v1/license/registry-token | jq -r '.token')
+
+docker login ghcr.io -u x-access-token -p $TOKEN
+```
+
+Docker stores these credentials locally — `docker compose` will use them automatically when pulling the image. You can also pull manually:
+
+```bash
+docker pull ghcr.io/context7/enterprise:latest
+```
+
+</Step>
+
+<Step title="Configure and start">
+
+Create a `docker-compose.yml`:
+
+```yaml
+services:
+  context7:
+    image: ghcr.io/context7/enterprise:latest
+    container_name: context7
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - context7-data:/data
+    environment:
+      - LICENSE_KEY=${LICENSE_KEY}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+
+volumes:
+  context7-data:
+    driver: local
+```
+
+Create a `.env` file in the same directory:
+
+```bash
+LICENSE_KEY=ctx7lic-...
+LLM_API_KEY=sk-...       # OpenAI, Anthropic, Gemini, or compatible
+GITHUB_TOKEN=ghp_...     # For repository ingestion
+```
+
+Start the service (this will pull the image on first run):
+
+```bash
+docker compose up -d
+```
+
+</Step>
+
+<Step title="Ingest your first repository">
+
+Open your deployment URL in a browser to access the dashboard. From there, add a repository or documentation source to index. Once ingestion completes, your private docs are ready to query.
+
+You can also add libraries via the REST API:
+
+```bash
+curl -X POST https://context7.internal.yourcompany.com/api/v1/libraries \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://github.com/your-org/your-repo"}'
+```
+
+</Step>
+
+</Steps>
+
+## Connecting Your AI Client
+
+Point your MCP client at your deployment URL. Replace `https://context7.internal.yourcompany.com` with your actual host.
+
+### Claude Code
+
+```bash
+claude mcp add --scope user --transport http context7 https://context7.internal.yourcompany.com/mcp
+```
+
+### Cursor
+
+Add to `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "url": "https://context7.internal.yourcompany.com/mcp"
+    }
+  }
+}
+```
+
+### Opencode
+
+```json
+{
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://context7.internal.yourcompany.com/mcp",
+      "enabled": true
+    }
+  }
+}
+```
+
+For other clients, see [All Clients](/resources/all-clients).
+
+## Configuration
+
+| Variable | Required | Description |
+|---|---|---|
+| `LICENSE_KEY` | Yes | License key issued by Upstash |
+| `LLM_API_KEY` | Yes | API key for your LLM provider |
+| `GITHUB_TOKEN` | Yes | GitHub PAT for repository ingestion |
+| `GITLAB_TOKEN` | No | GitLab token for GitLab repositories |
+| `LLM_PROVIDER` | No | Force a provider: `openai`, `anthropic`, `gemini`. Auto-detected from model name if unset |
+| `LLM_MODEL` | No | Model name (default: `gpt-4o`) |
+| `LLM_BASE_URL` | No | Custom OpenAI-compatible endpoint |
+| `EMBEDDING_PROVIDER` | No | Force embedding provider. Falls back to `LLM_PROVIDER` |
+| `EMBEDDING_API_KEY` | No | Separate API key for embeddings. Falls back to `LLM_API_KEY` |
+| `EMBEDDING_MODEL` | No | Embedding model name |
+| `EMBEDDING_BASE_URL` | No | Custom embedding endpoint |
+| `PORT` | No | HTTP port (default: `3000`) |
+| `DATA_DIR` | No | Data directory inside the container (default: `./data`) |
+
+### Using Anthropic
+
+```bash
+LLM_PROVIDER=anthropic
+LLM_API_KEY=sk-ant-...
+LLM_MODEL=claude-opus-4-5
+```
+
+### Using a Local / Custom Model
+
+Set `LLM_BASE_URL` to any OpenAI-compatible endpoint (Ollama, vLLM, etc.):
+
+```bash
+LLM_BASE_URL=http://host.docker.internal:11434/v1
+LLM_MODEL=llama3.2
+LLM_API_KEY=ollama
+```
+
+## Web UI
+
+Open your deployment URL in a browser to access the dashboard. From here you can add and remove libraries, trigger re-indexing, and monitor parsing status.
+
+## Health Check
+
+```bash
+curl https://context7.internal.yourcompany.com/api/health
+```
+
+Returns a JSON object with license status, LLM configuration, and storage health.
+
+## Updating the Image
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Data persists in the named Docker volume across updates.
+
+If your registry login has expired, re-authenticate first:
+
+```bash
+TOKEN=$(curl -s -H "Authorization: Bearer <your-license-key>" \
+  https://context7.com/api/v1/license/registry-token | jq -r '.token')
+
+docker login ghcr.io -u x-access-token -p $TOKEN
+```
+
+## Support
+
+For license issues, upgrade requests, or deployment questions, contact [context7@upstash.com](mailto:context7@upstash.com).
