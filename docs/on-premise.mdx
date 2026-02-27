@@ -29,19 +29,18 @@ Go to [context7.com/plans](https://context7.com/plans) and click **On-Premise Tr
 
 </Step>
 
-<Step title="Pull the Docker image">
+<Step title="Authenticate with the registry">
 
-Use your license key to authenticate with the container registry and pull the image:
+Use your license key to get a registry token and log in:
 
 ```bash
-# Get a registry token
 TOKEN=$(curl -s -H "Authorization: Bearer <your-license-key>" \
   https://context7.com/api/v1/license/registry-token | jq -r '.token')
 
-# Login and pull
 echo "$TOKEN" | docker login ghcr.io -u x-access-token --password-stdin
-docker pull ghcr.io/context7/enterprise:latest
 ```
+
+Docker stores these credentials locally — `docker compose` will use them automatically when pulling the image.
 
 </Step>
 
@@ -66,9 +65,10 @@ services:
 
 volumes:
   context7-data:
+    driver: local
 ```
 
-Create a `.env` file:
+Create a `.env` file in the same directory:
 
 ```bash
 LICENSE_KEY=ctx7lic-...
@@ -76,7 +76,7 @@ LLM_API_KEY=sk-...       # OpenAI, Anthropic, Gemini, or compatible
 GITHUB_TOKEN=ghp_...     # For repository ingestion
 ```
 
-Start the service:
+Start the service (this will pull the image on first run):
 
 ```bash
 docker compose up -d
