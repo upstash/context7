@@ -40,7 +40,11 @@ TOKEN=$(curl -s -H "Authorization: Bearer <your-license-key>" \
 echo "$TOKEN" | docker login ghcr.io -u x-access-token --password-stdin
 ```
 
-Docker stores these credentials locally — `docker compose` will use them automatically when pulling the image.
+Docker stores these credentials locally — `docker compose` will use them automatically when pulling the image. You can also pull manually:
+
+```bash
+docker pull ghcr.io/context7/enterprise:latest
+```
 
 </Step>
 
