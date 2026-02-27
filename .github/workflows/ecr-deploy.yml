@@ -11,6 +11,7 @@ on:
 permissions:
 
   contents: read
+  
 
 jobs:
   build-and-push:
