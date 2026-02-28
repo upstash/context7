@@ -8,11 +8,6 @@ on:
         required: true
         type: string
 
-permissions:
-
-  contents: read
-  
-
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
