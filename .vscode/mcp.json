@@ -1,0 +1,36 @@
+{
+	"servers": {ToeySuKhothai 
+	916163
+<<<<<<< Updated upstream
+	https://www.facebook.com/bongkochkaw
+=======
+>>>>>>> Stashed changes
+		"microsoft/markitdown": {
+			"type": "stdio",
+			"command": "uvx",
+			"args": [
+				"markitdown-mcp@0.0.1a4"
+			],
+			"gallery": "https://api.mcp.github.com",
+			"version": "1.0.0"
+		}
+	},
+	"inputs": []
+<<<<<<< Updated upstream
+}{
+	"servers": {
+		"microsoft/markitdown": {
+			"type": "stdio",
+			"command": "uvx",
+			"args": [
+				"markitdown-mcp@0.0.1a4"
+			],
+			"gallery": "https://api.mcp.github.com",
+			"version": "1.0.0"
+		}
+	},
+	"inputs": []
+}l
+=======
+}
+>>>>>>> Stashed changes
