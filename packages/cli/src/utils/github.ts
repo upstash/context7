@@ -126,6 +126,12 @@ export async function downloadSkillFromGitHub(
       const content = await fileResponse.text();
       const relativePath = item.path.slice(skillPath.length + 1);
 
+      // Prevent path traversal from malicious repo tree responses
+      if (relativePath.includes("..") || relativePath.startsWith("/")) {
+        console.warn(`Skipping suspicious path: ${relativePath}`);
+        continue;
+      }
+
       files.push({
         path: relativePath,
         content,

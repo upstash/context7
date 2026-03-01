@@ -1,5 +1,5 @@
 import { mkdir, writeFile, rm, symlink, lstat } from "fs/promises";
-import { join } from "path";
+import { join, resolve } from "path";
 
 import type { SkillFile } from "../types.js";
 
@@ -8,10 +8,18 @@ export async function installSkillFiles(
   files: SkillFile[],
   targetDir: string
 ): Promise<void> {
-  const skillDir = join(targetDir, skillName);
+  const skillDir = resolve(join(targetDir, skillName));
 
   for (const file of files) {
-    const filePath = join(skillDir, file.path);
+    const filePath = resolve(join(skillDir, file.path));
+
+    // Prevent path traversal — resolved path must stay within skillDir
+    if (!filePath.startsWith(skillDir + "/") && filePath !== skillDir) {
+      throw new Error(
+        `Path traversal detected: file path "${file.path}" escapes skill directory`
+      );
+    }
+
     const fileDir = join(filePath, "..");
 
     await mkdir(fileDir, { recursive: true });

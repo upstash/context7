@@ -25,18 +25,27 @@ export function setBaseUrl(url: string): void {
 export async function listProjectSkills(project: string): Promise<ListSkillsResponse> {
   const params = new URLSearchParams({ project });
   const response = await fetch(`${baseUrl}/api/v2/skills?${params}`);
+  if (!response.ok) {
+    return { project, skills: [], error: `HTTP error ${response.status}` };
+  }
   return (await response.json()) as ListSkillsResponse;
 }
 
 export async function getSkill(project: string, skillName: string): Promise<SingleSkillResponse> {
   const params = new URLSearchParams({ project, skill: skillName });
   const response = await fetch(`${baseUrl}/api/v2/skills?${params}`);
+  if (!response.ok) {
+    return { name: skillName, description: "", url: "", project, error: `HTTP error ${response.status}` };
+  }
   return (await response.json()) as SingleSkillResponse;
 }
 
 export async function searchSkills(query: string): Promise<SearchResponse> {
   const params = new URLSearchParams({ query });
   const response = await fetch(`${baseUrl}/api/v2/skills?${params}`);
+  if (!response.ok) {
+    return { results: [], error: `HTTP error ${response.status}` };
+  }
   return (await response.json()) as SearchResponse;
 }
 
@@ -53,6 +62,9 @@ export async function suggestSkills(
     headers,
     body: JSON.stringify({ dependencies }),
   });
+  if (!response.ok) {
+    return { skills: [], error: `HTTP error ${response.status}` };
+  }
   return (await response.json()) as SuggestResponse;
 }
 
