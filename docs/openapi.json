@@ -179,6 +179,595 @@
           }
         ]
       }
+    },
+    "/v2/add/repo/github": {
+      "post": {
+        "summary": "Add a GitHub repository",
+        "description": "Submit a GitHub repository for documentation processing. Supports private repos via a gitToken or by connecting your GitHub account at https://context7.com/add-library.",
+        "operationId": "addGitHubRepo",
+        "tags": ["Add Library"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddRepoRequest"
+              },
+              "example": {
+                "docsRepoUrl": "https://github.com/vercel/next.js"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AddLibrarySuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "409": {
+            "$ref": "#/components/responses/DuplicateError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "504": {
+            "$ref": "#/components/responses/GatewayTimeoutError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v2/add/repo/gitlab": {
+      "post": {
+        "summary": "Add a GitLab repository",
+        "description": "Submit a GitLab repository for documentation processing. Supports private repos via a gitToken or by connecting your GitLab account at https://context7.com/add-library.",
+        "operationId": "addGitLabRepo",
+        "tags": ["Add Library"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddRepoRequest"
+              },
+              "example": {
+                "docsRepoUrl": "https://gitlab.com/owner/repo"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AddLibrarySuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "409": {
+            "$ref": "#/components/responses/DuplicateError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "504": {
+            "$ref": "#/components/responses/GatewayTimeoutError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v2/add/repo/bitbucket": {
+      "post": {
+        "summary": "Add a Bitbucket repository",
+        "description": "Submit a Bitbucket repository for documentation processing. Supports private repos via a gitToken or by connecting your Bitbucket account at https://context7.com/add-library.",
+        "operationId": "addBitbucketRepo",
+        "tags": ["Add Library"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddRepoRequest"
+              },
+              "example": {
+                "docsRepoUrl": "https://bitbucket.org/owner/repo"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AddLibrarySuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "409": {
+            "$ref": "#/components/responses/DuplicateError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "504": {
+            "$ref": "#/components/responses/GatewayTimeoutError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v2/add/repo/git": {
+      "post": {
+        "summary": "Add from other Git providers",
+        "description": "Submit a repository from any Git provider not covered by the dedicated GitHub, GitLab, or Bitbucket endpoints. Supports Gitea, Forgejo, Codeberg, self-hosted GitLab, and other Git servers. For private repos, provide a personal access token via the gitToken field.",
+        "operationId": "addGitRepo",
+        "tags": ["Add Library"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["docsRepoUrl"],
+                "properties": {
+                  "docsRepoUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "The Git repository URL"
+                  },
+                  "gitToken": {
+                    "type": "string",
+                    "description": "Personal access token for private repositories"
+                  },
+                  "private": {
+                    "type": "boolean",
+                    "description": "Whether the repository is private"
+                  },
+                  "skipBenchmark": {
+                    "type": "boolean",
+                    "description": "Skip benchmark quality scoring after parsing"
+                  },
+                  "skipContextGeneration": {
+                    "type": "boolean",
+                    "description": "Skip automatic default context generation"
+                  },
+                  "skipVersionFiltering": {
+                    "type": "boolean",
+                    "description": "Skip filtering out version-specific documentation pages"
+                  }
+                }
+              },
+              "example": {
+                "docsRepoUrl": "https://codeberg.org/owner/repo"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AddLibrarySuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "409": {
+            "$ref": "#/components/responses/DuplicateError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "504": {
+            "$ref": "#/components/responses/GatewayTimeoutError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v2/add/openapi": {
+      "post": {
+        "summary": "Add an OpenAPI specification by URL",
+        "description": "Submit an OpenAPI specification URL for documentation processing.",
+        "operationId": "addOpenApi",
+        "tags": [
+          "Add Library"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "openApiUrl"
+                ],
+                "properties": {
+                  "openApiUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "URL pointing to an OpenAPI specification (JSON or YAML)"
+                  }
+                }
+              },
+              "example": {
+                "openApiUrl": "https://api.example.com/openapi.json"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AddLibrarySuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "504": {
+            "$ref": "#/components/responses/GatewayTimeoutError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v2/add/llmstxt": {
+      "post": {
+        "summary": "Add an llms.txt file",
+        "description": "Submit an llms.txt file URL for documentation processing.",
+        "operationId": "addLlmsTxt",
+        "tags": [
+          "Add Library"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "llmstxtUrl"
+                ],
+                "properties": {
+                  "llmstxtUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "URL pointing to an llms.txt, llms-full.txt, or llms-small.txt file"
+                  }
+                }
+              },
+              "example": {
+                "llmstxtUrl": "https://docs.example.com/llms.txt"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AddLibrarySuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "504": {
+            "$ref": "#/components/responses/GatewayTimeoutError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v2/add/website": {
+      "post": {
+        "summary": "Add a website",
+        "description": "Submit a website URL for documentation processing.",
+        "operationId": "addWebsite",
+        "tags": [
+          "Add Library"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "websiteUrl"
+                ],
+                "properties": {
+                  "websiteUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "The website URL to process"
+                  },
+                  "websiteBaseUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Base URL to limit crawling scope. Only pages starting with this URL will be indexed."
+                  }
+                }
+              },
+              "example": {
+                "websiteUrl": "https://docs.example.com"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AddLibrarySuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "422": {
+            "$ref": "#/components/responses/UnprocessableEntityError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "504": {
+            "$ref": "#/components/responses/GatewayTimeoutError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v2/add/openapi-upload": {
+      "post": {
+        "summary": "Upload an OpenAPI specification file",
+        "description": "Upload an OpenAPI specification file (JSON or YAML) for documentation processing. Requires a team project. File size limit is 10MB.",
+        "operationId": "addOpenApiUpload",
+        "tags": ["Add Library"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["openapiFile"],
+                "properties": {
+                  "openapiFile": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "The OpenAPI specification file (.json, .yaml, or .yml)"
+                  },
+                  "libraryTitle": {
+                    "type": "string",
+                    "description": "Custom title for the library"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Description of the library"
+                  },
+                  "skipBenchmark": {
+                    "type": "string",
+                    "enum": ["true"],
+                    "description": "Set to 'true' to skip benchmark quality scoring"
+                  },
+                  "force": {
+                    "type": "string",
+                    "enum": ["true"],
+                    "description": "Set to 'true' to force reprocessing"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AddLibrarySuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "409": {
+            "$ref": "#/components/responses/DuplicateError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "504": {
+            "$ref": "#/components/responses/GatewayTimeoutError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v1/refresh": {
+      "post": {
+        "summary": "Refresh a library",
+        "description": "Trigger a refresh of an existing library to fetch the latest documentation. Library owners have dedicated refresh limits.",
+        "operationId": "refreshLibrary",
+        "tags": ["Refresh"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["libraryName"],
+                "properties": {
+                  "libraryName": {
+                    "type": "string",
+                    "description": "Library identifier in `/owner/repo` format"
+                  },
+                  "branch": {
+                    "type": "string",
+                    "description": "Optional branch name to refresh"
+                  }
+                }
+              },
+              "example": {
+                "libraryName": "/vercel/next.js"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Refresh started successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "libraryName": {
+                      "type": "string",
+                      "description": "The library identifier"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["libraryName", "message"]
+                },
+                "example": {
+                  "libraryName": "/vercel/next.js",
+                  "message": "Refresh started successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -451,7 +1040,7 @@
             "properties": {
               "global": {
                 "type": "array",
-                "description": "Global teamspace rules",
+                "description": "Global team rules",
                 "items": {
                   "type": "string"
                 }
@@ -465,7 +1054,7 @@
               },
               "libraryTeam": {
                 "type": "array",
-                "description": "Library-specific rules from the teamspace",
+                "description": "Library-specific rules from the team",
                 "items": {
                   "type": "string"
                 }
@@ -486,13 +1075,56 @@
           "message": {
             "type": "string",
             "description": "Human-readable error message"
-          },
-          "status": {
-            "type": "integer",
-            "description": "HTTP status code"
           }
         },
-        "required": ["error"]
+        "required": ["error", "message"]
+      },
+      "AddRepoRequest": {
+        "type": "object",
+        "description": "Request body for adding a Git repository",
+        "required": ["docsRepoUrl"],
+        "properties": {
+          "docsRepoUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "The repository URL"
+          },
+          "gitToken": {
+            "type": "string",
+            "description": "Personal access token for private repositories. If not provided, the token from your OAuth connection at https://context7.com/add-library is used."
+          },
+          "private": {
+            "type": "boolean",
+            "description": "Whether the repository is private"
+          },
+          "skipBenchmark": {
+            "type": "boolean",
+            "description": "Skip benchmark quality scoring after parsing"
+          },
+          "skipContextGeneration": {
+            "type": "boolean",
+            "description": "Skip automatic default context generation"
+          },
+          "skipVersionFiltering": {
+            "type": "boolean",
+            "description": "Skip filtering out version-specific documentation pages"
+          }
+        }
+      },
+      "AddLibraryResponse": {
+        "type": "object",
+        "description": "Response after successfully submitting a library",
+        "properties": {
+          "libraryName": {
+            "type": "string",
+            "description": "The library identifier assigned (e.g., /owner/repo)"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable success message"
+          }
+        },
+        "required": ["libraryName", "message"]
       },
       "RedirectErrorResponse": {
         "allOf": [
@@ -539,21 +1171,40 @@
         }
       },
       "ForbiddenError": {
-        "description": "Forbidden - Access denied",
+        "description": "Forbidden - Insufficient permissions or plan restrictions",
         "content": {
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/Error"
             },
-            "example": {
-              "error": "access_denied",
-              "message": "Access denied: Library /owner/repo is not included in your allowed libraries"
+            "examples": {
+              "accessDenied": {
+                "summary": "Library not in allowed list",
+                "value": {
+                  "error": "access_denied",
+                  "message": "Access denied: Library /owner/repo is not included in your allowed libraries"
+                }
+              },
+              "insufficientRole": {
+                "summary": "Insufficient team role",
+                "value": {
+                  "error": "forbidden",
+                  "message": "Only team owners and admins can add private repositories"
+                }
+              },
+              "planRequired": {
+                "summary": "Plan upgrade required",
+                "value": {
+                  "error": "forbidden",
+                  "message": "Private repositories require a pro plan or team. Upgrade at https://context7.com/plans"
+                }
+              }
             }
           }
         }
       },
       "NotFoundError": {
-        "description": "Not Found - Library or resource doesn't exist",
+        "description": "Not Found - Resource doesn't exist",
         "content": {
           "application/json": {
             "schema": {
@@ -580,6 +1231,20 @@
                   "error": "no_snippets_found",
                   "message": "Could not fetch documentation snippets from the library."
                 }
+              },
+              "teamNotFound": {
+                "summary": "Team not found",
+                "value": {
+                  "error": "team_not_found",
+                  "message": "Team not found or access denied"
+                }
+              },
+              "userNotFound": {
+                "summary": "User not found",
+                "value": {
+                  "error": "user_not_found",
+                  "message": "User not found"
+                }
               }
             }
           }
@@ -593,9 +1258,8 @@
               "$ref": "#/components/schemas/Error"
             },
             "example": {
-              "error": "internal_server_error",
-              "message": "An internal error occurred while processing your request.",
-              "status": 500
+              "error": "internal_error",
+              "message": "An error occurred while processing your request"
             }
           }
         }
@@ -695,6 +1359,34 @@
           }
         }
       },
+      "AddLibrarySuccess": {
+        "description": "Library submitted successfully for processing",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/AddLibraryResponse"
+            },
+            "example": {
+              "libraryName": "/owner/repo",
+              "message": "Repository submitted successfully"
+            }
+          }
+        }
+      },
+      "DuplicateError": {
+        "description": "Conflict - Resource already exists",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "duplicate_repo",
+              "message": "This private repository is already in your team"
+            }
+          }
+        }
+      },
       "RateLimitError": {
         "description": "Too Many Requests - Rate limit exceeded",
         "headers": {
@@ -729,8 +1421,22 @@
               "$ref": "#/components/schemas/Error"
             },
             "example": {
-              "error": "Too Many Requests",
-              "message": "Rate limit exceeded. Please try again in 60 seconds."
+              "error": "rate_limit_exceeded",
+              "message": "Rate limit exceeded. Please try again later."
+            }
+          }
+        }
+      },
+      "GatewayTimeoutError": {
+        "description": "Gateway Timeout - Processing timed out waiting for logs",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "timeout",
+              "message": "Request timed out. Please try again."
             }
           }
         }
@@ -745,6 +1451,14 @@
     {
       "name": "Context",
       "description": "Retrieve documentation context for queries"
+    },
+    {
+      "name": "Add Library",
+      "description": "Submit new libraries for documentation processing"
+    },
+    {
+      "name": "Refresh",
+      "description": "Refresh existing libraries to fetch latest documentation"
     }
   ]
 }
