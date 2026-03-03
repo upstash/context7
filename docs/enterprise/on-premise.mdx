@@ -94,7 +94,7 @@ Open `http://localhost:3000` in your browser. On first launch, the setup wizard 
 
 1. **AI Provider** — Choose OpenAI, Anthropic, Gemini, or a custom OpenAI-compatible endpoint. Enter your API key and model name.
 2. **Embedding Provider** — Use the same provider as your LLM, or configure a separate one for embeddings.
-3. **Git Tokens** — Add a GitHub Personal Access Token (required) and optionally a GitLab token.
+3. **Git Tokens** — Add a GitHub and/or GitLab token for the platforms you use.
 
 All configuration is stored locally in the embedded database and can be updated later from the Settings page.
 
@@ -225,10 +225,10 @@ Configured via the **Settings** page in the web UI.
 
 | Setting | Description |
 |---|---|
-| GitHub Token | GitHub Personal Access Token for repository ingestion (required) |
-| GitLab Token | GitLab token for GitLab repositories (optional) |
+| GitHub Token | GitHub Personal Access Token — required for GitHub repositories |
+| GitLab Token | GitLab token — required for GitLab repositories |
 
-Create a GitHub token at [github.com/settings/tokens](https://github.com/settings/tokens) with `repo` scope for private repository access.
+You only need tokens for the platforms you use. If you only parse GitLab repos, you don't need a GitHub token, and vice versa. Create tokens with `repo` scope (GitHub) or `read_repository` scope (GitLab) for private repository access.
 
 ## Access Control
 
@@ -256,22 +256,9 @@ Open your deployment URL in a browser to access the dashboard. From here you can
 - Test MCP connectivity
 - Change admin credentials
 
-## Health Check
+## Operations
 
-```bash
-curl http://localhost:3000/api/health
-```
-
-Returns a JSON object with license status, LLM configuration, and storage health.
-
-## Updating the Image
-
-```bash
-docker compose pull
-docker compose up -d
-```
-
-Data persists in the named Docker volume across updates.
+### Updating the Image
 
 If your registry login has expired, re-authenticate first:
 
@@ -280,6 +267,47 @@ TOKEN=$(curl -s -H "Authorization: Bearer <your-license-key>" \
   https://context7.com/api/v1/license/registry-token | jq -r '.token')
 
 docker login ghcr.io -u x-access-token -p $TOKEN
+```
+
+Then pull the latest image and restart the container:
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Data persists in the named Docker volume across updates.
+
+### Health Check
+
+```bash
+curl http://localhost:3000/api/health
+```
+
+Example response:
+
+```json
+{
+  "status": "healthy",
+  "version": "1.0.0",
+  "setup": "complete",
+  "license": "configured",
+  "licenseInfo": {
+    "valid": true,
+    "teamSize": 10,
+    "expiresAt": "2026-06-01T00:00:00.000Z"
+  },
+  "repos_parsed": 5,
+  "uptime": 3600,
+  "connectivity": {
+    "llm": "configured",
+    "llm_provider": "openai",
+    "embedding": "configured",
+    "embedding_provider": "openai",
+    "github": "configured",
+    "gitlab": "not configured"
+  }
+}
 ```
 
 ## Support
