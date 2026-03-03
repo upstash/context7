@@ -34,7 +34,9 @@ Go to [context7.com/plans](https://context7.com/plans) and click **On-Premise Tr
 Use your license key to get a registry token and log in:
 
 ```bash
-TOKEN=$(curl -s -H "Authorization: Bearer <your-license-key>" \
+LICENSE_KEY="<your-license-key>"
+
+TOKEN=$(curl -s -H "Authorization: Bearer $LICENSE_KEY" \
   https://context7.com/api/v1/license/registry-token | jq -r '.token')
 
 docker login ghcr.io -u x-access-token -p $TOKEN
@@ -180,7 +182,7 @@ Configured via the **Settings** page in the web UI.
 |---|---|
 | LLM Provider | `openai`, `anthropic`, `gemini`, or custom |
 | LLM API Key | API key for your chosen provider |
-| LLM Model | Model name (e.g. `gpt-4o`, `claude-sonnet-4-5`, `gemini-2.0-flash`) |
+| LLM Model | Model name (e.g. `gpt-4o`, `claude-sonnet-4-5`, `gemini-2.5-flash`) |
 | LLM Base URL | Custom OpenAI-compatible endpoint (for local models or proxies) |
 
 #### Examples
@@ -214,10 +216,6 @@ By default, Context7 uses the same provider as your LLM for generating embedding
 | Embedding API Key | Separate API key for embeddings (falls back to LLM API key) |
 | Embedding Model | Embedding model name (e.g. `text-embedding-3-small`) |
 | Embedding Base URL | Custom embedding endpoint |
-
-<Warning>
-Changing the embedding provider or model after indexing will make existing vectors incompatible. You will need to re-parse all libraries after changing embedding settings.
-</Warning>
 
 ### Git Access Tokens
 
@@ -263,7 +261,9 @@ Open your deployment URL in a browser to access the dashboard. From here you can
 If your registry login has expired, re-authenticate first:
 
 ```bash
-TOKEN=$(curl -s -H "Authorization: Bearer <your-license-key>" \
+LICENSE_KEY="<your-license-key>"
+
+TOKEN=$(curl -s -H "Authorization: Bearer $LICENSE_KEY" \
   https://context7.com/api/v1/license/registry-token | jq -r '.token')
 
 docker login ghcr.io -u x-access-token -p $TOKEN
