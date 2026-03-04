@@ -1,0 +1,16 @@
+name: MCP Shield
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: thuggeelya/mcp-shield-action@v1
+        with:
+          server: 'npx -y @upstash/context7-mcp'
