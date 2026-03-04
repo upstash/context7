@@ -28,7 +28,8 @@
           "api-guide",
           "skills",
           "tips",
-          "enterprise"
+          "enterprise",
+          "enterprise/on-premise"
         ]
       },
       {
@@ -45,7 +46,7 @@
           "howto/chat-widget",
           "howto/verification",
           "howto/private-repositories",
-          "howto/team",
+          "howto/teamspace",
           "howto/usage"
         ]
       },

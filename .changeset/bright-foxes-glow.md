@@ -2,4 +2,4 @@
 "@upstash/context7-mcp": patch
 ---
 
-Include source field in search result response
+Reject GET requests on MCP endpoints with 405 to eliminate idle SSE connection timeouts

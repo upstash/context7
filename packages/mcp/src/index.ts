@@ -320,6 +320,17 @@ async function main() {
       res: express.Response,
       requireAuth: boolean
     ) => {
+      // Reject GET requests — this server is stateless and does not send server-initiated
+      // notifications, so SSE streams serve no purpose and cause mass NGINX timeouts.
+      // Returning 405 is spec-compliant per MCP StreamableHTTP (2025-03-26).
+      if (req.method === "GET") {
+        return res.status(405).json({
+          jsonrpc: "2.0",
+          error: { code: -32000, message: "Server does not support GET requests" },
+          id: null,
+        });
+      }
+
       try {
         const apiKey = extractApiKey(req);
         const resourceUrl = RESOURCE_URL;
