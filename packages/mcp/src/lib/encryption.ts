@@ -10,10 +10,12 @@ function validateEncryptionKey(key: string): boolean {
   return /^[0-9a-fA-F]{64}$/.test(key);
 }
 
-function encryptClientIp(clientIp: string): string {
+function encryptClientIp(clientIp: string): string | undefined {
   if (!validateEncryptionKey(ENCRYPTION_KEY)) {
-    console.error("Invalid encryption key format. Must be 64 hex characters.");
-    return clientIp; // Fallback to unencrypted
+    console.error(
+      "Invalid encryption key format. Must be 64 hex characters. Skipping mcp-client-ip header."
+    );
+    return undefined;
   }
 
   try {
@@ -23,8 +25,8 @@ function encryptClientIp(clientIp: string): string {
     encrypted += cipher.final("hex");
     return iv.toString("hex") + ":" + encrypted;
   } catch (error) {
-    console.error("Error encrypting client IP:", error);
-    return clientIp; // Fallback to unencrypted
+    console.error("Error encrypting client IP. Skipping mcp-client-ip header:", error);
+    return undefined;
   }
 }
 
@@ -49,7 +51,10 @@ export function generateHeaders(context: ClientContext): Record<string, string> 
   };
 
   if (context.clientIp) {
-    headers["mcp-client-ip"] = encryptClientIp(context.clientIp);
+    const encryptedClientIp = encryptClientIp(context.clientIp);
+    if (encryptedClientIp) {
+      headers["mcp-client-ip"] = encryptedClientIp;
+    }
   }
   if (context.apiKey) {
     headers["Authorization"] = `Bearer ${context.apiKey}`;
