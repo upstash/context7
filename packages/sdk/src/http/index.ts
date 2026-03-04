@@ -169,8 +169,15 @@ export class HttpClient implements Requester {
     }
 
     if (!res.ok) {
-      const errorBody = (await res.json()) as { error?: string; message?: string };
-      throw new Context7Error(errorBody.error || errorBody.message || res.statusText);
+      let errorBody: { error?: string; message?: string } | undefined;
+
+      try {
+        errorBody = (await res.json()) as { error?: string; message?: string };
+      } catch {
+        // Non-JSON error responses should still throw a typed Context7Error.
+      }
+
+      throw new Context7Error(errorBody?.error || errorBody?.message || res.statusText);
     }
 
     const contentType = res.headers.get("content-type");
