@@ -11,6 +11,7 @@ export interface SearchResult {
   trustScore?: number;
   benchmarkScore?: number;
   versions?: string[];
+  source?: string;
 }
 
 export interface SearchResponse {
