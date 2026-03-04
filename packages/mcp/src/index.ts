@@ -320,6 +320,17 @@ async function main() {
       res: express.Response,
       requireAuth: boolean
     ) => {
+      // Reject GET requests — this server is stateless and does not send server-initiated
+      // notifications, so SSE streams serve no purpose and cause mass NGINX timeouts.
+      // Returning 405 is spec-compliant per MCP StreamableHTTP (2025-03-26).
+      if (req.method === "GET") {
+        return res.status(405).json({
+          jsonrpc: "2.0",
+          error: { code: -32000, message: "Server does not support GET requests" },
+          id: null,
+        });
+      }
+
       try {
         const apiKey = extractApiKey(req);
         const resourceUrl = RESOURCE_URL;
@@ -392,28 +403,11 @@ async function main() {
 
     // Anonymous access endpoint - no authentication required
     app.all("/mcp", async (req, res) => {
-      // Reject GET requests — this server is stateless and does not send server-initiated
-      // notifications, so SSE streams serve no purpose and cause mass NGINX timeouts.
-      // Returning 405 is spec-compliant per MCP StreamableHTTP (2025-03-26).
-      if (req.method === "GET") {
-        return res.status(405).json({
-          jsonrpc: "2.0",
-          error: { code: -32601, message: "Server does not support GET requests" },
-          id: null,
-        });
-      }
       await handleMcpRequest(req, res, false);
     });
 
     // OAuth-protected endpoint - requires authentication
     app.all("/mcp/oauth", async (req, res) => {
-      if (req.method === "GET") {
-        return res.status(405).json({
-          jsonrpc: "2.0",
-          error: { code: -32601, message: "Server does not support GET requests" },
-          id: null,
-        });
-      }
       await handleMcpRequest(req, res, true);
     });
 
