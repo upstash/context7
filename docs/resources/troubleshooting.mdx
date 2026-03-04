@@ -8,7 +8,7 @@ This guide helps you resolve common issues when setting up or using Context7 MCP
 
 - Confirm Node.js v18+ is installed (`node --version`)
 - Update to the latest Context7 MCP package (`@upstash/context7-mcp@latest`)
-- Verify connectivity with `curl https://mcp.context7.com/mcp/ping`
+- Verify connectivity with `curl https://mcp.context7.com/ping`
 - Add your API key to the configuration if you hit rate limits
 - Enable debug logs (`DEBUG=*`) before collecting support information
 
@@ -297,7 +297,7 @@ Add proxy directly to your MCP configuration:
 Both lowercase and uppercase environment variables are supported.
 
 <Tip>
-  After updating proxy settings, run `curl https://mcp.context7.com/mcp/ping` to confirm outbound
+  After updating proxy settings, run `curl https://mcp.context7.com/ping` to confirm outbound
   connectivity before restarting your IDE.
 </Tip>
 
@@ -336,7 +336,7 @@ This opens an interactive inspector to test Context7 tools.
 Test that the remote server is reachable:
 
 ```bash
-curl https://mcp.context7.com/mcp/ping
+curl https://mcp.context7.com/ping
 ```
 
 Expected response: `{"status": "ok", "message": "pong"}`
