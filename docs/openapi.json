@@ -726,18 +726,13 @@
                 "schema": {
                   "type": "object",
                   "properties": {
-                    "libraryName": {
-                      "type": "string",
-                      "description": "The library identifier"
-                    },
                     "message": {
                       "type": "string"
                     }
                   },
-                  "required": ["libraryName", "message"]
+                  "required": ["message"]
                 },
                 "example": {
-                  "libraryName": "/vercel/next.js",
                   "message": "Refresh started successfully"
                 }
               }
