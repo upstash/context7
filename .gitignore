@@ -176,7 +176,8 @@ dist
 !plugins/cursor/context7/.cursor
 .opencode
 .claude
-.agents
+.agents/*
+!.agents/skills/
 
 # Finder (MacOS) folder config
 .DS_Store
