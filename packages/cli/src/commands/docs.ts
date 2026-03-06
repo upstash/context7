@@ -83,7 +83,7 @@ async function resolveCommand(
 
   const results = data.results;
 
-  spinner?.succeed(`Found ${results.length} ${results.length === 1 ? "library" : "libraries"}`);
+  spinner?.stop();
 
   if (options.json) {
     console.log(JSON.stringify(results, null, 2));
@@ -135,7 +135,7 @@ async function queryCommand(
   }
 
   if (typeof result === "string") {
-    spinner?.succeed("Documentation retrieved");
+    spinner?.stop();
     console.log(result);
     return;
   }
@@ -165,9 +165,7 @@ async function queryCommand(
     return;
   }
 
-  spinner?.succeed(
-    `Found ${ctx.codeSnippets?.length || 0} code and ${ctx.infoSnippets?.length || 0} info snippets`
-  );
+  spinner?.stop();
 
   if (options.json) {
     console.log(JSON.stringify(ctx, null, 2));
