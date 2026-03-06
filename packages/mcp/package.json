@@ -13,7 +13,7 @@
     "format:check": "prettier --check .",
     "dev": "tsc --watch",
     "start": "node dist/index.js --transport http",
-    "pack-mcpb": "pnpm install && pnpm run build && rm -rf node_modules && pnpm install --prod && cp mcpb/manifest.json manifest.json && cp ../../public/icon.png icon.png && mcpb validate manifest.json && mcpb pack . mcpb/context7.mcpb && rm manifest.json icon.png && pnpm install"
+    "pack-mcpb": "pnpm install && pnpm run build && rm -rf node_modules && pnpm install --prod && cp mcpb/manifest.json manifest.json && cp mcpb/.mcpbignore .mcpbignore && cp ../../public/icon.png icon.png && mcpb validate manifest.json && mcpb pack . mcpb/context7.mcpb && rm manifest.json .mcpbignore icon.png && pnpm install"
   },
   "repository": {
     "type": "git",
