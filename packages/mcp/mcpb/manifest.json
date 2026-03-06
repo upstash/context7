@@ -19,8 +19,8 @@
     "type": "node",
     "entry_point": "dist/index.js",
     "mcp_config": {
-      "command": "npx",
-      "args": ["-y", "--package=@upstash/context7-mcp", "context7-mcp"],
+      "command": "node",
+      "args": ["${__dirname}/dist/index.js"],
       "env": {}
     }
   },
