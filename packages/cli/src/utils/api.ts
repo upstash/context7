@@ -278,7 +278,10 @@ export async function resolveLibrary(
   });
 
   if (!response.ok) {
-    const errorData = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
+    const errorData = (await response.json().catch(() => ({}))) as {
+      error?: string;
+      message?: string;
+    };
     return {
       results: [],
       error: errorData.error || `HTTP error ${response.status}`,
