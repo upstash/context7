@@ -1,6 +1,6 @@
 # ctx7
 
-CLI for the [Context7 Skills Registry](https://context7.com) - install and manage AI coding skills across different AI coding assistants.
+CLI for [Context7](https://context7.com) - query up-to-date library documentation and manage AI coding skills.
 
 Skills are reusable prompt instructions that enhance your AI coding assistant with specialized capabilities like working with specific frameworks, libraries, or coding patterns.
 
@@ -26,6 +26,18 @@ ctx7 setup --claude
 ctx7 setup --opencode
 ```
 
+### Library Documentation
+
+```bash
+# Find a library
+ctx7 library react
+ctx7 library nextjs "app router"
+
+# Get documentation
+ctx7 docs /facebook/react "useEffect cleanup"
+ctx7 docs /vercel/next.js "middleware"
+```
+
 ### Skills
 
 ```bash
@@ -43,6 +55,32 @@ ctx7 skills list --claude
 ```
 
 ## Usage
+
+### Find a library
+
+Resolve a library name to a Context7 library ID.
+
+```bash
+ctx7 library react
+ctx7 library nextjs "app router setup"
+ctx7 library prisma "database relations"
+
+# Output as JSON
+ctx7 library react --json
+```
+
+### Query documentation
+
+Fetch documentation for a specific library using its Context7 ID.
+
+```bash
+ctx7 docs /facebook/react "useEffect cleanup"
+ctx7 docs /vercel/next.js "middleware authentication"
+ctx7 docs /prisma/prisma "one-to-many relations"
+
+# Output as JSON
+ctx7 docs /facebook/react "hooks" --json
+```
 
 ### Setup
 
