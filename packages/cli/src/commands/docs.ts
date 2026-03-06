@@ -52,7 +52,7 @@ async function resolveCommand(
   query: string | undefined,
   options: { json?: boolean }
 ): Promise<void> {
-  trackEvent("command", { name: "resolve" });
+  trackEvent("command", { name: "library" });
 
   const spinner = isTTY ? ora(`Searching for "${library}"...`).start() : null;
   const accessToken = getAccessToken();
@@ -98,7 +98,7 @@ async function resolveCommand(
   if (isTTY && results.length > 0) {
     const best = results[0];
     log.plain(
-      `${pc.bold("Quick command:")}\n` + `  ${pc.cyan(`ctx7 query "${best.id}" "<your question>"`)}`
+      `${pc.bold("Quick command:")}\n` + `  ${pc.cyan(`ctx7 docs "${best.id}" "<your question>"`)}`
     );
     log.blank();
   }
@@ -109,12 +109,12 @@ async function queryCommand(
   query: string,
   options: { json?: boolean }
 ): Promise<void> {
-  trackEvent("command", { name: "query" });
+  trackEvent("command", { name: "docs" });
 
   if (!libraryId.startsWith("/")) {
     log.error(`Invalid library ID: ${libraryId}`);
     log.info(`Library IDs start with "/" (e.g., /facebook/react)`);
-    log.info(`Run "ctx7 resolve <library>" to find the correct ID`);
+    log.info(`Run "ctx7 library <name>" to find the correct ID`);
     process.exitCode = 1;
     return;
   }
@@ -146,7 +146,7 @@ async function queryCommand(
       spinner?.warn("Library has been redirected");
       if (!spinner) log.warn("Library has been redirected");
       log.info(`New ID: ${pc.cyan(ctx.redirectUrl)}`);
-      log.info(`Run: ${pc.cyan(`ctx7 query "${ctx.redirectUrl}" "${query}"`)}`);
+      log.info(`Run: ${pc.cyan(`ctx7 docs "${ctx.redirectUrl}" "${query}"`)}`);
       process.exitCode = 1;
       return;
     }
@@ -200,17 +200,17 @@ async function queryCommand(
 
 export function registerDocsCommands(program: Command): void {
   program
-    .command("resolve")
-    .argument("<library>", "Library name to search for")
+    .command("library")
+    .argument("<name>", "Library name to search for")
     .argument("[query]", "Question or task for relevance ranking")
     .option("--json", "Output as JSON")
     .description("Resolve a library name to a Context7 library ID")
-    .action(async (library: string, query: string | undefined, options: { json?: boolean }) => {
-      await resolveCommand(library, query, options);
+    .action(async (name: string, query: string | undefined, options: { json?: boolean }) => {
+      await resolveCommand(name, query, options);
     });
 
   program
-    .command("query")
+    .command("docs")
     .argument("<libraryId>", "Context7 library ID (e.g., /facebook/react)")
     .argument("<query>", "Question or task to get docs for")
     .option("--json", "Output as JSON")

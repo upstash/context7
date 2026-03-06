@@ -48,8 +48,8 @@ Examples:
   ${brand.primary("npx ctx7 skills remove pdf")}
 
   ${brand.dim("# Query library documentation")}
-  ${brand.primary('npx ctx7 resolve react "how to use hooks"')}
-  ${brand.primary('npx ctx7 query /facebook/react "useEffect examples"')}
+  ${brand.primary('npx ctx7 library react "how to use hooks"')}
+  ${brand.primary('npx ctx7 docs /facebook/react "useEffect examples"')}
 
 Visit ${brand.primary("https://context7.com")} to browse skills
 `

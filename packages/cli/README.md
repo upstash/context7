@@ -30,12 +30,12 @@ ctx7 setup --opencode
 
 ```bash
 # Find a library
-ctx7 resolve react
-ctx7 resolve nextjs "app router"
+ctx7 library react
+ctx7 library nextjs "app router"
 
 # Get documentation
-ctx7 query /facebook/react "useEffect cleanup"
-ctx7 query /vercel/next.js "middleware"
+ctx7 docs /facebook/react "useEffect cleanup"
+ctx7 docs /vercel/next.js "middleware"
 ```
 
 ### Skills
@@ -56,17 +56,17 @@ ctx7 skills list --claude
 
 ## Usage
 
-### Resolve a library
+### Find a library
 
-Find the Context7 library ID for a library name.
+Resolve a library name to a Context7 library ID.
 
 ```bash
-ctx7 resolve react
-ctx7 resolve nextjs "app router setup"
-ctx7 resolve prisma "database relations"
+ctx7 library react
+ctx7 library nextjs "app router setup"
+ctx7 library prisma "database relations"
 
 # Output as JSON
-ctx7 resolve react --json
+ctx7 library react --json
 ```
 
 ### Query documentation
@@ -74,12 +74,12 @@ ctx7 resolve react --json
 Fetch documentation for a specific library using its Context7 ID.
 
 ```bash
-ctx7 query /facebook/react "useEffect cleanup"
-ctx7 query /vercel/next.js "middleware authentication"
-ctx7 query /prisma/prisma "one-to-many relations"
+ctx7 docs /facebook/react "useEffect cleanup"
+ctx7 docs /vercel/next.js "middleware authentication"
+ctx7 docs /prisma/prisma "one-to-many relations"
 
 # Output as JSON
-ctx7 query /facebook/react "hooks" --json
+ctx7 docs /facebook/react "hooks" --json
 ```
 
 ### Setup
