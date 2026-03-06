@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.2
+
+### Patch Changes
+
+- df60e3e: Add `library` and `docs` commands for querying library documentation from the terminal
+
 ## 0.3.1
 
 ### Patch Changes
