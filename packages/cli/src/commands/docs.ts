@@ -34,14 +34,15 @@ function formatLibraryResult(lib: LibrarySearchResult, index: number): string {
   if (lib.trustScore !== undefined) {
     meta.push(`trust: ${lib.trustScore}/10`);
   }
+  if (lib.benchmarkScore !== undefined && lib.benchmarkScore > 0) {
+    meta.push(`benchmark: ${lib.benchmarkScore}`);
+  }
   if (meta.length > 0) {
     lines.push(`   ${pc.dim(meta.join(" · "))}`);
   }
 
   if (lib.versions && lib.versions.length > 0) {
-    const shown = lib.versions.slice(0, 3).join(", ");
-    const extra = lib.versions.length > 3 ? ` (+${lib.versions.length - 3} more)` : "";
-    lines.push(`   ${pc.dim(`versions: ${shown}${extra}`)}`);
+    lines.push(`   ${pc.dim(`versions: ${lib.versions.join(", ")}`)}`);
   }
 
   return lines.join("\n");
