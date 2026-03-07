@@ -709,6 +709,10 @@
                   "branch": {
                     "type": "string",
                     "description": "Optional branch name to refresh"
+                  },
+                  "gitToken": {
+                    "type": "string",
+                    "description": "Optional Git access token for refreshing private repositories. If not provided, the stored OAuth token will be used."
                   }
                 }
               },
