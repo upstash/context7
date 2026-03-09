@@ -27,9 +27,7 @@
           "adding-libraries",
           "api-guide",
           "skills",
-          "tips",
-          "enterprise",
-          "enterprise/on-premise"
+          "tips"
         ]
       },
       {
@@ -48,6 +46,14 @@
           "howto/private-repositories",
           "howto/teamspace",
           "howto/usage"
+        ]
+      },
+      {
+        "group": "Enterprise",
+        "pages": [
+          "enterprise",
+          "enterprise/on-premise",
+          "resources/security"
         ]
       },
       {
