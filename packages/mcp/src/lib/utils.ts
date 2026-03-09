@@ -68,8 +68,18 @@ export function formatSearchResults(searchResponse: SearchResponse): string {
     return "No documentation libraries found matching your query.";
   }
 
+  const parts: string[] = [];
+
+  if (searchResponse.searchFilterApplied) {
+    parts.push(
+      "Search results are filtered. To see all available libraries, update your public library access settings in the dashboard at https://context7.com/dashboard?tab=libraries"
+    );
+  }
+
   const formattedResults = searchResponse.results.map(formatSearchResult);
-  return formattedResults.join("\n----------\n");
+  parts.push(formattedResults.join("\n----------\n"));
+
+  return parts.join("\n\n");
 }
 
 /**

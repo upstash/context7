@@ -17,6 +17,7 @@ export interface SearchResult {
 export interface SearchResponse {
   error?: string;
   results: SearchResult[];
+  searchFilterApplied?: boolean;
 }
 
 // Version state is still needed for validating search results

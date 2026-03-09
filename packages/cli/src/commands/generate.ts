@@ -163,6 +163,13 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
   searchSpinner.succeed(pc.green(`Found ${searchResult.results.length} relevant sources`));
   log.blank();
 
+  if (searchResult.searchFilterApplied) {
+    log.warn(
+      "Search results are filtered. To see all available libraries, update your public library access settings in the dashboard at https://context7.com/dashboard?tab=libraries"
+    );
+    log.blank();
+  }
+
   let selectedLibraries: LibrarySearchResult[];
   try {
     const formatProjectId = (id: string) => {
