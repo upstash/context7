@@ -1,4 +1,365 @@
 ---
 title: CLI
-url: https://github.com/upstash/context7/tree/master/packages/cli
+description: The ctx7 CLI — fetch library documentation, manage skills, and configure Context7 MCP from your terminal
 ---
+
+The `ctx7` CLI is the command-line interface for Context7. It does three things:
+
+- **Fetch library documentation** — resolve any library by name and query its up-to-date docs directly in your terminal, without opening a browser
+- **Manage AI coding skills** — install, search, generate, and remove skills from the Context7 registry
+- **Configure Context7 MCP** — set up the MCP server for Claude Code, Cursor, or OpenCode with a single command
+
+The CLI is useful both as a standalone tool (fetching docs while you code) and as a setup utility (wiring up Context7 for your AI coding agent).
+
+## Installation
+
+Requires Node.js 18 or later.
+
+<Tabs>
+  <Tab title="npx (no install)">
+    Run ctx7 directly without installing anything. Useful for one-off commands or trying it out.
+
+    ```bash
+    npx ctx7 --help
+    npx ctx7 library react
+    ```
+  </Tab>
+  <Tab title="Global install">
+    Install globally for faster access — no `npx` prefix needed on every command.
+
+    ```bash
+    npm install -g ctx7
+
+    # Verify installation
+    ctx7 --version
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Query Library Documentation
+
+Fetching docs is a two-step process: first resolve the library name to get its Context7 ID, then use that ID to query documentation. The ID is stable and scoped to a specific library — it's what Context7 uses to know exactly which library and version to pull docs from.
+
+### Step 1 — ctx7 library
+
+Searches the Context7 index by name and returns matching libraries. Pass an optional `query` to rank results by relevance to your specific task — this helps when a library name is ambiguous or has multiple versions indexed.
+
+```bash
+ctx7 library react
+ctx7 library nextjs "app router setup"
+ctx7 library prisma "database relations"
+```
+
+Each result shows:
+
+| Field | Description |
+|-------|-------------|
+| **ID** | The library ID to pass to `ctx7 docs` (e.g., `/facebook/react`) |
+| **Snippets** | Number of indexed documentation snippets |
+| **Stars** | GitHub stars — a signal of library popularity |
+| **Trust score** | Documentation quality indicator (0–10) |
+| **Versions** | Indexed versions, if version-specific docs exist |
+
+Pick the top result's ID, or a version-specific one if the user mentioned a version (e.g., `/vercel/next.js@canary`).
+
+```bash
+# Output as JSON — useful for scripting or piping into other tools
+ctx7 library react --json | jq '.[0].id'
+```
+
+### Step 2 — ctx7 docs
+
+Pass the library ID and a natural-language question to fetch relevant code snippets and explanations from the indexed documentation.
+
+```bash
+ctx7 docs /facebook/react "useEffect cleanup"
+ctx7 docs /vercel/next.js "middleware authentication"
+ctx7 docs /prisma/prisma "one-to-many relations"
+```
+
+<Note>
+Library IDs always start with `/`. Running `ctx7 docs react "hooks"` will fail — always use the full ID returned by `ctx7 library` in Step 1.
+</Note>
+
+The output contains two types of content: **code snippets** (titled, with language-tagged blocks) and **info snippets** (prose explanations with breadcrumb context). Both are formatted for readability in the terminal.
+
+```bash
+# Output as structured JSON
+ctx7 docs /facebook/react "hooks" --json
+
+# Pipe to other tools — output is clean when not in a TTY (no spinners or colors)
+ctx7 docs /facebook/react "hooks" | head -50
+ctx7 docs /vercel/next.js "routing" | grep -A 10 "middleware"
+```
+
+---
+
+## Setup
+
+Configure Context7 MCP for your AI coding agent. Writes the MCP server config, a Context7 rule file, and a `documentation-lookup` skill.
+
+### ctx7 setup
+
+```bash
+# Interactive — prompts for agent selection
+ctx7 setup
+
+# Target a specific agent
+ctx7 setup --claude
+ctx7 setup --cursor
+ctx7 setup --opencode
+
+# Configure for current project only (default is global)
+ctx7 setup --project
+
+# Skip confirmation prompts
+ctx7 setup --yes
+```
+
+**Authentication options:**
+
+```bash
+# Use an existing API key
+ctx7 setup --api-key YOUR_API_KEY
+
+# Use OAuth endpoint (IDE handles the auth flow)
+ctx7 setup --oauth
+```
+
+Without `--api-key` or `--oauth`, setup opens a browser for OAuth login and generates a new API key automatically.
+
+**What gets written:**
+
+| File | Purpose |
+|------|---------|
+| `.mcp.json` / `.cursor/mcp.json` / `.opencode.json` | MCP server entry |
+| Agent rules directory | Rule file — instructs the agent to use Context7 for library docs |
+| Agent skills directory | `documentation-lookup` skill |
+
+---
+
+## Authentication
+
+Most commands work without authentication. Log in to unlock skill generation and higher rate limits on documentation commands.
+
+### Commands
+
+```bash
+# Log in (opens browser for OAuth)
+ctx7 login
+
+# Log in without opening the browser (prints URL instead)
+ctx7 login --no-browser
+
+# Check current login status
+ctx7 whoami
+
+# Log out
+ctx7 logout
+```
+
+### API Key
+
+Set an API key via environment variable to skip interactive login entirely — useful for CI or scripting:
+
+```bash
+export CONTEXT7_API_KEY=your_key
+```
+
+### When is authentication required?
+
+| Feature | Required |
+|---------|----------|
+| `ctx7 library` / `ctx7 docs` | No — login gives higher rate limits |
+| `ctx7 skills install / search / suggest / list / remove` | No |
+| `ctx7 skills generate` | Yes |
+| `ctx7 setup` | Yes — unless `--api-key` or `--oauth` is passed |
+
+---
+
+## Skills
+
+Manage AI coding skills from the Context7 registry. See [Skills](/skills) for a full explanation of what skills are, the registry, trust scores, and skill file structure.
+
+### ctx7 skills install
+
+Install skills from any GitHub repository. Repository format is `/owner/repo`.
+
+```bash
+# Interactive — pick from a list
+ctx7 skills install /anthropics/skills
+
+# Install a specific skill by name
+ctx7 skills install /anthropics/skills pdf
+
+# Install all skills without prompting
+ctx7 skills install /anthropics/skills --all
+```
+
+**Target a specific AI coding assistant:**
+
+```bash
+ctx7 skills install /anthropics/skills pdf --claude      # Claude Code
+ctx7 skills install /anthropics/skills pdf --cursor      # Cursor
+ctx7 skills install /anthropics/skills pdf --universal   # Universal (.agents/skills/)
+ctx7 skills install /anthropics/skills pdf --antigravity
+```
+
+**Install globally** (available across all projects):
+
+```bash
+ctx7 skills install /anthropics/skills pdf --global
+ctx7 skills install /anthropics/skills --all --global
+```
+
+<Note>
+When installing to multiple clients, the skill files are created in your primary client's directory and symlinked to the others.
+</Note>
+
+Alias: `ctx7 si /anthropics/skills pdf`
+
+### ctx7 skills search
+
+Find skills across all indexed repositories by keyword. Shows an interactive list — select to install directly.
+
+```bash
+ctx7 skills search pdf
+ctx7 skills search typescript testing
+ctx7 skills search react nextjs
+```
+
+Alias: `ctx7 ss pdf`
+
+### ctx7 skills suggest
+
+Auto-detects your project dependencies and recommends relevant skills from the registry.
+
+```bash
+# Scan current project
+ctx7 skills suggest
+
+# Target a specific client
+ctx7 skills suggest --claude
+ctx7 skills suggest --cursor
+
+# Install suggestions globally
+ctx7 skills suggest --global
+```
+
+Scans: `package.json`, `requirements.txt`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `Gemfile`.
+
+Alias: `ctx7 ssg`
+
+### ctx7 skills generate
+
+Generate a custom skill tailored to your stack using AI. **Requires login.**
+
+```bash
+ctx7 skills generate
+
+# Generate and install to a specific client
+ctx7 skills generate --claude
+ctx7 skills generate --cursor
+ctx7 skills generate --universal
+
+# Generate as a global skill
+ctx7 skills generate --global
+```
+
+**Generation flow:**
+
+1. Describe the expertise you want (e.g., "OAuth authentication with NextAuth.js")
+2. Select relevant libraries from search results
+3. Answer 3 clarifying questions to focus the skill
+4. Review the generated skill and request changes if needed
+5. Choose where to install it
+
+<Tip>
+Describe best practices and constraints, not step-by-step tutorials. "TypeScript strict mode patterns" generates a more useful skill than "how to write TypeScript."
+</Tip>
+
+**Weekly limits:** Free accounts get 6 generations/week, Pro accounts get 10.
+
+Aliases: `ctx7 skills gen`, `ctx7 skills g`
+
+### ctx7 skills list
+
+View skills installed in your project or globally.
+
+```bash
+ctx7 skills list                   # All detected clients
+ctx7 skills list --claude
+ctx7 skills list --cursor
+ctx7 skills list --global
+```
+
+### ctx7 skills info
+
+Preview all available skills in a repository without installing.
+
+```bash
+ctx7 skills info /anthropics/skills
+```
+
+### ctx7 skills remove
+
+Uninstall a skill by name.
+
+```bash
+ctx7 skills remove pdf
+ctx7 skills remove pdf --claude
+ctx7 skills remove pdf --global
+```
+
+Aliases: `ctx7 skills rm`, `ctx7 skills delete`
+
+---
+
+## Shortcuts
+
+| Shortcut | Full command |
+|----------|-------------|
+| `ctx7 si` | `ctx7 skills install` |
+| `ctx7 ss` | `ctx7 skills search` |
+| `ctx7 ssg` | `ctx7 skills suggest` |
+| `ctx7 skills i` | `ctx7 skills install` |
+| `ctx7 skills s` | `ctx7 skills search` |
+| `ctx7 skills ls` | `ctx7 skills list` |
+| `ctx7 skills rm` | `ctx7 skills remove` |
+| `ctx7 skills gen` | `ctx7 skills generate` |
+| `ctx7 skills g` | `ctx7 skills generate` |
+
+---
+
+## Telemetry
+
+The CLI collects anonymous usage data to help improve the product. To disable:
+
+```bash
+# For a single command
+CTX7_TELEMETRY_DISABLED=1 ctx7 skills search pdf
+
+# Permanently — add to ~/.bashrc or ~/.zshrc
+export CTX7_TELEMETRY_DISABLED=1
+```
+
+---
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Browse Skills" icon="magnifying-glass" href="https://context7.com/skills">
+    Explore the skills registry
+  </Card>
+  <Card title="Skills Guide" icon="book" href="/skills">
+    Learn about skill file structure, trust scores, and the registry
+  </Card>
+  <Card title="Claude Code" icon="terminal" href="/clients/claude-code">
+    Set up Context7 in Claude Code
+  </Card>
+  <Card title="All Clients" icon="grid" href="/resources/all-clients">
+    Installation for every supported editor
+  </Card>
+</CardGroup>

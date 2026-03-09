@@ -41,19 +41,63 @@ When browsing or searching skills, you'll see:
 | **Install Count** | Number of times the skill has been installed |
 | **Trust Score** | Quality and safety indicator (0-10) |
 
-**Quick start:**
+### CLI
+
+You can interact with the registry directly from your terminal using the `ctx7` CLI. No configuration needed — most commands work without authentication.
+
+**Discover and install skills:**
 
 ```bash
-# Search for a skill
-npx ctx7 skills search react
+# Search the registry by keyword
+ctx7 skills search pdf
+ctx7 skills search "react testing"
 
-# Install a popular skill
-npx ctx7 skills install /vercel-labs/agent-skills vercel-react-best-practices
+# Browse all skills in a specific repository
+ctx7 skills info /anthropics/skills
+
+# Install a skill interactively (prompts you to pick)
+ctx7 skills install /anthropics/skills
+
+# Install a specific skill by name
+ctx7 skills install /anthropics/skills pdf
+
+# Get suggestions based on your project's dependencies
+ctx7 skills suggest
 ```
 
-## Trust Scores
+**Manage installed skills:**
 
-Every skill in the registry has a **trust score** from 0 to 10 that indicates the reliability and safety of the skill source.
+```bash
+# List skills installed in the current project
+ctx7 skills list
+
+# List skills installed for a specific client
+ctx7 skills list --claude
+ctx7 skills list --cursor
+
+# Remove a skill
+ctx7 skills remove pdf
+```
+
+**Generate a custom skill with AI:**
+
+```bash
+# Requires login — opens an interactive generation flow
+ctx7 login
+ctx7 skills generate
+```
+
+All install commands accept `--claude`, `--cursor`, `--universal`, and `--global` flags to target a specific client or install location. 
+
+See the [CLI reference](/clients/cli#skills) for the full flag reference and examples.
+
+### Trust & Security
+
+Context7 vets every skill in the registry before it reaches you — both through automated scanning and community-driven quality signals.
+
+#### Trust Scores
+
+Every skill has a **trust score** from 0 to 10 that reflects the reliability of its source.
 
 | Score | Level | Meaning |
 |-------|-------|---------|
@@ -61,226 +105,15 @@ Every skill in the registry has a **trust score** from 0 to 10 that indicates th
 | 3.0 - 6.9 | Medium | Standard community contribution |
 | 0.0 - 2.9 | Low | New or unverified — review before using |
 
-Trust scores help you make informed decisions about which skills to install. Higher scores indicate skills from reputable sources with community validation.
+Higher scores indicate skills from reputable sources with community validation. Trust scores are visible in search results and install prompts so you can make an informed decision before installing.
 
-### Security Features
+#### Security Features
 
-Context7 automatically scans skills for potential security issues:
+Context7 automatically scans skills for potential security issues before they appear in the registry:
 
 - **Prompt injection detection**: Skills containing potentially malicious instructions are blocked from installation
 - **Blocked skill warnings**: When viewing a repository, you'll see how many skills were blocked due to security concerns
 - **Clear error messages**: If you try to install a blocked skill, you'll receive a specific warning explaining why
-
-## Prerequisites
-
-Skills require the Context7 CLI. You need Node.js 18 or later.
-
-```bash
-# Run directly with npx (no installation required)
-npx ctx7 skills search pdf
-
-# Or install globally for faster access
-npm install -g ctx7
-```
-
-## CLI Commands
-
-### Install Skills
-
-Install skills from a repository to your AI coding assistant's skills directory.
-
-```bash
-# Interactive selection from a repository
-npx ctx7 skills install /anthropics/skills
-
-# Install a specific skill
-npx ctx7 skills install /anthropics/skills pdf
-
-# Install multiple skills at once
-npx ctx7 skills install /anthropics/skills pdf commit
-
-# Install all skills without prompting
-npx ctx7 skills install /anthropics/skills --all
-```
-
-**Target a specific client:**
-
-```bash
-npx ctx7 skills install /anthropics/skills pdf --claude
-npx ctx7 skills install /anthropics/skills pdf --cursor
-npx ctx7 skills install /anthropics/skills pdf --universal
-npx ctx7 skills install /anthropics/skills pdf --antigravity
-```
-
-**Install globally** (available in all projects):
-
-```bash
-npx ctx7 skills install /anthropics/skills pdf --global
-```
-
-<Note>
-When installing to multiple clients, the CLI creates the skill files in your primary client's directory and symlinks them to other clients.
-</Note>
-
-### Search Skills
-
-Find skills across all indexed repositories in the registry.
-
-```bash
-npx ctx7 skills search pdf
-npx ctx7 skills search typescript
-npx ctx7 skills search "react testing"
-```
-
-Search results display:
-- Skill name and repository
-- Description
-- Install count
-- Trust score
-
-You can install directly from search results by selecting a skill interactively.
-
-### Suggest Skills
-
-Automatically discover relevant skills based on your project's dependencies. The CLI scans your `package.json`, `requirements.txt`, or `pyproject.toml` and suggests matching skills from the registry.
-
-```bash
-# Scan current project and suggest skills
-npx ctx7 skills suggest
-
-# Suggest and install to a specific client
-npx ctx7 skills suggest --claude
-npx ctx7 skills suggest --cursor
-npx ctx7 skills suggest --universal
-
-# Suggest and install globally
-npx ctx7 skills suggest --global
-```
-
-**How it works:**
-
-1. Scans your project for dependencies (Node.js and Python supported)
-2. Queries Context7 for skills that match your dependencies
-3. Shows results with install count, trust score, and which dependency matched
-4. Lets you select and install skills interactively
-
-**Supported dependency files:**
-
-| File | Language |
-|------|----------|
-| `package.json` | Node.js (dependencies + devDependencies) |
-| `requirements.txt` | Python |
-| `pyproject.toml` | Python (PEP 621 + Poetry) |
-
-<Tip>
-Run `npx ctx7 skills suggest` when starting on a new project to quickly find skills for your tech stack.
-</Tip>
-
-### List Installed Skills
-
-View skills installed in your project or globally.
-
-```bash
-# List all installed skills
-npx ctx7 skills list
-
-# List for a specific client
-npx ctx7 skills list --claude
-npx ctx7 skills list --cursor
-npx ctx7 skills list --universal
-
-# List globally installed skills
-npx ctx7 skills list --global
-```
-
-### Show Skill Information
-
-Get details about all available skills in a repository.
-
-```bash
-npx ctx7 skills info /anthropics/skills
-```
-
-This displays:
-- Available skill names
-- Descriptions
-- Direct URLs
-- Quick install commands
-
-### Remove Skills
-
-Uninstall a skill from your project or global directory.
-
-```bash
-# Remove with interactive prompts
-npx ctx7 skills remove pdf
-
-# Remove from a specific client
-npx ctx7 skills remove pdf --claude
-npx ctx7 skills remove pdf --universal
-
-# Remove from global directory
-npx ctx7 skills remove pdf --global
-```
-
-## Generate Custom Skills
-
-Create custom skills tailored to your specific needs using AI. This feature requires authentication.
-
-### Authentication
-
-```bash
-# Log in (opens browser for OAuth)
-npx ctx7 login
-
-# Check your login status
-npx ctx7 whoami
-
-# Log out
-npx ctx7 logout
-```
-
-### Generate a Skill
-
-```bash
-# Start interactive generation
-npx ctx7 skills generate
-
-# Generate for a specific client
-npx ctx7 skills generate --cursor
-npx ctx7 skills generate --claude
-npx ctx7 skills generate --universal
-
-# Generate as a global skill
-npx ctx7 skills generate --global
-```
-
-### Generation Workflow
-
-1. **Describe your expertise**: Enter what you want the skill to do (e.g., "OAuth authentication with NextAuth.js best practices")
-2. **Select documentation**: Search and choose relevant libraries to inform the skill
-3. **Answer questions**: Respond to 3 clarifying questions to focus the skill
-4. **Review**: See the generated skill and optionally request changes
-5. **Install**: Save the skill to your selected client(s)
-
-<Tip>
-Describe best practices and constraints, not step-by-step tutorials. For example, "TypeScript strict mode patterns" is better than "how to write TypeScript."
-</Tip>
-
-## Supported Clients
-
-The CLI automatically detects installed AI coding assistants and offers to install skills for them.
-
-| Client | Project Directory | Global Directory |
-|--------|-------------------|------------------|
-| Universal (Amp, Codex, Gemini CLI, GitHub Copilot, OpenCode + more) | `.agents/skills/` | `~/.config/agents/skills/` |
-| Claude Code | `.claude/skills/` | `~/.claude/skills/` |
-| Cursor | `.cursor/skills/` | `~/.cursor/skills/` |
-| Antigravity | `.agent/skills/` | `~/.agent/skills/` |
-
-**Project vs Global:**
-- **Project skills** (default): Installed in your current project directory, available only in that project
-- **Global skills** (`--global`): Installed in your home directory, available across all projects
 
 ## Skill File Structure
 
@@ -312,25 +145,34 @@ Use markdown formatting, code examples, and clear steps.
 | Field | Required | Description |
 |-------|----------|-------------|
 | `name` | Yes | Identifier for the skill (lowercase, hyphens allowed) |
-| `description` | Yes | Explains what the skill does — used for discovery |
+| `description` | Yes | Explains what the skill does — used for discovery and auto-triggering |
 
 The markdown body contains the actual instructions your AI assistant follows when the skill is invoked.
 
-## Command Shortcuts
+## Supported Clients
 
-For faster usage, the CLI provides short aliases:
+The CLI automatically detects installed AI coding assistants and offers to install skills for them.
 
-| Shortcut | Full Command |
-|----------|--------------|
-| `npx ctx7 si` | `npx ctx7 skills install` |
-| `npx ctx7 ss` | `npx ctx7 skills search` |
-| `npx ctx7 ssg` | `npx ctx7 skills suggest` |
-| `npx ctx7 skills i` | `npx ctx7 skills install` |
-| `npx ctx7 skills s` | `npx ctx7 skills search` |
-| `npx ctx7 skills ls` | `npx ctx7 skills list` |
-| `npx ctx7 skills rm` | `npx ctx7 skills remove` |
-| `npx ctx7 skills gen` | `npx ctx7 skills generate` |
-| `npx ctx7 skills g` | `npx ctx7 skills generate` |
+| Client | Project Directory | Global Directory |
+|--------|-------------------|------------------|
+| Universal (Amp, Codex, Gemini CLI, GitHub Copilot, OpenCode + more) | `.agents/skills/` | `~/.config/agents/skills/` |
+| Claude Code | `.claude/skills/` | `~/.claude/skills/` |
+| Cursor | `.cursor/skills/` | `~/.cursor/skills/` |
+| Antigravity | `.agent/skills/` | `~/.agent/skills/` |
+
+**Project vs Global:**
+- **Project skills** (default): Installed in your current project directory, available only in that project
+- **Global skills** (`--global`): Installed in your home directory, available across all projects
+
+## Managing Skills
+
+Use the `ctx7` CLI to install, search, generate, and remove skills. See the [CLI reference](/clients/cli#skills) for all commands.
+
+```bash
+# Quick start
+npx ctx7 skills search pdf
+npx ctx7 skills install /anthropics/skills pdf
+```
 
 ## Troubleshooting
 
@@ -339,13 +181,7 @@ For faster usage, the CLI provides short aliases:
 If you see permission errors when installing or removing skills:
 
 ```bash
-# Try with sudo for global installations
-sudo npx ctx7 skills install /anthropics/skills pdf --global
-```
-
-Or fix directory permissions:
-
-```bash
+# Fix directory permissions
 sudo chown -R $(whoami) ~/.claude/skills
 ```
 
@@ -376,35 +212,23 @@ mkdir -p .cursor
 If login fails or tokens expire:
 
 ```bash
-# Clear stored credentials
-npx ctx7 logout
-
-# Log in again
-npx ctx7 login
-```
-
-## Disabling Telemetry
-
-The CLI collects anonymous usage data to help improve the product. To disable telemetry, set the `CTX7_TELEMETRY_DISABLED` environment variable:
-
-```bash
-# For a single command
-CTX7_TELEMETRY_DISABLED=1 npx ctx7 skills search pdf
-
-# Or export in your shell profile (~/.bashrc, ~/.zshrc, etc.)
-export CTX7_TELEMETRY_DISABLED=1
+ctx7 logout
+ctx7 login
 ```
 
 ## Next Steps
 
 <CardGroup cols={2}>
+  <Card title="CLI Reference" icon="terminal" href="/clients/cli">
+    All ctx7 commands for installing, searching, and generating skills
+  </Card>
   <Card title="Browse Skills" icon="magnifying-glass" href="https://context7.com/skills">
     Explore the skills registry
   </Card>
-  <Card title="Claude Code Skills Docs" icon="book" href="https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/skills">
-    Learn more about how skills work in Claude Code
-  </Card>
   <Card title="Agent Skills Spec" icon="code" href="https://agentskills.io">
     Read the open standard specification
+  </Card>
+  <Card title="Claude Code Skills" icon="book" href="https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/skills">
+    Learn more about how skills work in Claude Code
   </Card>
 </CardGroup>
