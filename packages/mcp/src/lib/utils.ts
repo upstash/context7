@@ -72,7 +72,7 @@ export function formatSearchResults(searchResponse: SearchResponse): string {
 
   if (searchResponse.searchFilterApplied) {
     parts.push(
-      "Search results are filtered. To see all available libraries, update your public library access settings in the dashboard at https://context7.com/dashboard?tab=libraries"
+      "**Note:** Search results are filtered. To see all available libraries, update your public library access settings in the dashboard at https://context7.com/dashboard?tab=libraries"
     );
   }
 
