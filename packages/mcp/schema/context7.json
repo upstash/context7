@@ -23,6 +23,12 @@
         "Powerful data synchronization for React"
       ]
     },
+    "branch": {
+      "type": "string",
+      "description": "The name of the git branch to parse. If not provided, the default branch will be used.",
+      "minLength": 1,
+      "examples": ["main", "master", "develop", "context7"]
+    },
     "folders": {
       "type": "array",
       "description": "Specific folder paths to include when parsing documentation. If empty, Context7 will scan the entire repository. Supports regex patterns and requires full paths.",
@@ -105,6 +111,24 @@
           }
         },
         "required": ["tag", "title"],
+        "additionalProperties": false
+      },
+      "default": []
+    },
+    "branchVersions": {
+      "type": "array",
+      "description": "Information about previous versions (branch-based) of your library that should also be available in Context7.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "branch": {
+            "type": "string",
+            "description": "The Git branch",
+            "minLength": 1,
+            "examples": ["v1.x", "stable-2.0", "legacy"]
+          }
+        },
+        "required": ["branch"],
         "additionalProperties": false
       },
       "default": []
