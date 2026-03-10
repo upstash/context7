@@ -9,9 +9,9 @@ If the user already provided a library ID in `/org/project` or `/org/project/ver
 Resolves a package/product name to a Context7-compatible library ID and returns matching libraries.
 
 ```bash
-ctx7 library react "useEffect cleanup"
-ctx7 library nextjs "app router setup"
-ctx7 library prisma "database relations"
+ctx7 library react "How to clean up useEffect with async operations"
+ctx7 library nextjs "How to set up app router with middleware"
+ctx7 library prisma "How to define one-to-many relations with cascade delete"
 ```
 
 Always pass a `query` argument — it is required and directly affects result ranking. Use the user's intent to form the query, which helps disambiguate when multiple libraries share a similar name. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query.
@@ -49,17 +49,17 @@ If the user mentions a specific version, use a version-specific library ID:
 
 ```bash
 # General (latest indexed)
-ctx7 docs /vercel/next.js "app router"
+ctx7 docs /vercel/next.js "How to set up app router"
 
 # Version-specific
-ctx7 docs /vercel/next.js/v14.3.0-canary.87 "app router"
+ctx7 docs /vercel/next.js/v14.3.0-canary.87 "How to set up app router"
 ```
 
 The available versions are listed in the `ctx7 library` output. Use the closest match to what the user specified.
 
 ```bash
 # Output as JSON for scripting
-ctx7 library react "hooks" --json | jq '.[0].id'
+ctx7 library react "How to use hooks for state management" --json | jq '.[0].id'
 ```
 
 ## Step 2: Query Documentation
@@ -69,9 +69,9 @@ Retrieves up-to-date documentation and code examples for the resolved library.
 You must call `ctx7 library` first to obtain the exact Context7-compatible library ID required to use this command, UNLESS the user explicitly provides a library ID in the format `/org/project` or `/org/project/version`.
 
 ```bash
-ctx7 docs /facebook/react "useEffect cleanup"
-ctx7 docs /vercel/next.js "middleware authentication"
-ctx7 docs /prisma/prisma "one-to-many relations"
+ctx7 docs /facebook/react "How to clean up useEffect with async operations"
+ctx7 docs /vercel/next.js "How to add authentication middleware to app router"
+ctx7 docs /prisma/prisma "How to define one-to-many relations with cascade delete"
 ```
 
 IMPORTANT: Do not call `ctx7 docs` more than 3 times per question. If you cannot find what you need after 3 calls, use the best information you have.
@@ -93,11 +93,11 @@ The output contains two types of content: **code snippets** (titled, with langua
 
 ```bash
 # Output as structured JSON
-ctx7 docs /facebook/react "hooks" --json
+ctx7 docs /facebook/react "How to use hooks for state management" --json
 
 # Pipe to other tools — output is clean when not in a TTY (no spinners or colors)
-ctx7 docs /facebook/react "hooks" | head -50
-ctx7 docs /vercel/next.js "routing" | grep -A5 "middleware"
+ctx7 docs /facebook/react "How to use hooks for state management" | head -50
+ctx7 docs /vercel/next.js "How to add middleware for route protection" | grep -A5 "middleware"
 ```
 
 ## Authentication
