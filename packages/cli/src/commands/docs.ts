@@ -10,6 +10,13 @@ import type { LibrarySearchResult, ContextResponse } from "../types.js";
 
 const isTTY = process.stdout.isTTY;
 
+function getReputationLabel(score: number | undefined): "High" | "Medium" | "Low" | "Unknown" {
+  if (score === undefined || score < 0) return "Unknown";
+  if (score >= 7) return "High";
+  if (score >= 4) return "Medium";
+  return "Low";
+}
+
 function getAccessToken(): string | undefined {
   const tokens = loadTokens();
   if (!tokens || isTokenExpired(tokens)) return undefined;
@@ -18,31 +25,24 @@ function getAccessToken(): string | undefined {
 
 function formatLibraryResult(lib: LibrarySearchResult, index: number): string {
   const lines: string[] = [];
-  lines.push(`${pc.dim(`${index + 1}.`)} ${pc.bold(lib.title)} ${pc.cyan(lib.id)}`);
+  lines.push(`${pc.dim(`${index + 1}.`)} ${pc.bold(`Title: ${lib.title}`)}`);
+  lines.push(`   ${pc.cyan(`Context7-compatible library ID: ${lib.id}`)}`);
 
   if (lib.description) {
-    lines.push(`   ${pc.dim(lib.description)}`);
+    lines.push(`   ${pc.dim(`Description: ${lib.description}`)}`);
   }
 
-  const meta: string[] = [];
   if (lib.totalSnippets) {
-    meta.push(`${lib.totalSnippets} snippets`);
-  }
-  if (lib.stars && lib.stars > 0) {
-    meta.push(`${lib.stars.toLocaleString()} stars`);
+    lines.push(`   ${pc.dim(`Code Snippets: ${lib.totalSnippets}`)}`);
   }
   if (lib.trustScore !== undefined) {
-    meta.push(`trust: ${lib.trustScore}/10`);
+    lines.push(`   ${pc.dim(`Source Reputation: ${getReputationLabel(lib.trustScore)}`)}`);
   }
   if (lib.benchmarkScore !== undefined && lib.benchmarkScore > 0) {
-    meta.push(`benchmark: ${lib.benchmarkScore}`);
+    lines.push(`   ${pc.dim(`Benchmark Score: ${lib.benchmarkScore}`)}`);
   }
-  if (meta.length > 0) {
-    lines.push(`   ${pc.dim(meta.join(" · "))}`);
-  }
-
   if (lib.versions && lib.versions.length > 0) {
-    lines.push(`   ${pc.dim(`versions: ${lib.versions.join(", ")}`)}`);
+    lines.push(`   ${pc.dim(`Versions: ${lib.versions.join(", ")}`)}`);
   }
 
   return lines.join("\n");

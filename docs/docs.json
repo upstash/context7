@@ -24,6 +24,7 @@
           "overview",
           "installation",
           "plans-pricing",
+          "clients/cli",
           "adding-libraries",
           "api-guide",
           "skills",
@@ -62,8 +63,7 @@
           "clients/claude-code",
           "clients/cursor",
           "clients/opencode",
-          "resources/all-clients",
-          "clients/cli"
+          "resources/all-clients"
         ]
       },
       {
