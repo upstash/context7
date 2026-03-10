@@ -1,5 +1,11 @@
 # @upstash/context7-mcp
 
+## 2.1.4
+
+### Patch Changes
+
+- 9de3f06: Display warning when public library access filter is being used to filter libraries.
+
 ## 2.1.3
 
 ### Patch Changes
