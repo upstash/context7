@@ -45,6 +45,7 @@ interface SetupOptions {
   apiKey?: string;
   oauth?: boolean;
   cli?: boolean;
+  mcp?: boolean;
 }
 
 const CHECKBOX_THEME = {
@@ -71,7 +72,8 @@ export function registerSetupCommand(program: Command): void {
     .option("--universal", "Set up for Universal (.agents/skills)")
     .option("--antigravity", "Set up for Antigravity (.agent/skills)")
     .option("--opencode", "Set up for OpenCode")
-    .option("--cli", "Set up CLI mode (no MCP server)")
+    .option("--mcp", "Set up MCP server mode")
+    .option("--cli", "Set up CLI + Skills mode (no MCP server)")
     .option("-p, --project", "Configure for current project instead of globally")
     .option("-y, --yes", "Skip confirmation prompts")
     .option("--api-key <key>", "Use API key authentication")
@@ -130,25 +132,24 @@ async function resolveAuth(options: SetupOptions): Promise<AuthOptions | null> {
 
 async function resolveMode(options: SetupOptions): Promise<SetupMode> {
   if (options.cli) return "cli";
-  if (options.yes || options.oauth || options.apiKey) return "mcp";
+  if (options.mcp || options.yes || options.oauth || options.apiKey) return "mcp";
 
   return select<SetupMode>({
     message: "How should your agent access Context7?",
     choices: [
       {
-        name: `MCP server (recommended)\n    ${pc.dim("Agent calls Context7 tools via MCP protocol to retrieve up-to-date library docs")}`,
+        name: `MCP server\n    ${pc.dim("Agent calls Context7 tools via MCP protocol to retrieve up-to-date library docs")}`,
         value: "mcp" as SetupMode,
       },
       {
-        name: `CLI commands\n    ${pc.dim("Agent runs ")}${pc.dim(pc.bold("ctx7 library / ctx7 docs"))}${pc.dim(" shell commands to retrieve up-to-date library docs")}`,
+        name: `CLI + Skills\n    ${pc.dim("Installs a docs skill that guides your agent to fetch up-to-date library docs using ")}${pc.dim(pc.bold("ctx7"))}${pc.dim(" CLI commands")}`,
         value: "cli" as SetupMode,
       },
     ],
     theme: {
       style: {
         highlight: (text: string) => pc.green(text),
-        answer: (text: string) =>
-          pc.green(text.split("\n")[0].replace(" (recommended)", "").trim()),
+        answer: (text: string) => pc.green(text.split("\n")[0].trim()),
       },
     },
   });
