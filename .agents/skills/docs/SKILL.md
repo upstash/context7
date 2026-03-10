@@ -1,8 +1,29 @@
-# Documentation Commands
+---
+name: docs
+description: Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework. Use when writing code that depends on external packages, verifying API signatures, looking up usage patterns, generating code with specific libraries, or when training data may be outdated. Covers setup questions, migration guides, and version-specific docs.
+---
 
-Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework. Two-step workflow: resolve the library name to get its ID, then query docs using that ID.
+# Documentation Lookup
 
-If the user already provided a library ID in `/org/project` or `/org/project/version` format, pass it directly to `ctx7 docs`.
+Retrieve current documentation and code examples for any library using the Context7 CLI.
+
+Run with `npx ctx7` (no install needed) or install globally with `npm install -g ctx7`.
+
+## Workflow
+
+Two-step process: resolve the library name to an ID, then query docs with that ID.
+
+```bash
+# Step 1: Resolve library ID
+ctx7 library <name> <query>
+
+# Step 2: Query documentation
+ctx7 docs <libraryId> <query>
+```
+
+You MUST call `ctx7 library` first to obtain a valid library ID UNLESS the user explicitly provides a library ID in the format `/org/project` or `/org/project/version`.
+
+IMPORTANT: Do not run these commands more than 3 times per question. If you cannot find what you need after 3 attempts, use the best result you have.
 
 ## Step 1: Resolve a Library
 
@@ -41,8 +62,6 @@ Each result includes:
 4. If no good matches exist, clearly state this and suggest query refinements
 5. For ambiguous queries, request clarification before proceeding with a best-guess match
 
-IMPORTANT: Do not call `ctx7 library` more than 3 times per question. If you cannot find what you need after 3 calls, use the best result you have.
-
 ### Version-specific IDs
 
 If the user mentions a specific version, use a version-specific library ID:
@@ -57,24 +76,15 @@ ctx7 docs /vercel/next.js/v14.3.0-canary.87 "app router"
 
 The available versions are listed in the `ctx7 library` output. Use the closest match to what the user specified.
 
-```bash
-# Output as JSON for scripting
-ctx7 library react "hooks" --json | jq '.[0].id'
-```
-
 ## Step 2: Query Documentation
 
 Retrieves up-to-date documentation and code examples for the resolved library.
-
-You must call `ctx7 library` first to obtain the exact Context7-compatible library ID required to use this command, UNLESS the user explicitly provides a library ID in the format `/org/project` or `/org/project/version`.
 
 ```bash
 ctx7 docs /facebook/react "useEffect cleanup"
 ctx7 docs /vercel/next.js "middleware authentication"
 ctx7 docs /prisma/prisma "one-to-many relations"
 ```
-
-IMPORTANT: Do not call `ctx7 docs` more than 3 times per question. If you cannot find what you need after 3 calls, use the best information you have.
 
 ### Writing good queries
 
@@ -87,18 +97,9 @@ The query directly affects the quality of results. Be specific and include relev
 | Bad | `"auth"` |
 | Bad | `"hooks"` |
 
-Use the user's full question as the query when possible — vague one-word queries return generic results.
+Use the user's full question as the query when possible, vague one-word queries return generic results.
 
 The output contains two types of content: **code snippets** (titled, with language-tagged blocks) and **info snippets** (prose explanations with breadcrumb context).
-
-```bash
-# Output as structured JSON
-ctx7 docs /facebook/react "hooks" --json
-
-# Pipe to other tools — output is clean when not in a TTY (no spinners or colors)
-ctx7 docs /facebook/react "hooks" | head -50
-ctx7 docs /vercel/next.js "routing" | grep -A5 "middleware"
-```
 
 ## Authentication
 
@@ -111,3 +112,10 @@ export CONTEXT7_API_KEY=your_key
 # Option B: OAuth login
 ctx7 login
 ```
+
+## Common Mistakes
+
+- Library IDs require a `/` prefix — `/facebook/react` not `facebook/react`
+- Always run `ctx7 library` first — `ctx7 docs react "hooks"` will fail without a valid ID
+- Use descriptive queries, not single words — `"React useEffect cleanup function"` not `"hooks"`
+- Do not include sensitive information (API keys, passwords, credentials) in queries

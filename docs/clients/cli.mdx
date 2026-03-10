@@ -40,48 +40,53 @@ Requires Node.js 18 or later.
 
 ## Query Library Documentation
 
-Fetching docs is a two-step process: first resolve the library name to get its Context7 ID, then use that ID to query documentation. The ID is stable and scoped to a specific library — it's what Context7 uses to know exactly which library and version to pull docs from.
+Fetching docs is a two-step process: first resolve the library name to get its Context7 ID, then use that ID to query documentation.
 
 ### Step 1 — ctx7 library
 
-Searches the Context7 index by name and returns matching libraries. Pass an optional `query` to rank results by relevance to your specific task — this helps when a library name is ambiguous or has multiple versions indexed.
+Searches the Context7 index by name and returns matching libraries. Pass a `query` describing what you're trying to do — this ranks results by relevance and helps when a library name is ambiguous or shared across multiple packages.
 
 ```bash
-ctx7 library react
+ctx7 library react "useEffect cleanup"
 ctx7 library nextjs "app router setup"
 ctx7 library prisma "database relations"
 ```
 
-Each result shows:
+Each result includes:
 
 | Field | Description |
 |-------|-------------|
-| **ID** | The library ID to pass to `ctx7 docs` (e.g., `/facebook/react`) |
-| **Snippets** | Number of indexed documentation snippets |
-| **Stars** | GitHub stars — a signal of library popularity |
-| **Trust score** | Documentation quality indicator (0–10) |
-| **Versions** | Indexed versions, if version-specific docs exist |
+| **Library ID** | The identifier to pass to `ctx7 docs` (format: `/org/project`) |
+| **Code Snippets** | Number of indexed code examples — higher means more documentation coverage |
+| **Source Reputation** | Authority indicator: High, Medium, Low, or Unknown |
+| **Benchmark Score** | Quality score from 0 to 100 |
+| **Versions** | Version-specific IDs when available (format: `/org/project/version`) |
 
-Pick the top result's ID, or a version-specific one if the user mentioned a version (e.g., `/vercel/next.js@canary`).
+When multiple results come back, the best match is usually the one with the closest name, highest snippet count, and strongest reputation. If you need docs for a specific version, pick the matching version ID from the list.
 
 ```bash
-# Output as JSON — useful for scripting or piping into other tools
-ctx7 library react --json | jq '.[0].id'
+# Fetch docs for a specific version
+ctx7 docs /vercel/next.js/v14.3.0-canary.87 "app router"
+
+# Output as JSON for scripting
+ctx7 library react "hooks" --json | jq '.[0].id'
 ```
 
 ### Step 2 — ctx7 docs
 
-Pass the library ID and a natural-language question to fetch relevant code snippets and explanations from the indexed documentation.
+Takes a library ID and a natural-language question, and returns relevant code snippets and explanations from the indexed documentation.
 
 ```bash
-ctx7 docs /facebook/react "useEffect cleanup"
-ctx7 docs /vercel/next.js "middleware authentication"
-ctx7 docs /prisma/prisma "one-to-many relations"
+ctx7 docs /facebook/react "useEffect cleanup function with async operations"
+ctx7 docs /vercel/next.js "middleware that redirects unauthenticated users"
+ctx7 docs /prisma/prisma "one-to-many relations with cascade delete"
 ```
 
 <Note>
 Library IDs always start with `/`. Running `ctx7 docs react "hooks"` will fail — always use the full ID returned by `ctx7 library` in Step 1.
 </Note>
+
+Queries work best when they're specific. Describe what you're trying to accomplish rather than using single keywords — `"How to set up authentication with JWT in Express.js"` returns much better results than `"auth"`.
 
 The output contains two types of content: **code snippets** (titled, with language-tagged blocks) and **info snippets** (prose explanations with breadcrumb context). Both are formatted for readability in the terminal.
 
