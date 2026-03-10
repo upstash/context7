@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.3
+
+### Patch Changes
+
+- 31b4fb8: Align CLI library output format with MCP: use labeled fields (Title, Context7-compatible library ID, Description, Code Snippets, Source Reputation, Benchmark Score, Versions) and categorical reputation labels (High/Medium/Low/Unknown) instead of numeric trust scores
+- 9de3f06: Display warning when public library access filter is being used to filter libraries.
+- 05a4406: Remove default selection of Universal agent target during skills install prompt
+- 9aae852: Show source repository next to skill name in search and suggest results for easier disambiguation
+
 ## 0.3.2
 
 ### Patch Changes
