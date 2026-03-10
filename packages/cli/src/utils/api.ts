@@ -9,7 +9,6 @@ import type {
   StructuredGenerateInput,
   GenerateStreamEvent,
   SkillQuotaResponse,
-  LibraryResolveResponse,
   ContextResponse,
 } from "../types.js";
 import { downloadSkillFromGitHub } from "./github.js";
@@ -267,7 +266,7 @@ export async function resolveLibrary(
   libraryName: string,
   query?: string,
   accessToken?: string
-): Promise<LibraryResolveResponse> {
+): Promise<LibrarySearchResponse> {
   const params = new URLSearchParams({ libraryName });
   if (query) {
     params.set("query", query);
@@ -289,7 +288,7 @@ export async function resolveLibrary(
     };
   }
 
-  return (await response.json()) as LibraryResolveResponse;
+  return (await response.json()) as LibrarySearchResponse;
 }
 
 export interface GetContextOptions {

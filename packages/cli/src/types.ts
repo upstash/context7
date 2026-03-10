@@ -57,6 +57,7 @@ export interface LibrarySearchResult {
 
 export interface LibrarySearchResponse {
   results: LibrarySearchResult[];
+  searchFilterApplied?: boolean;
   error?: string;
   message?: string;
 }
@@ -214,12 +215,6 @@ export interface SkillQuotaResponse {
   resetDate: string | null;
   message?: string;
   error?: string;
-}
-
-export interface LibraryResolveResponse {
-  results: LibrarySearchResult[];
-  error?: string;
-  message?: string;
 }
 
 export interface CodeExample {

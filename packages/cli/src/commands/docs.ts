@@ -91,6 +91,14 @@ async function resolveCommand(
   }
 
   log.blank();
+
+  if (data.searchFilterApplied) {
+    log.warn(
+      "Your results only include libraries matching your access settings. To search across all public libraries, update your settings at https://context7.com/dashboard?tab=libraries"
+    );
+    log.blank();
+  }
+
   for (let i = 0; i < results.length; i++) {
     log.plain(formatLibraryResult(results[i], i));
     log.blank();
