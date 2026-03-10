@@ -124,7 +124,7 @@ export async function promptForInstallTargets(options: AddOptions): Promise<Inst
   // Nothing detected — show checkbox to pick
   const universalLabel = `Universal \u2014 ${UNIVERSAL_AGENTS_LABEL} ${pc.dim(`(${universalPath})`)}`;
   const choices: { name: string; value: IDE; checked: boolean }[] = [
-    { name: universalLabel, value: "universal", checked: true },
+    { name: universalLabel, value: "universal", checked: false },
   ];
 
   for (const ide of VENDOR_SPECIFIC_AGENTS) {
