@@ -453,11 +453,14 @@ async function searchCommand(query: string): Promise<void> {
   log.blank();
 
   const indexWidth = data.results.length.toString().length;
-  const maxNameLen = Math.max(...data.results.map((s) => s.name.length));
+  const nameWithRepo = (s: SkillSearchResult) => `${s.name} ${pc.dim(`(${s.project})`)}`;
+  const nameWithRepoLen = (s: SkillSearchResult) => `${s.name} (${s.project})`.length;
+  const maxNameLen = Math.max(...data.results.map(nameWithRepoLen));
   const installsColWidth = 10;
   const choices = data.results.map((s, index) => {
     const indexStr = pc.dim(`${(index + 1).toString().padStart(indexWidth)}.`);
-    const paddedName = s.name.padEnd(maxNameLen);
+    const rawLen = nameWithRepoLen(s);
+    const displayName = nameWithRepo(s) + " ".repeat(maxNameLen - rawLen);
     const installsRaw = s.installCount ? String(s.installCount) : "-";
     const paddedInstalls =
       formatInstallCount(s.installCount, pc.dim("-")) +
@@ -480,7 +483,7 @@ async function searchCommand(query: string): Promise<void> {
     ];
 
     return {
-      name: `${indexStr} ${paddedName} ${paddedInstalls}${trust}`,
+      name: `${indexStr} ${displayName} ${paddedInstalls}${trust}`,
       value: s,
       description: metadataLines.join("\n"),
     };
@@ -784,7 +787,9 @@ async function suggestCommand(options: SuggestOptions): Promise<void> {
   trackEvent("suggest_results", { depCount: deps.length, skillCount: skills.length });
   log.blank();
 
-  const maxNameLen = Math.max(...skills.map((s) => s.name.length));
+  const nameWithRepo = (s: SkillSearchResult) => `${s.name} ${pc.dim(`(${s.project})`)}`;
+  const nameWithRepoLen = (s: SkillSearchResult) => `${s.name} (${s.project})`.length;
+  const maxNameLen = Math.max(...skills.map(nameWithRepoLen));
   const installsColWidth = 10;
   const trustColWidth = 12;
   const maxMatchedLen = Math.max(...skills.map((s) => s.matchedDep.length));
@@ -792,7 +797,8 @@ async function suggestCommand(options: SuggestOptions): Promise<void> {
 
   const choices = skills.map((s, index) => {
     const indexStr = pc.dim(`${(index + 1).toString().padStart(indexWidth)}.`);
-    const paddedName = s.name.padEnd(maxNameLen);
+    const rawLen = nameWithRepoLen(s);
+    const displayName = nameWithRepo(s) + " ".repeat(maxNameLen - rawLen);
     const installsRaw = s.installCount ? String(s.installCount) : "-";
     const paddedInstalls =
       formatInstallCount(s.installCount, pc.dim("-")) +
@@ -819,7 +825,7 @@ async function suggestCommand(options: SuggestOptions): Promise<void> {
     ];
 
     return {
-      name: `${indexStr} ${paddedName} ${paddedInstalls}${trust}${matched}`,
+      name: `${indexStr} ${displayName} ${paddedInstalls}${trust}${matched}`,
       value: s,
       description: metadataLines.join("\n"),
     };
