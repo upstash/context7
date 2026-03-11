@@ -33,7 +33,7 @@ Context7 mengambil contoh kode dan dokumentasi terkini langsung ke konteks LLM.
 
 ## 📚 Menambahkan Proyek
 
-Kunjungi [panduan penambahan proyek](./adding-projects.md) untuk mempelajari cara menambahkan (atau memperbarui) pustaka favorit Anda ke Context7.
+Kunjungi [panduan penambahan proyek](https://context7.com/docs/adding-libraries) untuk mempelajari cara menambahkan (atau memperbarui) pustaka favorit Anda ke Context7.
 
 ## 🛠️ Instalasi
 

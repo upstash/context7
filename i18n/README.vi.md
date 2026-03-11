@@ -33,7 +33,7 @@ Context7 lấy các ví dụ code và tài liệu cập nhật ngay vào context
 
 ## 📚 Thêm Dự Án
 
-Xem [hướng dẫn thêm dự án](./adding-projects.md) để học cách thêm (hoặc cập nhật) các thư viện yêu thích của bạn vào Context7.
+Xem [hướng dẫn thêm dự án](https://context7.com/docs/adding-libraries) để học cách thêm (hoặc cập nhật) các thư viện yêu thích của bạn vào Context7.
 
 ## 🛠️ Cài Đặt
 

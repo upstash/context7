@@ -34,7 +34,7 @@ O Context7 busca exemplos de código e documentação atualizados diretamente pa
 
 ## 📚 Adicionando Projetos
 
-Confira nosso [guia de adição de projetos](./adding-projects.md) para aprender como adicionar (ou atualizar) suas bibliotecas favoritas ao Context7.
+Confira nosso [guia de adição de projetos](https://context7.com/docs/adding-libraries) para aprender como adicionar (ou atualizar) suas bibliotecas favoritas ao Context7.
 
 ## 🛠️ Instalação
 
