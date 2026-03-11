@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.4
+
+### Patch Changes
+
+- 62dc278: - feat(cli): enumerate popularity with a 4-star scale in skill search, install, and suggest results
+  - feat(cli): show install count range and trust score in skill hover details
+  - fix(cli): rename "docs" skill to "find-docs" in setup output and prompts
+- 04130b5: Consolidate skills under /skills with canonical sources: rename docs→find-docs, ctx7-cli→context7-cli, add context7-mcp as canonical MCP skill. MCP setup now downloads skill from GitHub instead of using hardcoded content.
+- d418405: Add CLI mode to ctx7 setup for installing the docs skill without MCP configuration
+
 ## 0.3.3
 
 ### Patch Changes
