@@ -1,6 +1,6 @@
 ---
-name: context7-docs-lookup
-description: Use Context7 to fetch up-to-date library documentation. Activates when the user asks about libraries, frameworks, API references, or needs code examples — especially for setup questions, code generation, or mentions of specific frameworks like React, Vue, Next.js, Prisma, Supabase, etc.
+name: context7-mcp
+description: This skill should be used when the user asks about libraries, frameworks, API references, or needs code examples. Activates for setup questions, code generation involving libraries, or mentions of specific frameworks like React, Vue, Next.js, Prisma, Supabase, etc.
 ---
 
 When the user asks about libraries, frameworks, or needs code examples, use Context7 to fetch current documentation instead of relying on training data.

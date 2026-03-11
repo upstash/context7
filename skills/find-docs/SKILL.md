@@ -1,5 +1,5 @@
 ---
-name: docs
+name: find-docs
 description: Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework. Use when writing code that depends on external packages, verifying API signatures, looking up usage patterns, generating code with specific libraries, or when training data may be outdated. Covers setup questions, migration guides, and version-specific docs.
 ---
 
@@ -122,6 +122,15 @@ export CONTEXT7_API_KEY=your_key
 # Option B: OAuth login
 ctx7 login
 ```
+
+## Error Handling
+
+If a command fails with a quota error ("Monthly quota reached" or "quota exceeded"):
+1. Inform the user their Context7 quota is exhausted
+2. Suggest they authenticate for higher limits: `ctx7 login`
+3. If they cannot or choose not to authenticate, answer from training knowledge and clearly note it may be outdated
+
+Do not silently fall back to training data — always tell the user why Context7 was not used.
 
 ## Common Mistakes
 

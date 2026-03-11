@@ -4,7 +4,7 @@
 
 One-time command to configure Context7 for your AI coding agent. Prompts for mode on first run:
 - **MCP server** — registers the Context7 MCP server so the agent can call tools natively
-- **CLI + Skills** — installs a `docs` skill that guides the agent to use `ctx7` CLI commands (no MCP required)
+- **CLI + Skills** — installs a `find-docs` skill that guides the agent to use `ctx7` CLI commands (no MCP required)
 
 ```bash
 ctx7 setup                     # Interactive — prompts for mode, then agent/install target
@@ -37,7 +37,7 @@ Without `--api-key` or `--oauth`, setup opens a browser for OAuth login. MCP mod
 **What gets written — MCP mode:**
 - MCP server entry in the agent's config file (`.mcp.json` for Claude, `.cursor/mcp.json` for Cursor, `.opencode.json` for OpenCode)
 - A Context7 rule file instructing the agent to use Context7 for library docs
-- A `documentation-lookup` skill in the agent's skills directory
+- A `context7-mcp` skill in the agent's skills directory
 
 **What gets written — CLI + Skills mode:**
-- A `docs` skill in the chosen agent's skills directory, guiding the agent to use `ctx7 library` and `ctx7 docs` commands
+- A `find-docs` skill in the chosen agent's skills directory, guiding the agent to use `ctx7 library` and `ctx7 docs` commands
