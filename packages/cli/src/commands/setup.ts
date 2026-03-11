@@ -13,7 +13,7 @@ import { getBaseUrl, downloadSkill } from "../utils/api.js";
 import { installSkillFiles } from "../utils/installer.js";
 import { promptForInstallTargets, getTargetDirs } from "../utils/ide.js";
 import { performLogin } from "./auth.js";
-import { loadTokens, isTokenExpired } from "../utils/auth.js";
+import { loadTokens, isTokenExpired, saveTokens } from "../utils/auth.js";
 import {
   type SetupAgent,
   type AuthOptions,
@@ -155,7 +155,14 @@ async function resolveMode(options: SetupOptions): Promise<SetupMode> {
   });
 }
 
-async function resolveCliAuth(): Promise<void> {
+async function resolveCliAuth(apiKey?: string): Promise<void> {
+  if (apiKey) {
+    saveTokens({ access_token: apiKey, token_type: "bearer" });
+    log.blank();
+    log.plain(`${pc.green("✔")} Authenticated`);
+    return;
+  }
+
   const existingTokens = loadTokens();
   if (existingTokens && !isTokenExpired(existingTokens)) {
     log.blank();
@@ -357,7 +364,7 @@ async function setupMcp(agents: SetupAgent[], options: SetupOptions, scope: Scop
 }
 
 async function setupCli(options: SetupOptions): Promise<void> {
-  await resolveCliAuth();
+  await resolveCliAuth(options.apiKey);
 
   const targets = await promptForInstallTargets({ ...options, global: !options.project }, false);
   if (!targets) {
