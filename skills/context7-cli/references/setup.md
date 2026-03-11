@@ -37,7 +37,7 @@ Without `--api-key` or `--oauth`, setup opens a browser for OAuth login. MCP mod
 **What gets written — MCP mode:**
 - MCP server entry in the agent's config file (`.mcp.json` for Claude, `.cursor/mcp.json` for Cursor, `.opencode.json` for OpenCode)
 - A Context7 rule file instructing the agent to use Context7 for library docs
-- A `documentation-lookup` skill in the agent's skills directory
+- A `context7-mcp` skill in the agent's skills directory
 
 **What gets written — CLI + Skills mode:**
 - A `find-docs` skill in the chosen agent's skills directory, guiding the agent to use `ctx7 library` and `ctx7 docs` commands
