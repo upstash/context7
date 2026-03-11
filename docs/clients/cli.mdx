@@ -125,6 +125,7 @@ ctx7 setup --opencode
 
 # Target a specific install location (CLI + Skills mode)
 ctx7 setup --cli --claude       # Claude Code (~/.claude/skills)
+ctx7 setup --cli --cursor       # Cursor (~/.cursor/skills)
 ctx7 setup --cli --universal    # Universal (~/.config/agents/skills)
 ctx7 setup --cli --antigravity  # Antigravity (~/.config/agent/skills)
 
@@ -135,17 +136,17 @@ ctx7 setup --project
 ctx7 setup --yes
 ```
 
-**Authentication options (MCP mode):**
+**Authentication options:**
 
 ```bash
-# Use an existing API key
+# Use an existing API key (works for both MCP and CLI + Skills mode)
 ctx7 setup --api-key YOUR_API_KEY
 
-# Use OAuth endpoint (IDE handles the auth flow)
+# Use OAuth endpoint — MCP mode only (IDE handles the auth flow)
 ctx7 setup --oauth
 ```
 
-Without `--api-key` or `--oauth`, MCP setup opens a browser for OAuth login and generates a new API key automatically. CLI + Skills mode only requires a Context7 login (for skill download).
+Without `--api-key` or `--oauth`, setup opens a browser for OAuth login. MCP mode additionally generates a new API key after login. `--oauth` is MCP-only — use it when an IDE handles the auth flow on your behalf.
 
 **What gets written — MCP mode:**
 
@@ -198,7 +199,7 @@ export CONTEXT7_API_KEY=your_key
 | `ctx7 library` / `ctx7 docs` | No — login gives higher rate limits |
 | `ctx7 skills install / search / suggest / list / remove` | No |
 | `ctx7 skills generate` | Yes |
-| `ctx7 setup` | Yes — unless `--api-key` or `--oauth` is passed |
+| `ctx7 setup` | Yes — unless `--api-key` is passed (`--oauth` also skips login for MCP mode) |
 
 ---
 
