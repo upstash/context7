@@ -138,12 +138,12 @@ async function resolveMode(options: SetupOptions): Promise<SetupMode> {
     message: "How should your agent access Context7?",
     choices: [
       {
-        name: `MCP server\n    ${pc.dim("Agent calls Context7 tools via MCP protocol to retrieve up-to-date library docs")}`,
-        value: "mcp" as SetupMode,
-      },
-      {
         name: `CLI + Skills\n    ${pc.dim("Installs a docs skill that guides your agent to fetch up-to-date library docs using ")}${pc.dim(pc.bold("ctx7"))}${pc.dim(" CLI commands")}`,
         value: "cli" as SetupMode,
+      },
+      {
+        name: `MCP server\n    ${pc.dim("Agent calls Context7 tools via MCP protocol to retrieve up-to-date library docs")}`,
+        value: "mcp" as SetupMode,
       },
     ],
     theme: {
