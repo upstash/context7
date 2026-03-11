@@ -120,9 +120,9 @@ async function queryCommand(
 ): Promise<void> {
   trackEvent("command", { name: "docs" });
 
-  if (!libraryId.startsWith("/")) {
-    log.error(`Invalid library ID: ${libraryId}`);
-    log.info(`Library IDs start with "/" (e.g., /facebook/react)`);
+  if (!libraryId.startsWith("/") || !/^\/[^/]+\/[^/]/.test(libraryId)) {
+    log.error(`Invalid library ID: "${libraryId}"`);
+    log.info(`Expected format: /owner/repo or /owner/repo/version (e.g., /facebook/react)`);
     log.info(`Run "ctx7 library <name>" to find the correct ID`);
     process.exitCode = 1;
     return;
