@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.5
+
+### Patch Changes
+
+- 7e60d05: - feat(cli): track install count events when skills are installed via `ctx7 setup`
+
 ## 0.3.4
 
 ### Patch Changes
