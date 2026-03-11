@@ -75,7 +75,7 @@ const agents: Record<SetupAgent, AgentConfig> = {
       filename: "context7.md",
     },
     skill: {
-      name: "documentation-lookup",
+      name: "context7-mcp",
       dir: (scope) =>
         scope === "global" ? join(homedir(), ".claude", "skills") : join(".claude", "skills"),
     },
@@ -100,7 +100,7 @@ const agents: Record<SetupAgent, AgentConfig> = {
       filename: "context7.mdc",
     },
     skill: {
-      name: "documentation-lookup",
+      name: "context7-mcp",
       dir: (scope) =>
         scope === "global" ? join(homedir(), ".cursor", "skills") : join(".cursor", "skills"),
     },
@@ -131,7 +131,7 @@ const agents: Record<SetupAgent, AgentConfig> = {
           : ".opencode/rules/*.md",
     },
     skill: {
-      name: "documentation-lookup",
+      name: "context7-mcp",
       dir: (scope) =>
         scope === "global" ? join(homedir(), ".agents", "skills") : join(".agents", "skills"),
     },

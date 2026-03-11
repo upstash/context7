@@ -23,7 +23,7 @@ import {
   getAgent,
   detectAgents,
 } from "../setup/agents.js";
-import { RULE_CONTENT, SKILL_CONTENT } from "../setup/templates.js";
+import { RULE_CONTENT } from "../setup/templates.js";
 import {
   readJsonConfig,
   mergeServerEntry,
@@ -309,8 +309,11 @@ async function setupAgent(
 
   let skillStatus: string;
   try {
-    await mkdir(dirname(skillPath), { recursive: true });
-    await writeFile(skillPath, SKILL_CONTENT, "utf-8");
+    const downloadData = await downloadSkill("/upstash/context7", agent.skill.name);
+    if (downloadData.error || downloadData.files.length === 0) {
+      throw new Error(downloadData.error || "no files");
+    }
+    await installSkillFiles(agent.skill.name, downloadData.files, skillDir);
     skillStatus = "installed";
   } catch (err) {
     skillStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
@@ -375,20 +378,20 @@ async function setupCli(options: SetupOptions): Promise<void> {
   log.blank();
   const spinner = ora("Downloading docs skill...").start();
 
-  const downloadData = await downloadSkill("/upstash/context7", "docs");
+  const downloadData = await downloadSkill("/upstash/context7", "find-docs");
   if (downloadData.error || downloadData.files.length === 0) {
-    spinner.fail(`Failed to download docs skill: ${downloadData.error || "no files"}`);
+    spinner.fail(`Failed to download find-docs skill: ${downloadData.error || "no files"}`);
     return;
   }
 
-  spinner.succeed("Downloaded docs skill");
+  spinner.succeed("Downloaded find-docs skill");
 
   const targetDirs = getTargetDirs(targets);
-  const installSpinner = ora("Installing docs skill...").start();
+  const installSpinner = ora("Installing find-docs skill...").start();
 
   for (const dir of targetDirs) {
     installSpinner.text = `Installing to ${dir}...`;
-    await installSkillFiles("docs", downloadData.files, dir);
+    await installSkillFiles("find-docs", downloadData.files, dir);
   }
 
   installSpinner.stop();
