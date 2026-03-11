@@ -62,21 +62,32 @@ If your library doesn't qualify for automatic verification, you can apply manual
   </Step>
 
   <Step title="Apply for Verification">
-    If your library is not yet verified, you'll see a banner at the top of the configuration page with an "Apply for Verification" button. Click it to open the application form.
+    If your library is not yet verified, you'll see a banner at the top of the configuration page with an "Apply for Verification" button. Click it to start the process.
 
     <Frame>
       <img src="/images/howto/verification/apply-button.png" alt="Apply for Verification button" />
     </Frame>
   </Step>
 
+  <Step title="Instant Quality Check">
+    When you initiate a verification request, Context7 automatically checks a set of quality criteria. If your library meets **any one** of the following criteria, it is verified instantly — no form required:
+
+    - **Trust score above 7**: Calculated from your GitHub organization/user profile, including stars, repository count, account age, recent activity, followers, and profile completeness.
+    - **250+ GitHub stars** *(repositories only)*: Indicates a strong and established community.
+    - **Top 1% by popularity ranking**: Your library is among the most in-demand sources indexed on Context7.
+    - **200+ referring domains** *(websites and llms.txt sources only)*: Your source is cited or linked to by more than 200 unique external domains, demonstrating broad recognition across the web.
+
+    If any of these thresholds are met, verification is granted immediately.
+  </Step>
+
   <Step title="Complete the Application">
-    Fill out the verification application form:
+    If none of the quality thresholds are met, you'll be prompted to fill out the verification application form:
 
     | Field | Description | Required |
     | --- | --- | --- |
     | **Website/Docs URL** | Link to your library's official website or documentation | Yes |
     | **Library Description** | Brief description of what your library does | Yes |
-    | **Developer Value** | How your library helps developers | Yes |
+    | **Developer Value** | How your library helps developers | No |
 
     <Frame>
       <img src="/images/howto/verification/apply-modal.png" alt="Verification application modal" />
@@ -84,11 +95,7 @@ If your library doesn't qualify for automatic verification, you can apply manual
   </Step>
 
   <Step title="Submit for Review">
-    Click "Submit Application" to send your request to the Context7 team. You'll be redirected to a GitHub issue where you can track the status of your application.
-  </Step>
-
-  <Step title="Wait for Review">
-    The Context7 team will review your application and respond on the GitHub issue. Review typically takes 1-3 business days.
+    Click "Submit Application" to send your request. Your application will be reviewed immediately.
   </Step>
 </Steps>
 
@@ -125,7 +132,7 @@ Skills inherit the verification status of their parent library. When your librar
 
 ### How long does manual verification take?
 
-Most applications are reviewed within 1-3 business days. Complex cases may take longer.
+If your library meets one of the quality thresholds, verification is instant. Otherwise, your application is reviewed immediately after submission. If it's not automatically accepted, you can [open a GitHub issue](https://github.com/upstash/context7/issues/new/choose) to request a manual review.
 
 ### Can verification be revoked?
 
@@ -144,7 +151,7 @@ Automatic verification is recalculated daily. If your library no longer meets th
 
 ### My library is popular but not verified. Why?
 
-Automatic verification considers multiple factors including trust score, usage statistics, and skill installs. If you believe your library should be verified, please apply manually.
+Automatic verification considers multiple factors including trust score, usage statistics, and skill installs. When you apply manually, Context7 also checks quality criterias like GitHub stars, popularity ranking, and referring domains. If you believe your library meets any of these thresholds, please apply manually and the check will run immediately.
 
 ## Need Help?
 
