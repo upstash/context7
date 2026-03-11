@@ -285,7 +285,7 @@ async function installCommand(
       const choices = skillsWithRepo.map((s, index) => {
         const indexStr = pc.dim(`${(index + 1).toString().padStart(indexWidth)}.`);
         const paddedName = s.name.padEnd(maxNameLen);
-        const popularity = formatPopularity(s.installCount) + " ".repeat(popularityColWidth - 3);
+        const popularity = formatPopularity(s.installCount) + " ".repeat(popularityColWidth - 4);
         const trust = formatTrust(s.trustScore);
 
         const skillUrl = `https://context7.com/skills${s.project}/${s.name}`;
@@ -462,7 +462,7 @@ async function searchCommand(query: string): Promise<void> {
     const indexStr = pc.dim(`${(index + 1).toString().padStart(indexWidth)}.`);
     const rawLen = nameWithRepoLen(s);
     const displayName = nameWithRepo(s) + " ".repeat(maxNameLen - rawLen);
-    const popularity = formatPopularity(s.installCount) + " ".repeat(popularityColWidth - 3);
+    const popularity = formatPopularity(s.installCount) + " ".repeat(popularityColWidth - 4);
     const trust = formatTrust(s.trustScore);
 
     const skillLink = terminalLink(
@@ -798,7 +798,7 @@ async function suggestCommand(options: SuggestOptions): Promise<void> {
     const indexStr = pc.dim(`${(index + 1).toString().padStart(indexWidth)}.`);
     const rawLen = nameWithRepoLen(s);
     const displayName = nameWithRepo(s) + " ".repeat(maxNameLen - rawLen);
-    const popularity = formatPopularity(s.installCount) + " ".repeat(popularityColWidth - 3);
+    const popularity = formatPopularity(s.installCount) + " ".repeat(popularityColWidth - 4);
     const trustLabel = getTrustLabel(s.trustScore);
     const trust = formatTrust(s.trustScore) + " ".repeat(trustColWidth - trustLabel.length);
     const matched = pc.yellow(s.matchedDep.padEnd(maxMatchedLen));

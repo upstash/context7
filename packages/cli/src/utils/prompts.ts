@@ -14,20 +14,22 @@ export function terminalLink(text: string, url: string, color?: (s: string) => s
 }
 
 /**
- * Formats install count into a popularity star rating.
- * <100 → ★☆☆, 100–999 → ★★☆, 1000+ → ★★★
+ * Formats install count into a popularity star rating (4 stars).
+ * 0/unknown → ☆☆☆☆, <100 → ★☆☆☆, <500 → ★★☆☆, <1000 → ★★★☆, 1000+ → ★★★★
  */
 export function formatPopularity(count: number | undefined): string {
   const filled = "★";
   const empty = "☆";
+  const max = 4;
   let stars: number;
   if (count === undefined || count === 0) stars = 0;
   else if (count < 100) stars = 1;
-  else if (count < 1000) stars = 2;
-  else stars = 3;
+  else if (count < 500) stars = 2;
+  else if (count < 1000) stars = 3;
+  else stars = 4;
 
   const filledPart = filled.repeat(stars);
-  const emptyPart = empty.repeat(3 - stars);
+  const emptyPart = empty.repeat(max - stars);
   if (stars === 0) return pc.dim(emptyPart);
   return pc.yellow(filledPart) + pc.dim(emptyPart);
 }
