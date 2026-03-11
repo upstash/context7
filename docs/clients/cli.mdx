@@ -103,18 +103,31 @@ ctx7 docs /vercel/next.js "How to add middleware for route protection" | grep -A
 
 ## Setup
 
-Configure Context7 MCP for your AI coding agent. Writes the MCP server config, a Context7 rule file, and a `documentation-lookup` skill.
+Configure Context7 for your AI coding agent. On first run, prompts you to choose between two modes:
+
+- **MCP server** — registers the Context7 MCP server in your agent's config so it can call `resolve-library-id` and `get-library-docs` tools natively
+- **CLI + Skills** — installs a `docs` skill that guides your agent to fetch up-to-date library docs using `ctx7` CLI commands (no MCP required)
 
 ### ctx7 setup
 
 ```bash
-# Interactive — prompts for agent selection
+# Interactive — prompts for mode, then agent/install target
 ctx7 setup
 
-# Target a specific agent
+# Skip the mode prompt
+ctx7 setup --mcp            # MCP server mode
+ctx7 setup --cli            # CLI + Skills mode
+
+# Target a specific agent (MCP mode)
 ctx7 setup --claude
 ctx7 setup --cursor
 ctx7 setup --opencode
+
+# Target a specific install location (CLI + Skills mode)
+ctx7 setup --cli --claude       # Claude Code (~/.claude/skills)
+ctx7 setup --cli --cursor       # Cursor (~/.cursor/skills)
+ctx7 setup --cli --universal    # Universal (~/.config/agents/skills)
+ctx7 setup --cli --antigravity  # Antigravity (~/.config/agent/skills)
 
 # Configure for current project only (default is global)
 ctx7 setup --project
@@ -126,22 +139,28 @@ ctx7 setup --yes
 **Authentication options:**
 
 ```bash
-# Use an existing API key
+# Use an existing API key (works for both MCP and CLI + Skills mode)
 ctx7 setup --api-key YOUR_API_KEY
 
-# Use OAuth endpoint (IDE handles the auth flow)
+# Use OAuth endpoint — MCP mode only (IDE handles the auth flow)
 ctx7 setup --oauth
 ```
 
-Without `--api-key` or `--oauth`, setup opens a browser for OAuth login and generates a new API key automatically.
+Without `--api-key` or `--oauth`, setup opens a browser for OAuth login. MCP mode additionally generates a new API key after login. `--oauth` is MCP-only — use it when an IDE handles the auth flow on your behalf.
 
-**What gets written:**
+**What gets written — MCP mode:**
 
 | File | Purpose |
 |------|---------|
 | `.mcp.json` / `.cursor/mcp.json` / `.opencode.json` | MCP server entry |
 | Agent rules directory | Rule file — instructs the agent to use Context7 for library docs |
 | Agent skills directory | `documentation-lookup` skill |
+
+**What gets written — CLI + Skills mode:**
+
+| File | Purpose |
+|------|---------|
+| Agent skills directory | `docs` skill — guides the agent to use `ctx7 library` and `ctx7 docs` commands |
 
 ---
 
@@ -180,7 +199,7 @@ export CONTEXT7_API_KEY=your_key
 | `ctx7 library` / `ctx7 docs` | No — login gives higher rate limits |
 | `ctx7 skills install / search / suggest / list / remove` | No |
 | `ctx7 skills generate` | Yes |
-| `ctx7 setup` | Yes — unless `--api-key` or `--oauth` is passed |
+| `ctx7 setup` | Yes — unless `--api-key` is passed (`--oauth` also skips login for MCP mode) |
 
 ---
 

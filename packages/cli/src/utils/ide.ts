@@ -63,7 +63,10 @@ export function getUniversalDir(scope: Scope): string {
   return join(process.cwd(), UNIVERSAL_SKILLS_PATH);
 }
 
-export async function promptForInstallTargets(options: AddOptions): Promise<InstallTargets | null> {
+export async function promptForInstallTargets(
+  options: AddOptions,
+  forceUniversal = true
+): Promise<InstallTargets | null> {
   if (hasExplicitIdeOption(options)) {
     const ides = getSelectedIdes(options);
     const scope: Scope = options.global ? "global" : "project";
@@ -104,13 +107,17 @@ export async function promptForInstallTargets(options: AddOptions): Promise<Inst
     log.blank();
 
     let confirmed: boolean;
-    try {
-      confirmed = await confirm({
-        message: `Install to detected location(s)?\n${pc.dim(pathLines.join("\n"))}`,
-        default: true,
-      });
-    } catch {
-      return null;
+    if (options.yes) {
+      confirmed = true;
+    } else {
+      try {
+        confirmed = await confirm({
+          message: `Install to detected location(s)?\n${pc.dim(pathLines.join("\n"))}`,
+          default: true,
+        });
+      } catch {
+        return null;
+      }
     }
 
     if (!confirmed) {
@@ -124,10 +131,15 @@ export async function promptForInstallTargets(options: AddOptions): Promise<Inst
   // Nothing detected — show checkbox to pick
   const universalLabel = `Universal \u2014 ${UNIVERSAL_AGENTS_LABEL} ${pc.dim(`(${universalPath})`)}`;
   const choices: { name: string; value: IDE; checked: boolean }[] = [
+    {
+      name: `${IDE_NAMES["claude"]} ${pc.dim(`(${pathMap["claude"]})`)}`,
+      value: "claude" as IDE,
+      checked: false,
+    },
     { name: universalLabel, value: "universal", checked: false },
   ];
 
-  for (const ide of VENDOR_SPECIFIC_AGENTS) {
+  for (const ide of VENDOR_SPECIFIC_AGENTS.filter((ide) => ide !== "claude")) {
     choices.push({
       name: `${IDE_NAMES[ide]} ${pc.dim(`(${pathMap[ide]})`)}`,
       value: ide,
@@ -148,7 +160,7 @@ export async function promptForInstallTargets(options: AddOptions): Promise<Inst
           style: {
             highlight: (text: string) => pc.green(text),
             message: (text: string, status: string) => {
-              if (status === "done") return pc.dim(text.split("\n")[0]);
+              if (status === "done") return text.split("\n")[0];
               return pc.bold(text);
             },
           },
@@ -160,8 +172,9 @@ export async function promptForInstallTargets(options: AddOptions): Promise<Inst
     return null;
   }
 
-  // Universal is always included
-  const ides: IDE[] = ["universal", ...selectedIdes.filter((ide) => ide !== "universal")];
+  const ides: IDE[] = forceUniversal
+    ? ["universal", ...selectedIdes.filter((ide) => ide !== "universal")]
+    : selectedIdes;
 
   return { ides, scopes: [scope] };
 }
@@ -179,9 +192,12 @@ export async function promptForSingleTarget(
   log.blank();
 
   const universalLabel = `Universal ${pc.dim(`(${UNIVERSAL_SKILLS_PATH})`)}`;
-  const choices: { name: string; value: IDE }[] = [{ name: universalLabel, value: "universal" }];
+  const choices: { name: string; value: IDE }[] = [
+    { name: `${IDE_NAMES["claude"]} ${pc.dim(`(${IDE_PATHS["claude"]})`)}`, value: "claude" },
+    { name: universalLabel, value: "universal" },
+  ];
 
-  for (const ide of VENDOR_SPECIFIC_AGENTS) {
+  for (const ide of VENDOR_SPECIFIC_AGENTS.filter((ide) => ide !== "claude")) {
     choices.push({
       name: `${IDE_NAMES[ide]} ${pc.dim(`(${IDE_PATHS[ide]})`)}`,
       value: ide,

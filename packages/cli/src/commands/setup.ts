@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import pc from "picocolors";
 import ora from "ora";
+import { select } from "@inquirer/prompts";
 import { mkdir, writeFile } from "fs/promises";
 import { dirname, join } from "path";
 import { randomBytes } from "crypto";
@@ -8,9 +9,11 @@ import { randomBytes } from "crypto";
 import { log } from "../utils/logger.js";
 import { checkboxWithHover } from "../utils/prompts.js";
 import { trackEvent } from "../utils/tracking.js";
-import { getBaseUrl } from "../utils/api.js";
+import { getBaseUrl, downloadSkill } from "../utils/api.js";
+import { installSkillFiles } from "../utils/installer.js";
+import { promptForInstallTargets, getTargetDirs } from "../utils/ide.js";
 import { performLogin } from "./auth.js";
-import { loadTokens, isTokenExpired } from "../utils/auth.js";
+import { loadTokens, isTokenExpired, saveTokens } from "../utils/auth.js";
 import {
   type SetupAgent,
   type AuthOptions,
@@ -29,15 +32,20 @@ import {
 } from "../setup/mcp-writer.js";
 
 type Scope = "global" | "project";
+type SetupMode = "mcp" | "cli";
 
 interface SetupOptions {
   claude?: boolean;
   cursor?: boolean;
+  universal?: boolean;
+  antigravity?: boolean;
   opencode?: boolean;
   project?: boolean;
   yes?: boolean;
   apiKey?: string;
   oauth?: boolean;
+  cli?: boolean;
+  mcp?: boolean;
 }
 
 const CHECKBOX_THEME = {
@@ -58,10 +66,14 @@ function getSelectedAgents(options: SetupOptions): SetupAgent[] {
 export function registerSetupCommand(program: Command): void {
   program
     .command("setup")
-    .description("Set up Context7 MCP and rule for your AI coding agent")
+    .description("Set up Context7 for your AI coding agent")
     .option("--claude", "Set up for Claude Code")
     .option("--cursor", "Set up for Cursor")
+    .option("--universal", "Set up for Universal (.agents/skills)")
+    .option("--antigravity", "Set up for Antigravity (.agent/skills)")
     .option("--opencode", "Set up for OpenCode")
+    .option("--mcp", "Set up MCP server mode")
+    .option("--cli", "Set up CLI + Skills mode (no MCP server)")
     .option("-p, --project", "Configure for current project instead of globally")
     .option("-y, --yes", "Skip confirmation prompts")
     .option("--api-key <key>", "Use API key authentication")
@@ -118,6 +130,49 @@ async function resolveAuth(options: SetupOptions): Promise<AuthOptions | null> {
   return { mode: "api-key", apiKey };
 }
 
+async function resolveMode(options: SetupOptions): Promise<SetupMode> {
+  if (options.cli) return "cli";
+  if (options.mcp || options.yes || options.oauth || options.apiKey) return "mcp";
+
+  return select<SetupMode>({
+    message: "How should your agent access Context7?",
+    choices: [
+      {
+        name: `MCP server\n    ${pc.dim("Agent calls Context7 tools via MCP protocol to retrieve up-to-date library docs")}`,
+        value: "mcp" as SetupMode,
+      },
+      {
+        name: `CLI + Skills\n    ${pc.dim("Installs a docs skill that guides your agent to fetch up-to-date library docs using ")}${pc.dim(pc.bold("ctx7"))}${pc.dim(" CLI commands")}`,
+        value: "cli" as SetupMode,
+      },
+    ],
+    theme: {
+      style: {
+        highlight: (text: string) => pc.green(text),
+        answer: (text: string) => pc.green(text.split("\n")[0].trim()),
+      },
+    },
+  });
+}
+
+async function resolveCliAuth(apiKey?: string): Promise<void> {
+  if (apiKey) {
+    saveTokens({ access_token: apiKey, token_type: "bearer" });
+    log.blank();
+    log.plain(`${pc.green("✔")} Authenticated`);
+    return;
+  }
+
+  const existingTokens = loadTokens();
+  if (existingTokens && !isTokenExpired(existingTokens)) {
+    log.blank();
+    log.plain(`${pc.green("✔")} Authenticated`);
+    return;
+  }
+
+  await performLogin();
+}
+
 async function isAlreadyConfigured(agentName: SetupAgent, scope: Scope): Promise<boolean> {
   const agent = getAgent(agentName);
   const mcpPath =
@@ -131,10 +186,10 @@ async function isAlreadyConfigured(agentName: SetupAgent, scope: Scope): Promise
   }
 }
 
-async function promptAgents(scope: Scope): Promise<SetupAgent[] | null> {
+async function promptAgents(scope: Scope, mode: SetupMode): Promise<SetupAgent[] | null> {
   const choices = await Promise.all(
     ALL_AGENT_NAMES.map(async (name) => {
-      const configured = await isAlreadyConfigured(name, scope);
+      const configured = mode === "mcp" ? await isAlreadyConfigured(name, scope) : false;
       return {
         name: SETUP_AGENT_NAMES[name],
         value: name,
@@ -148,10 +203,13 @@ async function promptAgents(scope: Scope): Promise<SetupAgent[] | null> {
     return null;
   }
 
+  const message =
+    mode === "cli" ? "Install docs skill for which agents?" : "Which agents do you want to set up?";
+
   try {
     return await checkboxWithHover(
       {
-        message: "Which agents do you want to set up?",
+        message,
         choices,
         loop: false,
         theme: CHECKBOX_THEME,
@@ -163,7 +221,11 @@ async function promptAgents(scope: Scope): Promise<SetupAgent[] | null> {
   }
 }
 
-async function resolveAgents(options: SetupOptions, scope: Scope): Promise<SetupAgent[]> {
+async function resolveAgents(
+  options: SetupOptions,
+  scope: Scope,
+  mode: SetupMode = "mcp"
+): Promise<SetupAgent[]> {
   const explicit = getSelectedAgents(options);
   if (explicit.length > 0) return explicit;
 
@@ -172,7 +234,7 @@ async function resolveAgents(options: SetupOptions, scope: Scope): Promise<Setup
   if (detected.length > 0 && options.yes) return detected;
 
   log.blank();
-  const selected = await promptAgents(scope);
+  const selected = await promptAgents(scope, mode);
   if (!selected) {
     log.warn("Setup cancelled");
     return [];
@@ -265,13 +327,7 @@ async function setupAgent(
   };
 }
 
-async function setupCommand(options: SetupOptions): Promise<void> {
-  trackEvent("command", { name: "setup" });
-
-  const scope: Scope = options.project ? "project" : "global";
-  const agents = await resolveAgents(options, scope);
-  if (agents.length === 0) return;
-
+async function setupMcp(agents: SetupAgent[], options: SetupOptions, scope: Scope): Promise<void> {
   const auth = await resolveAuth(options);
   if (!auth) {
     log.warn("Setup cancelled");
@@ -305,4 +361,70 @@ async function setupCommand(options: SetupOptions): Promise<void> {
   log.blank();
 
   trackEvent("setup", { agents, scope, authMode: auth.mode });
+}
+
+async function setupCli(options: SetupOptions): Promise<void> {
+  await resolveCliAuth(options.apiKey);
+
+  const targets = await promptForInstallTargets({ ...options, global: !options.project }, false);
+  if (!targets) {
+    log.warn("Setup cancelled");
+    return;
+  }
+
+  log.blank();
+  const spinner = ora("Downloading docs skill...").start();
+
+  const downloadData = await downloadSkill("/upstash/context7", "docs");
+  if (downloadData.error || downloadData.files.length === 0) {
+    spinner.fail(`Failed to download docs skill: ${downloadData.error || "no files"}`);
+    return;
+  }
+
+  spinner.succeed("Downloaded docs skill");
+
+  const targetDirs = getTargetDirs(targets);
+  const installSpinner = ora("Installing docs skill...").start();
+
+  for (const dir of targetDirs) {
+    installSpinner.text = `Installing to ${dir}...`;
+    await installSkillFiles("docs", downloadData.files, dir);
+  }
+
+  installSpinner.stop();
+  log.blank();
+  log.plain(`${pc.green("✔")} Context7 CLI setup complete`);
+
+  log.blank();
+  for (const dir of targetDirs) {
+    log.itemAdd(
+      `docs  ${pc.dim("Guides your agent to fetch up-to-date library docs on demand using ctx7 CLI commands")}`
+    );
+    log.plain(`    ${pc.dim(dir)}`);
+  }
+  log.blank();
+  log.plain(`  ${pc.bold("Next steps")}`);
+  log.plain(`    Ask your agent: ${pc.cyan(`"Use ctx7 CLI to look up React hooks"`)}`);
+  log.blank();
+
+  trackEvent("setup", { mode: "cli" });
+}
+
+async function setupCommand(options: SetupOptions): Promise<void> {
+  trackEvent("command", { name: "setup" });
+
+  try {
+    const mode = await resolveMode(options);
+    if (mode === "mcp") {
+      const scope: Scope = options.project ? "project" : "global";
+      const agents = await resolveAgents(options, scope, mode);
+      if (agents.length === 0) return;
+      await setupMcp(agents, options, scope);
+    } else {
+      await setupCli(options);
+    }
+  } catch (err) {
+    if (err instanceof Error && err.name === "ExitPromptError") process.exit(0);
+    throw err;
+  }
 }

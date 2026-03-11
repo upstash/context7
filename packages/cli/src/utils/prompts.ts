@@ -64,6 +64,7 @@ export async function checkboxWithHover<T>(
     theme: {
       ...config.theme,
       style: {
+        answer: (text: string) => pc.green(text),
         ...config.theme?.style,
         highlight: (text: string) => pc.green(text),
         renderSelectedChoices: (
