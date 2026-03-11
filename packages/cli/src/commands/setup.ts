@@ -138,12 +138,12 @@ async function resolveMode(options: SetupOptions): Promise<SetupMode> {
     message: "How should your agent access Context7?",
     choices: [
       {
-        name: `MCP server\n    ${pc.dim("Agent calls Context7 tools via MCP protocol to retrieve up-to-date library docs")}`,
-        value: "mcp" as SetupMode,
+        name: `CLI + Skills\n    ${pc.dim("Installs a find-docs skill that guides your agent to fetch up-to-date library docs using ")}${pc.dim(pc.bold("ctx7"))}${pc.dim(" CLI commands")}`,
+        value: "cli" as SetupMode,
       },
       {
-        name: `CLI + Skills\n    ${pc.dim("Installs a docs skill that guides your agent to fetch up-to-date library docs using ")}${pc.dim(pc.bold("ctx7"))}${pc.dim(" CLI commands")}`,
-        value: "cli" as SetupMode,
+        name: `MCP server\n    ${pc.dim("Agent calls Context7 tools via MCP protocol to retrieve up-to-date library docs")}`,
+        value: "mcp" as SetupMode,
       },
     ],
     theme: {
@@ -204,7 +204,9 @@ async function promptAgents(scope: Scope, mode: SetupMode): Promise<SetupAgent[]
   }
 
   const message =
-    mode === "cli" ? "Install docs skill for which agents?" : "Which agents do you want to set up?";
+    mode === "cli"
+      ? "Install find-docs skill for which agents?"
+      : "Which agents do you want to set up?";
 
   try {
     return await checkboxWithHover(
@@ -376,7 +378,7 @@ async function setupCli(options: SetupOptions): Promise<void> {
   }
 
   log.blank();
-  const spinner = ora("Downloading docs skill...").start();
+  const spinner = ora("Downloading find-docs skill...").start();
 
   const downloadData = await downloadSkill("/upstash/context7", "find-docs");
   if (downloadData.error || downloadData.files.length === 0) {
@@ -401,7 +403,7 @@ async function setupCli(options: SetupOptions): Promise<void> {
   log.blank();
   for (const dir of targetDirs) {
     log.itemAdd(
-      `docs  ${pc.dim("Guides your agent to fetch up-to-date library docs on demand using ctx7 CLI commands")}`
+      `find-docs  ${pc.dim("Guides your agent to fetch up-to-date library docs on demand using ctx7 CLI commands")}`
     );
     log.plain(`    ${pc.dim(dir)}`);
   }

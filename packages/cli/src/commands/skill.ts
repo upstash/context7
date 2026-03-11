@@ -24,8 +24,10 @@ import {
 import {
   checkboxWithHover,
   terminalLink,
-  formatInstallCount,
-  formatTrustScore,
+  formatPopularity,
+  formatTrust,
+  formatInstallRange,
+  getTrustLabel,
 } from "../utils/prompts.js";
 import { installSkillFiles, symlinkSkill } from "../utils/installer.js";
 import { trackEvent } from "../utils/tracking.js";
@@ -279,15 +281,12 @@ async function installCommand(
     } else {
       const indexWidth = data.skills.length.toString().length;
       const maxNameLen = Math.max(...data.skills.map((s) => s.name.length));
-      const installsColWidth = 10;
+      const popularityColWidth = 13;
       const choices = skillsWithRepo.map((s, index) => {
         const indexStr = pc.dim(`${(index + 1).toString().padStart(indexWidth)}.`);
         const paddedName = s.name.padEnd(maxNameLen);
-        const installsRaw = s.installCount ? String(s.installCount) : "-";
-        const paddedInstalls =
-          formatInstallCount(s.installCount, pc.dim("-")) +
-          " ".repeat(installsColWidth - installsRaw.length);
-        const trust = formatTrustScore(s.trustScore);
+        const popularity = formatPopularity(s.installCount) + " ".repeat(popularityColWidth - 4);
+        const trust = formatTrust(s.trustScore);
 
         const skillUrl = `https://context7.com/skills${s.project}/${s.name}`;
         const skillLink = terminalLink(s.name, skillUrl, pc.white);
@@ -297,12 +296,14 @@ async function installCommand(
           "",
           `${pc.yellow("Skill:")}       ${skillLink}`,
           `${pc.yellow("Repo:")}        ${repoLink}`,
+          `${pc.yellow("Installs:")}    ${pc.white(formatInstallRange(s.installCount))}`,
+          `${pc.yellow("Trust:")}       ${s.trustScore !== undefined && s.trustScore >= 0 ? pc.white(s.trustScore.toFixed(1)) : pc.dim("-")}`,
           `${pc.yellow("Description:")}`,
           pc.white(s.description || "No description"),
         ];
 
         return {
-          name: `${indexStr} ${paddedName} ${paddedInstalls}${trust}`,
+          name: `${indexStr} ${paddedName} ${popularity}${trust}`,
           value: s,
           description: metadataLines.join("\n"),
         };
@@ -313,7 +314,7 @@ async function installCommand(
       const checkboxPrefixWidth = 3;
       const headerPad = " ".repeat(checkboxPrefixWidth + indexWidth + 1 + 1 + maxNameLen + 1);
       const headerLine =
-        headerPad + pc.dim("Installs".padEnd(installsColWidth)) + pc.dim("Trust(0-10)");
+        headerPad + pc.dim("Popularity".padEnd(popularityColWidth)) + pc.dim("Trust");
 
       try {
         selectedSkills = await checkboxWithHover({
@@ -456,16 +457,13 @@ async function searchCommand(query: string): Promise<void> {
   const nameWithRepo = (s: SkillSearchResult) => `${s.name} ${pc.dim(`(${s.project})`)}`;
   const nameWithRepoLen = (s: SkillSearchResult) => `${s.name} (${s.project})`.length;
   const maxNameLen = Math.max(...data.results.map(nameWithRepoLen));
-  const installsColWidth = 10;
+  const popularityColWidth = 13;
   const choices = data.results.map((s, index) => {
     const indexStr = pc.dim(`${(index + 1).toString().padStart(indexWidth)}.`);
     const rawLen = nameWithRepoLen(s);
     const displayName = nameWithRepo(s) + " ".repeat(maxNameLen - rawLen);
-    const installsRaw = s.installCount ? String(s.installCount) : "-";
-    const paddedInstalls =
-      formatInstallCount(s.installCount, pc.dim("-")) +
-      " ".repeat(installsColWidth - installsRaw.length);
-    const trust = formatTrustScore(s.trustScore);
+    const popularity = formatPopularity(s.installCount) + " ".repeat(popularityColWidth - 4);
+    const trust = formatTrust(s.trustScore);
 
     const skillLink = terminalLink(
       s.name,
@@ -478,12 +476,14 @@ async function searchCommand(query: string): Promise<void> {
       "",
       `${pc.yellow("Skill:")}       ${skillLink}`,
       `${pc.yellow("Repo:")}        ${repoLink}`,
+      `${pc.yellow("Installs:")}    ${pc.white(formatInstallRange(s.installCount))}`,
+      `${pc.yellow("Trust:")}       ${s.trustScore !== undefined && s.trustScore >= 0 ? pc.white(s.trustScore.toFixed(1)) : pc.dim("-")}`,
       `${pc.yellow("Description:")}`,
       pc.white(s.description || "No description"),
     ];
 
     return {
-      name: `${indexStr} ${displayName} ${paddedInstalls}${trust}`,
+      name: `${indexStr} ${displayName} ${popularity}${trust}`,
       value: s,
       description: metadataLines.join("\n"),
     };
@@ -491,8 +491,7 @@ async function searchCommand(query: string): Promise<void> {
 
   const checkboxPrefixWidth = 3; // "❯◯ " or " ◯ "
   const headerPad = " ".repeat(checkboxPrefixWidth + indexWidth + 1 + 1 + maxNameLen + 1);
-  const headerLine =
-    headerPad + pc.dim("Installs".padEnd(installsColWidth)) + pc.dim("Trust(0-10)");
+  const headerLine = headerPad + pc.dim("Popularity".padEnd(popularityColWidth)) + pc.dim("Trust");
 
   let selectedSkills: SkillSearchResult[];
   try {
@@ -790,8 +789,8 @@ async function suggestCommand(options: SuggestOptions): Promise<void> {
   const nameWithRepo = (s: SkillSearchResult) => `${s.name} ${pc.dim(`(${s.project})`)}`;
   const nameWithRepoLen = (s: SkillSearchResult) => `${s.name} (${s.project})`.length;
   const maxNameLen = Math.max(...skills.map(nameWithRepoLen));
-  const installsColWidth = 10;
-  const trustColWidth = 12;
+  const popularityColWidth = 13;
+  const trustColWidth = 8;
   const maxMatchedLen = Math.max(...skills.map((s) => s.matchedDep.length));
   const indexWidth = skills.length.toString().length;
 
@@ -799,13 +798,9 @@ async function suggestCommand(options: SuggestOptions): Promise<void> {
     const indexStr = pc.dim(`${(index + 1).toString().padStart(indexWidth)}.`);
     const rawLen = nameWithRepoLen(s);
     const displayName = nameWithRepo(s) + " ".repeat(maxNameLen - rawLen);
-    const installsRaw = s.installCount ? String(s.installCount) : "-";
-    const paddedInstalls =
-      formatInstallCount(s.installCount, pc.dim("-")) +
-      " ".repeat(installsColWidth - installsRaw.length);
-    const trustRaw =
-      s.trustScore !== undefined && s.trustScore >= 0 ? s.trustScore.toFixed(1) : "-";
-    const trust = formatTrustScore(s.trustScore) + " ".repeat(trustColWidth - trustRaw.length);
+    const popularity = formatPopularity(s.installCount) + " ".repeat(popularityColWidth - 4);
+    const trustLabel = getTrustLabel(s.trustScore);
+    const trust = formatTrust(s.trustScore) + " ".repeat(trustColWidth - trustLabel.length);
     const matched = pc.yellow(s.matchedDep.padEnd(maxMatchedLen));
 
     const skillLink = terminalLink(
@@ -819,13 +814,15 @@ async function suggestCommand(options: SuggestOptions): Promise<void> {
       "",
       `${pc.yellow("Skill:")}       ${skillLink}`,
       `${pc.yellow("Repo:")}        ${repoLink}`,
+      `${pc.yellow("Installs:")}    ${pc.white(formatInstallRange(s.installCount))}`,
+      `${pc.yellow("Trust:")}       ${s.trustScore !== undefined && s.trustScore >= 0 ? pc.white(s.trustScore.toFixed(1)) : pc.dim("-")}`,
       `${pc.yellow("Relevant:")}    ${pc.white(s.matchedDep)}`,
       `${pc.yellow("Description:")}`,
       pc.white(s.description || "No description"),
     ];
 
     return {
-      name: `${indexStr} ${displayName} ${paddedInstalls}${trust}${matched}`,
+      name: `${indexStr} ${displayName} ${popularity}${trust}${matched}`,
       value: s,
       description: metadataLines.join("\n"),
     };
@@ -835,8 +832,8 @@ async function suggestCommand(options: SuggestOptions): Promise<void> {
   const headerPad = " ".repeat(checkboxPrefixWidth + indexWidth + 1 + 1 + maxNameLen + 1);
   const headerLine =
     headerPad +
-    pc.dim("Installs".padEnd(installsColWidth)) +
-    pc.dim("Trust(0-10)".padEnd(trustColWidth)) +
+    pc.dim("Popularity".padEnd(popularityColWidth)) +
+    pc.dim("Trust".padEnd(trustColWidth)) +
     pc.dim("Relevant");
 
   let selectedSkills: SkillSearchResult[];
