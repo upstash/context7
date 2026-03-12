@@ -76,17 +76,13 @@ export function isTokenExpired(tokens: TokenData): boolean {
   return Date.now() > tokens.expires_at - 60000;
 }
 
-export async function refreshAccessToken(
-  baseUrl: string,
-  clientId: string,
-  refreshToken: string
-): Promise<TokenData> {
-  const response = await fetch(`${baseUrl}/api/oauth/token`, {
+async function refreshAccessToken(refreshToken: string): Promise<TokenData> {
+  const response = await fetch(`${getBaseUrl()}/api/oauth/token`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       grant_type: "refresh_token",
-      client_id: clientId,
+      client_id: CLI_CLIENT_ID,
       refresh_token: refreshToken,
     }).toString(),
   });
@@ -116,7 +112,7 @@ export async function getValidAccessToken(): Promise<string | null> {
   }
 
   try {
-    const newTokens = await refreshAccessToken(getBaseUrl(), CLI_CLIENT_ID, tokens.refresh_token);
+    const newTokens = await refreshAccessToken(tokens.refresh_token);
     saveTokens(newTokens);
     return newTokens.access_token;
   } catch {
