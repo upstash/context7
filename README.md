@@ -1,12 +1,12 @@
-![Cover](https://github.com/upstash/context7/blob/master/public/cover.png?raw=true)
+Cover
 
-[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D)
+[Install MCP Server](https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D)
 
 # Context7 Platform - Up-to-date Code Docs For Any Prompt
 
-[![Website](https://img.shields.io/badge/Website-context7.com-blue)](https://context7.com) [![smithery badge](https://smithery.ai/badge/@upstash/context7-mcp)](https://smithery.ai/server/@upstash/context7-mcp) [![NPM Version](https://img.shields.io/npm/v/%40upstash%2Fcontext7-mcp?color=red)](https://www.npmjs.com/package/@upstash/context7-mcp) [![MIT licensed](https://img.shields.io/npm/l/%40upstash%2Fcontext7-mcp)](./LICENSE)
+[Website](https://context7.com) [smithery badge](https://smithery.ai/server/@upstash/context7-mcp) [NPM Version](https://www.npmjs.com/package/@upstash/context7-mcp) [MIT licensed](./LICENSE)
 
-[![繁體中文](https://img.shields.io/badge/docs-繁體中文-yellow)](./i18n/README.zh-TW.md) [![简体中文](https://img.shields.io/badge/docs-简体中文-yellow)](./i18n/README.zh-CN.md) [![日本語](https://img.shields.io/badge/docs-日本語-b7003a)](./i18n/README.ja.md) [![한국어 문서](https://img.shields.io/badge/docs-한국어-green)](./i18n/README.ko.md) [![Documentación en Español](https://img.shields.io/badge/docs-Español-orange)](./i18n/README.es.md) [![Documentation en Français](https://img.shields.io/badge/docs-Français-blue)](./i18n/README.fr.md) [![Documentação em Português (Brasil)](<https://img.shields.io/badge/docs-Português%20(Brasil)-purple>)](./i18n/README.pt-BR.md) [![Documentazione in italiano](https://img.shields.io/badge/docs-Italian-red)](./i18n/README.it.md) [![Dokumentasi Bahasa Indonesia](https://img.shields.io/badge/docs-Bahasa%20Indonesia-pink)](./i18n/README.id-ID.md) [![Dokumentation auf Deutsch](https://img.shields.io/badge/docs-Deutsch-darkgreen)](./i18n/README.de.md) [![Документация на русском языке](https://img.shields.io/badge/docs-Русский-darkblue)](./i18n/README.ru.md) [![Українська документація](https://img.shields.io/badge/docs-Українська-lightblue)](./i18n/README.uk.md) [![Türkçe Doküman](https://img.shields.io/badge/docs-Türkçe-blue)](./i18n/README.tr.md) [![Arabic Documentation](https://img.shields.io/badge/docs-Arabic-white)](./i18n/README.ar.md) [![Tiếng Việt](https://img.shields.io/badge/docs-Tiếng%20Việt-red)](./i18n/README.vi.md)
+[繁體中文](./i18n/README.zh-TW.md) [简体中文](./i18n/README.zh-CN.md) [日本語](./i18n/README.ja.md) [한국어 문서](./i18n/README.ko.md) [Documentación en Español](./i18n/README.es.md) [Documentation en Français](./i18n/README.fr.md) [Documentação em Português (Brasil)](./i18n/README.pt-BR.md) [Documentazione in italiano](./i18n/README.it.md) [Dokumentasi Bahasa Indonesia](./i18n/README.id-ID.md) [Dokumentation auf Deutsch](./i18n/README.de.md) [Документация на русском языке](./i18n/README.ru.md) [Українська документація](./i18n/README.uk.md) [Türkçe Doküman](./i18n/README.tr.md) [Arabic Documentation](./i18n/README.ar.md) [Tiếng Việt](./i18n/README.vi.md)
 
 ## ❌ Without Context7
 
@@ -31,12 +31,13 @@ JSON API responses for five minutes. use context7
 ```
 
 ```txt
-Show me the Supabase auth API for email/password sign-up. use context7
+Show me the Supabase auth API for email/password sign-up.
 ```
 
 Context7 fetches up-to-date code examples and documentation right into your LLM's context. No tab-switching, no hallucinated APIs that don't exist, no outdated code generation.
 
 Works in two modes:
+
 - **CLI + Skills** — installs a skill that guides your agent to fetch docs using `ctx7` CLI commands (no MCP required)
 - **MCP** — registers a Context7 MCP server so your agent can call documentation tools natively
 
@@ -52,6 +53,7 @@ npx ctx7 setup
 ```
 
 Authenticates via OAuth, generates an API key, and installs the appropriate skill. You can choose between CLI + Skills or MCP mode. Use `--cursor`, `--claude`, or `--opencode` to target a specific agent.
+
 **[Manual Installation / Other Clients →](https://context7.com/docs/resources/all-clients)**
 
 ## Important Tips
@@ -102,7 +104,6 @@ Always use Context7 when I need library/API documentation, code generation, setu
 - `resolve-library-id`: Resolves a general library name into a Context7-compatible library ID.
   - `query` (required): The user's question or task (used to rank results by relevance)
   - `libraryName` (required): The name of the library to search for
-
 - `query-docs`: Retrieves documentation for a library using a Context7-compatible library ID.
   - `libraryId` (required): Exact Context7-compatible library ID (e.g., `/mongodb/docs`, `/vercel/next.js`)
   - `query` (required): The question or task to get relevant documentation for
@@ -143,7 +144,7 @@ Stay updated and join our community:
 
 ## ⭐ Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=upstash/context7&type=Date)](https://www.star-history.com/#upstash/context7&Date)
+[Star History Chart](https://www.star-history.com/#upstash/context7&Date)
 
 ## 📄 License
 
