@@ -8,15 +8,13 @@ import {
   createCallbackServer,
   exchangeCodeForTokens,
   saveTokens,
-  loadTokens,
   clearTokens,
   buildAuthorizationUrl,
-  isTokenExpired,
+  getValidAccessToken,
 } from "../utils/auth.js";
 
 import { trackEvent } from "../utils/tracking.js";
-
-const CLI_CLIENT_ID = "2veBSofhicRBguUT";
+import { CLI_CLIENT_ID } from "../constants.js";
 
 let baseUrl = "https://context7.com";
 
@@ -117,18 +115,13 @@ export async function performLogin(openBrowser = true): Promise<string | null> {
 
 async function loginCommand(options: { browser: boolean }): Promise<void> {
   trackEvent("command", { name: "login" });
-  const existingTokens = loadTokens();
-  if (existingTokens) {
-    const expired = isTokenExpired(existingTokens);
-    if (!expired || existingTokens.refresh_token) {
-      console.log(pc.yellow("You are already logged in."));
-      console.log(
-        pc.dim("Run 'ctx7 logout' first if you want to log in with a different account.")
-      );
-      return;
-    }
-    clearTokens();
+  const existingToken = await getValidAccessToken();
+  if (existingToken) {
+    console.log(pc.yellow("You are already logged in."));
+    console.log(pc.dim("Run 'ctx7 logout' first if you want to log in with a different account."));
+    return;
   }
+  clearTokens();
 
   const token = await performLogin(options.browser);
   if (!token) {
@@ -149,9 +142,9 @@ function logoutCommand(): void {
 
 async function whoamiCommand(): Promise<void> {
   trackEvent("command", { name: "whoami" });
-  const tokens = loadTokens();
+  const accessToken = await getValidAccessToken();
 
-  if (!tokens) {
+  if (!accessToken) {
     console.log(pc.yellow("Not logged in."));
     console.log(pc.dim("Run 'ctx7 login' to authenticate."));
     return;
@@ -160,7 +153,7 @@ async function whoamiCommand(): Promise<void> {
   console.log(pc.green("Logged in"));
 
   try {
-    const userInfo = await fetchUserInfo(tokens.access_token);
+    const userInfo = await fetchUserInfo(accessToken);
     if (userInfo.name) {
       console.log(`${pc.dim("Name:".padEnd(9))}${userInfo.name}`);
     }
@@ -168,9 +161,7 @@ async function whoamiCommand(): Promise<void> {
       console.log(`${pc.dim("Email:".padEnd(9))}${userInfo.email}`);
     }
   } catch {
-    if (isTokenExpired(tokens) && !tokens.refresh_token) {
-      console.log(pc.dim("(Session may be expired - run 'ctx7 login' to refresh)"));
-    }
+    console.log(pc.dim("(Session may be expired - run 'ctx7 login' to refresh)"));
   }
 }
 

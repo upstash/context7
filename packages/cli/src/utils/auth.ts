@@ -3,6 +3,8 @@ import * as http from "http";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import { CLI_CLIENT_ID } from "../constants.js";
+import { getBaseUrl } from "./api.js";
 
 const CONFIG_DIR = path.join(os.homedir(), ".context7");
 const CREDENTIALS_FILE = path.join(CONFIG_DIR, "credentials.json");
@@ -72,6 +74,54 @@ export function isTokenExpired(tokens: TokenData): boolean {
     return false;
   }
   return Date.now() > tokens.expires_at - 60000;
+}
+
+export async function refreshAccessToken(
+  baseUrl: string,
+  clientId: string,
+  refreshToken: string
+): Promise<TokenData> {
+  const response = await fetch(`${baseUrl}/api/oauth/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      client_id: clientId,
+      refresh_token: refreshToken,
+    }).toString(),
+  });
+
+  if (!response.ok) {
+    const err = (await response.json().catch(() => ({}))) as TokenErrorResponse;
+    throw new Error(err.error_description || err.error || "Failed to refresh token");
+  }
+
+  return (await response.json()) as TokenData;
+}
+
+/**
+ * Returns a valid access token, refreshing if expired.
+ * Returns null if no tokens exist or refresh fails.
+ */
+export async function getValidAccessToken(): Promise<string | null> {
+  const tokens = loadTokens();
+  if (!tokens) return null;
+
+  if (!isTokenExpired(tokens)) {
+    return tokens.access_token;
+  }
+
+  if (!tokens.refresh_token) {
+    return null;
+  }
+
+  try {
+    const newTokens = await refreshAccessToken(getBaseUrl(), CLI_CLIENT_ID, tokens.refresh_token);
+    saveTokens(newTokens);
+    return newTokens.access_token;
+  } catch {
+    return null;
+  }
 }
 
 export interface CallbackResult {
