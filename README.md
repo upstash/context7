@@ -18,9 +18,7 @@ LLMs rely on outdated or generic information about the libraries you use. You ge
 
 ## ✅ With Context7
 
-Context7 MCP pulls up-to-date, version-specific documentation and code examples straight from the source — and places them directly into your prompt.
-
-Add `use context7` to your prompt (or [set up a rule](#add-a-rule) to auto-invoke):
+Context7 pulls up-to-date, version-specific documentation and code examples straight from the source — and places them directly into your prompt.
 
 ```txt
 Create a Next.js middleware that checks for a valid JWT in cookies
@@ -32,169 +30,41 @@ Configure a Cloudflare Worker script to cache
 JSON API responses for five minutes. use context7
 ```
 
+```txt
+Show me the Supabase auth API for email/password sign-up. use context7
+```
+
 Context7 fetches up-to-date code examples and documentation right into your LLM's context. No tab-switching, no hallucinated APIs that don't exist, no outdated code generation.
+
+Works in two modes:
+- **CLI + Skills** — installs a skill that guides your agent to fetch docs using `ctx7` CLI commands (no MCP required)
+- **MCP** — registers a Context7 MCP server so your agent can call documentation tools natively
 
 ## Installation
 
 > [!NOTE]
 > **API Key Recommended**: Get a free API key at [context7.com/dashboard](https://context7.com/dashboard) for higher rate limits.
 
-<details>
-<summary><b>Install in Cursor</b></summary>
-
-Go to: `Settings` -> `Cursor Settings` -> `MCP` -> `Add new global MCP server`
-
-Pasting the following configuration into your Cursor `~/.cursor/mcp.json` file is the recommended approach. You may also install in a specific project by creating `.cursor/mcp.json` in your project folder. See [Cursor MCP docs](https://docs.cursor.com/context/model-context-protocol) for more info.
-
-> Since Cursor 1.0, you can click the install button below for instant one-click installation.
-
-#### Cursor Remote Server Connection
-
-[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D)
-
-```json
-{
-  "mcpServers": {
-    "context7": {
-      "url": "https://mcp.context7.com/mcp",
-      "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY"
-      }
-    }
-  }
-}
-```
-
-#### Cursor Local Server Connection
-
-[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJjb21tYW5kIjoibnB4IC15IEB1cHN0YXNoL2NvbnRleHQ3LW1jcCJ9)
-
-```json
-{
-  "mcpServers": {
-    "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
-    }
-  }
-}
-```
-
-</details>
-
-<details>
-<summary><b>Install in Claude Code</b></summary>
-
-Run this command. See [Claude Code MCP docs](https://code.claude.com/docs/en/mcp) for more info.
-
-#### Claude Code Local Server Connection
-
-```sh
-claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
-```
-
-#### Claude Code Remote Server Connection
-
-```sh
-claude mcp add --scope user --header "CONTEXT7_API_KEY: YOUR_API_KEY" --transport http context7 https://mcp.context7.com/mcp
-```
-
-> Remove `--scope user` to install for the current project only.
-
-</details>
-
-<details>
-<summary><b>Install in Opencode</b></summary>
-
-Add this to your Opencode configuration file. See [Opencode MCP docs](https://opencode.ai/docs/mcp-servers) for more info.
-
-#### Opencode Remote Server Connection
-
-```json
-"mcp": {
-  "context7": {
-    "type": "remote",
-    "url": "https://mcp.context7.com/mcp",
-    "headers": {
-      "CONTEXT7_API_KEY": "YOUR_API_KEY"
-    },
-    "enabled": true
-  }
-}
-```
-
-#### Opencode Local Server Connection
-
-```json
-{
-  "mcp": {
-    "context7": {
-      "type": "local",
-      "command": ["npx", "-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
-      "enabled": true
-    }
-  }
-}
-```
-
-</details>
-
-<details>
-<summary><b>Install with ctx7 setup</b></summary>
-
-Set up Context7 MCP for your coding agents:
+Set up Context7 for your coding agents with a single command:
 
 ```bash
 npx ctx7 setup
 ```
 
-Authenticates via OAuth, generates an API key, and configures the MCP server and rule for your agents. Use `--cursor`, `--claude`, or `--opencode` to target a specific agent.
-
-</details>
-
-**[Other IDEs and Clients →](https://context7.com/docs/resources/all-clients)**
-
-<details>
-<summary><b>OAuth Authentication</b></summary>
-
-Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization).
-
-To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client configuration:
-
-```diff
-- "url": "https://mcp.context7.com/mcp"
-+ "url": "https://mcp.context7.com/mcp/oauth"
-```
-
-OAuth is only available for remote HTTP connections. For local MCP connections using stdio transport, use API key authentication instead.
-
-</details>
+Authenticates via OAuth, generates an API key, and installs the appropriate skill. You can choose between CLI + Skills or MCP mode. Use `--cursor`, `--claude`, or `--opencode` to target a specific agent.
+**[Manual Installation / Other Clients →](https://context7.com/docs/resources/all-clients)**
 
 ## Important Tips
 
-### Add a Rule
-
-To avoid typing `use context7` in every prompt, add a rule to your MCP client to automatically invoke Context7 for code-related questions:
-
-- **Cursor**: `Cursor Settings > Rules`
-- **Claude Code**: `CLAUDE.md`
-- Or the equivalent in your MCP client
-
-**Example rule:**
-
-```txt
-Always use Context7 MCP when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
-```
-
 ### Use Library Id
 
-If you already know exactly which library you want to use, add its Context7 ID to your prompt. That way, Context7 MCP server can skip the library-matching step and directly continue with retrieving docs.
+If you already know exactly which library you want to use, add its Context7 ID to your prompt. That way, Context7 can skip the library-matching step and directly retrieve docs.
 
 ```txt
 Implement basic authentication with Supabase. use library /supabase/supabase for API and docs.
 ```
 
-The slash syntax tells the MCP tool exactly which library to load docs for.
+The slash syntax tells Context7 exactly which library to load docs for.
 
 ### Specify a Version
 
@@ -206,9 +76,28 @@ How do I set up Next.js 14 middleware? use context7
 
 Context7 will automatically match the appropriate version.
 
+### Add a Rule
+
+If you installed via `ctx7 setup`, a skill is configured automatically that triggers Context7 for library-related questions. To set up a rule manually instead, add one to your coding agent:
+
+- **Cursor**: `Cursor Settings > Rules`
+- **Claude Code**: `CLAUDE.md`
+- Or the equivalent in your coding agent
+
+**Example rule:**
+
+```txt
+Always use Context7 when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
+```
+
 ## Available Tools
 
-Context7 MCP provides the following tools that LLMs can use:
+### CLI Commands
+
+- `ctx7 library <name> <query>`: Searches the Context7 index by library name and returns matching libraries with their IDs.
+- `ctx7 docs <libraryId> <query>`: Retrieves documentation for a library using a Context7-compatible library ID (e.g., `/mongodb/docs`, `/vercel/next.js`).
+
+### MCP Tools
 
 - `resolve-library-id`: Resolves a general library name into a Context7-compatible library ID.
   - `query` (required): The user's question or task (used to rank results by relevance)
@@ -220,7 +109,8 @@ Context7 MCP provides the following tools that LLMs can use:
 
 ## More Documentation
 
-- [More MCP Clients](https://context7.com/docs/resources/all-clients) - Installation for 30+ clients
+- [CLI Reference](https://context7.com/docs/clients/cli) - Full CLI documentation
+- [MCP Clients](https://context7.com/docs/resources/all-clients) - Manual MCP installation for 30+ clients
 - [Adding Libraries](https://context7.com/docs/adding-libraries) - Submit your library to Context7
 - [Troubleshooting](https://context7.com/docs/resources/troubleshooting) - Common issues and solutions
 - [API Reference](https://context7.com/docs/api-guide) - REST API documentation

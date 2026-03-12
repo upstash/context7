@@ -1,15 +1,32 @@
 ---
-title: All MCP Clients
+title: MCP Clients
 description: Installation examples for MCP clients
 ---
 
 Context7 supports all MCP clients. Below are configuration examples for popular clients. If your client isn't listed, check its documentation for MCP server installation.
+
+<Tip>
+Looking for the easiest way to get started? Use `npx ctx7 setup` to configure Context7 automatically. See the [CLI docs](/clients/cli) for more details.
+</Tip>
 
 <Note>
 For detailed guides including rules, skills, agents, and best practices, see the dedicated client pages:
 - [Cursor](/clients/cursor) - Rules setup, Composer integration, tips
 - [Claude Code](/clients/claude-code) - Skills, agents, commands, plugin installation
 </Note>
+
+## OAuth Authentication
+
+Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization).
+
+To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client configuration:
+
+```diff
+- "url": "https://mcp.context7.com/mcp"
++ "url": "https://mcp.context7.com/mcp/oauth"
+```
+
+OAuth is only available for remote HTTP connections. For local MCP connections using stdio transport, use API key authentication instead.
 
 <AccordionGroup>
 
