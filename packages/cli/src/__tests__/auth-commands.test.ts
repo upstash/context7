@@ -10,7 +10,7 @@ const mockCreateCallbackServer = vi.fn();
 const mockExchangeCodeForTokens = vi.fn();
 const mockBuildAuthorizationUrl = vi.fn();
 
-vi.mock("../../utils/auth.js", () => ({
+vi.mock("../utils/auth.js", () => ({
   getValidAccessToken: (...args: unknown[]) => mockGetValidAccessToken(...args),
   clearTokens: (...args: unknown[]) => mockClearTokens(...args),
   saveTokens: (...args: unknown[]) => mockSaveTokens(...args),
@@ -21,7 +21,7 @@ vi.mock("../../utils/auth.js", () => ({
   buildAuthorizationUrl: (...args: unknown[]) => mockBuildAuthorizationUrl(...args),
 }));
 
-vi.mock("../../utils/tracking.js", () => ({
+vi.mock("../utils/tracking.js", () => ({
   trackEvent: vi.fn(),
 }));
 
@@ -37,11 +37,11 @@ vi.mock("ora", () => ({ default: () => mockSpinner }));
 const mockOpen = vi.fn().mockResolvedValue(undefined);
 vi.mock("open", () => ({ default: (...args: unknown[]) => mockOpen(...args) }));
 
-vi.mock("../../constants.js", () => ({ CLI_CLIENT_ID: "test-client-id" }));
-vi.mock("../../utils/api.js", () => ({ getBaseUrl: () => "https://test.context7.com" }));
+vi.mock("../constants.js", () => ({ CLI_CLIENT_ID: "test-client-id" }));
+vi.mock("../utils/api.js", () => ({ getBaseUrl: () => "https://test.context7.com" }));
 
-import { registerAuthCommands, performLogin } from "../auth.js";
-import { trackEvent } from "../../utils/tracking.js";
+import { registerAuthCommands, performLogin } from "../commands/auth.js";
+import { trackEvent } from "../utils/tracking.js";
 
 let logOutput: string[];
 let errorOutput: string[];
