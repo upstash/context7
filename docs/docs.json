@@ -57,7 +57,13 @@
             "group": "On-Premise",
             "pages": [
               "enterprise/on-premise",
-              "enterprise/deployment"
+              {
+                "group": "Deployment",
+                "pages": [
+                  "enterprise/deployment/kubernetes",
+                  "enterprise/deployment/docker"
+                ]
+              }
             ]
           },
           "resources/security"

@@ -1,6 +1,6 @@
 ---
 title: "Kubernetes Deployment"
-sidebarTitle: "Deployment"
+sidebarTitle: "Kubernetes"
 ---
 
 Deploy Context7 On-Premise on Kubernetes using raw manifests. This guide assumes you have completed the [On-Premise setup](/enterprise/on-premise) and have a valid license key.
@@ -275,6 +275,32 @@ The `/api/health` endpoint returns structured JSON with license status, connecti
 ```bash
 kubectl exec -n context7 context7-0 -- \
   wget -qO- http://localhost:3000/api/health
+```
+
+Example response:
+
+```json
+{
+  "status": "healthy",
+  "version": "1.0.0",
+  "setup": "complete",
+  "license": "configured",
+  "licenseInfo": {
+    "valid": true,
+    "teamSize": 10,
+    "expiresAt": "2026-06-01T00:00:00.000Z"
+  },
+  "repos_parsed": 5,
+  "uptime": 3600,
+  "connectivity": {
+    "llm": "configured",
+    "llm_provider": "openai",
+    "embedding": "configured",
+    "embedding_provider": "openai",
+    "github": "configured",
+    "gitlab": "not configured"
+  }
+}
 ```
 
 ### Logs
