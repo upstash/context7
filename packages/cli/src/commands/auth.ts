@@ -15,6 +15,7 @@ import {
 
 import { trackEvent } from "../utils/tracking.js";
 import { CLI_CLIENT_ID } from "../constants.js";
+import { getBaseUrl } from "../utils/api.js";
 
 let baseUrl = "https://context7.com";
 
@@ -153,27 +154,30 @@ async function whoamiCommand(): Promise<void> {
   console.log(pc.green("Logged in"));
 
   try {
-    const userInfo = await fetchUserInfo(accessToken);
-    if (userInfo.name) {
-      console.log(`${pc.dim("Name:".padEnd(9))}${userInfo.name}`);
+    const whoami = await fetchWhoami(accessToken);
+    if (whoami.name) {
+      console.log(`${pc.dim("Name:".padEnd(13))}${whoami.name}`);
     }
-    if (userInfo.email) {
-      console.log(`${pc.dim("Email:".padEnd(9))}${userInfo.email}`);
+    if (whoami.email) {
+      console.log(`${pc.dim("Email:".padEnd(13))}${whoami.email}`);
+    }
+    if (whoami.teamspace) {
+      console.log(`${pc.dim("Teamspace:".padEnd(13))}${whoami.teamspace.name}`);
     }
   } catch {
     console.log(pc.dim("(Session may be expired - run 'ctx7 login' to refresh)"));
   }
 }
 
-interface UserInfo {
-  sub?: string;
-  name?: string;
-  email?: string;
-  picture?: string;
+interface WhoamiResponse {
+  success: boolean;
+  name: string | null;
+  email: string | null;
+  teamspace: { id: string; name: string } | null;
 }
 
-async function fetchUserInfo(accessToken: string): Promise<UserInfo> {
-  const response = await fetch("https://clerk.context7.com/oauth/userinfo", {
+async function fetchWhoami(accessToken: string): Promise<WhoamiResponse> {
+  const response = await fetch(`${getBaseUrl()}/api/dashboard/whoami`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -183,5 +187,5 @@ async function fetchUserInfo(accessToken: string): Promise<UserInfo> {
     throw new Error("Failed to fetch user info");
   }
 
-  return (await response.json()) as UserInfo;
+  return (await response.json()) as WhoamiResponse;
 }
