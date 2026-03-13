@@ -5,7 +5,7 @@ import eslintPluginPrettier from "eslint-plugin-prettier";
 export default defineConfig(
   {
     // Base ESLint configuration
-    ignores: ["node_modules/**", "build/**", "dist/**", ".git/**", ".github/**", "tsup.config.ts"],
+    ignores: ["node_modules/**", "build/**", "dist/**", ".git/**", ".github/**", "tsup.config.ts", "vitest.config.ts"],
   },
   {
     files: ["**/*.ts", "**/*.tsx"],
