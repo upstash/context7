@@ -1,0 +1,314 @@
+---
+title: "Kubernetes Deployment"
+sidebarTitle: "Deployment"
+---
+
+Deploy Context7 On-Premise on Kubernetes using raw manifests. This guide assumes you have completed the [On-Premise setup](/enterprise/on-premise) and have a valid license key.
+
+## Prerequisites
+
+- Kubernetes cluster (v1.24+)
+- `kubectl` configured for your cluster
+- A StorageClass that supports `ReadWriteOnce` volumes
+- Context7 license key
+
+## Registry Authentication
+
+Context7 Enterprise images are hosted on `ghcr.io` and require authentication. Create an image pull secret using your license key:
+
+```bash
+LICENSE_KEY="<your-license-key>"
+
+# Get a registry token from Context7
+TOKEN=$(curl -s -H "Authorization: Bearer $LICENSE_KEY" \
+  https://context7.com/api/v1/license/registry-token | jq -r '.token')
+
+# Create the namespace and secrets
+kubectl create namespace context7
+
+kubectl create secret docker-registry context7-registry \
+  --namespace context7 \
+  --docker-server=ghcr.io \
+  --docker-username=x-access-token \
+  --docker-password="$TOKEN" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl create secret generic context7-config \
+  --namespace context7 \
+  --from-literal=LICENSE_KEY="$LICENSE_KEY" \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+## Manifests
+
+Context7 Enterprise runs as a single-replica StatefulSet with persistent storage. The manifests below define the core resources: a StatefulSet for the application, a Service for internal routing, and an Ingress for external access.
+
+### StatefulSet
+
+Context7 uses SQLite and LanceDB for local storage, which require a persistent volume. This means it must run as a **StatefulSet with a single replica** since SQLite does not support concurrent writers.
+
+```yaml statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: context7
+  namespace: context7
+spec:
+  serviceName: context7
+  replicas: 1
+  selector:
+    matchLabels:
+      app: context7
+  template:
+    metadata:
+      labels:
+        app: context7
+    spec:
+      imagePullSecrets:
+        - name: context7-registry
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: context7
+          image: ghcr.io/context7/enterprise:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: LICENSE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: context7-config
+                  key: LICENSE_KEY
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            requests:
+              cpu: "1"
+              memory: "2Gi"
+            limits:
+              cpu: "4"
+              memory: "8Gi"
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        # storageClassName: gp3  # Set this if your cluster has no default StorageClass
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
+```
+
+<Note>
+  **Storage class:** If your cluster does not have a default StorageClass, the PVC will stay in `Pending` and the pod won't start. Uncomment `storageClassName` and set it to a StorageClass available in your cluster (e.g. `gp3` on AWS EKS, `standard` on GKE, `default` on AKS). Run `kubectl get sc` to see available options.
+</Note>
+
+<Note>
+  **Resource sizing:** The defaults above (1 CPU / 2 GiB request) work for light usage. If you are parsing many large repositories concurrently, increase the limits. Parsing is CPU and memory intensive due to LLM calls and vector indexing.
+</Note>
+
+<Warning>
+  Do not set `replicas` higher than 1. Context7 uses SQLite which only supports a single writer. Running multiple replicas will cause database lock errors.
+</Warning>
+
+### Service
+
+```yaml service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: context7
+  namespace: context7
+spec:
+  selector:
+    app: context7
+  ports:
+    - port: 3000
+      targetPort: http
+      protocol: TCP
+      name: http
+  type: ClusterIP
+```
+
+### Ingress
+
+```yaml ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: context7
+  namespace: context7
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - context7.internal.yourcompany.com
+      secretName: context7-tls
+  rules:
+    - host: context7.internal.yourcompany.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: context7
+                port:
+                  number: 3000
+```
+
+Replace `context7.internal.yourcompany.com` with your actual hostname and `context7-tls` with your TLS secret.
+
+## Apply Everything
+
+After creating the namespace and secrets in the [Registry Authentication](#registry-authentication) step, apply the manifests:
+
+```bash
+kubectl apply -f statefulset.yaml
+kubectl apply -f service.yaml
+kubectl apply -f ingress.yaml
+```
+
+Verify the pod is running:
+
+```bash
+kubectl get pods -n context7
+kubectl logs -n context7 context7-0
+```
+
+Once the pod is ready, open your Ingress hostname in a browser to complete the setup wizard.
+
+## Networking Requirements
+
+Context7 requires outbound connectivity to the following:
+
+| Destination | Purpose |
+|---|---|
+| `ghcr.io` | Container image pulls (`imagePullPolicy: Always`) |
+| `context7.com` | License validation |
+| Your LLM provider (e.g. `api.openai.com`) | AI inference and embeddings |
+| `github.com` / `gitlab.com` | Repository cloning |
+
+If you use NetworkPolicies, ensure egress to these endpoints is allowed:
+
+```yaml networkpolicy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: context7-egress
+  namespace: context7
+spec:
+  podSelector:
+    matchLabels:
+      app: context7
+  policyTypes:
+    - Egress
+  egress:
+    - {} # Allow all egress (simplest)
+```
+
+For stricter policies, allow egress on port 443 to the specific domains listed above, and ensure egress to `kube-dns` on port 53 (UDP/TCP) is permitted for DNS resolution.
+
+## Operations
+
+### Updating
+
+Pull the latest image and restart:
+
+```bash
+kubectl rollout restart statefulset/context7 -n context7
+```
+
+To pin a specific version:
+
+```bash
+kubectl set image statefulset/context7 \
+  context7=ghcr.io/context7/enterprise:1.2.0 \
+  -n context7
+```
+
+If your registry token has expired, refresh it before restarting:
+
+```bash
+LICENSE_KEY="<your-license-key>"
+
+TOKEN=$(curl -s -H "Authorization: Bearer $LICENSE_KEY" \
+  https://context7.com/api/v1/license/registry-token | jq -r '.token')
+
+kubectl create secret docker-registry context7-registry \
+  --namespace context7 \
+  --docker-server=ghcr.io \
+  --docker-username=x-access-token \
+  --docker-password="$TOKEN" \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+### Health Monitoring
+
+The `/api/health` endpoint returns structured JSON with license status, connectivity, and parsed repo count. Point your monitoring stack at it:
+
+```bash
+kubectl exec -n context7 context7-0 -- \
+  wget -qO- http://localhost:3000/api/health
+```
+
+### Logs
+
+```bash
+# Follow logs
+kubectl logs -f -n context7 context7-0
+
+# Check license and startup status
+kubectl logs -n context7 context7-0 | head -20
+```
+
+## Troubleshooting
+
+### Pod is in CrashLoopBackOff
+
+Context7 validates your license key on startup. If the key is missing, invalid, or expired, the server exits immediately before the health endpoint is available. This means Kubernetes will report `CrashLoopBackOff` rather than a failed probe.
+
+Check the logs first:
+
+```bash
+kubectl logs -n context7 context7-0
+```
+
+Look for `[license]` messages in the first few lines. Common causes:
+
+- **Missing or incorrect `LICENSE_KEY`** in the `context7-config` secret
+- **No outbound connectivity** to `context7.com` for license validation
+- **Expired license**: contact [context7@upstash.com](mailto:context7@upstash.com) to renew
+
+<Note>
+  The startup probe only comes into play after the license is validated. If the pod is crash-looping, the issue is always upstream of the probe. Check logs, not probe events.
+</Note>
+
+## Connecting AI Clients
+
+Once deployed, point your MCP clients to your Ingress URL. See [Connecting Your AI Client](/enterprise/on-premise#connecting-your-ai-client) for client-specific instructions. Replace `localhost:3000` with your Kubernetes Ingress hostname.

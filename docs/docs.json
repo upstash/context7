@@ -53,7 +53,13 @@
         "group": "Enterprise",
         "pages": [
           "enterprise",
-          "enterprise/on-premise",
+          {
+            "group": "On-Premise",
+            "pages": [
+              "enterprise/on-premise",
+              "enterprise/deployment"
+            ]
+          },
           "resources/security"
         ]
       },
