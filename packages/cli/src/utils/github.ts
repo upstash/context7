@@ -126,6 +126,12 @@ export async function downloadSkillFromGitHub(
       const content = await fileResponse.text();
       const relativePath = item.path.slice(skillPath.length + 1);
 
+      // Reject paths that attempt directory traversal
+      if (relativePath.includes("..")) {
+        console.warn(`Skipping file with unsafe path: ${item.path}`);
+        continue;
+      }
+
       files.push({
         path: relativePath,
         content,
