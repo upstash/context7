@@ -1,0 +1,38 @@
+{
+  "name": "upstash/context7",
+  "description": "MCP server for Context7",
+  "accepts": [
+    {
+      "network": "eip155:8453",
+      "asset": "USDC",
+      "address": "YOUR_WALLET_ADDRESS"
+    }
+  ],
+  "resources": [
+    {
+      "path": "/modelcontextprotocol",
+      "price": "0.01",
+      "description": "Pay-per-call access to modelcontextprotocol"
+    },
+    {
+      "path": "/context7",
+      "price": "0.01",
+      "description": "Pay-per-call access to context7"
+    },
+    {
+      "path": "/vibe-coding",
+      "price": "0.01",
+      "description": "Pay-per-call access to vibe-coding"
+    },
+    {
+      "path": "/developer tools",
+      "price": "0.01",
+      "description": "Pay-per-call access to developer tools"
+    },
+    {
+      "path": "/documentation",
+      "price": "0.01",
+      "description": "Pay-per-call access to documentation"
+    }
+  ]
+}
