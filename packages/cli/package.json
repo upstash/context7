@@ -21,20 +21,20 @@
   },
   "dependencies": {
     "@inquirer/prompts": "^8.2.0",
-    "commander": "^13.1.0",
+    "commander": "^14.0.3",
     "figlet": "^1.9.4",
-    "open": "^10.1.0",
+    "open": "^11.0.0",
     "ora": "^9.0.0",
     "picocolors": "^1.1.1"
   },
   "devDependencies": {
     "@types/figlet": "^1.7.0",
-    "@types/node": "^22.19.1",
+    "@types/node": "^25.1.0",
     "@typescript-eslint/eslint-plugin": "^8.28.0",
     "@typescript-eslint/parser": "^8.28.0",
     "eslint": "^9.34.0",
     "eslint-plugin-prettier": "^5.2.5",
-    "prettier": "^3.6.2",
+    "prettier": "^3.8.1",
     "tsup": "^8.5.0",
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.28.0"
