@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.6
+
+### Patch Changes
+
+- fae6127: Add active teamspace name to whoami command output
+- 4b63117: Reorder setup mode choices to show MCP server first
+- 18b3292: Add token refresh support, centralize auth constants, switch whoami to internal API endpoint with teamspace display, and add unit tests for CLI auth utilities and commands
+
 ## 0.3.5
 
 ### Patch Changes
