@@ -13,7 +13,7 @@ import { getBaseUrl, downloadSkill } from "../utils/api.js";
 import { installSkillFiles } from "../utils/installer.js";
 import { promptForInstallTargets, getTargetDirs } from "../utils/ide.js";
 import { performLogin } from "./auth.js";
-import { loadTokens, isTokenExpired, saveTokens } from "../utils/auth.js";
+import { saveTokens, getValidAccessToken } from "../utils/auth.js";
 import {
   type SetupAgent,
   type AuthOptions,
@@ -84,11 +84,7 @@ export function registerSetupCommand(program: Command): void {
 }
 
 async function authenticateAndGenerateKey(): Promise<string | null> {
-  const existingTokens = loadTokens();
-  const accessToken =
-    existingTokens && !isTokenExpired(existingTokens)
-      ? existingTokens.access_token
-      : await performLogin();
+  const accessToken = (await getValidAccessToken()) ?? (await performLogin());
 
   if (!accessToken) return null;
 
@@ -163,8 +159,8 @@ async function resolveCliAuth(apiKey?: string): Promise<void> {
     return;
   }
 
-  const existingTokens = loadTokens();
-  if (existingTokens && !isTokenExpired(existingTokens)) {
+  const validToken = await getValidAccessToken();
+  if (validToken) {
     log.blank();
     log.plain(`${pc.green("✔")} Authenticated`);
     return;

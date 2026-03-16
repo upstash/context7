@@ -17,7 +17,9 @@
     "lint:check": "eslint src",
     "format": "prettier --write src",
     "format:check": "prettier --check src",
-    "clean": "rm -rf dist node_modules"
+    "clean": "rm -rf dist node_modules",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@inquirer/prompts": "^8.2.0",
@@ -37,7 +39,8 @@
     "prettier": "^3.6.2",
     "tsup": "^8.5.0",
     "typescript": "^5.8.2",
-    "typescript-eslint": "^8.28.0"
+    "typescript-eslint": "^8.28.0",
+    "vitest": "^4.0.13"
   },
   "keywords": [
     "context7",
