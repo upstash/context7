@@ -60,8 +60,8 @@
               {
                 "group": "Deployment",
                 "pages": [
-                  "enterprise/deployment/kubernetes",
-                  "enterprise/deployment/docker"
+                  "enterprise/deployment/docker",
+                  "enterprise/deployment/kubernetes"
                 ]
               }
             ]
