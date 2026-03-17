@@ -1,0 +1,52 @@
+{
+  "name": "@upstash/context7-evals",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Eval framework for Context7 integrations (skill and MCP routing)",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "eval": "vitest run",
+    "eval:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "peerDependencies": {
+    "ai": ">=6.0.0",
+    "zod": ">=4.0.0"
+  },
+  "devDependencies": {
+    "@ai-sdk/anthropic": "^3.0.0",
+    "@anthropic-ai/claude-agent-sdk": "latest",
+    "@opencode-ai/sdk": "latest",
+    "@openrouter/ai-sdk-provider": "^2.3.3",
+    "@types/node": "^22.0.0",
+    "@upstash/context7-mcp": "workspace:*",
+    "ai": "^6.0.5",
+    "dotenv": "^17.2.3",
+    "tsup": "^8.5.1",
+    "typescript": "^5.8.2",
+    "vitest": "^4.0.13",
+    "zod": "^4.3.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/upstash/context7.git",
+    "directory": "packages/evals"
+  },
+  "author": "Upstash",
+  "license": "MIT"
+}

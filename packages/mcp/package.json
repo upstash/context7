@@ -35,6 +35,11 @@
   "bin": {
     "context7-mcp": "dist/index.js"
   },
+  "exports": {
+    "./lib": "./dist/lib/api.js",
+    "./lib/utils": "./dist/lib/utils.js",
+    "./lib/tools": "./dist/lib/tools.js"
+  },
   "files": [
     "dist",
     "LICENSE",

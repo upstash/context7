@@ -2,10 +2,16 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { z } from "zod";
-import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
 import { ClientContext } from "./lib/encryption.js";
-import { formatSearchResults, extractClientInfoFromUserAgent } from "./lib/utils.js";
+import { extractClientInfoFromUserAgent } from "./lib/utils.js";
+import {
+  resolveLibraryIdSchema,
+  resolveLibraryIdDescription,
+  queryDocsSchema,
+  queryDocsDescription,
+  executeResolveLibraryId,
+  executeQueryDocs,
+} from "./lib/tools.js";
 import { isJWT, validateJWT } from "./lib/jwt.js";
 import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -145,123 +151,26 @@ server.registerTool(
   "resolve-library-id",
   {
     title: "Resolve Context7 Library ID",
-    description: `Resolves a package/product name to a Context7-compatible library ID and returns matching libraries.
-
-You MUST call this function before 'Query Documentation' tool to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
-
-Each result includes:
-- Library ID: Context7-compatible identifier (format: /org/project)
-- Name: Library or package name
-- Description: Short summary
-- Code Snippets: Number of available code examples
-- Source Reputation: Authority indicator (High, Medium, Low, or Unknown)
-- Benchmark Score: Quality indicator (100 is the highest score)
-- Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.
-
-For best results, select libraries based on name match, source reputation, snippet coverage, benchmark score, and relevance to your use case.
-
-Selection Process:
-1. Analyze the query to understand what library/package the user is looking for
-2. Return the most relevant match based on:
-- Name similarity to the query (exact matches prioritized)
-- Description relevance to the query's intent
-- Documentation coverage (prioritize libraries with higher Code Snippet counts)
-- Source reputation (consider libraries with High or Medium reputation more authoritative)
-- Benchmark Score: Quality indicator (100 is the highest score)
-
-Response Format:
-- Return the selected library ID in a clearly marked section
-- Provide a brief explanation for why this library was chosen
-- If multiple good matches exist, acknowledge this but proceed with the most relevant one
-- If no good matches exist, clearly state this and suggest query refinements
-
-For ambiguous queries, request clarification before proceeding with a best-guess match.
-
-IMPORTANT: Do not call this tool more than 3 times per question. If you cannot find what you need after 3 calls, use the best result you have.`,
-    inputSchema: {
-      query: z
-        .string()
-        .describe(
-          "The question or task you need help with. This is used to rank library results by relevance to what the user is trying to accomplish. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
-        ),
-      libraryName: z
-        .string()
-        .describe("Library name to search for and retrieve a Context7-compatible library ID."),
-    },
-    annotations: {
-      readOnlyHint: true,
-    },
+    description: resolveLibraryIdDescription,
+    inputSchema: resolveLibraryIdSchema,
+    annotations: { readOnlyHint: true },
   },
-  async ({ query, libraryName }) => {
-    const searchResponse = await searchLibraries(query, libraryName, getClientContext());
-
-    if (!searchResponse.results || searchResponse.results.length === 0) {
-      return {
-        content: [
-          {
-            type: "text",
-            text: searchResponse.error
-              ? searchResponse.error
-              : "No libraries found matching the provided name.",
-          },
-        ],
-      };
-    }
-
-    const resultsText = formatSearchResults(searchResponse);
-
-    const responseText = `Available Libraries:
-
-${resultsText}`;
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: responseText,
-        },
-      ],
-    };
-  }
+  async (args) => ({
+    content: [{ type: "text", text: await executeResolveLibraryId(args, getClientContext()) }],
+  })
 );
 
 server.registerTool(
   "query-docs",
   {
     title: "Query Documentation",
-    description: `Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
-
-You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
-
-IMPORTANT: Do not call this tool more than 3 times per question. If you cannot find what you need after 3 calls, use the best information you have.`,
-    inputSchema: {
-      libraryId: z
-        .string()
-        .describe(
-          "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
-        ),
-      query: z
-        .string()
-        .describe(
-          "The question or task you need help with. Be specific and include relevant details. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad: 'auth' or 'hooks'. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
-        ),
-    },
-    annotations: {
-      readOnlyHint: true,
-    },
+    description: queryDocsDescription,
+    inputSchema: queryDocsSchema,
+    annotations: { readOnlyHint: true },
   },
-  async ({ query, libraryId }) => {
-    const response = await fetchLibraryContext({ query, libraryId }, getClientContext());
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: response.data,
-        },
-      ],
-    };
-  }
+  async (args) => ({
+    content: [{ type: "text", text: await executeQueryDocs(args, getClientContext()) }],
+  })
 );
 
 async function main() {
