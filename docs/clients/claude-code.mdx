@@ -13,9 +13,19 @@ Run the setup command to configure Context7 for Claude Code:
 npx ctx7 setup --claude
 ```
 
-Authenticates via OAuth, generates an API key, and installs the appropriate skill. You can choose between CLI or MCP mode.
+This flow authenticates via OAuth, generates an API key, and installs the appropriate skill. You can choose between CLI or MCP mode.
 
-For manual MCP installation or other configuration options, see [All MCP Clients](/resources/all-clients).
+<Tip>
+If you're setting up Claude Code on a remote server, headless VM, or over SSH, use an existing API key instead:
+
+```bash
+npx ctx7 setup --claude --api-key YOUR_API_KEY
+```
+
+The default OAuth flow redirects back to `localhost`, which only works when the browser can reach the same machine that's running `ctx7 setup`.
+</Tip>
+
+Create or manage API keys in the [Context7 dashboard](https://context7.com/dashboard). For manual MCP installation or other configuration options, see [All MCP Clients](/resources/all-clients).
 
 ---
 
