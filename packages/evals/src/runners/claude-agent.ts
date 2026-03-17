@@ -54,6 +54,16 @@ async function runSingleCase(c: EvalCase, options: { maxSteps: number; cwd?: str
   const mcpServers = buildMcpServers(c.integrations);
   const hasSkill = c.integrations.some((i) => i.type === "skill");
 
+  // Build an explicit allowedTools list from the integrations so cc is restricted
+  // to only the configured tools in every scenario -- no Bash, WebSearch, etc.
+  // MCP tools use the mcp__serverName__toolName naming convention in cc.
+  const allowedTools: string[] = [
+    ...(hasSkill ? ["Skill"] : []),
+    ...c.integrations
+      .filter((i) => i.type === "mcp")
+      .flatMap((i) => i.watchTools.map((w) => `mcp__${i.name}__${w}`)),
+  ];
+
   const toolCalls: Array<{ toolName: string; toolInput: unknown }> = [];
   const debugMode = process.env.EVAL_DEBUG === "1";
 
@@ -63,7 +73,7 @@ async function runSingleCase(c: EvalCase, options: { maxSteps: number; cwd?: str
       ...(Object.keys(mcpServers).length > 0 ? { mcpServers } : {}),
       cwd: options.cwd ?? process.cwd(),
       ...(hasSkill ? { settingSources: ["project"] } : {}),
-      allowedTools: hasSkill ? ["Skill"] : [],
+      allowedTools,
       maxTurns: options.maxSteps,
       permissionMode: "bypassPermissions",
       allowDangerouslySkipPermissions: true,

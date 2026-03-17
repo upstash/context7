@@ -76,7 +76,7 @@ export function createSkillIntegration(
   return {
     name,
     type: "skill",
-    shortCode: "cli",
+    shortCode: "skill",
     systemPrompt,
     tools: { Skill: SKILL_TOOL },
     watchTools: ["Skill"],

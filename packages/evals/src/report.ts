@@ -243,6 +243,42 @@ export function printComparison(scenarios: ScenarioGroup[]): void {
 
   console.log(footerRow("Triggered on relevant", (r) => !!r.case.expect.invokes?.length));
   console.log(footerRow("Stayed quiet on off-topic", (r) => !!r.case.expect.skips?.length));
+
+  // Collect the set of prompts that are "invoke" type (from scenarios with explicit expectations)
+  const invokePrompts = new Set(
+    scenarios.flatMap((s) =>
+      s.runs.flatMap((a) =>
+        a.results
+          .filter((r) => !!r.case.expect.invokes?.length)
+          .map((r) => r.case.prompt)
+      )
+    )
+  );
+
+  // Per-integration invocation rate rows — only shown for multi-integration scenarios
+  const invocationRateRow = (label: string, integrationName: string) => {
+    const groupSummaries = scenarios.map((s) => {
+      const isMulti = (s.runs[0]?.results[0]?.case.integrations.length ?? 0) > 1;
+      return s.runs
+        .map((a) => {
+          if (!isMulti) return pad("–", AGENT_W);
+          const invokeResults = a.results.filter((r) => invokePrompts.has(r.case.prompt));
+          if (invokeResults.length === 0) return pad("–", AGENT_W);
+          const used = invokeResults.filter((r) =>
+            r.actualInvocations.some((inv) => inv.integration === integrationName)
+          ).length;
+          return pad(pct(used, invokeResults.length), AGENT_W);
+        })
+        .join(GAP);
+    });
+    return [pad("", TYPE_W), pad(label, PROMPT_W), ...groupSummaries].join(SEP);
+  };
+
+  for (const integrationName of allIntegrationNames) {
+    const code = shortCode.get(integrationName) ?? integrationName;
+    console.log(invocationRateRow(`  % via ${code}`, integrationName));
+  }
+
   console.log(divider + "\n");
 }
 

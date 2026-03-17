@@ -10,7 +10,7 @@ import {
 } from "./index.js";
 import type { PromptConfig } from "./types.js";
 
-const CLAUDE_HAIKU = anthropic("claude-haiku-4-5-20251001");
+const CLAUDE_SONNET = openrouter("anthropic/claude-opus-4.6");
 const GPT = openrouter("openai/gpt-5.4");
 
 const findDocsSkill = createSkillIntegration(
@@ -144,7 +144,7 @@ describe("Context7 integration routing evals", { timeout: 600_000 }, () => {
   describe.skip("find-docs skill only", () => {
     it("routes doc questions to the skill and ignores off-topic prompts", async () => {
       const results = await runEvals({
-        model: CLAUDE_HAIKU,
+        model: CLAUDE_SONNET,
         integrations: [findDocsSkill],
         prompts: PROMPTS,
       });
@@ -156,7 +156,7 @@ describe("Context7 integration routing evals", { timeout: 600_000 }, () => {
   describe.skip("MCP only", () => {
     it("calls resolveLibraryId/queryDocs for doc questions and skips for off-topic prompts", async () => {
       const results = await runEvals({
-        model: CLAUDE_HAIKU,
+        model: CLAUDE_SONNET,
         integrations: [context7MCP],
         prompts: PROMPTS,
       });
@@ -175,9 +175,9 @@ describe("Context7 integration routing evals", { timeout: 600_000 }, () => {
 
       const scenarios = await Promise.all(
         integrationSets.map(async ({ label, integrations }) => {
-          const [claude, haiku, gpt] = await Promise.all([
+          const [claude, sonnet, gpt] = await Promise.all([
             runEvals({ agent: "claude", integrations, prompts: PROMPTS }),
-            runEvals({ agent: "aisdk", model: CLAUDE_HAIKU, integrations, prompts: PROMPTS }),
+            runEvals({ agent: "aisdk", model: CLAUDE_SONNET, integrations, prompts: PROMPTS }),
             runEvals({ agent: "aisdk", model: GPT, integrations, prompts: PROMPTS }),
           ]);
 
@@ -185,7 +185,7 @@ describe("Context7 integration routing evals", { timeout: 600_000 }, () => {
             label,
             runs: [
               { agent: "cc", results: claude },
-              { agent: "haiku", results: haiku },
+              { agent: "sonnet", results: sonnet },
               { agent: "gpt-5.4", results: gpt },
             ],
           };
