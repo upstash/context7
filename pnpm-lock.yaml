@@ -2157,6 +2157,7 @@ packages:
   zod-to-json-schema@3.25.1:
   
     resolution: {integrity: sha512-pM/SU9d3YAggzi6MtR4h7ruuQlqKtad8e9S0fmxcMi+ueAK5Korys/aWcV9LIIHTVbj01NdzxcnXSN+O74ZIVA==}
+    
     peerDependencies:
       zod: ^3.25 || ^4
 
