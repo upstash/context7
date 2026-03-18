@@ -127,15 +127,23 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
 
 <Accordion title="OpenAI Codex">
 
-See [OpenAI Codex](https://github.com/openai/codex) for more information.
+See [OpenAI Codex MCP docs](https://developers.openai.com/codex/mcp) for more info.
+
+#### Using CLI
+
+```sh
+codex mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+```
 
 #### Local Server Connection
 
+Add this to your Codex configuration file (`~/.codex/config.toml` or `.codex/config.toml`).
+
 ```toml
 [mcp_servers.context7]
-args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
 command = "npx"
-startup_timeout_ms = 20_000
+args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+startup_timeout_sec = 20
 ```
 
 #### Remote Server Connection
@@ -147,7 +155,7 @@ http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
 ```
 
 <Note>
-If you see startup timeout errors, try increasing `startup_timeout_ms` to `40_000`.
+If you see startup timeout errors, try increasing `startup_timeout_sec` to `40`.
 </Note>
 
 </Accordion>
@@ -191,12 +199,12 @@ Add this to your Antigravity MCP config file. See [Antigravity MCP docs](https:/
 [<img alt="Install in VS Code (npx)" src="https://img.shields.io/badge/VS_Code-VS_Code?style=flat-square&label=Install%20Context7%20MCP&color=0098FF" />](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22context7%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40upstash%2Fcontext7-mcp%40latest%22%5D%7D)
 [<img alt="Install in VS Code Insiders (npx)" src="https://img.shields.io/badge/VS_Code_Insiders-VS_Code_Insiders?style=flat-square&label=Install%20Context7%20MCP&color=24bfa5" />](https://insiders.vscode.dev/redirect?url=vscode-insiders%3Amcp%2Finstall%3F%7B%22name%22%3A%22context7%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40upstash%2Fcontext7-mcp%40latest%22%5D%7D)
 
-Add this to your VS Code MCP config file. See [VS Code MCP docs](https://code.visualstudio.com/docs/copilot/chat/mcp-servers) for more info.
+Add this to your VS Code MCP config file (`.vscode/mcp.json`). See [VS Code MCP docs](https://code.visualstudio.com/docs/copilot/chat/mcp-servers) for more info.
 
 #### Remote Server Connection
 
 ```json
-"mcp": {
+{
   "servers": {
     "context7": {
       "type": "http",
@@ -212,7 +220,7 @@ Add this to your VS Code MCP config file. See [VS Code MCP docs](https://code.vi
 #### Local Server Connection
 
 ```json
-"mcp": {
+{
   "servers": {
     "context7": {
       "type": "stdio",
@@ -233,15 +241,29 @@ See [Kiro Model Context Protocol Documentation](https://kiro.dev/docs/mcp/config
 2. Add a new MCP server by clicking the `+ Add` button.
 3. Paste the configuration:
 
+#### Remote Server Connection
+
 ```json
 {
   "mcpServers": {
-    "Context7": {
+    "context7": {
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      }
+    }
+  }
+}
+```
+
+#### Local Server Connection
+
+```json
+{
+  "mcpServers": {
+    "context7": {
       "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
-      "env": {},
-      "disabled": false,
-      "autoApprove": []
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
     }
   }
 }
@@ -462,7 +484,10 @@ Use the Add manually feature and fill in the JSON configuration. See [Trae docum
 {
   "mcpServers": {
     "context7": {
-      "url": "https://mcp.context7.com/mcp"
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      }
     }
   }
 }
@@ -783,8 +808,22 @@ See [JetBrains AI Assistant Documentation](https://www.jetbrains.com/help/ai-ass
 
 1. In JetBrains IDEs, go to `Settings` -> `Tools` -> `AI Assistant` -> `Model Context Protocol (MCP)`
 2. Click `+ Add`.
-3. Click on `Command` in the top-left corner and select the As JSON option
-4. Add this configuration:
+3. Select the **HTTP** or **STDIO** tab and paste the JSON configuration.
+4. Click `Apply` to save changes.
+
+#### Remote Server Connection
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "url": "https://mcp.context7.com/mcp"
+    }
+  }
+}
+```
+
+#### Local Server Connection
 
 ```json
 {
@@ -796,8 +835,6 @@ See [JetBrains AI Assistant Documentation](https://www.jetbrains.com/help/ai-ass
   }
 }
 ```
-
-5. Click `Apply` to save changes.
 
 </Accordion>
 
