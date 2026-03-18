@@ -437,7 +437,6 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
       await new Promise<void>((resolve) => {
         const child = spawn(editor, [previewFile!], {
           stdio: "inherit",
-          shell: true,
         });
         child.on("close", () => resolve());
       });
