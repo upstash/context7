@@ -1,7 +1,8 @@
 import { SearchResponse, ContextRequest, ContextResponse } from "./types.js";
 import { ClientContext, generateHeaders } from "./encryption.js";
-import { ProxyAgent, setGlobalDispatcher } from "undici";
+import { Agent, ProxyAgent, setGlobalDispatcher } from "undici";
 import { CONTEXT7_API_BASE_URL } from "./constants.js";
+import { readFileSync } from "fs";
 
 /**
  * Parses error response from the Context7 API
@@ -42,14 +43,39 @@ const PROXY_URL: string | null =
   process.env.http_proxy ??
   null;
 
+const CUSTOM_CA_CERTS: string | undefined = process.env.NODE_EXTRA_CA_CERTS;
+
+function loadCustomCACerts(): Buffer | undefined {
+  if (!CUSTOM_CA_CERTS) return undefined;
+  try {
+    return readFileSync(CUSTOM_CA_CERTS);
+  } catch (error) {
+    console.error(
+      `[Context7] Failed to load custom CA certificates from ${CUSTOM_CA_CERTS}:`,
+      error
+    );
+    return undefined;
+  }
+}
+
 if (PROXY_URL && !PROXY_URL.startsWith("$") && /^(http|https):\/\//i.test(PROXY_URL)) {
   try {
-    setGlobalDispatcher(new ProxyAgent(PROXY_URL));
+    const ca = loadCustomCACerts();
+    setGlobalDispatcher(new ProxyAgent({ uri: PROXY_URL, ...(ca ? { connect: { ca } } : {}) }));
   } catch (error) {
     console.error(
       `[Context7] Failed to configure proxy agent for provided proxy URL: ${PROXY_URL}:`,
       error
     );
+  }
+} else if (CUSTOM_CA_CERTS) {
+  const ca = loadCustomCACerts();
+  if (ca) {
+    try {
+      setGlobalDispatcher(new Agent({ connect: { ca } }));
+    } catch (error) {
+      console.error(`[Context7] Failed to configure custom CA certificates:`, error);
+    }
   }
 }
 
