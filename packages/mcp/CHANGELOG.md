@@ -1,5 +1,11 @@
 # @upstash/context7-mcp
 
+## 2.1.5
+
+### Patch Changes
+
+- 2070cb1: Support NODE_EXTRA_CA_CERTS for enterprise MITM proxies by injecting custom CA certificates into undici's global dispatcher at runtime
+
 ## 2.1.4
 
 ### Patch Changes

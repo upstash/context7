@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.7
+
+### Patch Changes
+
+- 93eaf54: Remove shell:true from spawn call in generate command to prevent command injection via EDITOR env variable
+- 8c5cf7d: Prevent directory traversal in skill file installation by validating resolved paths stay within the target directory
+
 ## 0.3.6
 
 ### Patch Changes
