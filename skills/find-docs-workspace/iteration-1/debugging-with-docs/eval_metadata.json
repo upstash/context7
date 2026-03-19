@@ -1,0 +1,31 @@
+{
+  "eval_id": 3,
+  "eval_name": "debugging-with-docs",
+  "prompt": "My Tailwind CSS v4 config isn't picking up my custom theme colors. I have a tailwind.config.ts but the classes like bg-brand-500 aren't generating. What changed in v4?",
+  "assertions": [
+    {
+      "id": "ran-ctx7-library",
+      "text": "Ran ctx7 library to resolve Tailwind CSS library ID",
+      "type": "process",
+      "applies_to": "with_skill"
+    },
+    {
+      "id": "ran-ctx7-docs",
+      "text": "Ran ctx7 docs with a resolved library ID",
+      "type": "process",
+      "applies_to": "with_skill"
+    },
+    {
+      "id": "explains-v4-config-change",
+      "text": "Explains Tailwind v4's CSS-first configuration change (moving away from tailwind.config.ts)",
+      "type": "quality",
+      "applies_to": "both"
+    },
+    {
+      "id": "provides-fix",
+      "text": "Provides a concrete fix showing how to define custom colors in v4",
+      "type": "quality",
+      "applies_to": "both"
+    }
+  ]
+}

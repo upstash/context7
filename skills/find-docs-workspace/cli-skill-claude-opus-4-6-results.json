@@ -1,0 +1,127 @@
+{
+  "model": "claude-opus-4-6",
+  "mode": "cli-skill",
+  "elapsed_seconds": 46.98325824737549,
+  "results": [
+    {
+      "query": "How do I use useEffect to fetch data in React?",
+      "should_trigger": true,
+      "triggered": false,
+      "pass": false
+    },
+    {
+      "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+      "should_trigger": true,
+      "triggered": true,
+      "pass": true
+    },
+    {
+      "query": "How do React hooks work?",
+      "should_trigger": true,
+      "triggered": false,
+      "pass": false
+    },
+    {
+      "query": "I'm trying to set up SvelteKit's new runes system but the $state syntax isn't working like the docs say. I'm on version 5.2. Can you check what the correct pattern is?",
+      "should_trigger": true,
+      "triggered": true,
+      "pass": true
+    },
+    {
+      "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+      "should_trigger": true,
+      "triggered": true,
+      "pass": true
+    },
+    {
+      "query": "How does the new Bun.serve() API handle WebSocket upgrades? I saw something about a websocket handler option but can't figure out the types",
+      "should_trigger": true,
+      "triggered": true,
+      "pass": true
+    },
+    {
+      "query": "Can you write me a tRPC router that handles file uploads with presigned S3 URLs? Need to know the current recommended approach for tRPC v11",
+      "should_trigger": true,
+      "triggered": true,
+      "pass": true
+    },
+    {
+      "query": "I need to add rate limiting to my Hono.js API. What middleware options are available and how do I configure them?",
+      "should_trigger": true,
+      "triggered": true,
+      "pass": true
+    },
+    {
+      "query": "What's the correct way to set up Turborepo's new daemon mode? Our CI is slow and I heard there's a persistent cache feature now",
+      "should_trigger": true,
+      "triggered": true,
+      "pass": true
+    },
+    {
+      "query": "Show me how to use Tanstack Query v5's useSuspenseQuery - I keep getting errors when I try to use it with React Suspense boundaries",
+      "should_trigger": true,
+      "triggered": true,
+      "pass": true
+    },
+    {
+      "query": "My Playwright tests are flaky because of some timing issue with their new auto-retrying assertions. How do expect().toBeVisible() retries actually work in the latest version?",
+      "should_trigger": true,
+      "triggered": true,
+      "pass": true
+    },
+    {
+      "query": "Can you refactor this function to use async/await instead of callbacks?",
+      "should_trigger": false,
+      "triggered": false,
+      "pass": true
+    },
+    {
+      "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+      "should_trigger": false,
+      "triggered": false,
+      "pass": true
+    },
+    {
+      "query": "I have a bug where my React component re-renders infinitely. Here's the code: [component code]. Can you spot the issue?",
+      "should_trigger": false,
+      "triggered": false,
+      "pass": true
+    },
+    {
+      "query": "Help me write unit tests for this Express middleware that checks JWT tokens. Here's the middleware: [code]",
+      "should_trigger": false,
+      "triggered": false,
+      "pass": true
+    },
+    {
+      "query": "Can you optimize this SQL query? It's doing a full table scan and I think we need an index. Here's the query and the EXPLAIN output: [query + explain]",
+      "should_trigger": false,
+      "triggered": false,
+      "pass": true
+    },
+    {
+      "query": "Convert this JavaScript class component to a functional component with hooks",
+      "should_trigger": false,
+      "triggered": false,
+      "pass": true
+    },
+    {
+      "query": "I need a bash script that monitors disk usage and sends a Slack notification when it exceeds 90%",
+      "should_trigger": false,
+      "triggered": false,
+      "pass": true
+    },
+    {
+      "query": "Review this PR diff and tell me if there are any security issues: [diff]",
+      "should_trigger": false,
+      "triggered": false,
+      "pass": true
+    },
+    {
+      "query": "Help me set up a GitHub Actions workflow that runs my tests on every PR. I'm using a Node.js monorepo with pnpm workspaces",
+      "should_trigger": false,
+      "triggered": false,
+      "pass": true
+    }
+  ]
+}

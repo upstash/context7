@@ -1,0 +1,31 @@
+{
+  "eval_id": 2,
+  "eval_name": "version-specific-query",
+  "prompt": "We're migrating from React 18 to React 19 and our useFormStatus hook isn't working the same way. Can you show me the correct usage in React 19?",
+  "assertions": [
+    {
+      "id": "ran-ctx7-library",
+      "text": "Ran ctx7 library to resolve React library ID",
+      "type": "process",
+      "applies_to": "with_skill"
+    },
+    {
+      "id": "ran-ctx7-docs",
+      "text": "Ran ctx7 docs with a resolved library ID",
+      "type": "process",
+      "applies_to": "with_skill"
+    },
+    {
+      "id": "addresses-version-diff",
+      "text": "Explains what changed between React 18 and 19 regarding useFormStatus",
+      "type": "quality",
+      "applies_to": "both"
+    },
+    {
+      "id": "shows-correct-usage",
+      "text": "Shows correct React 19 useFormStatus usage with a code example",
+      "type": "quality",
+      "applies_to": "both"
+    }
+  ]
+}

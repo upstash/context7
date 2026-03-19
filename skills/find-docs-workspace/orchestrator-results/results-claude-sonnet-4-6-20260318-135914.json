@@ -1,0 +1,581 @@
+{
+  "mcp": {
+    "mode": "mcp",
+    "model": "claude-sonnet-4-6",
+    "max_turns": 4,
+    "elapsed_seconds": 53.4,
+    "total": 20,
+    "passed": 17,
+    "recall": "8/11 (73%)",
+    "precision": "8/8 (100%)",
+    "false_positives": 0,
+    "results": [
+      {
+        "query": "How do I use useEffect to fetch data in React?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 11.7,
+        "error": null
+      },
+      {
+        "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 10.5,
+        "error": null
+      },
+      {
+        "query": "How do React hooks work?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 15.1,
+        "error": null
+      },
+      {
+        "query": "I'm trying to set up SvelteKit's new runes system but the $state syntax isn't working like the docs say. I'm on version 5.2. Can you check what the correct pattern is?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Agent",
+        "elapsed": 39.5,
+        "error": null
+      },
+      {
+        "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch(resolve-library-id mcp context7)",
+        "elapsed": 24.2,
+        "error": null
+      },
+      {
+        "query": "How does the new Bun.serve() API handle WebSocket upgrades? I saw something about a websocket handler option but can't figure out the types",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch(resolve-library-id mcp__context7)",
+        "elapsed": 28.5,
+        "error": null
+      },
+      {
+        "query": "Can you write me a tRPC router that handles file uploads with presigned S3 URLs? Need to know the current recommended approach for tRPC v11",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch(mcp__context7__resolve-library-id)",
+        "elapsed": 18.6,
+        "error": null
+      },
+      {
+        "query": "I need to add rate limiting to my Hono.js API. What middleware options are available and how do I configure them?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Agent",
+        "elapsed": 38.0,
+        "error": null
+      },
+      {
+        "query": "What's the correct way to set up Turborepo's new daemon mode? Our CI is slow and I heard there's a persistent cache feature now",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch(resolve library id)",
+        "elapsed": 23.1,
+        "error": null
+      },
+      {
+        "query": "Show me how to use Tanstack Query v5's useSuspenseQuery - I keep getting errors when I try to use it with React Suspense boundaries",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Agent",
+        "elapsed": 53.3,
+        "error": null
+      },
+      {
+        "query": "My Playwright tests are flaky because of some timing issue with their new auto-retrying assertions. How do expect().toBeVisible() retries actually work in the latest version?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch(mcp__context7__resolve-library-id)",
+        "elapsed": 12.0,
+        "error": null
+      },
+      {
+        "query": "Can you refactor this function to use async/await instead of callbacks?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 6.6,
+        "error": null
+      },
+      {
+        "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 15.4,
+        "error": null
+      },
+      {
+        "query": "I have a bug where my React component re-renders infinitely. Here's the code: [component code]. Can you spot the issue?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 6.9,
+        "error": null
+      },
+      {
+        "query": "Help me write unit tests for this Express middleware that checks JWT tokens. Here's the middleware: [code]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 14.0,
+        "error": null
+      },
+      {
+        "query": "Can you optimize this SQL query? It's doing a full table scan and I think we need an index. Here's the query and the EXPLAIN output: [query + explain]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 5.5,
+        "error": null
+      },
+      {
+        "query": "Convert this JavaScript class component to a functional component with hooks",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 6.8,
+        "error": null
+      },
+      {
+        "query": "I need a bash script that monitors disk usage and sends a Slack notification when it exceeds 90%",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Write",
+        "elapsed": 35.4,
+        "error": null
+      },
+      {
+        "query": "Review this PR diff and tell me if there are any security issues: [diff]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 8.6,
+        "error": null
+      },
+      {
+        "query": "Help me set up a GitHub Actions workflow that runs my tests on every PR. I'm using a Node.js monorepo with pnpm workspaces",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Agent",
+        "elapsed": 49.0,
+        "error": null
+      }
+    ]
+  },
+  "mcp+rule": {
+    "mode": "mcp+rule",
+    "model": "claude-sonnet-4-6",
+    "max_turns": 4,
+    "elapsed_seconds": 28.0,
+    "total": 20,
+    "passed": 20,
+    "recall": "11/11 (100%)",
+    "precision": "11/11 (100%)",
+    "false_positives": 0,
+    "results": [
+      {
+        "query": "How do I use useEffect to fetch data in React?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch(select:mcp__context7__resolve-library-id)",
+        "elapsed": 20.3,
+        "error": null
+      },
+      {
+        "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch(select:mcp__context7__resolve-library-id)",
+        "elapsed": 19.1,
+        "error": null
+      },
+      {
+        "query": "How do React hooks work?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch(select:mcp__context7__resolve-library-id)",
+        "elapsed": 21.6,
+        "error": null
+      },
+      {
+        "query": "I'm trying to set up SvelteKit's new runes system but the $state syntax isn't working like the docs say. I'm on version 5.2. Can you check what the correct pattern is?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch(resolve-library-id query-docs)",
+        "elapsed": 11.2,
+        "error": null
+      },
+      {
+        "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch(resolve-library-id query-docs)",
+        "elapsed": 18.0,
+        "error": null
+      },
+      {
+        "query": "How does the new Bun.serve() API handle WebSocket upgrades? I saw something about a websocket handler option but can't figure out the types",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch(select:mcp__context7__resolve-library-id)",
+        "elapsed": 10.4,
+        "error": null
+      },
+      {
+        "query": "Can you write me a tRPC router that handles file uploads with presigned S3 URLs? Need to know the current recommended approach for tRPC v11",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch(resolve-library-id query-docs)",
+        "elapsed": 27.8,
+        "error": null
+      },
+      {
+        "query": "I need to add rate limiting to my Hono.js API. What middleware options are available and how do I configure them?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch(select:mcp__context7__resolve-library-id)",
+        "elapsed": 26.8,
+        "error": null
+      },
+      {
+        "query": "What's the correct way to set up Turborepo's new daemon mode? Our CI is slow and I heard there's a persistent cache feature now",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch(select:mcp__context7__resolve-library-id)",
+        "elapsed": 17.8,
+        "error": null
+      },
+      {
+        "query": "Show me how to use Tanstack Query v5's useSuspenseQuery - I keep getting errors when I try to use it with React Suspense boundaries",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch(select:mcp__context7__resolve-library-id)",
+        "elapsed": 21.2,
+        "error": null
+      },
+      {
+        "query": "My Playwright tests are flaky because of some timing issue with their new auto-retrying assertions. How do expect().toBeVisible() retries actually work in the latest version?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch(resolve-library-id)",
+        "elapsed": 27.8,
+        "error": null
+      },
+      {
+        "query": "Can you refactor this function to use async/await instead of callbacks?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 4.8,
+        "error": null
+      },
+      {
+        "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 14.6,
+        "error": null
+      },
+      {
+        "query": "I have a bug where my React component re-renders infinitely. Here's the code: [component code]. Can you spot the issue?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 8.9,
+        "error": null
+      },
+      {
+        "query": "Help me write unit tests for this Express middleware that checks JWT tokens. Here's the middleware: [code]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 7.5,
+        "error": null
+      },
+      {
+        "query": "Can you optimize this SQL query? It's doing a full table scan and I think we need an index. Here's the query and the EXPLAIN output: [query + explain]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 5.4,
+        "error": null
+      },
+      {
+        "query": "Convert this JavaScript class component to a functional component with hooks",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 6.6,
+        "error": null
+      },
+      {
+        "query": "I need a bash script that monitors disk usage and sends a Slack notification when it exceeds 90%",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Write",
+        "elapsed": 23.4,
+        "error": null
+      },
+      {
+        "query": "Review this PR diff and tell me if there are any security issues: [diff]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 10.2,
+        "error": null
+      },
+      {
+        "query": "Help me set up a GitHub Actions workflow that runs my tests on every PR. I'm using a Node.js monorepo with pnpm workspaces",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Bash",
+        "elapsed": 23.0,
+        "error": null
+      }
+    ]
+  },
+  "skill": {
+    "mode": "skill",
+    "model": "claude-sonnet-4-6",
+    "max_turns": 4,
+    "elapsed_seconds": 44.0,
+    "total": 20,
+    "passed": 19,
+    "recall": "10/11 (91%)",
+    "precision": "10/10 (100%)",
+    "false_positives": 0,
+    "results": [
+      {
+        "query": "How do I use useEffect to fetch data in React?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(find-docs)",
+        "elapsed": 14.6,
+        "error": null
+      },
+      {
+        "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(find-docs)",
+        "elapsed": 15.1,
+        "error": null
+      },
+      {
+        "query": "How do React hooks work?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 16.4,
+        "error": null
+      },
+      {
+        "query": "I'm trying to set up SvelteKit's new runes system but the $state syntax isn't working like the docs say. I'm on version 5.2. Can you check what the correct pattern is?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(find-docs)",
+        "elapsed": 13.1,
+        "error": null
+      },
+      {
+        "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(find-docs)",
+        "elapsed": 14.1,
+        "error": null
+      },
+      {
+        "query": "How does the new Bun.serve() API handle WebSocket upgrades? I saw something about a websocket handler option but can't figure out the types",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(find-docs)",
+        "elapsed": 13.6,
+        "error": null
+      },
+      {
+        "query": "Can you write me a tRPC router that handles file uploads with presigned S3 URLs? Need to know the current recommended approach for tRPC v11",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(find-docs)",
+        "elapsed": 13.8,
+        "error": null
+      },
+      {
+        "query": "I need to add rate limiting to my Hono.js API. What middleware options are available and how do I configure them?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(find-docs)",
+        "elapsed": 25.4,
+        "error": null
+      },
+      {
+        "query": "What's the correct way to set up Turborepo's new daemon mode? Our CI is slow and I heard there's a persistent cache feature now",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(find-docs)",
+        "elapsed": 15.4,
+        "error": null
+      },
+      {
+        "query": "Show me how to use Tanstack Query v5's useSuspenseQuery - I keep getting errors when I try to use it with React Suspense boundaries",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(find-docs)",
+        "elapsed": 16.2,
+        "error": null
+      },
+      {
+        "query": "My Playwright tests are flaky because of some timing issue with their new auto-retrying assertions. How do expect().toBeVisible() retries actually work in the latest version?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(find-docs)",
+        "elapsed": 21.8,
+        "error": null
+      },
+      {
+        "query": "Can you refactor this function to use async/await instead of callbacks?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 4.7,
+        "error": null
+      },
+      {
+        "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 14.5,
+        "error": null
+      },
+      {
+        "query": "I have a bug where my React component re-renders infinitely. Here's the code: [component code]. Can you spot the issue?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 5.4,
+        "error": null
+      },
+      {
+        "query": "Help me write unit tests for this Express middleware that checks JWT tokens. Here's the middleware: [code]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 6.0,
+        "error": null
+      },
+      {
+        "query": "Can you optimize this SQL query? It's doing a full table scan and I think we need an index. Here's the query and the EXPLAIN output: [query + explain]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 4.3,
+        "error": null
+      },
+      {
+        "query": "Convert this JavaScript class component to a functional component with hooks",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 4.7,
+        "error": null
+      },
+      {
+        "query": "I need a bash script that monitors disk usage and sends a Slack notification when it exceeds 90%",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Write",
+        "elapsed": 42.2,
+        "error": null
+      },
+      {
+        "query": "Review this PR diff and tell me if there are any security issues: [diff]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 7.6,
+        "error": null
+      },
+      {
+        "query": "Help me set up a GitHub Actions workflow that runs my tests on every PR. I'm using a Node.js monorepo with pnpm workspaces",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Agent",
+        "elapsed": 43.7,
+        "error": null
+      }
+    ]
+  }
+}

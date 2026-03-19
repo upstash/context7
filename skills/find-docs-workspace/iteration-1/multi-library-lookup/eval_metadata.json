@@ -1,0 +1,31 @@
+{
+  "eval_id": 1,
+  "eval_name": "multi-library-lookup",
+  "prompt": "I'm building a Next.js 15 app with Drizzle ORM. How do I set up server actions that write to a Postgres database using Drizzle's transaction API?",
+  "assertions": [
+    {
+      "id": "ran-ctx7-library",
+      "text": "Ran ctx7 library to resolve at least one library ID",
+      "type": "process",
+      "applies_to": "with_skill"
+    },
+    {
+      "id": "ran-ctx7-docs",
+      "text": "Ran ctx7 docs with a resolved library ID (not a raw name)",
+      "type": "process",
+      "applies_to": "with_skill"
+    },
+    {
+      "id": "covers-both-libraries",
+      "text": "Response covers both Next.js server actions AND Drizzle ORM transactions",
+      "type": "quality",
+      "applies_to": "both"
+    },
+    {
+      "id": "includes-code-example",
+      "text": "Contains a code example combining server actions with Drizzle transactions",
+      "type": "quality",
+      "applies_to": "both"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+[
+  {"query": "How do I use the new Svelte 5 $effect.tracking() rune? I can't find any examples that work", "should_trigger": true},
+  {"query": "What's the correct way to do parallel queries in Drizzle ORM? I keep seeing db.batch() mentioned but it errors out on Postgres", "should_trigger": true},
+  {"query": "I'm getting a weird error with Bun's built-in test runner: 'expect.toMatchSnapshot is not a function'. Is this supported yet?", "should_trigger": true},
+  {"query": "How do I configure Vite 6's new Environment API? The docs mention it but I can't figure out the config shape", "should_trigger": true},
+  {"query": "What middleware does Hono provide for rate limiting? I need to add it to my Cloudflare Workers API", "should_trigger": true},
+  {"query": "I'm trying to use the new React compiler but getting 'Invalid hook call' errors after enabling it. What are the requirements?", "should_trigger": true},
+  {"query": "How does Astro's new server islands feature work? Can you show me how to set up a hybrid page with both static and dynamic parts?", "should_trigger": true},
+  {"query": "What's the zod equivalent of yup's .when() for conditional validation? I'm migrating from yup to zod and this is the last piece", "should_trigger": true},
+  {"query": "How do I set up OpenTelemetry tracing in a Next.js app router project? I need to trace server actions and API routes", "should_trigger": true},
+  {"query": "Can you show me how to use Deno.serve() with the new Deno 2 API? The old std/http/server.ts approach doesn't work anymore", "should_trigger": true},
+  {"query": "Can you refactor this function to use early returns instead of nested if/else?", "should_trigger": false},
+  {"query": "Write me a Python script that renames all files in a directory to lowercase", "should_trigger": false},
+  {"query": "I have a memory leak in my Node.js app. Here's a heap snapshot - can you help me find the issue?", "should_trigger": false},
+  {"query": "Help me write a regex that matches email addresses with international domain names", "should_trigger": false},
+  {"query": "Can you optimize this PostgreSQL query? It's using a sequential scan on a 10M row table", "should_trigger": false},
+  {"query": "Review this TypeScript code for type safety issues. I think there are some unsafe casts", "should_trigger": false},
+  {"query": "Write a GitHub Actions workflow that builds a Docker image and pushes it to ECR on every tag", "should_trigger": false},
+  {"query": "Help me implement a binary search tree in Rust. I'm learning the language", "should_trigger": false},
+  {"query": "Convert this class-based React component to use hooks. Don't change the behavior", "should_trigger": false},
+  {"query": "Can you help me debug this segfault in my C program? Here's the backtrace from gdb", "should_trigger": false}
+]

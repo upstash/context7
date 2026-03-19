@@ -1,0 +1,168 @@
+{
+  "metadata": {
+    "skill_name": "find-docs",
+    "skill_path": "/Users/fahreddinozcan/Desktop/repos/context7/skills/find-docs",
+    "executor_model": "claude-opus-4-6",
+    "timestamp": "2026-03-18T01:15:00Z",
+    "evals_run": [1, 2, 3],
+    "runs_per_configuration": 1
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "eval_name": "multi-library-lookup",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 142.8,
+        "tokens": 22500,
+        "tool_calls": 11,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Ran ctx7 library to resolve at least one library ID", "passed": true, "evidence": "Ran ctx7 library 3 times: for 'nextjs', 'drizzle', and 'next.js' (retry)."},
+        {"text": "Ran ctx7 docs with a resolved library ID", "passed": true, "evidence": "Ran ctx7 docs with /vercel/next.js/v15.1.8 and /llmstxt/orm_drizzle_team_llms_txt."},
+        {"text": "Response covers both Next.js server actions AND Drizzle ORM transactions", "passed": true, "evidence": "Covers server actions and Drizzle transactions with atomic rollback."},
+        {"text": "Contains a code example combining server actions with Drizzle transactions", "passed": true, "evidence": "Complete create-order.ts example with db.transaction()."}
+      ],
+      "notes": ["Exceeded 3-command limit (ran 5). 'nextjs' query didn't find /vercel/next.js on first try."]
+    },
+    {
+      "eval_id": 1,
+      "eval_name": "multi-library-lookup",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 2,
+        "failed": 0,
+        "total": 2,
+        "time_seconds": 54.3,
+        "tokens": 11145,
+        "tool_calls": 2,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Response covers both Next.js server actions AND Drizzle ORM transactions", "passed": true, "evidence": "Covers server actions and Drizzle transactions."},
+        {"text": "Contains a code example combining server actions with Drizzle transactions", "passed": true, "evidence": "Multiple examples including error handling and nested transactions."}
+      ],
+      "notes": ["Comprehensive response from training knowledge. More scenario coverage than with-skill version."]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "version-specific-query",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 115.1,
+        "tokens": 19562,
+        "tool_calls": 7,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Ran ctx7 library to resolve React library ID", "passed": true, "evidence": "Found /facebook/react with v19_1_1 version."},
+        {"text": "Ran ctx7 docs with a resolved library ID", "passed": true, "evidence": "Queried /facebook/react/v19_1_1 and /reactjs/react.dev."},
+        {"text": "Explains what changed between React 18 and 19 regarding useFormStatus", "passed": true, "evidence": "Covers useFormState -> useActionState, action prop changes."},
+        {"text": "Shows correct React 19 useFormStatus usage with a code example", "passed": true, "evidence": "SubmitButton child pattern, comparison table, complete example."}
+      ],
+      "notes": ["Stayed within 3-command limit. Good use of version-specific ID."]
+    },
+    {
+      "eval_id": 2,
+      "eval_name": "version-specific-query",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 2,
+        "failed": 0,
+        "total": 2,
+        "time_seconds": 52.5,
+        "tokens": 10607,
+        "tool_calls": 2,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Explains what changed between React 18 and 19 regarding useFormStatus", "passed": true, "evidence": "Covers action vs onSubmit, useFormState -> useActionState."},
+        {"text": "Shows correct React 19 useFormStatus usage with a code example", "passed": true, "evidence": "Correct patterns with migration checklist."}
+      ],
+      "notes": ["Very comprehensive from training knowledge. Covers same ground as with-skill."]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "debugging-with-docs",
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 4,
+        "failed": 0,
+        "total": 4,
+        "time_seconds": 96.5,
+        "tokens": 18318,
+        "tool_calls": 9,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Ran ctx7 library to resolve Tailwind CSS library ID", "passed": true, "evidence": "Selected /websites/tailwindcss."},
+        {"text": "Ran ctx7 docs with a resolved library ID", "passed": true, "evidence": "Queried /websites/tailwindcss twice for colors and migration."},
+        {"text": "Explains Tailwind v4's CSS-first configuration change", "passed": true, "evidence": "Explains @theme directive replacing tailwind.config.ts."},
+        {"text": "Provides a concrete fix showing how to define custom colors in v4", "passed": true, "evidence": "@theme with --color-brand-*, @config bridge, upgrade tool."}
+      ],
+      "notes": ["Stayed within 3-command limit. Includes upgrade tool from docs."]
+    },
+    {
+      "eval_id": 3,
+      "eval_name": "debugging-with-docs",
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 2,
+        "failed": 0,
+        "total": 2,
+        "time_seconds": 41.3,
+        "tokens": 10297,
+        "tool_calls": 2,
+        "errors": 0
+      },
+      "expectations": [
+        {"text": "Explains Tailwind v4's CSS-first configuration change", "passed": true, "evidence": "Explains CSS-first config, @theme directive."},
+        {"text": "Provides a concrete fix showing how to define custom colors in v4", "passed": true, "evidence": "Three fix options: @theme, @config, @theme inline."}
+      ],
+      "notes": ["Comprehensive from training knowledge. Covers @theme inline option not in with-skill version."]
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {"mean": 1.0, "stddev": 0.0, "min": 1.0, "max": 1.0},
+      "time_seconds": {"mean": 118.1, "stddev": 19.1, "min": 96.5, "max": 142.8},
+      "tokens": {"mean": 20127, "stddev": 1726, "min": 18318, "max": 22500}
+    },
+    "without_skill": {
+      "pass_rate": {"mean": 1.0, "stddev": 0.0, "min": 1.0, "max": 1.0},
+      "time_seconds": {"mean": 49.4, "stddev": 5.6, "min": 41.3, "max": 54.3},
+      "tokens": {"mean": 10683, "stddev": 347, "min": 10297, "max": 11145}
+    },
+    "delta": {
+      "pass_rate": "+0.00",
+      "time_seconds": "+68.7",
+      "tokens": "+9444"
+    }
+  },
+  "notes": [
+    "All assertions pass in both configurations -- the quality assertions (covers-both-libraries, explains-v4-config-change, etc.) are non-discriminating between with-skill and without-skill for these topics, since the model's training data is recent enough to cover them well.",
+    "With-skill runs take ~2.4x longer (118s vs 49s avg) and use ~1.9x more tokens (20k vs 11k avg) due to ctx7 CLI lookups.",
+    "Eval 1 (multi-library-lookup) exceeded the skill's 3-command limit by running 5 commands -- the 'nextjs' query didn't find /vercel/next.js on the first try, requiring a retry with 'next.js'.",
+    "The skill's value proposition is harder to demonstrate on topics well-covered in training data. Tests with newer/niche libraries would better showcase the documentation freshness advantage.",
+    "Process assertions (ran-ctx7-library, ran-ctx7-docs) confirm the skill workflow is being followed correctly in 2 of 3 evals (eval 1 needed a retry)."
+  ]
+}

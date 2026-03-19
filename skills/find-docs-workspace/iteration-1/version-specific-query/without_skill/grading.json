@@ -1,0 +1,18 @@
+{
+  "eval_id": 2,
+  "eval_name": "version-specific-query",
+  "configuration": "without_skill",
+  "expectations": [
+    {
+      "text": "Explains what changed between React 18 and 19 regarding useFormStatus",
+      "passed": true,
+      "evidence": "Covers action prop vs onSubmit, child component requirement, useFormState -> useActionState rename, import path changes."
+    },
+    {
+      "text": "Shows correct React 19 useFormStatus usage with a code example",
+      "passed": true,
+      "evidence": "Shows correct SubmitButton pattern, React 18 vs 19 code comparison, useActionState integration, migration checklist, server actions example."
+    }
+  ],
+  "notes": "Very comprehensive answer from training knowledge. Covers the same ground as the with-skill version. Content appears accurate for React 19."
+}

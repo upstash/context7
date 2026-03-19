@@ -1,0 +1,18 @@
+{
+  "eval_id": 1,
+  "eval_name": "multi-library-lookup",
+  "configuration": "without_skill",
+  "expectations": [
+    {
+      "text": "Response covers both Next.js server actions AND Drizzle ORM transactions",
+      "passed": true,
+      "evidence": "Covers server actions ('use server', FormData, revalidatePath) and Drizzle transactions (db.transaction, tx object, .returning(), tx.rollback())."
+    },
+    {
+      "text": "Contains a code example combining server actions with Drizzle transactions",
+      "passed": true,
+      "evidence": "Multiple examples: createUserWithOrder with transaction, placeOrder with error handling, conditionalInsert with manual rollback. Also shows server/client component usage."
+    }
+  ],
+  "notes": "Comprehensive response from training knowledge. Covers more scenarios (nested transactions, manual rollback, client component usage) than the with-skill version. However, accuracy of API details depends on training data freshness."
+}

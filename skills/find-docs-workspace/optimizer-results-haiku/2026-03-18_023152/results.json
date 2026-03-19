@@ -1,0 +1,864 @@
+{
+  "exit_reason": "max_iterations (3)",
+  "original_description": "Retrieves authoritative, up-to-date technical documentation, API references, configuration details, and code examples for any developer technology.",
+  "best_description": "Retrieves authoritative, up-to-date technical documentation, API references, configuration details, and code examples for any developer technology.",
+  "best_score": "3/7",
+  "best_train_score": "6/13",
+  "best_test_score": "3/7",
+  "final_description": "Use this skill to look up documentation and code examples for any specific library, framework, or tool. For finding syntax, understanding APIs, learning how to use a technology, exploring features, checking version changes, and debugging library-specific issues.",
+  "iterations_run": 3,
+  "holdout": 0.4,
+  "train_size": 13,
+  "test_size": 7,
+  "history": [
+    {
+      "iteration": 1,
+      "description": "Retrieves authoritative, up-to-date technical documentation, API references, configuration details, and code examples for any developer technology.",
+      "train_passed": 6,
+      "train_failed": 7,
+      "train_total": 13,
+      "train_results": [
+        {
+          "query": "Show me how to use Tanstack Query v5's useSuspenseQuery - I keep getting errors when I try to use it with React Suspense boundaries",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "How does the new Bun.serve() API handle WebSocket upgrades? I saw something about a websocket handler option but can't figure out the types",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "Can you write me a tRPC router that handles file uploads with presigned S3 URLs? Need to know the current recommended approach for tRPC v11",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "How do I use useEffect to fetch data in React?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "My Playwright tests are flaky because of some timing issue with their new auto-retrying assertions. How do expect().toBeVisible() retries actually work in the latest version?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "Can you optimize this SQL query? It's doing a full table scan and I think we need an index. Here's the query and the EXPLAIN output: [query + explain]",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Help me set up a GitHub Actions workflow that runs my tests on every PR. I'm using a Node.js monorepo with pnpm workspaces",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Review this PR diff and tell me if there are any security issues: [diff]",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Can you refactor this function to use async/await instead of callbacks?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "I need a bash script that monitors disk usage and sends a Slack notification when it exceeds 90%",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ],
+      "test_passed": 3,
+      "test_failed": 4,
+      "test_total": 7,
+      "test_results": [
+        {
+          "query": "I need to add rate limiting to my Hono.js API. What middleware options are available and how do I configure them?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I'm trying to set up SvelteKit's new runes system but the $state syntax isn't working like the docs say. I'm on version 5.2. Can you check what the correct pattern is?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "Help me write unit tests for this Express middleware that checks JWT tokens. Here's the middleware: [code]",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "What's the correct way to set up Turborepo's new daemon mode? Our CI is slow and I heard there's a persistent cache feature now",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "Convert this JavaScript class component to a functional component with hooks",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "How do React hooks work?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I have a bug where my React component re-renders infinitely. Here's the code: [component code]. Can you spot the issue?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ],
+      "passed": 6,
+      "failed": 7,
+      "total": 13,
+      "results": [
+        {
+          "query": "Show me how to use Tanstack Query v5's useSuspenseQuery - I keep getting errors when I try to use it with React Suspense boundaries",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "How does the new Bun.serve() API handle WebSocket upgrades? I saw something about a websocket handler option but can't figure out the types",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "Can you write me a tRPC router that handles file uploads with presigned S3 URLs? Need to know the current recommended approach for tRPC v11",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "How do I use useEffect to fetch data in React?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "My Playwright tests are flaky because of some timing issue with their new auto-retrying assertions. How do expect().toBeVisible() retries actually work in the latest version?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "Can you optimize this SQL query? It's doing a full table scan and I think we need an index. Here's the query and the EXPLAIN output: [query + explain]",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Help me set up a GitHub Actions workflow that runs my tests on every PR. I'm using a Node.js monorepo with pnpm workspaces",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Review this PR diff and tell me if there are any security issues: [diff]",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Can you refactor this function to use async/await instead of callbacks?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "I need a bash script that monitors disk usage and sends a Slack notification when it exceeds 90%",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "iteration": 2,
+      "description": "Use this skill to look up authoritative documentation and code examples for specific libraries and frameworks. When you need to verify API syntax, understand method signatures, check configuration options, find current best practices, or see what changed between versions.",
+      "train_passed": 6,
+      "train_failed": 7,
+      "train_total": 13,
+      "train_results": [
+        {
+          "query": "Can you write me a tRPC router that handles file uploads with presigned S3 URLs? Need to know the current recommended approach for tRPC v11",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "Show me how to use Tanstack Query v5's useSuspenseQuery - I keep getting errors when I try to use it with React Suspense boundaries",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "How does the new Bun.serve() API handle WebSocket upgrades? I saw something about a websocket handler option but can't figure out the types",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "How do I use useEffect to fetch data in React?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "My Playwright tests are flaky because of some timing issue with their new auto-retrying assertions. How do expect().toBeVisible() retries actually work in the latest version?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "Can you optimize this SQL query? It's doing a full table scan and I think we need an index. Here's the query and the EXPLAIN output: [query + explain]",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Help me set up a GitHub Actions workflow that runs my tests on every PR. I'm using a Node.js monorepo with pnpm workspaces",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Can you refactor this function to use async/await instead of callbacks?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Review this PR diff and tell me if there are any security issues: [diff]",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "I need a bash script that monitors disk usage and sends a Slack notification when it exceeds 90%",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ],
+      "test_passed": 3,
+      "test_failed": 4,
+      "test_total": 7,
+      "test_results": [
+        {
+          "query": "I need to add rate limiting to my Hono.js API. What middleware options are available and how do I configure them?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I'm trying to set up SvelteKit's new runes system but the $state syntax isn't working like the docs say. I'm on version 5.2. Can you check what the correct pattern is?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "How do React hooks work?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "What's the correct way to set up Turborepo's new daemon mode? Our CI is slow and I heard there's a persistent cache feature now",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "Help me write unit tests for this Express middleware that checks JWT tokens. Here's the middleware: [code]",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Convert this JavaScript class component to a functional component with hooks",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "I have a bug where my React component re-renders infinitely. Here's the code: [component code]. Can you spot the issue?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ],
+      "passed": 6,
+      "failed": 7,
+      "total": 13,
+      "results": [
+        {
+          "query": "Can you write me a tRPC router that handles file uploads with presigned S3 URLs? Need to know the current recommended approach for tRPC v11",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "Show me how to use Tanstack Query v5's useSuspenseQuery - I keep getting errors when I try to use it with React Suspense boundaries",
+          "should_trigger": true,
+          "trigger_rate": 0.3333333333333333,
+          "triggers": 1,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "How does the new Bun.serve() API handle WebSocket upgrades? I saw something about a websocket handler option but can't figure out the types",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "How do I use useEffect to fetch data in React?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "My Playwright tests are flaky because of some timing issue with their new auto-retrying assertions. How do expect().toBeVisible() retries actually work in the latest version?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "Can you optimize this SQL query? It's doing a full table scan and I think we need an index. Here's the query and the EXPLAIN output: [query + explain]",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Help me set up a GitHub Actions workflow that runs my tests on every PR. I'm using a Node.js monorepo with pnpm workspaces",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Can you refactor this function to use async/await instead of callbacks?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Review this PR diff and tell me if there are any security issues: [diff]",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "I need a bash script that monitors disk usage and sends a Slack notification when it exceeds 90%",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "iteration": 3,
+      "description": "Use this skill to look up documentation and code examples for any specific library, framework, or tool. For finding syntax, understanding APIs, learning how to use a technology, exploring features, checking version changes, and debugging library-specific issues.",
+      "train_passed": 6,
+      "train_failed": 7,
+      "train_total": 13,
+      "train_results": [
+        {
+          "query": "Show me how to use Tanstack Query v5's useSuspenseQuery - I keep getting errors when I try to use it with React Suspense boundaries",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "How does the new Bun.serve() API handle WebSocket upgrades? I saw something about a websocket handler option but can't figure out the types",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "Can you write me a tRPC router that handles file uploads with presigned S3 URLs? Need to know the current recommended approach for tRPC v11",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "How do I use useEffect to fetch data in React?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "My Playwright tests are flaky because of some timing issue with their new auto-retrying assertions. How do expect().toBeVisible() retries actually work in the latest version?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Can you optimize this SQL query? It's doing a full table scan and I think we need an index. Here's the query and the EXPLAIN output: [query + explain]",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Can you refactor this function to use async/await instead of callbacks?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Review this PR diff and tell me if there are any security issues: [diff]",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Help me set up a GitHub Actions workflow that runs my tests on every PR. I'm using a Node.js monorepo with pnpm workspaces",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "I need a bash script that monitors disk usage and sends a Slack notification when it exceeds 90%",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ],
+      "test_passed": 3,
+      "test_failed": 4,
+      "test_total": 7,
+      "test_results": [
+        {
+          "query": "I need to add rate limiting to my Hono.js API. What middleware options are available and how do I configure them?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "I'm trying to set up SvelteKit's new runes system but the $state syntax isn't working like the docs say. I'm on version 5.2. Can you check what the correct pattern is?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "How do React hooks work?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "Help me write unit tests for this Express middleware that checks JWT tokens. Here's the middleware: [code]",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "What's the correct way to set up Turborepo's new daemon mode? Our CI is slow and I heard there's a persistent cache feature now",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "Convert this JavaScript class component to a functional component with hooks",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "I have a bug where my React component re-renders infinitely. Here's the code: [component code]. Can you spot the issue?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ],
+      "passed": 6,
+      "failed": 7,
+      "total": 13,
+      "results": [
+        {
+          "query": "Show me how to use Tanstack Query v5's useSuspenseQuery - I keep getting errors when I try to use it with React Suspense boundaries",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "How does the new Bun.serve() API handle WebSocket upgrades? I saw something about a websocket handler option but can't figure out the types",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "Can you write me a tRPC router that handles file uploads with presigned S3 URLs? Need to know the current recommended approach for tRPC v11",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "How do I use useEffect to fetch data in React?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "My Playwright tests are flaky because of some timing issue with their new auto-retrying assertions. How do expect().toBeVisible() retries actually work in the latest version?",
+          "should_trigger": true,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": false
+        },
+        {
+          "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Can you optimize this SQL query? It's doing a full table scan and I think we need an index. Here's the query and the EXPLAIN output: [query + explain]",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Can you refactor this function to use async/await instead of callbacks?",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Review this PR diff and tell me if there are any security issues: [diff]",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "Help me set up a GitHub Actions workflow that runs my tests on every PR. I'm using a Node.js monorepo with pnpm workspaces",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        },
+        {
+          "query": "I need a bash script that monitors disk usage and sends a Slack notification when it exceeds 90%",
+          "should_trigger": false,
+          "trigger_rate": 0.0,
+          "triggers": 0,
+          "runs": 3,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

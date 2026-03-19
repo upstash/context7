@@ -1,0 +1,28 @@
+{
+  "eval_id": 1,
+  "eval_name": "multi-library-lookup",
+  "configuration": "with_skill",
+  "expectations": [
+    {
+      "text": "Ran ctx7 library to resolve at least one library ID",
+      "passed": true,
+      "evidence": "Ran ctx7 library 3 times: for 'nextjs', 'drizzle', and 'next.js' (retry). Resolved /vercel/next.js and /llmstxt/orm_drizzle_team_llms_txt."
+    },
+    {
+      "text": "Ran ctx7 docs with a resolved library ID (not a raw name)",
+      "passed": true,
+      "evidence": "Ran ctx7 docs with /vercel/next.js/v15.1.8 and /llmstxt/orm_drizzle_team_llms_txt. Both are valid resolved IDs."
+    },
+    {
+      "text": "Response covers both Next.js server actions AND Drizzle ORM transactions",
+      "passed": true,
+      "evidence": "Response covers server actions ('use server' directive, FormData handling, revalidatePath) and Drizzle transactions (db.transaction, tx object, atomic rollback)."
+    },
+    {
+      "text": "Contains a code example combining server actions with Drizzle transactions",
+      "passed": true,
+      "evidence": "Complete create-order.ts example shows a server action using db.transaction() with insert into orders, orderItems, and inventory update."
+    }
+  ],
+  "notes": "Exceeded the 3-command limit (ran 5 commands). First 'nextjs' library lookup didn't find the official Vercel Next.js repo -- had to retry with 'next.js'. This suggests the skill could better guide library name resolution."
+}

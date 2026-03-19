@@ -1,0 +1,23 @@
+{
+  "skill_name": "find-docs",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I'm building a Next.js 15 app with Drizzle ORM. How do I set up server actions that write to a Postgres database using Drizzle's transaction API?",
+      "expected_output": "Should use ctx7 to look up both Next.js server actions and Drizzle ORM transaction docs, then provide a working code example combining both.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "We're migrating from React 18 to React 19 and our useFormStatus hook isn't working the same way. Can you show me the correct usage in React 19?",
+      "expected_output": "Should use ctx7 to look up React 19 docs specifically for useFormStatus, using version-specific library ID if available, and explain what changed.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "My Tailwind CSS v4 config isn't picking up my custom theme colors. I have a tailwind.config.ts but the classes like bg-brand-500 aren't generating. What changed in v4?",
+      "expected_output": "Should use ctx7 to look up Tailwind CSS v4 migration/config docs and explain the config changes in v4 (CSS-first configuration).",
+      "files": []
+    }
+  ]
+}

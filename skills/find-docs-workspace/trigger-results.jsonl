@@ -1,0 +1,20 @@
+{"query":"How do I use useEffect to fetch data in React?", "should_trigger":true, "triggered":false, "pass":false}
+{"query":"What is the Prisma syntax for defining a one-to-many relation with cascade delete?", "should_trigger":true, "triggered":false, "pass":false}
+{"query":"How do React hooks work?", "should_trigger":true, "triggered":false, "pass":false}
+{"query":, "should_trigger":true, "triggered":false, "pass":false}
+{"query":"We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?", "should_trigger":true, "triggered":false, "pass":false}
+{"query":, "should_trigger":true, "triggered":false, "pass":false}
+{"query":"Can you write me a tRPC router that handles file uploads with presigned S3 URLs? Need to know the current recommended approach for tRPC v11", "should_trigger":true, "triggered":false, "pass":false}
+{"query":"I need to add rate limiting to my Hono.js API. What middleware options are available and how do I configure them?", "should_trigger":true, "triggered":false, "pass":false}
+{"query":, "should_trigger":true, "triggered":false, "pass":false}
+{"query":, "should_trigger":true, "triggered":false, "pass":false}
+{"query":"My Playwright tests are flaky because of some timing issue with their new auto-retrying assertions. How do expect().toBeVisible() retries actually work in the latest version?", "should_trigger":true, "triggered":false, "pass":false}
+{"query":"Can you refactor this function to use async/await instead of callbacks?", "should_trigger":false, "triggered":false, "pass":true}
+{"query":, "should_trigger":false, "triggered":false, "pass":true}
+{"query":, "should_trigger":false, "triggered":false, "pass":true}
+{"query":, "should_trigger":false, "triggered":false, "pass":true}
+{"query":, "should_trigger":false, "triggered":false, "pass":true}
+{"query":"Convert this JavaScript class component to a functional component with hooks", "should_trigger":false, "triggered":false, "pass":true}
+{"query":"I need a bash script that monitors disk usage and sends a Slack notification when it exceeds 90%", "should_trigger":false, "triggered":false, "pass":true}
+{"query":"Review this PR diff and tell me if there are any security issues: [diff]", "should_trigger":false, "triggered":false, "pass":true}
+{"query":, "should_trigger":false, "triggered":false, "pass":true}
