@@ -15,9 +15,7 @@ export async function installSkillFiles(
 
     // Prevent directory traversal — resolved path must stay within skillDir
     if (!filePath.startsWith(skillDir + "/") && filePath !== skillDir) {
-      throw new Error(
-        `Skill file path "${file.path}" resolves outside the target directory`
-      );
+      throw new Error(`Skill file path "${file.path}" resolves outside the target directory`);
     }
 
     const fileDir = dirname(filePath);
