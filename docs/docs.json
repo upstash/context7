@@ -65,8 +65,19 @@
                 ]
               }
             ]
-          },
-          "resources/security"
+          }
+        ]
+      },
+      {
+        "group": "Security",
+        "pages": [
+          "security/overview",
+          "security/architecture",
+          "security/infrastructure",
+          "security/auth-and-access-control",
+          "security/compliance-and-reporting",
+          "security/malicious-content",
+          "security/best-practices"
         ]
       },
       {
@@ -135,7 +146,6 @@
         "group": "Resources",
         "pages": [
           "resources/developer",
-          "resources/security",
           "resources/troubleshooting"
         ]
       }

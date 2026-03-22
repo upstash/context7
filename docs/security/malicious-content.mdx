@@ -1,0 +1,25 @@
+---
+title: Malicious Content Detection
+sidebarTitle: Malicious Content
+---
+
+<Note>
+Malware detection is coming soon!
+</Note>
+
+How Context7 detects prompt injections and prevents them from reaching AI assistants.
+
+## Prompt Injection Detection
+
+Context7 indexes documentation from public and private repositories. To protect against malicious content being served to AI assistants, Context7 employs a **two-pass prompt injection detection pipeline**.
+
+<Frame>
+![How our classifier pipeline works](/images/security/classifier_pipeline.png)
+</Frame>
+
+- **Complementary detection stages** — a classifier and filter run in sequence, combining different detection approaches to maximize coverage while minimizing false positives
+- **Skills.md pipeline** — a separate but related detection pipeline is used for [Skills](/skills) files, adapted to their distinct structure and intent
+- **Continuous monitoring** — flagged content is tracked and reviewed on an ongoing basis
+- **Regular updates** — classifier pipelines are updated to address evolving attack methods and new injection techniques
+
+This ensures that documentation retrieved through Context7 is safe to consume by both human developers and AI coding agents.
