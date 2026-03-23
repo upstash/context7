@@ -13,10 +13,7 @@ The Overview tab displays four metrics:
 
 ### Requests
 
-The total number of API calls made to Context7, shown against your plan's included quota (e.g., 33/5,000).
-
-- Requests within your quota are free
-- Excess requests are charged at **$10 per 1K requests**
+The total number of API calls made to Context7, shown against your plan's included quota. Requests within your quota are free; excess requests are billed based on your plan.
 
 ### Parsing Tokens
 
@@ -26,32 +23,15 @@ The total tokens processed when parsing private source documentation (Pro and En
 - Charged for changed content when refreshing
 - No charge for cached content when refreshing
 
-**Rate**: $25 per 1M tokens
-
 ### Seats
 
-The number of members in your teamspace.
-
-**Rate**: $30 per seat/month
+The number of members in your teamspace. Each seat is billed monthly based on your plan.
 
 ### Cost
 
-Your total monthly cost in USD, with a breakdown of each component:
+Your total monthly cost in USD, with a breakdown of each component: request overages, parsing tokens, and seats.
 
-```
-Total Cost = Request Cost + Parsing Cost + Seat Cost
-
-Request Cost = (Excess Requests / 1,000) × $10
-Parsing Cost = (Parsing Tokens / 1,000,000) × $25
-Seat Cost    = Number of Seats × $30
-```
-
-**Example**:
-
-- Seats: 3 members
-- Requests: 6,200 (5,000 included, 1,200 excess)
-- Parsing: 800K tokens this month
-- Cost: (1.2K / 1K × $10) + (800K / 1M × $25) + (3 × $30) = $12 + $20 + $90 = **$122**
+See [Plans & Pricing](https://context7.com/plans) for current rates and included quotas.
 
 ## Reporting Periods
 
