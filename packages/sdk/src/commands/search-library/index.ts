@@ -36,6 +36,10 @@ export class SearchLibraryCommand extends Command<Library[] | string> {
       throw new Context7Error("Request did not return a result");
     }
 
+    if (!result.results || !Array.isArray(result.results)) {
+      return this.responseType === "txt" ? "No libraries found." : [];
+    }
+
     const libraries = result.results.map(formatLibrary);
 
     if (this.responseType === "txt") {
