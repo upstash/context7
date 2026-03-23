@@ -15,7 +15,7 @@ jobs:
           fetch-depth: 0
 
       - name: Check for changeset
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const { execSync } = require('child_process');
