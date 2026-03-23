@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.8
+
+### Patch Changes
+
+- c3c2647: Use ~/.agents/skills instead of ~/.config/agents/skills for global universal skill installs
+
 ## 0.3.7
 
 ### Patch Changes
