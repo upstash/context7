@@ -3,59 +3,55 @@ title: Monitor Usage
 description: Monitor your Context7 API usage and track costs
 ---
 
-Track your Context7 usage with real-time metrics from the Overview tab.
+Track your Context7 usage with real-time metrics from the **Overview** tab on your teamspace dashboard.
 
-![Usage statistics card showing metrics and cost breakdown](/images/dashboard/usage-stats.png)
+![Usage statistics card showing requests, parsing tokens, seats, and cost breakdown](/images/dashboard/usage-stats.png)
 
 ## Metrics Overview
 
-Context7 tracks four key metrics to help you understand your usage patterns:
+The Overview tab displays four metrics:
 
-### Search & Query Requests
+### Requests
 
-The total number of API calls made to Context7:
+The total number of API calls made to Context7, shown against your plan's included quota (e.g., 33/5,000).
 
-- **Search Requests**: Library search queries
-- **Query Requests**: Documentation retrieval calls
-
-### Query Tokens
-
-The total number of tokens returned in API responses. This reflects how much documentation content you've retrieved.
-
-<Tip>Search requests, Query requests, and Query tokens do not affect cost.</Tip>
+- Requests within your quota are free
+- Excess requests are charged at **$10 per 1K requests**
 
 ### Parsing Tokens
 
-The total tokens processed when parsing private repository documentation (Pro and Enterprise only).
+The total tokens processed when parsing private source documentation (Pro and Enterprise only).
 
-**How it works**:
-
-- Charged when adding a new private repository
+- Charged when adding a new private source
 - Charged for changed content when refreshing
 - No charge for cached content when refreshing
 
-**Cost**: $25 per 1M tokens
+**Rate**: $25 per 1M tokens
 
-### Total Cost
+### Seats
 
-Your monthly cost in USD (Pro and Enterprise only).
+The number of members in your teamspace.
 
-**Calculation**:
+**Rate**: $30 per seat/month
+
+### Cost
+
+Your total monthly cost in USD, with a breakdown of each component:
 
 ```
-Total Cost = Parsing Cost + Teamspace Cost
+Total Cost = Request Cost + Parsing Cost + Seat Cost
 
+Request Cost = (Excess Requests / 1,000) × $10
 Parsing Cost = (Parsing Tokens / 1,000,000) × $25
-Teamspace Cost = Number of Members × $7
+Seat Cost    = Number of Seats × $30
 ```
 
 **Example**:
 
-- Teamspace: 4 members
+- Seats: 3 members
+- Requests: 6,200 (5,000 included, 1,200 excess)
 - Parsing: 800K tokens this month
-- Cost: (800K / 1M × $25) + (4 × $7) = $20 + $28 = **$48**
-
-Hover over the Total Cost to see the detailed breakdown.
+- Cost: (1.2K / 1K × $10) + (800K / 1M × $25) + (3 × $30) = $12 + $20 + $90 = **$122**
 
 ## Reporting Periods
 
