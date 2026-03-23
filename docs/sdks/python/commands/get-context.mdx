@@ -1,0 +1,150 @@
+---
+title: "Get Context"
+description: "Retrieve documentation context for a library"
+---
+
+# Get Context
+
+Retrieve documentation context for a specific library. Returns documentation as a list of documentation objects (default) or as plain text.
+
+## Arguments
+
+<ParamField path="query" type="str" required>
+  The user's question or task (used for relevance ranking)
+</ParamField>
+
+<ParamField path="library_id" type="str" required>
+  The library identifier (e.g., `/facebook/react`)
+</ParamField>
+
+<ParamField path="type" type="Literal['json', 'txt']">
+  Format of the response
+  - `json`: List of Documentation objects (default)
+  - `txt`: Plain text format
+
+  Default: `"json"`
+</ParamField>
+
+## Response
+
+The response type depends on the `type` parameter.
+
+### JSON Format (`type="json"` or default)
+
+Returns `list[Documentation]` - a list of documentation objects.
+
+### Text Format (`type="txt"`)
+
+Returns a `str` containing the documentation context ready to use in LLM prompts.
+
+<ResponseField name="Documentation" type="object">
+  <Expandable title="properties">
+    <ResponseField name="title" type="str" required>
+      Title of the documentation snippet
+    </ResponseField>
+    <ResponseField name="content" type="str" required>
+      The documentation content (includes code blocks in markdown format)
+    </ResponseField>
+    <ResponseField name="source" type="str" required>
+      Source identifier for the snippet
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Examples
+
+<RequestExample>
+```python JSON Format (Default)
+from context7 import Context7
+
+with Context7() as client:
+    docs = client.get_context(
+        "How do I use hooks?",
+        "/facebook/react"
+    )
+
+    for doc in docs:
+        print(doc.title)
+        print(doc.content)
+        print(doc.source)
+```
+
+```python Text Format
+from context7 import Context7
+
+with Context7() as client:
+    context = client.get_context(
+        "How do I use hooks?",
+        "/facebook/react",
+        type="txt"
+    )
+    print(context)
+```
+
+```python Async Usage
+import asyncio
+from context7 import Context7
+
+async def main():
+    async with Context7() as client:
+        context = await client.get_context_async(
+            "How do I use hooks?",
+            "/facebook/react"
+        )
+        print(context)
+
+asyncio.run(main())
+```
+
+```python Error Handling
+from context7 import Context7, Context7Error
+
+with Context7() as client:
+    try:
+        context = client.get_context(
+            "How to get started?",
+            "/invalid/library"
+        )
+    except Context7Error as e:
+        print(f"API Error: {e}")
+```
+</RequestExample>
+
+## Use Cases
+
+### Providing Context to LLMs
+
+```python
+from context7 import Context7
+
+def get_docs_for_prompt(library: str, question: str) -> str:
+    with Context7() as client:
+        context = client.get_context(question, library, type="txt")
+
+        return f"""
+Here is the relevant documentation:
+
+{context}
+
+User question: {question}
+"""
+
+prompt = get_docs_for_prompt("/facebook/react", "How do I use useEffect?")
+```
+
+### Processing Individual Snippets
+
+```python
+from context7 import Context7
+
+with Context7() as client:
+    docs = client.get_context(
+        "How to create components?",
+        "/facebook/react"
+    )
+
+    for doc in docs:
+        print(f"Title: {doc.title}")
+        print(f"Source: {doc.source}")
+        print(f"Content length: {len(doc.content)} chars")
+```
