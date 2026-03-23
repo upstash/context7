@@ -44,7 +44,7 @@
           "howto/claiming-libraries",
           "howto/chat-widget",
           "howto/verification",
-          "howto/private-repositories",
+          "howto/private-sources",
           "howto/teamspace",
           "howto/usage"
         ]
@@ -139,6 +139,7 @@
       {
         "group": "Integrations",
         "pages": [
+          "integrations/github-actions",
           "integrations/code-rabbit"
         ]
       },
