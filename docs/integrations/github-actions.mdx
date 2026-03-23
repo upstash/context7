@@ -39,16 +39,16 @@ Keep your Context7 documentation in sync by triggering a refresh whenever you pu
               curl -s -X POST https://context7.com/api/v1/refresh \
                 -H "Content-Type: application/json" \
                 -H "Authorization: Bearer ${{ secrets.CONTEXT7_API_KEY }}" \
-                -d '{"libraryName": "/your-org/your-repo"}'
+                -d '{"libraryName": "/${{ github.repository }}"}'
     ```
 
-    Replace `/your-org/your-repo` with your library identifier on Context7 (e.g., `/vercel/next.js`).
+    This uses `${{ github.repository }}` to automatically resolve to your repository's `owner/repo` (e.g., `vercel/next.js`). If your library identifier on Context7 differs from your GitHub repository name, replace it with the correct value (e.g., `/your-org/your-repo`).
   </Step>
 </Steps>
 
 ## Refreshing a Specific Branch
 
-To refresh a non-default branch, add the `branch` field to the request body:
+To refresh a non-default branch, add the `branch` field to the request body. The `branch` value must match a branch name that already exists on your library in Context7.
 
 ```yaml
 - name: Trigger Context7 Refresh
@@ -58,6 +58,10 @@ To refresh a non-default branch, add the `branch` field to the request body:
       -H "Authorization: Bearer ${{ secrets.CONTEXT7_API_KEY }}" \
       -d '{"libraryName": "/your-org/your-repo", "branch": "v2"}'
 ```
+
+<Note>
+  If the branch has not been added to your library on Context7, the refresh will fail with a `branch_not_found` error.
+</Note>
 
 ## Private Repositories
 
