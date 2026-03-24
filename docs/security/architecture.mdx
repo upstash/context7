@@ -64,11 +64,34 @@ The Context7 MCP server is [open source](https://github.com/upstash/context7). I
 </Warning>
 
 ## Customizing What Is Retrieved
-You can limit retrieval scope by specifying which libraries or organizations are accessible under `Public Library Access` in the **Libraries** tab on your Context7 dashboard.
-This lets you limit content to libraries you trust and prefer.
+
+You can control retrieval scope from the **Policies** tab on your teamspace dashboard.
+
+### Source Type Access
+
+Toggle which types of documentation sources are accessible to your teamspace:
+
+- **Public Repositories** — open-source repositories from GitHub, GitLab, and Bitbucket
+- **Websites** — documentation crawled from websites
+- **llms.txt** — documentation from llms.txt files
+- **Confluence** — Atlassian Confluence workspace pages and documentation
+- **Uploaded Files** — manually uploaded OpenAPI specifications
+- **Non-Verified Libraries** — libraries that have not been verified by their owners
+- **Private Sources** — private sources connected to this teamspace
 
 <Frame>
-![Selecting libraries and organizations for retrieval](/images/dashboard/library-access-selector.png)
+![Source Type Access card showing toggles for each documentation source type](/images/dashboard/source-type-access.png)
+</Frame>
+
+### Public Repository Filters
+
+Restrict which public repositories are accessible to your teamspace. You can choose between two modes:
+
+- **Filter by Quality** — set criteria like minimum stars, minimum trust score, and recency or block specific libraries or organizations from appearing in results
+- **Select Manually** — pick specific libraries or organizations
+
+<Frame>
+![Public Repository Filters card showing quality filters and blocked libraries](/images/dashboard/public-repository-filters.png)
 </Frame>
 
 ## Data Handling
