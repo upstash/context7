@@ -124,7 +124,8 @@ const server = new McpServer(
     name: "Context7",
     version: SERVER_VERSION,
     websiteUrl: "https://context7.com",
-    description: "Context7 provides up-to-date documentation and code examples for libraries and frameworks.",
+    description:
+      "Context7 provides up-to-date documentation and code examples for libraries and frameworks.",
     icons: [
       {
         src: "https://context7.com/context7-icon-green.png",
@@ -133,7 +134,7 @@ const server = new McpServer(
     ],
   },
   {
-    instructions:`Use this server to retrieve up-to-date documentation and code examples for any library.
+    instructions: `Use this server to retrieve up-to-date documentation and code examples for any library.
 
 When to use:
 - User is working with a library/framework and needs API details, usage patterns, or configuration
