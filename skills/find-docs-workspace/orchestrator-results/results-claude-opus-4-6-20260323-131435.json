@@ -1,0 +1,2348 @@
+{
+  "cli+skill": {
+    "mode": "cli+skill",
+    "model": "claude-opus-4-6",
+    "max_turns": 10,
+    "elapsed_seconds": 120.3,
+    "total": 42,
+    "passed": 39,
+    "recall": "29/32 (91%)",
+    "precision": "29/29 (100%)",
+    "false_positives": 0,
+    "results": [
+      {
+        "query": "How do I use useEffect to fetch data in React?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Skill(find-docs) -> Bash(ctx7)",
+        "elapsed": 35.7,
+        "error": null
+      },
+      {
+        "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 120,
+        "error": "timeout"
+      },
+      {
+        "query": "vitest mocking - how do I mock a module?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Skill(find-docs) -> Bash(ctx7)",
+        "elapsed": 37.4,
+        "error": null
+      },
+      {
+        "query": "what are the docker compose healthcheck options?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Skill(find-docs) -> Bash(ctx7)",
+        "elapsed": 42.6,
+        "error": null
+      },
+      {
+        "query": "how do I configure a Terraform AWS provider with assume role?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(find-docs) -> ToolSearch -> Bash(ctx7)",
+        "elapsed": 44.4,
+        "error": null
+      },
+      {
+        "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(Drizzle ORM 0.35 onConflictDoUpdate API changes breaking changes) -> ToolSearch -> Skill(find-docs) -> Bash(ctx7)",
+        "elapsed": 31.7,
+        "error": null
+      },
+      {
+        "query": "something is wrong with our eslint setup after upgrading to v9, all the configs are different now. the flat config thing? idk how to migrate our .eslintrc",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Glob -> Skill(find-docs) -> Read -> Bash(ctx7) -> Bash",
+        "elapsed": 46.4,
+        "error": null
+      },
+      {
+        "query": "we just upgraded pydantic and now half our validators are broken. something about model_validator decorator replacing the old root_validator? the migration guide was confusing",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(pydantic v2 migration root_validator to model_validator) -> ToolSearch -> Skill(find-docs) -> Bash(ctx7)",
+        "elapsed": 75.5,
+        "error": null
+      },
+      {
+        "query": "our playwright tests started failing after updating to v1.40. something about the locator strict mode? it used to work when there were multiple matches and now it throws",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(find-docs) -> ToolSearch -> Bash(ctx7)",
+        "elapsed": 42.4,
+        "error": null
+      },
+      {
+        "query": "tailwind v4 broke all our custom colors, the theme config syntax is completely different apparently",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Glob -> Skill(find-docs) -> Bash(ctx7) -> Grep",
+        "elapsed": 46.1,
+        "error": null
+      },
+      {
+        "query": "ok so my PM wants me to add real-time notifications to our dashboard. we're on next.js and I have no idea if I should use websockets, SSE, or that new server actions streaming thing. what are my options",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Skill(find-docs) -> Bash(ctx7)",
+        "elapsed": 51.8,
+        "error": null
+      },
+      {
+        "query": "my boss wants row-level security in our supabase project so each team only sees their own data. I've never set up RLS policies before, how does that even work",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(find-docs) -> ToolSearch -> Bash(ctx7)",
+        "elapsed": 37.0,
+        "error": null
+      },
+      {
+        "query": "we're migrating from REST to GraphQL and someone suggested Apollo Server but I'm not sure if that's still the recommended thing or if there's something newer. we're on express/node",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(find-docs) -> ToolSearch -> Bash(ctx7) -> AskUserQuestion",
+        "elapsed": 41.8,
+        "error": null
+      },
+      {
+        "query": "I got a ticket to add stripe checkout to our app. its a next.js app. I need to create a checkout session and handle the webhook for payment confirmation. never used stripe sdk before",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Skill(find-docs) -> Glob -> Bash(ctx7) -> AskUserQuestion",
+        "elapsed": 51.0,
+        "error": null
+      },
+      {
+        "query": "the infra team wants me to set up opentelemetry tracing in our fastify services. apparently there's an auto-instrumentation package? no idea where to start",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Skill(find-docs) -> Bash(ctx7) -> AskUserQuestion",
+        "elapsed": 41.2,
+        "error": null
+      },
+      {
+        "query": "need to add oauth login (google + github) to our backend. we use fastify. whats the current recommended approach, is there a passport equivalent or something built in",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(Fastify OAuth2 authentication plugin Google GitHub login) -> ToolSearch -> Skill(find-docs) -> Bash(ctx7)",
+        "elapsed": 49.1,
+        "error": null
+      },
+      {
+        "query": "my next.js page keeps showing stale data. I think its the fetch caching thing they changed recently? the page uses fetch() in a server component and it seems like its caching forever",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(find-docs) -> ToolSearch -> Bash(ctx7)",
+        "elapsed": 40.7,
+        "error": null
+      },
+      {
+        "query": "my zustand store updates but the component doesnt rerender. im using some createWithEqualityFn thing from a tutorial but i think the api changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(find-docs) -> ToolSearch -> Bash(ctx7)",
+        "elapsed": 43.5,
+        "error": null
+      },
+      {
+        "query": "getting 'Cannot use import statement outside a module' with jest. tried the transform config but nothing works. someone mentioned experimental-vm-modules?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Glob -> Read",
+        "elapsed": 52.9,
+        "error": null
+      },
+      {
+        "query": "our stripe webhook keeps returning 400 in production but works locally. I think the signature verification is failing, maybe the sdk changed how you verify?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Grep -> Skill(find-docs) -> Bash(ctx7)",
+        "elapsed": 57.1,
+        "error": null
+      },
+      {
+        "query": "docker build works on my mac but fails in CI with some weird buildx error about cache mounts. our Dockerfile uses RUN --mount=type=cache and I think the syntax is different for buildkit v2?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(Docker BuildKit v2 RUN --mount=type=cache syntax changes and differences from v1) -> ToolSearch -> Skill(find-docs) -> Bash(ctx7)",
+        "elapsed": 44.1,
+        "error": null
+      },
+      {
+        "query": "I need to build a csv upload pipeline - validate the data, transform some columns, bulk insert into postgres. thinking about using bullmq for the queue part. how do I set that up",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(find-docs) -> ToolSearch -> Bash(ctx7)",
+        "elapsed": 59.1,
+        "error": null
+      },
+      {
+        "query": "setting up grpc between our typescript services. what library should I use and how do the protobuf schemas work with ts codegen",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Skill(find-docs) -> Bash(ctx7) -> AskUserQuestion",
+        "elapsed": 63.1,
+        "error": null
+      },
+      {
+        "query": "I saw vercel announced partial prerendering for next.js. can I use it yet? how does it work with app router and suspense boundaries",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(find-docs) -> ToolSearch -> Bash(ctx7)",
+        "elapsed": 56.1,
+        "error": null
+      },
+      {
+        "query": "the new react compiler - is it production ready? what do I need to change in my build config to enable it",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Skill(find-docs) -> Bash(ctx7) -> WebFetch",
+        "elapsed": 54.9,
+        "error": null
+      },
+      {
+        "query": "how do I use serde to deserialize JSON with optional fields in Rust?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(find-docs) -> ToolSearch -> Bash(ctx7)",
+        "elapsed": 42.4,
+        "error": null
+      },
+      {
+        "query": "how do I set up gin middleware for JWT auth in Go?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(gin middleware JWT authentication Go) -> ToolSearch -> Skill(find-docs) -> Bash(ctx7)",
+        "elapsed": 43.3,
+        "error": null
+      },
+      {
+        "query": "what's the spring boot 3 way to configure actuator endpoints? we're migrating from boot 2 and the properties changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(Spring Boot 3 actuator endpoints configuration properties migration from Boot 2) -> ToolSearch -> Skill(find-docs) -> Bash(ctx7)",
+        "elapsed": 42.9,
+        "error": null
+      },
+      {
+        "query": "kubernetes HPA - how do I configure autoscaling based on custom prometheus metrics, not just cpu",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(find-docs) -> ToolSearch -> Bash(ctx7)",
+        "elapsed": 58.2,
+        "error": null
+      },
+      {
+        "query": "fastapi dependency injection how?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Skill(find-docs) -> Bash(ctx7)",
+        "elapsed": 35.3,
+        "error": null
+      },
+      {
+        "query": "pnpm workspace syntax?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 11.6,
+        "error": null
+      },
+      {
+        "query": "redis pub sub node",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Skill(find-docs) -> Bash(ctx7)",
+        "elapsed": 63.0,
+        "error": null
+      },
+      {
+        "query": "I know react hooks pretty well but I always forget the exact difference between useMemo and useCallback. can you just explain the mental model?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 11.3,
+        "error": null
+      },
+      {
+        "query": "we use prisma but this is actually a pure SQL question about join performance. I have a query that does 3 left joins and its slow, heres the EXPLAIN output: [output]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 9.8,
+        "error": null
+      },
+      {
+        "query": "I need to refactor our express routes to use async/await instead of callbacks. the routes are in src/routes/. can you do it?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Glob",
+        "elapsed": 22.0,
+        "error": null
+      },
+      {
+        "query": "can you review this next.js component and tell me why it re-renders on every keystroke? here's the code: [code]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 11.6,
+        "error": null
+      },
+      {
+        "query": "we have a react app with a zustand store but my question is about the business logic, not zustand. the calculateDiscount function returns wrong values for bulk orders",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Grep",
+        "elapsed": 18.5,
+        "error": null
+      },
+      {
+        "query": "write me a node.js script that reads all json files in a directory and merges them into one",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Write",
+        "elapsed": 21.5,
+        "error": null
+      },
+      {
+        "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Write",
+        "elapsed": 34.0,
+        "error": null
+      },
+      {
+        "query": "add a createdAt field to the User model",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Grep -> Glob",
+        "elapsed": 33.0,
+        "error": null
+      },
+      {
+        "query": "fix the TypeScript errors in this file",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 8.9,
+        "error": null
+      },
+      {
+        "query": "rename the handleClick function to handleSubmit and update all references",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Grep",
+        "elapsed": 15.9,
+        "error": null
+      }
+    ]
+  },
+  "cli+claude.md": {
+    "mode": "cli+claude.md",
+    "model": "claude-opus-4-6",
+    "max_turns": 10,
+    "elapsed_seconds": 71.0,
+    "total": 42,
+    "passed": 39,
+    "recall": "29/32 (91%)",
+    "precision": "29/29 (100%)",
+    "false_positives": 0,
+    "results": [
+      {
+        "query": "How do I use useEffect to fetch data in React?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 31.3,
+        "error": null
+      },
+      {
+        "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 34.3,
+        "error": null
+      },
+      {
+        "query": "vitest mocking - how do I mock a module?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 33.7,
+        "error": null
+      },
+      {
+        "query": "what are the docker compose healthcheck options?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 32.1,
+        "error": null
+      },
+      {
+        "query": "how do I configure a Terraform AWS provider with assume role?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 29.9,
+        "error": null
+      },
+      {
+        "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 47.0,
+        "error": null
+      },
+      {
+        "query": "something is wrong with our eslint setup after upgrading to v9, all the configs are different now. the flat config thing? idk how to migrate our .eslintrc",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Glob -> Bash(ctx7) -> Read -> Bash",
+        "elapsed": 70.7,
+        "error": null
+      },
+      {
+        "query": "we just upgraded pydantic and now half our validators are broken. something about model_validator decorator replacing the old root_validator? the migration guide was confusing",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 39.7,
+        "error": null
+      },
+      {
+        "query": "our playwright tests started failing after updating to v1.40. something about the locator strict mode? it used to work when there were multiple matches and now it throws",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 49.8,
+        "error": null
+      },
+      {
+        "query": "tailwind v4 broke all our custom colors, the theme config syntax is completely different apparently",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7) -> AskUserQuestion",
+        "elapsed": 53.1,
+        "error": null
+      },
+      {
+        "query": "ok so my PM wants me to add real-time notifications to our dashboard. we're on next.js and I have no idea if I should use websockets, SSE, or that new server actions streaming thing. what are my options",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 61.0,
+        "error": null
+      },
+      {
+        "query": "my boss wants row-level security in our supabase project so each team only sees their own data. I've never set up RLS policies before, how does that even work",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 44.3,
+        "error": null
+      },
+      {
+        "query": "we're migrating from REST to GraphQL and someone suggested Apollo Server but I'm not sure if that's still the recommended thing or if there's something newer. we're on express/node",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 34.1,
+        "error": null
+      },
+      {
+        "query": "I got a ticket to add stripe checkout to our app. its a next.js app. I need to create a checkout session and handle the webhook for payment confirmation. never used stripe sdk before",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7) -> Glob",
+        "elapsed": 48.8,
+        "error": null
+      },
+      {
+        "query": "the infra team wants me to set up opentelemetry tracing in our fastify services. apparently there's an auto-instrumentation package? no idea where to start",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 34.9,
+        "error": null
+      },
+      {
+        "query": "need to add oauth login (google + github) to our backend. we use fastify. whats the current recommended approach, is there a passport equivalent or something built in",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 53.1,
+        "error": null
+      },
+      {
+        "query": "my next.js page keeps showing stale data. I think its the fetch caching thing they changed recently? the page uses fetch() in a server component and it seems like its caching forever",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 40.5,
+        "error": null
+      },
+      {
+        "query": "my zustand store updates but the component doesnt rerender. im using some createWithEqualityFn thing from a tutorial but i think the api changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 39.4,
+        "error": null
+      },
+      {
+        "query": "getting 'Cannot use import statement outside a module' with jest. tried the transform config but nothing works. someone mentioned experimental-vm-modules?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Glob -> Read",
+        "elapsed": 29.8,
+        "error": null
+      },
+      {
+        "query": "our stripe webhook keeps returning 400 in production but works locally. I think the signature verification is failing, maybe the sdk changed how you verify?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Bash(ctx7) -> ToolSearch",
+        "elapsed": 32.5,
+        "error": null
+      },
+      {
+        "query": "docker build works on my mac but fails in CI with some weird buildx error about cache mounts. our Dockerfile uses RUN --mount=type=cache and I think the syntax is different for buildkit v2?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 17.2,
+        "error": null
+      },
+      {
+        "query": "I need to build a csv upload pipeline - validate the data, transform some columns, bulk insert into postgres. thinking about using bullmq for the queue part. how do I set that up",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7) -> AskUserQuestion",
+        "elapsed": 53.1,
+        "error": null
+      },
+      {
+        "query": "setting up grpc between our typescript services. what library should I use and how do the protobuf schemas work with ts codegen",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 24.0,
+        "error": null
+      },
+      {
+        "query": "I saw vercel announced partial prerendering for next.js. can I use it yet? how does it work with app router and suspense boundaries",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 37.4,
+        "error": null
+      },
+      {
+        "query": "the new react compiler - is it production ready? what do I need to change in my build config to enable it",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 23.3,
+        "error": null
+      },
+      {
+        "query": "how do I use serde to deserialize JSON with optional fields in Rust?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 44.2,
+        "error": null
+      },
+      {
+        "query": "how do I set up gin middleware for JWT auth in Go?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 29.5,
+        "error": null
+      },
+      {
+        "query": "what's the spring boot 3 way to configure actuator endpoints? we're migrating from boot 2 and the properties changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 30.7,
+        "error": null
+      },
+      {
+        "query": "kubernetes HPA - how do I configure autoscaling based on custom prometheus metrics, not just cpu",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 37.7,
+        "error": null
+      },
+      {
+        "query": "fastapi dependency injection how?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 30.1,
+        "error": null
+      },
+      {
+        "query": "pnpm workspace syntax?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 35.0,
+        "error": null
+      },
+      {
+        "query": "redis pub sub node",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 32.2,
+        "error": null
+      },
+      {
+        "query": "I know react hooks pretty well but I always forget the exact difference between useMemo and useCallback. can you just explain the mental model?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 9.1,
+        "error": null
+      },
+      {
+        "query": "we use prisma but this is actually a pure SQL question about join performance. I have a query that does 3 left joins and its slow, heres the EXPLAIN output: [output]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 9.1,
+        "error": null
+      },
+      {
+        "query": "I need to refactor our express routes to use async/await instead of callbacks. the routes are in src/routes/. can you do it?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Glob",
+        "elapsed": 23.3,
+        "error": null
+      },
+      {
+        "query": "can you review this next.js component and tell me why it re-renders on every keystroke? here's the code: [code]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 6.9,
+        "error": null
+      },
+      {
+        "query": "we have a react app with a zustand store but my question is about the business logic, not zustand. the calculateDiscount function returns wrong values for bulk orders",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Grep",
+        "elapsed": 19.4,
+        "error": null
+      },
+      {
+        "query": "write me a node.js script that reads all json files in a directory and merges them into one",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Write",
+        "elapsed": 16.8,
+        "error": null
+      },
+      {
+        "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Write",
+        "elapsed": 29.8,
+        "error": null
+      },
+      {
+        "query": "add a createdAt field to the User model",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Grep -> Glob",
+        "elapsed": 26.7,
+        "error": null
+      },
+      {
+        "query": "fix the TypeScript errors in this file",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 8.6,
+        "error": null
+      },
+      {
+        "query": "rename the handleClick function to handleSubmit and update all references",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Grep",
+        "elapsed": 13.7,
+        "error": null
+      }
+    ]
+  },
+  "cli+rule": {
+    "mode": "cli+rule",
+    "model": "claude-opus-4-6",
+    "max_turns": 10,
+    "elapsed_seconds": 64.1,
+    "total": 42,
+    "passed": 38,
+    "recall": "29/32 (91%)",
+    "precision": "29/30 (97%)",
+    "false_positives": 1,
+    "results": [
+      {
+        "query": "How do I use useEffect to fetch data in React?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 31.7,
+        "error": null
+      },
+      {
+        "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 40.9,
+        "error": null
+      },
+      {
+        "query": "vitest mocking - how do I mock a module?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 35.7,
+        "error": null
+      },
+      {
+        "query": "what are the docker compose healthcheck options?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 33.4,
+        "error": null
+      },
+      {
+        "query": "how do I configure a Terraform AWS provider with assume role?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 35.2,
+        "error": null
+      },
+      {
+        "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 51.4,
+        "error": null
+      },
+      {
+        "query": "something is wrong with our eslint setup after upgrading to v9, all the configs are different now. the flat config thing? idk how to migrate our .eslintrc",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Glob -> Bash(ctx7) -> Read -> Bash",
+        "elapsed": 36.5,
+        "error": null
+      },
+      {
+        "query": "we just upgraded pydantic and now half our validators are broken. something about model_validator decorator replacing the old root_validator? the migration guide was confusing",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Bash(ctx7) -> ToolSearch",
+        "elapsed": 34.5,
+        "error": null
+      },
+      {
+        "query": "our playwright tests started failing after updating to v1.40. something about the locator strict mode? it used to work when there were multiple matches and now it throws",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 46.3,
+        "error": null
+      },
+      {
+        "query": "tailwind v4 broke all our custom colors, the theme config syntax is completely different apparently",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 32.3,
+        "error": null
+      },
+      {
+        "query": "ok so my PM wants me to add real-time notifications to our dashboard. we're on next.js and I have no idea if I should use websockets, SSE, or that new server actions streaming thing. what are my options",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 50.2,
+        "error": null
+      },
+      {
+        "query": "my boss wants row-level security in our supabase project so each team only sees their own data. I've never set up RLS policies before, how does that even work",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Bash(ctx7) -> ToolSearch",
+        "elapsed": 59.8,
+        "error": null
+      },
+      {
+        "query": "we're migrating from REST to GraphQL and someone suggested Apollo Server but I'm not sure if that's still the recommended thing or if there's something newer. we're on express/node",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 42.3,
+        "error": null
+      },
+      {
+        "query": "I got a ticket to add stripe checkout to our app. its a next.js app. I need to create a checkout session and handle the webhook for payment confirmation. never used stripe sdk before",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7) -> Glob",
+        "elapsed": 53.4,
+        "error": null
+      },
+      {
+        "query": "the infra team wants me to set up opentelemetry tracing in our fastify services. apparently there's an auto-instrumentation package? no idea where to start",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Bash(ctx7) -> ToolSearch",
+        "elapsed": 63.7,
+        "error": null
+      },
+      {
+        "query": "need to add oauth login (google + github) to our backend. we use fastify. whats the current recommended approach, is there a passport equivalent or something built in",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Bash(ctx7) -> ToolSearch",
+        "elapsed": 39.0,
+        "error": null
+      },
+      {
+        "query": "my next.js page keeps showing stale data. I think its the fetch caching thing they changed recently? the page uses fetch() in a server component and it seems like its caching forever",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 40.0,
+        "error": null
+      },
+      {
+        "query": "my zustand store updates but the component doesnt rerender. im using some createWithEqualityFn thing from a tutorial but i think the api changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Bash(ctx7) -> ToolSearch",
+        "elapsed": 34.6,
+        "error": null
+      },
+      {
+        "query": "getting 'Cannot use import statement outside a module' with jest. tried the transform config but nothing works. someone mentioned experimental-vm-modules?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 19.1,
+        "error": null
+      },
+      {
+        "query": "our stripe webhook keeps returning 400 in production but works locally. I think the signature verification is failing, maybe the sdk changed how you verify?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 50.5,
+        "error": null
+      },
+      {
+        "query": "docker build works on my mac but fails in CI with some weird buildx error about cache mounts. our Dockerfile uses RUN --mount=type=cache and I think the syntax is different for buildkit v2?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 20.1,
+        "error": null
+      },
+      {
+        "query": "I need to build a csv upload pipeline - validate the data, transform some columns, bulk insert into postgres. thinking about using bullmq for the queue part. how do I set that up",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 44.6,
+        "error": null
+      },
+      {
+        "query": "setting up grpc between our typescript services. what library should I use and how do the protobuf schemas work with ts codegen",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 28.7,
+        "error": null
+      },
+      {
+        "query": "I saw vercel announced partial prerendering for next.js. can I use it yet? how does it work with app router and suspense boundaries",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7) -> WebFetch",
+        "elapsed": 38.8,
+        "error": null
+      },
+      {
+        "query": "the new react compiler - is it production ready? what do I need to change in my build config to enable it",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 44.8,
+        "error": null
+      },
+      {
+        "query": "how do I use serde to deserialize JSON with optional fields in Rust?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 45.4,
+        "error": null
+      },
+      {
+        "query": "how do I set up gin middleware for JWT auth in Go?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 38.4,
+        "error": null
+      },
+      {
+        "query": "what's the spring boot 3 way to configure actuator endpoints? we're migrating from boot 2 and the properties changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 39.7,
+        "error": null
+      },
+      {
+        "query": "kubernetes HPA - how do I configure autoscaling based on custom prometheus metrics, not just cpu",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 47.6,
+        "error": null
+      },
+      {
+        "query": "fastapi dependency injection how?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7) -> AskUserQuestion",
+        "elapsed": 39.5,
+        "error": null
+      },
+      {
+        "query": "pnpm workspace syntax?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7)",
+        "elapsed": 32.2,
+        "error": null
+      },
+      {
+        "query": "redis pub sub node",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Bash(ctx7) -> AskUserQuestion",
+        "elapsed": 41.6,
+        "error": null
+      },
+      {
+        "query": "I know react hooks pretty well but I always forget the exact difference between useMemo and useCallback. can you just explain the mental model?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 13.8,
+        "error": null
+      },
+      {
+        "query": "we use prisma but this is actually a pure SQL question about join performance. I have a query that does 3 left joins and its slow, heres the EXPLAIN output: [output]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 12.1,
+        "error": null
+      },
+      {
+        "query": "I need to refactor our express routes to use async/await instead of callbacks. the routes are in src/routes/. can you do it?",
+        "should_trigger": false,
+        "triggered": true,
+        "pass": false,
+        "first_tool": "ToolSearch -> Glob -> Bash",
+        "elapsed": 25.6,
+        "error": null
+      },
+      {
+        "query": "can you review this next.js component and tell me why it re-renders on every keystroke? here's the code: [code]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 9.7,
+        "error": null
+      },
+      {
+        "query": "we have a react app with a zustand store but my question is about the business logic, not zustand. the calculateDiscount function returns wrong values for bulk orders",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Grep",
+        "elapsed": 21.0,
+        "error": null
+      },
+      {
+        "query": "write me a node.js script that reads all json files in a directory and merges them into one",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Write",
+        "elapsed": 22.7,
+        "error": null
+      },
+      {
+        "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Write",
+        "elapsed": 22.3,
+        "error": null
+      },
+      {
+        "query": "add a createdAt field to the User model",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Grep -> Glob",
+        "elapsed": 42.4,
+        "error": null
+      },
+      {
+        "query": "fix the TypeScript errors in this file",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch",
+        "elapsed": 16.6,
+        "error": null
+      },
+      {
+        "query": "rename the handleClick function to handleSubmit and update all references",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Grep",
+        "elapsed": 18.0,
+        "error": null
+      }
+    ]
+  },
+  "mcp": {
+    "mode": "mcp",
+    "model": "claude-opus-4-6",
+    "max_turns": 10,
+    "elapsed_seconds": 93.0,
+    "total": 42,
+    "passed": 10,
+    "recall": "0/32 (0%)",
+    "precision": "N/A",
+    "false_positives": 0,
+    "results": [
+      {
+        "query": "How do I use useEffect to fetch data in React?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 15.9,
+        "error": null
+      },
+      {
+        "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 13.9,
+        "error": null
+      },
+      {
+        "query": "vitest mocking - how do I mock a module?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 15.1,
+        "error": null
+      },
+      {
+        "query": "what are the docker compose healthcheck options?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 12.8,
+        "error": null
+      },
+      {
+        "query": "how do I configure a Terraform AWS provider with assume role?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 11.9,
+        "error": null
+      },
+      {
+        "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> WebSearch -> WebFetch",
+        "elapsed": 40.9,
+        "error": null
+      },
+      {
+        "query": "something is wrong with our eslint setup after upgrading to v9, all the configs are different now. the flat config thing? idk how to migrate our .eslintrc",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Glob -> Bash -> Grep -> Read -> Write",
+        "elapsed": 92.8,
+        "error": null
+      },
+      {
+        "query": "we just upgraded pydantic and now half our validators are broken. something about model_validator decorator replacing the old root_validator? the migration guide was confusing",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Grep",
+        "elapsed": 32.6,
+        "error": null
+      },
+      {
+        "query": "our playwright tests started failing after updating to v1.40. something about the locator strict mode? it used to work when there were multiple matches and now it throws",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 14.0,
+        "error": null
+      },
+      {
+        "query": "tailwind v4 broke all our custom colors, the theme config syntax is completely different apparently",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Glob -> Grep",
+        "elapsed": 24.4,
+        "error": null
+      },
+      {
+        "query": "ok so my PM wants me to add real-time notifications to our dashboard. we're on next.js and I have no idea if I should use websockets, SSE, or that new server actions streaming thing. what are my options",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 26.8,
+        "error": null
+      },
+      {
+        "query": "my boss wants row-level security in our supabase project so each team only sees their own data. I've never set up RLS policies before, how does that even work",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> WebFetch",
+        "elapsed": 39.8,
+        "error": null
+      },
+      {
+        "query": "we're migrating from REST to GraphQL and someone suggested Apollo Server but I'm not sure if that's still the recommended thing or if there's something newer. we're on express/node",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 18.0,
+        "error": null
+      },
+      {
+        "query": "I got a ticket to add stripe checkout to our app. its a next.js app. I need to create a checkout session and handle the webhook for payment confirmation. never used stripe sdk before",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Glob -> Bash -> Read",
+        "elapsed": 36.7,
+        "error": null
+      },
+      {
+        "query": "the infra team wants me to set up opentelemetry tracing in our fastify services. apparently there's an auto-instrumentation package? no idea where to start",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 25.1,
+        "error": null
+      },
+      {
+        "query": "need to add oauth login (google + github) to our backend. we use fastify. whats the current recommended approach, is there a passport equivalent or something built in",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 21.9,
+        "error": null
+      },
+      {
+        "query": "my next.js page keeps showing stale data. I think its the fetch caching thing they changed recently? the page uses fetch() in a server component and it seems like its caching forever",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 20.4,
+        "error": null
+      },
+      {
+        "query": "my zustand store updates but the component doesnt rerender. im using some createWithEqualityFn thing from a tutorial but i think the api changed",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Grep",
+        "elapsed": 23.6,
+        "error": null
+      },
+      {
+        "query": "getting 'Cannot use import statement outside a module' with jest. tried the transform config but nothing works. someone mentioned experimental-vm-modules?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Glob -> Read -> Bash -> Grep",
+        "elapsed": 31.5,
+        "error": null
+      },
+      {
+        "query": "our stripe webhook keeps returning 400 in production but works locally. I think the signature verification is failing, maybe the sdk changed how you verify?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Grep -> Glob",
+        "elapsed": 30.0,
+        "error": null
+      },
+      {
+        "query": "docker build works on my mac but fails in CI with some weird buildx error about cache mounts. our Dockerfile uses RUN --mount=type=cache and I think the syntax is different for buildkit v2?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 18.0,
+        "error": null
+      },
+      {
+        "query": "I need to build a csv upload pipeline - validate the data, transform some columns, bulk insert into postgres. thinking about using bullmq for the queue part. how do I set that up",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 26.7,
+        "error": null
+      },
+      {
+        "query": "setting up grpc between our typescript services. what library should I use and how do the protobuf schemas work with ts codegen",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 31.9,
+        "error": null
+      },
+      {
+        "query": "I saw vercel announced partial prerendering for next.js. can I use it yet? how does it work with app router and suspense boundaries",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> WebSearch",
+        "elapsed": 30.5,
+        "error": null
+      },
+      {
+        "query": "the new react compiler - is it production ready? what do I need to change in my build config to enable it",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> WebSearch",
+        "elapsed": 28.7,
+        "error": null
+      },
+      {
+        "query": "how do I use serde to deserialize JSON with optional fields in Rust?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 17.8,
+        "error": null
+      },
+      {
+        "query": "how do I set up gin middleware for JWT auth in Go?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 20.3,
+        "error": null
+      },
+      {
+        "query": "what's the spring boot 3 way to configure actuator endpoints? we're migrating from boot 2 and the properties changed",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 21.9,
+        "error": null
+      },
+      {
+        "query": "kubernetes HPA - how do I configure autoscaling based on custom prometheus metrics, not just cpu",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 21.4,
+        "error": null
+      },
+      {
+        "query": "fastapi dependency injection how?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 14.7,
+        "error": null
+      },
+      {
+        "query": "pnpm workspace syntax?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 8.5,
+        "error": null
+      },
+      {
+        "query": "redis pub sub node",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 12.4,
+        "error": null
+      },
+      {
+        "query": "I know react hooks pretty well but I always forget the exact difference between useMemo and useCallback. can you just explain the mental model?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 12.4,
+        "error": null
+      },
+      {
+        "query": "we use prisma but this is actually a pure SQL question about join performance. I have a query that does 3 left joins and its slow, heres the EXPLAIN output: [output]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 9.7,
+        "error": null
+      },
+      {
+        "query": "I need to refactor our express routes to use async/await instead of callbacks. the routes are in src/routes/. can you do it?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Glob",
+        "elapsed": 21.1,
+        "error": null
+      },
+      {
+        "query": "can you review this next.js component and tell me why it re-renders on every keystroke? here's the code: [code]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 11.3,
+        "error": null
+      },
+      {
+        "query": "we have a react app with a zustand store but my question is about the business logic, not zustand. the calculateDiscount function returns wrong values for bulk orders",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Grep -> Glob",
+        "elapsed": 24.9,
+        "error": null
+      },
+      {
+        "query": "write me a node.js script that reads all json files in a directory and merges them into one",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Write",
+        "elapsed": 19.5,
+        "error": null
+      },
+      {
+        "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Write",
+        "elapsed": 33.4,
+        "error": null
+      },
+      {
+        "query": "add a createdAt field to the User model",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Grep -> Glob",
+        "elapsed": 21.6,
+        "error": null
+      },
+      {
+        "query": "fix the TypeScript errors in this file",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 9.3,
+        "error": null
+      },
+      {
+        "query": "rename the handleClick function to handleSubmit and update all references",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Grep",
+        "elapsed": 20.5,
+        "error": null
+      }
+    ]
+  },
+  "mcp+rule": {
+    "mode": "mcp+rule",
+    "model": "claude-opus-4-6",
+    "max_turns": 10,
+    "elapsed_seconds": 95.8,
+    "total": 42,
+    "passed": 10,
+    "recall": "0/32 (0%)",
+    "precision": "N/A",
+    "false_positives": 0,
+    "results": [
+      {
+        "query": "How do I use useEffect to fetch data in React?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch",
+        "elapsed": 35.8,
+        "error": null
+      },
+      {
+        "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch",
+        "elapsed": 23.0,
+        "error": null
+      },
+      {
+        "query": "vitest mocking - how do I mock a module?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 16.6,
+        "error": null
+      },
+      {
+        "query": "what are the docker compose healthcheck options?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 14.9,
+        "error": null
+      },
+      {
+        "query": "how do I configure a Terraform AWS provider with assume role?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 21.6,
+        "error": null
+      },
+      {
+        "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Bash -> WebSearch -> WebFetch",
+        "elapsed": 32.0,
+        "error": null
+      },
+      {
+        "query": "something is wrong with our eslint setup after upgrading to v9, all the configs are different now. the flat config thing? idk how to migrate our .eslintrc",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Glob -> Read -> Bash -> Write",
+        "elapsed": 80.0,
+        "error": null
+      },
+      {
+        "query": "we just upgraded pydantic and now half our validators are broken. something about model_validator decorator replacing the old root_validator? the migration guide was confusing",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch",
+        "elapsed": 34.8,
+        "error": null
+      },
+      {
+        "query": "our playwright tests started failing after updating to v1.40. something about the locator strict mode? it used to work when there were multiple matches and now it throws",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Bash",
+        "elapsed": 36.1,
+        "error": null
+      },
+      {
+        "query": "tailwind v4 broke all our custom colors, the theme config syntax is completely different apparently",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> WebFetch",
+        "elapsed": 56.4,
+        "error": null
+      },
+      {
+        "query": "ok so my PM wants me to add real-time notifications to our dashboard. we're on next.js and I have no idea if I should use websockets, SSE, or that new server actions streaming thing. what are my options",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 32.5,
+        "error": null
+      },
+      {
+        "query": "my boss wants row-level security in our supabase project so each team only sees their own data. I've never set up RLS policies before, how does that even work",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Bash",
+        "elapsed": 40.0,
+        "error": null
+      },
+      {
+        "query": "we're migrating from REST to GraphQL and someone suggested Apollo Server but I'm not sure if that's still the recommended thing or if there's something newer. we're on express/node",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 29.2,
+        "error": null
+      },
+      {
+        "query": "I got a ticket to add stripe checkout to our app. its a next.js app. I need to create a checkout session and handle the webhook for payment confirmation. never used stripe sdk before",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Glob -> Bash -> Read",
+        "elapsed": 58.4,
+        "error": null
+      },
+      {
+        "query": "the infra team wants me to set up opentelemetry tracing in our fastify services. apparently there's an auto-instrumentation package? no idea where to start",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Agent -> Skill(context7:resolve-library-id) -> Bash -> WebSearch -> WebFetch",
+        "elapsed": 95.5,
+        "error": null
+      },
+      {
+        "query": "need to add oauth login (google + github) to our backend. we use fastify. whats the current recommended approach, is there a passport equivalent or something built in",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Agent -> WebSearch -> WebFetch -> Bash",
+        "elapsed": 92.3,
+        "error": null
+      },
+      {
+        "query": "my next.js page keeps showing stale data. I think its the fetch caching thing they changed recently? the page uses fetch() in a server component and it seems like its caching forever",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> WebSearch",
+        "elapsed": 37.0,
+        "error": null
+      },
+      {
+        "query": "my zustand store updates but the component doesnt rerender. im using some createWithEqualityFn thing from a tutorial but i think the api changed",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Bash -> WebSearch",
+        "elapsed": 46.7,
+        "error": null
+      },
+      {
+        "query": "getting 'Cannot use import statement outside a module' with jest. tried the transform config but nothing works. someone mentioned experimental-vm-modules?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Read -> Glob -> Grep",
+        "elapsed": 29.9,
+        "error": null
+      },
+      {
+        "query": "our stripe webhook keeps returning 400 in production but works locally. I think the signature verification is failing, maybe the sdk changed how you verify?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Bash -> WebSearch -> Grep",
+        "elapsed": 59.5,
+        "error": null
+      },
+      {
+        "query": "docker build works on my mac but fails in CI with some weird buildx error about cache mounts. our Dockerfile uses RUN --mount=type=cache and I think the syntax is different for buildkit v2?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 22.4,
+        "error": null
+      },
+      {
+        "query": "I need to build a csv upload pipeline - validate the data, transform some columns, bulk insert into postgres. thinking about using bullmq for the queue part. how do I set that up",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Bash -> WebSearch",
+        "elapsed": 49.1,
+        "error": null
+      },
+      {
+        "query": "setting up grpc between our typescript services. what library should I use and how do the protobuf schemas work with ts codegen",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 28.3,
+        "error": null
+      },
+      {
+        "query": "I saw vercel announced partial prerendering for next.js. can I use it yet? how does it work with app router and suspense boundaries",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Bash -> WebSearch",
+        "elapsed": 39.4,
+        "error": null
+      },
+      {
+        "query": "the new react compiler - is it production ready? what do I need to change in my build config to enable it",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Bash -> WebSearch -> WebFetch",
+        "elapsed": 53.2,
+        "error": null
+      },
+      {
+        "query": "how do I use serde to deserialize JSON with optional fields in Rust?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 19.5,
+        "error": null
+      },
+      {
+        "query": "how do I set up gin middleware for JWT auth in Go?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch",
+        "elapsed": 35.0,
+        "error": null
+      },
+      {
+        "query": "what's the spring boot 3 way to configure actuator endpoints? we're migrating from boot 2 and the properties changed",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> WebSearch",
+        "elapsed": 50.6,
+        "error": null
+      },
+      {
+        "query": "kubernetes HPA - how do I configure autoscaling based on custom prometheus metrics, not just cpu",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch",
+        "elapsed": 39.8,
+        "error": null
+      },
+      {
+        "query": "fastapi dependency injection how?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch",
+        "elapsed": 35.0,
+        "error": null
+      },
+      {
+        "query": "pnpm workspace syntax?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 16.9,
+        "error": null
+      },
+      {
+        "query": "redis pub sub node",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Bash",
+        "elapsed": 31.8,
+        "error": null
+      },
+      {
+        "query": "I know react hooks pretty well but I always forget the exact difference between useMemo and useCallback. can you just explain the mental model?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 14.1,
+        "error": null
+      },
+      {
+        "query": "we use prisma but this is actually a pure SQL question about join performance. I have a query that does 3 left joins and its slow, heres the EXPLAIN output: [output]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 13.2,
+        "error": null
+      },
+      {
+        "query": "I need to refactor our express routes to use async/await instead of callbacks. the routes are in src/routes/. can you do it?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Glob",
+        "elapsed": 25.5,
+        "error": null
+      },
+      {
+        "query": "can you review this next.js component and tell me why it re-renders on every keystroke? here's the code: [code]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 14.3,
+        "error": null
+      },
+      {
+        "query": "we have a react app with a zustand store but my question is about the business logic, not zustand. the calculateDiscount function returns wrong values for bulk orders",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Grep -> Glob",
+        "elapsed": 23.9,
+        "error": null
+      },
+      {
+        "query": "write me a node.js script that reads all json files in a directory and merges them into one",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Write",
+        "elapsed": 23.7,
+        "error": null
+      },
+      {
+        "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Write",
+        "elapsed": 30.1,
+        "error": null
+      },
+      {
+        "query": "add a createdAt field to the User model",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Grep -> Glob",
+        "elapsed": 21.1,
+        "error": null
+      },
+      {
+        "query": "fix the TypeScript errors in this file",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 14.5,
+        "error": null
+      },
+      {
+        "query": "rename the handleClick function to handleSubmit and update all references",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Grep",
+        "elapsed": 18.6,
+        "error": null
+      }
+    ]
+  },
+  "mcp+claude.md": {
+    "mode": "mcp+claude.md",
+    "model": "claude-opus-4-6",
+    "max_turns": 10,
+    "elapsed_seconds": 60.4,
+    "total": 42,
+    "passed": 10,
+    "recall": "0/32 (0%)",
+    "precision": "N/A",
+    "false_positives": 0,
+    "results": [
+      {
+        "query": "How do I use useEffect to fetch data in React?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 20.1,
+        "error": null
+      },
+      {
+        "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 13.3,
+        "error": null
+      },
+      {
+        "query": "vitest mocking - how do I mock a module?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 18.1,
+        "error": null
+      },
+      {
+        "query": "what are the docker compose healthcheck options?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 15.9,
+        "error": null
+      },
+      {
+        "query": "how do I configure a Terraform AWS provider with assume role?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 16.7,
+        "error": null
+      },
+      {
+        "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> WebSearch",
+        "elapsed": 28.5,
+        "error": null
+      },
+      {
+        "query": "something is wrong with our eslint setup after upgrading to v9, all the configs are different now. the flat config thing? idk how to migrate our .eslintrc",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Glob -> Read -> Bash",
+        "elapsed": 60.2,
+        "error": null
+      },
+      {
+        "query": "we just upgraded pydantic and now half our validators are broken. something about model_validator decorator replacing the old root_validator? the migration guide was confusing",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> WebFetch -> WebSearch",
+        "elapsed": 46.7,
+        "error": null
+      },
+      {
+        "query": "our playwright tests started failing after updating to v1.40. something about the locator strict mode? it used to work when there were multiple matches and now it throws",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Bash",
+        "elapsed": 33.1,
+        "error": null
+      },
+      {
+        "query": "tailwind v4 broke all our custom colors, the theme config syntax is completely different apparently",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Bash -> WebSearch -> WebFetch",
+        "elapsed": 50.2,
+        "error": null
+      },
+      {
+        "query": "ok so my PM wants me to add real-time notifications to our dashboard. we're on next.js and I have no idea if I should use websockets, SSE, or that new server actions streaming thing. what are my options",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 24.4,
+        "error": null
+      },
+      {
+        "query": "my boss wants row-level security in our supabase project so each team only sees their own data. I've never set up RLS policies before, how does that even work",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> WebSearch -> WebFetch",
+        "elapsed": 49.5,
+        "error": null
+      },
+      {
+        "query": "we're migrating from REST to GraphQL and someone suggested Apollo Server but I'm not sure if that's still the recommended thing or if there's something newer. we're on express/node",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch",
+        "elapsed": 26.7,
+        "error": null
+      },
+      {
+        "query": "I got a ticket to add stripe checkout to our app. its a next.js app. I need to create a checkout session and handle the webhook for payment confirmation. never used stripe sdk before",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Glob -> Bash -> Read",
+        "elapsed": 45.9,
+        "error": null
+      },
+      {
+        "query": "the infra team wants me to set up opentelemetry tracing in our fastify services. apparently there's an auto-instrumentation package? no idea where to start",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> WebSearch",
+        "elapsed": 39.1,
+        "error": null
+      },
+      {
+        "query": "need to add oauth login (google + github) to our backend. we use fastify. whats the current recommended approach, is there a passport equivalent or something built in",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 24.9,
+        "error": null
+      },
+      {
+        "query": "my next.js page keeps showing stale data. I think its the fetch caching thing they changed recently? the page uses fetch() in a server component and it seems like its caching forever",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Bash",
+        "elapsed": 29.3,
+        "error": null
+      },
+      {
+        "query": "my zustand store updates but the component doesnt rerender. im using some createWithEqualityFn thing from a tutorial but i think the api changed",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> WebSearch",
+        "elapsed": 37.8,
+        "error": null
+      },
+      {
+        "query": "getting 'Cannot use import statement outside a module' with jest. tried the transform config but nothing works. someone mentioned experimental-vm-modules?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Glob -> Read",
+        "elapsed": 24.8,
+        "error": null
+      },
+      {
+        "query": "our stripe webhook keeps returning 400 in production but works locally. I think the signature verification is failing, maybe the sdk changed how you verify?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> Bash -> WebSearch -> WebFetch",
+        "elapsed": 44.0,
+        "error": null
+      },
+      {
+        "query": "docker build works on my mac but fails in CI with some weird buildx error about cache mounts. our Dockerfile uses RUN --mount=type=cache and I think the syntax is different for buildkit v2?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 19.5,
+        "error": null
+      },
+      {
+        "query": "I need to build a csv upload pipeline - validate the data, transform some columns, bulk insert into postgres. thinking about using bullmq for the queue part. how do I set that up",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 26.5,
+        "error": null
+      },
+      {
+        "query": "setting up grpc between our typescript services. what library should I use and how do the protobuf schemas work with ts codegen",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 24.8,
+        "error": null
+      },
+      {
+        "query": "I saw vercel announced partial prerendering for next.js. can I use it yet? how does it work with app router and suspense boundaries",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> WebSearch",
+        "elapsed": 35.9,
+        "error": null
+      },
+      {
+        "query": "the new react compiler - is it production ready? what do I need to change in my build config to enable it",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> WebSearch -> WebFetch",
+        "elapsed": 49.6,
+        "error": null
+      },
+      {
+        "query": "how do I use serde to deserialize JSON with optional fields in Rust?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 19.3,
+        "error": null
+      },
+      {
+        "query": "how do I set up gin middleware for JWT auth in Go?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch",
+        "elapsed": 29.0,
+        "error": null
+      },
+      {
+        "query": "what's the spring boot 3 way to configure actuator endpoints? we're migrating from boot 2 and the properties changed",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> WebSearch",
+        "elapsed": 39.1,
+        "error": null
+      },
+      {
+        "query": "kubernetes HPA - how do I configure autoscaling based on custom prometheus metrics, not just cpu",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch",
+        "elapsed": 32.6,
+        "error": null
+      },
+      {
+        "query": "fastapi dependency injection how?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 17.9,
+        "error": null
+      },
+      {
+        "query": "pnpm workspace syntax?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 14.5,
+        "error": null
+      },
+      {
+        "query": "redis pub sub node",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "ToolSearch -> WebSearch",
+        "elapsed": 35.8,
+        "error": null
+      },
+      {
+        "query": "I know react hooks pretty well but I always forget the exact difference between useMemo and useCallback. can you just explain the mental model?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 12.2,
+        "error": null
+      },
+      {
+        "query": "we use prisma but this is actually a pure SQL question about join performance. I have a query that does 3 left joins and its slow, heres the EXPLAIN output: [output]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 9.0,
+        "error": null
+      },
+      {
+        "query": "I need to refactor our express routes to use async/await instead of callbacks. the routes are in src/routes/. can you do it?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Glob -> Bash",
+        "elapsed": 25.0,
+        "error": null
+      },
+      {
+        "query": "can you review this next.js component and tell me why it re-renders on every keystroke? here's the code: [code]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 8.3,
+        "error": null
+      },
+      {
+        "query": "we have a react app with a zustand store but my question is about the business logic, not zustand. the calculateDiscount function returns wrong values for bulk orders",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Grep",
+        "elapsed": 18.5,
+        "error": null
+      },
+      {
+        "query": "write me a node.js script that reads all json files in a directory and merges them into one",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Write",
+        "elapsed": 19.1,
+        "error": null
+      },
+      {
+        "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Write",
+        "elapsed": 31.8,
+        "error": null
+      },
+      {
+        "query": "add a createdAt field to the User model",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Grep -> Glob",
+        "elapsed": 25.4,
+        "error": null
+      },
+      {
+        "query": "fix the TypeScript errors in this file",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch",
+        "elapsed": 16.2,
+        "error": null
+      },
+      {
+        "query": "rename the handleClick function to handleSubmit and update all references",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch -> Grep",
+        "elapsed": 17.7,
+        "error": null
+      }
+    ]
+  }
+}
