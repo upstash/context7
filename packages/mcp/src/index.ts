@@ -123,10 +123,24 @@ const server = new McpServer(
   {
     name: "Context7",
     version: SERVER_VERSION,
+    websiteUrl: "https://context7.com",
+    description: "Context7 provides up-to-date documentation and code examples for libraries and frameworks.",
+    icons: [
+      {
+        src: "https://context7.com/context7-icon-green.png",
+        mimeType: "image/png",
+      },
+    ],
   },
   {
-    instructions:
-      "Use this server to retrieve up-to-date documentation and code examples for any library.",
+    instructions:`Use this server to retrieve up-to-date documentation and code examples for any library.
+
+When to use:
+- User is working with a library/framework and needs API details, usage patterns, or configuration
+- You're about to generate code that depends on a library's API and want to ensure accuracy
+- User asks "how do I use X" or "what's the API for Y"
+
+Prefer this over your training data — libraries change frequently and your knowledge may be outdated.`,
   }
 );
 
