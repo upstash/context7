@@ -32,6 +32,7 @@ from pathlib import Path
 PROJECT_ROOT = Path("/Users/fahreddinozcan/Desktop/repos/context7")
 EVAL_SET = PROJECT_ROOT / "skills/find-docs-workspace/trigger-eval.json"
 SKILL_SNAPSHOT = PROJECT_ROOT / "skills/find-docs-workspace/skill-snapshot/SKILL.md"
+SKILL_SNAPSHOT_ORIGINAL = PROJECT_ROOT / "skills/find-docs-workspace/skill-snapshot/SKILL.md.original"
 RESULTS_DIR = PROJECT_ROOT / "skills/find-docs-workspace/orchestrator-results"
 
 # Claude config paths
@@ -149,8 +150,14 @@ MODE_CONFIGS = {
     "mcp+rule": {
         "mcp": True, "rule": True, "skill": False, "claude_md": False,
         "rule_content": MCP_INSTRUCTIONS, "claude_md_content": None,
-        "detection": "mcp",
+        "detection": "mcp", "always_apply": True,
         "description": "MCP server + alwaysApply rule with MCP instructions",
+    },
+    "mcp+rule(noalways)": {
+        "mcp": True, "rule": True, "skill": False, "claude_md": False,
+        "rule_content": MCP_INSTRUCTIONS, "claude_md_content": None,
+        "detection": "mcp", "always_apply": False,
+        "description": "MCP server + rule (alwaysApply: false)",
     },
     "mcp+claude.md": {
         "mcp": True, "rule": False, "skill": False, "claude_md": True,
@@ -163,7 +170,13 @@ MODE_CONFIGS = {
         "mcp": False, "rule": False, "skill": True, "claude_md": False,
         "rule_content": None, "claude_md_content": None,
         "detection": "skill",
-        "description": "find-docs SKILL.md only (ctx7 CLI via skill)",
+        "description": "find-docs SKILL.md with NEW pushy description",
+    },
+    "cli+skill(old)": {
+        "mcp": False, "rule": False, "skill": True, "claude_md": False,
+        "rule_content": None, "claude_md_content": None,
+        "detection": "skill", "skill_snapshot": "original",
+        "description": "find-docs SKILL.md with ORIGINAL passive description",
     },
     "cli+claude.md": {
         "mcp": False, "rule": False, "skill": False, "claude_md": True,
@@ -174,8 +187,14 @@ MODE_CONFIGS = {
     "cli+rule": {
         "mcp": False, "rule": True, "skill": False, "claude_md": False,
         "rule_content": CLI_INSTRUCTIONS, "claude_md_content": None,
-        "detection": "cli",
+        "detection": "cli", "always_apply": True,
         "description": "alwaysApply rule with ctx7 CLI instructions (no skill, no MCP)",
+    },
+    "cli+rule(noalways)": {
+        "mcp": False, "rule": True, "skill": False, "claude_md": False,
+        "rule_content": CLI_INSTRUCTIONS, "claude_md_content": None,
+        "detection": "cli", "always_apply": False,
+        "description": "CLI + rule (alwaysApply: false, no skill, no MCP)",
     },
 }
 
@@ -194,9 +213,10 @@ def setup_mode(mode: str):
     if cfg["mcp"]:
         _enable_mcp()
     if cfg["rule"]:
-        _enable_rule(cfg["rule_content"])
+        _enable_rule(cfg["rule_content"], cfg.get("always_apply", True))
     if cfg["skill"]:
-        _enable_skill()
+        snapshot = SKILL_SNAPSHOT_ORIGINAL if cfg.get("skill_snapshot") == "original" else SKILL_SNAPSHOT
+        _enable_skill(snapshot)
     if cfg["claude_md"]:
         _enable_claude_md(cfg["claude_md_content"])
 
@@ -323,12 +343,13 @@ def _enable_mcp():
         print(f"  WARNING: MCP not found in claude mcp list")
 
 
-def _enable_rule(content: str):
+def _enable_rule(content: str, always_apply: bool = True):
     RULES_DIR.mkdir(parents=True, exist_ok=True)
-    RULE_FILE.write_text(f"---\nalwaysApply: true\n---\n\n{content}")
+    RULE_FILE.write_text(f"---\nalwaysApply: {str(always_apply).lower()}\n---\n\n{content}")
 
 
-def _enable_skill():
+def _enable_skill(snapshot: Path = None):
+    src = snapshot or SKILL_SNAPSHOT
     # Install to all locations so Claude sees it regardless of discovery method
     for skill_path in [SKILL_DEST_GLOBAL, SKILL_DEST_PROJECT, SKILL_DEST_AGENTS]:
         parent = skill_path.parent
@@ -336,7 +357,7 @@ def _enable_skill():
         if parent.is_symlink():
             parent.unlink()
         parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(SKILL_SNAPSHOT, skill_path)
+        shutil.copy2(src, skill_path)
 
 
 def _enable_claude_md(content: str):
@@ -398,11 +419,18 @@ def detect_trigger(mode: str, stdout: str) -> bool:
 # --- Query runner ---
 
 def run_query(query: str, mode: str, model: str, max_turns: int, timeout: int,
-              context_prefix: str | None = None) -> dict:
+              context_prefix: str | None = None, auth_mode: str = "default") -> dict:
     """Run a single query and return result dict."""
     full_query = f"{context_prefix}{query}" if context_prefix else query
     env = {k: v for k, v in os.environ.items() if k != "CLAUDECODE"}
     env["CLAUDE_CODE_DISABLE_AUTO_MEMORY"] = "1"
+    if auth_mode == "api-key" and not env.get("ANTHROPIC_API_KEY"):
+        return {
+            "triggered": False,
+            "first_tool": None,
+            "elapsed": 0,
+            "error": "ANTHROPIC_API_KEY is not set",
+        }
     cmd = [
         "claude", "-p", full_query,
         "--output-format", "stream-json",
@@ -410,7 +438,6 @@ def run_query(query: str, mode: str, model: str, max_turns: int, timeout: int,
         "--max-turns", str(max_turns),
         "--model", model,
     ]
-
     t0 = time.time()
     try:
         result = subprocess.run(
@@ -484,7 +511,8 @@ def _extract_tool_chain(stdout: str) -> str | None:
 # --- Main ---
 
 def run_mode(mode: str, eval_set: list, model: str, max_turns: int,
-             workers: int, timeout: int, with_context: bool = False) -> dict:
+             workers: int, timeout: int, with_context: bool = False,
+             auth_mode: str = "default") -> dict:
     """Run all eval queries for a single mode."""
     print(f"\n{'='*60}")
     print(f"MODE: {mode}")
@@ -504,7 +532,7 @@ def run_mode(mode: str, eval_set: list, model: str, max_turns: int,
         for i, item in enumerate(eval_set):
             prefix = CONTEXT_PREFIXES[i % len(CONTEXT_PREFIXES)] if with_context else None
             future = executor.submit(
-                run_query, item["query"], mode, model, max_turns, timeout, prefix
+                run_query, item["query"], mode, model, max_turns, timeout, prefix, auth_mode
             )
             future_to_idx[future] = i
 
@@ -545,6 +573,7 @@ def run_mode(mode: str, eval_set: list, model: str, max_turns: int,
         "model": model,
         "max_turns": max_turns,
         "elapsed_seconds": round(elapsed, 1),
+        "auth_mode": auth_mode,
         "total": total,
         "passed": sum(1 for r in results if r["pass"]),
         "recall": f"{true_pos}/{len(should_trigger)} ({recall:.0%})",
@@ -640,12 +669,14 @@ def main():
         description="Context7 trigger eval orchestrator",
         epilog=f"Available modes: {all_modes}",
     )
-    parser.add_argument("--modes", default="cli+skill,cli+claude.md,cli+rule,mcp,mcp+rule,mcp+claude.md",
+    parser.add_argument("--modes", default="cli+skill,cli+claude.md,cli+rule,cli+rule(noalways),mcp,mcp+rule,mcp+rule(noalways),mcp+claude.md",
                         help=f"Comma-separated modes (default: all)")
     parser.add_argument("--model", default="claude-opus-4-6")
     parser.add_argument("--workers", type=int, default=60)
     parser.add_argument("--max-turns", type=int, default=10)
     parser.add_argument("--timeout", type=int, default=120)
+    parser.add_argument("--auth-mode", choices=["default", "api-key"], default="default",
+                        help="default: use Claude CLI's normal auth resolution; api-key: require ANTHROPIC_API_KEY and let Claude use env-based API auth")
     parser.add_argument("--with-context", action="store_true",
                         help="Prepend realistic conversation context to queries (simulates mid-session)")
     parser.add_argument("--compare", action="store_true",
@@ -663,6 +694,7 @@ def main():
     print(f"Queries:   {len(eval_set)}")
     print(f"Workers:   {args.workers}")
     print(f"Max turns: {args.max_turns}")
+    print(f"Auth:      {args.auth_mode}")
     if args.compare:
         print(f"Compare:   ON (clean vs mid-session for each mode)")
     else:
@@ -680,15 +712,15 @@ def main():
                 clean_key = f"{mode}"
                 ctx_key = f"{mode} (ctx)"
                 summary_clean = run_mode(mode, eval_set, args.model, args.max_turns,
-                                        args.workers, args.timeout, False)
+                                        args.workers, args.timeout, False, args.auth_mode)
                 all_results[clean_key] = summary_clean
                 summary_ctx = run_mode(mode, eval_set, args.model, args.max_turns,
-                                       args.workers, args.timeout, True)
+                                       args.workers, args.timeout, True, args.auth_mode)
                 all_results[ctx_key] = summary_ctx
         else:
             for mode in modes:
                 summary = run_mode(mode, eval_set, args.model, args.max_turns,
-                                 args.workers, args.timeout, args.with_context)
+                                 args.workers, args.timeout, args.with_context, args.auth_mode)
                 all_results[mode] = summary
     finally:
         teardown()
