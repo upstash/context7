@@ -23,11 +23,7 @@ import {
   detectAgents,
 } from "../setup/agents.js";
 import { getRuleContent } from "../setup/templates.js";
-import {
-  readJsonConfig,
-  mergeServerEntry,
-  writeJsonConfig,
-} from "../setup/mcp-writer.js";
+import { readJsonConfig, mergeServerEntry, writeJsonConfig } from "../setup/mcp-writer.js";
 
 type Scope = "global" | "project";
 type SetupMode = "mcp" | "cli";
