@@ -24,7 +24,7 @@ import {
   getAgent,
   detectAgents,
 } from "../setup/agents.js";
-import { MCP_RULE_CONTENT, CLI_RULE_CONTENT } from "../setup/templates.js";
+import { getRuleContent } from "../setup/templates.js";
 import {
   readJsonConfig,
   mergeServerEntry,
@@ -294,7 +294,7 @@ async function setupAgent(
   let ruleStatus: string;
   try {
     await mkdir(dirname(rulePath), { recursive: true });
-    await writeFile(rulePath, MCP_RULE_CONTENT, "utf-8");
+    await writeFile(rulePath, await getRuleContent("mcp", agentName), "utf-8");
     ruleStatus = "installed";
   } catch (err) {
     ruleStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
@@ -386,11 +386,12 @@ async function installCliRules(targets: { ides: string[]; scopes: string[] }): P
       const rulePath = join(ruleDir, ruleCfg.filename);
 
       try {
+        const content = await getRuleContent("cli", ide);
         await mkdir(ruleDir, { recursive: true });
-        await writeFile(rulePath, CLI_RULE_CONTENT, "utf-8");
+        await writeFile(rulePath, content, "utf-8");
         installedPaths.push(rulePath);
-      } catch {
-        // Non-fatal -- rule install failure shouldn't block skill install
+      } catch (err) {
+        log.warn(`Failed to install rule for ${ide}: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
   }
