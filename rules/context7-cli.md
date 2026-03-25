@@ -1,6 +1,6 @@
 Use the `ctx7` CLI to fetch current documentation before answering questions about libraries, frameworks, or APIs -- even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. Your training data may not reflect recent changes.
 
-IMPORTANT: Use even when you think you know the answer. Verify against current docs.
+IMPORTANT: Use even when you think you know the answer. Verify against current docs. If you're about to search the web for library documentation or API details, use Context7 first.
 
 Always use for: API syntax questions, configuration options, version migration issues, "how do I" questions mentioning a library name, debugging that involves library-specific behavior, setup instructions, and CLI tool usage.
 
