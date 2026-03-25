@@ -20,12 +20,7 @@ vi.stubGlobal(
 );
 
 import { getRuleContent } from "../setup/templates.js";
-import {
-  mergeServerEntry,
-  mergeInstructions,
-  readJsonConfig,
-  writeJsonConfig,
-} from "../setup/mcp-writer.js";
+import { mergeServerEntry, readJsonConfig, writeJsonConfig } from "../setup/mcp-writer.js";
 
 describe("getRuleContent", () => {
   test("returns correct content per mode", async () => {
@@ -105,19 +100,6 @@ describe("mergeServerEntry", () => {
       type: "remote",
       url: "https://mcp.context7.com/mcp",
     });
-  });
-});
-
-describe("mergeInstructions", () => {
-  test("adds and deduplicates globs", () => {
-    const empty = mergeInstructions({}, ".opencode/rules/*.md");
-    expect(empty.instructions).toEqual([".opencode/rules/*.md"]);
-
-    const appended = mergeInstructions({ instructions: ["existing.md"] }, ".opencode/rules/*.md");
-    expect(appended.instructions).toEqual(["existing.md", ".opencode/rules/*.md"]);
-
-    const config = { instructions: [".opencode/rules/*.md"] };
-    expect(mergeInstructions(config, ".opencode/rules/*.md")).toBe(config);
   });
 });
 

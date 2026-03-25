@@ -26,7 +26,6 @@ import { getRuleContent } from "../setup/templates.js";
 import {
   readJsonConfig,
   mergeServerEntry,
-  mergeInstructions,
   writeJsonConfig,
 } from "../setup/mcp-writer.js";
 
@@ -317,13 +316,8 @@ async function setupAgent(
       mcpStatus = `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
     }
 
-    const finalConfig =
-      agent.rule.kind === "file" && agent.rule.instructionsGlob
-        ? mergeInstructions(config, agent.rule.instructionsGlob(scope))
-        : config;
-
-    if (finalConfig !== existing) {
-      await writeJsonConfig(mcpPath, finalConfig);
+    if (config !== existing) {
+      await writeJsonConfig(mcpPath, config);
     }
   } catch (err) {
     mcpStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;

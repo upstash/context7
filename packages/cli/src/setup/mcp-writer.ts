@@ -39,15 +39,6 @@ export function mergeServerEntry(
   };
 }
 
-export function mergeInstructions(
-  config: Record<string, unknown>,
-  glob: string
-): Record<string, unknown> {
-  const instructions = (config.instructions as string[] | undefined) ?? [];
-  if (instructions.includes(glob)) return config;
-  return { ...config, instructions: [...instructions, glob] };
-}
-
 export async function writeJsonConfig(
   filePath: string,
   config: Record<string, unknown>

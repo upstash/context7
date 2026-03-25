@@ -29,7 +29,6 @@ export type RuleType =
       kind: "file";
       dir: (scope: "project" | "global") => string;
       filename: string;
-      instructionsGlob?: (scope: "project" | "global") => string;
     }
   | { kind: "append"; file: (scope: "project" | "global") => string; sectionMarker: string };
 
