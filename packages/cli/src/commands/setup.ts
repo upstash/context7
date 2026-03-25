@@ -11,7 +11,6 @@ import { checkboxWithHover } from "../utils/prompts.js";
 import { trackEvent } from "../utils/tracking.js";
 import { getBaseUrl, downloadSkill } from "../utils/api.js";
 import { installSkillFiles } from "../utils/installer.js";
-import { promptForInstallTargets, getTargetDirs } from "../utils/ide.js";
 import { performLogin } from "./auth.js";
 import { saveTokens, getValidAccessToken } from "../utils/auth.js";
 import {
@@ -199,10 +198,7 @@ async function promptAgents(scope: Scope, mode: SetupMode): Promise<SetupAgent[]
     return null;
   }
 
-  const message =
-    mode === "cli"
-      ? "Install find-docs skill for which agents?"
-      : "Which agents do you want to set up?";
+  const message = "Which agents do you want to set up?";
 
   try {
     return await checkboxWithHover(
@@ -409,22 +405,46 @@ async function setupMcp(agents: SetupAgent[], options: SetupOptions, scope: Scop
   trackEvent("install", { skills: ["/upstash/context7/context7-mcp"], ides: agents });
 }
 
-/** Map IDE names to SetupAgent names for rule installation. */
-const IDE_TO_AGENT: Record<string, SetupAgent> = {
-  claude: "claude",
-  cursor: "cursor",
-  opencode: "opencode",
-  codex: "codex",
-};
+async function setupCliAgent(
+  agentName: SetupAgent,
+  scope: Scope,
+  downloadData: { files: Array<{ path: string; content: string }> }
+): Promise<{ skillPath: string; skillStatus: string; rulePath: string; ruleStatus: string }> {
+  const agent = getAgent(agentName);
+
+  const skillDir =
+    scope === "global"
+      ? agent.skill.dir("global")
+      : join(process.cwd(), agent.skill.dir("project"));
+  let skillStatus: string;
+  try {
+    await installSkillFiles("find-docs", downloadData.files, skillDir);
+    skillStatus = "installed";
+  } catch (err) {
+    skillStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
+  }
+  const skillPath = join(skillDir, "find-docs");
+
+  let ruleStatus: string;
+  let rulePath: string;
+  try {
+    const result = await installRule(agentName, "cli", scope);
+    ruleStatus = result.status;
+    rulePath = result.path;
+  } catch (err) {
+    ruleStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
+    rulePath = "";
+  }
+
+  return { skillPath, skillStatus, rulePath, ruleStatus };
+}
 
 async function setupCli(options: SetupOptions): Promise<void> {
   await resolveCliAuth(options.apiKey);
 
-  const targets = await promptForInstallTargets({ ...options, global: !options.project }, false);
-  if (!targets) {
-    log.warn("Setup cancelled");
-    return;
-  }
+  const scope: Scope = options.project ? "project" : "global";
+  const agents = await resolveAgents(options, scope, "cli");
+  if (agents.length === 0) return;
 
   log.blank();
   const spinner = ora("Downloading find-docs skill...").start();
@@ -437,53 +457,39 @@ async function setupCli(options: SetupOptions): Promise<void> {
 
   spinner.succeed("Downloaded find-docs skill");
 
-  const targetDirs = getTargetDirs(targets);
-  const installSpinner = ora("Installing find-docs skill and rule...").start();
+  const installSpinner = ora("Installing...").start();
+  const results: Array<{
+    agent: string;
+    skillPath: string;
+    skillStatus: string;
+    rulePath: string;
+    ruleStatus: string;
+  }> = [];
 
-  for (const dir of targetDirs) {
-    installSpinner.text = `Installing to ${dir}...`;
-    await installSkillFiles("find-docs", downloadData.files, dir);
+  for (const agentName of agents) {
+    installSpinner.text = `Setting up ${getAgent(agentName).displayName}...`;
+    const r = await setupCliAgent(agentName, scope, downloadData);
+    results.push({ agent: getAgent(agentName).displayName, ...r });
   }
 
-  // Install rules for agents that support them
-  const ruleResults: { agent: string; status: string; path: string }[] = [];
-  for (const scope of targets.scopes) {
-    for (const ide of targets.ides) {
-      const agentName = IDE_TO_AGENT[ide];
-      if (!agentName) continue;
-      try {
-        const result = await installRule(agentName, "cli", scope as Scope);
-        ruleResults.push({ agent: ide, ...result });
-      } catch (err) {
-        log.warn(
-          `Failed to install rule for ${ide}: ${err instanceof Error ? err.message : String(err)}`
-        );
-      }
-    }
-  }
-
-  installSpinner.stop();
-  log.blank();
-  log.plain(`${pc.green("✔")} Context7 CLI setup complete`);
+  installSpinner.succeed("Context7 CLI setup complete");
 
   log.blank();
-  for (const dir of targetDirs) {
-    log.itemAdd(
-      `find-docs  ${pc.dim("Guides your agent to fetch up-to-date library docs on demand using ctx7 CLI commands")}`
-    );
-    log.plain(`    ${pc.dim(dir)}`);
-  }
-  for (const r of ruleResults) {
-    log.itemAdd(`rule       ${pc.dim(`${r.status} for ${r.agent}`)}`);
-    log.plain(`    ${pc.dim(r.path)}`);
+  for (const r of results) {
+    log.plain(`  ${pc.bold(r.agent)}`);
+    const skillIcon = r.skillStatus === "installed" ? pc.green("+") : pc.red("✗");
+    log.plain(`    ${skillIcon} skill  ${pc.dim(r.skillPath)}`);
+    const ruleIcon =
+      r.ruleStatus === "installed" || r.ruleStatus === "updated" ? pc.green("+") : pc.red("✗");
+    log.plain(`    ${ruleIcon} rule   ${pc.dim(r.rulePath)}`);
   }
   log.blank();
   log.plain(`  ${pc.bold("Next steps")}`);
-  log.plain(`    Ask your agent: ${pc.cyan(`"Use ctx7 CLI to look up React hooks"`)}`);
+  log.plain(`    Ask your agent: ${pc.cyan(`"How do I use useEffect in React?"`)}`);
   log.blank();
 
   trackEvent("setup", { mode: "cli" });
-  trackEvent("install", { skills: ["/upstash/context7/find-docs"], ides: targets.ides });
+  trackEvent("install", { skills: ["/upstash/context7/find-docs"], ides: agents });
 }
 
 async function setupCommand(options: SetupOptions): Promise<void> {
