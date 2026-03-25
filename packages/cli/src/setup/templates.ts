@@ -3,6 +3,7 @@
 const GITHUB_RAW_URLS = [
   "https://raw.githubusercontent.com/upstash/context7/master/rules",
   "https://raw.githubusercontent.com/upstash/context7/main/rules",
+  "https://raw.githubusercontent.com/upstash/context7/ctx7-1435-ctx7-setup-install-rules-alongside-skills-in-cli-mode-and/rules",
 ];
 
 const CURSOR_FRONTMATTER = `---\nalwaysApply: true\n---\n\n`;

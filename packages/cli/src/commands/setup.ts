@@ -479,9 +479,11 @@ async function setupCli(options: SetupOptions): Promise<void> {
     log.plain(`  ${pc.bold(r.agent)}`);
     const skillIcon = r.skillStatus === "installed" ? pc.green("+") : pc.red("✗");
     log.plain(`    ${skillIcon} skill  ${pc.dim(r.skillPath)}`);
-    const ruleIcon =
-      r.ruleStatus === "installed" || r.ruleStatus === "updated" ? pc.green("+") : pc.red("✗");
-    log.plain(`    ${ruleIcon} rule   ${pc.dim(r.rulePath)}`);
+    if (r.ruleStatus === "installed" || r.ruleStatus === "updated") {
+      log.plain(`    ${pc.green("+")} rule   ${pc.dim(r.rulePath)}`);
+    } else {
+      log.plain(`    ${pc.red("✗")} rule   ${pc.dim(r.ruleStatus)}`);
+    }
   }
   log.blank();
   log.plain(`  ${pc.bold("Next steps")}`);
