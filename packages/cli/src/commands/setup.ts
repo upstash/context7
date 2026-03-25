@@ -23,7 +23,7 @@ import {
   getAgent,
   detectAgents,
 } from "../setup/agents.js";
-import { RULE_CONTENT } from "../setup/templates.js";
+import { MCP_RULE_CONTENT, CLI_RULE_CONTENT } from "../setup/templates.js";
 import {
   readJsonConfig,
   mergeServerEntry,
@@ -293,7 +293,7 @@ async function setupAgent(
   let ruleStatus: string;
   try {
     await mkdir(dirname(rulePath), { recursive: true });
-    await writeFile(rulePath, RULE_CONTENT, "utf-8");
+    await writeFile(rulePath, MCP_RULE_CONTENT, "utf-8");
     ruleStatus = "installed";
   } catch (err) {
     ruleStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
