@@ -153,7 +153,7 @@ const agents: Record<SetupAgent, AgentConfig> = {
     },
     rule: {
       kind: "append",
-      file: (scope) => (scope === "global" ? join(homedir(), "AGENTS.md") : "AGENTS.md"),
+      file: (scope) => (scope === "global" ? join(homedir(), ".codex", "AGENTS.md") : "AGENTS.md"),
       sectionMarker: "<!-- context7 -->",
     },
     skill: {
