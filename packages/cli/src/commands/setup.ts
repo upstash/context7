@@ -468,17 +468,14 @@ async function setupCli(options: SetupOptions): Promise<void> {
   log.blank();
   for (const r of results) {
     log.plain(`  ${pc.bold(r.agent)}`);
-    const skillIcon = r.skillStatus === "installed" ? pc.green("+") : pc.red("✗");
-    log.plain(`    ${skillIcon} skill  ${pc.dim(r.skillPath)}`);
-    if (r.ruleStatus === "installed" || r.ruleStatus === "updated") {
-      log.plain(`    ${pc.green("+")} rule   ${pc.dim(r.rulePath)}`);
-    } else {
-      log.plain(`    ${pc.red("✗")} rule   ${pc.dim(r.ruleStatus)}`);
-    }
+    const skillIcon = r.skillStatus === "installed" ? pc.green("+") : pc.dim("~");
+    log.plain(`    ${skillIcon} Skill ${r.skillStatus}`);
+    log.plain(`      ${pc.dim(r.skillPath)}`);
+    const ruleIcon =
+      r.ruleStatus === "installed" || r.ruleStatus === "updated" ? pc.green("+") : pc.dim("~");
+    log.plain(`    ${ruleIcon} Rule ${r.ruleStatus}`);
+    log.plain(`      ${pc.dim(r.rulePath)}`);
   }
-  log.blank();
-  log.plain(`  ${pc.bold("Next steps")}`);
-  log.plain(`    Ask your agent: ${pc.cyan(`"How do I use useEffect in React?"`)}`);
   log.blank();
 
   trackEvent("setup", { mode: "cli" });
