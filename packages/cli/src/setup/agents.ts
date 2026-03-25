@@ -127,16 +127,10 @@ const agents: Record<SetupAgent, AgentConfig> = {
       buildEntry: (auth) => withHeaders({ type: "remote", url: mcpUrl(auth), enabled: true }, auth),
     },
     rule: {
-      kind: "file",
-      dir: (scope) =>
-        scope === "global"
-          ? join(homedir(), ".config", "opencode", "rules")
-          : join(".opencode", "rules"),
-      filename: "context7.md",
-      instructionsGlob: (scope) =>
-        scope === "global"
-          ? join(homedir(), ".config", "opencode", "rules", "*.md")
-          : ".opencode/rules/*.md",
+      kind: "append",
+      file: (scope) =>
+        scope === "global" ? join(homedir(), ".config", "opencode", "AGENTS.md") : "AGENTS.md",
+      sectionMarker: "<!-- context7 -->",
     },
     skill: {
       name: "context7-mcp",

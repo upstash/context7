@@ -255,10 +255,11 @@ async function installRule(
     return { status: "installed", path: rulePath };
   }
 
-  // kind === "append": append a section to AGENTS.md (or similar)
+  // kind === "append": append a marked section to AGENTS.md (or similar)
   const filePath =
     scope === "global" ? rule.file("global") : join(process.cwd(), rule.file("project"));
-  const section = `\n${rule.sectionMarker}\n${content}\n${rule.sectionMarker}\n`;
+  const escapedMarker = rule.sectionMarker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const section = `${rule.sectionMarker}\n${content}${rule.sectionMarker}`;
 
   let existing = "";
   try {
@@ -268,17 +269,17 @@ async function installRule(
   }
 
   if (existing.includes(rule.sectionMarker)) {
-    // Replace existing section
-    const regex = new RegExp(
-      `\\n?${rule.sectionMarker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[\\s\\S]*?${rule.sectionMarker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\n?`
-    );
+    const regex = new RegExp(`${escapedMarker}\\n[\\s\\S]*?${escapedMarker}`);
     const updated = existing.replace(regex, section);
     await writeFile(filePath, updated, "utf-8");
     return { status: "updated", path: filePath };
   }
 
+  // Append with proper spacing
+  const separator =
+    existing.length > 0 && !existing.endsWith("\n") ? "\n\n" : existing.length > 0 ? "\n" : "";
   await mkdir(dirname(filePath), { recursive: true });
-  await writeFile(filePath, existing + section, "utf-8");
+  await writeFile(filePath, existing + separator + section + "\n", "utf-8");
   return { status: "installed", path: filePath };
 }
 
