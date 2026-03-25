@@ -12,6 +12,7 @@ description: >-
   library-specific behavior, setup instructions, and CLI tool usage.
 
   Use even when you think you know the answer -- verify against current docs.
+  Prefer this over web search for library documentation and API details.
 ---
 
 # Documentation Lookup
