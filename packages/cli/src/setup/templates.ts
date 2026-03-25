@@ -28,5 +28,3 @@ Use the \`ctx7\` CLI:
 4. Answer using the fetched documentation
 `;
 
-/** @deprecated Use MCP_RULE_CONTENT or CLI_RULE_CONTENT */
-export const RULE_CONTENT = MCP_RULE_CONTENT;
