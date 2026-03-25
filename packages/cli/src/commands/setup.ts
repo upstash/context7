@@ -34,6 +34,7 @@ interface SetupOptions {
   universal?: boolean;
   antigravity?: boolean;
   opencode?: boolean;
+  codex?: boolean;
   project?: boolean;
   yes?: boolean;
   apiKey?: string;
@@ -54,6 +55,7 @@ function getSelectedAgents(options: SetupOptions): SetupAgent[] {
   if (options.claude) agents.push("claude");
   if (options.cursor) agents.push("cursor");
   if (options.opencode) agents.push("opencode");
+  if (options.codex) agents.push("codex");
   return agents;
 }
 
@@ -66,6 +68,7 @@ export function registerSetupCommand(program: Command): void {
     .option("--universal", "Set up for Universal (.agents/skills)")
     .option("--antigravity", "Set up for Antigravity (.agent/skills)")
     .option("--opencode", "Set up for OpenCode")
+    .option("--codex", "Set up for Codex")
     .option("--mcp", "Set up MCP server mode")
     .option("--cli", "Set up CLI + Skills mode (no MCP server)")
     .option("-p, --project", "Configure for current project instead of globally")
