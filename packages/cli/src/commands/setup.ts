@@ -2,9 +2,8 @@ import { Command } from "commander";
 import pc from "picocolors";
 import ora from "ora";
 import { select } from "@inquirer/prompts";
-import { mkdir, writeFile } from "fs/promises";
+import { mkdir, readFile, writeFile } from "fs/promises";
 import { dirname, join } from "path";
-import { homedir } from "os";
 import { randomBytes } from "crypto";
 
 import { log } from "../utils/logger.js";
@@ -241,6 +240,52 @@ async function resolveAgents(
   return selected;
 }
 
+/** Install a rule for an agent, handling both "file" (standalone) and "append" (AGENTS.md) types. */
+async function installRule(
+  agentName: SetupAgent,
+  mode: SetupMode,
+  scope: Scope
+): Promise<{ status: string; path: string }> {
+  const agent = getAgent(agentName);
+  const rule = agent.rule;
+  const content = await getRuleContent(mode, agentName);
+
+  if (rule.kind === "file") {
+    const ruleDir =
+      scope === "global" ? rule.dir("global") : join(process.cwd(), rule.dir("project"));
+    const rulePath = join(ruleDir, rule.filename);
+    await mkdir(dirname(rulePath), { recursive: true });
+    await writeFile(rulePath, content, "utf-8");
+    return { status: "installed", path: rulePath };
+  }
+
+  // kind === "append": append a section to AGENTS.md (or similar)
+  const filePath =
+    scope === "global" ? rule.file("global") : join(process.cwd(), rule.file("project"));
+  const section = `\n${rule.sectionMarker}\n${content}\n${rule.sectionMarker}\n`;
+
+  let existing = "";
+  try {
+    existing = await readFile(filePath, "utf-8");
+  } catch {
+    // File doesn't exist yet
+  }
+
+  if (existing.includes(rule.sectionMarker)) {
+    // Replace existing section
+    const regex = new RegExp(
+      `\\n?${rule.sectionMarker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[\\s\\S]*?${rule.sectionMarker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\n?`
+    );
+    const updated = existing.replace(regex, section);
+    await writeFile(filePath, updated, "utf-8");
+    return { status: "updated", path: filePath };
+  }
+
+  await mkdir(dirname(filePath), { recursive: true });
+  await writeFile(filePath, existing + section, "utf-8");
+  return { status: "installed", path: filePath };
+}
+
 async function setupAgent(
   agentName: SetupAgent,
   auth: AuthOptions,
@@ -275,9 +320,10 @@ async function setupAgent(
       mcpStatus = `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
     }
 
-    const finalConfig = agent.rule.instructionsGlob
-      ? mergeInstructions(config, agent.rule.instructionsGlob(scope))
-      : config;
+    const finalConfig =
+      agent.rule.kind === "file" && agent.rule.instructionsGlob
+        ? mergeInstructions(config, agent.rule.instructionsGlob(scope))
+        : config;
 
     if (finalConfig !== existing) {
       await writeJsonConfig(mcpPath, finalConfig);
@@ -286,18 +332,15 @@ async function setupAgent(
     mcpStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
   }
 
-  const rulePath =
-    scope === "global"
-      ? join(agent.rule.dir("global"), agent.rule.filename)
-      : join(process.cwd(), agent.rule.dir("project"), agent.rule.filename);
-
   let ruleStatus: string;
+  let rulePath: string;
   try {
-    await mkdir(dirname(rulePath), { recursive: true });
-    await writeFile(rulePath, await getRuleContent("mcp", agentName), "utf-8");
-    ruleStatus = "installed";
+    const result = await installRule(agentName, "mcp", scope);
+    ruleStatus = result.status;
+    rulePath = result.path;
   } catch (err) {
     ruleStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
+    rulePath = "";
   }
 
   const skillDir =
@@ -366,38 +409,13 @@ async function setupMcp(agents: SetupAgent[], options: SetupOptions, scope: Scop
   trackEvent("install", { skills: ["/upstash/context7/context7-mcp"], ides: agents });
 }
 
-/** Map IDE to its rule directory path (relative for project, absolute for global). */
-const CLI_RULE_PATHS: Record<string, { project: string; global: string; filename: string }> = {
-  claude: { project: ".claude/rules", global: join(homedir(), ".claude", "rules"), filename: "context7.md" },
-  cursor: { project: ".cursor/rules", global: join(homedir(), ".cursor", "rules"), filename: "context7.mdc" },
-  antigravity: { project: ".agent/rules", global: join(homedir(), ".agent", "rules"), filename: "context7.md" },
-  universal: { project: ".agents/rules", global: join(homedir(), ".agents", "rules"), filename: "context7.md" },
+/** Map IDE names to SetupAgent names for rule installation. */
+const IDE_TO_AGENT: Record<string, SetupAgent> = {
+  claude: "claude",
+  cursor: "cursor",
+  opencode: "opencode",
+  codex: "codex",
 };
-
-async function installCliRules(targets: { ides: string[]; scopes: string[] }): Promise<string[]> {
-  const installedPaths: string[] = [];
-
-  for (const scope of targets.scopes) {
-    for (const ide of targets.ides) {
-      const ruleCfg = CLI_RULE_PATHS[ide];
-      if (!ruleCfg) continue;
-
-      const ruleDir = scope === "global" ? ruleCfg.global : join(process.cwd(), ruleCfg.project);
-      const rulePath = join(ruleDir, ruleCfg.filename);
-
-      try {
-        const content = await getRuleContent("cli", ide);
-        await mkdir(ruleDir, { recursive: true });
-        await writeFile(rulePath, content, "utf-8");
-        installedPaths.push(rulePath);
-      } catch (err) {
-        log.warn(`Failed to install rule for ${ide}: ${err instanceof Error ? err.message : String(err)}`);
-      }
-    }
-  }
-
-  return installedPaths;
-}
 
 async function setupCli(options: SetupOptions): Promise<void> {
   await resolveCliAuth(options.apiKey);
@@ -427,7 +445,22 @@ async function setupCli(options: SetupOptions): Promise<void> {
     await installSkillFiles("find-docs", downloadData.files, dir);
   }
 
-  const rulePaths = await installCliRules(targets);
+  // Install rules for agents that support them
+  const ruleResults: { agent: string; status: string; path: string }[] = [];
+  for (const scope of targets.scopes) {
+    for (const ide of targets.ides) {
+      const agentName = IDE_TO_AGENT[ide];
+      if (!agentName) continue;
+      try {
+        const result = await installRule(agentName, "cli", scope as Scope);
+        ruleResults.push({ agent: ide, ...result });
+      } catch (err) {
+        log.warn(
+          `Failed to install rule for ${ide}: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+    }
+  }
 
   installSpinner.stop();
   log.blank();
@@ -440,11 +473,9 @@ async function setupCli(options: SetupOptions): Promise<void> {
     );
     log.plain(`    ${pc.dim(dir)}`);
   }
-  for (const rulePath of rulePaths) {
-    log.itemAdd(
-      `rule       ${pc.dim("Instructs your agent when and how to use ctx7 for documentation lookup")}`
-    );
-    log.plain(`    ${pc.dim(rulePath)}`);
+  for (const r of ruleResults) {
+    log.itemAdd(`rule       ${pc.dim(`${r.status} for ${r.agent}`)}`);
+    log.plain(`    ${pc.dim(r.path)}`);
   }
   log.blank();
   log.plain(`  ${pc.bold("Next steps")}`);
