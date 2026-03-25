@@ -4,6 +4,7 @@ import ora from "ora";
 import { select } from "@inquirer/prompts";
 import { mkdir, writeFile } from "fs/promises";
 import { dirname, join } from "path";
+import { homedir } from "os";
 import { randomBytes } from "crypto";
 
 import { log } from "../utils/logger.js";
@@ -365,6 +366,38 @@ async function setupMcp(agents: SetupAgent[], options: SetupOptions, scope: Scop
   trackEvent("install", { skills: ["/upstash/context7/context7-mcp"], ides: agents });
 }
 
+/** Map IDE to its rule directory path (relative for project, absolute for global). */
+const CLI_RULE_PATHS: Record<string, { project: string; global: string; filename: string }> = {
+  claude: { project: ".claude/rules", global: join(homedir(), ".claude", "rules"), filename: "context7.md" },
+  cursor: { project: ".cursor/rules", global: join(homedir(), ".cursor", "rules"), filename: "context7.mdc" },
+  antigravity: { project: ".agent/rules", global: join(homedir(), ".agent", "rules"), filename: "context7.md" },
+  universal: { project: ".agents/rules", global: join(homedir(), ".agents", "rules"), filename: "context7.md" },
+};
+
+async function installCliRules(targets: { ides: string[]; scopes: string[] }): Promise<string[]> {
+  const installedPaths: string[] = [];
+
+  for (const scope of targets.scopes) {
+    for (const ide of targets.ides) {
+      const ruleCfg = CLI_RULE_PATHS[ide];
+      if (!ruleCfg) continue;
+
+      const ruleDir = scope === "global" ? ruleCfg.global : join(process.cwd(), ruleCfg.project);
+      const rulePath = join(ruleDir, ruleCfg.filename);
+
+      try {
+        await mkdir(ruleDir, { recursive: true });
+        await writeFile(rulePath, CLI_RULE_CONTENT, "utf-8");
+        installedPaths.push(rulePath);
+      } catch {
+        // Non-fatal -- rule install failure shouldn't block skill install
+      }
+    }
+  }
+
+  return installedPaths;
+}
+
 async function setupCli(options: SetupOptions): Promise<void> {
   await resolveCliAuth(options.apiKey);
 
@@ -386,12 +419,14 @@ async function setupCli(options: SetupOptions): Promise<void> {
   spinner.succeed("Downloaded find-docs skill");
 
   const targetDirs = getTargetDirs(targets);
-  const installSpinner = ora("Installing find-docs skill...").start();
+  const installSpinner = ora("Installing find-docs skill and rule...").start();
 
   for (const dir of targetDirs) {
     installSpinner.text = `Installing to ${dir}...`;
     await installSkillFiles("find-docs", downloadData.files, dir);
   }
+
+  const rulePaths = await installCliRules(targets);
 
   installSpinner.stop();
   log.blank();
@@ -403,6 +438,12 @@ async function setupCli(options: SetupOptions): Promise<void> {
       `find-docs  ${pc.dim("Guides your agent to fetch up-to-date library docs on demand using ctx7 CLI commands")}`
     );
     log.plain(`    ${pc.dim(dir)}`);
+  }
+  for (const rulePath of rulePaths) {
+    log.itemAdd(
+      `rule       ${pc.dim("Instructs your agent when and how to use ctx7 for documentation lookup")}`
+    );
+    log.plain(`    ${pc.dim(rulePath)}`);
   }
   log.blank();
   log.plain(`  ${pc.bold("Next steps")}`);
