@@ -9,6 +9,8 @@ Do not use for: refactoring, writing scripts from scratch, debugging business lo
 3. Fetch docs: `npx ctx7@latest docs <libraryId> "<user's question>"`
 4. Answer using the fetched documentation
 
-Use the user's full question as the query, not single words. Do not run more than 3 commands per question.
+You MUST call `library` first to get a valid ID (format: `/org/project`) unless the user provides one directly. Use the user's full question as the query -- specific and detailed queries return better results than vague single words. Do not run more than 3 commands per question. Do not include sensitive information (API keys, passwords, credentials) in queries.
 
-For details on authentication, version-specific IDs, and library resolution, see the `find-docs` skill if available.
+For version-specific docs, use `/org/project/version` from the `library` output (e.g., `/vercel/next.js/v14.3.0`).
+
+If a command fails with a quota error, inform the user and suggest `npx ctx7@latest login` or setting `CONTEXT7_API_KEY` env var for higher limits. Do not silently fall back to training data.

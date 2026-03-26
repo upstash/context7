@@ -8,5 +8,3 @@ Do not use for: refactoring, writing scripts from scratch, debugging business lo
 2. Pick the best match by: exact name match, description relevance, code snippet count, source reputation (High/Medium preferred), and benchmark score (higher is better). Use version-specific IDs when the user mentions a version
 3. `query-docs` with the selected library ID and the user's full question (not single words)
 4. Answer using the fetched docs
-
-For details on authentication, version-specific IDs, and library resolution, see the `find-docs` skill if available.
