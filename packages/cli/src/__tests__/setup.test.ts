@@ -20,7 +20,15 @@ vi.stubGlobal(
 );
 
 import { getRuleContent } from "../setup/templates.js";
-import { mergeServerEntry, readJsonConfig, writeJsonConfig } from "../setup/mcp-writer.js";
+import {
+  mergeServerEntry,
+  readJsonConfig,
+  writeJsonConfig,
+  readTomlServerExists,
+  buildTomlServerBlock,
+  appendTomlServer,
+  resolveMcpPath,
+} from "../setup/mcp-writer.js";
 
 describe("getRuleContent", () => {
   test("returns correct content per mode", async () => {
@@ -134,6 +142,136 @@ describe("readJsonConfig / writeJsonConfig", () => {
 
     const raw = await readFile(path, "utf-8");
     expect(raw.endsWith("\n")).toBe(true);
+  });
+});
+
+describe("JSONC support", () => {
+  let tempDir: string;
+
+  beforeEach(async () => {
+    tempDir = join(tmpdir(), `ctx7-test-${Date.now()}`);
+    await mkdir(tempDir, { recursive: true });
+  });
+
+  afterEach(async () => {
+    await rm(tempDir, { recursive: true, force: true });
+  });
+
+  test("readJsonConfig strips comments without corrupting URLs", async () => {
+    const path = join(tempDir, "config.jsonc");
+    await writeFile(
+      path,
+      `{
+  // This is a comment
+  "mcp": {},
+  "$schema": "https://opencode.ai/config.json"
+}`,
+      "utf-8"
+    );
+    const result = await readJsonConfig(path);
+    expect(result.$schema).toBe("https://opencode.ai/config.json");
+    expect(result.mcp).toEqual({});
+  });
+
+  test("readJsonConfig handles block comments", async () => {
+    const path = join(tempDir, "config.jsonc");
+    await writeFile(path, '{ /* block */ "key": "value" }', "utf-8");
+    const result = await readJsonConfig(path);
+    expect(result.key).toBe("value");
+  });
+
+  test("resolveMcpPath returns .jsonc when it exists", async () => {
+    const jsoncPath = join(tempDir, "opencode.jsonc");
+    await writeFile(jsoncPath, "{}", "utf-8");
+    const resolved = await resolveMcpPath(join(tempDir, "opencode.json"));
+    expect(resolved).toBe(jsoncPath);
+  });
+
+  test("resolveMcpPath falls back to .json when no .jsonc", async () => {
+    const jsonPath = join(tempDir, "opencode.json");
+    const resolved = await resolveMcpPath(jsonPath);
+    expect(resolved).toBe(jsonPath);
+  });
+
+  test("resolveMcpPath returns non-json paths unchanged", async () => {
+    const tomlPath = join(tempDir, "config.toml");
+    const resolved = await resolveMcpPath(tomlPath);
+    expect(resolved).toBe(tomlPath);
+  });
+});
+
+describe("TOML config", () => {
+  let tempDir: string;
+
+  beforeEach(async () => {
+    tempDir = join(tmpdir(), `ctx7-test-${Date.now()}`);
+    await mkdir(tempDir, { recursive: true });
+  });
+
+  afterEach(async () => {
+    await rm(tempDir, { recursive: true, force: true });
+  });
+
+  test("buildTomlServerBlock generates correct TOML", () => {
+    const block = buildTomlServerBlock("context7", {
+      url: "https://mcp.context7.com/mcp",
+    });
+    expect(block).toContain("[mcp_servers.context7]");
+    expect(block).toContain('url = "https://mcp.context7.com/mcp"');
+  });
+
+  test("buildTomlServerBlock includes http_headers", () => {
+    const block = buildTomlServerBlock("context7", {
+      url: "https://mcp.context7.com/mcp",
+      headers: { CONTEXT7_API_KEY: "sk-test" },
+    });
+    expect(block).toContain("[mcp_servers.context7]");
+    expect(block).toContain("[mcp_servers.context7.http_headers]");
+    expect(block).toContain('CONTEXT7_API_KEY = "sk-test"');
+    expect(block).not.toContain("headers =");
+  });
+
+  test("readTomlServerExists detects existing server", async () => {
+    const path = join(tempDir, "config.toml");
+    await writeFile(path, '[mcp_servers.context7]\nurl = "https://test.com"\n', "utf-8");
+    expect(await readTomlServerExists(path, "context7")).toBe(true);
+    expect(await readTomlServerExists(path, "other")).toBe(false);
+  });
+
+  test("readTomlServerExists returns false for missing file", async () => {
+    expect(await readTomlServerExists(join(tempDir, "nope.toml"), "context7")).toBe(false);
+  });
+
+  test("appendTomlServer appends to empty file", async () => {
+    const path = join(tempDir, "config.toml");
+    const { alreadyExists } = await appendTomlServer(path, "context7", {
+      url: "https://mcp.context7.com/mcp",
+    });
+    expect(alreadyExists).toBe(false);
+    const content = await readFile(path, "utf-8");
+    expect(content).toContain("[mcp_servers.context7]");
+    expect(content).toContain('url = "https://mcp.context7.com/mcp"');
+  });
+
+  test("appendTomlServer preserves existing config", async () => {
+    const path = join(tempDir, "config.toml");
+    await writeFile(path, 'model = "gpt-5"\n\n[mcp_servers.other]\nurl = "https://other.com"\n');
+    await appendTomlServer(path, "context7", { url: "https://mcp.context7.com/mcp" });
+    const content = await readFile(path, "utf-8");
+    expect(content).toContain('model = "gpt-5"');
+    expect(content).toContain("[mcp_servers.other]");
+    expect(content).toContain("[mcp_servers.context7]");
+  });
+
+  test("appendTomlServer is idempotent", async () => {
+    const path = join(tempDir, "config.toml");
+    await appendTomlServer(path, "context7", { url: "https://mcp.context7.com/mcp" });
+    const { alreadyExists } = await appendTomlServer(path, "context7", {
+      url: "https://mcp.context7.com/mcp",
+    });
+    expect(alreadyExists).toBe(true);
+    const content = await readFile(path, "utf-8");
+    expect(content.match(/\[mcp_servers\.context7\]/g)?.length).toBe(1);
   });
 });
 
