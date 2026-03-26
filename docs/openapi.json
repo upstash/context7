@@ -55,7 +55,8 @@
                       "benchmarkScore": 95.5,
                       "versions": ["v18.2.0", "v17.0.2"]
                     }
-                  ]
+                  ],
+                  "searchFilterApplied": false
                 }
               }
             }
@@ -68,6 +69,9 @@
           },
           "429": {
             "$ref": "#/components/responses/RateLimitError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           },
           "500": {
             "$ref": "#/components/responses/InternalServerError"
@@ -688,6 +692,277 @@
         ]
       }
     },
+    "/v2/add/confluence": {
+      "post": {
+        "summary": "Add a Confluence space",
+        "description": "Submit a Confluence space for documentation processing. Requires a connected Confluence account and a team project. You can optionally specify specific page IDs to index only a subset of the space.",
+        "operationId": "addConfluence",
+        "tags": ["Add Library"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["cloudId", "siteUrl", "spaceKey", "spaceName", "title", "description"],
+                "properties": {
+                  "cloudId": {
+                    "type": "string",
+                    "description": "The Confluence cloud instance ID"
+                  },
+                  "siteUrl": {
+                    "type": "string",
+                    "description": "The Confluence site URL"
+                  },
+                  "spaceKey": {
+                    "type": "string",
+                    "description": "The Confluence space key"
+                  },
+                  "spaceName": {
+                    "type": "string",
+                    "description": "The Confluence space name"
+                  },
+                  "pageIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Optional list of specific page IDs to index. If omitted, the entire space is indexed."
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "Title for the library"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Description of the library"
+                  },
+                  "projectId": {
+                    "type": "string",
+                    "description": "The team project ID to associate this Confluence space with"
+                  }
+                }
+              },
+              "example": {
+                "cloudId": "a]1b2c3d4-5e6f-7g8h-9i0j",
+                "siteUrl": "https://your-site.atlassian.net",
+                "spaceKey": "DOCS",
+                "spaceName": "Documentation",
+                "title": "My Docs",
+                "description": "Internal documentation",
+                "projectId": "project-uuid"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AddLibrarySuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "409": {
+            "$ref": "#/components/responses/DuplicateError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "504": {
+            "$ref": "#/components/responses/GatewayTimeoutError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v2/policies": {
+      "get": {
+        "summary": "Get teamspace policies",
+        "description": "Retrieve the current policy configuration for the teamspace associated with the API key. Includes source type access settings and public repository filters.",
+        "operationId": "getPolicies",
+        "tags": ["Policies"],
+        "responses": {
+          "200": {
+            "description": "Current policy configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyResponse"
+                },
+                "example": {
+                  "source_types": {
+                    "public_repos": { "enabled": true },
+                    "private_sources": { "enabled": true },
+                    "confluence": { "enabled": false },
+                    "uploaded_files": { "enabled": true },
+                    "websites": { "enabled": true },
+                    "llmstxt": { "enabled": true }
+                  },
+                  "library_filters": {
+                    "mode": "quality",
+                    "quality": {
+                      "require_verified": false,
+                      "min_trust_score": null,
+                      "max_age_days": 365,
+                      "blocked_libraries": ["/org/repo"],
+                      "repo_filters": { "min_stars": 100 }
+                    },
+                    "select": {
+                      "allowed_libraries": []
+                    }
+                  },
+                  "accessible_library_count": 4521
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "patch": {
+        "summary": "Update teamspace policies",
+        "description": "Incrementally update policy configuration for the teamspace associated with the API key. Only the fields you include in the request body are modified — omitted fields remain unchanged. For source types, use `enable`/`disable` arrays (both allowed if no overlap). For library lists, use `add`/`remove` objects or `clear: true` to remove all. Requires owner or admin role.",
+        "operationId": "updatePolicies",
+        "tags": ["Policies"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchPoliciesRequest"
+              },
+              "examples": {
+                "disableSourceType": {
+                  "summary": "Disable a source type",
+                  "value": {
+                    "source_types": {
+                      "disable": ["websites"]
+                    }
+                  }
+                },
+                "setQualityFilters": {
+                  "summary": "Set quality filter thresholds",
+                  "value": {
+                    "library_filters": {
+                      "quality": {
+                        "require_verified": true,
+                        "min_trust_score": 4,
+                        "repo_filters": { "min_stars": 1000 }
+                      }
+                    }
+                  }
+                },
+                "blockLibrary": {
+                  "summary": "Add a library to the blocked list",
+                  "value": {
+                    "library_filters": {
+                      "quality": {
+                        "blocked_libraries": { "add": ["/org/repo"] }
+                      }
+                    }
+                  }
+                },
+                "clearAllowedLibraries": {
+                  "summary": "Clear all allowed libraries",
+                  "value": {
+                    "library_filters": {
+                      "select": {
+                        "allowed_libraries": { "clear": true }
+                      }
+                    }
+                  }
+                },
+                "combined": {
+                  "summary": "Multiple changes in one request",
+                  "value": {
+                    "source_types": {
+                      "enable": ["websites"],
+                      "disable": ["confluence"]
+                    },
+                    "library_filters": {
+                      "mode": "quality",
+                      "quality": {
+                        "min_trust_score": 4,
+                        "max_age_days": 365,
+                        "blocked_libraries": {
+                          "add": ["/org/repo"],
+                          "remove": ["/org/old-repo"]
+                        },
+                        "repo_filters": { "min_stars": 100 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated policy configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/v1/refresh": {
       "post": {
         "summary": "Refresh a library",
@@ -927,9 +1202,13 @@
             "items": {
               "$ref": "#/components/schemas/Library"
             }
+          },
+          "searchFilterApplied": {
+            "type": "boolean",
+            "description": "Indicates whether the search results were filtered by the teamspace's public library access settings. When true, some libraries may be excluded from results based on the teamspace's configuration (e.g., only verified libraries, selected libraries, or private repos only)."
           }
         },
-        "required": ["results"]
+        "required": ["results", "searchFilterApplied"]
       },
       "CodeSnippet": {
         "type": "object",
@@ -1125,6 +1404,166 @@
         },
         "required": ["libraryName", "message"]
       },
+      "SourceTypeStatus": {
+        "type": "object",
+        "description": "Whether a source type is enabled or disabled",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether this source type is enabled"
+          }
+        },
+        "required": ["enabled"]
+      },
+      "PolicyResponse": {
+        "type": "object",
+        "description": "Complete teamspace policy configuration",
+        "properties": {
+          "source_types": {
+            "type": "object",
+            "description": "Access settings for each documentation source type",
+            "properties": {
+              "public_repos": { "$ref": "#/components/schemas/SourceTypeStatus" },
+              "private_sources": { "$ref": "#/components/schemas/SourceTypeStatus" },
+              "confluence": { "$ref": "#/components/schemas/SourceTypeStatus" },
+              "uploaded_files": { "$ref": "#/components/schemas/SourceTypeStatus" },
+              "websites": { "$ref": "#/components/schemas/SourceTypeStatus" },
+              "llmstxt": { "$ref": "#/components/schemas/SourceTypeStatus" }
+            },
+            "required": ["public_repos", "private_sources", "confluence", "uploaded_files", "websites", "llmstxt"]
+          },
+          "library_filters": {
+            "type": "object",
+            "description": "Library access filters. Mode determines which sub-object is active.",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "nullable": true,
+                "enum": ["quality", "select", null],
+                "description": "Filter mode: 'quality' for threshold-based filtering, 'select' for manual library selection"
+              },
+              "quality": {
+                "type": "object",
+                "description": "Quality-mode settings (active when mode is 'quality')",
+                "properties": {
+                  "require_verified": { "type": "boolean", "description": "Restrict to verified libraries only" },
+                  "min_trust_score": { "type": "integer", "nullable": true, "description": "Minimum trust score, 0-10" },
+                  "max_age_days": { "type": "integer", "nullable": true, "description": "Maximum days since last update" },
+                  "blocked_libraries": { "type": "array", "items": { "type": "string" }, "description": "Libraries excluded from results" },
+                  "repo_filters": {
+                    "type": "object",
+                    "description": "Repo-specific quality filters",
+                    "properties": {
+                      "min_stars": { "type": "integer", "nullable": true, "description": "Minimum GitHub stars required" }
+                    },
+                    "required": ["min_stars"]
+                  }
+                },
+                "required": ["require_verified", "min_trust_score", "max_age_days", "blocked_libraries", "repo_filters"]
+              },
+              "select": {
+                "type": "object",
+                "description": "Select-mode settings (active when mode is 'select')",
+                "properties": {
+                  "allowed_libraries": { "type": "array", "items": { "type": "string" }, "description": "Libraries explicitly allowed" }
+                },
+                "required": ["allowed_libraries"]
+              }
+            },
+            "required": ["mode", "quality", "select"]
+          },
+          "accessible_library_count": {
+            "type": "integer",
+            "description": "Number of public libraries currently accessible under these filters"
+          }
+        },
+        "required": ["source_types", "library_filters", "accessible_library_count"]
+      },
+      "ListOperation": {
+        "type": "object",
+        "description": "Incremental add/remove operation on a list of library identifiers. Use 'clear' to remove all entries at once.",
+        "properties": {
+          "add": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Library identifiers to add (must start with '/')"
+          },
+          "remove": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Library identifiers to remove (must start with '/')"
+          },
+          "clear": {
+            "type": "boolean",
+            "description": "Set to true to remove all entries. Cannot be used together with 'add' or 'remove'."
+          }
+        }
+      },
+      "PatchPoliciesRequest": {
+        "type": "object",
+        "description": "Incremental policy update. All fields are optional — only provided fields are modified. At least one of 'source_types' or 'library_filters' must be provided.",
+        "minProperties": 1,
+        "properties": {
+          "source_types": {
+            "type": "object",
+            "description": "Enable or disable specific source types. Both can be provided in one request, but the same type cannot appear in both arrays.",
+            "properties": {
+              "enable": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["public_repos", "private_sources", "confluence", "uploaded_files", "websites", "llmstxt"]
+                },
+                "description": "Source types to enable"
+              },
+              "disable": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": ["public_repos", "private_sources", "confluence", "uploaded_files", "websites", "llmstxt"]
+                },
+                "description": "Source types to disable"
+              }
+            }
+          },
+          "library_filters": {
+            "type": "object",
+            "description": "Update library access filters.",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "nullable": true,
+                "enum": ["quality", "select", null],
+                "description": "Filter mode (null to clear)"
+              },
+              "quality": {
+                "type": "object",
+                "description": "Update quality-mode settings.",
+                "properties": {
+                  "require_verified": { "type": "boolean", "description": "Restrict to verified libraries only" },
+                  "min_trust_score": { "type": "integer", "nullable": true, "minimum": 0, "maximum": 10, "description": "Minimum trust score, 0-10 (null to clear)" },
+                  "max_age_days": { "type": "integer", "nullable": true, "minimum": 1, "description": "Maximum age in days (null to clear)" },
+                  "blocked_libraries": { "$ref": "#/components/schemas/ListOperation" },
+                  "repo_filters": {
+                    "type": "object",
+                    "description": "Update repo-specific quality filters.",
+                    "properties": {
+                      "min_stars": { "type": "integer", "nullable": true, "minimum": 0, "description": "Minimum stars threshold (null to clear)" }
+                    }
+                  }
+                }
+              },
+              "select": {
+                "type": "object",
+                "description": "Update select-mode settings.",
+                "properties": {
+                  "allowed_libraries": { "$ref": "#/components/schemas/ListOperation" }
+                }
+              }
+            }
+          }
+        }
+      },
       "RedirectErrorResponse": {
         "allOf": [
           {
@@ -1244,6 +1683,13 @@
                   "error": "user_not_found",
                   "message": "User not found"
                 }
+              },
+              "noLibrariesFound": {
+                "summary": "No libraries matched search query",
+                "value": {
+                  "error": "no_libraries_found",
+                  "message": "No libraries found for \"nonexistent-lib\". Try a different search term."
+                }
               }
             }
           }
@@ -1264,27 +1710,15 @@
         }
       },
       "ServiceUnavailableError": {
-        "description": "Service Unavailable - Search failed or no results",
+        "description": "Service Unavailable - Search service is temporarily unavailable",
         "content": {
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/Error"
             },
-            "examples": {
-              "searchFailed": {
-                "summary": "Search service failure",
-                "value": {
-                  "error": "search_failed",
-                  "message": "Search failed: Service temporarily unavailable"
-                }
-              },
-              "noLibrariesFound": {
-                "summary": "No libraries matched",
-                "value": {
-                  "error": "no_libraries_found",
-                  "message": "No libraries found matching your search query."
-                }
-              }
+            "example": {
+              "error": "search_failed",
+              "message": "Search failed: Service temporarily unavailable"
             }
           }
         }
@@ -1454,6 +1888,10 @@
     {
       "name": "Add Library",
       "description": "Submit new libraries for documentation processing"
+    },
+    {
+      "name": "Policies",
+      "description": "Manage teamspace access policies and filters"
     },
     {
       "name": "Refresh",
