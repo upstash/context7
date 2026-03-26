@@ -149,7 +149,13 @@ const agents: Record<SetupAgent, AgentConfig> = {
       projectPath: join(".codex", "config.toml"),
       globalPath: join(homedir(), ".codex", "config.toml"),
       configKey: "mcp_servers",
-      buildEntry: (auth) => withHeaders({ url: mcpUrl(auth) }, auth),
+      buildEntry: (auth) => {
+        const entry: Record<string, unknown> = { type: "http", url: mcpUrl(auth) };
+        if (auth.mode === "api-key" && auth.apiKey) {
+          entry.headers = { CONTEXT7_API_KEY: auth.apiKey };
+        }
+        return entry;
+      },
     },
     rule: {
       kind: "append",
