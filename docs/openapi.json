@@ -71,7 +71,7 @@
             "$ref": "#/components/responses/RateLimitError"
           },
           "404": {
-            "$ref": "#/components/responses/SearchNotFoundError"
+            "$ref": "#/components/responses/NotFoundError"
           },
           "500": {
             "$ref": "#/components/responses/InternalServerError"
@@ -1683,6 +1683,13 @@
                   "error": "user_not_found",
                   "message": "User not found"
                 }
+              },
+              "noLibrariesFound": {
+                "summary": "No libraries matched search query",
+                "value": {
+                  "error": "no_libraries_found",
+                  "message": "No libraries found for \"nonexistent-lib\". Try a different search term."
+                }
               }
             }
           }
@@ -1698,20 +1705,6 @@
             "example": {
               "error": "internal_error",
               "message": "An error occurred while processing your request"
-            }
-          }
-        }
-      },
-      "SearchNotFoundError": {
-        "description": "Not Found - No libraries matched the search query",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error"
-            },
-            "example": {
-              "error": "no_libraries_found",
-              "message": "No libraries found for \"nonexistent-lib\". Try a different search term."
             }
           }
         }
