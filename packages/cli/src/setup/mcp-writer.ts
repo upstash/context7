@@ -2,7 +2,28 @@ import { access, readFile, writeFile, mkdir } from "fs/promises";
 import { dirname } from "path";
 
 function stripJsonComments(text: string): string {
-  return text.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  let result = "";
+  let i = 0;
+  while (i < text.length) {
+    if (text[i] === '"') {
+      const start = i++;
+      while (i < text.length && text[i] !== '"') {
+        if (text[i] === "\\") i++;
+        i++;
+      }
+      result += text.slice(start, ++i);
+    } else if (text[i] === "/" && text[i + 1] === "/") {
+      i += 2;
+      while (i < text.length && text[i] !== "\n") i++;
+    } else if (text[i] === "/" && text[i + 1] === "*") {
+      i += 2;
+      while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) i++;
+      i += 2;
+    } else {
+      result += text[i++];
+    }
+  }
+  return result;
 }
 
 export async function readJsonConfig(filePath: string): Promise<Record<string, unknown>> {
