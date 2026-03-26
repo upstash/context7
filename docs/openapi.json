@@ -884,6 +884,20 @@
                     }
                   }
                 },
+                "setWebsiteFilters": {
+                  "summary": "Set website quality filters",
+                  "value": {
+                    "library_filters": {
+                      "quality": {
+                        "website_filters": {
+                          "min_backlinks": 100,
+                          "min_referring_domains": 10,
+                          "min_organic_traffic": 1000
+                        }
+                      }
+                    }
+                  }
+                },
                 "blockLibrary": {
                   "summary": "Add a library to the blocked list",
                   "value": {
@@ -920,7 +934,8 @@
                           "add": ["/org/repo"],
                           "remove": ["/org/old-repo"]
                         },
-                        "repo_filters": { "min_stars": 100 }
+                        "repo_filters": { "min_stars": 100 },
+                        "website_filters": { "min_backlinks": 100 }
                       }
                     }
                   }
@@ -1457,9 +1472,19 @@
                       "min_stars": { "type": "integer", "nullable": true, "description": "Minimum GitHub stars required" }
                     },
                     "required": ["min_stars"]
+                  },
+                  "website_filters": {
+                    "type": "object",
+                    "description": "Website-specific quality filters",
+                    "properties": {
+                      "min_backlinks": { "type": "integer", "nullable": true, "description": "Minimum number of backlinks required" },
+                      "min_referring_domains": { "type": "integer", "nullable": true, "description": "Minimum number of referring domains required" },
+                      "min_organic_traffic": { "type": "integer", "nullable": true, "description": "Minimum monthly organic traffic required" }
+                    },
+                    "required": ["min_backlinks", "min_referring_domains", "min_organic_traffic"]
                   }
                 },
-                "required": ["require_verified", "min_trust_score", "max_age_days", "blocked_libraries", "repo_filters"]
+                "required": ["require_verified", "min_trust_score", "max_age_days", "blocked_libraries", "repo_filters", "website_filters"]
               },
               "select": {
                 "type": "object",
@@ -1549,6 +1574,15 @@
                     "description": "Update repo-specific quality filters.",
                     "properties": {
                       "min_stars": { "type": "integer", "nullable": true, "minimum": 0, "description": "Minimum stars threshold (null to clear)" }
+                    }
+                  },
+                  "website_filters": {
+                    "type": "object",
+                    "description": "Update website-specific quality filters.",
+                    "properties": {
+                      "min_backlinks": { "type": "integer", "nullable": true, "minimum": 0, "description": "Minimum backlinks threshold (null to clear)" },
+                      "min_referring_domains": { "type": "integer", "nullable": true, "minimum": 0, "description": "Minimum referring domains threshold (null to clear)" },
+                      "min_organic_traffic": { "type": "integer", "nullable": true, "minimum": 0, "description": "Minimum organic traffic threshold (null to clear)" }
                     }
                   }
                 }
