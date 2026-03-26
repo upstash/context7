@@ -28,6 +28,7 @@ import {
   mergeServerEntry,
   writeJsonConfig,
   resolveMcpPath,
+  appendTomlServer,
 } from "../setup/mcp-writer.js";
 
 type Scope = "global" | "project";
@@ -177,6 +178,10 @@ async function isAlreadyConfigured(agentName: SetupAgent, scope: Scope): Promise
     scope === "global" ? agent.mcp.globalPath : join(process.cwd(), agent.mcp.projectPath);
   const mcpPath = await resolveMcpPath(baseMcpPath);
   try {
+    if (mcpPath.endsWith(".toml")) {
+      const { readTomlServerExists } = await import("../setup/mcp-writer.js");
+      return readTomlServerExists(mcpPath, "context7");
+    }
     const existing = await readJsonConfig(mcpPath);
     const section = (existing[agent.mcp.configKey] as Record<string, unknown> | undefined) ?? {};
     return "context7" in section;
@@ -306,22 +311,31 @@ async function setupAgent(
 
   let mcpStatus: string;
   try {
-    const existing = await readJsonConfig(mcpPath);
-    const { config, alreadyExists } = mergeServerEntry(
-      existing,
-      agent.mcp.configKey,
-      "context7",
-      agent.mcp.buildEntry(auth)
-    );
-
-    if (alreadyExists) {
-      mcpStatus = "already configured";
+    if (mcpPath.endsWith(".toml")) {
+      const { alreadyExists } = await appendTomlServer(
+        mcpPath,
+        "context7",
+        agent.mcp.buildEntry(auth)
+      );
+      mcpStatus = alreadyExists
+        ? "already configured"
+        : `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
     } else {
-      mcpStatus = `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
-    }
-
-    if (config !== existing) {
-      await writeJsonConfig(mcpPath, config);
+      const existing = await readJsonConfig(mcpPath);
+      const { config, alreadyExists } = mergeServerEntry(
+        existing,
+        agent.mcp.configKey,
+        "context7",
+        agent.mcp.buildEntry(auth)
+      );
+      if (alreadyExists) {
+        mcpStatus = "already configured";
+      } else {
+        mcpStatus = `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
+      }
+      if (config !== existing) {
+        await writeJsonConfig(mcpPath, config);
+      }
     }
   } catch (err) {
     mcpStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;

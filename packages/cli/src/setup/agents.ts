@@ -137,7 +137,7 @@ const agents: Record<SetupAgent, AgentConfig> = {
         scope === "global" ? join(homedir(), ".agents", "skills") : join(".agents", "skills"),
     },
     detect: {
-      projectPaths: ["opencode.json", "opencode.jsonc"],
+      projectPaths: ["opencode.json", "opencode.jsonc", ".opencode.json"],
       globalPaths: [join(homedir(), ".config", "opencode")],
     },
   },
@@ -146,9 +146,9 @@ const agents: Record<SetupAgent, AgentConfig> = {
     name: "codex",
     displayName: "Codex",
     mcp: {
-      projectPath: join(".codex", "mcp.json"),
-      globalPath: join(homedir(), ".codex", "mcp.json"),
-      configKey: "mcpServers",
+      projectPath: join(".codex", "config.toml"),
+      globalPath: join(homedir(), ".codex", "config.toml"),
+      configKey: "mcp_servers",
       buildEntry: (auth) => withHeaders({ url: mcpUrl(auth) }, auth),
     },
     rule: {
