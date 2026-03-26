@@ -1,5 +1,9 @@
-import { readFile, writeFile, mkdir } from "fs/promises";
+import { access, readFile, writeFile, mkdir } from "fs/promises";
 import { dirname } from "path";
+
+function stripJsonComments(text: string): string {
+  return text.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+}
 
 export async function readJsonConfig(filePath: string): Promise<Record<string, unknown>> {
   let raw: string;
@@ -12,7 +16,7 @@ export async function readJsonConfig(filePath: string): Promise<Record<string, u
   raw = raw.trim();
   if (!raw) return {};
 
-  return JSON.parse(raw) as Record<string, unknown>;
+  return JSON.parse(stripJsonComments(raw)) as Record<string, unknown>;
 }
 
 export function mergeServerEntry(
@@ -37,6 +41,19 @@ export function mergeServerEntry(
     },
     alreadyExists: false,
   };
+}
+
+export async function resolveMcpPath(basePath: string): Promise<string> {
+  if (basePath.endsWith(".json")) {
+    const jsoncPath = basePath.replace(/\.json$/, ".jsonc");
+    try {
+      await access(jsoncPath);
+      return jsoncPath;
+    } catch {
+      return basePath;
+    }
+  }
+  return basePath;
 }
 
 export async function writeJsonConfig(

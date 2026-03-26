@@ -120,7 +120,7 @@ const agents: Record<SetupAgent, AgentConfig> = {
     name: "opencode",
     displayName: "OpenCode",
     mcp: {
-      projectPath: ".opencode.json",
+      projectPath: "opencode.json",
       globalPath: join(homedir(), ".config", "opencode", "opencode.json"),
       configKey: "mcp",
       buildEntry: (auth) => withHeaders({ type: "remote", url: mcpUrl(auth), enabled: true }, auth),
@@ -137,7 +137,7 @@ const agents: Record<SetupAgent, AgentConfig> = {
         scope === "global" ? join(homedir(), ".agents", "skills") : join(".agents", "skills"),
     },
     detect: {
-      projectPaths: [".opencode.json"],
+      projectPaths: ["opencode.json", "opencode.jsonc"],
       globalPaths: [join(homedir(), ".config", "opencode")],
     },
   },

@@ -23,7 +23,12 @@ import {
   detectAgents,
 } from "../setup/agents.js";
 import { getRuleContent } from "../setup/templates.js";
-import { readJsonConfig, mergeServerEntry, writeJsonConfig } from "../setup/mcp-writer.js";
+import {
+  readJsonConfig,
+  mergeServerEntry,
+  writeJsonConfig,
+  resolveMcpPath,
+} from "../setup/mcp-writer.js";
 
 type Scope = "global" | "project";
 type SetupMode = "mcp" | "cli";
@@ -168,8 +173,9 @@ async function resolveCliAuth(apiKey?: string): Promise<void> {
 
 async function isAlreadyConfigured(agentName: SetupAgent, scope: Scope): Promise<boolean> {
   const agent = getAgent(agentName);
-  const mcpPath =
+  const baseMcpPath =
     scope === "global" ? agent.mcp.globalPath : join(process.cwd(), agent.mcp.projectPath);
+  const mcpPath = await resolveMcpPath(baseMcpPath);
   try {
     const existing = await readJsonConfig(mcpPath);
     const section = (existing[agent.mcp.configKey] as Record<string, unknown> | undefined) ?? {};
@@ -294,8 +300,9 @@ async function setupAgent(
 }> {
   const agent = getAgent(agentName);
 
-  const mcpPath =
+  const baseMcpPath =
     scope === "global" ? agent.mcp.globalPath : join(process.cwd(), agent.mcp.projectPath);
+  const mcpPath = await resolveMcpPath(baseMcpPath);
 
   let mcpStatus: string;
   try {
