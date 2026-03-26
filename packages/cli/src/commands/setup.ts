@@ -253,7 +253,6 @@ async function installRule(
     return { status: "installed", path: rulePath };
   }
 
-  // kind === "append": append a marked section to AGENTS.md (or similar)
   const filePath =
     scope === "global" ? rule.file("global") : join(process.cwd(), rule.file("project"));
   const escapedMarker = rule.sectionMarker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -273,7 +272,6 @@ async function installRule(
     return { status: "updated", path: filePath };
   }
 
-  // Append with proper spacing
   const separator =
     existing.length > 0 && !existing.endsWith("\n") ? "\n\n" : existing.length > 0 ? "\n" : "";
   await mkdir(dirname(filePath), { recursive: true });
