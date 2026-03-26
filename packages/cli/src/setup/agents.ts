@@ -136,7 +136,7 @@ const agents: Record<SetupAgent, AgentConfig> = {
         scope === "global" ? join(homedir(), ".agents", "skills") : join(".agents", "skills"),
     },
     detect: {
-      projectPaths: [".opencode.json"],
+      projectPaths: [".opencode.json", ".opencode.jsonc"],
       globalPaths: [join(homedir(), ".config", "opencode")],
     },
   },
