@@ -39,12 +39,14 @@ describe("getRuleContent", () => {
     }
   });
 
-  test("throws when all fetch URLs fail", async () => {
+  test("returns fallback content when all fetch URLs fail", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() => Promise.resolve({ ok: false }))
     );
-    await expect(getRuleContent("mcp", "claude")).rejects.toThrow("Failed to fetch rule");
+    const content = await getRuleContent("mcp", "claude");
+    expect(content).toContain("Context7 MCP");
+    expect(content.length).toBeGreaterThan(100);
 
     vi.stubGlobal(
       "fetch",
