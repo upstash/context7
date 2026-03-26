@@ -1,0 +1,4434 @@
+{
+  "mcp": {
+    "mode": "mcp",
+    "model": "claude-opus-4-6",
+    "max_turns": 10,
+    "elapsed_seconds": 100.7,
+    "auth_mode": "default",
+    "total": 60,
+    "passed": 54,
+    "recall": "44/50 (88%)",
+    "precision": "44/44 (100%)",
+    "false_positives": 0,
+    "results": [
+      {
+        "query": "How do I use useEffect to fetch data in React?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(context7-mcp) -> ToolSearch -> MCP:resolve",
+        "elapsed": 30.8,
+        "error": null
+      },
+      {
+        "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 27.2,
+        "error": null
+      },
+      {
+        "query": "vitest mocking - how do I mock a module?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 33.3,
+        "error": null
+      },
+      {
+        "query": "what are the docker compose healthcheck options?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 29.8,
+        "error": null
+      },
+      {
+        "query": "how do I configure a Terraform AWS provider with assume role?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 25.5,
+        "error": null
+      },
+      {
+        "query": "how do I define middleware in axum for Rust?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 32.5,
+        "error": null
+      },
+      {
+        "query": "what's the sequelize syntax for a belongsToMany association with a junction table?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 27.9,
+        "error": null
+      },
+      {
+        "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> WebFetch",
+        "elapsed": 50.0,
+        "error": null
+      },
+      {
+        "query": "something is wrong with our eslint setup after upgrading to v9, all the configs are different now. the flat config thing? idk how to migrate our .eslintrc",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "Glob -> Read -> Bash -> Write",
+        "elapsed": 80.2,
+        "error": null
+      },
+      {
+        "query": "we just upgraded pydantic and now half our validators are broken. something about model_validator decorator replacing the old root_validator? the migration guide was confusing",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 35.9,
+        "error": null
+      },
+      {
+        "query": "our playwright tests started failing after updating to v1.40. something about the locator strict mode? it used to work when there were multiple matches and now it throws",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.3,
+        "error": null
+      },
+      {
+        "query": "tailwind v4 broke all our custom colors, the theme config syntax is completely different apparently",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Agent -> ToolSearch -> Glob -> Read -> Grep -> Bash -> MCP:resolve",
+        "elapsed": 65.5,
+        "error": null
+      },
+      {
+        "query": "after updating to react-router v7 all our loader functions stopped working. something about the remix merge?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> Agent -> Bash -> Read -> Grep -> Glob",
+        "elapsed": 100.4,
+        "error": null
+      },
+      {
+        "query": "webpack 5 migration is killing me. our module federation setup doesn't work anymore, the shared config syntax changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 35.0,
+        "error": null
+      },
+      {
+        "query": "ok so my PM wants me to add real-time notifications to our dashboard. we're on next.js and I have no idea if I should use websockets, SSE, or that new server actions streaming thing. what are my options",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 39.0,
+        "error": null
+      },
+      {
+        "query": "my boss wants row-level security in our supabase project so each team only sees their own data. I've never set up RLS policies before, how does that even work",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 42.1,
+        "error": null
+      },
+      {
+        "query": "we're migrating from REST to GraphQL and someone suggested Apollo Server but I'm not sure if that's still the recommended thing or if there's something newer. we're on express/node",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.7,
+        "error": null
+      },
+      {
+        "query": "I got a ticket to add stripe checkout to our app. its a next.js app. I need to create a checkout session and handle the webhook for payment confirmation. never used stripe sdk before",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> Agent -> Bash -> Read -> Grep",
+        "elapsed": 58.9,
+        "error": null
+      },
+      {
+        "query": "the infra team wants me to set up opentelemetry tracing in our fastify services. apparently there's an auto-instrumentation package? no idea where to start",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 29.3,
+        "error": null
+      },
+      {
+        "query": "need to add oauth login (google + github) to our backend. we use fastify. whats the current recommended approach, is there a passport equivalent or something built in",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Agent -> ToolSearch -> Bash -> Read -> Glob -> Grep -> MCP:resolve",
+        "elapsed": 82.5,
+        "error": null
+      },
+      {
+        "query": "we need to add PDF generation to our node backend. the invoices need to look good. I've heard of puppeteer and pdfkit but not sure which is better for this",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 33.7,
+        "error": null
+      },
+      {
+        "query": "product wants us to add feature flags. we're evaluating launchdarkly vs unleash vs just rolling our own. how does the launchdarkly node sdk work?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(context7-mcp) -> ToolSearch -> MCP:resolve",
+        "elapsed": 48.1,
+        "error": null
+      },
+      {
+        "query": "my next.js page keeps showing stale data. I think its the fetch caching thing they changed recently? the page uses fetch() in a server component and it seems like its caching forever",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 39.5,
+        "error": null
+      },
+      {
+        "query": "my zustand store updates but the component doesnt rerender. im using some createWithEqualityFn thing from a tutorial but i think the api changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.6,
+        "error": null
+      },
+      {
+        "query": "our stripe webhook keeps returning 400 in production but works locally. I think the signature verification is failing, maybe the sdk changed how you verify?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Agent -> ToolSearch -> Grep -> Bash -> Glob -> Read -> MCP:resolve",
+        "elapsed": 80.8,
+        "error": null
+      },
+      {
+        "query": "getting 'Cannot use import statement outside a module' with jest and ESM. what's the current recommended jest config for ESM projects?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 37.7,
+        "error": null
+      },
+      {
+        "query": "docker compose v2 changed how volumes work I think? our named volumes aren't mounting right after upgrading from v1",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "Glob",
+        "elapsed": 25.7,
+        "error": null
+      },
+      {
+        "query": "my prisma migrate dev keeps failing with 'drift detected' even though I haven't changed anything. is there a way to reset or ignore the drift?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.7,
+        "error": null
+      },
+      {
+        "query": "I need to build a csv upload pipeline - validate the data, transform some columns, bulk insert into postgres. thinking about using bullmq for the queue part. how do I set that up",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.1,
+        "error": null
+      },
+      {
+        "query": "setting up grpc between our typescript services. what library should I use and how do the protobuf schemas work with ts codegen",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.9,
+        "error": null
+      },
+      {
+        "query": "I saw vercel announced partial prerendering for next.js. can I use it yet? how does it work with app router and suspense boundaries",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.6,
+        "error": null
+      },
+      {
+        "query": "the new react compiler - is it production ready? what do I need to change in my build config to enable it",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> WebSearch",
+        "elapsed": 42.9,
+        "error": null
+      },
+      {
+        "query": "I want to add end-to-end type safety between our frontend and backend. heard about trpc and zodios. which one works better with next.js app router?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.5,
+        "error": null
+      },
+      {
+        "query": "we're switching from datadog to grafana cloud for monitoring. how do I set up the grafana agent to scrape prometheus metrics from our k8s cluster?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 41.8,
+        "error": null
+      },
+      {
+        "query": "how do I use serde to deserialize JSON with optional fields in Rust?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.7,
+        "error": null
+      },
+      {
+        "query": "how do I set up gin middleware for JWT auth in Go?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.2,
+        "error": null
+      },
+      {
+        "query": "what's the spring boot 3 way to configure actuator endpoints? we're migrating from boot 2 and the properties changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 37.4,
+        "error": null
+      },
+      {
+        "query": "kubernetes HPA - how do I configure autoscaling based on custom prometheus metrics, not just cpu",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 25.8,
+        "error": null
+      },
+      {
+        "query": "how do I implement a custom deserializer for sqlx in Rust? need to map a postgres enum to a rust enum",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 35.6,
+        "error": null
+      },
+      {
+        "query": "whats the flutter way to do dependency injection? I see people using get_it and riverpod, which one is standard?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 19.2,
+        "error": null
+      },
+      {
+        "query": "fastapi dependency injection how?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 30.4,
+        "error": null
+      },
+      {
+        "query": "pnpm workspace syntax?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "Glob -> Read",
+        "elapsed": 16.3,
+        "error": null
+      },
+      {
+        "query": "redis pub sub node",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 32.1,
+        "error": null
+      },
+      {
+        "query": "nginx reverse proxy websocket config",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 29.9,
+        "error": null
+      },
+      {
+        "query": "we need to set up a CI pipeline that runs playwright tests in parallel across multiple containers. gitlab ci. how do the sharding options work?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 37.9,
+        "error": null
+      },
+      {
+        "query": "our react native app needs push notifications. do I use firebase cloud messaging or expo notifications? we're on bare workflow",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 19.5,
+        "error": null
+      },
+      {
+        "query": "I need to add full-text search to our postgres database. heard about pg_trgm and tsvector but no idea how to set it up with prisma",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 49.3,
+        "error": null
+      },
+      {
+        "query": "how does the new deno 2 node compatibility work? can I just import npm packages directly now?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.3,
+        "error": null
+      },
+      {
+        "query": "astro content collections - how do I define a schema and query the content?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 33.7,
+        "error": null
+      },
+      {
+        "query": "celery beat periodic tasks setup with django and redis broker",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 37.4,
+        "error": null
+      },
+      {
+        "query": "I know react hooks pretty well but I always forget the exact difference between useMemo and useCallback. can you just explain the mental model?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 14.0,
+        "error": null
+      },
+      {
+        "query": "we use prisma but this is actually a pure SQL question about join performance. I have a query that does 3 left joins and its slow, heres the EXPLAIN output: [output]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 11.3,
+        "error": null
+      },
+      {
+        "query": "I need to refactor our express routes to use async/await instead of callbacks. the routes are in src/routes/. can you do it?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Glob -> Bash",
+        "elapsed": 19.0,
+        "error": null
+      },
+      {
+        "query": "can you review this next.js component and tell me why it re-renders on every keystroke? here's the code: [code]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 11.1,
+        "error": null
+      },
+      {
+        "query": "we have a react app with a zustand store but my question is about the business logic, not zustand. the calculateDiscount function returns wrong values for bulk orders",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep -> Glob",
+        "elapsed": 20.4,
+        "error": null
+      },
+      {
+        "query": "write me a node.js script that reads all json files in a directory and merges them into one",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Write",
+        "elapsed": 22.6,
+        "error": null
+      },
+      {
+        "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 16.0,
+        "error": null
+      },
+      {
+        "query": "add a createdAt field to the User model",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep -> Glob -> Agent -> Bash -> Read",
+        "elapsed": 77.2,
+        "error": null
+      },
+      {
+        "query": "fix the TypeScript errors in this file",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "ToolSearch",
+        "elapsed": 14.4,
+        "error": null
+      },
+      {
+        "query": "rename the handleClick function to handleSubmit and update all references",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep",
+        "elapsed": 15.3,
+        "error": null
+      }
+    ]
+  },
+  "mcp (ctx)": {
+    "mode": "mcp",
+    "model": "claude-opus-4-6",
+    "max_turns": 10,
+    "elapsed_seconds": 99.7,
+    "auth_mode": "default",
+    "total": 60,
+    "passed": 45,
+    "recall": "35/50 (70%)",
+    "precision": "35/35 (100%)",
+    "false_positives": 0,
+    "results": [
+      {
+        "query": "How do I use useEffect to fetch data in React?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 16.7,
+        "error": null
+      },
+      {
+        "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 9.5,
+        "error": null
+      },
+      {
+        "query": "vitest mocking - how do I mock a module?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 32.2,
+        "error": null
+      },
+      {
+        "query": "what are the docker compose healthcheck options?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.7,
+        "error": null
+      },
+      {
+        "query": "how do I configure a Terraform AWS provider with assume role?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 27.4,
+        "error": null
+      },
+      {
+        "query": "how do I define middleware in axum for Rust?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(context7-mcp) -> ToolSearch -> MCP:resolve",
+        "elapsed": 38.9,
+        "error": null
+      },
+      {
+        "query": "what's the sequelize syntax for a belongsToMany association with a junction table?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 12.8,
+        "error": null
+      },
+      {
+        "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> WebSearch",
+        "elapsed": 48.8,
+        "error": null
+      },
+      {
+        "query": "something is wrong with our eslint setup after upgrading to v9, all the configs are different now. the flat config thing? idk how to migrate our .eslintrc",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "Glob -> Read -> Bash -> Grep -> Edit",
+        "elapsed": 99.5,
+        "error": null
+      },
+      {
+        "query": "we just upgraded pydantic and now half our validators are broken. something about model_validator decorator replacing the old root_validator? the migration guide was confusing",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 40.2,
+        "error": null
+      },
+      {
+        "query": "our playwright tests started failing after updating to v1.40. something about the locator strict mode? it used to work when there were multiple matches and now it throws",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "Glob",
+        "elapsed": 27.9,
+        "error": null
+      },
+      {
+        "query": "tailwind v4 broke all our custom colors, the theme config syntax is completely different apparently",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.2,
+        "error": null
+      },
+      {
+        "query": "after updating to react-router v7 all our loader functions stopped working. something about the remix merge?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 41.2,
+        "error": null
+      },
+      {
+        "query": "webpack 5 migration is killing me. our module federation setup doesn't work anymore, the shared config syntax changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 30.4,
+        "error": null
+      },
+      {
+        "query": "ok so my PM wants me to add real-time notifications to our dashboard. we're on next.js and I have no idea if I should use websockets, SSE, or that new server actions streaming thing. what are my options",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 40.7,
+        "error": null
+      },
+      {
+        "query": "my boss wants row-level security in our supabase project so each team only sees their own data. I've never set up RLS policies before, how does that even work",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 47.6,
+        "error": null
+      },
+      {
+        "query": "we're migrating from REST to GraphQL and someone suggested Apollo Server but I'm not sure if that's still the recommended thing or if there's something newer. we're on express/node",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 18.8,
+        "error": null
+      },
+      {
+        "query": "I got a ticket to add stripe checkout to our app. its a next.js app. I need to create a checkout session and handle the webhook for payment confirmation. never used stripe sdk before",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> Glob",
+        "elapsed": 46.5,
+        "error": null
+      },
+      {
+        "query": "the infra team wants me to set up opentelemetry tracing in our fastify services. apparently there's an auto-instrumentation package? no idea where to start",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 40.0,
+        "error": null
+      },
+      {
+        "query": "need to add oauth login (google + github) to our backend. we use fastify. whats the current recommended approach, is there a passport equivalent or something built in",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 45.1,
+        "error": null
+      },
+      {
+        "query": "we need to add PDF generation to our node backend. the invoices need to look good. I've heard of puppeteer and pdfkit but not sure which is better for this",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Agent -> ToolSearch -> Read -> Bash -> Glob -> Grep -> MCP:resolve",
+        "elapsed": 80.4,
+        "error": null
+      },
+      {
+        "query": "product wants us to add feature flags. we're evaluating launchdarkly vs unleash vs just rolling our own. how does the launchdarkly node sdk work?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.8,
+        "error": null
+      },
+      {
+        "query": "my next.js page keeps showing stale data. I think its the fetch caching thing they changed recently? the page uses fetch() in a server component and it seems like its caching forever",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 35.4,
+        "error": null
+      },
+      {
+        "query": "my zustand store updates but the component doesnt rerender. im using some createWithEqualityFn thing from a tutorial but i think the api changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 40.9,
+        "error": null
+      },
+      {
+        "query": "our stripe webhook keeps returning 400 in production but works locally. I think the signature verification is failing, maybe the sdk changed how you verify?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Agent -> Skill(context7-mcp) -> Glob -> Grep -> Read -> Bash -> ToolSearch -> MCP:resolve",
+        "elapsed": 84.1,
+        "error": null
+      },
+      {
+        "query": "getting 'Cannot use import statement outside a module' with jest and ESM. what's the current recommended jest config for ESM projects?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "Glob -> Read -> Grep",
+        "elapsed": 33.2,
+        "error": null
+      },
+      {
+        "query": "docker compose v2 changed how volumes work I think? our named volumes aren't mounting right after upgrading from v1",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 16.5,
+        "error": null
+      },
+      {
+        "query": "my prisma migrate dev keeps failing with 'drift detected' even though I haven't changed anything. is there a way to reset or ignore the drift?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 20.8,
+        "error": null
+      },
+      {
+        "query": "I need to build a csv upload pipeline - validate the data, transform some columns, bulk insert into postgres. thinking about using bullmq for the queue part. how do I set that up",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 43.7,
+        "error": null
+      },
+      {
+        "query": "setting up grpc between our typescript services. what library should I use and how do the protobuf schemas work with ts codegen",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 47.0,
+        "error": null
+      },
+      {
+        "query": "I saw vercel announced partial prerendering for next.js. can I use it yet? how does it work with app router and suspense boundaries",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 44.9,
+        "error": null
+      },
+      {
+        "query": "the new react compiler - is it production ready? what do I need to change in my build config to enable it",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> WebFetch",
+        "elapsed": 56.2,
+        "error": null
+      },
+      {
+        "query": "I want to add end-to-end type safety between our frontend and backend. heard about trpc and zodios. which one works better with next.js app router?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 19.7,
+        "error": null
+      },
+      {
+        "query": "we're switching from datadog to grafana cloud for monitoring. how do I set up the grafana agent to scrape prometheus metrics from our k8s cluster?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 23.5,
+        "error": null
+      },
+      {
+        "query": "how do I use serde to deserialize JSON with optional fields in Rust?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.8,
+        "error": null
+      },
+      {
+        "query": "how do I set up gin middleware for JWT auth in Go?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.0,
+        "error": null
+      },
+      {
+        "query": "what's the spring boot 3 way to configure actuator endpoints? we're migrating from boot 2 and the properties changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 37.5,
+        "error": null
+      },
+      {
+        "query": "kubernetes HPA - how do I configure autoscaling based on custom prometheus metrics, not just cpu",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 23.0,
+        "error": null
+      },
+      {
+        "query": "how do I implement a custom deserializer for sqlx in Rust? need to map a postgres enum to a rust enum",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 39.0,
+        "error": null
+      },
+      {
+        "query": "whats the flutter way to do dependency injection? I see people using get_it and riverpod, which one is standard?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 20.6,
+        "error": null
+      },
+      {
+        "query": "fastapi dependency injection how?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(context7-mcp) -> ToolSearch -> MCP:resolve",
+        "elapsed": 37.0,
+        "error": null
+      },
+      {
+        "query": "pnpm workspace syntax?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 12.4,
+        "error": null
+      },
+      {
+        "query": "redis pub sub node",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 26.0,
+        "error": null
+      },
+      {
+        "query": "nginx reverse proxy websocket config",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 29.3,
+        "error": null
+      },
+      {
+        "query": "we need to set up a CI pipeline that runs playwright tests in parallel across multiple containers. gitlab ci. how do the sharding options work?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> Agent -> WebFetch -> WebSearch",
+        "elapsed": 92.6,
+        "error": null
+      },
+      {
+        "query": "our react native app needs push notifications. do I use firebase cloud messaging or expo notifications? we're on bare workflow",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 17.1,
+        "error": null
+      },
+      {
+        "query": "I need to add full-text search to our postgres database. heard about pg_trgm and tsvector but no idea how to set it up with prisma",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 41.6,
+        "error": null
+      },
+      {
+        "query": "how does the new deno 2 node compatibility work? can I just import npm packages directly now?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 33.5,
+        "error": null
+      },
+      {
+        "query": "astro content collections - how do I define a schema and query the content?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 23.1,
+        "error": null
+      },
+      {
+        "query": "celery beat periodic tasks setup with django and redis broker",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 24.7,
+        "error": null
+      },
+      {
+        "query": "I know react hooks pretty well but I always forget the exact difference between useMemo and useCallback. can you just explain the mental model?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 15.0,
+        "error": null
+      },
+      {
+        "query": "we use prisma but this is actually a pure SQL question about join performance. I have a query that does 3 left joins and its slow, heres the EXPLAIN output: [output]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 13.6,
+        "error": null
+      },
+      {
+        "query": "I need to refactor our express routes to use async/await instead of callbacks. the routes are in src/routes/. can you do it?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Glob",
+        "elapsed": 17.3,
+        "error": null
+      },
+      {
+        "query": "can you review this next.js component and tell me why it re-renders on every keystroke? here's the code: [code]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 10.6,
+        "error": null
+      },
+      {
+        "query": "we have a react app with a zustand store but my question is about the business logic, not zustand. the calculateDiscount function returns wrong values for bulk orders",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep",
+        "elapsed": 20.0,
+        "error": null
+      },
+      {
+        "query": "write me a node.js script that reads all json files in a directory and merges them into one",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 16.1,
+        "error": null
+      },
+      {
+        "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 13.9,
+        "error": null
+      },
+      {
+        "query": "add a createdAt field to the User model",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep -> Glob",
+        "elapsed": 31.7,
+        "error": null
+      },
+      {
+        "query": "fix the TypeScript errors in this file",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 11.9,
+        "error": null
+      },
+      {
+        "query": "rename the handleClick function to handleSubmit and update all references",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep",
+        "elapsed": 16.7,
+        "error": null
+      }
+    ]
+  },
+  "mcp(new)": {
+    "mode": "mcp(new)",
+    "model": "claude-opus-4-6",
+    "max_turns": 10,
+    "elapsed_seconds": 84.2,
+    "auth_mode": "default",
+    "total": 60,
+    "passed": 56,
+    "recall": "46/50 (92%)",
+    "precision": "46/46 (100%)",
+    "false_positives": 0,
+    "results": [
+      {
+        "query": "How do I use useEffect to fetch data in React?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 28.4,
+        "error": null
+      },
+      {
+        "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 29.2,
+        "error": null
+      },
+      {
+        "query": "vitest mocking - how do I mock a module?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 35.2,
+        "error": null
+      },
+      {
+        "query": "what are the docker compose healthcheck options?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 27.1,
+        "error": null
+      },
+      {
+        "query": "how do I configure a Terraform AWS provider with assume role?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 23.3,
+        "error": null
+      },
+      {
+        "query": "how do I define middleware in axum for Rust?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.8,
+        "error": null
+      },
+      {
+        "query": "what's the sequelize syntax for a belongsToMany association with a junction table?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 26.7,
+        "error": null
+      },
+      {
+        "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 33.2,
+        "error": null
+      },
+      {
+        "query": "something is wrong with our eslint setup after upgrading to v9, all the configs are different now. the flat config thing? idk how to migrate our .eslintrc",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "Glob -> Read -> Bash",
+        "elapsed": 50.9,
+        "error": null
+      },
+      {
+        "query": "we just upgraded pydantic and now half our validators are broken. something about model_validator decorator replacing the old root_validator? the migration guide was confusing",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 42.4,
+        "error": null
+      },
+      {
+        "query": "our playwright tests started failing after updating to v1.40. something about the locator strict mode? it used to work when there were multiple matches and now it throws",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 37.6,
+        "error": null
+      },
+      {
+        "query": "tailwind v4 broke all our custom colors, the theme config syntax is completely different apparently",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Agent -> ToolSearch -> Glob -> Grep -> Bash -> Read -> MCP:resolve",
+        "elapsed": 61.4,
+        "error": null
+      },
+      {
+        "query": "after updating to react-router v7 all our loader functions stopped working. something about the remix merge?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> Agent -> Read -> Bash -> Glob -> Grep",
+        "elapsed": 84.0,
+        "error": null
+      },
+      {
+        "query": "webpack 5 migration is killing me. our module federation setup doesn't work anymore, the shared config syntax changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 32.4,
+        "error": null
+      },
+      {
+        "query": "ok so my PM wants me to add real-time notifications to our dashboard. we're on next.js and I have no idea if I should use websockets, SSE, or that new server actions streaming thing. what are my options",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.7,
+        "error": null
+      },
+      {
+        "query": "my boss wants row-level security in our supabase project so each team only sees their own data. I've never set up RLS policies before, how does that even work",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 39.3,
+        "error": null
+      },
+      {
+        "query": "we're migrating from REST to GraphQL and someone suggested Apollo Server but I'm not sure if that's still the recommended thing or if there's something newer. we're on express/node",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 39.7,
+        "error": null
+      },
+      {
+        "query": "I got a ticket to add stripe checkout to our app. its a next.js app. I need to create a checkout session and handle the webhook for payment confirmation. never used stripe sdk before",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Agent -> ToolSearch -> Bash -> Read -> Grep -> MCP:resolve",
+        "elapsed": 78.1,
+        "error": null
+      },
+      {
+        "query": "the infra team wants me to set up opentelemetry tracing in our fastify services. apparently there's an auto-instrumentation package? no idea where to start",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 35.7,
+        "error": null
+      },
+      {
+        "query": "need to add oauth login (google + github) to our backend. we use fastify. whats the current recommended approach, is there a passport equivalent or something built in",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 37.3,
+        "error": null
+      },
+      {
+        "query": "we need to add PDF generation to our node backend. the invoices need to look good. I've heard of puppeteer and pdfkit but not sure which is better for this",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 34.4,
+        "error": null
+      },
+      {
+        "query": "product wants us to add feature flags. we're evaluating launchdarkly vs unleash vs just rolling our own. how does the launchdarkly node sdk work?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 42.5,
+        "error": null
+      },
+      {
+        "query": "my next.js page keeps showing stale data. I think its the fetch caching thing they changed recently? the page uses fetch() in a server component and it seems like its caching forever",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.2,
+        "error": null
+      },
+      {
+        "query": "my zustand store updates but the component doesnt rerender. im using some createWithEqualityFn thing from a tutorial but i think the api changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 34.3,
+        "error": null
+      },
+      {
+        "query": "our stripe webhook keeps returning 400 in production but works locally. I think the signature verification is failing, maybe the sdk changed how you verify?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Agent -> ToolSearch -> Glob -> Grep -> Bash -> Read -> MCP:resolve",
+        "elapsed": 79.3,
+        "error": null
+      },
+      {
+        "query": "getting 'Cannot use import statement outside a module' with jest and ESM. what's the current recommended jest config for ESM projects?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.7,
+        "error": null
+      },
+      {
+        "query": "docker compose v2 changed how volumes work I think? our named volumes aren't mounting right after upgrading from v1",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "Glob",
+        "elapsed": 22.2,
+        "error": null
+      },
+      {
+        "query": "my prisma migrate dev keeps failing with 'drift detected' even though I haven't changed anything. is there a way to reset or ignore the drift?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.7,
+        "error": null
+      },
+      {
+        "query": "I need to build a csv upload pipeline - validate the data, transform some columns, bulk insert into postgres. thinking about using bullmq for the queue part. how do I set that up",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 43.2,
+        "error": null
+      },
+      {
+        "query": "setting up grpc between our typescript services. what library should I use and how do the protobuf schemas work with ts codegen",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 41.5,
+        "error": null
+      },
+      {
+        "query": "I saw vercel announced partial prerendering for next.js. can I use it yet? how does it work with app router and suspense boundaries",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.9,
+        "error": null
+      },
+      {
+        "query": "the new react compiler - is it production ready? what do I need to change in my build config to enable it",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.7,
+        "error": null
+      },
+      {
+        "query": "I want to add end-to-end type safety between our frontend and backend. heard about trpc and zodios. which one works better with next.js app router?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 37.7,
+        "error": null
+      },
+      {
+        "query": "we're switching from datadog to grafana cloud for monitoring. how do I set up the grafana agent to scrape prometheus metrics from our k8s cluster?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 45.4,
+        "error": null
+      },
+      {
+        "query": "how do I use serde to deserialize JSON with optional fields in Rust?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 29.6,
+        "error": null
+      },
+      {
+        "query": "how do I set up gin middleware for JWT auth in Go?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 35.4,
+        "error": null
+      },
+      {
+        "query": "what's the spring boot 3 way to configure actuator endpoints? we're migrating from boot 2 and the properties changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 39.6,
+        "error": null
+      },
+      {
+        "query": "kubernetes HPA - how do I configure autoscaling based on custom prometheus metrics, not just cpu",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 42.2,
+        "error": null
+      },
+      {
+        "query": "how do I implement a custom deserializer for sqlx in Rust? need to map a postgres enum to a rust enum",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.9,
+        "error": null
+      },
+      {
+        "query": "whats the flutter way to do dependency injection? I see people using get_it and riverpod, which one is standard?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.6,
+        "error": null
+      },
+      {
+        "query": "fastapi dependency injection how?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 32.9,
+        "error": null
+      },
+      {
+        "query": "pnpm workspace syntax?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 13.6,
+        "error": null
+      },
+      {
+        "query": "redis pub sub node",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 34.7,
+        "error": null
+      },
+      {
+        "query": "nginx reverse proxy websocket config",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 16.0,
+        "error": null
+      },
+      {
+        "query": "we need to set up a CI pipeline that runs playwright tests in parallel across multiple containers. gitlab ci. how do the sharding options work?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 37.5,
+        "error": null
+      },
+      {
+        "query": "our react native app needs push notifications. do I use firebase cloud messaging or expo notifications? we're on bare workflow",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 33.0,
+        "error": null
+      },
+      {
+        "query": "I need to add full-text search to our postgres database. heard about pg_trgm and tsvector but no idea how to set it up with prisma",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 49.5,
+        "error": null
+      },
+      {
+        "query": "how does the new deno 2 node compatibility work? can I just import npm packages directly now?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 40.3,
+        "error": null
+      },
+      {
+        "query": "astro content collections - how do I define a schema and query the content?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 40.2,
+        "error": null
+      },
+      {
+        "query": "celery beat periodic tasks setup with django and redis broker",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 39.2,
+        "error": null
+      },
+      {
+        "query": "I know react hooks pretty well but I always forget the exact difference between useMemo and useCallback. can you just explain the mental model?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 11.3,
+        "error": null
+      },
+      {
+        "query": "we use prisma but this is actually a pure SQL question about join performance. I have a query that does 3 left joins and its slow, heres the EXPLAIN output: [output]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 10.1,
+        "error": null
+      },
+      {
+        "query": "I need to refactor our express routes to use async/await instead of callbacks. the routes are in src/routes/. can you do it?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Glob -> Bash",
+        "elapsed": 22.4,
+        "error": null
+      },
+      {
+        "query": "can you review this next.js component and tell me why it re-renders on every keystroke? here's the code: [code]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 10.4,
+        "error": null
+      },
+      {
+        "query": "we have a react app with a zustand store but my question is about the business logic, not zustand. the calculateDiscount function returns wrong values for bulk orders",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep",
+        "elapsed": 17.3,
+        "error": null
+      },
+      {
+        "query": "write me a node.js script that reads all json files in a directory and merges them into one",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Write",
+        "elapsed": 17.6,
+        "error": null
+      },
+      {
+        "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 16.0,
+        "error": null
+      },
+      {
+        "query": "add a createdAt field to the User model",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep -> Glob -> Agent -> Bash -> Read",
+        "elapsed": 82.9,
+        "error": null
+      },
+      {
+        "query": "fix the TypeScript errors in this file",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 9.5,
+        "error": null
+      },
+      {
+        "query": "rename the handleClick function to handleSubmit and update all references",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep",
+        "elapsed": 12.4,
+        "error": null
+      }
+    ]
+  },
+  "mcp(new) (ctx)": {
+    "mode": "mcp(new)",
+    "model": "claude-opus-4-6",
+    "max_turns": 10,
+    "elapsed_seconds": 91.9,
+    "auth_mode": "default",
+    "total": 60,
+    "passed": 51,
+    "recall": "41/50 (82%)",
+    "precision": "41/41 (100%)",
+    "false_positives": 0,
+    "results": [
+      {
+        "query": "How do I use useEffect to fetch data in React?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 29.5,
+        "error": null
+      },
+      {
+        "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 10.3,
+        "error": null
+      },
+      {
+        "query": "vitest mocking - how do I mock a module?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 28.1,
+        "error": null
+      },
+      {
+        "query": "what are the docker compose healthcheck options?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.3,
+        "error": null
+      },
+      {
+        "query": "how do I configure a Terraform AWS provider with assume role?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 33.0,
+        "error": null
+      },
+      {
+        "query": "how do I define middleware in axum for Rust?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(context7-mcp) -> MCP:resolve -> ToolSearch",
+        "elapsed": 40.0,
+        "error": null
+      },
+      {
+        "query": "what's the sequelize syntax for a belongsToMany association with a junction table?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.9,
+        "error": null
+      },
+      {
+        "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 32.2,
+        "error": null
+      },
+      {
+        "query": "something is wrong with our eslint setup after upgrading to v9, all the configs are different now. the flat config thing? idk how to migrate our .eslintrc",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "Glob -> Read -> Bash -> Write",
+        "elapsed": 80.9,
+        "error": null
+      },
+      {
+        "query": "we just upgraded pydantic and now half our validators are broken. something about model_validator decorator replacing the old root_validator? the migration guide was confusing",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.3,
+        "error": null
+      },
+      {
+        "query": "our playwright tests started failing after updating to v1.40. something about the locator strict mode? it used to work when there were multiple matches and now it throws",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "Glob",
+        "elapsed": 23.3,
+        "error": null
+      },
+      {
+        "query": "tailwind v4 broke all our custom colors, the theme config syntax is completely different apparently",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 33.6,
+        "error": null
+      },
+      {
+        "query": "after updating to react-router v7 all our loader functions stopped working. something about the remix merge?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 32.4,
+        "error": null
+      },
+      {
+        "query": "webpack 5 migration is killing me. our module federation setup doesn't work anymore, the shared config syntax changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 34.2,
+        "error": null
+      },
+      {
+        "query": "ok so my PM wants me to add real-time notifications to our dashboard. we're on next.js and I have no idea if I should use websockets, SSE, or that new server actions streaming thing. what are my options",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 37.0,
+        "error": null
+      },
+      {
+        "query": "my boss wants row-level security in our supabase project so each team only sees their own data. I've never set up RLS policies before, how does that even work",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 42.9,
+        "error": null
+      },
+      {
+        "query": "we're migrating from REST to GraphQL and someone suggested Apollo Server but I'm not sure if that's still the recommended thing or if there's something newer. we're on express/node",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 30.6,
+        "error": null
+      },
+      {
+        "query": "I got a ticket to add stripe checkout to our app. its a next.js app. I need to create a checkout session and handle the webhook for payment confirmation. never used stripe sdk before",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> Glob",
+        "elapsed": 45.3,
+        "error": null
+      },
+      {
+        "query": "the infra team wants me to set up opentelemetry tracing in our fastify services. apparently there's an auto-instrumentation package? no idea where to start",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 37.3,
+        "error": null
+      },
+      {
+        "query": "need to add oauth login (google + github) to our backend. we use fastify. whats the current recommended approach, is there a passport equivalent or something built in",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 41.8,
+        "error": null
+      },
+      {
+        "query": "we need to add PDF generation to our node backend. the invoices need to look good. I've heard of puppeteer and pdfkit but not sure which is better for this",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 33.9,
+        "error": null
+      },
+      {
+        "query": "product wants us to add feature flags. we're evaluating launchdarkly vs unleash vs just rolling our own. how does the launchdarkly node sdk work?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 30.1,
+        "error": null
+      },
+      {
+        "query": "my next.js page keeps showing stale data. I think its the fetch caching thing they changed recently? the page uses fetch() in a server component and it seems like its caching forever",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 33.0,
+        "error": null
+      },
+      {
+        "query": "my zustand store updates but the component doesnt rerender. im using some createWithEqualityFn thing from a tutorial but i think the api changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> Grep",
+        "elapsed": 39.1,
+        "error": null
+      },
+      {
+        "query": "our stripe webhook keeps returning 400 in production but works locally. I think the signature verification is failing, maybe the sdk changed how you verify?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 17.5,
+        "error": null
+      },
+      {
+        "query": "getting 'Cannot use import statement outside a module' with jest and ESM. what's the current recommended jest config for ESM projects?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "Glob -> Read -> Grep",
+        "elapsed": 23.6,
+        "error": null
+      },
+      {
+        "query": "docker compose v2 changed how volumes work I think? our named volumes aren't mounting right after upgrading from v1",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 15.9,
+        "error": null
+      },
+      {
+        "query": "my prisma migrate dev keeps failing with 'drift detected' even though I haven't changed anything. is there a way to reset or ignore the drift?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 18.9,
+        "error": null
+      },
+      {
+        "query": "I need to build a csv upload pipeline - validate the data, transform some columns, bulk insert into postgres. thinking about using bullmq for the queue part. how do I set that up",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.9,
+        "error": null
+      },
+      {
+        "query": "setting up grpc between our typescript services. what library should I use and how do the protobuf schemas work with ts codegen",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 42.9,
+        "error": null
+      },
+      {
+        "query": "I saw vercel announced partial prerendering for next.js. can I use it yet? how does it work with app router and suspense boundaries",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> MCP:query",
+        "elapsed": 42.6,
+        "error": null
+      },
+      {
+        "query": "the new react compiler - is it production ready? what do I need to change in my build config to enable it",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 30.9,
+        "error": null
+      },
+      {
+        "query": "I want to add end-to-end type safety between our frontend and backend. heard about trpc and zodios. which one works better with next.js app router?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 29.0,
+        "error": null
+      },
+      {
+        "query": "we're switching from datadog to grafana cloud for monitoring. how do I set up the grafana agent to scrape prometheus metrics from our k8s cluster?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 42.2,
+        "error": null
+      },
+      {
+        "query": "how do I use serde to deserialize JSON with optional fields in Rust?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 32.5,
+        "error": null
+      },
+      {
+        "query": "how do I set up gin middleware for JWT auth in Go?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(context7-mcp) -> ToolSearch -> MCP:resolve",
+        "elapsed": 35.4,
+        "error": null
+      },
+      {
+        "query": "what's the spring boot 3 way to configure actuator endpoints? we're migrating from boot 2 and the properties changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.0,
+        "error": null
+      },
+      {
+        "query": "kubernetes HPA - how do I configure autoscaling based on custom prometheus metrics, not just cpu",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 20.3,
+        "error": null
+      },
+      {
+        "query": "how do I implement a custom deserializer for sqlx in Rust? need to map a postgres enum to a rust enum",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 39.2,
+        "error": null
+      },
+      {
+        "query": "whats the flutter way to do dependency injection? I see people using get_it and riverpod, which one is standard?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 35.9,
+        "error": null
+      },
+      {
+        "query": "fastapi dependency injection how?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(context7-mcp) -> ToolSearch -> MCP:resolve",
+        "elapsed": 34.5,
+        "error": null
+      },
+      {
+        "query": "pnpm workspace syntax?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 10.5,
+        "error": null
+      },
+      {
+        "query": "redis pub sub node",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 28.3,
+        "error": null
+      },
+      {
+        "query": "nginx reverse proxy websocket config",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 28.6,
+        "error": null
+      },
+      {
+        "query": "we need to set up a CI pipeline that runs playwright tests in parallel across multiple containers. gitlab ci. how do the sharding options work?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.1,
+        "error": null
+      },
+      {
+        "query": "our react native app needs push notifications. do I use firebase cloud messaging or expo notifications? we're on bare workflow",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 14.7,
+        "error": null
+      },
+      {
+        "query": "I need to add full-text search to our postgres database. heard about pg_trgm and tsvector but no idea how to set it up with prisma",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.1,
+        "error": null
+      },
+      {
+        "query": "how does the new deno 2 node compatibility work? can I just import npm packages directly now?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 33.3,
+        "error": null
+      },
+      {
+        "query": "astro content collections - how do I define a schema and query the content?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.0,
+        "error": null
+      },
+      {
+        "query": "celery beat periodic tasks setup with django and redis broker",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 21.7,
+        "error": null
+      },
+      {
+        "query": "I know react hooks pretty well but I always forget the exact difference between useMemo and useCallback. can you just explain the mental model?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 13.7,
+        "error": null
+      },
+      {
+        "query": "we use prisma but this is actually a pure SQL question about join performance. I have a query that does 3 left joins and its slow, heres the EXPLAIN output: [output]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 12.1,
+        "error": null
+      },
+      {
+        "query": "I need to refactor our express routes to use async/await instead of callbacks. the routes are in src/routes/. can you do it?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Glob",
+        "elapsed": 14.9,
+        "error": null
+      },
+      {
+        "query": "can you review this next.js component and tell me why it re-renders on every keystroke? here's the code: [code]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 10.8,
+        "error": null
+      },
+      {
+        "query": "we have a react app with a zustand store but my question is about the business logic, not zustand. the calculateDiscount function returns wrong values for bulk orders",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep",
+        "elapsed": 20.2,
+        "error": null
+      },
+      {
+        "query": "write me a node.js script that reads all json files in a directory and merges them into one",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 13.1,
+        "error": null
+      },
+      {
+        "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 13.3,
+        "error": null
+      },
+      {
+        "query": "add a createdAt field to the User model",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep -> Glob -> Agent -> Bash -> Read",
+        "elapsed": 91.1,
+        "error": null
+      },
+      {
+        "query": "fix the TypeScript errors in this file",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 10.7,
+        "error": null
+      },
+      {
+        "query": "rename the handleClick function to handleSubmit and update all references",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep",
+        "elapsed": 15.4,
+        "error": null
+      }
+    ]
+  },
+  "mcp(prod)": {
+    "mode": "mcp(prod)",
+    "model": "claude-opus-4-6",
+    "max_turns": 10,
+    "elapsed_seconds": 84.1,
+    "auth_mode": "default",
+    "total": 60,
+    "passed": 60,
+    "recall": "50/50 (100%)",
+    "precision": "50/50 (100%)",
+    "false_positives": 0,
+    "results": [
+      {
+        "query": "How do I use useEffect to fetch data in React?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.3,
+        "error": null
+      },
+      {
+        "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 29.0,
+        "error": null
+      },
+      {
+        "query": "vitest mocking - how do I mock a module?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 28.4,
+        "error": null
+      },
+      {
+        "query": "what are the docker compose healthcheck options?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.8,
+        "error": null
+      },
+      {
+        "query": "how do I configure a Terraform AWS provider with assume role?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 32.1,
+        "error": null
+      },
+      {
+        "query": "how do I define middleware in axum for Rust?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 33.7,
+        "error": null
+      },
+      {
+        "query": "what's the sequelize syntax for a belongsToMany association with a junction table?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 33.2,
+        "error": null
+      },
+      {
+        "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 34.9,
+        "error": null
+      },
+      {
+        "query": "something is wrong with our eslint setup after upgrading to v9, all the configs are different now. the flat config thing? idk how to migrate our .eslintrc",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Glob -> ToolSearch -> Read -> MCP:resolve -> Bash",
+        "elapsed": 57.7,
+        "error": null
+      },
+      {
+        "query": "we just upgraded pydantic and now half our validators are broken. something about model_validator decorator replacing the old root_validator? the migration guide was confusing",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 35.2,
+        "error": null
+      },
+      {
+        "query": "our playwright tests started failing after updating to v1.40. something about the locator strict mode? it used to work when there were multiple matches and now it throws",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> Agent -> Glob -> Bash",
+        "elapsed": 50.0,
+        "error": null
+      },
+      {
+        "query": "tailwind v4 broke all our custom colors, the theme config syntax is completely different apparently",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> Glob",
+        "elapsed": 33.5,
+        "error": null
+      },
+      {
+        "query": "after updating to react-router v7 all our loader functions stopped working. something about the remix merge?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 29.4,
+        "error": null
+      },
+      {
+        "query": "webpack 5 migration is killing me. our module federation setup doesn't work anymore, the shared config syntax changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 34.2,
+        "error": null
+      },
+      {
+        "query": "ok so my PM wants me to add real-time notifications to our dashboard. we're on next.js and I have no idea if I should use websockets, SSE, or that new server actions streaming thing. what are my options",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 40.3,
+        "error": null
+      },
+      {
+        "query": "my boss wants row-level security in our supabase project so each team only sees their own data. I've never set up RLS policies before, how does that even work",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 40.1,
+        "error": null
+      },
+      {
+        "query": "we're migrating from REST to GraphQL and someone suggested Apollo Server but I'm not sure if that's still the recommended thing or if there's something newer. we're on express/node",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.9,
+        "error": null
+      },
+      {
+        "query": "I got a ticket to add stripe checkout to our app. its a next.js app. I need to create a checkout session and handle the webhook for payment confirmation. never used stripe sdk before",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> Agent -> Read -> Bash -> Glob",
+        "elapsed": 64.2,
+        "error": null
+      },
+      {
+        "query": "the infra team wants me to set up opentelemetry tracing in our fastify services. apparently there's an auto-instrumentation package? no idea where to start",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> Grep -> Glob",
+        "elapsed": 48.0,
+        "error": null
+      },
+      {
+        "query": "need to add oauth login (google + github) to our backend. we use fastify. whats the current recommended approach, is there a passport equivalent or something built in",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 39.5,
+        "error": null
+      },
+      {
+        "query": "we need to add PDF generation to our node backend. the invoices need to look good. I've heard of puppeteer and pdfkit but not sure which is better for this",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 24.6,
+        "error": null
+      },
+      {
+        "query": "product wants us to add feature flags. we're evaluating launchdarkly vs unleash vs just rolling our own. how does the launchdarkly node sdk work?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 43.2,
+        "error": null
+      },
+      {
+        "query": "my next.js page keeps showing stale data. I think its the fetch caching thing they changed recently? the page uses fetch() in a server component and it seems like its caching forever",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.2,
+        "error": null
+      },
+      {
+        "query": "my zustand store updates but the component doesnt rerender. im using some createWithEqualityFn thing from a tutorial but i think the api changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 35.3,
+        "error": null
+      },
+      {
+        "query": "our stripe webhook keeps returning 400 in production but works locally. I think the signature verification is failing, maybe the sdk changed how you verify?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> Agent -> Glob -> Grep -> Bash -> Read",
+        "elapsed": 83.7,
+        "error": null
+      },
+      {
+        "query": "getting 'Cannot use import statement outside a module' with jest and ESM. what's the current recommended jest config for ESM projects?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 37.9,
+        "error": null
+      },
+      {
+        "query": "docker compose v2 changed how volumes work I think? our named volumes aren't mounting right after upgrading from v1",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.2,
+        "error": null
+      },
+      {
+        "query": "my prisma migrate dev keeps failing with 'drift detected' even though I haven't changed anything. is there a way to reset or ignore the drift?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 39.1,
+        "error": null
+      },
+      {
+        "query": "I need to build a csv upload pipeline - validate the data, transform some columns, bulk insert into postgres. thinking about using bullmq for the queue part. how do I set that up",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 45.6,
+        "error": null
+      },
+      {
+        "query": "setting up grpc between our typescript services. what library should I use and how do the protobuf schemas work with ts codegen",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 46.1,
+        "error": null
+      },
+      {
+        "query": "I saw vercel announced partial prerendering for next.js. can I use it yet? how does it work with app router and suspense boundaries",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.6,
+        "error": null
+      },
+      {
+        "query": "the new react compiler - is it production ready? what do I need to change in my build config to enable it",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> WebSearch",
+        "elapsed": 45.1,
+        "error": null
+      },
+      {
+        "query": "I want to add end-to-end type safety between our frontend and backend. heard about trpc and zodios. which one works better with next.js app router?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 39.5,
+        "error": null
+      },
+      {
+        "query": "we're switching from datadog to grafana cloud for monitoring. how do I set up the grafana agent to scrape prometheus metrics from our k8s cluster?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 35.0,
+        "error": null
+      },
+      {
+        "query": "how do I use serde to deserialize JSON with optional fields in Rust?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 32.3,
+        "error": null
+      },
+      {
+        "query": "how do I set up gin middleware for JWT auth in Go?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 35.6,
+        "error": null
+      },
+      {
+        "query": "what's the spring boot 3 way to configure actuator endpoints? we're migrating from boot 2 and the properties changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 39.7,
+        "error": null
+      },
+      {
+        "query": "kubernetes HPA - how do I configure autoscaling based on custom prometheus metrics, not just cpu",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 40.4,
+        "error": null
+      },
+      {
+        "query": "how do I implement a custom deserializer for sqlx in Rust? need to map a postgres enum to a rust enum",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 41.3,
+        "error": null
+      },
+      {
+        "query": "whats the flutter way to do dependency injection? I see people using get_it and riverpod, which one is standard?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 33.7,
+        "error": null
+      },
+      {
+        "query": "fastapi dependency injection how?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 33.7,
+        "error": null
+      },
+      {
+        "query": "pnpm workspace syntax?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 32.2,
+        "error": null
+      },
+      {
+        "query": "redis pub sub node",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 29.0,
+        "error": null
+      },
+      {
+        "query": "nginx reverse proxy websocket config",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.7,
+        "error": null
+      },
+      {
+        "query": "we need to set up a CI pipeline that runs playwright tests in parallel across multiple containers. gitlab ci. how do the sharding options work?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.9,
+        "error": null
+      },
+      {
+        "query": "our react native app needs push notifications. do I use firebase cloud messaging or expo notifications? we're on bare workflow",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.2,
+        "error": null
+      },
+      {
+        "query": "I need to add full-text search to our postgres database. heard about pg_trgm and tsvector but no idea how to set it up with prisma",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 45.5,
+        "error": null
+      },
+      {
+        "query": "how does the new deno 2 node compatibility work? can I just import npm packages directly now?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 25.9,
+        "error": null
+      },
+      {
+        "query": "astro content collections - how do I define a schema and query the content?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 26.2,
+        "error": null
+      },
+      {
+        "query": "celery beat periodic tasks setup with django and redis broker",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.7,
+        "error": null
+      },
+      {
+        "query": "I know react hooks pretty well but I always forget the exact difference between useMemo and useCallback. can you just explain the mental model?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 19.6,
+        "error": null
+      },
+      {
+        "query": "we use prisma but this is actually a pure SQL question about join performance. I have a query that does 3 left joins and its slow, heres the EXPLAIN output: [output]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 13.4,
+        "error": null
+      },
+      {
+        "query": "I need to refactor our express routes to use async/await instead of callbacks. the routes are in src/routes/. can you do it?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Glob -> Bash",
+        "elapsed": 19.9,
+        "error": null
+      },
+      {
+        "query": "can you review this next.js component and tell me why it re-renders on every keystroke? here's the code: [code]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 11.0,
+        "error": null
+      },
+      {
+        "query": "we have a react app with a zustand store but my question is about the business logic, not zustand. the calculateDiscount function returns wrong values for bulk orders",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep",
+        "elapsed": 16.8,
+        "error": null
+      },
+      {
+        "query": "write me a node.js script that reads all json files in a directory and merges them into one",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 12.2,
+        "error": null
+      },
+      {
+        "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 18.3,
+        "error": null
+      },
+      {
+        "query": "add a createdAt field to the User model",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep -> Glob -> Agent -> Bash -> Read",
+        "elapsed": 77.7,
+        "error": null
+      },
+      {
+        "query": "fix the TypeScript errors in this file",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 11.7,
+        "error": null
+      },
+      {
+        "query": "rename the handleClick function to handleSubmit and update all references",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep",
+        "elapsed": 15.2,
+        "error": null
+      }
+    ]
+  },
+  "mcp(prod) (ctx)": {
+    "mode": "mcp(prod)",
+    "model": "claude-opus-4-6",
+    "max_turns": 10,
+    "elapsed_seconds": 56.0,
+    "auth_mode": "default",
+    "total": 60,
+    "passed": 59,
+    "recall": "49/50 (98%)",
+    "precision": "49/49 (100%)",
+    "false_positives": 0,
+    "results": [
+      {
+        "query": "How do I use useEffect to fetch data in React?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 34.4,
+        "error": null
+      },
+      {
+        "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 29.2,
+        "error": null
+      },
+      {
+        "query": "vitest mocking - how do I mock a module?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.0,
+        "error": null
+      },
+      {
+        "query": "what are the docker compose healthcheck options?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> MCP:query",
+        "elapsed": 41.6,
+        "error": null
+      },
+      {
+        "query": "how do I configure a Terraform AWS provider with assume role?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 40.3,
+        "error": null
+      },
+      {
+        "query": "how do I define middleware in axum for Rust?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(context7-mcp) -> ToolSearch -> MCP:resolve",
+        "elapsed": 33.5,
+        "error": null
+      },
+      {
+        "query": "what's the sequelize syntax for a belongsToMany association with a junction table?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 33.5,
+        "error": null
+      },
+      {
+        "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 34.2,
+        "error": null
+      },
+      {
+        "query": "something is wrong with our eslint setup after upgrading to v9, all the configs are different now. the flat config thing? idk how to migrate our .eslintrc",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> Glob -> MCP:resolve -> Read -> Bash",
+        "elapsed": 55.8,
+        "error": null
+      },
+      {
+        "query": "we just upgraded pydantic and now half our validators are broken. something about model_validator decorator replacing the old root_validator? the migration guide was confusing",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 34.6,
+        "error": null
+      },
+      {
+        "query": "our playwright tests started failing after updating to v1.40. something about the locator strict mode? it used to work when there were multiple matches and now it throws",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.1,
+        "error": null
+      },
+      {
+        "query": "tailwind v4 broke all our custom colors, the theme config syntax is completely different apparently",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.4,
+        "error": null
+      },
+      {
+        "query": "after updating to react-router v7 all our loader functions stopped working. something about the remix merge?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.9,
+        "error": null
+      },
+      {
+        "query": "webpack 5 migration is killing me. our module federation setup doesn't work anymore, the shared config syntax changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 35.9,
+        "error": null
+      },
+      {
+        "query": "ok so my PM wants me to add real-time notifications to our dashboard. we're on next.js and I have no idea if I should use websockets, SSE, or that new server actions streaming thing. what are my options",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.5,
+        "error": null
+      },
+      {
+        "query": "my boss wants row-level security in our supabase project so each team only sees their own data. I've never set up RLS policies before, how does that even work",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 40.7,
+        "error": null
+      },
+      {
+        "query": "we're migrating from REST to GraphQL and someone suggested Apollo Server but I'm not sure if that's still the recommended thing or if there's something newer. we're on express/node",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 37.5,
+        "error": null
+      },
+      {
+        "query": "I got a ticket to add stripe checkout to our app. its a next.js app. I need to create a checkout session and handle the webhook for payment confirmation. never used stripe sdk before",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> Glob",
+        "elapsed": 46.1,
+        "error": null
+      },
+      {
+        "query": "the infra team wants me to set up opentelemetry tracing in our fastify services. apparently there's an auto-instrumentation package? no idea where to start",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 45.1,
+        "error": null
+      },
+      {
+        "query": "need to add oauth login (google + github) to our backend. we use fastify. whats the current recommended approach, is there a passport equivalent or something built in",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 42.4,
+        "error": null
+      },
+      {
+        "query": "we need to add PDF generation to our node backend. the invoices need to look good. I've heard of puppeteer and pdfkit but not sure which is better for this",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> Skill(context7-mcp)",
+        "elapsed": 46.2,
+        "error": null
+      },
+      {
+        "query": "product wants us to add feature flags. we're evaluating launchdarkly vs unleash vs just rolling our own. how does the launchdarkly node sdk work?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.3,
+        "error": null
+      },
+      {
+        "query": "my next.js page keeps showing stale data. I think its the fetch caching thing they changed recently? the page uses fetch() in a server component and it seems like its caching forever",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 35.3,
+        "error": null
+      },
+      {
+        "query": "my zustand store updates but the component doesnt rerender. im using some createWithEqualityFn thing from a tutorial but i think the api changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 39.8,
+        "error": null
+      },
+      {
+        "query": "our stripe webhook keeps returning 400 in production but works locally. I think the signature verification is failing, maybe the sdk changed how you verify?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.4,
+        "error": null
+      },
+      {
+        "query": "getting 'Cannot use import statement outside a module' with jest and ESM. what's the current recommended jest config for ESM projects?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> Glob -> Read -> Agent -> Grep",
+        "elapsed": 54.3,
+        "error": null
+      },
+      {
+        "query": "docker compose v2 changed how volumes work I think? our named volumes aren't mounting right after upgrading from v1",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 33.8,
+        "error": null
+      },
+      {
+        "query": "my prisma migrate dev keeps failing with 'drift detected' even though I haven't changed anything. is there a way to reset or ignore the drift?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 43.5,
+        "error": null
+      },
+      {
+        "query": "I need to build a csv upload pipeline - validate the data, transform some columns, bulk insert into postgres. thinking about using bullmq for the queue part. how do I set that up",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 46.2,
+        "error": null
+      },
+      {
+        "query": "setting up grpc between our typescript services. what library should I use and how do the protobuf schemas work with ts codegen",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> WebSearch",
+        "elapsed": 52.5,
+        "error": null
+      },
+      {
+        "query": "I saw vercel announced partial prerendering for next.js. can I use it yet? how does it work with app router and suspense boundaries",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 25.2,
+        "error": null
+      },
+      {
+        "query": "the new react compiler - is it production ready? what do I need to change in my build config to enable it",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 34.0,
+        "error": null
+      },
+      {
+        "query": "I want to add end-to-end type safety between our frontend and backend. heard about trpc and zodios. which one works better with next.js app router?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 41.1,
+        "error": null
+      },
+      {
+        "query": "we're switching from datadog to grafana cloud for monitoring. how do I set up the grafana agent to scrape prometheus metrics from our k8s cluster?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 40.2,
+        "error": null
+      },
+      {
+        "query": "how do I use serde to deserialize JSON with optional fields in Rust?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 41.1,
+        "error": null
+      },
+      {
+        "query": "how do I set up gin middleware for JWT auth in Go?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 33.8,
+        "error": null
+      },
+      {
+        "query": "what's the spring boot 3 way to configure actuator endpoints? we're migrating from boot 2 and the properties changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.6,
+        "error": null
+      },
+      {
+        "query": "kubernetes HPA - how do I configure autoscaling based on custom prometheus metrics, not just cpu",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 41.5,
+        "error": null
+      },
+      {
+        "query": "how do I implement a custom deserializer for sqlx in Rust? need to map a postgres enum to a rust enum",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 39.4,
+        "error": null
+      },
+      {
+        "query": "whats the flutter way to do dependency injection? I see people using get_it and riverpod, which one is standard?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 35.8,
+        "error": null
+      },
+      {
+        "query": "fastapi dependency injection how?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 26.8,
+        "error": null
+      },
+      {
+        "query": "pnpm workspace syntax?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 12.1,
+        "error": null
+      },
+      {
+        "query": "redis pub sub node",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 32.2,
+        "error": null
+      },
+      {
+        "query": "nginx reverse proxy websocket config",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 28.7,
+        "error": null
+      },
+      {
+        "query": "we need to set up a CI pipeline that runs playwright tests in parallel across multiple containers. gitlab ci. how do the sharding options work?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 41.3,
+        "error": null
+      },
+      {
+        "query": "our react native app needs push notifications. do I use firebase cloud messaging or expo notifications? we're on bare workflow",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.6,
+        "error": null
+      },
+      {
+        "query": "I need to add full-text search to our postgres database. heard about pg_trgm and tsvector but no idea how to set it up with prisma",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 39.0,
+        "error": null
+      },
+      {
+        "query": "how does the new deno 2 node compatibility work? can I just import npm packages directly now?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 37.7,
+        "error": null
+      },
+      {
+        "query": "astro content collections - how do I define a schema and query the content?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 28.4,
+        "error": null
+      },
+      {
+        "query": "celery beat periodic tasks setup with django and redis broker",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 25.2,
+        "error": null
+      },
+      {
+        "query": "I know react hooks pretty well but I always forget the exact difference between useMemo and useCallback. can you just explain the mental model?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 17.1,
+        "error": null
+      },
+      {
+        "query": "we use prisma but this is actually a pure SQL question about join performance. I have a query that does 3 left joins and its slow, heres the EXPLAIN output: [output]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 17.1,
+        "error": null
+      },
+      {
+        "query": "I need to refactor our express routes to use async/await instead of callbacks. the routes are in src/routes/. can you do it?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Glob",
+        "elapsed": 14.5,
+        "error": null
+      },
+      {
+        "query": "can you review this next.js component and tell me why it re-renders on every keystroke? here's the code: [code]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 11.9,
+        "error": null
+      },
+      {
+        "query": "we have a react app with a zustand store but my question is about the business logic, not zustand. the calculateDiscount function returns wrong values for bulk orders",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep",
+        "elapsed": 21.5,
+        "error": null
+      },
+      {
+        "query": "write me a node.js script that reads all json files in a directory and merges them into one",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 16.8,
+        "error": null
+      },
+      {
+        "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 14.5,
+        "error": null
+      },
+      {
+        "query": "add a createdAt field to the User model",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep -> Glob",
+        "elapsed": 24.1,
+        "error": null
+      },
+      {
+        "query": "fix the TypeScript errors in this file",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 16.6,
+        "error": null
+      },
+      {
+        "query": "rename the handleClick function to handleSubmit and update all references",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep",
+        "elapsed": 18.2,
+        "error": null
+      }
+    ]
+  },
+  "mcp(prod+new)": {
+    "mode": "mcp(prod+new)",
+    "model": "claude-opus-4-6",
+    "max_turns": 10,
+    "elapsed_seconds": 71.2,
+    "auth_mode": "default",
+    "total": 60,
+    "passed": 59,
+    "recall": "49/50 (98%)",
+    "precision": "49/49 (100%)",
+    "false_positives": 0,
+    "results": [
+      {
+        "query": "How do I use useEffect to fetch data in React?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 25.6,
+        "error": null
+      },
+      {
+        "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 29.6,
+        "error": null
+      },
+      {
+        "query": "vitest mocking - how do I mock a module?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 29.0,
+        "error": null
+      },
+      {
+        "query": "what are the docker compose healthcheck options?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 32.2,
+        "error": null
+      },
+      {
+        "query": "how do I configure a Terraform AWS provider with assume role?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 30.4,
+        "error": null
+      },
+      {
+        "query": "how do I define middleware in axum for Rust?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 30.6,
+        "error": null
+      },
+      {
+        "query": "what's the sequelize syntax for a belongsToMany association with a junction table?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.5,
+        "error": null
+      },
+      {
+        "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.8,
+        "error": null
+      },
+      {
+        "query": "something is wrong with our eslint setup after upgrading to v9, all the configs are different now. the flat config thing? idk how to migrate our .eslintrc",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": "Agent -> ToolSearch -> Glob -> Read -> Bash -> Grep",
+        "elapsed": 55.7,
+        "error": null
+      },
+      {
+        "query": "we just upgraded pydantic and now half our validators are broken. something about model_validator decorator replacing the old root_validator? the migration guide was confusing",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 32.0,
+        "error": null
+      },
+      {
+        "query": "our playwright tests started failing after updating to v1.40. something about the locator strict mode? it used to work when there were multiple matches and now it throws",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 28.3,
+        "error": null
+      },
+      {
+        "query": "tailwind v4 broke all our custom colors, the theme config syntax is completely different apparently",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> Glob",
+        "elapsed": 42.7,
+        "error": null
+      },
+      {
+        "query": "after updating to react-router v7 all our loader functions stopped working. something about the remix merge?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 43.0,
+        "error": null
+      },
+      {
+        "query": "webpack 5 migration is killing me. our module federation setup doesn't work anymore, the shared config syntax changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.1,
+        "error": null
+      },
+      {
+        "query": "ok so my PM wants me to add real-time notifications to our dashboard. we're on next.js and I have no idea if I should use websockets, SSE, or that new server actions streaming thing. what are my options",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 46.2,
+        "error": null
+      },
+      {
+        "query": "my boss wants row-level security in our supabase project so each team only sees their own data. I've never set up RLS policies before, how does that even work",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 42.0,
+        "error": null
+      },
+      {
+        "query": "we're migrating from REST to GraphQL and someone suggested Apollo Server but I'm not sure if that's still the recommended thing or if there's something newer. we're on express/node",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 32.7,
+        "error": null
+      },
+      {
+        "query": "I got a ticket to add stripe checkout to our app. its a next.js app. I need to create a checkout session and handle the webhook for payment confirmation. never used stripe sdk before",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 25.2,
+        "error": null
+      },
+      {
+        "query": "the infra team wants me to set up opentelemetry tracing in our fastify services. apparently there's an auto-instrumentation package? no idea where to start",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.9,
+        "error": null
+      },
+      {
+        "query": "need to add oauth login (google + github) to our backend. we use fastify. whats the current recommended approach, is there a passport equivalent or something built in",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 44.5,
+        "error": null
+      },
+      {
+        "query": "we need to add PDF generation to our node backend. the invoices need to look good. I've heard of puppeteer and pdfkit but not sure which is better for this",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 37.0,
+        "error": null
+      },
+      {
+        "query": "product wants us to add feature flags. we're evaluating launchdarkly vs unleash vs just rolling our own. how does the launchdarkly node sdk work?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 43.4,
+        "error": null
+      },
+      {
+        "query": "my next.js page keeps showing stale data. I think its the fetch caching thing they changed recently? the page uses fetch() in a server component and it seems like its caching forever",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.5,
+        "error": null
+      },
+      {
+        "query": "my zustand store updates but the component doesnt rerender. im using some createWithEqualityFn thing from a tutorial but i think the api changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> Skill(context7-mcp)",
+        "elapsed": 47.8,
+        "error": null
+      },
+      {
+        "query": "our stripe webhook keeps returning 400 in production but works locally. I think the signature verification is failing, maybe the sdk changed how you verify?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> Agent -> Grep -> Glob -> Bash -> Read",
+        "elapsed": 70.9,
+        "error": null
+      },
+      {
+        "query": "getting 'Cannot use import statement outside a module' with jest and ESM. what's the current recommended jest config for ESM projects?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.8,
+        "error": null
+      },
+      {
+        "query": "docker compose v2 changed how volumes work I think? our named volumes aren't mounting right after upgrading from v1",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 43.1,
+        "error": null
+      },
+      {
+        "query": "my prisma migrate dev keeps failing with 'drift detected' even though I haven't changed anything. is there a way to reset or ignore the drift?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.3,
+        "error": null
+      },
+      {
+        "query": "I need to build a csv upload pipeline - validate the data, transform some columns, bulk insert into postgres. thinking about using bullmq for the queue part. how do I set that up",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 39.3,
+        "error": null
+      },
+      {
+        "query": "setting up grpc between our typescript services. what library should I use and how do the protobuf schemas work with ts codegen",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 43.2,
+        "error": null
+      },
+      {
+        "query": "I saw vercel announced partial prerendering for next.js. can I use it yet? how does it work with app router and suspense boundaries",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 42.9,
+        "error": null
+      },
+      {
+        "query": "the new react compiler - is it production ready? what do I need to change in my build config to enable it",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 35.9,
+        "error": null
+      },
+      {
+        "query": "I want to add end-to-end type safety between our frontend and backend. heard about trpc and zodios. which one works better with next.js app router?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.6,
+        "error": null
+      },
+      {
+        "query": "we're switching from datadog to grafana cloud for monitoring. how do I set up the grafana agent to scrape prometheus metrics from our k8s cluster?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 43.4,
+        "error": null
+      },
+      {
+        "query": "how do I use serde to deserialize JSON with optional fields in Rust?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 29.2,
+        "error": null
+      },
+      {
+        "query": "how do I set up gin middleware for JWT auth in Go?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.4,
+        "error": null
+      },
+      {
+        "query": "what's the spring boot 3 way to configure actuator endpoints? we're migrating from boot 2 and the properties changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 36.8,
+        "error": null
+      },
+      {
+        "query": "kubernetes HPA - how do I configure autoscaling based on custom prometheus metrics, not just cpu",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 42.0,
+        "error": null
+      },
+      {
+        "query": "how do I implement a custom deserializer for sqlx in Rust? need to map a postgres enum to a rust enum",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 41.1,
+        "error": null
+      },
+      {
+        "query": "whats the flutter way to do dependency injection? I see people using get_it and riverpod, which one is standard?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 35.4,
+        "error": null
+      },
+      {
+        "query": "fastapi dependency injection how?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 23.2,
+        "error": null
+      },
+      {
+        "query": "pnpm workspace syntax?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 27.1,
+        "error": null
+      },
+      {
+        "query": "redis pub sub node",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 33.2,
+        "error": null
+      },
+      {
+        "query": "nginx reverse proxy websocket config",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 30.6,
+        "error": null
+      },
+      {
+        "query": "we need to set up a CI pipeline that runs playwright tests in parallel across multiple containers. gitlab ci. how do the sharding options work?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 44.7,
+        "error": null
+      },
+      {
+        "query": "our react native app needs push notifications. do I use firebase cloud messaging or expo notifications? we're on bare workflow",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 42.5,
+        "error": null
+      },
+      {
+        "query": "I need to add full-text search to our postgres database. heard about pg_trgm and tsvector but no idea how to set it up with prisma",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> Glob",
+        "elapsed": 29.9,
+        "error": null
+      },
+      {
+        "query": "how does the new deno 2 node compatibility work? can I just import npm packages directly now?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 23.3,
+        "error": null
+      },
+      {
+        "query": "astro content collections - how do I define a schema and query the content?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> WebFetch",
+        "elapsed": 51.8,
+        "error": null
+      },
+      {
+        "query": "celery beat periodic tasks setup with django and redis broker",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.5,
+        "error": null
+      },
+      {
+        "query": "I know react hooks pretty well but I always forget the exact difference between useMemo and useCallback. can you just explain the mental model?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 19.5,
+        "error": null
+      },
+      {
+        "query": "we use prisma but this is actually a pure SQL question about join performance. I have a query that does 3 left joins and its slow, heres the EXPLAIN output: [output]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 13.3,
+        "error": null
+      },
+      {
+        "query": "I need to refactor our express routes to use async/await instead of callbacks. the routes are in src/routes/. can you do it?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Glob -> Bash",
+        "elapsed": 23.5,
+        "error": null
+      },
+      {
+        "query": "can you review this next.js component and tell me why it re-renders on every keystroke? here's the code: [code]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 8.7,
+        "error": null
+      },
+      {
+        "query": "we have a react app with a zustand store but my question is about the business logic, not zustand. the calculateDiscount function returns wrong values for bulk orders",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep",
+        "elapsed": 16.6,
+        "error": null
+      },
+      {
+        "query": "write me a node.js script that reads all json files in a directory and merges them into one",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 13.1,
+        "error": null
+      },
+      {
+        "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 15.6,
+        "error": null
+      },
+      {
+        "query": "add a createdAt field to the User model",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep -> Glob -> Agent -> Bash -> Read",
+        "elapsed": 64.8,
+        "error": null
+      },
+      {
+        "query": "fix the TypeScript errors in this file",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 11.1,
+        "error": null
+      },
+      {
+        "query": "rename the handleClick function to handleSubmit and update all references",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep",
+        "elapsed": 17.7,
+        "error": null
+      }
+    ]
+  },
+  "mcp(prod+new) (ctx)": {
+    "mode": "mcp(prod+new)",
+    "model": "claude-opus-4-6",
+    "max_turns": 10,
+    "elapsed_seconds": 56.9,
+    "auth_mode": "default",
+    "total": 60,
+    "passed": 59,
+    "recall": "49/50 (98%)",
+    "precision": "49/49 (100%)",
+    "false_positives": 0,
+    "results": [
+      {
+        "query": "How do I use useEffect to fetch data in React?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 27.6,
+        "error": null
+      },
+      {
+        "query": "What is the Prisma syntax for defining a one-to-many relation with cascade delete?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(context7-mcp) -> ToolSearch -> MCP:resolve",
+        "elapsed": 25.7,
+        "error": null
+      },
+      {
+        "query": "vitest mocking - how do I mock a module?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 25.0,
+        "error": null
+      },
+      {
+        "query": "what are the docker compose healthcheck options?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 26.4,
+        "error": null
+      },
+      {
+        "query": "how do I configure a Terraform AWS provider with assume role?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 27.5,
+        "error": null
+      },
+      {
+        "query": "how do I define middleware in axum for Rust?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Skill(context7-mcp) -> ToolSearch -> MCP:resolve",
+        "elapsed": 28.1,
+        "error": null
+      },
+      {
+        "query": "what's the sequelize syntax for a belongsToMany association with a junction table?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 23.2,
+        "error": null
+      },
+      {
+        "query": "We just upgraded to Drizzle ORM 0.35 and our existing .onConflictDoUpdate() calls are throwing type errors. What changed in the API?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 26.7,
+        "error": null
+      },
+      {
+        "query": "something is wrong with our eslint setup after upgrading to v9, all the configs are different now. the flat config thing? idk how to migrate our .eslintrc",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "Glob -> ToolSearch -> Read -> MCP:resolve",
+        "elapsed": 26.9,
+        "error": null
+      },
+      {
+        "query": "we just upgraded pydantic and now half our validators are broken. something about model_validator decorator replacing the old root_validator? the migration guide was confusing",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 27.2,
+        "error": null
+      },
+      {
+        "query": "our playwright tests started failing after updating to v1.40. something about the locator strict mode? it used to work when there were multiple matches and now it throws",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 25.1,
+        "error": null
+      },
+      {
+        "query": "tailwind v4 broke all our custom colors, the theme config syntax is completely different apparently",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 29.7,
+        "error": null
+      },
+      {
+        "query": "after updating to react-router v7 all our loader functions stopped working. something about the remix merge?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 33.9,
+        "error": null
+      },
+      {
+        "query": "webpack 5 migration is killing me. our module federation setup doesn't work anymore, the shared config syntax changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 28.5,
+        "error": null
+      },
+      {
+        "query": "ok so my PM wants me to add real-time notifications to our dashboard. we're on next.js and I have no idea if I should use websockets, SSE, or that new server actions streaming thing. what are my options",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 32.4,
+        "error": null
+      },
+      {
+        "query": "my boss wants row-level security in our supabase project so each team only sees their own data. I've never set up RLS policies before, how does that even work",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 37.1,
+        "error": null
+      },
+      {
+        "query": "we're migrating from REST to GraphQL and someone suggested Apollo Server but I'm not sure if that's still the recommended thing or if there's something newer. we're on express/node",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 26.7,
+        "error": null
+      },
+      {
+        "query": "I got a ticket to add stripe checkout to our app. its a next.js app. I need to create a checkout session and handle the webhook for payment confirmation. never used stripe sdk before",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 24.6,
+        "error": null
+      },
+      {
+        "query": "the infra team wants me to set up opentelemetry tracing in our fastify services. apparently there's an auto-instrumentation package? no idea where to start",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.5,
+        "error": null
+      },
+      {
+        "query": "need to add oauth login (google + github) to our backend. we use fastify. whats the current recommended approach, is there a passport equivalent or something built in",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 35.8,
+        "error": null
+      },
+      {
+        "query": "we need to add PDF generation to our node backend. the invoices need to look good. I've heard of puppeteer and pdfkit but not sure which is better for this",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 30.3,
+        "error": null
+      },
+      {
+        "query": "product wants us to add feature flags. we're evaluating launchdarkly vs unleash vs just rolling our own. how does the launchdarkly node sdk work?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 29.2,
+        "error": null
+      },
+      {
+        "query": "my next.js page keeps showing stale data. I think its the fetch caching thing they changed recently? the page uses fetch() in a server component and it seems like its caching forever",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 30.7,
+        "error": null
+      },
+      {
+        "query": "my zustand store updates but the component doesnt rerender. im using some createWithEqualityFn thing from a tutorial but i think the api changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 32.4,
+        "error": null
+      },
+      {
+        "query": "our stripe webhook keeps returning 400 in production but works locally. I think the signature verification is failing, maybe the sdk changed how you verify?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 33.1,
+        "error": null
+      },
+      {
+        "query": "getting 'Cannot use import statement outside a module' with jest and ESM. what's the current recommended jest config for ESM projects?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve -> Glob -> Read -> Agent -> Bash -> Grep",
+        "elapsed": 56.5,
+        "error": null
+      },
+      {
+        "query": "docker compose v2 changed how volumes work I think? our named volumes aren't mounting right after upgrading from v1",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 30.1,
+        "error": null
+      },
+      {
+        "query": "my prisma migrate dev keeps failing with 'drift detected' even though I haven't changed anything. is there a way to reset or ignore the drift?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 24.8,
+        "error": null
+      },
+      {
+        "query": "I need to build a csv upload pipeline - validate the data, transform some columns, bulk insert into postgres. thinking about using bullmq for the queue part. how do I set that up",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 38.2,
+        "error": null
+      },
+      {
+        "query": "setting up grpc between our typescript services. what library should I use and how do the protobuf schemas work with ts codegen",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 39.2,
+        "error": null
+      },
+      {
+        "query": "I saw vercel announced partial prerendering for next.js. can I use it yet? how does it work with app router and suspense boundaries",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 29.2,
+        "error": null
+      },
+      {
+        "query": "the new react compiler - is it production ready? what do I need to change in my build config to enable it",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 26.8,
+        "error": null
+      },
+      {
+        "query": "I want to add end-to-end type safety between our frontend and backend. heard about trpc and zodios. which one works better with next.js app router?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 30.9,
+        "error": null
+      },
+      {
+        "query": "we're switching from datadog to grafana cloud for monitoring. how do I set up the grafana agent to scrape prometheus metrics from our k8s cluster?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 35.0,
+        "error": null
+      },
+      {
+        "query": "how do I use serde to deserialize JSON with optional fields in Rust?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 28.7,
+        "error": null
+      },
+      {
+        "query": "how do I set up gin middleware for JWT auth in Go?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 25.4,
+        "error": null
+      },
+      {
+        "query": "what's the spring boot 3 way to configure actuator endpoints? we're migrating from boot 2 and the properties changed",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 28.9,
+        "error": null
+      },
+      {
+        "query": "kubernetes HPA - how do I configure autoscaling based on custom prometheus metrics, not just cpu",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.3,
+        "error": null
+      },
+      {
+        "query": "how do I implement a custom deserializer for sqlx in Rust? need to map a postgres enum to a rust enum",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 32.8,
+        "error": null
+      },
+      {
+        "query": "whats the flutter way to do dependency injection? I see people using get_it and riverpod, which one is standard?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 30.1,
+        "error": null
+      },
+      {
+        "query": "fastapi dependency injection how?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 18.2,
+        "error": null
+      },
+      {
+        "query": "pnpm workspace syntax?",
+        "should_trigger": true,
+        "triggered": false,
+        "pass": false,
+        "first_tool": null,
+        "elapsed": 8.4,
+        "error": null
+      },
+      {
+        "query": "redis pub sub node",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 26.0,
+        "error": null
+      },
+      {
+        "query": "nginx reverse proxy websocket config",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.6,
+        "error": null
+      },
+      {
+        "query": "we need to set up a CI pipeline that runs playwright tests in parallel across multiple containers. gitlab ci. how do the sharding options work?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 35.6,
+        "error": null
+      },
+      {
+        "query": "our react native app needs push notifications. do I use firebase cloud messaging or expo notifications? we're on bare workflow",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.5,
+        "error": null
+      },
+      {
+        "query": "I need to add full-text search to our postgres database. heard about pg_trgm and tsvector but no idea how to set it up with prisma",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 31.2,
+        "error": null
+      },
+      {
+        "query": "how does the new deno 2 node compatibility work? can I just import npm packages directly now?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 30.6,
+        "error": null
+      },
+      {
+        "query": "astro content collections - how do I define a schema and query the content?",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 29.7,
+        "error": null
+      },
+      {
+        "query": "celery beat periodic tasks setup with django and redis broker",
+        "should_trigger": true,
+        "triggered": true,
+        "pass": true,
+        "first_tool": "ToolSearch -> MCP:resolve",
+        "elapsed": 18.2,
+        "error": null
+      },
+      {
+        "query": "I know react hooks pretty well but I always forget the exact difference between useMemo and useCallback. can you just explain the mental model?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 11.5,
+        "error": null
+      },
+      {
+        "query": "we use prisma but this is actually a pure SQL question about join performance. I have a query that does 3 left joins and its slow, heres the EXPLAIN output: [output]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 16.5,
+        "error": null
+      },
+      {
+        "query": "I need to refactor our express routes to use async/await instead of callbacks. the routes are in src/routes/. can you do it?",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Glob -> Bash",
+        "elapsed": 18.1,
+        "error": null
+      },
+      {
+        "query": "can you review this next.js component and tell me why it re-renders on every keystroke? here's the code: [code]",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 10.3,
+        "error": null
+      },
+      {
+        "query": "we have a react app with a zustand store but my question is about the business logic, not zustand. the calculateDiscount function returns wrong values for bulk orders",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep",
+        "elapsed": 12.8,
+        "error": null
+      },
+      {
+        "query": "write me a node.js script that reads all json files in a directory and merges them into one",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 11.6,
+        "error": null
+      },
+      {
+        "query": "Write me a Python script that reads a CSV and outputs a summary of each column's data types and null counts",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 12.8,
+        "error": null
+      },
+      {
+        "query": "add a createdAt field to the User model",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep -> Glob -> Bash",
+        "elapsed": 30.4,
+        "error": null
+      },
+      {
+        "query": "fix the TypeScript errors in this file",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": null,
+        "elapsed": 8.3,
+        "error": null
+      },
+      {
+        "query": "rename the handleClick function to handleSubmit and update all references",
+        "should_trigger": false,
+        "triggered": false,
+        "pass": true,
+        "first_tool": "Grep",
+        "elapsed": 13.8,
+        "error": null
+      }
+    ]
+  }
+}
