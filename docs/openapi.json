@@ -71,7 +71,7 @@
             "$ref": "#/components/responses/RateLimitError"
           },
           "404": {
-            "$ref": "#/components/responses/NotFoundError"
+            "$ref": "#/components/responses/SearchNotFoundError"
           },
           "500": {
             "$ref": "#/components/responses/InternalServerError"
@@ -1702,7 +1702,7 @@
           }
         }
       },
-      "NotFoundError": {
+      "SearchNotFoundError": {
         "description": "Not Found - No libraries matched the search query",
         "content": {
           "application/json": {
