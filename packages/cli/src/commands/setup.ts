@@ -172,42 +172,11 @@ async function resolveCliAuth(apiKey?: string): Promise<void> {
   await performLogin();
 }
 
-async function isAlreadyConfigured(agentName: SetupAgent, scope: Scope): Promise<boolean> {
-  const agent = getAgent(agentName);
-  const mcpCandidates =
-    scope === "global"
-      ? agent.mcp.globalPaths
-      : agent.mcp.projectPaths.map((p) => join(process.cwd(), p));
-  const mcpPath = await resolveMcpPath(mcpCandidates);
-  try {
-    if (mcpPath.endsWith(".toml")) {
-      const { readTomlServerExists } = await import("../setup/mcp-writer.js");
-      return readTomlServerExists(mcpPath, "context7");
-    }
-    const existing = await readJsonConfig(mcpPath);
-    const section = (existing[agent.mcp.configKey] as Record<string, unknown> | undefined) ?? {};
-    return "context7" in section;
-  } catch {
-    return false;
-  }
-}
-
-async function promptAgents(scope: Scope, mode: SetupMode): Promise<SetupAgent[] | null> {
-  const choices = await Promise.all(
-    ALL_AGENT_NAMES.map(async (name) => {
-      const configured = mode === "mcp" ? await isAlreadyConfigured(name, scope) : false;
-      return {
-        name: SETUP_AGENT_NAMES[name],
-        value: name,
-        disabled: configured ? "(already configured)" : false,
-      };
-    })
-  );
-
-  if (choices.every((c) => c.disabled)) {
-    log.info("Context7 is already configured for all detected agents.");
-    return null;
-  }
+async function promptAgents(): Promise<SetupAgent[] | null> {
+  const choices = ALL_AGENT_NAMES.map((name) => ({
+    name: SETUP_AGENT_NAMES[name],
+    value: name,
+  }));
 
   const message = "Which agents do you want to set up?";
 
@@ -226,11 +195,7 @@ async function promptAgents(scope: Scope, mode: SetupMode): Promise<SetupAgent[]
   }
 }
 
-async function resolveAgents(
-  options: SetupOptions,
-  scope: Scope,
-  mode: SetupMode = "mcp"
-): Promise<SetupAgent[]> {
+async function resolveAgents(options: SetupOptions, scope: Scope): Promise<SetupAgent[]> {
   const explicit = getSelectedAgents(options);
   if (explicit.length > 0) return explicit;
 
@@ -239,7 +204,7 @@ async function resolveAgents(
   if (detected.length > 0 && options.yes) return detected;
 
   log.blank();
-  const selected = await promptAgents(scope, mode);
+  const selected = await promptAgents();
   if (!selected) {
     log.warn("Setup cancelled");
     return [];
@@ -322,7 +287,7 @@ async function setupAgent(
         agent.mcp.buildEntry(auth)
       );
       mcpStatus = alreadyExists
-        ? "already configured"
+        ? `reconfigured with ${AUTH_MODE_LABELS[auth.mode]}`
         : `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
     } else {
       const existing = await readJsonConfig(mcpPath);
@@ -332,14 +297,10 @@ async function setupAgent(
         "context7",
         agent.mcp.buildEntry(auth)
       );
-      if (alreadyExists) {
-        mcpStatus = "already configured";
-      } else {
-        mcpStatus = `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
-      }
-      if (config !== existing) {
-        await writeJsonConfig(mcpPath, config);
-      }
+      mcpStatus = alreadyExists
+        ? `reconfigured with ${AUTH_MODE_LABELS[auth.mode]}`
+        : `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
+      await writeJsonConfig(mcpPath, config);
     }
   } catch (err) {
     mcpStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
@@ -406,7 +367,10 @@ async function setupMcp(agents: SetupAgent[], options: SetupOptions, scope: Scop
   log.blank();
   for (const r of results) {
     log.plain(`  ${pc.bold(r.agent)}`);
-    const mcpIcon = r.mcpStatus.startsWith("configured") ? pc.green("+") : pc.dim("~");
+    const mcpIcon =
+      r.mcpStatus.startsWith("configured") || r.mcpStatus.startsWith("reconfigured")
+        ? pc.green("+")
+        : pc.dim("~");
     log.plain(`    ${mcpIcon} MCP server ${r.mcpStatus}`);
     log.plain(`      ${pc.dim(r.mcpPath)}`);
     const ruleIcon = r.ruleStatus === "installed" ? pc.green("+") : pc.dim("~");
@@ -460,7 +424,7 @@ async function setupCli(options: SetupOptions): Promise<void> {
   await resolveCliAuth(options.apiKey);
 
   const scope: Scope = options.project ? "project" : "global";
-  const agents = await resolveAgents(options, scope, "cli");
+  const agents = await resolveAgents(options, scope);
   if (agents.length === 0) return;
 
   log.blank();
@@ -515,7 +479,7 @@ async function setupCommand(options: SetupOptions): Promise<void> {
     const mode = await resolveMode(options);
     if (mode === "mcp") {
       const scope: Scope = options.project ? "project" : "global";
-      const agents = await resolveAgents(options, scope, mode);
+      const agents = await resolveAgents(options, scope);
       if (agents.length === 0) return;
       await setupMcp(agents, options, scope);
     } else {

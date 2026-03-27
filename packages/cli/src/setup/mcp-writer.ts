@@ -47,10 +47,7 @@ export function mergeServerEntry(
   entry: Record<string, unknown>
 ): { config: Record<string, unknown>; alreadyExists: boolean } {
   const section = (existing[configKey] as Record<string, unknown> | undefined) ?? {};
-
-  if (serverName in section) {
-    return { config: existing, alreadyExists: true };
-  }
+  const alreadyExists = serverName in section;
 
   return {
     config: {
@@ -60,7 +57,7 @@ export function mergeServerEntry(
         [serverName]: entry,
       },
     },
-    alreadyExists: false,
+    alreadyExists,
   };
 }
 
@@ -69,9 +66,7 @@ export async function resolveMcpPath(candidates: string[]): Promise<string> {
     try {
       await access(candidate);
       return candidate;
-    } catch {
-      // continue
-    }
+    } catch {}
   }
   return candidates[0];
 }
@@ -118,22 +113,43 @@ export async function appendTomlServer(
   serverName: string,
   entry: Record<string, unknown>
 ): Promise<{ alreadyExists: boolean }> {
-  if (await readTomlServerExists(filePath, serverName)) {
-    return { alreadyExists: true };
-  }
-
+  const alreadyExists = await readTomlServerExists(filePath, serverName);
   const block = buildTomlServerBlock(serverName, entry);
 
   let existing = "";
   try {
     existing = await readFile(filePath, "utf-8");
-  } catch {
-    // File doesn't exist
+  } catch {}
+
+  if (alreadyExists) {
+    const sectionHeader = `[mcp_servers.${serverName}]`;
+    const subPrefix = `[mcp_servers.${serverName}.`;
+    const startIdx = existing.indexOf(sectionHeader);
+    const rest = existing.slice(startIdx + sectionHeader.length);
+
+    let endOffset = rest.length;
+    const re = /^\[/gm;
+    let m;
+    while ((m = re.exec(rest)) !== null) {
+      const lineEnd = rest.indexOf("\n", m.index);
+      const line = rest.slice(m.index, lineEnd === -1 ? undefined : lineEnd);
+      if (!line.startsWith(subPrefix)) {
+        endOffset = m.index;
+        break;
+      }
+    }
+
+    const before = existing.slice(0, startIdx);
+    const after = existing.slice(startIdx + sectionHeader.length + endOffset);
+    const content = before + block + after;
+    await mkdir(dirname(filePath), { recursive: true });
+    await writeFile(filePath, content, "utf-8");
+  } else {
+    const separator =
+      existing.length > 0 && !existing.endsWith("\n") ? "\n\n" : existing.length > 0 ? "\n" : "";
+    await mkdir(dirname(filePath), { recursive: true });
+    await writeFile(filePath, existing + separator + block, "utf-8");
   }
 
-  const separator =
-    existing.length > 0 && !existing.endsWith("\n") ? "\n\n" : existing.length > 0 ? "\n" : "";
-  await mkdir(dirname(filePath), { recursive: true });
-  await writeFile(filePath, existing + separator + block, "utf-8");
-  return { alreadyExists: false };
+  return { alreadyExists };
 }
