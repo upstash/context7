@@ -1,5 +1,12 @@
 # @upstash/context7-mcp
 
+## 2.1.6
+
+### Patch Changes
+
+- a667712: Update search filter warning
+- be1a39a: Update server metadata and instructions.
+
 ## 2.1.5
 
 ### Patch Changes
