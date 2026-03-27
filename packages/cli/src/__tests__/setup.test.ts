@@ -180,22 +180,22 @@ describe("JSONC support", () => {
     expect(result.key).toBe("value");
   });
 
-  test("resolveMcpPath returns .jsonc when it exists", async () => {
+  test("resolveMcpPath returns first existing candidate", async () => {
     const jsoncPath = join(tempDir, "opencode.jsonc");
     await writeFile(jsoncPath, "{}", "utf-8");
-    const resolved = await resolveMcpPath(join(tempDir, "opencode.json"));
+    const resolved = await resolveMcpPath([join(tempDir, "opencode.json"), jsoncPath]);
     expect(resolved).toBe(jsoncPath);
   });
 
-  test("resolveMcpPath falls back to .json when no .jsonc", async () => {
+  test("resolveMcpPath falls back to first candidate when none exist", async () => {
     const jsonPath = join(tempDir, "opencode.json");
-    const resolved = await resolveMcpPath(jsonPath);
+    const resolved = await resolveMcpPath([jsonPath]);
     expect(resolved).toBe(jsonPath);
   });
 
-  test("resolveMcpPath returns non-json paths unchanged", async () => {
+  test("resolveMcpPath returns single candidate unchanged", async () => {
     const tomlPath = join(tempDir, "config.toml");
-    const resolved = await resolveMcpPath(tomlPath);
+    const resolved = await resolveMcpPath([tomlPath]);
     expect(resolved).toBe(tomlPath);
   });
 });

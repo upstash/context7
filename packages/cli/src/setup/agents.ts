@@ -36,8 +36,8 @@ export interface AgentConfig {
   name: SetupAgent;
   displayName: string;
   mcp: {
-    projectPath: string;
-    globalPath: string;
+    projectPaths: string[];
+    globalPaths: string[];
     configKey: string;
     buildEntry: (auth: AuthOptions) => Record<string, unknown>;
   };
@@ -68,8 +68,8 @@ const agents: Record<SetupAgent, AgentConfig> = {
     name: "claude",
     displayName: "Claude Code",
     mcp: {
-      projectPath: ".mcp.json",
-      globalPath: join(homedir(), ".claude.json"),
+      projectPaths: [".mcp.json"],
+      globalPaths: [join(homedir(), ".claude.json")],
       configKey: "mcpServers",
       buildEntry: (auth) => withHeaders({ type: "http", url: mcpUrl(auth) }, auth),
     },
@@ -94,8 +94,8 @@ const agents: Record<SetupAgent, AgentConfig> = {
     name: "cursor",
     displayName: "Cursor",
     mcp: {
-      projectPath: join(".cursor", "mcp.json"),
-      globalPath: join(homedir(), ".cursor", "mcp.json"),
+      projectPaths: [join(".cursor", "mcp.json")],
+      globalPaths: [join(homedir(), ".cursor", "mcp.json")],
       configKey: "mcpServers",
       buildEntry: (auth) => withHeaders({ url: mcpUrl(auth) }, auth),
     },
@@ -120,8 +120,13 @@ const agents: Record<SetupAgent, AgentConfig> = {
     name: "opencode",
     displayName: "OpenCode",
     mcp: {
-      projectPath: "opencode.json",
-      globalPath: join(homedir(), ".config", "opencode", "opencode.json"),
+      projectPaths: ["opencode.json", "opencode.jsonc", ".opencode.json", ".opencode.jsonc"],
+      globalPaths: [
+        join(homedir(), ".config", "opencode", "opencode.json"),
+        join(homedir(), ".config", "opencode", "opencode.jsonc"),
+        join(homedir(), ".config", "opencode", ".opencode.json"),
+        join(homedir(), ".config", "opencode", ".opencode.jsonc"),
+      ],
       configKey: "mcp",
       buildEntry: (auth) => withHeaders({ type: "remote", url: mcpUrl(auth), enabled: true }, auth),
     },
@@ -137,7 +142,7 @@ const agents: Record<SetupAgent, AgentConfig> = {
         scope === "global" ? join(homedir(), ".agents", "skills") : join(".agents", "skills"),
     },
     detect: {
-      projectPaths: [".opencode.json"],
+      projectPaths: ["opencode.json", "opencode.jsonc", ".opencode.json", ".opencode.jsonc"],
       globalPaths: [join(homedir(), ".config", "opencode")],
     },
   },
@@ -146,8 +151,8 @@ const agents: Record<SetupAgent, AgentConfig> = {
     name: "codex",
     displayName: "Codex",
     mcp: {
-      projectPath: join(".codex", "config.toml"),
-      globalPath: join(homedir(), ".codex", "config.toml"),
+      projectPaths: [join(".codex", "config.toml")],
+      globalPaths: [join(homedir(), ".codex", "config.toml")],
       configKey: "mcp_servers",
       buildEntry: (auth) => {
         const entry: Record<string, unknown> = { type: "http", url: mcpUrl(auth) };

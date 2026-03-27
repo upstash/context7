@@ -64,17 +64,16 @@ export function mergeServerEntry(
   };
 }
 
-export async function resolveMcpPath(basePath: string): Promise<string> {
-  if (basePath.endsWith(".json")) {
-    const jsoncPath = basePath.replace(/\.json$/, ".jsonc");
+export async function resolveMcpPath(candidates: string[]): Promise<string> {
+  for (const candidate of candidates) {
     try {
-      await access(jsoncPath);
-      return jsoncPath;
+      await access(candidate);
+      return candidate;
     } catch {
-      return basePath;
+      // continue
     }
   }
-  return basePath;
+  return candidates[0];
 }
 
 export async function writeJsonConfig(
