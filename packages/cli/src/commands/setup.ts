@@ -174,9 +174,11 @@ async function resolveCliAuth(apiKey?: string): Promise<void> {
 
 async function isAlreadyConfigured(agentName: SetupAgent, scope: Scope): Promise<boolean> {
   const agent = getAgent(agentName);
-  const baseMcpPath =
-    scope === "global" ? agent.mcp.globalPath : join(process.cwd(), agent.mcp.projectPath);
-  const mcpPath = await resolveMcpPath(baseMcpPath);
+  const mcpCandidates =
+    scope === "global"
+      ? agent.mcp.globalPaths
+      : agent.mcp.projectPaths.map((p) => join(process.cwd(), p));
+  const mcpPath = await resolveMcpPath(mcpCandidates);
   try {
     if (mcpPath.endsWith(".toml")) {
       const { readTomlServerExists } = await import("../setup/mcp-writer.js");
@@ -305,9 +307,11 @@ async function setupAgent(
 }> {
   const agent = getAgent(agentName);
 
-  const baseMcpPath =
-    scope === "global" ? agent.mcp.globalPath : join(process.cwd(), agent.mcp.projectPath);
-  const mcpPath = await resolveMcpPath(baseMcpPath);
+  const mcpCandidates =
+    scope === "global"
+      ? agent.mcp.globalPaths
+      : agent.mcp.projectPaths.map((p) => join(process.cwd(), p));
+  const mcpPath = await resolveMcpPath(mcpCandidates);
 
   let mcpStatus: string;
   try {
