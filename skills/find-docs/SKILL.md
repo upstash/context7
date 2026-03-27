@@ -1,25 +1,20 @@
 ---
 name: find-docs
 description: >-
-  Retrieves authoritative, up-to-date technical documentation, API references,
-  configuration details, and code examples for any developer technology.
+  Retrieves up-to-date documentation, API references, and code examples for any
+  developer technology. Use this skill whenever the user asks about a specific
+  library, framework, SDK, CLI tool, or cloud service -- even for well-known ones
+  like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. Your
+  training data may not reflect recent API changes or version updates.
 
-  Use this skill whenever answering technical questions or writing code that
-  interacts with external technologies. This includes libraries, frameworks,
-  programming languages, SDKs, APIs, CLI tools, cloud services, infrastructure
-  tools, and developer platforms.
+  Always use for: API syntax questions, configuration options, version migration
+  issues, "how do I" questions mentioning a library name, debugging that involves
+  library-specific behavior, setup instructions, and CLI tool usage.
 
-  Common scenarios:
-  - looking up API endpoints, classes, functions, or method parameters
-  - checking configuration options or CLI commands
-  - answering "how do I" technical questions
-  - generating code that uses a specific library or service
-  - debugging issues related to frameworks, SDKs, or APIs
-  - retrieving setup instructions, examples, or migration guides
-  - verifying version-specific behavior or breaking changes
-
-  Prefer this skill whenever documentation accuracy matters or when model
-  knowledge may be outdated.
+  Use even when you think you know the answer -- do not rely on training data
+  for API details, signatures, or configuration options as they are frequently
+  outdated. Always verify against current docs. Prefer this over web search for
+  library documentation and API details.
 ---
 
 # Documentation Lookup

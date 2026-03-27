@@ -2,7 +2,7 @@ import { Command } from "commander";
 import pc from "picocolors";
 import ora from "ora";
 import { select } from "@inquirer/prompts";
-import { mkdir, writeFile } from "fs/promises";
+import { mkdir, readFile, writeFile } from "fs/promises";
 import { dirname, join } from "path";
 import { randomBytes } from "crypto";
 
@@ -11,7 +11,6 @@ import { checkboxWithHover } from "../utils/prompts.js";
 import { trackEvent } from "../utils/tracking.js";
 import { getBaseUrl, downloadSkill } from "../utils/api.js";
 import { installSkillFiles } from "../utils/installer.js";
-import { promptForInstallTargets, getTargetDirs } from "../utils/ide.js";
 import { performLogin } from "./auth.js";
 import { saveTokens, getValidAccessToken } from "../utils/auth.js";
 import {
@@ -23,12 +22,13 @@ import {
   getAgent,
   detectAgents,
 } from "../setup/agents.js";
-import { RULE_CONTENT } from "../setup/templates.js";
+import { getRuleContent } from "../setup/templates.js";
 import {
   readJsonConfig,
   mergeServerEntry,
-  mergeInstructions,
   writeJsonConfig,
+  resolveMcpPath,
+  appendTomlServer,
 } from "../setup/mcp-writer.js";
 
 type Scope = "global" | "project";
@@ -40,6 +40,7 @@ interface SetupOptions {
   universal?: boolean;
   antigravity?: boolean;
   opencode?: boolean;
+  codex?: boolean;
   project?: boolean;
   yes?: boolean;
   apiKey?: string;
@@ -60,6 +61,7 @@ function getSelectedAgents(options: SetupOptions): SetupAgent[] {
   if (options.claude) agents.push("claude");
   if (options.cursor) agents.push("cursor");
   if (options.opencode) agents.push("opencode");
+  if (options.codex) agents.push("codex");
   return agents;
 }
 
@@ -72,6 +74,7 @@ export function registerSetupCommand(program: Command): void {
     .option("--universal", "Set up for Universal (.agents/skills)")
     .option("--antigravity", "Set up for Antigravity (.agent/skills)")
     .option("--opencode", "Set up for OpenCode")
+    .option("--codex", "Set up for Codex")
     .option("--mcp", "Set up MCP server mode")
     .option("--cli", "Set up CLI + Skills mode (no MCP server)")
     .option("-p, --project", "Configure for current project instead of globally")
@@ -171,9 +174,14 @@ async function resolveCliAuth(apiKey?: string): Promise<void> {
 
 async function isAlreadyConfigured(agentName: SetupAgent, scope: Scope): Promise<boolean> {
   const agent = getAgent(agentName);
-  const mcpPath =
+  const baseMcpPath =
     scope === "global" ? agent.mcp.globalPath : join(process.cwd(), agent.mcp.projectPath);
+  const mcpPath = await resolveMcpPath(baseMcpPath);
   try {
+    if (mcpPath.endsWith(".toml")) {
+      const { readTomlServerExists } = await import("../setup/mcp-writer.js");
+      return readTomlServerExists(mcpPath, "context7");
+    }
     const existing = await readJsonConfig(mcpPath);
     const section = (existing[agent.mcp.configKey] as Record<string, unknown> | undefined) ?? {};
     return "context7" in section;
@@ -199,10 +207,7 @@ async function promptAgents(scope: Scope, mode: SetupMode): Promise<SetupAgent[]
     return null;
   }
 
-  const message =
-    mode === "cli"
-      ? "Install find-docs skill for which agents?"
-      : "Which agents do you want to set up?";
+  const message = "Which agents do you want to set up?";
 
   try {
     return await checkboxWithHover(
@@ -240,6 +245,51 @@ async function resolveAgents(
   return selected;
 }
 
+/** Install a rule for an agent, handling both "file" (standalone) and "append" (AGENTS.md) types. */
+async function installRule(
+  agentName: SetupAgent,
+  mode: SetupMode,
+  scope: Scope
+): Promise<{ status: string; path: string }> {
+  const agent = getAgent(agentName);
+  const rule = agent.rule;
+  const content = await getRuleContent(mode, agentName);
+
+  if (rule.kind === "file") {
+    const ruleDir =
+      scope === "global" ? rule.dir("global") : join(process.cwd(), rule.dir("project"));
+    const rulePath = join(ruleDir, rule.filename);
+    await mkdir(dirname(rulePath), { recursive: true });
+    await writeFile(rulePath, content, "utf-8");
+    return { status: "installed", path: rulePath };
+  }
+
+  const filePath =
+    scope === "global" ? rule.file("global") : join(process.cwd(), rule.file("project"));
+  const escapedMarker = rule.sectionMarker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const section = `${rule.sectionMarker}\n${content}${rule.sectionMarker}`;
+
+  let existing = "";
+  try {
+    existing = await readFile(filePath, "utf-8");
+  } catch {
+    // File doesn't exist yet
+  }
+
+  if (existing.includes(rule.sectionMarker)) {
+    const regex = new RegExp(`${escapedMarker}\\n[\\s\\S]*?${escapedMarker}`);
+    const updated = existing.replace(regex, section);
+    await writeFile(filePath, updated, "utf-8");
+    return { status: "updated", path: filePath };
+  }
+
+  const separator =
+    existing.length > 0 && !existing.endsWith("\n") ? "\n\n" : existing.length > 0 ? "\n" : "";
+  await mkdir(dirname(filePath), { recursive: true });
+  await writeFile(filePath, existing + separator + section + "\n", "utf-8");
+  return { status: "installed", path: filePath };
+}
+
 async function setupAgent(
   agentName: SetupAgent,
   auth: AuthOptions,
@@ -255,48 +305,51 @@ async function setupAgent(
 }> {
   const agent = getAgent(agentName);
 
-  const mcpPath =
+  const baseMcpPath =
     scope === "global" ? agent.mcp.globalPath : join(process.cwd(), agent.mcp.projectPath);
+  const mcpPath = await resolveMcpPath(baseMcpPath);
 
   let mcpStatus: string;
   try {
-    const existing = await readJsonConfig(mcpPath);
-    const { config, alreadyExists } = mergeServerEntry(
-      existing,
-      agent.mcp.configKey,
-      "context7",
-      agent.mcp.buildEntry(auth)
-    );
-
-    if (alreadyExists) {
-      mcpStatus = "already configured";
+    if (mcpPath.endsWith(".toml")) {
+      const { alreadyExists } = await appendTomlServer(
+        mcpPath,
+        "context7",
+        agent.mcp.buildEntry(auth)
+      );
+      mcpStatus = alreadyExists
+        ? "already configured"
+        : `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
     } else {
-      mcpStatus = `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
-    }
-
-    const finalConfig = agent.rule.instructionsGlob
-      ? mergeInstructions(config, agent.rule.instructionsGlob(scope))
-      : config;
-
-    if (finalConfig !== existing) {
-      await writeJsonConfig(mcpPath, finalConfig);
+      const existing = await readJsonConfig(mcpPath);
+      const { config, alreadyExists } = mergeServerEntry(
+        existing,
+        agent.mcp.configKey,
+        "context7",
+        agent.mcp.buildEntry(auth)
+      );
+      if (alreadyExists) {
+        mcpStatus = "already configured";
+      } else {
+        mcpStatus = `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
+      }
+      if (config !== existing) {
+        await writeJsonConfig(mcpPath, config);
+      }
     }
   } catch (err) {
     mcpStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
   }
 
-  const rulePath =
-    scope === "global"
-      ? join(agent.rule.dir("global"), agent.rule.filename)
-      : join(process.cwd(), agent.rule.dir("project"), agent.rule.filename);
-
   let ruleStatus: string;
+  let rulePath: string;
   try {
-    await mkdir(dirname(rulePath), { recursive: true });
-    await writeFile(rulePath, RULE_CONTENT, "utf-8");
-    ruleStatus = "installed";
+    const result = await installRule(agentName, "mcp", scope);
+    ruleStatus = result.status;
+    rulePath = result.path;
   } catch (err) {
     ruleStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
+    rulePath = "";
   }
 
   const skillDir =
@@ -365,14 +418,46 @@ async function setupMcp(agents: SetupAgent[], options: SetupOptions, scope: Scop
   trackEvent("install", { skills: ["/upstash/context7/context7-mcp"], ides: agents });
 }
 
+async function setupCliAgent(
+  agentName: SetupAgent,
+  scope: Scope,
+  downloadData: { files: Array<{ path: string; content: string }> }
+): Promise<{ skillPath: string; skillStatus: string; rulePath: string; ruleStatus: string }> {
+  const agent = getAgent(agentName);
+
+  const skillDir =
+    scope === "global"
+      ? agent.skill.dir("global")
+      : join(process.cwd(), agent.skill.dir("project"));
+  let skillStatus: string;
+  try {
+    await installSkillFiles("find-docs", downloadData.files, skillDir);
+    skillStatus = "installed";
+  } catch (err) {
+    skillStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
+  }
+  const skillPath = join(skillDir, "find-docs");
+
+  let ruleStatus: string;
+  let rulePath: string;
+  try {
+    const result = await installRule(agentName, "cli", scope);
+    ruleStatus = result.status;
+    rulePath = result.path;
+  } catch (err) {
+    ruleStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
+    rulePath = "";
+  }
+
+  return { skillPath, skillStatus, rulePath, ruleStatus };
+}
+
 async function setupCli(options: SetupOptions): Promise<void> {
   await resolveCliAuth(options.apiKey);
 
-  const targets = await promptForInstallTargets({ ...options, global: !options.project }, false);
-  if (!targets) {
-    log.warn("Setup cancelled");
-    return;
-  }
+  const scope: Scope = options.project ? "project" : "global";
+  const agents = await resolveAgents(options, scope, "cli");
+  if (agents.length === 0) return;
 
   log.blank();
   const spinner = ora("Downloading find-docs skill...").start();
@@ -385,32 +470,38 @@ async function setupCli(options: SetupOptions): Promise<void> {
 
   spinner.succeed("Downloaded find-docs skill");
 
-  const targetDirs = getTargetDirs(targets);
-  const installSpinner = ora("Installing find-docs skill...").start();
+  const installSpinner = ora("Installing...").start();
+  const results: Array<{
+    agent: string;
+    skillPath: string;
+    skillStatus: string;
+    rulePath: string;
+    ruleStatus: string;
+  }> = [];
 
-  for (const dir of targetDirs) {
-    installSpinner.text = `Installing to ${dir}...`;
-    await installSkillFiles("find-docs", downloadData.files, dir);
+  for (const agentName of agents) {
+    installSpinner.text = `Setting up ${getAgent(agentName).displayName}...`;
+    const r = await setupCliAgent(agentName, scope, downloadData);
+    results.push({ agent: getAgent(agentName).displayName, ...r });
   }
 
-  installSpinner.stop();
-  log.blank();
-  log.plain(`${pc.green("✔")} Context7 CLI setup complete`);
+  installSpinner.succeed("Context7 CLI setup complete");
 
   log.blank();
-  for (const dir of targetDirs) {
-    log.itemAdd(
-      `find-docs  ${pc.dim("Guides your agent to fetch up-to-date library docs on demand using ctx7 CLI commands")}`
-    );
-    log.plain(`    ${pc.dim(dir)}`);
+  for (const r of results) {
+    log.plain(`  ${pc.bold(r.agent)}`);
+    const skillIcon = r.skillStatus === "installed" ? pc.green("+") : pc.dim("~");
+    log.plain(`    ${skillIcon} Skill ${r.skillStatus}`);
+    log.plain(`      ${pc.dim(r.skillPath)}`);
+    const ruleIcon =
+      r.ruleStatus === "installed" || r.ruleStatus === "updated" ? pc.green("+") : pc.dim("~");
+    log.plain(`    ${ruleIcon} Rule ${r.ruleStatus}`);
+    log.plain(`      ${pc.dim(r.rulePath)}`);
   }
-  log.blank();
-  log.plain(`  ${pc.bold("Next steps")}`);
-  log.plain(`    Ask your agent: ${pc.cyan(`"Use ctx7 CLI to look up React hooks"`)}`);
   log.blank();
 
   trackEvent("setup", { mode: "cli" });
-  trackEvent("install", { skills: ["/upstash/context7/find-docs"], ides: targets.ides });
+  trackEvent("install", { skills: ["/upstash/context7/find-docs"], ides: agents });
 }
 
 async function setupCommand(options: SetupOptions): Promise<void> {
