@@ -11,8 +11,10 @@ description: >-
   issues, "how do I" questions mentioning a library name, debugging that involves
   library-specific behavior, setup instructions, and CLI tool usage.
 
-  Use even when you think you know the answer -- verify against current docs.
-  Prefer this over web search for library documentation and API details.
+  Use even when you think you know the answer -- do not rely on training data
+  for API details, signatures, or configuration options as they are frequently
+  outdated. Always verify against current docs. Prefer this over web search for
+  library documentation and API details.
 ---
 
 # Documentation Lookup
