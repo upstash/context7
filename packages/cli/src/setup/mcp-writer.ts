@@ -113,7 +113,6 @@ export async function appendTomlServer(
   serverName: string,
   entry: Record<string, unknown>
 ): Promise<{ alreadyExists: boolean }> {
-  const alreadyExists = await readTomlServerExists(filePath, serverName);
   const block = buildTomlServerBlock(serverName, entry);
 
   let existing = "";
@@ -121,8 +120,10 @@ export async function appendTomlServer(
     existing = await readFile(filePath, "utf-8");
   } catch {}
 
+  const sectionHeader = `[mcp_servers.${serverName}]`;
+  const alreadyExists = existing.includes(sectionHeader);
+
   if (alreadyExists) {
-    const sectionHeader = `[mcp_servers.${serverName}]`;
     const subPrefix = `[mcp_servers.${serverName}.`;
     const startIdx = existing.indexOf(sectionHeader);
     const rest = existing.slice(startIdx + sectionHeader.length);
@@ -139,8 +140,12 @@ export async function appendTomlServer(
       }
     }
 
-    const before = existing.slice(0, startIdx);
-    const after = existing.slice(startIdx + sectionHeader.length + endOffset);
+    const rawBefore = existing.slice(0, startIdx).replace(/\n+$/, "");
+    const rawAfter = existing
+      .slice(startIdx + sectionHeader.length + endOffset)
+      .replace(/^\n+/, "");
+    const before = rawBefore.length > 0 ? rawBefore + "\n\n" : "";
+    const after = rawAfter.length > 0 ? "\n" + rawAfter : "";
     const content = before + block + after;
     await mkdir(dirname(filePath), { recursive: true });
     await writeFile(filePath, content, "utf-8");

@@ -372,6 +372,24 @@ describe("TOML config", () => {
     expect(content).not.toContain("https://old.com");
     expect(content.match(/\[mcp_servers\.context7\]/g)?.length).toBe(1);
   });
+
+  test("appendTomlServer does not accumulate blank lines on repeated overwrites", async () => {
+    const path = join(tempDir, "config.toml");
+    await writeFile(
+      path,
+      'model = "o3"\n\n[mcp_servers.context7]\nurl = "https://old.com"\n\n[mcp_servers.other]\nurl = "https://other.com"\n'
+    );
+
+    for (let i = 1; i <= 3; i++) {
+      await appendTomlServer(path, "context7", { url: `https://v${i}.com` });
+    }
+
+    const content = await readFile(path, "utf-8");
+    expect(content.match(/\[mcp_servers\.context7\]/g)?.length).toBe(1);
+    expect(content).toContain('url = "https://v3.com"');
+    expect(content).toContain("[mcp_servers.other]");
+    expect(content).not.toContain("\n\n\n");
+  });
 });
 
 describe("AGENTS.md append", () => {
