@@ -72,7 +72,7 @@ export function formatSearchResults(searchResponse: SearchResponse): string {
 
   if (searchResponse.searchFilterApplied) {
     parts.push(
-      "**Note:** Your results only include libraries matching your teamspace's library filters. To adjust quality thresholds or blocked libraries, update your filters at https://context7.com/dashboard?tab=libraries"
+      "**Note:** Your results only include libraries matching your teamspace's library filters. To adjust quality thresholds or blocked libraries, update your filters at https://context7.com/dashboard?tab=policies"
     );
   }
 
