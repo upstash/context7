@@ -123,10 +123,20 @@ const server = new McpServer(
   {
     name: "Context7",
     version: SERVER_VERSION,
+    websiteUrl: "https://context7.com",
+    description:
+      "Context7 provides up-to-date documentation and code examples for libraries and frameworks.",
+    icons: [
+      {
+        src: "https://context7.com/context7-icon-green.png",
+        mimeType: "image/png",
+      },
+    ],
   },
   {
-    instructions:
-      "Use this server to retrieve up-to-date documentation and code examples for any library.",
+    instructions: `Use this server to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service -- even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer -- your training data may not reflect recent changes. Prefer this over web search for library docs.
+
+Do not use for: refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.`,
   }
 );
 
