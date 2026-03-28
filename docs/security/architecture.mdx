@@ -1,0 +1,149 @@
+---
+title: Privacy-First Architecture
+sidebarTitle: Architecture
+---
+
+How Context7 handles privacy, retrieval scope, and data.
+
+## Query Privacy
+
+**Your original prompts and code stay with your AI assistant.**
+
+When you use Context7 through an MCP client, the AI assistant (not the user directly) formulates search queries to retrieve relevant documentation. Here is what happens:
+
+1. Your prompt is processed locally by your AI assistant (e.g., Cursor, Claude Code)
+2. The AI assistant formulates a search query and library name based on your request
+3. Only these formulated queries are sent to the Context7 API — your full prompt, source code, and conversation history are never transmitted
+4. The MCP tool descriptions explicitly instruct the AI assistant to strip sensitive information (API keys, passwords, credentials, personal data, and proprietary code) from queries before sending
+
+### What is sent to the Context7 API
+
+- `query` — a search query formulated by the MCP client (not your original prompt)
+- `libraryName` or `libraryId` — the library to look up
+- API key (if provided, for authentication)
+- MCP client name and version (e.g., IDE info, for analytics)
+- Transport type (`stdio` or `http`)
+- Client IP address, encrypted with AES-256-CBC (HTTP transport only, for rate limiting)
+
+<Note>
+  The MCP client formulates search queries on your behalf and is instructed not to include
+  sensitive or confidential information. Your full prompts, code, and conversation context
+  remain with your AI assistant and are never sent to Context7.
+</Note>
+
+### Use of MCP Queries
+
+The search queries formulated by the MCP client (not your original prompts) are used server-side in two ways:
+
+**Documentation Reranking**
+
+MCP-formulated queries are passed to LLMs to rerank and select the most relevant documentation for your request. Context7 uses well-known, trusted LLM providers for this purpose — including **OpenAI**, **Google Gemini**, and **Anthropic**.
+
+**Benchmarking and Quality Improvement**
+
+MCP-formulated queries are anonymously stored and used to benchmark retrieval accuracy and improve the documentation matching pipeline over time.
+
+### Enterprise Controls
+
+- On-premise Enterprise plans can use their own LLM provider for code extraction and private library ranking
+- On-premise Enterprise plans can disable public documentation usage, limiting context retrieval to privately indexed documentation only
+- Enterprise plans can disable query storage for benchmarking — however, this may affect the quality of context retrieval over time
+
+Contact our sales team at [context7.com](https://context7.com/contact) for Enterprise and on-premise plan details.
+
+## Customizing What Is Shared
+
+The Context7 MCP server is [open source](https://github.com/upstash/context7). If you want full control over what is sent as the `query` parameter, you can:
+
+1. Fork the [Context7 MCP repository](https://github.com/upstash/context7)
+2. Edit the tool input descriptions in [`packages/mcp/src/index.ts`](https://github.com/upstash/context7/blob/master/packages/mcp/src/index.ts) — these descriptions instruct the AI assistant on how to formulate the query
+3. Build and run your custom MCP server locally
+
+<Warning>
+  The `query` parameter is used server-side for LLM-based reranking of documentation results. Modifying, redacting, or omitting the query can significantly reduce the relevance and quality of returned documentation.
+</Warning>
+
+## Customizing What Is Retrieved
+
+You can control retrieval scope from the **Policies** tab on your teamspace dashboard.
+
+### Source Type Access
+
+Toggle which types of documentation sources are accessible to your teamspace:
+
+- **Public Repositories** — open-source repositories from GitHub, GitLab, and Bitbucket
+- **Websites** — documentation crawled from websites
+- **llms.txt** — documentation from llms.txt files
+- **Confluence** — Atlassian Confluence workspace pages and documentation
+- **Uploaded Files** — manually uploaded OpenAPI specifications
+- **Non-Verified Libraries** — libraries that have not been verified by their owners
+- **Private Sources** — private sources connected to this teamspace
+
+<Frame>
+![Source Type Access card showing toggles for each documentation source type](/images/dashboard/source-type-access.png)
+</Frame>
+
+### Public Repository Filters
+
+Restrict which public repositories are accessible to your teamspace. You can choose between two modes:
+
+- **Filter by Quality** — set criteria like minimum stars, minimum trust score, and recency or block specific libraries or organizations from appearing in results
+- **Select Manually** — pick specific libraries or organizations
+
+<Frame>
+![Public Repository Filters card showing quality filters and blocked libraries](/images/dashboard/public-repository-filters.png)
+</Frame>
+
+## Data Handling
+
+### Data Storage
+
+**Context7 does not store your source files.**
+
+- We only index and store **documentation** and **code examples** from repositories
+- Your code, and source files are not stored or shared
+- All indexed content is stored in a secure vector database optimized for retrieval
+
+**What we store:**
+
+- Library documentation
+- Code examples from documentation
+- Metadata about indexed libraries
+- Queries formulated by the MCP client
+
+**What we don't store:**
+
+- Your source code
+- Your original prompts or conversations
+- Your conversations with AI assistants
+
+
+### Privacy by Design
+
+- **Data Minimization**: We only collect and store what's necessary
+- **Purpose Limitation**: Documentation data is used only for documentation retrieval
+- **Storage Limitation**: Automated cleanup of outdated data
+- **Transparency**: Clear documentation of what we collect and why
+
+### GDPR Compliance
+
+Context7 provides:
+
+- The right to access your data
+- The right to delete your data
+- Data portability options
+- Clear consent mechanisms
+- Privacy-first data processing
+
+### Data Residency
+
+All indexed documentation and metadata are stored within Upstash's SOC 2 compliant infrastructure in the United States and the European Union. 
+Cross-border data transfers comply with the EU General Data Protection Regulation (GDPR) and the EU-U.S. Data Privacy Framework (DPF), and enterprise customers can request region-specific data residency to meet local regulatory requirements.
+
+
+### Data Retention
+
+- **Library Documentation**: Retained while the library is active and public
+- **API Logs**: Retained for 30 days for debugging and analytics
+- **User Data**: Retained according to your account status
+- **Deleted Data**: Permanently removed within 30 days of deletion request
