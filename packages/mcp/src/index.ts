@@ -18,6 +18,7 @@ const DEFAULT_PORT = 3000;
 
 // Parse CLI arguments using commander
 const program = new Command()
+  .version(SERVER_VERSION, "-v, --version", "output the current version")
   .option("--transport <stdio|http>", "transport type", "stdio")
   .option("--port <number>", "port for HTTP transport", DEFAULT_PORT.toString())
   .option("--api-key <key>", "API key for authentication (or set CONTEXT7_API_KEY env var)")
