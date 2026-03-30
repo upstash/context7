@@ -58,6 +58,10 @@ To configure manually, use the Context7 server URL `https://mcp.context7.com/mcp
 
 **[Manual Installation / Other Clients →](https://context7.com/docs/resources/all-clients)**
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/upstash-context7).
+
 ## Important Tips
 
 ### Use Library Id
