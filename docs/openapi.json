@@ -803,7 +803,7 @@
                   "$ref": "#/components/schemas/PolicyResponse"
                 },
                 "example": {
-                  "source_types": {
+                  "sourceTypes": {
                     "public_repos": { "enabled": true },
                     "private_sources": { "enabled": true },
                     "confluence": { "enabled": false },
@@ -811,20 +811,20 @@
                     "websites": { "enabled": true },
                     "llmstxt": { "enabled": true }
                   },
-                  "library_filters": {
+                  "libraryFilters": {
                     "mode": "quality",
                     "quality": {
-                      "require_verified": false,
-                      "min_trust_score": null,
-                      "max_age_days": 365,
-                      "blocked_libraries": ["/org/repo"],
-                      "repo_filters": { "min_stars": 100 }
+                      "requireVerified": false,
+                      "minTrustScore": null,
+                      "maxAgeDays": 365,
+                      "blockedLibraries": ["/org/repo"],
+                      "repoFilters": { "minStars": 100 }
                     },
                     "select": {
-                      "allowed_libraries": []
+                      "allowedLibraries": []
                     }
                   },
-                  "accessible_library_count": 4521
+                  "accessibleLibraryCount": 4521
                 }
               }
             }
@@ -853,7 +853,7 @@
       },
       "patch": {
         "summary": "Update teamspace policies",
-        "description": "Incrementally update policy configuration for the teamspace associated with the API key. Only the fields you include in the request body are modified — omitted fields remain unchanged. For source types, use `enable`/`disable` arrays (both allowed if no overlap). For library lists, use `add`/`remove` objects or `clear: true` to remove all. Requires owner or admin role.",
+        "description": "Incrementally update policy configuration for the teamspace associated with the API key. Only the fields you include in the request body are modified — omitted fields remain unchanged. For source types, use `enable`/`disable` arrays (both allowed if no overlap). For library lists, use `add`/`remove` objects or `clear: true` to remove all. Requires owner or admin role. All field names use camelCase.",
         "operationId": "updatePolicies",
         "tags": ["Policies"],
         "requestBody": {
@@ -867,7 +867,7 @@
                 "disableSourceType": {
                   "summary": "Disable a source type",
                   "value": {
-                    "source_types": {
+                    "sourceTypes": {
                       "disable": ["websites"]
                     }
                   }
@@ -875,11 +875,11 @@
                 "setQualityFilters": {
                   "summary": "Set quality filter thresholds",
                   "value": {
-                    "library_filters": {
+                    "libraryFilters": {
                       "quality": {
-                        "require_verified": true,
-                        "min_trust_score": 4,
-                        "repo_filters": { "min_stars": 1000 }
+                        "requireVerified": true,
+                        "minTrustScore": 4,
+                        "repoFilters": { "minStars": 1000 }
                       }
                     }
                   }
@@ -887,12 +887,12 @@
                 "setWebsiteFilters": {
                   "summary": "Set website quality filters",
                   "value": {
-                    "library_filters": {
+                    "libraryFilters": {
                       "quality": {
-                        "website_filters": {
-                          "min_backlinks": 100,
-                          "min_referring_domains": 10,
-                          "min_organic_traffic": 1000
+                        "websiteFilters": {
+                          "minBacklinks": 100,
+                          "minReferringDomains": 10,
+                          "minOrganicTraffic": 1000
                         }
                       }
                     }
@@ -901,9 +901,9 @@
                 "blockLibrary": {
                   "summary": "Add a library to the blocked list",
                   "value": {
-                    "library_filters": {
+                    "libraryFilters": {
                       "quality": {
-                        "blocked_libraries": { "add": ["/org/repo"] }
+                        "blockedLibraries": { "add": ["/org/repo"] }
                       }
                     }
                   }
@@ -911,9 +911,9 @@
                 "clearAllowedLibraries": {
                   "summary": "Clear all allowed libraries",
                   "value": {
-                    "library_filters": {
+                    "libraryFilters": {
                       "select": {
-                        "allowed_libraries": { "clear": true }
+                        "allowedLibraries": { "clear": true }
                       }
                     }
                   }
@@ -921,21 +921,21 @@
                 "combined": {
                   "summary": "Multiple changes in one request",
                   "value": {
-                    "source_types": {
+                    "sourceTypes": {
                       "enable": ["websites"],
                       "disable": ["confluence"]
                     },
-                    "library_filters": {
+                    "libraryFilters": {
                       "mode": "quality",
                       "quality": {
-                        "min_trust_score": 4,
-                        "max_age_days": 365,
-                        "blocked_libraries": {
+                        "minTrustScore": 4,
+                        "maxAgeDays": 365,
+                        "blockedLibraries": {
                           "add": ["/org/repo"],
                           "remove": ["/org/old-repo"]
                         },
-                        "repo_filters": { "min_stars": 100 },
-                        "website_filters": { "min_backlinks": 100 }
+                        "repoFilters": { "minStars": 100 },
+                        "websiteFilters": { "minBacklinks": 100 }
                       }
                     }
                   }
@@ -1434,7 +1434,7 @@
         "type": "object",
         "description": "Complete teamspace policy configuration",
         "properties": {
-          "source_types": {
+          "sourceTypes": {
             "type": "object",
             "description": "Access settings for each documentation source type",
             "properties": {
@@ -1447,7 +1447,7 @@
             },
             "required": ["public_repos", "private_sources", "confluence", "uploaded_files", "websites", "llmstxt"]
           },
-          "library_filters": {
+          "libraryFilters": {
             "type": "object",
             "description": "Library access filters. Mode determines which sub-object is active.",
             "properties": {
@@ -1461,48 +1461,48 @@
                 "type": "object",
                 "description": "Quality-mode settings (active when mode is 'quality')",
                 "properties": {
-                  "require_verified": { "type": "boolean", "description": "Restrict to verified libraries only" },
-                  "min_trust_score": { "type": "integer", "nullable": true, "description": "Minimum trust score, 0-10" },
-                  "max_age_days": { "type": "integer", "nullable": true, "description": "Maximum days since last update" },
-                  "blocked_libraries": { "type": "array", "items": { "type": "string" }, "description": "Libraries excluded from results" },
-                  "repo_filters": {
+                  "requireVerified": { "type": "boolean", "description": "Restrict to verified libraries only" },
+                  "minTrustScore": { "type": "integer", "nullable": true, "description": "Minimum trust score, 0-10" },
+                  "maxAgeDays": { "type": "integer", "nullable": true, "description": "Maximum days since last update" },
+                  "blockedLibraries": { "type": "array", "items": { "type": "string" }, "description": "Libraries excluded from results" },
+                  "repoFilters": {
                     "type": "object",
                     "description": "Repo-specific quality filters",
                     "properties": {
-                      "min_stars": { "type": "integer", "nullable": true, "description": "Minimum GitHub stars required" }
+                      "minStars": { "type": "integer", "nullable": true, "description": "Minimum GitHub stars required" }
                     },
-                    "required": ["min_stars"]
+                    "required": ["minStars"]
                   },
-                  "website_filters": {
+                  "websiteFilters": {
                     "type": "object",
                     "description": "Website-specific quality filters",
                     "properties": {
-                      "min_backlinks": { "type": "integer", "nullable": true, "description": "Minimum number of backlinks required" },
-                      "min_referring_domains": { "type": "integer", "nullable": true, "description": "Minimum number of referring domains required" },
-                      "min_organic_traffic": { "type": "integer", "nullable": true, "description": "Minimum monthly organic traffic required" }
+                      "minBacklinks": { "type": "integer", "nullable": true, "description": "Minimum number of backlinks required" },
+                      "minReferringDomains": { "type": "integer", "nullable": true, "description": "Minimum number of referring domains required" },
+                      "minOrganicTraffic": { "type": "integer", "nullable": true, "description": "Minimum monthly organic traffic required" }
                     },
-                    "required": ["min_backlinks", "min_referring_domains", "min_organic_traffic"]
+                    "required": ["minBacklinks", "minReferringDomains", "minOrganicTraffic"]
                   }
                 },
-                "required": ["require_verified", "min_trust_score", "max_age_days", "blocked_libraries", "repo_filters", "website_filters"]
+                "required": ["requireVerified", "minTrustScore", "maxAgeDays", "blockedLibraries", "repoFilters", "websiteFilters"]
               },
               "select": {
                 "type": "object",
                 "description": "Select-mode settings (active when mode is 'select')",
                 "properties": {
-                  "allowed_libraries": { "type": "array", "items": { "type": "string" }, "description": "Libraries explicitly allowed" }
+                  "allowedLibraries": { "type": "array", "items": { "type": "string" }, "description": "Libraries explicitly allowed" }
                 },
-                "required": ["allowed_libraries"]
+                "required": ["allowedLibraries"]
               }
             },
             "required": ["mode", "quality", "select"]
           },
-          "accessible_library_count": {
+          "accessibleLibraryCount": {
             "type": "integer",
             "description": "Number of public libraries currently accessible under these filters"
           }
         },
-        "required": ["source_types", "library_filters", "accessible_library_count"]
+        "required": ["sourceTypes", "libraryFilters", "accessibleLibraryCount"]
       },
       "ListOperation": {
         "type": "object",
@@ -1526,10 +1526,10 @@
       },
       "PatchPoliciesRequest": {
         "type": "object",
-        "description": "Incremental policy update. All fields are optional — only provided fields are modified. At least one of 'source_types' or 'library_filters' must be provided.",
+        "description": "Incremental policy update. All fields are optional — only provided fields are modified. At least one of 'sourceTypes' or 'libraryFilters' must be provided.",
         "minProperties": 1,
         "properties": {
-          "source_types": {
+          "sourceTypes": {
             "type": "object",
             "description": "Enable or disable specific source types. Both can be provided in one request, but the same type cannot appear in both arrays.",
             "properties": {
@@ -1551,7 +1551,7 @@
               }
             }
           },
-          "library_filters": {
+          "libraryFilters": {
             "type": "object",
             "description": "Update library access filters.",
             "properties": {
@@ -1565,24 +1565,24 @@
                 "type": "object",
                 "description": "Update quality-mode settings.",
                 "properties": {
-                  "require_verified": { "type": "boolean", "description": "Restrict to verified libraries only" },
-                  "min_trust_score": { "type": "integer", "nullable": true, "minimum": 0, "maximum": 10, "description": "Minimum trust score, 0-10 (null to clear)" },
-                  "max_age_days": { "type": "integer", "nullable": true, "minimum": 1, "description": "Maximum age in days (null to clear)" },
-                  "blocked_libraries": { "$ref": "#/components/schemas/ListOperation" },
-                  "repo_filters": {
+                  "requireVerified": { "type": "boolean", "description": "Restrict to verified libraries only" },
+                  "minTrustScore": { "type": "integer", "nullable": true, "minimum": 0, "maximum": 10, "description": "Minimum trust score, 0-10 (null to clear)" },
+                  "maxAgeDays": { "type": "integer", "nullable": true, "minimum": 1, "description": "Maximum age in days (null to clear)" },
+                  "blockedLibraries": { "$ref": "#/components/schemas/ListOperation" },
+                  "repoFilters": {
                     "type": "object",
                     "description": "Update repo-specific quality filters.",
                     "properties": {
-                      "min_stars": { "type": "integer", "nullable": true, "minimum": 0, "description": "Minimum stars threshold (null to clear)" }
+                      "minStars": { "type": "integer", "nullable": true, "minimum": 0, "description": "Minimum stars threshold (null to clear)" }
                     }
                   },
-                  "website_filters": {
+                  "websiteFilters": {
                     "type": "object",
                     "description": "Update website-specific quality filters.",
                     "properties": {
-                      "min_backlinks": { "type": "integer", "nullable": true, "minimum": 0, "description": "Minimum backlinks threshold (null to clear)" },
-                      "min_referring_domains": { "type": "integer", "nullable": true, "minimum": 0, "description": "Minimum referring domains threshold (null to clear)" },
-                      "min_organic_traffic": { "type": "integer", "nullable": true, "minimum": 0, "description": "Minimum organic traffic threshold (null to clear)" }
+                      "minBacklinks": { "type": "integer", "nullable": true, "minimum": 0, "description": "Minimum backlinks threshold (null to clear)" },
+                      "minReferringDomains": { "type": "integer", "nullable": true, "minimum": 0, "description": "Minimum referring domains threshold (null to clear)" },
+                      "minOrganicTraffic": { "type": "integer", "nullable": true, "minimum": 0, "description": "Minimum organic traffic threshold (null to clear)" }
                     }
                   }
                 }
@@ -1591,7 +1591,7 @@
                 "type": "object",
                 "description": "Update select-mode settings.",
                 "properties": {
-                  "allowed_libraries": { "$ref": "#/components/schemas/ListOperation" }
+                  "allowedLibraries": { "$ref": "#/components/schemas/ListOperation" }
                 }
               }
             }
