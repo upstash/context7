@@ -15,8 +15,7 @@ import { MODE_CONFIGS, PROJECT_ROOT } from "./modes.js";
 
 const EVAL_DIR = resolve(PROJECT_ROOT, "skills/find-docs-workspace");
 export const EVAL_SET_PATH = resolve(EVAL_DIR, "trigger-eval.json");
-export const SKILL_SNAPSHOT = resolve(EVAL_DIR, "skill-snapshot/SKILL.md");
-export const SKILL_SNAPSHOT_ORIGINAL = resolve(EVAL_DIR, "skill-snapshot/SKILL.md.original");
+export const SKILL_SOURCE = resolve(PROJECT_ROOT, "skills/find-docs/SKILL.md");
 export const RESULTS_DIR = resolve(EVAL_DIR, "orchestrator-results");
 
 const CLAUDE_DIR = resolve(homedir(), ".claude");
@@ -225,7 +224,7 @@ function enableRule(content: string): void {
   writeFileSync(RULE_FILE, `---\nalwaysApply: true\n---\n\n${content}`);
 }
 
-function enableSkill(opts?: { snapshot?: string; content?: string }): void {
+function enableSkill(opts?: { content?: string }): void {
   for (const skillPath of [SKILL_DEST_GLOBAL, SKILL_DEST_PROJECT, SKILL_DEST_AGENTS]) {
     const parent = dirname(skillPath);
     try {
@@ -237,8 +236,7 @@ function enableSkill(opts?: { snapshot?: string; content?: string }): void {
     if (opts?.content) {
       writeFileSync(skillPath, opts.content);
     } else {
-      const src = opts?.snapshot === "original" ? SKILL_SNAPSHOT_ORIGINAL : SKILL_SNAPSHOT;
-      copyFileSync(src, skillPath);
+      copyFileSync(SKILL_SOURCE, skillPath);
     }
   }
 }
@@ -263,7 +261,7 @@ export async function setupMode(mode: string): Promise<void> {
     enableRule(cfg.ruleContent!);
   }
   if (cfg.skill) {
-    enableSkill({ snapshot: cfg.skillSnapshot, content: cfg.skillContent });
+    enableSkill({ content: cfg.skillContent });
   }
   if (cfg.claudeMd) {
     enableClaudeMd(cfg.claudeMdContent!);

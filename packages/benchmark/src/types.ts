@@ -10,7 +10,6 @@ export interface ModeConfig {
   detection: DetectionMethod;
   description: string;
   useLocalMcp?: boolean;
-  skillSnapshot?: "original";
   skillContent?: string;
 }
 
