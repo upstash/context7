@@ -111,7 +111,24 @@ async function main(): Promise<void> {
   console.log("FINAL COMPARISON");
   console.log(`${"=".repeat(85)}`);
 
-  if (options.compare) {
+  const hasVersus = Object.keys(allResults).some((k) => MODE_CONFIGS[k]?.detection === "versus");
+
+  if (hasVersus) {
+    console.log(
+      `${"Mode".padEnd(22)} ${"ctx7".padEnd(8)} ${"nia".padEnd(8)} ${"both".padEnd(8)} ${"neither".padEnd(10)} ${"total".padEnd(6)}`
+    );
+    console.log("-".repeat(70));
+    for (const [modeName, s] of Object.entries(allResults)) {
+      const r = s.results ?? [];
+      const ctx7 = r.filter((x) => x.provider === "context7").length;
+      const nia = r.filter((x) => x.provider === "nia").length;
+      const both = r.filter((x) => x.provider === "both").length;
+      const neither = r.filter((x) => x.provider === "neither").length;
+      console.log(
+        `${modeName.padEnd(22)} ${String(ctx7).padEnd(8)} ${String(nia).padEnd(8)} ${String(both).padEnd(8)} ${String(neither).padEnd(10)} ${String(r.length).padEnd(6)}`
+      );
+    }
+  } else if (options.compare) {
     console.log(
       `${"Mode".padEnd(22)} ${"Recall (clean)".padEnd(18)} ${"Recall (ctx)".padEnd(18)} ${"Delta".padEnd(10)} ${"FP".padEnd(5)}`
     );

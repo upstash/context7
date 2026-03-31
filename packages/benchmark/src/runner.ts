@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { MODE_CONFIGS, PROJECT_ROOT, CONTEXT_PREFIXES } from "./modes.js";
 import { setupMode, teardown, EVAL_SET_PATH } from "./environment.js";
-import { detectTrigger, extractToolChain } from "./detection.js";
+import { detectTrigger, detectVersusProvider, extractToolChain } from "./detection.js";
 import type { EvalItem, EvalResult, QueryResult, ModeSummary } from "./types.js";
 
 function runQuery(
@@ -75,7 +75,8 @@ function runQuery(
         const detection = MODE_CONFIGS[mode].detection;
         const triggered = detectTrigger(detection, output);
         const firstTool = extractToolChain(output);
-        resolve({ triggered, firstTool, elapsed: roundedElapsed, error: null });
+        const provider = detection === "versus" ? detectVersusProvider(output) : undefined;
+        resolve({ triggered, firstTool, elapsed: roundedElapsed, error: null, provider });
       }
     );
   });
@@ -123,14 +124,16 @@ export async function runMode(
       firstTool: res.firstTool,
       elapsed: res.elapsed,
       error: res.error,
+      provider: res.provider,
     };
 
     completed++;
     const indicator = passed ? "+" : "X";
     const status = passed ? "PASS" : "FAIL";
     const toolInfo = res.firstTool ? ` [${res.firstTool}]` : " [no tool]";
+    const providerInfo = res.provider ? ` (${res.provider})` : "";
     console.log(
-      `  [${indicator}] ${completed}/${total} ${status}${toolInfo}: ${item.query.slice(0, 60)}`
+      `  [${indicator}] ${completed}/${total} ${status}${toolInfo}${providerInfo}: ${item.query.slice(0, 60)}`
     );
   }
 
@@ -190,21 +193,40 @@ export async function runMode(
   console.log(`  FP:        ${falsePos}/${shouldNot.length}`);
   console.log(`  Time:      ${Math.round(elapsed)}s`);
 
-  console.log(`\n  Should trigger:`);
-  for (const r of results) {
-    if (r.shouldTrigger) {
-      const mark = r.triggered ? "+" : "-";
-      const tool = r.firstTool ? ` [${r.firstTool}]` : "";
-      console.log(`    [${mark}]${tool} ${r.query.slice(0, 75)}`);
-    }
-  }
+  const isVersus = MODE_CONFIGS[mode].detection === "versus";
 
-  console.log(`\n  Should NOT trigger:`);
-  for (const r of results) {
-    if (!r.shouldTrigger) {
-      const mark = r.triggered ? "!" : ".";
+  if (isVersus) {
+    const ctx7Count = results.filter((r) => r.provider === "context7").length;
+    const niaCount = results.filter((r) => r.provider === "nia").length;
+    const bothCount = results.filter((r) => r.provider === "both").length;
+    const neitherCount = results.filter((r) => r.provider === "neither").length;
+    console.log(`\n  Provider breakdown:`);
+    console.log(
+      `    context7: ${ctx7Count}  nia: ${niaCount}  both: ${bothCount}  neither: ${neitherCount}`
+    );
+
+    console.log(`\n  Per-query providers:`);
+    for (const r of results) {
       const tool = r.firstTool ? ` [${r.firstTool}]` : "";
-      console.log(`    [${mark}]${tool} ${r.query.slice(0, 75)}`);
+      console.log(`    [${r.provider ?? "-"}]${tool} ${r.query.slice(0, 70)}`);
+    }
+  } else {
+    console.log(`\n  Should trigger:`);
+    for (const r of results) {
+      if (r.shouldTrigger) {
+        const mark = r.triggered ? "+" : "-";
+        const tool = r.firstTool ? ` [${r.firstTool}]` : "";
+        console.log(`    [${mark}]${tool} ${r.query.slice(0, 75)}`);
+      }
+    }
+
+    console.log(`\n  Should NOT trigger:`);
+    for (const r of results) {
+      if (!r.shouldTrigger) {
+        const mark = r.triggered ? "!" : ".";
+        const tool = r.firstTool ? ` [${r.firstTool}]` : "";
+        console.log(`    [${mark}]${tool} ${r.query.slice(0, 75)}`);
+      }
     }
   }
 

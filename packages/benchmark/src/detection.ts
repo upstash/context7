@@ -13,6 +13,31 @@ interface StreamEvent {
   };
 }
 
+const NIA_TOOLS = new Set([
+  "search_documentation",
+  "search_codebase",
+  "index",
+  "regex_search",
+  "manage_resource",
+  "get_github_file_tree",
+  "nia_web_search",
+  "nia_deep_research_agent",
+  "read_source_content",
+]);
+
+function isContext7Tool(name: string): boolean {
+  return (
+    name.includes("resolve-library-id") ||
+    name.includes("resolve_library_id") ||
+    name.includes("query-docs") ||
+    name.includes("query_docs")
+  );
+}
+
+function isNiaTool(name: string): boolean {
+  return NIA_TOOLS.has(name) || name.startsWith("mcp__nia__");
+}
+
 export function detectTrigger(detection: DetectionMethod, stdout: string): boolean {
   for (const line of stdout.split("\n")) {
     const trimmed = line.trim();
@@ -33,10 +58,13 @@ export function detectTrigger(detection: DetectionMethod, stdout: string): boole
       const name = block.name ?? "";
       const toolInput = block.input ?? {};
 
-      if (detection === "mcp") {
-        if (name.includes("resolve-library-id") || name.includes("resolve_library_id")) return true;
-        if (name.includes("query-docs") || name.includes("query_docs")) return true;
-      } else if (detection === "skill") {
+      if (detection === "mcp" || detection === "versus") {
+        if (isContext7Tool(name)) return true;
+      }
+      if (detection === "nia") {
+        if (isNiaTool(name)) return true;
+      }
+      if (detection === "skill") {
         if (name === "Skill") {
           const inputStr = JSON.stringify(toolInput);
           if (inputStr.includes("find-docs")) return true;
@@ -55,6 +83,37 @@ export function detectTrigger(detection: DetectionMethod, stdout: string): boole
   }
 
   return false;
+}
+
+export function detectVersusProvider(stdout: string): "context7" | "nia" | "both" | "neither" {
+  let ctx7 = false;
+  let nia = false;
+
+  for (const line of stdout.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    let event: StreamEvent;
+    try {
+      event = JSON.parse(trimmed);
+    } catch {
+      continue;
+    }
+
+    if (event.type !== "assistant") continue;
+
+    for (const block of event.message?.content ?? []) {
+      if (block.type !== "tool_use") continue;
+      const name = block.name ?? "";
+      if (isContext7Tool(name)) ctx7 = true;
+      if (isNiaTool(name)) nia = true;
+    }
+  }
+
+  if (ctx7 && nia) return "both";
+  if (ctx7) return "context7";
+  if (nia) return "nia";
+  return "neither";
 }
 
 export function extractToolChain(stdout: string): string | null {
@@ -103,10 +162,11 @@ export function extractToolChain(stdout: string): string | null {
       } else if (name === "Bash") {
         const cmd = String(inp.command ?? "");
         label = cmd.includes("ctx7") ? "Bash(ctx7)" : "Bash";
-      } else if (name.includes("resolve-library-id") || name.includes("resolve_library_id")) {
-        label = "MCP:resolve";
-      } else if (name.includes("query-docs") || name.includes("query_docs")) {
-        label = "MCP:query";
+      } else if (isContext7Tool(name)) {
+        label = name.includes("resolve") ? "ctx7:resolve" : "ctx7:query";
+      } else if (isNiaTool(name)) {
+        const short = name.replace("mcp__nia__", "");
+        label = `nia:${short}`;
       } else {
         label = name;
       }

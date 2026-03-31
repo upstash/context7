@@ -1,4 +1,4 @@
-export type DetectionMethod = "mcp" | "skill" | "cli";
+export type DetectionMethod = "mcp" | "skill" | "cli" | "versus" | "nia";
 
 export interface ModeConfig {
   mcp: boolean;
@@ -11,6 +11,8 @@ export interface ModeConfig {
   description: string;
   useLocalMcp?: boolean;
   skillContent?: string;
+  nia?: boolean;
+  niaApiKey?: string;
 }
 
 export interface EvalItem {
@@ -24,6 +26,7 @@ export interface QueryResult {
   firstTool: string | null;
   elapsed: number;
   error: string | null;
+  provider?: "context7" | "nia" | "both" | "neither";
 }
 
 export interface EvalResult {
@@ -34,6 +37,7 @@ export interface EvalResult {
   firstTool: string | null;
   elapsed: number;
   error: string | null;
+  provider?: "context7" | "nia" | "both" | "neither";
 }
 
 export interface ModeSummary {

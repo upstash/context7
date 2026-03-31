@@ -36,6 +36,28 @@ const PROD_CLI_INSTRUCTIONS = gitShow("rules/context7-cli.md");
 const PROD_SKILL_CONTENT = gitShow("skills/find-docs/SKILL.md");
 
 export const MODE_CONFIGS: Record<string, ModeConfig> = {
+  "nia:prod": {
+    mcp: false,
+    rule: false,
+    skill: false,
+    claudeMd: false,
+    ruleContent: null,
+    claudeMdContent: null,
+    detection: "nia",
+    nia: true,
+    description: "Nia MCP only, no Context7",
+  },
+  "vs:mcp": {
+    mcp: true,
+    rule: true,
+    skill: false,
+    claudeMd: false,
+    ruleContent: PROD_MCP_INSTRUCTIONS,
+    claudeMdContent: null,
+    detection: "versus",
+    nia: true,
+    description: "Context7 MCP (prod) + Nia MCP side by side",
+  },
   "mcp:prod": {
     mcp: true,
     rule: true,

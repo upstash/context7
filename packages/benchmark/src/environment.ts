@@ -1,4 +1,4 @@
-import { execSync, spawn, type ChildProcess } from "node:child_process";
+import { execSync, execFileSync, spawn, type ChildProcess } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -13,10 +13,10 @@ import { createConnection } from "node:net";
 import { homedir } from "node:os";
 import { MODE_CONFIGS, PROJECT_ROOT } from "./modes.js";
 
-const EVAL_DIR = resolve(PROJECT_ROOT, "skills/find-docs-workspace");
-export const EVAL_SET_PATH = resolve(EVAL_DIR, "trigger-eval.json");
+const BENCH_DIR = resolve(PROJECT_ROOT, "packages/benchmark");
+export const EVAL_SET_PATH = resolve(BENCH_DIR, "trigger-eval.json");
 export const SKILL_SOURCE = resolve(PROJECT_ROOT, "skills/find-docs/SKILL.md");
-export const RESULTS_DIR = resolve(EVAL_DIR, "orchestrator-results");
+export const RESULTS_DIR = resolve(BENCH_DIR, "results");
 
 const CLAUDE_DIR = resolve(homedir(), ".claude");
 const CLAUDE_RULES_DIR = resolve(CLAUDE_DIR, "rules");
@@ -24,9 +24,17 @@ const SKILLS_DIR = resolve(CLAUDE_DIR, "skills");
 const GLOBAL_MCP_CONFIG = resolve(CLAUDE_DIR, ".mcp.json");
 const PROJECT_MCP_CONFIG = resolve(PROJECT_ROOT, ".mcp.json");
 const RULE_FILE = resolve(CLAUDE_RULES_DIR, "context7.md");
-const SKILL_DEST_GLOBAL = resolve(SKILLS_DIR, "find-docs/SKILL.md");
-const SKILL_DEST_PROJECT = resolve(PROJECT_ROOT, ".claude/skills/find-docs/SKILL.md");
-const SKILL_DEST_AGENTS = resolve(PROJECT_ROOT, ".agents/skills/find-docs/SKILL.md");
+const FIND_DOCS_SKILLS = [
+  resolve(SKILLS_DIR, "find-docs/SKILL.md"),
+  resolve(PROJECT_ROOT, ".claude/skills/find-docs/SKILL.md"),
+  resolve(PROJECT_ROOT, ".agents/skills/find-docs/SKILL.md"),
+];
+const ALL_CONTEXT7_SKILLS = [
+  ...FIND_DOCS_SKILLS,
+  resolve(SKILLS_DIR, "context7-mcp/SKILL.md"),
+  resolve(PROJECT_ROOT, ".claude/skills/context7-mcp/SKILL.md"),
+  resolve(PROJECT_ROOT, ".agents/skills/context7-mcp/SKILL.md"),
+];
 const CLAUDE_MD = resolve(PROJECT_ROOT, "CLAUDE.md");
 
 export const MCP_LOCAL_PORT = 4247;
@@ -179,10 +187,12 @@ function disableAll(): void {
   writeFileSync(PROJECT_MCP_CONFIG, JSON.stringify(MCP_EMPTY, null, 2));
   runSilent("claude mcp remove context7 --scope project");
   runSilent("claude mcp remove context7 --scope user");
+  runSilent("claude mcp remove nia --scope project");
+  runSilent("claude mcp remove nia --scope user");
 
   safeUnlink(RULE_FILE);
 
-  for (const skillPath of [SKILL_DEST_GLOBAL, SKILL_DEST_PROJECT, SKILL_DEST_AGENTS]) {
+  for (const skillPath of ALL_CONTEXT7_SKILLS) {
     safeUnlink(skillPath);
     safeRmdir(dirname(skillPath));
   }
@@ -225,7 +235,7 @@ function enableRule(content: string): void {
 }
 
 function enableSkill(opts?: { content?: string }): void {
-  for (const skillPath of [SKILL_DEST_GLOBAL, SKILL_DEST_PROJECT, SKILL_DEST_AGENTS]) {
+  for (const skillPath of FIND_DOCS_SKILLS) {
     const parent = dirname(skillPath);
     try {
       if (lstatSync(parent).isSymbolicLink()) {
@@ -238,6 +248,40 @@ function enableSkill(opts?: { content?: string }): void {
     } else {
       copyFileSync(SKILL_SOURCE, skillPath);
     }
+  }
+}
+
+function enableNia(apiKey: string): void {
+  try {
+    execFileSync(
+      "claude",
+      [
+        "mcp",
+        "add",
+        "nia",
+        "https://apigcp.trynia.ai/mcp",
+        "--scope",
+        "project",
+        "--transport",
+        "http",
+        "--header",
+        `Authorization: Bearer ${apiKey}`,
+      ],
+      { stdio: "pipe" }
+    );
+  } catch (e) {
+    console.log(`  WARNING: claude mcp add nia failed: ${e}`);
+  }
+
+  try {
+    const check = execSync("claude mcp list", { encoding: "utf-8" });
+    if (check.includes("nia")) {
+      console.log("  Nia MCP registered");
+    } else {
+      console.log("  WARNING: Nia not found in claude mcp list");
+    }
+  } catch {
+    console.log("  WARNING: could not verify Nia registration");
   }
 }
 
@@ -262,6 +306,13 @@ export async function setupMode(mode: string): Promise<void> {
   }
   if (cfg.skill) {
     enableSkill({ content: cfg.skillContent });
+  }
+  if (cfg.nia) {
+    const niaKey = cfg.niaApiKey || process.env.NIA_API_KEY;
+    if (!niaKey) {
+      throw new Error("Nia mode requires NIA_API_KEY env var or niaApiKey in mode config");
+    }
+    enableNia(niaKey);
   }
   if (cfg.claudeMd) {
     enableClaudeMd(cfg.claudeMdContent!);

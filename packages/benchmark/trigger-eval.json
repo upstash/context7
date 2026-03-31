@@ -57,6 +57,23 @@
   {"query": "astro content collections - how do I define a schema and query the content?", "should_trigger": true, "category": "direct-api"},
   {"query": "celery beat periodic tasks setup with django and redis broker", "should_trigger": true, "category": "non-js"},
 
+  {"query": "how does crawl4ai cache works? how do they know if their cache is not stale? is it just a time dependent cache? or do they have a more sophisticated mechanism that detects if a page's content has changed?", "should_trigger": true, "category": "deep-dive"},
+  {"query": "how does langchain's RecursiveCharacterTextSplitter decide where to split? does it respect sentence boundaries or just chunk by character count? what happens with code blocks?", "should_trigger": true, "category": "deep-dive"},
+  {"query": "in llamaindex, how does the retriever scoring work when you use a VectorStoreIndex with metadata filters? does the metadata filter happen before or after the similarity search?", "should_trigger": true, "category": "deep-dive"},
+  {"query": "how does turborepo's remote caching actually work under the hood? what gets hashed to determine cache hits, and how does it handle environment variables that change between environments?", "should_trigger": true, "category": "deep-dive"},
+  {"query": "supabase realtime - when I subscribe to a postgres changes channel, how does it handle reconnection and missed events? is there a replay mechanism or do I need to handle that myself?", "should_trigger": true, "category": "deep-dive"},
+  {"query": "how does bun's hot module replacement differ from vite's? I read that bun does it at the runtime level instead of using websockets. what does that mean for state preservation?", "should_trigger": true, "category": "deep-dive"},
+
+  {"query": "how is the middleware chain implemented in express.js source code? I want to understand the actual next() callback mechanism", "should_trigger": true, "category": "source-code"},
+  {"query": "look at the zustand source code - how does the subscribe function actually notify React components to re-render?", "should_trigger": true, "category": "source-code"},
+  {"query": "what does prisma's query engine actually do under the hood? I want to see how it translates the JS API calls to SQL", "should_trigger": true, "category": "source-code"},
+  {"query": "compare the connection pooling strategies between pg-pool, knex, and drizzle-orm - which one handles reconnection best?", "should_trigger": true, "category": "research"},
+  {"query": "what are the architectural differences between bun, deno, and node's module resolution? I need a deep comparison", "should_trigger": true, "category": "research"},
+  {"query": "find examples of custom React Server Components implementations in open source projects on GitHub", "should_trigger": true, "category": "github-search"},
+  {"query": "how do other projects structure their turborepo monorepo? show me real examples from popular repos", "should_trigger": true, "category": "github-search"},
+  {"query": "how does effect-ts handle error channels? the dual error type thing", "should_trigger": true, "category": "niche-lib"},
+  {"query": "what's the internal architecture of electric-sql's sync engine?", "should_trigger": true, "category": "niche-lib"},
+
   {"query": "I know react hooks pretty well but I always forget the exact difference between useMemo and useCallback. can you just explain the mental model?", "should_trigger": false, "category": "near-miss-knows-it"},
   {"query": "we use prisma but this is actually a pure SQL question about join performance. I have a query that does 3 left joins and its slow, heres the EXPLAIN output: [output]", "should_trigger": false, "category": "near-miss-different-tool"},
   {"query": "I need to refactor our express routes to use async/await instead of callbacks. the routes are in src/routes/. can you do it?", "should_trigger": false, "category": "near-miss-refactor"},
