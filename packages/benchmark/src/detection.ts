@@ -13,19 +13,12 @@ interface StreamEvent {
   };
 }
 
-const NIA_TOOLS = new Set([
-  "search_documentation",
-  "search_codebase",
-  "index",
-  "regex_search",
-  "manage_resource",
-  "get_github_file_tree",
-  "nia_web_search",
-  "nia_deep_research_agent",
-  "read_source_content",
-]);
+// Detect by MCP server namespace prefix -- no hardcoded tool lists needed.
+// Claude Code names MCP tools as `mcp__<server>__<tool>` or uses the raw tool name
+// when only one server provides it.
 
 function isContext7Tool(name: string): boolean {
+  if (name.startsWith("mcp__context7__")) return true;
   return (
     name.includes("resolve-library-id") ||
     name.includes("resolve_library_id") ||
@@ -35,7 +28,10 @@ function isContext7Tool(name: string): boolean {
 }
 
 function isNiaTool(name: string): boolean {
-  return NIA_TOOLS.has(name) || name.startsWith("mcp__nia__");
+  if (name.startsWith("mcp__nia__")) return true;
+  // Nia-prefixed tool names (nia_web_search, nia_deep_research_agent, etc.)
+  if (name.startsWith("nia_")) return true;
+  return false;
 }
 
 function isNiaSkillCall(name: string, input: Record<string, unknown>): boolean {
