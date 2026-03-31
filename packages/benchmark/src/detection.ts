@@ -38,6 +38,24 @@ function isNiaTool(name: string): boolean {
   return NIA_TOOLS.has(name) || name.startsWith("mcp__nia__");
 }
 
+function isNiaSkillCall(name: string, input: Record<string, unknown>): boolean {
+  if (name === "Skill") {
+    const inputStr = JSON.stringify(input);
+    if (inputStr.includes("nia")) return true;
+  }
+  if (name === "Bash") {
+    const command = String(input.command ?? "");
+    if (
+      command.includes("scripts/nia") ||
+      command.includes("scripts/search") ||
+      command.includes("scripts/repos") ||
+      command.includes("scripts/sources")
+    )
+      return true;
+  }
+  return false;
+}
+
 export function detectTrigger(detection: DetectionMethod, stdout: string): boolean {
   for (const line of stdout.split("\n")) {
     const trimmed = line.trim();
@@ -58,11 +76,20 @@ export function detectTrigger(detection: DetectionMethod, stdout: string): boole
       const name = block.name ?? "";
       const toolInput = block.input ?? {};
 
-      if (detection === "mcp" || detection === "versus") {
+      if (detection === "mcp") {
         if (isContext7Tool(name)) return true;
       }
+      if (detection === "versus") {
+        if (isContext7Tool(name)) return true;
+        if (isNiaTool(name) || isNiaSkillCall(name, toolInput)) return true;
+        if (name === "Skill" && JSON.stringify(toolInput).includes("find-docs")) return true;
+        if (name === "Bash") {
+          const command = String(toolInput.command ?? "");
+          if (command.includes("ctx7") || command.includes("context7")) return true;
+        }
+      }
       if (detection === "nia") {
-        if (isNiaTool(name)) return true;
+        if (isNiaTool(name) || isNiaSkillCall(name, toolInput)) return true;
       }
       if (detection === "skill") {
         if (name === "Skill") {
@@ -105,8 +132,14 @@ export function detectVersusProvider(stdout: string): "context7" | "nia" | "both
     for (const block of event.message?.content ?? []) {
       if (block.type !== "tool_use") continue;
       const name = block.name ?? "";
+      const inp = block.input ?? {};
       if (isContext7Tool(name)) ctx7 = true;
-      if (isNiaTool(name)) nia = true;
+      if (name === "Skill" && JSON.stringify(inp).includes("find-docs")) ctx7 = true;
+      if (name === "Bash") {
+        const cmd = String(inp.command ?? "");
+        if (cmd.includes("ctx7") || cmd.includes("context7")) ctx7 = true;
+      }
+      if (isNiaTool(name) || isNiaSkillCall(name, inp)) nia = true;
     }
   }
 
@@ -161,7 +194,15 @@ export function extractToolChain(stdout: string): string | null {
         label = "ToolSearch";
       } else if (name === "Bash") {
         const cmd = String(inp.command ?? "");
-        label = cmd.includes("ctx7") ? "Bash(ctx7)" : "Bash";
+        if (cmd.includes("ctx7")) label = "Bash(ctx7)";
+        else if (
+          cmd.includes("scripts/nia") ||
+          cmd.includes("scripts/search") ||
+          cmd.includes("scripts/repos") ||
+          cmd.includes("scripts/sources")
+        )
+          label = "Bash(nia)";
+        else label = "Bash";
       } else if (isContext7Tool(name)) {
         label = name.includes("resolve") ? "ctx7:resolve" : "ctx7:query";
       } else if (isNiaTool(name)) {

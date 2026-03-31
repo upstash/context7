@@ -13,6 +13,7 @@ export interface ModeConfig {
   skillContent?: string;
   nia?: boolean;
   niaApiKey?: string;
+  niaSkill?: boolean;
 }
 
 export interface EvalItem {

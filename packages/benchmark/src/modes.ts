@@ -47,6 +47,18 @@ export const MODE_CONFIGS: Record<string, ModeConfig> = {
     nia: true,
     description: "Nia MCP only, no Context7",
   },
+  "vs:cli": {
+    mcp: false,
+    rule: true,
+    skill: true,
+    claudeMd: false,
+    ruleContent: PROD_CLI_INSTRUCTIONS,
+    claudeMdContent: null,
+    detection: "versus",
+    skillContent: PROD_SKILL_CONTENT,
+    niaSkill: true,
+    description: "Context7 CLI (prod) + Nia skill side by side",
+  },
   "vs:mcp": {
     mcp: true,
     rule: true,

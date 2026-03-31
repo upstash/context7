@@ -29,8 +29,16 @@ const FIND_DOCS_SKILLS = [
   resolve(PROJECT_ROOT, ".claude/skills/find-docs/SKILL.md"),
   resolve(PROJECT_ROOT, ".agents/skills/find-docs/SKILL.md"),
 ];
-const ALL_CONTEXT7_SKILLS = [
+const NIA_SKILL_REPO = "https://github.com/nozomio-labs/nia-skill.git";
+const NIA_SKILL_CACHE = resolve(PROJECT_ROOT, "packages/benchmark/.nia-skill");
+const NIA_SKILL_LOCATIONS = [
+  resolve(SKILLS_DIR, "nia/SKILL.md"),
+  resolve(PROJECT_ROOT, ".claude/skills/nia/SKILL.md"),
+  resolve(PROJECT_ROOT, ".agents/skills/nia/SKILL.md"),
+];
+const ALL_SKILLS = [
   ...FIND_DOCS_SKILLS,
+  ...NIA_SKILL_LOCATIONS,
   resolve(SKILLS_DIR, "context7-mcp/SKILL.md"),
   resolve(PROJECT_ROOT, ".claude/skills/context7-mcp/SKILL.md"),
   resolve(PROJECT_ROOT, ".agents/skills/context7-mcp/SKILL.md"),
@@ -192,7 +200,7 @@ function disableAll(): void {
 
   safeUnlink(RULE_FILE);
 
-  for (const skillPath of ALL_CONTEXT7_SKILLS) {
+  for (const skillPath of ALL_SKILLS) {
     safeUnlink(skillPath);
     safeRmdir(dirname(skillPath));
   }
@@ -248,6 +256,34 @@ function enableSkill(opts?: { content?: string }): void {
     } else {
       copyFileSync(SKILL_SOURCE, skillPath);
     }
+  }
+}
+
+function fetchNiaSkill(): void {
+  if (existsSync(resolve(NIA_SKILL_CACHE, "SKILL.md"))) {
+    execSync(`git -C "${NIA_SKILL_CACHE}" pull --quiet`, { stdio: "pipe" });
+  } else {
+    execSync(`git clone --depth 1 --quiet "${NIA_SKILL_REPO}" "${NIA_SKILL_CACHE}"`, {
+      stdio: "pipe",
+    });
+  }
+}
+
+function enableNiaSkill(): void {
+  fetchNiaSkill();
+  const srcSkill = resolve(NIA_SKILL_CACHE, "SKILL.md");
+  const srcScripts = resolve(NIA_SKILL_CACHE, "scripts");
+  for (const skillPath of NIA_SKILL_LOCATIONS) {
+    const parent = dirname(skillPath);
+    try {
+      if (lstatSync(parent).isSymbolicLink()) {
+        unlinkSync(parent);
+      }
+    } catch {}
+    ensureDir(parent);
+    copyFileSync(srcSkill, skillPath);
+    const destScripts = resolve(dirname(skillPath), "scripts");
+    runSilent(`cp -r "${srcScripts}" "${destScripts}"`);
   }
 }
 
@@ -313,6 +349,9 @@ export async function setupMode(mode: string): Promise<void> {
       throw new Error("Nia mode requires NIA_API_KEY env var or niaApiKey in mode config");
     }
     enableNia(niaKey);
+  }
+  if (cfg.niaSkill) {
+    enableNiaSkill();
   }
   if (cfg.claudeMd) {
     enableClaudeMd(cfg.claudeMdContent!);
