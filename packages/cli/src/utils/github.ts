@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import type { SkillFile, Skill } from "../types.js";
 
 const GITHUB_API = "https://api.github.com";
@@ -79,6 +80,18 @@ function parseGitHubUrl(url: string): {
   }
 }
 
+function getGitHubToken(): string | undefined {
+  const envToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+  if (envToken) return envToken;
+  try {
+    return execSync("gh auth token", { stdio: ["pipe", "pipe", "ignore"] })
+      .toString()
+      .trim();
+  } catch {
+    return undefined;
+  }
+}
+
 export async function downloadSkillFromGitHub(
   skill: Skill & { project: string }
 ): Promise<{ files: SkillFile[]; error?: string }> {
@@ -91,7 +104,7 @@ export async function downloadSkillFromGitHub(
 
     const { owner, repo, branch, path: skillPath } = parsed;
 
-    const ghToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+    const ghToken = getGitHubToken();
     const ghHeaders = {
       Accept: "application/vnd.github.v3+json",
       "User-Agent": "context7-cli",
