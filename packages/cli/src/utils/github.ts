@@ -92,6 +92,148 @@ function getGitHubToken(): string | undefined {
   }
 }
 
+function parseSkillFrontmatter(content: string): { name: string; description: string } | null {
+  const frontmatterMatch = content.match(/^---\s*\n([\s\S]*?)\n---/);
+  if (!frontmatterMatch) return null;
+
+  const frontmatter = frontmatterMatch[1];
+
+  const nameMatch = frontmatter.match(/^name:\s*(.+)$/m);
+  if (!nameMatch) return null;
+  const name = nameMatch[1]
+    .trim()
+    .replace(/^["']|["']$/g, "")
+    .toLowerCase();
+
+  let description = "";
+  const multiLineMatch = frontmatter.match(/^description:\s*([|>])-?\s*$/m);
+
+  if (multiLineMatch) {
+    const descLineIndex = frontmatter.indexOf("description:");
+    const lines = frontmatter.slice(descLineIndex).split("\n").slice(1);
+    const indentedLines: string[] = [];
+    for (const line of lines) {
+      if (line.trim() === "") {
+        indentedLines.push("");
+        continue;
+      }
+      if (/^\s+/.test(line)) {
+        indentedLines.push(line);
+      } else {
+        break;
+      }
+    }
+    const firstNonEmpty = indentedLines.find((l) => l.trim().length > 0);
+    const indent = firstNonEmpty?.match(/^(\s+)/)?.[1].length ?? 0;
+    description = indentedLines
+      .map((line) => line.slice(indent))
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+  } else {
+    const singleMatch = frontmatter.match(/^description:\s*(.+)$/m);
+    if (singleMatch) {
+      const value = singleMatch[1].trim();
+      if (!["|", ">", "|-", ">-"].includes(value)) {
+        description = value.replace(/^["']|["']$/g, "");
+      }
+    }
+  }
+
+  if (!description) return null;
+  return { name, description };
+}
+
+function getGitHubHeaders(): Record<string, string> {
+  const ghToken = getGitHubToken();
+  return {
+    Accept: "application/vnd.github.v3+json",
+    "User-Agent": "context7-cli",
+    ...(ghToken && { Authorization: `token ${ghToken}` }),
+  };
+}
+
+async function fetchRepoTree(
+  owner: string,
+  repo: string,
+  branch: string,
+  headers: Record<string, string>
+): Promise<GitHubTreeResponse | null> {
+  const treeUrl = `${GITHUB_API}/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
+  const response = await fetch(treeUrl, { headers });
+  if (!response.ok) return null;
+  return (await response.json()) as GitHubTreeResponse;
+}
+
+async function fetchDefaultBranch(
+  owner: string,
+  repo: string,
+  headers: Record<string, string>
+): Promise<{ branch: string } | { status: number }> {
+  const response = await fetch(`${GITHUB_API}/repos/${owner}/${repo}`, { headers });
+  if (!response.ok) return { status: response.status };
+  const data = (await response.json()) as { default_branch: string };
+  return { branch: data.default_branch };
+}
+
+type GitHubSkillsResult =
+  | { status: "ok"; skills: (Skill & { project: string })[] }
+  | { status: "repo_not_found" }
+  | { status: "error"; error: string };
+
+export async function listSkillsFromGitHub(project: string): Promise<GitHubSkillsResult> {
+  try {
+    const parts = project.split("/").filter(Boolean);
+    if (parts.length < 2) return { status: "error", error: "Invalid project format" };
+    const [owner, repo] = parts;
+
+    const headers = getGitHubHeaders();
+    const branchResult = await fetchDefaultBranch(owner, repo, headers);
+    if ("status" in branchResult) return { status: "repo_not_found" };
+
+    const treeData = await fetchRepoTree(owner, repo, branchResult.branch, headers);
+    if (!treeData) return { status: "error", error: "Could not fetch repository tree" };
+
+    const skillMdFiles = treeData.tree.filter(
+      (item) => item.type === "blob" && item.path.toLowerCase().endsWith("skill.md")
+    );
+
+    const skills: (Skill & { project: string })[] = [];
+    for (const item of skillMdFiles) {
+      const rawUrl = `${GITHUB_RAW}/${owner}/${repo}/${branchResult.branch}/${item.path}`;
+      const response = await fetch(rawUrl, { headers });
+      if (!response.ok) continue;
+
+      const content = await response.text();
+      const meta = parseSkillFrontmatter(content);
+      if (!meta) continue;
+
+      const skillDir = item.path.split("/").slice(0, -1).join("/");
+      skills.push({
+        name: meta.name,
+        description: meta.description,
+        url: `https://github.com/${owner}/${repo}/tree/${branchResult.branch}/${skillDir}`,
+        project,
+      });
+    }
+
+    return { status: "ok", skills };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { status: "error", error: message };
+  }
+}
+
+export async function getSkillFromGitHub(
+  project: string,
+  skillName: string
+): Promise<GitHubSkillsResult & { skill?: Skill & { project: string } }> {
+  const result = await listSkillsFromGitHub(project);
+  if (result.status !== "ok") return result;
+  const skill = result.skills.find((s) => s.name === skillName.toLowerCase());
+  return { ...result, skill };
+}
+
 export async function downloadSkillFromGitHub(
   skill: Skill & { project: string }
 ): Promise<{ files: SkillFile[]; error?: string }> {
@@ -104,21 +246,12 @@ export async function downloadSkillFromGitHub(
 
     const { owner, repo, branch, path: skillPath } = parsed;
 
-    const ghToken = getGitHubToken();
-    const ghHeaders = {
-      Accept: "application/vnd.github.v3+json",
-      "User-Agent": "context7-cli",
-      ...(ghToken && { Authorization: `token ${ghToken}` }),
-    };
+    const ghHeaders = getGitHubHeaders();
 
-    const treeUrl = `${GITHUB_API}/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
-    const treeResponse = await fetch(treeUrl, { headers: ghHeaders });
-
-    if (!treeResponse.ok) {
-      return { files: [], error: `GitHub API error: ${treeResponse.status}` };
+    const treeData = await fetchRepoTree(owner, repo, branch, ghHeaders);
+    if (!treeData) {
+      return { files: [], error: `GitHub API error` };
     }
-
-    const treeData = (await treeResponse.json()) as GitHubTreeResponse;
 
     const skillFiles = treeData.tree.filter(
       (item) => item.type === "blob" && item.path.startsWith(skillPath + "/")
