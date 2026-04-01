@@ -91,13 +91,15 @@ export async function downloadSkillFromGitHub(
 
     const { owner, repo, branch, path: skillPath } = parsed;
 
+    const ghToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+    const ghHeaders = {
+      Accept: "application/vnd.github.v3+json",
+      "User-Agent": "context7-cli",
+      ...(ghToken && { Authorization: `token ${ghToken}` }),
+    };
+
     const treeUrl = `${GITHUB_API}/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
-    const treeResponse = await fetch(treeUrl, {
-      headers: {
-        Accept: "application/vnd.github.v3+json",
-        "User-Agent": "context7-cli",
-      },
-    });
+    const treeResponse = await fetch(treeUrl, { headers: ghHeaders });
 
     if (!treeResponse.ok) {
       return { files: [], error: `GitHub API error: ${treeResponse.status}` };
@@ -116,7 +118,7 @@ export async function downloadSkillFromGitHub(
     const files: SkillFile[] = [];
     for (const item of skillFiles) {
       const rawUrl = `${GITHUB_RAW}/${owner}/${repo}/${branch}/${item.path}`;
-      const fileResponse = await fetch(rawUrl);
+      const fileResponse = await fetch(rawUrl, { headers: ghHeaders });
 
       if (!fileResponse.ok) {
         console.warn(`Failed to fetch ${item.path}: ${fileResponse.status}`);
