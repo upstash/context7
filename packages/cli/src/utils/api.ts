@@ -11,7 +11,7 @@ import type {
   SkillQuotaResponse,
   ContextResponse,
 } from "../types.js";
-import { downloadSkillFromGitHub } from "./github.js";
+import { downloadSkillFromGitHub, getSkillFromGitHub } from "./github.js";
 import { VERSION } from "../constants.js";
 
 let baseUrl = "https://context7.com";
@@ -62,11 +62,21 @@ export async function downloadSkill(project: string, skillName: string): Promise
   const skillData = await getSkill(project, skillName);
 
   if (skillData.error) {
-    return {
-      skill: { name: skillName, description: "", url: "", project },
-      files: [],
-      error: skillData.message || skillData.error,
-    };
+    // handle private repo skills with env var
+    const ghResult = await getSkillFromGitHub(project, skillName);
+    if (ghResult.status !== "ok" || !ghResult.skill) {
+      return {
+        skill: { name: skillName, description: "", url: "", project },
+        files: [],
+        error: skillData.message || skillData.error,
+      };
+    }
+
+    const { files, error } = await downloadSkillFromGitHub(ghResult.skill);
+    if (error) {
+      return { skill: ghResult.skill, files: [], error };
+    }
+    return { skill: ghResult.skill, files };
   }
 
   const skill = {
