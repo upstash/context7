@@ -16,79 +16,19 @@ Get your API key at [context7.com/dashboard](https://context7.com/dashboard). Le
 
 ## API Methods
 
-Context7 provides two core API methods for retrieving documentation context.
-
-### Search Library
-
-Search for available libraries by name. Use this to find the correct library ID before fetching documentation.
-
-**Endpoint:** `GET /api/v2/libs/search`
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `query` | string | Yes | Your question or task (used for relevance ranking) |
-| `libraryName` | string | Yes | Library name to search for (e.g., "react", "nextjs") |
-
-**Response:** Returns an array of matching libraries:
-
-```json
-[
-  {
-    "id": "/facebook/react",
-    "name": "React",
-    "description": "A JavaScript library for building user interfaces",
-    "totalSnippets": 1250,
-    "trustScore": 95,
-    "benchmarkScore": 88,
-    "versions": ["v18.2.0", "v17.0.2"]
-  }
-]
-```
-
-**Example:**
-
-```bash
-curl "https://context7.com/api/v2/libs/search?libraryName=react&query=hooks" \
-  -H "Authorization: Bearer CONTEXT7_API_KEY"
-```
-
-### Get Context
-
-Retrieve documentation context for a specific library. Returns relevant documentation snippets based on your query.
-
-**Endpoint:** `GET /api/v2/context`
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `query` | string | Yes | Your question or task (used for relevance ranking) |
-| `libraryId` | string | Yes | Library identifier from search (e.g., `/facebook/react`) |
-| `type` | string | No | Response format: `json` (default) or `txt` |
-
-**Response (JSON format):** Returns an array of documentation snippets:
-
-```json
-[
-  {
-    "title": "Using the Effect Hook",
-    "content": "The Effect Hook lets you perform side effects...",
-    "source": "react.dev/reference/react/useEffect"
-  }
-]
-```
-
-**Response (Text format):** Returns plain text ready for LLM prompts.
-
-**Example:**
-
-```bash
-# JSON format (default)
-curl "https://context7.com/api/v2/context?libraryId=/facebook/react&query=useEffect" \
-  -H "Authorization: Bearer CONTEXT7_API_KEY"
-
-# Text format
-curl "https://context7.com/api/v2/context?libraryId=/facebook/react&query=useEffect&type=txt" \
-  -H "Authorization: Bearer CONTEXT7_API_KEY"
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| [Search Library](/api-reference/search/search-for-libraries) | `GET /api/v2/libs/search` | Find libraries by name |
+| [Get Context](/api-reference/context/get-documentation-context) | `GET /api/v2/context` | Retrieve documentation snippets for a library |
+| [Refresh Library](/api-reference/refresh/refresh-a-library) | `POST /api/v1/refresh` | Refresh a library's documentation |
+| [Get Policies](/api-reference/policies/get-teamspace-policies) | `GET /api/v2/policies` | Retrieve teamspace policy configuration |
+| [Update Policies](/api-reference/policies/update-teamspace-policies) | `PATCH /api/v2/policies` | Update teamspace policies |
+| [Add Library](/api-reference/add-library/add-a-github-repository) | `POST /api/v2/add/repo/{provider}` | Submit a repository for processing |
+| [Add OpenAPI](/api-reference/add-library/add-an-openapi-specification-by-url) | `POST /api/v2/add/openapi` | Submit an OpenAPI spec |
+| [Upload OpenAPI](/api-reference/add-library/upload-an-openapi-specification-file) | `POST /api/v2/add/openapi-upload` | Upload an OpenAPI spec file |
+| [Add LLMs.txt](/api-reference/add-library/add-an-llmstxt-file) | `POST /api/v2/add/llmstxt` | Submit an llms.txt file |
+| [Add Website](/api-reference/add-library/add-a-website) | `POST /api/v2/add/website` | Submit a website for crawling |
+| [Add Confluence](/api-reference/add-library/add-a-confluence-space) | `POST /api/v2/add/confluence` | Submit a Confluence space |
 
 ### Complete Workflow Example
 
@@ -103,25 +43,29 @@ search_response = requests.get(
     headers=headers,
     params={"libraryName": "react", "query": "I need to manage state"}
 )
-libraries = search_response.json()
-best_match = libraries[0]
-print(f"Found: {best_match['name']} ({best_match['id']})")
+data = search_response.json()
+best_match = data["results"][0]
+print(f"Found: {best_match['title']} ({best_match['id']})")
 
 # Step 2: Get documentation context
 context_response = requests.get(
     "https://context7.com/api/v2/context",
     headers=headers,
-    params={"libraryId": best_match["id"], "query": "How do I use useState?"}
+    params={"libraryId": best_match["id"], "query": "How do I use useState?", "type": "json"}
 )
 docs = context_response.json()
 
-for doc in docs:
-    print(f"Title: {doc['title']}")
-    print(f"Content: {doc['content'][:200]}...")
+for snippet in docs["codeSnippets"]:
+    print(f"Title: {snippet['codeTitle']}")
+    for code in snippet["codeList"]:
+        print(f"Code: {code['code'][:200]}...")
+
+for info in docs["infoSnippets"]:
+    print(f"Content: {info['content'][:200]}...")
 ```
 
 <Info>
-  For TypeScript SDK usage with additional features, see [Search Library](/sdks/ts/commands/search-library) and [Get Context](/sdks/ts/commands/get-context).
+  For TypeScript SDK usage, see [Search Library](/sdks/ts/commands/search-library) and [Get Context](/sdks/ts/commands/get-context).
 </Info>
 
 ## Rate Limits
@@ -130,14 +74,14 @@ for doc in docs:
 - **With API key**: Higher limits based on your plan
 - View current usage and reset windows in the [dashboard](https://context7.com/dashboard).
 
-When you exceed rate limits, the API returns a `429` status code:
+When you exceed rate limits, the API returns a `429` status code with these headers:
 
-```json
-{
-  "error": "Too many requests",
-  "status": 429
-}
-```
+| Header | Description |
+|--------|-------------|
+| `Retry-After` | Seconds until rate limit resets |
+| `RateLimit-Limit` | Total request limit |
+| `RateLimit-Remaining` | Remaining requests in window |
+| `RateLimit-Reset` | Unix timestamp when limit resets |
 
 ## Best Practices
 
@@ -157,7 +101,7 @@ curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js&query=auth" 
 
 ### Cache Responses
 
-Store documentation locally to reduce API calls and improve performance. Documentation updates are relatively infrequent, so caching for several hours or days is usually appropriate.
+Documentation updates are relatively infrequent, so caching responses for several hours or days reduces API calls and improves performance.
 
 ### Handle Rate Limits
 
@@ -172,8 +116,8 @@ def fetch_with_retry(url, headers, max_retries=3):
         response = requests.get(url, headers=headers)
 
         if response.status_code == 429:
-            # Wait before retrying with exponential backoff
-            time.sleep(2 ** attempt)
+            retry_after = int(response.headers.get("Retry-After", 2 ** attempt))
+            time.sleep(retry_after)
             continue
 
         return response
@@ -183,11 +127,13 @@ def fetch_with_retry(url, headers, max_retries=3):
 
 ### Use Specific Versions
 
-Specify exact versions for consistent results across deployments:
+Pin to a specific version for consistent results. Both `/` and `@` syntax are supported:
 
 ```bash
-# Pin to a specific version
 curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js/v15.1.8&query=app%20router" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY"
+
+curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js@v15.1.8&query=app%20router" \
   -H "Authorization: Bearer CONTEXT7_API_KEY"
 ```
 
@@ -202,23 +148,25 @@ The Context7 API uses standard HTTP status codes:
 | 301  | Moved - Library redirected                | Use the new library ID from `redirectUrl`    |
 | 400  | Bad Request - Invalid parameters          | Check query parameters                       |
 | 401  | Unauthorized - Invalid API key            | Check your API key format (starts with `ctx7sk`) |
-| 403  | Forbidden - Access denied                 | Check library access permissions             |
+| 403  | Forbidden - Access denied                 | Check library access permissions or plan     |
 | 404  | Not Found - Library doesn't exist         | Verify the library ID                        |
+| 409  | Conflict - Resource already exists        | The library has already been added           |
 | 422  | Unprocessable - Library too large/no code | Try a different library                      |
 | 429  | Too Many Requests - Rate limit exceeded   | Wait for `Retry-After` header, then retry    |
 | 500  | Internal Server Error                     | Retry with backoff                           |
 | 503  | Service Unavailable - Search failed       | Retry later                                  |
+| 504  | Gateway Timeout - Processing timed out    | Retry later                                  |
 
-### Error Response Format
-
-All errors return a JSON object with these fields:
+All errors return a JSON object with `error` and `message` fields:
 
 ```json
 {
   "error": "library_not_found",
-  "message": "Library \"/owner/repo\" not found."
+  "message": "Library \"/owner/repo\" not found. Please check the library ID or your access permissions."
 }
 ```
+
+For `301` redirects, the response also includes a `redirectUrl` field pointing to the new library ID.
 
 ## SDK and Libraries
 
