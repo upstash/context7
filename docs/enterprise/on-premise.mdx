@@ -196,6 +196,14 @@ The Settings page lets you control which operations are available without authen
 
 When a permission is off, the operation requires admin login. The MCP endpoint and search API are always publicly accessible.
 
+## Policies
+
+Policies let you control which public documentation from the Context7 cloud is accessible to your on-premise instance. They do not affect locally parsed on-premise content.
+
+Access Policies from **Settings > Policies** tab. Requires admin login and a valid `LICENSE_KEY`.
+
+For details on source type toggles and library filters, see [Customizing What Is Retrieved](/security/architecture#customizing-what-is-retrieved).
+
 ## Web UI
 
 Open your deployment URL in a browser to access the dashboard. From here you can:
@@ -204,6 +212,7 @@ Open your deployment URL in a browser to access the dashboard. From here you can
 - Trigger re-indexing
 - Monitor parsing status and logs
 - Update AI provider settings, git tokens, and permissions
+- Configure policies for public cloud documentation access
 - Test MCP connectivity
 - Change admin credentials
 
