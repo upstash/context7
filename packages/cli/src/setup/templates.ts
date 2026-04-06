@@ -9,7 +9,7 @@ Do not use for: refactoring, writing scripts from scratch, debugging business lo
 
 ## Steps
 
-1. \`resolve-library-id\` with the library name and the user's question
+1. \`resolve-library-id\` with the library name and the user's question. Use the official library name with proper punctuation (e.g., "Next.js" not "nextjs", "Customer.io" not "customerio", "Three.js" not "threejs")
 2. Pick the best match by: exact name match, description relevance, code snippet count, source reputation (High/Medium preferred), and benchmark score (higher is better). Use version-specific IDs when the user mentions a version
 3. \`query-docs\` with the selected library ID and the user's full question (not single words)
 4. Answer using the fetched docs

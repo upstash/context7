@@ -197,7 +197,9 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
         ),
       libraryName: z
         .string()
-        .describe("Library name to search for and retrieve a Context7-compatible library ID."),
+        .describe(
+          "Library name to search for and retrieve a Context7-compatible library ID. Use the official library name with proper punctuation — e.g., 'Next.js' instead of 'nextjs', 'Customer.io' instead of 'customerio', 'Three.js' instead of 'threejs'."
+        ),
     },
     annotations: {
       readOnlyHint: true,
