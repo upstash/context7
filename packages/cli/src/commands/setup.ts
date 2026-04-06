@@ -41,6 +41,7 @@ interface SetupOptions {
   antigravity?: boolean;
   opencode?: boolean;
   codex?: boolean;
+  gemini?: boolean;
   project?: boolean;
   yes?: boolean;
   apiKey?: string;
@@ -62,6 +63,7 @@ function getSelectedAgents(options: SetupOptions): SetupAgent[] {
   if (options.cursor) agents.push("cursor");
   if (options.opencode) agents.push("opencode");
   if (options.codex) agents.push("codex");
+  if (options.gemini) agents.push("gemini");
   return agents;
 }
 
@@ -75,6 +77,7 @@ export function registerSetupCommand(program: Command): void {
     .option("--antigravity", "Set up for Antigravity (.agent/skills)")
     .option("--opencode", "Set up for OpenCode")
     .option("--codex", "Set up for Codex")
+    .option("--gemini", "Set up for Gemini CLI")
     .option("--mcp", "Set up MCP server mode")
     .option("--cli", "Set up CLI + Skills mode (no MCP server)")
     .option("-p, --project", "Configure for current project instead of globally")
@@ -379,6 +382,11 @@ async function setupMcp(agents: SetupAgent[], options: SetupOptions, scope: Scop
     const skillIcon = r.skillStatus === "installed" ? pc.green("+") : pc.dim("~");
     log.plain(`    ${skillIcon} Skill ${r.skillStatus}`);
     log.plain(`      ${pc.dim(r.skillPath)}`);
+    if (r.skillStatus.includes("EACCES")) {
+      log.plain(
+        `      ${pc.yellow("tip:")} fix permissions with: ${pc.cyan(`sudo chown -R $(whoami) ${dirname(dirname(r.skillPath))}`)}`
+      );
+    }
   }
   log.blank();
 
@@ -461,6 +469,11 @@ async function setupCli(options: SetupOptions): Promise<void> {
     const skillIcon = r.skillStatus === "installed" ? pc.green("+") : pc.dim("~");
     log.plain(`    ${skillIcon} Skill ${r.skillStatus}`);
     log.plain(`      ${pc.dim(r.skillPath)}`);
+    if (r.skillStatus.includes("EACCES")) {
+      log.plain(
+        `      ${pc.yellow("tip:")} fix permissions with: ${pc.cyan(`sudo chown -R $(whoami) ${dirname(dirname(r.skillPath))}`)}`
+      );
+    }
     const ruleIcon =
       r.ruleStatus === "installed" || r.ruleStatus === "updated" ? pc.green("+") : pc.dim("~");
     log.plain(`    ${ruleIcon} Rule ${r.ruleStatus}`);

@@ -42,7 +42,7 @@ describe("getRuleContent", () => {
     expect(cursor).toContain("---\nalwaysApply: true\n---");
     expect(cursor).toContain(MOCK_MCP_RULE);
 
-    for (const agent of ["claude", "codex", "opencode"]) {
+    for (const agent of ["claude", "codex", "opencode", "gemini"]) {
       const content = await getRuleContent("mcp", agent);
       expect(content).not.toContain("alwaysApply");
     }
@@ -789,9 +789,77 @@ describe("agent config integration", () => {
     });
   });
 
+  describe("gemini", () => {
+    const agent = getAgent("gemini");
+
+    test("buildEntry with api-key uses httpUrl", () => {
+      const entry = agent.mcp.buildEntry(apiKeyAuth);
+      expect(entry).toEqual({
+        httpUrl: "https://mcp.context7.com/mcp",
+        headers: { CONTEXT7_API_KEY: "sk-test-123" },
+      });
+      expect(entry).not.toHaveProperty("url");
+    });
+
+    test("buildEntry with oauth uses httpUrl without headers", () => {
+      const entry = agent.mcp.buildEntry(oauthAuth);
+      expect(entry).toEqual({
+        httpUrl: "https://mcp.context7.com/mcp/oauth",
+      });
+    });
+
+    test("uses configKey mcpServers", () => {
+      expect(agent.mcp.configKey).toBe("mcpServers");
+    });
+
+    test("merges into settings.json with mcpServers key", async () => {
+      const path = join(tempDir, "settings.json");
+      await writeJsonConfig(path, { theme: "dark" });
+
+      const existing = await readJsonConfig(path);
+      const { config } = mergeServerEntry(
+        existing,
+        agent.mcp.configKey,
+        "context7",
+        agent.mcp.buildEntry(apiKeyAuth)
+      );
+      await writeJsonConfig(path, config);
+
+      const result = await readJsonConfig(path);
+      expect(result.theme).toBe("dark");
+      expect((result.mcpServers as Record<string, unknown>).context7).toEqual({
+        httpUrl: "https://mcp.context7.com/mcp",
+        headers: { CONTEXT7_API_KEY: "sk-test-123" },
+      });
+    });
+
+    test("overwrites existing config in JSON", async () => {
+      const path = join(tempDir, "settings.json");
+      await writeJsonConfig(path, {
+        mcpServers: { context7: { httpUrl: "https://old.com" } },
+      });
+
+      const existing = await readJsonConfig(path);
+      const { config, alreadyExists } = mergeServerEntry(
+        existing,
+        agent.mcp.configKey,
+        "context7",
+        agent.mcp.buildEntry(apiKeyAuth)
+      );
+      expect(alreadyExists).toBe(true);
+      await writeJsonConfig(path, config);
+
+      const result = await readJsonConfig(path);
+      expect((result.mcpServers as Record<string, unknown>).context7).toEqual({
+        httpUrl: "https://mcp.context7.com/mcp",
+        headers: { CONTEXT7_API_KEY: "sk-test-123" },
+      });
+    });
+  });
+
   describe("all agents have consistent config", () => {
     test("all agents are covered", () => {
-      expect(ALL_AGENT_NAMES).toEqual(["claude", "cursor", "opencode", "codex"]);
+      expect(ALL_AGENT_NAMES).toEqual(["claude", "cursor", "opencode", "codex", "gemini"]);
     });
 
     test.each(ALL_AGENT_NAMES)("%s buildEntry returns url for both auth modes", (name) => {
@@ -799,8 +867,9 @@ describe("agent config integration", () => {
       const apiEntry = agent.mcp.buildEntry(apiKeyAuth);
       const oauthEntry = agent.mcp.buildEntry(oauthAuth);
 
-      expect(apiEntry.url).toBe("https://mcp.context7.com/mcp");
-      expect(oauthEntry.url).toBe("https://mcp.context7.com/mcp/oauth");
+      const urlKey = name === "gemini" ? "httpUrl" : "url";
+      expect(apiEntry[urlKey]).toBe("https://mcp.context7.com/mcp");
+      expect(oauthEntry[urlKey]).toBe("https://mcp.context7.com/mcp/oauth");
     });
 
     test.each(ALL_AGENT_NAMES)("%s buildEntry includes headers only for api-key auth", (name) => {
