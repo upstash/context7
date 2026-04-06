@@ -1,5 +1,12 @@
 # @upstash/context7-mcp
 
+## 2.1.7
+
+### Patch Changes
+
+- 658ec67: Add --version/-v flag to MCP CLI
+- 8322879: Improve resolve libryar id tool prompt to provide the libraryName query with proper format
+
 ## 2.1.6
 
 ### Patch Changes
