@@ -2,7 +2,7 @@ import { access } from "fs/promises";
 import { join } from "path";
 import { homedir } from "os";
 
-export type SetupAgent = "claude" | "cursor" | "opencode" | "codex";
+export type SetupAgent = "claude" | "cursor" | "opencode" | "codex" | "gemini";
 export type AuthMode = "oauth" | "api-key";
 
 export interface AuthOptions {
@@ -15,6 +15,7 @@ export const SETUP_AGENT_NAMES: Record<SetupAgent, string> = {
   cursor: "Cursor",
   opencode: "OpenCode",
   codex: "Codex",
+  gemini: "Gemini CLI",
 };
 
 export const AUTH_MODE_LABELS: Record<AuthMode, string> = {
@@ -175,6 +176,31 @@ const agents: Record<SetupAgent, AgentConfig> = {
     detect: {
       projectPaths: [".codex"],
       globalPaths: [join(homedir(), ".codex")],
+    },
+  },
+
+  gemini: {
+    name: "gemini",
+    displayName: "Gemini CLI",
+    mcp: {
+      projectPaths: [join(".gemini", "settings.json")],
+      globalPaths: [join(homedir(), ".gemini", "settings.json")],
+      configKey: "mcpServers",
+      buildEntry: (auth) => withHeaders({ httpUrl: mcpUrl(auth) }, auth),
+    },
+    rule: {
+      kind: "append",
+      file: (scope) => (scope === "global" ? join(homedir(), ".gemini", "GEMINI.md") : "GEMINI.md"),
+      sectionMarker: "<!-- context7 -->",
+    },
+    skill: {
+      name: "context7-mcp",
+      dir: (scope) =>
+        scope === "global" ? join(homedir(), ".gemini", "skills") : join(".gemini", "skills"),
+    },
+    detect: {
+      projectPaths: [".gemini"],
+      globalPaths: [join(homedir(), ".gemini")],
     },
   },
 };
