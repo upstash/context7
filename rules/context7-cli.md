@@ -4,7 +4,7 @@ Do not use for: refactoring, writing scripts from scratch, debugging business lo
 
 ## Steps
 
-1. Resolve library: `npx ctx7@latest library <name> "<user's question>"`
+1. Resolve library: `npx ctx7@latest library <name> "<user's question>"` — use the official library name with proper punctuation (e.g., "Next.js" not "nextjs", "Customer.io" not "customerio", "Three.js" not "threejs")
 2. Pick the best match (ID format: `/org/project`) by: exact name match, description relevance, code snippet count, source reputation (High/Medium preferred), and benchmark score (higher is better). If results don't look right, try alternate names or queries (e.g., "next.js" not "nextjs", or rephrase the question)
 3. Fetch docs: `npx ctx7@latest docs <libraryId> "<user's question>"`
 4. Answer using the fetched documentation

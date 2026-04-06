@@ -44,7 +44,9 @@ export function resolveLibraryId(config: Context7ToolsConfig = {}) {
         ),
       libraryName: z
         .string()
-        .describe("Library name to search for and retrieve a Context7-compatible library ID."),
+        .describe(
+          "Library name to search for and retrieve a Context7-compatible library ID. Use the official library name with proper punctuation — e.g., 'Next.js' instead of 'nextjs', 'Customer.io' instead of 'customerio', 'Three.js' instead of 'threejs'."
+        ),
     }),
     execute: async ({ query, libraryName }: { query: string; libraryName: string }) => {
       try {
