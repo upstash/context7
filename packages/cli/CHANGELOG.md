@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.10
+
+### Patch Changes
+
+- fb29170: Add Gemini CLI support to setup command
+- 89d4862: Use GITHUB_TOKEN/GH_TOKEN or gh CLI auth for skill downloads to avoid GitHub API rate limits and support private repos
+- 8322879: Improve resolve libryar id tool prompt to provide the libraryName query with proper format
+
 ## 0.3.9
 
 ### Patch Changes
