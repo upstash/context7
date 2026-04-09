@@ -140,7 +140,10 @@
         "group": "Integrations",
         "pages": [
           "integrations/github-actions",
-          "integrations/code-rabbit"
+          "integrations/code-rabbit",
+          "integrations/factory-ai",
+          "integrations/tembo",
+          "integrations/mastra"
         ]
       },
       {
