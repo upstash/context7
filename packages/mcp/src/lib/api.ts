@@ -3,6 +3,7 @@ import { ClientContext, generateHeaders } from "./encryption.js";
 import { Agent, ProxyAgent, setGlobalDispatcher } from "undici";
 import { CONTEXT7_API_BASE_URL } from "./constants.js";
 import { readFileSync } from "fs";
+import tls from "tls";
 
 /**
  * Parses error response from the Context7 API
@@ -45,10 +46,14 @@ const PROXY_URL: string | null =
 
 const CUSTOM_CA_CERTS: string | undefined = process.env.NODE_EXTRA_CA_CERTS;
 
-function loadCustomCACerts(): Buffer | undefined {
+function loadCustomCACerts(): (string | Buffer)[] | undefined {
   if (!CUSTOM_CA_CERTS) return undefined;
   try {
-    return readFileSync(CUSTOM_CA_CERTS);
+    const customCa = readFileSync(CUSTOM_CA_CERTS);
+    if (tls.rootCertificates.length > 0) {
+      return [...tls.rootCertificates, customCa];
+    }
+    return [customCa];
   } catch (error) {
     console.error(
       `[Context7] Failed to load custom CA certificates from ${CUSTOM_CA_CERTS}:`,
