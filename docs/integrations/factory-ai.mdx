@@ -10,40 +10,35 @@ For more details on how Factory AI handles MCP, see the [Factory AI MCP document
 
 ## Setup
 
-<Steps>
-  <Step title="Open MCP Manager">
-    Run the `/mcp` command inside Factory or use the CLI to manage MCP servers.
-  </Step>
-  <Step title="Add Context7 via CLI">
-    Add Context7 as an HTTP MCP server using the `droid` CLI:
+There are multiple ways to add Context7 as an MCP server in Factory AI. Replace `YOUR_API_KEY` with your API key from the [Context7 dashboard](https://context7.com/dashboard).
 
-    ```bash
-    droid mcp add context7 https://mcp.context7.com/mcp --type http --header "CONTEXT7_API_KEY: YOUR_API_KEY"
-    ```
+### Using the CLI
 
-    Replace `YOUR_API_KEY` with your API key from the [Context7 dashboard](https://context7.com/dashboard).
-  </Step>
-  <Step title="Or Add via Configuration File">
-    Alternatively, add Context7 directly to your `.factory/mcp.json` (project-level) or `~/.factory/mcp.json` (user-level):
+```bash
+droid mcp add context7 https://mcp.context7.com/mcp --type http --header "CONTEXT7_API_KEY: YOUR_API_KEY"
+```
 
-    ```json
-    {
-      "mcpServers": {
-        "context7": {
-          "type": "http",
-          "url": "https://mcp.context7.com/mcp",
-          "headers": {
-            "CONTEXT7_API_KEY": "YOUR_API_KEY"
-          }
-        }
+### Using the MCP Manager
+
+Run the `/mcp` command inside Factory and add Context7 from the interface.
+
+### Using a Configuration File
+
+Add Context7 directly to your `.factory/mcp.json` (project-level) or `~/.factory/mcp.json` (user-level):
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
       }
     }
-    ```
-  </Step>
-  <Step title="Verify Connection">
-    Run `/mcp` to confirm Context7 appears in your active MCP servers list.
-  </Step>
-</Steps>
+  }
+}
+```
 
 ## How It Works
 
