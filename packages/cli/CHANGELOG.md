@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.11
+
+### Patch Changes
+
+- bc8eaf1: Add `--all-agents` and `--yes` support to `ctx7 skills install` for non-interactive multi-agent installs.
+
 ## 0.3.10
 
 ### Patch Changes
