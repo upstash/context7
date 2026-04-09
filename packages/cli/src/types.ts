@@ -129,6 +129,7 @@ export type IDE = "claude" | "cursor" | "antigravity" | "universal";
 export type Scope = "project" | "global";
 
 export interface IDEOptions {
+  allAgents?: boolean;
   claude?: boolean;
   cursor?: boolean;
   universal?: boolean;
