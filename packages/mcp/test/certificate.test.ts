@@ -3,9 +3,8 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import tls from "node:tls";
 
-import { loadCustomCACerts } from "../src/lib/api.js";
+import { getDefaultCACertificates, loadCustomCACerts } from "../src/lib/api.js";
 
 test("loadCustomCACerts returns undefined when no path is provided", () => {
   assert.equal(loadCustomCACerts(undefined), undefined);
@@ -30,7 +29,7 @@ test("loadCustomCACerts appends custom certs to Node default CAs", () => {
   writeFileSync(certPath, `${customCert}\n`, "utf-8");
 
   try {
-    const defaultCAs = tls.getCACertificates("default");
+    const defaultCAs = getDefaultCACertificates();
     const mergedCAs = loadCustomCACerts(certPath);
 
     assert.ok(mergedCAs);

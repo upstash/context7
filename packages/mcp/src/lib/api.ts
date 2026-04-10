@@ -46,11 +46,19 @@ const PROXY_URL: string | null =
 
 const CUSTOM_CA_CERTS: string | undefined = process.env.NODE_EXTRA_CA_CERTS;
 
+export function getDefaultCACertificates(): string[] {
+  if (typeof tls.getCACertificates === "function") {
+    return tls.getCACertificates("default");
+  }
+
+  return [...tls.rootCertificates];
+}
+
 export function loadCustomCACerts(customCACertsPath = CUSTOM_CA_CERTS): string[] | undefined {
   if (!customCACertsPath) return undefined;
   try {
     const customCa = readFileSync(customCACertsPath, "utf-8");
-    return [...tls.getCACertificates("default"), customCa];
+    return [...getDefaultCACertificates(), customCa];
   } catch (error) {
     console.error(
       `[Context7] Failed to load custom CA certificates from ${customCACertsPath}:`,
