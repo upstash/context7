@@ -3,6 +3,7 @@ import { ClientContext, generateHeaders } from "./encryption.js";
 import { Agent, ProxyAgent, setGlobalDispatcher } from "undici";
 import { CONTEXT7_API_BASE_URL } from "./constants.js";
 import { readFileSync } from "fs";
+import tls from "tls";
 
 /**
  * Parses error response from the Context7 API
@@ -45,13 +46,22 @@ const PROXY_URL: string | null =
 
 const CUSTOM_CA_CERTS: string | undefined = process.env.NODE_EXTRA_CA_CERTS;
 
-function loadCustomCACerts(): Buffer | undefined {
-  if (!CUSTOM_CA_CERTS) return undefined;
+export function getDefaultCACertificates(): string[] {
+  if (typeof tls.getCACertificates === "function") {
+    return tls.getCACertificates("default");
+  }
+
+  return [...tls.rootCertificates];
+}
+
+export function loadCustomCACerts(customCACertsPath = CUSTOM_CA_CERTS): string[] | undefined {
+  if (!customCACertsPath) return undefined;
   try {
-    return readFileSync(CUSTOM_CA_CERTS);
+    const customCa = readFileSync(customCACertsPath, "utf-8");
+    return [...getDefaultCACertificates(), customCa];
   } catch (error) {
     console.error(
-      `[Context7] Failed to load custom CA certificates from ${CUSTOM_CA_CERTS}:`,
+      `[Context7] Failed to load custom CA certificates from ${customCACertsPath}:`,
       error
     );
     return undefined;
@@ -61,7 +71,12 @@ function loadCustomCACerts(): Buffer | undefined {
 if (PROXY_URL && !PROXY_URL.startsWith("$") && /^(http|https):\/\//i.test(PROXY_URL)) {
   try {
     const ca = loadCustomCACerts();
-    setGlobalDispatcher(new ProxyAgent({ uri: PROXY_URL, ...(ca ? { connect: { ca } } : {}) }));
+    setGlobalDispatcher(
+      new ProxyAgent({
+        uri: PROXY_URL,
+        ...(ca ? { requestTls: { ca }, proxyTls: { ca } } : {}),
+      })
+    );
   } catch (error) {
     console.error(
       `[Context7] Failed to configure proxy agent for provided proxy URL: ${PROXY_URL}:`,
