@@ -5,7 +5,7 @@
   "description": "MCP server for Context7",
   "scripts": {
     "build": "tsc && chmod 755 dist/index.js",
-    "test": "pnpm run build && tsc -p tsconfig.test.json && cp package.json dist-test/package.json && node --test dist-test/test/certificate.test.js",
+    "test": "pnpm exec vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:check": "eslint .",
@@ -55,6 +55,7 @@
   },
   "devDependencies": {
     "@types/node": "^25.0.3",
-    "typescript": "^5.8.2"
+    "typescript": "^5.8.2",
+    "vitest": "^4.0.13"
   }
 }

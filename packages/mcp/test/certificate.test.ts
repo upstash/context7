@@ -1,13 +1,12 @@
-import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import test from "node:test";
+import { expect, test } from "vitest";
 
 import { getDefaultCACertificates, loadCustomCACerts } from "../src/lib/api.js";
 
 test("loadCustomCACerts returns undefined when no path is provided", () => {
-  assert.equal(loadCustomCACerts(undefined), undefined);
+  expect(loadCustomCACerts(undefined)).toBeUndefined();
 });
 
 test("loadCustomCACerts appends custom certs to Node default CAs", () => {
@@ -32,10 +31,10 @@ test("loadCustomCACerts appends custom certs to Node default CAs", () => {
     const defaultCAs = getDefaultCACertificates();
     const mergedCAs = loadCustomCACerts(certPath);
 
-    assert.ok(mergedCAs);
-    assert.equal(mergedCAs.length, defaultCAs.length + 1);
-    assert.deepEqual(mergedCAs.slice(0, defaultCAs.length), defaultCAs);
-    assert.equal(mergedCAs.at(-1), `${customCert}\n`);
+    expect(mergedCAs).toBeDefined();
+    expect(mergedCAs).toHaveLength(defaultCAs.length + 1);
+    expect(mergedCAs?.slice(0, defaultCAs.length)).toEqual(defaultCAs);
+    expect(mergedCAs?.at(-1)).toBe(`${customCert}\n`);
   } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }
