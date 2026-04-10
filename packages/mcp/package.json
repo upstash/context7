@@ -5,7 +5,7 @@
   "description": "MCP server for Context7",
   "scripts": {
     "build": "tsc && chmod 755 dist/index.js",
-    "test": "echo \"No tests yet\"",
+    "test": "pnpm run build && tsc -p tsconfig.test.json && cp package.json dist-test/package.json && node --test dist-test/test/**/*.test.js",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:check": "eslint .",
