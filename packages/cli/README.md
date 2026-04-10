@@ -177,6 +177,12 @@ ctx7 skills install /anthropics/skills pdf --universal
 
 # Install globally (home directory instead of current project)
 ctx7 skills install /anthropics/skills pdf --global
+
+# Install non-interactively
+ctx7 skills install /anthropics/skills pdf --global --universal --yes
+
+# Install to all supported agent locations
+ctx7 skills install /anthropics/skills pdf --all-agents
 ```
 
 ### Search for skills

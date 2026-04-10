@@ -22,7 +22,9 @@
         "summary": "Search for libraries",
         "description": "Search for libraries by name with intelligent LLM-powered ranking based on your query context.",
         "operationId": "searchLibraries",
-        "tags": ["Search"],
+        "tags": [
+          "Search"
+        ],
         "parameters": [
           {
             "$ref": "#/components/parameters/LibraryNameParam"
@@ -53,9 +55,13 @@
                       "stars": 220000,
                       "trustScore": 10,
                       "benchmarkScore": 95.5,
-                      "versions": ["v18.2.0", "v17.0.2"]
+                      "versions": [
+                        "v18.2.0",
+                        "v17.0.2"
+                      ]
                     }
-                  ]
+                  ],
+                  "searchFilterApplied": false
                 }
               }
             }
@@ -65,6 +71,9 @@
           },
           "401": {
             "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
           },
           "429": {
             "$ref": "#/components/responses/RateLimitError"
@@ -89,7 +98,9 @@
         "summary": "Get documentation context",
         "description": "Retrieve intelligent, LLM-reranked documentation context for natural language queries. Returns the most relevant code snippets and documentation for your specific question.",
         "operationId": "getContext",
-        "tags": ["Context"],
+        "tags": [
+          "Context"
+        ],
         "parameters": [
           {
             "$ref": "#/components/parameters/LibraryIdParam"
@@ -144,8 +155,17 @@
               }
             }
           },
+          "202": {
+            "$ref": "#/components/responses/AcceptedError"
+          },
+          "301": {
+            "$ref": "#/components/responses/RedirectError"
+          },
           "400": {
             "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
           },
           "403": {
             "$ref": "#/components/responses/ForbiddenError"
@@ -153,17 +173,8 @@
           "404": {
             "$ref": "#/components/responses/NotFoundError"
           },
-          "202": {
-            "$ref": "#/components/responses/AcceptedError"
-          },
-          "301": {
-            "$ref": "#/components/responses/RedirectError"
-          },
           "422": {
             "$ref": "#/components/responses/UnprocessableEntityError"
-          },
-          "401": {
-            "$ref": "#/components/responses/UnauthorizedError"
           },
           "429": {
             "$ref": "#/components/responses/RateLimitError"
@@ -180,12 +191,379 @@
         ]
       }
     },
+    "/v1/refresh": {
+      "post": {
+        "summary": "Refresh a library",
+        "description": "Trigger a refresh of an existing library to fetch the latest documentation. Library owners have dedicated refresh limits.",
+        "operationId": "refreshLibrary",
+        "tags": [
+          "Refresh"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "libraryName"
+                ],
+                "properties": {
+                  "libraryName": {
+                    "type": "string",
+                    "description": "Library identifier in `/owner/repo` format"
+                  },
+                  "branch": {
+                    "type": "string",
+                    "description": "Optional branch name to refresh"
+                  },
+                  "gitToken": {
+                    "type": "string",
+                    "description": "Optional Git access token for refreshing private repositories. If not provided, the stored OAuth token will be used."
+                  }
+                }
+              },
+              "example": {
+                "libraryName": "/vercel/next.js"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Refresh started successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                },
+                "example": {
+                  "message": "Refresh started successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v2/policies": {
+      "get": {
+        "summary": "Get teamspace policies",
+        "description": "Retrieve the current policy configuration for the teamspace associated with the API key. Includes source type access settings and public repository filters.",
+        "operationId": "getPolicies",
+        "tags": [
+          "Policies"
+        ],
+        "responses": {
+          "200": {
+            "description": "Current policy configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyResponse"
+                },
+                "example": {
+                  "sourceTypes": {
+                    "public_repos": {
+                      "enabled": true
+                    },
+                    "private_sources": {
+                      "enabled": true
+                    },
+                    "confluence": {
+                      "enabled": false
+                    },
+                    "uploaded_files": {
+                      "enabled": true
+                    },
+                    "websites": {
+                      "enabled": true
+                    },
+                    "llmstxt": {
+                      "enabled": true
+                    }
+                  },
+                  "libraryFilters": {
+                    "mode": "quality",
+                    "quality": {
+                      "requireVerified": false,
+                      "minTrustScore": null,
+                      "maxAgeDays": 365,
+                      "blockedLibraries": [
+                        "/org/repo",
+                        "example.com"
+                      ],
+                      "exceptedLibraries": [
+                        "/vercel/next.js"
+                      ],
+                      "repoFilters": {
+                        "minStars": 100
+                      }
+                    },
+                    "select": {
+                      "allowedLibraries": []
+                    }
+                  },
+                  "accessibleLibraryCount": 4521
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "patch": {
+        "summary": "Update teamspace policies",
+        "description": "Incrementally update policy configuration for the teamspace associated with the API key. Only the fields you include in the request body are modified — omitted fields remain unchanged. For source types, use `enable`/`disable` arrays (both allowed if no overlap). For library lists, use `add`/`remove` objects or `clear: true` to remove all. Requires owner or admin role. All field names use camelCase.",
+        "operationId": "updatePolicies",
+        "tags": [
+          "Policies"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchPoliciesRequest"
+              },
+              "examples": {
+                "disableSourceType": {
+                  "summary": "Disable a source type",
+                  "value": {
+                    "sourceTypes": {
+                      "disable": [
+                        "websites"
+                      ]
+                    }
+                  }
+                },
+                "setQualityFilters": {
+                  "summary": "Set quality filter thresholds",
+                  "value": {
+                    "libraryFilters": {
+                      "quality": {
+                        "requireVerified": true,
+                        "minTrustScore": 4,
+                        "repoFilters": {
+                          "minStars": 1000
+                        }
+                      }
+                    }
+                  }
+                },
+                "setWebsiteFilters": {
+                  "summary": "Set website quality filters",
+                  "value": {
+                    "libraryFilters": {
+                      "quality": {
+                        "websiteFilters": {
+                          "minBacklinks": 100,
+                          "minReferringDomains": 10,
+                          "minOrganicTraffic": 1000
+                        }
+                      }
+                    }
+                  }
+                },
+                "blockLibrary": {
+                  "summary": "Add a library to the blocked list",
+                  "value": {
+                    "libraryFilters": {
+                      "quality": {
+                        "blockedLibraries": {
+                          "add": [
+                            "/org/repo"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "blockDomain": {
+                  "summary": "Block all libraries from a domain",
+                  "value": {
+                    "libraryFilters": {
+                      "quality": {
+                        "blockedLibraries": {
+                          "add": [
+                            "example.com"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "exceptLibrary": {
+                  "summary": "Add a library exception (bypasses all filters)",
+                  "value": {
+                    "libraryFilters": {
+                      "quality": {
+                        "exceptedLibraries": {
+                          "add": [
+                            "/vercel/next.js"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "allowDomain": {
+                  "summary": "Allow libraries from a specific domain (select mode)",
+                  "value": {
+                    "libraryFilters": {
+                      "select": {
+                        "allowedLibraries": {
+                          "add": [
+                            "stripe.com",
+                            "/vercel/next.js"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "clearAllowedLibraries": {
+                  "summary": "Clear all allowed libraries",
+                  "value": {
+                    "libraryFilters": {
+                      "select": {
+                        "allowedLibraries": {
+                          "clear": true
+                        }
+                      }
+                    }
+                  }
+                },
+                "combined": {
+                  "summary": "Multiple changes in one request",
+                  "value": {
+                    "sourceTypes": {
+                      "enable": [
+                        "websites"
+                      ],
+                      "disable": [
+                        "confluence"
+                      ]
+                    },
+                    "libraryFilters": {
+                      "mode": "quality",
+                      "quality": {
+                        "minTrustScore": 4,
+                        "maxAgeDays": 365,
+                        "blockedLibraries": {
+                          "add": [
+                            "/org/repo"
+                          ],
+                          "remove": [
+                            "/org/old-repo"
+                          ]
+                        },
+                        "repoFilters": {
+                          "minStars": 100
+                        },
+                        "websiteFilters": {
+                          "minBacklinks": 100
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated policy configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolicyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/v2/add/repo/github": {
       "post": {
         "summary": "Add a GitHub repository",
         "description": "Submit a GitHub repository for documentation processing. Supports private repos via a gitToken or by connecting your GitHub account at https://context7.com/add-library.",
         "operationId": "addGitHubRepo",
-        "tags": ["Add Library"],
+        "tags": [
+          "Add Library"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -240,7 +618,9 @@
         "summary": "Add a GitLab repository",
         "description": "Submit a GitLab repository for documentation processing. Supports private repos via a gitToken or by connecting your GitLab account at https://context7.com/add-library.",
         "operationId": "addGitLabRepo",
-        "tags": ["Add Library"],
+        "tags": [
+          "Add Library"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -295,7 +675,9 @@
         "summary": "Add a Bitbucket repository",
         "description": "Submit a Bitbucket repository for documentation processing. Supports private repos via a gitToken or by connecting your Bitbucket account at https://context7.com/add-library.",
         "operationId": "addBitbucketRepo",
-        "tags": ["Add Library"],
+        "tags": [
+          "Add Library"
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -350,14 +732,18 @@
         "summary": "Add from other Git providers",
         "description": "Submit a repository from any Git provider not covered by the dedicated GitHub, GitLab, or Bitbucket endpoints. Supports Gitea, Forgejo, Codeberg, self-hosted GitLab, and other Git servers. For private repos, provide a personal access token via the gitToken field.",
         "operationId": "addGitRepo",
-        "tags": ["Add Library"],
+        "tags": [
+          "Add Library"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["docsRepoUrl"],
+                "required": [
+                  "docsRepoUrl"
+                ],
                 "properties": {
                   "docsRepoUrl": {
                     "type": "string",
@@ -468,6 +854,92 @@
           },
           "401": {
             "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "504": {
+            "$ref": "#/components/responses/GatewayTimeoutError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/v2/add/openapi-upload": {
+      "post": {
+        "summary": "Upload an OpenAPI specification file",
+        "description": "Upload an OpenAPI specification file (JSON or YAML) for documentation processing. Requires a team project. File size limit is 10MB.",
+        "operationId": "addOpenApiUpload",
+        "tags": [
+          "Add Library"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "openapiFile"
+                ],
+                "properties": {
+                  "openapiFile": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "The OpenAPI specification file (.json, .yaml, or .yml)"
+                  },
+                  "libraryTitle": {
+                    "type": "string",
+                    "description": "Custom title for the library"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Description of the library"
+                  },
+                  "skipBenchmark": {
+                    "type": "string",
+                    "enum": [
+                      "true"
+                    ],
+                    "description": "Set to 'true' to skip benchmark quality scoring"
+                  },
+                  "force": {
+                    "type": "string",
+                    "enum": [
+                      "true"
+                    ],
+                    "description": "Set to 'true' to force reprocessing"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AddLibrarySuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "409": {
+            "$ref": "#/components/responses/DuplicateError"
           },
           "429": {
             "$ref": "#/components/responses/RateLimitError"
@@ -610,44 +1082,74 @@
         ]
       }
     },
-    "/v2/add/openapi-upload": {
+    "/v2/add/confluence": {
       "post": {
-        "summary": "Upload an OpenAPI specification file",
-        "description": "Upload an OpenAPI specification file (JSON or YAML) for documentation processing. Requires a team project. File size limit is 10MB.",
-        "operationId": "addOpenApiUpload",
-        "tags": ["Add Library"],
+        "summary": "Add a Confluence space",
+        "description": "Submit a Confluence space for documentation processing. Requires a connected Confluence account and a team project. You can optionally specify specific page IDs to index only a subset of the space.",
+        "operationId": "addConfluence",
+        "tags": [
+          "Add Library"
+        ],
         "requestBody": {
           "required": true,
           "content": {
-            "multipart/form-data": {
+            "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["openapiFile"],
+                "required": [
+                  "cloudId",
+                  "siteUrl",
+                  "spaceKey",
+                  "spaceName",
+                  "title",
+                  "description"
+                ],
                 "properties": {
-                  "openapiFile": {
+                  "cloudId": {
                     "type": "string",
-                    "format": "binary",
-                    "description": "The OpenAPI specification file (.json, .yaml, or .yml)"
+                    "description": "The Confluence cloud instance ID"
                   },
-                  "libraryTitle": {
+                  "siteUrl": {
                     "type": "string",
-                    "description": "Custom title for the library"
+                    "description": "The Confluence site URL"
+                  },
+                  "spaceKey": {
+                    "type": "string",
+                    "description": "The Confluence space key"
+                  },
+                  "spaceName": {
+                    "type": "string",
+                    "description": "The Confluence space name"
+                  },
+                  "pageIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Optional list of specific page IDs to index. If omitted, the entire space is indexed."
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "Title for the library"
                   },
                   "description": {
                     "type": "string",
                     "description": "Description of the library"
                   },
-                  "skipBenchmark": {
+                  "projectId": {
                     "type": "string",
-                    "enum": ["true"],
-                    "description": "Set to 'true' to skip benchmark quality scoring"
-                  },
-                  "force": {
-                    "type": "string",
-                    "enum": ["true"],
-                    "description": "Set to 'true' to force reprocessing"
+                    "description": "The team project ID to associate this Confluence space with"
                   }
                 }
+              },
+              "example": {
+                "cloudId": "a]1b2c3d4-5e6f-7g8h-9i0j",
+                "siteUrl": "https://your-site.atlassian.net",
+                "spaceKey": "DOCS",
+                "spaceName": "Documentation",
+                "title": "My Docs",
+                "description": "Internal documentation",
+                "projectId": "project-uuid"
               }
             }
           }
@@ -665,9 +1167,6 @@
           "403": {
             "$ref": "#/components/responses/ForbiddenError"
           },
-          "404": {
-            "$ref": "#/components/responses/NotFoundError"
-          },
           "409": {
             "$ref": "#/components/responses/DuplicateError"
           },
@@ -679,86 +1178,6 @@
           },
           "504": {
             "$ref": "#/components/responses/GatewayTimeoutError"
-          }
-        },
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ]
-      }
-    },
-    "/v1/refresh": {
-      "post": {
-        "summary": "Refresh a library",
-        "description": "Trigger a refresh of an existing library to fetch the latest documentation. Library owners have dedicated refresh limits.",
-        "operationId": "refreshLibrary",
-        "tags": ["Refresh"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["libraryName"],
-                "properties": {
-                  "libraryName": {
-                    "type": "string",
-                    "description": "Library identifier in `/owner/repo` format"
-                  },
-                  "branch": {
-                    "type": "string",
-                    "description": "Optional branch name to refresh"
-                  },
-                  "gitToken": {
-                    "type": "string",
-                    "description": "Optional Git access token for refreshing private repositories. If not provided, the stored OAuth token will be used."
-                  }
-                }
-              },
-              "example": {
-                "libraryName": "/vercel/next.js"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Refresh started successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "message": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["message"]
-                },
-                "example": {
-                  "message": "Refresh started successfully"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequestError"
-          },
-          "401": {
-            "$ref": "#/components/responses/UnauthorizedError"
-          },
-          "403": {
-            "$ref": "#/components/responses/ForbiddenError"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFoundError"
-          },
-          "429": {
-            "$ref": "#/components/responses/RateLimitError"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
           }
         },
         "security": [
@@ -835,7 +1254,10 @@
         "required": false,
         "schema": {
           "type": "string",
-          "enum": ["json", "txt"],
+          "enum": [
+            "json",
+            "txt"
+          ],
           "default": "txt"
         },
         "example": "json"
@@ -874,7 +1296,13 @@
           },
           "state": {
             "type": "string",
-            "enum": ["finalized", "initial", "processing", "error", "delete"],
+            "enum": [
+              "finalized",
+              "initial",
+              "processing",
+              "error",
+              "delete"
+            ],
             "description": "Processing state of the library",
             "example": "finalized"
           },
@@ -913,7 +1341,10 @@
             "items": {
               "type": "string"
             },
-            "example": ["v15.1.8", "v14.3.0"]
+            "example": [
+              "v15.1.8",
+              "v14.3.0"
+            ]
           }
         }
       },
@@ -927,9 +1358,16 @@
             "items": {
               "$ref": "#/components/schemas/Library"
             }
+          },
+          "searchFilterApplied": {
+            "type": "boolean",
+            "description": "Indicates whether the search results were filtered by the teamspace's public library access settings. When true, some libraries may be excluded from results based on the teamspace's configuration (e.g., only verified libraries, selected libraries, or private repos only)."
           }
         },
-        "required": ["results"]
+        "required": [
+          "results",
+          "searchFilterApplied"
+        ]
       },
       "CodeSnippet": {
         "type": "object",
@@ -990,7 +1428,10 @@
             "description": "The actual code content"
           }
         },
-        "required": ["language", "code"]
+        "required": [
+          "language",
+          "code"
+        ]
       },
       "InfoSnippet": {
         "type": "object",
@@ -1013,7 +1454,10 @@
             "description": "Token count for the content"
           }
         },
-        "required": ["content", "contentTokens"]
+        "required": [
+          "content",
+          "contentTokens"
+        ]
       },
       "ContextResponse": {
         "type": "object",
@@ -1061,7 +1505,10 @@
             }
           }
         },
-        "required": ["codeSnippets", "infoSnippets"]
+        "required": [
+          "codeSnippets",
+          "infoSnippets"
+        ]
       },
       "Error": {
         "type": "object",
@@ -1076,12 +1523,17 @@
             "description": "Human-readable error message"
           }
         },
-        "required": ["error", "message"]
+        "required": [
+          "error",
+          "message"
+        ]
       },
       "AddRepoRequest": {
         "type": "object",
         "description": "Request body for adding a Git repository",
-        "required": ["docsRepoUrl"],
+        "required": [
+          "docsRepoUrl"
+        ],
         "properties": {
           "docsRepoUrl": {
             "type": "string",
@@ -1123,7 +1575,347 @@
             "description": "Human-readable success message"
           }
         },
-        "required": ["libraryName", "message"]
+        "required": [
+          "libraryName",
+          "message"
+        ]
+      },
+      "SourceTypeStatus": {
+        "type": "object",
+        "description": "Whether a source type is enabled or disabled",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether this source type is enabled"
+          }
+        },
+        "required": [
+          "enabled"
+        ]
+      },
+      "PolicyResponse": {
+        "type": "object",
+        "description": "Complete teamspace policy configuration",
+        "properties": {
+          "sourceTypes": {
+            "type": "object",
+            "description": "Access settings for each documentation source type",
+            "properties": {
+              "public_repos": {
+                "$ref": "#/components/schemas/SourceTypeStatus"
+              },
+              "private_sources": {
+                "$ref": "#/components/schemas/SourceTypeStatus"
+              },
+              "confluence": {
+                "$ref": "#/components/schemas/SourceTypeStatus"
+              },
+              "uploaded_files": {
+                "$ref": "#/components/schemas/SourceTypeStatus"
+              },
+              "websites": {
+                "$ref": "#/components/schemas/SourceTypeStatus"
+              },
+              "llmstxt": {
+                "$ref": "#/components/schemas/SourceTypeStatus"
+              }
+            },
+            "required": [
+              "public_repos",
+              "private_sources",
+              "confluence",
+              "uploaded_files",
+              "websites",
+              "llmstxt"
+            ]
+          },
+          "libraryFilters": {
+            "type": "object",
+            "description": "Library access filters. Mode determines which sub-object is active.",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "nullable": true,
+                "enum": [
+                  "quality",
+                  "select",
+                  null
+                ],
+                "description": "Filter mode: 'quality' for threshold-based filtering, 'select' for manual library selection"
+              },
+              "quality": {
+                "type": "object",
+                "description": "Quality-mode settings (active when mode is 'quality')",
+                "properties": {
+                  "requireVerified": {
+                    "type": "boolean",
+                    "description": "Restrict to verified libraries only"
+                  },
+                  "minTrustScore": {
+                    "type": "integer",
+                    "nullable": true,
+                    "description": "Minimum trust score, 0-10"
+                  },
+                  "maxAgeDays": {
+                    "type": "integer",
+                    "nullable": true,
+                    "description": "Maximum days since last update"
+                  },
+                  "blockedLibraries": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Libraries excluded from results"
+                  },
+                  "exceptedLibraries": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Libraries that bypass all quality filters, blocked list, and source type restrictions"
+                  },
+                  "repoFilters": {
+                    "type": "object",
+                    "description": "Repo-specific quality filters",
+                    "properties": {
+                      "minStars": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Minimum GitHub stars required"
+                      }
+                    },
+                    "required": [
+                      "minStars"
+                    ]
+                  },
+                  "websiteFilters": {
+                    "type": "object",
+                    "description": "Website-specific quality filters",
+                    "properties": {
+                      "minBacklinks": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Minimum number of backlinks required"
+                      },
+                      "minReferringDomains": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Minimum number of referring domains required"
+                      },
+                      "minOrganicTraffic": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Minimum monthly organic traffic required"
+                      }
+                    },
+                    "required": [
+                      "minBacklinks",
+                      "minReferringDomains",
+                      "minOrganicTraffic"
+                    ]
+                  }
+                },
+                "required": [
+                  "requireVerified",
+                  "minTrustScore",
+                  "maxAgeDays",
+                  "blockedLibraries",
+                  "exceptedLibraries",
+                  "repoFilters",
+                  "websiteFilters"
+                ]
+              },
+              "select": {
+                "type": "object",
+                "description": "Select-mode settings (active when mode is 'select')",
+                "properties": {
+                  "allowedLibraries": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Libraries explicitly allowed"
+                  }
+                },
+                "required": [
+                  "allowedLibraries"
+                ]
+              }
+            },
+            "required": [
+              "mode",
+              "quality",
+              "select"
+            ]
+          },
+          "accessibleLibraryCount": {
+            "type": "integer",
+            "description": "Number of public libraries currently accessible under these filters"
+          }
+        },
+        "required": [
+          "sourceTypes",
+          "libraryFilters",
+          "accessibleLibraryCount"
+        ]
+      },
+      "ListOperation": {
+        "type": "object",
+        "description": "Incremental add/remove operation on a list of library identifiers or domains. Use 'clear' to remove all entries at once.",
+        "properties": {
+          "add": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Identifiers to add — library paths (e.g. '/org/repo', '/org') or domains (e.g. 'stripe.com')"
+          },
+          "remove": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Identifiers to remove — library paths (e.g. '/org/repo', '/org') or domains (e.g. 'stripe.com')"
+          },
+          "clear": {
+            "type": "boolean",
+            "description": "Set to true to remove all entries. Cannot be used together with 'add' or 'remove'."
+          }
+        }
+      },
+      "PatchPoliciesRequest": {
+        "type": "object",
+        "description": "Incremental policy update. All fields are optional — only provided fields are modified. At least one of 'sourceTypes' or 'libraryFilters' must be provided.",
+        "minProperties": 1,
+        "properties": {
+          "sourceTypes": {
+            "type": "object",
+            "description": "Enable or disable specific source types. Both can be provided in one request, but the same type cannot appear in both arrays.",
+            "properties": {
+              "enable": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "public_repos",
+                    "private_sources",
+                    "confluence",
+                    "uploaded_files",
+                    "websites",
+                    "llmstxt"
+                  ]
+                },
+                "description": "Source types to enable"
+              },
+              "disable": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "public_repos",
+                    "private_sources",
+                    "confluence",
+                    "uploaded_files",
+                    "websites",
+                    "llmstxt"
+                  ]
+                },
+                "description": "Source types to disable"
+              }
+            }
+          },
+          "libraryFilters": {
+            "type": "object",
+            "description": "Update library access filters.",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "nullable": true,
+                "enum": [
+                  "quality",
+                  "select",
+                  null
+                ],
+                "description": "Filter mode (null to clear)"
+              },
+              "quality": {
+                "type": "object",
+                "description": "Update quality-mode settings.",
+                "properties": {
+                  "requireVerified": {
+                    "type": "boolean",
+                    "description": "Restrict to verified libraries only"
+                  },
+                  "minTrustScore": {
+                    "type": "integer",
+                    "nullable": true,
+                    "minimum": 0,
+                    "maximum": 10,
+                    "description": "Minimum trust score, 0-10 (null to clear)"
+                  },
+                  "maxAgeDays": {
+                    "type": "integer",
+                    "nullable": true,
+                    "minimum": 1,
+                    "description": "Maximum age in days (null to clear)"
+                  },
+                  "blockedLibraries": {
+                    "$ref": "#/components/schemas/ListOperation"
+                  },
+                  "exceptedLibraries": {
+                    "$ref": "#/components/schemas/ListOperation"
+                  },
+                  "repoFilters": {
+                    "type": "object",
+                    "description": "Update repo-specific quality filters.",
+                    "properties": {
+                      "minStars": {
+                        "type": "integer",
+                        "nullable": true,
+                        "minimum": 0,
+                        "description": "Minimum stars threshold (null to clear)"
+                      }
+                    }
+                  },
+                  "websiteFilters": {
+                    "type": "object",
+                    "description": "Update website-specific quality filters.",
+                    "properties": {
+                      "minBacklinks": {
+                        "type": "integer",
+                        "nullable": true,
+                        "minimum": 0,
+                        "description": "Minimum backlinks threshold (null to clear)"
+                      },
+                      "minReferringDomains": {
+                        "type": "integer",
+                        "nullable": true,
+                        "minimum": 0,
+                        "description": "Minimum referring domains threshold (null to clear)"
+                      },
+                      "minOrganicTraffic": {
+                        "type": "integer",
+                        "nullable": true,
+                        "minimum": 0,
+                        "description": "Minimum organic traffic threshold (null to clear)"
+                      }
+                    }
+                  }
+                }
+              },
+              "select": {
+                "type": "object",
+                "description": "Update select-mode settings.",
+                "properties": {
+                  "allowedLibraries": {
+                    "$ref": "#/components/schemas/ListOperation"
+                  }
+                }
+              }
+            }
+          }
+        }
       },
       "RedirectErrorResponse": {
         "allOf": [
@@ -1244,6 +2036,13 @@
                   "error": "user_not_found",
                   "message": "User not found"
                 }
+              },
+              "noLibrariesFound": {
+                "summary": "No libraries matched search query",
+                "value": {
+                  "error": "no_libraries_found",
+                  "message": "No libraries found for \"nonexistent-lib\". Try a different search term."
+                }
               }
             }
           }
@@ -1264,27 +2063,15 @@
         }
       },
       "ServiceUnavailableError": {
-        "description": "Service Unavailable - Search failed or no results",
+        "description": "Service Unavailable - Search service is temporarily unavailable",
         "content": {
           "application/json": {
             "schema": {
               "$ref": "#/components/schemas/Error"
             },
-            "examples": {
-              "searchFailed": {
-                "summary": "Search service failure",
-                "value": {
-                  "error": "search_failed",
-                  "message": "Search failed: Service temporarily unavailable"
-                }
-              },
-              "noLibrariesFound": {
-                "summary": "No libraries matched",
-                "value": {
-                  "error": "no_libraries_found",
-                  "message": "No libraries found matching your search query."
-                }
-              }
+            "example": {
+              "error": "search_failed",
+              "message": "Search failed: Service temporarily unavailable"
             }
           }
         }
@@ -1452,12 +2239,16 @@
       "description": "Retrieve documentation context for queries"
     },
     {
-      "name": "Add Library",
-      "description": "Submit new libraries for documentation processing"
-    },
-    {
       "name": "Refresh",
       "description": "Refresh existing libraries to fetch latest documentation"
+    },
+    {
+      "name": "Policies",
+      "description": "Manage teamspace access policies and filters"
+    },
+    {
+      "name": "Add Library",
+      "description": "Submit new libraries for documentation processing"
     }
   ]
 }

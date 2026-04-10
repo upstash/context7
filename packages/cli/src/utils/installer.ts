@@ -1,5 +1,5 @@
 import { mkdir, writeFile, rm, symlink, lstat } from "fs/promises";
-import { join } from "path";
+import { join, resolve, dirname } from "path";
 
 import type { SkillFile } from "../types.js";
 
@@ -8,11 +8,17 @@ export async function installSkillFiles(
   files: SkillFile[],
   targetDir: string
 ): Promise<void> {
-  const skillDir = join(targetDir, skillName);
+  const skillDir = resolve(targetDir, skillName);
 
   for (const file of files) {
-    const filePath = join(skillDir, file.path);
-    const fileDir = join(filePath, "..");
+    const filePath = resolve(skillDir, file.path);
+
+    // Prevent directory traversal — resolved path must stay within skillDir
+    if (!filePath.startsWith(skillDir + "/") && filePath !== skillDir) {
+      throw new Error(`Skill file path "${file.path}" resolves outside the target directory`);
+    }
+
+    const fileDir = dirname(filePath);
 
     await mkdir(fileDir, { recursive: true });
     await writeFile(filePath, file.content);

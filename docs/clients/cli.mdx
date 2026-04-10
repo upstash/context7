@@ -126,7 +126,7 @@ ctx7 setup --opencode
 # Target a specific install location (CLI + Skills mode)
 ctx7 setup --cli --claude       # Claude Code (~/.claude/skills)
 ctx7 setup --cli --cursor       # Cursor (~/.cursor/skills)
-ctx7 setup --cli --universal    # Universal (~/.config/agents/skills)
+ctx7 setup --cli --universal    # Universal (~/.agents/skills)
 ctx7 setup --cli --antigravity  # Antigravity (~/.config/agent/skills)
 
 # Configure for current project only (default is global)
@@ -229,6 +229,7 @@ ctx7 skills install /anthropics/skills pdf --claude      # Claude Code
 ctx7 skills install /anthropics/skills pdf --cursor      # Cursor
 ctx7 skills install /anthropics/skills pdf --universal   # Universal (.agents/skills/)
 ctx7 skills install /anthropics/skills pdf --antigravity
+ctx7 skills install /anthropics/skills pdf --all-agents  # Universal + all vendor-specific locations
 ```
 
 **Install globally** (available across all projects):
@@ -236,6 +237,8 @@ ctx7 skills install /anthropics/skills pdf --antigravity
 ```bash
 ctx7 skills install /anthropics/skills pdf --global
 ctx7 skills install /anthropics/skills --all --global
+ctx7 skills install /anthropics/skills pdf --global --universal --yes
+ctx7 skills install /anthropics/skills pdf --global --all-agents --yes
 ```
 
 <Note>

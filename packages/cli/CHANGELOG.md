@@ -1,5 +1,48 @@
 # Changelog
 
+## 0.3.11
+
+### Patch Changes
+
+- bc8eaf1: Add `--all-agents` and `--yes` support to `ctx7 skills install` for non-interactive multi-agent installs.
+
+## 0.3.10
+
+### Patch Changes
+
+- fb29170: Add Gemini CLI support to setup command
+- 89d4862: Use GITHUB_TOKEN/GH_TOKEN or gh CLI auth for skill downloads to avoid GitHub API rate limits and support private repos
+- 8322879: Improve resolve libryar id tool prompt to provide the libraryName query with proper format
+
+## 0.3.9
+
+### Patch Changes
+
+- 6961bdd: Allow re-selecting already configured agents in ctx7 setup and overwrite existing MCP config entries instead of skipping them. Fix TOML replacement to correctly handle sub-sections and prevent whitespace drift on repeated runs.
+
+## 0.3.8
+
+### Patch Changes
+
+- a667712: Update search filter warning
+- d739f9b: Fix OpenCode MCP setup to resolve all config file variants (opencode.json, opencode.jsonc, .opencode.json, .opencode.jsonc)
+- 4f13168: Install rules alongside skills in `ctx7 setup` for better trigger rates
+  - CLI setup now installs a rule file for each agent (previously only installed the skill)
+  - Rule content fetched from GitHub, with agent-specific formatting (alwaysApply for Cursor)
+  - Updated find-docs skill description for higher invocation rates (66% -> 98%)
+  - Added Codex agent support with AGENTS.md append
+  - OpenCode now writes to AGENTS.md instead of .opencode/rules/
+  - Selective rule content with explicit when-to-use/when-not-to-use guidance
+
+- c3c2647: Use ~/.agents/skills instead of ~/.config/agents/skills for global universal skill installs
+
+## 0.3.7
+
+### Patch Changes
+
+- 93eaf54: Remove shell:true from spawn call in generate command to prevent command injection via EDITOR env variable
+- 8c5cf7d: Prevent directory traversal in skill file installation by validating resolved paths stay within the target directory
+
 ## 0.3.6
 
 ### Patch Changes

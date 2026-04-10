@@ -30,6 +30,7 @@ import {
   getTrustLabel,
 } from "../utils/prompts.js";
 import { installSkillFiles, symlinkSkill } from "../utils/installer.js";
+import { listSkillsFromGitHub, getSkillFromGitHub } from "../utils/github.js";
 import { trackEvent } from "../utils/tracking.js";
 import { registerGenerateCommand } from "./generate.js";
 import type {
@@ -98,6 +99,8 @@ export function registerSkillCommands(program: Command): void {
     .argument("<repository>", "GitHub repository (/owner/repo)")
     .argument("[skill]", "Specific skill name to install")
     .option("--all", "Install all skills without prompting")
+    .option("--all-agents", "Install to all supported agent locations")
+    .option("-y, --yes", "Skip confirmation prompts")
     .option("--global", "Install globally instead of current directory")
     .option("--claude", "Claude Code (.claude/skills/)")
     .option("--cursor", "Cursor (.cursor/skills/)")
@@ -172,6 +175,8 @@ export function registerSkillAliases(program: Command): void {
     .argument("<repository>", "GitHub repository (/owner/repo)")
     .argument("[skill]", "Specific skill name to install")
     .option("--all", "Install all skills without prompting")
+    .option("--all-agents", "Install to all supported agent locations")
+    .option("-y, --yes", "Skip confirmation prompts")
     .option("--global", "Install globally instead of current directory")
     .option("--claude", "Claude Code (.claude/skills/)")
     .option("--cursor", "Cursor (.cursor/skills/)")
@@ -233,26 +238,50 @@ async function installCommand(
       if (skillData.error === "prompt_injection_detected") {
         spinner.fail(pc.red(`Prompt injection detected in skill: ${skillName}`));
         log.warn("This skill contains potentially malicious content and cannot be installed.");
-      } else {
-        spinner.fail(pc.red(`Skill not found: ${skillName}`));
+        return;
       }
-      return;
-    }
 
-    spinner.succeed(`Found skill: ${skillName}`);
-    selectedSkills = [
-      {
-        name: skillData.name,
-        description: skillData.description,
-        url: skillData.url,
-        project: repo,
-      },
-    ];
+      spinner.text = `Fetching skill from GitHub: ${skillName}...`;
+      const ghResult = await getSkillFromGitHub(repo, skillName);
+      if (ghResult.status === "repo_not_found") {
+        spinner.fail(pc.red(`Repository not found: ${repo}`));
+        return;
+      }
+      if (ghResult.status !== "ok" || !ghResult.skill) {
+        spinner.fail(pc.red(`Skill not found: ${skillName}`));
+        return;
+      }
+
+      spinner.succeed(`Found skill: ${skillName}`);
+      selectedSkills = [ghResult.skill];
+    } else {
+      spinner.succeed(`Found skill: ${skillName}`);
+      selectedSkills = [
+        {
+          name: skillData.name,
+          description: skillData.description,
+          url: skillData.url,
+          project: repo,
+        },
+      ];
+    }
   } else {
     // Fetch all skills when no specific names provided
-    const data = await listProjectSkills(repo);
+    let data = await listProjectSkills(repo);
 
-    if (data.error) {
+    if ((data.error || !data.skills || data.skills.length === 0) && !data.blockedSkillsCount) {
+      spinner.text = `Fetching skills from GitHub...`;
+      const ghResult = await listSkillsFromGitHub(repo);
+      if (ghResult.status === "repo_not_found") {
+        spinner.fail(pc.red(`Repository not found: ${repo}`));
+        return;
+      }
+      if (ghResult.status === "ok" && ghResult.skills.length > 0) {
+        data = { project: repo, skills: ghResult.skills };
+      }
+    }
+
+    if (data.error && (!data.skills || data.skills.length === 0)) {
       spinner.fail(pc.red(`Error: ${data.message || data.error}`));
       return;
     }

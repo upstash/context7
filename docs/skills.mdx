@@ -87,7 +87,7 @@ ctx7 login
 ctx7 skills generate
 ```
 
-All install commands accept `--claude`, `--cursor`, `--universal`, and `--global` flags to target a specific client or install location. 
+All install commands accept `--claude`, `--cursor`, `--universal`, `--all-agents`, and `--global` flags to target a specific client or install location. Use `--yes` to skip confirmation prompts for non-interactive installs.
 
 See the [CLI reference](/clients/cli#skills) for the full flag reference and examples.
 
@@ -155,7 +155,7 @@ The CLI automatically detects installed AI coding assistants and offers to insta
 
 | Client | Project Directory | Global Directory |
 |--------|-------------------|------------------|
-| Universal (Amp, Codex, Gemini CLI, GitHub Copilot, OpenCode + more) | `.agents/skills/` | `~/.config/agents/skills/` |
+| Universal (Amp, Codex, Gemini CLI, GitHub Copilot, OpenCode + more) | `.agents/skills/` | `~/.agents/skills/` |
 | Claude Code | `.claude/skills/` | `~/.claude/skills/` |
 | Cursor | `.cursor/skills/` | `~/.cursor/skills/` |
 | Antigravity | `.agent/skills/` | `~/.agent/skills/` |

@@ -1,5 +1,25 @@
 # @upstash/context7-mcp
 
+## 2.1.7
+
+### Patch Changes
+
+- 658ec67: Add --version/-v flag to MCP CLI
+- 8322879: Improve resolve libryar id tool prompt to provide the libraryName query with proper format
+
+## 2.1.6
+
+### Patch Changes
+
+- a667712: Update search filter warning
+- be1a39a: Update server metadata and instructions.
+
+## 2.1.5
+
+### Patch Changes
+
+- 2070cb1: Support NODE_EXTRA_CA_CERTS for enterprise MITM proxies by injecting custom CA certificates into undici's global dispatcher at runtime
+
 ## 2.1.4
 
 ### Patch Changes

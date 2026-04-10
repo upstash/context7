@@ -129,6 +129,7 @@ export type IDE = "claude" | "cursor" | "antigravity" | "universal";
 export type Scope = "project" | "global";
 
 export interface IDEOptions {
+  allAgents?: boolean;
   claude?: boolean;
   cursor?: boolean;
   universal?: boolean;
@@ -165,7 +166,7 @@ export const IDE_GLOBAL_PATHS: Record<IDE, string> = {
   claude: ".claude/skills",
   cursor: ".cursor/skills",
   antigravity: ".agent/skills",
-  universal: ".config/agents/skills",
+  universal: ".agents/skills",
 };
 
 export const IDE_NAMES: Record<IDE, string> = {
@@ -178,7 +179,7 @@ export const IDE_NAMES: Record<IDE, string> = {
 // Universal .agents/skills standard
 // These agents read from .agents/skills/ natively — one install covers all of them.
 export const UNIVERSAL_SKILLS_PATH = ".agents/skills";
-export const UNIVERSAL_SKILLS_GLOBAL_PATH = ".config/agents/skills";
+export const UNIVERSAL_SKILLS_GLOBAL_PATH = ".agents/skills";
 
 // Display label for agents that read .agents/skills/ (includes agents beyond our IDE type)
 export const UNIVERSAL_AGENTS_LABEL = "Amp, Codex, Gemini CLI, GitHub Copilot, OpenCode + more";
