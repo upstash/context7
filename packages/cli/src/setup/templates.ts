@@ -56,7 +56,7 @@ export async function getRuleContent(mode: RuleMode, agent: string): Promise<str
   let body = await fetchRule(filename, fallback);
 
   if (mode === "cli" && agent === "codex" && !body.includes(CODEX_CLI_SANDBOX_GUIDANCE)) {
-    body += `\n\n${CODEX_CLI_SANDBOX_GUIDANCE}\n`;
+    body = `${body.trimEnd()}\n${CODEX_CLI_SANDBOX_GUIDANCE}\n`;
   }
 
   return agent === "cursor" ? `${CURSOR_FRONTMATTER}${body}` : body;
