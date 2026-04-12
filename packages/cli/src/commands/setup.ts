@@ -22,7 +22,7 @@ import {
   getAgent,
   detectAgents,
 } from "../setup/agents.js";
-import { getRuleContent } from "../setup/templates.js";
+import { customizeSkillFilesForAgent, getRuleContent } from "../setup/templates.js";
 import {
   readJsonConfig,
   mergeServerEntry,
@@ -407,7 +407,8 @@ async function setupCliAgent(
       : join(process.cwd(), agent.skill.dir("project"));
   let skillStatus: string;
   try {
-    await installSkillFiles("find-docs", downloadData.files, skillDir);
+    const files = customizeSkillFilesForAgent(agentName, "find-docs", downloadData.files);
+    await installSkillFiles("find-docs", files, skillDir);
     skillStatus = "installed";
   } catch (err) {
     skillStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
