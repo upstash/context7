@@ -11,7 +11,7 @@ keywords: ["docs", "documentation", "example", "setup", "usage", "syntax", "libr
 
 Context7 is a documentation power for libraries, frameworks, SDKs, APIs, and developer tools. It retrieves up-to-date documentation to ground code generation.
 
-## Onboarding
+## Usage
 
 ### Step 1: Resolve the Library ID
 
