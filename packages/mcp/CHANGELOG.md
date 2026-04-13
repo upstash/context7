@@ -1,5 +1,11 @@
 # @upstash/context7-mcp
 
+## 2.1.8
+
+### Patch Changes
+
+- 00833f9: Preserve Node's default trusted CAs when `NODE_EXTRA_CA_CERTS` is configured, and add a regression test for custom CA loading.
+
 ## 2.1.7
 
 ### Patch Changes
