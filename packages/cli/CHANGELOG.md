@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.12
+
+### Patch Changes
+
+- 33f2338: Add Codex-specific CLI setup guidance so generated rules and the installed `find-docs` skill tell Codex to rerun Context7 CLI requests outside the default sandbox after DNS or network failures.
+
 ## 0.3.11
 
 ### Patch Changes
