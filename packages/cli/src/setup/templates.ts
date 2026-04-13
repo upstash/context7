@@ -76,7 +76,7 @@ export function customizeSkillFilesForAgent(
       return file;
     }
 
-    const marker = "## Common Mistakes";
+    const marker = "## Step 1: Resolve a Library";
     const guidance = `${CODEX_CLI_SANDBOX_GUIDANCE}\n\n`;
 
     if (file.content.includes(marker)) {
