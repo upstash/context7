@@ -34,6 +34,7 @@ If a command fails with a quota error, inform the user and suggest \`npx ctx7@la
 `;
 
 const CURSOR_FRONTMATTER = `---\nalwaysApply: true\n---\n\n`;
+const CODEX_CLI_SANDBOX_GUIDANCE = `Run Context7 CLI requests outside Codex's default sandbox. If a Context7 CLI command fails with DNS or network errors such as ENOTFOUND, host resolution failures, or fetch failed, rerun it outside the sandbox instead of retrying inside the sandbox.`;
 
 export type RuleMode = "mcp" | "cli";
 
@@ -52,6 +53,43 @@ async function fetchRule(filename: string, fallback: string): Promise<string> {
 export async function getRuleContent(mode: RuleMode, agent: string): Promise<string> {
   const [filename, fallback] =
     mode === "mcp" ? ["context7-mcp.md", FALLBACK_MCP] : ["context7-cli.md", FALLBACK_CLI];
-  const body = await fetchRule(filename, fallback);
+  let body = await fetchRule(filename, fallback);
+
+  if (mode === "cli" && agent === "codex" && !body.includes(CODEX_CLI_SANDBOX_GUIDANCE)) {
+    body = `${body.trimEnd()}\n${CODEX_CLI_SANDBOX_GUIDANCE}\n`;
+  }
+
   return agent === "cursor" ? `${CURSOR_FRONTMATTER}${body}` : body;
+}
+
+export function customizeSkillFilesForAgent(
+  agent: string,
+  skillName: string,
+  files: Array<{ path: string; content: string }>
+): Array<{ path: string; content: string }> {
+  if (agent !== "codex" || skillName !== "find-docs") {
+    return files;
+  }
+
+  return files.map((file) => {
+    if (file.path !== "SKILL.md" || file.content.includes(CODEX_CLI_SANDBOX_GUIDANCE)) {
+      return file;
+    }
+
+    const marker = "## Step 1: Resolve a Library";
+    const guidance = `${CODEX_CLI_SANDBOX_GUIDANCE}\n\n`;
+
+    if (file.content.includes(marker)) {
+      return {
+        ...file,
+        content: file.content.replace(marker, `${guidance}${marker}`),
+      };
+    }
+
+    const separator = file.content.endsWith("\n") ? "\n" : "\n\n";
+    return {
+      ...file,
+      content: `${file.content}${separator}${CODEX_CLI_SANDBOX_GUIDANCE}\n`,
+    };
+  });
 }
