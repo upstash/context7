@@ -1,8 +1,8 @@
 ---
 name: "context7"
 displayName: "Context7"
-description: "Fetch up-to-date documentation and code examples for libraries and frameworks to inform code generation."
-keywords: ["docs", "documentation", "example", "setup", "usage", "syntax", "library", "framework", "context7"]
+description: "Find up-to-date documentation, API references, and code examples for libraries, frameworks, SDKs, and developer tools using Context7."
+keywords: ["context7", "library docs", "framework docs", "sdk docs", "api reference", "code examples", "package docs"]
 ---
 
 # Context7
@@ -52,4 +52,3 @@ Incorporate the fetched documentation into your response:
 - When multiple matches exist, prefer official/primary packages over community forks
 - Use Context7 even when you think you know the answer -- your training data may not reflect recent changes. Prefer this over web search for library docs.
 - Do not use Context7 for refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.
-
