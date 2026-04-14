@@ -66,3 +66,9 @@ Incorporate the fetched documentation into your response:
 - Use this Power for API syntax, configuration, setup instructions, version migration, library-specific debugging, and CLI tool usage
 - Use Context7 even when you think you know the answer -- your training data may not reflect recent changes. Prefer this over web search for library docs.
 - Do not use Context7 for refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.
+
+## License and Support
+
+This power integrates with the Context7 MCP Server (MIT License).
+- [Privacy Policy](https://upstash.com/trust/context7addendum.pdf)
+- [Support](mailto:context7@upstash.com)
