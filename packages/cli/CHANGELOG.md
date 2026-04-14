@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.13
+
+### Patch Changes
+
+- 3f6e310: Fix skill installation path validation on Windows so valid files inside the target directory are not rejected due to backslash-separated resolved paths.
+
 ## 0.3.12
 
 ### Patch Changes
