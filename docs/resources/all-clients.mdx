@@ -194,52 +194,6 @@ Add this to your Antigravity MCP config file. See [Antigravity MCP docs](https:/
 
 </Accordion>
 
-<Accordion title="Hermes">
-
-Use the Hermes CLI or edit `~/.hermes/config.yaml` directly. See the [Hermes CLI docs](https://github.com/nousresearch/hermes-agent/blob/main/website/docs/reference/cli-commands.md) for more info.
-
-#### Remote Server Connection (API Key)
-
-Add this to your Hermes config file (`~/.hermes/config.yaml`).
-
-```yaml
-mcp_servers:
-  context7:
-    url: "https://mcp.context7.com/mcp"
-    headers:
-      CONTEXT7_API_KEY: "YOUR_API_KEY"
-```
-
-#### Remote Server Connection (OAuth)
-
-```yaml
-mcp_servers:
-  context7:
-    url: "https://mcp.context7.com/mcp/oauth"
-    auth: oauth
-```
-
-#### Using CLI (OAuth)
-
-```sh
-hermes mcp add context7 --url https://mcp.context7.com/mcp/oauth --auth oauth
-```
-
-#### Local Server Connection
-
-```yaml
-mcp_servers:
-  context7:
-    command: "npx"
-    args: ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
-```
-
-<Note>
-Start with the API key method if you want the most direct setup. Hermes also supports OAuth for remote MCP servers via `auth: oauth`. On headless setups, Hermes may print an authorization URL to stdout or logs for you to open manually. If `hermes mcp add ... --auth oauth` drops into the interactive agent without saving the server entry, add the `mcp_servers.context7` config manually, then run `hermes mcp test context7` to trigger the auth flow and verify the connection.
-</Note>
-
-</Accordion>
-
 <Accordion title="VS Code">
 
 [<img alt="Install in VS Code (npx)" src="https://img.shields.io/badge/VS_Code-VS_Code?style=flat-square&label=Install%20Context7%20MCP&color=0098FF" />](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22context7%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40upstash%2Fcontext7-mcp%40latest%22%5D%7D)
@@ -660,6 +614,52 @@ Or, for a local server:
   }
 }
 ```
+
+</Accordion>
+
+<Accordion title="Hermes">
+
+Use the Hermes CLI or edit `~/.hermes/config.yaml` directly. See the [Hermes CLI docs](https://github.com/nousresearch/hermes-agent/blob/main/website/docs/reference/cli-commands.md) for more info.
+
+#### Remote Server Connection (API Key)
+
+Add this to your Hermes config file (`~/.hermes/config.yaml`).
+
+```yaml
+mcp_servers:
+  context7:
+    url: "https://mcp.context7.com/mcp"
+    headers:
+      CONTEXT7_API_KEY: "YOUR_API_KEY"
+```
+
+#### Remote Server Connection (OAuth)
+
+```yaml
+mcp_servers:
+  context7:
+    url: "https://mcp.context7.com/mcp/oauth"
+    auth: oauth
+```
+
+#### Using CLI (OAuth)
+
+```sh
+hermes mcp add context7 --url https://mcp.context7.com/mcp/oauth --auth oauth
+```
+
+#### Local Server Connection
+
+```yaml
+mcp_servers:
+  context7:
+    command: "npx"
+    args: ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+```
+
+<Note>
+Start with the API key method if you want the most direct setup. Hermes also supports OAuth for remote MCP servers via `auth: oauth`. On headless setups, Hermes may print an authorization URL to stdout or logs for you to open manually. If `hermes mcp add ... --auth oauth` drops into the interactive agent without saving the server entry, add the `mcp_servers.context7` config manually, then run `hermes mcp test context7` to trigger the auth flow and verify the connection.
+</Note>
 
 </Accordion>
 
