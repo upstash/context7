@@ -4,6 +4,7 @@ import figlet from "figlet";
 import { registerSkillCommands, registerSkillAliases } from "./commands/skill.js";
 import { registerAuthCommands, setAuthBaseUrl } from "./commands/auth.js";
 import { registerSetupCommand } from "./commands/setup.js";
+import { registerUninstallCommand } from "./commands/uninstall.js";
 import { registerDocsCommands } from "./commands/docs.js";
 import { setBaseUrl } from "./utils/api.js";
 import { VERSION } from "./constants.js";
@@ -47,6 +48,10 @@ Examples:
   ${brand.primary("npx ctx7 skills list --claude")}
   ${brand.primary("npx ctx7 skills remove pdf")}
 
+  ${brand.dim("# Remove Context7 setup")}
+  ${brand.primary("npx ctx7 uninstall --cursor")}
+  ${brand.primary("npx ctx7 uninstall --claude --mcp")}
+
   ${brand.dim("# Query library documentation")}
   ${brand.primary('npx ctx7 library react "how to use hooks"')}
   ${brand.primary('npx ctx7 docs /facebook/react "useEffect examples"')}
@@ -59,6 +64,7 @@ registerSkillCommands(program);
 registerSkillAliases(program);
 registerAuthCommands(program);
 registerSetupCommand(program);
+registerUninstallCommand(program);
 registerDocsCommands(program);
 
 program.action(() => {

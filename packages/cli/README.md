@@ -20,6 +20,9 @@ npm install -g ctx7
 # Set up Context7 MCP for your coding agents
 ctx7 setup
 
+# Remove Context7 setup later
+ctx7 uninstall
+
 # Target a specific agent
 ctx7 setup --cursor
 ctx7 setup --claude
@@ -107,6 +110,26 @@ ctx7 setup --project
 # Skip prompts
 ctx7 setup --yes
 ```
+
+### Uninstall setup
+
+Remove the Context7 setup written by `ctx7 setup`. By default this removes the Context7 MCP entry, rule, and setup skills for the selected agent.
+
+```bash
+# Interactive
+ctx7 uninstall
+
+# Target specific agents
+ctx7 uninstall --cursor
+ctx7 uninstall --claude --project
+
+# Remove only one part of the setup
+ctx7 uninstall --claude --mcp
+ctx7 uninstall --codex --rule
+ctx7 uninstall --gemini --skill
+```
+
+If you installed the CLI itself globally with `npm install -g ctx7`, remove that separately with `npm uninstall -g ctx7`. If you use `npx ctx7`, there is no permanent CLI install to remove.
 
 ### Generate skills
 

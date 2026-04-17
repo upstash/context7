@@ -3,16 +3,18 @@ title: MCP Clients
 description: Installation examples for MCP clients
 ---
 
-Context7 supports all MCP clients. Below are configuration examples for popular clients.  If your client isn't listed, check its documentation for MCP server installation. To configure manually, use the Context7 server URL `https://mcp.context7.com/mcp` with your MCP client and pass your API key via the `CONTEXT7_API_KEY` header.
+Context7 supports all MCP clients. Below are configuration examples for popular clients. If your client isn't listed, check its documentation for MCP server installation. To configure manually, use the Context7 server URL `https://mcp.context7.com/mcp` with your MCP client and pass your API key via the `CONTEXT7_API_KEY` header.
 
 <Tip>
-Looking for the easiest way to get started? Use `npx ctx7 setup` to configure Context7 automatically. See the [CLI docs](/clients/cli) for more details.
+  Looking for the easiest way to get started? Use `npx ctx7 setup` to configure Context7
+  automatically, and `npx ctx7 uninstall` to remove the generated setup later. See the [CLI
+  docs](/clients/cli) for more details.
 </Tip>
 
 <Note>
-For detailed guides including rules, skills, agents, and best practices, see the dedicated client pages:
-- [Cursor](/clients/cursor) - Rules setup, Composer integration, tips
-- [Claude Code](/clients/claude-code) - Skills, agents, commands, plugin installation
+  For detailed guides including rules, skills, agents, and best practices, see
+  [Cursor](/clients/cursor) for rules and Composer integration tips, and [Claude
+  Code](/clients/claude-code) for skills, agents, commands, and plugin installation.
 </Note>
 
 ## OAuth Authentication
@@ -154,9 +156,7 @@ url = "https://mcp.context7.com/mcp"
 http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
 ```
 
-<Note>
-If you see startup timeout errors, try increasing `startup_timeout_sec` to `40`.
-</Note>
+<Note>If you see startup timeout errors, try increasing `startup_timeout_sec` to `40`.</Note>
 
 </Accordion>
 
@@ -428,7 +428,7 @@ Fill in the following:
 | ------------------ | ------------------------------------------------------------------------------------------- |
 | **Name**           | `Context7`                                                                                  |
 | **Description**    | `Fetch up-to-date documentation and code examples for any library directly from the source` |
-| **MCP Server URL** | `https://mcp.context7.com/mcp/oauth`                                                       |
+| **MCP Server URL** | `https://mcp.context7.com/mcp/oauth`                                                        |
 
 > Accept the security notice and complete the one-time OAuth authorization.
 
@@ -460,7 +460,7 @@ Fill in the following:
 | ------------------ | ------------------------------------------------------------------------------------------- |
 | **Name**           | `Context7`                                                                                  |
 | **Description**    | `Fetch up-to-date documentation and code examples for any library directly from the source` |
-| **MCP Server URL** | `https://mcp.context7.com/mcp/oauth`                                                       |
+| **MCP Server URL** | `https://mcp.context7.com/mcp/oauth`                                                        |
 
 > Accept the security notice and complete the one-time OAuth authorization.
 
@@ -847,6 +847,7 @@ See [Qwen Code MCP Configuration](https://qwenlm.github.io/qwen-code-docs/en/use
 By default, configurations are saved to the project scope (`.qwen/settings.json`). Use the `--scope user` flag to save to the user scope (`~/.qwen/settings.json`) instead.
 
 #### Remote Server Connection
+
 ```sh
 qwen mcp add --transport http context7 https://mcp.context7.com/mcp \
   --header "CONTEXT7_API_KEY: YOUR_API_KEY" \
@@ -854,6 +855,7 @@ qwen mcp add --transport http context7 https://mcp.context7.com/mcp \
 ```
 
 #### Local Server Connection
+
 ```sh
 qwen mcp add context7 npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 ```
@@ -864,6 +866,7 @@ qwen mcp add context7 npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 2. Add the following to the `mcpServers` object:
 
 #### Remote Server Connection
+
 ```json
 {
   "mcpServers": {
@@ -879,6 +882,7 @@ qwen mcp add context7 npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 ```
 
 #### Local Server Connection
+
 ```json
 {
   "mcpServers": {

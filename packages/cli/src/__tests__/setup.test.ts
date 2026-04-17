@@ -22,11 +22,13 @@ vi.stubGlobal(
 import { getRuleContent } from "../setup/templates.js";
 import {
   mergeServerEntry,
+  removeServerEntry,
   readJsonConfig,
   writeJsonConfig,
   readTomlServerExists,
   buildTomlServerBlock,
   appendTomlServer,
+  removeTomlServer,
   resolveMcpPath,
 } from "../setup/mcp-writer.js";
 import { getAgent, ALL_AGENT_NAMES, type AuthOptions } from "../setup/agents.js";
@@ -148,6 +150,52 @@ describe("mergeServerEntry", () => {
       type: "remote",
       url: "https://mcp.context7.com/mcp",
     });
+  });
+});
+
+describe("removeServerEntry", () => {
+  test("removes server from config section", () => {
+    const { config, removed } = removeServerEntry(
+      {
+        mcpServers: {
+          context7: { url: "https://mcp.context7.com/mcp" },
+          other: { url: "https://other.com" },
+        },
+      },
+      "mcpServers",
+      "context7"
+    );
+
+    expect(removed).toBe(true);
+    expect(config).toEqual({
+      mcpServers: {
+        other: { url: "https://other.com" },
+      },
+    });
+  });
+
+  test("removes empty config section when context7 is the only server", () => {
+    const { config, removed } = removeServerEntry(
+      {
+        mcpServers: {
+          context7: { url: "https://mcp.context7.com/mcp" },
+        },
+        theme: "dark",
+      },
+      "mcpServers",
+      "context7"
+    );
+
+    expect(removed).toBe(true);
+    expect(config).toEqual({ theme: "dark" });
+  });
+
+  test("returns original config when server is not present", () => {
+    const existing = { mcpServers: { other: { url: "https://other.com" } } };
+    const { config, removed } = removeServerEntry(existing, "mcpServers", "context7");
+
+    expect(removed).toBe(false);
+    expect(config).toEqual(existing);
   });
 });
 
@@ -389,6 +437,50 @@ describe("TOML config", () => {
     expect(content).toContain('url = "https://v3.com"');
     expect(content).toContain("[mcp_servers.other]");
     expect(content).not.toContain("\n\n\n");
+  });
+
+  test("removeTomlServer removes only the target server", async () => {
+    const path = join(tempDir, "config.toml");
+    await writeFile(
+      path,
+      'model = "gpt-5"\n\n[mcp_servers.context7]\nurl = "https://mcp.context7.com/mcp"\n\n[mcp_servers.other]\nurl = "https://other.com"\n',
+      "utf-8"
+    );
+
+    const { removed } = await removeTomlServer(path, "context7");
+    expect(removed).toBe(true);
+
+    const content = await readFile(path, "utf-8");
+    expect(content).toContain('model = "gpt-5"');
+    expect(content).toContain("[mcp_servers.other]");
+    expect(content).toContain('url = "https://other.com"');
+    expect(content).not.toContain("[mcp_servers.context7]");
+  });
+
+  test("removeTomlServer removes nested subsections too", async () => {
+    const path = join(tempDir, "config.toml");
+    await writeFile(
+      path,
+      '[mcp_servers.context7]\nurl = "https://mcp.context7.com/mcp"\n\n[mcp_servers.context7.http_headers]\nCONTEXT7_API_KEY = "sk-test"\n\n[settings]\nmodel = "gpt-5"\n',
+      "utf-8"
+    );
+
+    const { removed } = await removeTomlServer(path, "context7");
+    expect(removed).toBe(true);
+
+    const content = await readFile(path, "utf-8");
+    expect(content).toContain("[settings]");
+    expect(content).toContain('model = "gpt-5"');
+    expect(content).not.toContain("[mcp_servers.context7]");
+    expect(content).not.toContain("CONTEXT7_API_KEY");
+  });
+
+  test("removeTomlServer returns false when server is missing", async () => {
+    const path = join(tempDir, "config.toml");
+    await writeFile(path, '[mcp_servers.other]\nurl = "https://other.com"\n', "utf-8");
+
+    const { removed } = await removeTomlServer(path, "context7");
+    expect(removed).toBe(false);
   });
 });
 

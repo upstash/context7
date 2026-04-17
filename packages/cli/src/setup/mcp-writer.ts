@@ -61,6 +61,33 @@ export function mergeServerEntry(
   };
 }
 
+export function removeServerEntry(
+  existing: Record<string, unknown>,
+  configKey: string,
+  serverName: string
+): { config: Record<string, unknown>; removed: boolean } {
+  const section = existing[configKey];
+  if (!section || typeof section !== "object" || Array.isArray(section)) {
+    return { config: existing, removed: false };
+  }
+
+  const current = section as Record<string, unknown>;
+  if (!(serverName in current)) {
+    return { config: existing, removed: false };
+  }
+
+  const rest = Object.fromEntries(Object.entries(current).filter(([key]) => key !== serverName));
+  const next = { ...existing };
+
+  if (Object.keys(rest).length === 0) {
+    delete next[configKey];
+  } else {
+    next[configKey] = rest;
+  }
+
+  return { config: next, removed: true };
+}
+
 export async function resolveMcpPath(candidates: string[]): Promise<string> {
   for (const candidate of candidates) {
     try {
@@ -157,4 +184,45 @@ export async function appendTomlServer(
   }
 
   return { alreadyExists };
+}
+
+export async function removeTomlServer(
+  filePath: string,
+  serverName: string
+): Promise<{ removed: boolean }> {
+  let existing = "";
+  try {
+    existing = await readFile(filePath, "utf-8");
+  } catch {
+    return { removed: false };
+  }
+
+  const sectionHeader = `[mcp_servers.${serverName}]`;
+  const startIdx = existing.indexOf(sectionHeader);
+  if (startIdx === -1) {
+    return { removed: false };
+  }
+
+  const subPrefix = `[mcp_servers.${serverName}.`;
+  const rest = existing.slice(startIdx + sectionHeader.length);
+
+  let endOffset = rest.length;
+  const re = /^\[/gm;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(rest)) !== null) {
+    const lineEnd = rest.indexOf("\n", match.index);
+    const line = rest.slice(match.index, lineEnd === -1 ? undefined : lineEnd);
+    if (!line.startsWith(subPrefix)) {
+      endOffset = match.index;
+      break;
+    }
+  }
+
+  const rawBefore = existing.slice(0, startIdx).replace(/\n+$/, "");
+  const rawAfter = existing.slice(startIdx + sectionHeader.length + endOffset).replace(/^\n+/, "");
+  const content = [rawBefore, rawAfter].filter(Boolean).join("\n\n");
+
+  await mkdir(dirname(filePath), { recursive: true });
+  await writeFile(filePath, content.length > 0 ? `${content}\n` : "", "utf-8");
+  return { removed: true };
 }

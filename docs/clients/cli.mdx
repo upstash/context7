@@ -23,6 +23,7 @@ Requires Node.js 18 or later.
     npx ctx7 --help
     npx ctx7 library react
     ```
+
   </Tab>
   <Tab title="Global install">
     Install globally for faster access — no `npx` prefix needed on every command.
@@ -33,6 +34,7 @@ Requires Node.js 18 or later.
     # Verify installation
     ctx7 --version
     ```
+
   </Tab>
 </Tabs>
 
@@ -54,13 +56,13 @@ ctx7 library prisma "How to define one-to-many relations with cascade delete"
 
 Each result includes:
 
-| Field | Description |
-|-------|-------------|
-| **Library ID** | The identifier to pass to `ctx7 docs` (format: `/org/project`) |
-| **Code Snippets** | Number of indexed code examples — higher means more documentation coverage |
-| **Source Reputation** | Authority indicator: High, Medium, Low, or Unknown |
-| **Benchmark Score** | Quality score from 0 to 100 |
-| **Versions** | Version-specific IDs when available (format: `/org/project/version`) |
+| Field                 | Description                                                                |
+| --------------------- | -------------------------------------------------------------------------- |
+| **Library ID**        | The identifier to pass to `ctx7 docs` (format: `/org/project`)             |
+| **Code Snippets**     | Number of indexed code examples — higher means more documentation coverage |
+| **Source Reputation** | Authority indicator: High, Medium, Low, or Unknown                         |
+| **Benchmark Score**   | Quality score from 0 to 100                                                |
+| **Versions**          | Version-specific IDs when available (format: `/org/project/version`)       |
 
 When multiple results come back, the best match is usually the one with the closest name, highest snippet count, and strongest reputation. If you need docs for a specific version, pick the matching version ID from the list.
 
@@ -83,7 +85,8 @@ ctx7 docs /prisma/prisma "How to define one-to-many relations with cascade delet
 ```
 
 <Note>
-Library IDs always start with `/`. Running `ctx7 docs react "hooks"` will fail — always use the full ID returned by `ctx7 library` in Step 1.
+  Library IDs always start with `/`. Running `ctx7 docs react "hooks"` will fail — always use the
+  full ID returned by `ctx7 library` in Step 1.
 </Note>
 
 Queries work best when they're specific. Describe what you're trying to accomplish rather than using single keywords — `"How to set up authentication with JWT in Express.js"` returns much better results than `"auth"`.
@@ -150,17 +153,37 @@ Without `--api-key` or `--oauth`, setup opens a browser for OAuth login. MCP mod
 
 **What gets written — MCP mode:**
 
-| File | Purpose |
-|------|---------|
-| `.mcp.json` / `.cursor/mcp.json` / `.opencode.json` | MCP server entry |
-| Agent rules directory | Rule file — instructs the agent to use Context7 for library docs |
-| Agent skills directory | `context7-mcp` skill |
+| File                                                | Purpose                                                          |
+| --------------------------------------------------- | ---------------------------------------------------------------- |
+| `.mcp.json` / `.cursor/mcp.json` / `.opencode.json` | MCP server entry                                                 |
+| Agent rules directory                               | Rule file — instructs the agent to use Context7 for library docs |
+| Agent skills directory                              | `context7-mcp` skill                                             |
 
 **What gets written — CLI + Skills mode:**
 
-| File | Purpose |
-|------|---------|
+| File                   | Purpose                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------ |
 | Agent skills directory | `docs` skill — guides the agent to use `ctx7 library` and `ctx7 docs` commands |
+
+### ctx7 uninstall
+
+Remove the setup written by `ctx7 setup`. By default this removes the Context7 MCP entry, the Context7 rule/instructions, and the setup skills for the selected agent.
+
+```bash
+# Interactive
+ctx7 uninstall
+
+# Target specific agents
+ctx7 uninstall --cursor
+ctx7 uninstall --claude --project
+
+# Remove only one part of the setup
+ctx7 uninstall --claude --mcp
+ctx7 uninstall --codex --rule
+ctx7 uninstall --gemini --skill
+```
+
+If you installed the CLI itself with `npm install -g ctx7`, remove that separately with `npm uninstall -g ctx7`. If you run Context7 with `npx ctx7`, there is no permanent CLI install to remove.
 
 ---
 
@@ -194,12 +217,12 @@ export CONTEXT7_API_KEY=your_key
 
 ### When is authentication required?
 
-| Feature | Required |
-|---------|----------|
-| `ctx7 library` / `ctx7 docs` | No — login gives higher rate limits |
-| `ctx7 skills install / search / suggest / list / remove` | No |
-| `ctx7 skills generate` | Yes |
-| `ctx7 setup` | Yes — unless `--api-key` is passed (`--oauth` also skips login for MCP mode) |
+| Feature                                                  | Required                                                                     |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `ctx7 library` / `ctx7 docs`                             | No — login gives higher rate limits                                          |
+| `ctx7 skills install / search / suggest / list / remove` | No                                                                           |
+| `ctx7 skills generate`                                   | Yes                                                                          |
+| `ctx7 setup`                                             | Yes — unless `--api-key` is passed (`--oauth` also skips login for MCP mode) |
 
 ---
 
@@ -242,7 +265,8 @@ ctx7 skills install /anthropics/skills pdf --global --all-agents --yes
 ```
 
 <Note>
-When installing to multiple clients, the skill files are created in your primary client's directory and symlinked to the others.
+  When installing to multiple clients, the skill files are created in your primary client's
+  directory and symlinked to the others.
 </Note>
 
 Alias: `ctx7 si /anthropics/skills pdf`
@@ -304,7 +328,8 @@ ctx7 skills generate --global
 5. Choose where to install it
 
 <Tip>
-Describe best practices and constraints, not step-by-step tutorials. "TypeScript strict mode patterns" generates a more useful skill than "how to write TypeScript."
+  Describe best practices and constraints, not step-by-step tutorials. "TypeScript strict mode
+  patterns" generates a more useful skill than "how to write TypeScript."
 </Tip>
 
 **Weekly limits:** Free accounts get 6 generations/week, Pro accounts get 10.
@@ -346,17 +371,17 @@ Aliases: `ctx7 skills rm`, `ctx7 skills delete`
 
 ## Shortcuts
 
-| Shortcut | Full command |
-|----------|-------------|
-| `ctx7 si` | `ctx7 skills install` |
-| `ctx7 ss` | `ctx7 skills search` |
-| `ctx7 ssg` | `ctx7 skills suggest` |
-| `ctx7 skills i` | `ctx7 skills install` |
-| `ctx7 skills s` | `ctx7 skills search` |
-| `ctx7 skills ls` | `ctx7 skills list` |
-| `ctx7 skills rm` | `ctx7 skills remove` |
+| Shortcut          | Full command           |
+| ----------------- | ---------------------- |
+| `ctx7 si`         | `ctx7 skills install`  |
+| `ctx7 ss`         | `ctx7 skills search`   |
+| `ctx7 ssg`        | `ctx7 skills suggest`  |
+| `ctx7 skills i`   | `ctx7 skills install`  |
+| `ctx7 skills s`   | `ctx7 skills search`   |
+| `ctx7 skills ls`  | `ctx7 skills list`     |
+| `ctx7 skills rm`  | `ctx7 skills remove`   |
 | `ctx7 skills gen` | `ctx7 skills generate` |
-| `ctx7 skills g` | `ctx7 skills generate` |
+| `ctx7 skills g`   | `ctx7 skills generate` |
 
 ---
 
