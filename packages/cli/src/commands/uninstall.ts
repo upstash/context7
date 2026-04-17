@@ -68,7 +68,8 @@ const MODE_SKILLS: Record<UninstallMode, readonly string[]> = {
 
 export function registerUninstallCommand(program: Command): void {
   program
-    .command("uninstall")
+    .command("remove")
+    .alias("uninstall")
     .description("Remove Context7 setup from your AI coding agent")
     .option("--claude", "Remove from Claude Code")
     .option("--cursor", "Remove from Cursor")

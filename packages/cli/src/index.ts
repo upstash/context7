@@ -49,10 +49,10 @@ Examples:
   ${brand.primary("npx ctx7 skills remove pdf")}
 
   ${brand.dim("# Remove Context7 setup")}
-  ${brand.primary("npx ctx7 uninstall --cursor")}
-  ${brand.primary("npx ctx7 uninstall --cursor --all")}
-  ${brand.primary("npx ctx7 uninstall --cursor --cli")}
-  ${brand.primary("npx ctx7 uninstall --claude --mcp")}
+  ${brand.primary("npx ctx7 remove --cursor")}
+  ${brand.primary("npx ctx7 remove --cursor --all")}
+  ${brand.primary("npx ctx7 remove --cursor --cli")}
+  ${brand.primary("npx ctx7 remove --claude --mcp")}
 
   ${brand.dim("# Query library documentation")}
   ${brand.primary('npx ctx7 library react "how to use hooks"')}

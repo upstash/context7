@@ -21,7 +21,7 @@ npm install -g ctx7
 ctx7 setup
 
 # Remove Context7 setup later
-ctx7 uninstall
+ctx7 remove
 
 # Target a specific agent
 ctx7 setup --cursor
@@ -117,18 +117,18 @@ Remove the Context7 setup written by `ctx7 setup`. By default this removes both 
 
 ```bash
 # Interactive
-ctx7 uninstall
+ctx7 remove
 
 # Target specific agents
-ctx7 uninstall --cursor
-ctx7 uninstall --claude --project
+ctx7 remove --cursor
+ctx7 remove --claude --project
 
 # Remove both setup modes explicitly
-ctx7 uninstall --cursor --all
+ctx7 remove --cursor --all
 
 # Remove only one setup mode
-ctx7 uninstall --cursor --cli
-ctx7 uninstall --claude --mcp
+ctx7 remove --cursor --cli
+ctx7 remove --claude --mcp
 ```
 
 If you installed the CLI itself globally with `npm install -g ctx7`, remove that separately with `npm uninstall -g ctx7`. If you use `npx ctx7`, there is no permanent CLI install to remove.
