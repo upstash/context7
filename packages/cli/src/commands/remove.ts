@@ -4,22 +4,17 @@ import ora from "ora";
 import { checkboxWithHover } from "../utils/prompts.js";
 import { log } from "../utils/logger.js";
 import { trackEvent } from "../utils/tracking.js";
-import {
-  ALL_AGENT_NAMES,
-  SETUP_AGENT_NAMES,
-  getAgent,
-  detectAgents,
-  type SetupAgent,
-} from "../setup/agents.js";
+import { ALL_AGENT_NAMES, SETUP_AGENT_NAMES, getAgent, type SetupAgent } from "../setup/agents.js";
 import {
   readJsonConfig,
+  readTomlServerExists,
   removeServerEntry,
   writeJsonConfig,
   resolveMcpPath,
   removeTomlServer,
 } from "../setup/mcp-writer.js";
 import { join } from "path";
-import { readFile, rm, writeFile } from "fs/promises";
+import { access, readFile, rm, writeFile } from "fs/promises";
 
 type Scope = "global" | "project";
 type UninstallMode = "mcp" | "cli";
@@ -66,6 +61,11 @@ const MODE_SKILLS: Record<UninstallMode, readonly string[]> = {
   cli: ["find-docs"],
 };
 
+const MODE_LABELS: Record<UninstallMode, string> = {
+  mcp: "MCP",
+  cli: "CLI + Skills",
+};
+
 export function registerRemoveCommand(program: Command): void {
   program
     .command("remove")
@@ -97,33 +97,19 @@ function getSelectedAgents(options: UninstallOptions): SetupAgent[] {
 }
 
 async function promptAgents(detected: SetupAgent[]): Promise<SetupAgent[] | null> {
-  const detectedSet = new Set(detected);
-  const orderedAgents =
-    detected.length > 0
-      ? [
-          ...ALL_AGENT_NAMES.filter((name) => detectedSet.has(name)),
-          ...ALL_AGENT_NAMES.filter((name) => !detectedSet.has(name)),
-        ]
-      : ALL_AGENT_NAMES;
-
-  const choices = orderedAgents.map((name) => ({
-    name: detectedSet.has(name)
-      ? `${SETUP_AGENT_NAMES[name]} ${pc.dim("(detected)")}`
-      : SETUP_AGENT_NAMES[name],
+  const choices = detected.map((name) => ({
+    name: SETUP_AGENT_NAMES[name],
     value: name,
   }));
 
-  const message =
-    detected.length > 0
-      ? `Which agents do you want to clean up?\n${pc.dim(
-          `  Detected: ${detected.map((agent) => SETUP_AGENT_NAMES[agent]).join(", ")}`
-        )}`
-      : "Which agents do you want to clean up?";
+  if (detected.length > 0) {
+    log.dim(`Detected: ${detected.map((agent) => SETUP_AGENT_NAMES[agent]).join(", ")}`);
+  }
 
   try {
     return await checkboxWithHover(
       {
-        message,
+        message: "Which agents do you want to remove Context7 setup from?",
         choices,
         loop: false,
         theme: CHECKBOX_THEME,
@@ -135,31 +121,52 @@ async function promptAgents(detected: SetupAgent[]): Promise<SetupAgent[] | null
   }
 }
 
+async function promptModes(modes: UninstallMode[]): Promise<UninstallMode[] | null> {
+  const choices = modes.map((mode) => ({
+    name: MODE_LABELS[mode],
+    value: mode,
+  }));
+
+  try {
+    return await checkboxWithHover(
+      {
+        message: "Which Context7 setup modes do you want to remove?",
+        choices,
+        loop: false,
+        theme: CHECKBOX_THEME,
+      },
+      { getName: (mode: UninstallMode) => MODE_LABELS[mode] }
+    );
+  } catch {
+    return null;
+  }
+}
+
 async function resolveAgents(options: UninstallOptions, scope: Scope): Promise<SetupAgent[]> {
   const explicit = getSelectedAgents(options);
   if (explicit.length > 0) return explicit;
 
-  const detected = await detectAgents(scope);
+  const detected = await detectConfiguredAgents(scope);
   if (detected.length > 0 && options.yes) return detected;
 
-  if (detected.length === 0 && options.yes) {
-    const message =
-      "No supported agents detected. Pass --claude, --cursor, --opencode, --codex, or --gemini.";
-    log.warn(message);
+  if (detected.length === 0) {
+    log.warn(
+      "No Context7 setup detected. Pass --claude, --cursor, --opencode, --codex, or --gemini."
+    );
     return [];
   }
 
   log.blank();
   const selected = await promptAgents(detected);
   if (!selected) {
-    log.warn("Uninstall cancelled");
+    log.warn("Remove cancelled");
     return [];
   }
 
   return selected;
 }
 
-function resolveModes(options: UninstallOptions): UninstallMode[] {
+function resolveFlagModes(options: UninstallOptions): UninstallMode[] {
   if (options.all) return ["mcp", "cli"];
 
   const selected: UninstallMode[] = [];
@@ -168,6 +175,138 @@ function resolveModes(options: UninstallOptions): UninstallMode[] {
   if (options.cli) selected.push("cli");
 
   return selected.length > 0 ? selected : ["mcp", "cli"];
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function hasMcpConfig(agentName: SetupAgent, scope: Scope): Promise<boolean> {
+  const agent = getAgent(agentName);
+  const candidates =
+    scope === "global"
+      ? agent.mcp.globalPaths
+      : agent.mcp.projectPaths.map((path) => join(process.cwd(), path));
+  const mcpPath = await resolveMcpPath(candidates);
+
+  if (mcpPath.endsWith(".toml")) {
+    return readTomlServerExists(mcpPath, "context7");
+  }
+
+  const existing = await readJsonConfig(mcpPath);
+  const section = existing[agent.mcp.configKey];
+  return (
+    !!section && typeof section === "object" && !Array.isArray(section) && "context7" in section
+  );
+}
+
+async function hasRule(agentName: SetupAgent, scope: Scope): Promise<boolean> {
+  const agent = getAgent(agentName);
+  const rule = agent.rule;
+
+  if (rule.kind === "file") {
+    const ruleDir =
+      scope === "global" ? rule.dir("global") : join(process.cwd(), rule.dir("project"));
+    return pathExists(join(ruleDir, rule.filename));
+  }
+
+  const filePath =
+    scope === "global" ? rule.file("global") : join(process.cwd(), rule.file("project"));
+
+  try {
+    const existing = await readFile(filePath, "utf-8");
+    return existing.includes(CONTEXT7_SECTION_MARKER);
+  } catch {
+    return false;
+  }
+}
+
+async function hasSkill(agentName: SetupAgent, scope: Scope, skillName: string): Promise<boolean> {
+  const agent = getAgent(agentName);
+  const skillsDir =
+    scope === "global"
+      ? agent.skill.dir("global")
+      : join(process.cwd(), agent.skill.dir("project"));
+  return pathExists(join(skillsDir, skillName));
+}
+
+async function detectAvailableModes(agents: SetupAgent[], scope: Scope): Promise<UninstallMode[]> {
+  let hasMcpArtifacts = false;
+  let hasCliArtifacts = false;
+  let hasRuleArtifacts = false;
+
+  for (const agent of agents) {
+    hasMcpArtifacts =
+      hasMcpArtifacts ||
+      (await hasMcpConfig(agent, scope)) ||
+      (await hasSkill(agent, scope, MODE_SKILLS.mcp[0]));
+    hasCliArtifacts = hasCliArtifacts || (await hasSkill(agent, scope, MODE_SKILLS.cli[0]));
+    hasRuleArtifacts = hasRuleArtifacts || (await hasRule(agent, scope));
+  }
+
+  const modes: UninstallMode[] = [];
+  if (hasMcpArtifacts) modes.push("mcp");
+  if (hasCliArtifacts) modes.push("cli");
+
+  if (modes.length === 0 && hasRuleArtifacts) {
+    return ["mcp", "cli"];
+  }
+
+  return modes;
+}
+
+async function hasAnyContext7Artifacts(agent: SetupAgent, scope: Scope): Promise<boolean> {
+  return (
+    (await hasMcpConfig(agent, scope)) ||
+    (await hasRule(agent, scope)) ||
+    (await hasSkill(agent, scope, MODE_SKILLS.mcp[0])) ||
+    (await hasSkill(agent, scope, MODE_SKILLS.cli[0]))
+  );
+}
+
+async function detectConfiguredAgents(scope: Scope): Promise<SetupAgent[]> {
+  const detected: SetupAgent[] = [];
+
+  for (const agent of ALL_AGENT_NAMES) {
+    if (await hasAnyContext7Artifacts(agent, scope)) {
+      detected.push(agent);
+    }
+  }
+
+  return detected;
+}
+
+async function resolveModes(
+  options: UninstallOptions,
+  agents: SetupAgent[],
+  scope: Scope
+): Promise<UninstallMode[]> {
+  if (options.all || options.mcp || options.cli) {
+    return resolveFlagModes(options);
+  }
+
+  const detectedModes = await detectAvailableModes(agents, scope);
+  if (detectedModes.length <= 1) {
+    return detectedModes.length === 1 ? detectedModes : ["mcp", "cli"];
+  }
+
+  if (options.yes) {
+    return detectedModes;
+  }
+
+  log.blank();
+  const selected = await promptModes(detectedModes);
+  if (!selected) {
+    log.warn("Remove cancelled");
+    return [];
+  }
+
+  return selected;
 }
 
 async function uninstallMcp(agentName: SetupAgent, scope: Scope): Promise<CleanupStatus> {
@@ -308,38 +447,52 @@ function iconForStatus(status: string): string {
 function printResults(results: AgentCleanupResult[], modes: UninstallMode[]): void {
   log.blank();
   const shouldPrintRule = modes.includes("mcp") || modes.includes("cli");
+  let hasVisibleResults = false;
 
   for (const result of results) {
+    const visibleSkills = result.skills?.filter((skill) => skill.status !== "not found") ?? [];
+    const showMcp = modes.includes("mcp") && result.mcp && result.mcp.status !== "not found";
+    const showRule = shouldPrintRule && result.rule && result.rule.status !== "not found";
+
+    if (!showMcp && !showRule && visibleSkills.length === 0) {
+      continue;
+    }
+
+    hasVisibleResults = true;
     log.plain(`  ${pc.bold(result.agent)}`);
 
-    if (modes.includes("mcp") && result.mcp) {
+    if (showMcp && result.mcp) {
       log.plain(`    ${iconForStatus(result.mcp.status)} MCP config ${result.mcp.status}`);
       log.plain(`      ${pc.dim(result.mcp.path)}`);
     }
 
-    if (shouldPrintRule && result.rule) {
+    if (showRule && result.rule) {
       log.plain(`    ${iconForStatus(result.rule.status)} Rule ${result.rule.status}`);
       log.plain(`      ${pc.dim(result.rule.path)}`);
     }
 
-    if (result.skills) {
-      for (const skill of result.skills) {
-        log.plain(`    ${iconForStatus(skill.status)} Skill ${skill.name} ${skill.status}`);
-        log.plain(`      ${pc.dim(skill.path)}`);
-      }
+    for (const skill of visibleSkills) {
+      log.plain(`    ${iconForStatus(skill.status)} Skill ${skill.name} ${skill.status}`);
+      log.plain(`      ${pc.dim(skill.path)}`);
     }
   }
 
-  log.blank();
+  if (hasVisibleResults) {
+    log.blank();
+  } else {
+    log.plain(`  ${pc.dim("No matching Context7 setup was found to remove.")}`);
+    log.blank();
+  }
 }
 
 async function removeCommand(options: UninstallOptions): Promise<void> {
   trackEvent("command", { name: "remove" });
 
   const scope: Scope = options.project ? "project" : "global";
-  const modes = resolveModes(options);
   const agents = await resolveAgents(options, scope);
   if (agents.length === 0) return;
+  const modes = await resolveModes(options, agents, scope);
+  if (modes.length === 0) return;
 
   log.blank();
   const spinner = ora("Removing Context7 setup...").start();

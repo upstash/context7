@@ -197,6 +197,32 @@ describe("removeServerEntry", () => {
     expect(removed).toBe(false);
     expect(config).toEqual(existing);
   });
+
+  test("preserves unrelated top-level fields and sibling MCP servers", () => {
+    const existing = {
+      version: 2,
+      theme: "dark",
+      mcpServers: {
+        alpha: { url: "https://alpha.com" },
+        context7: { url: "https://mcp.context7.com/mcp", headers: { key: "secret" } },
+        omega: { url: "https://omega.com" },
+      },
+      telemetry: { enabled: true },
+    };
+
+    const { config, removed } = removeServerEntry(existing, "mcpServers", "context7");
+
+    expect(removed).toBe(true);
+    expect(config).toEqual({
+      version: 2,
+      theme: "dark",
+      mcpServers: {
+        alpha: { url: "https://alpha.com" },
+        omega: { url: "https://omega.com" },
+      },
+      telemetry: { enabled: true },
+    });
+  });
 });
 
 describe("readJsonConfig / writeJsonConfig", () => {
@@ -473,6 +499,27 @@ describe("TOML config", () => {
     expect(content).toContain('model = "gpt-5"');
     expect(content).not.toContain("[mcp_servers.context7]");
     expect(content).not.toContain("CONTEXT7_API_KEY");
+  });
+
+  test("removeTomlServer preserves other MCP servers and their subsections", async () => {
+    const path = join(tempDir, "config.toml");
+    await writeFile(
+      path,
+      '[mcp_servers.context7]\nurl = "https://mcp.context7.com/mcp"\n\n[mcp_servers.context7.http_headers]\nCONTEXT7_API_KEY = "sk-test"\n\n[mcp_servers.other]\nurl = "https://other.com"\n\n[mcp_servers.other.http_headers]\nX_API_KEY = "keep-me"\n\n[settings]\nmodel = "gpt-5"\n',
+      "utf-8"
+    );
+
+    const { removed } = await removeTomlServer(path, "context7");
+    const content = await readFile(path, "utf-8");
+
+    expect(removed).toBe(true);
+    expect(content).toContain("[mcp_servers.other]");
+    expect(content).toContain('url = "https://other.com"');
+    expect(content).toContain("[mcp_servers.other.http_headers]");
+    expect(content).toContain('X_API_KEY = "keep-me"');
+    expect(content).toContain("[settings]");
+    expect(content).not.toContain("[mcp_servers.context7]");
+    expect(content).not.toContain("[mcp_servers.context7.http_headers]");
   });
 
   test("removeTomlServer returns false when server is missing", async () => {
