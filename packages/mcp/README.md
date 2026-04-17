@@ -720,9 +720,35 @@ See [JetBrains AI Assistant Documentation](https://www.jetbrains.com/help/ai-ass
 
 See [Kiro Model Context Protocol Documentation](https://kiro.dev/docs/mcp/configuration/) for details.
 
+[![Add to Kiro](https://kiro.dev/images/add-to-kiro.svg)](https://kiro.dev/launch/mcp/add?name=context7&config=%7B%22url%22%3A%22https%3A%2F%2Fmcp.context7.com%2Fmcp%22%2C%22disabled%22%3Afalse%2C%22autoApprove%22%3A%5B%5D%7D)
+
 1. Navigate `Kiro` > `MCP Servers`
 2. Add a new MCP server by clicking the `+ Add` button.
-3. Paste the configuration given below:
+3. Paste one of the configurations below:
+
+#### Kiro Remote Server Connection
+
+```json
+{
+  "mcpServers": {
+    "Context7": {
+      "url": "https://mcp.context7.com/mcp"
+    }
+  }
+}
+```
+
+To use an API key in Kiro, add:
+
+```json
+"headers": {
+  "CONTEXT7_API_KEY": "YOUR_API_KEY"
+}
+```
+
+You can create an API key at [context7.com/dashboard](https://context7.com/dashboard) for authenticated usage and higher rate limits.
+
+#### Kiro Local Server Connection
 
 ```json
 {
