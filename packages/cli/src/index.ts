@@ -50,6 +50,8 @@ Examples:
 
   ${brand.dim("# Remove Context7 setup")}
   ${brand.primary("npx ctx7 uninstall --cursor")}
+  ${brand.primary("npx ctx7 uninstall --cursor --all")}
+  ${brand.primary("npx ctx7 uninstall --cursor --cli")}
   ${brand.primary("npx ctx7 uninstall --claude --mcp")}
 
   ${brand.dim("# Query library documentation")}

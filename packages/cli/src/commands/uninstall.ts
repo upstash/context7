@@ -22,7 +22,7 @@ import { join } from "path";
 import { readFile, rm, writeFile } from "fs/promises";
 
 type Scope = "global" | "project";
-type CleanupTarget = "mcp" | "rule" | "skill";
+type UninstallMode = "mcp" | "cli";
 
 interface UninstallOptions {
   claude?: boolean;
@@ -33,9 +33,8 @@ interface UninstallOptions {
   project?: boolean;
   yes?: boolean;
   all?: boolean;
+  cli?: boolean;
   mcp?: boolean;
-  rule?: boolean;
-  skill?: boolean;
 }
 
 interface CleanupStatus {
@@ -62,7 +61,10 @@ const CHECKBOX_THEME = {
 };
 
 const CONTEXT7_SECTION_MARKER = "<!-- context7 -->";
-const CONTEXT7_SKILL_NAMES = ["context7-mcp", "find-docs"] as const;
+const MODE_SKILLS: Record<UninstallMode, readonly string[]> = {
+  mcp: ["context7-mcp"],
+  cli: ["find-docs"],
+};
 
 export function registerUninstallCommand(program: Command): void {
   program
@@ -73,10 +75,9 @@ export function registerUninstallCommand(program: Command): void {
     .option("--opencode", "Remove from OpenCode")
     .option("--codex", "Remove from Codex")
     .option("--gemini", "Remove from Gemini CLI")
-    .option("--mcp", "Remove only MCP server config")
-    .option("--rule", "Remove only Context7 rules/instructions")
-    .option("--skill", "Remove only Context7 setup skills")
-    .option("--all", "Remove all Context7-managed setup artifacts")
+    .option("--all", "Remove both MCP setup and CLI + Skills setup")
+    .option("--mcp", "Remove MCP setup")
+    .option("--cli", "Remove CLI + Skills setup")
     .option("-p, --project", "Remove from the current project instead of global config")
     .option("-y, --yes", "Skip confirmation prompts")
     .action(async (options: UninstallOptions) => {
@@ -139,18 +140,15 @@ async function resolveAgents(options: UninstallOptions, scope: Scope): Promise<S
   return selected;
 }
 
-function resolveTargets(options: UninstallOptions): CleanupTarget[] {
-  const selected: CleanupTarget[] = [];
+function resolveModes(options: UninstallOptions): UninstallMode[] {
+  if (options.all) return ["mcp", "cli"];
+
+  const selected: UninstallMode[] = [];
 
   if (options.mcp) selected.push("mcp");
-  if (options.rule) selected.push("rule");
-  if (options.skill) selected.push("skill");
+  if (options.cli) selected.push("cli");
 
-  if (options.all || selected.length === 0) {
-    return ["mcp", "rule", "skill"];
-  }
-
-  return selected;
+  return selected.length > 0 ? selected : ["mcp", "cli"];
 }
 
 async function uninstallMcp(agentName: SetupAgent, scope: Scope): Promise<CleanupStatus> {
@@ -227,7 +225,11 @@ async function uninstallRule(agentName: SetupAgent, scope: Scope): Promise<Clean
   }
 }
 
-async function uninstallSkills(agentName: SetupAgent, scope: Scope): Promise<SkillCleanupStatus[]> {
+async function uninstallSkills(
+  agentName: SetupAgent,
+  scope: Scope,
+  skillNames: readonly string[]
+): Promise<SkillCleanupStatus[]> {
   const agent = getAgent(agentName);
   const skillsDir =
     scope === "global"
@@ -236,7 +238,7 @@ async function uninstallSkills(agentName: SetupAgent, scope: Scope): Promise<Ski
 
   const results: SkillCleanupStatus[] = [];
 
-  for (const skillName of CONTEXT7_SKILL_NAMES) {
+  for (const skillName of skillNames) {
     const skillPath = join(skillsDir, skillName);
     try {
       await rm(skillPath, { recursive: true });
@@ -257,20 +259,22 @@ async function uninstallSkills(agentName: SetupAgent, scope: Scope): Promise<Ski
 async function uninstallAgent(
   agentName: SetupAgent,
   scope: Scope,
-  targets: CleanupTarget[]
+  modes: UninstallMode[]
 ): Promise<AgentCleanupResult> {
   const result: AgentCleanupResult = { agent: getAgent(agentName).displayName };
+  const skillNames = Array.from(new Set(modes.flatMap((mode) => [...MODE_SKILLS[mode]])));
+  const shouldRemoveRule = modes.includes("mcp") || modes.includes("cli");
 
-  if (targets.includes("mcp")) {
+  if (modes.includes("mcp")) {
     result.mcp = await uninstallMcp(agentName, scope);
   }
 
-  if (targets.includes("rule")) {
+  if (shouldRemoveRule) {
     result.rule = await uninstallRule(agentName, scope);
   }
 
-  if (targets.includes("skill")) {
-    result.skills = await uninstallSkills(agentName, scope);
+  if (skillNames.length > 0) {
+    result.skills = await uninstallSkills(agentName, scope, skillNames);
   }
 
   return result;
@@ -282,23 +286,24 @@ function iconForStatus(status: string): string {
   return pc.red("!");
 }
 
-function printResults(results: AgentCleanupResult[], targets: CleanupTarget[]): void {
+function printResults(results: AgentCleanupResult[], modes: UninstallMode[]): void {
   log.blank();
+  const shouldPrintRule = modes.includes("mcp") || modes.includes("cli");
 
   for (const result of results) {
     log.plain(`  ${pc.bold(result.agent)}`);
 
-    if (targets.includes("mcp") && result.mcp) {
+    if (modes.includes("mcp") && result.mcp) {
       log.plain(`    ${iconForStatus(result.mcp.status)} MCP config ${result.mcp.status}`);
       log.plain(`      ${pc.dim(result.mcp.path)}`);
     }
 
-    if (targets.includes("rule") && result.rule) {
+    if (shouldPrintRule && result.rule) {
       log.plain(`    ${iconForStatus(result.rule.status)} Rule ${result.rule.status}`);
       log.plain(`      ${pc.dim(result.rule.path)}`);
     }
 
-    if (targets.includes("skill") && result.skills) {
+    if (result.skills) {
       for (const skill of result.skills) {
         log.plain(`    ${iconForStatus(skill.status)} Skill ${skill.name} ${skill.status}`);
         log.plain(`      ${pc.dim(skill.path)}`);
@@ -313,7 +318,7 @@ async function uninstallCommand(options: UninstallOptions): Promise<void> {
   trackEvent("command", { name: "uninstall" });
 
   const scope: Scope = options.project ? "project" : "global";
-  const targets = resolveTargets(options);
+  const modes = resolveModes(options);
   const agents = await resolveAgents(options, scope);
   if (agents.length === 0) return;
 
@@ -323,11 +328,11 @@ async function uninstallCommand(options: UninstallOptions): Promise<void> {
   const results: AgentCleanupResult[] = [];
   for (const agentName of agents) {
     spinner.text = `Cleaning up ${getAgent(agentName).displayName}...`;
-    results.push(await uninstallAgent(agentName, scope, targets));
+    results.push(await uninstallAgent(agentName, scope, modes));
   }
 
   spinner.succeed("Context7 cleanup complete");
-  printResults(results, targets);
+  printResults(results, modes);
 
-  trackEvent("uninstall", { agents, scope, targets });
+  trackEvent("uninstall", { agents, scope, modes });
 }
