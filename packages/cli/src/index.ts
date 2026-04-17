@@ -5,6 +5,7 @@ import { registerSkillCommands, registerSkillAliases } from "./commands/skill.js
 import { registerAuthCommands, setAuthBaseUrl } from "./commands/auth.js";
 import { registerSetupCommand } from "./commands/setup.js";
 import { registerDocsCommands } from "./commands/docs.js";
+import { maybeShowUpgradeNotice, registerUpgradeCommand } from "./commands/upgrade.js";
 import { setBaseUrl } from "./utils/api.js";
 import { VERSION } from "./constants.js";
 
@@ -26,6 +27,12 @@ program
       setBaseUrl(opts.baseUrl);
       setAuthBaseUrl(opts.baseUrl);
     }
+  })
+  .hook("preAction", async (_thisCommand, actionCommand) => {
+    await maybeShowUpgradeNotice({
+      actionName: actionCommand.name(),
+      argv: process.argv,
+    });
   })
   .addHelpText(
     "after",
@@ -60,6 +67,7 @@ registerSkillAliases(program);
 registerAuthCommands(program);
 registerSetupCommand(program);
 registerDocsCommands(program);
+registerUpgradeCommand(program);
 
 program.action(() => {
   console.log("");
@@ -78,4 +86,4 @@ program.action(() => {
   console.log("");
 });
 
-program.parse();
+await program.parseAsync();
