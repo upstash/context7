@@ -1,0 +1,75 @@
+---
+title: Copilot CLI
+description: Using Context7 with GitHub Copilot CLI
+---
+
+Context7 integrates with GitHub Copilot CLI to provide current library documentation instead of relying on stale training data. You can use Context7 either as a plain MCP server or as a full plugin with skills, agents, and commands.
+
+## MCP Setup
+
+For direct MCP setup, see [All MCP Clients](/resources/all-clients#copilot-cli).
+
+If you only need the Context7 tools, add the MCP server to `~/.copilot/mcp-config.json`:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      },
+      "tools": ["query-docs", "resolve-library-id"]
+    }
+  }
+}
+```
+
+## The Context7 Plugin
+
+The full Copilot CLI plugin adds more than the MCP server:
+
+- A `context7-mcp` skill for library and framework questions
+- A `docs-researcher` custom agent for focused documentation lookups
+- A `/context7:docs` command for manual documentation queries
+- A bundled MCP configuration for the `context7` server
+
+## Installing the Plugin
+
+Register the marketplace and install the plugin:
+
+```bash
+copilot plugin marketplace add upstash/context7
+copilot plugin install context7-plugin@context7-marketplace
+```
+
+After installation, Copilot CLI should discover:
+
+- `docs-researcher` in `/agent`
+- `context7-mcp` in `/skills`
+- `/context7:docs` as an available command
+- `context7` in `/mcp show`
+
+## Usage
+
+Ask library questions directly in Copilot CLI:
+
+```text
+How do I configure middleware in Next.js 15?
+Show me Prisma relation examples
+What are the Supabase auth methods?
+```
+
+For a manual lookup, use the plugin command:
+
+```text
+/context7:docs next.js middleware
+/context7:docs /vercel/next.js/v15.1.8 app router
+```
+
+When you want to keep your current conversation lean, switch to the dedicated agent:
+
+```text
+/agent docs-researcher
+```

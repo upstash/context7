@@ -21,7 +21,7 @@ When given a question about a library or framework, fetch the relevant documenta
 3. **Select the best match**: From the results, pick the library with:
    - Exact or closest name match
    - Highest benchmark score
-   - Appropriate version if the user specified one (e.g., "React 19" → look for v19.x)
+   - Appropriate version if the user specified one (e.g., "React 19" -> look for v19.x)
 
 4. **Fetch documentation**: Call `query-docs` with:
    - `libraryId`: The selected Context7 library ID (e.g., `/vercel/next.js`)
