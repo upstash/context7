@@ -3,7 +3,7 @@ title: MCP Clients
 description: Installation examples for MCP clients
 ---
 
-Context7 supports all MCP clients. Below are configuration examples for popular clients.  If your client isn't listed, check its documentation for MCP server installation. To configure manually, use the Context7 server URL `https://mcp.context7.com/mcp` with your MCP client and pass your API key via the `CONTEXT7_API_KEY` header.
+Context7 supports all MCP clients. Below are configuration examples for popular clients. If your client isn't listed, check its documentation for MCP server installation. To configure manually, use the Context7 server URL `https://mcp.context7.com/mcp`. You can add a `CONTEXT7_API_KEY` header for authenticated usage and higher rate limits.
 
 <Tip>
 Looking for the easiest way to get started? Use `npx ctx7 setup` to configure Context7 automatically. See the [CLI docs](/clients/cli) for more details.
@@ -237,6 +237,8 @@ Add this to your VS Code MCP config file (`.vscode/mcp.json`). See [VS Code MCP 
 
 See [Kiro Model Context Protocol Documentation](https://kiro.dev/docs/mcp/configuration/) for details.
 
+[![Add to Kiro](https://kiro.dev/images/add-to-kiro.svg)](https://kiro.dev/launch/mcp/add?name=context7&config=%7B%22url%22%3A%22https%3A%2F%2Fmcp.context7.com%2Fmcp%22%7D)
+
 1. Navigate `Kiro` > `MCP Servers`
 2. Add a new MCP server by clicking the `+ Add` button.
 3. Paste the configuration:
@@ -247,14 +249,21 @@ See [Kiro Model Context Protocol Documentation](https://kiro.dev/docs/mcp/config
 {
   "mcpServers": {
     "context7": {
-      "url": "https://mcp.context7.com/mcp",
-      "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY"
-      }
+      "url": "https://mcp.context7.com/mcp"
     }
   }
 }
 ```
+
+To use an API key in Kiro, add:
+
+```json
+"headers": {
+  "CONTEXT7_API_KEY": "YOUR_API_KEY"
+}
+```
+
+See the [API keys guide](/howto/api-keys) for how to create one.
 
 #### Local Server Connection
 
