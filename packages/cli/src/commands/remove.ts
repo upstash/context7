@@ -66,7 +66,7 @@ const MODE_SKILLS: Record<UninstallMode, readonly string[]> = {
   cli: ["find-docs"],
 };
 
-export function registerUninstallCommand(program: Command): void {
+export function registerRemoveCommand(program: Command): void {
   program
     .command("remove")
     .alias("uninstall")
@@ -82,7 +82,7 @@ export function registerUninstallCommand(program: Command): void {
     .option("-p, --project", "Remove from the current project instead of global config")
     .option("-y, --yes", "Skip confirmation prompts")
     .action(async (options: UninstallOptions) => {
-      await uninstallCommand(options);
+      await removeCommand(options);
     });
 }
 
@@ -315,8 +315,8 @@ function printResults(results: AgentCleanupResult[], modes: UninstallMode[]): vo
   log.blank();
 }
 
-async function uninstallCommand(options: UninstallOptions): Promise<void> {
-  trackEvent("command", { name: "uninstall" });
+async function removeCommand(options: UninstallOptions): Promise<void> {
+  trackEvent("command", { name: "remove" });
 
   const scope: Scope = options.project ? "project" : "global";
   const modes = resolveModes(options);
@@ -335,5 +335,5 @@ async function uninstallCommand(options: UninstallOptions): Promise<void> {
   spinner.succeed("Context7 cleanup complete");
   printResults(results, modes);
 
-  trackEvent("uninstall", { agents, scope, modes });
+  trackEvent("remove", { agents, scope, modes });
 }

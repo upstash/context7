@@ -4,7 +4,7 @@ import figlet from "figlet";
 import { registerSkillCommands, registerSkillAliases } from "./commands/skill.js";
 import { registerAuthCommands, setAuthBaseUrl } from "./commands/auth.js";
 import { registerSetupCommand } from "./commands/setup.js";
-import { registerUninstallCommand } from "./commands/uninstall.js";
+import { registerRemoveCommand } from "./commands/remove.js";
 import { registerDocsCommands } from "./commands/docs.js";
 import { setBaseUrl } from "./utils/api.js";
 import { VERSION } from "./constants.js";
@@ -66,7 +66,7 @@ registerSkillCommands(program);
 registerSkillAliases(program);
 registerAuthCommands(program);
 registerSetupCommand(program);
-registerUninstallCommand(program);
+registerRemoveCommand(program);
 registerDocsCommands(program);
 
 program.action(() => {
