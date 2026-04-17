@@ -33,6 +33,11 @@ vi.mock("child_process", () => ({
 import { maybeShowUpgradeNotice, registerUpgradeCommand } from "../commands/upgrade.js";
 
 let logOutput: string[];
+const ANSI_PATTERN = /\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])/g;
+
+function stripAnsi(text: string): string {
+  return text.replace(ANSI_PATTERN, "");
+}
 
 async function runCommand(...args: string[]): Promise<void> {
   const program = new Command();
@@ -57,6 +62,10 @@ beforeEach(() => {
   });
 });
 
+function plainLogOutput(): string[] {
+  return logOutput.map(stripAnsi);
+}
+
 describe("upgrade command", () => {
   test("reports when ctx7 is already up to date", async () => {
     checkForUpdates.mockResolvedValue({
@@ -71,7 +80,7 @@ describe("upgrade command", () => {
 
     await runCommand("upgrade");
 
-    expect(logOutput.some((line) => line.includes("ctx7 is up to date"))).toBe(true);
+    expect(plainLogOutput().some((line) => line.includes("ctx7 is up to date"))).toBe(true);
     expect(trackEvent).toHaveBeenCalledWith("command", { name: "upgrade" });
   });
 
@@ -90,8 +99,8 @@ describe("upgrade command", () => {
 
     await runCommand("upgrade", "--check");
 
-    expect(logOutput.some((line) => line.includes("Update available"))).toBe(true);
-    expect(logOutput.some((line) => line.includes("npm install -g ctx7@latest"))).toBe(true);
+    expect(plainLogOutput().some((line) => line.includes("Update available"))).toBe(true);
+    expect(plainLogOutput().some((line) => line.includes("npm install -g ctx7@latest"))).toBe(true);
     expect(spawn).not.toHaveBeenCalled();
   });
 
@@ -110,8 +119,8 @@ describe("upgrade command", () => {
 
     await runCommand("upgrade");
 
-    expect(logOutput.some((line) => line.includes("ephemeral runner"))).toBe(true);
-    expect(logOutput.some((line) => line.includes("npx ctx7@latest <command>"))).toBe(true);
+    expect(plainLogOutput().some((line) => line.includes("ephemeral runner"))).toBe(true);
+    expect(plainLogOutput().some((line) => line.includes("npx ctx7@latest <command>"))).toBe(true);
     expect(spawn).not.toHaveBeenCalled();
   });
 
@@ -147,8 +156,8 @@ describe("upgrade command", () => {
 
     await runCommand("upgrade", "--check");
 
-    expect(logOutput.some((line) => line.includes("Couldn't check for updates"))).toBe(true);
-    expect(logOutput.some((line) => line.includes("npm install -g ctx7@latest"))).toBe(true);
+    expect(plainLogOutput().some((line) => line.includes("Couldn't check for updates"))).toBe(true);
+    expect(plainLogOutput().some((line) => line.includes("npm install -g ctx7@latest"))).toBe(true);
   });
 
   test("shows retry guidance when the upgrade command fails", async () => {
@@ -175,11 +184,11 @@ describe("upgrade command", () => {
 
     await runCommand("upgrade", "--yes");
 
-    expect(logOutput.some((line) => line.includes("Upgrade command exited with code 243"))).toBe(
-      true
-    );
-    expect(logOutput.some((line) => line.includes("Try rerunning:"))).toBe(true);
-    expect(logOutput.some((line) => line.includes("permissions"))).toBe(true);
+    expect(
+      plainLogOutput().some((line) => line.includes("Upgrade command exited with code 243"))
+    ).toBe(true);
+    expect(plainLogOutput().some((line) => line.includes("Try rerunning:"))).toBe(true);
+    expect(plainLogOutput().some((line) => line.includes("permissions"))).toBe(true);
   });
 
   test("shows permissions guidance when install method is unknown but command is global npm", async () => {
@@ -207,7 +216,9 @@ describe("upgrade command", () => {
     await runCommand("upgrade", "--yes");
 
     expect(spawn).not.toHaveBeenCalled();
-    expect(logOutput.some((line) => line.includes("Run npm install -g ctx7@latest"))).toBe(true);
+    expect(plainLogOutput().some((line) => line.includes("Run npm install -g ctx7@latest"))).toBe(
+      true
+    );
   });
 });
 
@@ -231,9 +242,11 @@ describe("pre-command upgrade notice", () => {
       isInteractive: true,
     });
 
-    expect(logOutput.some((line) => line.includes("Update available:"))).toBe(true);
-    expect(logOutput.some((line) => line.includes("Run ctx7 upgrade to update now"))).toBe(true);
-    expect(logOutput.some((line) => line.includes("npm install -g ctx7@latest"))).toBe(true);
+    expect(plainLogOutput().some((line) => line.includes("Update available:"))).toBe(true);
+    expect(plainLogOutput().some((line) => line.includes("Run ctx7 upgrade to update now"))).toBe(
+      true
+    );
+    expect(plainLogOutput().some((line) => line.includes("npm install -g ctx7@latest"))).toBe(true);
     expect(confirm).not.toHaveBeenCalled();
     expect(spawn).not.toHaveBeenCalled();
     expect(markUpdateNotificationShown).toHaveBeenCalledWith("0.3.13");
@@ -259,8 +272,10 @@ describe("pre-command upgrade notice", () => {
       isInteractive: true,
     });
 
-    expect(logOutput.some((line) => line.includes("Run ctx7 upgrade for update steps"))).toBe(true);
-    expect(logOutput.some((line) => line.includes("npm install -g ctx7@latest"))).toBe(true);
+    expect(
+      plainLogOutput().some((line) => line.includes("Run ctx7 upgrade for update steps"))
+    ).toBe(true);
+    expect(plainLogOutput().some((line) => line.includes("npm install -g ctx7@latest"))).toBe(true);
     expect(spawn).not.toHaveBeenCalled();
     expect(markUpdateNotificationShown).toHaveBeenCalledWith("0.3.13");
   });
@@ -283,8 +298,10 @@ describe("pre-command upgrade notice", () => {
       isInteractive: true,
     });
 
-    expect(logOutput.some((line) => line.includes("Use npx ctx7@latest <command>"))).toBe(true);
-    expect(logOutput.some((line) => line.includes("ctx7 upgrade"))).toBe(false);
+    expect(plainLogOutput().some((line) => line.includes("Use npx ctx7@latest <command>"))).toBe(
+      true
+    );
+    expect(plainLogOutput().some((line) => line.includes("ctx7 upgrade"))).toBe(false);
     expect(confirm).not.toHaveBeenCalled();
     expect(spawn).not.toHaveBeenCalled();
     expect(markUpdateNotificationShown).toHaveBeenCalledWith("0.3.13");
