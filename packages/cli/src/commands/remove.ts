@@ -96,16 +96,34 @@ function getSelectedAgents(options: UninstallOptions): SetupAgent[] {
   return agents;
 }
 
-async function promptAgents(): Promise<SetupAgent[] | null> {
-  const choices = ALL_AGENT_NAMES.map((name) => ({
-    name: SETUP_AGENT_NAMES[name],
+async function promptAgents(detected: SetupAgent[]): Promise<SetupAgent[] | null> {
+  const detectedSet = new Set(detected);
+  const orderedAgents =
+    detected.length > 0
+      ? [
+          ...ALL_AGENT_NAMES.filter((name) => detectedSet.has(name)),
+          ...ALL_AGENT_NAMES.filter((name) => !detectedSet.has(name)),
+        ]
+      : ALL_AGENT_NAMES;
+
+  const choices = orderedAgents.map((name) => ({
+    name: detectedSet.has(name)
+      ? `${SETUP_AGENT_NAMES[name]} ${pc.dim("(detected)")}`
+      : SETUP_AGENT_NAMES[name],
     value: name,
   }));
+
+  const message =
+    detected.length > 0
+      ? `Which agents do you want to clean up?\n${pc.dim(
+          `  Detected: ${detected.map((agent) => SETUP_AGENT_NAMES[agent]).join(", ")}`
+        )}`
+      : "Which agents do you want to clean up?";
 
   try {
     return await checkboxWithHover(
       {
-        message: "Which agents do you want to clean up?",
+        message,
         choices,
         loop: false,
         theme: CHECKBOX_THEME,
@@ -132,7 +150,7 @@ async function resolveAgents(options: UninstallOptions, scope: Scope): Promise<S
   }
 
   log.blank();
-  const selected = await promptAgents();
+  const selected = await promptAgents(detected);
   if (!selected) {
     log.warn("Uninstall cancelled");
     return [];
