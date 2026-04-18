@@ -1,0 +1,60 @@
+---
+title: Keeping Libraries Up to Date
+description: How Context7 ensures library documentation stays fresh
+---
+
+Context7 automatically refreshes library documentation so that developers always receive accurate, up-to-date context in their coding environment. Here's how it works.
+
+## Automatic Refresh
+
+Every time a library is requested through Context7 — whether via the MCP server or the REST API — the system checks when the documentation was last updated. If it's older than a threshold based on the library's popularity, a background refresh is triggered automatically.
+
+### Refresh Thresholds
+
+The staleness threshold is based on each library's popularity rank in Context7:
+
+| Popularity Rank | Refresh Threshold |
+| --------------- | ----------------- |
+| Top 100         | 3 days            |
+| Top 1,000       | 10 days           |
+| Top 5,000       | 20 days           |
+| All others      | 30 days           |
+
+Popular libraries are refreshed more frequently because developers rely on them more heavily and they tend to get updated faster.
+
+<Note>
+  The refresh is triggered in the background and does not affect the response time of your current request. You will receive the existing documentation immediately while the update runs asynchronously.
+</Note>
+
+## Manual Refresh
+
+Logged-in users can manually trigger a refresh for any library directly from the library page on Context7. This is useful when you know a library has just released a new version and want the updated documentation immediately, without waiting for the automatic cycle to complete.
+
+Library owners who have [claimed their library](/howto/claiming-libraries) receive higher refresh rate limits, giving them more control over how frequently their documentation can be updated.
+
+## What Triggers a Refresh
+
+A refresh is triggered when all of the following conditions are met:
+
+- The library has been requested recently
+- The documentation is older than the threshold for that library's popularity rank
+
+If a library hasn't been requested recently, it won't be refreshed — keeping the system efficient and focused on actively used documentation.
+
+<Note>
+  Private libraries are not refreshed automatically. To update a private library's documentation, trigger a manual refresh from the library page.
+</Note>
+
+## Supported Library Types
+
+Automatic and manual refreshes work across all supported source types:
+
+- **Git repositories** — re-parsed from the configured branch
+- **Websites** — re-crawled from the base URL
+- **OpenAPI specs** — re-fetched and re-indexed from the spec source
+
+## Related
+
+- [Adding Libraries](/adding-libraries)
+- [Claim Your Library](/howto/claiming-libraries)
+- [Managing Versions](/howto/claiming-libraries#managing-versions)
