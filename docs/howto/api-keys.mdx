@@ -29,7 +29,14 @@ curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js&query=routin
 
 <Warning>Store your API key securely. You won't be able to see it again after creation.</Warning>
 
-### Revoking Keys
+3. **Copy the key immediately**
+- Keys are shown only once for security
+- Format: `ctx7sk-**********************`
+4. **Use in your requests or add to your MCP configuration**:
+
+```bash
+curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js&query=routing" \ 
+-H "Authorization: Bearer YOUR_API_KEY"
 
 Remove API keys you no longer need:
 
