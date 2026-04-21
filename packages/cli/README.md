@@ -20,6 +20,9 @@ npm install -g ctx7
 # Set up Context7 MCP for your coding agents
 ctx7 setup
 
+# Remove Context7 setup later
+ctx7 remove
+
 # Target a specific agent
 ctx7 setup --cursor
 ctx7 setup --claude
@@ -107,6 +110,28 @@ ctx7 setup --project
 # Skip prompts
 ctx7 setup --yes
 ```
+
+### Uninstall setup
+
+Remove the Context7 setup written by `ctx7 setup`. By default this removes both MCP setup and CLI setup for the selected agent.
+
+```bash
+# Interactive
+ctx7 remove
+
+# Target specific agents
+ctx7 remove --cursor
+ctx7 remove --claude --project
+
+# Remove both setup modes explicitly
+ctx7 remove --cursor --all
+
+# Remove only one setup mode
+ctx7 remove --cursor --cli
+ctx7 remove --claude --mcp
+```
+
+If you installed the CLI itself globally with `npm install -g ctx7`, remove that separately with `npm uninstall -g ctx7`. If you use `npx ctx7`, there is no permanent CLI install to remove.
 
 ### Generate skills
 
@@ -230,12 +255,12 @@ ctx7 skills remove pdf --global
 
 The CLI automatically detects which AI coding assistants you have installed and offers to install skills for them:
 
-| Client | Skills Directory |
-|--------|-----------------|
+| Client                                                              | Skills Directory  |
+| ------------------------------------------------------------------- | ----------------- |
 | Universal (Amp, Codex, Gemini CLI, GitHub Copilot, OpenCode + more) | `.agents/skills/` |
-| Claude Code | `.claude/skills/` |
-| Cursor | `.cursor/skills/` |
-| Antigravity | `.agent/skills/` |
+| Claude Code                                                         | `.claude/skills/` |
+| Cursor                                                              | `.cursor/skills/` |
+| Antigravity                                                         | `.agent/skills/`  |
 
 ## Shortcuts
 

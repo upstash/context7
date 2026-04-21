@@ -54,6 +54,8 @@ npx ctx7 setup
 
 Authenticates via OAuth, generates an API key, and installs the appropriate skill. You can choose between CLI + Skills or MCP mode. Use `--cursor`, `--claude`, or `--opencode` to target a specific agent.
 
+To remove the generated setup later, run `npx ctx7 remove`. If you globally installed the CLI with `npm install -g ctx7`, remove that package separately with `npm uninstall -g ctx7`.
+
 To configure manually, use the Context7 server URL `https://mcp.context7.com/mcp` with your MCP client and pass your API key via the `CONTEXT7_API_KEY` header. See the link below for client-specific setup instructions.
 
 **[Manual Installation / Other Clients →](https://context7.com/docs/resources/all-clients)**
