@@ -73,11 +73,11 @@
         "group": "Security",
         "pages": [
           "security/overview",
-          "security/architecture",
+          "security/data-privacy",
           "security/infrastructure",
           "security/auth-and-access-control",
           "security/compliance-and-reporting",
-          "security/malicious-content",
+          "security/data-safety",
           "security/best-practices"
         ]
       },

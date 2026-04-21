@@ -1,6 +1,5 @@
 ---
-title: Malicious Content Detection
-sidebarTitle: Malicious Content
+title: Data Safety
 ---
 
 ## Prompt Injection and Malware Pattern Detection
@@ -11,7 +10,7 @@ Context7 indexes documentation from public and private sources. To prevent malic
 ![How our detection system works](/images/security/classifier_pipeline.png)
 </Frame>
 
-- **Robust Detection** — Content is analyzed to identify prompt injection attempts and malware-related patterns
+- **Robust Detection** — Content is analyzed using a classifier tailored for Context7 to identify prompt injection attempts and malware-related patterns
 - **Targeted Validation** — Suspicious content is subjected to additional checks
 - **Skills.md Handling** — A separate but related detection pipeline is used for [Skills](/skills) files, adapted to their distinct structure and intent
 - **Continuous Monitoring** — Flagged content is tracked and reviewed on an ongoing basis
