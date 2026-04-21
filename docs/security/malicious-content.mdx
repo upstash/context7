@@ -3,23 +3,18 @@ title: Malicious Content Detection
 sidebarTitle: Malicious Content
 ---
 
-<Note>
-Malware pattern detection is coming soon!
-</Note>
+## Prompt Injection and Malware Pattern Detection
 
-How Context7 detects prompt injections and prevents them from reaching AI assistants.
-
-## Prompt Injection Detection
-
-Context7 indexes documentation from public and private repositories. To protect against malicious content being served to AI assistants, Context7 employs a **two-pass prompt injection detection pipeline**.
+Context7 indexes documentation from public and private sources. To prevent malicious content from reaching AI assistants, Context7 employs a **layered malicious content detection system**.
 
 <Frame>
-![How our classifier pipeline works](/images/security/classifier_pipeline.png)
+![How our detection system works](/images/security/classifier_pipeline.png)
 </Frame>
 
-- **Complementary detection stages** — a classifier and filter run in sequence, combining different detection approaches to maximize coverage while minimizing false positives
-- **Skills.md pipeline** — a separate but related detection pipeline is used for [Skills](/skills) files, adapted to their distinct structure and intent
-- **Continuous monitoring** — flagged content is tracked and reviewed on an ongoing basis
-- **Regular updates** — classifier pipelines are updated to address evolving attack methods and new injection techniques
+- **Robust Detection** — Content is analyzed to identify prompt injection attempts and malware-related patterns
+- **Targeted Validation** — Suspicious content is subjected to additional checks
+- **Skills.md Handling** — A separate but related detection pipeline is used for [Skills](/skills) files, adapted to their distinct structure and intent
+- **Continuous Monitoring** — Flagged content is tracked and reviewed on an ongoing basis
+- **Regular Updates** — Detection logic is updated to address evolving attack methods and new injection techniques
 
 This ensures that documentation retrieved through Context7 is safe to consume by both human developers and AI coding agents.
