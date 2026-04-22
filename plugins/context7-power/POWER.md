@@ -3,6 +3,7 @@ name: "context7"
 displayName: "Context7"
 description: "Find up-to-date documentation, API references, and code examples for libraries, frameworks, SDKs, and developer tools using Context7."
 keywords: ["context7", "library docs", "framework docs", "sdk docs", "api reference", "code examples", "package docs"]
+author: "Context7"
 ---
 
 # Context7
