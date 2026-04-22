@@ -59,6 +59,12 @@
             "pages": [
               "enterprise/on-premise",
               {
+                "group": "Security",
+                "pages": [
+                  "enterprise/security/entra-sso"
+                ]
+              },
+              {
                 "group": "Deployment",
                 "pages": [
                   "enterprise/deployment/docker",
