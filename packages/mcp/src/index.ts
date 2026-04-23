@@ -262,7 +262,7 @@ Workflow: default call first. Retry with 'researchMode: true' if it doesn't answ
         .boolean()
         .optional()
         .describe(
-          `Retries the query with deep research: spins up sandboxed agents that read the actual source repos and runs a live web search, then synthesizes a fresh answer. Set true on retry if you weren't satisfied with the first answer and want a more thorough one.`
+          `Retries the query with deep research: spins up sandboxed agents that read the actual source repos and runs a live web search, then synthesizes a fresh answer. Set true on retry if you weren't satisfied with the first answer and want a more thorough one. Requires a Context7 API key (free at https://context7.com — 10 research runs/week on Free, 100/week on Pro, 300/week on Enterprise).`
         ),
     },
     annotations: {
