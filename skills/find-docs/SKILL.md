@@ -125,6 +125,14 @@ Use the user's full question as the query when possible, vague one-word queries 
 
 The output contains two types of content: **code snippets** (titled, with language-tagged blocks) and **info snippets** (prose explanations with breadcrumb context).
 
+### Retry with `--research` if you weren't satisfied
+
+If the default `ctx7 docs` answer didn't satisfy, re-run the same command **with `--research`** before giving up or answering from training data. This retries using sandboxed agents that git-pull the actual source repos plus a live web search, then synthesizes a fresh answer. More costly than the default — use it as a targeted retry.
+
+```bash
+ctx7 docs /vercel/next.js "How does middleware matcher handle dynamic segments in v15?" --research
+```
+
 ## Authentication
 
 Works without authentication. For higher rate limits:

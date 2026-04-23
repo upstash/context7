@@ -142,6 +142,7 @@ export async function fetchLibraryContext(
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/context`);
     url.searchParams.set("query", request.query);
     url.searchParams.set("libraryId", request.libraryId);
+    if (request.researchMode) url.searchParams.set("researchMode", "true");
 
     const headers = generateHeaders(context);
 

@@ -38,6 +38,10 @@ Call `query-docs` with:
 - `libraryId`: The selected Context7 library ID (e.g., `/vercel/next.js`)
 - `query`: The user's specific question
 
+### Step 3.5: Retry with researchMode if you weren't satisfied
+
+If the default `query-docs` answer didn't satisfy, call `query-docs` **again for the same library** with `researchMode: true`. This retries using sandboxed agents that git-pull the actual source repos plus a live web search, then synthesizes a fresh answer. Do this before giving up or answering from training data. More costly than the default — use it as a targeted retry.
+
 ### Step 4: Use the Documentation
 
 Incorporate the fetched documentation into your response:

@@ -76,6 +76,14 @@ ctx7 docs /prisma/prisma "How to define one-to-many relations with cascade delet
 
 IMPORTANT: Do not call `ctx7 docs` more than 3 times per question. If you cannot find what you need after 3 calls, use the best information you have.
 
+### Retry with `--research` if you weren't satisfied
+
+If the default `ctx7 docs` answer didn't satisfy, re-run the same command **with `--research`** before giving up or answering from training data. This retries using sandboxed agents that git-pull the actual source repos plus a live web search, then synthesizes a fresh answer. More costly than the default — use it as a targeted retry.
+
+```bash
+ctx7 docs /vercel/next.js "How does middleware matcher handle dynamic segments in v15?" --research
+```
+
 ### Writing good queries
 
 The query directly affects the quality of results. Be specific and include relevant details. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query.

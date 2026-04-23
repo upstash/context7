@@ -43,6 +43,7 @@
   },
   "homepage": "https://github.com/upstash/context7#readme",
   "devDependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
     "@changesets/cli": "^2.29.8",
     "@types/node": "^25.0.3",
     "@typescript-eslint/eslint-plugin": "^8.28.0",
@@ -51,6 +52,7 @@
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.5",
     "prettier": "^3.6.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.28.0"
   },

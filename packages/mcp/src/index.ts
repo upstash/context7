@@ -246,7 +246,7 @@ server.registerTool(
 
 You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
-IMPORTANT: Do not call this tool more than 3 times per question. If you cannot find what you need after 3 calls, use the best information you have.`,
+Workflow: default call first. Retry with 'researchMode: true' if it doesn't answer. Max 3 calls per each tool.`,
     inputSchema: {
       libraryId: z
         .string()
@@ -258,13 +258,22 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
         .describe(
           "The question or task you need help with. Be specific and include relevant details. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad: 'auth' or 'hooks'. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
         ),
+      researchMode: z
+        .boolean()
+        .optional()
+        .describe(
+          `Retries the query with deep research: spins up sandboxed agents that read the actual source repos and runs a live web search, then synthesizes a fresh answer. Set true on retry if you weren't satisfied with the first answer and want a more thorough one.`
+        ),
     },
     annotations: {
       readOnlyHint: true,
     },
   },
-  async ({ query, libraryId }) => {
-    const response = await fetchLibraryContext({ query, libraryId }, getClientContext());
+  async ({ query, libraryId, researchMode }) => {
+    const response = await fetchLibraryContext(
+      { query, libraryId, researchMode },
+      getClientContext()
+    );
 
     return {
       content: [
