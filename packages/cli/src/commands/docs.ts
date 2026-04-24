@@ -130,9 +130,7 @@ async function queryCommand(
 
   const spinner = isTTY
     ? ora(
-        options.research
-          ? `Researching "${libraryId}"...`
-          : `Fetching docs for "${libraryId}"...`
+        options.research ? `Researching "${libraryId}"...` : `Fetching docs for "${libraryId}"...`
       ).start()
     : null;
   const accessToken = getAccessToken();
@@ -238,11 +236,7 @@ export function registerDocsCommands(program: Command): void {
     )
     .description("Query documentation for a library")
     .action(
-      async (
-        libraryId: string,
-        query: string,
-        options: { json?: boolean; research?: boolean }
-      ) => {
+      async (libraryId: string, query: string, options: { json?: boolean; research?: boolean }) => {
         await queryCommand(libraryId, query, options);
       }
     );
