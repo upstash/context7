@@ -246,7 +246,7 @@ server.registerTool(
 
 You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
-Workflow: default call first. Retry with 'researchMode: true' if it doesn't answer. Max 3 calls per each tool.`,
+Workflow: call first without researchMode. If that doesn't answer the question, retry with researchMode: true. Do not call each tool more than 3 times per question`,
     inputSchema: {
       libraryId: z
         .string()
