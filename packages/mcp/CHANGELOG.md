@@ -1,5 +1,11 @@
 # @upstash/context7-mcp
 
+## 2.2.0
+
+### Minor Changes
+
+- 17b864f: Expose research mode through the MCP `researchMode` tool and the CLI `docs --research` flag for deep, agent-driven documentation answers.
+
 ## 2.1.8
 
 ### Patch Changes
