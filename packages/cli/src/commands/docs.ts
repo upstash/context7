@@ -116,7 +116,7 @@ async function resolveCommand(
 async function queryCommand(
   libraryId: string,
   query: string,
-  options: { json?: boolean }
+  options: { json?: boolean; research?: boolean }
 ): Promise<void> {
   trackEvent("command", { name: "docs" });
 
@@ -128,13 +128,22 @@ async function queryCommand(
     return;
   }
 
-  const spinner = isTTY ? ora(`Fetching docs for "${libraryId}"...`).start() : null;
+  const spinner = isTTY
+    ? ora(
+        options.research ? `Researching "${libraryId}"...` : `Fetching docs for "${libraryId}"...`
+      ).start()
+    : null;
   const accessToken = getAccessToken();
   const outputType = options.json ? "json" : "txt";
 
   let result;
   try {
-    result = await getLibraryContext(libraryId, query, { type: outputType }, accessToken);
+    result = await getLibraryContext(
+      libraryId,
+      query,
+      { type: outputType, researchMode: options.research },
+      accessToken
+    );
   } catch (err) {
     spinner?.fail(`Error: ${err instanceof Error ? err.message : String(err)}`);
     if (!spinner) log.error(err instanceof Error ? err.message : String(err));
@@ -221,8 +230,14 @@ export function registerDocsCommands(program: Command): void {
     .argument("<libraryId>", "Context7 library ID (e.g., /facebook/react)")
     .argument("<query>", "Question or task to get docs for")
     .option("--json", "Output as JSON")
+    .option(
+      "--research",
+      "Retry the query with deep research: spins up sandboxed agents that read the actual source repos (git pull + inspect) and runs a live web search, then synthesizes a fresh answer. Use on retry if you weren't satisfied with the first answer. More costly than the default."
+    )
     .description("Query documentation for a library")
-    .action(async (libraryId: string, query: string, options: { json?: boolean }) => {
-      await queryCommand(libraryId, query, options);
-    });
+    .action(
+      async (libraryId: string, query: string, options: { json?: boolean; research?: boolean }) => {
+        await queryCommand(libraryId, query, options);
+      }
+    );
 }

@@ -31,6 +31,9 @@
           },
           {
             "$ref": "#/components/parameters/QueryParam"
+          },
+          {
+            "$ref": "#/components/parameters/FastParam"
           }
         ],
         "responses": {
@@ -72,6 +75,9 @@
           "401": {
             "$ref": "#/components/responses/UnauthorizedError"
           },
+          "402": {
+            "$ref": "#/components/responses/SpendingLimitError"
+          },
           "404": {
             "$ref": "#/components/responses/NotFoundError"
           },
@@ -110,6 +116,12 @@
           },
           {
             "$ref": "#/components/parameters/TypeParam"
+          },
+          {
+            "$ref": "#/components/parameters/FastParam"
+          },
+          {
+            "$ref": "#/components/parameters/ResearchModeParam"
           }
         ],
         "responses": {
@@ -170,6 +182,9 @@
           "403": {
             "$ref": "#/components/responses/ForbiddenError"
           },
+          "402": {
+            "$ref": "#/components/responses/SpendingLimitError"
+          },
           "404": {
             "$ref": "#/components/responses/NotFoundError"
           },
@@ -181,6 +196,9 @@
           },
           "500": {
             "$ref": "#/components/responses/InternalServerError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ResearchNoSourcesError"
           }
         },
         "security": [
@@ -1186,6 +1204,104 @@
           }
         ]
       }
+    },
+    "/v2/add/notion": {
+      "post": {
+        "summary": "Add Notion pages",
+        "description": "Submit selected Notion pages for documentation processing. Requires a connected Notion account and a team project.",
+        "operationId": "addNotion",
+        "tags": [
+          "Add Library"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "workspaceId",
+                  "workspaceName",
+                  "pageIds",
+                  "title",
+                  "description"
+                ],
+                "properties": {
+                  "workspaceId": {
+                    "type": "string",
+                    "description": "The Notion workspace ID"
+                  },
+                  "workspaceName": {
+                    "type": "string",
+                    "description": "The Notion workspace name"
+                  },
+                  "pageIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "List of Notion page IDs to index."
+                  },
+                  "title": {
+                    "type": "string",
+                    "description": "Title for the library"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Description of the library"
+                  },
+                  "projectId": {
+                    "type": "string",
+                    "description": "The team project ID to associate these Notion pages with"
+                  }
+                }
+              },
+              "example": {
+                "workspaceId": "workspace-uuid",
+                "workspaceName": "Acme Workspace",
+                "pageIds": [
+                  "page-1",
+                  "page-2"
+                ],
+                "title": "Product Docs",
+                "description": "Internal Notion knowledge base",
+                "projectId": "project-uuid"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AddLibrarySuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "409": {
+            "$ref": "#/components/responses/DuplicateError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "504": {
+            "$ref": "#/components/responses/GatewayTimeoutError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -1261,6 +1377,36 @@
           "default": "txt"
         },
         "example": "json"
+      },
+      "FastParam": {
+        "name": "fast",
+        "in": "query",
+        "description": "When `true`, skip LLM reranking and return top vector-search results directly. Trades relevance quality for lower latency.",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "default": "false"
+        },
+        "example": "true"
+      },
+      "ResearchModeParam": {
+        "name": "researchMode",
+        "in": "query",
+        "description": "When `true`, run a deeper agentic research pipeline that returns a single synthesized `infoSnippet` instead of ranked snippets. Requires an API key and is subject to a weekly per-user quota.",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "default": "false"
+        },
+        "example": "true"
       }
     },
     "schemas": {
@@ -1403,6 +1549,14 @@
             "items": {
               "$ref": "#/components/schemas/CodeExample"
             }
+          },
+          "isDynamic": {
+            "type": "boolean",
+            "description": "Whether this snippet was recovered from the dynamic source-code index instead of the primary docs index"
+          },
+          "sourceFile": {
+            "type": "string",
+            "description": "Repo-relative source file path for dynamic snippets"
           }
         },
         "required": [
@@ -2173,6 +2327,20 @@
           }
         }
       },
+      "SpendingLimitError": {
+        "description": "Payment Required - the teamspace's configured monthly spending limit has been reached. A teamspace owner or admin can raise the limit in billing settings, or the cap will reset at the start of the next billing month.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "spending_limit_exceeded",
+              "message": "Monthly spending limit of $5.00 reached for this teamspace. An owner or admin can raise the limit at https://context7.com/dashboard/billing, or the cap will reset at the start of next month."
+            }
+          }
+        }
+      },
       "RateLimitError": {
         "description": "Too Many Requests - Rate limit exceeded",
         "headers": {
@@ -2223,6 +2391,20 @@
             "example": {
               "error": "timeout",
               "message": "Request timed out. Please try again."
+            }
+          }
+        }
+      },
+      "ResearchNoSourcesError": {
+        "description": "Bad Gateway - Research mode could not retrieve any source material for the query",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "example": {
+              "error": "research_no_sources",
+              "message": "Research mode could not retrieve any source material for this query."
             }
           }
         }

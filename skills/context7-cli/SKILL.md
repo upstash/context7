@@ -31,6 +31,7 @@ npx ctx7@latest <command>
 # Documentation
 ctx7 library <name> <query>           # Step 1: resolve library ID
 ctx7 docs <libraryId> <query>         # Step 2: fetch docs
+ctx7 docs <libraryId> <query> --research  # Retry with deep research if the default answer didn't satisfy
 
 # Skills
 ctx7 skills install /owner/repo       # Install from a repo (interactive)
