@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.0
+
+### Minor Changes
+
+- 17b864f: Expose research mode through the MCP `researchMode` tool and the CLI `docs --research` flag for deep, agent-driven documentation answers.
+
+### Patch Changes
+
+- 4feee15: Add CLI update notifications and a new `ctx7 upgrade` command. The CLI now checks for newer versions with cached state, shows a non-blocking notice before interactive commands, and provides safer upgrade guidance across npm, pnpm, bun, and ephemeral runner setups.
+- f056b14: Add `ctx7 remove` as the cleanup counterpart to `ctx7 setup`, with safer detection and removal behavior. The command now prompts only for agents with actual Context7 artifacts, preserves non-Context7 MCP configuration when removing entries, and includes stronger test coverage for JSON and TOML cleanup.
+
 ## 0.3.13
 
 ### Patch Changes
