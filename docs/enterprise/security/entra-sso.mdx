@@ -146,10 +146,6 @@ Paste the three values you copied from Azure into the form:
 
 If your organization uses different role names from the defaults, update **Admin role value** and **Member role value** to match the strings you entered as **Value** when creating the app roles in Azure.
 
-<Frame>
-  ![Entra SSO card with credentials and role values filled in](/images/enterprise/entra-sso/08-filled-credentials.png)
-</Frame>
-
 <Tip>
 The **Callback URL** shown at the bottom of the card is exactly what Context7 will send to Microsoft during sign-in. If it doesn't match the redirect URI you registered in Step 1 of Part 1, go back to Azure → App registrations → Context7 → Authentication and fix it there. The copy button next to the URL makes it easy to paste into the Azure form verbatim.
 </Tip>
@@ -162,13 +158,13 @@ Before turning SSO on for your users, click **Test connection**. Context7 will m
 - **"Tenant ID is invalid"**: the Tenant ID doesn't match an Entra directory. Double-check you haven't pasted the Client ID into the Tenant field (an easy mistake, since both are GUIDs).
 - **"Client ID was not found in this tenant"** or **"Client secret is invalid"**: recheck the values against the Azure Overview and Certificates & secrets pages. If the secret expired, generate a new one in Azure and paste the new value.
 
-<Frame>
-  ![Green success banner after a successful test](/images/enterprise/entra-sso/09-test-success.png)
-</Frame>
-
 ### Step 4: Enable SSO
 
 Once the test passes, click the toggle at the top-right of the card, then **Save Microsoft Entra Settings** at the bottom. The status indicator should read **Configured · Sign-in button visible on /login**.
+
+<Frame>
+  ![Entra SSO card with values filled, connection verified, and toggle on](/images/enterprise/entra-sso/08-filled-credentials.png)
+</Frame>
 
 ## Part 3: Sign in
 
