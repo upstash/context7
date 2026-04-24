@@ -10,6 +10,26 @@ import type { LibrarySearchResult, ContextResponse } from "../types.js";
 
 const isTTY = process.stdout.isTTY;
 
+export function normalizeLibraryId(input: string): string {
+  if (/^\/[^/]+\/.+/.test(input)) {
+    return input;
+  }
+
+  const normalizedPath = input.replace(/\\/g, "/");
+  const gitBashPrefixMatch = normalizedPath.match(/^[A-Za-z]:\/Program Files\/Git\/(.+)$/i);
+
+  if (!gitBashPrefixMatch) {
+    return input;
+  }
+
+  const segments = gitBashPrefixMatch[1].split("/").filter(Boolean);
+  if (segments.length < 2) {
+    return input;
+  }
+
+  return `/${segments.slice(0).join("/")}`;
+}
+
 function getReputationLabel(score: number | undefined): "High" | "Medium" | "Low" | "Unknown" {
   if (score === undefined || score < 0) return "Unknown";
   if (score >= 7) return "High";
@@ -120,7 +140,9 @@ async function queryCommand(
 ): Promise<void> {
   trackEvent("command", { name: "docs" });
 
-  if (!libraryId.startsWith("/") || !/^\/[^/]+\/[^/]/.test(libraryId)) {
+  const normalizedLibraryId = normalizeLibraryId(libraryId);
+
+  if (!normalizedLibraryId.startsWith("/") || !/^\/[^/]+\/[^/]/.test(normalizedLibraryId)) {
     log.error(`Invalid library ID: "${libraryId}"`);
     log.info(`Expected format: /owner/repo or /owner/repo/version (e.g., /facebook/react)`);
     log.info(`Run "ctx7 library <name>" to find the correct ID`);
@@ -128,13 +150,13 @@ async function queryCommand(
     return;
   }
 
-  const spinner = isTTY ? ora(`Fetching docs for "${libraryId}"...`).start() : null;
+  const spinner = isTTY ? ora(`Fetching docs for "${normalizedLibraryId}"...`).start() : null;
   const accessToken = getAccessToken();
   const outputType = options.json ? "json" : "txt";
 
   let result;
   try {
-    result = await getLibraryContext(libraryId, query, { type: outputType }, accessToken);
+    result = await getLibraryContext(normalizedLibraryId, query, { type: outputType }, accessToken);
   } catch (err) {
     spinner?.fail(`Error: ${err instanceof Error ? err.message : String(err)}`);
     if (!spinner) log.error(err instanceof Error ? err.message : String(err));
