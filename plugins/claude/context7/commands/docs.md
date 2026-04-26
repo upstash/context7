@@ -1,6 +1,8 @@
 ---
+name: docs
 description: Look up documentation for any library
 argument-hint: <library> [query]
+allowed-tools: [resolve-library-id, query-docs]
 ---
 
 # /context7:docs
