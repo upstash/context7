@@ -102,7 +102,7 @@
     "/v2/libs/metrics": {
       "get": {
         "summary": "Get library usage metrics",
-        "description": "Retrieve full usage metrics for a library: cumulative and daily request counters broken down by surface (web page, text docs, MCP, CLI), MCP client daily unique-user breakdown, and lifetime topic and country distributions. The API key's owning user must own the library — claim ownership at https://context7.com/add-library.",
+        "description": "Retrieve full usage metrics for a library: cumulative and daily request counters broken down by surface (web page, text docs, MCP, CLI), MCP client daily unique-user breakdown, and lifetime topic and country distributions. The API key must belong to a member of the teamspace that owns the library — claim ownership from the library's admin page on context7.com.",
         "operationId": "getLibraryMetrics",
         "tags": [
           "Metrics"
