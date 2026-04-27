@@ -99,6 +99,113 @@
         ]
       }
     },
+    "/v2/libs/metrics": {
+      "get": {
+        "summary": "Get library usage metrics",
+        "description": "Retrieve full usage metrics for a library: cumulative and daily request counters broken down by surface (web page, text docs, MCP, CLI), MCP client daily unique-user breakdown, and lifetime topic and country distributions. The API key's owning user must own the library — claim ownership at https://context7.com/add-library.",
+        "operationId": "getLibraryMetrics",
+        "tags": [
+          "Metrics"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/LibraryIdParam"
+          },
+          {
+            "$ref": "#/components/parameters/DaysParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Library usage metrics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LibraryMetricsResponse"
+                },
+                "example": {
+                  "total": {
+                    "page": 12450,
+                    "txt": 3820,
+                    "mcp": 95210,
+                    "cli": 1240
+                  },
+                  "daily": [
+                    {
+                      "date": "2025-01-14",
+                      "page": 8,
+                      "txt": 3,
+                      "mcp": 42,
+                      "cli": 1,
+                      "total": 54
+                    },
+                    {
+                      "date": "2025-01-15",
+                      "page": 11,
+                      "txt": 5,
+                      "mcp": 67,
+                      "cli": 0,
+                      "total": 83
+                    }
+                  ],
+                  "mcpClients": {
+                    "dailyData": [
+                      {
+                        "date": "2025-01-14",
+                        "uniqueUsersByClient": {
+                          "cursor": 12,
+                          "claude-code": 7
+                        },
+                        "totalUniqueUsers": 18
+                      },
+                      {
+                        "date": "2025-01-15",
+                        "uniqueUsersByClient": {
+                          "cursor": 15,
+                          "claude-code": 9,
+                          "windsurf": 2
+                        },
+                        "totalUniqueUsers": 25
+                      }
+                    ]
+                  },
+                  "topics": [
+                    { "topic": "routing", "count": 420 },
+                    { "topic": "middleware", "count": 312 },
+                    { "topic": "app-router", "count": 187 }
+                  ],
+                  "countries": [
+                    { "country": "US", "count": 3120 },
+                    { "country": "DE", "count": 842 },
+                    { "country": "IN", "count": 610 }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/v2/context": {
       "get": {
         "summary": "Get documentation context",
@@ -1407,6 +1514,19 @@
           "default": "false"
         },
         "example": "true"
+      },
+      "DaysParam": {
+        "name": "days",
+        "in": "query",
+        "description": "Number of days of daily history to return (1-365). Defaults to 30.",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 365,
+          "default": 30
+        },
+        "example": 30
       }
     },
     "schemas": {
@@ -1680,6 +1800,196 @@
         "required": [
           "error",
           "message"
+        ]
+      },
+      "ProjectStats": {
+        "type": "object",
+        "description": "Cumulative request counts for a library, broken down by request surface",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "Requests served to the context7.com web UI"
+          },
+          "txt": {
+            "type": "integer",
+            "description": "Plain-text documentation requests"
+          },
+          "mcp": {
+            "type": "integer",
+            "description": "Requests served via the Context7 MCP server"
+          },
+          "cli": {
+            "type": "integer",
+            "description": "Requests served to the Context7 CLI"
+          }
+        },
+        "required": [
+          "page",
+          "txt",
+          "mcp",
+          "cli"
+        ]
+      },
+      "DailyStatsPoint": {
+        "type": "object",
+        "description": "Per-day request counts for a library (counts *on* this date, not cumulative)",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "UTC date in `YYYY-MM-DD` format",
+            "example": "2025-01-15"
+          },
+          "page": {
+            "type": "integer",
+            "description": "Requests served to the context7.com web UI on this date"
+          },
+          "txt": {
+            "type": "integer",
+            "description": "Plain-text documentation requests on this date"
+          },
+          "mcp": {
+            "type": "integer",
+            "description": "Requests served via the Context7 MCP server on this date"
+          },
+          "cli": {
+            "type": "integer",
+            "description": "Requests served to the Context7 CLI on this date"
+          },
+          "total": {
+            "type": "integer",
+            "description": "Sum of all request surfaces on this date (`page + txt + mcp + cli`)"
+          }
+        },
+        "required": [
+          "date",
+          "page",
+          "txt",
+          "mcp",
+          "cli",
+          "total"
+        ]
+      },
+      "LibraryMetricsResponse": {
+        "type": "object",
+        "description": "Library usage metrics response",
+        "properties": {
+          "total": {
+            "$ref": "#/components/schemas/ProjectStats"
+          },
+          "daily": {
+            "type": "array",
+            "description": "Per-day request counts (deltas, not cumulative), ordered from oldest to newest. Days with zero activity are omitted. Up to `days` points — fewer if the library has less history or had idle days in the window.",
+            "items": {
+              "$ref": "#/components/schemas/DailyStatsPoint"
+            }
+          },
+          "mcpClients": {
+            "$ref": "#/components/schemas/McpClientMetrics"
+          },
+          "topics": {
+            "type": "array",
+            "description": "Lifetime topic distribution, ordered by count descending",
+            "items": {
+              "$ref": "#/components/schemas/TopicCount"
+            }
+          },
+          "countries": {
+            "type": "array",
+            "description": "Lifetime country distribution (ISO-2 codes), ordered by count descending",
+            "items": {
+              "$ref": "#/components/schemas/CountryCount"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "daily",
+          "mcpClients",
+          "topics",
+          "countries"
+        ]
+      },
+      "McpClientMetrics": {
+        "type": "object",
+        "description": "MCP client usage breakdown by day",
+        "properties": {
+          "dailyData": {
+            "type": "array",
+            "description": "Per-day MCP client unique-user breakdown, ordered from oldest to newest",
+            "items": {
+              "$ref": "#/components/schemas/McpDailyClientData"
+            }
+          }
+        },
+        "required": [
+          "dailyData"
+        ]
+      },
+      "McpDailyClientData": {
+        "type": "object",
+        "description": "Per-day MCP client unique users for a library",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "UTC date in `YYYY-MM-DD` format",
+            "example": "2025-01-15"
+          },
+          "uniqueUsersByClient": {
+            "type": "object",
+            "description": "Unique user count per MCP client identifier (e.g., `cursor`, `claude-code`, `windsurf`)",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "totalUniqueUsers": {
+            "type": "integer",
+            "description": "Total unique users across all clients for this library on this date"
+          }
+        },
+        "required": [
+          "date",
+          "uniqueUsersByClient",
+          "totalUniqueUsers"
+        ]
+      },
+      "TopicCount": {
+        "type": "object",
+        "description": "Topic with its lifetime request count",
+        "properties": {
+          "topic": {
+            "type": "string",
+            "description": "Normalized, lowercased topic string",
+            "example": "routing"
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of requests that referenced this topic"
+          }
+        },
+        "required": [
+          "topic",
+          "count"
+        ]
+      },
+      "CountryCount": {
+        "type": "object",
+        "description": "Country with its lifetime request count",
+        "properties": {
+          "country": {
+            "type": "string",
+            "description": "ISO 3166-1 alpha-2 country code",
+            "example": "US"
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of requests originating from this country"
+          }
+        },
+        "required": [
+          "country",
+          "count"
         ]
       },
       "AddRepoRequest": {
@@ -2431,6 +2741,10 @@
     {
       "name": "Add Library",
       "description": "Submit new libraries for documentation processing"
+    },
+    {
+      "name": "Metrics",
+      "description": "Retrieve usage metrics for libraries"
     }
   ]
 }
