@@ -1,5 +1,11 @@
 # @upstash/context7-mcp
 
+## 2.2.1
+
+### Patch Changes
+
+- 1b0c211: Add endpoint for OpenAI Apps SDK domain verification.
+
 ## 2.2.0
 
 ### Minor Changes
