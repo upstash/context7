@@ -11,7 +11,12 @@ import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
-import { SERVER_VERSION, RESOURCE_URL, AUTH_SERVER_URL } from "./lib/constants.js";
+import {
+  SERVER_VERSION,
+  RESOURCE_URL,
+  AUTH_SERVER_URL,
+  OPENAI_APPS_CHALLENGE_TOKEN,
+} from "./lib/constants.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -474,6 +479,20 @@ async function main() {
             message: "Failed to proxy authorization server metadata",
           });
         }
+      }
+    );
+
+    // OpenAI Apps SDK domain verification challenge
+    app.get(
+      "/.well-known/openai-apps-challenge",
+      (_req: express.Request, res: express.Response) => {
+        if (!OPENAI_APPS_CHALLENGE_TOKEN) {
+          return res.status(404).json({
+            error: "not_found",
+            message: "Endpoint not found.",
+          });
+        }
+        res.type("text/plain").send(OPENAI_APPS_CHALLENGE_TOKEN);
       }
     );
 
