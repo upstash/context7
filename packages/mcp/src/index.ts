@@ -408,8 +408,6 @@ async function main() {
         // buffering until the tool returns. This is required for long-running tools
         // (e.g. researchMode) because some MCP HTTP clients cap the underlying fetch
         // at 60s waiting for headers, even though the per-tool timeout is much higher.
-        // Note: GET SSE streams remain rejected above — that's the channel the earlier
-        // NGINX-timeout comment is about, not these per-request POST SSE responses.
         const transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: undefined,
           enableJsonResponse: false,
