@@ -208,6 +208,9 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
     },
     annotations: {
       readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+      idempotentHint: true,
     },
   },
   async ({ query, libraryName }) => {
@@ -272,6 +275,9 @@ Workflow: call first without researchMode. If that doesn't answer the question, 
     },
     annotations: {
       readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: true,
+      idempotentHint: true,
     },
   },
   async ({ query, libraryId, researchMode }) => {
