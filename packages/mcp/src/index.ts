@@ -274,20 +274,49 @@ Workflow: call first without researchMode. If that doesn't answer the question, 
       readOnlyHint: true,
     },
   },
-  async ({ query, libraryId, researchMode }) => {
-    const response = await fetchLibraryContext(
-      { query, libraryId, researchMode },
-      getClientContext()
-    );
+  async ({ query, libraryId, researchMode }, { sendNotification, _meta }) => {
+    // Emit periodic progress notifications while the upstream call is in flight.
+    // MCP clients that opt into resetTimeoutOnProgress (e.g. opencode) reset their
+    // request timer on each notification, which keeps long-running tools (notably
+    // researchMode) alive past the SDK's default 60s wall-clock timeout. Clients
+    // that don't pass a progressToken simply never see these — no behavior change.
+    const progressToken = _meta?.progressToken;
+    let progressInterval: ReturnType<typeof setInterval> | undefined;
+    if (researchMode && progressToken !== undefined) {
+      let progress = 0;
+      progressInterval = setInterval(() => {
+        progress += 1;
+        sendNotification({
+          method: "notifications/progress",
+          params: {
+            progressToken,
+            progress,
+            message: "Researching documentation…",
+          },
+        }).catch(() => {
+          // Notifications are best-effort; swallow transport errors so the tool
+          // call itself isn't aborted by a notification write failure.
+        });
+      }, 20_000);
+    }
 
-    return {
-      content: [
-        {
-          type: "text",
-          text: response.data,
-        },
-      ],
-    };
+    try {
+      const response = await fetchLibraryContext(
+        { query, libraryId, researchMode },
+        getClientContext()
+      );
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: response.data,
+          },
+        ],
+      };
+    } finally {
+      if (progressInterval) clearInterval(progressInterval);
+    }
   }
 );
 
