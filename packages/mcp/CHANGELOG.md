@@ -1,5 +1,11 @@
 # @upstash/context7-mcp
 
+## 2.2.3
+
+### Patch Changes
+
+- 772da3a: Stream MCP tool responses over SSE so HTTP headers flush before client `fetch` timeouts. Switching `enableJsonResponse` to `false` makes the SDK return the HTTP response synchronously after request validation, so headers are sent in milliseconds instead of being buffered until the tool completes. This fixes clients that cap the underlying `fetch` waiting for headers (e.g., Claude Code's 60s `wrapFetchWithTimeout`).
+
 ## 2.2.2
 
 ### Patch Changes
