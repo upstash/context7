@@ -125,43 +125,46 @@ function getClientIp(req: express.Request): string | undefined {
   return undefined;
 }
 
-const server = new McpServer(
-  {
-    name: "Context7",
-    version: SERVER_VERSION,
-    websiteUrl: "https://context7.com",
-    description:
-      "Context7 provides up-to-date documentation and code examples for libraries and frameworks.",
-    icons: [
-      {
-        src: "https://context7.com/context7-icon-green.png",
-        mimeType: "image/png",
-      },
-    ],
-  },
-  {
-    instructions: `Use this server to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service -- even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer -- your training data may not reflect recent changes. Prefer this over web search for library docs.
+// One McpServer per HTTP request. Sharing across requests would let any
+// transport.close clear the shared Protocol's _transport and break in-flight
+// long-running calls.
+function createMcpServer() {
+  const server = new McpServer(
+    {
+      name: "Context7",
+      version: SERVER_VERSION,
+      websiteUrl: "https://context7.com",
+      description:
+        "Context7 provides up-to-date documentation and code examples for libraries and frameworks.",
+      icons: [
+        {
+          src: "https://context7.com/context7-icon-green.png",
+          mimeType: "image/png",
+        },
+      ],
+    },
+    {
+      instructions: `Use this server to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service -- even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer -- your training data may not reflect recent changes. Prefer this over web search for library docs.
 
 Do not use for: refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.`,
-  }
-);
+    }
+  );
 
-// Capture client info from MCP initialize handshake
-server.server.oninitialized = () => {
-  const clientVersion = server.server.getClientVersion();
-  if (clientVersion) {
-    stdioClientInfo = {
-      ide: clientVersion.name,
-      version: clientVersion.version,
-    };
-  }
-};
+  server.server.oninitialized = () => {
+    const clientVersion = server.server.getClientVersion();
+    if (clientVersion) {
+      stdioClientInfo = {
+        ide: clientVersion.name,
+        version: clientVersion.version,
+      };
+    }
+  };
 
-server.registerTool(
-  "resolve-library-id",
-  {
-    title: "Resolve Context7 Library ID",
-    description: `Resolves a package/product name to a Context7-compatible library ID and returns matching libraries.
+  server.registerTool(
+    "resolve-library-id",
+    {
+      title: "Resolve Context7 Library ID",
+      description: `Resolves a package/product name to a Context7-compatible library ID and returns matching libraries.
 
 You MUST call this function before 'Query Documentation' tool to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
@@ -194,137 +197,135 @@ Response Format:
 For ambiguous queries, request clarification before proceeding with a best-guess match.
 
 IMPORTANT: Do not call this tool more than 3 times per question. If you cannot find what you need after 3 calls, use the best result you have.`,
-    inputSchema: {
-      query: z
-        .string()
-        .describe(
-          "The question or task you need help with. This is used to rank library results by relevance to what the user is trying to accomplish. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
-        ),
-      libraryName: z
-        .string()
-        .describe(
-          "Library name to search for and retrieve a Context7-compatible library ID. Use the official library name with proper punctuation — e.g., 'Next.js' instead of 'nextjs', 'Customer.io' instead of 'customerio', 'Three.js' instead of 'threejs'."
-        ),
+      inputSchema: {
+        query: z
+          .string()
+          .describe(
+            "The question or task you need help with. This is used to rank library results by relevance to what the user is trying to accomplish. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
+          ),
+        libraryName: z
+          .string()
+          .describe(
+            "Library name to search for and retrieve a Context7-compatible library ID. Use the official library name with proper punctuation — e.g., 'Next.js' instead of 'nextjs', 'Customer.io' instead of 'customerio', 'Three.js' instead of 'threejs'."
+          ),
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: true,
+        idempotentHint: true,
+      },
     },
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      openWorldHint: true,
-      idempotentHint: true,
-    },
-  },
-  async ({ query, libraryName }) => {
-    const searchResponse = await searchLibraries(query, libraryName, getClientContext());
+    async ({ query, libraryName }) => {
+      const searchResponse = await searchLibraries(query, libraryName, getClientContext());
 
-    if (!searchResponse.results || searchResponse.results.length === 0) {
+      if (!searchResponse.results || searchResponse.results.length === 0) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: searchResponse.error
+                ? searchResponse.error
+                : "No libraries found matching the provided name.",
+            },
+          ],
+        };
+      }
+
+      const resultsText = formatSearchResults(searchResponse);
+
+      const responseText = `Available Libraries:
+
+${resultsText}`;
+
       return {
         content: [
           {
             type: "text",
-            text: searchResponse.error
-              ? searchResponse.error
-              : "No libraries found matching the provided name.",
+            text: responseText,
           },
         ],
       };
     }
+  );
 
-    const resultsText = formatSearchResults(searchResponse);
-
-    const responseText = `Available Libraries:
-
-${resultsText}`;
-
-    return {
-      content: [
-        {
-          type: "text",
-          text: responseText,
-        },
-      ],
-    };
-  }
-);
-
-server.registerTool(
-  "query-docs",
-  {
-    title: "Query Documentation",
-    description: `Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
+  server.registerTool(
+    "query-docs",
+    {
+      title: "Query Documentation",
+      description: `Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
 
 You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
 Workflow: call first without researchMode. If that doesn't answer the question, retry with researchMode: true. Do not call each tool more than 3 times per question.`,
-    inputSchema: {
-      libraryId: z
-        .string()
-        .describe(
-          "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
-        ),
-      query: z
-        .string()
-        .describe(
-          "The question or task you need help with. Be specific and include relevant details. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad: 'auth' or 'hooks'. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
-        ),
-      researchMode: z
-        .boolean()
-        .optional()
-        .describe(
-          `Retry the query with deep research: spins up sandboxed agents that read the actual source repos and runs a live web search, then synthesizes a fresh answer. Set true on retry if you weren't satisfied with the first answer and want a more thorough one. Requires an API key. You can get one free at https://context7.com.`
-        ),
+      inputSchema: {
+        libraryId: z
+          .string()
+          .describe(
+            "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
+          ),
+        query: z
+          .string()
+          .describe(
+            "The question or task you need help with. Be specific and include relevant details. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad: 'auth' or 'hooks'. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
+          ),
+        researchMode: z
+          .boolean()
+          .optional()
+          .describe(
+            `Retry the query with deep research: spins up sandboxed agents that read the actual source repos and runs a live web search, then synthesizes a fresh answer. Set true on retry if you weren't satisfied with the first answer and want a more thorough one. Requires an API key. You can get one free at https://context7.com.`
+          ),
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: true,
+        idempotentHint: true,
+      },
     },
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      openWorldHint: true,
-      idempotentHint: true,
-    },
-  },
-  async ({ query, libraryId, researchMode }, { sendNotification, _meta }) => {
-    // Emit periodic progress notifications while the upstream call is in flight.
-    // MCP clients that opt into resetTimeoutOnProgress (e.g. opencode) reset their
-    // request timer on each notification, which keeps long-running tools (notably
-    // researchMode) alive past the SDK's default 60s wall-clock timeout. Clients
-    // that don't pass a progressToken simply never see these, so behavior is unchanged.
-    const progressToken = _meta?.progressToken;
-    let progressInterval: ReturnType<typeof setInterval> | undefined;
-    if (researchMode && progressToken !== undefined) {
-      let progress = 0;
-      progressInterval = setInterval(() => {
-        progress += 1;
-        sendNotification({
-          method: "notifications/progress",
-          params: {
-            progressToken,
-            progress,
-            message: "Researching documentation...",
-          },
-        }).catch(() => {
-          // Notifications are best-effort; swallow transport errors so the tool
-          // call itself isn't aborted by a notification write failure.
-        });
-      }, 20_000);
-    }
+    async ({ query, libraryId, researchMode }, { sendNotification, _meta }) => {
+      const progressToken = _meta?.progressToken;
+      let progressInterval: ReturnType<typeof setInterval> | undefined;
+      if (researchMode && progressToken !== undefined) {
+        let progress = 0;
+        progressInterval = setInterval(() => {
+          progress += 1;
+          sendNotification({
+            method: "notifications/progress",
+            params: {
+              progressToken,
+              progress,
+              message: "Researching documentation...",
+            },
+          }).catch(() => {
+            // Notifications are best-effort; swallow transport errors so the tool
+            // call itself isn't aborted by a notification write failure.
+          });
+        }, 20_000);
+      }
 
-    try {
-      const response = await fetchLibraryContext(
-        { query, libraryId, researchMode },
-        getClientContext()
-      );
+      try {
+        const response = await fetchLibraryContext(
+          { query, libraryId, researchMode },
+          getClientContext()
+        );
 
-      return {
-        content: [
-          {
-            type: "text",
-            text: response.data,
-          },
-        ],
-      };
-    } finally {
-      if (progressInterval) clearInterval(progressInterval);
+        return {
+          content: [
+            {
+              type: "text",
+              text: response.data,
+            },
+          ],
+        };
+      } finally {
+        if (progressInterval) clearInterval(progressInterval);
+      }
     }
-  }
-);
+  );
+
+  return server;
+}
 
 async function main() {
   const transportType = TRANSPORT_TYPE;
@@ -448,8 +449,10 @@ async function main() {
           enableJsonResponse: false,
         });
 
+        const server = createMcpServer();
         res.on("close", () => {
           transport.close();
+          server.close();
         });
 
         await requestContext.run(context, async () => {
@@ -568,6 +571,7 @@ async function main() {
   } else {
     stdioApiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
     const transport = new StdioServerTransport();
+    const server = createMcpServer();
 
     await server.connect(transport);
 
