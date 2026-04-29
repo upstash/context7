@@ -125,9 +125,6 @@ function getClientIp(req: express.Request): string | undefined {
   return undefined;
 }
 
-// One McpServer per HTTP request. Sharing across requests would let any
-// transport.close clear the shared Protocol's _transport and break in-flight
-// long-running calls.
 function createMcpServer() {
   const server = new McpServer(
     {
@@ -150,6 +147,7 @@ Do not use for: refactoring, writing scripts from scratch, debugging business lo
     }
   );
 
+  // Capture client info from MCP initialize handshake
   server.server.oninitialized = () => {
     const clientVersion = server.server.getClientVersion();
     if (clientVersion) {
@@ -284,6 +282,11 @@ Workflow: call first without researchMode. If that doesn't answer the question, 
       },
     },
     async ({ query, libraryId, researchMode }, { sendNotification, _meta }) => {
+      // Emit periodic progress notifications while the upstream call is in flight.
+      // MCP clients that opt into resetTimeoutOnProgress (e.g. opencode) reset their
+      // request timer on each notification, which keeps long-running tools (notably
+      // researchMode) alive past the SDK's default 60s wall-clock timeout. Clients
+      // that don't pass a progressToken simply never see these, so behavior is unchanged.
       const progressToken = _meta?.progressToken;
       let progressInterval: ReturnType<typeof setInterval> | undefined;
       if (researchMode && progressToken !== undefined) {
