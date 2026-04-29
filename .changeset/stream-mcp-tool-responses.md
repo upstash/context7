@@ -2,4 +2,4 @@
 "@upstash/context7-mcp": patch
 ---
 
-Stream MCP tool responses over SSE so HTTP headers flush before client `fetch` timeouts. Switching `enableJsonResponse` to `false` makes the SDK return the HTTP response synchronously after request validation, so headers are sent in milliseconds instead of being buffered until the tool completes. This fixes clients that cap the underlying `fetch` waiting for headers (e.g., Claude Code's 60s `wrapFetchWithTimeout`).
+Restore `researchMode` on `query-docs` and emit `notifications/progress` every 20s while the upstream call is in flight, so MCP clients that opt into `resetTimeoutOnProgress` keep their per-request timer alive past the SDK's 60s default. Also create a fresh `McpServer` per HTTP request so concurrent short requests can no longer clear the shared `Protocol._transport` and break in-flight long-running tool calls.
