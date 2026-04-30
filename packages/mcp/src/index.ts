@@ -2,6 +2,10 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+  ListPromptsRequestSchema,
+  ListResourcesRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
 import { ClientContext } from "./lib/encryption.js";
@@ -315,6 +319,17 @@ Workflow: call first without researchMode. If that doesn't answer the question, 
       }
     }
   );
+
+  // Advertise empty prompts/resources capabilities with no-op handlers.
+  // Some clients (e.g. opencode) call prompts/list and resources/list
+  // unconditionally and treat -32601 as a fatal connection error rather than
+  // honoring the negotiated capabilities, which would otherwise prevent the
+  // server from loading.
+  server.server.registerCapabilities({ prompts: {}, resources: {} });
+  server.server.setRequestHandler(ListPromptsRequestSchema, async () => ({ prompts: [] }));
+  server.server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+    resources: [],
+  }));
 
   return server;
 }
