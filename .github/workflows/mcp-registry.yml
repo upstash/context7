@@ -63,6 +63,7 @@ run: |
 
       - name: Login to MCP Registry
      - name: Update package version in server.js​on​
+ 
 run: |
          echo $(jq --arg v "${{ env.VERSION }}" '.version = $v | .packages[0].version = $v' server.json) > server.json
 
