@@ -147,17 +147,6 @@ Do not use for: refactoring, writing scripts from scratch, debugging business lo
     }
   );
 
-  // Capture client info from MCP initialize handshake
-  server.server.oninitialized = () => {
-    const clientVersion = server.server.getClientVersion();
-    if (clientVersion) {
-      stdioClientInfo = {
-        ide: clientVersion.name,
-        version: clientVersion.version,
-      };
-    }
-  };
-
   server.registerTool(
     "resolve-library-id",
     {
@@ -575,6 +564,18 @@ async function main() {
     stdioApiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
     const transport = new StdioServerTransport();
     const server = createMcpServer();
+
+    // Capture client info from MCP initialize handshake (stdio only — HTTP
+    // mode plumbs client info through requestContext per request).
+    server.server.oninitialized = () => {
+      const clientVersion = server.server.getClientVersion();
+      if (clientVersion) {
+        stdioClientInfo = {
+          ide: clientVersion.name,
+          version: clientVersion.version,
+        };
+      }
+    };
 
     await server.connect(transport);
 
