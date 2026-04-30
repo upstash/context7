@@ -37,10 +37,10 @@ jobs:
         id: build-push
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: packages/mcp/Dockerfile
-          platforms: linux/amd64,linux/arm64
-         
+context: .
+file: packages/mcp/Dockerfile
+platforms: linux/amd64,linux/arm64
+          
           push: true
           tags: |
             ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ inputs.version }}
