@@ -40,7 +40,10 @@ jobs:
 context: .
 file: packages/mcp/Dockerfile
 platforms: linux/amd64,linux/arm64
-         
+context: .
+file: packages/mcp/Dockerfile
+platforms: linux/amd64,linux/arm64
+          
 push: true
 tags: |
 context: .
