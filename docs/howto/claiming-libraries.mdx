@@ -205,7 +205,150 @@ Available for Git repositories and websites.
 
 | Field                                | Description                                                                                                                                    | Limits  |
 | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------- | 
+---
 title: Claim Your Library
+description: Verify ownership and manage your library's configuration via the admin panel
+---
+
+As a library owner, you can claim your library on Context7 to unlock advanced configuration options through a web-based admin panel. This gives you full control over how your documentation is parsed and presented to developers.
+
+<Note>Library claiming is available for Git repositories, websites, and llms.txt sources.</Note>
+
+
+## Why Claim Your Library?
+
+@@ -71,84 +72,121 @@
+
+</Step>
+
+  <Step title="Host the context7.json File">
+    <Tabs>
+      <Tab title="Git Repository">
+        Create a `context7.json` file in the **root** of your repository with the copied content:
+
+        ```json
+        {
+          "url": "https://context7.com/vercel/next.js",
+          "public_key": "pk_abc123xyz..."
+        }
+        ```
+
+        <Warning>
+          The `url` must exactly match your library's URL on Context7, and the `public_key` must match the key shown in the modal.
+        </Warning>
+
+        Commit and push the file to your repository's default branch.
+      </Tab>
+      <Tab title="Website / llms.txt">
+        Host the `context7.json` file anywhere under your library's base URL so it is publicly reachable. For example:
+
+        ```
+        https://docs.example.com/mylib/context7.json
+        ```
+
+        The file must contain the copied content:
+
+        ```json
+        {
+          "url": "https://context7.com/websites/mylib",
+          "public_key": "pk_abc123xyz..."
+        }
+        ```
+
+        <Warning>
+          The `url` must exactly match your library's URL on Context7, and the `public_key` must match the key shown in the modal.
+        </Warning>
+
+        Once the file is live, paste the full URL to your hosted `context7.json` into the input field shown in the modal.
+      </Tab>
+    </Tabs>
+</Step>
+
+<Step title="Verify Ownership">
+    Click "Claim Library". Context7 will fetch your `context7.json`, verify the URL and public key, and grant you access to the admin panel.
+    
+
+<Note>
+      For private GitHub repositories, ensure you have the Context7 GitHub App installed with access to the repository.
+      
+</Note>
+</Step>
+</Steps>
+
+## Admin Panel Overview
+
+After claiming your library, the admin page shows a full configuration editor with five main tabs: 
+
+- **Configuration**: Edit all library settings
+- **Chat**: Embed an AI chat assistant on your documentation site​
+- **Benchmark**: Evaluation of the quality of your library's documentation
+- **Metrics**: View usage statistics
+- **Versions**: Manage different versions and tags of your library
+
+## Configuration Fields
+
+### Basic Information
+
+These fields are available for all library types.
+
+| Field             | Description                                                                                               | Limits             |
+| ----------------- | --------------------------------------------------------------------------------------------------------- | ------------------ |
+| **Project Title** | Display name for your library in Context7. Used when the LLM cannot generate a name with high confidence. | Max 100 characters |
+| **Description**   | Brief description of your library's purpose.                                                              | Max 500 characters |
+
+### Source Settings​
+
+<Tabs>
+  <Tab title="Git Repository">
+    | Field                  | Description                                                                               | Limits                          |
+    | ---------------------- | ----------------------------------------------------------------------------------------- | ------------------------------- |
+    | **Branch**             | Git branch to parse. Leave empty for default branch.                                      | Max 100 characters              |
+    | **Folders to Include** | Specific folder paths to include when parsing. Leave empty to scan the entire repository. | Max 50 folders, 255 chars each  |
+    | **Folders to Exclude** | Folder paths or patterns to exclude from parsing. Supports glob patterns.                 | Max 50 patterns, 255 chars each |
+    | **Files to Exclude**   | Specific file names to exclude (filename only, not full path).                            | Max 100 files, 255 chars each   |
+
+    #### Exclusion Pattern Examples​
+
+    The exclusion fields support various pattern types: 
+
+    ```
+    node_modules     → Excludes any folder named "node_modules" anywhere
+    ./build          → Excludes "build" only at repository root
+    **/dist          → Excludes any "dist" folder anywhere (globstar)
+    docs/**/internal → Excludes "internal" folders under docs
+    *.test           → Excludes folders ending with .test
+    ```
+
+    <Note>
+      `excludeFiles` only accepts filenames, not paths. Use `CHANGELOG.md` instead of
+      `docs/CHANGELOG.md`.
+    </Note>
+  </Tab>
+  <Tab title="Website">
+    | Field                        | Description                                                                                      | Limits                          |
+    | ---------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------- |
+    | **Base URL**                 | The root URL to crawl for documentation.                                                         | Max 100 characters              |
+    | **Display URL**              | Optional URL shown to users instead of the base URL.                                             | Max 500 characters              |
+    | **Keep Hash (URL Fragments)**| Whether to treat URLs with different hash fragments as distinct pages. Disabled by default.      | Boolean                         |
+    | **Keep Query Parameters**    | Whether to treat URLs with different query strings as distinct pages. Enabled by default.        | Boolean                         |
+    | **Exclude URLs**             | URL patterns to exclude from crawling. Supports wildcards.                                       | Max 100 patterns                |
+  </Tab>
+</Tabs>
+
+### AI Instructions
+
+| Field            | Description                                                                     | Limits                       |
+| ---------------- | ------------------------------------------------------------------------------- | ---------------------------- |
+@@ -162,15 +200,12 @@
+
+### Advanced Settings
+
+Available for Git repositories and websites.
+
+
+| Field                                | Description                                                                                                                                    | Limits  |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| **Skip Automatic Version Detection** | By default, outdated library versions are automatically detected and excluded from indexing. Enable to include all versions regardless of age. | Boolean | 
 description: Verify ownership and manage your library's configuration via the admin panel
 ---
 
