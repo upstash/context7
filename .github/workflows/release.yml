@@ -23,6 +23,16 @@ release:
 name: Release
 
           
+- master
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+release:
+
+name: Release
+
+           
     runs-on: ubuntu-latest
     permissions:
       contents: write
