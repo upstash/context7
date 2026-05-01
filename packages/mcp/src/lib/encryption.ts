@@ -36,6 +36,7 @@ export interface ClientContext {
     version?: string;
   };
   transport?: "stdio" | "http";
+  consentSource?: string;
 }
 
 /**
@@ -62,6 +63,9 @@ export function generateHeaders(context: ClientContext): Record<string, string> 
   }
   if (context.transport) {
     headers["X-Context7-Transport"] = context.transport;
+  }
+  if (context.consentSource) {
+    headers["X-Context7-Consent-Source"] = context.consentSource;
   }
 
   return headers;

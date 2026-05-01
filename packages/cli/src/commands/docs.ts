@@ -1,6 +1,7 @@
 import { Command } from "commander";
 import pc from "picocolors";
 import ora from "ora";
+import { confirm } from "@inquirer/prompts";
 
 import { resolveLibrary, getLibraryContext } from "../utils/api.js";
 import { log } from "../utils/logger.js";
@@ -9,6 +10,7 @@ import { loadTokens, isTokenExpired } from "../utils/auth.js";
 import type { LibrarySearchResult, ContextResponse } from "../types.js";
 
 const isTTY = process.stdout.isTTY;
+const isInteractive = Boolean(process.stdout.isTTY && process.stdin.isTTY);
 
 function getReputationLabel(score: number | undefined): "High" | "Medium" | "Low" | "Unknown" {
   if (score === undefined || score < 0) return "Unknown";
@@ -128,12 +130,37 @@ async function queryCommand(
     return;
   }
 
+  const accessToken = getAccessToken();
+  let useResearch = !!options.research;
+  let consentSource: string | undefined;
+  if (useResearch) {
+    if (!process.env.CONTEXT7_API_KEY && !accessToken) {
+      log.error(
+        "Research mode is only supported for authenticated users. Get a free API key at https://context7.com."
+      );
+      process.exitCode = 1;
+      return;
+    }
+    if (isInteractive) {
+      const ok = await confirm({
+        message: "Deep research is recommended for this query. It takes 30–90 seconds. Continue?",
+        default: false,
+      });
+      if (!ok) {
+        useResearch = false;
+      } else {
+        consentSource = "cli-confirmed";
+      }
+    } else {
+      consentSource = "cli-non-tty";
+    }
+  }
+
   const spinner = isTTY
     ? ora(
-        options.research ? `Researching "${libraryId}"...` : `Fetching docs for "${libraryId}"...`
+        useResearch ? `Researching "${libraryId}"...` : `Fetching docs for "${libraryId}"...`
       ).start()
     : null;
-  const accessToken = getAccessToken();
   const outputType = options.json ? "json" : "txt";
 
   let result;
@@ -141,7 +168,7 @@ async function queryCommand(
     result = await getLibraryContext(
       libraryId,
       query,
-      { type: outputType, researchMode: options.research },
+      { type: outputType, researchMode: useResearch, consentSource },
       accessToken
     );
   } catch (err) {

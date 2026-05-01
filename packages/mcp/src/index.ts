@@ -271,6 +271,40 @@ Workflow: call first without researchMode. If that doesn't answer the question, 
       },
     },
     async ({ query, libraryId, researchMode }, { sendNotification, _meta }) => {
+      let effectiveResearchMode = researchMode ?? false;
+      let consentSource: string | undefined;
+      if (effectiveResearchMode) {
+        if (!getClientContext().apiKey) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: "Research mode is only supported for authenticated users. Get a free API key at https://context7.com.",
+              },
+            ],
+          };
+        }
+        const supportsElicitation = !!server.server.getClientCapabilities()?.elicitation?.form;
+        if (supportsElicitation) {
+          const result = await server.server.elicitInput({
+            message:
+              "Deep research takes 30–90 seconds and queries live web/source data. Continue, or use the fast lookup instead?",
+            requestedSchema: { type: "object", properties: {} },
+          });
+          if (result.action === "accept") {
+            consentSource = "elicitation-accepted";
+          } else if (result.action === "decline") {
+            effectiveResearchMode = false;
+          } else {
+            return {
+              content: [{ type: "text", text: "Research request cancelled by user." }],
+            };
+          }
+        } else {
+          consentSource = "no-elicitation";
+        }
+      }
+
       // Emit periodic progress notifications while the upstream call is in flight.
       // MCP clients that opt into resetTimeoutOnProgress (e.g. opencode) reset their
       // request timer on each notification, which keeps long-running tools (notably
@@ -278,9 +312,9 @@ Workflow: call first without researchMode. If that doesn't answer the question, 
       // that don't pass a progressToken simply never see these, so behavior is unchanged.
       const progressToken = _meta?.progressToken;
       let progressInterval: ReturnType<typeof setInterval> | undefined;
-      if (researchMode && progressToken !== undefined) {
+      if (effectiveResearchMode && progressToken !== undefined) {
         let progress = 0;
-        progressInterval = setInterval(() => {
+        const sendProgress = () => {
           progress += 1;
           sendNotification({
             method: "notifications/progress",
@@ -293,13 +327,15 @@ Workflow: call first without researchMode. If that doesn't answer the question, 
             // Notifications are best-effort; swallow transport errors so the tool
             // call itself isn't aborted by a notification write failure.
           });
-        }, 20_000);
+        };
+        sendProgress();
+        progressInterval = setInterval(sendProgress, 10_000);
       }
 
       try {
         const response = await fetchLibraryContext(
-          { query, libraryId, researchMode },
-          getClientContext()
+          { query, libraryId, researchMode: effectiveResearchMode },
+          { ...getClientContext(), consentSource }
         );
 
         return {
