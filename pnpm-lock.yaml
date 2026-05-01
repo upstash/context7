@@ -45,6 +45,7 @@ importers:
         specifier: ^1.25.2
         
         version: 1.25.2(hono@4.11.3)(zod@3.25.76)
+        
       '@types/express':
         specifier: ^5.0.4
         version: 5.0.5
