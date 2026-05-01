@@ -159,6 +159,7 @@ Updating, improving and correcting the documentation
 This guide is based on the [contributing.md](https://contributing.md/generator)!
 <!-- omit in toc -->
 <!-- omit in toc -->
+<!-- omit in toc -->
 # Contributing to context7
 
 First off, thanks for taking the time to contribute! ❤️
@@ -319,4 +320,4 @@ Updating, improving and correcting the documentation
 This guide is based on the [contributing.md](https://contributing.md/generator)!
 <!-- omit in toc -->
  
- 
+  
