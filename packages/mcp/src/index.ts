@@ -284,7 +284,7 @@ Workflow: call first without researchMode. If that doesn't answer the question, 
             ],
           };
         }
-        const supportsElicitation = !!server.server.getClientCapabilities()?.elicitation?.form;
+        const supportsElicitation = !!server.server.getClientCapabilities()?.elicitation;
         if (supportsElicitation) {
           const result = await server.server.elicitInput({
             message:
