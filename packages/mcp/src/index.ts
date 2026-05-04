@@ -244,7 +244,7 @@ ${resultsText}`;
 
 You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
-Workflow: call first without researchMode. If that doesn't answer the question, retry with researchMode: true. Do not call each tool more than 3 times per question.`,
+Do not call this tool more than 3 times per question.`,
       inputSchema: {
         libraryId: z
           .string()
@@ -256,12 +256,6 @@ Workflow: call first without researchMode. If that doesn't answer the question, 
           .describe(
             "The question or task you need help with. Be specific and include relevant details. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad: 'auth' or 'hooks'. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
           ),
-        researchMode: z
-          .boolean()
-          .optional()
-          .describe(
-            `Retry the query with deep research: spins up sandboxed agents that read the actual source repos and runs a live web search, then synthesizes a fresh answer. Set true on retry if you weren't satisfied with the first answer and want a more thorough one. Requires an API key. You can get one free at https://context7.com.`
-          ),
       },
       annotations: {
         readOnlyHint: true,
@@ -270,85 +264,17 @@ Workflow: call first without researchMode. If that doesn't answer the question, 
         idempotentHint: true,
       },
     },
-    async ({ query, libraryId, researchMode }, { sendNotification, _meta }) => {
-      let effectiveResearchMode = researchMode ?? false;
-      let consentSource: string | undefined;
-      if (effectiveResearchMode) {
-        if (!getClientContext().apiKey) {
-          return {
-            content: [
-              {
-                type: "text",
-                text: "Research mode is only supported for authenticated users. Get a free API key at https://context7.com.",
-              },
-            ],
-          };
-        }
-        const supportsElicitation = !!server.server.getClientCapabilities()?.elicitation;
-        if (supportsElicitation) {
-          const result = await server.server.elicitInput({
-            message:
-              "Deep research takes 30–90 seconds and queries live web/source data. Continue, or use the fast lookup instead?",
-            requestedSchema: { type: "object", properties: {} },
-          });
-          if (result.action === "accept") {
-            consentSource = "elicitation-accepted";
-          } else if (result.action === "decline") {
-            effectiveResearchMode = false;
-          } else {
-            return {
-              content: [{ type: "text", text: "Research request cancelled by user." }],
-            };
-          }
-        } else {
-          consentSource = "no-elicitation";
-        }
-      }
+    async ({ query, libraryId }) => {
+      const response = await fetchLibraryContext({ query, libraryId }, getClientContext());
 
-      // Emit periodic progress notifications while the upstream call is in flight.
-      // MCP clients that opt into resetTimeoutOnProgress (e.g. opencode) reset their
-      // request timer on each notification, which keeps long-running tools (notably
-      // researchMode) alive past the SDK's default 60s wall-clock timeout. Clients
-      // that don't pass a progressToken simply never see these, so behavior is unchanged.
-      const progressToken = _meta?.progressToken;
-      let progressInterval: ReturnType<typeof setInterval> | undefined;
-      if (effectiveResearchMode && progressToken !== undefined) {
-        let progress = 0;
-        const sendProgress = () => {
-          progress += 1;
-          sendNotification({
-            method: "notifications/progress",
-            params: {
-              progressToken,
-              progress,
-              message: "Researching documentation...",
-            },
-          }).catch(() => {
-            // Notifications are best-effort; swallow transport errors so the tool
-            // call itself isn't aborted by a notification write failure.
-          });
-        };
-        sendProgress();
-        progressInterval = setInterval(sendProgress, 10_000);
-      }
-
-      try {
-        const response = await fetchLibraryContext(
-          { query, libraryId, researchMode: effectiveResearchMode },
-          { ...getClientContext(), consentSource }
-        );
-
-        return {
-          content: [
-            {
-              type: "text",
-              text: response.data,
-            },
-          ],
-        };
-      } finally {
-        if (progressInterval) clearInterval(progressInterval);
-      }
+      return {
+        content: [
+          {
+            type: "text",
+            text: response.data,
+          },
+        ],
+      };
     }
   );
 
@@ -470,8 +396,8 @@ async function main() {
         // Use SSE responses for tool calls (enableJsonResponse: false). The SDK then
         // flushes response headers immediately after parsing the request rather than
         // buffering until the tool returns. This is required for long-running tools
-        // (e.g. researchMode) because some MCP HTTP clients cap the underlying fetch
-        // at 60s waiting for headers, even though the per-tool timeout is much higher.
+        // because some MCP HTTP clients cap the underlying fetch at 60s waiting for
+        // headers, even though the per-tool timeout is much higher.
         const transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: undefined,
           enableJsonResponse: false,

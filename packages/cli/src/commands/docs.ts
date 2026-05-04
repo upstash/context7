@@ -1,7 +1,6 @@
 import { Command } from "commander";
 import pc from "picocolors";
 import ora from "ora";
-import { confirm } from "@inquirer/prompts";
 
 import { resolveLibrary, getLibraryContext } from "../utils/api.js";
 import { log } from "../utils/logger.js";
@@ -10,7 +9,6 @@ import { loadTokens, isTokenExpired } from "../utils/auth.js";
 import type { LibrarySearchResult, ContextResponse } from "../types.js";
 
 const isTTY = process.stdout.isTTY;
-const isInteractive = Boolean(process.stdout.isTTY && process.stdin.isTTY);
 
 function getReputationLabel(score: number | undefined): "High" | "Medium" | "Low" | "Unknown" {
   if (score === undefined || score < 0) return "Unknown";
@@ -118,7 +116,7 @@ async function resolveCommand(
 async function queryCommand(
   libraryId: string,
   query: string,
-  options: { json?: boolean; research?: boolean }
+  options: { json?: boolean }
 ): Promise<void> {
   trackEvent("command", { name: "docs" });
 
@@ -131,46 +129,13 @@ async function queryCommand(
   }
 
   const accessToken = getAccessToken();
-  let useResearch = !!options.research;
-  let consentSource: string | undefined;
-  if (useResearch) {
-    if (!process.env.CONTEXT7_API_KEY && !accessToken) {
-      log.error(
-        "Research mode is only supported for authenticated users. Get a free API key at https://context7.com."
-      );
-      process.exitCode = 1;
-      return;
-    }
-    if (isInteractive) {
-      const ok = await confirm({
-        message: "Deep research is recommended for this query. It takes 30–90 seconds. Continue?",
-        default: false,
-      });
-      if (!ok) {
-        useResearch = false;
-      } else {
-        consentSource = "cli-confirmed";
-      }
-    } else {
-      consentSource = "cli-non-tty";
-    }
-  }
 
-  const spinner = isTTY
-    ? ora(
-        useResearch ? `Researching "${libraryId}"...` : `Fetching docs for "${libraryId}"...`
-      ).start()
-    : null;
+  const spinner = isTTY ? ora(`Fetching docs for "${libraryId}"...`).start() : null;
   const outputType = options.json ? "json" : "txt";
 
   let result;
   try {
-    result = await getLibraryContext(
-      libraryId,
-      query,
-      { type: outputType, researchMode: useResearch, consentSource },
-      accessToken
-    );
+    result = await getLibraryContext(libraryId, query, { type: outputType }, accessToken);
   } catch (err) {
     spinner?.fail(`Error: ${err instanceof Error ? err.message : String(err)}`);
     if (!spinner) log.error(err instanceof Error ? err.message : String(err));
@@ -257,14 +222,8 @@ export function registerDocsCommands(program: Command): void {
     .argument("<libraryId>", "Context7 library ID (e.g., /facebook/react)")
     .argument("<query>", "Question or task to get docs for")
     .option("--json", "Output as JSON")
-    .option(
-      "--research",
-      "Retry the query with deep research: spins up sandboxed agents that read the actual source repos (git pull + inspect) and runs a live web search, then synthesizes a fresh answer. Use on retry if you weren't satisfied with the first answer. More costly than the default."
-    )
     .description("Query documentation for a library")
-    .action(
-      async (libraryId: string, query: string, options: { json?: boolean; research?: boolean }) => {
-        await queryCommand(libraryId, query, options);
-      }
-    );
+    .action(async (libraryId: string, query: string, options: { json?: boolean }) => {
+      await queryCommand(libraryId, query, options);
+    });
 }

@@ -26,7 +26,6 @@ export type DocumentState = "initial" | "finalized" | "error" | "delete";
 export type ContextRequest = {
   query: string;
   libraryId: string;
-  researchMode?: boolean;
 };
 
 export type ContextResponse = {
