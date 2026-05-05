@@ -226,9 +226,6 @@
           },
           {
             "$ref": "#/components/parameters/FastParam"
-          },
-          {
-            "$ref": "#/components/parameters/ResearchModeParam"
           }
         ],
         "responses": {
@@ -303,9 +300,6 @@
           },
           "500": {
             "$ref": "#/components/responses/InternalServerError"
-          },
-          "502": {
-            "$ref": "#/components/responses/ResearchNoSourcesError"
           }
         },
         "security": [
@@ -1515,21 +1509,6 @@
         },
         "example": "true"
       },
-      "ResearchModeParam": {
-        "name": "researchMode",
-        "in": "query",
-        "description": "When `true`, run a deeper agentic research pipeline that returns a single synthesized `infoSnippet` instead of ranked snippets. Requires an API key and is subject to a weekly per-user quota.",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ],
-          "default": "false"
-        },
-        "example": "true"
-      },
       "DaysParam": {
         "name": "days",
         "in": "query",
@@ -2716,20 +2695,6 @@
             "example": {
               "error": "timeout",
               "message": "Request timed out. Please try again."
-            }
-          }
-        }
-      },
-      "ResearchNoSourcesError": {
-        "description": "Bad Gateway - Research mode could not retrieve any source material for the query",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error"
-            },
-            "example": {
-              "error": "research_no_sources",
-              "message": "Research mode could not retrieve any source material for this query."
             }
           }
         }

@@ -1,5 +1,5 @@
 ---
-title: Keeping Libraries Up to Date
+title: Keeping Libraries Fresh
 description: How Context7 ensures library documentation stays fresh
 ---
 
@@ -15,12 +15,12 @@ The staleness threshold is based on each library's popularity rank in Context7:
 
 | Popularity Rank | Refresh Threshold |
 | --------------- | ----------------- |
-| Top 100         | 3 days            |
-| Top 1,000       | 10 days           |
-| Top 5,000       | 20 days           |
-| All others      | 30 days           |
+| Top 100         | 1 day             |
+| Top 1,000       | 15 days           |
+| Top 5,000       | 30 days           |
+| All others      | 45 days           |
 
-Popular libraries are refreshed more frequently because developers rely on them more heavily and they tend to get updated faster.
+Popular libraries are refreshed more frequently because developers rely on them more heavily and they tend to get updated faster. Website libraries use a slightly higher threshold than the values above.
 
 <Note>
   The refresh is triggered in the background and does not affect the response time of your current request. You will receive the existing documentation immediately while the update runs asynchronously.
@@ -32,7 +32,7 @@ Logged-in users can manually trigger a refresh for any library directly from the
 
 Library owners who have [claimed their library](/howto/claiming-libraries) receive higher refresh rate limits, giving them more control over how frequently their documentation can be updated.
 
-## What Triggers a Refresh
+## What Triggers an Automated Refresh
 
 A refresh is triggered when all of the following conditions are met:
 

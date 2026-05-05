@@ -309,7 +309,6 @@ export async function resolveLibrary(
 
 export interface GetContextOptions {
   type?: "json" | "txt";
-  researchMode?: boolean;
 }
 
 export async function getLibraryContext(
@@ -322,11 +321,9 @@ export async function getLibraryContext(
   if (options?.type) {
     params.set("type", options.type);
   }
-  if (options?.researchMode) {
-    params.set("researchMode", "true");
-  }
+  const headers = getAuthHeaders(accessToken);
   const response = await fetch(`${baseUrl}/api/v2/context?${params}`, {
-    headers: getAuthHeaders(accessToken),
+    headers,
   });
 
   if (!response.ok) {
