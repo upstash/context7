@@ -641,6 +641,27 @@ describe("agent config integration", () => {
       });
     });
 
+    test("uses CLAUDE_CONFIG_DIR for global Claude config, rules, skills, and detection", () => {
+      const previous = process.env.CLAUDE_CONFIG_DIR;
+      const customDir = join(tempDir, "xdg", "claude");
+      process.env.CLAUDE_CONFIG_DIR = customDir;
+      try {
+        expect(agent.mcp.globalPaths).toEqual([join(customDir, ".claude.json")]);
+        expect(agent.rule.kind).toBe("file");
+        if (agent.rule.kind === "file") {
+          expect(agent.rule.dir("global")).toBe(join(customDir, "rules"));
+        }
+        expect(agent.skill.dir("global")).toBe(join(customDir, "skills"));
+        expect(agent.detect.globalPaths).toEqual([customDir]);
+      } finally {
+        if (previous === undefined) {
+          delete process.env.CLAUDE_CONFIG_DIR;
+        } else {
+          process.env.CLAUDE_CONFIG_DIR = previous;
+        }
+      }
+    });
+
     test("merges into JSON config with configKey mcpServers", async () => {
       const path = join(tempDir, ".claude.json");
       const existing = await readJsonConfig(path);

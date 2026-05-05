@@ -25,6 +25,17 @@ export const AUTH_MODE_LABELS: Record<AuthMode, string> = {
 
 const MCP_BASE_URL = "https://mcp.context7.com";
 
+function claudeConfigDir(): string {
+  return process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
+}
+
+function claudeGlobalMcpPath(): string {
+  if (process.env.CLAUDE_CONFIG_DIR) {
+    return join(claudeConfigDir(), ".claude.json");
+  }
+  return join(homedir(), ".claude.json");
+}
+
 export type RuleType =
   | {
       kind: "file";
@@ -70,24 +81,28 @@ const agents: Record<SetupAgent, AgentConfig> = {
     displayName: "Claude Code",
     mcp: {
       projectPaths: [".mcp.json"],
-      globalPaths: [join(homedir(), ".claude.json")],
+      get globalPaths() {
+        return [claudeGlobalMcpPath()];
+      },
       configKey: "mcpServers",
       buildEntry: (auth) => withHeaders({ type: "http", url: mcpUrl(auth) }, auth),
     },
     rule: {
       kind: "file",
       dir: (scope) =>
-        scope === "global" ? join(homedir(), ".claude", "rules") : join(".claude", "rules"),
+        scope === "global" ? join(claudeConfigDir(), "rules") : join(".claude", "rules"),
       filename: "context7.md",
     },
     skill: {
       name: "context7-mcp",
       dir: (scope) =>
-        scope === "global" ? join(homedir(), ".claude", "skills") : join(".claude", "skills"),
+        scope === "global" ? join(claudeConfigDir(), "skills") : join(".claude", "skills"),
     },
     detect: {
       projectPaths: [".mcp.json", ".claude"],
-      globalPaths: [join(homedir(), ".claude")],
+      get globalPaths() {
+        return [claudeConfigDir()];
+      },
     },
   },
 
