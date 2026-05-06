@@ -112,7 +112,7 @@ export class HttpClient implements Requester {
     this.retry =
       typeof config?.retry === "boolean" && config?.retry === false
         ? {
-            attempts: 1,
+            attempts: 0,
             backoff: () => 0,
           }
         : {
@@ -153,7 +153,6 @@ export class HttpClient implements Requester {
     for (let i = 0; i <= this.retry.attempts; i++) {
       try {
         res = await fetch(url, requestOptions as RequestInit);
-        break;
       } catch (error_) {
         if (requestOptions.signal?.aborted) {
           throw error_;
@@ -162,15 +161,49 @@ export class HttpClient implements Requester {
         if (i < this.retry.attempts) {
           await new Promise((r) => setTimeout(r, this.retry.backoff(i)));
         }
+        continue;
       }
+
+      // Retry on retryable HTTP status codes (429 rate-limit, 5xx server errors)
+      if (!res.ok) {
+        const retryable = res.status === 429 || (res.status >= 500 && res.status < 600);
+        if (retryable && i < this.retry.attempts) {
+          // Respect Retry-After header when present (common for 429)
+          const retryAfter = res.headers.get("retry-after");
+          const delay = retryAfter
+            ? parseInt(retryAfter, 10) * 1000 || this.retry.backoff(i)
+            : this.retry.backoff(i);
+          await new Promise((r) => setTimeout(r, delay));
+          continue;
+        }
+      }
+
+      break;
     }
+
     if (!res) {
       throw error ?? new Error("Exhausted all retries");
     }
 
     if (!res.ok) {
-      const errorBody = (await res.json()) as { error?: string; message?: string };
-      throw new Context7Error(errorBody.error || errorBody.message || res.statusText);
+      // Read body once as text, then attempt JSON parse.
+      // This avoids consuming the body stream twice (res.json() + res.text()),
+      // which would fail since Response body can only be read once.
+      const bodyText = await res.text().catch(() => "");
+      let errorMessage: string;
+
+      try {
+        const errorBody = JSON.parse(bodyText) as { error?: string; message?: string };
+        errorMessage = errorBody.error || errorBody.message || res.statusText;
+      } catch {
+        // Not JSON (e.g., HTML error page from proxy, plain text)
+        errorMessage =
+          bodyText && bodyText.length <= 200
+            ? bodyText
+            : `${res.statusText} (${res.status})`;
+      }
+
+      throw new Context7Error(errorMessage || res.statusText);
     }
 
     const contentType = res.headers.get("content-type");
