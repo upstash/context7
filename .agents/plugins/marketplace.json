@@ -1,0 +1,28 @@
+{
+  "name": "context7-marketplace",
+  "interface": {
+    "displayName": "Context7"
+  },
+  "owner": {
+    "name": "Upstash",
+    "url": "https://upstash.com"
+  },
+  "plugins": [
+    {
+      "name": "context7",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/upstash/context7.git",
+        "path": "./plugins/codex/context7",
+        "ref": "master"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity",
+      "description": "Up-to-date documentation lookup for libraries, frameworks, SDKs, and APIs.",
+      "version": "1.0.0"
+    }
+  ]
+}

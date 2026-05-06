@@ -1,0 +1,75 @@
+name: Sync plugins
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "rules/**"
+      - "skills/**"
+      - "scripts/sync-plugins.ts"
+      - ".github/workflows/sync-plugins.yml"
+  pull_request:
+    paths:
+      - "rules/**"
+      - "skills/**"
+      - "plugins/**"
+      - "scripts/sync-plugins.ts"
+      - ".github/workflows/sync-plugins.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-plugins-${{ github.event.pull_request.head.ref || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run sync
+        id: sync
+        run: |
+          pnpm sync:plugins
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit synced files
+        if: steps.sync.outputs.changed == 'true' && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- ':!pnpm-lock.yaml'
+          git commit -m "chore: sync plugin files from rules/skills"
+          git push
+
+      - name: Fail on drift in fork PR
+        if: steps.sync.outputs.changed == 'true' && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          echo "Plugins are out of sync with rules/skills."
+          echo "Run 'pnpm sync:plugins' locally and commit the result."
+          exit 1
