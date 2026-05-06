@@ -198,7 +198,15 @@ async function hasMcpConfig(agentName: SetupAgent, scope: Scope): Promise<boolea
     return readTomlServerExists(mcpPath, "context7");
   }
 
-  const existing = await readJsonConfig(mcpPath);
+  let existing: Record<string, unknown>;
+  try {
+    existing = await readJsonConfig(mcpPath);
+  } catch (err) {
+    log.warn(
+      `Skipped ${mcpPath}: could not parse (${err instanceof Error ? err.message : String(err)})`
+    );
+    return false;
+  }
   const section = existing[agent.mcp.configKey];
   return (
     !!section && typeof section === "object" && !Array.isArray(section) && "context7" in section
