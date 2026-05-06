@@ -1,13 +1,19 @@
 {
   "name": "context7",
   "version": "1.0.0",
-  "description": "Upstash Context7 MCP server for up-to-date documentation lookup. Pull version-specific documentation and code examples directly from source repositories into your LLM context.",
+  "description": "USER LEVEL: You get current, version-specific docs and examples pulled into context so answers match your actual dependency versions. PROJECT LEVEL: Agents write code against real API surfaces instead of hallucinated methods from outdated training data. Version-aware docs for libraries and APIs—Context7 MCP pulls current official snippets and examples into context so answers match the stack you’re on. BEST SUITED FOR: • Any project using libraries or frameworks with frequently changing APIs • Developers upgrading dependencies who need migration-accurate examples • Agent workflows where doc accuracy directly affects code correctness",
   "author": {
     "name": "Context7",
     "email": "context7@upstash.com",
     "url": "https://context7.com"
   },
-  "keywords": ["documentation", "mcp", "context7", "libraries", "frameworks"],
+  "keywords": [
+    "documentation",
+    "mcp",
+    "context7",
+    "libraries",
+    "frameworks"
+  ],
   "logo": "https://context7.com/brand/context7-icon-green.svg",
   "primaryColor": "#059669"
 }
