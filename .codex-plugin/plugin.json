@@ -1,0 +1,24 @@
+{
+  "name": "context7",
+  "version": "0.1.0",
+  "description": "Up-to-date code documentation for Codex from Context7",
+  "author": {
+    "name": "upstash",
+    "url": "https://github.com/upstash/context7"
+  },
+  "homepage": "https://github.com/upstash/context7",
+  "repository": "https://github.com/upstash/context7",
+  "keywords": [
+    "mcp",
+    "codex"
+  ],
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Context7",
+    "shortDescription": "Up-to-date code documentation for Codex from Context7",
+    "longDescription": "Up-to-date code documentation for LLMs and AI code editors.",
+    "category": "Development",
+    "websiteURL": "https://github.com/upstash/context7"
+  },
+  "skills": "./skills/"
+}
