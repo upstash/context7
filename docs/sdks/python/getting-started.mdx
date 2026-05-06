@@ -1,0 +1,159 @@
+---
+title: "Getting Started"
+description: "Get started with the Context7 Python SDK"
+---
+
+<Warning>
+  **Work in Progress**: This SDK is currently under active development. The API is subject to change and may introduce breaking changes in future releases.
+</Warning>
+
+# Getting Started
+
+`context7` is a Python SDK for Context7, enabling easier access to library documentation with full type hints.
+
+Using `context7` you can:
+
+- Search across available libraries
+- Get documentation context for any library
+- Access library metadata including trust scores and versions
+
+You can find the Github Repository [here](https://github.com/upstash/context7/tree/master/packages/python/sdk).
+
+## Install
+
+<CodeGroup>
+  ```shell pip
+  pip install context7
+  ```
+
+```shell uv
+uv add context7
+```
+
+```shell poetry
+poetry add context7
+```
+
+</CodeGroup>
+
+## Usage
+
+### Initializing the Client
+
+To use the Context7 SDK, you need an API key. You can get your API key from the [Context7 Dashboard](https://context7.com/dashboard).
+
+#### Using environment variables
+
+The SDK automatically reads from environment variables if no API key is provided:
+
+```bash
+CONTEXT7_API_KEY="your_api_key_here"
+```
+
+When an environment variable is set, you can initialize the client without any parameters:
+
+```python
+from context7 import Context7
+
+with Context7() as client:
+    # Use the client
+    pass
+```
+
+#### Using a configuration parameter
+
+If you prefer to pass the API key in code:
+
+```python
+from context7 import Context7
+
+with Context7(api_key="ctx7sk_...") as client:
+    # Use the client
+    pass
+```
+
+<Note>
+  The SDK checks for API keys in this order: 1. `api_key` parameter (if provided) 2.
+  `CONTEXT7_API_KEY` environment variable
+</Note>
+
+## Quick Start Example
+
+### Synchronous Usage
+
+```python
+from context7 import Context7
+
+with Context7() as client:
+    # Search for libraries
+    libraries = client.search_library(
+        "I need to build a UI with components",
+        "react"
+    )
+    print(f"Found {len(libraries)} libraries")
+    print(libraries[0].id)  # "/facebook/react"
+
+    # Get documentation as JSON array (default)
+    docs = client.get_context(
+        "How do I use hooks?",
+        "/facebook/react"
+    )
+    print(docs[0].title, docs[0].content)
+
+    # Get documentation as plain text
+    context = client.get_context(
+        "How do I use hooks?",
+        "/facebook/react",
+        type="txt"
+    )
+    print(context)
+```
+
+### Asynchronous Usage
+
+```python
+import asyncio
+from context7 import Context7
+
+async def main():
+    async with Context7() as client:
+        # Search for libraries
+        libraries = await client.search_library_async(
+            "I need to build a UI with components",
+            "react"
+        )
+        print(f"Found {len(libraries)} libraries")
+        print(libraries[0].id)  # "/facebook/react"
+
+        # Get documentation context (JSON array by default)
+        docs = await client.get_context_async(
+            "How do I use hooks?",
+            "/facebook/react"
+        )
+        print(docs[0].title, docs[0].content)
+
+asyncio.run(main())
+```
+
+## Error Handling
+
+The SDK raises `Context7Error` for API errors:
+
+```python
+from context7 import Context7, Context7Error
+
+with Context7() as client:
+    try:
+        context = client.get_context("query", "/invalid/library")
+    except Context7Error as e:
+        print(f"Context7 API Error: {e}")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+```
+
+## Next Steps
+
+Explore the SDK commands:
+
+- [Search Library](/sdks/python/commands/search-library) - Search for libraries
+- [Get Context](/sdks/python/commands/get-context) - Retrieve library documentation context
