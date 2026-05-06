@@ -524,6 +524,11 @@ async function main() {
     startServer(initialPort);
   } else {
     stdioApiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
+
+    process.stdin.on("end", () => process.exit(0));
+    process.stdin.on("close", () => process.exit(0));
+    process.on("SIGHUP", () => process.exit(0));
+
     const transport = new StdioServerTransport();
     const server = createMcpServer();
 
