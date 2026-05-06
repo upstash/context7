@@ -24,7 +24,7 @@
   "dependencies": {
     "@inquirer/prompts": "^8.2.0",
     "commander": "^13.1.0",
-    "figlet": "^1.9.4",
+    "figlet": "^1.11.0",
     "open": "^10.1.0",
     "ora": "^9.0.0",
     "picocolors": "^1.1.1"
