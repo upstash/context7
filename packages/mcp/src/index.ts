@@ -282,25 +282,56 @@ Do not call this tool more than 3 times per question.`,
   return server;
 }
 
-// Rewrite hallucinated argument names on incoming `tools/call` messages so
-// they validate against the canonical tool schema. Install BEFORE
-// `server.connect(transport)`: the SDK's `Protocol.connect()` captures the
-// existing `onmessage` and chains its dispatch handler over it, so our hook
-// runs first on every incoming JSON-RPC message.
+// Map of canonical arg name -> hallucinated aliases that should be rewritten
+// to it. LLM clients often echo phrasing from tool descriptions instead of
+// the literal schema keys, which trips Zod validation before the tool runs.
+type AliasMap = Record<string, readonly string[]>;
+
+const GLOBAL_ALIASES: AliasMap = {
+  query: ["userQuery", "question"],
+};
+
+// Tool-scoped aliases, for keys that are canonical on one tool but a
+// hallucination on another (e.g. `libraryName` is canonical for
+// `resolve-library-id`, so we only rewrite it on `query-docs` calls).
+const TOOL_ALIASES: Record<string, AliasMap> = {
+  "query-docs": {
+    libraryId: ["context7CompatibleLibraryID", "libraryID", "libraryName"],
+  },
+};
+
+function applyAliases(args: Record<string, unknown>, aliases: AliasMap): void {
+  for (const [canonical, alternatives] of Object.entries(aliases)) {
+    if (canonical in args) continue;
+    for (const alt of alternatives) {
+      if (alt in args) {
+        args[canonical] = args[alt];
+        delete args[alt];
+        break;
+      }
+    }
+  }
+}
+
+// Install BEFORE `server.connect(transport)`: the SDK's `Protocol.connect()`
+// captures the existing `onmessage` and chains its dispatch handler over it,
+// so our hook runs first on every incoming JSON-RPC message.
 function installTransportArgAliasing(transport: Transport): void {
   transport.onmessage = (message) => {
-    const msg = message as { method?: string; params?: { arguments?: unknown } };
+    const msg = message as {
+      method?: string;
+      params?: { name?: string; arguments?: unknown };
+    };
     if (msg.method !== "tools/call") return;
     const args = msg.params?.arguments;
     if (!args || typeof args !== "object") return;
     const argsRecord = args as Record<string, unknown>;
-    if ("context7CompatibleLibraryID" in argsRecord && !("libraryId" in argsRecord)) {
-      argsRecord.libraryId = argsRecord.context7CompatibleLibraryID;
-      delete argsRecord.context7CompatibleLibraryID;
-    }
-    if ("userQuery" in argsRecord && !("query" in argsRecord)) {
-      argsRecord.query = argsRecord.userQuery;
-      delete argsRecord.userQuery;
+
+    applyAliases(argsRecord, GLOBAL_ALIASES);
+
+    const toolName = msg.params?.name;
+    if (toolName && toolName in TOOL_ALIASES) {
+      applyAliases(argsRecord, TOOL_ALIASES[toolName]);
     }
   };
 }
