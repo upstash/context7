@@ -2,6 +2,7 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { z } from "zod";
 import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
 import { ClientContext } from "./lib/encryption.js";
@@ -281,6 +282,29 @@ Do not call this tool more than 3 times per question.`,
   return server;
 }
 
+// Rewrite hallucinated argument names on incoming `tools/call` messages so
+// they validate against the canonical tool schema. Install BEFORE
+// `server.connect(transport)`: the SDK's `Protocol.connect()` captures the
+// existing `onmessage` and chains its dispatch handler over it, so our hook
+// runs first on every incoming JSON-RPC message.
+function installTransportArgAliasing(transport: Transport): void {
+  transport.onmessage = (message) => {
+    const msg = message as { method?: string; params?: { arguments?: unknown } };
+    if (msg.method !== "tools/call") return;
+    const args = msg.params?.arguments;
+    if (!args || typeof args !== "object") return;
+    const argsRecord = args as Record<string, unknown>;
+    if ("context7CompatibleLibraryID" in argsRecord && !("libraryId" in argsRecord)) {
+      argsRecord.libraryId = argsRecord.context7CompatibleLibraryID;
+      delete argsRecord.context7CompatibleLibraryID;
+    }
+    if ("userQuery" in argsRecord && !("query" in argsRecord)) {
+      argsRecord.query = argsRecord.userQuery;
+      delete argsRecord.userQuery;
+    }
+  };
+}
+
 async function main() {
   const transportType = TRANSPORT_TYPE;
 
@@ -410,6 +434,7 @@ async function main() {
         });
 
         await requestContext.run(context, async () => {
+          installTransportArgAliasing(transport);
           await server.connect(transport);
           await transport.handleRequest(req, res, req.body);
         });
@@ -544,6 +569,7 @@ async function main() {
       }
     };
 
+    installTransportArgAliasing(transport);
     await server.connect(transport);
 
     console.error(`Context7 Documentation MCP Server v${SERVER_VERSION} running on stdio`);
