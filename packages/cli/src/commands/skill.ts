@@ -30,6 +30,7 @@ import {
   getTrustLabel,
 } from "../utils/prompts.js";
 import { installSkillFiles, symlinkSkill } from "../utils/installer.js";
+import { assertSkillNameInRoot } from "../utils/skill-name.js";
 import { listSkillsFromGitHub, getSkillFromGitHub } from "../utils/github.js";
 import { trackEvent } from "../utils/tracking.js";
 import { registerGenerateCommand } from "./generate.js";
@@ -708,7 +709,13 @@ async function removeCommand(name: string, options: RemoveOptions): Promise<void
   }
 
   const skillsDir = getTargetDirFromSelection(target.ide, target.scope);
-  const skillPath = join(skillsDir, name);
+  let skillPath: string;
+  try {
+    skillPath = assertSkillNameInRoot(skillsDir, name);
+  } catch {
+    log.error(`Invalid skill name: ${name}`);
+    return;
+  }
 
   try {
     await rm(skillPath, { recursive: true });

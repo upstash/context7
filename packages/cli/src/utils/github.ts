@@ -1,5 +1,6 @@
 import { execSync } from "node:child_process";
 import type { SkillFile, Skill } from "../types.js";
+import { isSafeSkillName } from "./skill-name.js";
 
 const GITHUB_API = "https://api.github.com";
 const GITHUB_RAW = "https://raw.githubusercontent.com";
@@ -100,10 +101,8 @@ function parseSkillFrontmatter(content: string): { name: string; description: st
 
   const nameMatch = frontmatter.match(/^name:\s*(.+)$/m);
   if (!nameMatch) return null;
-  const name = nameMatch[1]
-    .trim()
-    .replace(/^["']|["']$/g, "")
-    .toLowerCase();
+  const name = nameMatch[1].trim().replace(/^["']|["']$/g, "");
+  if (!isSafeSkillName(name)) return null;
 
   let description = "";
   const multiLineMatch = frontmatter.match(/^description:\s*([|>])-?\s*$/m);
@@ -230,7 +229,7 @@ export async function getSkillFromGitHub(
 ): Promise<GitHubSkillsResult & { skill?: Skill & { project: string } }> {
   const result = await listSkillsFromGitHub(project);
   if (result.status !== "ok") return result;
-  const skill = result.skills.find((s) => s.name === skillName.toLowerCase());
+  const skill = result.skills.find((s) => s.name.toLowerCase() === skillName.toLowerCase());
   return { ...result, skill };
 }
 
