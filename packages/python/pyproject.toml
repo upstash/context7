@@ -1,0 +1,48 @@
+[project]
+name = "context7-workspace"
+version = "0.0.0"
+description = "Context7 Python packages workspace"
+requires-python = ">=3.9"
+license = "MIT"
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["sdk"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "TCH"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["sdk/tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.mypy]
+python_version = "3.9"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+
+[tool.pyright]
+pythonVersion = "3.9"
+typeCheckingMode = "strict"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.19.0",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "pytest-cov>=7.0.0",
+    "python-dotenv>=1.2.1",
+    "ruff>=0.14.8",
+]

@@ -1,0 +1,164 @@
+---
+title: "Search Library"
+description: "Search available libraries"
+---
+
+# Search Library
+
+Search across available libraries. Returns a list of matching libraries with metadata useful for selection.
+
+## Arguments
+
+<ParamField path="query" type="str" required>
+  The user's question or task (used for relevance ranking)
+</ParamField>
+
+<ParamField path="library_name" type="str" required>
+  The library name to search for
+</ParamField>
+
+## Response
+
+Returns `list[Library]` - a list of library objects.
+
+<ResponseField name="Library" type="object">
+  <Expandable title="properties">
+    <ResponseField name="id" type="str" required>
+      Unique identifier for the library (e.g., `/facebook/react`)
+    </ResponseField>
+    <ResponseField name="name" type="str" required>
+      Display name of the library
+    </ResponseField>
+    <ResponseField name="description" type="str" required>
+      Brief description of the library
+    </ResponseField>
+    <ResponseField name="total_snippets" type="int" required>
+      Total number of documentation snippets available
+    </ResponseField>
+    <ResponseField name="trust_score" type="float" required>
+      Trust score of the library
+    </ResponseField>
+    <ResponseField name="benchmark_score" type="float" required>
+      Benchmark score indicating documentation quality
+    </ResponseField>
+    <ResponseField name="versions" type="list[str] | None">
+      Available versions
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Examples
+
+<RequestExample>
+```python Basic Search
+from context7 import Context7
+
+with Context7() as client:
+    libraries = client.search_library(
+        "I need to build a UI",
+        "react"
+    )
+
+    print(f"Found {len(libraries)} libraries")
+    for library in libraries:
+        print(f"{library.name}: {library.description}")
+```
+
+```python Async Usage
+import asyncio
+from context7 import Context7
+
+async def main():
+    async with Context7() as client:
+        libraries = await client.search_library_async(
+            "I need to build a UI",
+            "react"
+        )
+
+        print(f"Found {len(libraries)} libraries")
+        for library in libraries:
+            print(f"{library.name}: {library.description}")
+
+asyncio.run(main())
+```
+
+```python Selecting Best Library
+from context7 import Context7
+
+with Context7() as client:
+    libraries = client.search_library(
+        "I want to build a web app",
+        "next"
+    )
+
+    sorted_libs = sorted(libraries, key=lambda x: x.benchmark_score, reverse=True)
+    best = sorted_libs[0]
+
+    print(f"Best match: {best.name} (score: {best.benchmark_score})")
+    print(f"Available snippets: {best.total_snippets}")
+```
+
+```python Error Handling
+from context7 import Context7, Context7Error
+
+with Context7() as client:
+    try:
+        libraries = client.search_library("query", "express")
+
+        if not libraries:
+            print("No libraries found")
+        else:
+            print(f"Found {len(libraries)} libraries")
+    except Context7Error as e:
+        print(f"API Error: {e}")
+```
+</RequestExample>
+
+## Use Cases
+
+### Finding Libraries by Score
+
+```python
+from context7 import Context7
+
+with Context7() as client:
+    libraries = client.search_library("state management", "redux")
+
+    trusted = sorted(libraries, key=lambda x: x.trust_score, reverse=True)
+    print(f"Most trusted: {trusted[0].name}")
+```
+
+### Checking Available Versions
+
+```python
+from context7 import Context7
+
+with Context7() as client:
+    libraries = client.search_library("I want to use lodash", "lodash")
+
+    library = libraries[0]
+    if library.versions:
+        print(f"Available versions: {', '.join(library.versions)}")
+```
+
+### Full Workflow
+
+```python
+from context7 import Context7
+
+with Context7() as client:
+    libraries = client.search_library(
+        "I want to build a React app",
+        "react"
+    )
+
+    library = libraries[0]
+    print(f"Using: {library.name} ({library.id})")
+
+    context = client.get_context(
+        "How do I create a component?",
+        library.id
+    )
+
+    print(context)
+```
