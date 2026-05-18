@@ -54,6 +54,7 @@
         "group": "Enterprise",
         "pages": [
           "enterprise",
+          "enterprise/azure-apim",
           {
             "group": "On-Premise",
             "pages": [
