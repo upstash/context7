@@ -19,7 +19,6 @@ import {
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
 import { buildAuthPrompt } from "./lib/auth/auth-prompt.js";
-import { loadStdioToken, tryElicitSignIn } from "./lib/auth/stdio-oauth.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -82,15 +81,12 @@ let stdioClientInfo: { ide?: string; version?: string } | undefined;
 /**
  * Get the effective client context
  */
-async function getClientContext(): Promise<ClientContext> {
+function getClientContext(): ClientContext {
   const ctx = requestContext.getStore();
   if (ctx) return ctx;
 
-  // stdio reads credentials.json each call so the same long-running process
-  // picks up tokens an in-flight OAuth flow just wrote; refresh happens
-  // transparently inside loadStdioToken when the access token expires.
   return {
-    apiKey: stdioApiKey ?? (await loadStdioToken()),
+    apiKey: stdioApiKey,
     clientInfo: stdioClientInfo,
     transport: "stdio",
   };
@@ -98,17 +94,14 @@ async function getClientContext(): Promise<ClientContext> {
 
 type ToolResult = { content: { type: "text"; text: string }[] };
 
-function withAuthPrompt<A>(
-  server: McpServer,
-  handler: (a: A) => Promise<ToolResult>
-): (a: A) => Promise<ToolResult> {
+function withAuthPrompt<A>(handler: (a: A) => Promise<ToolResult>): (a: A) => Promise<ToolResult> {
   return async (args) => {
     // Wire stdio through AsyncLocalStorage so the API layer (which sets
     // `shouldPrompt` from the backend signal) and this wrapper share the
     // same mutable context object. HTTP already runs inside `requestContext`.
     const inherited = requestContext.getStore();
     const ctx: ClientContext = inherited ?? {
-      apiKey: stdioApiKey ?? (await loadStdioToken()),
+      apiKey: stdioApiKey,
       clientInfo: stdioClientInfo,
       transport: "stdio",
     };
@@ -117,16 +110,6 @@ function withAuthPrompt<A>(
       : await requestContext.run(ctx, () => handler(args));
 
     if (ctx.apiKey || !ctx.shouldPrompt || result.content.length === 0) return result;
-
-    // Stdio: server lives on the user's machine — drive OAuth directly via
-    // elicit + localhost callback. Token lands in credentials.json and is
-    // picked up on the next call. Fall through to the text nudge only when
-    // elicit isn't supported (no-response); a decline means the user saw
-    // the dialog and said no, don't double-prompt.
-    if (ctx.transport === "stdio") {
-      const outcome = await tryElicitSignIn(server.server);
-      if (outcome !== "no-response") return result;
-    }
 
     const rateLimited = result.content.some(
       (c) => c.type === "text" && /quota exceeded|rate.?limit/i.test(c.text)
@@ -248,40 +231,37 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
         idempotentHint: true,
       },
     },
-    withAuthPrompt(
-      server,
-      async ({ query, libraryName }: { query: string; libraryName: string }) => {
-        const searchResponse = await searchLibraries(query, libraryName, await getClientContext());
+    withAuthPrompt(async ({ query, libraryName }: { query: string; libraryName: string }) => {
+      const searchResponse = await searchLibraries(query, libraryName, getClientContext());
 
-        if (!searchResponse.results || searchResponse.results.length === 0) {
-          return {
-            content: [
-              {
-                type: "text" as const,
-                text: searchResponse.error
-                  ? searchResponse.error
-                  : "No libraries found matching the provided name.",
-              },
-            ],
-          };
-        }
-
-        const resultsText = formatSearchResults(searchResponse);
-
-        const responseText = `Available Libraries:
-
-${resultsText}`;
-
+      if (!searchResponse.results || searchResponse.results.length === 0) {
         return {
           content: [
             {
               type: "text" as const,
-              text: responseText,
+              text: searchResponse.error
+                ? searchResponse.error
+                : "No libraries found matching the provided name.",
             },
           ],
         };
       }
-    )
+
+      const resultsText = formatSearchResults(searchResponse);
+
+      const responseText = `Available Libraries:
+
+${resultsText}`;
+
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: responseText,
+          },
+        ],
+      };
+    })
   );
 
   server.registerTool(
@@ -312,8 +292,8 @@ Do not call this tool more than 3 times per question.`,
         idempotentHint: true,
       },
     },
-    withAuthPrompt(server, async ({ query, libraryId }: { query: string; libraryId: string }) => {
-      const response = await fetchLibraryContext({ query, libraryId }, await getClientContext());
+    withAuthPrompt(async ({ query, libraryId }: { query: string; libraryId: string }) => {
+      const response = await fetchLibraryContext({ query, libraryId }, getClientContext());
 
       return {
         content: [
