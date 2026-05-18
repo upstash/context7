@@ -888,14 +888,6 @@
                     "type": "boolean",
                     "description": "Whether the repository is private"
                   },
-                  "skipBenchmark": {
-                    "type": "boolean",
-                    "description": "Skip benchmark quality scoring after parsing"
-                  },
-                  "skipContextGeneration": {
-                    "type": "boolean",
-                    "description": "Skip automatic default context generation"
-                  },
                   "skipVersionFiltering": {
                     "type": "boolean",
                     "description": "Skip filtering out version-specific documentation pages"
@@ -1032,13 +1024,6 @@
                   "description": {
                     "type": "string",
                     "description": "Description of the library"
-                  },
-                  "skipBenchmark": {
-                    "type": "string",
-                    "enum": [
-                      "true"
-                    ],
-                    "description": "Set to 'true' to skip benchmark quality scoring"
                   },
                   "force": {
                     "type": "string",
@@ -1474,6 +1459,10 @@
             "value": "/llmstxt/example"
           },
           "withVersion": {
+            "summary": "With specific version (slash)",
+            "value": "/vercel/next.js/v14.3.0"
+          },
+          "withVersionAt": {
             "summary": "With specific version (@ syntax)",
             "value": "/vercel/next.js@v14.3.0"
           }
@@ -2005,14 +1994,6 @@
           "private": {
             "type": "boolean",
             "description": "Whether the repository is private"
-          },
-          "skipBenchmark": {
-            "type": "boolean",
-            "description": "Skip benchmark quality scoring after parsing"
-          },
-          "skipContextGeneration": {
-            "type": "boolean",
-            "description": "Skip automatic default context generation"
           },
           "skipVersionFiltering": {
             "type": "boolean",
