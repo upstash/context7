@@ -330,7 +330,11 @@ The cache duration (`3000` seconds) is slightly below Entra's default access tok
 
 ## Part 4: Onboard your tenant in Context7
 
-The Context7 MCP server validates inbound tokens against per-teamspace tenant configuration. An owner or admin of the teamspace configures it from the dashboard.
+Context7 validates inbound tokens in two stages: first the token's signature, audience, issuer, and scope are checked against your teamspace's tenant configuration; then the token's `oid` claim is resolved against a list of pre-provisioned users for the teamspace. **Both checks are mandatory** — there is no auto-provisioning, so any developer who has not been added to the teamspace's user list will be rejected with `401` even when their token is otherwise valid.
+
+An owner or admin of the teamspace configures both from the dashboard.
+
+### Step 1: Configure the tenant
 
 1. Sign in to [context7.com/dashboard](https://context7.com/dashboard) and select the teamspace that will own the integration.
 2. **Overview** tab → **Microsoft Entra ID** card → **Configure**.
@@ -348,7 +352,23 @@ The Context7 MCP server validates inbound tokens against per-teamspace tenant co
 
 5. **Save**.
 
-The Context7 MCP server now accepts tokens whose `aud` matches the audience you provided, signed by your tenant's Entra issuer, with the required scope present.
+### Step 2: Pre-provision your developers
+
+After saving the tenant configuration, scroll down to the **Microsoft Entra ID users** card on the same Overview tab. This is where you list every Entra user who should be able to authenticate to the teamspace through APIM.
+
+1. Click **Add user**.
+2. Enter the user's:
+   - **Email** — the address they sign in to Entra with.
+   - **Object ID (oid)** — their Entra object ID. Find it in the Entra admin center under **Users → `<name>` → Overview → Object ID**, or have the user run `az ad signed-in-user show --query id -o tsv` after `az login`.
+3. Click **Add user** to save.
+
+Context7 creates a Clerk user record for the developer, adds them as a `developer` member of the teamspace, and inserts a `(tenant, oid, teamspace)` mapping. The same email can be added to multiple teamspaces — the Clerk user is reused and a separate mapping row is created per teamspace.
+
+<Note>
+For large rollouts (tens or hundreds of developers), CSV bulk-import and Entra SCIM provisioning are on the roadmap. Reach out to [context7@upstash.com](mailto:context7@upstash.com) if your scale needs either ahead of general availability.
+</Note>
+
+The Context7 MCP server now accepts tokens whose `aud` matches the audience you provided, signed by your tenant's Entra issuer, with the required scope present, and whose `oid` matches one of the users you added in Step 2.
 
 ## Part 5: Expose OAuth discovery for MCP clients
 
@@ -359,7 +379,7 @@ For MCP clients (VS Code with GitHub Copilot, Claude Code, Cursor) to authentica
 A second API in APIM at the root path hosts the well-known endpoints and the OAuth bridge:
 
 ```bash
-az apim api create -g $RG --service-name $APIM_NAME \
+az apim api create -g $RG --service-name $APIM \
   --api-id oauth-proxy \
   --display-name "OAuth Proxy" \
   --path "" \
@@ -374,7 +394,7 @@ for op in prm-metadata as-metadata authorize token; do
     authorize)    path="/authorize"; method=GET ;;
     token)        path="/token"; method=POST ;;
   esac
-  az apim api operation create -g $RG --service-name $APIM_NAME \
+  az apim api operation create -g $RG --service-name $APIM \
     --api-id oauth-proxy --operation-id $op \
     --display-name "$op" --method $method --url-template "$path"
 done
@@ -565,13 +585,17 @@ The `scope` parameter in the OBO request is malformed. Verify that the `mcp-api-
 
 ### `401 Unauthorized` from Context7 with a valid OBO token
 
-The MCP API token's audience, issuer, or scope does not match your Context7 teamspace configuration. Open **Overview → Microsoft Entra ID** in the dashboard and verify:
+Either the token does not match the teamspace's tenant configuration, or the user is not on the teamspace's pre-provisioned list.
+
+First open **Overview → Microsoft Entra ID** in the dashboard and verify:
 
 - **Tenant ID** matches the OBO token's `tid` claim.
 - **Audience** matches the OBO token's `aud` claim exactly (case-sensitive, GUID form for v2 tokens).
 - **Required scope** matches a value in the token's `scp` claim.
 
 Use **Test connection** to confirm the tenant is reachable.
+
+If the tenant config is correct, the user's `oid` is probably not in the teamspace's provisioned users list. Decode the OBO token at [jwt.io](https://jwt.io) and copy the `oid` claim, then check that exact value appears in **Overview → Microsoft Entra ID users**. If it's missing, add the user (see Part 4 Step 2).
 
 ### Streaming responses get cut off
 
