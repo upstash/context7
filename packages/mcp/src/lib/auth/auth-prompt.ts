@@ -1,4 +1,6 @@
-export function clientFlagForCli(ide: string | undefined): string {
+import type { ClientContext } from "../encryption.js";
+
+function clientFlagForCli(ide: string | undefined): string {
   if (!ide) return "";
   const lower = ide.toLowerCase();
   if (lower.includes("cursor")) return "--cursor";
@@ -11,20 +13,26 @@ export function clientFlagForCli(ide: string | undefined): string {
 
 export interface BuildAuthPromptOptions {
   clientIde?: string;
-  rateLimited?: boolean;
+}
+
+/**
+ * Appends a sign-in nudge to `text` when the backend has signaled (via
+ * `X-Context7-Auth-Prompt: 1`, captured on `ctx.shouldPrompt` in api.ts)
+ * that the anonymous caller should be prompted to authenticate. No-op for
+ * authenticated callers or when the signal wasn't set.
+ */
+export function appendAuthPrompt(text: string, ctx: ClientContext): string {
+  if (ctx.apiKey || !ctx.shouldPrompt) return text;
+  return `${text}\n\n${buildAuthPrompt({ clientIde: ctx.clientInfo?.ide })}`;
 }
 
 export function buildAuthPrompt(opts: BuildAuthPromptOptions): string {
   const flag = clientFlagForCli(opts.clientIde);
   const command = flag ? `npx ctx7 setup ${flag} --mcp -y` : `npx ctx7 setup --mcp`;
-  const tag = opts.rateLimited ? "[Rate limit reached]" : "[Heads up]";
-  const reason = opts.rateLimited
-    ? "Context7's free anonymous rate limit was just hit."
-    : "This user is using Context7 anonymously.";
 
   return [
     "---",
-    `**${tag} Notice for the user — please relay the following section to them and offer to run the command for them after their confirmation:**`,
+    `**[Heads up] Notice for the user — please relay the following section to them and offer to run the command for them after their confirmation:**`,
     "",
     "> You're using Context7 anonymously. To sign in for **free** higher rate limits, run this in your terminal:",
     ">",
@@ -32,8 +40,8 @@ export function buildAuthPrompt(opts: BuildAuthPromptOptions): string {
     `> ${command}`,
     "> ```",
     ">",
-    "> It opens the browser, completes sign-in, and writes the access token into your MCP client config. After it finishes, disable + re-enable the Context7 MCP server in your editor so the new credentials take effect.",
+    "> It opens the browser, completes sign-in, and writes credentials into your MCP client config. After it finishes, disable + re-enable the Context7 MCP server in your editor so the new credentials take effect.",
     "",
-    `(Background for the assistant: ${reason} Surface the notice above to the user; with their permission, you may run \`${command}\` for them via your shell tool.)`,
+    `(Background for the assistant: this user is using Context7 anonymously. Surface the notice above to the user; with their permission, you may run \`${command}\` for them via your shell tool.)`,
   ].join("\n");
 }

@@ -18,7 +18,7 @@ import {
   AUTH_SERVER_URL,
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
-import { buildAuthPrompt } from "./lib/auth/auth-prompt.js";
+import { appendAuthPrompt } from "./lib/auth/auth-prompt.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -83,43 +83,17 @@ let stdioClientInfo: { ide?: string; version?: string } | undefined;
  */
 function getClientContext(): ClientContext {
   const ctx = requestContext.getStore();
-  if (ctx) return ctx;
 
+  // HTTP mode: context is fully populated from request
+  if (ctx) {
+    return ctx;
+  }
+
+  // stdio mode: use globals
   return {
     apiKey: stdioApiKey,
     clientInfo: stdioClientInfo,
     transport: "stdio",
-  };
-}
-
-type ToolResult = { content: { type: "text"; text: string }[] };
-
-function withAuthPrompt<A>(handler: (a: A) => Promise<ToolResult>): (a: A) => Promise<ToolResult> {
-  return async (args) => {
-    // Wire stdio through AsyncLocalStorage so the API layer (which sets
-    // `shouldPrompt` from the backend signal) and this wrapper share the
-    // same mutable context object. HTTP already runs inside `requestContext`.
-    const inherited = requestContext.getStore();
-    const ctx: ClientContext = inherited ?? {
-      apiKey: stdioApiKey,
-      clientInfo: stdioClientInfo,
-      transport: "stdio",
-    };
-    const result = inherited
-      ? await handler(args)
-      : await requestContext.run(ctx, () => handler(args));
-
-    if (ctx.apiKey || !ctx.shouldPrompt || result.content.length === 0) return result;
-
-    const rateLimited = result.content.some(
-      (c) => c.type === "text" && /quota exceeded|rate.?limit/i.test(c.text)
-    );
-    const prompt = buildAuthPrompt({ clientIde: ctx.clientInfo?.ide, rateLimited });
-    const last = result.content[result.content.length - 1];
-    if (last.type === "text") {
-      last.text = `${last.text}\n\n${prompt}`;
-    }
-    return result;
   };
 }
 
@@ -231,37 +205,33 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
         idempotentHint: true,
       },
     },
-    withAuthPrompt(async ({ query, libraryName }: { query: string; libraryName: string }) => {
-      const searchResponse = await searchLibraries(query, libraryName, getClientContext());
+    async ({ query, libraryName }: { query: string; libraryName: string }) => {
+      const ctx = getClientContext();
+      const searchResponse = await searchLibraries(query, libraryName, ctx);
 
       if (!searchResponse.results || searchResponse.results.length === 0) {
+        const text = searchResponse.error ?? "No libraries found matching the provided name.";
         return {
           content: [
             {
-              type: "text" as const,
-              text: searchResponse.error
-                ? searchResponse.error
-                : "No libraries found matching the provided name.",
+              type: "text",
+              text: appendAuthPrompt(text, ctx),
             },
           ],
         };
       }
 
       const resultsText = formatSearchResults(searchResponse);
-
-      const responseText = `Available Libraries:
-
-${resultsText}`;
-
+      const responseText = `Available Libraries:\n\n${resultsText}`;
       return {
         content: [
           {
-            type: "text" as const,
-            text: responseText,
+            type: "text",
+            text: appendAuthPrompt(responseText, ctx),
           },
         ],
       };
-    })
+    }
   );
 
   server.registerTool(
@@ -292,18 +262,18 @@ Do not call this tool more than 3 times per question.`,
         idempotentHint: true,
       },
     },
-    withAuthPrompt(async ({ query, libraryId }: { query: string; libraryId: string }) => {
-      const response = await fetchLibraryContext({ query, libraryId }, getClientContext());
-
+    async ({ query, libraryId }: { query: string; libraryId: string }) => {
+      const ctx = getClientContext();
+      const response = await fetchLibraryContext({ query, libraryId }, ctx);
       return {
         content: [
           {
-            type: "text" as const,
-            text: response.data,
+            type: "text",
+            text: appendAuthPrompt(response.data, ctx),
           },
         ],
       };
-    })
+    }
   );
 
   return server;
