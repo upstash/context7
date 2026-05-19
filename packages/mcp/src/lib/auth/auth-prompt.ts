@@ -1,4 +1,4 @@
-import type { ClientContext } from "../encryption.js";
+import type { ClientContext } from "../types.js";
 
 function clientFlagForCli(ide: string | undefined): string {
   if (!ide) return "";

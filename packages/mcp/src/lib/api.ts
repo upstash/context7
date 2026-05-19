@@ -1,5 +1,5 @@
-import { SearchResponse, ContextRequest, ContextResponse } from "./types.js";
-import { ClientContext, generateHeaders } from "./encryption.js";
+import { SearchResponse, ContextRequest, ContextResponse, ClientContext } from "./types.js";
+import { generateHeaders } from "./encryption.js";
 import { Agent, ProxyAgent, setGlobalDispatcher } from "undici";
 import { CONTEXT7_API_BASE_URL } from "./constants.js";
 import { readFileSync } from "fs";
