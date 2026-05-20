@@ -80,9 +80,7 @@ const requestContext = new AsyncLocalStorage<ClientContext>();
 // Global state for stdio mode only
 let stdioApiKey: string | undefined;
 let stdioClientInfo: { ide?: string; version?: string } | undefined;
-// One random session ID per stdio process invocation, so backend analytics
-// can group all tool calls from a single client launch (Cursor, Claude Desktop, etc.)
-// the same way it groups requests sharing an `mcp-session-id` header in HTTP mode.
+// One session ID per stdio process.
 let stdioSessionId: string | undefined;
 
 /**
@@ -213,13 +211,9 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
         idempotentHint: true,
       },
     },
-    async ({ query, libraryName }, extra) => {
+    async ({ query, libraryName }) => {
       const ctx = getClientContext();
-      const requestCtx = {
-        ...ctx,
-        sessionId: extra.sessionId ?? ctx.sessionId,
-      };
-      const searchResponse = await searchLibraries(query, libraryName, requestCtx);
+      const searchResponse = await searchLibraries(query, libraryName, ctx);
 
       if (!searchResponse.results || searchResponse.results.length === 0) {
         const text = searchResponse.error ?? "No libraries found matching the provided name.";
@@ -274,16 +268,9 @@ Do not call this tool more than 3 times per question.`,
         idempotentHint: true,
       },
     },
-    async ({ query, libraryId }, extra) => {
+    async ({ query, libraryId }) => {
       const ctx = getClientContext();
-      const requestCtx = {
-        ...ctx,
-        sessionId: extra.sessionId ?? ctx.sessionId,
-      };
-      const response = await fetchLibraryContext(
-        { query, libraryId },
-        requestCtx
-      );
+      const response = await fetchLibraryContext({ query, libraryId }, ctx);
 
       return {
         content: [
