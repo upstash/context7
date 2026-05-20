@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.3
+
+### Patch Changes
+
+- dea0e43: Declare `@inquirer/core` as a direct dependency of the CLI. It was previously imported in `selectOrInput.ts` but only resolvable as a transitive of `@inquirer/prompts`, which caused `ctx7` to fail at startup with `ERR_MODULE_NOT_FOUND` under pnpm's isolated node linker.
+- 34fda7d: Add `--stdio` flag to `ctx7 setup` to configure Context7 as a local stdio MCP server.
+- 61de754: Harden skill name handling during `ctx7 skills install` and `ctx7 skills remove`. Skill names from remote `SKILL.md` files are now restricted to a safe character set, and the install sinks assert the target directory is a direct child of the skills root before writing.
+
 ## 0.4.2
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "ctx7",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Context7 CLI - Manage AI coding skills and documentation context",
   "type": "module",
   "bin": {
