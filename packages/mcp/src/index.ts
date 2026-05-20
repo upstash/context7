@@ -272,10 +272,13 @@ Do not call this tool more than 3 times per question.`,
       },
     },
     async ({ query, libraryId }, extra) => {
-      const response = await fetchLibraryContext({ query, libraryId }, {
-        ...getClientContext(),
-        sessionId: extra.sessionId,
-      });
+      const response = await fetchLibraryContext(
+        { query, libraryId },
+        {
+          ...getClientContext(),
+          sessionId: extra.sessionId,
+        }
+      );
 
       return {
         content: [
