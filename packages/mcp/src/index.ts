@@ -79,6 +79,10 @@ const requestContext = new AsyncLocalStorage<ClientContext>();
 // Global state for stdio mode only
 let stdioApiKey: string | undefined;
 let stdioClientInfo: { ide?: string; version?: string } | undefined;
+// One random session ID per stdio process invocation, so backend analytics
+// can group all tool calls from a single client launch (Cursor, Claude Desktop, etc.)
+// the same way it groups requests sharing an `mcp-session-id` header in HTTP mode.
+let stdioSessionId: string | undefined;
 
 /**
  * Get the effective client context
@@ -96,6 +100,7 @@ function getClientContext(): ClientContext {
     apiKey: stdioApiKey,
     clientInfo: stdioClientInfo,
     transport: "stdio",
+    sessionId: stdioSessionId,
   };
 }
 
@@ -208,9 +213,10 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       },
     },
     async ({ query, libraryName }, extra) => {
+      const ctx = getClientContext();
       const searchResponse = await searchLibraries(query, libraryName, {
-        ...getClientContext(),
-        sessionId: extra.sessionId,
+        ...ctx,
+        sessionId: extra.sessionId ?? ctx.sessionId,
       });
 
       if (!searchResponse.results || searchResponse.results.length === 0) {
@@ -272,11 +278,12 @@ Do not call this tool more than 3 times per question.`,
       },
     },
     async ({ query, libraryId }, extra) => {
+      const ctx = getClientContext();
       const response = await fetchLibraryContext(
         { query, libraryId },
         {
-          ...getClientContext(),
-          sessionId: extra.sessionId,
+          ...ctx,
+          sessionId: extra.sessionId ?? ctx.sessionId,
         }
       );
 
@@ -620,6 +627,7 @@ async function main() {
     startServer(initialPort);
   } else {
     stdioApiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
+    stdioSessionId = randomUUID();
 
     process.stdin.on("end", () => process.exit(0));
     process.stdin.on("close", () => process.exit(0));
