@@ -1,0 +1,41 @@
+{
+  "name": "context7",
+  "version": "1.0.0",
+  "description": "Up-to-date documentation lookup for libraries, frameworks, SDKs, and APIs. Pulls version-specific docs and code examples directly from source repositories into Codex.",
+  "author": {
+    "name": "Upstash",
+    "url": "https://upstash.com"
+  },
+  "homepage": "https://context7.com",
+  "repository": "https://github.com/upstash/context7",
+  "license": "MIT",
+  "keywords": [
+    "context7",
+    "documentation",
+    "mcp",
+    "library-docs",
+    "framework-docs",
+    "api-reference",
+    "code-examples"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Context7",
+    "shortDescription": "Up-to-date code docs for any prompt",
+    "longDescription": "Context7 fetches current documentation directly from source repositories so Codex stops relying on stale training data or hallucinated APIs. Ask about any library, framework, SDK, or CLI tool and get version-specific answers grounded in real docs.",
+    "developerName": "Upstash",
+    "category": "Productivity",
+    "websiteURL": "https://context7.com",
+    "privacyPolicyURL": "https://upstash.com/trust/privacy.pdf",
+    "termsOfServiceURL": "https://upstash.com/trust/terms.pdf",
+    "defaultPrompt": [
+      "How do I set up authentication in Next.js 15?",
+      "Show me the latest Prisma syntax for relations.",
+      "What are the Supabase Row Level Security best practices?"
+    ],
+    "brandColor": "#059669",
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.svg"
+  }
+}

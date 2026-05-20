@@ -20,6 +20,8 @@
     "lint:check": "pnpm -r run lint:check",
     "format": "pnpm -r run format",
     "format:check": "pnpm -r run format:check",
+    "sync:plugins": "tsx scripts/sync-plugins.ts",
+    "sync:plugins:check": "tsx scripts/sync-plugins.ts --check",
     "release": "pnpm build && changeset publish",
     "release:snapshot": "changeset version --snapshot canary && pnpm build && changeset publish --tag canary --no-git-tag"
   },
@@ -51,6 +53,7 @@
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.5",
     "prettier": "^3.6.2",
+    "tsx": "^4.20.3",
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.28.0"
   },
