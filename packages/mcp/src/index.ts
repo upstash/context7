@@ -211,7 +211,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
         idempotentHint: true,
       },
     },
-    async ({ query, libraryName }) => {
+    async ({ query, libraryName }: { query: string; libraryName: string }) => {
       const ctx = getClientContext();
       const searchResponse = await searchLibraries(query, libraryName, ctx);
 
@@ -268,10 +268,9 @@ Do not call this tool more than 3 times per question.`,
         idempotentHint: true,
       },
     },
-    async ({ query, libraryId }) => {
+    async ({ query, libraryId }: { query: string; libraryId: string }) => {
       const ctx = getClientContext();
       const response = await fetchLibraryContext({ query, libraryId }, ctx);
-
       return {
         content: [
           {
@@ -398,9 +397,9 @@ async function main() {
       res: express.Response,
       requireAuth: boolean
     ) => {
-      // Reject GET requests — we don't push server-initiated messages (notifications,
-      // sampling, elicitation), so an SSE GET stream would just sit idle and rack up
-      // ingress timeouts. 405 is spec-compliant per MCP StreamableHTTP (2025-03-26).
+      // Reject GET requests — this server is stateless and does not send server-initiated
+      // notifications, so SSE streams serve no purpose and cause mass NGINX timeouts.
+      // Returning 405 is spec-compliant per MCP StreamableHTTP (2025-03-26).
       if (req.method === "GET") {
         return res.status(405).json({
           jsonrpc: "2.0",
@@ -502,8 +501,8 @@ async function main() {
           sessionIdGenerator: undefined,
           enableJsonResponse: false,
         });
-        const server = createMcpServer();
 
+        const server = createMcpServer();
         res.on("close", () => {
           transport.close();
           server.close();
