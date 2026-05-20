@@ -20,7 +20,7 @@ const program = new Command();
 program
   .name("ctx7")
   .description("Context7 CLI - Manage AI coding skills and documentation context")
-  .version(VERSION)
+  .version(VERSION, "-v, --version")
   .option("--base-url <url>")
   .hook("preAction", (thisCommand) => {
     const opts = thisCommand.opts();
