@@ -20,11 +20,7 @@ export function createSessionStore() {
 
   return {
     async create(sessionId: string) {
-      try {
-        await redis.set(getSessionKey(sessionId), "1", { ex: SESSION_TTL_SECONDS });
-      } catch (err) {
-        console.error(`Error creating Redis session record ${sessionId}:`, err);
-      }
+      await redis.set(getSessionKey(sessionId), "1", { ex: SESSION_TTL_SECONDS });
     },
 
     async refresh(sessionId: string) {
@@ -37,11 +33,7 @@ export function createSessionStore() {
     },
 
     async delete(sessionId: string) {
-      try {
-        await redis.del(getSessionKey(sessionId));
-      } catch (err) {
-        console.error(`Error deleting Redis session record ${sessionId}:`, err);
-      }
+      await redis.del(getSessionKey(sessionId));
     },
   };
 }
