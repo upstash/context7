@@ -397,9 +397,9 @@ async function main() {
       res: express.Response,
       requireAuth: boolean
     ) => {
-      // Reject GET requests — this server is stateless and does not send server-initiated
-      // notifications, so SSE streams serve no purpose and cause mass NGINX timeouts.
-      // Returning 405 is spec-compliant per MCP StreamableHTTP (2025-03-26).
+      // Reject GET requests — sessions are tracked in Redis, but this server does not send
+      // server-initiated notifications, so SSE streams serve no purpose and cause mass NGINX
+      // timeouts. Returning 405 is spec-compliant per MCP StreamableHTTP (2025-03-26).
       if (req.method === "GET") {
         return res.status(405).json({
           jsonrpc: "2.0",
@@ -467,11 +467,11 @@ async function main() {
           return res.status(200).end();
         }
 
-        let requestSessionId: string;
+        let effectiveSessionId: string;
         if (!sessionId && req.method === "POST" && isInitializeRequest(req.body)) {
-          requestSessionId = randomUUID();
-          await sessionStore.create(requestSessionId);
-          res.setHeader("mcp-session-id", requestSessionId);
+          effectiveSessionId = randomUUID();
+          await sessionStore.create(effectiveSessionId);
+          res.setHeader("mcp-session-id", effectiveSessionId);
         } else if (sessionId && req.method === "POST" && !isInitializeRequest(req.body)) {
           const sessionExists = await sessionStore.refresh(sessionId);
           if (!sessionExists) {
@@ -481,7 +481,7 @@ async function main() {
               id: null,
             });
           }
-          requestSessionId = sessionId;
+          effectiveSessionId = sessionId;
         } else {
           return res.status(400).json({
             jsonrpc: "2.0",
@@ -490,8 +490,11 @@ async function main() {
           });
         }
 
-        context.sessionId = requestSessionId;
+        context.sessionId = effectiveSessionId;
 
+        // sessionIdGenerator is undefined because session lifecycle (create/refresh/delete)
+        // is owned by the route handler above and persisted in Redis, not by the SDK transport.
+        //
         // Use SSE responses for tool calls (enableJsonResponse: false). The SDK then
         // flushes response headers immediately after parsing the request rather than
         // buffering until the tool returns. This is required for long-running tools
@@ -621,13 +624,6 @@ async function main() {
         );
       });
     };
-
-    const shutdown = async (signal: string) => {
-      console.error(`Received ${signal}, shutting down server...`);
-      process.exit(0);
-    };
-    process.on("SIGINT", () => shutdown("SIGINT"));
-    process.on("SIGTERM", () => shutdown("SIGTERM"));
 
     startServer(initialPort);
   } else {
