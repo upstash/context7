@@ -15,37 +15,51 @@ jobs:
     permissions:
       id-token: write # Required for OIDC authentication with MCP Registry
       contents: read
+    env:
+      MCP_PUBLISHER_VERSION: v1.4.0
+      # sha256 of mcp-publisher_linux_amd64.tar.gz from the v1.4.0 release.
+      # Verify against https://github.com/modelcontextprotocol/registry/releases/tag/v1.4.0
+      MCP_PUBLISHER_SHA256: c4b402b43a85166c3f840641ca1c9e6de5bfa1cf533c22576d663ccbda0711bb
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: lts/*
 
       - name: Set version
+        env:
+          USER_VERSION: ${{ inputs.version }}
         run: |
-          if [ -n "${{ inputs.version }}" ]; then
-            VERSION="${{ inputs.version }}"
-            # Remove 'v' prefix if it exists
-            VERSION="${VERSION#v}"
+          if [ -n "$USER_VERSION" ]; then
+            if ! [[ "$USER_VERSION" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$ ]]; then
+              echo "::error::Invalid version format: $USER_VERSION"
+              exit 1
+            fi
+            VERSION="${USER_VERSION#v}"
           else
             VERSION=$(node -p "require('./packages/mcp/package.json').version")
           fi
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "Publishing version: $VERSION"
 
       - name: Update package version in server.json
         run: |
-          echo $(jq --arg v "${{ env.VERSION }}" '.version = $v | .packages[0].version = $v' server.json) > server.json
+          jq --arg v "$VERSION" '.version = $v | .packages[0].version = $v' server.json > server.json.tmp
+          mv server.json.tmp server.json
 
       - name: Validate server.json
         run: npx mcp-registry-validator validate server.json
 
       - name: Install MCP Publisher
         run: |
-          curl -L "https://github.com/modelcontextprotocol/registry/releases/download/v1.4.0/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+          curl -fSL -o mcp-publisher.tar.gz \
+            "https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"
+          echo "${MCP_PUBLISHER_SHA256}  mcp-publisher.tar.gz" | sha256sum -c -
+          tar xzf mcp-publisher.tar.gz mcp-publisher
+          rm mcp-publisher.tar.gz
 
       - name: Login to MCP Registry
         run: ./mcp-publisher login github-oidc
