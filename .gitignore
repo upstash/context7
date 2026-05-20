@@ -172,6 +172,7 @@ dist
 .idea
 
 .mcp.json
+server.json
 .cursor
 !plugins/cursor/context7/.cursor
 .opencode
