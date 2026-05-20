@@ -46,7 +46,7 @@ Works in two modes:
 > [!NOTE]
 > **API Key Recommended**: Get a free API key at [context7.com/dashboard](https://context7.com/dashboard) for higher rate limits.
 
-Set up Context7 for your coding agents with a single command:
+Set up Context7 for your coding agents with a single command. The `ctx7` CLI requires Node.js 18 or newer.
 
 ```bash
 npx ctx7 setup
