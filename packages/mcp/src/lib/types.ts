@@ -31,3 +31,16 @@ export type ContextRequest = {
 export type ContextResponse = {
   data: string;
 };
+
+export interface ClientContext {
+  clientIp?: string;
+  apiKey?: string;
+  clientInfo?: {
+    ide?: string;
+    version?: string;
+  };
+  transport?: "stdio" | "http";
+  /** Mutable: set by the upstream API layer when the backend signals the
+   *  client should be prompted to sign in. Read by the auth-prompt wrapper. */
+  shouldPrompt?: boolean;
+}
