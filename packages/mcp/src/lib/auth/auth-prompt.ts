@@ -13,6 +13,7 @@ function clientFlagForCli(ide: string | undefined): string {
 
 export interface BuildAuthPromptOptions {
   clientIde?: string;
+  transport?: "stdio" | "http";
 }
 
 /**
@@ -23,12 +24,18 @@ export interface BuildAuthPromptOptions {
  */
 export function appendAuthPrompt(text: string, ctx: ClientContext): string {
   if (ctx.apiKey || !ctx.shouldPrompt) return text;
-  return `${text}\n\n${buildAuthPrompt({ clientIde: ctx.clientInfo?.ide })}`;
+  return `${text}\n\n${buildAuthPrompt({
+    clientIde: ctx.clientInfo?.ide,
+    transport: ctx.transport,
+  })}`;
 }
 
 export function buildAuthPrompt(opts: BuildAuthPromptOptions): string {
   const flag = clientFlagForCli(opts.clientIde);
-  const command = flag ? `npx ctx7 setup ${flag} --mcp -y` : `npx ctx7 setup --mcp`;
+  const transportFlag = opts.transport === "stdio" ? " --stdio" : "";
+  const command = flag
+    ? `npx ctx7 setup ${flag} --mcp${transportFlag} -y`
+    : `npx ctx7 setup --mcp${transportFlag}`;
 
   return [
     "---",
