@@ -5,7 +5,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { z } from "zod";
 import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
-import { ClientContext } from "./lib/encryption.js";
+import type { ClientContext } from "./lib/types.js";
 import { formatSearchResults, extractClientInfoFromUserAgent } from "./lib/utils.js";
 import { isJWT, validateJWT } from "./lib/jwt.js";
 import express from "express";
@@ -21,6 +21,7 @@ import {
   AUTH_SERVER_URL,
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
+import { appendAuthPrompt } from "./lib/auth/auth-prompt.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -214,35 +215,31 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
     },
     async ({ query, libraryName }, extra) => {
       const ctx = getClientContext();
-      const searchResponse = await searchLibraries(query, libraryName, {
+      const requestCtx = {
         ...ctx,
         sessionId: extra.sessionId ?? ctx.sessionId,
-      });
+      };
+      const searchResponse = await searchLibraries(query, libraryName, requestCtx);
 
       if (!searchResponse.results || searchResponse.results.length === 0) {
+        const text = searchResponse.error ?? "No libraries found matching the provided name.";
         return {
           content: [
             {
               type: "text",
-              text: searchResponse.error
-                ? searchResponse.error
-                : "No libraries found matching the provided name.",
+              text: appendAuthPrompt(text, ctx),
             },
           ],
         };
       }
 
       const resultsText = formatSearchResults(searchResponse);
-
-      const responseText = `Available Libraries:
-
-${resultsText}`;
-
+      const responseText = `Available Libraries:\n\n${resultsText}`;
       return {
         content: [
           {
             type: "text",
-            text: responseText,
+            text: appendAuthPrompt(responseText, ctx),
           },
         ],
       };
@@ -279,19 +276,20 @@ Do not call this tool more than 3 times per question.`,
     },
     async ({ query, libraryId }, extra) => {
       const ctx = getClientContext();
+      const requestCtx = {
+        ...ctx,
+        sessionId: extra.sessionId ?? ctx.sessionId,
+      };
       const response = await fetchLibraryContext(
         { query, libraryId },
-        {
-          ...ctx,
-          sessionId: extra.sessionId ?? ctx.sessionId,
-        }
+        requestCtx
       );
 
       return {
         content: [
           {
             type: "text",
-            text: response.data,
+            text: appendAuthPrompt(response.data, ctx),
           },
         ],
       };
