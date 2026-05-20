@@ -36,6 +36,7 @@ export interface ClientContext {
     version?: string;
   };
   transport?: "stdio" | "http";
+  sessionId?: string;
 }
 
 /**
@@ -50,6 +51,9 @@ export function generateHeaders(context: ClientContext): Record<string, string> 
 
   if (context.clientIp) {
     headers["mcp-client-ip"] = encryptClientIp(context.clientIp);
+  }
+  if (context.sessionId) {
+    headers["mcp-session-id"] = context.sessionId;
   }
   if (context.apiKey) {
     headers["Authorization"] = `Bearer ${context.apiKey}`;

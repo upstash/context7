@@ -10,8 +10,11 @@ import { formatSearchResults, extractClientInfoFromUserAgent } from "./lib/utils
 import { isJWT, validateJWT } from "./lib/jwt.js";
 import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
+import { InMemoryEventStore } from "@modelcontextprotocol/sdk/examples/shared/inMemoryEventStore.js";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
+import { randomUUID } from "node:crypto";
 import {
   SERVER_VERSION,
   RESOURCE_URL,
@@ -204,8 +207,11 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
         idempotentHint: true,
       },
     },
-    async ({ query, libraryName }) => {
-      const searchResponse = await searchLibraries(query, libraryName, getClientContext());
+    async ({ query, libraryName }, extra) => {
+      const searchResponse = await searchLibraries(query, libraryName, {
+        ...getClientContext(),
+        sessionId: extra.sessionId,
+      });
 
       if (!searchResponse.results || searchResponse.results.length === 0) {
         return {
@@ -265,8 +271,11 @@ Do not call this tool more than 3 times per question.`,
         idempotentHint: true,
       },
     },
-    async ({ query, libraryId }) => {
-      const response = await fetchLibraryContext({ query, libraryId }, getClientContext());
+    async ({ query, libraryId }, extra) => {
+      const response = await fetchLibraryContext({ query, libraryId }, {
+        ...getClientContext(),
+        sessionId: extra.sessionId,
+      });
 
       return {
         content: [
@@ -387,22 +396,17 @@ async function main() {
       );
     };
 
+    // Session-keyed transport map. One StreamableHTTPServerTransport (and one connected
+    // McpServer) per MCP session, looked up on every request via the `mcp-session-id`
+    // header. Both `/mcp` and `/mcp/oauth` share this map — auth is enforced per request
+    // via `requireAuth`, not stored on the session.
+    const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
+
     const handleMcpRequest = async (
       req: express.Request,
       res: express.Response,
       requireAuth: boolean
     ) => {
-      // Reject GET requests — this server is stateless and does not send server-initiated
-      // notifications, so SSE streams serve no purpose and cause mass NGINX timeouts.
-      // Returning 405 is spec-compliant per MCP StreamableHTTP (2025-03-26).
-      if (req.method === "GET") {
-        return res.status(405).json({
-          jsonrpc: "2.0",
-          error: { code: -32000, message: "Server does not support GET requests" },
-          id: null,
-        });
-      }
-
       try {
         const apiKey = extractApiKey(req);
         const resourceUrl = RESOURCE_URL;
@@ -448,25 +452,45 @@ async function main() {
           transport: "http",
         };
 
-        // Use SSE responses for tool calls (enableJsonResponse: false). The SDK then
-        // flushes response headers immediately after parsing the request rather than
-        // buffering until the tool returns. This is required for long-running tools
-        // because some MCP HTTP clients cap the underlying fetch at 60s waiting for
-        // headers, even though the per-tool timeout is much higher.
-        const transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: undefined,
-          enableJsonResponse: false,
-        });
+        const sessionId = req.headers["mcp-session-id"] as string | undefined;
+        let transport: StreamableHTTPServerTransport;
 
-        const server = createMcpServer();
-        res.on("close", () => {
-          transport.close();
-          server.close();
-        });
+        if (sessionId && transports[sessionId]) {
+          transport = transports[sessionId];
+        } else if (!sessionId && req.method === "POST" && isInitializeRequest(req.body)) {
+          // Use SSE responses for tool calls (enableJsonResponse: false). The SDK then
+          // flushes response headers immediately after parsing the request rather than
+          // buffering until the tool returns. This is required for long-running tools
+          // because some MCP HTTP clients cap the underlying fetch at 60s waiting for
+          // headers, even though the per-tool timeout is much higher.
+          transport = new StreamableHTTPServerTransport({
+            sessionIdGenerator: () => randomUUID(),
+            enableJsonResponse: false,
+            eventStore: new InMemoryEventStore(),
+            onsessioninitialized: (sid) => {
+              transports[sid] = transport;
+            },
+          });
 
-        await requestContext.run(context, async () => {
+          transport.onclose = () => {
+            const sid = transport.sessionId;
+            if (sid && transports[sid]) {
+              delete transports[sid];
+            }
+          };
+
+          const server = createMcpServer();
           installTransportArgAliasing(transport);
           await server.connect(transport);
+        } else {
+          return res.status(400).json({
+            jsonrpc: "2.0",
+            error: { code: -32000, message: "Bad Request: No valid session ID provided" },
+            id: null,
+          });
+        }
+
+        await requestContext.run(context, async () => {
           await transport.handleRequest(req, res, req.body);
         });
       } catch (error) {
@@ -576,6 +600,19 @@ async function main() {
         );
       });
     };
+
+    process.on("SIGINT", async () => {
+      console.error("Shutting down server...");
+      for (const sid of Object.keys(transports)) {
+        try {
+          await transports[sid].close();
+        } catch (err) {
+          console.error(`Error closing session ${sid}:`, err);
+        }
+        delete transports[sid];
+      }
+      process.exit(0);
+    });
 
     startServer(initialPort);
   } else {
