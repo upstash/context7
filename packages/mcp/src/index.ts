@@ -11,10 +11,10 @@ import { isJWT, validateJWT } from "./lib/jwt.js";
 import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
-import { InMemoryEventStore } from "@modelcontextprotocol/sdk/examples/shared/inMemoryEventStore.js";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
 import { randomUUID } from "node:crypto";
+import { createSessionStore } from "./lib/sessionStore.js";
 import {
   SERVER_VERSION,
   RESOURCE_URL,
@@ -406,17 +406,24 @@ async function main() {
       );
     };
 
-    // Session-keyed transport map. One StreamableHTTPServerTransport (and one connected
-    // McpServer) per MCP session, looked up on every request via the `mcp-session-id`
-    // header. Both `/mcp` and `/mcp/oauth` share this map — auth is enforced per request
-    // via `requireAuth`, not stored on the session.
-    const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
+    const sessionStore = createSessionStore();
 
     const handleMcpRequest = async (
       req: express.Request,
       res: express.Response,
       requireAuth: boolean
     ) => {
+      // Reject GET requests — we don't push server-initiated messages (notifications,
+      // sampling, elicitation), so an SSE GET stream would just sit idle and rack up
+      // ingress timeouts. 405 is spec-compliant per MCP StreamableHTTP (2025-03-26).
+      if (req.method === "GET") {
+        return res.status(405).json({
+          jsonrpc: "2.0",
+          error: { code: -32000, message: "Server does not support GET requests" },
+          id: null,
+        });
+      }
+
       try {
         const apiKey = extractApiKey(req);
         const resourceUrl = RESOURCE_URL;
@@ -462,36 +469,35 @@ async function main() {
           transport: "http",
         };
 
-        const sessionId = req.headers["mcp-session-id"] as string | undefined;
-        let transport: StreamableHTTPServerTransport;
+        const sessionId = extractHeaderValue(req.headers["mcp-session-id"]);
 
-        if (sessionId && transports[sessionId]) {
-          transport = transports[sessionId];
-        } else if (!sessionId && req.method === "POST" && isInitializeRequest(req.body)) {
-          // Use SSE responses for tool calls (enableJsonResponse: false). The SDK then
-          // flushes response headers immediately after parsing the request rather than
-          // buffering until the tool returns. This is required for long-running tools
-          // because some MCP HTTP clients cap the underlying fetch at 60s waiting for
-          // headers, even though the per-tool timeout is much higher.
-          transport = new StreamableHTTPServerTransport({
-            sessionIdGenerator: () => randomUUID(),
-            enableJsonResponse: false,
-            eventStore: new InMemoryEventStore(),
-            onsessioninitialized: (sid) => {
-              transports[sid] = transport;
-            },
-          });
+        if (req.method === "DELETE") {
+          if (!sessionId) {
+            return res.status(400).json({
+              jsonrpc: "2.0",
+              error: { code: -32000, message: "Bad Request: No valid session ID provided" },
+              id: null,
+            });
+          }
+          await sessionStore.delete(sessionId);
+          return res.status(200).end();
+        }
 
-          transport.onclose = () => {
-            const sid = transport.sessionId;
-            if (sid && transports[sid]) {
-              delete transports[sid];
-            }
-          };
-
-          const server = createMcpServer();
-          installTransportArgAliasing(transport);
-          await server.connect(transport);
+        let requestSessionId: string;
+        if (!sessionId && req.method === "POST" && isInitializeRequest(req.body)) {
+          requestSessionId = randomUUID();
+          await sessionStore.create(requestSessionId);
+          res.setHeader("mcp-session-id", requestSessionId);
+        } else if (sessionId && req.method === "POST" && !isInitializeRequest(req.body)) {
+          const sessionExists = await sessionStore.refresh(sessionId);
+          if (!sessionExists) {
+            return res.status(400).json({
+              jsonrpc: "2.0",
+              error: { code: -32000, message: "Bad Request: No valid session ID provided" },
+              id: null,
+            });
+          }
+          requestSessionId = sessionId;
         } else {
           return res.status(400).json({
             jsonrpc: "2.0",
@@ -499,6 +505,27 @@ async function main() {
             id: null,
           });
         }
+
+        context.sessionId = requestSessionId;
+
+        // Use SSE responses for tool calls (enableJsonResponse: false). The SDK then
+        // flushes response headers immediately after parsing the request rather than
+        // buffering until the tool returns. This is required for long-running tools
+        // because some MCP HTTP clients cap the underlying fetch at 60s waiting for
+        // headers, even though the per-tool timeout is much higher.
+        const transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: undefined,
+          enableJsonResponse: false,
+        });
+        const server = createMcpServer();
+
+        res.on("close", () => {
+          transport.close();
+          server.close();
+        });
+
+        installTransportArgAliasing(transport);
+        await server.connect(transport);
 
         await requestContext.run(context, async () => {
           await transport.handleRequest(req, res, req.body);
@@ -611,18 +638,12 @@ async function main() {
       });
     };
 
-    process.on("SIGINT", async () => {
-      console.error("Shutting down server...");
-      for (const sid of Object.keys(transports)) {
-        try {
-          await transports[sid].close();
-        } catch (err) {
-          console.error(`Error closing session ${sid}:`, err);
-        }
-        delete transports[sid];
-      }
+    const shutdown = async (signal: string) => {
+      console.error(`Received ${signal}, shutting down server...`);
       process.exit(0);
-    });
+    };
+    process.on("SIGINT", () => shutdown("SIGINT"));
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
 
     startServer(initialPort);
   } else {
