@@ -47,6 +47,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.1",
     "@types/express": "^5.0.4",
+    "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
     "commander": "^14.0.0",
     "express": "^5.1.0",

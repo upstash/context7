@@ -15,6 +15,7 @@ import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
 import { randomUUID } from "node:crypto";
 import { createSessionStore } from "./lib/sessionStore.js";
+import { createRateLimiters } from "./lib/ratelimit.js";
 import {
   SERVER_VERSION,
   RESOURCE_URL,
@@ -391,6 +392,7 @@ async function main() {
     };
 
     const sessionStore = createSessionStore();
+    const rateLimiters = createRateLimiters();
 
     const handleMcpRequest = async (
       req: express.Request,
@@ -469,6 +471,15 @@ async function main() {
 
         let effectiveSessionId: string;
         if (!sessionId && req.method === "POST" && isInitializeRequest(req.body)) {
+          const rateLimitKey = context.clientIp ?? "unknown";
+          const { success } = await rateLimiters.sessionCreate.limit(rateLimitKey);
+          if (!success) {
+            return res.status(429).json({
+              jsonrpc: "2.0",
+              error: { code: -32000, message: "Too Many Requests: session creation rate limit exceeded" },
+              id: null,
+            });
+          }
           effectiveSessionId = randomUUID();
           await sessionStore.create(effectiveSessionId);
           res.setHeader("mcp-session-id", effectiveSessionId);

@@ -1,20 +1,10 @@
-import { Redis } from "@upstash/redis";
+import { getRedis } from "./redis.js";
 
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
 const SESSION_KEY_PREFIX = "#mcp#session#";
 
-function hasRedisCredentials() {
-  return Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
-}
-
 export function createSessionStore() {
-  if (!hasRedisCredentials()) {
-    throw new Error(
-      "Upstash Redis credentials are required for MCP HTTP sessions. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN."
-    );
-  }
-
-  const redis = Redis.fromEnv();
+  const redis = getRedis();
 
   const getSessionKey = (sessionId: string) => `${SESSION_KEY_PREFIX}${sessionId}`;
 
