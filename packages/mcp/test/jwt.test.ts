@@ -5,7 +5,9 @@ vi.mock("jose", async () => {
   const actual = await vi.importActual<typeof jose>("jose");
   return {
     ...actual,
-    createRemoteJWKSet: vi.fn(() => "fake-jwks" as unknown as ReturnType<typeof jose.createRemoteJWKSet>),
+    createRemoteJWKSet: vi.fn(
+      () => "fake-jwks" as unknown as ReturnType<typeof jose.createRemoteJWKSet>
+    ),
     jwtVerify: vi.fn(),
   };
 });

@@ -2,9 +2,7 @@ import * as jose from "jose";
 import { CLERK_DOMAIN, CONTEXT7_API_BASE_URL } from "./constants.js";
 
 const CLERK_ISSUER = `https://${CLERK_DOMAIN}`;
-const clerkJwks = jose.createRemoteJWKSet(
-  new URL(`https://${CLERK_DOMAIN}/.well-known/jwks.json`)
-);
+const clerkJwks = jose.createRemoteJWKSet(new URL(`https://${CLERK_DOMAIN}/.well-known/jwks.json`));
 
 const ENTRA_V2_ISSUER_RE = /^https:\/\/login\.microsoftonline\.com\/[0-9a-f-]{36}\/v2\.0$/;
 
