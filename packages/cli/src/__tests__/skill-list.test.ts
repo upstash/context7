@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { Command } from "commander";
-import { mkdir, rm } from "fs/promises";
+import { mkdir, rm, realpath } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 
@@ -31,8 +31,9 @@ beforeEach(async () => {
   });
   vi.spyOn(console, "error").mockImplementation(() => {});
   originalCwd = process.cwd();
-  tempDir = join(tmpdir(), `ctx7-skills-list-${Date.now()}`);
-  await mkdir(tempDir, { recursive: true });
+  const rawTempDir = join(tmpdir(), `ctx7-skills-list-${Date.now()}`);
+  await mkdir(rawTempDir, { recursive: true });
+  tempDir = await realpath(rawTempDir);
   process.chdir(tempDir);
 });
 
