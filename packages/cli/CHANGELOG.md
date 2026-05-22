@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.4
+
+### Patch Changes
+
+- 7cacc94: Add `--json` flag to `ctx7 skills list` for machine-parseable output. Emits `{ skills: [{ name, path, source }] }` where `path` is absolute and `source` is the agent type (`universal`, `claude`, `cursor`, `antigravity`). Matches the existing `--json` pattern on `ctx7 library` and `ctx7 docs`.
+
 ## 0.4.3
 
 ### Patch Changes
