@@ -475,9 +475,11 @@ async function main() {
         } else if (sessionId && req.method === "POST" && !isInitializeRequest(req.body)) {
           const sessionExists = await sessionStore.refresh(sessionId);
           if (!sessionExists) {
-            return res.status(400).json({
+            // Per MCP Streamable HTTP spec: 404 signals to the client that the session
+            // has been terminated/expired, so it should re-initialize with a fresh InitializeRequest.
+            return res.status(404).json({
               jsonrpc: "2.0",
-              error: { code: -32000, message: "Bad Request: No valid session ID provided" },
+              error: { code: -32000, message: "Session not found or expired. Please re-initialize." },
               id: null,
             });
           }
