@@ -1,6 +1,7 @@
 import { getRedis } from "./redis.js";
 
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
+const REFRESH_THRESHOLD_SECONDS = 24 * 60 * 60; // 1 day — only extend TTL when below this
 const SESSION_KEY_PREFIX = "#mcp#session#";
 
 // Fail-open: log Redis errors and proceed. The session ID isn't an auth/authz
@@ -23,7 +24,14 @@ export function createSessionStore() {
 
     async refresh(sessionId: string) {
       try {
-        return (await redis.expire(getSessionKey(sessionId), SESSION_TTL_SECONDS)) === 1;
+        // One TTL call tells us both whether the key exists AND how much time it has left.
+        // Only issue an EXPIRE write when the key is approaching expiry
+        const ttl = await redis.ttl(getSessionKey(sessionId));
+        if (ttl < 0) return false;
+        if (ttl < REFRESH_THRESHOLD_SECONDS) {
+          await redis.expire(getSessionKey(sessionId), SESSION_TTL_SECONDS);
+        }
+        return true;
       } catch (err) {
         console.error(`Error refreshing Redis session record ${sessionId}:`, err);
         return true;
