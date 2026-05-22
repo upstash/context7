@@ -479,7 +479,10 @@ async function main() {
             // has been terminated/expired, so it should re-initialize with a fresh InitializeRequest.
             return res.status(404).json({
               jsonrpc: "2.0",
-              error: { code: -32000, message: "Session not found or expired. Please re-initialize." },
+              error: {
+                code: -32000,
+                message: "Session not found or expired. Please re-initialize.",
+              },
               id: null,
             });
           }

@@ -3,6 +3,10 @@ import { getRedis } from "./redis.js";
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
 const SESSION_KEY_PREFIX = "#mcp#session#";
 
+// Fail-open: log Redis errors and proceed. The session ID isn't an auth/authz
+// primitive — only an opaque identifier for log correlation and spec compliance —
+// so an unreachable Redis shouldn't block clients. Ghost sessions self-heal on
+// the next refresh (returns false → client gets 404 → re-inits).
 export function createSessionStore() {
   const redis = getRedis();
 
@@ -10,7 +14,11 @@ export function createSessionStore() {
 
   return {
     async create(sessionId: string) {
-      await redis.set(getSessionKey(sessionId), "1", { ex: SESSION_TTL_SECONDS });
+      try {
+        await redis.set(getSessionKey(sessionId), "1", { ex: SESSION_TTL_SECONDS });
+      } catch (err) {
+        console.error(`Error creating Redis session record ${sessionId}:`, err);
+      }
     },
 
     async refresh(sessionId: string) {
@@ -23,7 +31,11 @@ export function createSessionStore() {
     },
 
     async delete(sessionId: string) {
-      await redis.del(getSessionKey(sessionId));
+      try {
+        await redis.del(getSessionKey(sessionId));
+      } catch (err) {
+        console.error(`Error deleting Redis session record ${sessionId}:`, err);
+      }
     },
   };
 }
