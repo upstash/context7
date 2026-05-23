@@ -1,9 +1,0 @@
-# Smithery configuration file: https://smithery.ai/docs/config#smitheryyaml
-
-startCommand:
-  type: http
-  configSchema:
-    # JSON Schema defining the configuration options for the MCP.
-    type: object
-    description: No configuration required
-  exampleConfig: {}
