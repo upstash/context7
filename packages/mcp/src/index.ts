@@ -10,8 +10,11 @@ import { formatSearchResults, extractClientInfoFromUserAgent } from "./lib/utils
 import { isJWT, validateJWT } from "./lib/jwt.js";
 import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
+import { randomUUID } from "node:crypto";
+import { createSessionStore } from "./lib/sessionStore.js";
 import {
   SERVER_VERSION,
   RESOURCE_URL,
@@ -77,6 +80,8 @@ const requestContext = new AsyncLocalStorage<ClientContext>();
 // Global state for stdio mode only
 let stdioApiKey: string | undefined;
 let stdioClientInfo: { ide?: string; version?: string } | undefined;
+// One session ID per stdio process.
+let stdioSessionId: string | undefined;
 
 /**
  * Get the effective client context
@@ -94,6 +99,7 @@ function getClientContext(): ClientContext {
     apiKey: stdioApiKey,
     clientInfo: stdioClientInfo,
     transport: "stdio",
+    sessionId: stdioSessionId,
   };
 }
 
@@ -384,14 +390,16 @@ async function main() {
       );
     };
 
+    const sessionStore = createSessionStore();
+
     const handleMcpRequest = async (
       req: express.Request,
       res: express.Response,
       requireAuth: boolean
     ) => {
-      // Reject GET requests — this server is stateless and does not send server-initiated
-      // notifications, so SSE streams serve no purpose and cause mass NGINX timeouts.
-      // Returning 405 is spec-compliant per MCP StreamableHTTP (2025-03-26).
+      // Reject GET requests — sessions are tracked in Redis, but this server does not send
+      // server-initiated notifications, so SSE streams serve no purpose and cause mass NGINX
+      // timeouts. Returning 405 is spec-compliant per MCP StreamableHTTP (2025-03-26).
       if (req.method === "GET") {
         return res.status(405).json({
           jsonrpc: "2.0",
@@ -445,6 +453,53 @@ async function main() {
           transport: "http",
         };
 
+        const sessionId = extractHeaderValue(req.headers["mcp-session-id"]);
+
+        if (req.method === "DELETE") {
+          if (!sessionId) {
+            return res.status(400).json({
+              jsonrpc: "2.0",
+              error: { code: -32000, message: "Bad Request: No valid session ID provided" },
+              id: null,
+            });
+          }
+          await sessionStore.delete(sessionId);
+          return res.status(200).end();
+        }
+
+        let effectiveSessionId: string;
+        if (!sessionId && req.method === "POST" && isInitializeRequest(req.body)) {
+          effectiveSessionId = randomUUID();
+          await sessionStore.create(effectiveSessionId);
+          res.setHeader("mcp-session-id", effectiveSessionId);
+        } else if (sessionId && req.method === "POST" && !isInitializeRequest(req.body)) {
+          const sessionExists = await sessionStore.refresh(sessionId);
+          if (!sessionExists) {
+            // Per MCP Streamable HTTP spec: 404 signals to the client that the session
+            // has been terminated/expired, so it should re-initialize with a fresh InitializeRequest.
+            return res.status(404).json({
+              jsonrpc: "2.0",
+              error: {
+                code: -32000,
+                message: "Session not found or expired. Please re-initialize.",
+              },
+              id: null,
+            });
+          }
+          effectiveSessionId = sessionId;
+        } else {
+          return res.status(400).json({
+            jsonrpc: "2.0",
+            error: { code: -32000, message: "Bad Request: No valid session ID provided" },
+            id: null,
+          });
+        }
+
+        context.sessionId = effectiveSessionId;
+
+        // sessionIdGenerator is undefined because session lifecycle (create/refresh/delete)
+        // is owned by the route handler above and persisted in Redis, not by the SDK transport.
+        //
         // Use SSE responses for tool calls (enableJsonResponse: false). The SDK then
         // flushes response headers immediately after parsing the request rather than
         // buffering until the tool returns. This is required for long-running tools
@@ -461,9 +516,10 @@ async function main() {
           server.close();
         });
 
+        installTransportArgAliasing(transport);
+        await server.connect(transport);
+
         await requestContext.run(context, async () => {
-          installTransportArgAliasing(transport);
-          await server.connect(transport);
           await transport.handleRequest(req, res, req.body);
         });
       } catch (error) {
@@ -577,6 +633,7 @@ async function main() {
     startServer(initialPort);
   } else {
     stdioApiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
+    stdioSessionId = randomUUID();
 
     process.stdin.on("end", () => process.exit(0));
     process.stdin.on("close", () => process.exit(0));

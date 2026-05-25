@@ -1,5 +1,15 @@
 # @upstash/context7-mcp
 
+## 3.0.0
+
+### Major Changes
+
+- af6a7b5: Convert the stateless MCP implementation to a stateful one using Redis for session management.
+
+### Patch Changes
+
+- 3d73145: Reduce Redis writes on `refresh` by checking the remaining TTL first and only issuing `EXPIRE` when the session is within one day of expiry.
+
 ## 2.3.0
 
 ### Minor Changes
