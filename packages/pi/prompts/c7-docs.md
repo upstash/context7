@@ -1,6 +1,6 @@
 ---
 description: Fetch Context7 documentation for a library
-argumentHint: <library> <question>
+argument-hint: <library> <question>
 ---
 
 Look up documentation for `$1` using Context7.
