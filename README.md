@@ -121,6 +121,14 @@ Always use Context7 when I need library/API documentation, code generation, setu
 - [API Reference](https://context7.com/docs/api-guide) - REST API documentation
 - [Developer Guide](https://context7.com/docs/resources/developer) - Run Context7 MCP locally
 
+## Packages
+
+- [`@upstash/context7-mcp`](https://www.npmjs.com/package/@upstash/context7-mcp) - MCP server
+- [`ctx7`](https://www.npmjs.com/package/ctx7) - CLI
+- [`@upstash/context7-sdk`](https://www.npmjs.com/package/@upstash/context7-sdk) - TypeScript SDK
+- [`@upstash/context7-tools-ai-sdk`](https://www.npmjs.com/package/@upstash/context7-tools-ai-sdk) - Vercel AI SDK tools
+- [`@upstash/context7-pi`](https://www.npmjs.com/package/@upstash/context7-pi) - pi.dev extension
+
 ## Disclaimer
 
 1- Context7 projects are community-contributed and while we strive to maintain high quality, we cannot guarantee the accuracy, completeness, or security of all library documentation. Projects listed in Context7 are developed and maintained by their respective owners, not by Context7. If you encounter any suspicious, inappropriate, or potentially harmful content, please use the "Report" button on the project page to notify us immediately. We take all reports seriously and will review flagged content promptly to maintain the integrity and safety of our platform. By using Context7, you acknowledge that you do so at your own discretion and risk.
