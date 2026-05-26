@@ -138,6 +138,31 @@ describe("validateJWT - Entra path", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  test("does not cache transient 500 errors — next request retries", async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValueOnce(makeFetchResponse({ ok: false, status: 500 }));
+    fetchMock.mockResolvedValueOnce(
+      makeFetchResponse({
+        jsonData: { teamspaceId: "team-1", tenantId: TENANT_ID, requiredScope: null },
+      })
+    );
+    vi.mocked(jose.jwtVerify).mockResolvedValue({
+      payload: { oid: "u" },
+      protectedHeader: { alg: "RS256" },
+    } as unknown as Awaited<ReturnType<typeof jose.jwtVerify>>);
+
+    const { validateJWT } = await loadModule();
+    const token = makeEntraToken({ iss: ENTRA_ISSUER, aud: AUDIENCE });
+
+    const first = await validateJWT(token);
+    expect(first.valid).toBe(false);
+    expect(first.error).toBe("Unknown audience");
+
+    const second = await validateJWT(token);
+    expect(second.valid).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("validateJWT - Clerk path", () => {

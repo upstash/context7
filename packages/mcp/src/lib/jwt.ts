@@ -32,17 +32,26 @@ async function fetchEntraConfig(audience: string): Promise<EntraConfig | null> {
   const cached = configByAudience.get(audience);
   if (cached && cached.expiresAt > now) return cached.value;
 
-  let value: EntraConfig | null = null;
   try {
     const res = await fetch(
       `${CONTEXT7_API_BASE_URL}/v2/entra/config/${encodeURIComponent(audience)}`
     );
-    if (res.ok) value = (await res.json()) as EntraConfig;
+    if (res.ok) {
+      const value = (await res.json()) as EntraConfig;
+      configByAudience.set(audience, { value, expiresAt: now + CONFIG_TTL_MS });
+      return value;
+    }
+    if (res.status === 404) {
+      // Authoritative "not configured" response — safe to cache the miss so we
+      // don't hammer the app on every token verification.
+      configByAudience.set(audience, { value: null, expiresAt: now + CONFIG_TTL_MS });
+      return null;
+    }
   } catch {
-    // network error: fall through and cache null briefly
+    // Network or JSON parse error: transient. Fall through without caching so
+    // the next request retries.
   }
-  configByAudience.set(audience, { value, expiresAt: now + CONFIG_TTL_MS });
-  return value;
+  return null;
 }
 
 export interface JWTValidationResult {
