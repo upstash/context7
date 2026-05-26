@@ -10,6 +10,7 @@ vi.mock("fs", () => {
     writeFileSync: vi.fn(),
     readFileSync: vi.fn(),
     unlinkSync: vi.fn(),
+    renameSync: vi.fn(),
   };
   return { ...fns, default: fns };
 });
@@ -33,8 +34,9 @@ import {
 } from "../utils/auth.js";
 
 const mfs = vi.mocked(fs);
-const CREDENTIALS_PATH = "/fake-home/.context7/credentials.json";
-const CONFIG_DIR_PATH = "/fake-home/.context7";
+const CREDENTIALS_PATH = "/fake-home/.config/context7/credentials.json";
+const LEGACY_CREDENTIALS_PATH = "/fake-home/.context7/credentials.json";
+const CONFIG_DIR_PATH = "/fake-home/.config/context7";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -48,6 +50,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
 });
 
 describe("generatePKCE", () => {
@@ -96,6 +99,22 @@ describe("saveTokens", () => {
     });
   });
 
+  test("honors XDG_CONFIG_HOME for credentials", () => {
+    vi.stubEnv("XDG_CONFIG_HOME", "/custom-config");
+    mfs.existsSync.mockReturnValue(false);
+    saveTokens({ access_token: "tok", token_type: "bearer" });
+
+    expect(mfs.mkdirSync).toHaveBeenCalledWith("/custom-config/context7", {
+      recursive: true,
+      mode: 0o700,
+    });
+    expect(mfs.writeFileSync).toHaveBeenCalledWith(
+      "/custom-config/context7/credentials.json",
+      expect.any(String),
+      { mode: 0o600 }
+    );
+  });
+
   test("computes expires_at from expires_in when expires_at is absent", () => {
     mfs.existsSync.mockReturnValue(true);
     const now = 1000000;
@@ -124,6 +143,24 @@ describe("loadTokens", () => {
     mfs.existsSync.mockReturnValue(true);
     mfs.readFileSync.mockReturnValue(JSON.stringify(tokens));
     expect(loadTokens()).toEqual(tokens);
+  });
+
+  test("migrates credentials from the legacy ~/.context7 path before reading", () => {
+    const tokens: TokenData = { access_token: "tok", token_type: "bearer" };
+    let migrated = false;
+    mfs.existsSync.mockImplementation((filePath) =>
+      filePath === CREDENTIALS_PATH
+        ? migrated
+        : filePath === LEGACY_CREDENTIALS_PATH || filePath === CONFIG_DIR_PATH
+    );
+    mfs.renameSync.mockImplementation(() => {
+      migrated = true;
+    });
+    mfs.readFileSync.mockReturnValue(JSON.stringify(tokens));
+
+    expect(loadTokens()).toEqual(tokens);
+    expect(mfs.renameSync).toHaveBeenCalledWith(LEGACY_CREDENTIALS_PATH, CREDENTIALS_PATH);
+    expect(mfs.readFileSync).toHaveBeenCalledWith(CREDENTIALS_PATH, "utf-8");
   });
 
   test("returns null on malformed JSON", () => {

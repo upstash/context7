@@ -1,10 +1,13 @@
-import { homedir } from "os";
-import { dirname, join } from "path";
+import { dirname } from "path";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import { NAME, VERSION } from "../constants.js";
+import {
+  UPDATE_STATE_FILE_NAME,
+  getUpdateStateFilePath,
+  migrateLegacyFile,
+} from "./storage-paths.js";
 
 const DEFAULT_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-const UPDATE_STATE_FILE = join(homedir(), ".context7", "cli-state.json");
 
 export type InstallMethod =
   | "npm-global"
@@ -47,12 +50,20 @@ interface CheckForUpdatesOptions {
 }
 
 function getStateFilePath(stateFile?: string): string {
-  return stateFile ?? UPDATE_STATE_FILE;
+  return stateFile ?? getUpdateStateFilePath();
+}
+
+async function prepareStateFilePath(stateFile?: string): Promise<string> {
+  const path = getStateFilePath(stateFile);
+  if (!stateFile) {
+    await migrateLegacyFile(UPDATE_STATE_FILE_NAME, path);
+  }
+  return path;
 }
 
 async function readUpdateState(stateFile?: string): Promise<UpdateState> {
   try {
-    const raw = await readFile(getStateFilePath(stateFile), "utf-8");
+    const raw = await readFile(await prepareStateFilePath(stateFile), "utf-8");
     return JSON.parse(raw) as UpdateState;
   } catch {
     return {};
@@ -60,7 +71,7 @@ async function readUpdateState(stateFile?: string): Promise<UpdateState> {
 }
 
 async function writeUpdateState(state: UpdateState, stateFile?: string): Promise<void> {
-  const path = getStateFilePath(stateFile);
+  const path = await prepareStateFilePath(stateFile);
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, JSON.stringify(state, null, 2) + "\n", "utf-8");
 }
