@@ -55,6 +55,7 @@
     "typescript-eslint": "^8.28.0"
   },
   "dependencies": {
+    "@hono/node-server": "1.19.10",
     "@inquirer/core": "^11.1.1",
     "@inquirer/type": "^4.0.3"
   }
