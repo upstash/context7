@@ -151,23 +151,24 @@ const agents: Record<SetupAgent, AgentConfig> = {
     },
   },
 
+  // Antigravity is built on Gemini infrastructure and shares ~/.gemini/. Per
+  // the official Codelabs guide, Antigravity 2.0/IDE/CLI read MCP servers from
+  // ~/.gemini/config/mcp_config.json globally; there is no project-level MCP
+  // config, so projectPaths is empty and setupAgent falls back to global.
   antigravity: {
     name: "antigravity",
     displayName: "Antigravity",
     mcp: {
-      projectPaths: [join(".agent", "mcp_config.json")],
-      globalPaths: [join(homedir(), ".gemini", "antigravity", "mcp_config.json")],
+      projectPaths: [],
+      globalPaths: [join(homedir(), ".gemini", "config", "mcp_config.json")],
       configKey: "mcpServers",
       buildEntry: (auth, transport) =>
-        transport === "stdio" ? stdioEntry(auth) : withHeaders({ serverUrl: mcpUrl(auth) }, auth),
+        transport === "stdio" ? stdioEntry(auth) : withHeaders({ httpUrl: mcpUrl(auth) }, auth),
     },
     rule: {
-      kind: "file",
-      dir: (scope) =>
-        scope === "global"
-          ? join(homedir(), ".gemini", "antigravity", "rules")
-          : join(".agent", "rules"),
-      filename: "context7.md",
+      kind: "append",
+      file: (scope) => (scope === "global" ? join(homedir(), ".gemini", "GEMINI.md") : "GEMINI.md"),
+      sectionMarker: "<!-- context7 -->",
     },
     skill: {
       name: "context7-mcp",

@@ -307,7 +307,7 @@ async function setupAgent(
   const agent = getAgent(agentName);
 
   const mcpCandidates =
-    scope === "global"
+    scope === "global" || agent.mcp.projectPaths.length === 0
       ? agent.mcp.globalPaths
       : agent.mcp.projectPaths.map((p) => join(process.cwd(), p));
   const mcpPath = await resolveMcpPath(mcpCandidates);

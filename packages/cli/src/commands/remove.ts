@@ -189,7 +189,7 @@ async function pathExists(path: string): Promise<boolean> {
 async function hasMcpConfig(agentName: SetupAgent, scope: Scope): Promise<boolean> {
   const agent = getAgent(agentName);
   const candidates =
-    scope === "global"
+    scope === "global" || agent.mcp.projectPaths.length === 0
       ? agent.mcp.globalPaths
       : agent.mcp.projectPaths.map((path) => join(process.cwd(), path));
   const mcpPath = await resolveMcpPath(candidates);
@@ -320,7 +320,7 @@ async function resolveModes(
 async function uninstallMcp(agentName: SetupAgent, scope: Scope): Promise<CleanupStatus> {
   const agent = getAgent(agentName);
   const mcpCandidates =
-    scope === "global"
+    scope === "global" || agent.mcp.projectPaths.length === 0
       ? agent.mcp.globalPaths
       : agent.mcp.projectPaths.map((path) => join(process.cwd(), path));
   const mcpPath = await resolveMcpPath(mcpCandidates);
