@@ -2,7 +2,7 @@ import { access } from "fs/promises";
 import { join } from "path";
 import { homedir } from "os";
 
-export type SetupAgent = "claude" | "cursor" | "opencode" | "codex" | "gemini";
+export type SetupAgent = "claude" | "cursor" | "antigravity" | "opencode" | "codex" | "gemini";
 export type AuthMode = "oauth" | "api-key";
 export type Transport = "http" | "stdio";
 
@@ -14,6 +14,7 @@ export interface AuthOptions {
 export const SETUP_AGENT_NAMES: Record<SetupAgent, string> = {
   claude: "Claude Code",
   cursor: "Cursor",
+  antigravity: "Antigravity",
   opencode: "OpenCode",
   codex: "Codex",
   gemini: "Gemini CLI",
@@ -147,6 +148,35 @@ const agents: Record<SetupAgent, AgentConfig> = {
     detect: {
       projectPaths: [".cursor"],
       globalPaths: [join(homedir(), ".cursor")],
+    },
+  },
+
+  antigravity: {
+    name: "antigravity",
+    displayName: "Antigravity",
+    mcp: {
+      projectPaths: [join(".agent", "mcp_config.json")],
+      globalPaths: [join(homedir(), ".gemini", "antigravity", "mcp_config.json")],
+      configKey: "mcpServers",
+      buildEntry: (auth, transport) =>
+        transport === "stdio" ? stdioEntry(auth) : withHeaders({ serverUrl: mcpUrl(auth) }, auth),
+    },
+    rule: {
+      kind: "file",
+      dir: (scope) =>
+        scope === "global"
+          ? join(homedir(), ".gemini", "antigravity", "rules")
+          : join(".agent", "rules"),
+      filename: "context7.md",
+    },
+    skill: {
+      name: "context7-mcp",
+      dir: (scope) =>
+        scope === "global" ? join(homedir(), ".agent", "skills") : join(".agent", "skills"),
+    },
+    detect: {
+      projectPaths: [".agent"],
+      globalPaths: [join(homedir(), ".gemini", "antigravity"), join(homedir(), ".agent")],
     },
   },
 

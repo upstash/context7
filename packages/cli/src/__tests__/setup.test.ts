@@ -47,7 +47,7 @@ describe("getRuleContent", () => {
     expect(cursor).toContain("---\nalwaysApply: true\n---");
     expect(cursor).toContain(MOCK_MCP_RULE);
 
-    for (const agent of ["claude", "codex", "opencode", "gemini"]) {
+    for (const agent of ["claude", "antigravity", "codex", "opencode", "gemini"]) {
       const content = await getRuleContent("mcp", agent);
       expect(content).not.toContain("alwaysApply");
     }
@@ -1022,7 +1022,14 @@ describe("agent config integration", () => {
 
   describe("all agents have consistent config", () => {
     test("all agents are covered", () => {
-      expect(ALL_AGENT_NAMES).toEqual(["claude", "cursor", "opencode", "codex", "gemini"]);
+      expect(ALL_AGENT_NAMES).toEqual([
+        "claude",
+        "cursor",
+        "antigravity",
+        "opencode",
+        "codex",
+        "gemini",
+      ]);
     });
 
     test.each(ALL_AGENT_NAMES)("%s buildEntry returns url for both auth modes", (name) => {
@@ -1030,7 +1037,7 @@ describe("agent config integration", () => {
       const apiEntry = agent.mcp.buildEntry(apiKeyAuth, "http");
       const oauthEntry = agent.mcp.buildEntry(oauthAuth, "http");
 
-      const urlKey = name === "gemini" ? "httpUrl" : "url";
+      const urlKey = name === "gemini" ? "httpUrl" : name === "antigravity" ? "serverUrl" : "url";
       expect(apiEntry[urlKey]).toBe("https://mcp.context7.com/mcp");
       expect(oauthEntry[urlKey]).toBe("https://mcp.context7.com/mcp/oauth");
     });

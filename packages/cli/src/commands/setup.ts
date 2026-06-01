@@ -42,7 +42,6 @@ type SetupMode = "mcp" | "cli";
 interface SetupOptions {
   claude?: boolean;
   cursor?: boolean;
-  universal?: boolean;
   antigravity?: boolean;
   opencode?: boolean;
   codex?: boolean;
@@ -71,6 +70,7 @@ function getSelectedAgents(options: SetupOptions): SetupAgent[] {
   const agents: SetupAgent[] = [];
   if (options.claude) agents.push("claude");
   if (options.cursor) agents.push("cursor");
+  if (options.antigravity) agents.push("antigravity");
   if (options.opencode) agents.push("opencode");
   if (options.codex) agents.push("codex");
   if (options.gemini) agents.push("gemini");
@@ -83,7 +83,6 @@ export function registerSetupCommand(program: Command): void {
     .description("Set up Context7 for your AI coding agent")
     .option("--claude", "Set up for Claude Code")
     .option("--cursor", "Set up for Cursor")
-    .option("--universal", "Set up for Universal (.agents/skills)")
     .option("--antigravity", "Set up for Antigravity (.agent/skills)")
     .option("--opencode", "Set up for OpenCode")
     .option("--codex", "Set up for Codex")
