@@ -337,10 +337,10 @@ An owner or admin of the teamspace configures both from the dashboard.
 ### Step 1: Configure the tenant
 
 1. Sign in to [context7.com/dashboard](https://context7.com/dashboard) and select the teamspace that will own the integration.
-2. **Overview** tab → **Microsoft Entra ID** card → **Configure**.
+2. **Settings** tab → **Microsoft Entra ID** card → **Configure**.
 
    <Note>
-   The card is visible only for enterprise teamspaces and active enterprise trials.
+   The Settings tab itself is visible only for enterprise teamspaces and active enterprise trials. If you don't see it, confirm the selected teamspace is on an enterprise plan.
    </Note>
 
 3. Fill in:
@@ -354,7 +354,7 @@ An owner or admin of the teamspace configures both from the dashboard.
 
 ### Step 2: Pre-provision your developers
 
-After saving the tenant configuration, scroll down to the **Microsoft Entra ID users** card on the same Overview tab. This is where you list every Entra user who should be able to authenticate to the teamspace through APIM.
+After saving the tenant configuration, scroll down to the **Microsoft Entra ID users** card on the same Settings tab. This is where you list every Entra user who should be able to authenticate to the teamspace through APIM.
 
 1. Click **Add user**.
 2. Enter the user's:
@@ -363,6 +363,14 @@ After saving the tenant configuration, scroll down to the **Microsoft Entra ID u
 3. Click **Add user** to save.
 
 Context7 creates a Clerk user record for the developer, adds them as a `developer` member of the teamspace, and inserts a `(tenant, oid, teamspace)` mapping. The same email can be added to multiple teamspaces — the Clerk user is reused and a separate mapping row is created per teamspace.
+
+<Note>
+Clicking **Remove** on the Microsoft Entra ID card removes both the tenant configuration **and** all provisioned users for the teamspace in a single step. If you only need to revoke a single user, remove them from the Microsoft Entra ID users card instead.
+</Note>
+
+<Note>
+Each MCP API app (audience) can be configured for **one** teamspace at a time. If you reuse an audience already claimed by a different teamspace you will see "This audience is already configured for another teamspace" — open the other teamspace's Settings tab and remove the Entra configuration there first, or register a new MCP API app for this teamspace.
+</Note>
 
 <Note>
 For large rollouts (tens or hundreds of developers), CSV bulk-import and Entra SCIM provisioning are on the roadmap. Reach out to [context7@upstash.com](mailto:context7@upstash.com) if your scale needs either ahead of general availability.
@@ -518,7 +526,45 @@ Expected:
 - `/authorize` returns `302 Found` with a `Location` header pointing at Entra's authorize endpoint.
 - An unauthorised POST to `/context7/mcp` returns `401` with `WWW-Authenticate: Bearer resource_metadata="https://<your-apim-host>/.well-known/oauth-protected-resource"`.
 
-## Part 6: Connect an MCP client
+## Part 6: Smoke test the gateway from CLI
+
+Before pointing real MCP clients at the gateway, validate the full OBO flow from your terminal. This catches misconfigurations (wrong audience, missing scope, unmapped user) without involving an MCP client.
+
+### Step 1: Authorize the Azure CLI on the Gateway app
+
+Azure CLI's well-known client ID is `04b07795-8ddb-461a-bbee-02f9e1bf7b46`. Pre-authorize it on the Gateway app's scope so `az account get-access-token` can mint tokens:
+
+1. Entra admin center → **App registrations** → **Context7 APIM Gateway** → **Expose an API**.
+2. Under **Authorized client applications**, click **+ Add a client application**.
+3. **Client ID:** `04b07795-8ddb-461a-bbee-02f9e1bf7b46`.
+4. Tick the `api://<gateway-app-id>/Mcp.Gateway.Access` scope. **Add**.
+
+<Note>
+This pre-authorization is only required for the CLI smoke test described here. End users connecting via VS Code with GitHub Copilot use Microsoft's first-party VS Code client ID, which you already pre-authorized in [Part 2 Step 3](#step-3-wire-the-permission-chain).
+</Note>
+
+### Step 2: Acquire a token and call the gateway
+
+```bash
+GATEWAY_APP_ID=<gateway-app-client-id>
+APIM_HOST=<your-apim-host>
+
+az login --tenant <your-tenant-id> --scope api://$GATEWAY_APP_ID/.default
+
+TOKEN=$(az account get-access-token --resource api://$GATEWAY_APP_ID --query accessToken -o tsv)
+
+curl -i -X POST "https://$APIM_HOST/context7/mcp" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","method":"initialize","id":1,"params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"smoke","version":"0.0.1"}}}'
+```
+
+Expected: `200 OK`, an `mcp-session-id` response header, and a Server-Sent Events body with the Context7 server info. That confirms APIM validated your inbound token, performed the OBO exchange, forwarded the new token to `mcp.context7.com`, the MCP server validated it against your tenant configuration, and the request was attributed to your provisioned user.
+
+If you get a non-200 status, decode `$TOKEN` at [jwt.io](https://jwt.io) and confirm `aud` is the Gateway app's client ID, `scp` is `Mcp.Gateway.Access`, and `oid` matches the value you added under **Microsoft Entra ID users**. See [Troubleshooting](#troubleshooting) for specific error codes.
+
+## Part 7: Connect an MCP client
 
 Configure your MCP client to talk to the APIM endpoint. Example for VS Code with GitHub Copilot:
 
@@ -587,7 +633,7 @@ The `scope` parameter in the OBO request is malformed. Verify that the `mcp-api-
 
 Either the token does not match the teamspace's tenant configuration, or the user is not on the teamspace's pre-provisioned list.
 
-First open **Overview → Microsoft Entra ID** in the dashboard and verify:
+First open **Settings → Microsoft Entra ID** in the dashboard and verify:
 
 - **Tenant ID** matches the OBO token's `tid` claim.
 - **Audience** matches the OBO token's `aud` claim exactly (case-sensitive, GUID form for v2 tokens).
@@ -595,7 +641,7 @@ First open **Overview → Microsoft Entra ID** in the dashboard and verify:
 
 Use **Test connection** to confirm the tenant is reachable.
 
-If the tenant config is correct, the user's `oid` is probably not in the teamspace's provisioned users list. Decode the OBO token at [jwt.io](https://jwt.io) and copy the `oid` claim, then check that exact value appears in **Overview → Microsoft Entra ID users**. If it's missing, add the user (see Part 4 Step 2).
+If the tenant config is correct, the user's `oid` is probably not in the teamspace's provisioned users list. Decode the OBO token at [jwt.io](https://jwt.io) and copy the `oid` claim, then check that exact value appears in **Settings → Microsoft Entra ID users**. If it's missing, add the user (see Part 4 Step 2).
 
 ### Streaming responses get cut off
 
