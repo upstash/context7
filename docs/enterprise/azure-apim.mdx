@@ -526,7 +526,45 @@ Expected:
 - `/authorize` returns `302 Found` with a `Location` header pointing at Entra's authorize endpoint.
 - An unauthorised POST to `/context7/mcp` returns `401` with `WWW-Authenticate: Bearer resource_metadata="https://<your-apim-host>/.well-known/oauth-protected-resource"`.
 
-## Part 6: Connect an MCP client
+## Part 6: Smoke test the gateway from CLI
+
+Before pointing real MCP clients at the gateway, validate the full OBO flow from your terminal. This catches misconfigurations (wrong audience, missing scope, unmapped user) without involving an MCP client.
+
+### Step 1: Authorize the Azure CLI on the Gateway app
+
+Azure CLI's well-known client ID is `04b07795-8ddb-461a-bbee-02f9e1bf7b46`. Pre-authorize it on the Gateway app's scope so `az account get-access-token` can mint tokens:
+
+1. Entra admin center → **App registrations** → **Context7 APIM Gateway** → **Expose an API**.
+2. Under **Authorized client applications**, click **+ Add a client application**.
+3. **Client ID:** `04b07795-8ddb-461a-bbee-02f9e1bf7b46`.
+4. Tick the `api://<gateway-app-id>/Mcp.Gateway.Access` scope. **Add**.
+
+<Note>
+This pre-authorization is only required for the CLI smoke test described here. End users connecting via VS Code with GitHub Copilot use Microsoft's first-party VS Code client ID, which you already pre-authorized in [Part 2 Step 3](#step-3-wire-the-permission-chain).
+</Note>
+
+### Step 2: Acquire a token and call the gateway
+
+```bash
+GATEWAY_APP_ID=<gateway-app-client-id>
+APIM_HOST=<your-apim-host>
+
+az login --tenant <your-tenant-id> --scope api://$GATEWAY_APP_ID/.default
+
+TOKEN=$(az account get-access-token --resource api://$GATEWAY_APP_ID --query accessToken -o tsv)
+
+curl -i -X POST "https://$APIM_HOST/context7/mcp" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{"jsonrpc":"2.0","method":"initialize","id":1,"params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"smoke","version":"0.0.1"}}}'
+```
+
+Expected: `200 OK`, an `mcp-session-id` response header, and a Server-Sent Events body with the Context7 server info. That confirms APIM validated your inbound token, performed the OBO exchange, forwarded the new token to `mcp.context7.com`, the MCP server validated it against your tenant configuration, and the request was attributed to your provisioned user.
+
+If you get a non-200 status, decode `$TOKEN` at [jwt.io](https://jwt.io) and confirm `aud` is the Gateway app's client ID, `scp` is `Mcp.Gateway.Access`, and `oid` matches the value you added under **Microsoft Entra ID users**. See [Troubleshooting](#troubleshooting) for specific error codes.
+
+## Part 7: Connect an MCP client
 
 Configure your MCP client to talk to the APIM endpoint. Example for VS Code with GitHub Copilot:
 
