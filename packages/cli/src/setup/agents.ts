@@ -225,7 +225,7 @@ const agents: Record<SetupAgent, AgentConfig> = {
       globalPaths: [join(homedir(), ".gemini", "config", "mcp_config.json")],
       configKey: "mcpServers",
       buildEntry: (auth, transport) =>
-        transport === "stdio" ? stdioEntry(auth) : withHeaders({ httpUrl: mcpUrl(auth) }, auth),
+        transport === "stdio" ? stdioEntry(auth) : withHeaders({ serverUrl: mcpUrl(auth) }, auth),
     },
     rule: {
       kind: "append",

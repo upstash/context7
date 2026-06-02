@@ -1037,7 +1037,7 @@ describe("agent config integration", () => {
       const apiEntry = agent.mcp.buildEntry(apiKeyAuth, "http");
       const oauthEntry = agent.mcp.buildEntry(oauthAuth, "http");
 
-      const urlKey = name === "gemini" || name === "antigravity" ? "httpUrl" : "url";
+      const urlKey = name === "gemini" ? "httpUrl" : name === "antigravity" ? "serverUrl" : "url";
       expect(apiEntry[urlKey]).toBe("https://mcp.context7.com/mcp");
       expect(oauthEntry[urlKey]).toBe("https://mcp.context7.com/mcp/oauth");
     });

@@ -188,8 +188,11 @@ async function pathExists(path: string): Promise<boolean> {
 
 async function hasMcpConfig(agentName: SetupAgent, scope: Scope): Promise<boolean> {
   const agent = getAgent(agentName);
+  // Agents with no project-level MCP (e.g. Antigravity) only have a global
+  // config — there's nothing to detect at project scope.
+  if (scope === "project" && agent.mcp.projectPaths.length === 0) return false;
   const candidates =
-    scope === "global" || agent.mcp.projectPaths.length === 0
+    scope === "global"
       ? agent.mcp.globalPaths
       : agent.mcp.projectPaths.map((path) => join(process.cwd(), path));
   const mcpPath = await resolveMcpPath(candidates);
@@ -319,8 +322,11 @@ async function resolveModes(
 
 async function uninstallMcp(agentName: SetupAgent, scope: Scope): Promise<CleanupStatus> {
   const agent = getAgent(agentName);
+  if (scope === "project" && agent.mcp.projectPaths.length === 0) {
+    return { status: "not found", path: "" };
+  }
   const mcpCandidates =
-    scope === "global" || agent.mcp.projectPaths.length === 0
+    scope === "global"
       ? agent.mcp.globalPaths
       : agent.mcp.projectPaths.map((path) => join(process.cwd(), path));
   const mcpPath = await resolveMcpPath(mcpCandidates);
