@@ -24,6 +24,7 @@ interface UninstallOptions {
   cursor?: boolean;
   opencode?: boolean;
   codex?: boolean;
+  antigravity?: boolean;
   gemini?: boolean;
   project?: boolean;
   yes?: boolean;
@@ -75,6 +76,7 @@ export function registerRemoveCommand(program: Command): void {
     .option("--cursor", "Remove from Cursor")
     .option("--opencode", "Remove from OpenCode")
     .option("--codex", "Remove from Codex")
+    .option("--antigravity", "Remove from Antigravity")
     .option("--gemini", "Remove from Gemini CLI")
     .option("--all", "Remove both MCP setup and CLI + Skills setup")
     .option("--mcp", "Remove MCP setup")
@@ -92,6 +94,7 @@ function getSelectedAgents(options: UninstallOptions): SetupAgent[] {
   if (options.cursor) agents.push("cursor");
   if (options.opencode) agents.push("opencode");
   if (options.codex) agents.push("codex");
+  if (options.antigravity) agents.push("antigravity");
   if (options.gemini) agents.push("gemini");
   return agents;
 }
@@ -151,7 +154,7 @@ async function resolveAgents(options: UninstallOptions, scope: Scope): Promise<S
 
   if (detected.length === 0) {
     log.warn(
-      "No Context7 setup detected. Pass --claude, --cursor, --opencode, --codex, or --gemini."
+      "No Context7 setup detected. Pass --claude, --cursor, --opencode, --codex, --antigravity, or --gemini."
     );
     return [];
   }
