@@ -1,12 +1,11 @@
 ---
 title: CLI
-description: The ctx7 CLI — fetch library documentation, manage skills, and configure Context7 MCP from your terminal
+description: The ctx7 CLI — fetch library documentation and configure Context7 MCP from your terminal
 ---
 
 The `ctx7` CLI is the command-line interface for Context7. It does three things:
 
 - **Fetch library documentation** — resolve any library by name and query its up-to-date docs directly in your terminal, without opening a browser
-- **Manage AI coding skills** — install, search, generate, and remove skills from the Context7 registry
 - **Configure Context7 MCP** — set up the MCP server for Claude Code, Cursor, or OpenCode with a single command
 
 The CLI is useful both as a standalone tool (fetching docs while you code) and as a setup utility (wiring up Context7 for your AI coding agent).
@@ -191,7 +190,7 @@ If you installed the CLI itself with `npm install -g ctx7`, remove that separate
 
 ## Authentication
 
-Most commands work without authentication. Log in to unlock skill generation and higher rate limits on documentation commands.
+Most commands work without authentication. Log in to unlock higher rate limits on documentation commands.
 
 ### Commands
 
@@ -222,168 +221,7 @@ export CONTEXT7_API_KEY=your_key
 | Feature                                                  | Required                                                                     |
 | -------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | `ctx7 library` / `ctx7 docs`                             | No — login gives higher rate limits                                          |
-| `ctx7 skills install / search / suggest / list / remove` | No                                                                           |
-| `ctx7 skills generate`                                   | Yes                                                                          |
 | `ctx7 setup`                                             | Yes — unless `--api-key` is passed (`--oauth` also skips login for MCP mode) |
-
----
-
-## Skills
-
-Manage AI coding skills from the Context7 registry. See [Skills](/skills) for a full explanation of what skills are, the registry, trust scores, and skill file structure.
-
-### ctx7 skills install
-
-Install skills from any GitHub repository. Repository format is `/owner/repo`.
-
-```bash
-# Interactive — pick from a list
-ctx7 skills install /anthropics/skills
-
-# Install a specific skill by name
-ctx7 skills install /anthropics/skills pdf
-
-# Install all skills without prompting
-ctx7 skills install /anthropics/skills --all
-```
-
-**Target a specific AI coding assistant:**
-
-```bash
-ctx7 skills install /anthropics/skills pdf --claude      # Claude Code
-ctx7 skills install /anthropics/skills pdf --cursor      # Cursor
-ctx7 skills install /anthropics/skills pdf --universal   # Universal (.agents/skills/)
-ctx7 skills install /anthropics/skills pdf --antigravity
-ctx7 skills install /anthropics/skills pdf --all-agents  # Universal + all vendor-specific locations
-```
-
-**Install globally** (available across all projects):
-
-```bash
-ctx7 skills install /anthropics/skills pdf --global
-ctx7 skills install /anthropics/skills --all --global
-ctx7 skills install /anthropics/skills pdf --global --universal --yes
-ctx7 skills install /anthropics/skills pdf --global --all-agents --yes
-```
-
-<Note>
-  When installing to multiple clients, the skill files are created in your primary client's
-  directory and symlinked to the others.
-</Note>
-
-Alias: `ctx7 si /anthropics/skills pdf`
-
-### ctx7 skills search
-
-Find skills across all indexed repositories by keyword. Shows an interactive list — select to install directly.
-
-```bash
-ctx7 skills search pdf
-ctx7 skills search typescript testing
-ctx7 skills search react nextjs
-```
-
-Alias: `ctx7 ss pdf`
-
-### ctx7 skills suggest
-
-Auto-detects your project dependencies and recommends relevant skills from the registry.
-
-```bash
-# Scan current project
-ctx7 skills suggest
-
-# Target a specific client
-ctx7 skills suggest --claude
-ctx7 skills suggest --cursor
-
-# Install suggestions globally
-ctx7 skills suggest --global
-```
-
-Scans: `package.json`, `requirements.txt`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `Gemfile`.
-
-Alias: `ctx7 ssg`
-
-### ctx7 skills generate
-
-Generate a custom skill tailored to your stack using AI. **Requires login.**
-
-```bash
-ctx7 skills generate
-
-# Generate and install to a specific client
-ctx7 skills generate --claude
-ctx7 skills generate --cursor
-ctx7 skills generate --universal
-
-# Generate as a global skill
-ctx7 skills generate --global
-```
-
-**Generation flow:**
-
-1. Describe the expertise you want (e.g., "OAuth authentication with NextAuth.js")
-2. Select relevant libraries from search results
-3. Answer 3 clarifying questions to focus the skill
-4. Review the generated skill and request changes if needed
-5. Choose where to install it
-
-<Tip>
-  Describe best practices and constraints, not step-by-step tutorials. "TypeScript strict mode
-  patterns" generates a more useful skill than "how to write TypeScript."
-</Tip>
-
-**Weekly limits:** Free accounts get 6 generations/week, Pro accounts get 10.
-
-Aliases: `ctx7 skills gen`, `ctx7 skills g`
-
-### ctx7 skills list
-
-View skills installed in your project or globally.
-
-```bash
-ctx7 skills list                   # All detected clients
-ctx7 skills list --claude
-ctx7 skills list --cursor
-ctx7 skills list --global
-```
-
-### ctx7 skills info
-
-Preview all available skills in a repository without installing.
-
-```bash
-ctx7 skills info /anthropics/skills
-```
-
-### ctx7 skills remove
-
-Uninstall a skill by name.
-
-```bash
-ctx7 skills remove pdf
-ctx7 skills remove pdf --claude
-ctx7 skills remove pdf --global
-```
-
-Aliases: `ctx7 skills rm`, `ctx7 skills delete`
-
----
-
-## Shortcuts
-
-| Shortcut          | Full command           |
-| ----------------- | ---------------------- |
-| `ctx7 si`         | `ctx7 skills install`  |
-| `ctx7 ss`         | `ctx7 skills search`   |
-| `ctx7 ssg`        | `ctx7 skills suggest`  |
-| `ctx7 skills i`   | `ctx7 skills install`  |
-| `ctx7 skills s`   | `ctx7 skills search`   |
-| `ctx7 skills ls`  | `ctx7 skills list`     |
-| `ctx7 skills rm`  | `ctx7 skills remove`   |
-| `ctx7 skills gen` | `ctx7 skills generate` |
-| `ctx7 skills g`   | `ctx7 skills generate` |
 
 ---
 
@@ -393,7 +231,7 @@ The CLI collects anonymous usage data to help improve the product. To disable:
 
 ```bash
 # For a single command
-CTX7_TELEMETRY_DISABLED=1 ctx7 skills search pdf
+CTX7_TELEMETRY_DISABLED=1 ctx7 docs /facebook/react "useEffect examples"
 
 # Permanently — add to ~/.bashrc or ~/.zshrc
 export CTX7_TELEMETRY_DISABLED=1
@@ -404,12 +242,6 @@ export CTX7_TELEMETRY_DISABLED=1
 ## Next Steps
 
 <CardGroup cols={2}>
-  <Card title="Browse Skills" icon="magnifying-glass" href="https://context7.com/skills">
-    Explore the skills registry
-  </Card>
-  <Card title="Skills Guide" icon="book" href="/skills">
-    Learn about skill file structure, trust scores, and the registry
-  </Card>
   <Card title="Claude Code" icon="terminal" href="/clients/claude-code">
     Set up Context7 in Claude Code
   </Card>
