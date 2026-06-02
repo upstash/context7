@@ -70,9 +70,9 @@ function getSelectedAgents(options: SetupOptions): SetupAgent[] {
   const agents: SetupAgent[] = [];
   if (options.claude) agents.push("claude");
   if (options.cursor) agents.push("cursor");
-  if (options.antigravity) agents.push("antigravity");
   if (options.opencode) agents.push("opencode");
   if (options.codex) agents.push("codex");
+  if (options.antigravity) agents.push("antigravity");
   if (options.gemini) agents.push("gemini");
   return agents;
 }

@@ -1025,9 +1025,9 @@ describe("agent config integration", () => {
       expect(ALL_AGENT_NAMES).toEqual([
         "claude",
         "cursor",
-        "antigravity",
         "opencode",
         "codex",
+        "antigravity",
         "gemini",
       ]);
     });
