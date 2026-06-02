@@ -144,7 +144,7 @@ async function resolveAuth(options: SetupOptions): Promise<AuthOptions | null> {
 
 async function resolveMode(options: SetupOptions): Promise<SetupMode> {
   if (options.cli) return "cli";
-  if (options.mcp || options.yes || options.oauth || options.apiKey || options.stdio) return "mcp";
+  if (options.mcp || options.yes || options.oauth || options.stdio) return "mcp";
 
   return select<SetupMode>({
     message: "How should your agent access Context7?",
