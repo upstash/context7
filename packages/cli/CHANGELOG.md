@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.5
+
+### Patch Changes
+
+- 2affada: `ctx7 setup` now properly supports `--antigravity`, installing skills to `.agent/skills`, a `GEMINI.md` rule section (Antigravity reads Gemini-family config), and MCP config to Antigravity 2.0's documented global path `~/.gemini/config/mcp_config.json` (with `httpUrl` for HTTP, matching the Gemini convention). Antigravity has no documented project-level MCP file, so `setup --antigravity --project --mcp` writes to the global location. Also removes the `--universal` flag from `setup`, which was advertised but silently ignored — it never propagated through agent selection, so passing it (e.g. `setup --cli --universal --project`) caused setup to fall back to auto-detection and write to the wrong directory.
+- 268f52f: `ctx7 setup --api-key <KEY>` (without `--cli`, `--mcp`, or `-y`) now prompts to choose between MCP server and CLI + Skills modes. Previously, passing `--api-key` short-circuited to MCP, locking users out of the CLI + Skills option even though that mode also accepts an API key. Explicit `--mcp` / `--cli` / `--stdio` / `--oauth` / `-y` still skip the prompt as before.
+- 2e97dae: Add deprecation warning to skill commands
+
 ## 0.4.4
 
 ### Patch Changes
