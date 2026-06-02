@@ -3,6 +3,9 @@ export interface SkillFile {
   content: string;
 }
 
+// TODO(deprecate-skills-phase-2): Remove Skill Hub response types when
+// deprecated `ctx7 skills ...` commands are deleted. Keep setup skill directory
+// types below.
 export interface Skill {
   name: string;
   description: string;

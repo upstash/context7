@@ -180,6 +180,8 @@ type GitHubSkillsResult =
   | { status: "repo_not_found" }
   | { status: "error"; error: string };
 
+// TODO(deprecate-skills-phase-2): Remove direct GitHub Skill Hub fallback when
+// deprecated `ctx7 skills install/info` commands are deleted.
 export async function listSkillsFromGitHub(project: string): Promise<GitHubSkillsResult> {
   try {
     const parts = project.split("/").filter(Boolean);

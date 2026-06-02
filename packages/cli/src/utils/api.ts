@@ -24,6 +24,8 @@ export function setBaseUrl(url: string): void {
   baseUrl = url;
 }
 
+// TODO(deprecate-skills-phase-2): Remove the Skill Hub API helpers in this file
+// when deprecated `ctx7 skills ...` commands are deleted.
 export async function listProjectSkills(project: string): Promise<ListSkillsResponse> {
   const params = new URLSearchParams({ project });
   const response = await fetch(`${baseUrl}/api/v2/skills?${params}`);
