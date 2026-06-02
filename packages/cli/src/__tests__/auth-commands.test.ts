@@ -9,6 +9,9 @@ const mockGenerateState = vi.fn();
 const mockCreateCallbackServer = vi.fn();
 const mockExchangeCodeForTokens = vi.fn();
 const mockBuildAuthorizationUrl = vi.fn();
+const mockShouldUseDeviceFlow = vi.fn(() => false);
+const mockStartDeviceAuthorization = vi.fn();
+const mockPollDeviceToken = vi.fn();
 
 vi.mock("../utils/auth.js", () => ({
   getValidAccessToken: (...args: unknown[]) => mockGetValidAccessToken(...args),
@@ -19,6 +22,9 @@ vi.mock("../utils/auth.js", () => ({
   createCallbackServer: (...args: unknown[]) => mockCreateCallbackServer(...args),
   exchangeCodeForTokens: (...args: unknown[]) => mockExchangeCodeForTokens(...args),
   buildAuthorizationUrl: (...args: unknown[]) => mockBuildAuthorizationUrl(...args),
+  shouldUseDeviceFlow: (...args: unknown[]) => mockShouldUseDeviceFlow(...args),
+  startDeviceAuthorization: (...args: unknown[]) => mockStartDeviceAuthorization(...args),
+  pollDeviceToken: (...args: unknown[]) => mockPollDeviceToken(...args),
 }));
 
 vi.mock("../utils/tracking.js", () => ({

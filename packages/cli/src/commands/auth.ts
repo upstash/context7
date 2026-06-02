@@ -11,6 +11,9 @@ import {
   clearTokens,
   buildAuthorizationUrl,
   getValidAccessToken,
+  shouldUseDeviceFlow,
+  startDeviceAuthorization,
+  pollDeviceToken,
 } from "../utils/auth.js";
 
 import { trackEvent } from "../utils/tracking.js";
@@ -28,6 +31,7 @@ export function registerAuthCommands(program: Command): void {
     .command("login")
     .description("Log in to Context7")
     .option("--no-browser", "Don't open browser automatically")
+    .option("--device", "Force device-code flow (use on SSH / headless hosts)")
     .action(async (options) => {
       await loginCommand(options);
     });
@@ -47,7 +51,85 @@ export function registerAuthCommands(program: Command): void {
     });
 }
 
-export async function performLogin(openBrowser = true): Promise<string | null> {
+export async function performDeviceLogin(openBrowser = true): Promise<string | null> {
+  const spinner = ora("Preparing login...").start();
+
+  let authorization;
+  try {
+    authorization = await startDeviceAuthorization(baseUrl, CLI_CLIENT_ID);
+  } catch (error) {
+    spinner.fail(pc.red("Login failed"));
+    if (error instanceof Error) console.error(pc.red(error.message));
+    return null;
+  }
+
+  spinner.stop();
+
+  console.log("");
+  console.log(pc.bold("Authorize the Context7 CLI in your browser:"));
+  console.log("");
+  console.log(`  Visit ${pc.cyan(authorization.verification_uri)}`);
+  console.log(`  Enter code ${pc.green(pc.bold(authorization.user_code))}`);
+  console.log("");
+
+  if (openBrowser && authorization.verification_uri_complete) {
+    try {
+      await open(authorization.verification_uri_complete);
+    } catch {
+      // ignore; user can copy/paste
+    }
+  }
+
+  const waitingSpinner = ora("Waiting for authorization...").start();
+
+  const deadline = Date.now() + authorization.expires_in * 1000;
+  let intervalMs = authorization.interval * 1000;
+
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    try {
+      const result = await pollDeviceToken(
+        baseUrl,
+        CLI_CLIENT_ID,
+        authorization.device_code
+      );
+      if (result.status === "approved" && result.tokens) {
+        saveTokens(result.tokens);
+        waitingSpinner.succeed(pc.green("Login successful!"));
+        return result.tokens.access_token;
+      }
+      if (result.status === "slow_down") {
+        intervalMs += 5000;
+        continue;
+      }
+      if (result.status === "denied") {
+        waitingSpinner.fail(pc.red("Authorization denied."));
+        return null;
+      }
+      if (result.status === "expired") {
+        waitingSpinner.fail(pc.red("Code expired. Run login again."));
+        return null;
+      }
+      // pending or transient — keep polling.
+    } catch (error) {
+      waitingSpinner.fail(pc.red("Login failed"));
+      if (error instanceof Error) console.error(pc.red(error.message));
+      return null;
+    }
+  }
+
+  waitingSpinner.fail(pc.red("Code expired without approval."));
+  return null;
+}
+
+export async function performLogin(
+  openBrowser = true,
+  forceDevice = false
+): Promise<string | null> {
+  if (forceDevice || shouldUseDeviceFlow()) {
+    return performDeviceLogin(openBrowser);
+  }
+
   const spinner = ora("Preparing login...").start();
 
   try {
@@ -114,7 +196,7 @@ export async function performLogin(openBrowser = true): Promise<string | null> {
   }
 }
 
-async function loginCommand(options: { browser: boolean }): Promise<void> {
+async function loginCommand(options: { browser: boolean; device?: boolean }): Promise<void> {
   trackEvent("command", { name: "login" });
   const existingToken = await getValidAccessToken();
   if (existingToken) {
@@ -124,7 +206,7 @@ async function loginCommand(options: { browser: boolean }): Promise<void> {
   }
   clearTokens();
 
-  const token = await performLogin(options.browser);
+  const token = await performLogin(options.browser, options.device ?? false);
   if (!token) {
     process.exit(1);
   }
