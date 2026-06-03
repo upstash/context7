@@ -48,6 +48,9 @@ function suppressionKey(ctx: ClientContext): string {
   return ctx.sessionId ?? ctx.clientIp ?? "default";
 }
 
+const CHOICE_RUN_SETUP = "run_setup";
+const CHOICE_STAY_ANON = "stay_anon";
+
 /**
  * Fires a form-mode elicitation that surfaces a sign-in nudge in the client UI
  * when the backend has signaled (via `X-Context7-Auth-Prompt: 1`, captured on
@@ -57,10 +60,16 @@ function suppressionKey(ctx: ClientContext): string {
  * The message is delivered out-of-band to the human via the client, not into
  * the tool result the LLM reads, so it does not trip prompt-injection guards.
  *
+ * Presents a two-option radio: "I'll run the command to sign in" or "Continue
+ * anonymously with smaller limits". Picking the latter (or declining outright)
+ * suppresses further nudges for the lifetime of the MCP process. The command
+ * itself is shown in the dialog message for the user to copy; the server does
+ * not attempt to drive the client to run it.
+ *
  * No-op for authenticated callers, when the signal wasn't set, when the
  * client did not advertise the `elicitation` capability, or when the user
- * checked "Don't show this again" earlier in the session. Fire-and-forget:
- * never blocks or fails the surrounding tool response.
+ * has already chosen to stay anonymous earlier in the session.
+ * Fire-and-forget: never blocks or fails the surrounding tool response.
  */
 export function maybeElicitAuthSignIn(server: McpServer, ctx: ClientContext): void {
   if (ctx.apiKey || !ctx.shouldPrompt) return;
@@ -74,16 +83,24 @@ export function maybeElicitAuthSignIn(server: McpServer, ctx: ClientContext): vo
       requestedSchema: {
         type: "object",
         properties: {
-          dontShowAgain: {
-            type: "boolean",
-            title: "Don't show this again",
-            default: false,
+          choice: {
+            type: "string",
+            title: "How would you like to continue?",
+            oneOf: [
+              { const: CHOICE_RUN_SETUP, title: "I'll run the command to sign in" },
+              { const: CHOICE_STAY_ANON, title: "Continue anonymously with smaller limits" },
+            ],
+            default: CHOICE_RUN_SETUP,
           },
         },
+        required: ["choice"],
       },
     })
     .then((result) => {
-      if (result.action === "accept" && result.content?.dontShowAgain === true) {
+      // Suppress for the rest of the session when the user explicitly opts to
+      // stay anonymous, or when they dismiss the dialog (decline/cancel) —
+      // re-prompting after either signal would be noise.
+      if (result.action !== "accept" || result.content?.choice === CHOICE_STAY_ANON) {
         suppressedSessions.add(key);
       }
     })

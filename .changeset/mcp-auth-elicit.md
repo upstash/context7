@@ -6,5 +6,5 @@ Replace the in-result sign-in nudge with an MCP form elicitation. When the backe
 
 - Surfaces the `npx ctx7 setup --<client> --mcp[ --stdio] -y` command in a client-rendered dialog rather than as model-visible text. The previous text-injection approach was treated as untrusted instruction content by some agents; elicitations are delivered out-of-band to the user so they bypass that path entirely.
 - Gated on the client advertising the `elicitation` capability — clients without it see no nudge, which is a safe no-op.
-- Includes a "Don't show this again" checkbox; opting out suppresses further nudges for the lifetime of the MCP process (per session id / client IP).
+- Presents a two-option radio: "I'll run the command to sign in" or "Continue anonymously with smaller limits". The latter (or any decline/cancel) suppresses further nudges for the lifetime of the MCP process, keyed per session id / client IP.
 - Fire-and-forget: the elicitation does not block or alter the surrounding tool response.
