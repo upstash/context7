@@ -25,6 +25,7 @@ vi.mock("../utils/auth.js", () => ({
   shouldUseDeviceFlow: (...args: unknown[]) => mockShouldUseDeviceFlow(...args),
   startDeviceAuthorization: (...args: unknown[]) => mockStartDeviceAuthorization(...args),
   pollDeviceToken: (...args: unknown[]) => mockPollDeviceToken(...args),
+  DEFAULT_DEVICE_POLL_INTERVAL_SECONDS: 5,
 }));
 
 vi.mock("../utils/tracking.js", () => ({
@@ -428,5 +429,25 @@ describe("performDeviceLogin", () => {
 
     await performDeviceLogin(false);
     expect(mockOpen).not.toHaveBeenCalled();
+  });
+
+  test("defaults poll interval to 5s when server omits it (RFC 8628 §3.2)", async () => {
+    vi.useFakeTimers();
+    try {
+      mockStartDeviceAuthorization.mockResolvedValue({ ...authorization, interval: undefined });
+      mockPollDeviceToken.mockResolvedValueOnce({ status: "pending" }).mockResolvedValueOnce({
+        status: "approved",
+        tokens: { access_token: "t", token_type: "bearer" },
+      });
+
+      const pending = performDeviceLogin(false);
+      // Two 5s polls.
+      await vi.advanceTimersByTimeAsync(11_000);
+      const result = await pending;
+      expect(result).toBe("t");
+      expect(mockPollDeviceToken).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

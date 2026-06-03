@@ -15,6 +15,7 @@ import {
   shouldUseDeviceFlow,
   startDeviceAuthorization,
   pollDeviceToken,
+  DEFAULT_DEVICE_POLL_INTERVAL_SECONDS,
 } from "../utils/auth.js";
 
 import { trackEvent } from "../utils/tracking.js";
@@ -149,7 +150,7 @@ export async function performDeviceLogin(openBrowser = true): Promise<string | n
   const waitingSpinner = ora({ text: "Waiting for authorization...", indent: 2 }).start();
 
   const deadline = Date.now() + authorization.expires_in * 1000;
-  let intervalMs = authorization.interval * 1000;
+  let intervalMs = (authorization.interval ?? DEFAULT_DEVICE_POLL_INTERVAL_SECONDS) * 1000;
 
   while (Date.now() < deadline) {
     await new Promise((resolve) => setTimeout(resolve, intervalMs));

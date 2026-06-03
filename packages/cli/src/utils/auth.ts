@@ -319,10 +319,14 @@ export interface DeviceAuthorizationResponse {
   verification_uri: string;
   verification_uri_complete?: string;
   expires_in: number;
-  interval: number;
+  /** Optional per RFC 8628 §3.2; clients MUST default to 5s when absent. */
+  interval?: number;
 }
 
 const DEVICE_CODE_GRANT = "urn:ietf:params:oauth:grant-type:device_code";
+
+/** RFC 8628 §3.2 default poll interval when the server omits `interval`. */
+export const DEFAULT_DEVICE_POLL_INTERVAL_SECONDS = 5;
 
 /** Heuristic: prefer device flow on SSH and headless Linux. False positives are fine — device flow works locally too. */
 export function shouldUseDeviceFlow(): boolean {
