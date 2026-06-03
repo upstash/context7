@@ -7,7 +7,11 @@ import { z } from "zod";
 import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
 import type { ClientContext } from "./lib/types.js";
 import { formatSearchResults, extractClientInfoFromUserAgent } from "./lib/utils.js";
-import { isJWT, validateJWT } from "./lib/jwt.js";
+import {
+  extractApiKey,
+  extractHeaderValue,
+  validateRequiredOAuthBearerToken,
+} from "./lib/httpAuth.js";
 import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
@@ -364,32 +368,6 @@ async function main() {
       next();
     });
 
-    const extractHeaderValue = (value: string | string[] | undefined): string | undefined => {
-      if (!value) return undefined;
-      return typeof value === "string" ? value : value[0];
-    };
-
-    const extractBearerToken = (authHeader: string | string[] | undefined): string | undefined => {
-      const header = extractHeaderValue(authHeader);
-      if (!header) return undefined;
-
-      if (header.startsWith("Bearer ")) {
-        return header.substring(7).trim();
-      }
-
-      return header;
-    };
-
-    const extractApiKey = (req: express.Request): string | undefined => {
-      return (
-        extractBearerToken(req.headers.authorization) ||
-        extractHeaderValue(req.headers["context7-api-key"]) ||
-        extractHeaderValue(req.headers["x-api-key"]) ||
-        extractHeaderValue(req.headers["context7_api_key"]) ||
-        extractHeaderValue(req.headers["x_api_key"])
-      );
-    };
-
     const sessionStore = createSessionStore();
 
     const handleMcpRequest = async (
@@ -409,7 +387,7 @@ async function main() {
       }
 
       try {
-        const apiKey = extractApiKey(req);
+        let apiKey = extractApiKey(req.headers);
         const resourceUrl = RESOURCE_URL;
         const baseUrl = new URL(resourceUrl).origin;
 
@@ -420,30 +398,18 @@ async function main() {
         );
 
         if (requireAuth) {
-          if (!apiKey) {
+          const authResult = await validateRequiredOAuthBearerToken(req.headers.authorization);
+          if (!authResult.valid) {
             return res.status(401).json({
               jsonrpc: "2.0",
               error: {
                 code: -32001,
-                message: "Authentication required. Please authenticate to use this MCP server.",
+                message: authResult.error,
               },
               id: null,
             });
           }
-
-          if (isJWT(apiKey)) {
-            const validationResult = await validateJWT(apiKey);
-            if (!validationResult.valid) {
-              return res.status(401).json({
-                jsonrpc: "2.0",
-                error: {
-                  code: -32001,
-                  message: validationResult.error || "Invalid token. Please re-authenticate.",
-                },
-                id: null,
-              });
-            }
-          }
+          apiKey = authResult.token;
         }
 
         const context: ClientContext = {
