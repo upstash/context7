@@ -2,6 +2,7 @@ import { Command } from "commander";
 import pc from "picocolors";
 import ora from "ora";
 import open from "open";
+import boxen from "boxen";
 import {
   generatePKCE,
   generateState,
@@ -51,6 +52,65 @@ export function registerAuthCommands(program: Command): void {
     });
 }
 
+function renderDeviceCodeBox(
+  userCode: string,
+  verificationUri: string,
+  verificationUriComplete: string | undefined
+): string {
+  const codeLine = `${pc.dim("Your one-time code:")}\n\n    ${pc.green(pc.bold(userCode))}`;
+  const linkLine = verificationUriComplete
+    ? `${pc.dim("Open this link to approve:")}\n${pc.cyan(verificationUriComplete)}`
+    : `${pc.dim("Visit:")} ${pc.cyan(verificationUri)}`;
+  return boxen(`${codeLine}\n\n${linkLine}`, {
+    title: "Sign in to Context7",
+    titleAlignment: "left",
+    padding: 1,
+    margin: { top: 1, bottom: 1, left: 2, right: 2 },
+    borderStyle: "round",
+    borderColor: "gray",
+  });
+}
+
+/** Prints a prompt and resolves on the next keypress. No-op when stdin isn't a TTY. */
+function waitForEnter(prompt: string): Promise<void> {
+  if (!process.stdin.isTTY) return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    process.stdout.write(`  ${pc.dim(prompt)} `);
+    const onData = (chunk: Buffer) => {
+      // Ctrl-C
+      if (chunk[0] === 0x03) {
+        process.stdin.removeListener("data", onData);
+        process.stdin.setRawMode?.(false);
+        process.stdin.pause();
+        process.stdout.write("\n");
+        process.exit(130);
+      }
+      process.stdin.removeListener("data", onData);
+      process.stdin.setRawMode?.(false);
+      process.stdin.pause();
+      process.stdout.write("\n");
+      resolve();
+    };
+    process.stdin.setRawMode?.(true);
+    process.stdin.resume();
+    process.stdin.on("data", onData);
+  });
+}
+
+async function announceIdentity(accessToken: string): Promise<string> {
+  try {
+    const whoami = await fetchWhoami(accessToken);
+    const name = whoami.email || whoami.name;
+    if (!name) return "Login successful!";
+    const team = whoami.teamspace?.name;
+    return team
+      ? `Logged in as ${pc.bold(name)} ${pc.dim(`(${team})`)}`
+      : `Logged in as ${pc.bold(name)}`;
+  } catch {
+    return "Login successful!";
+  }
+}
+
 export async function performDeviceLogin(openBrowser = true): Promise<string | null> {
   const spinner = ora("Preparing login...").start();
 
@@ -65,22 +125,28 @@ export async function performDeviceLogin(openBrowser = true): Promise<string | n
 
   spinner.stop();
 
-  console.log("");
-  console.log(pc.bold("Authorize the Context7 CLI in your browser:"));
-  console.log("");
-  console.log(`  Visit ${pc.cyan(authorization.verification_uri)}`);
-  console.log(`  Enter code ${pc.green(pc.bold(authorization.user_code))}`);
-  console.log("");
+  console.log(
+    renderDeviceCodeBox(
+      authorization.user_code,
+      authorization.verification_uri,
+      authorization.verification_uri_complete
+    )
+  );
 
-  if (openBrowser && authorization.verification_uri_complete) {
+  const target = authorization.verification_uri_complete ?? authorization.verification_uri;
+  if (openBrowser) {
+    await waitForEnter("Press Enter to open the browser, or Ctrl-C to quit...");
     try {
-      await open(authorization.verification_uri_complete);
+      await open(target);
     } catch {
-      // ignore; user can copy/paste
+      console.log(pc.dim(`  Couldn't open a browser — visit the link above manually.`));
     }
+  } else {
+    console.log(pc.dim("  Open the link above in any browser to continue."));
+    console.log("");
   }
 
-  const waitingSpinner = ora("Waiting for authorization...").start();
+  const waitingSpinner = ora({ text: "Waiting for authorization...", indent: 2 }).start();
 
   const deadline = Date.now() + authorization.expires_in * 1000;
   let intervalMs = authorization.interval * 1000;
@@ -88,14 +154,11 @@ export async function performDeviceLogin(openBrowser = true): Promise<string | n
   while (Date.now() < deadline) {
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
     try {
-      const result = await pollDeviceToken(
-        baseUrl,
-        CLI_CLIENT_ID,
-        authorization.device_code
-      );
+      const result = await pollDeviceToken(baseUrl, CLI_CLIENT_ID, authorization.device_code);
       if (result.status === "approved" && result.tokens) {
         saveTokens(result.tokens);
-        waitingSpinner.succeed(pc.green("Login successful!"));
+        const successText = await announceIdentity(result.tokens.access_token);
+        waitingSpinner.succeed(pc.green(successText));
         return result.tokens.access_token;
       }
       if (result.status === "slow_down") {

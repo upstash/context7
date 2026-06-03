@@ -9,7 +9,7 @@ const mockGenerateState = vi.fn();
 const mockCreateCallbackServer = vi.fn();
 const mockExchangeCodeForTokens = vi.fn();
 const mockBuildAuthorizationUrl = vi.fn();
-const mockShouldUseDeviceFlow = vi.fn(() => false);
+const mockShouldUseDeviceFlow = vi.fn((..._args: unknown[]) => false);
 const mockStartDeviceAuthorization = vi.fn();
 const mockPollDeviceToken = vi.fn();
 
