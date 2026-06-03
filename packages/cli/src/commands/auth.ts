@@ -59,8 +59,11 @@ function renderDeviceCodeBox(
   verificationUriComplete: string | undefined
 ): string {
   const codeLine = `${pc.dim("Your one-time code:")}\n\n    ${pc.green(pc.bold(userCode))}`;
+  // Per RFC 8628 §3.3, even when verification_uri_complete is available we
+  // still show the bare verification_uri so users on screen readers / paper
+  // can type it manually.
   const linkLine = verificationUriComplete
-    ? `${pc.dim("Open this link to approve:")}\n${pc.cyan(verificationUriComplete)}`
+    ? `${pc.dim("Open this link to approve:")}\n${pc.cyan(verificationUriComplete)}\n\n${pc.dim("Or visit")} ${pc.cyan(verificationUri)} ${pc.dim("and enter the code above.")}`
     : `${pc.dim("Visit:")} ${pc.cyan(verificationUri)}`;
   return boxen(`${codeLine}\n\n${linkLine}`, {
     title: "Sign in to Context7",
@@ -174,7 +177,14 @@ export async function performDeviceLogin(openBrowser = true): Promise<string | n
         waitingSpinner.fail(pc.red("Code expired. Run login again."));
         return null;
       }
-      // pending or transient — keep polling.
+      if (result.status === "transient") {
+        // RFC 8628 §3.5: client MUST unilaterally reduce polling frequency on
+        // connection timeout. Apply +5s like slow_down so a flaky network or
+        // 5xx burst doesn't keep hitting at the original cadence.
+        intervalMs += 5000;
+        continue;
+      }
+      // pending — keep polling at the current cadence.
     } catch (error) {
       waitingSpinner.fail(pc.red("Login failed"));
       if (error instanceof Error) console.error(pc.red(error.message));

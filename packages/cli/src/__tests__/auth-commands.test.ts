@@ -360,19 +360,28 @@ describe("performDeviceLogin", () => {
     expect(mockSaveTokens).not.toHaveBeenCalled();
   });
 
-  test("keeps polling on transient errors", async () => {
-    mockStartDeviceAuthorization.mockResolvedValue(authorization);
-    mockPollDeviceToken
-      .mockResolvedValueOnce({ status: "transient", errorMessage: "ECONN" })
-      .mockResolvedValueOnce({ status: "pending" })
-      .mockResolvedValueOnce({
-        status: "approved",
-        tokens: { access_token: "t", token_type: "bearer" },
-      });
+  test("keeps polling on transient errors and applies backoff (RFC 8628 §3.5)", async () => {
+    vi.useFakeTimers();
+    try {
+      mockStartDeviceAuthorization.mockResolvedValue(authorization);
+      mockPollDeviceToken
+        .mockResolvedValueOnce({ status: "transient", errorMessage: "ECONN" })
+        .mockResolvedValueOnce({ status: "pending" })
+        .mockResolvedValueOnce({
+          status: "approved",
+          tokens: { access_token: "t", token_type: "bearer" },
+        });
 
-    const result = await performDeviceLogin(false);
-    expect(result).toBe("t");
-    expect(mockPollDeviceToken).toHaveBeenCalledTimes(3);
+      const pending = performDeviceLogin(false);
+      // transient bumps the interval by 5s (mirroring slow_down), so the
+      // 2nd and 3rd polls each need a 5s wait. Advance enough to cover both.
+      await vi.advanceTimersByTimeAsync(11_000);
+      const result = await pending;
+      expect(result).toBe("t");
+      expect(mockPollDeviceToken).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   test("backs off polling cadence when slow_down is returned", async () => {

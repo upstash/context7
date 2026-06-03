@@ -341,10 +341,21 @@ export async function startDeviceAuthorization(
   baseUrl: string,
   clientId: string
 ): Promise<DeviceAuthorizationResponse> {
+  // Hostname is shown on the server's verification page so the user can confirm
+  // that the device they're authorizing matches the one running the CLI
+  // (RFC 8628 §5.4 phishing resistance). Best-effort; falls back to "unknown".
+  const params = new URLSearchParams({ client_id: clientId });
+  try {
+    const hostname = os.hostname();
+    if (hostname) params.set("hostname", hostname);
+  } catch {
+    // ignore
+  }
+
   const response = await fetch(`${baseUrl}/api/oauth/device/code`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ client_id: clientId }).toString(),
+    body: params.toString(),
   });
 
   if (!response.ok) {
