@@ -324,12 +324,7 @@ export interface DeviceAuthorizationResponse {
 
 const DEVICE_CODE_GRANT = "urn:ietf:params:oauth:grant-type:device_code";
 
-/**
- * Detects whether the current process is running on a host where the
- * localhost-callback OAuth flow is broken — primarily SSH sessions and
- * CI/headless Linux without a graphical browser. False positives are
- * acceptable (we fall back to device flow, which works locally too).
- */
+/** Heuristic: prefer device flow on SSH and headless Linux. False positives are fine — device flow works locally too. */
 export function shouldUseDeviceFlow(): boolean {
   if (process.env.SSH_CONNECTION || process.env.SSH_CLIENT || process.env.SSH_TTY) return true;
   if (process.platform === "linux" && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) {
