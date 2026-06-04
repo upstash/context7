@@ -25,7 +25,7 @@
     "@inquirer/core": "^11.1.1",
     "@inquirer/prompts": "^8.2.0",
     "boxen": "^8.0.1",
-    "commander": "^13.1.0",
+    "commander": "^15.0.0",
     "figlet": "^1.9.4",
     "open": "^10.1.0",
     "ora": "^9.0.0",
