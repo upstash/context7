@@ -4,15 +4,9 @@ import ora from "ora";
 import open from "open";
 import boxen from "boxen";
 import {
-  generatePKCE,
-  generateState,
-  createCallbackServer,
-  exchangeCodeForTokens,
   saveTokens,
   clearTokens,
-  buildAuthorizationUrl,
   getValidAccessToken,
-  shouldUseDeviceFlow,
   startDeviceAuthorization,
   pollDeviceToken,
   DEFAULT_DEVICE_POLL_INTERVAL_SECONDS,
@@ -33,7 +27,6 @@ export function registerAuthCommands(program: Command): void {
     .command("login")
     .description("Log in to Context7")
     .option("--no-browser", "Don't open browser automatically")
-    .option("--device", "Force device-code flow (use on SSH / headless hosts)")
     .action(async (options) => {
       await loginCommand(options);
     });
@@ -115,7 +108,7 @@ async function announceIdentity(accessToken: string): Promise<string> {
   }
 }
 
-export async function performDeviceLogin(openBrowser = true): Promise<string | null> {
+export async function performLogin(openBrowser = true): Promise<string | null> {
   const spinner = ora("Preparing login...").start();
 
   let authorization;
@@ -196,81 +189,7 @@ export async function performDeviceLogin(openBrowser = true): Promise<string | n
   return null;
 }
 
-export async function performLogin(
-  openBrowser = true,
-  forceDevice = false
-): Promise<string | null> {
-  if (forceDevice || shouldUseDeviceFlow()) {
-    return performDeviceLogin(openBrowser);
-  }
-
-  const spinner = ora("Preparing login...").start();
-
-  try {
-    const { codeVerifier, codeChallenge } = generatePKCE();
-    const state = generateState();
-    const callbackServer = createCallbackServer(state);
-    const port = await callbackServer.port;
-    const redirectUri = `http://localhost:${port}/callback`;
-    const authUrl = buildAuthorizationUrl(
-      baseUrl,
-      CLI_CLIENT_ID,
-      redirectUri,
-      codeChallenge,
-      state
-    );
-
-    spinner.stop();
-
-    console.log("");
-    console.log(pc.bold("Opening browser to log in..."));
-    console.log("");
-
-    if (openBrowser) {
-      await open(authUrl);
-      console.log(pc.dim("If the browser didn't open, visit this URL:"));
-    } else {
-      console.log(pc.dim("Open this URL in your browser:"));
-    }
-    console.log(pc.cyan(authUrl));
-    console.log("");
-
-    const waitingSpinner = ora("Waiting for login...").start();
-
-    try {
-      const { code } = await callbackServer.result;
-      waitingSpinner.text = "Exchanging code for tokens...";
-
-      const tokens = await exchangeCodeForTokens(
-        baseUrl,
-        code,
-        codeVerifier,
-        redirectUri,
-        CLI_CLIENT_ID
-      );
-      saveTokens(tokens);
-      callbackServer.close();
-
-      waitingSpinner.succeed(pc.green("Login successful!"));
-      return tokens.access_token;
-    } catch (error) {
-      callbackServer.close();
-      waitingSpinner.fail(pc.red("Login failed"));
-      if (error instanceof Error) {
-        console.error(pc.red(error.message));
-      }
-      return null;
-    }
-  } catch (error) {
-    spinner.fail(pc.red("Login failed"));
-    if (error instanceof Error) {
-      console.error(pc.red(error.message));
-    }
-    return null;
-  }
-}
-
-async function loginCommand(options: { browser: boolean; device?: boolean }): Promise<void> {
+async function loginCommand(options: { browser: boolean }): Promise<void> {
   trackEvent("command", { name: "login" });
   const existingToken = await getValidAccessToken();
   if (existingToken) {
@@ -280,7 +199,7 @@ async function loginCommand(options: { browser: boolean; device?: boolean }): Pr
   }
   clearTokens();
 
-  const token = await performLogin(options.browser, options.device ?? false);
+  const token = await performLogin(options.browser);
   if (!token) {
     process.exit(1);
   }
