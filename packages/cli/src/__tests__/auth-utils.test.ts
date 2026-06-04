@@ -29,6 +29,9 @@ import {
   exchangeCodeForTokens,
   buildAuthorizationUrl,
   createCallbackServer,
+  shouldUseDeviceFlow,
+  startDeviceAuthorization,
+  pollDeviceToken,
   type TokenData,
 } from "../utils/auth.js";
 
@@ -419,5 +422,174 @@ describe("createCallbackServer", () => {
     expect(err).toBeInstanceOf(Error);
     expect((err as Error).message).toBe("User cancelled");
     await closeAndWait(server.close);
+  });
+});
+
+describe("shouldUseDeviceFlow", () => {
+  const originalEnv = { ...process.env };
+  const originalPlatform = Object.getOwnPropertyDescriptor(process, "platform")!;
+
+  beforeEach(() => {
+    delete process.env.SSH_CONNECTION;
+    delete process.env.SSH_CLIENT;
+    delete process.env.SSH_TTY;
+    delete process.env.DISPLAY;
+    delete process.env.WAYLAND_DISPLAY;
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+    Object.defineProperty(process, "platform", originalPlatform);
+  });
+
+  test("false on macOS with no SSH env", () => {
+    Object.defineProperty(process, "platform", { value: "darwin", configurable: true });
+    expect(shouldUseDeviceFlow()).toBe(false);
+  });
+
+  test.each(["SSH_CONNECTION", "SSH_CLIENT", "SSH_TTY"])("true when %s is set", (key) => {
+    Object.defineProperty(process, "platform", { value: "darwin", configurable: true });
+    process.env[key] = "anything";
+    expect(shouldUseDeviceFlow()).toBe(true);
+  });
+
+  test("true on Linux without DISPLAY / WAYLAND_DISPLAY", () => {
+    Object.defineProperty(process, "platform", { value: "linux", configurable: true });
+    expect(shouldUseDeviceFlow()).toBe(true);
+  });
+
+  test("false on Linux with DISPLAY set", () => {
+    Object.defineProperty(process, "platform", { value: "linux", configurable: true });
+    process.env.DISPLAY = ":0";
+    expect(shouldUseDeviceFlow()).toBe(false);
+  });
+
+  test("false on Linux with WAYLAND_DISPLAY set", () => {
+    Object.defineProperty(process, "platform", { value: "linux", configurable: true });
+    process.env.WAYLAND_DISPLAY = "wayland-0";
+    expect(shouldUseDeviceFlow()).toBe(false);
+  });
+});
+
+describe("startDeviceAuthorization", () => {
+  test("returns parsed response on 200", async () => {
+    const payload = {
+      device_code: "dc",
+      user_code: "ABCD-EFGH",
+      verification_uri: "https://t.example/oauth/device",
+      verification_uri_complete: "https://t.example/oauth/device?user_code=ABCD-EFGH",
+      expires_in: 600,
+      interval: 5,
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(payload) })
+    );
+    await expect(startDeviceAuthorization("https://t.example", "test-client")).resolves.toEqual(
+      payload
+    );
+  });
+
+  test("POSTs client_id as form-encoded body", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          device_code: "",
+          user_code: "",
+          verification_uri: "",
+          expires_in: 0,
+          interval: 5,
+        }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    await startDeviceAuthorization("https://t.example", "test-client");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://t.example/api/oauth/device/code",
+      expect.objectContaining({
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "client_id=test-client",
+      })
+    );
+  });
+
+  test("throws with the server-provided error_description", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: () =>
+          Promise.resolve({ error: "invalid_request", error_description: "bad client_id" }),
+      })
+    );
+    await expect(startDeviceAuthorization("https://t", "bogus")).rejects.toThrow("bad client_id");
+  });
+});
+
+describe("pollDeviceToken", () => {
+  test("approved on 200 returns tokens", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ access_token: "ctx7sk-x", token_type: "bearer" }),
+      })
+    );
+    const result = await pollDeviceToken("https://t", "c", "dc");
+    expect(result.status).toBe("approved");
+    expect(result.tokens?.access_token).toBe("ctx7sk-x");
+  });
+
+  test.each([
+    ["authorization_pending", "pending"],
+    ["slow_down", "slow_down"],
+    ["access_denied", "denied"],
+    ["expired_token", "expired"],
+  ] as const)("maps %s -> %s", async (serverError, expected) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        json: () => Promise.resolve({ error: serverError }),
+      })
+    );
+    expect((await pollDeviceToken("https://t", "c", "dc")).status).toBe(expected);
+  });
+
+  test("returns transient on a 5xx response", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+        json: () => Promise.resolve({ error: "server_error" }),
+      })
+    );
+    const result = await pollDeviceToken("https://t", "c", "dc");
+    expect(result.status).toBe("transient");
+    expect(result.errorMessage).toBeTruthy();
+  });
+
+  test("returns transient on a fetch network failure", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("ECONNREFUSED")));
+    const result = await pollDeviceToken("https://t", "c", "dc");
+    expect(result.status).toBe("transient");
+    expect(result.errorMessage).toBe("ECONNREFUSED");
+  });
+
+  test("throws on unknown 4xx error code", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        json: () =>
+          Promise.resolve({ error: "invalid_grant", error_description: "device_code malformed" }),
+      })
+    );
+    await expect(pollDeviceToken("https://t", "c", "dc")).rejects.toThrow("device_code malformed");
   });
 });
