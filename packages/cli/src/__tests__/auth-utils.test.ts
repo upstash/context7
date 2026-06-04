@@ -1,5 +1,4 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
-import * as crypto from "crypto";
 
 vi.mock("os", () => ({ homedir: () => "/fake-home", default: { homedir: () => "/fake-home" } }));
 
@@ -19,17 +18,11 @@ vi.mock("../utils/api.js", () => ({ getBaseUrl: () => "https://test.context7.com
 
 import * as fs from "fs";
 import {
-  generatePKCE,
-  generateState,
   saveTokens,
   loadTokens,
   clearTokens,
   isTokenExpired,
   getValidAccessToken,
-  exchangeCodeForTokens,
-  buildAuthorizationUrl,
-  createCallbackServer,
-  shouldUseDeviceFlow,
   startDeviceAuthorization,
   pollDeviceToken,
   type TokenData,
@@ -51,31 +44,6 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
-});
-
-describe("generatePKCE", () => {
-  test("returns codeVerifier and codeChallenge with correct SHA-256 relationship", () => {
-    const { codeVerifier, codeChallenge } = generatePKCE();
-    const expected = crypto.createHash("sha256").update(codeVerifier).digest("base64url");
-    expect(codeChallenge).toBe(expected);
-  });
-
-  test("generates unique values on each call", () => {
-    const a = generatePKCE();
-    const b = generatePKCE();
-    expect(a.codeVerifier).not.toBe(b.codeVerifier);
-  });
-});
-
-describe("generateState", () => {
-  test("returns a base64url string", () => {
-    const state = generateState();
-    expect(state).toMatch(/^[A-Za-z0-9_-]+$/);
-  });
-
-  test("generates unique values on each call", () => {
-    expect(generateState()).not.toBe(generateState());
-  });
 });
 
 describe("saveTokens", () => {
@@ -270,204 +238,6 @@ describe("getValidAccessToken", () => {
     );
 
     expect(await getValidAccessToken()).toBeNull();
-  });
-});
-
-describe("exchangeCodeForTokens", () => {
-  test("POSTs correct parameters and returns TokenData on success", async () => {
-    const tokenResponse: TokenData = { access_token: "new-tok", token_type: "bearer" };
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve(tokenResponse),
-      })
-    );
-
-    const result = await exchangeCodeForTokens(
-      "https://example.com",
-      "auth-code",
-      "verifier",
-      "http://localhost:52417/callback",
-      "client-id"
-    );
-
-    expect(result).toEqual(tokenResponse);
-    expect(fetch).toHaveBeenCalledWith(
-      "https://example.com/api/oauth/token",
-      expect.objectContaining({
-        method: "POST",
-        body: expect.stringContaining("grant_type=authorization_code"),
-      })
-    );
-    const body = vi.mocked(fetch).mock.calls[0][1]!.body as string;
-    const params = new URLSearchParams(body);
-    expect(params.get("client_id")).toBe("client-id");
-    expect(params.get("code")).toBe("auth-code");
-    expect(params.get("code_verifier")).toBe("verifier");
-    expect(params.get("redirect_uri")).toBe("http://localhost:52417/callback");
-  });
-
-  test("throws with error_description on failure", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: false,
-        json: () => Promise.resolve({ error_description: "bad code" }),
-      })
-    );
-
-    await expect(
-      exchangeCodeForTokens("https://example.com", "code", "verifier", "redirect", "client")
-    ).rejects.toThrow("bad code");
-  });
-
-  test("throws generic message when response has no JSON", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: false,
-        json: () => Promise.reject(new Error("no json")),
-      })
-    );
-
-    await expect(
-      exchangeCodeForTokens("https://example.com", "code", "verifier", "redirect", "client")
-    ).rejects.toThrow("Failed to exchange code for tokens");
-  });
-});
-
-describe("buildAuthorizationUrl", () => {
-  test("constructs URL with all required parameters", () => {
-    const result = buildAuthorizationUrl(
-      "https://example.com",
-      "client-id",
-      "http://localhost:52417/callback",
-      "challenge",
-      "state-value"
-    );
-
-    const url = new URL(result);
-    expect(url.origin).toBe("https://example.com");
-    expect(url.pathname).toBe("/api/oauth/authorize");
-    expect(url.searchParams.get("client_id")).toBe("client-id");
-    expect(url.searchParams.get("redirect_uri")).toBe("http://localhost:52417/callback");
-    expect(url.searchParams.get("code_challenge")).toBe("challenge");
-    expect(url.searchParams.get("code_challenge_method")).toBe("S256");
-    expect(url.searchParams.get("state")).toBe("state-value");
-    expect(url.searchParams.get("scope")).toBe("profile email");
-    expect(url.searchParams.get("response_type")).toBe("code");
-  });
-});
-
-describe("createCallbackServer", () => {
-  async function httpGet(url: string): Promise<void> {
-    const http = await import("http");
-    return new Promise((resolve, reject) => {
-      http
-        .get(url, (res) => {
-          res.resume();
-          res.on("end", resolve);
-        })
-        .on("error", reject);
-    });
-  }
-
-  function closeAndWait(closeFn: () => void): Promise<void> {
-    return new Promise((resolve) => {
-      closeFn();
-      setTimeout(resolve, 100);
-    });
-  }
-
-  test("resolves with code and state on valid callback", async () => {
-    const server = createCallbackServer("expected-state");
-    const port = await server.port;
-    await httpGet(`http://127.0.0.1:${port}/callback?code=auth-code&state=expected-state`);
-    const result = await server.result;
-    expect(result).toEqual({ code: "auth-code", state: "expected-state" });
-    await closeAndWait(server.close);
-  });
-
-  test("rejects on state mismatch", async () => {
-    const server = createCallbackServer("expected-state");
-    const resultPromise = server.result.catch((e: Error) => e);
-    const port = await server.port;
-    await httpGet(`http://127.0.0.1:${port}/callback?code=auth-code&state=wrong-state`);
-    const err = await resultPromise;
-    expect(err).toBeInstanceOf(Error);
-    expect((err as Error).message).toBe("State mismatch");
-    await closeAndWait(server.close);
-  });
-
-  test("rejects on missing code", async () => {
-    const server = createCallbackServer("expected-state");
-    const resultPromise = server.result.catch((e: Error) => e);
-    const port = await server.port;
-    await httpGet(`http://127.0.0.1:${port}/callback?state=expected-state`);
-    const err = await resultPromise;
-    expect(err).toBeInstanceOf(Error);
-    expect((err as Error).message).toBe("Missing authorization code or state");
-    await closeAndWait(server.close);
-  });
-
-  test("rejects on error parameter", async () => {
-    const server = createCallbackServer("expected-state");
-    const resultPromise = server.result.catch((e: Error) => e);
-    const port = await server.port;
-    await httpGet(
-      `http://127.0.0.1:${port}/callback?error=access_denied&error_description=User+cancelled`
-    );
-    const err = await resultPromise;
-    expect(err).toBeInstanceOf(Error);
-    expect((err as Error).message).toBe("User cancelled");
-    await closeAndWait(server.close);
-  });
-});
-
-describe("shouldUseDeviceFlow", () => {
-  const originalEnv = { ...process.env };
-  const originalPlatform = Object.getOwnPropertyDescriptor(process, "platform")!;
-
-  beforeEach(() => {
-    delete process.env.SSH_CONNECTION;
-    delete process.env.SSH_CLIENT;
-    delete process.env.SSH_TTY;
-    delete process.env.DISPLAY;
-    delete process.env.WAYLAND_DISPLAY;
-  });
-
-  afterEach(() => {
-    process.env = { ...originalEnv };
-    Object.defineProperty(process, "platform", originalPlatform);
-  });
-
-  test("false on macOS with no SSH env", () => {
-    Object.defineProperty(process, "platform", { value: "darwin", configurable: true });
-    expect(shouldUseDeviceFlow()).toBe(false);
-  });
-
-  test.each(["SSH_CONNECTION", "SSH_CLIENT", "SSH_TTY"])("true when %s is set", (key) => {
-    Object.defineProperty(process, "platform", { value: "darwin", configurable: true });
-    process.env[key] = "anything";
-    expect(shouldUseDeviceFlow()).toBe(true);
-  });
-
-  test("true on Linux without DISPLAY / WAYLAND_DISPLAY", () => {
-    Object.defineProperty(process, "platform", { value: "linux", configurable: true });
-    expect(shouldUseDeviceFlow()).toBe(true);
-  });
-
-  test("false on Linux with DISPLAY set", () => {
-    Object.defineProperty(process, "platform", { value: "linux", configurable: true });
-    process.env.DISPLAY = ":0";
-    expect(shouldUseDeviceFlow()).toBe(false);
-  });
-
-  test("false on Linux with WAYLAND_DISPLAY set", () => {
-    Object.defineProperty(process, "platform", { value: "linux", configurable: true });
-    process.env.WAYLAND_DISPLAY = "wayland-0";
-    expect(shouldUseDeviceFlow()).toBe(false);
   });
 });
 

@@ -4,12 +4,6 @@ import { Command } from "commander";
 const mockGetValidAccessToken = vi.fn();
 const mockClearTokens = vi.fn();
 const mockSaveTokens = vi.fn();
-const mockGeneratePKCE = vi.fn();
-const mockGenerateState = vi.fn();
-const mockCreateCallbackServer = vi.fn();
-const mockExchangeCodeForTokens = vi.fn();
-const mockBuildAuthorizationUrl = vi.fn();
-const mockShouldUseDeviceFlow = vi.fn((..._args: unknown[]) => false);
 const mockStartDeviceAuthorization = vi.fn();
 const mockPollDeviceToken = vi.fn();
 
@@ -17,12 +11,6 @@ vi.mock("../utils/auth.js", () => ({
   getValidAccessToken: (...args: unknown[]) => mockGetValidAccessToken(...args),
   clearTokens: (...args: unknown[]) => mockClearTokens(...args),
   saveTokens: (...args: unknown[]) => mockSaveTokens(...args),
-  generatePKCE: (...args: unknown[]) => mockGeneratePKCE(...args),
-  generateState: (...args: unknown[]) => mockGenerateState(...args),
-  createCallbackServer: (...args: unknown[]) => mockCreateCallbackServer(...args),
-  exchangeCodeForTokens: (...args: unknown[]) => mockExchangeCodeForTokens(...args),
-  buildAuthorizationUrl: (...args: unknown[]) => mockBuildAuthorizationUrl(...args),
-  shouldUseDeviceFlow: (...args: unknown[]) => mockShouldUseDeviceFlow(...args),
   startDeviceAuthorization: (...args: unknown[]) => mockStartDeviceAuthorization(...args),
   pollDeviceToken: (...args: unknown[]) => mockPollDeviceToken(...args),
   DEFAULT_DEVICE_POLL_INTERVAL_SECONDS: 5,
@@ -47,7 +35,7 @@ vi.mock("open", () => ({ default: (...args: unknown[]) => mockOpen(...args) }));
 vi.mock("../constants.js", () => ({ CLI_CLIENT_ID: "test-client-id" }));
 vi.mock("../utils/api.js", () => ({ getBaseUrl: () => "https://test.context7.com" }));
 
-import { registerAuthCommands, performLogin, performDeviceLogin } from "../commands/auth.js";
+import { registerAuthCommands, performLogin } from "../commands/auth.js";
 import { trackEvent } from "../utils/tracking.js";
 
 let logOutput: string[];
@@ -104,15 +92,7 @@ describe("login command", () => {
   test("calls process.exit(1) when login fails", async () => {
     mockGetValidAccessToken.mockResolvedValue(null);
     mockClearTokens.mockReturnValue(false);
-    // Mock performLogin to fail by making createCallbackServer reject
-    mockGeneratePKCE.mockReturnValue({ codeVerifier: "v", codeChallenge: "c" });
-    mockGenerateState.mockReturnValue("state");
-    mockCreateCallbackServer.mockReturnValue({
-      port: Promise.resolve(52417),
-      result: Promise.reject(new Error("timeout")),
-      close: vi.fn(),
-    });
-    mockBuildAuthorizationUrl.mockReturnValue("https://example.com/auth");
+    mockStartDeviceAuthorization.mockRejectedValue(new Error("network down"));
 
     await runCommand("login").catch(() => {});
     expect(process.exit).toHaveBeenCalledWith(1);
@@ -190,128 +170,6 @@ describe("whoami command", () => {
 });
 
 describe("performLogin", () => {
-  test("returns access_token on success", async () => {
-    const mockClose = vi.fn();
-    mockGeneratePKCE.mockReturnValue({ codeVerifier: "verifier", codeChallenge: "challenge" });
-    mockGenerateState.mockReturnValue("state");
-    mockCreateCallbackServer.mockReturnValue({
-      port: Promise.resolve(52417),
-      result: Promise.resolve({ code: "auth-code", state: "state" }),
-      close: mockClose,
-    });
-    mockBuildAuthorizationUrl.mockReturnValue("https://example.com/auth");
-    mockExchangeCodeForTokens.mockResolvedValue({
-      access_token: "new-token",
-      token_type: "bearer",
-    });
-
-    const result = await performLogin();
-    expect(result).toBe("new-token");
-    expect(mockSaveTokens).toHaveBeenCalled();
-    expect(mockClose).toHaveBeenCalled();
-  });
-
-  test("opens browser by default", async () => {
-    mockGeneratePKCE.mockReturnValue({ codeVerifier: "v", codeChallenge: "c" });
-    mockGenerateState.mockReturnValue("s");
-    mockCreateCallbackServer.mockReturnValue({
-      port: Promise.resolve(52417),
-      result: Promise.resolve({ code: "code", state: "s" }),
-      close: vi.fn(),
-    });
-    mockBuildAuthorizationUrl.mockReturnValue("https://example.com/auth");
-    mockExchangeCodeForTokens.mockResolvedValue({
-      access_token: "tok",
-      token_type: "bearer",
-    });
-
-    await performLogin(true);
-    expect(mockOpen).toHaveBeenCalledWith("https://example.com/auth");
-  });
-
-  test("skips browser open when openBrowser=false", async () => {
-    mockGeneratePKCE.mockReturnValue({ codeVerifier: "v", codeChallenge: "c" });
-    mockGenerateState.mockReturnValue("s");
-    mockCreateCallbackServer.mockReturnValue({
-      port: Promise.resolve(52417),
-      result: Promise.resolve({ code: "code", state: "s" }),
-      close: vi.fn(),
-    });
-    mockBuildAuthorizationUrl.mockReturnValue("https://example.com/auth");
-    mockExchangeCodeForTokens.mockResolvedValue({
-      access_token: "tok",
-      token_type: "bearer",
-    });
-
-    await performLogin(false);
-    expect(mockOpen).not.toHaveBeenCalled();
-  });
-
-  test("returns null on callback failure", async () => {
-    const mockClose = vi.fn();
-    mockGeneratePKCE.mockReturnValue({ codeVerifier: "v", codeChallenge: "c" });
-    mockGenerateState.mockReturnValue("s");
-    mockCreateCallbackServer.mockReturnValue({
-      port: Promise.resolve(52417),
-      result: Promise.reject(new Error("User cancelled")),
-      close: mockClose,
-    });
-    mockBuildAuthorizationUrl.mockReturnValue("https://example.com/auth");
-
-    const result = await performLogin();
-    expect(result).toBeNull();
-    expect(mockClose).toHaveBeenCalled();
-  });
-
-  test("uses device flow when forceDevice=true", async () => {
-    mockStartDeviceAuthorization.mockResolvedValue({
-      device_code: "dc",
-      user_code: "ABCD-EFGH",
-      verification_uri: "https://t/oauth/device",
-      verification_uri_complete: "https://t/oauth/device?user_code=ABCD-EFGH",
-      expires_in: 600,
-      interval: 0,
-    });
-    mockPollDeviceToken.mockResolvedValue({
-      status: "approved",
-      tokens: { access_token: "ctx7sk-x", token_type: "bearer" },
-    });
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({ ok: false, json: () => Promise.resolve({}) })
-    );
-
-    const result = await performLogin(false, true);
-    expect(result).toBe("ctx7sk-x");
-    expect(mockCreateCallbackServer).not.toHaveBeenCalled();
-  });
-
-  test("uses device flow when shouldUseDeviceFlow returns true", async () => {
-    mockShouldUseDeviceFlow.mockReturnValueOnce(true);
-    mockStartDeviceAuthorization.mockResolvedValue({
-      device_code: "dc",
-      user_code: "X",
-      verification_uri: "https://t",
-      verification_uri_complete: undefined,
-      expires_in: 600,
-      interval: 0,
-    });
-    mockPollDeviceToken.mockResolvedValue({
-      status: "approved",
-      tokens: { access_token: "tok", token_type: "bearer" },
-    });
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({ ok: false, json: () => Promise.resolve({}) })
-    );
-
-    const result = await performLogin(false);
-    expect(result).toBe("tok");
-    expect(mockStartDeviceAuthorization).toHaveBeenCalled();
-  });
-});
-
-describe("performDeviceLogin", () => {
   const authorization = {
     device_code: "dc",
     user_code: "ABCD-EFGH",
@@ -336,7 +194,7 @@ describe("performDeviceLogin", () => {
       tokens: { access_token: "ctx7sk-x", token_type: "bearer" },
     });
 
-    const result = await performDeviceLogin(false);
+    const result = await performLogin(false);
     expect(result).toBe("ctx7sk-x");
     expect(mockSaveTokens).toHaveBeenCalledWith({
       access_token: "ctx7sk-x",
@@ -348,7 +206,7 @@ describe("performDeviceLogin", () => {
     mockStartDeviceAuthorization.mockResolvedValue(authorization);
     mockPollDeviceToken.mockResolvedValue({ status: "denied" });
 
-    expect(await performDeviceLogin(false)).toBeNull();
+    expect(await performLogin(false)).toBeNull();
     expect(mockSaveTokens).not.toHaveBeenCalled();
   });
 
@@ -356,7 +214,7 @@ describe("performDeviceLogin", () => {
     mockStartDeviceAuthorization.mockResolvedValue(authorization);
     mockPollDeviceToken.mockResolvedValue({ status: "expired" });
 
-    expect(await performDeviceLogin(false)).toBeNull();
+    expect(await performLogin(false)).toBeNull();
     expect(mockSaveTokens).not.toHaveBeenCalled();
   });
 
@@ -372,7 +230,7 @@ describe("performDeviceLogin", () => {
           tokens: { access_token: "t", token_type: "bearer" },
         });
 
-      const pending = performDeviceLogin(false);
+      const pending = performLogin(false);
       // transient bumps the interval by 5s (mirroring slow_down), so the
       // 2nd and 3rd polls each need a 5s wait. Advance enough to cover both.
       await vi.advanceTimersByTimeAsync(11_000);
@@ -393,7 +251,7 @@ describe("performDeviceLogin", () => {
         tokens: { access_token: "t", token_type: "bearer" },
       });
 
-      const pending = performDeviceLogin(false);
+      const pending = performLogin(false);
       // First poll fires after the initial 0ms interval; slow_down then
       // bumps the interval by 5000ms before the second poll.
       await vi.advanceTimersByTimeAsync(5500);
@@ -408,7 +266,7 @@ describe("performDeviceLogin", () => {
   test("returns null when start request throws", async () => {
     mockStartDeviceAuthorization.mockRejectedValue(new Error("network down"));
 
-    expect(await performDeviceLogin(false)).toBeNull();
+    expect(await performLogin(false)).toBeNull();
     expect(mockPollDeviceToken).not.toHaveBeenCalled();
   });
 
@@ -422,7 +280,7 @@ describe("performDeviceLogin", () => {
         tokens: { access_token: "t", token_type: "bearer" },
       });
 
-      await performDeviceLogin(true);
+      await performLogin(true);
       expect(mockOpen).toHaveBeenCalledWith(authorization.verification_uri_complete);
     } finally {
       Object.defineProperty(process.stdin, "isTTY", { value: originalIsTTY, configurable: true });
@@ -436,7 +294,7 @@ describe("performDeviceLogin", () => {
       tokens: { access_token: "t", token_type: "bearer" },
     });
 
-    await performDeviceLogin(false);
+    await performLogin(false);
     expect(mockOpen).not.toHaveBeenCalled();
   });
 
@@ -449,7 +307,7 @@ describe("performDeviceLogin", () => {
         tokens: { access_token: "t", token_type: "bearer" },
       });
 
-      const pending = performDeviceLogin(false);
+      const pending = performLogin(false);
       // Two 5s polls.
       await vi.advanceTimersByTimeAsync(11_000);
       const result = await pending;
