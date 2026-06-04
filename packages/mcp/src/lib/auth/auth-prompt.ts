@@ -48,8 +48,12 @@ function suppressionKey(ctx: ClientContext): string {
   return ctx.sessionId ?? ctx.clientIp ?? "default";
 }
 
-const CHOICE_RUN_SETUP = "run_setup";
-const CHOICE_STAY_ANON = "stay_anon";
+// User-facing strings double as enum const values: keeps the schema in the
+// simpler `enum: [...]` shape (which clients render more reliably than
+// `oneOf` with separate `const`/`title`), and the response surfaces the
+// chosen label directly so suppression logic can compare against it.
+const CHOICE_RUN_SETUP = "I'll run the command to sign in";
+const CHOICE_STAY_ANON = "Continue anonymously with smaller limits";
 
 /**
  * Fires a form-mode elicitation that surfaces a sign-in nudge in the client UI
@@ -86,10 +90,7 @@ export function maybeElicitAuthSignIn(server: McpServer, ctx: ClientContext): vo
           choice: {
             type: "string",
             title: "How would you like to continue?",
-            oneOf: [
-              { const: CHOICE_RUN_SETUP, title: "I'll run the command to sign in" },
-              { const: CHOICE_STAY_ANON, title: "Continue anonymously with smaller limits" },
-            ],
+            enum: [CHOICE_RUN_SETUP, CHOICE_STAY_ANON],
             default: CHOICE_RUN_SETUP,
           },
         },
