@@ -45,8 +45,10 @@
           "howto/chat-widget",
           "howto/verification",
           "howto/private-sources",
-          "howto/teamspace",
-          "howto/usage"
+          "howto/policies",
+          "howto/rules",
+          "howto/usage",
+          "howto/teamspace"
         ]
       },
       {
