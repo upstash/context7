@@ -1,0 +1,62 @@
+---
+title: Policies
+description: Control which sources and libraries your teamspace can access
+---
+
+Policies let you control exactly which documentation your teamspace can pull from Context7. Configure them from the [policies tab](https://context7.com/dashboard?tab=policies) of your dashboard, or programmatically through the [Policies API](/api-reference/policies/get-teamspace-policies).
+
+Every search and MCP request made with one of the teamspace's API keys is filtered through these policies, so they apply to all members at once.
+
+<Note>Policies are scoped to a teamspace. Only owners and admins can change them; developers have read-only access.</Note>
+
+## Source Type Access
+
+The **Source Type Access** card toggles entire categories of sources on or off. Disabling a type removes all of its content from results for the whole teamspace.
+
+| Group             | Source Type        | What it covers                          |
+| ----------------- | ------------------ | --------------------------------------- |
+| Public Sources    | Public Repositories | Public GitHub repositories              |
+| Public Sources    | Websites           | Indexed documentation websites          |
+| Public Sources    | LLMs.txt           | `llms.txt` sources                      |
+| Connected Sources | Confluence         | Atlassian Confluence workspace pages    |
+| Connected Sources | Uploaded Files     | Uploaded OpenAPI specs and PDFs         |
+| Connected Sources | Notion             | Connected Notion pages                  |
+| Connected Sources | Private Sources    | Privately parsed repositories           |
+
+## Library Filters
+
+The **Library Filters** card decides which public libraries are accessible. Choose one of two modes:
+
+### Filter by Quality
+
+Allow any public library that clears the quality bar you set. Available filters:
+
+| Filter            | Options                              |
+| ----------------- | ------------------------------------ |
+| Verification      | All · Verified Only                  |
+| Trust score       | All · Medium (4+) · High (7+)        |
+| Freshness         | All · 30 days · 90 days · 1 year     |
+| Repo stars        | All · 100+ · 1,000+ · 10,000+        |
+| Website backlinks | All · 500+ · 2,500+ · 5,000+         |
+| Referring domains | All · 100+ · 500+ · 1,000+           |
+| Organic traffic   | All · 100+ · 1,000+ · 10,000+        |
+
+You can also maintain two override lists in quality mode:
+
+- **Blocked libraries** — always excluded, even if they pass every filter.
+- **Excepted libraries** — always allowed, even if they fail the filters.
+
+### Select Manually
+
+Ignore the quality bar entirely and grant access only to a hand-picked list of libraries. Anything not on the list is inaccessible.
+
+<Note>The card shows the number of libraries currently accessible under your settings, so you can see the impact before saving.</Note>
+
+## Managing Policies via API
+
+The same configuration is available over the REST API using a teamspace API key:
+
+- [Get Policies](/api-reference/policies/get-teamspace-policies) — `GET /api/v2/policies` returns the current configuration and accessible library count.
+- [Update Policies](/api-reference/policies/update-teamspace-policies) — `PATCH /api/v2/policies` applies an incremental update; only the fields you include are changed.
+
+See the [API Reference](/api-guide) for request and response details.
