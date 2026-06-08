@@ -1,11 +1,15 @@
 import * as fs from "fs";
-import * as path from "path";
 import * as os from "os";
 import { CLI_CLIENT_ID } from "../constants.js";
 import { getBaseUrl } from "./api.js";
-
-const CONFIG_DIR = path.join(os.homedir(), ".context7");
-const CREDENTIALS_FILE = path.join(CONFIG_DIR, "credentials.json");
+import {
+  CREDENTIALS_FILE_NAME,
+  getConfigDir,
+  getCredentialsFilePath,
+  getLegacyFilePath,
+  migrateLegacyFileSync,
+  resolveReadPathSync,
+} from "./storage-paths.js";
 
 export interface TokenData {
   access_token: string;
@@ -17,27 +21,41 @@ export interface TokenData {
 }
 
 function ensureConfigDir(): void {
-  if (!fs.existsSync(CONFIG_DIR)) {
-    fs.mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 });
+  const configDir = getConfigDir();
+  if (!fs.existsSync(configDir)) {
+    fs.mkdirSync(configDir, { recursive: true, mode: 0o700 });
   }
 }
 
+// Credentials must never be group/world-readable, even if a migrated or
+// pre-existing file carried looser permissions.
+const CREDENTIALS_MODE = 0o600;
+
 export function saveTokens(tokens: TokenData): void {
+  const credentialsFile = getCredentialsFilePath();
+  migrateLegacyFileSync(CREDENTIALS_FILE_NAME, credentialsFile, CREDENTIALS_MODE);
   ensureConfigDir();
   const data = {
     ...tokens,
     expires_at:
       tokens.expires_at ?? (tokens.expires_in ? Date.now() + tokens.expires_in * 1000 : undefined),
   };
-  fs.writeFileSync(CREDENTIALS_FILE, JSON.stringify(data, null, 2), { mode: 0o600 });
+  fs.writeFileSync(credentialsFile, JSON.stringify(data, null, 2), { mode: CREDENTIALS_MODE });
+  // `mode` is ignored when the file already exists; enforce it explicitly.
+  fs.chmodSync(credentialsFile, CREDENTIALS_MODE);
 }
 
 export function loadTokens(): TokenData | null {
-  if (!fs.existsSync(CREDENTIALS_FILE)) {
+  const credentialsFile = resolveReadPathSync(
+    CREDENTIALS_FILE_NAME,
+    getCredentialsFilePath(),
+    CREDENTIALS_MODE
+  );
+  if (!fs.existsSync(credentialsFile)) {
     return null;
   }
   try {
-    const data = JSON.parse(fs.readFileSync(CREDENTIALS_FILE, "utf-8"));
+    const data = JSON.parse(fs.readFileSync(credentialsFile, "utf-8"));
     return data as TokenData;
   } catch {
     return null;
@@ -45,11 +63,18 @@ export function loadTokens(): TokenData | null {
 }
 
 export function clearTokens(): boolean {
-  if (fs.existsSync(CREDENTIALS_FILE)) {
-    fs.unlinkSync(CREDENTIALS_FILE);
-    return true;
+  const credentialsFile = getCredentialsFilePath();
+  let removed = false;
+  if (fs.existsSync(credentialsFile)) {
+    fs.unlinkSync(credentialsFile);
+    removed = true;
   }
-  return false;
+  const legacyCredentialsFile = getLegacyFilePath(CREDENTIALS_FILE_NAME);
+  if (fs.existsSync(legacyCredentialsFile)) {
+    fs.unlinkSync(legacyCredentialsFile);
+    removed = true;
+  }
+  return removed;
 }
 
 export function isTokenExpired(tokens: TokenData): boolean {

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { mkdir, readFile, rm } from "fs/promises";
+import { mkdir, readFile, rm, writeFile } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 
@@ -31,6 +31,7 @@ beforeEach(async () => {
 afterEach(async () => {
   await rm(tempDir, { recursive: true, force: true });
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   vi.doUnmock("os");
   vi.resetModules();
   vi.restoreAllMocks();
@@ -155,7 +156,7 @@ describe("checkForUpdates", () => {
 });
 
 describe("default cli-state persistence", () => {
-  test("writes updater state under ~/.context7/cli-state.json when using the default path", async () => {
+  test("writes updater state under the XDG state directory when using the default path", async () => {
     const fakeHome = join(tempDir, "fake-home");
     await mkdir(fakeHome, { recursive: true });
 
@@ -179,7 +180,7 @@ describe("default cli-state persistence", () => {
     await updateCheck.markUpdateNotificationShown("9.9.9", { now: 2000 });
 
     const persisted = JSON.parse(
-      await readFile(join(fakeHome, ".context7", "cli-state.json"), "utf-8")
+      await readFile(join(fakeHome, ".local", "state", "context7", "cli-state.json"), "utf-8")
     ) as {
       latestVersion?: string;
       lastCheckedAt?: number;
@@ -193,6 +194,82 @@ describe("default cli-state persistence", () => {
       notifiedVersion: "9.9.9",
       lastNotifiedAt: 2000,
     });
+  });
+
+  test("honors XDG_STATE_HOME for updater state", async () => {
+    // Mock homedir so the legacy-migration step cannot touch the real ~/.context7.
+    const fakeHome = join(tempDir, "fake-home");
+    await mkdir(fakeHome, { recursive: true });
+    const stateHome = join(tempDir, "xdg-state");
+    vi.stubEnv("XDG_STATE_HOME", stateHome);
+
+    vi.resetModules();
+    vi.doMock("os", async () => {
+      const actual = await vi.importActual<typeof import("os")>("os");
+      return { ...actual, homedir: () => fakeHome };
+    });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ version: "9.9.9" }),
+      })
+    );
+
+    const updateCheck = await import("../utils/update-check.js");
+    await updateCheck.checkForUpdates({ force: true, now: 1000 });
+
+    const persisted = JSON.parse(
+      await readFile(join(stateHome, "context7", "cli-state.json"), "utf-8")
+    ) as {
+      latestVersion?: string;
+      lastCheckedAt?: number;
+    };
+
+    expect(persisted).toEqual({
+      latestVersion: "9.9.9",
+      lastCheckedAt: 1000,
+    });
+  });
+
+  test("migrates legacy ~/.context7 cli-state into the XDG state directory", async () => {
+    const fakeHome = join(tempDir, "fake-home");
+    const legacyDir = join(fakeHome, ".context7");
+    await mkdir(legacyDir, { recursive: true });
+    await writeFile(
+      join(legacyDir, "cli-state.json"),
+      JSON.stringify({ latestVersion: "9.9.9", lastCheckedAt: 1000 }),
+      "utf-8"
+    );
+
+    vi.resetModules();
+    vi.doMock("os", async () => {
+      const actual = await vi.importActual<typeof import("os")>("os");
+      return { ...actual, homedir: () => fakeHome };
+    });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => {
+        throw new Error("fetch should not be called for a fresh migrated cache");
+      })
+    );
+
+    const updateCheck = await import("../utils/update-check.js");
+
+    const info = await updateCheck.checkForUpdates({
+      now: 2000,
+      cacheTtlMs: 10_000,
+    });
+
+    expect(info?.latestVersion).toBe("9.9.9");
+    expect(fetch).not.toHaveBeenCalled();
+    expect(
+      JSON.parse(
+        await readFile(join(fakeHome, ".local", "state", "context7", "cli-state.json"), "utf-8")
+      )
+    ).toEqual({ latestVersion: "9.9.9", lastCheckedAt: 1000 });
   });
 });
 

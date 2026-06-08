@@ -20,6 +20,7 @@ import { promptForInstallTargets, getTargetDirs } from "../utils/ide.js";
 import selectOrInput from "../utils/selectOrInput.js";
 import { checkboxWithHover, terminalLink } from "../utils/prompts.js";
 import { trackEvent } from "../utils/tracking.js";
+import { getPreviewsDir } from "../utils/storage-paths.js";
 import type {
   GenerateOptions,
   LibrarySearchResult,
@@ -428,7 +429,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
     };
 
     const openInEditor = async () => {
-      const previewDir = join(homedir(), ".context7", "previews");
+      const previewDir = getPreviewsDir();
       await mkdir(previewDir, { recursive: true });
       previewFile = join(previewDir, `${skillName}.md`);
       if (!previewFileWritten) {
