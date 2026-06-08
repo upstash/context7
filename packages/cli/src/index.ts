@@ -4,7 +4,9 @@ import figlet from "figlet";
 import { registerSkillCommands, registerSkillAliases } from "./commands/skill.js";
 import { registerAuthCommands, setAuthBaseUrl } from "./commands/auth.js";
 import { registerSetupCommand } from "./commands/setup.js";
+import { registerRemoveCommand } from "./commands/remove.js";
 import { registerDocsCommands } from "./commands/docs.js";
+import { maybeShowUpgradeNotice, registerUpgradeCommand } from "./commands/upgrade.js";
 import { setBaseUrl } from "./utils/api.js";
 import { VERSION } from "./constants.js";
 
@@ -17,7 +19,7 @@ const program = new Command();
 
 program
   .name("ctx7")
-  .description("Context7 CLI - Manage AI coding skills and documentation context")
+  .description("Context7 CLI - Fetch documentation context and configure Context7")
   .version(VERSION, "-v, --version")
   .option("--base-url <url>")
   .hook("preAction", (thisCommand) => {
@@ -27,31 +29,30 @@ program
       setAuthBaseUrl(opts.baseUrl);
     }
   })
+  .hook("preAction", async (_thisCommand, actionCommand) => {
+    await maybeShowUpgradeNotice({
+      actionName: actionCommand.name(),
+      argv: process.argv,
+    });
+  })
   .addHelpText(
     "after",
     `
 Examples:
-  ${brand.dim("# Search for skills")}
-  ${brand.primary("npx ctx7 skills search pdf")}
-  ${brand.primary("npx ctx7 skills search react hooks")}
+  ${brand.dim("# Configure Context7 for your coding agent")}
+  ${brand.primary("npx ctx7 setup")}
+  ${brand.primary("npx ctx7 setup --mcp")}
+  ${brand.primary("npx ctx7 setup --cli")}
 
-  ${brand.dim("# Install from a repository")}
-  ${brand.primary("npx ctx7 skills install /anthropics/skills")}
-  ${brand.primary("npx ctx7 skills install /anthropics/skills pdf")}
-
-  ${brand.dim("# Install to specific client")}
-  ${brand.primary("npx ctx7 skills install /anthropics/skills --cursor")}
-  ${brand.primary("npx ctx7 skills install /anthropics/skills --global")}
-
-  ${brand.dim("# List and manage installed skills")}
-  ${brand.primary("npx ctx7 skills list --claude")}
-  ${brand.primary("npx ctx7 skills remove pdf")}
+  ${brand.dim("# Remove Context7 setup")}
+  ${brand.primary("npx ctx7 remove --cursor")}
+  ${brand.primary("npx ctx7 remove --cursor --all")}
+  ${brand.primary("npx ctx7 remove --cursor --cli")}
+  ${brand.primary("npx ctx7 remove --claude --mcp")}
 
   ${brand.dim("# Query library documentation")}
   ${brand.primary('npx ctx7 library react "how to use hooks"')}
   ${brand.primary('npx ctx7 docs /facebook/react "useEffect examples"')}
-
-Visit ${brand.primary("https://context7.com")} to browse skills
 `
   );
 
@@ -59,23 +60,24 @@ registerSkillCommands(program);
 registerSkillAliases(program);
 registerAuthCommands(program);
 registerSetupCommand(program);
+registerRemoveCommand(program);
 registerDocsCommands(program);
+registerUpgradeCommand(program);
 
 program.action(() => {
   console.log("");
   const banner = figlet.textSync("Context7", { font: "ANSI Shadow" });
   console.log(brand.primary(banner));
-  console.log(brand.dim("  The open agent skills ecosystem"));
+  console.log(brand.dim("  Documentation context for AI coding agents"));
   console.log("");
 
   console.log("  Quick start:");
-  console.log(`    ${brand.primary("npx ctx7 skills search pdf")}`);
-  console.log(`    ${brand.primary("npx ctx7 skills install /anthropics/skills")}`);
+  console.log(`    ${brand.primary("npx ctx7 setup")}`);
+  console.log(`    ${brand.primary('npx ctx7 docs /facebook/react "useEffect examples"')}`);
   console.log("");
 
   console.log(`  Run ${brand.primary("npx ctx7 --help")} for all commands and options`);
-  console.log(`  Visit ${brand.primary("https://context7.com")} to browse skills`);
   console.log("");
 });
 
-program.parse();
+await program.parseAsync();

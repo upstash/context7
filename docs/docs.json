@@ -26,8 +26,8 @@
           "plans-pricing",
           "clients/cli",
           "adding-libraries",
+          "library-updates",
           "api-guide",
-          "skills",
           "tips"
         ]
       },
@@ -44,19 +44,28 @@
           "howto/claiming-libraries",
           "howto/chat-widget",
           "howto/verification",
-          "howto/private-repositories",
-          "howto/teamspace",
-          "howto/usage"
+          "howto/private-sources",
+          "howto/policies",
+          "howto/rules",
+          "howto/usage",
+          "howto/teamspace"
         ]
       },
       {
         "group": "Enterprise",
         "pages": [
           "enterprise",
+          "enterprise/azure-apim",
           {
             "group": "On-Premise",
             "pages": [
               "enterprise/on-premise",
+              {
+                "group": "Security",
+                "pages": [
+                  "enterprise/security/entra-sso"
+                ]
+              },
               {
                 "group": "Deployment",
                 "pages": [
@@ -65,8 +74,19 @@
                 ]
               }
             ]
-          },
-          "resources/security"
+          }
+        ]
+      },
+      {
+        "group": "Security",
+        "pages": [
+          "security/overview",
+          "security/data-privacy",
+          "security/infrastructure",
+          "security/auth-and-access-control",
+          "security/compliance-and-reporting",
+          "security/data-safety",
+          "security/best-practices"
         ]
       },
       {
@@ -128,14 +148,17 @@
       {
         "group": "Integrations",
         "pages": [
-          "integrations/code-rabbit"
+          "integrations/github-actions",
+          "integrations/code-rabbit",
+          "integrations/factory-ai",
+          "integrations/tembo",
+          "integrations/mastra"
         ]
       },
       {
         "group": "Resources",
         "pages": [
           "resources/developer",
-          "resources/security",
           "resources/troubleshooting"
         ]
       }

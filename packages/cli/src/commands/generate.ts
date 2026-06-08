@@ -20,6 +20,7 @@ import { promptForInstallTargets, getTargetDirs } from "../utils/ide.js";
 import selectOrInput from "../utils/selectOrInput.js";
 import { checkboxWithHover, terminalLink } from "../utils/prompts.js";
 import { trackEvent } from "../utils/tracking.js";
+import { getPreviewsDir } from "../utils/storage-paths.js";
 import type {
   GenerateOptions,
   LibrarySearchResult,
@@ -35,6 +36,8 @@ interface QueryLogEntry {
   results: ToolResultSnippet[];
 }
 
+// TODO(deprecate-skills-phase-2): Remove this deprecated Skill Hub generation
+// subcommand after legacy `ctx7 skills generate` support is dropped.
 export function registerGenerateCommand(skillCommand: Command): void {
   skillCommand
     .command("generate")
@@ -165,7 +168,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
 
   if (searchResult.searchFilterApplied) {
     log.warn(
-      "Your results only include libraries matching your access settings. To search across all public libraries, update your settings at https://context7.com/dashboard?tab=libraries"
+      "Your results only include libraries matching your teamspace's library filters. To adjust quality thresholds or blocked libraries, update your filters at https://context7.com/dashboard?tab=policies"
     );
     log.blank();
   }
@@ -426,7 +429,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
     };
 
     const openInEditor = async () => {
-      const previewDir = join(homedir(), ".context7", "previews");
+      const previewDir = getPreviewsDir();
       await mkdir(previewDir, { recursive: true });
       previewFile = join(previewDir, `${skillName}.md`);
       if (!previewFileWritten) {

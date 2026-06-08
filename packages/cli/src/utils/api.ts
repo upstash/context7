@@ -11,7 +11,7 @@ import type {
   SkillQuotaResponse,
   ContextResponse,
 } from "../types.js";
-import { downloadSkillFromGitHub } from "./github.js";
+import { downloadSkillFromGitHub, getSkillFromGitHub } from "./github.js";
 import { VERSION } from "../constants.js";
 
 let baseUrl = "https://context7.com";
@@ -24,6 +24,8 @@ export function setBaseUrl(url: string): void {
   baseUrl = url;
 }
 
+// TODO(deprecate-skills-phase-2): Remove the Skill Hub API helpers in this file
+// when deprecated `ctx7 skills ...` commands are deleted.
 export async function listProjectSkills(project: string): Promise<ListSkillsResponse> {
   const params = new URLSearchParams({ project });
   const response = await fetch(`${baseUrl}/api/v2/skills?${params}`);
@@ -62,11 +64,21 @@ export async function downloadSkill(project: string, skillName: string): Promise
   const skillData = await getSkill(project, skillName);
 
   if (skillData.error) {
-    return {
-      skill: { name: skillName, description: "", url: "", project },
-      files: [],
-      error: skillData.message || skillData.error,
-    };
+    // handle private repo skills with env var
+    const ghResult = await getSkillFromGitHub(project, skillName);
+    if (ghResult.status !== "ok" || !ghResult.skill) {
+      return {
+        skill: { name: skillName, description: "", url: "", project },
+        files: [],
+        error: skillData.message || skillData.error,
+      };
+    }
+
+    const { files, error } = await downloadSkillFromGitHub(ghResult.skill);
+    if (error) {
+      return { skill: ghResult.skill, files: [], error };
+    }
+    return { skill: ghResult.skill, files };
   }
 
   const skill = {
@@ -311,8 +323,9 @@ export async function getLibraryContext(
   if (options?.type) {
     params.set("type", options.type);
   }
+  const headers = getAuthHeaders(accessToken);
   const response = await fetch(`${baseUrl}/api/v2/context?${params}`, {
-    headers: getAuthHeaders(accessToken),
+    headers,
   });
 
   if (!response.ok) {

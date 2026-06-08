@@ -27,6 +27,10 @@ import {
 } from "../types.js";
 
 export function getSelectedIdes(options: IDEOptions): IDE[] {
+  if (options.allAgents) {
+    return ["universal", ...VENDOR_SPECIFIC_AGENTS];
+  }
+
   const ides: IDE[] = [];
   if (options.claude) ides.push("claude");
   if (options.cursor) ides.push("cursor");
@@ -36,7 +40,13 @@ export function getSelectedIdes(options: IDEOptions): IDE[] {
 }
 
 export function hasExplicitIdeOption(options: IDEOptions): boolean {
-  return !!(options.claude || options.cursor || options.universal || options.antigravity);
+  return !!(
+    options.allAgents ||
+    options.claude ||
+    options.cursor ||
+    options.universal ||
+    options.antigravity
+  );
 }
 
 /** Detect vendor-specific agents whose parent directory exists. */

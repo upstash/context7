@@ -3,6 +3,9 @@ export interface SkillFile {
   content: string;
 }
 
+// TODO(deprecate-skills-phase-2): Remove Skill Hub response types when
+// deprecated `ctx7 skills ...` commands are deleted. Keep setup skill directory
+// types below.
 export interface Skill {
   name: string;
   description: string;
@@ -129,6 +132,7 @@ export type IDE = "claude" | "cursor" | "antigravity" | "universal";
 export type Scope = "project" | "global";
 
 export interface IDEOptions {
+  allAgents?: boolean;
   claude?: boolean;
   cursor?: boolean;
   universal?: boolean;
@@ -141,7 +145,7 @@ export interface ScopeOptions {
 
 export type AddOptions = IDEOptions & ScopeOptions & { all?: boolean; yes?: boolean };
 export type SuggestOptions = IDEOptions & ScopeOptions;
-export type ListOptions = IDEOptions & ScopeOptions;
+export type ListOptions = IDEOptions & ScopeOptions & { json?: boolean };
 export type RemoveOptions = IDEOptions & ScopeOptions;
 export type GenerateOptions = IDEOptions &
   ScopeOptions & {

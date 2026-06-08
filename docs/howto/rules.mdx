@@ -1,0 +1,32 @@
+---
+title: Rules
+description: Prepend custom guidelines to the documentation your teamspace retrieves
+---
+
+Rules are custom instructions that are automatically prepended to the documentation context whenever your teamspace retrieves library docs. Use them to set coding standards, define architectural patterns, or specify framework preferences so every result follows your team's conventions.
+
+Manage them from the [rules tab](https://context7.com/dashboard?tab=rules) of your dashboard.
+
+<Note>Teamspace Rules are a Pro feature. Only owners and admins can add, edit, or delete rules; developers have read-only access.</Note>
+
+## Rule Scopes
+
+Each rule applies at one of two scopes:
+
+- **Global Rules** — apply to every library your teamspace accesses.
+- **Library-Specific Rules** — apply only when retrieving docs for a particular library.
+
+## Examples
+
+- "Always use TypeScript strict mode"
+- "Prefer server components in Next.js"
+- "Use the App Router, not the Pages Router"
+
+## Adding a Rule
+
+1. Open the [rules tab](https://context7.com/dashboard?tab=rules) and click **Add Rule...**
+2. Choose the scope — **Global** or a specific **Library**.
+3. Enter the rule text.
+4. Save. The rule takes effect on the next documentation request made with the teamspace's API keys.
+
+Existing rules are grouped by scope in the list. Select **Global Rules** or any library entry to edit or remove its rules.

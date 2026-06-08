@@ -94,7 +94,7 @@ async function resolveCommand(
 
   if (data.searchFilterApplied) {
     log.warn(
-      "Your results only include libraries matching your access settings. To search across all public libraries, update your settings at https://context7.com/dashboard?tab=libraries"
+      "Your results only include libraries matching your teamspace's library filters. To adjust quality thresholds or blocked libraries, update your filters at https://context7.com/dashboard?tab=policies"
     );
     log.blank();
   }
@@ -128,8 +128,9 @@ async function queryCommand(
     return;
   }
 
-  const spinner = isTTY ? ora(`Fetching docs for "${libraryId}"...`).start() : null;
   const accessToken = getAccessToken();
+
+  const spinner = isTTY ? ora(`Fetching docs for "${libraryId}"...`).start() : null;
   const outputType = options.json ? "json" : "txt";
 
   let result;

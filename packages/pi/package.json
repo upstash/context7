@@ -1,0 +1,69 @@
+{
+  "name": "@upstash/context7-pi",
+  "version": "0.1.0",
+  "description": "Official Context7 extension for pi.dev — adds resolve-library-id and query-docs tools to the pi coding agent",
+  "type": "module",
+  "pi": {
+    "extensions": [
+      "./extensions"
+    ],
+    "skills": [
+      "./skills"
+    ],
+    "prompts": [
+      "./prompts"
+    ],
+    "image": "https://github.com/upstash/context7/blob/master/public/cover.png?raw=true"
+  },
+  "files": [
+    "extensions",
+    "lib",
+    "skills",
+    "prompts",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:check": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/upstash/context7.git",
+    "directory": "packages/pi"
+  },
+  "keywords": [
+    "pi-package",
+    "context7",
+    "documentation",
+    "upstash",
+    "ai",
+    "coding-agent"
+  ],
+  "author": "Upstash",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/upstash/context7/issues"
+  },
+  "homepage": "https://github.com/upstash/context7#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.75.4",
+    "@types/node": "^25.9.1",
+    "dotenv": "^17.2.3",
+    "typebox": "^1.1.38",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.14"
+  }
+}

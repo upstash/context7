@@ -1,5 +1,11 @@
 # @upstash/context7-tools-ai-sdk
 
+## 0.2.3
+
+### Patch Changes
+
+- 8322879: Improve resolve libryar id tool prompt to provide the libraryName query with proper format
+
 ## 0.2.2
 
 ### Patch Changes

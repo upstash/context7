@@ -1,5 +1,113 @@
 # Changelog
 
+## 0.5.1
+
+### Patch Changes
+
+- ea91d7d: `ctx7 login` now always uses the device-code flow. The localhost-callback path is removed — every install (laptop, SSH, Codespace, Docker, CI) goes through the same boxed prompt and verification page. Drops the `--device` flag (it was the opt-in for what's now the default). Older CLI versions (≤ 0.5.0) continue to work against the unchanged auth endpoints, so pinned installs are unaffected.
+
+## 0.5.0
+
+### Minor Changes
+
+- 5a180d5: Add OAuth 2.0 device authorization flow (RFC 8628) for `ctx7 login` and `ctx7 setup`. Required for headless / remote hosts (SSH, Codespaces, Docker, CI) where the existing localhost-callback flow can't work — the browser was opening on the user's laptop while the callback listener ran on the remote host.
+
+  The new flow prints a verification URL and short code, then polls a token endpoint. The user visits the URL on any device, signs in, and approves; the CLI receives the same `ctx7sk-…` API key it would have gotten from the legacy flow. Device flow is selected automatically when `SSH_CONNECTION` is set or `$DISPLAY` is missing on Linux, and can be forced with `ctx7 login --device`. Polling tolerates transient network errors and 5xx responses without ending the session.
+
+## 0.4.5
+
+### Patch Changes
+
+- 2affada: `ctx7 setup` now properly supports `--antigravity`, installing skills to `.agent/skills`, a `GEMINI.md` rule section (Antigravity reads Gemini-family config), and MCP config to Antigravity 2.0's documented global path `~/.gemini/config/mcp_config.json` (with `httpUrl` for HTTP, matching the Gemini convention). Antigravity has no documented project-level MCP file, so `setup --antigravity --project --mcp` writes to the global location. Also removes the `--universal` flag from `setup`, which was advertised but silently ignored — it never propagated through agent selection, so passing it (e.g. `setup --cli --universal --project`) caused setup to fall back to auto-detection and write to the wrong directory.
+- 268f52f: `ctx7 setup --api-key <KEY>` (without `--cli`, `--mcp`, or `-y`) now prompts to choose between MCP server and CLI + Skills modes. Previously, passing `--api-key` short-circuited to MCP, locking users out of the CLI + Skills option even though that mode also accepts an API key. Explicit `--mcp` / `--cli` / `--stdio` / `--oauth` / `-y` still skip the prompt as before.
+- 2e97dae: Add deprecation warning to skill commands
+
+## 0.4.4
+
+### Patch Changes
+
+- 7cacc94: Add `--json` flag to `ctx7 skills list` for machine-parseable output. Emits `{ skills: [{ name, path, source }] }` where `path` is absolute and `source` is the agent type (`universal`, `claude`, `cursor`, `antigravity`). Matches the existing `--json` pattern on `ctx7 library` and `ctx7 docs`.
+
+## 0.4.3
+
+### Patch Changes
+
+- dea0e43: Declare `@inquirer/core` as a direct dependency of the CLI. It was previously imported in `selectOrInput.ts` but only resolvable as a transitive of `@inquirer/prompts`, which caused `ctx7` to fail at startup with `ERR_MODULE_NOT_FOUND` under pnpm's isolated node linker.
+- 34fda7d: Add `--stdio` flag to `ctx7 setup` to configure Context7 as a local stdio MCP server.
+- 61de754: Harden skill name handling during `ctx7 skills install` and `ctx7 skills remove`. Skill names from remote `SKILL.md` files are now restricted to a safe character set, and the install sinks assert the target directory is a direct child of the skills root before writing.
+
+## 0.4.2
+
+### Patch Changes
+
+- 6c71e4d: Handle malformed MCP config files gracefully during `ctx7 remove` agent detection. Previously, an unparseable JSON config at any agent's well-known path (e.g. a hand-edited `~/.claude.json`) would crash the command with an unhandled `SyntaxError` before it could do anything. The detector now skips the offending file and logs a warning naming the path and parse error so the user can fix it, while detection continues for the remaining agents.
+- 4056850: Respect `CLAUDE_CONFIG_DIR` env var when resolving Claude Code's global config, rules, skills, and detection paths
+
+## 0.4.1
+
+### Patch Changes
+
+- 1aa3430: Remove research mode entirely from the MCP server and CLI. The `query-docs` MCP tool no longer accepts or forwards a `researchMode` parameter, and the CLI no longer exposes a `--research` flag on `ctx7 docs`.
+
+## 0.4.0
+
+### Minor Changes
+
+- 17b864f: Expose research mode through the MCP `researchMode` tool and the CLI `docs --research` flag for deep, agent-driven documentation answers.
+
+### Patch Changes
+
+- 4feee15: Add CLI update notifications and a new `ctx7 upgrade` command. The CLI now checks for newer versions with cached state, shows a non-blocking notice before interactive commands, and provides safer upgrade guidance across npm, pnpm, bun, and ephemeral runner setups.
+- f056b14: Add `ctx7 remove` as the cleanup counterpart to `ctx7 setup`, with safer detection and removal behavior. The command now prompts only for agents with actual Context7 artifacts, preserves non-Context7 MCP configuration when removing entries, and includes stronger test coverage for JSON and TOML cleanup.
+
+## 0.3.13
+
+### Patch Changes
+
+- 3f6e310: Fix skill installation path validation on Windows so valid files inside the target directory are not rejected due to backslash-separated resolved paths.
+
+## 0.3.12
+
+### Patch Changes
+
+- 33f2338: Add Codex-specific CLI setup guidance so generated rules and the installed `find-docs` skill tell Codex to rerun Context7 CLI requests outside the default sandbox after DNS or network failures.
+
+## 0.3.11
+
+### Patch Changes
+
+- bc8eaf1: Add `--all-agents` and `--yes` support to `ctx7 skills install` for non-interactive multi-agent installs.
+
+## 0.3.10
+
+### Patch Changes
+
+- fb29170: Add Gemini CLI support to setup command
+- 89d4862: Use GITHUB_TOKEN/GH_TOKEN or gh CLI auth for skill downloads to avoid GitHub API rate limits and support private repos
+- 8322879: Improve resolve libryar id tool prompt to provide the libraryName query with proper format
+
+## 0.3.9
+
+### Patch Changes
+
+- 6961bdd: Allow re-selecting already configured agents in ctx7 setup and overwrite existing MCP config entries instead of skipping them. Fix TOML replacement to correctly handle sub-sections and prevent whitespace drift on repeated runs.
+
+## 0.3.8
+
+### Patch Changes
+
+- a667712: Update search filter warning
+- d739f9b: Fix OpenCode MCP setup to resolve all config file variants (opencode.json, opencode.jsonc, .opencode.json, .opencode.jsonc)
+- 4f13168: Install rules alongside skills in `ctx7 setup` for better trigger rates
+  - CLI setup now installs a rule file for each agent (previously only installed the skill)
+  - Rule content fetched from GitHub, with agent-specific formatting (alwaysApply for Cursor)
+  - Updated find-docs skill description for higher invocation rates (66% -> 98%)
+  - Added Codex agent support with AGENTS.md append
+  - OpenCode now writes to AGENTS.md instead of .opencode/rules/
+  - Selective rule content with explicit when-to-use/when-not-to-use guidance
+
+- c3c2647: Use ~/.agents/skills instead of ~/.config/agents/skills for global universal skill installs
+
 ## 0.3.7
 
 ### Patch Changes

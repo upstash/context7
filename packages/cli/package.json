@@ -1,7 +1,7 @@
 {
   "name": "ctx7",
-  "version": "0.3.7",
-  "description": "Context7 CLI - Manage AI coding skills and documentation context",
+  "version": "0.5.1",
+  "description": "Context7 CLI - Fetch documentation context and configure Context7",
   "type": "module",
   "bin": {
     "ctx7": "./dist/index.js"
@@ -22,7 +22,9 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@inquirer/core": "^11.1.1",
     "@inquirer/prompts": "^8.2.0",
+    "boxen": "^8.0.1",
     "commander": "^13.1.0",
     "figlet": "^1.9.4",
     "open": "^10.1.0",

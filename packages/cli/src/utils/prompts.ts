@@ -80,16 +80,21 @@ export async function checkboxWithHover<T>(
   );
   const values = choices.map((c) => c.value);
   const totalItems = values.length;
-  let cursorPosition = 0;
+  let cursorPosition = choices.findIndex((c) => !c.disabled);
+  if (cursorPosition < 0) cursorPosition = 0;
 
   // Default getName assumes object has 'name' property
   const getName = options?.getName ?? ((v: T) => (v as { name: string }).name);
 
   const keypressHandler = (_str: string | undefined, key: readline.Key) => {
-    if (key.name === "up" && cursorPosition > 0) {
-      cursorPosition--;
-    } else if (key.name === "down" && cursorPosition < totalItems - 1) {
-      cursorPosition++;
+    if (key.name === "up") {
+      let next = cursorPosition - 1;
+      while (next >= 0 && choices[next].disabled) next--;
+      if (next >= 0) cursorPosition = next;
+    } else if (key.name === "down") {
+      let next = cursorPosition + 1;
+      while (next < totalItems && choices[next].disabled) next++;
+      if (next < totalItems) cursorPosition = next;
     }
   };
 

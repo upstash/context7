@@ -1,0 +1,82 @@
+---
+title: Add Private Sources
+description: Add and manage private source documentation
+---
+
+Add private sources to Context7 to make your internal documentation available to AI coding assistants. You can add sources from GitHub, GitLab, Bitbucket, other Git providers, Confluence, and OpenAPI specifications.
+
+![Private Sources card showing a table of added sources and source type options](/images/dashboard/private-sources-card.png)
+
+## Adding Private Sources
+
+Follow these steps to add a private source:
+
+1. Go to your teamspace's **Sources** tab
+2. **Click "Add another"** to open the source type selector
+3. **Select a source type**:
+   - **GitHub** — connect your GitHub account and select a repository
+   - **GitLab** — connect your GitLab account and select a project
+   - **Bitbucket** — connect your Bitbucket account and select a repository
+   - **Other Git** — add any Git repository by URL
+   - **Confluence** — connect your Confluence workspace
+   - **OpenAPI** — add an OpenAPI specification
+4. **Authorize** Context7 to access your source (if required)
+5. **Submit** for parsing
+
+<Note>You must have a Pro or Enterprise plan to add private sources. Public sources can be added from the [Add Library](https://context7.com/add-library) page.</Note>
+
+## Source Management
+
+### Refreshing Documentation
+
+Keep your private documentation up to date:
+
+1. **Click the refresh icon** next to the source
+2. Context7 re-parses the source
+3. **You're only charged for changed content** — cached pages are free
+
+**When to refresh**:
+
+- After major documentation updates
+- After releasing new features
+- When you notice outdated information
+
+<Tip>Refresh private sources only after significant documentation changes to minimize costs.</Tip>
+
+### Removing Sources
+
+To remove a private source:
+
+1. **Click the trash icon** next to the source
+2. **Confirm deletion** in the modal
+3. Source documentation becomes unavailable immediately
+
+<Warning>
+  This action is permanent. The source will no longer be accessible via the API.
+</Warning>
+
+## Permissions
+
+Access to private source management is restricted by role. Only Owners and Admins can add, refresh, or remove private sources. Developers can view source documentation but cannot manage sources.
+
+See [Teamspace Management](/howto/teamspace#roles) for the complete permissions table.
+
+## Configuration
+
+### Using `context7.json`
+
+Add a `context7.json` file to your repository root for better control over parsing:
+
+```json
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "Your Project Name",
+  "description": "Brief description of your project",
+  "folders": ["docs", "guides"],
+  "excludeFolders": ["tests", "dist", "node_modules"],
+  "excludeFiles": ["CHANGELOG.md"],
+  "rules": ["Always validate user input", "Use TypeScript strict mode"]
+}
+```
+
+See the [Adding Libraries](/adding-libraries) page for complete configuration options.
