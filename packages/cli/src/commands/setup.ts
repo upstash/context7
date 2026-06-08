@@ -42,7 +42,6 @@ type SetupMode = "mcp" | "cli";
 interface SetupOptions {
   claude?: boolean;
   cursor?: boolean;
-  universal?: boolean;
   antigravity?: boolean;
   opencode?: boolean;
   codex?: boolean;
@@ -73,6 +72,7 @@ function getSelectedAgents(options: SetupOptions): SetupAgent[] {
   if (options.cursor) agents.push("cursor");
   if (options.opencode) agents.push("opencode");
   if (options.codex) agents.push("codex");
+  if (options.antigravity) agents.push("antigravity");
   if (options.gemini) agents.push("gemini");
   return agents;
 }
@@ -83,7 +83,6 @@ export function registerSetupCommand(program: Command): void {
     .description("Set up Context7 for your AI coding agent")
     .option("--claude", "Set up for Claude Code")
     .option("--cursor", "Set up for Cursor")
-    .option("--universal", "Set up for Universal (.agents/skills)")
     .option("--antigravity", "Set up for Antigravity (.agent/skills)")
     .option("--opencode", "Set up for OpenCode")
     .option("--codex", "Set up for Codex")
@@ -145,7 +144,7 @@ async function resolveAuth(options: SetupOptions): Promise<AuthOptions | null> {
 
 async function resolveMode(options: SetupOptions): Promise<SetupMode> {
   if (options.cli) return "cli";
-  if (options.mcp || options.yes || options.oauth || options.apiKey || options.stdio) return "mcp";
+  if (options.mcp || options.yes || options.oauth || options.stdio) return "mcp";
 
   return select<SetupMode>({
     message: "How should your agent access Context7?",
@@ -308,7 +307,7 @@ async function setupAgent(
   const agent = getAgent(agentName);
 
   const mcpCandidates =
-    scope === "global"
+    scope === "global" || agent.mcp.projectPaths.length === 0
       ? agent.mcp.globalPaths
       : agent.mcp.projectPaths.map((p) => join(process.cwd(), p));
   const mcpPath = await resolveMcpPath(mcpCandidates);

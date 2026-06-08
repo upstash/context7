@@ -1,5 +1,4 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
-import * as crypto from "crypto";
 
 vi.mock("os", () => ({ homedir: () => "/fake-home", default: { homedir: () => "/fake-home" } }));
 
@@ -21,16 +20,13 @@ vi.mock("../utils/api.js", () => ({ getBaseUrl: () => "https://test.context7.com
 
 import * as fs from "fs";
 import {
-  generatePKCE,
-  generateState,
   saveTokens,
   loadTokens,
   clearTokens,
   isTokenExpired,
   getValidAccessToken,
-  exchangeCodeForTokens,
-  buildAuthorizationUrl,
-  createCallbackServer,
+  startDeviceAuthorization,
+  pollDeviceToken,
   type TokenData,
 } from "../utils/auth.js";
 
@@ -52,31 +48,6 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
-});
-
-describe("generatePKCE", () => {
-  test("returns codeVerifier and codeChallenge with correct SHA-256 relationship", () => {
-    const { codeVerifier, codeChallenge } = generatePKCE();
-    const expected = crypto.createHash("sha256").update(codeVerifier).digest("base64url");
-    expect(codeChallenge).toBe(expected);
-  });
-
-  test("generates unique values on each call", () => {
-    const a = generatePKCE();
-    const b = generatePKCE();
-    expect(a.codeVerifier).not.toBe(b.codeVerifier);
-  });
-});
-
-describe("generateState", () => {
-  test("returns a base64url string", () => {
-    const state = generateState();
-    expect(state).toMatch(/^[A-Za-z0-9_-]+$/);
-  });
-
-  test("generates unique values on each call", () => {
-    expect(generateState()).not.toBe(generateState());
-  });
 });
 
 describe("saveTokens", () => {
@@ -331,154 +302,125 @@ describe("getValidAccessToken", () => {
   });
 });
 
-describe("exchangeCodeForTokens", () => {
-  test("POSTs correct parameters and returns TokenData on success", async () => {
-    const tokenResponse: TokenData = { access_token: "new-tok", token_type: "bearer" };
+describe("startDeviceAuthorization", () => {
+  test("returns parsed response on 200", async () => {
+    const payload = {
+      device_code: "dc",
+      user_code: "ABCD-EFGH",
+      verification_uri: "https://t.example/oauth/device",
+      verification_uri_complete: "https://t.example/oauth/device?user_code=ABCD-EFGH",
+      expires_in: 600,
+      interval: 5,
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(payload) })
+    );
+    await expect(startDeviceAuthorization("https://t.example", "test-client")).resolves.toEqual(
+      payload
+    );
+  });
+
+  test("POSTs client_id as form-encoded body", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          device_code: "",
+          user_code: "",
+          verification_uri: "",
+          expires_in: 0,
+          interval: 5,
+        }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    await startDeviceAuthorization("https://t.example", "test-client");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://t.example/api/oauth/device/code",
+      expect.objectContaining({
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "client_id=test-client",
+      })
+    );
+  });
+
+  test("throws with the server-provided error_description", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: () =>
+          Promise.resolve({ error: "invalid_request", error_description: "bad client_id" }),
+      })
+    );
+    await expect(startDeviceAuthorization("https://t", "bogus")).rejects.toThrow("bad client_id");
+  });
+});
+
+describe("pollDeviceToken", () => {
+  test("approved on 200 returns tokens", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
         ok: true,
-        json: () => Promise.resolve(tokenResponse),
+        status: 200,
+        json: () => Promise.resolve({ access_token: "ctx7sk-x", token_type: "bearer" }),
       })
     );
-
-    const result = await exchangeCodeForTokens(
-      "https://example.com",
-      "auth-code",
-      "verifier",
-      "http://localhost:52417/callback",
-      "client-id"
-    );
-
-    expect(result).toEqual(tokenResponse);
-    expect(fetch).toHaveBeenCalledWith(
-      "https://example.com/api/oauth/token",
-      expect.objectContaining({
-        method: "POST",
-        body: expect.stringContaining("grant_type=authorization_code"),
-      })
-    );
-    const body = vi.mocked(fetch).mock.calls[0][1]!.body as string;
-    const params = new URLSearchParams(body);
-    expect(params.get("client_id")).toBe("client-id");
-    expect(params.get("code")).toBe("auth-code");
-    expect(params.get("code_verifier")).toBe("verifier");
-    expect(params.get("redirect_uri")).toBe("http://localhost:52417/callback");
+    const result = await pollDeviceToken("https://t", "c", "dc");
+    expect(result.status).toBe("approved");
+    expect(result.tokens?.access_token).toBe("ctx7sk-x");
   });
 
-  test("throws with error_description on failure", async () => {
+  test.each([
+    ["authorization_pending", "pending"],
+    ["slow_down", "slow_down"],
+    ["access_denied", "denied"],
+    ["expired_token", "expired"],
+  ] as const)("maps %s -> %s", async (serverError, expected) => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
         ok: false,
-        json: () => Promise.resolve({ error_description: "bad code" }),
+        status: 400,
+        json: () => Promise.resolve({ error: serverError }),
       })
     );
-
-    await expect(
-      exchangeCodeForTokens("https://example.com", "code", "verifier", "redirect", "client")
-    ).rejects.toThrow("bad code");
+    expect((await pollDeviceToken("https://t", "c", "dc")).status).toBe(expected);
   });
 
-  test("throws generic message when response has no JSON", async () => {
+  test("returns transient on a 5xx response", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
         ok: false,
-        json: () => Promise.reject(new Error("no json")),
+        status: 503,
+        json: () => Promise.resolve({ error: "server_error" }),
       })
     );
-
-    await expect(
-      exchangeCodeForTokens("https://example.com", "code", "verifier", "redirect", "client")
-    ).rejects.toThrow("Failed to exchange code for tokens");
+    const result = await pollDeviceToken("https://t", "c", "dc");
+    expect(result.status).toBe("transient");
+    expect(result.errorMessage).toBeTruthy();
   });
-});
 
-describe("buildAuthorizationUrl", () => {
-  test("constructs URL with all required parameters", () => {
-    const result = buildAuthorizationUrl(
-      "https://example.com",
-      "client-id",
-      "http://localhost:52417/callback",
-      "challenge",
-      "state-value"
+  test("returns transient on a fetch network failure", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("ECONNREFUSED")));
+    const result = await pollDeviceToken("https://t", "c", "dc");
+    expect(result.status).toBe("transient");
+    expect(result.errorMessage).toBe("ECONNREFUSED");
+  });
+
+  test("throws on unknown 4xx error code", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        json: () =>
+          Promise.resolve({ error: "invalid_grant", error_description: "device_code malformed" }),
+      })
     );
-
-    const url = new URL(result);
-    expect(url.origin).toBe("https://example.com");
-    expect(url.pathname).toBe("/api/oauth/authorize");
-    expect(url.searchParams.get("client_id")).toBe("client-id");
-    expect(url.searchParams.get("redirect_uri")).toBe("http://localhost:52417/callback");
-    expect(url.searchParams.get("code_challenge")).toBe("challenge");
-    expect(url.searchParams.get("code_challenge_method")).toBe("S256");
-    expect(url.searchParams.get("state")).toBe("state-value");
-    expect(url.searchParams.get("scope")).toBe("profile email");
-    expect(url.searchParams.get("response_type")).toBe("code");
-  });
-});
-
-describe("createCallbackServer", () => {
-  async function httpGet(url: string): Promise<void> {
-    const http = await import("http");
-    return new Promise((resolve, reject) => {
-      http
-        .get(url, (res) => {
-          res.resume();
-          res.on("end", resolve);
-        })
-        .on("error", reject);
-    });
-  }
-
-  function closeAndWait(closeFn: () => void): Promise<void> {
-    return new Promise((resolve) => {
-      closeFn();
-      setTimeout(resolve, 100);
-    });
-  }
-
-  test("resolves with code and state on valid callback", async () => {
-    const server = createCallbackServer("expected-state");
-    const port = await server.port;
-    await httpGet(`http://127.0.0.1:${port}/callback?code=auth-code&state=expected-state`);
-    const result = await server.result;
-    expect(result).toEqual({ code: "auth-code", state: "expected-state" });
-    await closeAndWait(server.close);
-  });
-
-  test("rejects on state mismatch", async () => {
-    const server = createCallbackServer("expected-state");
-    const resultPromise = server.result.catch((e: Error) => e);
-    const port = await server.port;
-    await httpGet(`http://127.0.0.1:${port}/callback?code=auth-code&state=wrong-state`);
-    const err = await resultPromise;
-    expect(err).toBeInstanceOf(Error);
-    expect((err as Error).message).toBe("State mismatch");
-    await closeAndWait(server.close);
-  });
-
-  test("rejects on missing code", async () => {
-    const server = createCallbackServer("expected-state");
-    const resultPromise = server.result.catch((e: Error) => e);
-    const port = await server.port;
-    await httpGet(`http://127.0.0.1:${port}/callback?state=expected-state`);
-    const err = await resultPromise;
-    expect(err).toBeInstanceOf(Error);
-    expect((err as Error).message).toBe("Missing authorization code or state");
-    await closeAndWait(server.close);
-  });
-
-  test("rejects on error parameter", async () => {
-    const server = createCallbackServer("expected-state");
-    const resultPromise = server.result.catch((e: Error) => e);
-    const port = await server.port;
-    await httpGet(
-      `http://127.0.0.1:${port}/callback?error=access_denied&error_description=User+cancelled`
-    );
-    const err = await resultPromise;
-    expect(err).toBeInstanceOf(Error);
-    expect((err as Error).message).toBe("User cancelled");
-    await closeAndWait(server.close);
+    await expect(pollDeviceToken("https://t", "c", "dc")).rejects.toThrow("device_code malformed");
   });
 });

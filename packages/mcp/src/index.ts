@@ -2,6 +2,11 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+  ListPromptsRequestSchema,
+  ListResourcesRequestSchema,
+  ListResourceTemplatesRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { z } from "zod";
 import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
@@ -281,6 +286,15 @@ Do not call this tool more than 3 times per question.`,
       };
     }
   );
+
+  server.server.registerCapabilities({ prompts: {}, resources: {} });
+  server.server.setRequestHandler(ListPromptsRequestSchema, async () => ({ prompts: [] }));
+  server.server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+    resources: [],
+  }));
+  server.server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({
+    resourceTemplates: [],
+  }));
 
   return server;
 }

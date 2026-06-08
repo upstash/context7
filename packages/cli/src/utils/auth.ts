@@ -1,6 +1,5 @@
-import * as crypto from "crypto";
-import * as http from "http";
 import * as fs from "fs";
+import * as os from "os";
 import { CLI_CLIENT_ID } from "../constants.js";
 import { getBaseUrl } from "./api.js";
 import {
@@ -19,21 +18,6 @@ export interface TokenData {
   expires_in?: number;
   expires_at?: number;
   scope?: string;
-}
-
-export interface PKCEChallenge {
-  codeVerifier: string;
-  codeChallenge: string;
-}
-
-export function generatePKCE(): PKCEChallenge {
-  const codeVerifier = crypto.randomBytes(32).toString("base64url");
-  const codeChallenge = crypto.createHash("sha256").update(codeVerifier).digest("base64url");
-  return { codeVerifier, codeChallenge };
-}
-
-export function generateState(): string {
-  return crypto.randomBytes(16).toString("base64url");
 }
 
 function ensureConfigDir(): void {
@@ -120,8 +104,10 @@ async function refreshAccessToken(refreshToken: string): Promise<TokenData> {
 }
 
 /**
- * Returns a valid access token, refreshing if expired.
- * Returns null if no tokens exist or refresh fails.
+ * Returns a valid access token, refreshing if expired. Returns null if no
+ * tokens are stored or refresh fails. Pre-0.5 installs may have OAuth tokens
+ * with a `refresh_token`; new installs hold long-lived API keys that never
+ * expire and skip the refresh path entirely.
  */
 export async function getValidAccessToken(): Promise<string | null> {
   const tokens = loadTokens();
@@ -144,195 +130,110 @@ export async function getValidAccessToken(): Promise<string | null> {
   }
 }
 
-export interface CallbackResult {
-  code: string;
-  state: string;
-}
-
-// Port for OAuth callback server - must match registered redirect URI
-const CALLBACK_PORT = 52417;
-
-export function createCallbackServer(expectedState: string): {
-  port: Promise<number>;
-  result: Promise<CallbackResult>;
-  close: () => void;
-} {
-  let resolvePort: (port: number) => void;
-  let resolveResult: (result: CallbackResult) => void;
-  let rejectResult: (error: Error) => void;
-  let serverInstance: http.Server | null = null;
-
-  const portPromise = new Promise<number>((resolve) => {
-    resolvePort = resolve;
-  });
-
-  const resultPromise = new Promise<CallbackResult>((resolve, reject) => {
-    resolveResult = resolve;
-    rejectResult = reject;
-  });
-
-  const server = http.createServer((req, res) => {
-    const url = new URL(req.url || "/", `http://localhost`);
-
-    if (url.pathname === "/callback") {
-      const code = url.searchParams.get("code");
-      const state = url.searchParams.get("state");
-      const error = url.searchParams.get("error");
-      const errorDescription = url.searchParams.get("error_description");
-
-      res.writeHead(200, { "Content-Type": "text/html" });
-
-      if (error) {
-        res.end(errorPage(errorDescription || error));
-        serverInstance?.close();
-        rejectResult(new Error(errorDescription || error));
-        return;
-      }
-
-      if (!code || !state) {
-        res.end(errorPage("Missing authorization code or state"));
-        serverInstance?.close();
-        rejectResult(new Error("Missing authorization code or state"));
-        return;
-      }
-
-      if (state !== expectedState) {
-        res.end(errorPage("State mismatch - possible CSRF attack"));
-        serverInstance?.close();
-        rejectResult(new Error("State mismatch"));
-        return;
-      }
-
-      res.end(successPage());
-      serverInstance?.close();
-      resolveResult({ code, state });
-    } else {
-      res.writeHead(404);
-      res.end("Not found");
-    }
-  });
-
-  serverInstance = server;
-
-  server.on("error", (err) => {
-    rejectResult(err as Error);
-  });
-
-  server.listen(CALLBACK_PORT, "127.0.0.1", () => {
-    resolvePort(CALLBACK_PORT);
-  });
-
-  const timeout = setTimeout(
-    () => {
-      server.close();
-      rejectResult(new Error("Login timed out after 5 minutes"));
-    },
-    5 * 60 * 1000
-  );
-
-  return {
-    port: portPromise,
-    result: resultPromise,
-    close: () => {
-      clearTimeout(timeout);
-      server.close();
-    },
-  };
-}
-
-function successPage(): string {
-  return `<!DOCTYPE html>
-<html>
-  <head><title>Login Successful</title></head>
-  <body style="font-family: system-ui; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f9fafb;">
-    <div style="text-align: center; padding: 2rem;">
-      <div style="width: 64px; height: 64px; background: #16a34a; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
-        <svg width="32" height="32" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24">
-          <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <h1 style="color: #16a34a; margin: 0 0 0.5rem;">Login Successful!</h1>
-      <p style="color: #6b7280; margin: 0;">You can close this window and return to the terminal.</p>
-    </div>
-  </body>
-</html>`;
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function errorPage(message: string): string {
-  const safeMessage = escapeHtml(message);
-  return `<!DOCTYPE html>
-<html>
-  <head><title>Login Failed</title></head>
-  <body style="font-family: system-ui; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f9fafb;">
-    <div style="text-align: center; padding: 2rem;">
-      <div style="width: 64px; height: 64px; background: #dc2626; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
-        <svg width="32" height="32" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24">
-          <path d="M6 18L18 6M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <h1 style="color: #dc2626; margin: 0 0 0.5rem;">Login Failed</h1>
-      <p style="color: #6b7280; margin: 0;">${safeMessage}</p>
-      <p style="color: #9ca3af; margin: 1rem 0 0; font-size: 0.875rem;">You can close this window.</p>
-    </div>
-  </body>
-</html>`;
-}
-
 interface TokenErrorResponse {
   error?: string;
   error_description?: string;
 }
 
-export async function exchangeCodeForTokens(
+export interface DeviceAuthorizationResponse {
+  device_code: string;
+  user_code: string;
+  verification_uri: string;
+  verification_uri_complete?: string;
+  expires_in: number;
+  /** Optional per RFC 8628 §3.2; clients MUST default to 5s when absent. */
+  interval?: number;
+}
+
+const DEVICE_CODE_GRANT = "urn:ietf:params:oauth:grant-type:device_code";
+
+/** RFC 8628 §3.2 default poll interval when the server omits `interval`. */
+export const DEFAULT_DEVICE_POLL_INTERVAL_SECONDS = 5;
+
+export async function startDeviceAuthorization(
   baseUrl: string,
-  code: string,
-  codeVerifier: string,
-  redirectUri: string,
   clientId: string
-): Promise<TokenData> {
-  const response = await fetch(`${baseUrl}/api/oauth/token`, {
+): Promise<DeviceAuthorizationResponse> {
+  // Hostname is shown on the server's verification page so the user can confirm
+  // that the device they're authorizing matches the one running the CLI
+  // (RFC 8628 §5.4 phishing resistance). Best-effort.
+  const params = new URLSearchParams({ client_id: clientId });
+  try {
+    const hostname = os.hostname();
+    if (hostname) params.set("hostname", hostname);
+  } catch {
+    // ignore
+  }
+
+  const response = await fetch(`${baseUrl}/api/oauth/device/code`, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "authorization_code",
-      client_id: clientId,
-      code,
-      code_verifier: codeVerifier,
-      redirect_uri: redirectUri,
-    }).toString(),
+    body: params.toString(),
   });
 
   if (!response.ok) {
     const err = (await response.json().catch(() => ({}))) as TokenErrorResponse;
-    throw new Error(err.error_description || err.error || "Failed to exchange code for tokens");
+    throw new Error(err.error_description || err.error || "Failed to start device authorization");
   }
 
-  return (await response.json()) as TokenData;
+  return (await response.json()) as DeviceAuthorizationResponse;
 }
 
-export function buildAuthorizationUrl(
+export interface PollDeviceTokenResult {
+  status: "approved" | "pending" | "slow_down" | "denied" | "expired" | "transient";
+  tokens?: TokenData;
+  errorMessage?: string;
+}
+
+export async function pollDeviceToken(
   baseUrl: string,
   clientId: string,
-  redirectUri: string,
-  codeChallenge: string,
-  state: string
-): string {
-  const url = new URL(`${baseUrl}/api/oauth/authorize`);
-  url.searchParams.set("client_id", clientId);
-  url.searchParams.set("redirect_uri", redirectUri);
-  url.searchParams.set("code_challenge", codeChallenge);
-  url.searchParams.set("code_challenge_method", "S256");
-  url.searchParams.set("state", state);
-  url.searchParams.set("scope", "profile email");
-  url.searchParams.set("response_type", "code");
-  return url.toString();
+  deviceCode: string
+): Promise<PollDeviceTokenResult> {
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}/api/oauth/device/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: DEVICE_CODE_GRANT,
+        device_code: deviceCode,
+        client_id: clientId,
+      }).toString(),
+    });
+  } catch (error) {
+    // Network blip — keep polling.
+    return {
+      status: "transient",
+      errorMessage: error instanceof Error ? error.message : "network error",
+    };
+  }
+
+  if (response.ok) {
+    const tokens = (await response.json()) as TokenData;
+    return { status: "approved", tokens };
+  }
+
+  // Treat any 5xx as transient so a flaky backend doesn't end the user's session.
+  if (response.status >= 500) {
+    const err = (await response.json().catch(() => ({}))) as TokenErrorResponse;
+    return {
+      status: "transient",
+      errorMessage: err.error_description || err.error || `HTTP ${response.status}`,
+    };
+  }
+
+  const err = (await response.json().catch(() => ({}))) as TokenErrorResponse;
+  switch (err.error) {
+    case "authorization_pending":
+      return { status: "pending" };
+    case "slow_down":
+      return { status: "slow_down" };
+    case "access_denied":
+      return { status: "denied" };
+    case "expired_token":
+      return { status: "expired" };
+    default:
+      throw new Error(err.error_description || err.error || "Device token poll failed");
+  }
 }

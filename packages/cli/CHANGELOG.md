@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.5.1
+
+### Patch Changes
+
+- ea91d7d: `ctx7 login` now always uses the device-code flow. The localhost-callback path is removed — every install (laptop, SSH, Codespace, Docker, CI) goes through the same boxed prompt and verification page. Drops the `--device` flag (it was the opt-in for what's now the default). Older CLI versions (≤ 0.5.0) continue to work against the unchanged auth endpoints, so pinned installs are unaffected.
+
+## 0.5.0
+
+### Minor Changes
+
+- 5a180d5: Add OAuth 2.0 device authorization flow (RFC 8628) for `ctx7 login` and `ctx7 setup`. Required for headless / remote hosts (SSH, Codespaces, Docker, CI) where the existing localhost-callback flow can't work — the browser was opening on the user's laptop while the callback listener ran on the remote host.
+
+  The new flow prints a verification URL and short code, then polls a token endpoint. The user visits the URL on any device, signs in, and approves; the CLI receives the same `ctx7sk-…` API key it would have gotten from the legacy flow. Device flow is selected automatically when `SSH_CONNECTION` is set or `$DISPLAY` is missing on Linux, and can be forced with `ctx7 login --device`. Polling tolerates transient network errors and 5xx responses without ending the session.
+
+## 0.4.5
+
+### Patch Changes
+
+- 2affada: `ctx7 setup` now properly supports `--antigravity`, installing skills to `.agent/skills`, a `GEMINI.md` rule section (Antigravity reads Gemini-family config), and MCP config to Antigravity 2.0's documented global path `~/.gemini/config/mcp_config.json` (with `httpUrl` for HTTP, matching the Gemini convention). Antigravity has no documented project-level MCP file, so `setup --antigravity --project --mcp` writes to the global location. Also removes the `--universal` flag from `setup`, which was advertised but silently ignored — it never propagated through agent selection, so passing it (e.g. `setup --cli --universal --project`) caused setup to fall back to auto-detection and write to the wrong directory.
+- 268f52f: `ctx7 setup --api-key <KEY>` (without `--cli`, `--mcp`, or `-y`) now prompts to choose between MCP server and CLI + Skills modes. Previously, passing `--api-key` short-circuited to MCP, locking users out of the CLI + Skills option even though that mode also accepts an API key. Explicit `--mcp` / `--cli` / `--stdio` / `--oauth` / `-y` still skip the prompt as before.
+- 2e97dae: Add deprecation warning to skill commands
+
 ## 0.4.4
 
 ### Patch Changes

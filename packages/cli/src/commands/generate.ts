@@ -36,6 +36,8 @@ interface QueryLogEntry {
   results: ToolResultSnippet[];
 }
 
+// TODO(deprecate-skills-phase-2): Remove this deprecated Skill Hub generation
+// subcommand after legacy `ctx7 skills generate` support is dropped.
 export function registerGenerateCommand(skillCommand: Command): void {
   skillCommand
     .command("generate")

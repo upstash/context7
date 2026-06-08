@@ -57,6 +57,17 @@ import { homedir } from "os";
 import { detectProjectDependencies } from "../utils/deps.js";
 import { loadTokens, isTokenExpired } from "../utils/auth.js";
 
+const SKILL_HUB_DEPRECATION_WARNING =
+  "Warning: Skill commands are deprecated and will stop working in the next major release.";
+
+// TODO(deprecate-skills-phase-2): Delete this Skill Hub command tree once the
+// deprecated `ctx7 skills ...` compatibility window closes. Do not remove the
+// setup-installed Context7 skills with it.
+function warnSkillHubDeprecated(): void {
+  console.error(pc.yellow(SKILL_HUB_DEPRECATION_WARNING));
+  console.error("");
+}
+
 function logInstallSummary(
   targets: InstallTargets,
   targetDirs: string[],
@@ -88,7 +99,13 @@ function logInstallSummary(
 }
 
 export function registerSkillCommands(program: Command): void {
-  const skill = program.command("skills").alias("skill").description("Manage AI coding skills");
+  const skill = program
+    .command("skills", { hidden: true })
+    .alias("skill")
+    .description("Manage AI coding skills")
+    .hook("preAction", () => {
+      warnSkillHubDeprecated();
+    });
 
   // Register generate subcommand
   registerGenerateCommand(skill);
@@ -186,6 +203,7 @@ export function registerSkillAliases(program: Command): void {
     .option("--antigravity", "Antigravity (.agent/skills/)")
     .description("Install skills (alias for: skills install)")
     .action(async (project: string, skillName: string | undefined, options: AddOptions) => {
+      warnSkillHubDeprecated();
       await installCommand(project, skillName, options);
     });
 
@@ -194,6 +212,7 @@ export function registerSkillAliases(program: Command): void {
     .argument("<keywords...>", "Search keywords")
     .description("Search for skills (alias for: skills search)")
     .action(async (keywords: string[]) => {
+      warnSkillHubDeprecated();
       await searchCommand(keywords.join(" "));
     });
 
@@ -206,6 +225,7 @@ export function registerSkillAliases(program: Command): void {
     .option("--antigravity", "Antigravity (.agent/skills/)")
     .description("Suggest skills (alias for: skills suggest)")
     .action(async (options: SuggestOptions) => {
+      warnSkillHubDeprecated();
       await suggestCommand(options);
     });
 }
@@ -319,7 +339,7 @@ async function installCommand(
         const popularity = formatPopularity(s.installCount) + " ".repeat(popularityColWidth - 4);
         const trust = formatTrust(s.trustScore);
 
-        const skillUrl = `https://context7.com/skills${s.project}/${s.name}`;
+        const skillUrl = s.url || `https://github.com${s.project}`;
         const skillLink = terminalLink(s.name, skillUrl, pc.white);
         const repoLink = terminalLink(s.project, `https://github.com${s.project}`, pc.white);
         const metadataLines = [
@@ -496,11 +516,7 @@ async function searchCommand(query: string): Promise<void> {
     const popularity = formatPopularity(s.installCount) + " ".repeat(popularityColWidth - 4);
     const trust = formatTrust(s.trustScore);
 
-    const skillLink = terminalLink(
-      s.name,
-      `https://context7.com/skills${s.project}/${s.name}`,
-      pc.white
-    );
+    const skillLink = terminalLink(s.name, s.url || `https://github.com${s.project}`, pc.white);
     const repoLink = terminalLink(s.project, `https://github.com${s.project}`, pc.white);
     const metadataLines = [
       pc.dim("─".repeat(50)),
@@ -871,11 +887,7 @@ async function suggestCommand(options: SuggestOptions): Promise<void> {
     const trust = formatTrust(s.trustScore) + " ".repeat(trustColWidth - trustLabel.length);
     const matched = pc.yellow(s.matchedDep.padEnd(maxMatchedLen));
 
-    const skillLink = terminalLink(
-      s.name,
-      `https://context7.com/skills${s.project}/${s.name}`,
-      pc.white
-    );
+    const skillLink = terminalLink(s.name, s.url || `https://github.com${s.project}`, pc.white);
     const repoLink = terminalLink(s.project, `https://github.com${s.project}`, pc.white);
     const metadataLines = [
       pc.dim("─".repeat(50)),
