@@ -5,6 +5,7 @@ import {
   UPDATE_STATE_FILE_NAME,
   getUpdateStateFilePath,
   migrateLegacyFile,
+  resolveReadPath,
 } from "./storage-paths.js";
 
 const DEFAULT_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -53,7 +54,16 @@ function getStateFilePath(stateFile?: string): string {
   return stateFile ?? getUpdateStateFilePath();
 }
 
-async function prepareStateFilePath(stateFile?: string): Promise<string> {
+// Reads resolve to the legacy `~/.context7` file if migration could not move it.
+async function readStateFilePath(stateFile?: string): Promise<string> {
+  if (stateFile) {
+    return stateFile;
+  }
+  return resolveReadPath(UPDATE_STATE_FILE_NAME, getUpdateStateFilePath());
+}
+
+// Writes always target the XDG path; migrate the legacy file first if present.
+async function writeStateFilePath(stateFile?: string): Promise<string> {
   const path = getStateFilePath(stateFile);
   if (!stateFile) {
     await migrateLegacyFile(UPDATE_STATE_FILE_NAME, path);
@@ -63,7 +73,7 @@ async function prepareStateFilePath(stateFile?: string): Promise<string> {
 
 async function readUpdateState(stateFile?: string): Promise<UpdateState> {
   try {
-    const raw = await readFile(await prepareStateFilePath(stateFile), "utf-8");
+    const raw = await readFile(await readStateFilePath(stateFile), "utf-8");
     return JSON.parse(raw) as UpdateState;
   } catch {
     return {};
@@ -71,7 +81,7 @@ async function readUpdateState(stateFile?: string): Promise<UpdateState> {
 }
 
 async function writeUpdateState(state: UpdateState, stateFile?: string): Promise<void> {
-  const path = await prepareStateFilePath(stateFile);
+  const path = await writeStateFilePath(stateFile);
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, JSON.stringify(state, null, 2) + "\n", "utf-8");
 }

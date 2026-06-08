@@ -197,8 +197,17 @@ describe("default cli-state persistence", () => {
   });
 
   test("honors XDG_STATE_HOME for updater state", async () => {
+    // Mock homedir so the legacy-migration step cannot touch the real ~/.context7.
+    const fakeHome = join(tempDir, "fake-home");
+    await mkdir(fakeHome, { recursive: true });
     const stateHome = join(tempDir, "xdg-state");
     vi.stubEnv("XDG_STATE_HOME", stateHome);
+
+    vi.resetModules();
+    vi.doMock("os", async () => {
+      const actual = await vi.importActual<typeof import("os")>("os");
+      return { ...actual, homedir: () => fakeHome };
+    });
 
     vi.stubGlobal(
       "fetch",
@@ -208,7 +217,8 @@ describe("default cli-state persistence", () => {
       })
     );
 
-    await checkForUpdates({ force: true, now: 1000 });
+    const updateCheck = await import("../utils/update-check.js");
+    await updateCheck.checkForUpdates({ force: true, now: 1000 });
 
     const persisted = JSON.parse(
       await readFile(join(stateHome, "context7", "cli-state.json"), "utf-8")

@@ -8,15 +8,27 @@ const LEGACY_DIR = ".context7";
 
 export const CREDENTIALS_FILE_NAME = "credentials.json";
 export const UPDATE_STATE_FILE_NAME = "cli-state.json";
+export const PREVIEWS_DIR_NAME = "previews";
+
+// Per the XDG Base Directory Spec, a relative (or empty) value must be ignored
+// and the default used instead.
+function xdgBase(envVar: string, ...defaultSegments: string[]): string {
+  const value = process.env[envVar];
+  const base =
+    value && path.isAbsolute(value) ? value : path.join(os.homedir(), ...defaultSegments);
+  return path.join(base, APP_DIR);
+}
 
 export function getConfigDir(): string {
-  const configHome = process.env.XDG_CONFIG_HOME;
-  return path.join(configHome || path.join(os.homedir(), ".config"), APP_DIR);
+  return xdgBase("XDG_CONFIG_HOME", ".config");
 }
 
 export function getStateDir(): string {
-  const stateHome = process.env.XDG_STATE_HOME;
-  return path.join(stateHome || path.join(os.homedir(), ".local", "state"), APP_DIR);
+  return xdgBase("XDG_STATE_HOME", ".local", "state");
+}
+
+export function getCacheDir(): string {
+  return xdgBase("XDG_CACHE_HOME", ".cache");
 }
 
 export function getCredentialsFilePath(): string {
@@ -27,18 +39,31 @@ export function getUpdateStateFilePath(): string {
   return path.join(getStateDir(), UPDATE_STATE_FILE_NAME);
 }
 
+export function getPreviewsDir(): string {
+  return path.join(getCacheDir(), PREVIEWS_DIR_NAME);
+}
+
 export function getLegacyFilePath(fileName: string): string {
   return path.join(os.homedir(), LEGACY_DIR, fileName);
 }
 
+/**
+ * Best-effort move of a legacy `~/.context7/<file>` into its new XDG location.
+ * Failures (cross-device rename, permissions) are swallowed so callers fall
+ * back to reading the legacy file rather than crashing.
+ */
 export function migrateLegacyFileSync(fileName: string, targetPath: string): void {
   const legacyPath = getLegacyFilePath(fileName);
   if (legacyPath === targetPath || fs.existsSync(targetPath) || !fs.existsSync(legacyPath)) {
     return;
   }
 
-  fs.mkdirSync(path.dirname(targetPath), { recursive: true, mode: 0o700 });
-  fs.renameSync(legacyPath, targetPath);
+  try {
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true, mode: 0o700 });
+    fs.renameSync(legacyPath, targetPath);
+  } catch {
+    // Leave the legacy file in place; readers resolve to it via resolveReadPathSync.
+  }
 }
 
 export async function migrateLegacyFile(fileName: string, targetPath: string): Promise<void> {
@@ -47,8 +72,35 @@ export async function migrateLegacyFile(fileName: string, targetPath: string): P
     return;
   }
 
-  await mkdir(path.dirname(targetPath), { recursive: true, mode: 0o700 });
-  await rename(legacyPath, targetPath);
+  try {
+    await mkdir(path.dirname(targetPath), { recursive: true, mode: 0o700 });
+    await rename(legacyPath, targetPath);
+  } catch {
+    // Leave the legacy file in place; readers resolve to it via resolveReadPath.
+  }
+}
+
+/**
+ * Returns the path to read from: the XDG target after attempting migration,
+ * or the legacy path if migration could not complete and the legacy file
+ * still exists. New writes should always target `targetPath`.
+ */
+export function resolveReadPathSync(fileName: string, targetPath: string): string {
+  migrateLegacyFileSync(fileName, targetPath);
+  if (fs.existsSync(targetPath)) {
+    return targetPath;
+  }
+  const legacyPath = getLegacyFilePath(fileName);
+  return fs.existsSync(legacyPath) ? legacyPath : targetPath;
+}
+
+export async function resolveReadPath(fileName: string, targetPath: string): Promise<string> {
+  await migrateLegacyFile(fileName, targetPath);
+  if (await exists(targetPath)) {
+    return targetPath;
+  }
+  const legacyPath = getLegacyFilePath(fileName);
+  return (await exists(legacyPath)) ? legacyPath : targetPath;
 }
 
 async function exists(filePath: string): Promise<boolean> {

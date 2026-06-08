@@ -168,6 +168,20 @@ describe("loadTokens", () => {
     mfs.readFileSync.mockReturnValue("not json");
     expect(loadTokens()).toBeNull();
   });
+
+  test("falls back to the legacy file (no throw) when migration fails", () => {
+    const tokens: TokenData = { access_token: "tok", token_type: "bearer" };
+    // Only the legacy file exists; the rename fails (e.g. EXDEV / EACCES).
+    mfs.existsSync.mockImplementation((filePath) => filePath === LEGACY_CREDENTIALS_PATH);
+    mfs.renameSync.mockImplementation(() => {
+      throw new Error("EXDEV: cross-device link not permitted");
+    });
+    mfs.readFileSync.mockReturnValue(JSON.stringify(tokens));
+
+    expect(() => loadTokens()).not.toThrow();
+    expect(loadTokens()).toEqual(tokens);
+    expect(mfs.readFileSync).toHaveBeenCalledWith(LEGACY_CREDENTIALS_PATH, "utf-8");
+  });
 });
 
 describe("clearTokens", () => {

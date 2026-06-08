@@ -9,6 +9,7 @@ import {
   getCredentialsFilePath,
   getLegacyFilePath,
   migrateLegacyFileSync,
+  resolveReadPathSync,
 } from "./storage-paths.js";
 
 export interface TokenData {
@@ -42,14 +43,9 @@ function ensureConfigDir(): void {
   }
 }
 
-function prepareCredentialsFile(): string {
+export function saveTokens(tokens: TokenData): void {
   const credentialsFile = getCredentialsFilePath();
   migrateLegacyFileSync(CREDENTIALS_FILE_NAME, credentialsFile);
-  return credentialsFile;
-}
-
-export function saveTokens(tokens: TokenData): void {
-  const credentialsFile = prepareCredentialsFile();
   ensureConfigDir();
   const data = {
     ...tokens,
@@ -60,7 +56,7 @@ export function saveTokens(tokens: TokenData): void {
 }
 
 export function loadTokens(): TokenData | null {
-  const credentialsFile = prepareCredentialsFile();
+  const credentialsFile = resolveReadPathSync(CREDENTIALS_FILE_NAME, getCredentialsFilePath());
   if (!fs.existsSync(credentialsFile)) {
     return null;
   }
@@ -73,7 +69,7 @@ export function loadTokens(): TokenData | null {
 }
 
 export function clearTokens(): boolean {
-  const credentialsFile = prepareCredentialsFile();
+  const credentialsFile = getCredentialsFilePath();
   let removed = false;
   if (fs.existsSync(credentialsFile)) {
     fs.unlinkSync(credentialsFile);
