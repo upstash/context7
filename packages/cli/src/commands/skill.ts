@@ -30,6 +30,7 @@ import {
   getTrustLabel,
 } from "../utils/prompts.js";
 import { installSkillFiles, symlinkSkill } from "../utils/installer.js";
+import { assertSkillNameInRoot } from "../utils/skill-name.js";
 import { listSkillsFromGitHub, getSkillFromGitHub } from "../utils/github.js";
 import { trackEvent } from "../utils/tracking.js";
 import { registerGenerateCommand } from "./generate.js";
@@ -55,6 +56,17 @@ import {
 import { homedir } from "os";
 import { detectProjectDependencies } from "../utils/deps.js";
 import { loadTokens, isTokenExpired } from "../utils/auth.js";
+
+const SKILL_HUB_DEPRECATION_WARNING =
+  "Warning: Skill commands are deprecated and will stop working in the next major release.";
+
+// TODO(deprecate-skills-phase-2): Delete this Skill Hub command tree once the
+// deprecated `ctx7 skills ...` compatibility window closes. Do not remove the
+// setup-installed Context7 skills with it.
+function warnSkillHubDeprecated(): void {
+  console.error(pc.yellow(SKILL_HUB_DEPRECATION_WARNING));
+  console.error("");
+}
 
 function logInstallSummary(
   targets: InstallTargets,
@@ -87,7 +99,13 @@ function logInstallSummary(
 }
 
 export function registerSkillCommands(program: Command): void {
-  const skill = program.command("skills").alias("skill").description("Manage AI coding skills");
+  const skill = program
+    .command("skills", { hidden: true })
+    .alias("skill")
+    .description("Manage AI coding skills")
+    .hook("preAction", () => {
+      warnSkillHubDeprecated();
+    });
 
   // Register generate subcommand
   registerGenerateCommand(skill);
@@ -123,6 +141,7 @@ export function registerSkillCommands(program: Command): void {
   skill
     .command("list")
     .alias("ls")
+    .option("--json", "Output as JSON")
     .option("--global", "List global skills")
     .option("--claude", "Claude Code (.claude/skills/)")
     .option("--cursor", "Cursor (.cursor/skills/)")
@@ -184,6 +203,7 @@ export function registerSkillAliases(program: Command): void {
     .option("--antigravity", "Antigravity (.agent/skills/)")
     .description("Install skills (alias for: skills install)")
     .action(async (project: string, skillName: string | undefined, options: AddOptions) => {
+      warnSkillHubDeprecated();
       await installCommand(project, skillName, options);
     });
 
@@ -192,6 +212,7 @@ export function registerSkillAliases(program: Command): void {
     .argument("<keywords...>", "Search keywords")
     .description("Search for skills (alias for: skills search)")
     .action(async (keywords: string[]) => {
+      warnSkillHubDeprecated();
       await searchCommand(keywords.join(" "));
     });
 
@@ -204,6 +225,7 @@ export function registerSkillAliases(program: Command): void {
     .option("--antigravity", "Antigravity (.agent/skills/)")
     .description("Suggest skills (alias for: skills suggest)")
     .action(async (options: SuggestOptions) => {
+      warnSkillHubDeprecated();
       await suggestCommand(options);
     });
 }
@@ -317,7 +339,7 @@ async function installCommand(
         const popularity = formatPopularity(s.installCount) + " ".repeat(popularityColWidth - 4);
         const trust = formatTrust(s.trustScore);
 
-        const skillUrl = `https://context7.com/skills${s.project}/${s.name}`;
+        const skillUrl = s.url || `https://github.com${s.project}`;
         const skillLink = terminalLink(s.name, skillUrl, pc.white);
         const repoLink = terminalLink(s.project, `https://github.com${s.project}`, pc.white);
         const metadataLines = [
@@ -494,11 +516,7 @@ async function searchCommand(query: string): Promise<void> {
     const popularity = formatPopularity(s.installCount) + " ".repeat(popularityColWidth - 4);
     const trust = formatTrust(s.trustScore);
 
-    const skillLink = terminalLink(
-      s.name,
-      `https://context7.com/skills${s.project}/${s.name}`,
-      pc.white
-    );
+    const skillLink = terminalLink(s.name, s.url || `https://github.com${s.project}`, pc.white);
     const repoLink = terminalLink(s.project, `https://github.com${s.project}`, pc.white);
     const metadataLines = [
       pc.dim("─".repeat(50)),
@@ -638,7 +656,13 @@ async function listCommand(options: ListOptions): Promise<void> {
   const scope: Scope = options.global ? "global" : "project";
   const baseDir = scope === "global" ? homedir() : process.cwd();
 
-  const results: { label: string; path: string; skills: string[] }[] = [];
+  const results: {
+    label: string;
+    displayPath: string;
+    dir: string;
+    source: string;
+    skills: string[];
+  }[] = [];
 
   // Helper to scan a skills directory
   async function scanDir(dir: string): Promise<string[]> {
@@ -661,7 +685,7 @@ async function listCommand(options: ListOptions): Promise<void> {
       const label = ide === "universal" ? UNIVERSAL_AGENTS_LABEL : IDE_NAMES[ide];
       const skills = await scanDir(dir);
       if (skills.length > 0) {
-        results.push({ label, path: dir, skills });
+        results.push({ label, displayPath: dir, dir, source: ide, skills });
       }
     }
   } else {
@@ -670,7 +694,13 @@ async function listCommand(options: ListOptions): Promise<void> {
     const universalDir = join(baseDir, universalPath);
     const universalSkills = await scanDir(universalDir);
     if (universalSkills.length > 0) {
-      results.push({ label: UNIVERSAL_AGENTS_LABEL, path: universalPath, skills: universalSkills });
+      results.push({
+        label: UNIVERSAL_AGENTS_LABEL,
+        displayPath: universalPath,
+        dir: universalDir,
+        source: "universal",
+        skills: universalSkills,
+      });
     }
 
     for (const ide of VENDOR_SPECIFIC_AGENTS) {
@@ -678,9 +708,28 @@ async function listCommand(options: ListOptions): Promise<void> {
       const dir = join(baseDir, pathMap[ide]);
       const skills = await scanDir(dir);
       if (skills.length > 0) {
-        results.push({ label: IDE_NAMES[ide], path: pathMap[ide], skills });
+        results.push({
+          label: IDE_NAMES[ide],
+          displayPath: pathMap[ide],
+          dir,
+          source: ide,
+          skills,
+        });
       }
     }
+  }
+
+  if (options.json) {
+    const skills = results.flatMap((result) =>
+      result.skills.map((name) => ({
+        name,
+        path: join(result.dir, name),
+        source: result.source,
+      }))
+    );
+
+    console.log(JSON.stringify({ skills }, null, 2));
+    return;
   }
 
   if (results.length === 0) {
@@ -690,8 +739,8 @@ async function listCommand(options: ListOptions): Promise<void> {
 
   log.blank();
 
-  for (const { label, path, skills } of results) {
-    log.plain(`${pc.bold(label)} ${pc.dim(path)}`);
+  for (const { label, displayPath, skills } of results) {
+    log.plain(`${pc.bold(label)} ${pc.dim(displayPath)}`);
     for (const skill of skills) {
       log.plain(`  ${pc.green(skill)}`);
     }
@@ -708,7 +757,13 @@ async function removeCommand(name: string, options: RemoveOptions): Promise<void
   }
 
   const skillsDir = getTargetDirFromSelection(target.ide, target.scope);
-  const skillPath = join(skillsDir, name);
+  let skillPath: string;
+  try {
+    skillPath = assertSkillNameInRoot(skillsDir, name);
+  } catch {
+    log.error(`Invalid skill name: ${name}`);
+    return;
+  }
 
   try {
     await rm(skillPath, { recursive: true });
@@ -832,11 +887,7 @@ async function suggestCommand(options: SuggestOptions): Promise<void> {
     const trust = formatTrust(s.trustScore) + " ".repeat(trustColWidth - trustLabel.length);
     const matched = pc.yellow(s.matchedDep.padEnd(maxMatchedLen));
 
-    const skillLink = terminalLink(
-      s.name,
-      `https://context7.com/skills${s.project}/${s.name}`,
-      pc.white
-    );
+    const skillLink = terminalLink(s.name, s.url || `https://github.com${s.project}`, pc.white);
     const repoLink = terminalLink(s.project, `https://github.com${s.project}`, pc.white);
     const metadataLines = [
       pc.dim("─".repeat(50)),

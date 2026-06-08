@@ -6,21 +6,26 @@ import {
   ListPromptsRequestSchema,
   ListResourcesRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { z } from "zod";
 import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
-import { ClientContext } from "./lib/encryption.js";
+import type { ClientContext } from "./lib/types.js";
 import { formatSearchResults, extractClientInfoFromUserAgent } from "./lib/utils.js";
 import { isJWT, validateJWT } from "./lib/jwt.js";
 import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
+import { randomUUID } from "node:crypto";
+import { createSessionStore } from "./lib/sessionStore.js";
 import {
   SERVER_VERSION,
   RESOURCE_URL,
   AUTH_SERVER_URL,
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
+import { appendAuthPrompt } from "./lib/auth/auth-prompt.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -79,6 +84,8 @@ const requestContext = new AsyncLocalStorage<ClientContext>();
 // Global state for stdio mode only
 let stdioApiKey: string | undefined;
 let stdioClientInfo: { ide?: string; version?: string } | undefined;
+// One session ID per stdio process.
+let stdioSessionId: string | undefined;
 
 /**
  * Get the effective client context
@@ -96,6 +103,7 @@ function getClientContext(): ClientContext {
     apiKey: stdioApiKey,
     clientInfo: stdioClientInfo,
     transport: "stdio",
+    sessionId: stdioSessionId,
   };
 }
 
@@ -207,33 +215,29 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
         idempotentHint: true,
       },
     },
-    async ({ query, libraryName }) => {
-      const searchResponse = await searchLibraries(query, libraryName, getClientContext());
+    async ({ query, libraryName }: { query: string; libraryName: string }) => {
+      const ctx = getClientContext();
+      const searchResponse = await searchLibraries(query, libraryName, ctx);
 
       if (!searchResponse.results || searchResponse.results.length === 0) {
+        const text = searchResponse.error ?? "No libraries found matching the provided name.";
         return {
           content: [
             {
               type: "text",
-              text: searchResponse.error
-                ? searchResponse.error
-                : "No libraries found matching the provided name.",
+              text: appendAuthPrompt(text, ctx),
             },
           ],
         };
       }
 
       const resultsText = formatSearchResults(searchResponse);
-
-      const responseText = `Available Libraries:
-
-${resultsText}`;
-
+      const responseText = `Available Libraries:\n\n${resultsText}`;
       return {
         content: [
           {
             type: "text",
-            text: responseText,
+            text: appendAuthPrompt(responseText, ctx),
           },
         ],
       };
@@ -248,7 +252,7 @@ ${resultsText}`;
 
 You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
-Workflow: call first without researchMode. If that doesn't answer the question, retry with researchMode: true. Do not call each tool more than 3 times per question.`,
+Do not call this tool more than 3 times per question.`,
       inputSchema: {
         libraryId: z
           .string()
@@ -260,12 +264,6 @@ Workflow: call first without researchMode. If that doesn't answer the question, 
           .describe(
             "The question or task you need help with. Be specific and include relevant details. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad: 'auth' or 'hooks'. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
           ),
-        researchMode: z
-          .boolean()
-          .optional()
-          .describe(
-            `Retry the query with deep research: spins up sandboxed agents that read the actual source repos and runs a live web search, then synthesizes a fresh answer. Set true on retry if you weren't satisfied with the first answer and want a more thorough one. Requires an API key. You can get one free at https://context7.com.`
-          ),
       },
       annotations: {
         readOnlyHint: true,
@@ -274,49 +272,17 @@ Workflow: call first without researchMode. If that doesn't answer the question, 
         idempotentHint: true,
       },
     },
-    async ({ query, libraryId, researchMode }, { sendNotification, _meta }) => {
-      // Emit periodic progress notifications while the upstream call is in flight.
-      // MCP clients that opt into resetTimeoutOnProgress (e.g. opencode) reset their
-      // request timer on each notification, which keeps long-running tools (notably
-      // researchMode) alive past the SDK's default 60s wall-clock timeout. Clients
-      // that don't pass a progressToken simply never see these, so behavior is unchanged.
-      const progressToken = _meta?.progressToken;
-      let progressInterval: ReturnType<typeof setInterval> | undefined;
-      if (researchMode && progressToken !== undefined) {
-        let progress = 0;
-        progressInterval = setInterval(() => {
-          progress += 1;
-          sendNotification({
-            method: "notifications/progress",
-            params: {
-              progressToken,
-              progress,
-              message: "Researching documentation...",
-            },
-          }).catch(() => {
-            // Notifications are best-effort; swallow transport errors so the tool
-            // call itself isn't aborted by a notification write failure.
-          });
-        }, 20_000);
-      }
-
-      try {
-        const response = await fetchLibraryContext(
-          { query, libraryId, researchMode },
-          getClientContext()
-        );
-
-        return {
-          content: [
-            {
-              type: "text",
-              text: response.data,
-            },
-          ],
-        };
-      } finally {
-        if (progressInterval) clearInterval(progressInterval);
-      }
+    async ({ query, libraryId }: { query: string; libraryId: string }) => {
+      const ctx = getClientContext();
+      const response = await fetchLibraryContext({ query, libraryId }, ctx);
+      return {
+        content: [
+          {
+            type: "text",
+            text: appendAuthPrompt(response.data, ctx),
+          },
+        ],
+      };
     }
   );
 
@@ -327,6 +293,60 @@ Workflow: call first without researchMode. If that doesn't answer the question, 
   }));
 
   return server;
+}
+
+// Map of canonical arg name -> hallucinated aliases that should be rewritten
+// to it. LLM clients often echo phrasing from tool descriptions instead of
+// the literal schema keys, which trips Zod validation before the tool runs.
+type AliasMap = Record<string, readonly string[]>;
+
+const GLOBAL_ALIASES: AliasMap = {
+  query: ["userQuery", "question"],
+};
+
+// Tool-scoped aliases, for keys that are canonical on one tool but a
+// hallucination on another (e.g. `libraryName` is canonical for
+// `resolve-library-id`, so we only rewrite it on `query-docs` calls).
+const TOOL_ALIASES: Record<string, AliasMap> = {
+  "query-docs": {
+    libraryId: ["context7CompatibleLibraryID", "libraryID", "libraryName"],
+  },
+};
+
+function applyAliases(args: Record<string, unknown>, aliases: AliasMap): void {
+  for (const [canonical, alternatives] of Object.entries(aliases)) {
+    if (canonical in args) continue;
+    for (const alt of alternatives) {
+      if (alt in args) {
+        args[canonical] = args[alt];
+        delete args[alt];
+        break;
+      }
+    }
+  }
+}
+
+// Install BEFORE `server.connect(transport)`: the SDK's `Protocol.connect()`
+// captures the existing `onmessage` and chains its dispatch handler over it,
+// so our hook runs first on every incoming JSON-RPC message.
+function installTransportArgAliasing(transport: Transport): void {
+  transport.onmessage = (message) => {
+    const msg = message as {
+      method?: string;
+      params?: { name?: string; arguments?: unknown };
+    };
+    if (msg.method !== "tools/call") return;
+    const args = msg.params?.arguments;
+    if (!args || typeof args !== "object") return;
+    const argsRecord = args as Record<string, unknown>;
+
+    applyAliases(argsRecord, GLOBAL_ALIASES);
+
+    const toolName = msg.params?.name;
+    if (toolName && toolName in TOOL_ALIASES) {
+      applyAliases(argsRecord, TOOL_ALIASES[toolName]);
+    }
+  };
 }
 
 async function main() {
@@ -380,14 +400,16 @@ async function main() {
       );
     };
 
+    const sessionStore = createSessionStore();
+
     const handleMcpRequest = async (
       req: express.Request,
       res: express.Response,
       requireAuth: boolean
     ) => {
-      // Reject GET requests — this server is stateless and does not send server-initiated
-      // notifications, so SSE streams serve no purpose and cause mass NGINX timeouts.
-      // Returning 405 is spec-compliant per MCP StreamableHTTP (2025-03-26).
+      // Reject GET requests — sessions are tracked in Redis, but this server does not send
+      // server-initiated notifications, so SSE streams serve no purpose and cause mass NGINX
+      // timeouts. Returning 405 is spec-compliant per MCP StreamableHTTP (2025-03-26).
       if (req.method === "GET") {
         return res.status(405).json({
           jsonrpc: "2.0",
@@ -441,11 +463,58 @@ async function main() {
           transport: "http",
         };
 
+        const sessionId = extractHeaderValue(req.headers["mcp-session-id"]);
+
+        if (req.method === "DELETE") {
+          if (!sessionId) {
+            return res.status(400).json({
+              jsonrpc: "2.0",
+              error: { code: -32000, message: "Bad Request: No valid session ID provided" },
+              id: null,
+            });
+          }
+          await sessionStore.delete(sessionId);
+          return res.status(200).end();
+        }
+
+        let effectiveSessionId: string;
+        if (!sessionId && req.method === "POST" && isInitializeRequest(req.body)) {
+          effectiveSessionId = randomUUID();
+          await sessionStore.create(effectiveSessionId);
+          res.setHeader("mcp-session-id", effectiveSessionId);
+        } else if (sessionId && req.method === "POST" && !isInitializeRequest(req.body)) {
+          const sessionExists = await sessionStore.refresh(sessionId);
+          if (!sessionExists) {
+            // Per MCP Streamable HTTP spec: 404 signals to the client that the session
+            // has been terminated/expired, so it should re-initialize with a fresh InitializeRequest.
+            return res.status(404).json({
+              jsonrpc: "2.0",
+              error: {
+                code: -32000,
+                message: "Session not found or expired. Please re-initialize.",
+              },
+              id: null,
+            });
+          }
+          effectiveSessionId = sessionId;
+        } else {
+          return res.status(400).json({
+            jsonrpc: "2.0",
+            error: { code: -32000, message: "Bad Request: No valid session ID provided" },
+            id: null,
+          });
+        }
+
+        context.sessionId = effectiveSessionId;
+
+        // sessionIdGenerator is undefined because session lifecycle (create/refresh/delete)
+        // is owned by the route handler above and persisted in Redis, not by the SDK transport.
+        //
         // Use SSE responses for tool calls (enableJsonResponse: false). The SDK then
         // flushes response headers immediately after parsing the request rather than
         // buffering until the tool returns. This is required for long-running tools
-        // (e.g. researchMode) because some MCP HTTP clients cap the underlying fetch
-        // at 60s waiting for headers, even though the per-tool timeout is much higher.
+        // because some MCP HTTP clients cap the underlying fetch at 60s waiting for
+        // headers, even though the per-tool timeout is much higher.
         const transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: undefined,
           enableJsonResponse: false,
@@ -457,8 +526,10 @@ async function main() {
           server.close();
         });
 
+        installTransportArgAliasing(transport);
+        await server.connect(transport);
+
         await requestContext.run(context, async () => {
-          await server.connect(transport);
           await transport.handleRequest(req, res, req.body);
         });
       } catch (error) {
@@ -572,6 +643,12 @@ async function main() {
     startServer(initialPort);
   } else {
     stdioApiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
+    stdioSessionId = randomUUID();
+
+    process.stdin.on("end", () => process.exit(0));
+    process.stdin.on("close", () => process.exit(0));
+    process.on("SIGHUP", () => process.exit(0));
+
     const transport = new StdioServerTransport();
     const server = createMcpServer();
 
@@ -587,6 +664,7 @@ async function main() {
       }
     };
 
+    installTransportArgAliasing(transport);
     await server.connect(transport);
 
     console.error(`Context7 Documentation MCP Server v${SERVER_VERSION} running on stdio`);

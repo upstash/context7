@@ -226,9 +226,6 @@
           },
           {
             "$ref": "#/components/parameters/FastParam"
-          },
-          {
-            "$ref": "#/components/parameters/ResearchModeParam"
           }
         ],
         "responses": {
@@ -303,9 +300,6 @@
           },
           "500": {
             "$ref": "#/components/responses/InternalServerError"
-          },
-          "502": {
-            "$ref": "#/components/responses/ResearchNoSourcesError"
           }
         },
         "security": [
@@ -336,7 +330,7 @@
                 "properties": {
                   "libraryName": {
                     "type": "string",
-                    "description": "Library identifier in `/owner/repo` format"
+                    "description": "Library identifier — the URL path of the library on context7.com. Use `/owner/repo` for GitHub repositories (e.g., `/vercel/next.js`), or `/<source>/<id>` for other sources (e.g., `/websites/uploadcare_com`, `/llmstxt/<source>`). See [Library ID format](/api-guide#library-id-format)."
                   },
                   "branch": {
                     "type": "string",
@@ -348,8 +342,19 @@
                   }
                 }
               },
-              "example": {
-                "libraryName": "/vercel/next.js"
+              "examples": {
+                "github": {
+                  "summary": "GitHub repository",
+                  "value": { "libraryName": "/vercel/next.js" }
+                },
+                "website": {
+                  "summary": "Website source",
+                  "value": { "libraryName": "/websites/uploadcare_com" }
+                },
+                "llmstxt": {
+                  "summary": "llms.txt source",
+                  "value": { "libraryName": "/llmstxt/example" }
+                }
               }
             }
           }
@@ -883,14 +888,6 @@
                     "type": "boolean",
                     "description": "Whether the repository is private"
                   },
-                  "skipBenchmark": {
-                    "type": "boolean",
-                    "description": "Skip benchmark quality scoring after parsing"
-                  },
-                  "skipContextGeneration": {
-                    "type": "boolean",
-                    "description": "Skip automatic default context generation"
-                  },
                   "skipVersionFiltering": {
                     "type": "boolean",
                     "description": "Skip filtering out version-specific documentation pages"
@@ -1027,13 +1024,6 @@
                   "description": {
                     "type": "string",
                     "description": "Description of the library"
-                  },
-                  "skipBenchmark": {
-                    "type": "string",
-                    "enum": [
-                      "true"
-                    ],
-                    "description": "Set to 'true' to skip benchmark quality scoring"
                   },
                   "force": {
                     "type": "string",
@@ -1447,7 +1437,7 @@
       "LibraryIdParam": {
         "name": "libraryId",
         "in": "query",
-        "description": "Context7-compatible library ID in format `/owner/repo`, `/owner/repo/version`, or `/owner/repo@version`",
+        "description": "Context7-compatible library ID — the URL path of the library on context7.com. Use `/owner/repo` for GitHub repositories, or `/<source>/<id>` for other sources (websites, llms.txt, GitLab/Bitbucket, etc.). Optionally suffix with `/<version>` or `@<version>` to pin a specific version. See [Library ID format](/api-guide#library-id-format).",
         "required": true,
         "schema": {
           "type": "string",
@@ -1456,9 +1446,17 @@
           "pattern": "^/[^/]+/[^/]+([/@][^/]+)?$"
         },
         "examples": {
-          "basic": {
-            "summary": "Basic library ID",
+          "github": {
+            "summary": "GitHub repository",
             "value": "/vercel/next.js"
+          },
+          "website": {
+            "summary": "Website source",
+            "value": "/websites/uploadcare_com"
+          },
+          "llmstxt": {
+            "summary": "llms.txt source",
+            "value": "/llmstxt/example"
           },
           "withVersion": {
             "summary": "With specific version (slash)",
@@ -1500,21 +1498,6 @@
         },
         "example": "true"
       },
-      "ResearchModeParam": {
-        "name": "researchMode",
-        "in": "query",
-        "description": "When `true`, run a deeper agentic research pipeline that returns a single synthesized `infoSnippet` instead of ranked snippets. Requires an API key and is subject to a weekly per-user quota.",
-        "required": false,
-        "schema": {
-          "type": "string",
-          "enum": [
-            "true",
-            "false"
-          ],
-          "default": "false"
-        },
-        "example": "true"
-      },
       "DaysParam": {
         "name": "days",
         "in": "query",
@@ -1536,7 +1519,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "Library ID in format `/owner/repo`",
+            "description": "Library ID — the URL path of the library on context7.com. `/owner/repo` for GitHub repositories, or `/<source>/<id>` for other sources (e.g., `/vercel/next.js`, `/websites/uploadcare_com`). See [Library ID format](/api-guide#library-id-format).",
             "example": "/vercel/next.js"
           },
           "title": {
@@ -2012,14 +1995,6 @@
             "type": "boolean",
             "description": "Whether the repository is private"
           },
-          "skipBenchmark": {
-            "type": "boolean",
-            "description": "Skip benchmark quality scoring after parsing"
-          },
-          "skipContextGeneration": {
-            "type": "boolean",
-            "description": "Skip automatic default context generation"
-          },
           "skipVersionFiltering": {
             "type": "boolean",
             "description": "Skip filtering out version-specific documentation pages"
@@ -2032,7 +2007,7 @@
         "properties": {
           "libraryName": {
             "type": "string",
-            "description": "The library identifier assigned (e.g., /owner/repo)"
+            "description": "The library identifier assigned — the URL path of the library on context7.com. `/owner/repo` for GitHub repositories, or `/<source>/<id>` for other sources (e.g., `/vercel/next.js`, `/websites/uploadcare_com`). See [Library ID format](/api-guide#library-id-format)."
           },
           "message": {
             "type": "string",
@@ -2418,7 +2393,7 @@
                 "summary": "Invalid library ID format",
                 "value": {
                   "error": "invalid_library_id",
-                  "message": "Invalid library ID format. Expected: /owner/repo or /owner/repo/version"
+                  "message": "Invalid library ID format. Expected: `/owner/repo` for GitHub repositories, or `/<source>/<id>` for other sources (the URL path of the library on context7.com)"
                 }
               }
             }
@@ -2701,20 +2676,6 @@
             "example": {
               "error": "timeout",
               "message": "Request timed out. Please try again."
-            }
-          }
-        }
-      },
-      "ResearchNoSourcesError": {
-        "description": "Bad Gateway - Research mode could not retrieve any source material for the query",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/Error"
-            },
-            "example": {
-              "error": "research_no_sources",
-              "message": "Research mode could not retrieve any source material for this query."
             }
           }
         }

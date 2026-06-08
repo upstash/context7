@@ -28,7 +28,6 @@
           "adding-libraries",
           "library-updates",
           "api-guide",
-          "skills",
           "tips"
         ]
       },
@@ -46,18 +45,27 @@
           "howto/chat-widget",
           "howto/verification",
           "howto/private-sources",
-          "howto/teamspace",
-          "howto/usage"
+          "howto/policies",
+          "howto/rules",
+          "howto/usage",
+          "howto/teamspace"
         ]
       },
       {
         "group": "Enterprise",
         "pages": [
           "enterprise",
+          "enterprise/azure-apim",
           {
             "group": "On-Premise",
             "pages": [
               "enterprise/on-premise",
+              {
+                "group": "Security",
+                "pages": [
+                  "enterprise/security/entra-sso"
+                ]
+              },
               {
                 "group": "Deployment",
                 "pages": [

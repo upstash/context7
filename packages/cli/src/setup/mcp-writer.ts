@@ -1,5 +1,6 @@
 import { access, readFile, writeFile, mkdir } from "fs/promises";
 import { dirname } from "path";
+import { STDIO_PACKAGE } from "./agents.js";
 
 function stripJsonComments(text: string): string {
   let result = "";
@@ -113,6 +114,117 @@ export async function readTomlServerExists(filePath: string, serverName: string)
   } catch {
     return false;
   }
+}
+
+/**
+ * Reads the top-level `[mcp_servers.<serverName>]` block from a TOML config
+ * file and parses its key-value lines into a JS object. Handles string and
+ * array values (TOML array syntax is JSON-compatible). Sub-tables like
+ * `[mcp_servers.<serverName>.http_headers]` are ignored. Returns undefined
+ * if the file or section is missing.
+ */
+export async function readTomlServerEntry(
+  filePath: string,
+  serverName: string
+): Promise<Record<string, unknown> | undefined> {
+  let raw: string;
+  try {
+    raw = await readFile(filePath, "utf-8");
+  } catch {
+    return undefined;
+  }
+
+  const sectionHeader = `[mcp_servers.${serverName}]`;
+  const startIdx = raw.indexOf(sectionHeader);
+  if (startIdx === -1) return undefined;
+
+  // The top-level table's values live between its header and the next `[...]`
+  // header (whether that's a sub-table like `[mcp_servers.foo.http_headers]`
+  // or an unrelated section). Sub-table values belong to the sub-table, not
+  // here, so excluding them is correct.
+  const rest = raw.slice(startIdx + sectionHeader.length);
+  const nextHeader = /^\[/m.exec(rest);
+  const block = nextHeader ? rest.slice(0, nextHeader.index) : rest;
+
+  const entry: Record<string, unknown> = {};
+  const lineRe = /^([A-Za-z_][\w-]*)\s*=\s*(.+?)\s*$/gm;
+  let lineMatch: RegExpExecArray | null;
+  while ((lineMatch = lineRe.exec(block)) !== null) {
+    const [, key, valueText] = lineMatch;
+    try {
+      entry[key] = JSON.parse(valueText);
+    } catch {
+      // Skip values we can't parse as JSON (e.g., bare TOML numbers like 20)
+    }
+  }
+  return Object.keys(entry).length > 0 ? entry : undefined;
+}
+
+/**
+ * True when `entry` looks like a stdio invocation of `@upstash/context7-mcp`
+ * (either `command: "npx", args: [..., "@upstash/context7-mcp", ...]` or
+ * OpenCode-style `command: ["npx", ..., "@upstash/context7-mcp", ...]`).
+ */
+export function isStdioContext7Entry(entry: unknown): entry is Record<string, unknown> {
+  if (!entry || typeof entry !== "object") return false;
+  const e = entry as Record<string, unknown>;
+  const refs = (s: unknown) => typeof s === "string" && s.includes(STDIO_PACKAGE);
+
+  if (Array.isArray(e.command)) {
+    return (e.command as unknown[]).some(refs);
+  }
+  if (typeof e.command === "string" && Array.isArray(e.args)) {
+    return (e.args as unknown[]).some(refs);
+  }
+  return false;
+}
+
+/**
+ * Extracts an existing per-server entry from an in-memory JSON config
+ * (e.g., the object returned by `readJsonConfig`). Returns `undefined`
+ * when the section, server, or entry shape is missing.
+ */
+export function getJsonServerEntry(
+  config: Record<string, unknown>,
+  configKey: string,
+  serverName: string
+): Record<string, unknown> | undefined {
+  const section = config[configKey];
+  if (!section || typeof section !== "object") return undefined;
+  const entry = (section as Record<string, unknown>)[serverName];
+  return entry && typeof entry === "object" ? (entry as Record<string, unknown>) : undefined;
+}
+
+function stripApiKeyPair(args: string[]): string[] {
+  const result: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--api-key") {
+      i++; // skip the value too
+      continue;
+    }
+    result.push(args[i]);
+  }
+  return result;
+}
+
+/**
+ * Returns a copy of `entry` with any existing `--api-key <value>` pair
+ * removed from args (or array-form command), then a new `--api-key <apiKey>`
+ * appended when `apiKey` is provided. All other fields — including the
+ * package specifier (e.g., `@upstash/context7-mcp@latest`) — are preserved.
+ */
+export function patchStdioApiKey(
+  entry: Record<string, unknown>,
+  apiKey: string | undefined
+): Record<string, unknown> {
+  if (Array.isArray(entry.command)) {
+    const cmd = stripApiKeyPair(entry.command as string[]);
+    if (apiKey) cmd.push("--api-key", apiKey);
+    return { ...entry, command: cmd };
+  }
+  const args = Array.isArray(entry.args) ? stripApiKeyPair(entry.args as string[]) : [];
+  if (apiKey) args.push("--api-key", apiKey);
+  return { ...entry, args };
 }
 
 export function buildTomlServerBlock(serverName: string, entry: Record<string, unknown>): string {

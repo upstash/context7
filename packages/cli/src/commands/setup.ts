@@ -16,6 +16,7 @@ import { saveTokens, getValidAccessToken } from "../utils/auth.js";
 import {
   type SetupAgent,
   type AuthOptions,
+  type Transport,
   SETUP_AGENT_NAMES,
   AUTH_MODE_LABELS,
   ALL_AGENT_NAMES,
@@ -29,6 +30,10 @@ import {
   writeJsonConfig,
   resolveMcpPath,
   appendTomlServer,
+  readTomlServerEntry,
+  isStdioContext7Entry,
+  patchStdioApiKey,
+  getJsonServerEntry,
 } from "../setup/mcp-writer.js";
 
 type Scope = "global" | "project";
@@ -37,7 +42,6 @@ type SetupMode = "mcp" | "cli";
 interface SetupOptions {
   claude?: boolean;
   cursor?: boolean;
-  universal?: boolean;
   antigravity?: boolean;
   opencode?: boolean;
   codex?: boolean;
@@ -48,6 +52,11 @@ interface SetupOptions {
   oauth?: boolean;
   cli?: boolean;
   mcp?: boolean;
+  stdio?: boolean;
+}
+
+function resolveTransport(options: SetupOptions): Transport {
+  return options.stdio ? "stdio" : "http";
 }
 
 const CHECKBOX_THEME = {
@@ -63,6 +72,7 @@ function getSelectedAgents(options: SetupOptions): SetupAgent[] {
   if (options.cursor) agents.push("cursor");
   if (options.opencode) agents.push("opencode");
   if (options.codex) agents.push("codex");
+  if (options.antigravity) agents.push("antigravity");
   if (options.gemini) agents.push("gemini");
   return agents;
 }
@@ -73,7 +83,6 @@ export function registerSetupCommand(program: Command): void {
     .description("Set up Context7 for your AI coding agent")
     .option("--claude", "Set up for Claude Code")
     .option("--cursor", "Set up for Cursor")
-    .option("--universal", "Set up for Universal (.agents/skills)")
     .option("--antigravity", "Set up for Antigravity (.agent/skills)")
     .option("--opencode", "Set up for OpenCode")
     .option("--codex", "Set up for Codex")
@@ -84,6 +93,7 @@ export function registerSetupCommand(program: Command): void {
     .option("-y, --yes", "Skip confirmation prompts")
     .option("--api-key <key>", "Use API key authentication")
     .option("--oauth", "Use OAuth endpoint (IDE handles auth flow)")
+    .option("--stdio", "Configure the MCP server as a local stdio process (default: HTTP)")
     .action(async (options: SetupOptions) => {
       await setupCommand(options);
     });
@@ -134,7 +144,7 @@ async function resolveAuth(options: SetupOptions): Promise<AuthOptions | null> {
 
 async function resolveMode(options: SetupOptions): Promise<SetupMode> {
   if (options.cli) return "cli";
-  if (options.mcp || options.yes || options.oauth || options.apiKey) return "mcp";
+  if (options.mcp || options.yes || options.oauth || options.stdio) return "mcp";
 
   return select<SetupMode>({
     message: "How should your agent access Context7?",
@@ -260,9 +270,30 @@ async function installRule(
   return { status: "installed", path: filePath };
 }
 
+/**
+ * For stdio transport, preserve an existing `@upstash/context7-mcp` invocation
+ * (e.g., `@upstash/context7-mcp@latest` or a user-pinned version) and only
+ * swap the `--api-key` value. Falls back to the agent's canonical shape when
+ * no existing stdio entry is detected. HTTP transport always uses the
+ * canonical shape.
+ */
+function resolveEntryToWrite(
+  agent: ReturnType<typeof getAgent>,
+  auth: AuthOptions,
+  transport: Transport,
+  existingEntry: Record<string, unknown> | undefined
+): Record<string, unknown> {
+  if (transport === "stdio" && existingEntry && isStdioContext7Entry(existingEntry)) {
+    const apiKey = auth.mode === "api-key" ? auth.apiKey : undefined;
+    return patchStdioApiKey(existingEntry, apiKey);
+  }
+  return agent.mcp.buildEntry(auth, transport);
+}
+
 async function setupAgent(
   agentName: SetupAgent,
   auth: AuthOptions,
+  transport: Transport,
   scope: Scope
 ): Promise<{
   agent: string;
@@ -276,7 +307,7 @@ async function setupAgent(
   const agent = getAgent(agentName);
 
   const mcpCandidates =
-    scope === "global"
+    scope === "global" || agent.mcp.projectPaths.length === 0
       ? agent.mcp.globalPaths
       : agent.mcp.projectPaths.map((p) => join(process.cwd(), p));
   const mcpPath = await resolveMcpPath(mcpCandidates);
@@ -284,21 +315,25 @@ async function setupAgent(
   let mcpStatus: string;
   try {
     if (mcpPath.endsWith(".toml")) {
-      const { alreadyExists } = await appendTomlServer(
-        mcpPath,
-        "context7",
-        agent.mcp.buildEntry(auth)
-      );
+      const existingTomlEntry =
+        transport === "stdio" ? await readTomlServerEntry(mcpPath, "context7") : undefined;
+      const entry = resolveEntryToWrite(agent, auth, transport, existingTomlEntry);
+      const { alreadyExists } = await appendTomlServer(mcpPath, "context7", entry);
       mcpStatus = alreadyExists
         ? `reconfigured with ${AUTH_MODE_LABELS[auth.mode]}`
         : `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
     } else {
       const existing = await readJsonConfig(mcpPath);
+      const existingJsonEntry =
+        transport === "stdio"
+          ? getJsonServerEntry(existing, agent.mcp.configKey, "context7")
+          : undefined;
+      const entry = resolveEntryToWrite(agent, auth, transport, existingJsonEntry);
       const { config, alreadyExists } = mergeServerEntry(
         existing,
         agent.mcp.configKey,
         "context7",
-        agent.mcp.buildEntry(auth)
+        entry
       );
       mcpStatus = alreadyExists
         ? `reconfigured with ${AUTH_MODE_LABELS[auth.mode]}`
@@ -350,6 +385,12 @@ async function setupAgent(
 }
 
 async function setupMcp(agents: SetupAgent[], options: SetupOptions, scope: Scope): Promise<void> {
+  const transport = resolveTransport(options);
+  if (transport === "stdio" && options.oauth) {
+    log.error("--stdio is incompatible with --oauth (OAuth uses the hosted HTTP endpoint).");
+    return;
+  }
+
   const auth = await resolveAuth(options);
   if (!auth) {
     log.warn("Setup cancelled");
@@ -362,7 +403,7 @@ async function setupMcp(agents: SetupAgent[], options: SetupOptions, scope: Scop
   const results = [];
   for (const agentName of agents) {
     spinner.text = `Setting up ${getAgent(agentName).displayName}...`;
-    results.push(await setupAgent(agentName, auth, scope));
+    results.push(await setupAgent(agentName, auth, transport, scope));
   }
 
   spinner.succeed("Context7 setup complete");

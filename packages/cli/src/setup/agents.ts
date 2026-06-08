@@ -2,8 +2,9 @@ import { access } from "fs/promises";
 import { join } from "path";
 import { homedir } from "os";
 
-export type SetupAgent = "claude" | "cursor" | "opencode" | "codex" | "gemini";
+export type SetupAgent = "claude" | "cursor" | "opencode" | "codex" | "antigravity" | "gemini";
 export type AuthMode = "oauth" | "api-key";
+export type Transport = "http" | "stdio";
 
 export interface AuthOptions {
   mode: AuthMode;
@@ -15,6 +16,7 @@ export const SETUP_AGENT_NAMES: Record<SetupAgent, string> = {
   cursor: "Cursor",
   opencode: "OpenCode",
   codex: "Codex",
+  antigravity: "Antigravity",
   gemini: "Gemini CLI",
 };
 
@@ -24,6 +26,30 @@ export const AUTH_MODE_LABELS: Record<AuthMode, string> = {
 };
 
 const MCP_BASE_URL = "https://mcp.context7.com";
+export const STDIO_PACKAGE = "@upstash/context7-mcp";
+
+function stdioArgs(auth: AuthOptions): string[] {
+  const args = ["-y", STDIO_PACKAGE];
+  if (auth.mode === "api-key" && auth.apiKey) {
+    args.push("--api-key", auth.apiKey);
+  }
+  return args;
+}
+
+function stdioEntry(auth: AuthOptions): Record<string, unknown> {
+  return { command: "npx", args: stdioArgs(auth) };
+}
+
+function claudeConfigDir(): string {
+  return process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
+}
+
+function claudeGlobalMcpPath(): string {
+  if (process.env.CLAUDE_CONFIG_DIR) {
+    return join(claudeConfigDir(), ".claude.json");
+  }
+  return join(homedir(), ".claude.json");
+}
 
 export type RuleType =
   | {
@@ -40,7 +66,7 @@ export interface AgentConfig {
     projectPaths: string[];
     globalPaths: string[];
     configKey: string;
-    buildEntry: (auth: AuthOptions) => Record<string, unknown>;
+    buildEntry: (auth: AuthOptions, transport: Transport) => Record<string, unknown>;
   };
   rule: RuleType;
   skill: {
@@ -70,24 +96,31 @@ const agents: Record<SetupAgent, AgentConfig> = {
     displayName: "Claude Code",
     mcp: {
       projectPaths: [".mcp.json"],
-      globalPaths: [join(homedir(), ".claude.json")],
+      get globalPaths() {
+        return [claudeGlobalMcpPath()];
+      },
       configKey: "mcpServers",
-      buildEntry: (auth) => withHeaders({ type: "http", url: mcpUrl(auth) }, auth),
+      buildEntry: (auth, transport) =>
+        transport === "stdio"
+          ? stdioEntry(auth)
+          : withHeaders({ type: "http", url: mcpUrl(auth) }, auth),
     },
     rule: {
       kind: "file",
       dir: (scope) =>
-        scope === "global" ? join(homedir(), ".claude", "rules") : join(".claude", "rules"),
+        scope === "global" ? join(claudeConfigDir(), "rules") : join(".claude", "rules"),
       filename: "context7.md",
     },
     skill: {
       name: "context7-mcp",
       dir: (scope) =>
-        scope === "global" ? join(homedir(), ".claude", "skills") : join(".claude", "skills"),
+        scope === "global" ? join(claudeConfigDir(), "skills") : join(".claude", "skills"),
     },
     detect: {
       projectPaths: [".mcp.json", ".claude"],
-      globalPaths: [join(homedir(), ".claude")],
+      get globalPaths() {
+        return [claudeConfigDir()];
+      },
     },
   },
 
@@ -98,7 +131,8 @@ const agents: Record<SetupAgent, AgentConfig> = {
       projectPaths: [join(".cursor", "mcp.json")],
       globalPaths: [join(homedir(), ".cursor", "mcp.json")],
       configKey: "mcpServers",
-      buildEntry: (auth) => withHeaders({ url: mcpUrl(auth) }, auth),
+      buildEntry: (auth, transport) =>
+        transport === "stdio" ? stdioEntry(auth) : withHeaders({ url: mcpUrl(auth) }, auth),
     },
     rule: {
       kind: "file",
@@ -129,7 +163,10 @@ const agents: Record<SetupAgent, AgentConfig> = {
         join(homedir(), ".config", "opencode", ".opencode.jsonc"),
       ],
       configKey: "mcp",
-      buildEntry: (auth) => withHeaders({ type: "remote", url: mcpUrl(auth), enabled: true }, auth),
+      buildEntry: (auth, transport) =>
+        transport === "stdio"
+          ? { type: "local", command: ["npx", ...stdioArgs(auth)], enabled: true }
+          : withHeaders({ type: "remote", url: mcpUrl(auth), enabled: true }, auth),
     },
     rule: {
       kind: "append",
@@ -155,13 +192,10 @@ const agents: Record<SetupAgent, AgentConfig> = {
       projectPaths: [join(".codex", "config.toml")],
       globalPaths: [join(homedir(), ".codex", "config.toml")],
       configKey: "mcp_servers",
-      buildEntry: (auth) => {
-        const entry: Record<string, unknown> = { type: "http", url: mcpUrl(auth) };
-        if (auth.mode === "api-key" && auth.apiKey) {
-          entry.headers = { CONTEXT7_API_KEY: auth.apiKey };
-        }
-        return entry;
-      },
+      buildEntry: (auth, transport) =>
+        transport === "stdio"
+          ? stdioEntry(auth)
+          : withHeaders({ type: "http", url: mcpUrl(auth) }, auth),
     },
     rule: {
       kind: "append",
@@ -179,6 +213,36 @@ const agents: Record<SetupAgent, AgentConfig> = {
     },
   },
 
+  // Antigravity is built on Gemini infrastructure and shares ~/.gemini/. Per
+  // the official Codelabs guide, Antigravity 2.0/IDE/CLI read MCP servers from
+  // ~/.gemini/config/mcp_config.json globally; there is no project-level MCP
+  // config, so projectPaths is empty and setupAgent falls back to global.
+  antigravity: {
+    name: "antigravity",
+    displayName: "Antigravity",
+    mcp: {
+      projectPaths: [],
+      globalPaths: [join(homedir(), ".gemini", "config", "mcp_config.json")],
+      configKey: "mcpServers",
+      buildEntry: (auth, transport) =>
+        transport === "stdio" ? stdioEntry(auth) : withHeaders({ serverUrl: mcpUrl(auth) }, auth),
+    },
+    rule: {
+      kind: "append",
+      file: (scope) => (scope === "global" ? join(homedir(), ".gemini", "GEMINI.md") : "GEMINI.md"),
+      sectionMarker: "<!-- context7 -->",
+    },
+    skill: {
+      name: "context7-mcp",
+      dir: (scope) =>
+        scope === "global" ? join(homedir(), ".agent", "skills") : join(".agent", "skills"),
+    },
+    detect: {
+      projectPaths: [".agent"],
+      globalPaths: [join(homedir(), ".gemini", "antigravity"), join(homedir(), ".agent")],
+    },
+  },
+
   gemini: {
     name: "gemini",
     displayName: "Gemini CLI",
@@ -186,7 +250,8 @@ const agents: Record<SetupAgent, AgentConfig> = {
       projectPaths: [join(".gemini", "settings.json")],
       globalPaths: [join(homedir(), ".gemini", "settings.json")],
       configKey: "mcpServers",
-      buildEntry: (auth) => withHeaders({ httpUrl: mcpUrl(auth) }, auth),
+      buildEntry: (auth, transport) =>
+        transport === "stdio" ? stdioEntry(auth) : withHeaders({ httpUrl: mcpUrl(auth) }, auth),
     },
     rule: {
       kind: "append",

@@ -24,6 +24,7 @@ interface UninstallOptions {
   cursor?: boolean;
   opencode?: boolean;
   codex?: boolean;
+  antigravity?: boolean;
   gemini?: boolean;
   project?: boolean;
   yes?: boolean;
@@ -75,6 +76,7 @@ export function registerRemoveCommand(program: Command): void {
     .option("--cursor", "Remove from Cursor")
     .option("--opencode", "Remove from OpenCode")
     .option("--codex", "Remove from Codex")
+    .option("--antigravity", "Remove from Antigravity")
     .option("--gemini", "Remove from Gemini CLI")
     .option("--all", "Remove both MCP setup and CLI + Skills setup")
     .option("--mcp", "Remove MCP setup")
@@ -92,6 +94,7 @@ function getSelectedAgents(options: UninstallOptions): SetupAgent[] {
   if (options.cursor) agents.push("cursor");
   if (options.opencode) agents.push("opencode");
   if (options.codex) agents.push("codex");
+  if (options.antigravity) agents.push("antigravity");
   if (options.gemini) agents.push("gemini");
   return agents;
 }
@@ -151,7 +154,7 @@ async function resolveAgents(options: UninstallOptions, scope: Scope): Promise<S
 
   if (detected.length === 0) {
     log.warn(
-      "No Context7 setup detected. Pass --claude, --cursor, --opencode, --codex, or --gemini."
+      "No Context7 setup detected. Pass --claude, --cursor, --opencode, --codex, --antigravity, or --gemini."
     );
     return [];
   }
@@ -188,6 +191,9 @@ async function pathExists(path: string): Promise<boolean> {
 
 async function hasMcpConfig(agentName: SetupAgent, scope: Scope): Promise<boolean> {
   const agent = getAgent(agentName);
+  // Agents with no project-level MCP (e.g. Antigravity) only have a global
+  // config — there's nothing to detect at project scope.
+  if (scope === "project" && agent.mcp.projectPaths.length === 0) return false;
   const candidates =
     scope === "global"
       ? agent.mcp.globalPaths
@@ -198,7 +204,15 @@ async function hasMcpConfig(agentName: SetupAgent, scope: Scope): Promise<boolea
     return readTomlServerExists(mcpPath, "context7");
   }
 
-  const existing = await readJsonConfig(mcpPath);
+  let existing: Record<string, unknown>;
+  try {
+    existing = await readJsonConfig(mcpPath);
+  } catch (err) {
+    log.warn(
+      `Skipped ${mcpPath}: could not parse (${err instanceof Error ? err.message : String(err)})`
+    );
+    return false;
+  }
   const section = existing[agent.mcp.configKey];
   return (
     !!section && typeof section === "object" && !Array.isArray(section) && "context7" in section
@@ -311,6 +325,9 @@ async function resolveModes(
 
 async function uninstallMcp(agentName: SetupAgent, scope: Scope): Promise<CleanupStatus> {
   const agent = getAgent(agentName);
+  if (scope === "project" && agent.mcp.projectPaths.length === 0) {
+    return { status: "not found", path: "" };
+  }
   const mcpCandidates =
     scope === "global"
       ? agent.mcp.globalPaths

@@ -19,7 +19,7 @@ const program = new Command();
 
 program
   .name("ctx7")
-  .description("Context7 CLI - Manage AI coding skills and documentation context")
+  .description("Context7 CLI - Fetch documentation context and configure Context7")
   .version(VERSION)
   .option("--base-url <url>")
   .hook("preAction", (thisCommand) => {
@@ -39,21 +39,10 @@ program
     "after",
     `
 Examples:
-  ${brand.dim("# Search for skills")}
-  ${brand.primary("npx ctx7 skills search pdf")}
-  ${brand.primary("npx ctx7 skills search react hooks")}
-
-  ${brand.dim("# Install from a repository")}
-  ${brand.primary("npx ctx7 skills install /anthropics/skills")}
-  ${brand.primary("npx ctx7 skills install /anthropics/skills pdf")}
-
-  ${brand.dim("# Install to specific client")}
-  ${brand.primary("npx ctx7 skills install /anthropics/skills --cursor")}
-  ${brand.primary("npx ctx7 skills install /anthropics/skills --global")}
-
-  ${brand.dim("# List and manage installed skills")}
-  ${brand.primary("npx ctx7 skills list --claude")}
-  ${brand.primary("npx ctx7 skills remove pdf")}
+  ${brand.dim("# Configure Context7 for your coding agent")}
+  ${brand.primary("npx ctx7 setup")}
+  ${brand.primary("npx ctx7 setup --mcp")}
+  ${brand.primary("npx ctx7 setup --cli")}
 
   ${brand.dim("# Remove Context7 setup")}
   ${brand.primary("npx ctx7 remove --cursor")}
@@ -64,8 +53,6 @@ Examples:
   ${brand.dim("# Query library documentation")}
   ${brand.primary('npx ctx7 library react "how to use hooks"')}
   ${brand.primary('npx ctx7 docs /facebook/react "useEffect examples"')}
-
-Visit ${brand.primary("https://context7.com")} to browse skills
 `
   );
 
@@ -81,16 +68,15 @@ program.action(() => {
   console.log("");
   const banner = figlet.textSync("Context7", { font: "ANSI Shadow" });
   console.log(brand.primary(banner));
-  console.log(brand.dim("  The open agent skills ecosystem"));
+  console.log(brand.dim("  Documentation context for AI coding agents"));
   console.log("");
 
   console.log("  Quick start:");
-  console.log(`    ${brand.primary("npx ctx7 skills search pdf")}`);
-  console.log(`    ${brand.primary("npx ctx7 skills install /anthropics/skills")}`);
+  console.log(`    ${brand.primary("npx ctx7 setup")}`);
+  console.log(`    ${brand.primary('npx ctx7 docs /facebook/react "useEffect examples"')}`);
   console.log("");
 
   console.log(`  Run ${brand.primary("npx ctx7 --help")} for all commands and options`);
-  console.log(`  Visit ${brand.primary("https://context7.com")} to browse skills`);
   console.log("");
 });
 

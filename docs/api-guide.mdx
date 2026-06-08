@@ -30,6 +30,32 @@ Get your API key at [context7.com/dashboard](https://context7.com/dashboard). Le
 | [Add Website](/api-reference/add-library/add-a-website) | `POST /api/v2/add/website` | Submit a website for crawling |
 | [Add Confluence](/api-reference/add-library/add-a-confluence-space) | `POST /api/v2/add/confluence` | Submit a Confluence space |
 
+## Library ID format
+
+A **library ID** is the URL path of the library on context7.com. If the library page is at `https://context7.com/websites/uploadcare_com`, its ID is `/websites/uploadcare_com`. The same ID works for every endpoint that accepts a `libraryId` or `libraryName` — including [Get Context](/api-reference/context/get-documentation-context) and [Refresh Library](/api-reference/refresh/refresh-a-library).
+
+Use `/owner/repo` for GitHub repositories, or `/<source>/<id>` for other sources:
+
+| Source | Example library ID |
+|--------|--------------------|
+| GitHub repository | `/vercel/next.js` |
+| GitLab / Bitbucket / generic Git repo | `/<owner>/<repo>` (same shape as GitHub) |
+| Website | `/websites/uploadcare_com` |
+| llms.txt source | `/llmstxt/<source>` |
+| npm / package source | `/packages/<name>` or `/npm/<name>` |
+| Uploaded docs | `/docs/<name>` |
+
+You can pin a specific version with either `/owner/repo/<version>` or `/owner/repo@<version>`:
+
+```
+/vercel/next.js/v15.1.8
+/vercel/next.js@v15.1.8
+```
+
+<Tip>
+  Don't know the ID for a library? Find it on [context7.com](https://context7.com) — the URL path of the library page **is** the ID. Or call [Search Library](/api-reference/search/search-for-libraries) and use the `id` from the response.
+</Tip>
+
 ### Complete Workflow Example
 
 ```python
@@ -96,6 +122,10 @@ curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js&query=How%20
 
 # Less optimal - vague query
 curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js&query=auth" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY"
+
+# Non-GitHub source (website) - same endpoint, same shape
+curl "https://context7.com/api/v2/context?libraryId=/websites/uploadcare_com&query=image%20transformations" \
   -H "Authorization: Bearer CONTEXT7_API_KEY"
 ```
 

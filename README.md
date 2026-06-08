@@ -46,7 +46,7 @@ Works in two modes:
 > [!NOTE]
 > **API Key Recommended**: Get a free API key at [context7.com/dashboard](https://context7.com/dashboard) for higher rate limits.
 
-Set up Context7 for your coding agents with a single command:
+Set up Context7 for your coding agents with a single command. The `ctx7` CLI requires Node.js 18 or newer.
 
 ```bash
 npx ctx7 setup
@@ -120,6 +120,14 @@ Always use Context7 when I need library/API documentation, code generation, setu
 - [Troubleshooting](https://context7.com/docs/resources/troubleshooting) - Common issues and solutions
 - [API Reference](https://context7.com/docs/api-guide) - REST API documentation
 - [Developer Guide](https://context7.com/docs/resources/developer) - Run Context7 MCP locally
+
+## Packages
+
+- [`@upstash/context7-mcp`](https://www.npmjs.com/package/@upstash/context7-mcp) - MCP server
+- [`ctx7`](https://www.npmjs.com/package/ctx7) - CLI
+- [`@upstash/context7-sdk`](https://www.npmjs.com/package/@upstash/context7-sdk) - TypeScript SDK
+- [`@upstash/context7-tools-ai-sdk`](https://www.npmjs.com/package/@upstash/context7-tools-ai-sdk) - Vercel AI SDK tools
+- [`@upstash/context7-pi`](https://www.npmjs.com/package/@upstash/context7-pi) - pi.dev extension
 
 ## Disclaimer
 

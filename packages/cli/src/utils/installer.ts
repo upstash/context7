@@ -1,14 +1,15 @@
 import { mkdir, writeFile, rm, symlink, lstat } from "fs/promises";
-import { join, resolve, dirname } from "path";
+import { resolve, dirname } from "path";
 
 import type { SkillFile } from "../types.js";
+import { assertSkillNameInRoot } from "./skill-name.js";
 
 export async function installSkillFiles(
   skillName: string,
   files: SkillFile[],
-  targetDir: string
+  skillsRoot: string
 ): Promise<void> {
-  const skillDir = resolve(targetDir, skillName);
+  const skillDir = assertSkillNameInRoot(skillsRoot, skillName);
 
   for (const file of files) {
     const filePath = resolve(skillDir, file.path);
@@ -32,9 +33,9 @@ export async function installSkillFiles(
 export async function symlinkSkill(
   skillName: string,
   sourcePath: string,
-  targetDir: string
+  skillsRoot: string
 ): Promise<void> {
-  const targetPath = join(targetDir, skillName);
+  const targetPath = assertSkillNameInRoot(skillsRoot, skillName);
 
   try {
     const stats = await lstat(targetPath);
@@ -43,6 +44,6 @@ export async function symlinkSkill(
     }
   } catch {}
 
-  await mkdir(targetDir, { recursive: true });
+  await mkdir(skillsRoot, { recursive: true });
   await symlink(sourcePath, targetPath);
 }

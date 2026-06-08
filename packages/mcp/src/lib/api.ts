@@ -1,5 +1,5 @@
-import { SearchResponse, ContextRequest, ContextResponse } from "./types.js";
-import { ClientContext, generateHeaders } from "./encryption.js";
+import { SearchResponse, ContextRequest, ContextResponse, ClientContext } from "./types.js";
+import { generateHeaders } from "./encryption.js";
 import { Agent, ProxyAgent, setGlobalDispatcher } from "undici";
 import { CONTEXT7_API_BASE_URL } from "./constants.js";
 import { readFileSync } from "fs";
@@ -94,6 +94,12 @@ if (PROXY_URL && !PROXY_URL.startsWith("$") && /^(http|https):\/\//i.test(PROXY_
   }
 }
 
+function readPromptSignal(response: Response, context: ClientContext): void {
+  if (response.headers.get("X-Context7-Auth-Prompt") === "1") {
+    context.shouldPrompt = true;
+  }
+}
+
 /**
  * Searches for libraries matching the given query
  * @param query The user's question or task (used for LLM relevance ranking)
@@ -114,6 +120,7 @@ export async function searchLibraries(
     const headers = generateHeaders(context);
 
     const response = await fetch(url, { headers });
+    readPromptSignal(response, context);
     if (!response.ok) {
       const errorMessage = await parseErrorResponse(response, context.apiKey);
       console.error(errorMessage);
@@ -142,11 +149,11 @@ export async function fetchLibraryContext(
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/context`);
     url.searchParams.set("query", request.query);
     url.searchParams.set("libraryId", request.libraryId);
-    if (request.researchMode) url.searchParams.set("researchMode", "true");
 
     const headers = generateHeaders(context);
 
     const response = await fetch(url, { headers });
+    readPromptSignal(response, context);
     if (!response.ok) {
       const errorMessage = await parseErrorResponse(response, context.apiKey);
       console.error(errorMessage);
