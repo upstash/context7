@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import { access, mkdir, rename } from "fs/promises";
+import { access, chmod, mkdir, rename } from "fs/promises";
 import * as os from "os";
 import * as path from "path";
 
@@ -49,10 +49,12 @@ export function getLegacyFilePath(fileName: string): string {
 
 /**
  * Best-effort move of a legacy `~/.context7/<file>` into its new XDG location.
- * Failures (cross-device rename, permissions) are swallowed so callers fall
- * back to reading the legacy file rather than crashing.
+ * `rename` preserves the source's permissions, so callers pass `mode` for
+ * sensitive files (e.g. credentials) to re-assert a restrictive mode on the
+ * migrated file. Failures (cross-device rename, permissions) are swallowed so
+ * callers fall back to reading the legacy file rather than crashing.
  */
-export function migrateLegacyFileSync(fileName: string, targetPath: string): void {
+export function migrateLegacyFileSync(fileName: string, targetPath: string, mode?: number): void {
   const legacyPath = getLegacyFilePath(fileName);
   if (legacyPath === targetPath || fs.existsSync(targetPath) || !fs.existsSync(legacyPath)) {
     return;
@@ -61,12 +63,19 @@ export function migrateLegacyFileSync(fileName: string, targetPath: string): voi
   try {
     fs.mkdirSync(path.dirname(targetPath), { recursive: true, mode: 0o700 });
     fs.renameSync(legacyPath, targetPath);
+    if (mode !== undefined) {
+      fs.chmodSync(targetPath, mode);
+    }
   } catch {
     // Leave the legacy file in place; readers resolve to it via resolveReadPathSync.
   }
 }
 
-export async function migrateLegacyFile(fileName: string, targetPath: string): Promise<void> {
+export async function migrateLegacyFile(
+  fileName: string,
+  targetPath: string,
+  mode?: number
+): Promise<void> {
   const legacyPath = getLegacyFilePath(fileName);
   if (legacyPath === targetPath || (await exists(targetPath)) || !(await exists(legacyPath))) {
     return;
@@ -75,6 +84,9 @@ export async function migrateLegacyFile(fileName: string, targetPath: string): P
   try {
     await mkdir(path.dirname(targetPath), { recursive: true, mode: 0o700 });
     await rename(legacyPath, targetPath);
+    if (mode !== undefined) {
+      await chmod(targetPath, mode);
+    }
   } catch {
     // Leave the legacy file in place; readers resolve to it via resolveReadPath.
   }
@@ -85,8 +97,8 @@ export async function migrateLegacyFile(fileName: string, targetPath: string): P
  * or the legacy path if migration could not complete and the legacy file
  * still exists. New writes should always target `targetPath`.
  */
-export function resolveReadPathSync(fileName: string, targetPath: string): string {
-  migrateLegacyFileSync(fileName, targetPath);
+export function resolveReadPathSync(fileName: string, targetPath: string, mode?: number): string {
+  migrateLegacyFileSync(fileName, targetPath, mode);
   if (fs.existsSync(targetPath)) {
     return targetPath;
   }
@@ -94,8 +106,12 @@ export function resolveReadPathSync(fileName: string, targetPath: string): strin
   return fs.existsSync(legacyPath) ? legacyPath : targetPath;
 }
 
-export async function resolveReadPath(fileName: string, targetPath: string): Promise<string> {
-  await migrateLegacyFile(fileName, targetPath);
+export async function resolveReadPath(
+  fileName: string,
+  targetPath: string,
+  mode?: number
+): Promise<string> {
+  await migrateLegacyFile(fileName, targetPath, mode);
   if (await exists(targetPath)) {
     return targetPath;
   }

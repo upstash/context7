@@ -11,6 +11,7 @@ vi.mock("fs", () => {
     readFileSync: vi.fn(),
     unlinkSync: vi.fn(),
     renameSync: vi.fn(),
+    chmodSync: vi.fn(),
   };
   return { ...fns, default: fns };
 });
@@ -99,6 +100,13 @@ describe("saveTokens", () => {
     });
   });
 
+  test("enforces 0o600 even when the credentials file already exists", () => {
+    // writeFileSync's mode is ignored for an existing file, so chmod must run.
+    mfs.existsSync.mockReturnValue(true);
+    saveTokens({ access_token: "tok", token_type: "bearer" });
+    expect(mfs.chmodSync).toHaveBeenCalledWith(CREDENTIALS_PATH, 0o600);
+  });
+
   test("honors XDG_CONFIG_HOME for credentials", () => {
     vi.stubEnv("XDG_CONFIG_HOME", "/custom-config");
     mfs.existsSync.mockReturnValue(false);
@@ -160,6 +168,8 @@ describe("loadTokens", () => {
 
     expect(loadTokens()).toEqual(tokens);
     expect(mfs.renameSync).toHaveBeenCalledWith(LEGACY_CREDENTIALS_PATH, CREDENTIALS_PATH);
+    // rename preserves the legacy mode, so migration must re-assert 0o600.
+    expect(mfs.chmodSync).toHaveBeenCalledWith(CREDENTIALS_PATH, 0o600);
     expect(mfs.readFileSync).toHaveBeenCalledWith(CREDENTIALS_PATH, "utf-8");
   });
 
