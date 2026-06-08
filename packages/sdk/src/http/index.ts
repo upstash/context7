@@ -169,7 +169,10 @@ export class HttpClient implements Requester {
     }
 
     if (!res.ok) {
-      const errorBody = (await res.json()) as { error?: string; message?: string };
+      const errorBody = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        message?: string;
+      };
       throw new Context7Error(errorBody.error || errorBody.message || res.statusText);
     }
 
