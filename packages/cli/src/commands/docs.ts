@@ -3,6 +3,7 @@ import pc from "picocolors";
 import ora from "ora";
 
 import { resolveLibrary, getLibraryContext } from "../utils/api.js";
+import { recoverLibraryId } from "../utils/library-id.js";
 import { log } from "../utils/logger.js";
 import { trackEvent } from "../utils/tracking.js";
 import { loadTokens, isTokenExpired } from "../utils/auth.js";
@@ -120,10 +121,18 @@ async function queryCommand(
 ): Promise<void> {
   trackEvent("command", { name: "docs" });
 
+  // Git Bash on Windows rewrites "/owner/repo" into a Windows path; recover it.
+  libraryId = recoverLibraryId(libraryId);
+
   if (!libraryId.startsWith("/") || !/^\/[^/]+\/[^/]/.test(libraryId)) {
     log.error(`Invalid library ID: "${libraryId}"`);
     log.info(`Expected format: /owner/repo or /owner/repo/version (e.g., /facebook/react)`);
     log.info(`Run "ctx7 library <name>" to find the correct ID`);
+    if (process.platform === "win32") {
+      log.info(
+        `On Git Bash, prefix the ID with an extra slash to avoid path conversion: ctx7 docs "//facebook/react" "<your question>"`
+      );
+    }
     process.exitCode = 1;
     return;
   }
