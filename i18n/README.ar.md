@@ -35,7 +35,7 @@
 ### المتطلبات
 
 - Node.js إصدار 18.0.0 أو أعلى
-- Cursor، Windsurf، Claude Desktop أو أي عميل MCP آخر
+- Cursor، Devin Desktop، Claude Desktop أو أي عميل MCP آخر
 
 ### التثبيت عبر Smithery
 
@@ -87,7 +87,7 @@ npx -y @smithery/cli install @upstash/context7-mcp --client claude
 }
 ```
 
-### التثبيت في Windsurf
+### التثبيت في Devin Desktop
 
 ```json
 {

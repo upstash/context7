@@ -35,10 +35,13 @@ const CONFIG_DIR_PATH = "/fake-home/.config/context7";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // os.homedir() reads $HOME on POSIX (HOMEPATH/USERPROFILE on Windows). Stubbing
-  // the env is deterministic across Node versions; mocking the "os" builtin is not.
+  // os.homedir() reads $HOME first on POSIX, so stubbing the env var pins the
+  // home directory deterministically without mocking the `os` builtin (which
+  // resolves unreliably across Node versions / worker pooling in CI).
   vi.stubEnv("HOME", "/fake-home");
-  vi.stubEnv("USERPROFILE", "/fake-home");
+  vi.stubEnv("XDG_CONFIG_HOME", undefined);
+  vi.stubEnv("XDG_STATE_HOME", undefined);
+  vi.stubEnv("XDG_CACHE_HOME", undefined);
   vi.stubGlobal(
     "fetch",
     vi.fn(() => {
@@ -337,16 +340,13 @@ describe("startDeviceAuthorization", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     await startDeviceAuthorization("https://t.example", "test-client");
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://t.example/api/oauth/device/code",
-      expect.objectContaining({
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        // hostname is appended best-effort by os.hostname(); assert only the
-        // client_id field so the test stays machine-independent.
-        body: expect.stringContaining("client_id=test-client"),
-      })
-    );
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("https://t.example/api/oauth/device/code");
+    expect(init.method).toBe("POST");
+    expect(init.headers).toEqual({ "Content-Type": "application/x-www-form-urlencoded" });
+    // Body is form-encoded; hostname is appended best-effort and varies by
+    // machine, so assert on the parsed client_id rather than the exact string.
+    expect(new URLSearchParams(init.body as string).get("client_id")).toBe("test-client");
   });
 
   test("throws with the server-provided error_description", async () => {

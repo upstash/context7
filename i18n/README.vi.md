@@ -40,7 +40,7 @@ Xem [hướng dẫn thêm dự án](https://context7.com/docs/adding-libraries) 
 ### Yêu Cầu
 
 - Node.js >= v18.0.0
-- Cursor, Windsurf, Claude Desktop hoặc MCP Client khác
+- Cursor, Devin Desktop, Claude Desktop hoặc MCP Client khác
 <details>
 <summary><b>Cài đặt qua Smithery</b></summary>
 
@@ -125,11 +125,11 @@ Paste cấu hình sau vào file Cursor `~/.cursor/mcp.json` là cách được k
 </details>
 
 <details>
-<summary><b>Cài đặt trong Windsurf</b></summary>
+<summary><b>Cài đặt trong Devin Desktop</b></summary>
 
-Thêm cấu hình này vào file cấu hình Windsurf MCP của bạn. Xem [tài liệu Windsurf MCP](https://docs.windsurf.com/windsurf/mcp) để biết thêm thông tin.
+Thêm cấu hình này vào file cấu hình Devin Desktop MCP của bạn. Xem [tài liệu Devin Desktop MCP](https://docs.devin.ai/desktop/cascade/mcp) để biết thêm thông tin.
 
-#### Kết nối Windsurf Remote Server
+#### Kết nối Devin Desktop Remote Server
 
 ```json
 {
@@ -141,7 +141,7 @@ Thêm cấu hình này vào file cấu hình Windsurf MCP của bạn. Xem [tài
 }
 ```
 
-#### Kết nối Windsurf Local Server
+#### Kết nối Devin Desktop Local Server
 
 ```json
 {
@@ -760,7 +760,7 @@ Context7 MCP cung cấp các công cụ sau mà LLM có thể sử dụng:
 ## 🛟 Mẹo
 
 ### Thêm Quy Tắc
-> Nếu bạn không muốn thêm `use context7` vào mỗi prompt, bạn có thể định nghĩa một quy tắc đơn giản trong file `.windsurfrules` của bạn trong Windsurf hoặc từ phần `Cursor Settings > Rules` trong Cursor (hoặc tương đương trong MCP client của bạn) để tự động gọi Context7 trên bất kỳ câu hỏi code nào:
+> Nếu bạn không muốn thêm `use context7` vào mỗi prompt, bạn có thể định nghĩa một quy tắc đơn giản trong thư mục `.devin/rules/` của bạn trong Devin Desktop hoặc từ phần `Cursor Settings > Rules` trong Cursor (hoặc tương đương trong MCP client của bạn) để tự động gọi Context7 trên bất kỳ câu hỏi code nào:
 >
 > ```toml
 > [[calls]]
