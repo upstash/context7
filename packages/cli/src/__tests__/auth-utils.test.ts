@@ -1,7 +1,5 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 
-vi.mock("os", () => ({ homedir: () => "/fake-home", default: { homedir: () => "/fake-home" } }));
-
 vi.mock("fs", () => {
   const fns = {
     existsSync: vi.fn(),
@@ -37,6 +35,10 @@ const CONFIG_DIR_PATH = "/fake-home/.config/context7";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // os.homedir() reads $HOME on POSIX (HOMEPATH/USERPROFILE on Windows). Stubbing
+  // the env is deterministic across Node versions; mocking the "os" builtin is not.
+  vi.stubEnv("HOME", "/fake-home");
+  vi.stubEnv("USERPROFILE", "/fake-home");
   vi.stubGlobal(
     "fetch",
     vi.fn(() => {
@@ -340,7 +342,9 @@ describe("startDeviceAuthorization", () => {
       expect.objectContaining({
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: "client_id=test-client",
+        // hostname is appended best-effort by os.hostname(); assert only the
+        // client_id field so the test stays machine-independent.
+        body: expect.stringContaining("client_id=test-client"),
       })
     );
   });

@@ -13,10 +13,11 @@ import {
 const HOME = "/fake-home";
 
 beforeEach(() => {
-  vi.mock("os", async () => {
-    const actual = await vi.importActual<typeof import("os")>("os");
-    return { ...actual, homedir: () => HOME };
-  });
+  // os.homedir() reads $HOME on POSIX (USERPROFILE on Windows). Stubbing the env
+  // is deterministic; mocking the "os" builtin inside beforeEach is not hoisted,
+  // so its async factory resolves after the first test has already run.
+  vi.stubEnv("HOME", HOME);
+  vi.stubEnv("USERPROFILE", HOME);
 });
 
 afterEach(() => {
