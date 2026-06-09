@@ -40,7 +40,7 @@ Context7 завантажує свіжі приклади коду й докум
 ### Системні вимоги
 
 - Node.js ≥ v18.0.0
-- Cursor, Windsurf, Claude Desktop або інший MCP-клієнт
+- Cursor, Devin Desktop, Claude Desktop або інший MCP-клієнт
 <details>
 <summary><b>Встановлення через Smithery</b></summary>
 
@@ -125,11 +125,11 @@ npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME>
 </details>
 
 <details>
-<summary><b>Встановлення в Windsurf</b></summary>
+<summary><b>Встановлення в Devin Desktop</b></summary>
 
-Додайте це до вашого конфігураційного файлу Windsurf MCP. Детальніше див. у [документації Windsurf MCP](https://docs.windsurf.com/windsurf/mcp).
+Додайте це до вашого конфігураційного файлу Devin Desktop MCP. Детальніше див. у [документації Devin Desktop MCP](https://docs.devin.ai/desktop/cascade/mcp).
 
-#### Підключення до віддаленого сервера Windsurf
+#### Підключення до віддаленого сервера Devin Desktop
 
 ```json
 {
@@ -141,7 +141,7 @@ npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME>
 }
 ```
 
-#### Підключення до локального сервера Windsurf
+#### Підключення до локального сервера Devin Desktop
 
 ```json
 {
@@ -676,7 +676,7 @@ Context7 MCP надає наступні інструменти, які можу
 ## 🛟 Поради
 
 ### Додайте правило
-> Якщо ви не хочете додавати `use context7` до кожного промпту, ви можете визначити просте правило у вашому файлі `.windsurfrules` в Windsurf або в розділі `Cursor Settings > Rules` в Cursor (або еквівалентному у вашому MCP-клієнті), щоб автоматично викликати Context7 для будь-яких запитань про код:
+> Якщо ви не хочете додавати `use context7` до кожного промпту, ви можете визначити просте правило у вашому каталозі `.devin/rules/` в Devin Desktop або в розділі `Cursor Settings > Rules` в Cursor (або еквівалентному у вашому MCP-клієнті), щоб автоматично викликати Context7 для будь-яких запитань про код:
 >
 > ```toml
 > [[calls]]

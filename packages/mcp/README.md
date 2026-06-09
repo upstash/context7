@@ -52,7 +52,7 @@ Check out our [project addition guide](https://context7.com/docs/adding-librarie
 ### Requirements
 
 - Node.js >= v18.0.0
-- Cursor, Claude Code, VSCode, Windsurf or another MCP Client
+- Cursor, Claude Code, VSCode, Devin Desktop or another MCP Client
 - Context7 API Key (Optional) for higher rate limits and private repositories (Get yours by creating an account at [context7.com/dashboard](https://context7.com/dashboard))
 
 > [!TIP]
@@ -60,7 +60,7 @@ Check out our [project addition guide](https://context7.com/docs/adding-librarie
 >
 > After installing Context7 (see instructions below), enhance your workflow by adding a rule so you don't have to type `use context7` in every prompt. Define a simple rule in your MCP client's rule section to automatically invoke Context7 on any code question:
 >
-> - For Windsurf, in `.windsurfrules` file
+> - For Devin Desktop, in `.devin/rules/` directory
 > - For Cursor, from `Cursor Settings > Rules` section
 > - For Claude Code, in `CLAUDE.md` file
 > - Or the equivalent in your MCP client
@@ -172,11 +172,11 @@ amp mcp add context7 --header "CONTEXT7_API_KEY=YOUR_API_KEY" https://mcp.contex
 </details>
 
 <details>
-<summary><b>Install in Windsurf</b></summary>
+<summary><b>Install in Devin Desktop</b></summary>
 
-Add this to your Windsurf MCP config file. See [Windsurf MCP docs](https://docs.windsurf.com/windsurf/cascade/mcp) for more info.
+Add this to your Devin Desktop MCP config file. See [Devin Desktop MCP docs](https://docs.devin.ai/desktop/cascade/mcp) for more info.
 
-#### Windsurf Remote Server Connection
+#### Devin Desktop Remote Server Connection
 
 ```json
 {
@@ -191,7 +191,7 @@ Add this to your Windsurf MCP config file. See [Windsurf MCP docs](https://docs.
 }
 ```
 
-#### Windsurf Local Server Connection
+#### Devin Desktop Local Server Connection
 
 ```json
 {

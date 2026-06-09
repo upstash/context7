@@ -40,7 +40,7 @@ Kunjungi [panduan penambahan proyek](https://context7.com/docs/adding-libraries)
 ### Persyaratan
 
 - Node.js >= v18.0.0
-- Cursor, Windsurf, Claude Desktop, atau klien MCP lainnya
+- Cursor, Devin Desktop, Claude Desktop, atau klien MCP lainnya
 <details>
 <summary><b>Menginstal melalui Smithery</b></summary>
 
@@ -120,11 +120,11 @@ Menyalin konfigurasi berikut ke file `~/.cursor/mcp.json` Anda adalah pendekatan
 </details>
 
 <details>
-<summary><b>Instal di Windsurf</b></summary>
+<summary><b>Instal di Devin Desktop</b></summary>
 
-Tambahkan ini ke file konfigurasi MCP Windsurf Anda. Lihat [dokumentasi MCP Windsurf](https://docs.windsurf.com/windsurf/mcp) untuk info lebih lanjut.
+Tambahkan ini ke file konfigurasi MCP Devin Desktop Anda. Lihat [dokumentasi MCP Devin Desktop](https://docs.devin.ai/desktop/cascade/mcp) untuk info lebih lanjut.
 
-#### Koneksi Server Remote Windsurf
+#### Koneksi Server Remote Devin Desktop
 
 ```json
 {
@@ -136,7 +136,7 @@ Tambahkan ini ke file konfigurasi MCP Windsurf Anda. Lihat [dokumentasi MCP Wind
 }
 ```
 
-#### Koneksi Server Lokal Windsurf
+#### Koneksi Server Lokal Devin Desktop
 
 ```json
 {
@@ -769,7 +769,7 @@ Context7 MCP menyediakan alat berikut yang dapat digunakan oleh LLM:
 ## 🛟 Tips
 
 ### Tambahkan Aturan
-> Jika Anda tidak ingin menambahkan `use context7` ke setiap permintaan, Anda dapat menentukan aturan sederhana di file `.windsurfrules` Anda di Windsurf atau dari bagian `Cursor Settings > Rules` di Cursor (atau yang setara di klien MCP Anda) untuk memanggil Context7 secara otomatis pada setiap pertanyaan kode:
+> Jika Anda tidak ingin menambahkan `use context7` ke setiap permintaan, Anda dapat menentukan aturan sederhana di direktori `.devin/rules/` Anda di Devin Desktop atau dari bagian `Cursor Settings > Rules` di Cursor (atau yang setara di klien MCP Anda) untuk memanggil Context7 secara otomatis pada setiap pertanyaan kode:
 >
 > ```toml
 > [[calls]]

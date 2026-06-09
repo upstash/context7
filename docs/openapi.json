@@ -163,7 +163,7 @@
                         "uniqueUsersByClient": {
                           "cursor": 15,
                           "claude-code": 9,
-                          "windsurf": 2
+                          "codex": 2
                         },
                         "totalUniqueUsers": 25
                       }
@@ -1921,7 +1921,7 @@
           },
           "uniqueUsersByClient": {
             "type": "object",
-            "description": "Unique user count per MCP client identifier (e.g., `cursor`, `claude-code`, `windsurf`)",
+            "description": "Unique user count per MCP client identifier (e.g., `cursor`, `claude-code`, `codex`)",
             "additionalProperties": {
               "type": "integer"
             }
