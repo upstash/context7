@@ -38,20 +38,9 @@ function buildElicitMessage(
   ].join("\n");
 }
 
-// In-memory suppression set, keyed per session (or per client IP / "default"
-// when no session id is available). Cleared when the MCP process exits, so
-// stdio clients reset on editor reload. For longer-lived suppression, the
-// backend's per-IP Redis key would need to track this signal too.
-const suppressedSessions = new Set<string>();
-
-function suppressionKey(ctx: ClientContext): string {
-  return ctx.sessionId ?? ctx.clientIp ?? "default";
-}
-
 // User-facing strings double as enum const values: keeps the schema in the
-// simpler `enum: [...]` shape (which clients render more reliably than
-// `oneOf` with separate `const`/`title`), and the response surfaces the
-// chosen label directly so suppression logic can compare against it.
+// simpler `enum: [...]` shape, which clients render more reliably than
+// `oneOf` with separate `const`/`title`.
 const CHOICE_RUN_SETUP = "I'll run the command to sign in";
 const CHOICE_STAY_ANON = "Continue anonymously with smaller limits";
 
@@ -64,21 +53,18 @@ const CHOICE_STAY_ANON = "Continue anonymously with smaller limits";
  * The message is delivered out-of-band to the human via the client, not into
  * the tool result the LLM reads, so it does not trip prompt-injection guards.
  *
- * Presents a two-option radio: "I'll run the command to sign in" or "Continue
- * anonymously with smaller limits". Picking the latter (or declining outright)
- * suppresses further nudges for the lifetime of the MCP process. The command
- * itself is shown in the dialog message for the user to copy; the server does
- * not attempt to drive the client to run it.
+ * The backend owns how often this fires: it sets the header at most once per
+ * MCP session, so the server holds no suppression state — it simply shows the
+ * dialog whenever the header is present. The command itself is shown in the
+ * dialog message for the user to copy; the server does not attempt to drive
+ * the client to run it.
  *
- * No-op for authenticated callers, when the signal wasn't set, when the
- * client did not advertise the `elicitation` capability, or when the user
- * has already chosen to stay anonymous earlier in the session.
- * Fire-and-forget: never blocks or fails the surrounding tool response.
+ * No-op for authenticated callers, when the signal wasn't set, or when the
+ * client did not advertise the `elicitation` capability. Fire-and-forget:
+ * never blocks or fails the surrounding tool response.
  */
 export function maybeElicitAuthSignIn(server: McpServer, ctx: ClientContext): void {
   if (ctx.apiKey || !ctx.shouldPrompt) return;
-  const key = suppressionKey(ctx);
-  if (suppressedSessions.has(key)) return;
   if (!server.server.getClientCapabilities()?.elicitation) return;
 
   void server.server
@@ -96,14 +82,6 @@ export function maybeElicitAuthSignIn(server: McpServer, ctx: ClientContext): vo
         },
         required: ["choice"],
       },
-    })
-    .then((result) => {
-      // Suppress for the rest of the session when the user explicitly opts to
-      // stay anonymous, or when they dismiss the dialog (decline/cancel) —
-      // re-prompting after either signal would be noise.
-      if (result.action !== "accept" || result.content?.choice === CHOICE_STAY_ANON) {
-        suppressedSessions.add(key);
-      }
     })
     .catch(() => {
       // Client may not support elicitation despite the capability flag, or
