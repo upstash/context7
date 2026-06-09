@@ -41,7 +41,7 @@ Confira nosso [guia de adição de projetos](https://context7.com/docs/adding-li
 ### Requisitos
 
 - Node.js >= v18.0.0
-- Cursor, Claude Code, VSCode, Windsurf ou outro Cliente MCP
+- Cursor, Claude Code, VSCode, Devin Desktop ou outro Cliente MCP
 <details>
 <summary><b>Instalando via Smithery</b></summary>
 
@@ -107,11 +107,11 @@ claude mcp add --scope user --transport http context7 https://mcp.context7.com/m
 </details>
 
 <details>
-<summary><b>Instalar no Windsurf</b></summary>
+<summary><b>Instalar no Devin Desktop</b></summary>
 
-Adicione isto ao arquivo de configuração MCP do Windsurf. Veja mais em [Windsurf MCP docs](https://docs.windsurf.com/windsurf/cascade/mcp).
+Adicione isto ao arquivo de configuração MCP do Devin Desktop. Veja mais em [Devin Desktop MCP docs](https://docs.devin.ai/desktop/cascade/mcp).
 
-#### Conexão Remota do Servidor Windsurf
+#### Conexão Remota do Servidor Devin Desktop
 
 ```json
 {
@@ -123,7 +123,7 @@ Adicione isto ao arquivo de configuração MCP do Windsurf. Veja mais em [Windsu
 }
 ```
 
-#### Conexão Local do Servidor Windsurf
+#### Conexão Local do Servidor Devin Desktop
 
 ```json
 {
@@ -879,7 +879,7 @@ O Context7 MCP fornece as seguintes ferramentas que LLMs podem usar:
 ## 🛟 Dicas
 
 ### Adicionar uma Regra
-> Se você não quiser adicionar `use context7` a todo prompt, você pode definir uma regra simples no seu arquivo `.windsurfrules` no Windsurf ou em `Cursor Settings > Rules` no Cursor (ou equivalente no seu cliente MCP) para invocar o Context7 automaticamente em qualquer questão de código:
+> Se você não quiser adicionar `use context7` a todo prompt, você pode definir uma regra simples no seu diretório `.devin/rules/` no Devin Desktop ou em `Cursor Settings > Rules` no Cursor (ou equivalente no seu cliente MCP) para invocar o Context7 automaticamente em qualquer questão de código:
 >
 > ```toml
 > [[calls]]

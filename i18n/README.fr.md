@@ -35,7 +35,7 @@ Context7 apporte des exemples de code et de la documentation à jour directement
 ### Prérequis
 
 - Node.js >= v18.0.0
-- Cursor, Windsurf, Claude Desktop ou un autre client MCP
+- Cursor, Devin Desktop, Claude Desktop ou un autre client MCP
 
 ### Installation via Smithery
 
@@ -91,8 +91,8 @@ La méthode recommandée est de coller la configuration suivante dans votre fich
 ```
 </details>
 
-### Installation dans Windsurf
-Ajoutez ceci à votre fichier de configuration MCP Windsurf. Voir la [documentation Windsurf MCP](https://docs.windsurf.com/windsurf/mcp) pour plus d’informations.
+### Installation dans Devin Desktop
+Ajoutez ceci à votre fichier de configuration MCP Devin Desktop. Voir la [documentation Devin Desktop MCP](https://docs.devin.ai/desktop/cascade/mcp) pour plus d’informations.
 ```json
 {
   "mcpServers": {

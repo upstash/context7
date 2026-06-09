@@ -40,7 +40,7 @@ Context7 は最新のコード例とドキュメントを直接 LLM のコンテ
 ### 必須要件
 
 - Node.js >= v18.0.0
-- Cursor、Windsurf、Claude Desktop またはその他の MCP クライアント
+- Cursor、Devin Desktop、Claude Desktop またはその他の MCP クライアント
 <details>
 <summary><b>Smithery 経由でのインストール</b></summary>
 
@@ -125,11 +125,11 @@ Smithery キーは [Smithery.ai Web ページ](https://smithery.ai/server/@upsta
 </details>
 
 <details>
-<summary><b>Windsurf へのインストール</b></summary>
+<summary><b>Devin Desktop へのインストール</b></summary>
 
-これを Windsurf MCP 設定ファイルに追加します。詳細は [Windsurf MCP ドキュメント](https://docs.windsurf.com/windsurf/mcp) を参照してください。
+これを Devin Desktop MCP 設定ファイルに追加します。詳細は [Devin Desktop MCP ドキュメント](https://docs.devin.ai/desktop/cascade/mcp) を参照してください。
 
-#### Windsurf リモートサーバー接続
+#### Devin Desktop リモートサーバー接続
 
 ```json
 {
@@ -141,7 +141,7 @@ Smithery キーは [Smithery.ai Web ページ](https://smithery.ai/server/@upsta
 }
 ```
 
-#### Windsurf ローカルサーバー接続
+#### Devin Desktop ローカルサーバー接続
 
 ```json
 {

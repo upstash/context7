@@ -36,7 +36,7 @@ Context7, güncel kod örneklerini ve belgelerini doğrudan LLM'inizin içeriği
 ### Gereksinimler
 
 - Node.js >= v18.0.0
-- Cursor, Windsurf, Claude Desktop veya başka bir MCP İstemcisi
+- Cursor, Devin Desktop, Claude Desktop veya başka bir MCP İstemcisi
 
 ### Smithery aracılığıyla kurulum
 
@@ -92,8 +92,8 @@ Aşağıdaki yapılandırmayı Cursor `~/.cursor/mcp.json` dosyanıza yapıştı
 ```
 </details>
 
-### Windsurf'te Kurulum
-Bunu Windsurf MCP yapılandırma dosyanıza ekleyin. Daha fazla bilgi için [Windsurf MCP belgelerine](https://docs.windsurf.com/windsurf/mcp) bakabilirsiniz.
+### Devin Desktop'te Kurulum
+Bunu Devin Desktop MCP yapılandırma dosyanıza ekleyin. Daha fazla bilgi için [Devin Desktop MCP belgelerine](https://docs.devin.ai/desktop/cascade/mcp) bakabilirsiniz.
 ```json
 {
   "mcpServers": {
