@@ -3,6 +3,10 @@
   "owner": {
     "name": "Upstash"
   },
+  "metadata": {
+    "description": "Official Upstash marketplace for the Context7 documentation-lookup plugin.",
+    "version": "1.0.0"
+  },
   "plugins": [
     {
       "name": "context7-plugin",
