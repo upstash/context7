@@ -1,0 +1,120 @@
+---
+title: Codex
+description: Using Context7 with OpenAI Codex
+---
+
+Context7 integrates with [OpenAI Codex](https://developers.openai.com/codex/) to provide current library documentation instead of relying on training data. Codex comes in three surfaces — the Codex CLI, Codex Desktop, and Codex Cloud — and Context7 works across all of them.
+
+<Info>
+MCP servers in Codex are configured once and shared everywhere. The Codex CLI, Codex Desktop, and the IDE extension all read the same `~/.codex/config.toml`, so adding Context7 in one place enables it in the others. See the [Codex MCP documentation](https://developers.openai.com/codex/mcp) for more details.
+</Info>
+
+## Installation
+
+Run the setup command to configure Context7 for Codex:
+
+```bash
+npx ctx7 setup --codex
+```
+
+This authenticates via OAuth, generates an API key, and writes the Context7 configuration to your `~/.codex/config.toml` and `AGENTS.md`. You can choose between CLI or MCP mode. Login uses the OAuth device flow — it shows a verification link and short code you open on any device, so it works the same locally or on a remote, headless, or SSH host.
+
+Create or manage API keys in the [Context7 dashboard](https://context7.com/dashboard). For manual configuration or other clients, see [All MCP Clients](/resources/all-clients).
+
+---
+
+## Codex surfaces
+
+<CardGroup cols={3}>
+<Card title="Codex CLI" icon="terminal">
+The local coding agent that runs in your terminal. Add Context7 with `codex mcp add` or by editing `config.toml`.
+</Card>
+<Card title="Codex Desktop" icon="desktop">
+The Codex app for macOS and Windows. Enable Context7 from the app's MCP settings, or rely on the shared `config.toml`.
+</Card>
+<Card title="Codex Cloud" icon="cloud">
+The web-based agent that runs tasks in cloud environments. Add Context7 to the tools for an environment from the Codex web app.
+</Card>
+</CardGroup>
+
+### Codex CLI
+
+Add Context7 from the terminal with the `codex mcp add` command:
+
+```bash
+codex mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+```
+
+Or add it directly to `~/.codex/config.toml` (use a project-scoped `.codex/config.toml` for trusted projects):
+
+```toml
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+startup_timeout_ms = 20_000
+```
+
+Prefer the hosted server? Use the remote connection instead:
+
+```toml
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
+```
+
+### Codex Desktop
+
+The Codex app (macOS and Windows) shares the same MCP configuration as the CLI and IDE extension. Enable Context7 from the app's MCP settings, or add it to `~/.codex/config.toml` using the snippets above — it's picked up automatically.
+
+### Codex Cloud
+
+Codex Cloud delegates tasks to OpenAI's agent in managed cloud environments, so they can run in the background without your local machine. Each environment defines the repo, setup steps, and tools Codex uses — configure Context7 as part of an [environment](https://developers.openai.com/codex/cloud/environments) from the Codex web app. Cloud environments also have [configurable internet access](https://developers.openai.com/codex/cloud/internet-access), which Context7 needs to reach the documentation API.
+
+---
+
+## Using Context7
+
+With `ctx7 setup`, a skill is installed that triggers automatically when you ask about libraries. You can also invoke it explicitly:
+
+```
+use context7 to show me how to set up middleware in Next.js 15
+use context7 for Prisma query examples with relations
+use context7 for the Supabase syntax for row-level security
+```
+
+If you know the library ID, use it directly to skip resolution:
+
+```
+use context7 with /supabase/supabase for authentication docs
+use context7 with /vercel/next.js for app router setup
+```
+
+You can also add instructions to your `AGENTS.md` file:
+
+```markdown AGENTS.md
+When you need to search docs, use Context7.
+```
+
+---
+
+## Tips
+
+<AccordionGroup>
+<Accordion title="Getting Better Results">
+- Be specific about what you're trying to do, not just which library
+- Mention versions when they matter
+- If the first result isn't right, ask for a different part of the docs
+
+```
+# Good
+How do I handle file uploads with the Supabase Storage API?
+
+# Less specific
+How does Supabase storage work?
+```
+</Accordion>
+
+<Accordion title="Startup timed out or program not found">
+If you see a startup "request timed out" or "not found program" error, increase `startup_timeout_ms` to `40_000` and retry. On Windows, point `command` at the absolute `npx.cmd` path and set `SystemRoot` and `APPDATA` explicitly — `npx` requires them, but some Codex MCP clients don't set them by default.
+</Accordion>
+</AccordionGroup>

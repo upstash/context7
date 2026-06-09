@@ -34,7 +34,7 @@ OAuth is only available for remote HTTP connections. For local MCP connections u
 
 <Accordion title="Claude Code">
 
-Run this command. See [Claude Code MCP docs](https://docs.anthropic.com/en/docs/claude-code/mcp) for more info.
+Run this command. See [Claude Code MCP docs](https://code.claude.com/docs/en/mcp) for more info.
 
 #### Local Server Connection
 
@@ -52,9 +52,9 @@ claude mcp add --scope user --header "CONTEXT7_API_KEY: YOUR_API_KEY" --transpor
 
 <Accordion title="Cursor">
 
-Go to: `Settings` -> `Cursor Settings` -> `MCP` -> `Add new global MCP server`
+Go to: `Cursor Settings` -> `Tools & MCP` -> `New MCP Server`
 
-Pasting the following configuration into your Cursor `~/.cursor/mcp.json` file is the recommended approach. You may also install in a specific project by creating `.cursor/mcp.json` in your project folder. See [Cursor MCP docs](https://docs.cursor.com/context/model-context-protocol) for more info.
+Pasting the following configuration into your Cursor `~/.cursor/mcp.json` file is the recommended approach. You may also install in a specific project by creating `.cursor/mcp.json` in your project folder. See [Cursor MCP docs](https://cursor.com/docs/context/mcp) for more info.
 
 Since Cursor 1.0, you can click the install button below for instant one-click installation.
 
@@ -284,42 +284,51 @@ See the [API keys guide](/howto/api-keys) for how to create one.
 
 <Accordion title="Kilo Code">
 
-You can configure the Context7 MCP server in **Kilo Code** using either the UI or by editing your project's MCP configuration file.
+You can configure the Context7 MCP server in **Kilo Code** using either the UI or by editing your config file. See [Kilo Code MCP docs](https://kilo.ai/docs/automate/mcp/using-in-kilo-code) for more info.
 
-Kilo Code supports two configuration levels:
+Kilo Code stores MCP servers in a `kilo.jsonc` file:
 
-- **Global MCP Configuration** — stored in `mcp_settings.json`
-- **Project-level MCP Configuration** — stored in `.kilocode/mcp.json` (recommended)
+- **Global** — `~/.config/kilo/kilo.jsonc`
+- **Project** — `kilo.jsonc` in your project root or `.kilo/kilo.jsonc` (takes precedence)
 
 ### Configure via Kilo Code UI
 
-1. Open **Kilo Code**.
-2. Click the **Settings** icon in the top-right corner.
-3. Navigate to **Settings → MCP Servers**.
-4. Click **Add Server**.
-5. Choose **HTTP Server** (Streamable HTTP Transport).
-6. Enter the details:
-   - **URL**: `https://mcp.context7.com/mcp`
-   - **Headers → Add Header**
-     - **Key:** `Authorization`
-     - **Value:** `Bearer YOUR_API_KEY`
-7. Click **Save**.
+1. Click the **Settings** icon in the sidebar toolbar.
+2. Navigate to the **Agent Behaviour** tab.
+3. Select the **MCP Servers** sub-tab.
+4. Click **Add Server** and choose **Remote (HTTP)** or **Local (stdio)**.
+5. Fill in the details and save.
 
 ### Manual Configuration
 
-Create `.kilocode/mcp.json`:
+Add Context7 under the `mcp` key in your `kilo.jsonc`.
+
+#### Remote Server Connection
 
 ```json
 {
-  "mcpServers": {
+  "mcp": {
     "context7": {
-      "type": "streamable-http",
+      "type": "remote",
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "Authorization": "Bearer YOUR_API_KEY"
+        "CONTEXT7_API_KEY": "YOUR_API_KEY"
       },
-      "alwaysAllow": [],
-      "disabled": false
+      "enabled": true
+    }
+  }
+}
+```
+
+#### Local Server Connection
+
+```json
+{
+  "mcp": {
+    "context7": {
+      "type": "local",
+      "command": ["npx", "-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"],
+      "enabled": true
     }
   }
 }
@@ -421,7 +430,7 @@ Open Claude Desktop developer settings and edit your `claude_desktop_config.json
 
 <Accordion title="ChatGPT (Web)">
 
-ChatGPT supports MCP servers through remote connectors via [Developer Mode](https://platform.openai.com/docs/guides/developer-mode) (beta). Available for Pro, Plus, Team, Enterprise, and Edu plans.
+ChatGPT supports MCP servers through remote connectors via [Developer Mode](https://developers.openai.com/api/docs/guides/developer-mode) (beta). Available for Pro, Plus, Team, Enterprise, and Edu plans.
 
 #### 1. Enable Developer Mode
 
@@ -447,7 +456,7 @@ Start a new chat → Click the plus icon → Hover over `More` → Select the `C
 
 Alternatively, you can say `use context7` in your prompt and ChatGPT will automatically use the `Context7` app.
 
-See [OpenAI MCP docs](https://platform.openai.com/docs/mcp) for more info.
+See [OpenAI MCP docs](https://developers.openai.com/api/docs/mcp) for more info.
 
 </Accordion>
 
@@ -479,7 +488,7 @@ Open the ChatGPT desktop app → Start a new chat → ChatGPT will automatically
 
 Apps configured on the web are automatically available in the desktop app.
 
-See [OpenAI MCP docs](https://platform.openai.com/docs/mcp) for more info.
+See [OpenAI MCP docs](https://developers.openai.com/api/docs/mcp) for more info.
 
 </Accordion>
 
@@ -539,7 +548,6 @@ Or you can directly edit MCP servers configuration:
   "mcpServers": {
     "context7": {
       "url": "https://mcp.context7.com/mcp",
-      "type": "streamableHttp",
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY"
       }
@@ -552,39 +560,32 @@ Or you can directly edit MCP servers configuration:
 
 <Accordion title="Augment Code">
 
-To configure Context7 MCP in Augment Code, you can use either the graphical interface or manual configuration.
+To configure Context7 MCP in Augment Code, you can use either the graphical interface or manual configuration. See [Augment Code MCP docs](https://docs.augmentcode.com/setup-augment/mcp) for more info.
 
 ### Using the Augment Code UI
 
-1. Click the hamburger menu.
+1. Open the options menu in the upper right of the Augment panel.
 2. Select **Settings**.
-3. Navigate to the **Tools** section.
-4. Click the **+ Add MCP** button.
-5. Enter the following command:
+3. Navigate to the **MCP** section.
+4. Click the **+** button to add a new server.
+5. Enter the name **Context7** and the command:
 
    ```
    npx -y @upstash/context7-mcp@latest
    ```
 
-6. Name the MCP: **Context7**.
-7. Click the **Add** button.
-
 ### Manual Configuration
 
-1. Press Cmd/Ctrl Shift P or go to the hamburger menu in the Augment panel
-2. Select Edit Settings
-3. Under Advanced, click Edit in settings.json
-4. Add the server configuration to the `mcpServers` array in the `augment.advanced` object
+In the **MCP** section, use **Import from JSON** and paste the following (a top-level `mcpServers` object keyed by server name):
 
 ```json
-"augment.advanced": {
-  "mcpServers": [
-    {
-      "name": "context7",
+{
+  "mcpServers": {
+    "context7": {
       "command": "npx",
       "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
     }
-  ]
+  }
 }
 ```
 
@@ -711,7 +712,7 @@ Use these alternatives to run the local Context7 MCP server with other runtimes.
 
 <Accordion title="Copilot Coding Agent">
 
-Add the following configuration to Repository->Settings->Copilot->Coding agent->MCP configuration:
+Add the following configuration to `Repository` -> `Settings` -> `Code & automation` -> `Copilot` -> `MCP servers`. Only secrets named with the `COPILOT_MCP_` prefix are exposed to the MCP config, so store your key as a `COPILOT_MCP_CONTEXT7_API_KEY` Actions secret and reference it:
 
 ```json
 {
@@ -720,7 +721,7 @@ Add the following configuration to Repository->Settings->Copilot->Coding agent->
       "type": "http",
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+        "CONTEXT7_API_KEY": "$COPILOT_MCP_CONTEXT7_API_KEY"
       },
       "tools": ["query-docs", "resolve-library-id"]
     }
@@ -728,7 +729,7 @@ Add the following configuration to Repository->Settings->Copilot->Coding agent->
 }
 ```
 
-See the [official GitHub documentation](https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/agents/copilot-coding-agent/extending-copilot-coding-agent-with-mcp) for more info.
+See the [official GitHub documentation](https://docs.github.com/en/copilot/how-tos/agents/copilot-coding-agent/extending-copilot-coding-agent-with-mcp) for more info.
 
 </Accordion>
 
@@ -789,7 +790,7 @@ Add this to your Amazon Q Developer CLI configuration file. See [Amazon Q Develo
 
 See [Warp Model Context Protocol Documentation](https://docs.warp.dev/knowledge-and-collaboration/mcp#adding-an-mcp-server) for details.
 
-1. Navigate `Settings` > `AI` > `Manage MCP servers`.
+1. Navigate `Settings` > `Agents` > `MCP servers`.
 2. Add a new MCP server by clicking the `+ Add` button.
 3. Paste the configuration:
 
@@ -829,7 +830,7 @@ amp mcp add context7 --header "CONTEXT7_API_KEY=YOUR_API_KEY" https://mcp.contex
 
 <Accordion title="Zed">
 
-It can be installed via [Zed Extensions](https://zed.dev/extensions?query=Context7) or you can add this to your Zed `settings.json`. See [Zed Context Server docs](https://zed.dev/docs/assistant/context-servers) for more info.
+It can be installed via [Zed Extensions](https://zed.dev/extensions?query=Context7) or you can add this to your Zed `settings.json`. See [Zed MCP docs](https://zed.dev/docs/ai/mcp) for more info.
 
 ```json
 {
@@ -847,13 +848,13 @@ It can be installed via [Zed Extensions](https://zed.dev/extensions?query=Contex
 
 <Accordion title="Smithery">
 
-To install Context7 MCP Server for any client automatically via [Smithery](https://smithery.ai/server/@upstash/context7-mcp):
+To install Context7 MCP Server for any client automatically via [Smithery](https://smithery.ai/servers/@upstash/context7-mcp):
 
 ```bash
-npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME> --key <YOUR_SMITHERY_KEY>
+npx -y @smithery/cli@latest install @upstash/context7-mcp --client <CLIENT_NAME>
 ```
 
-You can find your Smithery key in the [Smithery.ai webpage](https://smithery.ai/server/@upstash/context7-mcp).
+See the [Context7 server page on Smithery](https://smithery.ai/servers/@upstash/context7-mcp) for more details.
 
 </Accordion>
 
@@ -912,7 +913,7 @@ qwen mcp add --transport http context7 https://mcp.context7.com/mcp \
 #### Local Server Connection
 
 ```sh
-qwen mcp add context7 npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+qwen mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 ```
 
 ### Manual Configuration
@@ -956,7 +957,7 @@ qwen mcp add context7 npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 1. Create a `Dockerfile`:
 
 ```Dockerfile
-FROM node:18-alpine
+FROM node:22-alpine
 WORKDIR /app
 RUN npm install -g @upstash/context7-mcp
 CMD ["context7-mcp"]
@@ -1005,7 +1006,7 @@ The configuration on Windows is slightly different. Use `cmd` to run npx:
 
 <Accordion title="LM Studio">
 
-See [LM Studio MCP Support](https://lmstudio.ai/blog/lmstudio-v0.3.17) for more information.
+See [LM Studio MCP docs](https://lmstudio.ai/docs/app/plugins/mcp) for more information.
 
 #### One-click install:
 
@@ -1054,13 +1055,11 @@ Or, for a local server:
 
 ```json
 {
-  "mcp": {
-    "servers": {
-      "context7": {
-        "type": "stdio",
-        "command": "npx",
-        "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
-      }
+  "servers": {
+    "context7": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
     }
   }
 }
@@ -1259,13 +1258,7 @@ droid mcp add context7 "npx -y @upstash/context7-mcp" --env CONTEXT7_API_KEY=YOU
 
 [Emdash](https://github.com/generalaction/emdash) is an orchestration layer for running multiple coding agents in parallel.
 
-**What Emdash provides:**
-
-- Global toggle: Settings → MCP → "Enable Context7 MCP"
-- Per-workspace enable: The Context7 button in the ProviderBar
-
-**What you still need to do:**
-Configure your coding agent (Codex, Claude Code, Cursor, etc.) to connect to Context7 MCP. Emdash does not modify your agent's config.
+Context7 is available as a built-in entry in Emdash's MCP catalog. Enable it from the MCP view and provide your `CONTEXT7_API_KEY` (optional, for higher rate limits). Emdash adapts and writes the MCP config into your selected coding agent's config (Codex, Claude Code, Cursor, etc.) for you.
 
 See the [Emdash repository](https://github.com/generalaction/emdash) for more information.
 
@@ -1273,7 +1266,7 @@ See the [Emdash repository](https://github.com/generalaction/emdash) for more in
 
 <Accordion title="Desktop Extension">
 
-Install the [context7.mcpb](https://github.com/upstash/context7/tree/master/mcpb/context7.mcpb) file and add it to your client. See [MCP bundles docs](https://github.com/anthropics/mcpb#mcp-bundles-mcpb) for more info.
+Install the [context7.mcpb](https://github.com/upstash/context7/tree/master/packages/mcp/mcpb/context7.mcpb) file and add it to your client. See [MCP bundles docs](https://github.com/modelcontextprotocol/mcpb#mcp-bundles-mcpb) for more info.
 
 </Accordion>
 

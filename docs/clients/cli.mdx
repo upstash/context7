@@ -148,7 +148,7 @@ ctx7 setup --api-key YOUR_API_KEY
 ctx7 setup --oauth
 ```
 
-Without `--api-key` or `--oauth`, setup opens a browser for OAuth login. MCP mode additionally generates a new API key after login. `--oauth` is MCP-only — use it when an IDE handles the auth flow on your behalf.
+Without `--api-key` or `--oauth`, setup runs the OAuth device flow: it shows a verification link and short code that you open on any device to sign in, so it works the same locally or on a remote, headless, or SSH host. MCP mode additionally generates a new API key after login. `--oauth` is MCP-only — use it when an IDE handles the auth flow on your behalf.
 
 **What gets written — MCP mode:**
 

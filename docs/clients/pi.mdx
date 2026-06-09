@@ -1,0 +1,90 @@
+---
+title: Pi
+description: Using Context7 with the Pi coding agent
+---
+
+Context7 integrates with the [Pi coding agent](https://pi.dev) through the official [`@upstash/context7-pi`](https://github.com/upstash/context7/tree/master/packages/pi) extension. Instead of relying on training data, Pi gets current library documentation directly in your coding sessions.
+
+The extension is self-contained — it registers Context7's tools natively in Pi, so there's no separate MCP server to run.
+
+## Installation
+
+Install the extension with Pi's package command:
+
+```bash
+pi install npm:@upstash/context7-pi
+```
+
+## Authentication
+
+The extension works out of the box at IP-based rate limits — useful for trying it out. For higher quotas and access to private repositories, generate a free key at the [Context7 dashboard](https://context7.com/dashboard) and export it:
+
+```bash
+export CONTEXT7_API_KEY=ctx7sk_...
+```
+
+Set it in your shell profile so Pi picks it up on launch.
+
+---
+
+## What it adds
+
+<CardGroup cols={2}>
+<Card title="resolve-library-id" icon="magnifying-glass">
+Converts a package or product name to a Context7 library ID (e.g. `Next.js` → `/vercel/next.js`). The agent calls this first.
+</Card>
+<Card title="query-docs" icon="book">
+Fetches documentation and code examples for a resolved library ID.
+</Card>
+<Card title="context7-docs skill" icon="sparkles">
+Teaches the agent to reach for these tools whenever you ask about a library, framework, SDK, API, CLI tool, or cloud service.
+</Card>
+<Card title="/c7-docs command" icon="terminal">
+Runs the resolve + query flow in one shot for manual lookups.
+</Card>
+</CardGroup>
+
+---
+
+## Using Context7
+
+Once installed, the skill triggers automatically when you ask about libraries — just ask a docs question and the tools are invoked for you:
+
+```
+how do I configure caching in Next.js 16?
+use the Prisma syntax for relations
+what are the Supabase auth methods?
+```
+
+For a manual lookup, use the slash command:
+
+```
+/c7-docs <library> <question>
+```
+
+For example:
+
+```
+/c7-docs next.js Cache Components
+/c7-docs supabase row level security
+```
+
+---
+
+## Tips
+
+<AccordionGroup>
+<Accordion title="Getting Better Results">
+- Be specific about what you're trying to do, not just which library
+- Mention versions when they matter
+- If the first result isn't right, ask for a different part of the docs
+
+```
+# Good
+How do I handle file uploads with the Supabase Storage API?
+
+# Less specific
+How does Supabase storage work?
+```
+</Accordion>
+</AccordionGroup>
