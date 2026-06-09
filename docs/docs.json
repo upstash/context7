@@ -93,6 +93,7 @@
         "group": "Clients",
         "pages": [
           "clients/claude-code",
+          "clients/codex",
           "clients/cursor",
           "clients/opencode",
           "resources/all-clients"
