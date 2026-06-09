@@ -96,6 +96,7 @@
           "clients/codex",
           "clients/cursor",
           "clients/opencode",
+          "clients/pi",
           "resources/all-clients"
         ]
       },
