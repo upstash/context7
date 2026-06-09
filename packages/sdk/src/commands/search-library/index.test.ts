@@ -2,8 +2,13 @@ import { describe, test, expect } from "vitest";
 import { SearchLibraryCommand } from "./index";
 import { newHttpClient } from "../../utils/test-utils";
 import { Context7 } from "../../client";
+import type { Requester } from "@http";
 
 const httpClient = newHttpClient();
+
+function mockRequester(result: unknown): Requester {
+  return { request: () => Promise.resolve({ result }) } as Requester;
+}
 
 describe("SearchLibraryCommand", () => {
   test("should search for a library", async () => {
@@ -41,5 +46,19 @@ describe("SearchLibraryCommand", () => {
     expect(library).toHaveProperty("totalSnippets");
     expect(library).toHaveProperty("trustScore");
     expect(library).toHaveProperty("benchmarkScore");
+  });
+});
+
+describe("SearchLibraryCommand defensive handling", () => {
+  test("returns an empty array when results field is missing", async () => {
+    const command = new SearchLibraryCommand("query", "react");
+    const result = await command.exec(mockRequester({}));
+    expect(result).toEqual([]);
+  });
+
+  test("returns an empty array when results is null", async () => {
+    const command = new SearchLibraryCommand("query", "react");
+    const result = await command.exec(mockRequester({ results: null }));
+    expect(result).toEqual([]);
   });
 });

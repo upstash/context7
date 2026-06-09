@@ -36,7 +36,7 @@ export class SearchLibraryCommand extends Command<Library[] | string> {
       throw new Context7Error("Request did not return a result");
     }
 
-    const libraries = result.results.map(formatLibrary);
+    const libraries = (result.results ?? []).map(formatLibrary);
 
     if (this.responseType === "txt") {
       return formatLibrariesAsText(libraries);

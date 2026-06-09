@@ -3,8 +3,13 @@ import { GetContextCommand } from "./index";
 import { newHttpClient } from "../../utils/test-utils";
 import { Context7 } from "../../client";
 import type { Documentation } from "@commands/types";
+import type { Requester } from "@http";
 
 const httpClient = newHttpClient();
+
+function mockRequester(result: unknown): Requester {
+  return { request: () => Promise.resolve({ result }) } as Requester;
+}
 
 describe("GetContextCommand", () => {
   test("should get library context as JSON (default)", async () => {
@@ -63,5 +68,19 @@ describe("GetContextCommand", () => {
     expect(result).toBeDefined();
     expect(typeof result).toBe("string");
     expect(result.length).toBeGreaterThan(0);
+  });
+});
+
+describe("GetContextCommand defensive handling", () => {
+  test("returns an empty array when snippet fields are missing", async () => {
+    const command = new GetContextCommand("query", "/facebook/react");
+    const result = await command.exec(mockRequester({}));
+    expect(result).toEqual([]);
+  });
+
+  test("returns an empty array when snippet fields are null", async () => {
+    const command = new GetContextCommand("query", "/facebook/react");
+    const result = await command.exec(mockRequester({ codeSnippets: null, infoSnippets: null }));
+    expect(result).toEqual([]);
   });
 });

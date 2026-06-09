@@ -112,7 +112,7 @@ export class HttpClient implements Requester {
     this.retry =
       typeof config?.retry === "boolean" && config?.retry === false
         ? {
-            attempts: 1,
+            attempts: 0,
             backoff: () => 0,
           }
         : {
@@ -153,7 +153,6 @@ export class HttpClient implements Requester {
     for (let i = 0; i <= this.retry.attempts; i++) {
       try {
         res = await fetch(url, requestOptions as RequestInit);
-        break;
       } catch (error_) {
         if (requestOptions.signal?.aborted) {
           throw error_;
@@ -162,7 +161,20 @@ export class HttpClient implements Requester {
         if (i < this.retry.attempts) {
           await new Promise((r) => setTimeout(r, this.retry.backoff(i)));
         }
+        continue;
       }
+
+      // Retry transient HTTP errors: 429 (rate limit) and 5xx (server errors).
+      const retryable = res.status === 429 || res.status >= 500;
+      if (retryable && i < this.retry.attempts) {
+        // Respect the Retry-After header (delta-seconds) when present, else back off.
+        const retryAfter = Number(res.headers.get("retry-after"));
+        const delay = retryAfter > 0 ? retryAfter * 1000 : this.retry.backoff(i);
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+
+      break;
     }
     if (!res) {
       throw error ?? new Error("Exhausted all retries");
