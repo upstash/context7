@@ -13,10 +13,13 @@ import {
 const HOME = "/fake-home";
 
 beforeEach(() => {
-  vi.mock("os", async () => {
-    const actual = await vi.importActual<typeof import("os")>("os");
-    return { ...actual, homedir: () => HOME };
-  });
+  // os.homedir() reads $HOME first on POSIX, so stubbing the env var pins the
+  // home directory deterministically without mocking the `os` builtin (which
+  // resolves unreliably across Node versions / worker pooling in CI).
+  vi.stubEnv("HOME", HOME);
+  vi.stubEnv("XDG_CONFIG_HOME", undefined);
+  vi.stubEnv("XDG_STATE_HOME", undefined);
+  vi.stubEnv("XDG_CACHE_HOME", undefined);
 });
 
 afterEach(() => {
