@@ -60,23 +60,6 @@ To configure manually, use the Context7 server URL `https://mcp.context7.com/mcp
 
 **[Manual Installation / Other Clients →](https://context7.com/docs/resources/all-clients)**
 
-### Docker MCP Toolkit
-
-When using the Docker MCP Toolkit image (`mcp/context7`) with a stdio-based client such as VS Code, Cline, Roo Code, or Claude Desktop, set `MCP_TRANSPORT=stdio` so the container starts with stdio transport instead of its HTTP default:
-
-```json
-{
-  "mcpServers": {
-    "context7": {
-      "command": "docker",
-      "args": ["run", "-i", "--rm", "-e", "MCP_TRANSPORT=stdio", "mcp/context7"]
-    }
-  }
-}
-```
-
-Keep using the remote server URL above for HTTP-based clients.
-
 ## Important Tips
 
 ### Use Library Id

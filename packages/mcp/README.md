@@ -897,6 +897,23 @@ If you prefer to run the MCP server in a Docker container:
 
    _Note: This is an example configuration. Please refer to the specific examples for your MCP client (like Cursor, VS Code, etc.) earlier in this README to adapt the structure (e.g., `mcpServers` vs `servers`). Also, ensure the image name in `args` matches the tag used during the `docker build` command._
 
+   If you use the Docker MCP Toolkit image (`mcp/context7`) with a stdio-based client such
+   as VS Code, Cline, Roo Code, or Claude Desktop, set `MCP_TRANSPORT=stdio` so the
+   container starts with stdio transport instead of its HTTP default:
+
+   ```json
+   {
+     "mcpServers": {
+       "context7": {
+         "command": "docker",
+         "args": ["run", "-i", "--rm", "-e", "MCP_TRANSPORT=stdio", "mcp/context7"]
+       }
+     }
+   }
+   ```
+
+   Keep using the remote server URL for HTTP-based clients.
+
 </details>
 
 <details>
