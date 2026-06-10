@@ -171,7 +171,6 @@ dist
 # IntelliJ based IDEs
 .idea
 
-.mcp.json
 .cursor
 !plugins/cursor/context7/.cursor
 .opencode
