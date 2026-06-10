@@ -19,7 +19,7 @@ npx ctx7 setup --codex
 
 This authenticates via OAuth, generates an API key, and writes the Context7 configuration to your `~/.codex/config.toml` and `AGENTS.md`. You can choose between CLI or MCP mode. Login uses the OAuth device flow, which shows a verification link and short code you open on any device, so it works locally, on SSH hosts, and in headless environments.
 
-Prefer a plugin? The Context7 Codex plugin connects Codex to the hosted Context7 MCP server and bundles a skill that triggers documentation lookups when you ask about libraries:
+You can also install Context7 as a Codex plugin. It connects to the hosted MCP server and includes a skill that looks up documentation when you ask about libraries:
 
 ```bash
 codex plugin marketplace add upstash/context7
