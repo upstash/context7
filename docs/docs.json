@@ -94,6 +94,7 @@
         "pages": [
           "clients/claude-code",
           "clients/codex",
+          "clients/copilot-cli",
           "clients/cursor",
           "clients/opencode",
           "clients/pi",
