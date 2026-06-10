@@ -1,4 +1,4 @@
-# Context7 Plugin for Claude Code
+# Context7 Plugin for GitHub Copilot CLI
 
 Context7 solves a common problem with AI coding assistants: outdated training data and hallucinated APIs. Instead of relying on stale knowledge, Context7 fetches current documentation directly from source repositories.
 
@@ -6,7 +6,7 @@ Context7 solves a common problem with AI coding assistants: outdated training da
 
 This plugin provides:
 
-- **MCP Server** - Connects Claude Code to Context7's documentation service
+- **MCP Server** - Connects Copilot CLI to Context7's documentation service
 - **Skills** - Auto-triggers documentation lookups when you ask about libraries
 - **Agents** - A dedicated `docs-researcher` agent for focused lookups
 - **Commands** - `/context7:docs` for manual documentation queries
@@ -16,8 +16,8 @@ This plugin provides:
 Add the marketplace and install the plugin:
 
 ```bash
-claude plugin marketplace add upstash/context7
-claude plugin install context7@context7-marketplace
+copilot plugin marketplace add upstash/context7
+copilot plugin install context7@context7-marketplace
 ```
 
 ## Available Tools
@@ -55,10 +55,10 @@ For manual lookups, use the command:
 /context7:docs /vercel/next.js/v15.1.8 middleware
 ```
 
-Or spawn the docs-researcher agent when you want to keep your main context clean:
+Or use the docs-researcher agent when you want to keep your main context clean:
 
-```
-spawn docs-researcher to look up Supabase auth methods
+```bash
+copilot --agent docs-researcher -p "look up Supabase auth methods"
 ```
 
 ## Version Pinning

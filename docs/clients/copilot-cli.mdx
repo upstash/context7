@@ -1,0 +1,125 @@
+---
+title: GitHub Copilot CLI
+description: Using Context7 with GitHub Copilot CLI
+---
+
+Context7 integrates with [GitHub Copilot CLI](https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli) to provide current library documentation instead of relying on training data. The Context7 plugin ships the MCP server together with a skill, an agent, and a command, so documentation lookups work out of the box.
+
+## Installation
+
+Add the Context7 marketplace and install the plugin:
+
+```bash
+copilot plugin marketplace add upstash/context7
+copilot plugin install context7@context7-marketplace
+```
+
+You can also run the same steps from an interactive session with `/plugin marketplace add upstash/context7` and `/plugin install context7@context7-marketplace`.
+
+For manual MCP configuration (for example, to add an API key for higher rate limits), see [All MCP Clients](/resources/all-clients). Create or manage API keys in the [Context7 dashboard](https://context7.com/dashboard).
+
+---
+
+## What's Included
+
+<CardGroup cols={2}>
+<Card title="MCP Server" icon="server">
+The tools for fetching documentation (`resolve-library-id`, `query-docs`)
+</Card>
+<Card title="Skills" icon="sparkles">
+Auto-triggers documentation lookups when you ask about libraries
+</Card>
+<Card title="Agents" icon="robot">
+A `docs-researcher` agent for focused lookups that keep context lean
+</Card>
+<Card title="Commands" icon="terminal">
+`/context7:docs` for manual documentation queries
+</Card>
+</CardGroup>
+
+---
+
+## Using Context7
+
+The bundled skill triggers automatically when you ask about libraries — no need to say "use context7". You can also invoke it explicitly:
+
+```
+use context7 to show me how to set up middleware in Next.js 15
+use context7 for Prisma query examples with relations
+use context7 for the Supabase syntax for row-level security
+```
+
+If you know the library ID, use it directly to skip resolution:
+
+```
+use context7 with /supabase/supabase for authentication docs
+use context7 with /vercel/next.js for app router setup
+```
+
+### Skills
+
+The documentation lookup skill recognizes when documentation would help and fetches it automatically.
+
+<AccordionGroup>
+<Accordion title="What triggers the skill">
+- Setup questions: "How do I configure Next.js middleware?"
+- Code generation: "Write a Prisma query for user relations"
+- API references: "What are the Supabase auth methods?"
+- Framework mentions: React, Vue, Svelte, Express, Tailwind, etc.
+</Accordion>
+<Accordion title="How it works">
+1. **Resolve**: Finds the library ID using `resolve-library-id` with your question as context
+2. **Select**: Picks the best match based on name accuracy and quality scores
+3. **Fetch**: Calls `query-docs` with the library ID and your specific question
+4. **Return**: Provides code examples and explanations from current documentation
+</Accordion>
+</AccordionGroup>
+
+### Agents
+
+When you're in the middle of a long task and don't want documentation tool calls cluttering your context, use the `docs-researcher` agent. It runs in a separate context and returns just the answer:
+
+```bash
+copilot --agent docs-researcher -p "how do I set up Prisma with PostgreSQL?"
+```
+
+| Scenario | Use |
+|----------|-----|
+| Deep into a task with long context | Agent |
+| Want to avoid context bloat | Agent |
+| Context is short | Inline tools |
+| Want docs visible in conversation | Inline tools |
+
+### Commands
+
+`/context7:docs` is a manual command for documentation lookups.
+
+**Format:**
+```
+/context7:docs <library> [query]
+```
+
+**Examples:**
+
+<Tabs>
+<Tab title="Basic" icon="search">
+```
+/context7:docs react hooks
+/context7:docs next.js authentication
+/context7:docs prisma relations
+```
+</Tab>
+<Tab title="With Library ID" icon="link">
+```
+/context7:docs /vercel/next.js app router
+/context7:docs /supabase/supabase row level security
+```
+
+Using a library ID directly skips the resolution step.
+</Tab>
+</Tabs>
+
+**When to use:**
+- You know exactly which library and topic you need
+- You want a quick lookup without explaining your full context
+- You're testing what documentation is available
