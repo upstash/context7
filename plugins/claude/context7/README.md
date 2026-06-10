@@ -17,7 +17,7 @@ Add the marketplace and install the plugin:
 
 ```bash
 claude plugin marketplace add upstash/context7
-claude plugin install context7-plugin@context7-marketplace
+claude plugin install context7@context7-marketplace
 ```
 
 ## Available Tools
