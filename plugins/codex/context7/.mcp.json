@@ -1,9 +1,8 @@
 {
   "mcpServers": {
     "context7": {
-      "cwd": ".",
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"]
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp"
     }
   }
 }

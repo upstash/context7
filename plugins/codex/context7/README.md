@@ -11,7 +11,7 @@ codex plugin marketplace add upstash/context7
 codex plugin add context7@context7-marketplace
 ```
 
-Start a new Codex thread after installation so Codex can load the plugin's skill and MCP tools.
+After adding the plugin, a browser window opens so you can log in to Context7 via OAuth. Start a new Codex thread after installation so Codex can load the plugin's skill and MCP tools.
 
 ## What's Included
 
@@ -22,19 +22,16 @@ This plugin provides:
 
 ## Authentication
 
-The plugin starts the Context7 MCP package without an `--api-key` argument:
+The plugin connects to the hosted Context7 MCP server:
 
 ```json
 {
-  "cwd": ".",
-  "command": "npx",
-  "args": ["-y", "@upstash/context7-mcp"]
+  "type": "http",
+  "url": "https://mcp.context7.com/mcp"
 }
 ```
 
-That is intentional. The MCP server reads `CONTEXT7_API_KEY` from its environment when the variable is present. If `CONTEXT7_API_KEY` is missing, the server starts anonymously and Context7 still works with anonymous limits.
-
-To use authenticated limits, start Codex with `CONTEXT7_API_KEY` available in the Codex process environment. The MCP package also supports `--api-key`, but this plugin keeps the default env-var-or-anonymous behavior so a missing key never prevents startup.
+When you add the plugin, a browser window opens to log in to Context7 via OAuth, so your requests use your account's authenticated rate limits. On remote or headless machines where a browser can't open, run `npx ctx7 setup --codex` instead — it uses the OAuth device flow and writes an API-key-backed configuration to `~/.codex/config.toml`. Create or manage API keys in the [Context7 dashboard](https://context7.com/dashboard).
 
 ## Available Tools
 

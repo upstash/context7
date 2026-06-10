@@ -11,24 +11,22 @@ MCP servers in Codex are configured once and shared everywhere. The Codex CLI, C
 
 ## Installation
 
-The easiest local install is the Context7 Codex plugin. It bundles the MCP server with a skill that triggers documentation lookups when you ask about libraries:
-
-```bash
-codex plugin marketplace add upstash/context7
-codex plugin add context7@context7-marketplace
-```
-
-Start a new Codex thread after installation so Codex can load the plugin's skill and MCP tools.
-
-The plugin works anonymously by default. For higher authenticated limits, start Codex with `CONTEXT7_API_KEY` in the environment.
-
-Prefer generated MCP config instead of a plugin? Run the setup command:
+Run the setup command to configure Context7 for Codex:
 
 ```bash
 npx ctx7 setup --codex
 ```
 
 This authenticates via OAuth, generates an API key, and writes the Context7 configuration to your `~/.codex/config.toml` and `AGENTS.md`. You can choose between CLI or MCP mode. Login uses the OAuth device flow, which shows a verification link and short code you open on any device, so it works locally, on SSH hosts, and in headless environments.
+
+Prefer a plugin? The Context7 Codex plugin connects Codex to the hosted Context7 MCP server and bundles a skill that triggers documentation lookups when you ask about libraries:
+
+```bash
+codex plugin marketplace add upstash/context7
+codex plugin add context7@context7-marketplace
+```
+
+After adding the plugin, a browser window opens so you can log in to Context7 via OAuth — plugin installs use your account's authenticated rate limits too. Start a new Codex thread after installation so Codex can load the plugin's skill and MCP tools.
 
 Create or manage API keys in the [Context7 dashboard](https://context7.com/dashboard). For manual configuration or other clients, see [All MCP Clients](/resources/all-clients).
 
@@ -85,7 +83,7 @@ Codex Cloud delegates tasks to OpenAI's agent in managed cloud environments, so 
 
 ## Using Context7
 
-With the plugin or `ctx7 setup`, a skill triggers automatically when you ask about libraries. You can also invoke it explicitly:
+With `ctx7 setup` or the plugin, a skill triggers automatically when you ask about libraries. You can also invoke it explicitly:
 
 ```
 use context7 to show me how to set up middleware in Next.js 15
