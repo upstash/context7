@@ -6,7 +6,7 @@ export interface Context7Config {
  * A library available in Context7
  */
 export interface Library {
-  /** Context7 library ID (e.g., "/facebook/react") */
+  /** Context7 library ID (e.g., "/react/react") */
   id: string;
   /** Library display name */
   name: string;

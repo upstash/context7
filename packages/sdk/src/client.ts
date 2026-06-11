@@ -117,7 +117,7 @@ export class Context7 {
   /**
    * Get documentation context for a library
    * @param query The user's question or task
-   * @param libraryId Context7 library ID (e.g., "/facebook/react")
+   * @param libraryId Context7 library ID (e.g., "/react/react")
    * @param options Response format options
    * @returns Documentation as Documentation[] (json, default) or string (txt)
    */
