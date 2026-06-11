@@ -131,6 +131,17 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
 
 See [OpenAI Codex MCP docs](https://developers.openai.com/codex/mcp) for more info.
 
+#### Context7 Plugin
+
+You can also install Context7 as a Codex plugin. It connects to the hosted MCP server and includes a documentation lookup skill. After installation, a browser window opens so you can log in via OAuth.
+
+```sh
+codex plugin marketplace add upstash/context7
+codex plugin add context7@context7-marketplace
+```
+
+Start a new Codex thread after installation so Codex can load the plugin.
+
 #### Using CLI
 
 ```sh

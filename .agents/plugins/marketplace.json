@@ -1,0 +1,20 @@
+{
+  "name": "context7-marketplace",
+  "interface": {
+    "displayName": "Context7 Marketplace"
+  },
+  "plugins": [
+    {
+      "name": "context7",
+      "source": {
+        "source": "local",
+        "path": "./plugins/codex/context7"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Developer Tools"
+    }
+  ]
+}

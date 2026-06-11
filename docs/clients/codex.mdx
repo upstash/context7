@@ -17,7 +17,16 @@ Run the setup command to configure Context7 for Codex:
 npx ctx7 setup --codex
 ```
 
-This authenticates via OAuth, generates an API key, and writes the Context7 configuration to your `~/.codex/config.toml` and `AGENTS.md`. You can choose between CLI or MCP mode. Login uses the OAuth device flow — it shows a verification link and short code you open on any device, so it works the same locally or on a remote, headless, or SSH host.
+This authenticates via OAuth, generates an API key, and writes the Context7 configuration to your `~/.codex/config.toml` and `AGENTS.md`. You can choose between CLI or MCP mode. Login uses the OAuth device flow, which shows a verification link and short code you open on any device, so it works locally, on SSH hosts, and in headless environments.
+
+You can also install Context7 as a Codex plugin. It connects to the hosted MCP server and includes a skill that looks up documentation when you ask about libraries:
+
+```bash
+codex plugin marketplace add upstash/context7
+codex plugin add context7@context7-marketplace
+```
+
+After adding the plugin, a browser window opens so you can log in to Context7 via OAuth — plugin installs use your account's authenticated rate limits too. Start a new Codex thread after installation so Codex can load the plugin's skill and MCP tools.
 
 Create or manage API keys in the [Context7 dashboard](https://context7.com/dashboard). For manual configuration or other clients, see [All MCP Clients](/resources/all-clients).
 
@@ -39,7 +48,7 @@ The web-based agent that runs tasks in cloud environments. Add Context7 to the t
 
 ### Codex CLI
 
-Add Context7 from the terminal with the `codex mcp add` command:
+If you only want the MCP server, add Context7 from the terminal with the `codex mcp add` command:
 
 ```bash
 codex mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
@@ -74,7 +83,7 @@ Codex Cloud delegates tasks to OpenAI's agent in managed cloud environments, so 
 
 ## Using Context7
 
-With `ctx7 setup`, a skill is installed that triggers automatically when you ask about libraries. You can also invoke it explicitly:
+With `ctx7 setup` or the plugin, a skill triggers automatically when you ask about libraries. You can also invoke it explicitly:
 
 ```
 use context7 to show me how to set up middleware in Next.js 15

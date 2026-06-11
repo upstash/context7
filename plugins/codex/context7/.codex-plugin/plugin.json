@@ -1,0 +1,32 @@
+{
+  "name": "context7",
+  "version": "1.0.1",
+  "description": "Upstash Context7 MCP server for up-to-date documentation lookup. Pull version-specific documentation and code examples directly from source repositories into your LLM context.",
+  "author": {
+    "name": "Upstash",
+    "email": "context7@upstash.com",
+    "url": "https://upstash.com"
+  },
+  "homepage": "https://context7.com",
+  "repository": "https://github.com/upstash/context7",
+  "license": "MIT",
+  "keywords": ["documentation", "context", "mcp", "library-docs"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Context7",
+    "shortDescription": "Fetch current library documentation in Codex",
+    "longDescription": "Context7 adds current, version-aware library documentation and code examples to Codex through the Context7 MCP server.",
+    "developerName": "Upstash",
+    "category": "Developer Tools",
+    "capabilities": ["Read"],
+    "websiteURL": "https://context7.com",
+    "privacyPolicyURL": "https://upstash.com/privacy",
+    "termsOfServiceURL": "https://upstash.com/terms",
+    "defaultPrompt": [
+      "Use Context7 for Next.js middleware docs.",
+      "Find current Prisma relation query examples."
+    ],
+    "brandColor": "#059669"
+  }
+}
