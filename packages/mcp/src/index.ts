@@ -26,7 +26,7 @@ import {
   AUTH_SERVER_URL,
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
-import { appendAuthPrompt } from "./lib/auth/auth-prompt.js";
+import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -222,11 +222,12 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
 
       if (!searchResponse.results || searchResponse.results.length === 0) {
         const text = searchResponse.error ?? "No libraries found matching the provided name.";
+        maybeElicitAuthSignIn(server, ctx);
         return {
           content: [
             {
               type: "text",
-              text: appendAuthPrompt(text, ctx),
+              text,
             },
           ],
         };
@@ -234,11 +235,12 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
 
       const resultsText = formatSearchResults(searchResponse);
       const responseText = `Available Libraries:\n\n${resultsText}`;
+      maybeElicitAuthSignIn(server, ctx);
       return {
         content: [
           {
             type: "text",
-            text: appendAuthPrompt(responseText, ctx),
+            text: responseText,
           },
         ],
       };
@@ -276,11 +278,12 @@ Do not call this tool more than 3 times per question.`,
     async ({ query, libraryId }: { query: string; libraryId: string }) => {
       const ctx = getClientContext();
       const response = await fetchLibraryContext({ query, libraryId }, ctx);
+      maybeElicitAuthSignIn(server, ctx);
       return {
         content: [
           {
             type: "text",
-            text: appendAuthPrompt(response.data, ctx),
+            text: response.data,
           },
         ],
       };
