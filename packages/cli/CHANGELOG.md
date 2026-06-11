@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.2
+
+### Patch Changes
+
+- cb6aee1: Bump runtime dependencies: `commander` 13 -> 15 and `ora` 9.0 -> 9.4.
+- 428af3e: Recover Context7 library IDs that Git Bash mangles on Windows. Git Bash rewrites a leading-slash argument like `/facebook/react` into a Windows path under the Git install dir (`C:/Program Files/Git/facebook/react`), causing `ctx7 docs` to reject it as invalid; this mainly affected users running ctx7 through Claude Code. The CLI now detects and undoes the conversion before validation, accepts the `//owner/repo` escape, and points users at that workaround for install layouts it can't auto-detect.
+- c03bc9c: Store CLI files in XDG Base Directory locations instead of `~/.context7`. Credentials move to `$XDG_CONFIG_HOME/context7` (default `~/.config/context7`), updater state to `$XDG_STATE_HOME/context7` (default `~/.local/state/context7`), and `generate` previews to `$XDG_CACHE_HOME/context7` (default `~/.cache/context7`). Existing files in `~/.context7` are migrated automatically on first use; migration is best-effort and falls back to reading the legacy file if it cannot complete. The credentials file is always re-asserted to `0o600` after migration or write so it is never group/world-readable. Relative or empty `XDG_*` values are ignored per the spec.
+
 ## 0.5.1
 
 ### Patch Changes
