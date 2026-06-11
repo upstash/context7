@@ -72,6 +72,21 @@ The plugin is available from the Context7 marketplace. Run these commands in Cla
 
 This adds the Context7 marketplace and installs the plugin with skills, agents, and commands.
 
+### Using Your API Key with the Plugin
+
+Without an API key, the plugin connects anonymously and shares the anonymous rate limits. To use your own plan, create an API key in the [Context7 dashboard](https://context7.com/dashboard) and export it as an environment variable before launching Claude Code:
+
+```bash
+# e.g. in ~/.zshrc or ~/.bashrc
+export CONTEXT7_API_KEY="your-api-key"
+```
+
+The plugin reads `CONTEXT7_API_KEY` from your environment automatically. Restart Claude Code after setting it, then confirm requests are counted against your plan in the [dashboard](https://context7.com/dashboard).
+
+<Note>
+If the variable is not set, the plugin still works — requests just go through the anonymous tier, which has lower rate limits.
+</Note>
+
 ### Skills
 
 #### Documentation Lookup Skill
