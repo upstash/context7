@@ -20,6 +20,17 @@ copilot plugin marketplace add upstash/context7
 copilot plugin install context7@context7-marketplace
 ```
 
+## API Key (Recommended)
+
+Without an API key, the plugin connects anonymously and shares the anonymous rate limits. To use your own plan, create an API key in the [Context7 dashboard](https://context7.com/dashboard) and export it as an environment variable before launching Copilot CLI:
+
+```bash
+# e.g. in ~/.zshrc or ~/.bashrc
+export CONTEXT7_API_KEY="your-api-key"
+```
+
+The plugin's MCP server configuration picks up `CONTEXT7_API_KEY` automatically. Restart Copilot CLI after setting it, then verify the key is being used by checking your usage in the [dashboard](https://context7.com/dashboard).
+
 ## Available Tools
 
 ### resolve-library-id
