@@ -8,7 +8,7 @@ const httpClient = newHttpClient();
 
 describe("GetContextCommand", () => {
   test("should get library context as JSON (default)", async () => {
-    const command = new GetContextCommand("How to use hooks", "/facebook/react");
+    const command = new GetContextCommand("How to use hooks", "/react/react");
     const result = await command.exec(httpClient);
 
     expect(result).toBeDefined();
@@ -24,7 +24,7 @@ describe("GetContextCommand", () => {
   });
 
   test("should get library context as text with type: txt", async () => {
-    const command = new GetContextCommand("How to use hooks", "/facebook/react", {
+    const command = new GetContextCommand("How to use hooks", "/react/react", {
       type: "txt",
     });
     const result = await command.exec(httpClient);
@@ -39,7 +39,7 @@ describe("GetContextCommand", () => {
       apiKey: process.env.CONTEXT7_API_KEY || process.env.API_KEY!,
     });
 
-    const result = await client.getContext("How to use hooks", "/facebook/react");
+    const result = await client.getContext("How to use hooks", "/react/react");
 
     expect(result).toBeDefined();
     expect(Array.isArray(result)).toBe(true);
@@ -56,7 +56,7 @@ describe("GetContextCommand", () => {
       apiKey: process.env.CONTEXT7_API_KEY || process.env.API_KEY!,
     });
 
-    const result = await client.getContext("How to use hooks", "/facebook/react", {
+    const result = await client.getContext("How to use hooks", "/react/react", {
       type: "txt",
     });
 

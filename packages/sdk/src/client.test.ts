@@ -77,7 +77,7 @@ describe("Context7 Client", () => {
     const client = new Context7({ apiKey });
 
     test("should get context as Documentation array (default)", async () => {
-      const result = await client.getContext("How to use hooks", "/facebook/react");
+      const result = await client.getContext("How to use hooks", "/react/react");
 
       expect(result).toBeDefined();
       expect(Array.isArray(result)).toBe(true);
@@ -85,7 +85,7 @@ describe("Context7 Client", () => {
     });
 
     test("should get context with explicit json type", async () => {
-      const result = await client.getContext("How to use hooks", "/facebook/react", {
+      const result = await client.getContext("How to use hooks", "/react/react", {
         type: "json",
       });
 
@@ -95,7 +95,7 @@ describe("Context7 Client", () => {
     });
 
     test("should have correct Documentation structure", async () => {
-      const result = await client.getContext("How to use hooks", "/facebook/react", {
+      const result = await client.getContext("How to use hooks", "/react/react", {
         type: "json",
       });
 
@@ -114,7 +114,7 @@ describe("Context7 Client", () => {
     const client = new Context7({ apiKey });
 
     test("should get context as text string with type: txt", async () => {
-      const result = await client.getContext("How to use hooks", "/facebook/react", {
+      const result = await client.getContext("How to use hooks", "/react/react", {
         type: "txt",
       });
 
@@ -160,7 +160,7 @@ describe("Context7 Client", () => {
     const client = new Context7({ apiKey });
 
     test("should infer Documentation[] for default (json) format", async () => {
-      const result = await client.getContext("How to use hooks", "/facebook/react");
+      const result = await client.getContext("How to use hooks", "/react/react");
 
       expect(Array.isArray(result)).toBe(true);
       expect(result[0]).toHaveProperty("title");
@@ -169,7 +169,7 @@ describe("Context7 Client", () => {
     });
 
     test("should infer string type for txt format", async () => {
-      const result = await client.getContext("How to use hooks", "/facebook/react", {
+      const result = await client.getContext("How to use hooks", "/react/react", {
         type: "txt",
       });
 
