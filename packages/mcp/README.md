@@ -863,7 +863,7 @@ If you prefer to run the MCP server in a Docker container:
    # EXPOSE 3000
 
    # Default command to run the server
-   CMD ["context7-mcp"]
+   CMD ["context7-mcp", "--transport", "stdio"]
    ```
 
    </details>
@@ -896,6 +896,37 @@ If you prefer to run the MCP server in a Docker container:
    ```
 
    _Note: This is an example configuration. Please refer to the specific examples for your MCP client (like Cursor, VS Code, etc.) earlier in this README to adapt the structure (e.g., `mcpServers` vs `servers`). Also, ensure the image name in `args` matches the tag used during the `docker build` command._
+
+   If you use the Docker MCP Toolkit image (`mcp/context7`) with a stdio-based client,
+   set `MCP_TRANSPORT=stdio` so the container starts with stdio transport instead of its
+   HTTP default. For Cline, Roo Code, and Claude Desktop, use:
+
+   ```json
+   {
+     "mcpServers": {
+       "context7": {
+         "command": "docker",
+         "args": ["run", "-i", "--rm", "-e", "MCP_TRANSPORT=stdio", "mcp/context7"]
+       }
+     }
+   }
+   ```
+
+   For VS Code, use the same Docker command in the `servers` format:
+
+   ```json
+   {
+     "servers": {
+       "context7": {
+         "type": "stdio",
+         "command": "docker",
+         "args": ["run", "-i", "--rm", "-e", "MCP_TRANSPORT=stdio", "mcp/context7"]
+       }
+     }
+   }
+   ```
+
+   Keep using the remote server URL for HTTP-based clients.
 
 </details>
 

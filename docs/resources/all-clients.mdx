@@ -971,7 +971,7 @@ qwen mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 FROM node:22-alpine
 WORKDIR /app
 RUN npm install -g @upstash/context7-mcp
-CMD ["context7-mcp"]
+CMD ["context7-mcp", "--transport", "stdio"]
 ```
 
 2. Build the image:
@@ -993,6 +993,35 @@ docker build -t context7-mcp .
   }
 }
 ```
+
+If you use the Docker MCP Toolkit image (`mcp/context7`) with a stdio-based client, set `MCP_TRANSPORT=stdio` so the container starts with stdio transport instead of its HTTP default. For Cline, Roo Code, and Claude Desktop, use:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "-e", "MCP_TRANSPORT=stdio", "mcp/context7"]
+    }
+  }
+}
+```
+
+For VS Code, use the same Docker command in the `servers` format:
+
+```json
+{
+  "servers": {
+    "context7": {
+      "type": "stdio",
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "-e", "MCP_TRANSPORT=stdio", "mcp/context7"]
+    }
+  }
+}
+```
+
+Keep using the remote server URL for HTTP-based clients.
 
 </Accordion>
 
