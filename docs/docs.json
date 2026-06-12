@@ -98,6 +98,7 @@
           "clients/cursor",
           "clients/opencode",
           "clients/pi",
+          "clients/vscode",
           "resources/all-clients"
         ]
       },
