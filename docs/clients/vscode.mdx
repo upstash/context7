@@ -1,0 +1,76 @@
+---
+title: VS Code
+description: Using Context7 with VS Code
+---
+
+The [Context7 VS Code extension](https://marketplace.visualstudio.com/items?itemName=Upstash.context7-mcp) registers the Context7 MCP server with VS Code's built-in MCP support, so AI features like Copilot Chat in agent mode get current library documentation instead of relying on training data.
+
+The extension connects to the hosted server at `https://mcp.context7.com/mcp`. There is no local server process to manage and nothing to update manually. The source is available at [upstash/context7-vscode-extension](https://github.com/upstash/context7-vscode-extension).
+
+## Installation
+
+Install **Context7 MCP Server** from the [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=Upstash.context7-mcp), or search for `Upstash.context7-mcp` in the Extensions view.
+
+Requires VS Code 1.101 or later.
+
+The server registers automatically when the extension activates. To confirm, run the **MCP: List Servers** command and check that "Context7" is listed.
+
+If you prefer to configure the MCP server yourself instead of using the extension, see [All MCP Clients](/resources/all-clients).
+
+---
+
+## Adding an API Key
+
+An API key gives you higher rate limits and access to private repositories. Create one in the [Context7 dashboard](https://context7.com/dashboard).
+
+<Steps>
+<Step title="Open Settings">
+Press `Cmd+,` (or `Ctrl+,` on Windows/Linux) and search for "context7".
+</Step>
+<Step title="Set the Key">
+Paste your key into the **Context7: Api Key** field, or add it to `settings.json` directly:
+
+```json
+{
+  "context7.apiKey": "YOUR_API_KEY"
+}
+```
+</Step>
+<Step title="Restart the Server">
+Changing the key stops the running server so the new key can be picked up. Restart it via **MCP: List Servers** → **Context7** → **Start Server**, or just send a new chat request, which prompts to start it. No window reload required.
+</Step>
+</Steps>
+
+<Tip>
+Keep the API key in your user settings rather than workspace settings if you commit `.vscode/settings.json` to version control.
+</Tip>
+
+---
+
+## Using Context7
+
+Add "use context7" to your prompts in Copilot Chat:
+
+```
+use context7 to show me how to set up middleware in Next.js 15
+use context7 for Prisma query examples with relations
+use context7 for the Supabase syntax for row-level security
+```
+
+If you know the library ID, use it directly to skip resolution:
+
+```
+use context7 with /supabase/supabase for authentication docs
+use context7 with /vercel/next.js for app router setup
+```
+
+<Tip>
+Add a rule to your AI assistant's instructions (e.g. `.github/copilot-instructions.md`) telling it to use Context7 for code generation and library questions, so you don't have to type "use context7" every time.
+</Tip>
+
+### Available Tools
+
+The extension exposes the two Context7 tools to VS Code:
+
+1. **`resolve-library-id`**: Resolves a package or product name to a Context7-compatible library ID
+2. **`query-docs`**: Fetches up-to-date documentation for a library
