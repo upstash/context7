@@ -1,5 +1,11 @@
 # @upstash/context7-mcp
 
+## 3.2.1
+
+### Patch Changes
+
+- 8123b51: Restore Node 18 support by pinning undici to ^6.26.0 and commander to ^13.1.0, which dropped the Node 20+ engine requirements that caused a "File is not defined" crash on startup.
+
 ## 3.2.0
 
 ### Minor Changes
