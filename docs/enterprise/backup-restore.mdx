@@ -53,7 +53,7 @@ The secret key is stored encrypted in the local database.
 
 ### Schedule and Retention
 
-Pick a preset (daily, every 6 hours, weekly) or enter a custom cron expression. Retention keeps the newest N archives and prunes older ones automatically; set it to 0 to keep everything.
+Pick a preset (daily, every 6 hours, weekly) or enter a custom cron expression. Retention keeps the newest N archives and prunes older ones automatically; choose **Keep all** to retain everything.
 
 If an ingestion job is running when a scheduled backup fires, the backup still completes, but that one repository may be captured mid-parse. Schedule backups for quiet hours, or simply re-index the repository after a restore.
 
@@ -78,15 +78,23 @@ All backup endpoints require an admin session and keep working even if your lice
 
 ## Restoring
 
-Restore runs offline with the server stopped. For S3 backups, download the archive to the machine first.
+Restore a backup from the dashboard (for local backups) or with the offline CLI (for S3 backups, scripted recovery, or a fresh machine).
 
-The restore never deletes your current data. It moves the existing database, vector index, and encryption key into a `pre-restore-<timestamp>` directory inside the data volume, so you can roll back if something looks wrong. Delete that directory once you've verified the restore.
+In every case the restore never deletes your current data. It moves the existing database, vector index, and encryption key into a `pre-restore-<timestamp>` directory inside the data volume, so you can roll back. Delete that directory once you've verified the restore.
 
 <Note>
 A backup created by a newer Context7 version cannot be restored into an older installation; the restore tool will refuse and tell you to upgrade first. Backups from older versions restore fine, and the database is migrated automatically the next time the server starts.
 </Note>
 
-### Docker
+### From the dashboard
+
+Open **Settings → Backup**, find the backup in the list, and click the restore icon. Context7 validates the archive, shows what it contains (created date, projects, schema version), and asks you to confirm. It then stages the restore and restarts to apply it, because the live database and vector index cannot be swapped while the server is running. Under Docker or Kubernetes the server comes back automatically; otherwise start it again after it stops.
+
+### Offline with the CLI
+
+Run the CLI with the server stopped. For S3 backups, download the archive to the machine first.
+
+#### Docker
 
 ```bash
 # 1. Stop the server
@@ -106,7 +114,7 @@ If the archive is not already inside a mounted volume (for example, you download
 docker compose cp ./context7-backup-2026-06-12T02-00-00.tar.gz context7:/data/
 ```
 
-### Kubernetes
+#### Kubernetes
 
 Scale the StatefulSet down, run the restore in a one-off pod that mounts the same PVC, then scale back up:
 
@@ -122,7 +130,7 @@ kubectl -n context7 scale statefulset context7 --replicas=1
 
 Use `kubectl cp` to place the archive on the volume first if it isn't there already.
 
-### Running Locally
+#### Running locally
 
 If you run Context7 without Docker:
 
