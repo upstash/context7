@@ -3,10 +3,10 @@ title: CLI
 description: The ctx7 CLI — fetch library documentation and configure Context7 MCP from your terminal
 ---
 
-The `ctx7` CLI is the command-line interface for Context7. It does three things:
+The `ctx7` CLI is the command-line interface for Context7. It does two things:
 
 - **Fetch library documentation** — resolve any library by name and query its up-to-date docs directly in your terminal, without opening a browser
-- **Configure Context7 MCP** — set up the MCP server for Claude Code, Cursor, or OpenCode with a single command
+- **Configure your AI coding agent** — set up the Context7 MCP server (or a CLI-based `docs` skill) for Claude Code, Cursor, OpenCode, and more with a single command
 
 The CLI is useful both as a standalone tool (fetching docs while you code) and as a setup utility (wiring up Context7 for your AI coding agent).
 
@@ -107,7 +107,7 @@ ctx7 docs /vercel/next.js "How to add middleware for route protection" | grep -A
 
 Configure Context7 for your AI coding agent. On first run, prompts you to choose between two modes:
 
-- **MCP server** — registers the Context7 MCP server in your agent's config so it can call `resolve-library-id` and `get-library-docs` tools natively
+- **MCP server** — registers the Context7 MCP server in your agent's config so it can call `resolve-library-id` and `query-docs` tools natively
 - **CLI + Skills** — installs a `docs` skill that guides your agent to fetch up-to-date library docs using `ctx7` CLI commands (no MCP required)
 
 ### ctx7 setup
@@ -129,7 +129,7 @@ ctx7 setup --opencode
 ctx7 setup --cli --claude       # Claude Code (~/.claude/skills)
 ctx7 setup --cli --cursor       # Cursor (~/.cursor/skills)
 ctx7 setup --cli --universal    # Universal (~/.agents/skills)
-ctx7 setup --cli --antigravity  # Antigravity (~/.config/agent/skills)
+ctx7 setup --cli --antigravity  # Antigravity (~/.agent/skills)
 
 # Configure for current project only (default is global)
 ctx7 setup --project

@@ -593,7 +593,7 @@ Reload VS Code. The first time GitHub Copilot uses the server, the OAuth flow ru
 8. VS Code calls `/context7/mcp` with the new token. APIM validates it, performs the OBO exchange to mint an MCP-API-audience token, and forwards to Context7.
 9. The MCP server validates the OBO token against your tenant configuration and serves the request as the signed-in user.
 
-Trigger a Copilot Chat tool call ("use context7 to resolve the library id for Next.js") to verify the integration.
+Trigger a Copilot Chat tool call ("use context7 to resolve the library ID for Next.js") to verify the integration.
 
 <Note>
 The manual client ID step is required because Entra ID doesn't implement RFC 7591 Dynamic Client Registration. You can document the Gateway app's client ID in your internal onboarding guide and rotate it on the normal app-registration lifecycle. Microsoft's first-party VS Code client ID (`aebc6443-996d-45c2-90f0-388ff96faa56`) can also be used by pre-authorising it on the Gateway scope, but the Gateway app's own client ID is the most consistent path because PKCE removes the need for a client secret on the user-facing side.
@@ -653,6 +653,6 @@ If a client signs in but receives `AADSTS65005: The resource is disabled` or sim
 
 ## What this does not cover
 
-- **Self-hosted MCP server.** This guide proxies the hosted `mcp.context7.com`. For air-gapped or compliance scenarios where MCP traffic cannot leave your network, contact [context7@upstash.com](mailto:context7@upstash.com).
+- **On-premise MCP server.** This guide proxies the hosted `mcp.context7.com`. For air-gapped or compliance scenarios where MCP traffic cannot leave your network, contact [context7@upstash.com](mailto:context7@upstash.com).
 - **Dynamic Client Registration.** Entra does not implement RFC 7591. Each approved MCP client must be pre-registered (or use a Microsoft first-party client ID) and pre-authorized on the APIM Gateway app's scope.
 - **Group-based authorization at Context7.** Context7 resolves the `oid` claim to a user record and authorises against teamspace membership. Group-based policies inside Context7 (for example, restricting which Entra group can use which libraries) are not configured by this guide; reach out if your team needs that level of control.

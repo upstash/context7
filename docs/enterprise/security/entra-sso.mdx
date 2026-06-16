@@ -1,7 +1,7 @@
 ---
 title: "Microsoft Entra ID (SSO)"
 sidebarTitle: "Entra SSO"
-description: "Let your workspace sign in with Microsoft Entra ID instead of shared passwords."
+description: "Let your teamspace sign in with Microsoft Entra ID instead of shared passwords."
 ---
 
 Context7 On-Premise supports single sign-on with Microsoft Entra ID (formerly Azure AD). Once configured, anyone in your Entra tenant who is assigned one of the Context7 app roles can sign in to the dashboard with their work account, and Context7 creates a matching user record automatically on their first login.
@@ -14,7 +14,7 @@ You'll need:
 
 - An **Entra admin** (or someone who can register applications in your tenant).
 - A running Context7 On-Premise instance that you can reach in your browser.
-- The Context7 admin password. This is the same account you use to open **Workspace Settings** today. On a fresh install it is `admin` / `admin` until you change it.
+- The Context7 admin password. This is the same account you use to open **Teamspace Settings** today. On a fresh install it is `admin` / `admin` until you change it.
 
 <Note>
 Entra SSO is an **addition** to password login, not a replacement. The seeded admin account keeps working even after you turn on SSO, so you never get locked out if the Entra app goes sideways.
@@ -63,7 +63,7 @@ These aren't secrets. The client ID is public information that's sent in every s
 
 From the app's left sidebar, open **Certificates & secrets**, stay on the **Client secrets** tab, then click **+ New client secret**.
 
-Give it a description (for example, `Context7 on-prem`), pick an expiry (180 days or 12 months are common), and click **Add**.
+Give it a description (for example, `Context7 on-premise`), pick an expiry (180 days or 12 months are common), and click **Add**.
 
 <Frame>
   ![Client secrets tab with New client secret form](/images/enterprise/entra-sso/03-client-secret.png)
@@ -84,7 +84,7 @@ From the left sidebar, click **App roles**, then **+ Create app role**. Fill in 
 - **Display name**: `Context7 Admin`
 - **Allowed member types**: *Users/Groups*
 - **Value**: `Context7.Admin`
-- **Description**: anything descriptive, like "Full admin access to the Context7 workspace"
+- **Description**: anything descriptive, like "Full admin access to the Context7 teamspace"
 - Leave *Do you want to enable this app role?* checked.
 
 Click **Apply**.
@@ -117,7 +117,7 @@ Go back to **Microsoft Entra ID → Enterprise applications** (a *different* sec
 Now open **Users and groups** on the same app and click **+ Add user/group**. For each person you want to grant access:
 
 1. Pick the user (or a group) under **Users**.
-2. Pick a role: **Context7 Admin** for workspace administrators, **Context7 Member** for everyone else.
+2. Pick a role: **Context7 Admin** for teamspace administrators, **Context7 Member** for everyone else.
 3. Click **Assign**.
 
 <Frame>
@@ -130,10 +130,10 @@ At a minimum, assign yourself the **Context7 Admin** role so you can test the fl
 
 ### Step 1: Open the Entra SSO card
 
-Sign in to your Context7 dashboard with the password admin account. Open **Workspace Settings**, and under **Authentication** you'll find a card titled **Microsoft Entra SSO**.
+Sign in to your Context7 dashboard with the password admin account. Open **Teamspace Settings**, and under **Authentication** you'll find a card titled **Microsoft Entra SSO**.
 
 <Frame>
-  ![Context7 Workspace Settings with the Microsoft Entra SSO card highlighted](/images/enterprise/entra-sso/07-context7-settings-card.png)
+  ![Context7 Teamspace Settings with the Microsoft Entra SSO card highlighted](/images/enterprise/entra-sso/07-context7-settings-card.png)
 </Frame>
 
 ### Step 2: Fill in the credentials
@@ -183,11 +183,11 @@ The first time each person signs in, Context7 creates a user record with the dis
 Role assignments live entirely in Entra. To change someone's access in Context7:
 
 - **Promote a member to admin**: in Entra, go to Enterprise applications → Context7 → Users and groups, remove their Member role, add the Admin role, and ask them to sign out and back in.
-- **Revoke access**: remove the user from Users and groups in Entra. Existing browser sessions remain valid until they expire or sign out. If you need to cut them off immediately, restart Context7 (in-memory sessions are cleared on restart) or have an admin explicitly delete their user row from the workspace.
-- **Audit who signed in recently**: **Workspace Settings → Users** shows every Context7 user with their auth provider and last-login timestamp.
+- **Revoke access**: remove the user from Users and groups in Entra. Existing browser sessions remain valid until they expire or sign out. If you need to cut them off immediately, restart Context7 (in-memory sessions are cleared on restart) or have an admin explicitly delete their user row from the teamspace.
+- **Audit who signed in recently**: **Teamspace Settings → Users** shows every Context7 user with their auth provider and last-login timestamp.
 
 <Frame>
-  ![Workspace Users tab showing password and Entra users side by side](/images/enterprise/entra-sso/11-users-tab.png)
+  ![Teamspace Users tab showing password and Entra users side by side](/images/enterprise/entra-sso/11-users-tab.png)
 </Frame>
 
 ## Troubleshooting

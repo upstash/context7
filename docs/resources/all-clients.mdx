@@ -156,7 +156,7 @@ Add this to your Codex configuration file (`~/.codex/config.toml` or `.codex/con
 [mcp_servers.context7]
 command = "npx"
 args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
-startup_timeout_sec = 20
+startup_timeout_ms = 20_000
 ```
 
 #### Remote Server Connection
@@ -167,7 +167,7 @@ url = "https://mcp.context7.com/mcp"
 http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
 ```
 
-<Note>If you see startup timeout errors, try increasing `startup_timeout_sec` to `40`.</Note>
+<Note>If you see startup timeout errors, try increasing `startup_timeout_ms` to `40_000`.</Note>
 
 </Accordion>
 
