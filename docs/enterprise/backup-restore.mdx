@@ -55,7 +55,7 @@ The secret key is stored encrypted in the local database.
 
 Pick a preset (daily, every 6 hours, weekly) or enter a custom cron expression. Retention keeps the newest N archives and prunes older ones automatically; choose **Keep all** to retain everything.
 
-If an ingestion job is running when a scheduled backup fires, the backup still completes, but that one repository may be captured mid-parse. Schedule backups for quiet hours, or simply re-index the repository after a restore.
+If an indexing job is running when a scheduled backup fires, the backup still completes, but that one library may be only partially indexed. Schedule backups for quiet hours, or simply re-index that library after a restore.
 
 ## Running a Backup Manually
 
@@ -88,7 +88,7 @@ A backup created by a newer Context7 version cannot be restored into an older in
 
 ### From the dashboard
 
-Open **Settings → Backup**, find the backup in the list, and click the restore icon. Context7 validates the archive, shows what it contains (created date, projects, schema version), and asks you to confirm. It then stages the restore and restarts to apply it, because the live database and vector index cannot be swapped while the server is running. Under Docker or Kubernetes the server comes back automatically; otherwise start it again after it stops.
+Open **Settings → Backup**, find the backup in the list, and click the restore icon. Context7 validates the archive, shows what it contains (created date, libraries, schema version), and asks you to confirm. It then stages the restore and restarts to apply it, because the live database and vector index cannot be swapped while the server is running. Under Docker or Kubernetes the server comes back automatically; otherwise start it again after it stops.
 
 ### Offline with the CLI
 
