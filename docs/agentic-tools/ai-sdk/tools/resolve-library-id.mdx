@@ -79,7 +79,7 @@ On success, the tool returns the search results as plain text, formatted for eas
 - Context7-compatible library ID: /reactjs/react.dev
 - Description: The library for web and native user interfaces
 - Code Snippets: 1250
-- Trust Score: High
+- Source Reputation: High
 - Benchmark Score: 98
 - Versions: 19.0.0, 18.3.1, 18.2.0
 ----------
@@ -87,7 +87,7 @@ On success, the tool returns the search results as plain text, formatted for eas
 - Context7-compatible library ID: /facebook/react-native
 - Description: A framework for building native applications using React
 - Code Snippets: 890
-- Trust Score: High
+- Source Reputation: High
 - Benchmark Score: 95
 - Versions: 0.76.0, 0.75.4
 ```
@@ -149,12 +149,12 @@ const { toolCalls, toolResults } = await generateText({
 
 // See what the model searched for
 for (const call of toolCalls) {
-  console.log("Searched for:", call.args.libraryName);
+  console.log("Searched for:", call.input.libraryName);
 }
 
 // See the results
 for (const result of toolResults) {
-  console.log("Found:", result.result);
+  console.log("Found:", result.output);
 }
 ```
 
