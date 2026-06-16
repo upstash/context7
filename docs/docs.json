@@ -72,7 +72,8 @@
                   "enterprise/deployment/docker",
                   "enterprise/deployment/kubernetes"
                 ]
-              }
+              },
+              "enterprise/backup-restore"
             ]
           }
         ]

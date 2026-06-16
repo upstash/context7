@@ -1,0 +1,151 @@
+---
+title: "Backup and Restore"
+sidebarTitle: "Backup & Restore"
+---
+
+Context7 On-Premise can back up all of its data into a single archive, on a schedule or on demand. A backup contains everything needed to rebuild your deployment on a fresh machine: the SQLite database (configuration, credentials, indexed libraries), the vector index, and the encryption key that protects stored secrets.
+
+Backups run safely while the server is serving traffic. The database snapshot uses SQLite's online backup API, so you don't need a maintenance window.
+
+<Warning>
+Backup archives include the database and the encryption key, which means anyone holding an archive can read your stored credentials (LLM API keys, Git tokens). Store backups with the same care as the data volume itself. For S3, use a private bucket with server-side encryption.
+</Warning>
+
+## Configuring Backups
+
+Open **Settings → Backup** in the dashboard. Choose a destination, set a schedule, and save.
+
+### Local or Network Path
+
+Writes archives to a directory on the server's filesystem. Use this for air-gapped deployments or when you back up to an NFS mount.
+
+When running in Docker, mount a dedicated volume for backups so they survive independently of the data volume:
+
+```yaml
+services:
+  context7:
+    # ...
+    volumes:
+      - context7-data:/data
+      - context7-backups:/backups
+
+volumes:
+  context7-data:
+  context7-backups:
+```
+
+Then set the backup directory to `/backups` in the dashboard.
+
+### S3
+
+Works with AWS S3 and any S3-compatible store such as MinIO or Ceph.
+
+| Field | Description |
+| ----- | ----------- |
+| Bucket | Bucket name (required) |
+| Region | Bucket region, defaults to `us-east-1` |
+| Access Key ID / Secret | Static credentials. Leave blank to use the AWS default credential chain (IAM role, environment variables) |
+| Endpoint | Custom endpoint for S3-compatible storage. Leave blank for AWS |
+| Path-style addressing | Enable for most MinIO setups |
+| Key prefix | Optional prefix inside the bucket, e.g. `context7/` |
+
+The secret key is stored encrypted in the local database.
+
+### Schedule and Retention
+
+Pick a preset (daily, every 6 hours, weekly) or enter a custom cron expression. Retention keeps the newest N archives and prunes older ones automatically; choose **Keep all** to retain everything.
+
+If an indexing job is running when a scheduled backup fires, the backup still completes, but that one library may be only partially indexed. Schedule backups for quiet hours, or simply re-index that library after a restore.
+
+## Running a Backup Manually
+
+Click **Back up now** in the dashboard, or call the API:
+
+```bash
+curl -X POST http://localhost:3000/api/backup \
+  -H "Cookie: <admin session>" 
+```
+
+All backup endpoints require an admin session and keep working even if your license has expired, so you can always get your data out.
+
+| Endpoint | Description |
+| -------- | ----------- |
+| `POST /api/backup` | Start a backup in the background |
+| `GET /api/backup/status` | Whether a backup is running, plus the last result |
+| `GET /api/backups` | List available archives |
+| `GET /api/backups/<name>/download` | Download an archive (local destination only) |
+| `GET /api/backup/config` / `PUT` | Read or update the backup configuration |
+
+## Restoring
+
+Restore a backup from the dashboard (for local backups) or with the offline CLI (for S3 backups, scripted recovery, or a fresh machine).
+
+In every case the restore never deletes your current data. It moves the existing database, vector index, and encryption key into a `pre-restore-<timestamp>` directory inside the data volume, so you can roll back. Delete that directory once you've verified the restore.
+
+<Note>
+A backup created by a newer Context7 version cannot be restored into an older installation; the restore tool will refuse and tell you to upgrade first. Backups from older versions restore fine, and the database is migrated automatically the next time the server starts.
+</Note>
+
+### From the dashboard
+
+Open **Settings → Backup**, find the backup in the list, and click the restore icon. Context7 validates the archive, shows what it contains (created date, libraries, schema version), and asks you to confirm. It then stages the restore and restarts to apply it, because the live database and vector index cannot be swapped while the server is running. Under Docker or Kubernetes the server comes back automatically; otherwise start it again after it stops.
+
+### Offline with the CLI
+
+Run the CLI with the server stopped. For S3 backups, download the archive to the machine first.
+
+#### Docker
+
+```bash
+# 1. Stop the server
+docker compose stop context7
+
+# 2. Run the restore against the same volumes
+docker compose run --rm --no-deps context7 \
+  node dist/enterprise/restore.mjs /backups/context7-backup-2026-06-12T02-00-00.tar.gz --yes
+
+# 3. Start the server again
+docker compose start context7
+```
+
+If the archive is not already inside a mounted volume (for example, you downloaded it from S3), copy it in first:
+
+```bash
+docker compose cp ./context7-backup-2026-06-12T02-00-00.tar.gz context7:/data/
+```
+
+#### Kubernetes
+
+Scale the StatefulSet down, run the restore in a one-off pod that mounts the same PVC, then scale back up:
+
+```bash
+kubectl -n context7 scale statefulset context7 --replicas=0
+
+kubectl -n context7 run context7-restore --rm -it --restart=Never \
+  --image=ghcr.io/context7/enterprise:latest \
+  --overrides='{"spec":{"imagePullSecrets":[{"name":"context7-registry"}],"containers":[{"name":"context7-restore","image":"ghcr.io/context7/enterprise:latest","command":["node","dist/enterprise/restore.mjs","/data/context7-backup-2026-06-12T02-00-00.tar.gz","--yes"],"volumeMounts":[{"name":"data","mountPath":"/data"}]}],"volumes":[{"name":"data","persistentVolumeClaim":{"claimName":"data-context7-0"}}]}}'
+
+kubectl -n context7 scale statefulset context7 --replicas=1
+```
+
+Use `kubectl cp` to place the archive on the volume first if it isn't there already.
+
+#### Running locally
+
+If you run Context7 without Docker:
+
+```bash
+npm run ctx7:restore -- /path/to/context7-backup-2026-06-12T02-00-00.tar.gz
+```
+
+The command prompts for confirmation before replacing anything. Pass `--yes` to skip the prompt in scripts.
+
+## Disaster Recovery Checklist
+
+1. Deploy a fresh Context7 instance on the new machine (same or newer version).
+2. Don't run the setup wizard. Stop the server instead.
+3. Copy your latest backup archive onto the machine.
+4. Run the restore as shown above.
+5. Start the server. Your configuration, credentials, users, indexed libraries, and search index are all back.
+
+Because the encryption key travels inside the archive, restored credentials work immediately on the new machine. Nothing needs to be re-entered.
