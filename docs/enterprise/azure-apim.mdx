@@ -145,6 +145,23 @@ This app represents the gateway as an Entra resource. Clients request tokens for
 
 6. **Manifest** → set `requestedAccessTokenVersion: 2`. Save.
 
+   <Tip>
+   The Manifest UI sometimes silently fails to persist this value. If you see v1 tokens (`iss: https://sts.windows.net/...` or `ver: 1.0`) after setting it, apply it via CLI instead:
+
+   ```bash
+   az ad app update --id <gateway-app-client-id> --set api.requestedAccessTokenVersion=2
+   az ad app show --id <gateway-app-client-id> --query api.requestedAccessTokenVersion -o tsv  # should print 2
+   ```
+
+   Do the same for the MCP API app from Step 1 if its tokens come back as v1.
+   </Tip>
+
+7. **Authentication** → **+ Add a platform** → **Web** → enter `https://vscode.dev/redirect` as the redirect URI → **Configure**.
+
+   <Note>
+   VS Code with GitHub Copilot uses Microsoft's hosted OAuth broker at `vscode.dev/redirect` rather than a local loopback URI. The redirect URI must be registered on the Gateway app or the sign-in flow fails with `AADSTS500113` or `AADSTS50011`. Add additional redirect URIs (or platforms) here for other MCP clients as you adopt them — each client tool's documentation lists its expected URI.
+   </Note>
+
 ### Step 3: Wire the permission chain
 
 The APIM Gateway app must be allowed to call the MCP API on a user's behalf, and the MCP client tools must be allowed to call the Gateway.
@@ -588,7 +605,7 @@ Reload VS Code. The first time GitHub Copilot uses the server, the OAuth flow ru
 3. VS Code attempts Dynamic Client Registration. Because Entra ID does not implement RFC 7591, the request fails and VS Code shows a dialog: **"Dynamic Client Registration not supported. Do you want to proceed by manually providing a client registration?"**
 4. Click **Copy URIs & Proceed**, then paste the **APIM Gateway app's Application (client) ID** when prompted. (This is the same app whose client secret APIM uses for the OBO call.)
 5. A browser window opens. The URL bar should switch to `login.microsoftonline.com/...` after APIM's 302 redirect. Sign in with your Entra account and accept the `Mcp.Gateway.Access` consent.
-6. The browser redirects to a localhost loopback URI that VS Code is listening on. VS Code captures the auth code.
+6. The browser redirects to `https://vscode.dev/redirect` (VS Code's hosted OAuth broker), which hands the auth code back to your local VS Code instance.
 7. VS Code exchanges the code at APIM's `/token` endpoint, which forwards the request to Entra. Entra returns an access token whose audience is the Gateway app.
 8. VS Code calls `/context7/mcp` with the new token. APIM validates it, performs the OBO exchange to mint an MCP-API-audience token, and forwards to Context7.
 9. The MCP server validates the OBO token against your tenant configuration and serves the request as the signed-in user.
@@ -650,6 +667,14 @@ APIM diagnostics with "Number of payload bytes to log" set above zero truncate M
 ### Wrong client ID returned to MCP clients
 
 If a client signs in but receives `AADSTS65005: The resource is disabled` or similar, the client's app ID is not in the APIM Gateway app's **Authorized client applications** list for the `Mcp.Gateway.Access` scope. Add it explicitly.
+
+### `AADSTS500113: No reply address is registered for the application`
+
+The Gateway app has no redirect URIs registered. VS Code's OAuth flow sends `https://vscode.dev/redirect` as the redirect URI, and Entra rejects the request when that URI isn't on the app. Open the Gateway app in Entra → **Authentication** → **+ Add a platform** → **Web** → add `https://vscode.dev/redirect` → **Configure**. See [Part 2 Step 2](#step-2-register-the-apim-gateway-app).
+
+### `AADSTS50011: The redirect URI ... does not match`
+
+A specific redirect URI was sent that the Gateway app doesn't have on its list. Read the error message to see exactly which URI Entra received (most commonly `https://vscode.dev/redirect`), then add it under the Gateway app's **Authentication** → **+ Add a platform** → **Web**.
 
 ## What this does not cover
 
