@@ -265,7 +265,7 @@ export async function downloadSkillFromGitHub(
     if ("error" in treeData) {
       const hint =
         !ghHeaders["Authorization"] && /403|429|rate/.test(treeData.error)
-          ? " — set GITHUB_TOKEN env var to increase rate limits"
+          ? " — run `gh auth login` or set the GITHUB_TOKEN env var to increase rate limits"
           : "";
       return { files: [], error: `GitHub API error: ${treeData.error}${hint}` };
     }
