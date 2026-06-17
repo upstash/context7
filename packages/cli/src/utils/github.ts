@@ -152,15 +152,32 @@ function getGitHubHeaders(): Record<string, string> {
   };
 }
 
+// Turns a GitHub HTTP status into an actionable message. The common failures
+// here are an expired/invalid token (401) shadowing a working `gh` login, or
+// the anonymous rate limit (403); both previously surfaced as a bare
+// "GitHub API error" with no way to tell them apart.
+function describeGitHubError(status: number): string {
+  switch (status) {
+    case 401:
+      return "GitHub API error: 401 (invalid or expired token; check GITHUB_TOKEN/GH_TOKEN, or run `gh auth login`)";
+    case 403:
+      return "GitHub API error: 403 (rate limited; set GITHUB_TOKEN/GH_TOKEN, or run `gh auth login` for higher limits)";
+    case 404:
+      return "GitHub API error: 404 (repository or branch not found)";
+    default:
+      return `GitHub API error: ${status}`;
+  }
+}
+
 async function fetchRepoTree(
   owner: string,
   repo: string,
   branch: string,
   headers: Record<string, string>
-): Promise<GitHubTreeResponse | null> {
+): Promise<GitHubTreeResponse | { status: number }> {
   const treeUrl = `${GITHUB_API}/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
   const response = await fetch(treeUrl, { headers });
-  if (!response.ok) return null;
+  if (!response.ok) return { status: response.status };
   return (await response.json()) as GitHubTreeResponse;
 }
 
@@ -193,7 +210,8 @@ export async function listSkillsFromGitHub(project: string): Promise<GitHubSkill
     if ("status" in branchResult) return { status: "repo_not_found" };
 
     const treeData = await fetchRepoTree(owner, repo, branchResult.branch, headers);
-    if (!treeData) return { status: "error", error: "Could not fetch repository tree" };
+    if ("status" in treeData)
+      return { status: "error", error: describeGitHubError(treeData.status) };
 
     const skillMdFiles = treeData.tree.filter(
       (item) => item.type === "blob" && item.path.toLowerCase().endsWith("skill.md")
@@ -250,8 +268,8 @@ export async function downloadSkillFromGitHub(
     const ghHeaders = getGitHubHeaders();
 
     const treeData = await fetchRepoTree(owner, repo, branch, ghHeaders);
-    if (!treeData) {
-      return { files: [], error: `GitHub API error` };
+    if ("status" in treeData) {
+      return { files: [], error: describeGitHubError(treeData.status) };
     }
 
     const skillFiles = treeData.tree.filter(
