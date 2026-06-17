@@ -152,21 +152,38 @@ function getGitHubHeaders(): Record<string, string> {
   };
 }
 
-// Turns a GitHub HTTP status into an actionable message. The common failures
-// here are an expired/invalid token (401) shadowing a working `gh` login, or
-// the anonymous rate limit (403); both previously surfaced as a bare
-// "GitHub API error" with no way to tell them apart.
+// Turns a GitHub HTTP status into a short, recognizable message. The common
+// failures are an expired/invalid token (401) shadowing a working `gh` login,
+// or the anonymous rate limit (403); both previously surfaced as a bare
+// "GitHub API error" with no way to tell them apart. The actionable fix is
+// returned separately by `githubErrorTip` so callers can render it as a hint.
 function describeGitHubError(status: number): string {
   switch (status) {
     case 401:
-      return "GitHub API error: 401 (invalid or expired token; check GITHUB_TOKEN/GH_TOKEN, or run `gh auth login`)";
+      return "GitHub API error: 401 (invalid or expired token)";
     case 403:
-      return "GitHub API error: 403 (rate limited; set GITHUB_TOKEN/GH_TOKEN, or run `gh auth login` for higher limits)";
+      return "GitHub API error: 403 (rate limited)";
     case 404:
       return "GitHub API error: 404 (repository or branch not found)";
     default:
       return `GitHub API error: ${status}`;
   }
+}
+
+/**
+ * Returns an actionable hint for a GitHub error message produced by
+ * `describeGitHubError`, or `undefined` when there's nothing useful to add.
+ * Meant to be shown as a `tip:` line below the failure.
+ */
+export function githubErrorTip(error: string | undefined): string | undefined {
+  if (!error) return undefined;
+  if (error.includes("401")) {
+    return "your GitHub token is invalid or expired; refresh GITHUB_TOKEN/GH_TOKEN or run `gh auth login`";
+  }
+  if (error.includes("403")) {
+    return "GitHub rate limit reached; set GITHUB_TOKEN/GH_TOKEN or run `gh auth login` for higher limits";
+  }
+  return undefined;
 }
 
 async function fetchRepoTree(

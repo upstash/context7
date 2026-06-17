@@ -10,6 +10,7 @@ import { log } from "../utils/logger.js";
 import { checkboxWithHover } from "../utils/prompts.js";
 import { trackEvent } from "../utils/tracking.js";
 import { getBaseUrl, downloadSkill } from "../utils/api.js";
+import { githubErrorTip } from "../utils/github.js";
 import { installSkillFiles } from "../utils/installer.js";
 import { performLogin } from "./auth.js";
 import { saveTokens, getValidAccessToken } from "../utils/auth.js";
@@ -428,6 +429,8 @@ async function setupMcp(agents: SetupAgent[], options: SetupOptions, scope: Scop
         `      ${pc.yellow("tip:")} fix permissions with: ${pc.cyan(`sudo chown -R $(whoami) ${dirname(dirname(r.skillPath))}`)}`
       );
     }
+    const skillTip = githubErrorTip(r.skillStatus);
+    if (skillTip) log.plain(`      ${pc.yellow("tip:")} ${skillTip}`);
   }
   log.blank();
 
@@ -483,6 +486,8 @@ async function setupCli(options: SetupOptions): Promise<void> {
   const downloadData = await downloadSkill("/upstash/context7", "find-docs");
   if (downloadData.error || downloadData.files.length === 0) {
     spinner.fail(`Failed to download find-docs skill: ${downloadData.error || "no files"}`);
+    const tip = githubErrorTip(downloadData.error);
+    if (tip) log.plain(`  ${pc.yellow("tip:")} ${tip}`);
     return;
   }
 
@@ -516,6 +521,8 @@ async function setupCli(options: SetupOptions): Promise<void> {
         `      ${pc.yellow("tip:")} fix permissions with: ${pc.cyan(`sudo chown -R $(whoami) ${dirname(dirname(r.skillPath))}`)}`
       );
     }
+    const skillTip = githubErrorTip(r.skillStatus);
+    if (skillTip) log.plain(`      ${pc.yellow("tip:")} ${skillTip}`);
     const ruleIcon =
       r.ruleStatus === "installed" || r.ruleStatus === "updated" ? pc.green("+") : pc.dim("~");
     log.plain(`    ${ruleIcon} Rule ${r.ruleStatus}`);
