@@ -386,7 +386,8 @@ async function setupAgent(
 
 function logSkillStatus(skillStatus: string, skillPath: string): void {
   const skillFailed = skillStatus.startsWith("failed:");
-  const skillIcon = skillStatus === "installed" ? pc.green("+") : skillFailed ? pc.red("✖") : pc.dim("~");
+  const skillIcon =
+    skillStatus === "installed" ? pc.green("+") : skillFailed ? pc.red("✖") : pc.dim("~");
   log.plain(`    ${skillIcon} Skill ${skillFailed ? "failed" : skillStatus}`);
   log.plain(`      ${pc.dim(skillPath)}`);
   if (skillFailed) {
