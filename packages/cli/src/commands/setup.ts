@@ -384,6 +384,22 @@ async function setupAgent(
   };
 }
 
+function logSkillStatus(skillStatus: string, skillPath: string): void {
+  const skillFailed = skillStatus.startsWith("failed:");
+  const skillIcon =
+    skillStatus === "installed" ? pc.green("+") : skillFailed ? pc.red("✖") : pc.dim("~");
+  log.plain(`    ${skillIcon} Skill ${skillFailed ? "failed" : skillStatus}`);
+  log.plain(`      ${pc.dim(skillPath)}`);
+  if (skillFailed) {
+    log.plain(`      ${pc.red(skillStatus.slice("failed: ".length))}`);
+    if (skillStatus.includes("EACCES")) {
+      log.plain(
+        `      ${pc.yellow("tip:")} fix permissions with: ${pc.cyan(`sudo chown -R $(whoami) ${dirname(dirname(skillPath))}`)}`
+      );
+    }
+  }
+}
+
 async function setupMcp(agents: SetupAgent[], options: SetupOptions, scope: Scope): Promise<void> {
   const transport = resolveTransport(options);
   if (transport === "stdio" && options.oauth) {
@@ -420,14 +436,7 @@ async function setupMcp(agents: SetupAgent[], options: SetupOptions, scope: Scop
     const ruleIcon = r.ruleStatus === "installed" ? pc.green("+") : pc.dim("~");
     log.plain(`    ${ruleIcon} Rule ${r.ruleStatus}`);
     log.plain(`      ${pc.dim(r.rulePath)}`);
-    const skillIcon = r.skillStatus === "installed" ? pc.green("+") : pc.dim("~");
-    log.plain(`    ${skillIcon} Skill ${r.skillStatus}`);
-    log.plain(`      ${pc.dim(r.skillPath)}`);
-    if (r.skillStatus.includes("EACCES")) {
-      log.plain(
-        `      ${pc.yellow("tip:")} fix permissions with: ${pc.cyan(`sudo chown -R $(whoami) ${dirname(dirname(r.skillPath))}`)}`
-      );
-    }
+    logSkillStatus(r.skillStatus, r.skillPath);
   }
   log.blank();
 
@@ -498,9 +507,10 @@ async function setupCli(options: SetupOptions): Promise<void> {
   }> = [];
 
   for (const agentName of agents) {
-    installSpinner.text = `Setting up ${getAgent(agentName).displayName}...`;
+    const agentDef = getAgent(agentName);
+    installSpinner.text = `Setting up ${agentDef.displayName}...`;
     const r = await setupCliAgent(agentName, scope, downloadData);
-    results.push({ agent: getAgent(agentName).displayName, ...r });
+    results.push({ agent: agentDef.displayName, ...r });
   }
 
   installSpinner.succeed("Context7 CLI setup complete");
@@ -508,14 +518,7 @@ async function setupCli(options: SetupOptions): Promise<void> {
   log.blank();
   for (const r of results) {
     log.plain(`  ${pc.bold(r.agent)}`);
-    const skillIcon = r.skillStatus === "installed" ? pc.green("+") : pc.dim("~");
-    log.plain(`    ${skillIcon} Skill ${r.skillStatus}`);
-    log.plain(`      ${pc.dim(r.skillPath)}`);
-    if (r.skillStatus.includes("EACCES")) {
-      log.plain(
-        `      ${pc.yellow("tip:")} fix permissions with: ${pc.cyan(`sudo chown -R $(whoami) ${dirname(dirname(r.skillPath))}`)}`
-      );
-    }
+    logSkillStatus(r.skillStatus, r.skillPath);
     const ruleIcon =
       r.ruleStatus === "installed" || r.ruleStatus === "updated" ? pc.green("+") : pc.dim("~");
     log.plain(`    ${ruleIcon} Rule ${r.ruleStatus}`);

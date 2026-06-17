@@ -152,15 +152,24 @@ function getGitHubHeaders(): Record<string, string> {
   };
 }
 
+async function extractGitHubError(response: Response): Promise<string> {
+  let detail = `HTTP ${response.status}`;
+  try {
+    const body = (await response.json()) as { message?: string };
+    if (body.message) detail += `: ${body.message}`;
+  } catch {}
+  return detail;
+}
+
 async function fetchRepoTree(
   owner: string,
   repo: string,
   branch: string,
   headers: Record<string, string>
-): Promise<GitHubTreeResponse | null> {
+): Promise<GitHubTreeResponse | { error: string }> {
   const treeUrl = `${GITHUB_API}/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
   const response = await fetch(treeUrl, { headers });
-  if (!response.ok) return null;
+  if (!response.ok) return { error: await extractGitHubError(response) };
   return (await response.json()) as GitHubTreeResponse;
 }
 
@@ -168,9 +177,9 @@ async function fetchDefaultBranch(
   owner: string,
   repo: string,
   headers: Record<string, string>
-): Promise<{ branch: string } | { status: number }> {
+): Promise<{ branch: string } | { error: string; status: number }> {
   const response = await fetch(`${GITHUB_API}/repos/${owner}/${repo}`, { headers });
-  if (!response.ok) return { status: response.status };
+  if (!response.ok) return { error: await extractGitHubError(response), status: response.status };
   const data = (await response.json()) as { default_branch: string };
   return { branch: data.default_branch };
 }
@@ -190,10 +199,13 @@ export async function listSkillsFromGitHub(project: string): Promise<GitHubSkill
 
     const headers = getGitHubHeaders();
     const branchResult = await fetchDefaultBranch(owner, repo, headers);
-    if ("status" in branchResult) return { status: "repo_not_found" };
+    if ("error" in branchResult) {
+      if (branchResult.status === 404) return { status: "repo_not_found" };
+      return { status: "error", error: branchResult.error };
+    }
 
     const treeData = await fetchRepoTree(owner, repo, branchResult.branch, headers);
-    if (!treeData) return { status: "error", error: "Could not fetch repository tree" };
+    if ("error" in treeData) return { status: "error", error: treeData.error };
 
     const skillMdFiles = treeData.tree.filter(
       (item) => item.type === "blob" && item.path.toLowerCase().endsWith("skill.md")
@@ -250,8 +262,12 @@ export async function downloadSkillFromGitHub(
     const ghHeaders = getGitHubHeaders();
 
     const treeData = await fetchRepoTree(owner, repo, branch, ghHeaders);
-    if (!treeData) {
-      return { files: [], error: `GitHub API error` };
+    if ("error" in treeData) {
+      const hint =
+        !ghHeaders["Authorization"] && /403|429|rate/.test(treeData.error)
+          ? " — run `gh auth login` or set the GITHUB_TOKEN env var to increase rate limits"
+          : "";
+      return { files: [], error: `GitHub API error: ${treeData.error}${hint}` };
     }
 
     const skillFiles = treeData.tree.filter(
