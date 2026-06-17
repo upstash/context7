@@ -9,19 +9,28 @@ Add private sources to Context7 to make your internal documentation available to
 
 ## Adding Private Sources
 
-Follow these steps to add a private source:
-
-1. Go to your teamspace's **Sources** tab
-2. **Click "Add another"** to open the source type selector
-3. **Select a source type**:
-   - **GitHub** — connect your GitHub account and select a repository
-   - **GitLab** — connect your GitLab account and select a project
-   - **Bitbucket** — connect your Bitbucket account and select a repository
-   - **Other Git** — add any Git repository by URL
-   - **Confluence** — connect your Confluence workspace
-   - **OpenAPI** — add an OpenAPI specification
-4. **Authorize** Context7 to access your source (if required)
-5. **Submit** for parsing
+<Steps>
+  <Step title="Open the Sources tab">
+    Go to your teamspace's **Sources** tab.
+  </Step>
+  <Step title="Add a source">
+    Click **Add another** to open the source type selector.
+  </Step>
+  <Step title="Select a source type">
+    - **GitHub** — connect your GitHub account and select a repository
+    - **GitLab** — connect your GitLab account and select a project
+    - **Bitbucket** — connect your Bitbucket account and select a repository
+    - **Other Git** — add any Git repository by URL
+    - **Confluence** — connect your Confluence workspace
+    - **OpenAPI** — add an OpenAPI specification
+  </Step>
+  <Step title="Authorize access">
+    Authorize Context7 to access your source (if required).
+  </Step>
+  <Step title="Submit for parsing">
+    Submit the source for parsing.
+  </Step>
+</Steps>
 
 <Note>You must have a Pro or Enterprise plan to add private sources. Public sources can be added from the [Add Library](https://context7.com/add-library) page.</Note>
 
@@ -45,11 +54,14 @@ Keep your private documentation up to date:
 
 ### Removing Sources
 
-To remove a private source:
-
-1. **Click the trash icon** next to the source
-2. **Confirm deletion** in the modal
-3. Source documentation becomes unavailable immediately
+<Steps>
+  <Step title="Delete the source">
+    Click the trash icon next to the source.
+  </Step>
+  <Step title="Confirm deletion">
+    Confirm in the modal. The source documentation becomes unavailable immediately.
+  </Step>
+</Steps>
 
 <Warning>
   This action is permanent. The source will no longer be accessible via the API.
@@ -79,4 +91,4 @@ Add a `context7.json` file to your repository root for better control over parsi
 }
 ```
 
-See the [Adding Libraries](/adding-libraries) page for complete configuration options.
+See the [Library Owners](/library-owners) page for complete configuration options.
