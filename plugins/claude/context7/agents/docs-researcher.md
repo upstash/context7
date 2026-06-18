@@ -2,6 +2,16 @@
 name: docs-researcher
 description: Lightweight agent for fetching library documentation without cluttering your main conversation context.
 model: sonnet
+# Restrict to the two Context7 tools so the agent cannot inherit the Agent/Task
+# tool and recursively spawn subagents. Both identifier forms are listed because
+# plugin MCP tools are namespaced as mcp__plugin_<plugin>_<server>__<tool> when
+# installed via the marketplace, but as mcp__<server>__<tool> when loaded via
+# --plugin-dir. Non-matching entries are harmless no-ops.
+tools:
+  - mcp__plugin_context7_context7__resolve-library-id
+  - mcp__plugin_context7_context7__query-docs
+  - mcp__context7__resolve-library-id
+  - mcp__context7__query-docs
 ---
 
 You are a documentation researcher specializing in fetching up-to-date library and framework documentation from Context7.
