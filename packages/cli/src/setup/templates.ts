@@ -35,6 +35,7 @@ If a command fails with a quota error, inform the user and suggest \`npx ctx7@la
 
 const CURSOR_FRONTMATTER = `---\nalwaysApply: true\n---\n\n`;
 const CODEX_CLI_SANDBOX_GUIDANCE = `Run Context7 CLI requests outside Codex's default sandbox. If a Context7 CLI command fails with DNS or network errors such as ENOTFOUND, host resolution failures, or fetch failed, rerun it outside the sandbox instead of retrying inside the sandbox.`;
+const HERMES_MCP_TOOL_GUIDANCE = `In Hermes, MCP tools are exposed with the configured server-name prefix. If the server is named \`context7\`, call \`mcp_context7_resolve_library_id\` and \`mcp_context7_query_docs\` instead of the raw MCP tool names.`;
 
 export type RuleMode = "mcp" | "cli";
 
@@ -59,6 +60,10 @@ export async function getRuleContent(mode: RuleMode, agent: string): Promise<str
     body = `${body.trimEnd()}\n${CODEX_CLI_SANDBOX_GUIDANCE}\n`;
   }
 
+  if (mode === "mcp" && agent === "hermes" && !body.includes(HERMES_MCP_TOOL_GUIDANCE)) {
+    body = `${body.trimEnd()}\n\n${HERMES_MCP_TOOL_GUIDANCE}\n`;
+  }
+
   return agent === "cursor" ? `${CURSOR_FRONTMATTER}${body}` : body;
 }
 
@@ -67,6 +72,19 @@ export function customizeSkillFilesForAgent(
   skillName: string,
   files: Array<{ path: string; content: string }>
 ): Array<{ path: string; content: string }> {
+  if (agent === "hermes" && skillName === "context7-mcp") {
+    return files.map((file) => {
+      if (file.path !== "SKILL.md") return file;
+      let content = file.content;
+      content = content.replace(/`resolve-library-id`/g, "`mcp_context7_resolve_library_id`");
+      content = content.replace(/`query-docs`/g, "`mcp_context7_query_docs`");
+      if (!content.includes(HERMES_MCP_TOOL_GUIDANCE)) {
+        content = `${content.trimEnd()}\n\n## Hermes Tool Names\n\n${HERMES_MCP_TOOL_GUIDANCE}\n`;
+      }
+      return { ...file, content };
+    });
+  }
+
   if (agent !== "codex" || skillName !== "find-docs") {
     return files;
   }
