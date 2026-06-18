@@ -347,9 +347,9 @@ The cache duration (`3000` seconds) is slightly below Entra's default access tok
 
 ## Part 4: Onboard your tenant in Context7
 
-Context7 validates inbound tokens in two stages: first the token's signature, audience, issuer, and scope are checked against your teamspace's tenant configuration; then the token's `oid` claim is resolved against a list of pre-provisioned users for the teamspace. **Both checks are mandatory** — there is no auto-provisioning, so any developer who has not been added to the teamspace's user list will be rejected with `401` even when their token is otherwise valid.
+Context7 validates inbound tokens in two stages: first the token's signature, audience, issuer, and scope are checked against your teamspace's tenant configuration; then the token's `oid` claim is resolved against a list of pre-provisioned users for the teamspace. **Both checks are mandatory** — any developer who has not been added to the teamspace's user list will be rejected with `401` even when their token is otherwise valid.
 
-An owner or admin of the teamspace configures both from the dashboard.
+An owner or admin of the teamspace configures both from the dashboard. Users can be added one at a time (Step 2) or synced automatically from an Entra security group (Step 3).
 
 ### Step 1: Configure the tenant
 
@@ -390,10 +390,70 @@ Each MCP API app (audience) can be configured for **one** teamspace at a time. I
 </Note>
 
 <Note>
-For large rollouts (tens or hundreds of developers), CSV bulk-import and Entra SCIM provisioning are on the roadmap. Reach out to [context7@upstash.com](mailto:context7@upstash.com) if your scale needs either ahead of general availability.
+For more than a handful of developers, prefer **Step 3: Auto-provision from an Entra security group** below — adds and revokes track group membership automatically. CSV bulk-import and SCIM provisioning remain on the roadmap; reach out to [context7@upstash.com](mailto:context7@upstash.com) if your scale needs either ahead of general availability.
 </Note>
 
-The Context7 MCP server now accepts tokens whose `aud` matches the audience you provided, signed by your tenant's Entra issuer, with the required scope present, and whose `oid` matches one of the users you added in Step 2.
+### Step 3: Auto-provision from an Entra security group (optional)
+
+For teams of more than a handful of developers, Context7 can sync the teamspace's user list directly from a Microsoft Entra security group. Members added to the group are added to the teamspace automatically; members removed from the group have their access revoked. The sync runs every 30 minutes; an admin can also trigger an immediate sync from the dashboard.
+
+The integration uses Microsoft Graph with **Workload Identity Federation** (WIF) — Context7 acts as an OIDC issuer and signs short-lived JWT assertions that your sync app trusts via a federated credential. No shared secret is stored, rotated, or exchanged on either side.
+
+1. **Add Microsoft Graph permissions** to an Entra app registration.
+
+   The simplest path is to reuse the **Context7 MCP API** app from [Part 2 Step 1](#step-1-register-the-mcp-api-app) — federated identity holds no secret, so reusing it adds no risk. Open that app and add:
+
+   - **API permissions** → **+ Add a permission** → **Microsoft Graph** → **Application permissions**.
+   - Search and tick `GroupMember.Read.All` and `User.ReadBasic.All`.
+   - **Add permissions**, then click **Grant admin consent for `<your tenant>`** at the top of the list.
+
+   <Note>
+   Both permissions are required. `GroupMember.Read.All` alone returns each user's `oid` with all profile fields nulled out, so the sync can't resolve them to emails and drops them — surfacing as `0 members` synced. `User.ReadBasic.All` populates `mail`, `userPrincipalName`, and `displayName`.
+   </Note>
+
+2. **Add a federated credential.**
+
+   On the same app: **Certificates & secrets** → **Federated credentials** tab → **+ Add credential** → **Federated credential scenario: Other issuer**. Open the Context7 dashboard alongside the Entra portal — the **Auto-provisioning from Entra group** card surfaces three values with copy buttons. Paste them as:
+
+   - **Issuer**: `https://context7.com`
+   - **Type**: Explicit subject identifier
+   - **Value**: `teamspace:<your-teamspace-uuid>` (copy verbatim from the dashboard)
+   - **Audience**: `api://AzureADTokenExchange`
+   - **Name**: any label (e.g. `Context7-sync`).
+
+   **Add**. No client secret is generated.
+
+3. **Create or pick an Entra security group** containing the developers who should have access.
+
+   Entra admin center → **Groups** → **+ New group** (type *Security*, membership type *Assigned*). Add developers as **Members**, not Owners — Graph's `/members` endpoint doesn't include group owners by default.
+
+   Open the group → **Overview** → copy the **Object ID**.
+
+4. **Configure in the Context7 dashboard.**
+
+   Settings tab → **Microsoft Entra ID users** card → **Auto-sync from Entra group** panel → **Configure**.
+
+   - **Sync app client ID**: the app you set up in step 1 (the MCP API app's client ID if you reused it).
+   - **Group object ID**: from step 3.
+   - Leave **Revoke access when a user is removed from the group** and **Run sync on schedule** ticked.
+   - Click **Test connection**. Expected response: *"Connected. Group has N members."*
+   - **Save**.
+
+5. **Click "Sync now"** to provision the current group members immediately. Each appears in the **Microsoft Entra ID users** list with a **Synced** badge. Subsequent syncs run every 30 minutes.
+
+<Note>
+Manually-added users (Step 2) and synced users (Step 3) coexist on the same teamspace. The sync reconciler only touches rows whose provisioning source is `graph_group_sync`, so removing someone from the Entra group never revokes a manually-added user.
+</Note>
+
+<Note>
+If you want strict separation of concerns, register a dedicated **Context7 Sync** app instead of reusing the MCP API app. Add the same two Graph permissions and the same federated credential to it, and use its client ID in step 4. The choice is purely organizational — both produce identical sync behavior.
+</Note>
+
+<Note>
+Nested groups are not expanded. If `Context7 MCP Users` contains a subgroup `Engineering`, only direct members of `Context7 MCP Users` are synced. Flatten by adding individual members or use a single dynamic membership group.
+</Note>
+
+The Context7 MCP server now accepts tokens whose `aud` matches the audience you provided, signed by your tenant's Entra issuer, with the required scope present, and whose `oid` matches one of the users on the teamspace's user list (manual or synced).
 
 ## Part 5: Expose OAuth discovery for MCP clients
 
@@ -667,6 +727,14 @@ APIM diagnostics with "Number of payload bytes to log" set above zero truncate M
 ### Wrong client ID returned to MCP clients
 
 If a client signs in but receives `AADSTS65005: The resource is disabled` or similar, the client's app ID is not in the APIM Gateway app's **Authorized client applications** list for the `Mcp.Gateway.Access` scope. Add it explicitly.
+
+### Auto-sync reports "0 members" but the group has members
+
+Two common causes, in order of likelihood:
+
+1. **The sync app is missing `User.ReadBasic.All`.** With only `GroupMember.Read.All`, Microsoft Graph returns each user's `oid` but with `mail`, `userPrincipalName`, and `displayName` set to `null`. Context7 drops users without a resolvable email. The dashboard surfaces this as the error message: *"Graph returned N user members but their profile fields are null. Sync app needs User.ReadBasic.All in addition to GroupMember.Read.All."* Add `User.ReadBasic.All` to the sync app's API permissions and grant admin consent.
+
+2. **The users are group Owners, not Members.** Open the group in Entra → **Members** tab (not Owners) → verify the people you expect to sync are listed there. Add them as Members if they're only Owners.
 
 ### `AADSTS500113: No reply address is registered for the application`
 
