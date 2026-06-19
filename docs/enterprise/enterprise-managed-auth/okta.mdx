@@ -23,13 +23,13 @@ Okta Cross-App Access (the productized ID-JAG flow) is an Early Access feature. 
 - The client exchanges the ID-JAG with Context7 for an access token, then calls `mcp.context7.com`.
 - Context7 validates the ID-JAG against your tenant and, on first sign-in, provisions the user as a teamspace member automatically (matched by email).
 
-Access is governed entirely in Okta. There is no user list to maintain in Context7 — anyone your admin assigns to the connected app is provisioned on first sign-in. Removing them from the app blocks new sign-ins immediately; any active session ends when its short-lived access token expires (within an hour).
+Access is governed entirely in Okta. There is no user list to maintain in Context7: anyone your admin assigns to the connected app is provisioned on first sign-in. Removing them from the app blocks new sign-ins immediately, and any active session ends when its short-lived access token expires (within an hour).
 
 ## Before you start
 
 - An **Okta org** with **Cross App Access** enabled.
 - A **Context7 enterprise teamspace**. The Enterprise-Managed Auth settings appear only for enterprise plans.
-- Developers assigned to the connected Okta app. They are provisioned into the teamspace automatically on first sign-in — no manual user list to maintain.
+- Developers assigned to the connected Okta app. They are provisioned into the teamspace automatically on first sign-in, so there is no manual user list to maintain.
 
 ## Part 1: Configure Okta
 
@@ -103,7 +103,7 @@ Use your **org** authorization server issuer (`https://<your-org>.okta.com`), no
 
 ## Part 3: How developers connect
 
-Enterprise-Managed Auth is wired on the **client** side by your organization, not per developer. The Okta sign-in isn't triggered by a server URL someone pastes — it happens because Claude Code is configured to use your enterprise IdP for managed connectors.
+Enterprise-Managed Auth is wired on the **client** side by your organization, not per developer. The Okta sign-in isn't triggered by a server URL someone pastes. It happens because Claude Code is configured to use your enterprise IdP for managed connectors.
 
 Your admin connects the Okta org to Claude and enables the Context7 MCP server (`https://mcp.context7.com/mcp`) as a managed connector. After that, anyone using Claude Code with their corporate Okta identity gets Context7 automatically: Claude Code obtains an ID-JAG from Okta and exchanges it with Context7 for an access token. There is no token to paste and no per-user OAuth.
 
