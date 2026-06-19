@@ -101,22 +101,13 @@ Click **Configure**, enter the issuer, and **Save**. Context7 validates the issu
 Use your **org** authorization server issuer (`https://<your-org>.okta.com`), not a custom authorization server. Cross-App Access apps cannot use custom authorization servers.
 </Note>
 
-## Part 3: Connect an MCP client
+## Part 3: How developers connect
 
-Point your MCP client at the Context7 server:
+Enterprise-Managed Auth is wired on the **client** side by your organization, not per developer. The Okta sign-in isn't triggered by a server URL someone pastes — it happens because Claude Code is configured to use your enterprise IdP for managed connectors.
 
-```json
-{
-  "servers": {
-    "context7": {
-      "type": "http",
-      "url": "https://mcp.context7.com/mcp"
-    }
-  }
-}
-```
+Your admin connects the Okta org to Claude and enables the Context7 MCP server (`https://mcp.context7.com/mcp`) as a managed connector. After that, anyone using Claude Code with their corporate Okta identity gets Context7 automatically: Claude Code obtains an ID-JAG from Okta and exchanges it with Context7 for an access token. There is no token to paste and no per-user OAuth.
 
-On first use the client signs in through Okta and is connected automatically. No token to paste, no per-user consent.
+See Claude's [Enterprise-Managed Auth](https://claude.com/blog/enterprise-managed-auth) documentation for the client-side admin setup.
 
 ## Troubleshooting
 
