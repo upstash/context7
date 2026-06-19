@@ -58,6 +58,12 @@
           "enterprise",
           "enterprise/azure-apim",
           {
+            "group": "Enterprise-Managed Auth",
+            "pages": [
+              "enterprise/enterprise-managed-auth/okta"
+            ]
+          },
+          {
             "group": "On-Premise",
             "pages": [
               "enterprise/on-premise",
