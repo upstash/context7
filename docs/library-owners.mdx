@@ -76,6 +76,25 @@ Here's an example `context7.json` file with all available options:
   be available in Context7.
   - **`branch`**: The Git branch
 
+### How `folders` and `excludeFolders` interact
+
+`excludeFolders` always takes priority over `folders`. Evaluation order for any given file:
+
+1. Does the file's path (or any ancestor directory) match an `excludeFolders` pattern? → **excluded**, stop.
+2. Is `folders` non-empty and the file is not under any listed folder? → **excluded**, stop.
+3. Otherwise → **included**.
+
+**Example — scan selected directories but skip archived content:**
+
+```json
+{
+  "folders": ["docs", "api-reference"],
+  "excludeFolders": ["docs/archive", "**/old"]
+}
+```
+
+This scans only `docs/` and `api-reference/`, but within those it skips `docs/archive/` and any folder named `old` at any depth.
+
 ### Exclusion Patterns
 
 The `excludeFolders` parameter supports various pattern types for flexible exclusion:
