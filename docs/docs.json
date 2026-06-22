@@ -3,6 +3,12 @@
   "theme": "mint",
   "name": "Context7 MCP",
   "description": "Up-to-date code docs for any prompt.",
+  "redirects": [
+    {
+      "source": "/enterprise/azure-apim",
+      "destination": "/enterprise/enterprise-managed-auth/entra"
+    }
+  ],
   "colors": {
     "primary": "#10B981",
     "light": "#ECFDF5",
@@ -56,7 +62,13 @@
         "group": "Enterprise",
         "pages": [
           "enterprise",
-          "enterprise/azure-apim",
+          {
+            "group": "Enterprise-Managed Auth",
+            "pages": [
+              "enterprise/enterprise-managed-auth/entra",
+              "enterprise/enterprise-managed-auth/okta"
+            ]
+          },
           {
             "group": "On-Premise",
             "pages": [

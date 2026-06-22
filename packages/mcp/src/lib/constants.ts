@@ -14,4 +14,9 @@ export const CLERK_DOMAIN = "clerk.context7.com";
 export const CONTEXT7_API_BASE_URL = process.env.CONTEXT7_API_URL || `${CONTEXT7_BASE_URL}/api`;
 export const RESOURCE_URL = process.env.RESOURCE_URL || MCP_RESOURCE_URL;
 export const AUTH_SERVER_URL = process.env.AUTH_SERVER_URL || CONTEXT7_BASE_URL;
+
+// Enterprise-Managed Auth (id-jag): access tokens minted by the Context7
+// authorization server, validated against its public JWKS.
+export const EMA_ISSUER = AUTH_SERVER_URL;
+export const EMA_JWKS_URL = process.env.EMA_JWKS_URL || `${CONTEXT7_API_BASE_URL}/oauth/ema-jwks`;
 export const OPENAI_APPS_CHALLENGE_TOKEN = process.env.OPENAI_APPS_CHALLENGE_TOKEN;

@@ -1,8 +1,16 @@
 import * as jose from "jose";
-import { CLERK_DOMAIN, CONTEXT7_API_BASE_URL } from "./constants.js";
+import {
+  CLERK_DOMAIN,
+  CONTEXT7_API_BASE_URL,
+  EMA_ISSUER,
+  EMA_JWKS_URL,
+  RESOURCE_URL,
+} from "./constants.js";
 
 const CLERK_ISSUER = `https://${CLERK_DOMAIN}`;
 const clerkJwks = jose.createRemoteJWKSet(new URL(`https://${CLERK_DOMAIN}/.well-known/jwks.json`));
+
+const emaJwks = jose.createRemoteJWKSet(new URL(EMA_JWKS_URL));
 
 const ENTRA_V2_ISSUER_RE = /^https:\/\/login\.microsoftonline\.com\/[0-9a-f-]{36}\/v2\.0$/;
 
@@ -87,6 +95,11 @@ export async function validateJWT(token: string): Promise<JWTValidationResult> {
         }
       }
 
+      return { valid: true };
+    }
+
+    if (iss === EMA_ISSUER) {
+      await jose.jwtVerify(token, emaJwks, { issuer: EMA_ISSUER, audience: RESOURCE_URL });
       return { valid: true };
     }
 
