@@ -87,7 +87,32 @@
                 ]
               },
               "enterprise/backup-restore",
-              "enterprise/library-import"
+              "enterprise/library-import",
+              {
+                "group": "API Reference",
+                "pages": [
+                  "enterprise/api/authentication",
+                  {
+                    "group": "Search",
+                    "pages": ["enterprise/api/search/search-for-libraries"]
+                  },
+                  {
+                    "group": "Context",
+                    "pages": ["enterprise/api/context/get-documentation-context"]
+                  },
+                  {
+                    "group": "Parse",
+                    "pages": [
+                      "enterprise/api/parse/parse-a-git-repository",
+                      "enterprise/api/parse/parse-an-openapi-spec-by-url",
+                      "enterprise/api/parse/upload-an-openapi-spec-file",
+                      "enterprise/api/parse/parse-a-website",
+                      "enterprise/api/parse/refresh-a-library",
+                      "enterprise/api/parse/get-parse-status"
+                    ]
+                  }
+                ]
+              }
             ]
           }
         ]

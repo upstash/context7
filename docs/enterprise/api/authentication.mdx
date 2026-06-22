@@ -1,0 +1,112 @@
+---
+title: "Authentication"
+description: "How to authenticate requests to your on-premise Context7 instance"
+---
+
+The on-premise API supports two authentication methods: session cookies for browser-based access, and API keys for server-to-server and MCP access.
+
+## API Keys
+
+API keys are the recommended method for authenticating REST API and MCP requests. Pass the key in the `Authorization` header:
+
+```bash
+Authorization: Bearer ctx7op-xxxxxxxx_xxxxxxxxxxxxxxxx
+```
+
+Keys are scoped to the user account that created them and inherit that user's role (`admin` or `member`). There are no per-key scopes or expiry — revoke a key to invalidate it.
+
+### Creating an API Key
+
+<Tabs>
+  <Tab title="Web UI">
+    <Steps>
+      <Step title="Open Settings">
+        Go to **Settings > API Keys** in the admin dashboard.
+      </Step>
+      <Step title="Create a key">
+        Click **Create API Key** and give it a name (e.g. `CI pipeline`, `Cursor`).
+      </Step>
+      <Step title="Copy the key">
+        Copy the full key immediately — it is only shown once.
+
+        ```
+        ctx7op-3e99befa5b88_3531934258aede2f...
+        ```
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="API">
+    Log in first to get a session cookie, then create a key:
+
+    ```bash
+    # 1. Log in
+    curl -c cookies.txt -X POST http://localhost:3000/api/auth/login \
+      -H "Content-Type: application/json" \
+      -d '{"username": "admin", "password": "your-password"}'
+
+    # 2. Create a key
+    curl -b cookies.txt -X POST http://localhost:3000/api/auth/api-keys \
+      -H "Content-Type: application/json" \
+      -d '{"name": "my-key"}'
+    ```
+
+    Response:
+
+    ```json
+    {
+      "token": "ctx7op-3e99befa5b88_3531934258...",
+      "apiKey": {
+        "id": "946cef6c-...",
+        "name": "my-key",
+        "keyPrefix": "ctx7op-3e99befa5b88",
+        "createdAt": "2025-01-01T12:00:00.000Z"
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>API keys are shown only once at creation. Store yours securely before closing the dialog.</Warning>
+
+### Revoking a Key
+
+From **Settings > API Keys**, click the delete icon next to the key. Revocation is immediate — any request using that key will be rejected. The action cannot be undone.
+
+To revoke via API:
+
+```bash
+curl -X DELETE http://localhost:3000/api/auth/api-keys/<key-id> \
+  -H "Authorization: Bearer ctx7op-..."
+```
+
+## Session Cookie
+
+Browser sessions are established by calling `POST /api/auth/login`. The server sets an `c7_session` HTTP-only cookie that is sent automatically by the browser on subsequent requests.
+
+```bash
+curl -c cookies.txt -X POST http://localhost:3000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "your-password"}'
+```
+
+Session cookies are suitable for direct browser usage and scripted admin tasks. For long-running integrations, use an API key instead.
+
+## Roles
+
+| Role | Access |
+|---|---|
+| `admin` | Full access to all endpoints including settings, user management, and delete operations |
+| `member` | Can trigger parsing and search. Cannot access admin endpoints |
+
+Default credentials on a fresh install are `admin` / `admin`. Change them immediately from **Settings > Change Credentials**.
+
+## Anonymous Access
+
+Certain operations can be allowed without authentication. Configure them from **Settings > Permissions**:
+
+| Permission | Default |
+|---|---|
+| Anonymous parse / refresh | Off |
+| Anonymous delete | Off |
+
+The search (`GET /v2/libs/search`) and context (`GET /v2/context`) endpoints are always publicly accessible unless a global `API_KEY` environment variable is set, in which case every endpoint requires a bearer token.
