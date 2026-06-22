@@ -1,5 +1,11 @@
 # @upstash/context7-mcp
 
+## 3.2.2
+
+### Patch Changes
+
+- 2253765: Validate Enterprise-Managed Auth (id-jag) access tokens at the MCP server, so MCP clients can authenticate to Context7 through an enterprise IdP (Okta) via the MCP Enterprise-Managed Authorization extension.
+
 ## 3.2.1
 
 ### Patch Changes
