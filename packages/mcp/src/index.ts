@@ -27,6 +27,7 @@ import {
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
+import { resolveAuthState, evaluateLazyAuth, buildWwwAuthenticate } from "./lib/auth/lazy-auth.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -412,7 +413,7 @@ async function main() {
     const handleMcpRequest = async (
       req: express.Request,
       res: express.Response,
-      requireAuth: boolean
+      mode: "lazy" | "required"
     ) => {
       // Reject GET requests — sessions are tracked in Redis, but this server does not send
       // server-initiated notifications, so SSE streams serve no purpose and cause mass NGINX
@@ -431,13 +432,12 @@ async function main() {
         const baseUrl = new URL(resourceUrl).origin;
 
         // OAuth discovery info header, used by MCP clients to discover the authorization server
-        res.set(
-          "WWW-Authenticate",
-          `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
-        );
+        res.set("WWW-Authenticate", buildWwwAuthenticate(baseUrl));
 
-        if (requireAuth) {
+        if (mode === "required") {
+          // Eager auth: challenge on every request, including initialize/tools/list.
           if (!apiKey) {
+            res.set("WWW-Authenticate", buildWwwAuthenticate(baseUrl, "invalid_token"));
             return res.status(401).json({
               jsonrpc: "2.0",
               error: {
@@ -451,6 +451,7 @@ async function main() {
           if (isJWT(apiKey)) {
             const validationResult = await validateJWT(apiKey);
             if (!validationResult.valid) {
+              res.set("WWW-Authenticate", buildWwwAuthenticate(baseUrl, "invalid_token"));
               return res.status(401).json({
                 jsonrpc: "2.0",
                 error: {
@@ -460,6 +461,25 @@ async function main() {
                 id: null,
               });
             }
+          }
+        } else {
+          // Lazy auth: connect/list anonymously; challenge only when an
+          // unauthenticated caller hits a protected tool or exhausts its
+          // anonymous quota. Decided here, before the transport streams a 200.
+          const auth = await resolveAuthState(apiKey);
+          const { challenge } = await evaluateLazyAuth({
+            body: req.body,
+            auth,
+            clientIp: getClientIp(req),
+            sessionId: extractHeaderValue(req.headers["mcp-session-id"]),
+          });
+          if (challenge) {
+            res.set("WWW-Authenticate", buildWwwAuthenticate(baseUrl, challenge.error));
+            return res.status(challenge.status).json({
+              jsonrpc: "2.0",
+              error: { code: -32001, message: challenge.message },
+              id: challenge.id ?? null,
+            });
           }
         }
 
@@ -551,14 +571,15 @@ async function main() {
       }
     };
 
-    // Anonymous access endpoint - no authentication required
+    // Lazy-auth endpoint: anonymous connect/list and public tool calls, with a
+    // 401 challenge only for protected tools or once the anonymous quota is spent.
     app.all("/mcp", async (req, res) => {
-      await handleMcpRequest(req, res, false);
+      await handleMcpRequest(req, res, "lazy");
     });
 
-    // OAuth-protected endpoint - requires authentication
+    // OAuth-protected endpoint - requires authentication on every request
     app.all("/mcp/oauth", async (req, res) => {
-      await handleMcpRequest(req, res, true);
+      await handleMcpRequest(req, res, "required");
     });
 
     app.get("/ping", (_req: express.Request, res: express.Response) => {

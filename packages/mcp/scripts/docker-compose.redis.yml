@@ -1,0 +1,22 @@
+# Local Upstash-compatible Redis for testing the MCP HTTP server.
+# `@upstash/redis` speaks an HTTP REST protocol; serverless-redis-http (srh)
+# exposes a plain Redis over that protocol so getRedis() works locally.
+#
+#   docker compose -f scripts/docker-compose.redis.yml up -d
+#
+# Then point the server at it:
+#   UPSTASH_REDIS_REST_URL=http://localhost:8079
+#   UPSTASH_REDIS_REST_TOKEN=local_token
+services:
+  redis:
+    image: redis:7-alpine
+  srh:
+    image: hiett/serverless-redis-http:latest
+    environment:
+      SRH_MODE: env
+      SRH_TOKEN: local_token
+      SRH_CONNECTION_STRING: redis://redis:6379
+    ports:
+      - "8079:80"
+    depends_on:
+      - redis
