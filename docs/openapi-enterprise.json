@@ -38,7 +38,7 @@
           {
             "name": "query",
             "in": "query",
-            "description": "User's original question or task — used for relevance ranking",
+            "description": "User's original question or task - used for relevance ranking",
             "required": true,
             "schema": {
               "type": "string",
@@ -165,7 +165,7 @@
               },
               "examples": {
                 "minimal": {
-                  "summary": "Minimal — index the whole repo",
+                  "summary": "Minimal - index the whole repo",
                   "value": {
                     "repoUrl": "https://github.com/your-org/your-repo"
                   }
@@ -408,7 +408,7 @@
             "$ref": "#/components/responses/ParseQueued"
           },
           "400": {
-            "description": "Bad Request — refresh not available for this project type",
+            "description": "Bad Request - refresh not available for this project type",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Error" },
@@ -433,7 +433,7 @@
             "$ref": "#/components/responses/NotFoundError"
           },
           "409": {
-            "description": "Conflict — a parse job is already active or queued for this project",
+            "description": "Conflict - a parse job is already active or queued for this project",
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Error" },
@@ -685,7 +685,7 @@
         }
       },
       "BadRequestError": {
-        "description": "Bad Request — invalid or missing parameters",
+        "description": "Bad Request - invalid or missing parameters",
         "content": {
           "application/json": {
             "schema": { "$ref": "#/components/schemas/Error" },
@@ -694,7 +694,7 @@
         }
       },
       "UnauthorizedError": {
-        "description": "Unauthorized — authentication required",
+        "description": "Unauthorized - authentication required",
         "content": {
           "application/json": {
             "schema": { "$ref": "#/components/schemas/Error" },
@@ -703,7 +703,7 @@
         }
       },
       "NotFoundError": {
-        "description": "Not Found — library does not exist",
+        "description": "Not Found - library does not exist",
         "content": {
           "application/json": {
             "schema": { "$ref": "#/components/schemas/Error" },
