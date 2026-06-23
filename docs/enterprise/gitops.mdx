@@ -98,7 +98,11 @@ For this to work:
 
 - Your instance must be reachable from GitHub at that webhook URL. An on-premise instance behind a firewall that GitHub cannot reach should rely on the schedule or CI instead.
 - The GitHub App must be installed on the account or organization that owns the manifest repository.
-- The App must be subscribed to push events. Apps created after this feature shipped are subscribed automatically; if you set up the GitHub App earlier, add the push event (and the webhook URL above) in the App's settings on GitHub, or recreate it.
+- The App must be subscribed to push events.
+
+<Warning>
+GitHub App integrations created before GitOps shipped were not subscribed to any events, so they do not deliver push webhooks. If you set up the GitHub App before this release, recreate it from **Settings → Integrations**, or open the App's settings on GitHub and add the **push** event along with the webhook URL above. Apps created after this release are configured automatically.
+</Warning>
 
 If you use a personal access token instead of a GitHub App, webhooks are not available. Use the schedule, or have your CI call the reconcile endpoint after merging a change to the manifest.
 
