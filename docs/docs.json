@@ -88,6 +88,7 @@
               },
               "enterprise/backup-restore",
               "enterprise/library-import",
+              "enterprise/gitops",
               {
                 "group": "API Reference",
                 "pages": [
