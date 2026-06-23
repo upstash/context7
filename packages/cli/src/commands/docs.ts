@@ -3,7 +3,7 @@ import pc from "picocolors";
 import ora from "ora";
 
 import { resolveLibrary, getLibraryContext } from "../utils/api.js";
-import { recoverLibraryId } from "../utils/library-id.js";
+import { normalizeLibraryId, recoverLibraryId } from "../utils/library-id.js";
 import { log } from "../utils/logger.js";
 import { trackEvent } from "../utils/tracking.js";
 import { loadTokens, isTokenExpired } from "../utils/auth.js";
@@ -122,7 +122,7 @@ async function queryCommand(
   trackEvent("command", { name: "docs" });
 
   // Git Bash on Windows rewrites "/owner/repo" into a Windows path; recover it.
-  libraryId = recoverLibraryId(libraryId);
+  libraryId = normalizeLibraryId(recoverLibraryId(libraryId));
 
   if (!libraryId.startsWith("/") || !/^\/[^/]+\/[^/]/.test(libraryId)) {
     log.error(`Invalid library ID: "${libraryId}"`);

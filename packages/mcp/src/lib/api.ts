@@ -100,6 +100,15 @@ function readPromptSignal(response: Response, context: ClientContext): void {
   }
 }
 
+function normalizeLibraryId(input: string): string {
+  const parts = input.split("/");
+  if (parts[0] !== "" || parts.length < 3) return input;
+
+  parts[1] = parts[1].toLowerCase();
+  parts[2] = parts[2].toLowerCase();
+  return parts.join("/");
+}
+
 /**
  * Searches for libraries matching the given query
  * @param query The user's question or task (used for LLM relevance ranking)
@@ -148,7 +157,7 @@ export async function fetchLibraryContext(
   try {
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/context`);
     url.searchParams.set("query", request.query);
-    url.searchParams.set("libraryId", request.libraryId);
+    url.searchParams.set("libraryId", normalizeLibraryId(request.libraryId));
 
     const headers = generateHeaders(context);
 

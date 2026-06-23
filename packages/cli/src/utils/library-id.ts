@@ -20,3 +20,12 @@ export function recoverLibraryId(input: string): string {
   const match = normalized.match(/^[A-Za-z]:\/.*?\/(?:Git|PortableGit|git-bash)\/(.+)$/i);
   return match ? `/${match[1]}` : input;
 }
+
+export function normalizeLibraryId(input: string): string {
+  const parts = input.split("/");
+  if (parts[0] !== "" || parts.length < 3) return input;
+
+  parts[1] = parts[1].toLowerCase();
+  parts[2] = parts[2].toLowerCase();
+  return parts.join("/");
+}

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { recoverLibraryId } from "../utils/library-id.js";
+import { normalizeLibraryId, recoverLibraryId } from "../utils/library-id.js";
 
 describe("recoverLibraryId", () => {
   test("passes through a normal library ID unchanged", () => {
@@ -40,5 +40,22 @@ describe("recoverLibraryId", () => {
 
   test("leaves an unrecognized Windows path untouched", () => {
     expect(recoverLibraryId("C:/Users/me/project")).toBe("C:/Users/me/project");
+  });
+});
+
+describe("normalizeLibraryId", () => {
+  test("lowercases case-insensitive library ID segments", () => {
+    expect(normalizeLibraryId("/ClickHouse/ClickHouse")).toBe("/clickhouse/clickhouse");
+    expect(normalizeLibraryId("/websites/Example_COM")).toBe("/websites/example_com");
+  });
+
+  test("preserves version suffix casing", () => {
+    expect(normalizeLibraryId("/Vercel/Next.js/v15.1.8-CANARY")).toBe(
+      "/vercel/next.js/v15.1.8-CANARY"
+    );
+  });
+
+  test("leaves invalid IDs untouched", () => {
+    expect(normalizeLibraryId("facebook/react")).toBe("facebook/react");
   });
 });
