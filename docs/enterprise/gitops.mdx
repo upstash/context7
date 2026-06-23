@@ -12,6 +12,24 @@ The point is to keep your configuration in code. After a disaster, or when stand
   ![The GitOps settings card under Settings, Indexing](/images/enterprise/gitops/gitops-settings.png)
 </Frame>
 
+## Before you start
+
+GitOps relies on the Git and AI providers you configure elsewhere in the dashboard. Set these up first, under **Settings → Integrations**, before enabling GitOps:
+
+<Steps>
+  <Step title="Configure a Git credential for your host">
+    Context7 clones both the manifest repository and the repositories it indexes using the GitHub App or personal access token you set under **Settings → Integrations**. Private repositories require this. If no usable credential exists for the manifest repo's host, a sync fails with a clear error.
+  </Step>
+  <Step title="Set up a GitHub App if you want push-triggered syncs">
+    Automatic syncs on every push are delivered by webhook, which requires a **GitHub App** (not a personal access token), an instance that is **reachable from GitHub**, and the App **subscribed to push events**. See [Webhooks](#webhooks) for details. Without an App you can still use the sync schedule or trigger syncs from CI.
+  </Step>
+  <Step title="Confirm your LLM and embedding providers are configured">
+    A sync parses the repositories it adds, so the same LLM and embedding providers used for normal parsing must be set up. The dashboard shows a clear error if they are missing.
+  </Step>
+</Steps>
+
+Once these are in place, configure the manifest repository under **Settings → Indexing → GitOps** (see [Configuring in the dashboard](#configuring-in-the-dashboard)).
+
 ## How it works
 
 You commit a manifest file (by default `repos.yaml`) to a Git repository. Context7 clones that repository using the same Git credentials you already configured under **Settings → Integrations** (a GitHub App or a personal access token), reads the manifest, and compares it against the repositories it currently has indexed.
