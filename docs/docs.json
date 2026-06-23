@@ -87,9 +87,14 @@
                   "enterprise/deployment/kubernetes"
                 ]
               },
-              "enterprise/backup-restore",
-              "enterprise/library-import",
-              "enterprise/gitops",
+              {
+                "group": "Features",
+                "pages": [
+                  "enterprise/library-import",
+                  "enterprise/gitops",
+                  "enterprise/backup-restore"
+                ]
+              },
               {
                 "group": "API Reference",
                 "pages": [
