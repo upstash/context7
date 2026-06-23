@@ -15,17 +15,25 @@ Keys are scoped to the user account that created them and inherit that user's ro
 
 <Steps>
   <Step title="Open Settings">
-    Go to **Settings > API Keys** in the admin dashboard.
+    Go to **Personal Settings > API Keys** in the admin dashboard and click **Create API Key**.
+
+    <Frame>
+      ![API Keys settings page](/images/enterprise/api-keys/api-keys-empty.png)
+    </Frame>
   </Step>
-  <Step title="Create a key">
-    Click **Create API Key** and give it a name (e.g. `CI pipeline`, `Cursor`).
+  <Step title="Name the key">
+    Give the key a descriptive name so you know which client or service is using it (e.g. `CI pipeline`, `Cursor`).
+
+    <Frame>
+      ![Create API Key dialog](/images/enterprise/api-keys/api-keys-create-dialog.png)
+    </Frame>
   </Step>
   <Step title="Copy the key">
-    Copy the full key immediately - it is only shown once.
+    Copy the full key value before closing the dialog. It is only shown once.
 
-    ```
-    ctx7op-3e99befa5b88_3531934258aede2f...
-    ```
+    <Frame>
+      ![API Key Created dialog showing the key value](/images/enterprise/api-keys/api-keys-created.png)
+    </Frame>
   </Step>
 </Steps>
 
