@@ -3,11 +3,7 @@ title: "Authentication"
 description: "How to authenticate requests to your on-premise Context7 instance"
 ---
 
-The on-premise API supports two authentication methods: session cookies for browser-based access, and API keys for server-to-server and MCP access.
-
-## API Keys
-
-API keys are the recommended method for authenticating REST API and MCP requests. Pass the key in the `Authorization` header:
+The on-premise API supports API keys for server-to-server and MCP access. Pass the key in the `Authorization` header:
 
 ```bash
 Authorization: Bearer ctx7op-xxxxxxxx_xxxxxxxxxxxxxxxx
@@ -15,81 +11,29 @@ Authorization: Bearer ctx7op-xxxxxxxx_xxxxxxxxxxxxxxxx
 
 Keys are scoped to the user account that created them and inherit that user's role (`admin` or `member`). There are no per-key scopes or expiry - revoke a key to invalidate it.
 
-### Creating an API Key
+## Creating an API Key
 
-<Tabs>
-  <Tab title="Web UI">
-    <Steps>
-      <Step title="Open Settings">
-        Go to **Settings > API Keys** in the admin dashboard.
-      </Step>
-      <Step title="Create a key">
-        Click **Create API Key** and give it a name (e.g. `CI pipeline`, `Cursor`).
-      </Step>
-      <Step title="Copy the key">
-        Copy the full key immediately - it is only shown once.
+<Steps>
+  <Step title="Open Settings">
+    Go to **Settings > API Keys** in the admin dashboard.
+  </Step>
+  <Step title="Create a key">
+    Click **Create API Key** and give it a name (e.g. `CI pipeline`, `Cursor`).
+  </Step>
+  <Step title="Copy the key">
+    Copy the full key immediately - it is only shown once.
 
-        ```
-        ctx7op-3e99befa5b88_3531934258aede2f...
-        ```
-      </Step>
-    </Steps>
-  </Tab>
-  <Tab title="API">
-    Log in first to get a session cookie, then create a key:
-
-    ```bash
-    # 1. Log in
-    curl -c cookies.txt -X POST http://localhost:3000/api/auth/login \
-      -H "Content-Type: application/json" \
-      -d '{"username": "admin", "password": "your-password"}'
-
-    # 2. Create a key
-    curl -b cookies.txt -X POST http://localhost:3000/api/auth/api-keys \
-      -H "Content-Type: application/json" \
-      -d '{"name": "my-key"}'
     ```
-
-    Response:
-
-    ```json
-    {
-      "token": "ctx7op-3e99befa5b88_3531934258...",
-      "apiKey": {
-        "id": "946cef6c-...",
-        "name": "my-key",
-        "keyPrefix": "ctx7op-3e99befa5b88",
-        "createdAt": "2025-01-01T12:00:00.000Z"
-      }
-    }
+    ctx7op-3e99befa5b88_3531934258aede2f...
     ```
-  </Tab>
-</Tabs>
+  </Step>
+</Steps>
 
 <Warning>API keys are shown only once at creation. Store yours securely before closing the dialog.</Warning>
 
-### Revoking a Key
+## Revoking a Key
 
-From **Settings > API Keys**, click the delete icon next to the key. Revocation is immediate - any request using that key will be rejected. The action cannot be undone.
-
-To revoke via API:
-
-```bash
-curl -X DELETE http://localhost:3000/api/auth/api-keys/<key-id> \
-  -H "Authorization: Bearer ctx7op-..."
-```
-
-## Session Cookie
-
-Browser sessions are established by calling `POST /api/auth/login`. The server sets an `c7_session` HTTP-only cookie that is sent automatically by the browser on subsequent requests.
-
-```bash
-curl -c cookies.txt -X POST http://localhost:3000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username": "admin", "password": "your-password"}'
-```
-
-Session cookies are suitable for direct browser usage and scripted admin tasks. For long-running integrations, use an API key instead.
+Go to **Settings > API Keys** and click the delete icon next to the key. Revocation is immediate and cannot be undone. Update any integrations using the key before revoking.
 
 ## Roles
 
