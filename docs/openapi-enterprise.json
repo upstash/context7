@@ -502,7 +502,7 @@
       "bearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "description": "API key generated from **Settings > API Keys** in the web UI. Keys follow the format `ctx7op-{publicId}_{secret}`."
+        "description": "API key generated from Personal Settings. See [Authentication](/enterprise/api/authentication#creating-an-api-key)."
       }
     },
     "schemas": {
