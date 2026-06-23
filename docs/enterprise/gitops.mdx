@@ -90,11 +90,17 @@ Repeated syncs are cheap. Context7 remembers the last commit it processed and sk
 
 ## Webhooks
 
-When the manifest repository is hosted on a connected GitHub App (configured under **Settings → Integrations**), Context7 reconciles automatically on every push, with no CI step required.
+When the manifest repository is hosted on a connected GitHub App (set up under **Settings → Integrations**), Context7 reconciles automatically on every push, with no CI step required.
 
-GitHub delivers a `push` event to `/api/github/webhook`. Context7 verifies the payload signature against the GitHub App's webhook secret, and a push to the manifest repository's configured branch triggers a sync. Pushes to other repositories or other branches are ignored.
+The GitHub App is created with a webhook that points at `https://<your-host>/api/github/webhook` and is subscribed to push events. When you push to the manifest repository, GitHub delivers a `push` event, Context7 verifies the payload signature against the App's webhook secret, and a push to the configured branch triggers a sync. Pushes to other repositories or other branches are ignored.
 
-For setups that use a personal access token instead of a GitHub App, webhooks are not available. Use the schedule, or have your CI call the reconcile endpoint after merging a change to the manifest.
+For this to work:
+
+- Your instance must be reachable from GitHub at that webhook URL. An on-premise instance behind a firewall that GitHub cannot reach should rely on the schedule or CI instead.
+- The GitHub App must be installed on the account or organization that owns the manifest repository.
+- The App must be subscribed to push events. Apps created after this feature shipped are subscribed automatically; if you set up the GitHub App earlier, add the push event (and the webhook URL above) in the App's settings on GitHub, or recreate it.
+
+If you use a personal access token instead of a GitHub App, webhooks are not available. Use the schedule, or have your CI call the reconcile endpoint after merging a change to the manifest.
 
 ## Disaster recovery
 
