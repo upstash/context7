@@ -1,0 +1,739 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Context7 On-Premise API",
+    "description": "REST API for the Context7 On-Premise server. Covers library parsing and documentation search.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://your-instance.example.com/api",
+      "description": "Your on-premise deployment (replace with your actual host)"
+    },
+    {
+      "url": "http://localhost:3000/api",
+      "description": "Local development"
+    }
+  ],
+  "paths": {
+    "/v2/libs/search": {
+      "get": {
+        "summary": "Search for libraries",
+        "description": "Search locally indexed libraries by name. Results may also include public libraries from Context7 Cloud depending on your policy settings.",
+        "operationId": "searchLibraries",
+        "tags": ["Search"],
+        "parameters": [
+          {
+            "name": "libraryName",
+            "in": "query",
+            "description": "Library name to search for (e.g., `react`, `nextjs`)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            },
+            "example": "react"
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "description": "User's original question or task - used for relevance ranking",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            },
+            "example": "How to manage state with hooks"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results ranked by relevance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchResponse"
+                },
+                "example": {
+                  "results": [
+                    {
+                      "id": "/your-org/your-repo",
+                      "title": "Your Repo",
+                      "description": "Internal tooling docs",
+                      "totalSnippets": 150,
+                      "source": "Local (Private)",
+                      "trustScore": 10
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {},
+          { "bearerAuth": [] }
+        ]
+      }
+    },
+    "/v2/context": {
+      "get": {
+        "summary": "Get documentation context",
+        "description": "Retrieve documentation snippets for a library ranked by relevance to your query, formatted as plain text ready to inject into an LLM prompt. This is the endpoint MCP tools call internally.",
+        "operationId": "getContext",
+        "tags": ["Context"],
+        "parameters": [
+          {
+            "name": "libraryId",
+            "in": "query",
+            "description": "Library ID returned by `GET /v2/libs/search` (e.g., `/your-org/your-repo`)",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            },
+            "example": "/vercel/next.js"
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "description": "Natural language question or topic to retrieve context for",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+            },
+            "example": "How do I use the app router?"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Relevant documentation snippets as plain text",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "### useRouter()\n\nSource: https://github.com/vercel/next.js/...\n\nThe `useRouter` hook allows you to programmatically change routes inside Client Components.\n\n--------------------------------\n\n### app/layout.tsx\n\n```tsx\nexport default function Layout({ children }) {\n  return <html><body>{children}</body></html>\n}\n```"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {},
+          { "bearerAuth": [] }
+        ]
+      }
+    },
+    "/parse": {
+      "post": {
+        "summary": "Parse a Git repository",
+        "description": "Queue a GitHub or GitLab repository for parsing and indexing. Returns immediately with a queue position. Monitor progress with `GET /parse-status`.",
+        "operationId": "parseRepo",
+        "tags": ["Parse"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParseRepoRequest"
+              },
+              "examples": {
+                "minimal": {
+                  "summary": "Minimal - index the whole repo",
+                  "value": {
+                    "repoUrl": "https://github.com/your-org/your-repo"
+                  }
+                },
+                "withOptions": {
+                  "summary": "With folder and branch filters",
+                  "value": {
+                    "repoUrl": "https://github.com/your-org/your-repo",
+                    "branch": "main",
+                    "folders": ["docs"],
+                    "excludeFolders": ["node_modules"],
+                    "force": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/ParseQueued"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {},
+          { "bearerAuth": [] }
+        ]
+      }
+    },
+    "/parse-openapi": {
+      "post": {
+        "summary": "Parse an OpenAPI spec by URL",
+        "description": "Queue a remote OpenAPI specification (JSON or YAML) for parsing and indexing.",
+        "operationId": "parseOpenApi",
+        "tags": ["Parse"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["openApiUrl"],
+                "properties": {
+                  "openApiUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "URL of a JSON or YAML OpenAPI specification"
+                  },
+                  "projectTitle": {
+                    "type": "string",
+                    "description": "Display name for the project"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Short description shown in the library list"
+                  },
+                  "force": {
+                    "type": "boolean",
+                    "description": "Re-parse even if already indexed",
+                    "default": false
+                  }
+                }
+              },
+              "example": {
+                "openApiUrl": "https://example.com/openapi.json",
+                "projectTitle": "My API"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/ParseQueued"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {},
+          { "bearerAuth": [] }
+        ]
+      }
+    },
+    "/parse-openapi-upload": {
+      "post": {
+        "summary": "Upload an OpenAPI spec file",
+        "description": "Upload an OpenAPI specification file directly for parsing and indexing.",
+        "operationId": "parseOpenApiUpload",
+        "tags": ["Parse"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["openapiFile"],
+                "properties": {
+                  "openapiFile": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "A `.json` or `.yaml` OpenAPI specification file"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/ParseQueued"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {},
+          { "bearerAuth": [] }
+        ]
+      }
+    },
+    "/parse-website": {
+      "post": {
+        "summary": "Parse a website",
+        "description": "Crawl and index a public website starting from the given URL.",
+        "operationId": "parseWebsite",
+        "tags": ["Parse"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["websiteUrl"],
+                "properties": {
+                  "websiteUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Root URL to start crawling from"
+                  },
+                  "projectTitle": {
+                    "type": "string",
+                    "description": "Display name for the project"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Short description shown in the library list"
+                  },
+                  "maxPages": {
+                    "type": "integer",
+                    "description": "Maximum number of pages to crawl",
+                    "default": 100
+                  },
+                  "maxDepth": {
+                    "type": "integer",
+                    "description": "Maximum link depth from the root URL",
+                    "default": 3
+                  },
+                  "excludePatterns": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "URL path patterns to skip (e.g., `/blog/*`)"
+                  },
+                  "force": {
+                    "type": "boolean",
+                    "description": "Re-crawl even if already indexed",
+                    "default": false
+                  }
+                }
+              },
+              "example": {
+                "websiteUrl": "https://docs.example.com",
+                "maxPages": 50
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/ParseQueued"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {},
+          { "bearerAuth": [] }
+        ]
+      }
+    },
+    "/projects/{projectId}/refresh": {
+      "post": {
+        "summary": "Refresh a library",
+        "description": "Re-parse an existing library using its stored settings. Returns immediately with a queue position.\n\nNot available for:\n- Libraries imported from Context7 Cloud (re-import an updated bundle instead)\n- Uploaded OpenAPI files (re-upload the file instead)",
+        "operationId": "refreshProject",
+        "tags": ["Parse"],
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "description": "Project identifier without the leading slash. For repositories use `owner/repo` (e.g. `upstash/ratelimit-js`). For websites use `websites/hostname` (e.g. `websites/upstash`). For OpenAPI specs use `openapi/derived-name`.",
+            "schema": {
+              "type": "string"
+            },
+            "example": "upstash/ratelimit-js"
+          }
+        ],
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/ParseQueued"
+          },
+          "400": {
+            "description": "Bad Request - refresh not available for this project type",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" },
+                "examples": {
+                  "imported": {
+                    "summary": "Imported library",
+                    "value": { "error": "Refresh isn't available for imported libraries. Re-import an updated export from Context7 Cloud to update it." }
+                  },
+                  "uploadedFile": {
+                    "summary": "Uploaded OpenAPI file",
+                    "value": { "error": "Refresh not available for uploaded OpenAPI files. Re-upload the same file to update." }
+                  },
+                  "noToken": {
+                    "summary": "No git token configured",
+                    "value": { "error": "No git token configured for GitHub. Configure a GitHub App or set a personal access token." }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "409": {
+            "description": "Conflict - a parse job is already active or queued for this project",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" },
+                "example": { "error": "This project is already queued", "project": "/upstash/ratelimit-js", "status": "queued" }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {},
+          { "bearerAuth": [] }
+        ]
+      }
+    },
+    "/parse-status": {
+      "get": {
+        "summary": "Get parse status",
+        "description": "Returns the current status of all active and queued parse jobs.",
+        "operationId": "getParseStatus",
+        "tags": ["Parse"],
+        "responses": {
+          "200": {
+            "description": "Active parse jobs and their status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParseStatusResponse"
+                },
+                "example": {
+                  "activeParses": {
+                    "/your-org/your-repo": {
+                      "status": "parsing",
+                      "startedAt": "2025-01-01T12:00:00.000Z",
+                      "duration": 8.6,
+                      "statusMessage": "Scanning 16 files"
+                    },
+                    "/other-org/other-repo": {
+                      "status": "queued",
+                      "position": 1,
+                      "createdAt": "2025-01-01T12:00:01.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [
+          {},
+          { "bearerAuth": [] }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "API key generated from Personal Settings. See [Authentication](/enterprise/api/authentication#creating-an-api-key)."
+      }
+    },
+    "schemas": {
+      "Library": {
+        "type": "object",
+        "description": "An indexed library",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Library ID to pass to `GET /v2/context`",
+            "example": "/your-org/your-repo"
+          },
+          "title": {
+            "type": "string",
+            "description": "Display name",
+            "example": "Your Repo"
+          },
+          "description": {
+            "type": "string",
+            "description": "Short description",
+            "example": "Internal tooling docs"
+          },
+          "totalSnippets": {
+            "type": "integer",
+            "description": "Number of indexed snippets",
+            "example": 150
+          },
+          "source": {
+            "type": "string",
+            "description": "Where the library was indexed from",
+            "example": "Local (Private)"
+          },
+          "trustScore": {
+            "type": "integer",
+            "description": "Source reputation score (0–10)",
+            "example": 10
+          }
+        }
+      },
+      "SearchResponse": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "description": "Matching libraries ranked by relevance",
+            "items": {
+              "$ref": "#/components/schemas/Library"
+            }
+          }
+        },
+        "required": ["results"]
+      },
+      "ParseQueuedResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Parse queued"
+          },
+          "project": {
+            "type": "string",
+            "description": "Project identifier assigned to this library (e.g. `/your-org/your-repo`)",
+            "example": "/your-org/your-repo"
+          },
+          "queueId": {
+            "type": "integer",
+            "description": "Numeric ID for this parse job",
+            "example": 5
+          },
+          "position": {
+            "type": "integer",
+            "nullable": true,
+            "description": "Position in the queue. `null` if the job started immediately",
+            "example": 1
+          }
+        },
+        "required": ["message", "project", "queueId"]
+      },
+      "ParseRepoRequest": {
+        "type": "object",
+        "required": ["repoUrl"],
+        "properties": {
+          "repoUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "HTTPS URL of the GitHub or GitLab repository"
+          },
+          "branch": {
+            "type": "string",
+            "description": "Branch to parse. Defaults to the repository's default branch"
+          },
+          "folders": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Only index files under these paths. Empty means the entire repository"
+          },
+          "excludeFolders": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Paths to skip during indexing"
+          },
+          "excludeFiles": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Glob patterns for files to exclude"
+          },
+          "force": {
+            "type": "boolean",
+            "description": "Re-parse even if the current commit is already indexed",
+            "default": false
+          }
+        }
+      },
+      "ParseJobStatus": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["queued", "parsing", "finalizing"],
+            "description": "Current job status"
+          },
+          "position": {
+            "type": "integer",
+            "description": "Queue position. Only present when `status` is `queued`"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp when the job was queued. Only present when `status` is `queued`"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp when the job began running. Only present when `status` is `parsing` or `finalizing`"
+          },
+          "duration": {
+            "type": "number",
+            "description": "Elapsed seconds since the job started. Only present when `status` is `parsing` or `finalizing`"
+          },
+          "statusMessage": {
+            "type": "string",
+            "description": "Human-readable progress detail (e.g. `Scanning 16 files`). Only present when `status` is `parsing`"
+          }
+        },
+        "required": ["status"]
+      },
+      "ParseStatusResponse": {
+        "type": "object",
+        "properties": {
+          "activeParses": {
+            "type": "object",
+            "description": "Map of project name to its current parse job status",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ParseJobStatus"
+            }
+          }
+        },
+        "required": ["activeParses"]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable error description"
+          }
+        },
+        "required": ["error"]
+      }
+    },
+    "responses": {
+      "ParseQueued": {
+        "description": "Parse job accepted and queued",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ParseQueuedResponse"
+            }
+          }
+        }
+      },
+      "BadRequestError": {
+        "description": "Bad Request - invalid or missing parameters",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": { "error": "repoUrl is required" }
+          }
+        }
+      },
+      "UnauthorizedError": {
+        "description": "Unauthorized - authentication required",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": { "error": "Authentication required" }
+          }
+        }
+      },
+      "NotFoundError": {
+        "description": "Not Found - library does not exist",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": { "error": "Project not found" }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Internal Server Error",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": { "error": "An unexpected error occurred" }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Search",
+      "description": "Search indexed libraries"
+    },
+    {
+      "name": "Context",
+      "description": "Retrieve documentation context for queries"
+    },
+    {
+      "name": "Parse",
+      "description": "Parse and index new libraries"
+    }
+  ]
+}
