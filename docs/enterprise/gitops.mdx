@@ -14,21 +14,11 @@ The point is to keep your configuration in code. After a disaster, or when stand
 
 ## Before you start
 
-GitOps relies on the Git and AI providers you configure elsewhere in the dashboard. Set these up first, under **Settings → Integrations**, before enabling GitOps:
+GitOps clones your manifest repository and the repositories it indexes using the Git credentials you configure under **Settings → Integrations**. Connect a GitHub App or a personal access token first; see [GitHub Integration](/enterprise/github-integration). Automatic syncs on every push require the **GitHub App** (a personal access token cannot receive webhooks).
 
-<Steps>
-  <Step title="Configure a Git credential for your host">
-    Context7 clones both the manifest repository and the repositories it indexes using the GitHub App or personal access token you set under **Settings → Integrations**. Private repositories require this. If no usable credential exists for the manifest repo's host, a sync fails with a clear error.
-  </Step>
-  <Step title="Set up a GitHub App if you want push-triggered syncs">
-    Automatic syncs on every push are delivered by webhook, which requires a **GitHub App** (not a personal access token), an instance that is **reachable from GitHub**, and the App **subscribed to push events**. See [Webhooks](#webhooks) for details. Without an App you can still use the sync schedule or trigger syncs from CI.
-  </Step>
-  <Step title="Confirm your LLM and embedding providers are configured">
-    A sync parses the repositories it adds, so the same LLM and embedding providers used for normal parsing must be set up. The dashboard shows a clear error if they are missing.
-  </Step>
-</Steps>
-
-Once these are in place, configure the manifest repository under **Settings → Indexing → GitOps** (see [Configuring in the dashboard](#configuring-in-the-dashboard)).
+<Warning>
+If you set up the GitHub App **before** GitOps was available, it is not subscribed to push events and will not trigger syncs. Add the **push** event to the App on GitHub, or recreate it from **Settings → Integrations**. See [GitHub Integration](/enterprise/github-integration#webhooks).
+</Warning>
 
 ## How it works
 
@@ -108,21 +98,9 @@ Repeated syncs are cheap. Context7 remembers the last commit it processed and sk
 
 ## Webhooks
 
-When the manifest repository is hosted on a connected GitHub App (set up under **Settings → Integrations**), Context7 reconciles automatically on every push, with no CI step required.
+When the manifest repository is served by the [GitHub App](/enterprise/github-integration), every push to its configured branch triggers an immediate sync, with no CI step required. Pushes to other repositories or other branches are ignored.
 
-The GitHub App is created with a webhook that points at `https://<your-host>/api/github/webhook` and is subscribed to push events. When you push to the manifest repository, GitHub delivers a `push` event, Context7 verifies the payload signature against the App's webhook secret, and a push to the configured branch triggers a sync. Pushes to other repositories or other branches are ignored.
-
-For this to work:
-
-- Your instance must be reachable from GitHub at that webhook URL. An on-premise instance behind a firewall that GitHub cannot reach should rely on the schedule or CI instead.
-- The GitHub App must be installed on the account or organization that owns the manifest repository.
-- The App must be subscribed to push events.
-
-<Warning>
-GitHub App integrations created before GitOps shipped were not subscribed to any events, so they do not deliver push webhooks. If you set up the GitHub App before this release, recreate it from **Settings → Integrations**, or open the App's settings on GitHub and add the **push** event along with the webhook URL above. Apps created after this release are configured automatically.
-</Warning>
-
-If you use a personal access token instead of a GitHub App, webhooks are not available. Use the schedule, or have your CI call the reconcile endpoint after merging a change to the manifest.
+Webhook delivery requires the GitHub App, an instance reachable from GitHub, and the App subscribed to push events. See [GitHub Integration](/enterprise/github-integration#webhooks) for setup, including what to do if you connected the App before push support existed. With a personal access token instead of the App, webhooks are unavailable; use the sync schedule or have CI call the reconcile endpoint.
 
 ## Disaster recovery
 

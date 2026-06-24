@@ -1,0 +1,50 @@
+---
+title: "GitHub Integration"
+sidebarTitle: "GitHub"
+description: "Connect Context7 to GitHub with a GitHub App or a personal access token for private repository access and push webhooks"
+---
+
+Context7 needs access to your GitHub repositories to clone and index them. You can connect GitHub in two ways: a **GitHub App** (recommended) or a **personal access token**. The GitHub App additionally delivers push webhooks, which power push-triggered [GitOps](/enterprise/gitops) syncs.
+
+Both are configured under **Settings → Integrations**.
+
+## GitHub App
+
+The GitHub App is the recommended option. It gives Context7 fine-grained access to only the repositories you select, rotates short-lived access tokens automatically, and delivers webhooks for push-triggered GitOps syncs.
+
+<Steps>
+  <Step title="Create the App">
+    Go to **Settings → Integrations** and choose **Set up GitHub App**. Context7 generates a pre-filled App manifest and sends you to GitHub to create the App in one click.
+  </Step>
+  <Step title="Return to Context7">
+    After you create the App on GitHub, you are redirected back and Context7 stores everything it needs automatically: the App ID, private key, client ID and secret, and the webhook secret.
+  </Step>
+  <Step title="Install the App">
+    Install the App on the account or organization that owns your repositories, and grant it access to the repositories you want to index (including your GitOps manifest repository, if you use GitOps).
+  </Step>
+</Steps>
+
+The App is created with read access to repository **contents** and **metadata**, a subscription to **push** events, and a webhook pointing at `https://<your-host>/api/github/webhook`.
+
+## Personal access token
+
+As a simpler alternative, add a GitHub personal access token under **Settings → Integrations**. Use a token with the `repo` scope for private repository access.
+
+A personal access token can clone and index repositories, but it **cannot receive webhooks**. With a token only, push-triggered GitOps syncs are unavailable; use the GitOps sync schedule or trigger syncs from CI instead.
+
+## GitHub Enterprise Server
+
+To connect a GitHub Enterprise Server instance instead of github.com, set your GitHub Enterprise host under **Settings → Integrations**. The App or token then targets your server.
+
+## Webhooks
+
+When the GitHub App is connected, GitHub delivers `push` events to `https://<your-host>/api/github/webhook`. Context7 verifies each delivery's signature against the App's webhook secret and uses pushes to drive [GitOps](/enterprise/gitops) reconciliation: a push to a GitOps manifest repository triggers an immediate sync.
+
+For delivery to work:
+
+- Your instance must be **reachable from GitHub** at the webhook URL. An instance behind a firewall that GitHub cannot reach will not receive webhooks.
+- The App must be **subscribed to push events** (new App setups are configured this way automatically).
+
+<Warning>
+GitHub Apps created before push support was added are not subscribed to any events, so they do not deliver webhooks. If you set up the App earlier, open it on GitHub and add the **push** event under its event subscriptions, confirm its webhook URL is `https://<your-host>/api/github/webhook`, or recreate the App from **Settings → Integrations**.
+</Warning>

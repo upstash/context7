@@ -73,6 +73,7 @@
             "group": "On-Premise",
             "pages": [
               "enterprise/on-premise",
+              "enterprise/github-integration",
               {
                 "group": "Security",
                 "pages": [
