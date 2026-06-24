@@ -12,6 +12,10 @@ Both are configured under **Settings → Integrations**.
 
 The GitHub App is the recommended option. It gives Context7 fine-grained access to only the repositories you select, rotates short-lived access tokens automatically, and delivers webhooks for push-triggered GitOps syncs.
 
+<Frame>
+  ![The GitHub App card under Settings, Integrations](/images/enterprise/integrations/github-app.png)
+</Frame>
+
 <Steps>
   <Step title="Create the App">
     Go to **Settings → Integrations** and choose **Set up GitHub App**. Context7 generates a pre-filled App manifest and sends you to GitHub to create the App in one click.
@@ -29,6 +33,10 @@ The App is created with read access to repository **contents** and **metadata**,
 ## Personal access token
 
 As a simpler alternative, add a GitHub personal access token under **Settings → Integrations**. Use a token with the `repo` scope for private repository access.
+
+<Frame>
+  ![Git token fields under Settings, Integrations](/images/enterprise/integrations/git-tokens.png)
+</Frame>
 
 A personal access token can clone and index repositories, but it **cannot receive webhooks**. With a token only, push-triggered GitOps syncs are unavailable; use the GitOps sync schedule or trigger syncs from CI instead.
 
