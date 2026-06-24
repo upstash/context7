@@ -12,23 +12,24 @@ Both are configured under **Settings → Integrations**.
 
 The GitHub App is the recommended option. It gives Context7 fine-grained access to only the repositories you select, rotates short-lived access tokens automatically, and delivers webhooks for push-triggered GitOps syncs.
 
-<Frame>
-  ![The GitHub App card under Settings, Integrations](/images/enterprise/integrations/github-app.png)
-</Frame>
+Connecting the App is two steps: first create the App, then install it on your repositories.
 
 <Steps>
   <Step title="Create the App">
-    Go to **Settings → Integrations** and choose **Set up GitHub App**. Context7 generates a pre-filled App manifest and sends you to GitHub to create the App in one click.
-  </Step>
-  <Step title="Return to Context7">
-    After you create the App on GitHub, you are redirected back and Context7 stores everything it needs automatically: the App ID, private key, client ID and secret, and the webhook secret.
+    Go to **Settings → Integrations** and choose **Set up GitHub App**. Context7 generates a pre-filled App manifest and sends you to GitHub to create the App in one click. You are redirected back and Context7 stores everything it needs automatically: the App ID, private key, client ID and secret, and the webhook secret.
   </Step>
   <Step title="Install the App">
-    Install the App on the account or organization that owns your repositories, and grant it access to the repositories you want to index (including your GitOps manifest repository, if you use GitOps).
+    After it is created, install the App on the account or organization that owns your repositories, and grant it access to the repositories you want to index (including your GitOps manifest repository, if you use GitOps).
   </Step>
 </Steps>
 
 The App is created with read access to repository **contents** and **metadata**, a subscription to **push** events, and a webhook pointing at `https://<your-host>/api/github/webhook`.
+
+Once both steps are done, the GitHub App card shows the connected App and its installation:
+
+<Frame>
+  ![Connected GitHub App with one installation under Settings, Integrations](/images/enterprise/integrations/github-app.png)
+</Frame>
 
 ## Personal access token
 
