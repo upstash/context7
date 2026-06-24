@@ -108,7 +108,7 @@ Because the repository list lives in Git, rebuilding an instance does not requir
 
 ## API
 
-The same operations are available over the REST API and require an admin session.
+The same operations are available over the REST API and require an admin [API key](/enterprise/api/authentication).
 
 ```
 GET  /api/gitops/status       # current configuration and the last sync result
@@ -120,7 +120,7 @@ To propagate a manifest change from CI immediately (for example when you are not
 
 ```bash
 curl -X POST http://localhost:3000/api/gitops/reconcile \
-  -H "Cookie: <admin session>"
+  -H "Authorization: Bearer <admin-api-key>"
 ```
 
 The response reports what the sync did, including how many repositories were created, updated, left unchanged, pruned, and skipped.
