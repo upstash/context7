@@ -74,6 +74,12 @@
             "pages": [
               "enterprise/on-premise",
               {
+                "group": "Integrations",
+                "pages": [
+                  "enterprise/integrations/github"
+                ]
+              },
+              {
                 "group": "Security",
                 "pages": [
                   "enterprise/security/entra-sso",
@@ -87,8 +93,14 @@
                   "enterprise/deployment/kubernetes"
                 ]
               },
-              "enterprise/backup-restore",
-              "enterprise/library-import",
+              {
+                "group": "Features",
+                "pages": [
+                  "enterprise/library-import",
+                  "enterprise/gitops",
+                  "enterprise/backup-restore"
+                ]
+              },
               {
                 "group": "API Reference",
                 "pages": [

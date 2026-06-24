@@ -1,0 +1,126 @@
+---
+title: "GitOps"
+sidebarTitle: "GitOps"
+description: "Manage the list of indexed repositories declaratively from a Git repo and reconcile your on-premise instance to match it"
+---
+
+GitOps lets you keep the list of repositories Context7 indexes in a Git repository, instead of adding them one by one in the dashboard. Context7 reads a manifest file from that repo and reconciles its own state to match: it indexes anything new, re-indexes anything whose settings changed, and (optionally) removes anything you have deleted from the manifest.
+
+The point is to keep your configuration in code. After a disaster, or when standing up a second environment, you point a fresh instance at the manifest repository and the entire index rebuilds itself with no manual clicks.
+
+<Frame>
+  ![The GitOps settings card under Settings, Indexing](/images/enterprise/gitops/gitops-settings.png)
+</Frame>
+
+## Before you start
+
+GitOps clones your manifest repository and the repositories it indexes using the Git credentials you configure under **Settings → Integrations**. Connect a GitHub App or a personal access token first; see [GitHub Integration](/enterprise/integrations/github). Automatic syncs on every push require the **GitHub App** (a personal access token cannot receive webhooks).
+
+<Warning>
+If you set up the GitHub App **before** GitOps was available, it is not subscribed to push events and will not trigger syncs. Add the **push** event to the App on GitHub, or recreate it from **Settings → Integrations**. See [GitHub Integration](/enterprise/integrations/github#webhooks).
+</Warning>
+
+## How it works
+
+You commit a manifest file (by default `repos.yaml`) to a Git repository. Context7 clones that repository using the same Git credentials you already configured under **Settings → Integrations** (a GitHub App or a personal access token), reads the manifest, and compares it against the repositories it currently has indexed.
+
+For each repository in the manifest, Context7 decides what to do:
+
+- **Add** it if it is in the manifest but not yet indexed.
+- **Re-index** it if its manifest entry changed, for example a different branch or new folder filters, or if its last indexing run did not finish.
+- **Leave it untouched** if it already matches. Running a sync with no changes is a safe no-op.
+
+When pruning is enabled, repositories that you remove from the manifest are also deleted from the instance. Pruning only ever removes repositories that GitOps itself added; repositories you add by hand in the dashboard are never touched.
+
+<Note>
+GitOps is the source of truth only for the repositories listed in the manifest. You can still add other repositories manually in the dashboard, and they will be left alone during a sync.
+</Note>
+
+## The manifest file
+
+The manifest is a YAML file with a list of repositories under `repos`. An optional `defaults` block applies to every entry unless an entry overrides it.
+
+```yaml repos.yaml
+defaults:
+  indexSourceCode: false
+  branch: ""              # empty means the repository's default branch
+repos:
+  - url: https://github.com/acme/payments
+    branch: main
+    folders: [docs]
+    excludeFolders: [node_modules]
+  - url: https://github.com/acme/billing
+    indexSourceCode: true
+```
+
+Each entry accepts the same options as the **Add Repository** form in the dashboard:
+
+| Field | Description |
+| ----- | ----------- |
+| `url` (or `repoUrl`) | The Git repository to index. Required. |
+| `branch` | Branch to index. Leave blank to use the repository's default branch. |
+| `folders` | Only index these folders. Omit to index the whole repository. |
+| `excludeFolders` | Folders to skip. |
+| `excludeFiles` | File patterns to skip, for example `["*.test.md"]`. |
+| `indexSourceCode` | Whether to also generate documentation from source code. Defaults to `false`. |
+
+If the manifest cannot be parsed, the whole sync is rejected and nothing changes, so a malformed file can never partially apply or wipe your index.
+
+## Configuring in the dashboard
+
+Open **Settings → Indexing → GitOps**, fill in the manifest repository, and save.
+
+| Setting | Description |
+| ------- | ----------- |
+| Enable GitOps sync | Turns on automatic reconciliation (on startup, on the schedule, and on push). When off, nothing syncs automatically, but you can still run a sync by hand. |
+| Manifest repository URL | The Git repository that holds the manifest. |
+| Manifest path | Path to the manifest within that repository. Defaults to `repos.yaml`. |
+| Branch | Branch to read the manifest from. Leave blank for the default branch. |
+| Sync schedule | How often to reconcile automatically. Choose a preset or enter a custom cron expression. Set to **Manual only** to disable scheduled syncs. |
+| Prune removed repositories | Delete GitOps-managed repositories that are no longer in the manifest. Off by default. |
+
+The manifest repository is cloned with the Git token from **Settings → Integrations**, so private repositories work without any extra credentials. If you have not configured a GitHub App or personal access token for the host, the sync reports a clear error.
+
+<Warning>
+Pruning permanently deletes a repository's indexed data (snippets and embeddings). It only affects repositories GitOps added, never ones you created in the dashboard, but treat the manifest as authoritative once pruning is on. Removing an entry and syncing will delete that library.
+</Warning>
+
+## When syncs happen
+
+A reconcile runs in four situations:
+
+- **On startup.** When the instance boots with GitOps enabled, it reconciles immediately. This is what makes disaster recovery a single step: bring up a fresh instance pointed at the manifest repo and the index rebuilds itself.
+- **On a schedule.** The cron schedule you set acts as a steady fallback that keeps the instance in line with the manifest.
+- **On push (webhook).** If the manifest repository is on a connected GitHub App, every push triggers an immediate sync. See [Webhooks](#webhooks) below.
+- **On demand.** Click **Sync now** in the dashboard, or call the API, to reconcile right away.
+
+Repeated syncs are cheap. Context7 remembers the last commit it processed and skips the work entirely when nothing has changed, and it only re-indexes a repository when its manifest entry actually differs.
+
+## Webhooks
+
+When the manifest repository is served by the [GitHub App](/enterprise/integrations/github), every push to its configured branch triggers an immediate sync, with no CI step required. Pushes to other repositories or other branches are ignored.
+
+Webhook delivery requires the GitHub App, an instance reachable from GitHub, and the App subscribed to push events. See [GitHub Integration](/enterprise/integrations/github#webhooks) for setup, including what to do if you connected the App before push support existed. With a personal access token instead of the App, webhooks are unavailable; use the sync schedule or have CI call the reconcile endpoint.
+
+## Disaster recovery
+
+Because the repository list lives in Git, rebuilding an instance does not require restoring it from a backup. Stand up a fresh Context7 instance, configure your LLM and Git credentials, enable GitOps with the manifest repository URL, and start it. On boot it reads the manifest and re-indexes every listed repository. Your configuration is reproducible from code.
+
+## API
+
+The same operations are available over the REST API and require an admin [API key](/enterprise/api/authentication).
+
+```
+GET  /api/gitops/status       # current configuration and the last sync result
+PUT  /api/gitops/config        # update the configuration
+POST /api/gitops/reconcile     # run a sync now
+```
+
+To propagate a manifest change from CI immediately (for example when you are not using a GitHub App), call the reconcile endpoint after merging:
+
+```bash
+curl -X POST http://localhost:3000/api/gitops/reconcile \
+  -H "Authorization: Bearer <admin-api-key>"
+```
+
+The response reports what the sync did, including how many repositories were created, updated, left unchanged, pruned, and skipped.
