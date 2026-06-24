@@ -8,6 +8,10 @@ Context7 needs access to your GitHub repositories to clone and index them. You c
 
 Both are configured under **Settings → Integrations**.
 
+<Note>
+Running GitHub Enterprise Server instead of github.com? Point Context7 at your server first. See [GitHub Enterprise Server](#github-enterprise-server).
+</Note>
+
 ## GitHub App
 
 The GitHub App is the recommended option. It gives Context7 fine-grained access to only the repositories you select, rotates short-lived access tokens automatically, and delivers webhooks for push-triggered GitOps syncs.
@@ -68,7 +72,26 @@ A personal access token can clone and index repositories, but it **cannot receiv
 
 ## GitHub Enterprise Server
 
-To connect a GitHub Enterprise Server instance instead of github.com, set your GitHub Enterprise host under **Settings → Integrations**. The App or token then targets your server.
+Context7 works with GitHub Enterprise Server, not only github.com. Set your server host **before** you create the GitHub App or add a token, so the App is created on your own server instead of github.com.
+
+<Steps>
+  <Step title="Set your GitHub Enterprise host">
+    Open **Settings → Integrations → Git Tokens** and select **Using GitHub Enterprise?**. Enter your server host, for example `github.your-company.com` (no `https://`), then choose **Save & Apply**.
+
+    <Frame>
+      ![Git Tokens section with the Using GitHub Enterprise option under Settings, Integrations](/images/enterprise/integrations/git-tokens.png)
+    </Frame>
+  </Step>
+  <Step title="Create the App or add a token">
+    Now follow [GitHub App](#github-app) or [Personal access token](#personal-access-token) above. The App manifest, installation, sign-in, and all API calls target your server. Before you create the App, the GitHub App card shows the server it will use, so you can confirm it is not github.com.
+  </Step>
+</Steps>
+
+For this to work, Context7 must reach your server's API at `https://<your-host>/api/v3`, and your server must reach Context7 at its webhook URL for push delivery.
+
+<Note>
+Prefer to set this at deploy time, for example as part of a disaster recovery rebuild? Set the `GITHUB_URL` environment variable to your server URL, such as `https://github.your-company.com`. A host saved in the UI takes precedence over the environment variable when both are set.
+</Note>
 
 ## Webhooks
 
