@@ -23,12 +23,37 @@ Connecting the App is two steps: first create the App, then install it on your r
   </Step>
 </Steps>
 
-The App is created with read access to repository **contents** and **metadata**, a subscription to **push** events, and a webhook pointing at `https://<your-host>/api/github/webhook`.
-
 Once both steps are done, the GitHub App card shows the connected App and its installation:
 
 <Frame>
   ![Connected GitHub App with one installation under Settings, Integrations](/images/enterprise/integrations/github-app.png)
+</Frame>
+
+### Verify the App configuration
+
+The setup flow configures everything below automatically, so a newly created App is ready to use. Use this section to confirm the App, or to fix an App you connected before GitOps existed (it will be missing the push event; see [Webhooks](#webhooks)). Open the App at `github.com/settings/apps`.
+
+| Setting | Required value |
+| ------- | -------------- |
+| Repository permission: Contents | Read-only |
+| Repository permission: Metadata | Read-only (mandatory) |
+| Subscribed events | Push |
+| Webhook | Active |
+| Webhook URL | `https://<your-host>/api/github/webhook` |
+| Webhook secret | Set |
+| Callback URL | `https://<your-host>/api/github/callback` |
+| Setup URL | `https://<your-host>/api/github/setup` |
+
+Under **Permissions & events**, the repository permissions are granted and the **Push** event is subscribed:
+
+<Frame>
+  ![GitHub App repository permissions and the subscribed Push event](/images/enterprise/integrations/github-permissions.png)
+</Frame>
+
+Under **Webhook**, it is active and points at your instance with a secret configured:
+
+<Frame>
+  ![GitHub App webhook settings: active, webhook URL, and a configured secret](/images/enterprise/integrations/github-webhook.png)
 </Frame>
 
 ## Personal access token
