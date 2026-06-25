@@ -83,7 +83,8 @@ Detect which framework this project uses and add the widget accordingly. Place
 it in the root layout or HTML file so it loads on every page.
 
 Optional attributes: data-color (hex color, default #059669), data-position
-(bottom-right or bottom-left), data-placeholder (input placeholder text).
+(bottom-right or bottom-left), data-placeholder (input placeholder text),
+data-welcome-message (initial assistant message shown when the chat opens).
 ```
 
 ## Framework Examples
@@ -141,6 +142,7 @@ The widget supports optional attributes for customization:
 | `data-color`         | Brand color for the widget (hex code)  | `#059669`            |
 | `data-position`      | Widget position on the page            | `bottom-right`       |
 | `data-placeholder`   | Placeholder text in the input field    | `Ask about the docs...` |
+| `data-welcome-message` | Initial assistant message shown when the chat opens | Generated from library ID |
 
 ### Examples
 
@@ -162,6 +164,16 @@ The widget supports optional attributes for customization:
   src="https://context7.com/widget.js"
   data-library="/vercel/next.js"
   data-placeholder="Ask me anything about Next.js..."
+></script>
+```
+
+**Custom welcome message:**
+
+```html
+<script
+  src="https://context7.com/widget.js"
+  data-library="/vercel/next.js"
+  data-welcome-message="Hello! I'm here to help you with the Next.js documentation."
 ></script>
 ```
 
