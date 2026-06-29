@@ -996,34 +996,29 @@ docker build -t context7-mcp .
 }
 ```
 
-If you use the Docker MCP Toolkit image (`mcp/context7`) with a stdio-based client, set `MCP_TRANSPORT=stdio` so the container starts with stdio transport instead of its HTTP default. For Cline, Roo Code, and Claude Desktop, use:
+</Accordion>
+
+<Accordion title="Docker MCP Toolkit">
+
+Context7 is available in the [Docker MCP Catalog](https://hub.docker.com/mcp/server/context7/overview) as a **remote** server, so you don't need to build, pull, or run a local image. The MCP Toolkit connects to the hosted endpoint for you.
+
+1. In Docker Desktop, open **MCP Toolkit → Catalog**, search for **Context7**, and enable it.
+2. (Optional) In the server's **Config** tab, set your Context7 API key (`CONTEXT7_API_KEY`) for higher rate limits. The server also works without one.
+3. Connect your MCP client to Docker's MCP gateway. Either run `docker mcp client connect <client>` (for example `vscode`, `cursor`, or `claude-desktop`), or add the gateway to your client config manually:
 
 ```json
 {
   "mcpServers": {
-    "context7": {
+    "MCP_DOCKER": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "-e", "MCP_TRANSPORT=stdio", "mcp/context7"]
+      "args": ["mcp", "gateway", "run"],
+      "type": "stdio"
     }
   }
 }
 ```
 
-For VS Code, use the same Docker command in the `servers` format:
-
-```json
-{
-  "servers": {
-    "context7": {
-      "type": "stdio",
-      "command": "docker",
-      "args": ["run", "-i", "--rm", "-e", "MCP_TRANSPORT=stdio", "mcp/context7"]
-    }
-  }
-}
-```
-
-Keep using the remote server URL for HTTP-based clients.
+The gateway exposes every server you've enabled in the MCP Toolkit, including Context7. Tools appear under the `MCP_DOCKER` server in your client.
 
 </Accordion>
 
