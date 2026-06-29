@@ -967,34 +967,55 @@ qwen mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 
 <Accordion title="Using Docker">
 
-1. Create a `Dockerfile`:
-
-```Dockerfile
-FROM node:22-alpine
-WORKDIR /app
-RUN npm install -g @upstash/context7-mcp
-CMD ["context7-mcp", "--transport", "stdio"]
-```
-
-2. Build the image:
+Pull the official image instead of building your own. It is published to both the GitHub Container Registry and Docker Hub, and the `latest` tag follows the most recent release:
 
 ```bash
-docker build -t context7-mcp .
+docker pull ghcr.io/upstash/context7-mcp
+# or
+docker pull upstash/context7-mcp
 ```
 
-3. Configure your MCP client:
+**As a stdio MCP server** (for clients such as Claude Desktop, Cline, or Roo Code), append `--transport stdio`:
 
 ```json
 {
   "mcpServers": {
     "context7": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "context7-mcp"],
-      "transportType": "stdio"
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "ghcr.io/upstash/context7-mcp",
+        "--transport",
+        "stdio",
+        "--api-key",
+        "YOUR_API_KEY"
+      ]
     }
   }
 }
 ```
+
+<Note>
+  The image also supports an HTTP transport (`--transport http`, the default) used for
+  self-hosted deployments. That mode keeps session state in Upstash Redis and requires the
+  `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` environment variables. For local use
+  with an MCP client, stick with `--transport stdio` as shown above.
+</Note>
+
+<Tip>
+  Prefer to build it yourself? Use the
+  [`Dockerfile`](https://github.com/upstash/context7/blob/master/packages/mcp/Dockerfile) in
+  the repository, or a minimal one:
+
+```Dockerfile
+FROM node:22-alpine
+RUN npm install -g @upstash/context7-mcp
+ENTRYPOINT ["context7-mcp"]
+```
+
+</Tip>
 
 </Accordion>
 
