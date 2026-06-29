@@ -1017,6 +1017,25 @@ ENTRYPOINT ["context7-mcp"]
 
 </Tip>
 
+<Note>
+  For a hardened, enterprise-grade image with signed provenance, an SBOM, and near-zero known
+  CVEs, Context7 is also available as a [Docker Hardened Image](https://dhi.io) at
+  `dhi.io/context7-mcp`. It runs over stdio out of the box. Pulling it requires authenticating
+  with `docker login dhi.io` and a Docker Hardened Images subscription:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "dhi.io/context7-mcp", "--api-key", "YOUR_API_KEY"]
+    }
+  }
+}
+```
+
+</Note>
+
 </Accordion>
 
 <Accordion title="Docker MCP Toolkit">
