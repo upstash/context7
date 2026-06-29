@@ -1,6 +1,7 @@
 import { access, readFile, writeFile, mkdir } from "fs/promises";
 import { dirname } from "path";
 import { STDIO_PACKAGE } from "./agents.js";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 function stripJsonComments(text: string): string {
   let result = "";
@@ -105,6 +106,67 @@ export async function writeJsonConfig(
 ): Promise<void> {
   await mkdir(dirname(filePath), { recursive: true });
   await writeFile(filePath, JSON.stringify(config, null, 2) + "\n", "utf-8");
+}
+
+export async function readYamlConfig(filePath: string): Promise<Record<string, unknown>> {
+  let raw: string;
+  try {
+    raw = await readFile(filePath, "utf-8");
+  } catch {
+    return {};
+  }
+
+  raw = raw.trim();
+  if (!raw) return {};
+
+  const parsed = parseYaml(raw) as unknown;
+  return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+    ? (parsed as Record<string, unknown>)
+    : {};
+}
+
+export async function writeYamlConfig(
+  filePath: string,
+  config: Record<string, unknown>
+): Promise<void> {
+  await mkdir(dirname(filePath), { recursive: true });
+  await writeFile(filePath, stringifyYaml(config, { lineWidth: 0 }), "utf-8");
+}
+
+export function getYamlServerEntry(
+  config: Record<string, unknown>,
+  configKey: string,
+  serverName: string
+): Record<string, unknown> | undefined {
+  const section = config[configKey];
+  if (!section || typeof section !== "object") return undefined;
+  const entry = (section as Record<string, unknown>)[serverName];
+  return entry && typeof entry === "object" ? (entry as Record<string, unknown>) : undefined;
+}
+
+export async function appendYamlServer(
+  filePath: string,
+  serverName: string,
+  entry: Record<string, unknown>,
+  configKey = "mcp_servers"
+): Promise<{ alreadyExists: boolean }> {
+  const existing = await readYamlConfig(filePath);
+  const { config, alreadyExists } = mergeServerEntry(existing, configKey, serverName, entry);
+  await writeYamlConfig(filePath, config);
+  return { alreadyExists };
+}
+
+export async function removeYamlServer(
+  filePath: string,
+  serverName: string,
+  configKey = "mcp_servers"
+): Promise<{ removed: boolean }> {
+  const existing = await readYamlConfig(filePath);
+  const { config, removed } = removeServerEntry(existing, configKey, serverName);
+  if (removed) {
+    await writeYamlConfig(filePath, config);
+  }
+  return { removed };
 }
 
 export async function readTomlServerExists(filePath: string, serverName: string): Promise<boolean> {

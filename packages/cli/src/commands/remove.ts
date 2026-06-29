@@ -8,10 +8,12 @@ import { ALL_AGENT_NAMES, SETUP_AGENT_NAMES, getAgent, type SetupAgent } from ".
 import {
   readJsonConfig,
   readTomlServerExists,
+  readYamlConfig,
   removeServerEntry,
   writeJsonConfig,
   resolveMcpPath,
   removeTomlServer,
+  removeYamlServer,
 } from "../setup/mcp-writer.js";
 import { join } from "path";
 import { access, readFile, rm, writeFile } from "fs/promises";
@@ -26,6 +28,7 @@ interface UninstallOptions {
   codex?: boolean;
   antigravity?: boolean;
   gemini?: boolean;
+  hermes?: boolean;
   project?: boolean;
   yes?: boolean;
   all?: boolean;
@@ -78,6 +81,7 @@ export function registerRemoveCommand(program: Command): void {
     .option("--codex", "Remove from Codex")
     .option("--antigravity", "Remove from Antigravity")
     .option("--gemini", "Remove from Gemini CLI")
+    .option("--hermes", "Remove from Hermes Agent")
     .option("--all", "Remove both MCP setup and CLI + Skills setup")
     .option("--mcp", "Remove MCP setup")
     .option("--cli", "Remove CLI + Skills setup")
@@ -96,6 +100,7 @@ function getSelectedAgents(options: UninstallOptions): SetupAgent[] {
   if (options.codex) agents.push("codex");
   if (options.antigravity) agents.push("antigravity");
   if (options.gemini) agents.push("gemini");
+  if (options.hermes) agents.push("hermes");
   return agents;
 }
 
@@ -154,7 +159,7 @@ async function resolveAgents(options: UninstallOptions, scope: Scope): Promise<S
 
   if (detected.length === 0) {
     log.warn(
-      "No Context7 setup detected. Pass --claude, --cursor, --opencode, --codex, --antigravity, or --gemini."
+      "No Context7 setup detected. Pass --claude, --cursor, --opencode, --codex, --antigravity, --gemini, or --hermes."
     );
     return [];
   }
@@ -202,6 +207,22 @@ async function hasMcpConfig(agentName: SetupAgent, scope: Scope): Promise<boolea
 
   if (mcpPath.endsWith(".toml")) {
     return readTomlServerExists(mcpPath, "context7");
+  }
+
+  if (mcpPath.endsWith(".yaml") || mcpPath.endsWith(".yml")) {
+    let existing: Record<string, unknown>;
+    try {
+      existing = await readYamlConfig(mcpPath);
+    } catch (err) {
+      log.warn(
+        `Skipped ${mcpPath}: could not parse (${err instanceof Error ? err.message : String(err)})`
+      );
+      return false;
+    }
+    const section = existing[agent.mcp.configKey];
+    return (
+      !!section && typeof section === "object" && !Array.isArray(section) && "context7" in section
+    );
   }
 
   let existing: Record<string, unknown>;
@@ -337,6 +358,11 @@ async function uninstallMcp(agentName: SetupAgent, scope: Scope): Promise<Cleanu
   try {
     if (mcpPath.endsWith(".toml")) {
       const { removed } = await removeTomlServer(mcpPath, "context7");
+      return { status: removed ? "removed" : "not found", path: mcpPath };
+    }
+
+    if (mcpPath.endsWith(".yaml") || mcpPath.endsWith(".yml")) {
+      const { removed } = await removeYamlServer(mcpPath, "context7", agent.mcp.configKey);
       return { status: removed ? "removed" : "not found", path: mcpPath };
     }
 

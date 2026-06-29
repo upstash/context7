@@ -30,10 +30,13 @@ import {
   writeJsonConfig,
   resolveMcpPath,
   appendTomlServer,
+  appendYamlServer,
   readTomlServerEntry,
+  readYamlConfig,
   isStdioContext7Entry,
   patchStdioApiKey,
   getJsonServerEntry,
+  getYamlServerEntry,
 } from "../setup/mcp-writer.js";
 
 type Scope = "global" | "project";
@@ -46,6 +49,7 @@ interface SetupOptions {
   opencode?: boolean;
   codex?: boolean;
   gemini?: boolean;
+  hermes?: boolean;
   project?: boolean;
   yes?: boolean;
   apiKey?: string;
@@ -74,6 +78,7 @@ function getSelectedAgents(options: SetupOptions): SetupAgent[] {
   if (options.codex) agents.push("codex");
   if (options.antigravity) agents.push("antigravity");
   if (options.gemini) agents.push("gemini");
+  if (options.hermes) agents.push("hermes");
   return agents;
 }
 
@@ -87,6 +92,7 @@ export function registerSetupCommand(program: Command): void {
     .option("--opencode", "Set up for OpenCode")
     .option("--codex", "Set up for Codex")
     .option("--gemini", "Set up for Gemini CLI")
+    .option("--hermes", "Set up for Hermes Agent")
     .option("--mcp", "Set up MCP server mode")
     .option("--cli", "Set up CLI + Skills mode (no MCP server)")
     .option("-p, --project", "Configure for current project instead of globally")
@@ -322,6 +328,17 @@ async function setupAgent(
       mcpStatus = alreadyExists
         ? `reconfigured with ${AUTH_MODE_LABELS[auth.mode]}`
         : `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
+    } else if (mcpPath.endsWith(".yaml") || mcpPath.endsWith(".yml")) {
+      const existing = await readYamlConfig(mcpPath);
+      const existingYamlEntry =
+        transport === "stdio"
+          ? getYamlServerEntry(existing, agent.mcp.configKey, "context7")
+          : undefined;
+      const entry = resolveEntryToWrite(agent, auth, transport, existingYamlEntry);
+      const { alreadyExists } = await appendYamlServer(mcpPath, "context7", entry, agent.mcp.configKey);
+      mcpStatus = alreadyExists
+        ? `reconfigured with ${AUTH_MODE_LABELS[auth.mode]}`
+        : `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
     } else {
       const existing = await readJsonConfig(mcpPath);
       const existingJsonEntry =
@@ -367,7 +384,8 @@ async function setupAgent(
     if (downloadData.error || downloadData.files.length === 0) {
       throw new Error(downloadData.error || "no files");
     }
-    await installSkillFiles(agent.skill.name, downloadData.files, skillDir);
+    const files = customizeSkillFilesForAgent(agentName, agent.skill.name, downloadData.files);
+    await installSkillFiles(agent.skill.name, files, skillDir);
     skillStatus = "installed";
   } catch (err) {
     skillStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;

@@ -30,6 +30,10 @@ import {
   buildTomlServerBlock,
   appendTomlServer,
   removeTomlServer,
+  readYamlConfig,
+  writeYamlConfig,
+  appendYamlServer,
+  removeYamlServer,
   resolveMcpPath,
   isStdioContext7Entry,
   patchStdioApiKey,
@@ -534,6 +538,89 @@ describe("TOML config", () => {
   });
 });
 
+describe("YAML MCP config", () => {
+  let tempDir: string;
+
+  beforeEach(async () => {
+    tempDir = join(tmpdir(), `ctx7-yaml-test-${Date.now()}`);
+    await mkdir(tempDir, { recursive: true });
+  });
+
+  afterEach(async () => {
+    await rm(tempDir, { recursive: true, force: true });
+  });
+
+  test("readYamlConfig returns empty object for missing or empty config", async () => {
+    expect(await readYamlConfig(join(tempDir, "missing.yaml"))).toEqual({});
+    const path = join(tempDir, "config.yaml");
+    await writeFile(path, "\n", "utf-8");
+    expect(await readYamlConfig(path)).toEqual({});
+  });
+
+  test("appendYamlServer adds context7 under mcp_servers and preserves existing keys", async () => {
+    const path = join(tempDir, "config.yaml");
+    await writeFile(
+      path,
+      "model:\n  provider: openrouter\nmcp_servers:\n  other:\n    url: https://other.com\n",
+      "utf-8"
+    );
+
+    const { alreadyExists } = await appendYamlServer(path, "context7", {
+      url: "https://mcp.context7.com/mcp",
+      headers: { CONTEXT7_API_KEY: "sk-test-123" },
+    });
+
+    expect(alreadyExists).toBe(false);
+    const config = await readYamlConfig(path);
+    expect(config.model).toEqual({ provider: "openrouter" });
+    const servers = config.mcp_servers as Record<string, unknown>;
+    expect(servers.other).toEqual({ url: "https://other.com" });
+    expect(servers.context7).toEqual({
+      url: "https://mcp.context7.com/mcp",
+      headers: { CONTEXT7_API_KEY: "sk-test-123" },
+    });
+  });
+
+  test("appendYamlServer overwrites existing context7 entry without duplicating", async () => {
+    const path = join(tempDir, "config.yaml");
+    await appendYamlServer(path, "context7", { url: "https://old.com" });
+    const { alreadyExists } = await appendYamlServer(path, "context7", {
+      url: "https://mcp.context7.com/mcp/oauth",
+    });
+
+    expect(alreadyExists).toBe(true);
+    const config = await readYamlConfig(path);
+    expect((config.mcp_servers as Record<string, unknown>).context7).toEqual({
+      url: "https://mcp.context7.com/mcp/oauth",
+    });
+    const content = await readFile(path, "utf-8");
+    expect(content.match(/context7:/g)?.length).toBe(1);
+    expect(content).not.toContain("https://old.com");
+  });
+
+  test("removeYamlServer removes only context7 and cleans empty mcp_servers", async () => {
+    const path = join(tempDir, "config.yaml");
+    await writeYamlConfig(path, {
+      display: { language: "zh" },
+      mcp_servers: {
+        other: { url: "https://other.com" },
+        context7: { url: "https://mcp.context7.com/mcp" },
+      },
+    });
+
+    expect(await removeYamlServer(path, "context7")).toEqual({ removed: true });
+    let config = await readYamlConfig(path);
+    expect(config).toEqual({
+      display: { language: "zh" },
+      mcp_servers: { other: { url: "https://other.com" } },
+    });
+
+    expect(await removeYamlServer(path, "other")).toEqual({ removed: true });
+    config = await readYamlConfig(path);
+    expect(config).toEqual({ display: { language: "zh" } });
+  });
+});
+
 describe("AGENTS.md append", () => {
   let tempDir: string;
 
@@ -1020,6 +1107,53 @@ describe("agent config integration", () => {
     });
   });
 
+  describe("hermes", () => {
+    const agent = getAgent("hermes");
+
+    test("buildEntry with api-key writes Hermes HTTP MCP shape", () => {
+      expect(agent.mcp.buildEntry(apiKeyAuth, "http")).toEqual({
+        url: "https://mcp.context7.com/mcp",
+        headers: { CONTEXT7_API_KEY: "sk-test-123" },
+        timeout: 120,
+        connect_timeout: 60,
+      });
+    });
+
+    test("buildEntry with oauth writes Hermes OAuth URL without headers", () => {
+      expect(agent.mcp.buildEntry(oauthAuth, "http")).toEqual({
+        url: "https://mcp.context7.com/mcp/oauth",
+        timeout: 120,
+        connect_timeout: 60,
+      });
+    });
+
+    test("stdio entry uses env instead of exposing api key in args", () => {
+      const entry = agent.mcp.buildEntry(apiKeyAuth, "stdio");
+      expect(entry.command).toBe("node");
+      expect(entry.args[0]).toBe("-e");
+      expect(entry.args[1]).toContain("@upstash/context7-mcp");
+      expect(entry.env).toEqual({ CONTEXT7_API_KEY: "sk-test-123" });
+      expect(entry.timeout).toBe(120);
+      expect(entry.connect_timeout).toBe(60);
+    });
+
+    test("merges into Hermes YAML config under mcp_servers", async () => {
+      const path = join(tempDir, "config.yaml");
+      await writeYamlConfig(path, { display: { language: "zh" } });
+
+      await appendYamlServer(path, "context7", agent.mcp.buildEntry(apiKeyAuth, "http"));
+
+      const config = await readYamlConfig(path);
+      expect(config.display).toEqual({ language: "zh" });
+      expect((config.mcp_servers as Record<string, unknown>).context7).toEqual({
+        url: "https://mcp.context7.com/mcp",
+        headers: { CONTEXT7_API_KEY: "sk-test-123" },
+        timeout: 120,
+        connect_timeout: 60,
+      });
+    });
+  });
+
   describe("all agents have consistent config", () => {
     test("all agents are covered", () => {
       expect(ALL_AGENT_NAMES).toEqual([
@@ -1029,6 +1163,7 @@ describe("agent config integration", () => {
         "codex",
         "antigravity",
         "gemini",
+        "hermes",
       ]);
     });
 
@@ -1103,11 +1238,27 @@ describe("agent config integration", () => {
       });
     });
 
+    test("hermes stdio entry uses env instead of --api-key args", () => {
+      const entry = getAgent("hermes").mcp.buildEntry(apiKeyAuth, "stdio");
+      expect(entry.command).toBe("node");
+      expect(entry.args[0]).toBe("-e");
+      expect(entry.args[1]).toContain("@upstash/context7-mcp");
+      expect(Object.keys(entry.env as Record<string, string>)).toEqual(["CONTEXT7_API_KEY"]);
+      expect(typeof (entry.env as Record<string, string>).CONTEXT7_API_KEY).toBe("string");
+      expect(entry.timeout).toBe(120);
+      expect(entry.connect_timeout).toBe(60);
+    });
+
     test.each(ALL_AGENT_NAMES)("%s stdio entry omits --api-key for oauth mode", (name) => {
       const entry = getAgent(name).mcp.buildEntry(oauthAuth, "stdio");
       const args = (entry.args ?? entry.command) as string[];
       expect(args).not.toContain("--api-key");
-      expect(args).toContain("@upstash/context7-mcp");
+      if (name === "hermes") {
+        // Hermes uses node -e inline script, check the script content
+        expect(args.some((arg) => typeof arg === "string" && arg.includes("@upstash/context7-mcp"))).toBe(true);
+      } else {
+        expect(args).toContain("@upstash/context7-mcp");
+      }
     });
 
     test("codex stdio entry serializes to TOML correctly", () => {
