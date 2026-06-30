@@ -53,6 +53,31 @@ describe("createMemorySessionStore", () => {
       vi.useRealTimers();
     }
   });
+
+  test("caps memory by evicting the oldest sessions past the limit", async () => {
+    const store = createMemorySessionStore(3);
+    await store.create("a");
+    await store.create("b");
+    await store.create("c");
+    await store.create("d"); // exceeds cap of 3 -> evicts oldest ("a")
+
+    expect(await store.refresh("a")).toBe(false);
+    expect(await store.refresh("b")).toBe(true);
+    expect(await store.refresh("c")).toBe(true);
+    expect(await store.refresh("d")).toBe(true);
+  });
+
+  test("does not grow unbounded under a flood of new sessions", async () => {
+    const cap = 100;
+    const store = createMemorySessionStore(cap);
+    for (let i = 0; i < cap * 10; i++) {
+      await store.create(`session-${i}`);
+    }
+
+    // Everything older than the last `cap` sessions must have been evicted.
+    expect(await store.refresh("session-0")).toBe(false);
+    expect(await store.refresh(`session-${cap * 10 - 1}`)).toBe(true);
+  });
 });
 
 describe("createSessionStore", () => {
