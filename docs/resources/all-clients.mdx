@@ -997,11 +997,16 @@ docker pull upstash/context7-mcp
 }
 ```
 
+**As a remote HTTP server** (the image's default), expose port 8080:
+
+```bash
+docker run --rm -p 8080:8080 ghcr.io/upstash/context7-mcp
+```
+
 <Note>
-  The image also supports an HTTP transport (`--transport http`, the default) used for
-  self-hosted deployments. That mode keeps session state in Upstash Redis and requires the
-  `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` environment variables. For local use
-  with an MCP client, stick with `--transport stdio` as shown above.
+  The HTTP server runs standalone with an in-memory session store, so no extra configuration is
+  needed. If you run multiple instances behind a load balancer, set `UPSTASH_REDIS_REST_URL` and
+  `UPSTASH_REDIS_REST_TOKEN` so sessions are shared across them.
 </Note>
 
 <Tip>
