@@ -1004,9 +1004,9 @@ docker run --rm -p 8080:8080 ghcr.io/upstash/context7-mcp
 ```
 
 <Note>
-  The HTTP server runs standalone with an in-memory session store, so no extra configuration is
-  needed. If you run multiple instances behind a load balancer, set `UPSTASH_REDIS_REST_URL` and
-  `UPSTASH_REDIS_REST_TOKEN` so sessions are shared across them.
+  The HTTP server runs standalone with no extra configuration. If you run multiple instances
+  behind a load balancer, set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` so sessions
+  are shared across them.
 </Note>
 
 <Tip>
