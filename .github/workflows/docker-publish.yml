@@ -1,0 +1,88 @@
+name: Publish Docker Image
+
+on:
+  push:
+    tags:
+      - "@upstash/context7-mcp@*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Image version tag (defaults to packages/mcp/package.json version)"
+        required: false
+        type: string
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # Required to push to GHCR with GITHUB_TOKEN
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Determine version
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # Tag looks like "@upstash/context7-mcp@3.2.2"
+            VERSION="${GITHUB_REF_NAME##*@}"
+          elif [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+            VERSION="${VERSION#v}"
+          else
+            VERSION=$(node -p "require('./packages/mcp/package.json').version")
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "Publishing version: $VERSION"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        id: build-push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: packages/mcp/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/upstash/context7-mcp:latest
+            ghcr.io/upstash/context7-mcp:${{ env.VERSION }}
+            upstash/context7-mcp:latest
+            upstash/context7-mcp:${{ env.VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Create GitHub summary
+        run: |
+          {
+            echo "## Official Docker Image Published"
+            echo ""
+            echo "**Version:** \`${{ env.VERSION }}\`"
+            echo "**Platforms:** \`linux/amd64\`, \`linux/arm64\`"
+            echo "**Digest:** \`${{ steps.build-push.outputs.digest }}\`"
+            echo ""
+            echo "**Tags:**"
+            echo "- \`ghcr.io/upstash/context7-mcp:latest\`"
+            echo "- \`ghcr.io/upstash/context7-mcp:${{ env.VERSION }}\`"
+            echo "- \`upstash/context7-mcp:latest\`"
+            echo "- \`upstash/context7-mcp:${{ env.VERSION }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

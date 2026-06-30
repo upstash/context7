@@ -967,34 +967,79 @@ qwen mcp add context7 -- npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 
 <Accordion title="Using Docker">
 
-1. Create a `Dockerfile`:
-
-```Dockerfile
-FROM node:22-alpine
-WORKDIR /app
-RUN npm install -g @upstash/context7-mcp
-CMD ["context7-mcp", "--transport", "stdio"]
-```
-
-2. Build the image:
+Pull the official image instead of building your own. It is published to both the GitHub Container Registry and Docker Hub, and the `latest` tag follows the most recent release:
 
 ```bash
-docker build -t context7-mcp .
+docker pull ghcr.io/upstash/context7-mcp
+# or
+docker pull upstash/context7-mcp
 ```
 
-3. Configure your MCP client:
+**As a stdio MCP server** (for clients such as Claude Desktop, Cline, or Roo Code), append `--transport stdio`:
 
 ```json
 {
   "mcpServers": {
     "context7": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "context7-mcp"],
-      "transportType": "stdio"
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "ghcr.io/upstash/context7-mcp",
+        "--transport",
+        "stdio",
+        "--api-key",
+        "YOUR_API_KEY"
+      ]
     }
   }
 }
 ```
+
+**As a remote HTTP server** (the image's default), expose port 8080:
+
+```bash
+docker run --rm -p 8080:8080 ghcr.io/upstash/context7-mcp
+```
+
+<Note>
+  The HTTP server runs standalone with no extra configuration. If you run multiple instances
+  behind a load balancer, set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` so sessions
+  are shared across them.
+</Note>
+
+<Tip>
+  Prefer to build it yourself? Use the
+  [`Dockerfile`](https://github.com/upstash/context7/blob/master/packages/mcp/Dockerfile) in
+  the repository, or a minimal one:
+
+```Dockerfile
+FROM node:22-alpine
+RUN npm install -g @upstash/context7-mcp
+ENTRYPOINT ["context7-mcp"]
+```
+
+</Tip>
+
+<Note>
+  For a hardened, enterprise-grade image with signed provenance, an SBOM, and near-zero known
+  CVEs, Context7 is also available as a [Docker Hardened Image](https://dhi.io) at
+  `dhi.io/context7-mcp`. It runs over stdio out of the box. Pulling it requires authenticating
+  with `docker login dhi.io` and a Docker Hardened Images subscription:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "dhi.io/context7-mcp", "--api-key", "YOUR_API_KEY"]
+    }
+  }
+}
+```
+
+</Note>
 
 </Accordion>
 

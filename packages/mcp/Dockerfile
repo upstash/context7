@@ -26,4 +26,6 @@ COPY --from=builder /app/packages/mcp/dist ./packages/mcp/dist
 
 WORKDIR /app/packages/mcp
 EXPOSE 8080
-CMD ["node", "dist/index.js", "--transport", "http", "--port", "8080"]
+# Default to HTTP on :8080. Override args (e.g. `--transport stdio`) are appended to the entrypoint.
+ENTRYPOINT ["node", "dist/index.js"]
+CMD ["--transport", "http", "--port", "8080"]
