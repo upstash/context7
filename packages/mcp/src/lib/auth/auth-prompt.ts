@@ -1,4 +1,4 @@
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/server";
 import type { ClientContext } from "../types.js";
 
 function clientFlagForCli(ide: string | undefined): string {

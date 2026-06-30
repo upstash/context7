@@ -1,21 +1,15 @@
 #!/usr/bin/env node
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  ListPromptsRequestSchema,
-  ListResourcesRequestSchema,
-  ListResourceTemplatesRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
-import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
+import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
+import { McpServer, isInitializeRequest } from "@modelcontextprotocol/server";
+import type { Transport } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
 import type { ClientContext } from "./lib/types.js";
 import { formatSearchResults, extractClientInfoFromUserAgent } from "./lib/utils.js";
 import { isJWT, validateJWT } from "./lib/jwt.js";
 import express from "express";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
 import { randomUUID } from "node:crypto";
@@ -197,7 +191,7 @@ Response Format:
 For ambiguous queries, request clarification before proceeding with a best-guess match.
 
 IMPORTANT: Do not call this tool more than 3 times per question. If you cannot find what you need after 3 calls, use the best result you have.`,
-      inputSchema: {
+      inputSchema: z.object({
         query: z
           .string()
           .describe(
@@ -208,7 +202,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
           .describe(
             "Library name to search for and retrieve a Context7-compatible library ID. Use the official library name with proper punctuation — e.g., 'Next.js' instead of 'nextjs', 'Customer.io' instead of 'customerio', 'Three.js' instead of 'threejs'."
           ),
-      },
+      }),
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -256,7 +250,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
 You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
 Do not call this tool more than 3 times per question.`,
-      inputSchema: {
+      inputSchema: z.object({
         libraryId: z
           .string()
           .describe(
@@ -267,7 +261,7 @@ Do not call this tool more than 3 times per question.`,
           .describe(
             "The question or task you need help with. Be specific and include relevant details. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad: 'auth' or 'hooks'. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
           ),
-      },
+      }),
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -291,11 +285,11 @@ Do not call this tool more than 3 times per question.`,
   );
 
   server.server.registerCapabilities({ prompts: {}, resources: {} });
-  server.server.setRequestHandler(ListPromptsRequestSchema, async () => ({ prompts: [] }));
-  server.server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+  server.server.setRequestHandler("prompts/list", async () => ({ prompts: [] }));
+  server.server.setRequestHandler("resources/list", async () => ({
     resources: [],
   }));
-  server.server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({
+  server.server.setRequestHandler("resources/templates/list", async () => ({
     resourceTemplates: [],
   }));
 
@@ -522,7 +516,7 @@ async function main() {
         // buffering until the tool returns. This is required for long-running tools
         // because some MCP HTTP clients cap the underlying fetch at 60s waiting for
         // headers, even though the per-tool timeout is much higher.
-        const transport = new StreamableHTTPServerTransport({
+        const transport = new NodeStreamableHTTPServerTransport({
           sessionIdGenerator: undefined,
           enableJsonResponse: false,
         });
