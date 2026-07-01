@@ -60,7 +60,7 @@
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "^0.78.0",
-    "@types/node": "^25.9.1",
+    "@types/node": "^26.0.1",
     "dotenv": "^17.4.2",
     "typebox": "^1.1.38",
     "typescript": "^5.9.3",
