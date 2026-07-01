@@ -16,7 +16,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.branch || github.ref }}
 
