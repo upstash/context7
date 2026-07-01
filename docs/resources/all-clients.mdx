@@ -1307,4 +1307,31 @@ Install the [context7.mcpb](https://github.com/upstash/context7/tree/master/pack
 
 </Accordion>
 
+<Accordion title="AnythingLLM">
+
+AnythingLLM supports MCP Servers through GUI. 
+
+1. Navigate `AnythingLLM` > `Agents Skills`
+2. Select `MCP Servers`.
+3. Click `Edit MCP config`.
+4. Paste.
+5. Click to "Refresh" button.
+
+#### Remote Connection
+```json
+{
+"mcpServers": {
+  "context7": {
+    "type": "streamable",
+    "url": "https://mcp.context7.com/mcp",
+    "headers": { 
+		  "CONTEXT7_API_KEY": "YOUR_API_KEY"
+		}	
+	}
+}
+}
+```
+
+</Accordion>
+
 </AccordionGroup>
