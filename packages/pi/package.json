@@ -59,7 +59,7 @@
     "access": "public"
   },
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": "^0.78.0",
+    "@earendil-works/pi-coding-agent": "^0.80.3",
     "@types/node": "^25.9.1",
     "dotenv": "^17.4.2",
     "typebox": "^1.1.38",
