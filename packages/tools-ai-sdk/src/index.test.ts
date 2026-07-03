@@ -223,6 +223,7 @@ describe("@upstash/context7-tools-ai-sdk", () => {
       expect(RESOLVE_LIBRARY_ID_DESCRIPTION).toBeDefined();
       expect(typeof RESOLVE_LIBRARY_ID_DESCRIPTION).toBe("string");
       expect(RESOLVE_LIBRARY_ID_DESCRIPTION).toContain("library");
+      expect(RESOLVE_LIBRARY_ID_DESCRIPTION).toContain("docs site");
     });
   });
 });
