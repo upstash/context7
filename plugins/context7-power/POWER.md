@@ -49,7 +49,9 @@ From the resolution results, choose based on:
 Call `query-docs` with:
 
 - `libraryId`: The selected Context7 library ID (e.g., /vercel/next.js)
-- `query`: The user's full, specific question rather than a single word
+- `query`: The user's full, specific question rather than a single word, scoped to a single concept
+
+If the user's question spans multiple distinct concepts (e.g. routing and auth and caching), make a separate `query-docs` call per concept with the same library ID, unless the question is about how the concepts interact -- combined queries dilute ranking and return shallow results for each topic.
 
 ### Step 4: Use the Documentation
 
@@ -62,6 +64,7 @@ Incorporate the fetched documentation into your response:
 ## Best Practices
 
 - Pass the user's full question as the query for better results
+- Keep each query to one topic; split multi-topic questions into separate `query-docs` calls, unless the question is about how the concepts interact
 - When users mention versions ("Next.js 15", "React 19"), use version-specific library IDs if available from the resolution step
 - When multiple matches exist, prefer official/primary packages over community forks
 - Use this Power for API syntax, configuration, setup instructions, version migration, library-specific debugging, and CLI tool usage
