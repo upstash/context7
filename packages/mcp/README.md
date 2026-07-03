@@ -1448,6 +1448,8 @@ You can use the `CONTEXT7_API_KEY` environment variable instead of passing the `
 
 **Note:** The `--api-key` CLI flag takes precedence over the environment variable when both are provided.
 
+You can optionally set `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` to persist MCP session IDs in [Upstash Redis](https://upstash.com/). This lets multiple server instances share session state and expires idle sessions after 7 days. Without them, the server still works normally — sessions are simply not persisted or expired.
+
 **Example with .env file:**
 
 ```bash

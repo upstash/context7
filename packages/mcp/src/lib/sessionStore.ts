@@ -1,4 +1,4 @@
-import { getRedis } from "./redis.js";
+import { getRedis, hasRedisCredentials } from "./redis.js";
 
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
 const REFRESH_THRESHOLD_SECONDS = 24 * 60 * 60; // 1 day — only extend TTL when below this
@@ -8,7 +8,23 @@ const SESSION_KEY_PREFIX = "#mcp#session#";
 // primitive — only an opaque identifier for log correlation and spec compliance —
 // so an unreachable Redis shouldn't block clients. Ghost sessions self-heal on
 // the next refresh (returns false → client gets 404 → re-inits).
+//
+// Redis itself is optional: without credentials, sessions are minted but not
+// persisted or expired — refresh always succeeds.
 export function createSessionStore() {
+  if (!hasRedisCredentials()) {
+    console.warn(
+      "Upstash Redis credentials not set — MCP sessions will not be persisted or expired."
+    );
+    return {
+      async create(_sessionId: string) {},
+      async refresh(_sessionId: string) {
+        return true;
+      },
+      async delete(_sessionId: string) {},
+    };
+  }
+
   const redis = getRedis();
 
   const getSessionKey = (sessionId: string) => `${SESSION_KEY_PREFIX}${sessionId}`;
