@@ -78,16 +78,17 @@ IMPORTANT: Do not call `ctx7 docs` more than 3 times per question. If you cannot
 
 ### Writing good queries
 
-The query directly affects the quality of results. Be specific and include relevant details. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query.
+The query directly affects the quality of results. Be specific and include relevant details, but keep each query to one topic — if the question spans multiple distinct concepts, run a separate `ctx7 docs` command per concept instead of combining them, unless the question is about how the concepts interact. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query.
 
 | Quality | Example |
 |---------|---------|
 | Good | `"How to set up authentication with JWT in Express.js"` |
 | Good | `"React useEffect cleanup function with async operations"` |
-| Bad | `"auth"` |
-| Bad | `"hooks"` |
+| Bad (too vague) | `"auth"` |
+| Bad (too vague) | `"hooks"` |
+| Bad (too broad) | `"routing and auth and caching in Next.js"` |
 
-Use the user's full question as the query when possible — vague one-word queries return generic results.
+Use the user's full question as the query when possible — vague one-word queries return generic results, and multi-topic queries dilute ranking and return shallow results for each topic.
 
 The output contains two types of content: **code snippets** (titled, with language-tagged blocks) and **info snippets** (prose explanations with breadcrumb context).
 
