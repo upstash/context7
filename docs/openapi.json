@@ -458,7 +458,11 @@
                         "/vercel/next.js"
                       ],
                       "repoFilters": {
-                        "minStars": 100
+                        "minStars": 100,
+                        "allowedLicenses": [
+                          "MIT",
+                          "Apache-2.0"
+                        ]
                       }
                     },
                     "select": {
@@ -582,6 +586,39 @@
                           "add": [
                             "/vercel/next.js"
                           ]
+                        }
+                      }
+                    }
+                  }
+                },
+                "allowPermissiveLicenses": {
+                  "summary": "Restrict public repos to permissive SPDX licenses",
+                  "value": {
+                    "libraryFilters": {
+                      "quality": {
+                        "repoFilters": {
+                          "allowedLicenses": {
+                            "add": [
+                              "MIT",
+                              "Apache-2.0",
+                              "BSD-3-Clause",
+                              "ISC"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "clearLicenseRestriction": {
+                  "summary": "Remove all license restrictions",
+                  "value": {
+                    "libraryFilters": {
+                      "quality": {
+                        "repoFilters": {
+                          "allowedLicenses": {
+                            "clear": true
+                          }
                         }
                       }
                     }
@@ -891,6 +928,10 @@
                   "skipVersionFiltering": {
                     "type": "boolean",
                     "description": "Skip filtering out version-specific documentation pages"
+                  },
+                  "generateDocs": {
+                    "type": "boolean",
+                    "description": "Generate documentation from the repository source code. Applies to private repository submissions."
                   }
                 }
               },
@@ -1998,6 +2039,10 @@
           "skipVersionFiltering": {
             "type": "boolean",
             "description": "Skip filtering out version-specific documentation pages"
+          },
+          "generateDocs": {
+            "type": "boolean",
+            "description": "Generate documentation from the repository source code. Applies to private repository submissions."
           }
         }
       },
@@ -2122,10 +2167,18 @@
                         "type": "integer",
                         "nullable": true,
                         "description": "Minimum GitHub stars required"
+                      },
+                      "allowedLicenses": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "SPDX license identifiers (e.g. 'MIT', 'Apache-2.0') that are allowed. Empty array means no license restriction. Applies to public repos only; non-repo source types pass through."
                       }
                     },
                     "required": [
-                      "minStars"
+                      "minStars",
+                      "allowedLicenses"
                     ]
                   },
                   "websiteFilters": {
@@ -2216,6 +2269,34 @@
               "type": "string"
             },
             "description": "Identifiers to remove — library paths (e.g. '/org/repo', '/org') or domains (e.g. 'stripe.com')"
+          },
+          "clear": {
+            "type": "boolean",
+            "description": "Set to true to remove all entries. Cannot be used together with 'add' or 'remove'."
+          }
+        }
+      },
+      "LicenseListOperation": {
+        "type": "object",
+        "description": "Incremental add/remove operation on a list of SPDX license identifiers. Use 'clear' to remove all entries at once.",
+        "properties": {
+          "add": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9.+\\-_]+$",
+              "maxLength": 64
+            },
+            "description": "SPDX license identifiers to add (e.g. 'MIT', 'Apache-2.0', 'BSD-3-Clause')"
+          },
+          "remove": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9.+\\-_]+$",
+              "maxLength": 64
+            },
+            "description": "SPDX license identifiers to remove"
           },
           "clear": {
             "type": "boolean",
@@ -2314,6 +2395,9 @@
                         "nullable": true,
                         "minimum": 0,
                         "description": "Minimum stars threshold (null to clear)"
+                      },
+                      "allowedLicenses": {
+                        "$ref": "#/components/schemas/LicenseListOperation"
                       }
                     }
                   },
