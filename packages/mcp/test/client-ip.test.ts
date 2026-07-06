@@ -9,21 +9,40 @@ describe("isPrivateOrLocalIp", () => {
     "172.16.0.1",
     "127.0.0.1",
     "169.254.1.1",
+    "100.64.0.1",
+    "100.127.255.255",
     "::1",
+    "0::1",
+    "0:0:0:0:0:0:0:1",
     "fe80::1",
+    "FE80::1",
+    "febf::1",
     "fc00::1",
     "fd12::1",
+    "fdff::1",
     "::ffff:127.0.0.1",
   ])("treats %s as private or local", (ip) => {
     expect(isPrivateOrLocalIp(ip)).toBe(true);
   });
 
-  test.each(["8.8.8.8", "203.0.113.10", "2001:db8::1", "::ffff:8.8.8.8"])(
-    "treats %s as public",
-    (ip) => {
-      expect(isPrivateOrLocalIp(ip)).toBe(false);
-    }
-  );
+  test.each([
+    "8.8.8.8",
+    "203.0.113.10",
+    "100.63.255.255",
+    "100.128.0.1",
+    "2001:db8::1",
+    "1::1",
+    "::11",
+    "::ffff:8.8.8.8",
+    // abbreviated first hextets that look like fe80::/10 or fc00::/7 but are not
+    "fe8::1",
+    "fc::1",
+    "fd0::1",
+    // fec0::/10 (deprecated site-local) is outside fe80::/10
+    "fec0::1",
+  ])("treats %s as public", (ip) => {
+    expect(isPrivateOrLocalIp(ip)).toBe(false);
+  });
 });
 
 describe("getClientIp", () => {

@@ -5,7 +5,7 @@ function stripIpv4MappedPrefix(ip: string): string {
 }
 
 /**
- * Returns true for RFC1918, loopback, link-local, and IPv6 private ranges.
+ * Returns true for RFC1918, CGNAT, loopback, link-local, and IPv6 private ranges.
  */
 export function isPrivateOrLocalIp(ip: string): boolean {
   const plainIp = stripIpv4MappedPrefix(ip).toLowerCase();
@@ -15,22 +15,27 @@ export function isPrivateOrLocalIp(ip: string): boolean {
       plainIp.startsWith("10.") ||
       plainIp.startsWith("192.168.") ||
       /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(plainIp) ||
+      /^100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\./.test(plainIp) ||
       plainIp.startsWith("127.") ||
       plainIp.startsWith("169.254.")
     );
   }
 
-  if (plainIp === "::1") {
+  // ::1 loopback in any textual form (e.g. "0::1", "0:0:0:0:0:0:0:1")
+  if (/^[0:]+1$/.test(plainIp)) {
     return true;
   }
 
+  // First hextets in fe80::/10 and fc00::/7 start with a non-zero digit, so a
+  // valid textual form always spells out all 4 digits.
+
   // fe80::/10 link-local
-  if (/^fe[89ab][0-9a-f]{0,2}:/i.test(plainIp) || /^fe[89ab][0-9a-f]{0,2}$/i.test(plainIp)) {
+  if (/^fe[89ab][0-9a-f]:/.test(plainIp)) {
     return true;
   }
 
   // fc00::/7 unique local
-  if (/^f[cd][0-9a-f]{0,2}:/i.test(plainIp) || /^f[cd][0-9a-f]{0,2}$/i.test(plainIp)) {
+  if (/^f[cd][0-9a-f]{2}:/.test(plainIp)) {
     return true;
   }
 
