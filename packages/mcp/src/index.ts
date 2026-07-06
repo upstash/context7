@@ -27,6 +27,7 @@ import {
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
+import { getClientIp } from "./lib/client-ip.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -106,36 +107,6 @@ function getClientContext(): ClientContext {
     transport: "stdio",
     sessionId: stdioSessionId,
   };
-}
-
-/**
- * Extract client IP address from request headers.
- * Handles X-Forwarded-For header for proxied requests.
- */
-function getClientIp(req: express.Request): string | undefined {
-  const forwardedFor = req.headers["x-forwarded-for"] || req.headers["X-Forwarded-For"];
-
-  if (forwardedFor) {
-    const ips = Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor;
-    const ipList = ips.split(",").map((ip) => ip.trim());
-
-    for (const ip of ipList) {
-      const plainIp = ip.replace(/^::ffff:/, "");
-      if (
-        !plainIp.startsWith("10.") &&
-        !plainIp.startsWith("192.168.") &&
-        !/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(plainIp)
-      ) {
-        return plainIp;
-      }
-    }
-    return ipList[0].replace(/^::ffff:/, "");
-  }
-
-  if (req.socket?.remoteAddress) {
-    return req.socket.remoteAddress.replace(/^::ffff:/, "");
-  }
-  return undefined;
 }
 
 function createMcpServer() {
