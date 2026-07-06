@@ -1,5 +1,12 @@
 # @upstash/context7-mcp
 
+## 3.2.3
+
+### Patch Changes
+
+- 41878ec: Skip loopback (`127.0.0.0/8`), link-local (`169.254.0.0/16`), CGNAT (`100.64.0.0/10`), IPv6 loopback (`::1`), IPv6 link-local (`fe80::/10`), and IPv6 unique-local (`fc00::/7`) addresses when extracting the client IP from `X-Forwarded-For`, so proxy-internal hops no longer pollute the reported client IP.
+- 33229cb: Clarify the `query-docs` query description so it asks for a single concept per query. When a question spans multiple distinct topics, callers are now told to make a separate query per concept instead of combining them (unless the question is about how the concepts interact), which avoids diluted, shallow results. Applied consistently across the MCP server, CLI, pi, and AI SDK tools.
+
 ## 3.2.2
 
 ### Patch Changes
