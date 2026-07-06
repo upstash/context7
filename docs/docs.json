@@ -76,7 +76,8 @@
               {
                 "group": "Integrations",
                 "pages": [
-                  "enterprise/integrations/github"
+                  "enterprise/integrations/github",
+                  "enterprise/integrations/confluence"
                 ]
               },
               {
