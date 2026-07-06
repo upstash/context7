@@ -33,7 +33,7 @@ Reach for these tools whenever a question involves a specific library, framework
 ## Workflow
 
 1. **Resolve the library ID.** Call `resolve-library-id` with the library name and the user's question. The tool returns matching libraries with their Context7 IDs (`/org/project` format), descriptions, snippet counts, and quality scores. Pick the best match — prioritize official sources, name match, and high benchmark scores.
-2. **Query the docs.** Call `query-docs` with the chosen library ID and the user's question. The tool returns documentation snippets and code examples.
+2. **Query the docs.** Call `query-docs` with the chosen library ID and the user's question, scoped to a single concept — if the question spans multiple distinct concepts, make a separate call per concept with the same library ID, unless the question is about how the concepts interact. The tool returns documentation snippets and code examples.
 3. **Answer.** Cite the library ID you used and quote code examples verbatim when relevant.
 
 If the user supplies a library ID in `/org/project` or `/org/project/version` format directly, skip step 1 and call `query-docs` immediately.

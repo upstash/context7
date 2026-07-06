@@ -14,7 +14,7 @@ Fetches up-to-date documentation and code examples for a library.
 ```
 
 - **library**: The library name, or a Context7 ID starting with `/`
-- **query**: What you're looking for (optional but recommended)
+- **query**: What you're looking for (optional but recommended; run the command once per distinct concept, unless asking how they interact)
 
 ## Examples
 

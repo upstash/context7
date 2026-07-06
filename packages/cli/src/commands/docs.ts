@@ -229,7 +229,10 @@ export function registerDocsCommands(program: Command): void {
   program
     .command("docs")
     .argument("<libraryId>", "Context7 library ID (e.g., /facebook/react)")
-    .argument("<query>", "Question or task to get docs for")
+    .argument(
+      "<query>",
+      "Single-topic question to get docs for (run a separate query per distinct concept, unless asking how they interact)"
+    )
     .option("--json", "Output as JSON")
     .description("Query documentation for a library")
     .action(async (libraryId: string, query: string, options: { json?: boolean }) => {

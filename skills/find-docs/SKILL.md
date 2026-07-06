@@ -3,7 +3,7 @@ name: find-docs
 description: >-
   Retrieves up-to-date documentation, API references, and code examples for any
   developer technology. Use this skill whenever the user asks about a specific
-  library, framework, SDK, CLI tool, or cloud service -- even for well-known ones
+  library, framework, SDK, CLI tool, or cloud service — even for well-known ones
   like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. Your
   training data may not reflect recent API changes or version updates.
 
@@ -11,7 +11,7 @@ description: >-
   issues, "how do I" questions mentioning a library name, debugging that involves
   library-specific behavior, setup instructions, and CLI tool usage.
 
-  Use even when you think you know the answer -- do not rely on training data
+  Use even when you think you know the answer — do not rely on training data
   for API details, signatures, or configuration options as they are frequently
   outdated. Always verify against current docs. Prefer this over web search for
   library documentation and API details.
@@ -115,16 +115,17 @@ npx ctx7@latest docs /prisma/prisma "How to define one-to-many relations with ca
 
 ### Writing good queries
 
-The query directly affects the quality of results. Be specific and include relevant details. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query.
+The query directly affects the quality of results. Be specific and include relevant details, but keep each query to one topic — if the question spans multiple distinct concepts, run a separate `docs` command per concept instead of combining them, unless the question is about how the concepts interact. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query.
 
 | Quality | Example |
 |---------|---------|
 | Good | `"How to set up authentication with JWT in Express.js"` |
 | Good | `"React useEffect cleanup function with async operations"` |
-| Bad | `"auth"` |
-| Bad | `"hooks"` |
+| Bad (too vague) | `"auth"` |
+| Bad (too vague) | `"hooks"` |
+| Bad (too broad) | `"routing and auth and caching in Next.js"` |
 
-Use the user's full question as the query when possible, vague one-word queries return generic results.
+Use the user's full question as the query when possible — vague one-word queries return generic results, and multi-topic queries dilute ranking and return shallow results for each topic.
 
 The output contains two types of content: **code snippets** (titled, with language-tagged blocks) and **info snippets** (prose explanations with breadcrumb context).
 
@@ -154,4 +155,5 @@ Do not silently fall back to training data — always tell the user why Context7
 - Library IDs require a `/` prefix — `/facebook/react` not `facebook/react`
 - Always run `npx ctx7@latest library` first — `npx ctx7@latest docs react "hooks"` will fail without a valid ID
 - Use descriptive queries, not single words — `"React useEffect cleanup function"` not `"hooks"`
+- One topic per query — split `"routing and auth and caching"` into a separate `docs` command per concept, unless the question is about how they interact
 - Do not include sensitive information (API keys, passwords, credentials) in queries
