@@ -1,0 +1,40 @@
+name: Triage library report
+
+# When a "Library Report" issue is opened, forward it to the triage service so the agent can
+# analyze it and post its findings as a comment.
+#
+# Cross-repo note: this issue lives here (upstash/context7) but the triage agent + its secrets
+# (Redis/Vector/model creds + a token that can comment on this repo) live in the context7app
+# deployment. A GitHub Action here cannot run the agent, so it only forwards the issue number to
+# the app's endpoint with a shared secret; the app runs the read-only agent and posts the comment.
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   TRIAGE_WEBHOOK_URL     https://<context7app-domain>/api/triage/analyze
+#   TRIAGE_WEBHOOK_SECRET  same value as TRIAGE_WEBHOOK_SECRET in the context7app environment
+
+on:
+  issues:
+    types: [opened]
+
+permissions: {} # no GITHUB_TOKEN needed — the app comments with its own token
+
+jobs:
+  triage:
+    if: contains(github.event.issue.title, 'Library Report')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Forward to triage service
+        env:
+          TRIAGE_WEBHOOK_URL: ${{ secrets.TRIAGE_WEBHOOK_URL }}
+          TRIAGE_WEBHOOK_SECRET: ${{ secrets.TRIAGE_WEBHOOK_SECRET }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          if [ -z "$TRIAGE_WEBHOOK_URL" ]; then
+            echo "TRIAGE_WEBHOOK_URL not configured; skipping triage."
+            exit 0
+          fi
+          echo "Triaging issue #$ISSUE_NUMBER"
+          curl -fsS --max-time 180 -X POST "$TRIAGE_WEBHOOK_URL" \
+            -H "Authorization: Bearer $TRIAGE_WEBHOOK_SECRET" \
+            -H "Content-Type: application/json" \
+            -d "{\"issueNumber\": $ISSUE_NUMBER}"
