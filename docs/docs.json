@@ -120,6 +120,7 @@
                       "enterprise/api/parse/parse-a-git-repository",
                       "enterprise/api/parse/parse-an-openapi-spec-by-url",
                       "enterprise/api/parse/upload-an-openapi-spec-file",
+                      "enterprise/api/parse/import-libraries",
                       "enterprise/api/parse/parse-a-website",
                       "enterprise/api/parse/refresh-a-library",
                       "enterprise/api/parse/get-parse-status"

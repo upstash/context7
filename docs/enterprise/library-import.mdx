@@ -121,6 +121,61 @@ Because your install didn't parse these libraries from source, it can't refresh 
 Re-importing a library you already have does nothing unless **Overwrite existing libraries** is checked. The import skips libraries that already exist and tells you which ones it skipped.
 </Note>
 
+## Automating with the API
+
+Beyond the dashboard flow, both sides expose an API so you can script imports — for example, to sync a fixed set of libraries into on-premise on a schedule through a bridge host that can reach both networks.
+
+<Steps>
+
+<Step title="Export from Context7 Cloud">
+
+Call the cloud export endpoint with your **enterprise license key**. It returns one library's full structured content (every code and info snippet, no embeddings), shaped to feed straight into the import endpoint.
+
+```bash
+curl -X POST https://context7.com/api/v1/license/export \
+  -H "Authorization: Bearer $CONTEXT7_LICENSE_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"library":"vercel/next.js"}'
+```
+
+Only public libraries can be exported this way.
+
+</Step>
+
+<Step title="Import into your on-premise install">
+
+POST that JSON to your install's [import endpoint](/enterprise/api/parse/import-libraries), authenticated with a [personal API key](/enterprise/api/authentication#creating-an-api-key). The body is `{ "libraries": [...], "force": false }` — exactly the export response shape.
+
+```bash
+curl -X POST https://your-instance.example.com/api/import-libraries \
+  -H "Authorization: Bearer $ONPREM_API_KEY" \
+  -H "Content-Type: application/json" \
+  --data @library.json
+```
+
+</Step>
+
+</Steps>
+
+From a host that can reach both — a bridge or import gateway — the two calls chain directly:
+
+```bash
+curl -sf -X POST https://context7.com/api/v1/license/export \
+  -H "Authorization: Bearer $CONTEXT7_LICENSE_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"library":"vercel/next.js"}' \
+| curl -X POST https://your-instance.example.com/api/import-libraries \
+  -H "Authorization: Bearer $ONPREM_API_KEY" \
+  -H "Content-Type: application/json" \
+  --data-binary @-
+```
+
+For a strictly airgapped install, save the export response to a file, transfer it the same way you would the `.zip`, then import it. The import endpoint also accepts the dashboard `.zip` bundle as a `multipart/form-data` upload (field `bundleFile`) — see the [endpoint reference](/enterprise/api/parse/import-libraries).
+
+<Note>
+The import endpoint is available only on offline-license installs, the same gate as the dashboard flow. Imported libraries are skipped unless `force` is set, and the response lists what it queued and skipped.
+</Note>
+
 ## Limits
 
 - Up to 50 libraries per export.
