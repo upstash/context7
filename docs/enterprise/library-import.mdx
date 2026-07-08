@@ -173,7 +173,7 @@ curl -sf -X POST https://context7.com/api/v1/enterprise/export \
 For a strictly airgapped install, save the export response to a file, transfer it the same way you would the `.zip`, then import it. The import endpoint also accepts the dashboard `.zip` bundle as a `multipart/form-data` upload (field `bundleFile`). See the [endpoint reference](/enterprise/api/parse/import-libraries) for details.
 
 <Note>
-The import endpoint is available only on offline-license installs, the same gate as the dashboard flow. Imported libraries are skipped unless `force` is set, and the response lists what it queued and skipped.
+The import endpoint is available only on offline-license installs, the same gate as the dashboard flow. A library that already exists is skipped unless you overwrite it with `force`, either as a `?force=true` query param (handy when piping the export straight through) or a `"force": true` field in a JSON body. The response lists what it queued and skipped.
 </Note>
 
 ## Limits
