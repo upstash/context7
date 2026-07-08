@@ -29,7 +29,8 @@
     "figlet": "^1.9.4",
     "open": "^10.1.0",
     "ora": "^9.4.0",
-    "picocolors": "^1.1.1"
+    "picocolors": "^1.1.1",
+    "yaml": "^2.8.1"
   },
   "devDependencies": {
     "@types/figlet": "^1.7.0",

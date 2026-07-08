@@ -26,6 +26,7 @@ const mockSpinner = {
 vi.mock("ora", () => ({ default: () => mockSpinner }));
 
 import { registerRemoveCommand } from "../commands/remove.js";
+import { readYamlConfig } from "../setup/mcp-writer.js";
 
 let tempDir: string;
 let originalCwd: string;
@@ -322,6 +323,48 @@ describe("remove command", () => {
       },
       telemetry: { enabled: true },
     });
+  });
+
+  test("removes Hermes MCP setup from YAML config", async () => {
+    const previousHermesHome = process.env.HERMES_HOME;
+    const hermesHome = join(tempDir, "hermes-home");
+    const configPath = join(hermesHome, "config.yaml");
+    const rulePath = join(hermesHome, "rules", "context7.md");
+    const mcpSkillPath = join(hermesHome, "skills", "context7-mcp", "SKILL.md");
+
+    process.env.HERMES_HOME = hermesHome;
+    try {
+      await mkdir(join(hermesHome, "rules"), { recursive: true });
+      await mkdir(join(hermesHome, "skills", "context7-mcp"), { recursive: true });
+      await writeFile(
+        configPath,
+        'display:\n  language: zh\nmcp_servers:\n  other:\n    url: https://other.com\n  context7:\n    url: https://mcp.context7.com/mcp\n',
+        "utf-8"
+      );
+      await writeFile(rulePath, "hermes rule", "utf-8");
+      await writeFile(mcpSkillPath, "mcp skill", "utf-8");
+
+      await runCommand("remove", "--hermes", "--mcp");
+
+      const config = await readYamlConfig(configPath);
+      expect(config).toEqual({
+        display: { language: "zh" },
+        mcp_servers: { other: { url: "https://other.com" } },
+      });
+      expect(await exists(rulePath)).toBe(false);
+      expect(await exists(join(hermesHome, "skills", "context7-mcp"))).toBe(false);
+      expect(trackEvent).toHaveBeenCalledWith("remove", {
+        agents: ["hermes"],
+        scope: "global",
+        modes: ["mcp"],
+      });
+    } finally {
+      if (previousHermesHome === undefined) {
+        delete process.env.HERMES_HOME;
+      } else {
+        process.env.HERMES_HOME = previousHermesHome;
+      }
+    }
   });
 
   test("detects only agents with Context7 artifacts, not just agent folders", async () => {

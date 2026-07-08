@@ -2,7 +2,14 @@ import { access } from "fs/promises";
 import { join } from "path";
 import { homedir } from "os";
 
-export type SetupAgent = "claude" | "cursor" | "opencode" | "codex" | "antigravity" | "gemini";
+export type SetupAgent =
+  | "claude"
+  | "cursor"
+  | "opencode"
+  | "codex"
+  | "antigravity"
+  | "gemini"
+  | "hermes";
 export type AuthMode = "oauth" | "api-key";
 export type Transport = "http" | "stdio";
 
@@ -18,6 +25,7 @@ export const SETUP_AGENT_NAMES: Record<SetupAgent, string> = {
   codex: "Codex",
   antigravity: "Antigravity",
   gemini: "Gemini CLI",
+  hermes: "Hermes Agent",
 };
 
 export const AUTH_MODE_LABELS: Record<AuthMode, string> = {
@@ -38,6 +46,43 @@ function stdioArgs(auth: AuthOptions): string[] {
 
 function stdioEntry(auth: AuthOptions): Record<string, unknown> {
   return { command: "npx", args: stdioArgs(auth) };
+}
+
+function hermesHome(): string {
+  return process.env.HERMES_HOME || process.env.HERMES_CONFIG_DIR || join(homedir(), ".hermes");
+}
+
+function hermesConfigPaths(): string[] {
+  if (process.env.HERMES_HOME || process.env.HERMES_CONFIG_DIR) {
+    return [join(hermesHome(), "config.yaml")];
+  }
+
+  const candidates = [
+    join(hermesHome(), "config.yaml"),
+    process.env.LOCALAPPDATA ? join(process.env.LOCALAPPDATA, "hermes", "config.yaml") : undefined,
+    join(homedir(), ".hermes", "config.yaml"),
+  ].filter(Boolean) as string[];
+  return Array.from(new Set(candidates));
+}
+
+function hermesStdioEntry(auth: AuthOptions): Record<string, unknown> {
+  const entry: Record<string, unknown> = {
+    command: "node",
+    args: [
+      "-e",
+      'const p=require("path");const f=require("fs");const c=require("child_process");let x;try{x=require.resolve("@upstash/context7-mcp")}catch(e){const d=c.execSync("npm config get cache",{encoding:"utf8"}).trim();const n=p.join(d,"_npx");if(f.existsSync(n)){for(const k of f.readdirSync(n)){const t=p.join(n,k,"node_modules","@upstash","context7-mcp","dist","index.js");if(f.existsSync(t)){x=t;break}}}if(!x){const o=require("os").tmpdir();c.execSync("npm install --no-save @upstash/context7-mcp",{stdio:"inherit",cwd:o});x=require.resolve("@upstash/context7-mcp",{paths:[o]})}}require("module")._load(x,null,!0)',
+    ],
+    timeout: 120,
+    connect_timeout: 60,
+  };
+  if (auth.mode === "api-key" && auth.apiKey) {
+    entry.env = { CONTEXT7_API_KEY: auth.apiKey };
+  }
+  return entry;
+}
+
+function hermesHttpEntry(auth: AuthOptions): Record<string, unknown> {
+  return withHeaders({ url: mcpUrl(auth), timeout: 120, connect_timeout: 60 }, auth);
 }
 
 function claudeConfigDir(): string {
@@ -266,6 +311,38 @@ const agents: Record<SetupAgent, AgentConfig> = {
     detect: {
       projectPaths: [".gemini"],
       globalPaths: [join(homedir(), ".gemini")],
+    },
+  },
+
+  hermes: {
+    name: "hermes",
+    displayName: "Hermes Agent",
+    mcp: {
+      projectPaths: [],
+      get globalPaths() {
+        return hermesConfigPaths();
+      },
+      configKey: "mcp_servers",
+      buildEntry: (auth, transport) =>
+        transport === "stdio" ? hermesStdioEntry(auth) : hermesHttpEntry(auth),
+    },
+    rule: {
+      kind: "file",
+      dir: (scope) => (scope === "global" ? join(hermesHome(), "rules") : join(".hermes", "rules")),
+      filename: "context7.md",
+    },
+    skill: {
+      name: "context7-mcp",
+      dir: (scope) => (scope === "global" ? join(hermesHome(), "skills") : join(".hermes", "skills")),
+    },
+    detect: {
+      projectPaths: [".hermes"],
+      get globalPaths() {
+        if (process.env.HERMES_HOME || process.env.HERMES_CONFIG_DIR) {
+          return [hermesHome()];
+        }
+        return Array.from(new Set([hermesHome(), process.env.LOCALAPPDATA ? join(process.env.LOCALAPPDATA, "hermes") : undefined, join(homedir(), ".hermes")].filter(Boolean) as string[]));
+      },
     },
   },
 };
