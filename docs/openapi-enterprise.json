@@ -312,7 +312,7 @@
     "/import-libraries": {
       "post": {
         "summary": "Import a library bundle",
-        "description": "Import pre-parsed libraries into an airgapped on-premise install. Accepts either a Context7 Cloud export `.zip` (`multipart/form-data`) or a JSON body (`application/json`) for programmatic clients. Each library is queued as its own job and its snippets are re-embedded locally with this install's configured provider. Available only on installs running an **offline (airgapped) license**.",
+        "description": "Import pre-parsed libraries into an airgapped on-premise install. Accepts either a Context7 Cloud export `.zip` (`multipart/form-data`) or a JSON body (`application/json`) for programmatic clients. Requires a personal API key (or an admin session). Each library is queued as its own job and its snippets are re-embedded locally with this install's configured provider. Available only on installs running an **offline (airgapped) license**.",
         "operationId": "importLibraries",
         "tags": ["Parse"],
         "requestBody": {
@@ -360,10 +360,7 @@
             "$ref": "#/components/responses/InternalServerError"
           }
         },
-        "security": [
-          {},
-          { "bearerAuth": [] }
-        ]
+        "security": [{ "bearerAuth": [] }]
       }
     },
     "/parse-website": {

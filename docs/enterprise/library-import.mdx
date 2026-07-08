@@ -129,12 +129,13 @@ Besides the dashboard flow, both sides expose an API so you can script imports. 
 
 <Step title="Export from Context7 Cloud">
 
-Call the cloud export endpoint and pass your **enterprise license key** in the request body. It returns one library's full content (every code and info snippet, without embeddings), already shaped for the import endpoint.
+Call the cloud export endpoint with your **enterprise license key** in the `Authorization` header. It returns one library's full content (every code and info snippet, without embeddings), already shaped for the import endpoint.
 
 ```bash
 curl -X POST https://context7.com/api/v1/enterprise/export \
+  -H "Authorization: Bearer YOUR_LICENSE_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"licenseKey":"YOUR_LICENSE_KEY","library":"vercel/next.js"}'
+  -d '{"library":"vercel/next.js"}'
 ```
 
 Only public libraries can be exported this way.
@@ -160,8 +161,9 @@ From a host that can reach both networks, such as a bridge or import gateway, th
 
 ```bash
 curl -sf -X POST https://context7.com/api/v1/enterprise/export \
+  -H "Authorization: Bearer YOUR_LICENSE_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"licenseKey":"YOUR_LICENSE_KEY","library":"vercel/next.js"}' \
+  -d '{"library":"vercel/next.js"}' \
 | curl -X POST https://your-instance.example.com/api/import-libraries \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "Content-Type: application/json" \
