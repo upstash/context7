@@ -1,80 +1,27 @@
-import * as fs from "fs";
 import * as os from "os";
 import { CLI_CLIENT_ID } from "../constants.js";
 import { getBaseUrl } from "./api.js";
-import {
-  CREDENTIALS_FILE_NAME,
-  getConfigDir,
-  getCredentialsFilePath,
-  getLegacyFilePath,
-  migrateLegacyFileSync,
-  resolveReadPathSync,
-} from "./storage-paths.js";
+import { resolveCredentialStore } from "./credential-store/index.js";
+import type { TokenData } from "./credential-store/types.js";
 
-export interface TokenData {
-  access_token: string;
-  refresh_token?: string;
-  token_type: string;
-  expires_in?: number;
-  expires_at?: number;
-  scope?: string;
+export type { TokenData } from "./credential-store/types.js";
+
+export async function saveTokens(tokens: TokenData): Promise<void> {
+  const store = await resolveCredentialStore();
+  await store.save(tokens);
 }
 
-function ensureConfigDir(): void {
-  const configDir = getConfigDir();
-  if (!fs.existsSync(configDir)) {
-    fs.mkdirSync(configDir, { recursive: true, mode: 0o700 });
-  }
+export async function loadTokens(): Promise<TokenData | null> {
+  const store = await resolveCredentialStore();
+  return store.load();
 }
 
-// Credentials must never be group/world-readable, even if a migrated or
-// pre-existing file carried looser permissions.
-const CREDENTIALS_MODE = 0o600;
-
-export function saveTokens(tokens: TokenData): void {
-  const credentialsFile = getCredentialsFilePath();
-  migrateLegacyFileSync(CREDENTIALS_FILE_NAME, credentialsFile, CREDENTIALS_MODE);
-  ensureConfigDir();
-  const data = {
-    ...tokens,
-    expires_at:
-      tokens.expires_at ?? (tokens.expires_in ? Date.now() + tokens.expires_in * 1000 : undefined),
-  };
-  fs.writeFileSync(credentialsFile, JSON.stringify(data, null, 2), { mode: CREDENTIALS_MODE });
-  // `mode` is ignored when the file already exists; enforce it explicitly.
-  fs.chmodSync(credentialsFile, CREDENTIALS_MODE);
-}
-
-export function loadTokens(): TokenData | null {
-  const credentialsFile = resolveReadPathSync(
-    CREDENTIALS_FILE_NAME,
-    getCredentialsFilePath(),
-    CREDENTIALS_MODE
-  );
-  if (!fs.existsSync(credentialsFile)) {
-    return null;
-  }
-  try {
-    const data = JSON.parse(fs.readFileSync(credentialsFile, "utf-8"));
-    return data as TokenData;
-  } catch {
-    return null;
-  }
-}
-
-export function clearTokens(): boolean {
-  const credentialsFile = getCredentialsFilePath();
-  let removed = false;
-  if (fs.existsSync(credentialsFile)) {
-    fs.unlinkSync(credentialsFile);
-    removed = true;
-  }
-  const legacyCredentialsFile = getLegacyFilePath(CREDENTIALS_FILE_NAME);
-  if (fs.existsSync(legacyCredentialsFile)) {
-    fs.unlinkSync(legacyCredentialsFile);
-    removed = true;
-  }
-  return removed;
+export async function clearTokens(): Promise<boolean> {
+  const { JsonCredentialStore } = await import("./credential-store/json-store.js");
+  const { KeyringCredentialStore } = await import("./credential-store/keyring-store.js");
+  const jsonRemoved = await new JsonCredentialStore().clear();
+  const keyringRemoved = await new KeyringCredentialStore().clear();
+  return jsonRemoved || keyringRemoved;
 }
 
 export function isTokenExpired(tokens: TokenData): boolean {
@@ -82,6 +29,18 @@ export function isTokenExpired(tokens: TokenData): boolean {
     return false;
   }
   return Date.now() > tokens.expires_at - 60000;
+}
+
+/**
+ * Returns a stored access token when present and not expired. Does not refresh
+ * OAuth tokens — use getValidAccessToken for that.
+ */
+export async function getStoredAccessToken(): Promise<string | undefined> {
+  const tokens = await loadTokens();
+  if (!tokens || isTokenExpired(tokens)) {
+    return undefined;
+  }
+  return tokens.access_token;
 }
 
 async function refreshAccessToken(refreshToken: string): Promise<TokenData> {
@@ -110,7 +69,7 @@ async function refreshAccessToken(refreshToken: string): Promise<TokenData> {
  * expire and skip the refresh path entirely.
  */
 export async function getValidAccessToken(): Promise<string | null> {
-  const tokens = loadTokens();
+  const tokens = await loadTokens();
   if (!tokens) return null;
 
   if (!isTokenExpired(tokens)) {
@@ -123,7 +82,7 @@ export async function getValidAccessToken(): Promise<string | null> {
 
   try {
     const newTokens = await refreshAccessToken(tokens.refresh_token);
-    saveTokens(newTokens);
+    await saveTokens(newTokens);
     return newTokens.access_token;
   } catch {
     return null;
