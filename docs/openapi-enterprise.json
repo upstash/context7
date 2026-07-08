@@ -309,6 +309,69 @@
         ]
       }
     },
+    "/import-libraries": {
+      "post": {
+        "summary": "Import a library bundle",
+        "description": "Import pre-parsed libraries into an airgapped on-premise install. Accepts either a Context7 Cloud export `.zip` (`multipart/form-data`) or a JSON body (`application/json`) for programmatic clients. Requires a personal API key (or an admin session). Each library is queued as its own job and its snippets are re-embedded locally with this install's configured provider. Available only on installs running an **offline (airgapped) license**.",
+        "operationId": "importLibraries",
+        "tags": ["Parse"],
+        "parameters": [
+          {
+            "name": "force",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "boolean", "default": false },
+            "description": "Overwrite libraries that already exist. Handy when posting a piped export body, which carries no `force` field. Without it, existing libraries are skipped."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportLibrariesRequest"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["bundleFile"],
+                "properties": {
+                  "bundleFile": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "A Context7 Cloud `context7-libraries.zip` export (up to 100 MB)"
+                  },
+                  "force": {
+                    "type": "boolean",
+                    "description": "Overwrite libraries that already exist on this install",
+                    "default": false
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/LibrariesImported"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "security": [{ "bearerAuth": [] }]
+      }
+    },
     "/parse-website": {
       "post": {
         "summary": "Parse a website",
@@ -581,6 +644,111 @@
         },
         "required": ["message", "project", "queueId"]
       },
+      "ImportLibrariesRequest": {
+        "type": "object",
+        "required": ["libraries"],
+        "properties": {
+          "libraries": {
+            "type": "array",
+            "description": "The libraries to import. Each carries its full snippet content; embeddings are recomputed on this install.",
+            "items": {
+              "$ref": "#/components/schemas/ImportLibrary"
+            }
+          },
+          "force": {
+            "type": "boolean",
+            "description": "Overwrite libraries that already exist on this install",
+            "default": false
+          }
+        }
+      },
+      "ImportLibrary": {
+        "type": "object",
+        "required": ["project", "codeSnippets", "infoSnippets"],
+        "properties": {
+          "project": {
+            "type": "string",
+            "description": "Library identifier, e.g. `/your-org/your-repo`",
+            "example": "/vercel/next.js"
+          },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "type": {
+            "type": "string",
+            "description": "Source type of the library (e.g. `repo`, `website`, `openapi`)"
+          },
+          "language": { "type": "string", "example": "English" },
+          "branch": { "type": "string" },
+          "docsRepoUrl": { "type": "string" },
+          "docsSiteUrl": { "type": "string" },
+          "totalTokens": { "type": "integer" },
+          "codeSnippets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "title": { "type": "string" },
+                "description": { "type": "string" },
+                "language": { "type": "string" },
+                "codeList": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "language": { "type": "string" },
+                      "code": { "type": "string" }
+                    }
+                  }
+                },
+                "tokens": { "type": "integer" }
+              }
+            }
+          },
+          "infoSnippets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "content": { "type": "string" },
+                "breadcrumb": { "type": "string" },
+                "tokens": { "type": "integer" }
+              }
+            }
+          }
+        }
+      },
+      "LibrariesImportedResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "example": "Queued 2 libraries for import"
+          },
+          "queued": {
+            "type": "array",
+            "description": "Library identifiers queued for import",
+            "items": { "type": "string" },
+            "example": ["/vercel/next.js", "/facebook/react"]
+          },
+          "skipped": {
+            "type": "array",
+            "description": "Libraries that were not imported, with a reason",
+            "items": {
+              "type": "object",
+              "properties": {
+                "project": { "type": "string" },
+                "reason": {
+                  "type": "string",
+                  "example": "already exists"
+                }
+              }
+            }
+          }
+        },
+        "required": ["message", "queued", "skipped"]
+      },
       "ParseRepoRequest": {
         "type": "object",
         "required": ["repoUrl"],
@@ -681,6 +849,25 @@
             "schema": {
               "$ref": "#/components/schemas/ParseQueuedResponse"
             }
+          }
+        }
+      },
+      "LibrariesImported": {
+        "description": "Libraries accepted and queued for import",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/LibrariesImportedResponse"
+            }
+          }
+        }
+      },
+      "ForbiddenError": {
+        "description": "Forbidden - the action is not permitted for this install or user",
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/Error" },
+            "example": { "error": "Library import is available only with an offline license." }
           }
         }
       },
