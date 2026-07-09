@@ -64,6 +64,6 @@
     "dotenv": "^17.4.2",
     "typebox": "^1.1.38",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.14"
+    "vitest": "^4.1.9"
   }
 }
