@@ -4,7 +4,7 @@ sidebarTitle: "GitOps"
 description: "Manage the list of indexed repositories declaratively from a Git repo and reconcile your on-premise instance to match it"
 ---
 
-GitOps lets you keep the list of repositories Context7 indexes in a Git repository, instead of adding them one by one in the dashboard. Context7 reads a manifest file from that repo and reconciles its own state to match: it indexes anything new, re-indexes anything whose settings changed, and (optionally) removes anything you have deleted from the manifest.
+GitOps lets you keep the list of sources Context7 indexes in a Git repository, instead of adding them one by one in the dashboard. Alongside Git repositories, a source can be a Confluence space, a website, an llms.txt index, or an OpenAPI specification. Context7 reads a manifest file from that repo and reconciles its own state to match: it indexes anything new, re-indexes anything whose settings changed, and (optionally) removes anything you have deleted from the manifest.
 
 The point is to keep your configuration in code. After a disaster, or when standing up a second environment, you point a fresh instance at the manifest repository and the entire index rebuilds itself with no manual clicks.
 
@@ -24,10 +24,10 @@ If you set up the GitHub App **before** GitOps was available, it is not subscrib
 
 You commit a manifest file (by default `repos.yaml`) to a Git repository. Context7 clones that repository using the same Git credentials you already configured under **Settings → Integrations** (a GitHub App or a personal access token), reads the manifest, and compares it against the repositories it currently has indexed.
 
-For each repository in the manifest, Context7 decides what to do:
+For each source in the manifest, Context7 decides what to do:
 
 - **Add** it if it is in the manifest but not yet indexed.
-- **Re-index** it if its manifest entry changed, for example a different branch or new folder filters, or if its last indexing run did not finish.
+- **Re-index** it if its manifest entry changed, for example a different branch, new folder filters, or a changed page limit, or if its last indexing run did not finish.
 - **Leave it untouched** if it already matches. Running a sync with no changes is a safe no-op.
 
 When pruning is enabled, repositories that you remove from the manifest are also deleted from the instance. Pruning only ever removes repositories that GitOps itself added; repositories you add by hand in the dashboard are never touched.
@@ -38,33 +38,55 @@ GitOps is the source of truth only for the repositories listed in the manifest. 
 
 ## The manifest file
 
-The manifest is a YAML file with a list of repositories under `repos`. An optional `defaults` block applies to every entry unless an entry overrides it.
+The manifest is a YAML file with a list of sources under `repos`. An optional `defaults` block applies to every entry unless an entry overrides it.
+
+An entry's `type` selects which parser handles it. Omit `type` and the entry is treated as a Git repository, so manifests written before multi-source support keep working unchanged.
 
 ```yaml repos.yaml
 defaults:
   indexSourceCode: false
   branch: ""              # empty means the repository's default branch
 repos:
+  # Git repository (the default when type is omitted)
   - url: https://github.com/acme/payments
     branch: main
     folders: [docs]
     excludeFolders: [node_modules]
-  - url: https://github.com/acme/billing
-    indexSourceCode: true
+
+  # Confluence space (uses the connection from Settings → Integrations)
+  - url: https://acme.atlassian.net/wiki
+    type: confluence
+    spaceKey: TEAM
+
+  # llms.txt index
+  - url: https://docs.acme.com/llms.txt
+    type: llmstxt
+
+  # Website crawl
+  - url: https://docs.acme.com/
+    type: website
+    maxPages: 200
+
+  # OpenAPI specification
+  - url: https://petstore.swagger.io/v3/openapi.json
+    type: openapi
 ```
 
-Each entry accepts the same options as the **Add Repository** form in the dashboard:
+Every entry needs a `url` (or `repoUrl`). The remaining fields depend on `type`:
 
-| Field | Description |
-| ----- | ----------- |
-| `url` (or `repoUrl`) | The Git repository to index. Required. |
-| `branch` | Branch to index. Leave blank to use the repository's default branch. |
-| `folders` | Only index these folders. Omit to index the whole repository. |
-| `excludeFolders` | Folders to skip. |
-| `excludeFiles` | File patterns to skip, for example `["*.test.md"]`. |
-| `indexSourceCode` | Whether to also generate documentation from source code. Defaults to `false`. |
+| `type` | Fields |
+| ------ | ------ |
+| `git` (default) | `branch`, `folders`, `excludeFolders`, `excludeFiles`, `indexSourceCode` — the same options as the **Add Repository** form. |
+| `confluence` | `spaceKey` (required), `spaceId` (Cloud only, resolved automatically from the key when omitted), `spaceName`, `title`, `description`. The whole space is indexed. |
+| `website` | `maxPages`, `maxDepth`, `excludePatterns`, `title`, `description`. |
+| `llmstxt` | `maxPages`, `title`, `description`. The URL must point to an `llms.txt`, `llms-full.txt`, or `llms-small.txt` file. |
+| `openapi` | `title`, `description`. |
 
-If the manifest cannot be parsed, the whole sync is rejected and nothing changes, so a malformed file can never partially apply or wipe your index.
+<Note>
+Confluence entries reuse the site URL and API token you set under **Settings → Integrations → Confluence**, so no credentials go in the manifest. Website, llms.txt, and OpenAPI sources are fetched over public HTTP and need no credentials. Configure Confluence before adding Confluence entries, or the sync reports those entries as failed.
+</Note>
+
+The manifest is validated strictly: an unknown `type`, a field that does not belong to the entry's type (a common source of silent mistakes), or a missing required field rejects the **whole** sync. Nothing changes until the file parses cleanly, so a malformed manifest can never partially apply or wipe your index.
 
 ## Configuring in the dashboard
 
