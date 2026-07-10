@@ -89,6 +89,25 @@ You can find your Smithery key in the [Smithery.ai webpage](https://smithery.ai/
 </details>
 
 <details>
+<summary><b>Install in Autohand Code</b></summary>
+
+Use the [Autohand Code CLI](https://github.com/autohandai/code-cli/) to add the local Context7 server:
+
+```sh
+autohand mcp add context7 npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
+```
+
+Add `--scope project` before `context7` to save the server in the current project's `.autohand` configuration instead of your user configuration.
+
+For basic usage without an API key, you can connect to the remote server instead:
+
+```sh
+autohand mcp add --transport http context7 https://mcp.context7.com/mcp
+```
+
+</details>
+
+<details>
 <summary><b>Install in Cursor</b></summary>
 
 Go to: `Settings` -> `Cursor Settings` -> `MCP` -> `Add new global MCP server`
