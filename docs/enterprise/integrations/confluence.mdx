@@ -55,7 +55,7 @@ Go to **Add** and choose **Confluence**.
   ![The Add Libraries source picker with a Confluence tile](/images/enterprise/integrations/confluence-source.png)
 </Frame>
 
-Pick a space, then choose which pages to index. The page tree mirrors the space hierarchy, so selecting a parent selects its children. Give the project a title and description if you want to override the auto-detected ones, then choose **Start Parsing**.
+Pick a space, then index the whole space or choose specific pages. Give the project a title and description if you want to override the auto-detected ones, then choose **Start Parsing**.
 
 <Frame>
   ![Selecting a Confluence space and pages, with the page tree and Start Parsing button](/images/enterprise/integrations/confluence-add.png)
@@ -63,10 +63,10 @@ Pick a space, then choose which pages to index. The page tree mirrors the space 
 
 <Steps>
   <Step title="Select a space">
-    Choose the space from the dropdown. Context7 lists every space the configured token can read.
+    Choose the space from the dropdown, or paste a space URL (for example `https://your-site.atlassian.net/wiki/spaces/TEAM`) into **Space URL** to select it directly — handy when the account can read many spaces.
   </Step>
-  <Step title="Choose pages">
-    Tick individual pages, or use **Select all** to index the whole space. Use the search box to filter a large space.
+  <Step title="Choose the scope">
+    Leave **Index the entire space** on to index everything, which is the fastest path and the right choice for large spaces. Turn it off to pick individual pages: the page tree mirrors the space hierarchy, so selecting a parent selects its children. Very large spaces load their pages in batches — use **Load more pages** to fetch the rest, and the search box to filter.
   </Step>
   <Step title="Start parsing">
     Context7 fetches the pages, converts them to Markdown (code blocks, tables, and callouts are preserved), and indexes them. The project appears under your libraries when it finishes.
@@ -74,8 +74,10 @@ Pick a space, then choose which pages to index. The page tree mirrors the space 
 </Steps>
 
 <Note>
-**Select all** indexes the whole space, so a later refresh also picks up pages added since. Selecting a specific subset pins the project to exactly those pages.
+Indexing the entire space means a later refresh also picks up pages added since. Selecting a specific subset pins the project to exactly those pages.
 </Note>
+
+You can also index Confluence spaces declaratively with [GitOps](/enterprise/gitops) — add a `type: confluence` entry with a `spaceKey` to your manifest, and it reuses this same connection.
 
 ## Refresh and delete
 
