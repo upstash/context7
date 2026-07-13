@@ -1273,6 +1273,38 @@ See [Local and Remote MCPs for Perplexity](https://www.perplexity.ai/help-center
 
 </Accordion>
 
+<Accordion title="Manus">
+
+Manus includes a built-in Context7 connector:
+
+1. Navigate `Settings` > `Connectors`.
+2. In the `Apps` tab, search for `Context7`.
+3. Click `Context7` to enable it.
+
+<Frame>
+  <img src="/images/clients/manus/connector.png" alt="Context7 connector in Manus" />
+</Frame>
+
+Alternatively, add it as a custom MCP connection with your API key:
+
+1. Navigate `Settings` > `Connectors` > `Custom MCP`.
+2. Fill in the configuration:
+
+| Field              | Value                          |
+| ------------------ | ------------------------------ |
+| **Server Name**    | `Context7`                     |
+| **Transport Type** | `HTTP`                         |
+| **Server URL**     | `https://mcp.context7.com/mcp` |
+| **Custom headers** | `CONTEXT7_API_KEY`: `YOUR_API_KEY` |
+
+3. Click `Save`.
+
+<Frame>
+  <img src="/images/clients/manus/custom-mcp.png" alt="Context7 custom MCP configuration in Manus" />
+</Frame>
+
+</Accordion>
+
 <Accordion title="Factory">
 
 Factory's droid supports MCP servers through its CLI. See [Factory MCP docs](https://docs.factory.ai/cli/configuration/mcp) for more info.
