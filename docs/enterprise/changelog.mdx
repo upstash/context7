@@ -1,0 +1,81 @@
+---
+title: "Changelog"
+description: "Release notes for the Context7 On-Premise image."
+---
+
+<Update label="2026-07-10" description="v1.2.3">
+
+### Added
+
+- Improved the relevance of responses from the MCP server and API through new reranking capabilities.
+- Added support for GitOps-based routing for Confluence and other on-premise data parsers.
+
+</Update>
+
+<Update label="2026-07-09" description="v1.2.2">
+
+### Changed
+
+- Improved compatibility with OpenID Connect (OIDC) providers adhering to RFC 9207.
+
+### Security
+
+- Enhanced the security of the enterprise OpenID Connect (OIDC) Single Sign-On (SSO) flow.
+
+</Update>
+
+<Update label="2026-07-08" description="v1.2.1">
+
+### Added
+
+- Added a REST API for programmatic library import.
+
+</Update>
+
+<Update label="2026-07-08" description="v1.2.0">
+
+### Added
+
+- Added support for ingesting content from Confluence Cloud and Data Center.
+- Added full end-to-end integration with GitHub Enterprise Server.
+- Added support for ingesting content from llms.txt files.
+
+### Fixed
+
+- Improved parsing robustness by preventing process hangs and cleaning up orphaned staging data.
+
+</Update>
+
+<Update label="2026-07-02" description="v1.1.2">
+
+### Fixed
+
+- Fixed the path used for GitHub Apps on GitHub Enterprise Server.
+
+</Update>
+
+<Update label="2026-07-02" description="v1.1.1">
+
+### Fixed
+
+- Fixed the GitHub App client to correctly target the on-premise GitHub Enterprise Server API.
+
+</Update>
+
+<Update label="2026-06-24" description="v1.1.0">
+
+### Added
+
+- GitOps declarative repository management: define the repositories to index in a Git manifest (`repos.yaml`) and have Context7 reconcile them on startup, on a schedule, on manual trigger, and on GitHub push webhooks. Supports per-repo branch, folder, and file filters, plus pruning of repositories removed from the manifest.
+- Generic OIDC single sign-on for the on-premise dashboard.
+- Configure a GitHub Enterprise Server host from the dashboard so the GitHub App and tokens target your own server instead of github.com.
+
+</Update>
+
+<Update label="2026-06-16" description="v1.0.0">
+
+### Added
+
+- Initial tracked release of the Context7 On-Premise image.
+
+</Update>
