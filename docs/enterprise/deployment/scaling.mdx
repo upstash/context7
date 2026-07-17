@@ -126,11 +126,118 @@ In multi-replica mode you no longer need the single-replica StatefulSet from the
 
 ## Migrating an existing deployment
 
-There is no automatic migration from an existing single-container SQLite deployment to PostgreSQL. Setting `DATABASE_URL` on a running install starts from an empty database.
+If you already run a single container, a built-in command copies your existing SQLite data into PostgreSQL, so you do not have to re-index your libraries. It reads the data directory from your single container and writes to the target PostgreSQL.
 
-<Note>
-Plan multi-replica mode for a fresh deployment. To move an existing single-container install, re-index your repositories against the new PostgreSQL and object storage backend.
-</Note>
+<Warning>
+Run the migration during a maintenance window. Stop indexing and let in-flight parses finish first, then run the migration against a quiet database. In-flight parse jobs are not migrated.
+</Warning>
+
+<Steps>
+
+<Step title="Provision PostgreSQL and a bucket">
+
+Create the target PostgreSQL database and the object storage bucket, as in the setup above. The schema is created automatically.
+
+</Step>
+
+<Step title="Run the migration">
+
+Run the one-shot `migrate` command with access to your existing data directory and the target database. It creates the schema and copies your projects, pages, users, API keys, settings, and usage counters.
+
+<Tabs>
+
+<Tab title="Docker">
+
+```bash
+docker run --rm \
+  -v context7-data:/data \
+  -e DATA_DIR=/data \
+  -e DATABASE_URL="postgres://user:pass@host:5432/context7" \
+  -e VECTOR_STORE_URI="s3://your-bucket/vectors" \
+  ghcr.io/context7/enterprise:latest \
+  node dist/enterprise/migrate.mjs
+```
+
+Use the same volume (`context7-data`) your single container uses, so the command reads your existing database.
+
+</Tab>
+
+<Tab title="Kubernetes">
+
+Run it as a `Job` that mounts the existing data volume:
+
+```yaml migrate-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: context7-migrate
+  namespace: context7
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: context7-registry
+      containers:
+        - name: migrate
+          image: ghcr.io/context7/enterprise:latest
+          command: ["node", "dist/enterprise/migrate.mjs"]
+          env:
+            - name: DATA_DIR
+              value: /data
+            - name: DATABASE_URL
+              value: postgres://user:pass@host:5432/context7
+            - name: VECTOR_STORE_URI
+              value: s3://your-bucket/vectors
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: data-context7-0
+```
+
+```bash
+kubectl apply -f migrate-job.yaml
+kubectl logs -n context7 job/context7-migrate
+```
+
+</Tab>
+
+</Tabs>
+
+The command prints the number of rows copied per table and the `ENCRYPTION_KEY` your new deployment must use.
+
+</Step>
+
+<Step title="Copy the vector index">
+
+The vector index is a directory of files. Copy it to the same bucket you set in `VECTOR_STORE_URI`:
+
+```bash
+aws s3 sync /data/vectors s3://your-bucket/vectors
+```
+
+Use `gcloud storage rsync` or `azcopy` for GCS or Azure.
+
+</Step>
+
+<Step title="Reuse the encryption key">
+
+Your stored credentials are encrypted with the key from the single container. Set `ENCRYPTION_KEY` on the new deployment to the value the migration command printed, so credentials stay readable.
+
+</Step>
+
+<Step title="Redeploy in multi-replica mode">
+
+Redeploy with `DATABASE_URL`, `VECTOR_STORE_URI`, `ENCRYPTION_KEY`, and `SESSION_SECRET` set on every replica, following the steps above. Verify at `/api/health` that your libraries are present, then scale up.
+
+</Step>
+
+</Steps>
+
+The migration is idempotent for keyed data, so a failed run leaves the target untouched and can be retried.
 
 ## Limitations
 

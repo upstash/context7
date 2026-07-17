@@ -126,6 +126,10 @@ Example response:
 }
 ```
 
+## Scaling
+
+The setup above runs a single container with a local volume, which suits most deployments. To run multiple replicas behind a load balancer, move state to PostgreSQL and object storage. See [Scaling](/enterprise/deployment/scaling), which also covers migrating an existing single-container deployment.
+
 ## Connecting AI Clients
 
 Once deployed, point your MCP clients to your deployment URL. See [Connecting Your AI Client](/enterprise/on-premise#connecting-your-ai-client) for client-specific instructions.
