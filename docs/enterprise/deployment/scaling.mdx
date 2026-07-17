@@ -128,6 +128,12 @@ In multi-replica mode you no longer need the single-replica StatefulSet from the
 
 If you already run a single container, a built-in command copies your existing SQLite data into PostgreSQL, so you do not have to re-index your libraries. It reads the data directory from your single container and writes to the target PostgreSQL.
 
+The admin UI shows your current storage mode and the exact migration command under **Settings > Scaling**:
+
+<Frame>
+  ![Migration helper under Settings, Scaling](/images/scaling-settings.png)
+</Frame>
+
 <Warning>
 Run the migration during a maintenance window. Stop indexing and let in-flight parses finish first, then run the migration against a quiet database. In-flight parse jobs are not migrated.
 </Warning>
@@ -236,6 +242,12 @@ Redeploy with `DATABASE_URL`, `VECTOR_STORE_URI`, `ENCRYPTION_KEY`, and `SESSION
 </Step>
 
 </Steps>
+
+After redeploying, **Settings > Scaling** confirms the deployment is running in multi-replica mode:
+
+<Frame>
+  ![Multi-replica mode confirmed](/images/scaling-multi-replica.png)
+</Frame>
 
 The migration is idempotent for keyed data, so a failed run leaves the target untouched and can be retried.
 
