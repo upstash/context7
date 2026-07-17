@@ -92,7 +92,8 @@
                 "group": "Deployment",
                 "pages": [
                   "enterprise/deployment/docker",
-                  "enterprise/deployment/kubernetes"
+                  "enterprise/deployment/kubernetes",
+                  "enterprise/deployment/scaling"
                 ]
               },
               {

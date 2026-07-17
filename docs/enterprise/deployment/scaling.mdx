@@ -1,0 +1,138 @@
+---
+title: "Scaling"
+sidebarTitle: "Scaling"
+description: "Run Context7 On-Premise as multiple replicas behind a load balancer"
+---
+
+By default Context7 On-Premise runs as a single container. It stores everything on a local volume: a SQLite database for configuration and metadata, and a LanceDB index for embeddings. This is simple to operate but limits you to one instance, since SQLite does not support concurrent writers across containers.
+
+To run multiple replicas behind a load balancer, move that shared state off the local volume: relational data to PostgreSQL, and vectors to object storage. Once both are external, every replica is stateless and interchangeable, and you can scale horizontally.
+
+<Note>
+You only need this if a single container can no longer handle your query or indexing load. Most deployments run fine on one container with a persistent volume. See [Docker](/enterprise/deployment/docker) and [Kubernetes](/enterprise/deployment/kubernetes) for the standard single-container setup.
+</Note>
+
+## What you need
+
+- A **PostgreSQL** database (managed or self-hosted) reachable from every replica.
+- An **object storage** bucket (S3, GCS, or Azure Blob) for the vector index, with credentials available to every replica.
+- A **load balancer** in front of the replicas.
+
+The default embedded SQLite and LanceDB are not used when these are configured.
+
+## Configuration
+
+Set the same values on every replica. Presence of `DATABASE_URL` is what switches the store from SQLite to PostgreSQL.
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `DATABASE_URL` | Yes | PostgreSQL connection string, for example `postgres://user:pass@host:5432/context7`. Enables multi-replica mode. |
+| `VECTOR_STORE_URI` | Yes | Object storage location for the vector index, for example `s3://your-bucket/vectors`. Also accepts `gs://` and `az://`. |
+| `ENCRYPTION_KEY` | Yes | 64 hex characters, shared by all replicas so they can decrypt the same stored credentials. Generate with `openssl rand -hex 32`. |
+| `SESSION_SECRET` | Yes | Random string, shared by all replicas so any of them can validate a session issued by another. |
+| `PG_POOL_MAX` | No | PostgreSQL connections per replica. Defaults to `10`. |
+
+Provide the object storage credentials through the usual provider environment variables, for example `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` for S3.
+
+<Warning>
+`ENCRYPTION_KEY` and `SESSION_SECRET` must be identical on every replica and must stay stable. If `ENCRYPTION_KEY` changes, stored credentials can no longer be decrypted. Store both in your secret manager.
+</Warning>
+
+## Enable it
+
+<Steps>
+
+<Step title="Provision PostgreSQL and a bucket">
+
+Create a PostgreSQL database and an object storage bucket. The database schema is created automatically on first boot, so an empty database is all you need.
+
+</Step>
+
+<Step title="Generate the shared secrets">
+
+```bash
+openssl rand -hex 32   # ENCRYPTION_KEY
+openssl rand -hex 32   # SESSION_SECRET
+```
+
+</Step>
+
+<Step title="Set the environment on every replica">
+
+Add `DATABASE_URL`, `VECTOR_STORE_URI`, `ENCRYPTION_KEY`, `SESSION_SECRET`, and your object storage credentials to each replica, alongside the usual `LICENSE_KEY` and model settings.
+
+</Step>
+
+<Step title="Point health checks at /api/ready">
+
+Configure your load balancer or orchestrator readiness check to use `GET /api/ready`. It returns `200` only when the replica can reach the database and its MCP bridge is up, so traffic is routed only to replicas that are ready.
+
+</Step>
+
+<Step title="Scale out">
+
+Start as many replicas as you need behind the load balancer. They are interchangeable.
+
+</Step>
+
+</Steps>
+
+## Docker Compose
+
+```yaml
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: context7
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: context7
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  context7:
+    image: ghcr.io/context7/enterprise:latest
+    depends_on:
+      - postgres
+    ports:
+      - "3000:3000"
+    environment:
+      - LICENSE_KEY=${LICENSE_KEY}
+      - LLM_API_KEY=${LLM_API_KEY}
+      - DATABASE_URL=postgres://context7:${POSTGRES_PASSWORD}@postgres:5432/context7
+      - VECTOR_STORE_URI=s3://your-bucket/vectors
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    deploy:
+      replicas: 3
+
+volumes:
+  pgdata:
+```
+
+Run it with a load balancer in front of the `context7` service. Compose does not provide one, so use an external reverse proxy or move to Kubernetes.
+
+## Kubernetes
+
+In multi-replica mode you no longer need the single-replica StatefulSet from the [Kubernetes guide](/enterprise/deployment/kubernetes). Because state is external, run Context7 as a `Deployment` with `replicas` set to your target count, put the shared configuration in a `Secret`, and expose it through a `Service` and `Ingress`. Set the readiness probe to `GET /api/ready`.
+
+## How it behaves
+
+- **Shared work queue.** All replicas pull parse jobs from the same queue in PostgreSQL, so indexing throughput scales with replica count.
+- **Single scheduler.** Background jobs that must run once, such as the usage report, scheduled backups, and GitOps sync, run on one elected leader. If that replica stops, another takes over.
+- **Stateless sessions.** Sessions are signed tokens, so any replica accepts a login issued by another, and logins survive restarts.
+
+## Migrating an existing deployment
+
+There is no automatic migration from an existing single-container SQLite deployment to PostgreSQL. Setting `DATABASE_URL` on a running install starts from an empty database.
+
+<Note>
+Plan multi-replica mode for a fresh deployment. To move an existing single-container install, re-index your repositories against the new PostgreSQL and object storage backend.
+</Note>
+
+## Limitations
+
+- Object storage has higher latency than a local disk. This is fine for indexing and search, but expect slightly slower vector reads than a single container on local storage.
+- Database backups are handled by PostgreSQL in this mode. Use your provider's managed backups or `pg_dump` rather than the built-in backup, which targets the embedded SQLite file. See [Backup and Restore](/enterprise/backup-restore).
