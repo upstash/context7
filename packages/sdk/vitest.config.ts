@@ -10,6 +10,8 @@ export default defineConfig({
     environment: "node",
     include: ["src/**/*.test.ts"],
     env: process.env,
+    // These tests call the live API, so the 5s default fails on latency alone.
+    testTimeout: 30_000,
   },
   resolve: {
     alias: {

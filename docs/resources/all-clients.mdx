@@ -996,34 +996,29 @@ docker build -t context7-mcp .
 }
 ```
 
-If you use the Docker MCP Toolkit image (`mcp/context7`) with a stdio-based client, set `MCP_TRANSPORT=stdio` so the container starts with stdio transport instead of its HTTP default. For Cline, Roo Code, and Claude Desktop, use:
+</Accordion>
+
+<Accordion title="Docker MCP Toolkit">
+
+Context7 is available in the [Docker MCP Catalog](https://hub.docker.com/mcp/server/context7/overview) as a **remote** server, so you don't need to build, pull, or run a local image. The MCP Toolkit connects to the hosted endpoint for you.
+
+1. In Docker Desktop, open **MCP Toolkit → Catalog**, search for **Context7**, and enable it.
+2. (Optional) In the server's **Config** tab, set your Context7 API key (`CONTEXT7_API_KEY`) for higher rate limits. The server also works without one.
+3. Connect your MCP client to Docker's MCP gateway. Either run `docker mcp client connect <client>` (for example `vscode`, `cursor`, or `claude-desktop`), or add the gateway to your client config manually:
 
 ```json
 {
   "mcpServers": {
-    "context7": {
+    "MCP_DOCKER": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "-e", "MCP_TRANSPORT=stdio", "mcp/context7"]
+      "args": ["mcp", "gateway", "run"],
+      "type": "stdio"
     }
   }
 }
 ```
 
-For VS Code, use the same Docker command in the `servers` format:
-
-```json
-{
-  "servers": {
-    "context7": {
-      "type": "stdio",
-      "command": "docker",
-      "args": ["run", "-i", "--rm", "-e", "MCP_TRANSPORT=stdio", "mcp/context7"]
-    }
-  }
-}
-```
-
-Keep using the remote server URL for HTTP-based clients.
+The gateway exposes every server you've enabled in the MCP Toolkit, including Context7. Tools appear under the `MCP_DOCKER` server in your client.
 
 </Accordion>
 
@@ -1278,6 +1273,38 @@ See [Local and Remote MCPs for Perplexity](https://www.perplexity.ai/help-center
 
 </Accordion>
 
+<Accordion title="Manus">
+
+Manus includes a built-in Context7 connector:
+
+1. Navigate `Settings` > `Connectors`.
+2. In the `Apps` tab, search for `Context7`.
+3. Click `Context7` to enable it.
+
+<Frame>
+  <img src="/images/clients/manus/connector.png" alt="Context7 connector in Manus" />
+</Frame>
+
+Alternatively, add it as a custom MCP connection with your API key:
+
+1. Navigate `Settings` > `Connectors` > `Custom MCP`.
+2. Fill in the configuration:
+
+| Field              | Value                          |
+| ------------------ | ------------------------------ |
+| **Server Name**    | `Context7`                     |
+| **Transport Type** | `HTTP`                         |
+| **Server URL**     | `https://mcp.context7.com/mcp` |
+| **Custom headers** | `CONTEXT7_API_KEY`: `YOUR_API_KEY` |
+
+3. Click `Save`.
+
+<Frame>
+  <img src="/images/clients/manus/custom-mcp.png" alt="Context7 custom MCP configuration in Manus" />
+</Frame>
+
+</Accordion>
+
 <Accordion title="Factory">
 
 Factory's droid supports MCP servers through its CLI. See [Factory MCP docs](https://docs.factory.ai/cli/configuration/mcp) for more info.
@@ -1309,6 +1336,33 @@ See the [Emdash repository](https://github.com/generalaction/emdash) for more in
 <Accordion title="Desktop Extension">
 
 Install the [context7.mcpb](https://github.com/upstash/context7/tree/master/packages/mcp/mcpb/context7.mcpb) file and add it to your client. See [MCP bundles docs](https://github.com/modelcontextprotocol/mcpb#mcp-bundles-mcpb) for more info.
+
+</Accordion>
+
+<Accordion title="AnythingLLM">
+
+AnythingLLM supports MCP Servers through GUI. 
+
+1. Navigate `AnythingLLM` > `Agents Skills`
+2. Select `MCP Servers`.
+3. Click `Edit MCP config`.
+4. Paste.
+5. Click to "Refresh" button.
+
+#### Remote Connection
+```json
+{
+"mcpServers": {
+  "context7": {
+    "type": "streamable",
+    "url": "https://mcp.context7.com/mcp",
+    "headers": { 
+		  "CONTEXT7_API_KEY": "YOUR_API_KEY"
+		}	
+	}
+}
+}
+```
 
 </Accordion>
 

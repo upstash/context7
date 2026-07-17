@@ -1,0 +1,84 @@
+---
+title: "Confluence Integration"
+sidebarTitle: "Confluence"
+description: "Index Confluence spaces from Atlassian Cloud or a self-hosted Data Center instance"
+---
+
+Context7 can index the pages of a Confluence space and serve them like any other library. It works with **Atlassian Cloud** and with self-hosted **Data Center / Server**.
+
+An admin connects Confluence once under **Settings → Integrations** using an API token. After that, anyone who can add libraries picks a space and pages from **Add → Confluence**. There is no OAuth app to register, which keeps the setup self-contained on your own infrastructure.
+
+<Note>
+Confluence pages are behind authentication, so Context7 reaches them with the token you configure. The token needs read access to the spaces you want to index.
+</Note>
+
+## Connect Confluence
+
+Open **Settings → Integrations → Confluence**, choose your deployment, fill in the fields, and use **Test connection** to confirm before saving.
+
+<Frame>
+  ![Confluence integration settings with the Data Center deployment selected](/images/enterprise/integrations/confluence-settings.png)
+</Frame>
+
+<Tabs>
+  <Tab title="Cloud">
+    | Field | Value |
+    | ----- | ----- |
+    | Deployment | Cloud |
+    | Site URL | `https://your-company.atlassian.net` |
+    | Email | The account email that owns the token |
+    | API Token | Create one at [id.atlassian.com](https://id.atlassian.com/manage-profile/security/api-tokens) |
+
+    Cloud uses the Confluence v2 REST API and authenticates with the email and API token together.
+  </Tab>
+  <Tab title="Data Center / Server">
+    | Field | Value |
+    | ----- | ----- |
+    | Deployment | Data Center |
+    | Site URL | `https://confluence.your-company.com` (include the context path if your install uses one, for example `/confluence`) |
+    | Email | Leave blank |
+    | Personal Access Token | Create one in Confluence under your profile, **Personal Access Tokens** |
+
+    Data Center uses the v1 REST API and authenticates with a Personal Access Token. Personal Access Tokens require Confluence 7.9 or later. If your instance uses basic auth instead, put the username in the Email field and the password in the token field.
+  </Tab>
+</Tabs>
+
+<Note>
+Point Context7 at a service account rather than a personal login, so indexing does not depend on one person's access.
+</Note>
+
+## Index a space
+
+Go to **Add** and choose **Confluence**.
+
+<Frame>
+  ![The Add Libraries source picker with a Confluence tile](/images/enterprise/integrations/confluence-source.png)
+</Frame>
+
+Pick a space, then index the whole space or choose specific pages. Give the project a title and description if you want to override the auto-detected ones, then choose **Start Parsing**.
+
+<Frame>
+  ![Selecting a Confluence space and pages, with the page tree and Start Parsing button](/images/enterprise/integrations/confluence-add.png)
+</Frame>
+
+<Steps>
+  <Step title="Select a space">
+    Choose the space from the dropdown, or paste a space URL (for example `https://your-site.atlassian.net/wiki/spaces/TEAM`) into **Space URL** to select it directly — handy when the account can read many spaces.
+  </Step>
+  <Step title="Choose the scope">
+    Leave **Index the entire space** on to index everything, which is the fastest path and the right choice for large spaces. Turn it off to pick individual pages: the page tree mirrors the space hierarchy, so selecting a parent selects its children. Very large spaces load their pages in batches — use **Load more pages** to fetch the rest, and the search box to filter.
+  </Step>
+  <Step title="Start parsing">
+    Context7 fetches the pages, converts them to Markdown (code blocks, tables, and callouts are preserved), and indexes them. The project appears under your libraries when it finishes.
+  </Step>
+</Steps>
+
+<Note>
+Indexing the entire space means a later refresh also picks up pages added since. Selecting a specific subset pins the project to exactly those pages.
+</Note>
+
+You can also index Confluence spaces declaratively with [GitOps](/enterprise/gitops) — add a `type: confluence` entry with a `spaceKey` to your manifest, and it reuses this same connection.
+
+## Refresh and delete
+
+A Confluence project behaves like any other library. **Refresh** re-indexes the space using the stored selection and the current admin token, so rotating the token in Settings updates future refreshes without editing the project. **Delete** removes the project and its indexed content.

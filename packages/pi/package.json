@@ -1,6 +1,6 @@
 {
   "name": "@upstash/context7-pi",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Official Context7 extension for pi.dev — adds resolve-library-id and query-docs tools to the pi coding agent",
   "type": "module",
   "pi": {
@@ -64,6 +64,6 @@
     "dotenv": "^17.4.2",
     "typebox": "^1.1.38",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.14"
+    "vitest": "^4.1.9"
   }
 }

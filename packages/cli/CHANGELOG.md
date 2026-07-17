@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.5
+
+### Patch Changes
+
+- e1b4793: Surface the underlying network error when an OAuth request fails. Connection failures now report the cause (TLS interception, DNS, firewall, timeout) with a hint, and non-JSON error responses report the HTTP status and body excerpt instead of a generic message.
+
+## 0.5.4
+
+### Patch Changes
+
+- 33229cb: Clarify the `query-docs` query description so it asks for a single concept per query. When a question spans multiple distinct topics, callers are now told to make a separate query per concept instead of combining them (unless the question is about how the concepts interact), which avoids diluted, shallow results. Applied consistently across the MCP server, CLI, pi, and AI SDK tools.
+
 ## 0.5.3
 
 ### Patch Changes

@@ -59,9 +59,10 @@ You can pin a specific version with either `/owner/repo/<version>` or `/owner/re
 ### Complete Workflow Example
 
 ```python
+import os
 import requests
 
-headers = {"Authorization": "Bearer CONTEXT7_API_KEY"}
+headers = {"Authorization": f"Bearer {os.environ['CONTEXT7_API_KEY']}"}
 
 # Step 1: Search for the library
 search_response = requests.get(
