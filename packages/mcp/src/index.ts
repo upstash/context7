@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 
-import { NodeStreamableHTTPServerTransport } from "@modelcontextprotocol/node";
-import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
-import { McpServer, isInitializeRequest } from "@modelcontextprotocol/server";
-import type { Transport } from "@modelcontextprotocol/server";
+import { toNodeHandler } from "@modelcontextprotocol/node";
+import { StdioServerTransport, serveStdio } from "@modelcontextprotocol/server/stdio";
+import { McpServer, createMcpHandler } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
 import type { ClientContext } from "./lib/types.js";
@@ -13,7 +12,6 @@ import express from "express";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
 import { randomUUID } from "node:crypto";
-import { createSessionStore } from "./lib/sessionStore.js";
 import {
   SERVER_VERSION,
   RESOURCE_URL,
@@ -298,27 +296,25 @@ function applyAliases(args: Record<string, unknown>, aliases: AliasMap): void {
   }
 }
 
-// Install BEFORE `server.connect(transport)`: the SDK's `Protocol.connect()`
-// captures the existing `onmessage` and chains its dispatch handler over it,
-// so our hook runs first on every incoming JSON-RPC message.
-function installTransportArgAliasing(transport: Transport): void {
-  transport.onmessage = (message) => {
-    const msg = message as {
-      method?: string;
-      params?: { name?: string; arguments?: unknown };
-    };
-    if (msg.method !== "tools/call") return;
-    const args = msg.params?.arguments;
-    if (!args || typeof args !== "object") return;
-    const argsRecord = args as Record<string, unknown>;
-
-    applyAliases(argsRecord, GLOBAL_ALIASES);
-
-    const toolName = msg.params?.name;
-    if (toolName && toolName in TOOL_ALIASES) {
-      applyAliases(argsRecord, TOOL_ALIASES[toolName]);
-    }
+// Rewrites hallucinated tool-arg names on an incoming JSON-RPC message in
+// place, before the SDK validates it against the tool's input schema. Called
+// on the parsed HTTP body (per request) and on every stdio message.
+function aliasToolCallArgs(message: unknown): void {
+  const msg = message as {
+    method?: string;
+    params?: { name?: string; arguments?: unknown };
   };
+  if (msg?.method !== "tools/call") return;
+  const args = msg.params?.arguments;
+  if (!args || typeof args !== "object") return;
+  const argsRecord = args as Record<string, unknown>;
+
+  applyAliases(argsRecord, GLOBAL_ALIASES);
+
+  const toolName = msg.params?.name;
+  if (toolName && toolName in TOOL_ALIASES) {
+    applyAliases(argsRecord, TOOL_ALIASES[toolName]);
+  }
 }
 
 async function main() {
@@ -372,24 +368,27 @@ async function main() {
       );
     };
 
-    const sessionStore = createSessionStore();
+    // Stateless serving: a fresh server instance per request, no Mcp-Session-Id,
+    // no session store. The handler serves modern (2026-07-28) traffic natively
+    // and 2025-era traffic through its stateless legacy fallback, which answers
+    // GET/DELETE (session operations) with 405.
+    //
+    // responseMode "sse" keeps responses streaming: headers flush immediately
+    // after parsing the request rather than buffering until the tool returns.
+    // This is required for long-running tools because some MCP HTTP clients cap
+    // the underlying fetch at 60s waiting for headers, even though the per-tool
+    // timeout is much higher.
+    const mcpHandler = createMcpHandler(() => createMcpServer(), {
+      responseMode: "sse",
+      onerror: (error) => console.error("MCP handler error:", error),
+    });
+    const nodeHandler = toNodeHandler(mcpHandler);
 
     const handleMcpRequest = async (
       req: express.Request,
       res: express.Response,
       requireAuth: boolean
     ) => {
-      // Reject GET requests — sessions are tracked in Redis, but this server does not send
-      // server-initiated notifications, so SSE streams serve no purpose and cause mass NGINX
-      // timeouts. Returning 405 is spec-compliant per MCP StreamableHTTP (2025-03-26).
-      if (req.method === "GET") {
-        return res.status(405).json({
-          jsonrpc: "2.0",
-          error: { code: -32000, message: "Server does not support GET requests" },
-          id: null,
-        });
-      }
-
       try {
         const apiKey = extractApiKey(req);
         const resourceUrl = RESOURCE_URL;
@@ -435,74 +434,16 @@ async function main() {
           transport: "http",
         };
 
-        const sessionId = extractHeaderValue(req.headers["mcp-session-id"]);
-
-        if (req.method === "DELETE") {
-          if (!sessionId) {
-            return res.status(400).json({
-              jsonrpc: "2.0",
-              error: { code: -32000, message: "Bad Request: No valid session ID provided" },
-              id: null,
-            });
-          }
-          await sessionStore.delete(sessionId);
-          return res.status(200).end();
+        // express.json() already parsed the body, so alias rewriting happens
+        // here and the parsed body is handed straight to the SDK handler.
+        // Legacy 2025-03-26 clients may batch messages in an array.
+        const body: unknown = req.body;
+        for (const msg of Array.isArray(body) ? body : [body]) {
+          aliasToolCallArgs(msg);
         }
-
-        let effectiveSessionId: string;
-        if (!sessionId && req.method === "POST" && isInitializeRequest(req.body)) {
-          effectiveSessionId = randomUUID();
-          await sessionStore.create(effectiveSessionId);
-          res.setHeader("mcp-session-id", effectiveSessionId);
-        } else if (sessionId && req.method === "POST" && !isInitializeRequest(req.body)) {
-          const sessionExists = await sessionStore.refresh(sessionId);
-          if (!sessionExists) {
-            // Per MCP Streamable HTTP spec: 404 signals to the client that the session
-            // has been terminated/expired, so it should re-initialize with a fresh InitializeRequest.
-            return res.status(404).json({
-              jsonrpc: "2.0",
-              error: {
-                code: -32000,
-                message: "Session not found or expired. Please re-initialize.",
-              },
-              id: null,
-            });
-          }
-          effectiveSessionId = sessionId;
-        } else {
-          return res.status(400).json({
-            jsonrpc: "2.0",
-            error: { code: -32000, message: "Bad Request: No valid session ID provided" },
-            id: null,
-          });
-        }
-
-        context.sessionId = effectiveSessionId;
-
-        // sessionIdGenerator is undefined because session lifecycle (create/refresh/delete)
-        // is owned by the route handler above and persisted in Redis, not by the SDK transport.
-        //
-        // Use SSE responses for tool calls (enableJsonResponse: false). The SDK then
-        // flushes response headers immediately after parsing the request rather than
-        // buffering until the tool returns. This is required for long-running tools
-        // because some MCP HTTP clients cap the underlying fetch at 60s waiting for
-        // headers, even though the per-tool timeout is much higher.
-        const transport = new NodeStreamableHTTPServerTransport({
-          sessionIdGenerator: undefined,
-          enableJsonResponse: false,
-        });
-
-        const server = createMcpServer();
-        res.on("close", () => {
-          transport.close();
-          server.close();
-        });
-
-        installTransportArgAliasing(transport);
-        await server.connect(transport);
 
         await requestContext.run(context, async () => {
-          await transport.handleRequest(req, res, req.body);
+          await nodeHandler(req, res, body);
         });
       } catch (error) {
         console.error("Error handling MCP request:", error);
@@ -622,22 +563,37 @@ async function main() {
     process.on("SIGHUP", () => process.exit(0));
 
     const transport = new StdioServerTransport();
-    const server = createMcpServer();
+    serveStdio(
+      () => {
+        const server = createMcpServer();
 
-    // Capture client info from MCP initialize handshake (stdio only — HTTP
-    // mode plumbs client info through requestContext per request).
-    server.server.oninitialized = () => {
-      const clientVersion = server.server.getClientVersion();
-      if (clientVersion) {
-        stdioClientInfo = {
-          ide: clientVersion.name,
-          version: clientVersion.version,
+        // Capture client info from MCP initialize handshake (stdio only — HTTP
+        // mode plumbs client info through requestContext per request).
+        server.server.oninitialized = () => {
+          const clientVersion = server.server.getClientVersion();
+          if (clientVersion) {
+            stdioClientInfo = {
+              ide: clientVersion.name,
+              version: clientVersion.version,
+            };
+          }
         };
-      }
-    };
 
-    installTransportArgAliasing(transport);
-    await server.connect(transport);
+        return server;
+      },
+      {
+        transport,
+        onerror: (error) => console.error("MCP stdio error:", error),
+      }
+    );
+
+    // serveStdio assigns transport.onmessage synchronously before returning;
+    // wrap it so hallucinated tool-arg names are rewritten before dispatch.
+    const dispatch = transport.onmessage;
+    transport.onmessage = (message) => {
+      aliasToolCallArgs(message);
+      dispatch?.(message);
+    };
 
     console.error(`Context7 Documentation MCP Server v${SERVER_VERSION} running on stdio`);
   }
