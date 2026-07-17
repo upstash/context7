@@ -134,7 +134,9 @@ Configure your load balancer or orchestrator readiness check to use `GET /api/re
 
 <Step title="Scale out">
 
-Start as many replicas as you need behind the load balancer. They are interchangeable.
+Start as many replicas as you need behind the load balancer. Every replica is identical: it serves API, MCP, and search traffic **and** pulls parse jobs from the shared queue, so adding replicas grows both query capacity and indexing throughput at once. Work is distributed automatically and no replica is special.
+
+If a large re-index competes with query latency on a replica, lower **Max concurrent parses** (Settings > Indexing) so each replica runs fewer parses at a time, or give replicas more CPU and memory.
 
 </Step>
 
