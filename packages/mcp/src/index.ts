@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { toNodeHandler } from "@modelcontextprotocol/node";
-import { StdioServerTransport, serveStdio } from "@modelcontextprotocol/server/stdio";
+import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { McpServer, createMcpHandler } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
@@ -101,6 +101,88 @@ function getClientContext(): ClientContext {
   };
 }
 
+// Map of canonical arg name -> hallucinated aliases that should be rewritten
+// to it. LLM clients often echo phrasing from tool descriptions instead of
+// the literal schema keys, which trips Zod validation before the tool runs.
+type AliasMap = Record<string, readonly string[]>;
+
+const GLOBAL_ALIASES: AliasMap = {
+  query: ["userQuery", "question"],
+};
+
+// Tool-scoped aliases, for keys that are canonical on one tool but a
+// hallucination on another (e.g. `libraryName` is canonical for
+// `resolve-library-id`, so we only rewrite it on `query-docs` calls).
+const QUERY_DOCS_ALIASES: AliasMap = {
+  libraryId: ["context7CompatibleLibraryID", "libraryID", "libraryName"],
+};
+
+function applyAliases(args: Record<string, unknown>, aliases: AliasMap): void {
+  for (const [canonical, alternatives] of Object.entries(aliases)) {
+    if (canonical in args) continue;
+    for (const alt of alternatives) {
+      if (alt in args) {
+        args[canonical] = args[alt];
+        delete args[alt];
+        break;
+      }
+    }
+  }
+}
+
+// z.preprocess step that rewrites aliased arg names before validation. Living
+// in the schema keeps aliasing transport-agnostic: the SDK parses the wire
+// message (any transport, any protocol era) and runs this on validation.
+function aliasArgs(aliases: AliasMap[]) {
+  return (value: unknown) => {
+    if (value && typeof value === "object") {
+      for (const map of aliases) {
+        applyAliases(value as Record<string, unknown>, map);
+      }
+    }
+    return value;
+  };
+}
+
+const RESOLVE_LIBRARY_ID_INPUT_SCHEMA = z.preprocess(
+  aliasArgs([GLOBAL_ALIASES]),
+  z.object({
+    query: z
+      .string()
+      .describe(
+        "The question or task you need help with. This is used to rank library results by relevance to what the user is trying to accomplish. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
+      ),
+    libraryName: z
+      .string()
+      .describe(
+        "Library name to search for and retrieve a Context7-compatible library ID. Use the official library name with proper punctuation — e.g., 'Next.js' instead of 'nextjs', 'Customer.io' instead of 'customerio', 'Three.js' instead of 'threejs'."
+      ),
+  })
+);
+
+const QUERY_DOCS_INPUT_SCHEMA = z.preprocess(
+  aliasArgs([GLOBAL_ALIASES, QUERY_DOCS_ALIASES]),
+  z.object({
+    libraryId: z
+      .string()
+      .describe(
+        "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
+      ),
+    query: z
+      .string()
+      .describe(
+        "The question or task you need help with, scoped to a single concept. Be specific and include relevant details, but keep each query to one topic — if the user's question spans multiple distinct concepts, make a separate call per concept instead of combining them, unless the question is about how the concepts interact. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad (too vague): 'auth' or 'hooks'. Bad (too broad): 'routing and auth and caching in Next.js'. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
+      ),
+  })
+);
+
+const READ_ONLY_TOOL_ANNOTATIONS = {
+  readOnlyHint: true,
+  destructiveHint: false,
+  openWorldHint: true,
+  idempotentHint: true,
+} as const;
+
 function createMcpServer() {
   const server = new McpServer(
     {
@@ -160,24 +242,8 @@ Response Format:
 For ambiguous queries, request clarification before proceeding with a best-guess match.
 
 IMPORTANT: Do not call this tool more than 3 times per question. If you cannot find what you need after 3 calls, use the best result you have.`,
-      inputSchema: z.object({
-        query: z
-          .string()
-          .describe(
-            "The question or task you need help with. This is used to rank library results by relevance to what the user is trying to accomplish. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
-          ),
-        libraryName: z
-          .string()
-          .describe(
-            "Library name to search for and retrieve a Context7-compatible library ID. Use the official library name with proper punctuation — e.g., 'Next.js' instead of 'nextjs', 'Customer.io' instead of 'customerio', 'Three.js' instead of 'threejs'."
-          ),
-      }),
-      annotations: {
-        readOnlyHint: true,
-        destructiveHint: false,
-        openWorldHint: true,
-        idempotentHint: true,
-      },
+      inputSchema: RESOLVE_LIBRARY_ID_INPUT_SCHEMA,
+      annotations: READ_ONLY_TOOL_ANNOTATIONS,
     },
     async ({ query, libraryName }: { query: string; libraryName: string }) => {
       const ctx = getClientContext();
@@ -219,24 +285,8 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
 You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
 Do not call this tool more than 3 times per question.`,
-      inputSchema: z.object({
-        libraryId: z
-          .string()
-          .describe(
-            "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
-          ),
-        query: z
-          .string()
-          .describe(
-            "The question or task you need help with, scoped to a single concept. Be specific and include relevant details, but keep each query to one topic — if the user's question spans multiple distinct concepts, make a separate call per concept instead of combining them, unless the question is about how the concepts interact. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad (too vague): 'auth' or 'hooks'. Bad (too broad): 'routing and auth and caching in Next.js'. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
-          ),
-      }),
-      annotations: {
-        readOnlyHint: true,
-        destructiveHint: false,
-        openWorldHint: true,
-        idempotentHint: true,
-      },
+      inputSchema: QUERY_DOCS_INPUT_SCHEMA,
+      annotations: READ_ONLY_TOOL_ANNOTATIONS,
     },
     async ({ query, libraryId }: { query: string; libraryId: string }) => {
       const ctx = getClientContext();
@@ -265,62 +315,8 @@ Do not call this tool more than 3 times per question.`,
   return server;
 }
 
-// Map of canonical arg name -> hallucinated aliases that should be rewritten
-// to it. LLM clients often echo phrasing from tool descriptions instead of
-// the literal schema keys, which trips Zod validation before the tool runs.
-type AliasMap = Record<string, readonly string[]>;
-
-const GLOBAL_ALIASES: AliasMap = {
-  query: ["userQuery", "question"],
-};
-
-// Tool-scoped aliases, for keys that are canonical on one tool but a
-// hallucination on another (e.g. `libraryName` is canonical for
-// `resolve-library-id`, so we only rewrite it on `query-docs` calls).
-const TOOL_ALIASES: Record<string, AliasMap> = {
-  "query-docs": {
-    libraryId: ["context7CompatibleLibraryID", "libraryID", "libraryName"],
-  },
-};
-
-function applyAliases(args: Record<string, unknown>, aliases: AliasMap): void {
-  for (const [canonical, alternatives] of Object.entries(aliases)) {
-    if (canonical in args) continue;
-    for (const alt of alternatives) {
-      if (alt in args) {
-        args[canonical] = args[alt];
-        delete args[alt];
-        break;
-      }
-    }
-  }
-}
-
-// Rewrites hallucinated tool-arg names on an incoming JSON-RPC message in
-// place, before the SDK validates it against the tool's input schema. Called
-// on the parsed HTTP body (per request) and on every stdio message.
-function aliasToolCallArgs(message: unknown): void {
-  const msg = message as {
-    method?: string;
-    params?: { name?: string; arguments?: unknown };
-  };
-  if (msg?.method !== "tools/call") return;
-  const args = msg.params?.arguments;
-  if (!args || typeof args !== "object") return;
-  const argsRecord = args as Record<string, unknown>;
-
-  applyAliases(argsRecord, GLOBAL_ALIASES);
-
-  const toolName = msg.params?.name;
-  if (toolName && toolName in TOOL_ALIASES) {
-    applyAliases(argsRecord, TOOL_ALIASES[toolName]);
-  }
-}
-
 async function main() {
-  const transportType = TRANSPORT_TYPE;
-
-  if (transportType === "http") {
+  if (TRANSPORT_TYPE === "http") {
     const initialPort = CLI_PORT ?? DEFAULT_PORT;
 
     const app = express();
@@ -333,8 +329,6 @@ async function main() {
         "Access-Control-Allow-Headers",
         "Content-Type, MCP-Session-Id, MCP-Protocol-Version, X-Context7-API-Key, Context7-API-Key, X-API-Key, Authorization"
       );
-      res.setHeader("Access-Control-Expose-Headers", "MCP-Session-Id");
-
       if (req.method === "OPTIONS") {
         res.sendStatus(200);
         return;
@@ -384,6 +378,9 @@ async function main() {
     });
     const nodeHandler = toNodeHandler(mcpHandler);
 
+    // OAuth discovery info header, used by MCP clients to discover the authorization server
+    const wwwAuthenticate = `Bearer resource_metadata="${new URL(RESOURCE_URL).origin}/.well-known/oauth-protected-resource"`;
+
     const handleMcpRequest = async (
       req: express.Request,
       res: express.Response,
@@ -391,14 +388,7 @@ async function main() {
     ) => {
       try {
         const apiKey = extractApiKey(req);
-        const resourceUrl = RESOURCE_URL;
-        const baseUrl = new URL(resourceUrl).origin;
-
-        // OAuth discovery info header, used by MCP clients to discover the authorization server
-        res.set(
-          "WWW-Authenticate",
-          `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
-        );
+        res.set("WWW-Authenticate", wwwAuthenticate);
 
         if (requireAuth) {
           if (!apiKey) {
@@ -434,16 +424,8 @@ async function main() {
           transport: "http",
         };
 
-        // express.json() already parsed the body, so alias rewriting happens
-        // here and the parsed body is handed straight to the SDK handler.
-        // Legacy 2025-03-26 clients may batch messages in an array.
-        const body: unknown = req.body;
-        for (const msg of Array.isArray(body) ? body : [body]) {
-          aliasToolCallArgs(msg);
-        }
-
         await requestContext.run(context, async () => {
-          await nodeHandler(req, res, body);
+          await nodeHandler(req, res, req.body);
         });
       } catch (error) {
         console.error("Error handling MCP request:", error);
@@ -562,7 +544,6 @@ async function main() {
     process.stdin.on("close", () => process.exit(0));
     process.on("SIGHUP", () => process.exit(0));
 
-    const transport = new StdioServerTransport();
     serveStdio(
       () => {
         const server = createMcpServer();
@@ -582,18 +563,9 @@ async function main() {
         return server;
       },
       {
-        transport,
         onerror: (error) => console.error("MCP stdio error:", error),
       }
     );
-
-    // serveStdio assigns transport.onmessage synchronously before returning;
-    // wrap it so hallucinated tool-arg names are rewritten before dispatch.
-    const dispatch = transport.onmessage;
-    transport.onmessage = (message) => {
-      aliasToolCallArgs(message);
-      dispatch?.(message);
-    };
 
     console.error(`Context7 Documentation MCP Server v${SERVER_VERSION} running on stdio`);
   }
