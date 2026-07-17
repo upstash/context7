@@ -140,12 +140,6 @@ export interface DeviceAuthorizationResponse {
 
 const DEVICE_CODE_GRANT = "urn:ietf:params:oauth:grant-type:device_code";
 
-/**
- * Builds an error message from a non-OK response. An OAuth server sends a JSON
- * `error`/`error_description` (RFC 6749 §5.2), but an intercepting proxy sends
- * HTML or nothing — so fall back to the status and a body excerpt rather than a
- * generic message that hides whether the request even reached Context7.
- */
 async function describeErrorResponse(response: Response, fallback: string): Promise<string> {
   const body = await response.text().catch(() => "");
 
@@ -154,7 +148,7 @@ async function describeErrorResponse(response: Response, fallback: string): Prom
     const message = err.error_description || err.error;
     if (message) return message;
   } catch {
-    // Not JSON — an interceptor, not the OAuth server.
+    // An interceptor's HTML, not an OAuth error object.
   }
 
   const excerpt = body.replace(/\s+/g, " ").trim().slice(0, 200);
@@ -168,8 +162,6 @@ const DNS_HINT = "DNS lookup failed. Check your network or VPN connection.";
 const BLOCKED_HINT =
   "The connection was refused or reset, which usually means a firewall or proxy is blocking it.";
 const TIMEOUT_HINT = "The connection timed out. A proxy or firewall may be dropping the request.";
-// Undici ignores HTTPS_PROXY unless a dispatcher is set, so a machine whose npm
-// works through a proxy can still fail here with no recognizable code.
 const DEFAULT_HINT =
   "If you are behind a corporate proxy, note that Node does not use HTTPS_PROXY automatically.";
 
@@ -188,7 +180,6 @@ const CONNECTION_HINTS: Record<string, string> = {
   ETIMEDOUT: TIMEOUT_HINT,
 };
 
-/** `cause` is typed `unknown`, so narrow it rather than asserting its shape. */
 function getErrorCause(error: unknown): { code?: string; message?: string } {
   if (typeof error !== "object" || error === null || !("cause" in error)) return {};
   const cause = (error as { cause: unknown }).cause;
@@ -201,11 +192,6 @@ function getErrorCause(error: unknown): { code?: string; message?: string } {
   };
 }
 
-/**
- * `fetch` rejects with a bare "fetch failed" and puts the real reason on
- * `cause`, which reads as a Context7 outage when it is almost always local
- * networking.
- */
 function describeConnectionError(error: unknown, url: string): string {
   const { code, message } = getErrorCause(error);
   const detail = message || (error instanceof Error ? error.message : String(error));
@@ -214,11 +200,6 @@ function describeConnectionError(error: unknown, url: string): string {
   return `Could not reach ${url}: ${detail}${code ? ` (${code})` : ""}\n${hint}`;
 }
 
-/**
- * POSTs a form-encoded body to an OAuth endpoint. Rewrites a thrown `fetch`
- * into an error that names the actual cause; the response itself is returned
- * unexamined for callers that classify it (see `pollDeviceToken`).
- */
 async function postForm(url: string, params: URLSearchParams): Promise<Response> {
   try {
     return await fetch(url, {
@@ -231,10 +212,6 @@ async function postForm(url: string, params: URLSearchParams): Promise<Response>
   }
 }
 
-/**
- * POSTs to an OAuth endpoint and returns the parsed body, throwing a described
- * error for both connection failures and non-OK responses.
- */
 async function oauthRequest<T>(url: string, params: URLSearchParams, fallback: string): Promise<T> {
   const response = await postForm(url, params);
   if (!response.ok) {

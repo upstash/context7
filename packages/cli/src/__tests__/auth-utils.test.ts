@@ -391,8 +391,6 @@ describe("startDeviceAuthorization", () => {
     await expect(startDeviceAuthorization("https://t", "bogus")).rejects.toThrow("bad client_id");
   });
 
-  // A proxy or firewall answers with HTML rather than an OAuth error object;
-  // the status and body must survive so the user can tell it was intercepted.
   test("reports status and body excerpt when the response is not JSON", async () => {
     vi.stubGlobal(
       "fetch",
@@ -473,7 +471,6 @@ describe("pollDeviceToken", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("ECONNREFUSED")));
     const result = await pollDeviceToken("https://t", "c", "dc");
     expect(result.status).toBe("transient");
-    // Polling keeps the described cause rather than the bare message.
     expect(result.errorMessage).toContain("ECONNREFUSED");
   });
 
