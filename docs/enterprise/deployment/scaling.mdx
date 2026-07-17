@@ -40,7 +40,74 @@ Set the same values on every replica. Presence of `DATABASE_URL` is what switche
 
 <Step title="Provision PostgreSQL with pgvector">
 
-Create a PostgreSQL database with the pgvector extension. The schema and the extension are created automatically on first boot, so an empty database is all you need (the database user must be allowed to run `CREATE EXTENSION`).
+Context7 stores vectors with [pgvector](https://github.com/pgvector/pgvector). You need PostgreSQL 13 or newer with pgvector **0.5.0 or newer** (0.5.0 added the HNSW index used for similarity search).
+
+On first boot Context7 runs `CREATE EXTENSION IF NOT EXISTS vector` and creates its tables and indexes automatically. You just provide a database whose user is allowed to create the extension. On managed Postgres that usually means enabling pgvector for the instance first, then connecting with a privileged role.
+
+<Tabs>
+
+<Tab title="AWS RDS / Aurora">
+
+pgvector ships with RDS and Aurora PostgreSQL. Connect as the master user (or a member of `rds_superuser`) and enable it:
+
+```sql
+CREATE EXTENSION vector;
+```
+
+No parameter group changes are required. See [pgvector on Amazon RDS](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_PostgreSQL.html).
+
+</Tab>
+
+<Tab title="Google Cloud SQL">
+
+pgvector is supported on Cloud SQL for PostgreSQL. Connect as a user with the `cloudsqlsuperuser` role and enable it:
+
+```sql
+CREATE EXTENSION vector;
+```
+
+See [Cloud SQL extensions](https://cloud.google.com/sql/docs/postgres/extensions).
+
+</Tab>
+
+<Tab title="Azure Flexible Server">
+
+Allowlist the extension first: add `VECTOR` to the `azure.extensions` server parameter, then connect and enable it:
+
+```sql
+CREATE EXTENSION vector;
+```
+
+See [pgvector on Azure Database for PostgreSQL](https://learn.microsoft.com/azure/postgresql/flexible-server/how-to-use-pgvector).
+
+</Tab>
+
+<Tab title="Self-hosted / Docker">
+
+Use the official image, which bundles pgvector:
+
+```bash
+docker run -d --name postgres \
+  -e POSTGRES_PASSWORD=... -e POSTGRES_DB=context7 \
+  -p 5432:5432 --shm-size=1g \
+  pgvector/pgvector:pg16
+```
+
+For an existing server, install the extension package (`apt-get install postgresql-16-pgvector` on Debian/Ubuntu) or build from source, then run `CREATE EXTENSION vector;`. See [pgvector installation](https://github.com/pgvector/pgvector#installation). Set `--shm-size` at least as large as `maintenance_work_mem` so parallel HNSW index builds do not run out of shared memory.
+
+</Tab>
+
+</Tabs>
+
+Verify the installed version (must be `0.5.0` or newer):
+
+```sql
+SELECT extversion FROM pg_extension WHERE extname = 'vector';
+```
+
+<Note>
+If the application's database user cannot run `CREATE EXTENSION` (common on locked-down managed instances), have a DBA run it once as a privileged role before you start Context7. Once the extension exists, the app user only needs normal table privileges.
+</Note>
 
 </Step>
 
@@ -225,6 +292,7 @@ A Helm chart that renders all of this from a few values (single replica by defau
 - **Shared work queue.** All replicas pull parse jobs from the same queue in PostgreSQL, so indexing throughput scales with replica count.
 - **Single scheduler.** Background jobs that must run once, such as the usage report, scheduled backups, and GitOps sync, run on one elected leader. If that replica stops, another takes over.
 - **Stateless sessions.** Sessions are signed tokens, so any replica accepts a login issued by another, and logins survive restarts.
+- **Vectors in Postgres.** Embeddings are stored with pgvector, indexed with HNSW using cosine distance. The vector dimension is taken from your embedding model on first write, so there is no manual schema setup and switching embedding models is a re-index, not a migration.
 
 ## Migrating an existing deployment
 
@@ -244,7 +312,7 @@ Run the migration during a maintenance window. Stop indexing and let in-flight p
 
 <Step title="Provision PostgreSQL with pgvector">
 
-Create the target PostgreSQL database with the pgvector extension. The schema is created automatically.
+Create the target PostgreSQL database with pgvector, the same way as in [Enable it](#enable-it) above. The schema, extension, and vector tables are created automatically.
 
 </Step>
 
