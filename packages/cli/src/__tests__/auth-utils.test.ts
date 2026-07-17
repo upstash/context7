@@ -354,11 +354,46 @@ describe("startDeviceAuthorization", () => {
       "fetch",
       vi.fn().mockResolvedValue({
         ok: false,
-        json: () =>
-          Promise.resolve({ error: "invalid_request", error_description: "bad client_id" }),
+        status: 400,
+        url: "https://t/api/oauth/device/code",
+        text: () =>
+          Promise.resolve(
+            JSON.stringify({ error: "invalid_request", error_description: "bad client_id" })
+          ),
       })
     );
     await expect(startDeviceAuthorization("https://t", "bogus")).rejects.toThrow("bad client_id");
+  });
+
+  // A proxy or firewall answers with HTML rather than an OAuth error object;
+  // the status and body must survive so the user can tell it was intercepted.
+  test("reports status and body excerpt when the response is not JSON", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        url: "https://t/api/oauth/device/code",
+        text: () => Promise.resolve("<html><body>Blocked by proxy</body></html>"),
+      })
+    );
+    await expect(startDeviceAuthorization("https://t", "c")).rejects.toThrow(
+      /HTTP 403.*Blocked by proxy/s
+    );
+  });
+
+  test("surfaces the underlying cause when the connection fails", async () => {
+    const failure = Object.assign(new TypeError("fetch failed"), {
+      cause: {
+        code: "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+        message: "unable to verify leaf signature",
+      },
+    });
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(failure));
+
+    await expect(startDeviceAuthorization("https://t", "c")).rejects.toThrow(
+      /UNABLE_TO_VERIFY_LEAF_SIGNATURE.*NODE_EXTRA_CA_CERTS/s
+    );
   });
 });
 

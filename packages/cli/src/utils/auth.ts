@@ -147,6 +147,71 @@ export interface DeviceAuthorizationResponse {
 
 const DEVICE_CODE_GRANT = "urn:ietf:params:oauth:grant-type:device_code";
 
+/**
+ * Builds an error message from a non-OK response. An OAuth server sends a JSON
+ * `error`/`error_description` (RFC 6749 §5.2), but an intercepting proxy sends
+ * HTML or nothing — so fall back to the status and a body excerpt rather than a
+ * generic message that hides whether the request even reached Context7.
+ */
+async function describeErrorResponse(response: Response, fallback: string): Promise<string> {
+  const body = await response.text().catch(() => "");
+
+  try {
+    const err = JSON.parse(body) as TokenErrorResponse;
+    const message = err.error_description || err.error;
+    if (message) return message;
+  } catch {
+    // Not JSON — an interceptor, not the OAuth server.
+  }
+
+  const excerpt = body.replace(/\s+/g, " ").trim().slice(0, 200);
+  const detail = `HTTP ${response.status} from ${response.url}`;
+  return excerpt ? `${fallback} (${detail}): ${excerpt}` : `${fallback} (${detail})`;
+}
+
+/**
+ * `fetch` rejects with a bare "fetch failed" and puts the real reason on
+ * `cause`, which reads as a Context7 outage when it is almost always local
+ * networking. Undici also ignores HTTPS_PROXY unless a dispatcher is set, so a
+ * machine whose npm works through a proxy can still fail here.
+ */
+function describeConnectionError(error: unknown, url: string): string {
+  const cause = (error as { cause?: { code?: string; message?: string } })?.cause;
+  const code = cause?.code;
+  const detail = cause?.message || (error instanceof Error ? error.message : String(error));
+
+  let hint: string;
+  switch (code) {
+    case "UNABLE_TO_VERIFY_LEAF_SIGNATURE":
+    case "SELF_SIGNED_CERT_IN_CHAIN":
+    case "DEPTH_ZERO_SELF_SIGNED_CERT":
+    case "CERT_HAS_EXPIRED":
+      hint =
+        "The TLS certificate could not be verified, which usually means a proxy is inspecting HTTPS traffic. Point NODE_EXTRA_CA_CERTS at your organization's root CA.";
+      break;
+    case "ENOTFOUND":
+    case "EAI_AGAIN":
+      hint = "DNS lookup failed. Check your network or VPN connection.";
+      break;
+    case "ECONNREFUSED":
+    case "ECONNRESET":
+    case "EHOSTUNREACH":
+    case "ENETUNREACH":
+      hint =
+        "The connection was refused or reset, which usually means a firewall or proxy is blocking it.";
+      break;
+    case "UND_ERR_CONNECT_TIMEOUT":
+    case "ETIMEDOUT":
+      hint = "The connection timed out. A proxy or firewall may be dropping the request.";
+      break;
+    default:
+      hint =
+        "If you are behind a corporate proxy, note that Node does not use HTTPS_PROXY automatically.";
+  }
+
+  return `Could not reach ${url}: ${detail}${code ? ` (${code})` : ""}\n${hint}`;
+}
+
 /** RFC 8628 §3.2 default poll interval when the server omits `interval`. */
 export const DEFAULT_DEVICE_POLL_INTERVAL_SECONDS = 5;
 
@@ -165,15 +230,20 @@ export async function startDeviceAuthorization(
     // ignore
   }
 
-  const response = await fetch(`${baseUrl}/api/oauth/device/code`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: params.toString(),
-  });
+  const url = `${baseUrl}/api/oauth/device/code`;
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+    });
+  } catch (error) {
+    throw new Error(describeConnectionError(error, url));
+  }
 
   if (!response.ok) {
-    const err = (await response.json().catch(() => ({}))) as TokenErrorResponse;
-    throw new Error(err.error_description || err.error || "Failed to start device authorization");
+    throw new Error(await describeErrorResponse(response, "Failed to start device authorization"));
   }
 
   return (await response.json()) as DeviceAuthorizationResponse;
