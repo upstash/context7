@@ -30,9 +30,10 @@ Set the same values on every replica. Presence of `DATABASE_URL` is what switche
 | `VECTOR_STORE_URI` | Yes | Object storage location for the vector index, for example `s3://your-bucket/vectors`. Also accepts `gs://` and `az://`. |
 | `ENCRYPTION_KEY` | Yes | 64 hex characters, shared by all replicas so they can decrypt the same stored credentials. Generate with `openssl rand -hex 32`. |
 | `SESSION_SECRET` | Yes | Random string, shared by all replicas so any of them can validate a session issued by another. |
+| `VECTOR_STORE_ENDPOINT` | No | Custom S3-compatible endpoint for on-prem object storage (MinIO, Ceph). Leave blank for managed AWS S3. |
 | `PG_POOL_MAX` | No | PostgreSQL connections per replica. Defaults to `10`. |
 
-Provide the object storage credentials through the usual provider environment variables, for example `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` for S3.
+Provide the object storage credentials through the usual provider environment variables, for example `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` for S3. For a custom endpoint, use `VECTOR_STORE_ACCESS_KEY_ID` and `VECTOR_STORE_SECRET_ACCESS_KEY`.
 
 <Warning>
 `ENCRYPTION_KEY` and `SESSION_SECRET` must be identical on every replica and must stay stable. If `ENCRYPTION_KEY` changes, stored credentials can no longer be decrypted. Store both in your secret manager.
@@ -77,46 +78,42 @@ Start as many replicas as you need behind the load balancer. They are interchang
 
 </Steps>
 
+You do not have to hand-write the wiring. Ready-made deployment artifacts ship in the repo under `enterprise/deploy`.
+
 ## Docker Compose
 
-```yaml
-services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: context7
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: context7
-    volumes:
-      - pgdata:/var/lib/postgresql/data
+For evaluation and small deployments, `enterprise/deploy/docker-compose.scale.yml` brings up the whole stack with one command: Postgres, object storage (MinIO), three app replicas, and an nginx load balancer. Copy `enterprise/deploy/.env.example` to `.env`, fill in the values, then:
 
-  context7:
-    image: ghcr.io/context7/enterprise:latest
-    depends_on:
-      - postgres
-    ports:
-      - "3000:3000"
-    environment:
-      - LICENSE_KEY=${LICENSE_KEY}
-      - LLM_API_KEY=${LLM_API_KEY}
-      - DATABASE_URL=postgres://context7:${POSTGRES_PASSWORD}@postgres:5432/context7
-      - VECTOR_STORE_URI=s3://your-bucket/vectors
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
-      - SESSION_SECRET=${SESSION_SECRET}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-    deploy:
-      replicas: 3
-
-volumes:
-  pgdata:
+```bash
+docker compose -f docker-compose.scale.yml up -d
 ```
 
-Run it with a load balancer in front of the `context7` service. Compose does not provide one, so use an external reverse proxy or move to Kubernetes.
+For production, use an external managed Postgres and object storage: drop the `postgres` and `minio` services and point `DATABASE_URL`, `VECTOR_STORE_URI`, and the object-storage credentials at your managed services.
 
 ## Kubernetes
 
-In multi-replica mode you no longer need the single-replica StatefulSet from the [Kubernetes guide](/enterprise/deployment/kubernetes). Because state is external, run Context7 as a `Deployment` with `replicas` set to your target count, put the shared configuration in a `Secret`, and expose it through a `Service` and `Ingress`. Set the readiness probe to `GET /api/ready`.
+Use the Helm chart at `enterprise/deploy/helm/context7-enterprise`. It defaults to a single replica, and `scaling.enabled=true` switches to a multi-replica `Deployment` backed by external Postgres and object storage, with the readiness probe already set to `/api/ready`.
+
+```bash
+helm install context7 ./context7-enterprise \
+  --namespace context7 --create-namespace \
+  --set license=ctx7sk-... \
+  --set 'imagePullSecrets[0].name=context7-registry' \
+  --set scaling.enabled=true \
+  --set scaling.replicas=3 \
+  --set scaling.databaseUrl='postgres://user:pass@host:5432/context7' \
+  --set scaling.vectorStoreUri='s3://your-bucket/vectors' \
+  --set scaling.encryptionKey=$(openssl rand -hex 32) \
+  --set scaling.sessionSecret=$(openssl rand -hex 32) \
+  --set scaling.objectStorage.accessKeyId=... \
+  --set scaling.objectStorage.secretAccessKey=...
+```
+
+Leave `scaling.enabled` unset (the default) for the standard single-container deployment from the [Kubernetes guide](/enterprise/deployment/kubernetes).
+
+## On-prem object storage
+
+If you do not use a cloud provider, point the vector store at S3-compatible storage such as MinIO or Ceph. Set `VECTOR_STORE_ENDPOINT` to the endpoint (for example `http://minio:9000`) along with `VECTOR_STORE_ACCESS_KEY_ID` and `VECTOR_STORE_SECRET_ACCESS_KEY`. The bundled Compose stack already runs MinIO for you.
 
 ## How it behaves
 
