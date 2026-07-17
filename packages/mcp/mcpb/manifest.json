@@ -37,7 +37,7 @@
   "compatibility": {
     "platforms": ["darwin", "win32", "linux"],
     "runtimes": {
-      "node": ">=v18.0.0"
+      "node": ">=v20.0.0"
     }
   },
   "keywords": ["vibe-coding", "developer tools", "documentation", "context"],
