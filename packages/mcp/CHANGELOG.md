@@ -1,5 +1,11 @@
 # @upstash/context7-mcp
 
+## 3.2.4
+
+### Patch Changes
+
+- c61a565: Bump jose from 6.1.3 to 6.2.3.
+
 ## 3.2.3
 
 ### Patch Changes
