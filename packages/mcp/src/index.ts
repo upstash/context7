@@ -117,30 +117,25 @@ const QUERY_DOCS_ALIASES: AliasMap = {
   libraryId: ["context7CompatibleLibraryID", "libraryID", "libraryName"],
 };
 
-function applyAliases(args: Record<string, unknown>, aliases: AliasMap): void {
-  for (const [canonical, alternatives] of Object.entries(aliases)) {
-    if (canonical in args) continue;
-    for (const alt of alternatives) {
-      if (alt in args) {
-        args[canonical] = args[alt];
-        delete args[alt];
-        break;
-      }
-    }
-  }
-}
-
 // z.preprocess step that rewrites aliased arg names before validation. Living
 // in the schema keeps aliasing transport-agnostic: the SDK parses the wire
 // message (any transport, any protocol era) and runs this on validation.
-function aliasArgs(aliases: AliasMap[]) {
+// Returns a remapped copy — the raw wire params object stays untouched.
+function aliasArgs(aliases: AliasMap) {
   return (value: unknown) => {
-    if (value && typeof value === "object") {
-      for (const map of aliases) {
-        applyAliases(value as Record<string, unknown>, map);
+    if (!value || typeof value !== "object") return value;
+    const args: Record<string, unknown> = { ...value };
+    for (const [canonical, alternatives] of Object.entries(aliases)) {
+      if (canonical in args) continue;
+      for (const alt of alternatives) {
+        if (alt in args) {
+          args[canonical] = args[alt];
+          delete args[alt];
+          break;
+        }
       }
     }
-    return value;
+    return args;
   };
 }
 
@@ -204,7 +199,7 @@ For ambiguous queries, request clarification before proceeding with a best-guess
 
 IMPORTANT: Do not call this tool more than 3 times per question. If you cannot find what you need after 3 calls, use the best result you have.`,
       inputSchema: z.preprocess(
-        aliasArgs([GLOBAL_ALIASES]),
+        aliasArgs(GLOBAL_ALIASES),
         z.object({
           query: z
             .string()
@@ -266,7 +261,7 @@ You must call 'Resolve Context7 Library ID' tool first to obtain the exact Conte
 
 Do not call this tool more than 3 times per question.`,
       inputSchema: z.preprocess(
-        aliasArgs([GLOBAL_ALIASES, QUERY_DOCS_ALIASES]),
+        aliasArgs({ ...GLOBAL_ALIASES, ...QUERY_DOCS_ALIASES }),
         z.object({
           libraryId: z
             .string()
@@ -387,6 +382,10 @@ async function main() {
         const baseUrl = new URL(RESOURCE_URL).origin;
 
         // OAuth discovery info header, used by MCP clients to discover the authorization server
+        // TODO: @modelcontextprotocol/server now ships canonical OAuth helpers
+        // (bearerAuthChallengeResponse, buildOAuthProtectedResourceMetadata,
+        // oauthMetadataResponse) — replace this hand-rolled header and the
+        // /.well-known/oauth-protected-resource route with them.
         res.set(
           "WWW-Authenticate",
           `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
