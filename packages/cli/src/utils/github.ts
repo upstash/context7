@@ -85,6 +85,11 @@ function getGitHubToken(): string | undefined {
   const envToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
   if (envToken) return envToken;
   try {
+    // Deliberately shell-free: execSync would wrap this in `cmd.exe /d /s /c` on Windows,
+    // which EDR tooling reports as suspicious Node behavior (#2918). Do not add `shell`
+    // to make a .cmd/.bat `gh` shim resolve; that reintroduces the flagged process for
+    // everyone. Such shims are rare (mainstream Windows installs ship gh.exe) and only
+    // cost the fallback to unauthenticated requests.
     return execFileSync("gh", ["auth", "token"], {
       encoding: "utf8",
       stdio: ["pipe", "pipe", "ignore"],
