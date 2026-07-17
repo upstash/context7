@@ -78,38 +78,181 @@ Start as many replicas as you need behind the load balancer. They are interchang
 
 </Steps>
 
-You do not have to hand-write the wiring. Ready-made deployment artifacts ship in the repo under `enterprise/deploy`.
-
 ## Docker Compose
 
-For evaluation and small deployments, `enterprise/deploy/docker-compose.scale.yml` brings up the whole stack with one command: Postgres, object storage (MinIO), three app replicas, and an nginx load balancer. Copy `enterprise/deploy/.env.example` to `.env`, fill in the values, then:
+For evaluation and small deployments, this stack brings up Postgres, object storage (MinIO), three app replicas, and an nginx load balancer with one command.
+
+Create a `.env`:
 
 ```bash
-docker compose -f docker-compose.scale.yml up -d
+LICENSE_KEY=ctx7sk-...
+POSTGRES_PASSWORD=change-me
+OBJECT_STORAGE_ACCESS_KEY=context7
+OBJECT_STORAGE_SECRET_KEY=change-me-too
+# openssl rand -hex 32
+ENCRYPTION_KEY=
+SESSION_SECRET=
 ```
 
-For production, use an external managed Postgres and object storage: drop the `postgres` and `minio` services and point `DATABASE_URL`, `VECTOR_STORE_URI`, and the object-storage credentials at your managed services.
+Create `nginx.conf` (round-robins across the replicas):
+
+```nginx
+events {}
+http {
+  resolver 127.0.0.11 valid=10s ipv6=off;
+  server {
+    listen 80;
+    location / {
+      set $backend http://app:3000;
+      proxy_pass $backend;
+      proxy_http_version 1.1;
+      proxy_set_header Host $host;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+    }
+  }
+}
+```
+
+Create `docker-compose.yml`:
+
+```yaml
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: context7
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: context7
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U context7"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: ${OBJECT_STORAGE_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${OBJECT_STORAGE_SECRET_KEY}
+    volumes: [miniodata:/data]
+
+  createbuckets:
+    image: minio/mc
+    depends_on: [minio]
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 $${OBJECT_STORAGE_ACCESS_KEY} $${OBJECT_STORAGE_SECRET_KEY}; do sleep 1; done;
+      mc mb -p local/context7-vectors; exit 0;"
+    environment:
+      OBJECT_STORAGE_ACCESS_KEY: ${OBJECT_STORAGE_ACCESS_KEY}
+      OBJECT_STORAGE_SECRET_KEY: ${OBJECT_STORAGE_SECRET_KEY}
+
+  app:
+    image: ghcr.io/context7/enterprise:latest
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      LICENSE_KEY: ${LICENSE_KEY}
+      DATABASE_URL: postgres://context7:${POSTGRES_PASSWORD}@postgres:5432/context7
+      VECTOR_STORE_URI: s3://context7-vectors/vectors
+      VECTOR_STORE_ENDPOINT: http://minio:9000
+      VECTOR_STORE_ACCESS_KEY_ID: ${OBJECT_STORAGE_ACCESS_KEY}
+      VECTOR_STORE_SECRET_ACCESS_KEY: ${OBJECT_STORAGE_SECRET_KEY}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      SESSION_SECRET: ${SESSION_SECRET}
+    deploy: { replicas: 3 }
+
+  lb:
+    image: nginx:alpine
+    depends_on: [app]
+    ports: ["3000:80"]
+    volumes: ["./nginx.conf:/etc/nginx/nginx.conf:ro"]
+
+volumes:
+  pgdata:
+  miniodata:
+```
+
+Then start it and open `http://localhost:3000` to complete the setup wizard:
+
+```bash
+docker compose up -d
+```
+
+For production, use an external managed Postgres and object storage: drop the `postgres`, `minio`, and `createbuckets` services and point `DATABASE_URL`, `VECTOR_STORE_URI`, and the object-storage credentials at your managed services.
 
 ## Kubernetes
 
-Use the Helm chart at `enterprise/deploy/helm/context7-enterprise`. It defaults to a single replica, and `scaling.enabled=true` switches to a multi-replica `Deployment` backed by external Postgres and object storage, with the readiness probe already set to `/api/ready`.
+This assumes you created the namespace and image pull secret in the [Kubernetes guide](/enterprise/deployment/kubernetes). Put the shared configuration in a Secret:
 
-```bash
-helm install context7 ./context7-enterprise \
-  --namespace context7 --create-namespace \
-  --set license=ctx7sk-... \
-  --set 'imagePullSecrets[0].name=context7-registry' \
-  --set scaling.enabled=true \
-  --set scaling.replicas=3 \
-  --set scaling.databaseUrl='postgres://user:pass@host:5432/context7' \
-  --set scaling.vectorStoreUri='s3://your-bucket/vectors' \
-  --set scaling.encryptionKey=$(openssl rand -hex 32) \
-  --set scaling.sessionSecret=$(openssl rand -hex 32) \
-  --set scaling.objectStorage.accessKeyId=... \
-  --set scaling.objectStorage.secretAccessKey=...
+```yaml secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: context7-env
+  namespace: context7
+type: Opaque
+stringData:
+  LICENSE_KEY: "ctx7sk-..."
+  DATABASE_URL: "postgres://user:pass@host:5432/context7"
+  VECTOR_STORE_URI: "s3://your-bucket/vectors"
+  ENCRYPTION_KEY: "<64 hex, openssl rand -hex 32>"
+  SESSION_SECRET: "<random string>"
+  AWS_ACCESS_KEY_ID: "<object storage key>"
+  AWS_SECRET_ACCESS_KEY: "<object storage secret>"
 ```
 
-Leave `scaling.enabled` unset (the default) for the standard single-container deployment from the [Kubernetes guide](/enterprise/deployment/kubernetes).
+Run the app as a `Deployment` instead of the single-replica StatefulSet. State is external, so `/data` is per-pod scratch and readiness gates on `/api/ready`:
+
+```yaml deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: context7
+  namespace: context7
+spec:
+  replicas: 3
+  selector: { matchLabels: { app: context7 } }
+  template:
+    metadata: { labels: { app: context7 } }
+    spec:
+      imagePullSecrets:
+        - name: context7-registry
+      containers:
+        - name: context7
+          image: ghcr.io/context7/enterprise:latest
+          ports:
+            - { containerPort: 3000, name: http }
+          env:
+            - { name: DATA_DIR, value: /data }
+          envFrom:
+            - secretRef: { name: context7-env }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+          readinessProbe:
+            httpGet: { path: /api/ready, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /api/health, port: http }
+            periodSeconds: 30
+      volumes:
+        - name: data
+          emptyDir: {}
+```
+
+Reuse the `Service` and `Ingress` from the [Kubernetes guide](/enterprise/deployment/kubernetes), then apply:
+
+```bash
+kubectl apply -f secret.yaml
+kubectl apply -f deployment.yaml
+```
+
+<Note>
+A Helm chart that renders all of this from a few values (single replica by default, `scaling.enabled=true` to scale out) ships with the enterprise distribution. Ask your Context7 contact if you would like to use it.
+</Note>
 
 ## On-prem object storage
 
