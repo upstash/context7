@@ -299,8 +299,34 @@ describe("getValidAccessToken", () => {
       "fetch",
       vi.fn().mockResolvedValue({
         ok: false,
-        json: () => Promise.resolve({ error: "invalid_grant" }),
+        status: 400,
+        url: "https://test.context7.com/api/oauth/token",
+        text: () => Promise.resolve(JSON.stringify({ error: "invalid_grant" })),
       })
+    );
+
+    expect(await getValidAccessToken()).toBeNull();
+  });
+
+  // An expired refresh token is indistinguishable from being logged out, so the
+  // caller reports "not logged in" rather than surfacing a network error here.
+  test("returns null when the refresh connection fails", async () => {
+    const tokens: TokenData = {
+      access_token: "expired-tok",
+      token_type: "bearer",
+      expires_at: Date.now() - 1000,
+      refresh_token: "refresh-tok",
+    };
+
+    mfs.existsSync.mockReturnValue(true);
+    mfs.readFileSync.mockReturnValue(JSON.stringify(tokens));
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockRejectedValue(
+          Object.assign(new TypeError("fetch failed"), { cause: { code: "ENOTFOUND" } })
+        )
     );
 
     expect(await getValidAccessToken()).toBeNull();
@@ -447,7 +473,8 @@ describe("pollDeviceToken", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("ECONNREFUSED")));
     const result = await pollDeviceToken("https://t", "c", "dc");
     expect(result.status).toBe("transient");
-    expect(result.errorMessage).toBe("ECONNREFUSED");
+    // Polling keeps the described cause rather than the bare message.
+    expect(result.errorMessage).toContain("ECONNREFUSED");
   });
 
   test("throws on unknown 4xx error code", async () => {
