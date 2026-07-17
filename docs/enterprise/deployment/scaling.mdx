@@ -6,7 +6,7 @@ description: "Run Context7 On-Premise as multiple replicas behind a load balance
 
 By default Context7 On-Premise runs as a single container. It stores everything on a local volume: a SQLite database for configuration and metadata, and a LanceDB index for embeddings. This is simple to operate but limits you to one instance, since SQLite does not support concurrent writers across containers.
 
-To run multiple replicas behind a load balancer, move that shared state off the local volume: relational data to PostgreSQL, and vectors to object storage. Once both are external, every replica is stateless and interchangeable, and you can scale horizontally.
+To run multiple replicas behind a load balancer, move that state to PostgreSQL. Relational data goes to Postgres, and vectors go to Postgres too via the `pgvector` extension. Once state is external, every replica is stateless and interchangeable, and you can scale horizontally. Postgres is the only external dependency, there is no separate vector database or object storage to run.
 
 <Note>
 You only need this if a single container can no longer handle your query or indexing load. Most deployments run fine on one container with a persistent volume. See [Docker](/enterprise/deployment/docker) and [Kubernetes](/enterprise/deployment/kubernetes) for the standard single-container setup.
@@ -14,26 +14,22 @@ You only need this if a single container can no longer handle your query or inde
 
 ## What you need
 
-- A **PostgreSQL** database (managed or self-hosted) reachable from every replica.
-- An **object storage** bucket (S3, GCS, or Azure Blob) for the vector index, with credentials available to every replica.
+- A **PostgreSQL** database (managed or self-hosted) with the **pgvector** extension, reachable from every replica. Managed Postgres such as RDS, Cloud SQL, and Azure support pgvector; for self-hosted use the `pgvector/pgvector` image.
 - A **load balancer** in front of the replicas.
 
-The default embedded SQLite and LanceDB are not used when these are configured.
+The embedded SQLite and LanceDB are not used once `DATABASE_URL` is set.
 
 ## Configuration
 
-Set the same values on every replica. Presence of `DATABASE_URL` is what switches the store from SQLite to PostgreSQL.
+Set the same values on every replica. Presence of `DATABASE_URL` is what switches the store from SQLite to Postgres and vectors to pgvector.
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `DATABASE_URL` | Yes | PostgreSQL connection string, for example `postgres://user:pass@host:5432/context7`. Enables multi-replica mode. |
-| `VECTOR_STORE_URI` | Yes | Object storage location for the vector index, for example `s3://your-bucket/vectors`. Also accepts `gs://` and `az://`. |
+| `DATABASE_URL` | Yes | PostgreSQL connection string, for example `postgres://user:pass@host:5432/context7`. Enables multi-replica mode; vectors go to pgvector in this database. |
 | `ENCRYPTION_KEY` | Yes | 64 hex characters, shared by all replicas so they can decrypt the same stored credentials. Generate with `openssl rand -hex 32`. |
 | `SESSION_SECRET` | Yes | Random string, shared by all replicas so any of them can validate a session issued by another. |
-| `VECTOR_STORE_ENDPOINT` | No | Custom S3-compatible endpoint for on-prem object storage (MinIO, Ceph). Leave blank for managed AWS S3. |
+| `VECTOR_STORE_URI` | No | Keep vectors in LanceDB on object storage instead of pgvector, for example `s3://your-bucket/vectors`. See [Vectors on object storage](#vectors-on-object-storage). |
 | `PG_POOL_MAX` | No | PostgreSQL connections per replica. Defaults to `10`. |
-
-Provide the object storage credentials through the usual provider environment variables, for example `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` for S3. For a custom endpoint, use `VECTOR_STORE_ACCESS_KEY_ID` and `VECTOR_STORE_SECRET_ACCESS_KEY`.
 
 <Warning>
 `ENCRYPTION_KEY` and `SESSION_SECRET` must be identical on every replica and must stay stable. If `ENCRYPTION_KEY` changes, stored credentials can no longer be decrypted. Store both in your secret manager.
@@ -43,9 +39,9 @@ Provide the object storage credentials through the usual provider environment va
 
 <Steps>
 
-<Step title="Provision PostgreSQL and a bucket">
+<Step title="Provision PostgreSQL with pgvector">
 
-Create a PostgreSQL database and an object storage bucket. The database schema is created automatically on first boot, so an empty database is all you need.
+Create a PostgreSQL database with the pgvector extension. The schema and the extension are created automatically on first boot, so an empty database is all you need (the database user must be allowed to run `CREATE EXTENSION`).
 
 </Step>
 
@@ -60,7 +56,7 @@ openssl rand -hex 32   # SESSION_SECRET
 
 <Step title="Set the environment on every replica">
 
-Add `DATABASE_URL`, `VECTOR_STORE_URI`, `ENCRYPTION_KEY`, `SESSION_SECRET`, and your object storage credentials to each replica, alongside the usual `LICENSE_KEY` and model settings.
+Add `DATABASE_URL`, `ENCRYPTION_KEY`, and `SESSION_SECRET` to each replica, alongside the usual `LICENSE_KEY` and model settings.
 
 </Step>
 
@@ -80,15 +76,13 @@ Start as many replicas as you need behind the load balancer. They are interchang
 
 ## Docker Compose
 
-For evaluation and small deployments, this stack brings up Postgres, object storage (MinIO), three app replicas, and an nginx load balancer with one command.
+For evaluation and small deployments, this stack brings up Postgres (with pgvector), three app replicas, and an nginx load balancer with one command. There is no object storage to run.
 
 Create a `.env`:
 
 ```bash
 LICENSE_KEY=ctx7sk-...
 POSTGRES_PASSWORD=change-me
-OBJECT_STORAGE_ACCESS_KEY=context7
-OBJECT_STORAGE_SECRET_KEY=change-me-too
 # openssl rand -hex 32
 ENCRYPTION_KEY=
 SESSION_SECRET=
@@ -119,7 +113,7 @@ Create `docker-compose.yml`:
 ```yaml
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: context7
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -131,25 +125,6 @@ services:
       timeout: 5s
       retries: 10
 
-  minio:
-    image: minio/minio
-    command: server /data
-    environment:
-      MINIO_ROOT_USER: ${OBJECT_STORAGE_ACCESS_KEY}
-      MINIO_ROOT_PASSWORD: ${OBJECT_STORAGE_SECRET_KEY}
-    volumes: [miniodata:/data]
-
-  createbuckets:
-    image: minio/mc
-    depends_on: [minio]
-    entrypoint: >
-      /bin/sh -c "
-      until mc alias set local http://minio:9000 $${OBJECT_STORAGE_ACCESS_KEY} $${OBJECT_STORAGE_SECRET_KEY}; do sleep 1; done;
-      mc mb -p local/context7-vectors; exit 0;"
-    environment:
-      OBJECT_STORAGE_ACCESS_KEY: ${OBJECT_STORAGE_ACCESS_KEY}
-      OBJECT_STORAGE_SECRET_KEY: ${OBJECT_STORAGE_SECRET_KEY}
-
   app:
     image: ghcr.io/context7/enterprise:latest
     depends_on:
@@ -157,10 +132,6 @@ services:
     environment:
       LICENSE_KEY: ${LICENSE_KEY}
       DATABASE_URL: postgres://context7:${POSTGRES_PASSWORD}@postgres:5432/context7
-      VECTOR_STORE_URI: s3://context7-vectors/vectors
-      VECTOR_STORE_ENDPOINT: http://minio:9000
-      VECTOR_STORE_ACCESS_KEY_ID: ${OBJECT_STORAGE_ACCESS_KEY}
-      VECTOR_STORE_SECRET_ACCESS_KEY: ${OBJECT_STORAGE_SECRET_KEY}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
       SESSION_SECRET: ${SESSION_SECRET}
     deploy: { replicas: 3 }
@@ -173,7 +144,6 @@ services:
 
 volumes:
   pgdata:
-  miniodata:
 ```
 
 Then start it and open `http://localhost:3000` to complete the setup wizard:
@@ -182,7 +152,7 @@ Then start it and open `http://localhost:3000` to complete the setup wizard:
 docker compose up -d
 ```
 
-For production, use an external managed Postgres and object storage: drop the `postgres`, `minio`, and `createbuckets` services and point `DATABASE_URL`, `VECTOR_STORE_URI`, and the object-storage credentials at your managed services.
+For production, point `DATABASE_URL` at an external managed Postgres (with pgvector) and drop the `postgres` service.
 
 ## Kubernetes
 
@@ -198,11 +168,8 @@ type: Opaque
 stringData:
   LICENSE_KEY: "ctx7sk-..."
   DATABASE_URL: "postgres://user:pass@host:5432/context7"
-  VECTOR_STORE_URI: "s3://your-bucket/vectors"
   ENCRYPTION_KEY: "<64 hex, openssl rand -hex 32>"
   SESSION_SECRET: "<random string>"
-  AWS_ACCESS_KEY_ID: "<object storage key>"
-  AWS_SECRET_ACCESS_KEY: "<object storage secret>"
 ```
 
 Run the app as a `Deployment` instead of the single-replica StatefulSet. State is external, so `/data` is per-pod scratch and readiness gates on `/api/ready`:
@@ -254,10 +221,6 @@ kubectl apply -f deployment.yaml
 A Helm chart that renders all of this from a few values (single replica by default, `scaling.enabled=true` to scale out) ships with the enterprise distribution. Ask your Context7 contact if you would like to use it.
 </Note>
 
-## On-prem object storage
-
-If you do not use a cloud provider, point the vector store at S3-compatible storage such as MinIO or Ceph. Set `VECTOR_STORE_ENDPOINT` to the endpoint (for example `http://minio:9000`) along with `VECTOR_STORE_ACCESS_KEY_ID` and `VECTOR_STORE_SECRET_ACCESS_KEY`. The bundled Compose stack already runs MinIO for you.
-
 ## How it behaves
 
 - **Shared work queue.** All replicas pull parse jobs from the same queue in PostgreSQL, so indexing throughput scales with replica count.
@@ -266,7 +229,7 @@ If you do not use a cloud provider, point the vector store at S3-compatible stor
 
 ## Migrating an existing deployment
 
-If you already run a single container, a built-in command copies your existing SQLite data into PostgreSQL, so you do not have to re-index your libraries. It reads the data directory from your single container and writes to the target PostgreSQL.
+If you already run a single container, a built-in command copies your existing SQLite data and LanceDB vectors into PostgreSQL, so you do not have to re-index your libraries or re-embed anything. It reads the data directory from your single container and writes to the target PostgreSQL.
 
 The admin UI shows your current storage mode and the exact migration command under **Settings > Scaling**:
 
@@ -280,15 +243,15 @@ Run the migration during a maintenance window. Stop indexing and let in-flight p
 
 <Steps>
 
-<Step title="Provision PostgreSQL and a bucket">
+<Step title="Provision PostgreSQL with pgvector">
 
-Create the target PostgreSQL database and the object storage bucket, as in the setup above. The schema is created automatically.
+Create the target PostgreSQL database with the pgvector extension. The schema is created automatically.
 
 </Step>
 
 <Step title="Run the migration">
 
-Run the one-shot `migrate` command with access to your existing data directory and the target database. It creates the schema and copies your projects, pages, users, API keys, settings, and usage counters.
+Run the one-shot `migrate` command with access to your existing data directory and the target database. It creates the schema and copies your projects, pages, users, API keys, settings, usage counters, and the vector index into pgvector.
 
 <Tabs>
 
@@ -299,12 +262,11 @@ docker run --rm \
   -v context7-data:/data \
   -e DATA_DIR=/data \
   -e DATABASE_URL="postgres://user:pass@host:5432/context7" \
-  -e VECTOR_STORE_URI="s3://your-bucket/vectors" \
   ghcr.io/context7/enterprise:latest \
   node dist/enterprise/migrate.mjs
 ```
 
-Use the same volume (`context7-data`) your single container uses, so the command reads your existing database.
+Use the same volume (`context7-data`) your single container uses, so the command reads your existing database and vectors.
 
 </Tab>
 
@@ -333,8 +295,6 @@ spec:
               value: /data
             - name: DATABASE_URL
               value: postgres://user:pass@host:5432/context7
-            - name: VECTOR_STORE_URI
-              value: s3://your-bucket/vectors
           volumeMounts:
             - name: data
               mountPath: /data
@@ -353,19 +313,7 @@ kubectl logs -n context7 job/context7-migrate
 
 </Tabs>
 
-The command prints the number of rows copied per table and the `ENCRYPTION_KEY` your new deployment must use.
-
-</Step>
-
-<Step title="Copy the vector index">
-
-The vector index is a directory of files. Copy it to the same bucket you set in `VECTOR_STORE_URI`:
-
-```bash
-aws s3 sync /data/vectors s3://your-bucket/vectors
-```
-
-Use `gcloud storage rsync` or `azcopy` for GCS or Azure.
+The command prints the rows and vectors copied, and the `ENCRYPTION_KEY` your new deployment must use.
 
 </Step>
 
@@ -377,7 +325,7 @@ Your stored credentials are encrypted with the key from the single container. Se
 
 <Step title="Redeploy in multi-replica mode">
 
-Redeploy with `DATABASE_URL`, `VECTOR_STORE_URI`, `ENCRYPTION_KEY`, and `SESSION_SECRET` set on every replica, following the steps above. Verify at `/api/health` that your libraries are present, then scale up.
+Redeploy with `DATABASE_URL`, `ENCRYPTION_KEY`, and `SESSION_SECRET` set on every replica, following the steps above. Verify at `/api/health` that your libraries are present, then scale up.
 
 </Step>
 
@@ -389,9 +337,13 @@ After redeploying, **Settings > Scaling** confirms the deployment is running in 
   ![Multi-replica mode confirmed](/images/scaling-multi-replica.png)
 </Frame>
 
-The migration is idempotent for keyed data, so a failed run leaves the target untouched and can be retried.
+## Vectors on object storage
+
+pgvector is the default and needs nothing beyond Postgres. If you would rather keep vectors in LanceDB on object storage (for example a very large index you do not want in Postgres), set `VECTOR_STORE_URI` to a bucket such as `s3://your-bucket/vectors` (also `gs://` and `az://`) on every replica, and provide the object storage credentials through the usual `AWS_*` environment variables.
+
+For on-prem, S3-compatible storage such as MinIO or Ceph, also set `VECTOR_STORE_ENDPOINT` (for example `http://minio:9000`) with `VECTOR_STORE_ACCESS_KEY_ID` and `VECTOR_STORE_SECRET_ACCESS_KEY`. When `VECTOR_STORE_URI` is set, the migration copies the index with a file sync instead (`aws s3 sync /data/vectors s3://your-bucket/vectors`).
 
 ## Limitations
 
-- Object storage has higher latency than a local disk. This is fine for indexing and search, but expect slightly slower vector reads than a single container on local storage.
+- With pgvector, vector search runs in Postgres. For typical on-prem workloads this is well within reach; for a very large index, size Postgres accordingly or keep vectors in LanceDB on object storage.
 - Database backups are handled by PostgreSQL in this mode. Use your provider's managed backups or `pg_dump` rather than the built-in backup, which targets the embedded SQLite file. See [Backup and Restore](/enterprise/backup-restore).
