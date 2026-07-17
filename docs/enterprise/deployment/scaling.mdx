@@ -28,7 +28,6 @@ Set the same values on every replica. Presence of `DATABASE_URL` is what switche
 | `DATABASE_URL` | Yes | PostgreSQL connection string, for example `postgres://user:pass@host:5432/context7`. Enables multi-replica mode; vectors go to pgvector in this database. |
 | `ENCRYPTION_KEY` | Yes | 64 hex characters, shared by all replicas so they can decrypt the same stored credentials. Generate with `openssl rand -hex 32`. |
 | `SESSION_SECRET` | Yes | Random string, shared by all replicas so any of them can validate a session issued by another. |
-| `VECTOR_STORE_URI` | No | Keep vectors in LanceDB on object storage instead of pgvector, for example `s3://your-bucket/vectors`. See [Vectors on object storage](#vectors-on-object-storage). |
 | `PG_POOL_MAX` | No | PostgreSQL connections per replica. Defaults to `10`. |
 
 <Warning>
@@ -337,13 +336,7 @@ After redeploying, **Settings > Scaling** confirms the deployment is running in 
   ![Multi-replica mode confirmed](/images/scaling-multi-replica.png)
 </Frame>
 
-## Vectors on object storage
-
-pgvector is the default and needs nothing beyond Postgres. If you would rather keep vectors in LanceDB on object storage (for example a very large index you do not want in Postgres), set `VECTOR_STORE_URI` to a bucket such as `s3://your-bucket/vectors` (also `gs://` and `az://`) on every replica, and provide the object storage credentials through the usual `AWS_*` environment variables.
-
-For on-prem, S3-compatible storage such as MinIO or Ceph, also set `VECTOR_STORE_ENDPOINT` (for example `http://minio:9000`) with `VECTOR_STORE_ACCESS_KEY_ID` and `VECTOR_STORE_SECRET_ACCESS_KEY`. When `VECTOR_STORE_URI` is set, the migration copies the index with a file sync instead (`aws s3 sync /data/vectors s3://your-bucket/vectors`).
-
 ## Limitations
 
-- With pgvector, vector search runs in Postgres. For typical on-prem workloads this is well within reach; for a very large index, size Postgres accordingly or keep vectors in LanceDB on object storage.
+- With pgvector, vector search runs in Postgres. For typical on-prem workloads this is well within reach; for a very large index, size Postgres accordingly.
 - Database backups are handled by PostgreSQL in this mode. Use your provider's managed backups or `pg_dump` rather than the built-in backup, which targets the embedded SQLite file. See [Backup and Restore](/enterprise/backup-restore).
