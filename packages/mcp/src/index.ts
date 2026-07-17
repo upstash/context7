@@ -144,45 +144,6 @@ function aliasArgs(aliases: AliasMap[]) {
   };
 }
 
-const RESOLVE_LIBRARY_ID_INPUT_SCHEMA = z.preprocess(
-  aliasArgs([GLOBAL_ALIASES]),
-  z.object({
-    query: z
-      .string()
-      .describe(
-        "The question or task you need help with. This is used to rank library results by relevance to what the user is trying to accomplish. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
-      ),
-    libraryName: z
-      .string()
-      .describe(
-        "Library name to search for and retrieve a Context7-compatible library ID. Use the official library name with proper punctuation — e.g., 'Next.js' instead of 'nextjs', 'Customer.io' instead of 'customerio', 'Three.js' instead of 'threejs'."
-      ),
-  })
-);
-
-const QUERY_DOCS_INPUT_SCHEMA = z.preprocess(
-  aliasArgs([GLOBAL_ALIASES, QUERY_DOCS_ALIASES]),
-  z.object({
-    libraryId: z
-      .string()
-      .describe(
-        "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
-      ),
-    query: z
-      .string()
-      .describe(
-        "The question or task you need help with, scoped to a single concept. Be specific and include relevant details, but keep each query to one topic — if the user's question spans multiple distinct concepts, make a separate call per concept instead of combining them, unless the question is about how the concepts interact. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad (too vague): 'auth' or 'hooks'. Bad (too broad): 'routing and auth and caching in Next.js'. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
-      ),
-  })
-);
-
-const READ_ONLY_TOOL_ANNOTATIONS = {
-  readOnlyHint: true,
-  destructiveHint: false,
-  openWorldHint: true,
-  idempotentHint: true,
-} as const;
-
 function createMcpServer() {
   const server = new McpServer(
     {
@@ -242,8 +203,27 @@ Response Format:
 For ambiguous queries, request clarification before proceeding with a best-guess match.
 
 IMPORTANT: Do not call this tool more than 3 times per question. If you cannot find what you need after 3 calls, use the best result you have.`,
-      inputSchema: RESOLVE_LIBRARY_ID_INPUT_SCHEMA,
-      annotations: READ_ONLY_TOOL_ANNOTATIONS,
+      inputSchema: z.preprocess(
+        aliasArgs([GLOBAL_ALIASES]),
+        z.object({
+          query: z
+            .string()
+            .describe(
+              "The question or task you need help with. This is used to rank library results by relevance to what the user is trying to accomplish. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
+            ),
+          libraryName: z
+            .string()
+            .describe(
+              "Library name to search for and retrieve a Context7-compatible library ID. Use the official library name with proper punctuation — e.g., 'Next.js' instead of 'nextjs', 'Customer.io' instead of 'customerio', 'Three.js' instead of 'threejs'."
+            ),
+        })
+      ),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: true,
+        idempotentHint: true,
+      },
     },
     async ({ query, libraryName }: { query: string; libraryName: string }) => {
       const ctx = getClientContext();
@@ -285,8 +265,27 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
 You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
 Do not call this tool more than 3 times per question.`,
-      inputSchema: QUERY_DOCS_INPUT_SCHEMA,
-      annotations: READ_ONLY_TOOL_ANNOTATIONS,
+      inputSchema: z.preprocess(
+        aliasArgs([GLOBAL_ALIASES, QUERY_DOCS_ALIASES]),
+        z.object({
+          libraryId: z
+            .string()
+            .describe(
+              "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
+            ),
+          query: z
+            .string()
+            .describe(
+              "The question or task you need help with, scoped to a single concept. Be specific and include relevant details, but keep each query to one topic — if the user's question spans multiple distinct concepts, make a separate call per concept instead of combining them, unless the question is about how the concepts interact. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad (too vague): 'auth' or 'hooks'. Bad (too broad): 'routing and auth and caching in Next.js'. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
+            ),
+        })
+      ),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: true,
+        idempotentHint: true,
+      },
     },
     async ({ query, libraryId }: { query: string; libraryId: string }) => {
       const ctx = getClientContext();
@@ -378,9 +377,6 @@ async function main() {
     });
     const nodeHandler = toNodeHandler(mcpHandler);
 
-    // OAuth discovery info header, used by MCP clients to discover the authorization server
-    const wwwAuthenticate = `Bearer resource_metadata="${new URL(RESOURCE_URL).origin}/.well-known/oauth-protected-resource"`;
-
     const handleMcpRequest = async (
       req: express.Request,
       res: express.Response,
@@ -388,7 +384,13 @@ async function main() {
     ) => {
       try {
         const apiKey = extractApiKey(req);
-        res.set("WWW-Authenticate", wwwAuthenticate);
+        const baseUrl = new URL(RESOURCE_URL).origin;
+
+        // OAuth discovery info header, used by MCP clients to discover the authorization server
+        res.set(
+          "WWW-Authenticate",
+          `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
+        );
 
         if (requireAuth) {
           if (!apiKey) {
