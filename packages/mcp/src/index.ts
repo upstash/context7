@@ -2,7 +2,12 @@
 
 import { toNodeHandler } from "@modelcontextprotocol/node";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
-import { McpServer, createMcpHandler } from "@modelcontextprotocol/server";
+import {
+  McpServer,
+  createMcpHandler,
+  CLIENT_INFO_META_KEY,
+  type ServerContext,
+} from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
 import type { ClientContext } from "./lib/types.js";
@@ -81,10 +86,23 @@ let stdioClientInfo: { ide?: string; version?: string } | undefined;
 // One session ID per stdio process.
 let stdioSessionId: string | undefined;
 
+// Reads the client name/version that modern (2026-07-28) clients attach to
+// every request's _meta envelope. Legacy (2025) clients declare it once in the
+// initialize handshake instead — see the oninitialized hook in main().
+// The envelope is untyped in the current SDK beta, hence the cast.
+function envelopeClientInfo(toolCtx: ServerContext): ClientContext["clientInfo"] {
+  const envelope = toolCtx.mcpReq.envelope as
+    | Record<string, { name?: string; version?: string }>
+    | undefined;
+
+  const info = envelope?.[CLIENT_INFO_META_KEY];
+  return info ? { ide: info.name, version: info.version } : undefined;
+}
+
 /**
  * Get the effective client context
  */
-function getClientContext(): ClientContext {
+function getClientContext(toolCtx: ServerContext): ClientContext {
   const ctx = requestContext.getStore();
 
   // HTTP mode: context is fully populated from request
@@ -92,10 +110,10 @@ function getClientContext(): ClientContext {
     return ctx;
   }
 
-  // stdio mode: use globals
+  // stdio mode: envelope (modern clients) or globals (legacy initialize)
   return {
     apiKey: stdioApiKey,
-    clientInfo: stdioClientInfo,
+    clientInfo: envelopeClientInfo(toolCtx) ?? stdioClientInfo,
     transport: "stdio",
     sessionId: stdioSessionId,
   };
@@ -155,6 +173,11 @@ function createMcpServer() {
       ],
     },
     {
+      // Declaring the capabilities makes the SDK install prompts/list,
+      // resources/list, and resources/templates/list handlers that answer
+      // with the registered (i.e. empty) collections, for clients that
+      // request them unconditionally.
+      capabilities: { prompts: {}, resources: {} },
       instructions: `Use this server to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
 
 Do not use for: refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.`,
@@ -220,8 +243,8 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
         idempotentHint: true,
       },
     },
-    async ({ query, libraryName }: { query: string; libraryName: string }) => {
-      const ctx = getClientContext();
+    async ({ query, libraryName }: { query: string; libraryName: string }, toolCtx) => {
+      const ctx = getClientContext(toolCtx);
       const searchResponse = await searchLibraries(query, libraryName, ctx);
 
       if (!searchResponse.results || searchResponse.results.length === 0) {
@@ -282,8 +305,8 @@ Do not call this tool more than 3 times per question.`,
         idempotentHint: true,
       },
     },
-    async ({ query, libraryId }: { query: string; libraryId: string }) => {
-      const ctx = getClientContext();
+    async ({ query, libraryId }: { query: string; libraryId: string }, toolCtx) => {
+      const ctx = getClientContext(toolCtx);
       const response = await fetchLibraryContext({ query, libraryId }, ctx);
       maybeElicitAuthSignIn(server, ctx);
       return {
@@ -296,15 +319,6 @@ Do not call this tool more than 3 times per question.`,
       };
     }
   );
-
-  server.server.registerCapabilities({ prompts: {}, resources: {} });
-  server.server.setRequestHandler("prompts/list", async () => ({ prompts: [] }));
-  server.server.setRequestHandler("resources/list", async () => ({
-    resources: [],
-  }));
-  server.server.setRequestHandler("resources/templates/list", async () => ({
-    resourceTemplates: [],
-  }));
 
   return server;
 }
@@ -370,7 +384,11 @@ async function main() {
       responseMode: "sse",
       onerror: (error) => console.error("MCP handler error:", error),
     });
-    const nodeHandler = toNodeHandler(mcpHandler);
+    // Without onerror, request-conversion / handler.fetch throws are answered
+    // with a bare 500 inside the adapter and never reach our express handler.
+    const nodeHandler = toNodeHandler(mcpHandler, {
+      onerror: (error) => console.error("MCP node adapter error:", error),
+    });
 
     const handleMcpRequest = async (
       req: express.Request,
