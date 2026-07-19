@@ -26,12 +26,11 @@ Set the same values on every replica. Presence of `DATABASE_URL` is what switche
 | Variable | Required | Description |
 | --- | --- | --- |
 | `DATABASE_URL` | Yes | PostgreSQL connection string, for example `postgres://user:pass@host:5432/context7`. Enables multi-replica mode; vectors go to pgvector in this database. |
-| `ENCRYPTION_KEY` | Yes | 64 hex characters, shared by all replicas so they can decrypt the same stored credentials. Generate with `openssl rand -hex 32`. |
-| `SESSION_SECRET` | Yes | Random string, shared by all replicas so any of them can validate a session issued by another. |
+| `ENCRYPTION_KEY` | Yes | 64 hex characters, shared by all replicas so they can decrypt the same stored credentials and validate each other's session tokens. Generate with `openssl rand -hex 32`. |
 | `PG_POOL_MAX` | No | PostgreSQL connections per replica. Defaults to `10`. |
 
 <Warning>
-`ENCRYPTION_KEY` and `SESSION_SECRET` must be identical on every replica and must stay stable. If `ENCRYPTION_KEY` changes, stored credentials can no longer be decrypted. Store both in your secret manager.
+`ENCRYPTION_KEY` must be identical on every replica and must stay stable. If it changes, stored credentials can no longer be decrypted and all sessions are invalidated. Store it in your secret manager.
 </Warning>
 
 ## Enable it
@@ -115,14 +114,13 @@ If the application's database user cannot run `CREATE EXTENSION` (common on lock
 
 ```bash
 openssl rand -hex 32   # ENCRYPTION_KEY
-openssl rand -hex 32   # SESSION_SECRET
 ```
 
 </Step>
 
 <Step title="Set the environment on every replica">
 
-Add `DATABASE_URL`, `ENCRYPTION_KEY`, and `SESSION_SECRET` to each replica, alongside the usual `LICENSE_KEY` and model settings.
+Add `DATABASE_URL` and `ENCRYPTION_KEY` to each replica, alongside the usual `LICENSE_KEY` and model settings.
 
 </Step>
 
@@ -153,7 +151,6 @@ LICENSE_KEY=ctx7sk-...
 POSTGRES_PASSWORD=change-me
 # openssl rand -hex 32
 ENCRYPTION_KEY=
-SESSION_SECRET=
 ```
 
 Create `nginx.conf` (round-robins across the replicas):
@@ -201,7 +198,6 @@ services:
       LICENSE_KEY: ${LICENSE_KEY}
       DATABASE_URL: postgres://context7:${POSTGRES_PASSWORD}@postgres:5432/context7
       ENCRYPTION_KEY: ${ENCRYPTION_KEY}
-      SESSION_SECRET: ${SESSION_SECRET}
     deploy: { replicas: 3 }
 
   lb:
@@ -237,7 +233,6 @@ stringData:
   LICENSE_KEY: "ctx7sk-..."
   DATABASE_URL: "postgres://user:pass@host:5432/context7"
   ENCRYPTION_KEY: "<64 hex, openssl rand -hex 32>"
-  SESSION_SECRET: "<random string>"
 ```
 
 Run the app as a `Deployment` instead of the single-replica StatefulSet. State is external, so `/data` is per-pod scratch and readiness gates on `/api/ready`:
@@ -394,7 +389,7 @@ Your stored credentials are encrypted with the key from the single container. Se
 
 <Step title="Redeploy in multi-replica mode">
 
-Redeploy with `DATABASE_URL`, `ENCRYPTION_KEY`, and `SESSION_SECRET` set on every replica, following the steps above. Verify at `/api/health` that your libraries are present, then scale up.
+Redeploy with `DATABASE_URL` and `ENCRYPTION_KEY` set on every replica, following the steps above. Verify at `/api/health` that your libraries are present, then scale up.
 
 </Step>
 
