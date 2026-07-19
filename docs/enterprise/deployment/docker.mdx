@@ -128,7 +128,9 @@ Example response:
 
 ## Scaling
 
-The setup above runs a single container with a local volume, which suits most deployments. To run multiple replicas behind a load balancer, move state to PostgreSQL and object storage. See [Scaling](/enterprise/deployment/scaling), which also covers migrating an existing single-container deployment.
+The setup above runs a single container with a local volume, which suits most deployments. To run multiple replicas behind a load balancer, move state to an external PostgreSQL (embeddings included, via the `pgvector` extension), so every replica is stateless and interchangeable. A turnkey multi-replica Compose file (app replicas + Nginx load balancer) ships in the deployment bundle.
+
+See [Scaling](/enterprise/deployment/scaling) for the full setup, which also covers migrating an existing single-container deployment.
 
 ## Connecting AI Clients
 
