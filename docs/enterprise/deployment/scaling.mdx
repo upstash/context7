@@ -19,25 +19,22 @@ Every replica runs the full application (REST API, MCP endpoint, and parser) and
 ```mermaid
 flowchart TB
     clients["MCP clients<br/>and browsers"] --> lb["Load balancer"]
-    lb --> r1["Replica 1<br/>leader"]
+    lb --> r1["Replica 1"]
     lb --> r2["Replica 2"]
     lb --> r3["Replica 3"]
     r1 --> pg[("PostgreSQL<br/>+ pgvector")]
     r2 --> pg
     r3 --> pg
-    r1 -. "scheduled jobs<br/>backups, usage, GitOps" .-> pg
 
     classDef client fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a;
     classDef replica fill:#ede9fe,stroke:#8b5cf6,color:#5b21b6;
-    classDef leader fill:#fef9c3,stroke:#ca8a04,color:#854d0e;
     classDef db fill:#dcfce7,stroke:#16a34a,color:#166534;
     class clients,lb client;
-    class r2,r3 replica;
-    class r1 leader;
+    class r1,r2,r3 replica;
     class pg db;
 ```
 
-Replicas coordinate through Postgres: they pull indexing jobs from a shared queue, elect a single leader for jobs that must run once (backups, usage reporting, GitOps sync), and validate each other's signed session tokens. See [How it behaves](#how-it-behaves) for the details.
+Replicas coordinate through Postgres: they pull indexing jobs from a shared queue, run jobs that must happen once (backups, usage reporting, GitOps sync) on a single replica using a Postgres lock, and validate each other's signed session tokens. See [How it behaves](#how-it-behaves) for the details.
 
 ## What you need
 
@@ -314,7 +311,7 @@ A Helm chart renders all of this from a few values (single replica by default, `
 ## How it behaves
 
 - **Shared work queue.** All replicas pull parse jobs from the same queue in PostgreSQL, so indexing throughput scales with replica count.
-- **Single scheduler.** Background jobs that must run once, such as the usage report, scheduled backups, and GitOps sync, run on one elected leader. If that replica stops, another takes over.
+- **Single execution for scheduled jobs.** Jobs that must run once across the fleet, such as the usage report, scheduled backups, and GitOps sync, take a short Postgres advisory lock when they fire, so exactly one replica runs each. No replica is special, and there is nothing to fail over.
 - **Stateless sessions.** Sessions are signed tokens, so any replica accepts a login issued by another, and logins survive restarts.
 - **Vectors in Postgres.** Embeddings are stored with pgvector, indexed with HNSW using cosine distance. The vector dimension is taken from your embedding model on first write, so there is no manual schema setup and switching embedding models is a re-index, not a migration.
 
