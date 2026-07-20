@@ -1,3 +1,4 @@
+import { CLIENT_INFO_META_KEY } from "@modelcontextprotocol/server";
 import { SearchResponse, SearchResult } from "./types.js";
 
 /**
@@ -80,6 +81,24 @@ export function formatSearchResults(searchResponse: SearchResponse): string {
   parts.push(formattedResults.join("\n----------\n"));
 
   return parts.join("\n\n");
+}
+
+/**
+ * Reads the client name/version that modern (2026-07-28) clients attach to
+ * every request's `_meta` envelope. Legacy (2025) clients declare it once in
+ * the initialize handshake instead.
+ *
+ * The envelope is untyped (`RequestMetaEnvelope = {}`) in the current SDK
+ * beta, so the shape probed here is not compile-checked against the SDK —
+ * utils.test.ts locks it so a beta bump that changes it fails loudly.
+ */
+export function envelopeClientInfo(
+  envelope: unknown
+): { ide?: string; version?: string } | undefined {
+  const info = (envelope as Record<string, { name?: string; version?: string }> | undefined)?.[
+    CLIENT_INFO_META_KEY
+  ];
+  return info ? { ide: info.name, version: info.version } : undefined;
 }
 
 /**

@@ -62,6 +62,16 @@ const CHOICE_STAY_ANON = "Continue anonymously with smaller limits";
  * No-op for authenticated callers, when the signal wasn't set, or when the
  * client did not advertise the `elicitation` capability. Fire-and-forget:
  * never blocks or fails the surrounding tool response.
+ *
+ * 2025-era stdio only, by design. The 2026-07-28 protocol revision removed
+ * the push-style server-to-client request channel, and its replacement —
+ * returning `inputRequired(...)` from the tool handler — would replace the
+ * tool result and force a client retry, i.e. gate doc delivery behind the
+ * nudge. That trade is wrong for a soft hint, so modern-era connections get
+ * no nudge: `getClientCapabilities()` is undefined there (no initialize
+ * handshake), so the capability guard below short-circuits. On HTTP the guard
+ * short-circuits for the same reason — each stateless request runs on a fresh
+ * server that never saw an initialize.
  */
 export function maybeElicitAuthSignIn(server: McpServer, ctx: ClientContext): void {
   if (ctx.apiKey || !ctx.shouldPrompt) return;

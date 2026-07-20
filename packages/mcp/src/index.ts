@@ -2,16 +2,15 @@
 
 import { toNodeHandler } from "@modelcontextprotocol/node";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
-import {
-  McpServer,
-  createMcpHandler,
-  CLIENT_INFO_META_KEY,
-  type ServerContext,
-} from "@modelcontextprotocol/server";
+import { McpServer, createMcpHandler, type ServerContext } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
 import type { ClientContext } from "./lib/types.js";
-import { formatSearchResults, extractClientInfoFromUserAgent } from "./lib/utils.js";
+import {
+  formatSearchResults,
+  extractClientInfoFromUserAgent,
+  envelopeClientInfo,
+} from "./lib/utils.js";
 import { isJWT, validateJWT } from "./lib/jwt.js";
 import express from "express";
 import { Command } from "commander";
@@ -86,19 +85,6 @@ let stdioClientInfo: { ide?: string; version?: string } | undefined;
 // One session ID per stdio process.
 let stdioSessionId: string | undefined;
 
-// Reads the client name/version that modern (2026-07-28) clients attach to
-// every request's _meta envelope. Legacy (2025) clients declare it once in the
-// initialize handshake instead — see the oninitialized hook in main().
-// The envelope is untyped in the current SDK beta, hence the cast.
-function envelopeClientInfo(toolCtx: ServerContext): ClientContext["clientInfo"] {
-  const envelope = toolCtx.mcpReq.envelope as
-    | Record<string, { name?: string; version?: string }>
-    | undefined;
-
-  const info = envelope?.[CLIENT_INFO_META_KEY];
-  return info ? { ide: info.name, version: info.version } : undefined;
-}
-
 /**
  * Get the effective client context
  */
@@ -113,7 +99,7 @@ function getClientContext(toolCtx: ServerContext): ClientContext {
   // stdio mode: envelope (modern clients) or globals (legacy initialize)
   return {
     apiKey: stdioApiKey,
-    clientInfo: envelopeClientInfo(toolCtx) ?? stdioClientInfo,
+    clientInfo: envelopeClientInfo(toolCtx.mcpReq.envelope) ?? stdioClientInfo,
     transport: "stdio",
     sessionId: stdioSessionId,
   };
@@ -333,9 +319,13 @@ async function main() {
     app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
       res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
+      // Mcp-Method / Mcp-Name are the SEP-2243 standard headers 2026-07-28
+      // clients send on every request; without them here, browser-based modern
+      // clients fail the CORS preflight. (Mcp-Param-* mirroring is skipped by
+      // browser clients, so those are not needed.)
       res.setHeader(
         "Access-Control-Allow-Headers",
-        "Content-Type, MCP-Session-Id, MCP-Protocol-Version, X-Context7-API-Key, Context7-API-Key, X-API-Key, Authorization"
+        "Content-Type, MCP-Session-Id, MCP-Protocol-Version, Mcp-Method, Mcp-Name, X-Context7-API-Key, Context7-API-Key, X-API-Key, Authorization"
       );
       if (req.method === "OPTIONS") {
         res.sendStatus(200);
