@@ -343,7 +343,7 @@ The manifests above run a single replica: a StatefulSet with a `ReadWriteOnce` v
 To run multiple replicas behind the Service, move that state to an external PostgreSQL with the `pgvector` extension. Relational data and embeddings both live in Postgres, so every pod becomes stateless and interchangeable: swap the StatefulSet for a `Deployment` with `replicas` greater than one, mount `/data` as scratch (`emptyDir`), and gate readiness on `/api/ready` so a pod only receives traffic once it has connected to Postgres.
 
 <Note>
-The Context7 Helm chart renders all of this from a few values: the single-replica StatefulSet by default, or a multi-replica Deployment with `scaling.enabled=true`. It ships with the enterprise distribution.
+The [Helm chart](/enterprise/deployment/helm) renders all of this from a few values: the single-replica StatefulSet by default, or a multi-replica Deployment with `scaling.enabled=true`. It is the easiest way to deploy and scale on Kubernetes.
 </Note>
 
 See [Scaling](/enterprise/deployment/scaling) for the full setup, PostgreSQL and pgvector provisioning, and migrating an existing single-container deployment.
