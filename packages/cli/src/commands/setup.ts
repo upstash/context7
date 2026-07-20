@@ -1,4 +1,4 @@
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import pc from "picocolors";
 import ora from "ora";
 import { select } from "@inquirer/prompts";
@@ -53,6 +53,7 @@ interface SetupOptions {
   cli?: boolean;
   mcp?: boolean;
   stdio?: boolean;
+  from?: string;
 }
 
 function resolveTransport(options: SetupOptions): Transport {
@@ -94,6 +95,9 @@ export function registerSetupCommand(program: Command): void {
     .option("--api-key <key>", "Use API key authentication")
     .option("--oauth", "Use OAuth endpoint (IDE handles auth flow)")
     .option("--stdio", "Configure the MCP server as a local stdio process (default: HTTP)")
+    // Attribution source stamped into telemetry (e.g. the MCP sign-in nudge
+    // appends --from mcp-nudge). Hidden: not meant to be typed by hand.
+    .addOption(new Option("--from <source>").hideHelp())
     .action(async (options: SetupOptions) => {
       await setupCommand(options);
     });
@@ -440,7 +444,7 @@ async function setupMcp(agents: SetupAgent[], options: SetupOptions, scope: Scop
   }
   log.blank();
 
-  trackEvent("setup", { agents, scope, authMode: auth.mode });
+  trackEvent("setup", { agents, scope, authMode: auth.mode, from: options.from });
   trackEvent("install", { skills: ["/upstash/context7/context7-mcp"], ides: agents });
 }
 
@@ -526,7 +530,7 @@ async function setupCli(options: SetupOptions): Promise<void> {
   }
   log.blank();
 
-  trackEvent("setup", { mode: "cli" });
+  trackEvent("setup", { mode: "cli", from: options.from });
   trackEvent("install", { skills: ["/upstash/context7/find-docs"], ides: agents });
 }
 

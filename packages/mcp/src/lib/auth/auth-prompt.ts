@@ -1,5 +1,26 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ClientContext } from "../types.js";
+import { CONTEXT7_API_BASE_URL } from "../constants.js";
+
+type PromptOutcome = "shown" | "accepted" | "declined" | "dismissed";
+
+/**
+ * Fire-and-forget funnel telemetry: lets the backend measure how often the
+ * nudge actually renders ("shown") and what users pick, since the
+ * X-Context7-Auth-Prompt header alone can't distinguish rendered dialogs
+ * from silent no-ops. Mirrors the CLI's trackEvent, including its opt-out.
+ */
+function trackPromptOutcome(outcome: PromptOutcome, ctx: ClientContext): void {
+  if (process.env.CTX7_TELEMETRY_DISABLED) return;
+  fetch(`${CONTEXT7_API_BASE_URL}/v2/cli/events`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      event: "auth_prompt",
+      data: { outcome, ide: ctx.clientInfo?.ide, transport: ctx.transport },
+    }),
+  }).catch(() => {});
+}
 
 function clientFlagForCli(ide: string | undefined): string {
   if (!ide) return "";
@@ -18,6 +39,9 @@ function buildAuthCommand(
 ): string {
   const flag = clientFlagForCli(clientIde);
   const transportFlag = transport === "stdio" ? " --stdio" : "";
+  // TODO: append " --from mcp-nudge" for exact nudge→setup attribution once a
+  // ctx7 release with the --from flag has been published — emitting it earlier
+  // breaks users whose npx cache holds an older CLI (unknown-option error).
   return flag
     ? `npx ctx7 setup ${flag} --mcp${transportFlag} -y`
     : `npx ctx7 setup --mcp${transportFlag}`;
@@ -67,6 +91,7 @@ export function maybeElicitAuthSignIn(server: McpServer, ctx: ClientContext): vo
   if (ctx.apiKey || !ctx.shouldPrompt) return;
   if (!server.server.getClientCapabilities()?.elicitation) return;
 
+  trackPromptOutcome("shown", ctx);
   void server.server
     .elicitInput({
       message: buildElicitMessage(ctx.clientInfo?.ide, ctx.transport),
@@ -82,6 +107,15 @@ export function maybeElicitAuthSignIn(server: McpServer, ctx: ClientContext): vo
         },
         required: ["choice"],
       },
+    })
+    .then((result) => {
+      const outcome: PromptOutcome =
+        result.action === "accept"
+          ? result.content?.choice === CHOICE_STAY_ANON
+            ? "declined"
+            : "accepted"
+          : "dismissed";
+      trackPromptOutcome(outcome, ctx);
     })
     .catch(() => {
       // Client may not support elicitation despite the capability flag, or
