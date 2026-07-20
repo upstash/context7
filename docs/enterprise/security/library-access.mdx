@@ -1,0 +1,56 @@
+---
+title: "Library Access Control"
+sidebarTitle: "Library Access"
+description: "Restrict which libraries each user can query over the MCP and API, based on their SSO groups or individual grants."
+---
+
+By default, every signed-in user can query every library indexed on your instance. Library access control lets you lock specific libraries down so only the right people can reach them. This is useful when you index a repository that only one team has access to in your source control, and you want that boundary to carry over to Context7.
+
+Access is decided per library. A library is either open to everyone or restricted to a set of principals: SSO groups, individual users, or both. Admins always have access to every library.
+
+<Note>
+Group-based access relies on the group claim from your identity provider, so it works when your users sign in through SSO. See [OIDC SSO](/enterprise/security/oidc-sso) or [Microsoft Entra SSO](/enterprise/security/entra-sso) for setup. For password users, grant access to individual users instead.
+</Note>
+
+## Restrict a library
+
+<Steps>
+  <Step title="Open the library settings">
+    Sign in as an admin, open the library you want to restrict, and click the settings icon. You will see the **Access** section.
+  </Step>
+  <Step title="Switch to Restricted">
+    Select **Restricted**. Add the SSO groups that should have access, and add any individual users you want to grant directly. Click **Save changes**.
+
+    <Frame>
+      ![The library settings dialog with access set to Restricted, showing group and user grants](/images/enterprise/library-access/01-restricted-access.png)
+    </Frame>
+
+    Anyone in a listed group, plus the users you added, can now query this library. Everyone else stops seeing it.
+  </Step>
+</Steps>
+
+To reopen a library to the whole workspace, set its access back to **Everyone**.
+
+<Frame>
+  ![The library settings dialog with access set to Everyone](/images/enterprise/library-access/02-everyone-access.png)
+</Frame>
+
+## Set the default for new libraries
+
+New libraries are open to everyone unless you change the workspace default. Open **Teamspace Settings**, select the **Users** tab, and find the **Library Access** card.
+
+Turn on **Restrict libraries by default** to flip your instance to deny by default. Members then see only the libraries they have been explicitly granted, and each new library stays private until you grant access to it.
+
+<Frame>
+  ![The Library Access card in settings with the restrict by default toggle](/images/enterprise/library-access/03-default-posture.png)
+</Frame>
+
+## How it applies
+
+Access is enforced everywhere a user reaches a library:
+
+- **MCP**: restricted libraries are hidden from `resolve-library-id` results, and a `get-library-docs` call for a library the user cannot access returns an access denied message.
+- **API**: the same filtering applies to library search and documentation requests made with a personal API key.
+- **Dashboard**: members only see the libraries they can access in their library list.
+
+Admins are never restricted. They see and can query every library, which is also how they manage access in the first place.
