@@ -63,7 +63,7 @@ Turn it on to flip your instance to deny by default. Members then see only the l
 
 Access is enforced everywhere a user reaches a library:
 
-- **MCP**: restricted libraries are hidden from library search results, and a documentation request for a library the user cannot access returns an access denied message.
+- **MCP**: restricted libraries are hidden from library search results, and a documentation request for a library the user cannot access returns the same "not found" response as a library that isn't indexed. Restricted libraries can't be told apart from ones that don't exist.
 - **API**: the same filtering applies to library search and documentation requests made with a personal API key.
 - **Dashboard**: members only see the libraries they can access in their library list.
 
