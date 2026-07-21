@@ -90,16 +90,17 @@ let stdioSessionId: string | undefined;
  */
 function getClientContext(toolCtx: ServerContext): ClientContext {
   const ctx = requestContext.getStore();
+  const requestClientInfo = envelopeClientInfo(toolCtx.mcpReq.envelope);
 
-  // HTTP mode: context is fully populated from request
+  // Use protocol client info when available; fall back to the HTTP User-Agent.
   if (ctx) {
-    return ctx;
+    return { ...ctx, clientInfo: requestClientInfo ?? ctx.clientInfo };
   }
 
   // stdio mode: envelope (modern clients) or globals (legacy initialize)
   return {
     apiKey: stdioApiKey,
-    clientInfo: envelopeClientInfo(toolCtx.mcpReq.envelope) ?? stdioClientInfo,
+    clientInfo: requestClientInfo ?? stdioClientInfo,
     transport: "stdio",
     sessionId: stdioSessionId,
   };
