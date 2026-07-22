@@ -4,7 +4,7 @@ sidebarTitle: "Other Git"
 description: "Ingest private repositories from a self-managed Git host such as Gerrit, Gitea, or self-hosted Bitbucket over HTTPS or SSH"
 ---
 
-Context7 can clone and index repositories from any self-managed Git host that isn't GitHub or GitLab — **Gerrit**, **Gitea**, **self-hosted Bitbucket**, and similar — over **HTTPS** or **SSH**.
+Context7 can clone and index repositories from any self-managed Git host that isn't GitHub or GitLab, such as **Gerrit**, **Gitea**, or **self-hosted Bitbucket**, over **HTTPS** or **SSH**.
 
 Configure the host under **Settings → Integrations → Other Git**, choose the **HTTPS** or **SSH** tab, then [add repositories](#add-a-repository) with their normal clone URL.
 
@@ -22,19 +22,19 @@ On the **HTTPS** tab, fill in the host and an account's credentials:
 
 | Field | Description |
 | ----- | ----------- |
-| Host | The Git host, without `https://` — for example `gerrit.your-company.com`. Repositories whose `https://` URL is on this host are cloned with the credentials below. |
-| Username | The account username. **Required** — HTTP basic auth needs a username (for Gerrit, generate an HTTP password in its settings and use that account's username). |
+| Host | The Git host, without `https://`. For example, `gerrit.your-company.com`. Repositories whose `https://` URL is on this host are cloned with the credentials below. |
+| Username | The account username. This is required, because HTTP basic auth needs a username (for Gerrit, generate an HTTP password in its settings and use that account's username). |
 | HTTP Password / Token | The account's HTTP password or access token. |
 
 Then add a repository with its HTTPS clone URL, for example `https://gerrit.your-company.com/a/platform/sdk`.
 
 <Note>
-Presenting a private or self-signed TLS certificate? Point `NODE_EXTRA_CA_CERTS` at your CA bundle (recommended), or set `GIT_TLS_INSECURE=true` for testing only. Always use `https://` for credentialed clones — a plaintext `http://` host to a non-loopback address is logged as a warning.
+Presenting a private or self-signed TLS certificate? Point `NODE_EXTRA_CA_CERTS` at your CA bundle (recommended), or set `GIT_TLS_INSECURE=true` for testing only. Always use `https://` for credentialed clones. A plaintext `http://` host to a non-loopback address is logged as a warning.
 </Note>
 
 ## SSH (deploy key)
 
-For repositories added with an `ssh://` URL — for example `ssh://<user>@gerrit.your-company.com:29418/platform/sdk` — Context7 authenticates with a deploy key. Register the key's **public** half on a service account in your Git host that can read the repositories you want to index, then give Context7 the private half one of two ways.
+When a repository is added with an `ssh://` URL, for example `ssh://<user>@gerrit.your-company.com:29418/platform/sdk`, Context7 authenticates with a deploy key. Register the key's **public** half on a service account in your Git host that can read the repositories you want to index, then give Context7 the private half one of two ways.
 
 ### Paste the key in the UI (recommended)
 
@@ -50,11 +50,11 @@ Generate the `known_hosts` entry with `ssh-keyscan`, for example:
 ssh-keyscan -p 29418 gerrit.your-company.com
 ```
 
-That's all — add repositories with their `ssh://` URL and they clone with the pasted key.
+That's all you need. Add repositories with their `ssh://` URL and they clone with the pasted key.
 
 ### Mount a key into the container (alternative)
 
-If you prefer the private key never touch the application (it is never written to the database or included in backups), mount it into the container instead and point Git at it with `GIT_SSH_COMMAND`. Leave the UI SSH key blank — a mounted key is used whenever no key is configured in the UI.
+If you prefer the private key never touch the application (it is never written to the database or included in backups), mount it into the container instead and point Git at it with `GIT_SSH_COMMAND`. Leave the UI SSH key blank, and a mounted key is used whenever no key is configured in the UI.
 
 <Tabs>
   <Tab title="Kubernetes">
@@ -118,11 +118,11 @@ Once the host is configured, add repositories the same as any other source:
   <Step title="Paste the clone URL">
     Enter the repository's clone URL. The scheme selects how it authenticates:
 
-    - **HTTPS** — `https://gerrit.your-company.com/a/platform/sdk` (uses the HTTPS credentials above).
-    - **SSH** — `ssh://<user>@gerrit.your-company.com:29418/platform/sdk` (uses the deploy key).
+    - **HTTPS**: `https://gerrit.your-company.com/a/platform/sdk` (uses the HTTPS credentials above).
+    - **SSH**: `ssh://<user>@gerrit.your-company.com:29418/platform/sdk` (uses the deploy key).
   </Step>
   <Step title="Parse">
-    Context7 clones, indexes the documentation, and serves it over MCP. Re-index later with the project's **Refresh** action or from CI — see [GitOps](/enterprise/gitops).
+    Context7 clones, indexes the documentation, and serves it over MCP. Re-index later with the project's **Refresh** action or from CI. See [GitOps](/enterprise/gitops).
   </Step>
 </Steps>
 
