@@ -58,6 +58,14 @@ repos:
     type: confluence
     spaceKey: TEAM
 
+  # Confluence — specific pages by URL (may span spaces)
+  - url: https://acme.atlassian.net/wiki
+    type: confluence
+    pageUrls:
+      - https://acme.atlassian.net/wiki/spaces/TEAM/pages/1234567/Overview
+      - https://acme.atlassian.net/wiki/spaces/SDK/pages/7654321/Client+API
+    includeSubPages: true
+
   # llms.txt index
   - url: https://docs.acme.com/llms.txt
     type: llmstxt
@@ -77,7 +85,7 @@ Every entry needs a `url` (or `repoUrl`). The remaining fields depend on `type`:
 | `type` | Fields |
 | ------ | ------ |
 | `git` (default) | `branch`, `folders`, `excludeFolders`, `excludeFiles`, `indexSourceCode` — the same options as the **Add Repository** form. |
-| `confluence` | `spaceKey` (required), `spaceId` (Cloud only, resolved automatically from the key when omitted), `spaceName`, `title`, `description`. The whole space is indexed. |
+| `confluence` | Either `spaceKey` (indexes the whole space; plus `spaceId`, Cloud only, resolved automatically from the key when omitted, and `spaceName`) **or** `pageUrls` (a list of page URLs to index, which may span spaces) with optional `includeSubPages` to also index each page's sub-tree. Plus `title` and `description`. Set one form or the other, not both. |
 | `website` | `maxPages`, `maxDepth`, `excludePatterns`, `title`, `description`. |
 | `llmstxt` | `maxPages`, `title`, `description`. The URL must point to an `llms.txt`, `llms-full.txt`, or `llms-small.txt` file. |
 | `openapi` | `title`, `description`. |
