@@ -48,16 +48,17 @@
   },
   "homepage": "https://github.com/upstash/context7#readme",
   "dependencies": {
+    "@modelcontextprotocol/node": "2.0.0-beta.4",
+    "@modelcontextprotocol/server": "2.0.0-beta.4",
     "@types/express": "^5.0.4",
     "commander": "^13.1.0",
     "express": "^5.1.0",
     "jose": "^6.2.3",
     "undici": "^6.26.0",
-    "zod": "^4.4.3",
-    "@modelcontextprotocol/server": "2.0.0-beta.4",
-    "@modelcontextprotocol/node": "2.0.0-beta.4"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "2.0.0-beta.4",
     "@types/node": "^25.0.3",
     "typescript": "^5.8.2",
     "vitest": "^4.1.9"
