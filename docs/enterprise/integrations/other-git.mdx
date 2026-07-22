@@ -1,0 +1,94 @@
+---
+title: "Other Git Integration"
+sidebarTitle: "Other Git"
+description: "Ingest private repositories from a self-managed Git host such as Gerrit, Gitea, or self-hosted Bitbucket over HTTPS or SSH"
+---
+
+Context7 can clone and index repositories from any self-managed Git host that isn't GitHub or GitLab — **Gerrit**, **Gitea**, **self-hosted Bitbucket**, and similar — over **HTTPS** or **SSH**.
+
+Configure the host under **Settings → Integrations → Other Git**, then add repositories with their normal clone URL from **Add Repository** (or a [GitOps](/enterprise/gitops) manifest), the same as any other repository.
+
+<Note>
+These hosts have no GitHub-style webhooks. Drive re-indexing on merge from your CI (for example Jenkins) by calling `POST /api/gitops/reconcile` or `POST /api/projects/<id>/refresh` after a push. See [GitOps](/enterprise/gitops).
+</Note>
+
+## HTTPS (basic auth)
+
+Under **Settings → Integrations → Other Git**, set:
+
+| Field | Description |
+| ----- | ----------- |
+| Host | The Git host, without `https://` — for example `gerrit.your-company.com`. Repositories whose `https://` URL is on this host are cloned with the credentials below. |
+| Username | The account username. **Required** — HTTP basic auth needs a username (for Gerrit, generate an HTTP password under its settings and use that account's username). |
+| HTTP Password / Token | The account's HTTP password or access token. |
+
+Then add a repository with its HTTPS clone URL, for example `https://gerrit.your-company.com/a/platform/sdk`.
+
+<Note>
+Presenting a private or self-signed TLS certificate? Point `NODE_EXTRA_CA_CERTS` at your CA bundle (recommended), or set `GIT_TLS_INSECURE=true` for testing only. Always use `https://` for credentialed clones — a plaintext `http://` host to a non-loopback address is logged as a warning.
+</Note>
+
+## SSH (deploy key)
+
+SSH remotes authenticate with a **deploy key mounted into the container**. There is nothing to enter in the UI, and the key is never stored by Context7 — leave the HTTP Password blank and add repositories with their `ssh://` URL, for example `ssh://git@gerrit.your-company.com:29418/platform/sdk`.
+
+Mount the private key (and a `known_hosts` file for host-key verification) and point Git at them with `GIT_SSH_COMMAND`.
+
+<Tabs>
+  <Tab title="Kubernetes">
+    Create a Secret with the deploy key and known hosts:
+
+    ```yaml
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: context7-git-ssh
+    type: Opaque
+    stringData:
+      id_ed25519: |
+        -----BEGIN OPENSSH PRIVATE KEY-----
+        ...
+        -----END OPENSSH PRIVATE KEY-----
+      known_hosts: |
+        [gerrit.your-company.com]:29418 ssh-ed25519 AAAA...
+    ```
+
+    Mount it and set `GIT_SSH_COMMAND` on the Context7 container:
+
+    ```yaml
+    spec:
+      containers:
+        - name: context7
+          env:
+            - name: GIT_SSH_COMMAND
+              value: "ssh -i /etc/git-ssh/id_ed25519 -o UserKnownHostsFile=/etc/git-ssh/known_hosts"
+          volumeMounts:
+            - name: git-ssh
+              mountPath: /etc/git-ssh
+              readOnly: true
+      volumes:
+        - name: git-ssh
+          secret:
+            secretName: context7-git-ssh
+            defaultMode: 0400
+    ```
+  </Tab>
+  <Tab title="Docker">
+    Mount the key and known hosts, and set `GIT_SSH_COMMAND`:
+
+    ```bash
+    docker run -d -p 3000:3000 -v context7-data:/data \
+      -v /path/to/id_ed25519:/etc/git-ssh/id_ed25519:ro \
+      -v /path/to/known_hosts:/etc/git-ssh/known_hosts:ro \
+      -e GIT_SSH_COMMAND="ssh -i /etc/git-ssh/id_ed25519 -o UserKnownHostsFile=/etc/git-ssh/known_hosts" \
+      -e LLM_API_KEY=sk-... \
+      ghcr.io/context7/enterprise
+    ```
+  </Tab>
+</Tabs>
+
+Generate the `known_hosts` entry with `ssh-keyscan`, for example `ssh-keyscan -p 29418 gerrit.your-company.com`.
+
+<Note>
+The on-premise image ships with an SSH client, so no extra packages are needed. Register the deploy key's public half on a service account in your Git host that can read the repositories you want to index.
+</Note>
