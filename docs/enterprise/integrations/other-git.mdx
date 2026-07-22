@@ -30,14 +30,20 @@ Presenting a private or self-signed TLS certificate? Point `NODE_EXTRA_CA_CERTS`
 
 ## SSH (deploy key)
 
-SSH remotes authenticate with a **deploy key mounted into the container**. There is nothing to enter in the UI, and the key is never stored by Context7 — leave the HTTP Password blank and add repositories with their `ssh://` URL, for example `ssh://git@gerrit.your-company.com:29418/platform/sdk`.
+For repositories added with an `ssh://` URL — for example `ssh://git@gerrit.your-company.com:29418/platform/sdk` — Context7 authenticates with a deploy key. Register the key's **public** half on a service account in your Git host that can read the repositories you want to index, then give Context7 the private half one of two ways.
 
-Mount the private key (and a `known_hosts` file for host-key verification) and point Git at them with `GIT_SSH_COMMAND`.
+### Paste the key in the UI (recommended)
+
+Under **Settings → Integrations → Other Git → SSH**, paste the private key. It is stored encrypted, and Context7 uses it for `ssh://` clones. Optionally paste a `known_hosts` entry to pin the host key (generate it with `ssh-keyscan`, for example `ssh-keyscan -p 29418 gerrit.your-company.com`); if you leave it blank, the host key is trusted on first use. Leave the HTTP Password blank.
+
+That's all — add repositories with their `ssh://` URL and they clone with the pasted key.
+
+### Mount a key into the container (alternative)
+
+If you prefer the private key never touch the application (it is never written to the database or included in backups), mount it into the container instead and point Git at it with `GIT_SSH_COMMAND`. Leave the UI SSH key blank — a mounted key is used whenever no key is configured in the UI.
 
 <Tabs>
   <Tab title="Kubernetes">
-    Create a Secret with the deploy key and known hosts:
-
     ```yaml
     apiVersion: v1
     kind: Secret
@@ -52,8 +58,6 @@ Mount the private key (and a `known_hosts` file for host-key verification) and p
       known_hosts: |
         [gerrit.your-company.com]:29418 ssh-ed25519 AAAA...
     ```
-
-    Mount it and set `GIT_SSH_COMMAND` on the Context7 container:
 
     ```yaml
     spec:
@@ -74,8 +78,6 @@ Mount the private key (and a `known_hosts` file for host-key verification) and p
     ```
   </Tab>
   <Tab title="Docker">
-    Mount the key and known hosts, and set `GIT_SSH_COMMAND`:
-
     ```bash
     docker run -d -p 3000:3000 -v context7-data:/data \
       -v /path/to/id_ed25519:/etc/git-ssh/id_ed25519:ro \
@@ -87,8 +89,6 @@ Mount the private key (and a `known_hosts` file for host-key verification) and p
   </Tab>
 </Tabs>
 
-Generate the `known_hosts` entry with `ssh-keyscan`, for example `ssh-keyscan -p 29418 gerrit.your-company.com`.
-
 <Note>
-The on-premise image ships with an SSH client, so no extra packages are needed. Register the deploy key's public half on a service account in your Git host that can read the repositories you want to index.
+The on-premise image ships with an SSH client, so no extra packages are needed either way.
 </Note>
