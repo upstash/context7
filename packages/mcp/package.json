@@ -32,6 +32,9 @@
   "author": "abdush",
   "license": "MIT",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "bin": {
     "context7-mcp": "dist/index.js"
   },
@@ -45,9 +48,9 @@
   },
   "homepage": "https://github.com/upstash/context7#readme",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/node": "2.0.0-beta.4",
+    "@modelcontextprotocol/server": "2.0.0-beta.4",
     "@types/express": "^5.0.4",
-    "@upstash/redis": "^1.38.0",
     "commander": "^13.1.0",
     "express": "^5.1.0",
     "jose": "^6.2.3",
@@ -55,6 +58,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@modelcontextprotocol/client": "2.0.0-beta.4",
     "@types/node": "^25.0.3",
     "typescript": "^5.8.2",
     "vitest": "^4.1.9"

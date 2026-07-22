@@ -1,25 +1,21 @@
 #!/usr/bin/env node
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import {
-  ListPromptsRequestSchema,
-  ListResourcesRequestSchema,
-  ListResourceTemplatesRequestSchema,
-} from "@modelcontextprotocol/sdk/types.js";
-import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
+import { toNodeHandler } from "@modelcontextprotocol/node";
+import { serveStdio } from "@modelcontextprotocol/server/stdio";
+import { McpServer, createMcpHandler, type ServerContext } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
 import type { ClientContext } from "./lib/types.js";
-import { formatSearchResults, extractClientInfoFromUserAgent } from "./lib/utils.js";
+import {
+  formatSearchResults,
+  extractClientInfoFromUserAgent,
+  envelopeClientInfo,
+} from "./lib/utils.js";
 import { isJWT, validateJWT } from "./lib/jwt.js";
 import express from "express";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
 import { randomUUID } from "node:crypto";
-import { createSessionStore } from "./lib/sessionStore.js";
 import {
   SERVER_VERSION,
   RESOURCE_URL,
@@ -92,20 +88,59 @@ let stdioSessionId: string | undefined;
 /**
  * Get the effective client context
  */
-function getClientContext(): ClientContext {
+function getClientContext(toolCtx: ServerContext): ClientContext {
   const ctx = requestContext.getStore();
+  const requestClientInfo = envelopeClientInfo(toolCtx.mcpReq.envelope);
 
-  // HTTP mode: context is fully populated from request
+  // Use protocol client info when available; fall back to the HTTP User-Agent.
   if (ctx) {
-    return ctx;
+    return { ...ctx, clientInfo: requestClientInfo ?? ctx.clientInfo };
   }
 
-  // stdio mode: use globals
+  // stdio mode: envelope (modern clients) or globals (legacy initialize)
   return {
     apiKey: stdioApiKey,
-    clientInfo: stdioClientInfo,
+    clientInfo: requestClientInfo ?? stdioClientInfo,
     transport: "stdio",
     sessionId: stdioSessionId,
+  };
+}
+
+// Map of canonical arg name -> hallucinated aliases that should be rewritten
+// to it. LLM clients often echo phrasing from tool descriptions instead of
+// the literal schema keys, which trips Zod validation before the tool runs.
+type AliasMap = Record<string, readonly string[]>;
+
+const GLOBAL_ALIASES: AliasMap = {
+  query: ["userQuery", "question"],
+};
+
+// Tool-scoped aliases, for keys that are canonical on one tool but a
+// hallucination on another (e.g. `libraryName` is canonical for
+// `resolve-library-id`, so we only rewrite it on `query-docs` calls).
+const QUERY_DOCS_ALIASES: AliasMap = {
+  libraryId: ["context7CompatibleLibraryID", "libraryID", "libraryName"],
+};
+
+// z.preprocess step that rewrites aliased arg names before validation. Living
+// in the schema keeps aliasing transport-agnostic: the SDK parses the wire
+// message (any transport, any protocol era) and runs this on validation.
+// Returns a remapped copy — the raw wire params object stays untouched.
+function aliasArgs(aliases: AliasMap) {
+  return (value: unknown) => {
+    if (!value || typeof value !== "object") return value;
+    const args: Record<string, unknown> = { ...value };
+    for (const [canonical, alternatives] of Object.entries(aliases)) {
+      if (canonical in args) continue;
+      for (const alt of alternatives) {
+        if (alt in args) {
+          args[canonical] = args[alt];
+          delete args[alt];
+          break;
+        }
+      }
+    }
+    return args;
   };
 }
 
@@ -125,6 +160,11 @@ function createMcpServer() {
       ],
     },
     {
+      // Declaring the capabilities makes the SDK install prompts/list,
+      // resources/list, and resources/templates/list handlers that answer
+      // with the registered (i.e. empty) collections, for clients that
+      // request them unconditionally.
+      capabilities: { prompts: {}, resources: {} },
       instructions: `Use this server to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
 
 Do not use for: refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.`,
@@ -168,18 +208,21 @@ Response Format:
 For ambiguous queries, request clarification before proceeding with a best-guess match.
 
 IMPORTANT: Do not call this tool more than 3 times per question. If you cannot find what you need after 3 calls, use the best result you have.`,
-      inputSchema: {
-        query: z
-          .string()
-          .describe(
-            "The question or task you need help with. This is used to rank library results by relevance to what the user is trying to accomplish. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
-          ),
-        libraryName: z
-          .string()
-          .describe(
-            "Library name to search for and retrieve a Context7-compatible library ID. Use the official library name with proper punctuation — e.g., 'Next.js' instead of 'nextjs', 'Customer.io' instead of 'customerio', 'Three.js' instead of 'threejs'."
-          ),
-      },
+      inputSchema: z.preprocess(
+        aliasArgs(GLOBAL_ALIASES),
+        z.object({
+          query: z
+            .string()
+            .describe(
+              "The question or task you need help with. This is used to rank library results by relevance to what the user is trying to accomplish. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
+            ),
+          libraryName: z
+            .string()
+            .describe(
+              "Library name to search for and retrieve a Context7-compatible library ID. Use the official library name with proper punctuation — e.g., 'Next.js' instead of 'nextjs', 'Customer.io' instead of 'customerio', 'Three.js' instead of 'threejs'."
+            ),
+        })
+      ),
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -187,8 +230,8 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
         idempotentHint: true,
       },
     },
-    async ({ query, libraryName }: { query: string; libraryName: string }) => {
-      const ctx = getClientContext();
+    async ({ query, libraryName }: { query: string; libraryName: string }, toolCtx) => {
+      const ctx = getClientContext(toolCtx);
       const searchResponse = await searchLibraries(query, libraryName, ctx);
 
       if (!searchResponse.results || searchResponse.results.length === 0) {
@@ -227,18 +270,21 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
 You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
 Do not call this tool more than 3 times per question.`,
-      inputSchema: {
-        libraryId: z
-          .string()
-          .describe(
-            "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
-          ),
-        query: z
-          .string()
-          .describe(
-            "The question or task you need help with, scoped to a single concept. Be specific and include relevant details, but keep each query to one topic — if the user's question spans multiple distinct concepts, make a separate call per concept instead of combining them, unless the question is about how the concepts interact. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad (too vague): 'auth' or 'hooks'. Bad (too broad): 'routing and auth and caching in Next.js'. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
-          ),
-      },
+      inputSchema: z.preprocess(
+        aliasArgs({ ...GLOBAL_ALIASES, ...QUERY_DOCS_ALIASES }),
+        z.object({
+          libraryId: z
+            .string()
+            .describe(
+              "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
+            ),
+          query: z
+            .string()
+            .describe(
+              "The question or task you need help with, scoped to a single concept. Be specific and include relevant details, but keep each query to one topic — if the user's question spans multiple distinct concepts, make a separate call per concept instead of combining them, unless the question is about how the concepts interact. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad (too vague): 'auth' or 'hooks'. Bad (too broad): 'routing and auth and caching in Next.js'. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
+            ),
+        })
+      ),
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -246,8 +292,8 @@ Do not call this tool more than 3 times per question.`,
         idempotentHint: true,
       },
     },
-    async ({ query, libraryId }: { query: string; libraryId: string }) => {
-      const ctx = getClientContext();
+    async ({ query, libraryId }: { query: string; libraryId: string }, toolCtx) => {
+      const ctx = getClientContext(toolCtx);
       const response = await fetchLibraryContext({ query, libraryId }, ctx);
       maybeElicitAuthSignIn(server, ctx);
       return {
@@ -261,76 +307,11 @@ Do not call this tool more than 3 times per question.`,
     }
   );
 
-  server.server.registerCapabilities({ prompts: {}, resources: {} });
-  server.server.setRequestHandler(ListPromptsRequestSchema, async () => ({ prompts: [] }));
-  server.server.setRequestHandler(ListResourcesRequestSchema, async () => ({
-    resources: [],
-  }));
-  server.server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => ({
-    resourceTemplates: [],
-  }));
-
   return server;
 }
 
-// Map of canonical arg name -> hallucinated aliases that should be rewritten
-// to it. LLM clients often echo phrasing from tool descriptions instead of
-// the literal schema keys, which trips Zod validation before the tool runs.
-type AliasMap = Record<string, readonly string[]>;
-
-const GLOBAL_ALIASES: AliasMap = {
-  query: ["userQuery", "question"],
-};
-
-// Tool-scoped aliases, for keys that are canonical on one tool but a
-// hallucination on another (e.g. `libraryName` is canonical for
-// `resolve-library-id`, so we only rewrite it on `query-docs` calls).
-const TOOL_ALIASES: Record<string, AliasMap> = {
-  "query-docs": {
-    libraryId: ["context7CompatibleLibraryID", "libraryID", "libraryName"],
-  },
-};
-
-function applyAliases(args: Record<string, unknown>, aliases: AliasMap): void {
-  for (const [canonical, alternatives] of Object.entries(aliases)) {
-    if (canonical in args) continue;
-    for (const alt of alternatives) {
-      if (alt in args) {
-        args[canonical] = args[alt];
-        delete args[alt];
-        break;
-      }
-    }
-  }
-}
-
-// Install BEFORE `server.connect(transport)`: the SDK's `Protocol.connect()`
-// captures the existing `onmessage` and chains its dispatch handler over it,
-// so our hook runs first on every incoming JSON-RPC message.
-function installTransportArgAliasing(transport: Transport): void {
-  transport.onmessage = (message) => {
-    const msg = message as {
-      method?: string;
-      params?: { name?: string; arguments?: unknown };
-    };
-    if (msg.method !== "tools/call") return;
-    const args = msg.params?.arguments;
-    if (!args || typeof args !== "object") return;
-    const argsRecord = args as Record<string, unknown>;
-
-    applyAliases(argsRecord, GLOBAL_ALIASES);
-
-    const toolName = msg.params?.name;
-    if (toolName && toolName in TOOL_ALIASES) {
-      applyAliases(argsRecord, TOOL_ALIASES[toolName]);
-    }
-  };
-}
-
 async function main() {
-  const transportType = TRANSPORT_TYPE;
-
-  if (transportType === "http") {
+  if (TRANSPORT_TYPE === "http") {
     const initialPort = CLI_PORT ?? DEFAULT_PORT;
 
     const app = express();
@@ -339,12 +320,14 @@ async function main() {
     app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
       res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
+      // Mcp-Method / Mcp-Name are the SEP-2243 standard headers 2026-07-28
+      // clients send on every request; without them here, browser-based modern
+      // clients fail the CORS preflight. (Mcp-Param-* mirroring is skipped by
+      // browser clients, so those are not needed.)
       res.setHeader(
         "Access-Control-Allow-Headers",
-        "Content-Type, MCP-Session-Id, MCP-Protocol-Version, X-Context7-API-Key, Context7-API-Key, X-API-Key, Authorization"
+        "Content-Type, MCP-Session-Id, MCP-Protocol-Version, Mcp-Method, Mcp-Name, X-Context7-API-Key, Context7-API-Key, X-API-Key, Authorization"
       );
-      res.setHeader("Access-Control-Expose-Headers", "MCP-Session-Id");
-
       if (req.method === "OPTIONS") {
         res.sendStatus(200);
         return;
@@ -378,30 +361,40 @@ async function main() {
       );
     };
 
-    const sessionStore = createSessionStore();
+    // Stateless serving: a fresh server instance per request, no Mcp-Session-Id,
+    // no session store. The handler serves modern (2026-07-28) traffic natively
+    // and 2025-era traffic through its stateless legacy fallback, which answers
+    // GET/DELETE (session operations) with 405.
+    //
+    // responseMode "sse" keeps responses streaming: headers flush immediately
+    // after parsing the request rather than buffering until the tool returns.
+    // This is required for long-running tools because some MCP HTTP clients cap
+    // the underlying fetch at 60s waiting for headers, even though the per-tool
+    // timeout is much higher.
+    const mcpHandler = createMcpHandler(() => createMcpServer(), {
+      responseMode: "sse",
+      onerror: (error) => console.error("MCP handler error:", error),
+    });
+    // Without onerror, request-conversion / handler.fetch throws are answered
+    // with a bare 500 inside the adapter and never reach our express handler.
+    const nodeHandler = toNodeHandler(mcpHandler, {
+      onerror: (error) => console.error("MCP node adapter error:", error),
+    });
 
     const handleMcpRequest = async (
       req: express.Request,
       res: express.Response,
       requireAuth: boolean
     ) => {
-      // Reject GET requests — sessions are tracked in Redis, but this server does not send
-      // server-initiated notifications, so SSE streams serve no purpose and cause mass NGINX
-      // timeouts. Returning 405 is spec-compliant per MCP StreamableHTTP (2025-03-26).
-      if (req.method === "GET") {
-        return res.status(405).json({
-          jsonrpc: "2.0",
-          error: { code: -32000, message: "Server does not support GET requests" },
-          id: null,
-        });
-      }
-
       try {
         const apiKey = extractApiKey(req);
-        const resourceUrl = RESOURCE_URL;
-        const baseUrl = new URL(resourceUrl).origin;
+        const baseUrl = new URL(RESOURCE_URL).origin;
 
         // OAuth discovery info header, used by MCP clients to discover the authorization server
+        // TODO: @modelcontextprotocol/server now ships canonical OAuth helpers
+        // (bearerAuthChallengeResponse, buildOAuthProtectedResourceMetadata,
+        // oauthMetadataResponse) — replace this hand-rolled header and the
+        // /.well-known/oauth-protected-resource route with them.
         res.set(
           "WWW-Authenticate",
           `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
@@ -441,74 +434,8 @@ async function main() {
           transport: "http",
         };
 
-        const sessionId = extractHeaderValue(req.headers["mcp-session-id"]);
-
-        if (req.method === "DELETE") {
-          if (!sessionId) {
-            return res.status(400).json({
-              jsonrpc: "2.0",
-              error: { code: -32000, message: "Bad Request: No valid session ID provided" },
-              id: null,
-            });
-          }
-          await sessionStore.delete(sessionId);
-          return res.status(200).end();
-        }
-
-        let effectiveSessionId: string;
-        if (!sessionId && req.method === "POST" && isInitializeRequest(req.body)) {
-          effectiveSessionId = randomUUID();
-          await sessionStore.create(effectiveSessionId);
-          res.setHeader("mcp-session-id", effectiveSessionId);
-        } else if (sessionId && req.method === "POST" && !isInitializeRequest(req.body)) {
-          const sessionExists = await sessionStore.refresh(sessionId);
-          if (!sessionExists) {
-            // Per MCP Streamable HTTP spec: 404 signals to the client that the session
-            // has been terminated/expired, so it should re-initialize with a fresh InitializeRequest.
-            return res.status(404).json({
-              jsonrpc: "2.0",
-              error: {
-                code: -32000,
-                message: "Session not found or expired. Please re-initialize.",
-              },
-              id: null,
-            });
-          }
-          effectiveSessionId = sessionId;
-        } else {
-          return res.status(400).json({
-            jsonrpc: "2.0",
-            error: { code: -32000, message: "Bad Request: No valid session ID provided" },
-            id: null,
-          });
-        }
-
-        context.sessionId = effectiveSessionId;
-
-        // sessionIdGenerator is undefined because session lifecycle (create/refresh/delete)
-        // is owned by the route handler above and persisted in Redis, not by the SDK transport.
-        //
-        // Use SSE responses for tool calls (enableJsonResponse: false). The SDK then
-        // flushes response headers immediately after parsing the request rather than
-        // buffering until the tool returns. This is required for long-running tools
-        // because some MCP HTTP clients cap the underlying fetch at 60s waiting for
-        // headers, even though the per-tool timeout is much higher.
-        const transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: undefined,
-          enableJsonResponse: false,
-        });
-
-        const server = createMcpServer();
-        res.on("close", () => {
-          transport.close();
-          server.close();
-        });
-
-        installTransportArgAliasing(transport);
-        await server.connect(transport);
-
         await requestContext.run(context, async () => {
-          await transport.handleRequest(req, res, req.body);
+          await nodeHandler(req, res, req.body);
         });
       } catch (error) {
         console.error("Error handling MCP request:", error);
@@ -627,23 +554,28 @@ async function main() {
     process.stdin.on("close", () => process.exit(0));
     process.on("SIGHUP", () => process.exit(0));
 
-    const transport = new StdioServerTransport();
-    const server = createMcpServer();
+    serveStdio(
+      () => {
+        const server = createMcpServer();
 
-    // Capture client info from MCP initialize handshake (stdio only — HTTP
-    // mode plumbs client info through requestContext per request).
-    server.server.oninitialized = () => {
-      const clientVersion = server.server.getClientVersion();
-      if (clientVersion) {
-        stdioClientInfo = {
-          ide: clientVersion.name,
-          version: clientVersion.version,
+        // Capture client info from MCP initialize handshake (stdio only — HTTP
+        // mode plumbs client info through requestContext per request).
+        server.server.oninitialized = () => {
+          const clientVersion = server.server.getClientVersion();
+          if (clientVersion) {
+            stdioClientInfo = {
+              ide: clientVersion.name,
+              version: clientVersion.version,
+            };
+          }
         };
-      }
-    };
 
-    installTransportArgAliasing(transport);
-    await server.connect(transport);
+        return server;
+      },
+      {
+        onerror: (error) => console.error("MCP stdio error:", error),
+      }
+    );
 
     console.error(`Context7 Documentation MCP Server v${SERVER_VERSION} running on stdio`);
   }
