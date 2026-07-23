@@ -115,7 +115,7 @@ npx ctx7@latest docs /prisma/prisma "How to define one-to-many relations with ca
 
 ### Writing good queries
 
-The query directly affects the quality of results. Be specific and include relevant details, but keep each query to one topic — if the question spans multiple distinct concepts, run a separate `docs` command per concept instead of combining them, unless the question is about how the concepts interact. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query.
+The query directly affects the quality of results. Derive a focused documentation question from the user's request. Keep details that improve retrieval, omit unrelated details, and run a separate `docs` command for each distinct documentation need. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query.
 
 | Quality | Example |
 |---------|---------|
@@ -125,7 +125,7 @@ The query directly affects the quality of results. Be specific and include relev
 | Bad (too vague) | `"hooks"` |
 | Bad (too broad) | `"routing and auth and caching in Next.js"` |
 
-Use the user's full question as the query when possible — vague one-word queries return generic results, and multi-topic queries dilute ranking and return shallow results for each topic.
+Use the user's documentation need as the query.
 
 The output contains two types of content: **code snippets** (titled, with language-tagged blocks) and **info snippets** (prose explanations with breadcrumb context).
 
