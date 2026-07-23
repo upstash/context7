@@ -31,9 +31,9 @@ Do not use this Power for refactoring, writing scripts from scratch, debugging b
 Call `resolve-library-id` with:
 
 - `libraryName`: The library name extracted from the user's question
-- `query`: A focused description of the documentation need
+- `query`: A focused documentation question derived from the user's request (improves relevance ranking)
 
-Always start with `resolve-library-id` using the library name and a focused description of the documentation need, unless the user provides an exact library ID in `/org/project` format
+Always start with `resolve-library-id` using the library name and a focused documentation question derived from the user's request, unless the user provides an exact library ID in `/org/project` format
 
 ### Step 2: Select the Best Match
 
@@ -49,9 +49,9 @@ From the resolution results, choose based on:
 Call `query-docs` with:
 
 - `libraryId`: The selected Context7 library ID (e.g., /vercel/next.js)
-- `query`: A focused documentation question for one library API, feature, or concept
+- `query`: A focused documentation question derived from the user's request rather than a single word, scoped to a single concept
 
-Keep details that improve retrieval, omit unrelated details, and split distinct documentation needs into separate `query-docs` calls.
+If the user's question spans multiple distinct concepts (e.g. routing and auth and caching), make a separate `query-docs` call per concept with the same library ID, unless the question is about how the concepts interact — combined queries dilute ranking and return shallow results for each topic.
 
 ### Step 4: Use the Documentation
 
@@ -63,8 +63,8 @@ Incorporate the fetched documentation into your response:
 
 ## Best Practices
 
-- Include only details that help retrieve the relevant documentation
-- Name one library API, feature, or concept per query, then split distinct documentation needs into separate `query-docs` calls
+- Use a focused documentation question derived from the user's request for better results, but keep each query to a single concept
+- Keep each query to one topic; split multi-topic questions into separate `query-docs` calls, unless the question is about how the concepts interact
 - When users mention versions ("Next.js 15", "React 19"), use version-specific library IDs if available from the resolution step
 - When multiple matches exist, prefer official/primary packages over community forks
 - Use this Power for API syntax, configuration, setup instructions, version migration, library-specific debugging, and CLI tool usage

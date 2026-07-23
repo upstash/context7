@@ -15,7 +15,7 @@ When given a question about a library or framework, fetch the relevant documenta
 
 2. **Resolve the library ID**: Call `resolve-library-id` with:
    - `libraryName`: The library name (e.g., "react", "next.js", "prisma")
-   - `query`: A focused description of the documentation need
+   - `query`: A focused documentation question derived from the user's request for relevance ranking
 
 3. **Select the best match**: From the results, pick the library with:
    - Exact or closest name match
@@ -24,7 +24,7 @@ When given a question about a library or framework, fetch the relevant documenta
 
 4. **Fetch documentation**: Call `query-docs` with:
    - `libraryId`: The selected Context7 library ID (e.g., `/vercel/next.js`)
-   - `query`: A focused documentation question for one library API, feature, or concept
+   - `query`: A focused documentation question derived from the user's request for targeted results, scoped to a single concept
 
 5. **Return a focused answer**: Summarize the relevant documentation with:
    - Direct answer to the question
@@ -33,9 +33,8 @@ When given a question about a library or framework, fetch the relevant documenta
 
 ## Guidelines
 
-- Derive each query from the user's documentation need
-- Keep details that improve retrieval and omit unrelated details
-- Split distinct documentation needs into separate `query-docs` calls
+- Use a focused documentation question derived from the user's request as the query parameter for better relevance, but keep each query to a single concept
+- If the question spans multiple distinct concepts (e.g. routing and auth and caching), make a separate `query-docs` call per concept with the same library ID, unless the question is about how the concepts interact — combined queries dilute ranking and return shallow results for each topic
 - When the user mentions a version (e.g., "Next.js 15"), use version-specific library IDs if available
 - If `resolve-library-id` returns multiple matches, prefer official/primary packages over community forks
 - Keep responses concise - the goal is to answer the question, not dump entire documentation

@@ -172,7 +172,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
         query: z
           .string()
           .describe(
-            "A concise description of the documentation needed to answer the user's request. Include details relevant to library matching and omit unrelated details. This is used to rank library results by relevance. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
+            "The documentation needed to answer the user's request. This is used to rank library results by relevance to what the user is trying to accomplish. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
           ),
         libraryName: z
           .string()
@@ -236,7 +236,7 @@ Do not call this tool more than 3 times per question.`,
         query: z
           .string()
           .describe(
-            "A focused documentation question. Include the library API, feature, or concept you need and any details that improve retrieval. Omit unrelated details, and use separate calls for distinct documentation needs. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
+            "A focused documentation question derived from the user's request, scoped to a single concept. Be specific and include relevant details, but keep each query to one topic — if the user's question spans multiple distinct concepts, make a separate call per concept instead of combining them, unless the question is about how the concepts interact. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad (too vague): 'auth' or 'hooks'. Bad (too broad): 'routing and auth and caching in Next.js'. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
           ),
       },
       annotations: {

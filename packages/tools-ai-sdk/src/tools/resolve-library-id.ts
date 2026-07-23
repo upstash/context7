@@ -40,7 +40,7 @@ export function resolveLibraryId(config: Context7ToolsConfig = {}) {
       query: z
         .string()
         .describe(
-          "A concise description of the documentation needed to answer the user's request. Include details relevant to library matching and omit unrelated details. This is used to rank library results by relevance. IMPORTANT: Do not include any sensitive or confidential information such as API keys, passwords, credentials, or personal data in your query."
+          "The documentation needed to answer the user's request. This is used to rank library results by relevance to what the user is trying to accomplish. IMPORTANT: Do not include any sensitive or confidential information such as API keys, passwords, credentials, or personal data in your query."
         ),
       libraryName: z
         .string()

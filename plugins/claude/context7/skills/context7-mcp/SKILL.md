@@ -21,7 +21,7 @@ Activate this skill when the user:
 Call `resolve-library-id` with:
 
 - `libraryName`: The library name extracted from the user's question
-- `query`: A concise description of the documentation needed to answer the user's request
+- `query`: A focused documentation question derived from the user's request (improves relevance ranking)
 
 ### Step 2: Select the Best Match
 
@@ -36,9 +36,9 @@ From the resolution results, choose based on:
 Call `query-docs` with:
 
 - `libraryId`: The selected Context7 library ID (e.g., `/vercel/next.js`)
-- `query`: A focused documentation question derived from the user's request
+- `query`: A focused documentation question derived from the user's request, scoped to a single concept
 
-Keep details that improve retrieval, omit unrelated details, and split distinct documentation needs into separate `query-docs` calls.
+If the user's question spans multiple distinct concepts (e.g. routing and auth and caching), make a separate `query-docs` call per concept with the same library ID, unless the question is about how the concepts interact — combined queries dilute ranking and return shallow results for each topic.
 
 ### Step 4: Use the Documentation
 
@@ -50,7 +50,7 @@ Incorporate the fetched documentation into your response:
 
 ## Guidelines
 
-- **Be specific**: Include only details that help retrieve the relevant documentation
-- **One topic per query**: Name one library API, feature, or concept, then split distinct documentation needs into separate `query-docs` calls
+- **Be specific**: Use a focused documentation question derived from the user's request for better results, but keep each query to a single concept
+- **One topic per query**: Split multi-topic questions into separate `query-docs` calls — resolve the library ID once, then query per concept, unless the question is about how the concepts interact
 - **Version awareness**: When users mention versions ("Next.js 15", "React 19"), use version-specific library IDs if available from the resolution step
 - **Prefer official sources**: When multiple matches exist, prefer official/primary packages over community forks
