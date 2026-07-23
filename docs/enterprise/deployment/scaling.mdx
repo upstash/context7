@@ -8,6 +8,8 @@ By default Context7 On-Premise runs as a single container. It stores everything 
 
 To run multiple replicas behind a load balancer, move that state to PostgreSQL. Relational data goes to Postgres, and vectors go to Postgres too via the `pgvector` extension. Once state is external, every replica is stateless and interchangeable, and you can scale horizontally. Postgres is the only external dependency, there is no separate vector database or object storage to run.
 
+If you already run Milvus or Zilliz Cloud, you can send vectors there instead of pgvector. See [Vector stores](/enterprise/deployment/vector-stores) for all the options; this page uses the default pgvector setup throughout.
+
 <Note>
 You only need this if a single container can no longer handle your query or indexing load. Most deployments run fine on one container with a persistent volume. See [Docker](/enterprise/deployment/docker) and [Kubernetes](/enterprise/deployment/kubernetes) for the standard single-container setup.
 </Note>
@@ -38,7 +40,7 @@ Replicas coordinate through Postgres: they pull indexing jobs from a shared queu
 
 ## What you need
 
-- A **PostgreSQL** database (managed or self-hosted) with the **pgvector** extension, reachable from every replica. Managed Postgres such as RDS, Cloud SQL, and Azure support pgvector; for self-hosted use the `pgvector/pgvector` image.
+- A **PostgreSQL** database (managed or self-hosted) with the **pgvector** extension, reachable from every replica. Managed Postgres such as RDS, Cloud SQL, and Azure support pgvector; for self-hosted use the `pgvector/pgvector` image. To keep vectors in Milvus or Zilliz Cloud instead, see [Vector stores](/enterprise/deployment/vector-stores).
 - A **load balancer** in front of the replicas.
 
 The embedded SQLite and LanceDB are not used once `DATABASE_URL` is set.
@@ -313,7 +315,7 @@ A Helm chart renders all of this from a few values (single replica by default, `
 - **Shared work queue.** All replicas pull parse jobs from the same queue in PostgreSQL, so indexing throughput scales with replica count.
 - **Single execution for scheduled jobs.** Jobs that must run once across the fleet, such as the usage report, scheduled backups, and GitOps sync, take a short Postgres advisory lock when they fire, so exactly one replica runs each. No replica is special, and there is nothing to fail over.
 - **Stateless sessions.** Sessions are signed tokens, so any replica accepts a login issued by another, and logins survive restarts.
-- **Vectors in Postgres.** Embeddings are stored with pgvector, indexed with HNSW using cosine distance. The vector dimension is taken from your embedding model on first write, so there is no manual schema setup and switching embedding models is a re-index, not a migration.
+- **Vectors in Postgres.** Embeddings are stored with pgvector, indexed with HNSW using cosine distance. The vector dimension is taken from your embedding model on first write, so there is no manual schema setup and switching embedding models is a re-index, not a migration. To store vectors in Milvus or Zilliz Cloud instead, see [Vector stores](/enterprise/deployment/vector-stores).
 
 ## Migrating an existing deployment
 
