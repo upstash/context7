@@ -86,7 +86,8 @@
                 "group": "Security",
                 "pages": [
                   "enterprise/security/entra-sso",
-                  "enterprise/security/oidc-sso"
+                  "enterprise/security/oidc-sso",
+                  "enterprise/security/library-access"
                 ]
               },
               {
