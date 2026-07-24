@@ -34,9 +34,9 @@ Step 2: Analyze the results from resolveLibraryId and select the BEST library ID
    - Code snippet coverage (higher is better)
    - Benchmark score (higher is better)
 
-Step 3: Call 'queryDocs' with the selected library ID and a focused documentation question derived from the user's request
+Step 3: Call 'queryDocs' with the selected library ID and a documentation question derived from the user's request
    - Use the exact library ID from the resolveLibraryId results
-   - Include the focused documentation question as the query parameter
+   - Include the documentation question as the query parameter
 
 Step 4: Provide a clear answer with code examples from the documentation
 
