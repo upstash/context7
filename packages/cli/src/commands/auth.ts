@@ -34,8 +34,8 @@ export function registerAuthCommands(program: Command): void {
   program
     .command("logout")
     .description("Log out of Context7")
-    .action(() => {
-      logoutCommand();
+    .action(async () => {
+      await logoutCommand();
     });
 
   program
@@ -153,7 +153,7 @@ export async function performLogin(openBrowser = true): Promise<string | null> {
     try {
       const result = await pollDeviceToken(baseUrl, CLI_CLIENT_ID, authorization.device_code);
       if (result.status === "approved" && result.tokens) {
-        saveTokens(result.tokens);
+        await saveTokens(result.tokens);
         const successText = await announceIdentity(result.tokens.access_token);
         waitingSpinner.succeed(pc.green(successText));
         return result.tokens.access_token;
@@ -197,7 +197,7 @@ async function loginCommand(options: { browser: boolean }): Promise<void> {
     console.log(pc.dim("Run 'ctx7 logout' first if you want to log in with a different account."));
     return;
   }
-  clearTokens();
+  await clearTokens();
 
   const token = await performLogin(options.browser);
   if (!token) {
@@ -207,9 +207,9 @@ async function loginCommand(options: { browser: boolean }): Promise<void> {
   console.log(pc.dim("You can now use authenticated Context7 features."));
 }
 
-function logoutCommand(): void {
+async function logoutCommand(): Promise<void> {
   trackEvent("command", { name: "logout" });
-  if (clearTokens()) {
+  if (await clearTokens()) {
     console.log(pc.green("Logged out successfully."));
   } else {
     console.log(pc.yellow("You are not logged in."));

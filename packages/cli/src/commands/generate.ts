@@ -13,7 +13,7 @@ import {
   generateSkillStructured,
   getSkillQuota,
 } from "../utils/api.js";
-import { loadTokens, isTokenExpired } from "../utils/auth.js";
+import { getValidAccessToken } from "../utils/auth.js";
 import { performLogin } from "./auth.js";
 import { log } from "../utils/logger.js";
 import { promptForInstallTargets, getTargetDirs } from "../utils/ide.js";
@@ -60,11 +60,8 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
   trackEvent("command", { name: "generate" });
   log.blank();
 
-  let accessToken: string | null = null;
-  const tokens = loadTokens();
-  if (tokens && !isTokenExpired(tokens)) {
-    accessToken = tokens.access_token;
-  } else {
+  let accessToken = await getValidAccessToken();
+  if (!accessToken) {
     log.info("Authentication required. Logging in...");
     log.blank();
     accessToken = await performLogin();
