@@ -219,7 +219,7 @@ export function registerDocsCommands(program: Command): void {
   program
     .command("library")
     .argument("<name>", "Library name to search for")
-    .argument("[query]", "Documentation question for relevance ranking")
+    .argument("[query]", "What to look up in the library's documentation")
     .option("--json", "Output as JSON")
     .description("Resolve a library name to a Context7 library ID")
     .action(async (name: string, query: string | undefined, options: { json?: boolean }) => {
