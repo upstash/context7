@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.6
+
+### Patch Changes
+
+- 23843e9: Read the GitHub CLI auth token by invoking `gh` directly instead of through a shell. The shell wrapper (`cmd.exe /d /s /c` on Windows) caused endpoint protection tools such as Microsoft Defender for Endpoint to raise a "Suspicious Node.js process behavior" alert during `ctx7 setup`.
+- c82cc8a: Fix `ctx7 setup` skill install failing with "fetch failed" when the GitHub git tree API (`api.github.com`) is blocked or unreachable. Skill download now falls back to fetching the single `SKILL.md` directly from `raw.githubusercontent.com` — the URL the docs API already resolves — so setup succeeds in environments where only the docs/raw hosts are reachable.
+
 ## 0.5.5
 
 ### Patch Changes
