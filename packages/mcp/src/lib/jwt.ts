@@ -68,7 +68,8 @@ export interface JWTValidationResult {
 }
 
 export function isJWT(token: string): boolean {
-  return token.split(".").length === 3;
+  const parts = token.split(".");
+  return parts.length === 3 && parts.every((part) => part.length > 0);
 }
 
 export async function validateJWT(token: string): Promise<JWTValidationResult> {
