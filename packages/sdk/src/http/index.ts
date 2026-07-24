@@ -179,7 +179,12 @@ export class HttpClient implements Requester {
     const contentType = res.headers.get("content-type");
 
     if (contentType?.includes("application/json")) {
-      const body = await res.json();
+      let body: unknown;
+      try {
+        body = await res.json();
+      } catch {
+        throw new Context7Error("Failed to parse JSON response from Context7 API");
+      }
       return { result: body as TResult };
     } else {
       const text = await res.text();
