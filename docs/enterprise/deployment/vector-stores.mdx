@@ -1,0 +1,108 @@
+---
+title: "Vector Stores"
+sidebarTitle: "Vector Stores"
+description: "Choose where Context7 On-Premise stores embeddings: embedded LanceDB, pgvector, or Milvus"
+---
+
+Context7 stores every library's embeddings in a vector store and searches it on each query. The store is chosen independently of the relational database, so you can keep configuration and metadata in one place and send vectors somewhere else ("bring your own store"). This page covers the three backends and how to configure each.
+
+<Note>
+Most single-container deployments need nothing here. The default embedded store works out of the box. You only need to change the vector store to run multiple replicas or to reuse a vector database you already operate.
+</Note>
+
+## Options
+
+| Store | Best for | Runs where | Configuration |
+| --- | --- | --- | --- |
+| **LanceDB** (default) | Single container | Embedded in the container's data volume | None |
+| **pgvector** | Multiple replicas, already running PostgreSQL | Your PostgreSQL, the same database as the relational data or a separate one | `DATABASE_URL` or `VECTOR_DATABASE_URL` |
+| **Milvus** | Multiple replicas with an existing Milvus / Zilliz Cloud, or very large indexes | An external Milvus cluster or Zilliz Cloud | `MILVUS_*` |
+
+The embedded LanceDB index is local to one container, so it cannot back multiple replicas. To [scale out](/enterprise/deployment/scaling) you need a shared store: pgvector or Milvus.
+
+## Selecting a store
+
+`VECTOR_STORE` picks the backend:
+
+| Value | Behavior |
+| --- | --- |
+| `auto` (default) | pgvector when a PostgreSQL URL is available for vectors, otherwise embedded LanceDB. |
+| `lancedb` | Embedded local index. |
+| `pgvector` | pgvector in PostgreSQL. Requires a Postgres `VECTOR_DATABASE_URL` (or `DATABASE_URL`). |
+| `milvus` | External Milvus or Zilliz Cloud. Requires `MILVUS_ADDRESS`. |
+
+With `auto`, setting `DATABASE_URL` to a Postgres connection (the multi-replica setup) automatically stores vectors in pgvector in that same database. You only set `VECTOR_STORE` explicitly to override that, for example to keep vectors in Milvus while the relational data lives in Postgres.
+
+Whatever the store, the collection or table is created on first write, the vector dimension is taken from your embedding model, and search uses an HNSW index with cosine similarity. There is no manual schema setup, and switching embedding models is a re-index rather than a migration.
+
+## pgvector
+
+pgvector stores embeddings in PostgreSQL alongside (or beside) your relational data. In the standard multi-replica setup vectors share the relational database, so there is nothing extra to configure. See [Scaling](/enterprise/deployment/scaling#enable-it) for the full provisioning guide, including managed Postgres (RDS, Cloud SQL, Azure) and self-hosted.
+
+| Variable | Description |
+| --- | --- |
+| `VECTOR_DATABASE_URL` | PostgreSQL DSN for vectors. Defaults to `DATABASE_URL`, so vectors share the relational database. Set it to point vectors at a **separate** pgvector service. The target needs the `pgvector` extension. |
+
+<Note>
+Use `VECTOR_DATABASE_URL` when you want vectors in a dedicated pgvector instance, for example to size and scale vector storage independently of the relational database.
+</Note>
+
+## Milvus
+
+Set `VECTOR_STORE=milvus` to store embeddings in an external [Milvus](https://milvus.io/) cluster or [Zilliz Cloud](https://zilliz.com/cloud). Context7 creates its collections (HNSW, cosine) on first write. Milvus **2.4 or newer** is required.
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `MILVUS_ADDRESS` | Yes | Cluster endpoint, for example `milvus:19530` or `https://your-cluster.zillizcloud.com`. |
+| `MILVUS_TOKEN` | | API-key authentication, used by Zilliz Cloud and token-secured clusters. |
+| `MILVUS_USERNAME` | | Username for a self-hosted cluster with user/password auth. |
+| `MILVUS_PASSWORD` | | Password to go with `MILVUS_USERNAME`. |
+| `MILVUS_DATABASE` | | Milvus database name. Defaults to the server default. |
+
+Use `MILVUS_TOKEN` for Zilliz Cloud and API-key clusters, or `MILVUS_USERNAME` + `MILVUS_PASSWORD` for a self-hosted cluster with username/password auth.
+
+<Tabs>
+
+<Tab title="Zilliz Cloud">
+
+Take the public endpoint and API key from your Zilliz Cloud cluster, then set:
+
+```bash
+VECTOR_STORE=milvus
+MILVUS_ADDRESS=https://your-cluster.zillizcloud.com
+MILVUS_TOKEN=<api-key>
+```
+
+</Tab>
+
+<Tab title="Self-hosted">
+
+For evaluation, bring up a standalone Milvus with the official script:
+
+```bash
+curl -sfL https://raw.githubusercontent.com/milvus-io/milvus/master/scripts/standalone_embed.sh -o standalone_embed.sh
+bash standalone_embed.sh start
+```
+
+Then point Context7 at it:
+
+```bash
+VECTOR_STORE=milvus
+MILVUS_ADDRESS=localhost:19530
+```
+
+If the cluster has authentication enabled, add `MILVUS_TOKEN`, or `MILVUS_USERNAME` and `MILVUS_PASSWORD`. For production, follow the [Milvus install guide](https://milvus.io/docs/install_standalone-docker.md) or run it on Kubernetes with the Milvus Operator.
+
+</Tab>
+
+</Tabs>
+
+<Warning>
+Milvus stores `text` and `metadata` as `VARCHAR`, capped at 65,535 characters. This is well above normal chunk sizes, but an unusually large single chunk will be rejected on insert.
+</Warning>
+
+## Which one to use
+
+- **Single container:** keep the default (LanceDB). No configuration, no external service.
+- **Multiple replicas, no existing vector database:** use pgvector. Vectors share the PostgreSQL you already need for [scaling](/enterprise/deployment/scaling), so there is nothing extra to run.
+- **You already run Milvus or Zilliz Cloud,** or you need a very large index managed separately from Postgres: use Milvus.

@@ -1,0 +1,433 @@
+---
+title: "Scaling"
+sidebarTitle: "Scaling"
+description: "Run Context7 On-Premise as multiple replicas behind a load balancer"
+---
+
+By default Context7 On-Premise runs as a single container. It stores everything on a local volume: a SQLite database for configuration and metadata, and a LanceDB index for embeddings. This is simple to operate but limits you to one instance, since SQLite does not support concurrent writers across containers.
+
+To run multiple replicas behind a load balancer, move that state to PostgreSQL. Relational data goes to Postgres, and vectors go to Postgres too via the `pgvector` extension. Once state is external, every replica is stateless and interchangeable, and you can scale horizontally. Postgres is the only external dependency, there is no separate vector database or object storage to run.
+
+If you already run Milvus or Zilliz Cloud, you can send vectors there instead of pgvector. See [Vector stores](/enterprise/deployment/vector-stores) for all the options; this page uses the default pgvector setup throughout.
+
+<Note>
+You only need this if a single container can no longer handle your query or indexing load. Most deployments run fine on one container with a persistent volume. See [Docker](/enterprise/deployment/docker) and [Kubernetes](/enterprise/deployment/kubernetes) for the standard single-container setup.
+</Note>
+
+## Architecture
+
+Every replica runs the full application (REST API, MCP endpoint, and parser) and is interchangeable. All shared state lives in PostgreSQL, so a load balancer can spread traffic across any number of replicas.
+
+```mermaid
+flowchart TB
+    clients["MCP clients<br/>and browsers"] --> lb["Load balancer"]
+    lb --> r1["Replica 1"]
+    lb --> r2["Replica 2"]
+    lb --> r3["Replica 3"]
+    r1 --> pg[("PostgreSQL<br/>+ pgvector")]
+    r2 --> pg
+    r3 --> pg
+
+    classDef client fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a;
+    classDef replica fill:#ede9fe,stroke:#8b5cf6,color:#5b21b6;
+    classDef db fill:#dcfce7,stroke:#16a34a,color:#166534;
+    class clients,lb client;
+    class r1,r2,r3 replica;
+    class pg db;
+```
+
+Replicas coordinate through Postgres: they pull indexing jobs from a shared queue, run jobs that must happen once (backups, usage reporting, GitOps sync) on a single replica using a Postgres lock, and validate each other's signed session tokens. See [How it behaves](#how-it-behaves) for the details.
+
+## What you need
+
+- A **PostgreSQL** database (managed or self-hosted) with the **pgvector** extension, reachable from every replica. Managed Postgres such as RDS, Cloud SQL, and Azure support pgvector; for self-hosted use the `pgvector/pgvector` image. To keep vectors in Milvus or Zilliz Cloud instead, see [Vector stores](/enterprise/deployment/vector-stores).
+- A **load balancer** in front of the replicas.
+
+The embedded SQLite and LanceDB are not used once `DATABASE_URL` is set.
+
+## Configuration
+
+Set the same values on every replica. Presence of `DATABASE_URL` is what switches the store from SQLite to Postgres and vectors to pgvector.
+
+| Variable | Required | Description |
+| --- | --- | --- |
+| `DATABASE_URL` | Yes | PostgreSQL connection string, for example `postgres://user:pass@host:5432/context7`. Enables multi-replica mode; vectors go to pgvector in this database. |
+| `ENCRYPTION_KEY` | Yes | 64 hex characters, shared by all replicas so they can decrypt the same stored credentials and validate each other's session tokens. Generate with `openssl rand -hex 32`. |
+| `PG_POOL_MAX` | No | PostgreSQL connections per replica. Defaults to `10`. |
+
+<Warning>
+`ENCRYPTION_KEY` must be identical on every replica and must stay stable. If it changes, stored credentials can no longer be decrypted and all sessions are invalidated. Store it in your secret manager.
+</Warning>
+
+## Enable it
+
+<Steps>
+
+<Step title="Provision PostgreSQL with pgvector">
+
+Context7 stores vectors with [pgvector](https://github.com/pgvector/pgvector). You need PostgreSQL 13 or newer with pgvector **0.5.0 or newer** (0.5.0 added the HNSW index used for similarity search).
+
+On first boot Context7 runs `CREATE EXTENSION IF NOT EXISTS vector` and creates its tables and indexes automatically. You just provide a database whose user is allowed to create the extension. On managed Postgres that usually means enabling pgvector for the instance first, then connecting with a privileged role.
+
+<Tabs>
+
+<Tab title="AWS RDS / Aurora">
+
+pgvector ships with RDS and Aurora PostgreSQL. Connect as the master user (or a member of `rds_superuser`) and enable it:
+
+```sql
+CREATE EXTENSION vector;
+```
+
+No parameter group changes are required. See [pgvector on Amazon RDS](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_PostgreSQL.html).
+
+</Tab>
+
+<Tab title="Google Cloud SQL">
+
+pgvector is supported on Cloud SQL for PostgreSQL. Connect as a user with the `cloudsqlsuperuser` role and enable it:
+
+```sql
+CREATE EXTENSION vector;
+```
+
+See [Cloud SQL extensions](https://cloud.google.com/sql/docs/postgres/extensions).
+
+</Tab>
+
+<Tab title="Azure Flexible Server">
+
+Allowlist the extension first: add `VECTOR` to the `azure.extensions` server parameter, then connect and enable it:
+
+```sql
+CREATE EXTENSION vector;
+```
+
+See [pgvector on Azure Database for PostgreSQL](https://learn.microsoft.com/azure/postgresql/flexible-server/how-to-use-pgvector).
+
+</Tab>
+
+<Tab title="Self-hosted / Docker">
+
+Use the official image, which bundles pgvector:
+
+```bash
+docker run -d --name postgres \
+  -e POSTGRES_PASSWORD=... -e POSTGRES_DB=context7 \
+  -p 5432:5432 --shm-size=1g \
+  pgvector/pgvector:pg16
+```
+
+For an existing server, install the extension package (`apt-get install postgresql-16-pgvector` on Debian/Ubuntu) or build from source, then run `CREATE EXTENSION vector;`. See [pgvector installation](https://github.com/pgvector/pgvector#installation). Set `--shm-size` at least as large as `maintenance_work_mem` so parallel HNSW index builds do not run out of shared memory.
+
+</Tab>
+
+</Tabs>
+
+Verify the installed version (must be `0.5.0` or newer):
+
+```sql
+SELECT extversion FROM pg_extension WHERE extname = 'vector';
+```
+
+<Note>
+If the application's database user cannot run `CREATE EXTENSION` (common on locked-down managed instances), have a DBA run it once as a privileged role before you start Context7. Once the extension exists, the app user only needs normal table privileges.
+</Note>
+
+</Step>
+
+<Step title="Generate the shared secrets">
+
+```bash
+openssl rand -hex 32   # ENCRYPTION_KEY
+```
+
+</Step>
+
+<Step title="Set the environment on every replica">
+
+Add `DATABASE_URL` and `ENCRYPTION_KEY` to each replica, alongside the usual `LICENSE_KEY` and model settings.
+
+</Step>
+
+<Step title="Point health checks at /api/ready">
+
+Configure your load balancer or orchestrator readiness check to use `GET /api/ready`. It returns `200` only when the replica can reach the database and its MCP bridge is up, so traffic is routed only to replicas that are ready.
+
+</Step>
+
+<Step title="Scale out">
+
+Start as many replicas as you need behind the load balancer. Every replica is identical: it serves API, MCP, and search traffic **and** pulls parse jobs from the shared queue, so adding replicas grows both query capacity and indexing throughput at once. Work is distributed automatically and no replica is special.
+
+If a large re-index competes with query latency on a replica, lower **Max concurrent parses** (Settings > Indexing) so each replica runs fewer parses at a time, or give replicas more CPU and memory.
+
+</Step>
+
+</Steps>
+
+## Docker Compose
+
+For evaluation and small deployments, this stack brings up Postgres (with pgvector), three app replicas, and an nginx load balancer with one command. There is no object storage to run.
+
+Create a `.env`:
+
+```bash
+LICENSE_KEY=ctx7sk-...
+POSTGRES_PASSWORD=change-me
+# openssl rand -hex 32
+ENCRYPTION_KEY=
+```
+
+Create `nginx.conf` (round-robins across the replicas):
+
+```nginx
+events {}
+http {
+  resolver 127.0.0.11 valid=10s ipv6=off;
+  server {
+    listen 80;
+    location / {
+      set $backend http://app:3000;
+      proxy_pass $backend;
+      proxy_http_version 1.1;
+      proxy_set_header Host $host;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+    }
+  }
+}
+```
+
+Create `docker-compose.yml`:
+
+```yaml
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: context7
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: context7
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U context7"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    image: ghcr.io/context7/enterprise:latest
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      LICENSE_KEY: ${LICENSE_KEY}
+      DATABASE_URL: postgres://context7:${POSTGRES_PASSWORD}@postgres:5432/context7
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+    deploy: { replicas: 3 }
+
+  lb:
+    image: nginx:alpine
+    depends_on: [app]
+    ports: ["3000:80"]
+    volumes: ["./nginx.conf:/etc/nginx/nginx.conf:ro"]
+
+volumes:
+  pgdata:
+```
+
+Then start it and open `http://localhost:3000` to complete the setup wizard:
+
+```bash
+docker compose up -d
+```
+
+For production, point `DATABASE_URL` at an external managed Postgres (with pgvector) and drop the `postgres` service.
+
+## Kubernetes
+
+This assumes you created the namespace and image pull secret in the [Kubernetes guide](/enterprise/deployment/kubernetes). Put the shared configuration in a Secret:
+
+```yaml secret.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: context7-env
+  namespace: context7
+type: Opaque
+stringData:
+  LICENSE_KEY: "ctx7sk-..."
+  DATABASE_URL: "postgres://user:pass@host:5432/context7"
+  ENCRYPTION_KEY: "<64 hex, openssl rand -hex 32>"
+```
+
+Run the app as a `Deployment` instead of the single-replica StatefulSet. State is external, so `/data` is per-pod scratch and readiness gates on `/api/ready`:
+
+```yaml deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: context7
+  namespace: context7
+spec:
+  replicas: 3
+  selector: { matchLabels: { app: context7 } }
+  template:
+    metadata: { labels: { app: context7 } }
+    spec:
+      imagePullSecrets:
+        - name: context7-registry
+      containers:
+        - name: context7
+          image: ghcr.io/context7/enterprise:latest
+          ports:
+            - { containerPort: 3000, name: http }
+          env:
+            - { name: DATA_DIR, value: /data }
+          envFrom:
+            - secretRef: { name: context7-env }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+          readinessProbe:
+            httpGet: { path: /api/ready, port: http }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /api/health, port: http }
+            periodSeconds: 30
+      volumes:
+        - name: data
+          emptyDir: {}
+```
+
+Reuse the `Service` and `Ingress` from the [Kubernetes guide](/enterprise/deployment/kubernetes), then apply:
+
+```bash
+kubectl apply -f secret.yaml
+kubectl apply -f deployment.yaml
+```
+
+<Note>
+A Helm chart renders all of this from a few values (single replica by default, `scaling.enabled=true` to scale out) and ships with the enterprise distribution.
+</Note>
+
+## How it behaves
+
+- **Shared work queue.** All replicas pull parse jobs from the same queue in PostgreSQL, so indexing throughput scales with replica count.
+- **Single execution for scheduled jobs.** Jobs that must run once across the fleet, such as the usage report, scheduled backups, and GitOps sync, take a short Postgres advisory lock when they fire, so exactly one replica runs each. No replica is special, and there is nothing to fail over.
+- **Stateless sessions.** Sessions are signed tokens, so any replica accepts a login issued by another, and logins survive restarts.
+- **Vectors in Postgres.** Embeddings are stored with pgvector, indexed with HNSW using cosine distance. The vector dimension is taken from your embedding model on first write, so there is no manual schema setup and switching embedding models is a re-index, not a migration. To store vectors in Milvus or Zilliz Cloud instead, see [Vector stores](/enterprise/deployment/vector-stores).
+
+## Migrating an existing deployment
+
+If you already run a single container, a built-in command copies your existing SQLite data and LanceDB vectors into PostgreSQL, so you do not have to re-index your libraries or re-embed anything. It reads the data directory from your single container and writes to the target PostgreSQL.
+
+The admin UI shows your current storage mode and the exact migration command under **Settings > Scaling**:
+
+<Frame>
+  ![Migration helper under Settings, Scaling](/images/scaling-settings.png)
+</Frame>
+
+<Warning>
+Run the migration during a maintenance window. Stop indexing and let in-flight parses finish first, then run the migration against a quiet database. In-flight parse jobs are not migrated.
+</Warning>
+
+<Steps>
+
+<Step title="Provision PostgreSQL with pgvector">
+
+Create the target PostgreSQL database with pgvector, the same way as in [Enable it](#enable-it) above. The schema, extension, and vector tables are created automatically.
+
+</Step>
+
+<Step title="Run the migration">
+
+Run the one-shot `migrate` command with access to your existing data directory and the target database. It creates the schema and copies your projects, pages, users, API keys, per-library access rules, SSO group memberships, settings, usage counters, and the vector index into pgvector.
+
+<Tabs>
+
+<Tab title="Docker">
+
+```bash
+docker run --rm \
+  -v context7-data:/data \
+  -e DATA_DIR=/data \
+  -e DATABASE_URL="postgres://user:pass@host:5432/context7" \
+  ghcr.io/context7/enterprise:latest \
+  node dist/enterprise/migrate.mjs
+```
+
+Use the same volume (`context7-data`) your single container uses, so the command reads your existing database and vectors.
+
+</Tab>
+
+<Tab title="Kubernetes">
+
+Run it as a `Job` that mounts the existing data volume:
+
+```yaml migrate-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: context7-migrate
+  namespace: context7
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: context7-registry
+      containers:
+        - name: migrate
+          image: ghcr.io/context7/enterprise:latest
+          command: ["node", "dist/enterprise/migrate.mjs"]
+          env:
+            - name: DATA_DIR
+              value: /data
+            - name: DATABASE_URL
+              value: postgres://user:pass@host:5432/context7
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: data-context7-0
+```
+
+```bash
+kubectl apply -f migrate-job.yaml
+kubectl logs -n context7 job/context7-migrate
+```
+
+</Tab>
+
+</Tabs>
+
+The command prints the rows and vectors copied, and the `ENCRYPTION_KEY` your new deployment must use.
+
+</Step>
+
+<Step title="Reuse the encryption key">
+
+Your stored credentials are encrypted with the key from the single container. Set `ENCRYPTION_KEY` on the new deployment to the value the migration command printed, so credentials stay readable.
+
+</Step>
+
+<Step title="Redeploy in multi-replica mode">
+
+Redeploy with `DATABASE_URL` and `ENCRYPTION_KEY` set on every replica, following the steps above. Verify at `/api/health` that your libraries are present, then scale up.
+
+</Step>
+
+</Steps>
+
+After redeploying, **Settings > Scaling** confirms the deployment is running in multi-replica mode:
+
+<Frame>
+  ![Multi-replica mode confirmed](/images/scaling-multi-replica.png)
+</Frame>
+
+## Limitations
+
+- With pgvector, vector search runs in Postgres. For typical on-prem workloads this is well within reach; for a very large index, size Postgres accordingly.
+- Database backups are handled by PostgreSQL in this mode. Use your provider's managed backups or `pg_dump` rather than the built-in backup, which targets the embedded SQLite file. See [Backup and Restore](/enterprise/backup-restore).
