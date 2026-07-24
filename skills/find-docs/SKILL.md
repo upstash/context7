@@ -125,7 +125,7 @@ The query directly affects the quality of results. Be specific and include relev
 | Bad (too vague) | `"hooks"` |
 | Bad (too broad) | `"routing and auth and caching in Next.js"` |
 
-Describe what to look up in the library's documentation in the query when possible — vague one-word queries return generic results, and multi-topic queries dilute ranking and return shallow results for each topic.
+Describe what to look up in the library's documentation, rather than the task to complete — vague one-word queries return generic results, and multi-topic queries dilute ranking and return shallow results for each topic.
 
 The output contains two types of content: **code snippets** (titled, with language-tagged blocks) and **info snippets** (prose explanations with breadcrumb context).
 
