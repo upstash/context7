@@ -1,3 +1,5 @@
+[![mcpindex](https://mcpindex.ai/api/v1/badge/io-github-upstash-context7)](https://mcpindex.ai/server/io-github-upstash-context7)
+
 ![Cover](https://github.com/upstash/context7/blob/master/public/cover.png?raw=true)
 
 [![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D)
