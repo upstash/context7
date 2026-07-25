@@ -31,9 +31,9 @@ Do not use this Power for refactoring, writing scripts from scratch, debugging b
 Call `resolve-library-id` with:
 
 - `libraryName`: The library name extracted from the user's question
-- `query`: The user's full question (improves relevance ranking)
+- `query`: What to look up in the library's documentation (improves relevance ranking)
 
-Always start with `resolve-library-id` using the library name and the user's question, unless the user provides an exact library ID in `/org/project` format
+Always start with `resolve-library-id` using the library name and what to look up in the library's documentation, unless the user provides an exact library ID in `/org/project` format
 
 ### Step 2: Select the Best Match
 
@@ -49,7 +49,7 @@ From the resolution results, choose based on:
 Call `query-docs` with:
 
 - `libraryId`: The selected Context7 library ID (e.g., /vercel/next.js)
-- `query`: The user's full, specific question rather than a single word, scoped to a single concept
+- `query`: What to look up in the library's documentation, scoped to a single concept and using more than a single word
 
 If the user's question spans multiple distinct concepts (e.g. routing and auth and caching), make a separate `query-docs` call per concept with the same library ID, unless the question is about how the concepts interact — combined queries dilute ranking and return shallow results for each topic.
 
@@ -63,7 +63,7 @@ Incorporate the fetched documentation into your response:
 
 ## Best Practices
 
-- Pass the user's full question as the query for better results, but keep each query to a single concept
+- Describe what to look up in the library's documentation, but keep each query to a single concept
 - Keep each query to one topic; split multi-topic questions into separate `query-docs` calls, unless the question is about how the concepts interact
 - When users mention versions ("Next.js 15", "React 19"), use version-specific library IDs if available from the resolution step
 - When multiple matches exist, prefer official/primary packages over community forks
