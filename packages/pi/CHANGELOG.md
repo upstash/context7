@@ -1,5 +1,11 @@
 # @upstash/context7-pi
 
+## 0.1.2
+
+### Patch Changes
+
+- 1c081df: Improve query prompts so agents request relevant library documentation instead of passing the task to complete.
+
 ## 0.1.1
 
 ### Patch Changes
