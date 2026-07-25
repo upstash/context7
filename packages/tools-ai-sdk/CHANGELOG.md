@@ -1,5 +1,11 @@
 # @upstash/context7-tools-ai-sdk
 
+## 0.2.5
+
+### Patch Changes
+
+- 1c081df: Improve query prompts so agents request relevant library documentation instead of passing the task to complete.
+
 ## 0.2.4
 
 ### Patch Changes
