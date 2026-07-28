@@ -7,7 +7,11 @@ import { registerSetupCommand } from "./commands/setup.js";
 import { registerRemoveCommand } from "./commands/remove.js";
 import { registerDocsCommands } from "./commands/docs.js";
 import { maybeShowUpgradeNotice, registerUpgradeCommand } from "./commands/upgrade.js";
-import { maybeShowContentUpdateNotice, registerUpdateCommand } from "./commands/update.js";
+import {
+  autoUpdateContent,
+  maybeShowContentUpdateNotice,
+  registerUpdateCommand,
+} from "./commands/update.js";
 import { setBaseUrl } from "./utils/api.js";
 import { VERSION } from "./constants.js";
 
@@ -35,10 +39,8 @@ program
       actionName: actionCommand.name(),
       argv: process.argv,
     });
-    await maybeShowContentUpdateNotice({
-      actionName: actionCommand.name(),
-      argv: process.argv,
-    });
+    const remaining = await autoUpdateContent({ actionName: actionCommand.name() });
+    await maybeShowContentUpdateNotice(remaining, { argv: process.argv });
   })
   .addHelpText(
     "after",

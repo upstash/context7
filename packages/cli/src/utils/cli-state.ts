@@ -45,6 +45,10 @@ function statePath(stateFile?: string): string {
   return stateFile ?? process.env.CTX7_STATE_FILE ?? getUpdateStateFilePath();
 }
 
+export function getStatePath(): string {
+  return statePath();
+}
+
 export async function readCliState(stateFile?: string): Promise<CliState> {
   const target = statePath(stateFile);
   const path =

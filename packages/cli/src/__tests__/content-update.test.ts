@@ -11,7 +11,7 @@ import {
   resolveSkill,
 } from "../utils/content.js";
 import { readCliState, writeCliState, type Install } from "../utils/cli-state.js";
-import { scanOutdated } from "../commands/update.js";
+import { autoUpdateContent, scanOutdated } from "../commands/update.js";
 
 const SKILL_BODY = "---\nname: find-docs\n---\n\nFind docs.\n";
 
@@ -185,6 +185,91 @@ describe("scanOutdated", () => {
     await recordSkill(3, hashFiles([{ path: "SKILL.md", content: SKILL_BODY }]));
 
     expect(await scanOutdated()).toEqual([]);
+  });
+});
+
+describe("autoUpdateContent", () => {
+  const NEW_BODY = "---\nname: find-docs\n---\n\nFind docs, revised.\n";
+
+  beforeEach(async () => {
+    await writeFile(join(skillDir, "SKILL.md"), SKILL_BODY);
+  });
+
+  function stubNewer() {
+    const manifest = {
+      schema: 1,
+      skills: {
+        "find-docs": {
+          revision: 4,
+          minCliVersion: "0.0.0",
+          files: [{ path: "SKILL.md", hash: hashContent(NEW_BODY) }],
+        },
+      },
+      rules: {},
+    };
+    stubFetch(manifest, NEW_BODY);
+  }
+
+  test("rewrites an unmodified skill in place and records the new revision", async () => {
+    stubNewer();
+    await recordSkill(3, hashFiles([{ path: "SKILL.md", content: SKILL_BODY }]));
+
+    const remaining = await autoUpdateContent({ actionName: "docs" });
+
+    expect(remaining).toEqual([]);
+    expect(await readFile(join(skillDir, "SKILL.md"), "utf-8")).toBe(NEW_BODY);
+    const install = (await readCliState()).installs?.[skillDir];
+    expect(install?.revision).toBe(4);
+    expect(install?.hash).toBe(hashFiles([{ path: "SKILL.md", content: NEW_BODY }]));
+  });
+
+  test("leaves locally modified skills alone and returns them", async () => {
+    stubNewer();
+    await recordSkill(3, hashFiles([{ path: "SKILL.md", content: SKILL_BODY }]));
+    await writeFile(join(skillDir, "SKILL.md"), "hand edited\n");
+
+    const remaining = await autoUpdateContent({ actionName: "docs" });
+
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0].edited).toBe(true);
+    expect(await readFile(join(skillDir, "SKILL.md"), "utf-8")).toBe("hand edited\n");
+  });
+
+  test("does not run for commands that manage content themselves", async () => {
+    stubNewer();
+    await recordSkill(3, hashFiles([{ path: "SKILL.md", content: SKILL_BODY }]));
+
+    expect(await autoUpdateContent({ actionName: "setup" })).toEqual([]);
+    expect(await readFile(join(skillDir, "SKILL.md"), "utf-8")).toBe(SKILL_BODY);
+  });
+
+  test("honours CTX7_NO_AUTO_UPDATE", async () => {
+    stubNewer();
+    vi.stubEnv("CTX7_NO_AUTO_UPDATE", "1");
+    await recordSkill(3, hashFiles([{ path: "SKILL.md", content: SKILL_BODY }]));
+
+    expect(await autoUpdateContent({ actionName: "docs" })).toEqual([]);
+    expect(await readFile(join(skillDir, "SKILL.md"), "utf-8")).toBe(SKILL_BODY);
+  });
+
+  test("skips work while another process holds the lock", async () => {
+    stubNewer();
+    await recordSkill(3, hashFiles([{ path: "SKILL.md", content: SKILL_BODY }]));
+    await writeFile(`${stateFile}.lock`, "999");
+
+    const remaining = await autoUpdateContent({ actionName: "docs" });
+
+    expect(remaining).toHaveLength(1);
+    expect(await readFile(join(skillDir, "SKILL.md"), "utf-8")).toBe(SKILL_BODY);
+  });
+
+  test("drops the record when the install has been deleted", async () => {
+    stubNewer();
+    await recordSkill(3, hashFiles([{ path: "SKILL.md", content: SKILL_BODY }]));
+    await rm(skillDir, { recursive: true, force: true });
+
+    await expect(autoUpdateContent({ actionName: "docs" })).resolves.toEqual([]);
+    expect((await readCliState()).installs).toEqual({});
   });
 });
 

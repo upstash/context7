@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import { dirname } from "path";
+import { mkdir, rm, stat, writeFile } from "fs/promises";
 import ora from "ora";
 import pc from "picocolors";
 import { confirm } from "@inquirer/prompts";
@@ -9,6 +10,7 @@ import { log } from "../utils/logger.js";
 import { trackEvent } from "../utils/tracking.js";
 import {
   forgetInstall,
+  getStatePath,
   readCliState,
   updateCliState,
   type Install,
@@ -68,6 +70,8 @@ export async function scanOutdated(): Promise<Outdated[]> {
       install.kind === "skill" ? manifest.skills?.[install.name] : manifest.rules?.[install.name];
     if (!entry) continue;
 
+    if (entry.revision <= install.revision) continue;
+
     const current =
       install.kind === "skill"
         ? await readSkillHash(path, install)
@@ -79,8 +83,6 @@ export async function scanOutdated(): Promise<Outdated[]> {
       await forgetInstall(path);
       continue;
     }
-
-    if (entry.revision <= install.revision) continue;
 
     outdated.push({
       path,
@@ -210,34 +212,105 @@ async function updateCommand(options: UpdateOptions): Promise<void> {
   trackEvent("content-update", { count: ready.length - failures.length });
 }
 
+const SKIP_AUTO_UPDATE = ["update", "setup", "remove", "uninstall", "upgrade"];
+const LOCK_STALE_MS = 60_000;
+
+async function acquireLock(path: string): Promise<boolean> {
+  try {
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(path, String(process.pid), { flag: "wx" });
+    return true;
+  } catch {
+    try {
+      const info = await stat(path);
+      if (Date.now() - info.mtimeMs < LOCK_STALE_MS) return false;
+      await writeFile(path, String(process.pid));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+/**
+ * Refreshes out-of-date skills and rules during ordinary commands so agent-driven
+ * runs (`npx ctx7@latest docs ...`, always non-TTY) stay current without anyone
+ * running `ctx7 update`. Silent, best-effort, and never fails the host command.
+ */
+export async function autoUpdateContent(
+  options: { actionName?: string } = {}
+): Promise<Outdated[]> {
+  if (SKIP_AUTO_UPDATE.includes(options.actionName ?? "")) return [];
+  if (process.env.CTX7_NO_AUTO_UPDATE) return [];
+
+  let outdated: Outdated[];
+  try {
+    outdated = await scanOutdated();
+  } catch {
+    return [];
+  }
+
+  const ready = outdated.filter((target) => !target.blockedBy && !target.edited);
+  if (ready.length === 0) return outdated;
+
+  const lockPath = `${getStatePath()}.lock`;
+  if (!(await acquireLock(lockPath))) return outdated;
+
+  const applied = new Set<string>();
+  try {
+    for (const target of ready) {
+      try {
+        await apply(target);
+        applied.add(target.path);
+      } catch {
+        continue;
+      }
+    }
+  } finally {
+    await rm(lockPath, { force: true }).catch(() => {});
+  }
+
+  return outdated.filter((target) => !applied.has(target.path));
+}
+
+/**
+ * Reports only what auto-update could not fix on its own: locally modified files
+ * and revisions gated behind a newer CLI. Both need a human decision.
+ */
 export async function maybeShowContentUpdateNotice(
-  options: { actionName?: string; argv?: string[]; isInteractive?: boolean; now?: number } = {}
+  remaining: Outdated[],
+  options: { argv?: string[]; isInteractive?: boolean; now?: number } = {}
 ): Promise<void> {
-  const actionName = options.actionName ?? "";
   const argv = options.argv ?? process.argv;
   const isInteractive =
     options.isInteractive ?? Boolean(process.stdout.isTTY && process.stdin.isTTY);
 
-  if (
-    !isInteractive ||
-    argv.includes("--json") ||
-    ["update", "setup", "remove", "uninstall", "upgrade"].includes(actionName)
-  ) {
-    return;
-  }
+  if (!isInteractive || argv.includes("--json") || remaining.length === 0) return;
 
   const now = options.now ?? Date.now();
   const state = await readCliState();
   if (state.contentNotifiedAt && now - state.contentNotifiedAt < NOTICE_COOLDOWN_MS) return;
 
-  const actionable = (await scanOutdated()).filter((target) => !target.blockedBy);
-  if (actionable.length === 0) return;
+  const edited = remaining.filter((target) => !target.blockedBy && target.edited);
+  const blocked = remaining.filter((target) => target.blockedBy);
+
+  const lines: string[] = [];
+  if (edited.length > 0) {
+    lines.push(
+      `${pc.white(pc.bold("Skill update available:"))} ${pc.green(pc.bold(String(edited.length)))} ${pc.white("locally modified item(s)")}`,
+      `${pc.white("Run")} ${pc.yellow(pc.bold("ctx7 update --force"))} ${pc.white("to overwrite them")}`
+    );
+  }
+  if (blocked.length > 0) {
+    lines.push(
+      `${pc.white("Newer skill content needs")} ${pc.green(pc.bold(`ctx7 >= ${blocked[0].blockedBy}`))}`,
+      `${pc.white("Run")} ${pc.yellow(pc.bold("ctx7 upgrade"))} ${pc.white("to unlock it")}`
+    );
+  }
+  if (lines.length === 0) return;
 
   log.blank();
-  log.box([
-    `${pc.white(pc.bold("Skill update available:"))} ${pc.green(pc.bold(String(actionable.length)))} ${pc.white("item(s) out of date")}`,
-    `${pc.white("Run")} ${pc.yellow(pc.bold("ctx7 update"))} ${pc.white("to refresh them")}`,
-  ]);
+  log.box(lines);
   log.blank();
 
   await updateCliState({ contentNotifiedAt: now });
