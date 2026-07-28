@@ -7,6 +7,7 @@ import { registerSetupCommand } from "./commands/setup.js";
 import { registerRemoveCommand } from "./commands/remove.js";
 import { registerDocsCommands } from "./commands/docs.js";
 import { maybeShowUpgradeNotice, registerUpgradeCommand } from "./commands/upgrade.js";
+import { maybeShowContentUpdateNotice, registerUpdateCommand } from "./commands/update.js";
 import { setBaseUrl } from "./utils/api.js";
 import { VERSION } from "./constants.js";
 
@@ -34,6 +35,10 @@ program
       actionName: actionCommand.name(),
       argv: process.argv,
     });
+    await maybeShowContentUpdateNotice({
+      actionName: actionCommand.name(),
+      argv: process.argv,
+    });
   })
   .addHelpText(
     "after",
@@ -43,6 +48,9 @@ Examples:
   ${brand.primary("npx ctx7 setup")}
   ${brand.primary("npx ctx7 setup --mcp")}
   ${brand.primary("npx ctx7 setup --cli")}
+
+  ${brand.dim("# Refresh installed skills and rules")}
+  ${brand.primary("npx ctx7 update")}
 
   ${brand.dim("# Remove Context7 setup")}
   ${brand.primary("npx ctx7 remove --cursor")}
@@ -63,6 +71,7 @@ registerSetupCommand(program);
 registerRemoveCommand(program);
 registerDocsCommands(program);
 registerUpgradeCommand(program);
+registerUpdateCommand(program);
 
 program.action(() => {
   console.log("");

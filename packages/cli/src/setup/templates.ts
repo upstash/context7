@@ -1,7 +1,4 @@
-const GITHUB_RAW_URLS = [
-  "https://raw.githubusercontent.com/upstash/context7/master/rules",
-  "https://raw.githubusercontent.com/upstash/context7/main/rules",
-];
+import { resolveRule } from "../utils/content.js";
 
 const FALLBACK_MCP = `Use Context7 MCP to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
 
@@ -38,28 +35,29 @@ const CODEX_CLI_SANDBOX_GUIDANCE = `Run Context7 CLI requests outside Codex's de
 
 export type RuleMode = "mcp" | "cli";
 
-async function fetchRule(filename: string, fallback: string): Promise<string> {
-  for (const base of GITHUB_RAW_URLS) {
-    try {
-      const res = await fetch(`${base}/${filename}`);
-      if (res.ok) return await res.text();
-    } catch {
-      continue;
-    }
-  }
-  return fallback;
+export function getRuleFilename(mode: RuleMode): string {
+  return mode === "mcp" ? "context7-mcp.md" : "context7-cli.md";
 }
 
-export async function getRuleContent(mode: RuleMode, agent: string): Promise<string> {
-  const [filename, fallback] =
-    mode === "mcp" ? ["context7-mcp.md", FALLBACK_MCP] : ["context7-cli.md", FALLBACK_CLI];
-  let body = await fetchRule(filename, fallback);
+export async function getRule(
+  mode: RuleMode,
+  agent: string
+): Promise<{ content: string; revision: number }> {
+  const resolved = await resolveRule(getRuleFilename(mode));
+  let body = resolved?.content ?? (mode === "mcp" ? FALLBACK_MCP : FALLBACK_CLI);
 
   if (mode === "cli" && agent === "codex" && !body.includes(CODEX_CLI_SANDBOX_GUIDANCE)) {
     body = `${body.trimEnd()}\n${CODEX_CLI_SANDBOX_GUIDANCE}\n`;
   }
 
-  return agent === "cursor" ? `${CURSOR_FRONTMATTER}${body}` : body;
+  return {
+    content: agent === "cursor" ? `${CURSOR_FRONTMATTER}${body}` : body,
+    revision: resolved?.revision ?? 0,
+  };
+}
+
+export async function getRuleContent(mode: RuleMode, agent: string): Promise<string> {
+  return (await getRule(mode, agent)).content;
 }
 
 export function customizeSkillFilesForAgent(

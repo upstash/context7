@@ -15,6 +15,7 @@ import {
 } from "../setup/mcp-writer.js";
 import { join } from "path";
 import { access, readFile, rm, writeFile } from "fs/promises";
+import { forgetInstall } from "../utils/cli-state.js";
 
 type Scope = "global" | "project";
 type UninstallMode = "mcp" | "cli";
@@ -362,6 +363,7 @@ async function uninstallRule(agentName: SetupAgent, scope: Scope): Promise<Clean
 
     try {
       await rm(targetPath);
+      await forgetInstall(targetPath);
       return { status: "removed", path: targetPath };
     } catch (err) {
       const error = err as NodeJS.ErrnoException;
@@ -392,6 +394,7 @@ async function uninstallRule(agentName: SetupAgent, scope: Scope): Promise<Clean
       await writeFile(filePath, `${updated}\n`, "utf-8");
     }
 
+    await forgetInstall(filePath);
     return { status: "removed", path: filePath };
   } catch (err) {
     const error = err as NodeJS.ErrnoException;
@@ -417,6 +420,7 @@ async function uninstallSkills(
     const skillPath = join(skillsDir, skillName);
     try {
       await rm(skillPath, { recursive: true });
+      await forgetInstall(skillPath);
       results.push({ name: skillName, status: "removed", path: skillPath });
     } catch (err) {
       const error = err as NodeJS.ErrnoException;
