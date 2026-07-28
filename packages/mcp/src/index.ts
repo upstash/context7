@@ -9,7 +9,7 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import type { Transport } from "@modelcontextprotocol/sdk/shared/transport.js";
 import { z } from "zod";
-import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
+import { searchLibraries, fetchLibraryContext, addLibrarySource } from "./lib/api.js";
 import type { ClientContext } from "./lib/types.js";
 import { formatSearchResults, extractClientInfoFromUserAgent } from "./lib/utils.js";
 import { isJWT, validateJWT } from "./lib/jwt.js";
@@ -127,7 +127,9 @@ function createMcpServer() {
     {
       instructions: `Use this server to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
 
-Do not use for: refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.`,
+Do not use for: refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.
+
+When documentation is missing from Context7 and the user wants the source indexed, use the add-library tool with a public GitHub/GitLab/Bitbucket/docs URL (requires an API key).`,
     }
   );
 
@@ -255,6 +257,85 @@ Do not call this tool more than 3 times per question.`,
           {
             type: "text",
             text: response.data,
+          },
+        ],
+      };
+    }
+  );
+
+  server.registerTool(
+    "add-library",
+    {
+      title: "Add Library to Context7",
+      description: `Submit a public documentation source to Context7 for indexing so future queries can use it.
+
+Use when resolve-library-id finds no good match and you have a public GitHub/GitLab/Bitbucket repo URL, docs website, OpenAPI spec URL, or llms.txt URL. Requires a Context7 API key.
+
+Prefer public Git repository URLs. For websites/OpenAPI/llms.txt, pass type explicitly when auto-detection is ambiguous.
+
+Do not submit private or credentialed sources unless the user explicitly requests it and provides a gitToken.`,
+      inputSchema: {
+        url: z
+          .string()
+          .describe(
+            "Public URL to submit — typically a GitHub/GitLab/Bitbucket repository, docs site, OpenAPI spec, or llms.txt file."
+          ),
+        type: z
+          .enum(["github", "gitlab", "bitbucket", "git", "website", "openapi", "llmstxt"])
+          .optional()
+          .describe(
+            "Optional source kind override. Auto-detected from the URL when omitted."
+          ),
+        private: z
+          .boolean()
+          .optional()
+          .describe("Whether the repository is private (requires a suitable plan and gitToken)."),
+        gitToken: z
+          .string()
+          .optional()
+          .describe(
+            "Optional git access token for private repository submissions. Do not invent tokens."
+          ),
+      },
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        openWorldHint: true,
+        idempotentHint: true,
+      },
+    },
+    async ({
+      url,
+      type,
+      private: isPrivate,
+      gitToken,
+    }: {
+      url: string;
+      type?: "github" | "gitlab" | "bitbucket" | "git" | "website" | "openapi" | "llmstxt";
+      private?: boolean;
+      gitToken?: string;
+    }) => {
+      const ctx = getClientContext();
+      const response = await addLibrarySource(
+        { url, type, private: isPrivate, gitToken },
+        ctx
+      );
+      maybeElicitAuthSignIn(server, ctx);
+      const lines = [response.data];
+      if (response.libraryName) {
+        lines.push(`Library ID: ${response.libraryName}`);
+        lines.push(
+          `Next: call query-docs with libraryId "${response.libraryName}" after indexing completes.`
+        );
+      }
+      if (response.alreadyExists) {
+        lines.push("Status: already exists (idempotent).");
+      }
+      return {
+        content: [
+          {
+            type: "text",
+            text: lines.join("\n"),
           },
         ],
       };

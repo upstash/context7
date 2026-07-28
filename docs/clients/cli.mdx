@@ -3,9 +3,10 @@ title: CLI
 description: The ctx7 CLI — fetch library documentation and configure Context7 MCP from your terminal
 ---
 
-The `ctx7` CLI is the command-line interface for Context7. It does two things:
+The `ctx7` CLI (also installed as `context7`) is the command-line interface for Context7. It does three things:
 
 - **Fetch library documentation** — resolve any library by name and query its up-to-date docs directly in your terminal, without opening a browser
+- **Submit documentation sources** — add public Git repos, websites, OpenAPI specs, or `llms.txt` files to the Context7 index (`ctx7 add`)
 - **Configure your AI coding agent** — set up the Context7 MCP server (or a CLI-based `docs` skill) for Claude Code, Cursor, OpenCode, and more with a single command
 
 The CLI is useful both as a standalone tool (fetching docs while you code) and as a setup utility (wiring up Context7 for your AI coding agent).
@@ -30,9 +31,27 @@ Requires Node.js 18 or later.
     ```bash
     npm install -g ctx7
 
-    # Verify installation
+    # Verify installation (both names work)
     ctx7 --version
+    context7 --version
     ```
+
+  </Tab>
+  <Tab title="Homebrew">
+    ```bash
+    brew install ctx7
+    ```
+
+  </Tab>
+  <Tab title="WinGet (Windows)">
+    After the WinGet package is published:
+
+    ```powershell
+    winget install Upstash.Context7
+    context7 --version
+    ```
+
+    Until then, use `npm install -g ctx7`. See `packages/cli/packaging/README.md` in the repo for packaging details.
 
   </Tab>
 </Tabs>
@@ -100,6 +119,30 @@ ctx7 docs /facebook/react "How to use hooks for state management" --json
 ctx7 docs /facebook/react "How to use hooks for state management" | head -50
 ctx7 docs /vercel/next.js "How to add middleware for route protection" | grep -A 10 "middleware"
 ```
+
+---
+
+## Submit a library — ctx7 add
+
+Submit a public documentation source for indexing. Useful for agents that discover missing libraries while researching.
+
+Requires authentication (`CONTEXT7_API_KEY` or `ctx7 login`).
+
+```bash
+# GitHub / GitLab / Bitbucket (auto-detected)
+ctx7 add https://github.com/owner/repo
+context7 add https://gitlab.com/owner/repo --json
+
+# Website / OpenAPI / llms.txt
+ctx7 add https://docs.example.com --type website
+ctx7 add https://api.example.com/openapi.json --type openapi
+ctx7 add https://docs.example.com/llms.txt
+
+# Private repo (Pro/Enterprise)
+ctx7 add https://github.com/owner/private-repo --private --git-token "$GIT_TOKEN"
+```
+
+`--json` prints a stable payload (`libraryName`, `message`, `alreadyExists`, `status`) for scripting. Duplicate submissions (`409`) are treated as idempotent success so agents can safely retry.
 
 ---
 

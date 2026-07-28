@@ -1,0 +1,107 @@
+name: CLI portable release (Windows / winget)
+
+# Builds a portable Windows zip for the Context7 CLI and attaches it to a GitHub
+# Release. Optionally submits/updates the WinGet package when WINGET_TOKEN is set.
+#
+# Trigger manually after a ctx7 npm publish, or on published GitHub Releases.
+# Maintainers: set repository secret WINGET_TOKEN (PAT that can open PRs against
+# a fork of microsoft/winget-pkgs) to enable auto-submit.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "CLI version to package (defaults to packages/cli/package.json)"
+        required: false
+        type: string
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  portable-windows:
+    name: Build Windows portable zip
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      asset_name: ${{ steps.meta.outputs.asset_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Resolve version
+        id: meta
+        shell: pwsh
+        run: |
+          $pkg = Get-Content packages/cli/package.json | ConvertFrom-Json
+          $version = if ("${{ inputs.version }}") { "${{ inputs.version }}" } else { $pkg.version }
+          $asset = "context7-$version-win-portable.zip"
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "asset_name=$asset" >> $env:GITHUB_OUTPUT
+          Write-Host "Packaging CLI version $version"
+
+      - name: Build portable zip
+        shell: pwsh
+        run: node packages/cli/scripts/build-win-portable.mjs
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: context7-win-portable
+          path: packages/cli/dist-portable/${{ steps.meta.outputs.asset_name }}
+
+      - name: Attach to GitHub Release (if release event)
+        if: github.event_name == 'release'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${{ github.event.release.tag_name }}" `
+            "packages/cli/dist-portable/${{ steps.meta.outputs.asset_name }}" `
+            --clobber
+
+  winget:
+    name: Submit WinGet package
+    needs: portable-windows
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Skip when WINGET_TOKEN is unset
+        id: gate
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: |
+          if [ -z "$WINGET_TOKEN" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "WINGET_TOKEN not configured; skipping WinGet submission."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Submit to winget-pkgs
+        if: steps.gate.outputs.skip == 'false'
+        uses: vedantmgoyal9/winget-releaser@v2
+        with:
+          identifier: Upstash.Context7
+          version: ${{ needs.portable-windows.outputs.version }}
+          release-tag: ${{ github.event.release.tag_name }}
+          installers-regex: 'context7-.*-win-portable\.zip$'
+          token: ${{ secrets.WINGET_TOKEN }}

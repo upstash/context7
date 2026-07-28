@@ -1,0 +1,27 @@
+# Upstash.Context7.installer
+# Placeholders {{PACKAGE_VERSION}}, {{INSTALLER_URL}}, {{INSTALLER_SHA256}} are filled by CI.
+PackageIdentifier: Upstash.Context7
+PackageVersion: "{{PACKAGE_VERSION}}"
+Platform:
+  - Windows.Desktop
+MinimumOSVersion: 10.0.17763.0
+InstallerType: zip
+NestedInstallerType: portable
+NestedInstallerFiles:
+  - RelativeFilePath: context7-win-portable\context7.cmd
+    PortableCommandAlias: context7
+  - RelativeFilePath: context7-win-portable\ctx7.cmd
+    PortableCommandAlias: ctx7
+Dependencies:
+  PackageDependencies:
+    - PackageIdentifier: OpenJS.NodeJS.LTS
+InstallModes:
+  - silent
+UpgradeBehavior: uninstallPrevious
+ReleaseDate: "{{RELEASE_DATE}}"
+Installers:
+  - Architecture: neutral
+    InstallerUrl: "{{INSTALLER_URL}}"
+    InstallerSha256: "{{INSTALLER_SHA256}}"
+ManifestType: installer
+ManifestVersion: 1.9.0

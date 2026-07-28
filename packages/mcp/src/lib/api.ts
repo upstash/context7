@@ -4,6 +4,7 @@ import { Agent, ProxyAgent, setGlobalDispatcher } from "undici";
 import { CONTEXT7_API_BASE_URL } from "./constants.js";
 import { readFileSync } from "fs";
 import tls from "tls";
+import { resolveAddTarget } from "./add-library.js";
 
 /**
  * Parses error response from the Context7 API
@@ -169,6 +170,85 @@ export async function fetchLibraryContext(
     return { data: text };
   } catch (error) {
     const errorMessage = `Error fetching library context. Please try again later. ${error}`;
+    console.error(errorMessage);
+    return { data: errorMessage };
+  }
+}
+
+export interface AddLibraryRequest {
+  url: string;
+  type?: "github" | "gitlab" | "bitbucket" | "git" | "website" | "openapi" | "llmstxt";
+  private?: boolean;
+  gitToken?: string;
+}
+
+export interface AddLibraryResponse {
+  data: string;
+  libraryName?: string;
+  alreadyExists?: boolean;
+}
+
+/**
+ * Submit a library / docs source to Context7 for indexing.
+ */
+export async function addLibrarySource(
+  request: AddLibraryRequest,
+  context: ClientContext = {}
+): Promise<AddLibraryResponse> {
+  try {
+    if (!context.apiKey) {
+      return {
+        data: "Authentication required to submit libraries. Set CONTEXT7_API_KEY or configure the MCP server with an API key from https://context7.com/dashboard.",
+      };
+    }
+
+    const target = resolveAddTarget(request.url, request.type, {
+      private: request.private,
+      gitToken: request.gitToken,
+    });
+
+    const url = new URL(`${CONTEXT7_API_BASE_URL}${target.endpointPath}`);
+    const headers = {
+      ...generateHeaders(context),
+      "Content-Type": "application/json",
+    };
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(target.body),
+    });
+    readPromptSignal(response, context);
+
+    const payload = (await response.json().catch(() => ({}))) as {
+      libraryName?: string;
+      message?: string;
+      error?: string;
+    };
+
+    if (response.status === 409) {
+      return {
+        data: payload.message || "This source is already submitted to Context7.",
+        libraryName: payload.libraryName,
+        alreadyExists: true,
+      };
+    }
+
+    if (!response.ok) {
+      const errorMessage = payload.message || (await parseErrorResponse(response, context.apiKey));
+      console.error(errorMessage);
+      return { data: errorMessage };
+    }
+
+    const libraryName = payload.libraryName;
+    const message =
+      payload.message ||
+      (libraryName
+        ? `Submitted successfully as ${libraryName}`
+        : "Submitted successfully for processing");
+    return { data: message, libraryName, alreadyExists: false };
+  } catch (error) {
+    const errorMessage = `Error submitting library: ${error}`;
     console.error(errorMessage);
     return { data: errorMessage };
   }
