@@ -39,21 +39,35 @@ export function getRuleFilename(mode: RuleMode): string {
   return mode === "mcp" ? "context7-mcp.md" : "context7-cli.md";
 }
 
+export function decorateRule(body: string, mode: RuleMode, agent: string): string {
+  let decorated = body;
+
+  if (mode === "cli" && agent === "codex" && !decorated.includes(CODEX_CLI_SANDBOX_GUIDANCE)) {
+    decorated = `${decorated.trimEnd()}\n${CODEX_CLI_SANDBOX_GUIDANCE}\n`;
+  }
+
+  return agent === "cursor" ? `${CURSOR_FRONTMATTER}${decorated}` : decorated;
+}
+
+/** Resolves from the manifest, or null when only the built-in fallback is available. */
+export async function getManifestRule(
+  mode: RuleMode,
+  agent: string
+): Promise<{ content: string; revision: number } | null> {
+  const resolved = await resolveRule(getRuleFilename(mode));
+  if (!resolved) return null;
+  return { content: decorateRule(resolved.content, mode, agent), revision: resolved.revision };
+}
+
 export async function getRule(
   mode: RuleMode,
   agent: string
 ): Promise<{ content: string; revision: number }> {
-  const resolved = await resolveRule(getRuleFilename(mode));
-  let body = resolved?.content ?? (mode === "mcp" ? FALLBACK_MCP : FALLBACK_CLI);
+  const resolved = await getManifestRule(mode, agent);
+  if (resolved) return resolved;
 
-  if (mode === "cli" && agent === "codex" && !body.includes(CODEX_CLI_SANDBOX_GUIDANCE)) {
-    body = `${body.trimEnd()}\n${CODEX_CLI_SANDBOX_GUIDANCE}\n`;
-  }
-
-  return {
-    content: agent === "cursor" ? `${CURSOR_FRONTMATTER}${body}` : body,
-    revision: resolved?.revision ?? 0,
-  };
+  const fallback = mode === "mcp" ? FALLBACK_MCP : FALLBACK_CLI;
+  return { content: decorateRule(fallback, mode, agent), revision: 0 };
 }
 
 export async function getRuleContent(mode: RuleMode, agent: string): Promise<string> {

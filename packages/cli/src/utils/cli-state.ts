@@ -1,5 +1,5 @@
 import { dirname } from "path";
-import { mkdir, readFile, writeFile } from "fs/promises";
+import { mkdir, readFile, rename, rm, stat, writeFile } from "fs/promises";
 
 import type { ContentManifest } from "./content.js";
 import {
@@ -38,6 +38,7 @@ export interface CliState {
   lastNotifiedAt?: number;
   contentManifest?: { fetchedAt: number; manifest: ContentManifest };
   contentNotifiedAt?: number;
+  contentRetryAfter?: number;
   installs?: Record<string, Install>;
 }
 
@@ -49,6 +50,51 @@ export function getStatePath(): string {
   return statePath();
 }
 
+const LOCK_STALE_MS = 60_000;
+let lockDepth = 0;
+
+/**
+ * Re-entrant within a process, stale-tolerant across processes. The default wait
+ * is deliberately short: this sits on the hot path of every command, so bounded
+ * last-writer-wins beats stalling a docs query behind another process.
+ */
+export async function acquireStateLock(target: string, timeoutMs = 250): Promise<boolean> {
+  if (lockDepth > 0) {
+    lockDepth++;
+    return true;
+  }
+
+  const lockFile = `${target}.lock`;
+  const deadline = Date.now() + timeoutMs;
+
+  for (;;) {
+    try {
+      await writeFile(lockFile, String(process.pid), { flag: "wx" });
+      lockDepth = 1;
+      return true;
+    } catch {
+      // Held elsewhere.
+    }
+
+    const info = await stat(lockFile).catch(() => null);
+    const stale = info !== null && Date.now() - info.mtimeMs > LOCK_STALE_MS;
+    if (stale) {
+      await rm(lockFile, { force: true }).catch(() => {});
+    }
+
+    if (Date.now() >= deadline) return false;
+    if (!stale) await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+}
+
+export async function releaseStateLock(target: string): Promise<void> {
+  if (lockDepth === 0) return;
+  lockDepth--;
+  if (lockDepth === 0) {
+    await rm(`${target}.lock`, { force: true }).catch(() => {});
+  }
+}
+
 export async function readCliState(stateFile?: string): Promise<CliState> {
   const target = statePath(stateFile);
   const path =
@@ -56,20 +102,44 @@ export async function readCliState(stateFile?: string): Promise<CliState> {
       ? await resolveReadPath(UPDATE_STATE_FILE_NAME, target)
       : target;
 
+  let raw: string;
   try {
-    return JSON.parse(await readFile(path, "utf-8")) as CliState;
+    raw = await readFile(path, "utf-8");
   } catch {
+    return {};
+  }
+
+  try {
+    return JSON.parse(raw) as CliState;
+  } catch {
+    // Quarantine rather than read {} forever: an unparseable file would otherwise
+    // silently disable install tracking on every future run.
+    await rename(path, `${path}.corrupt`).catch(() => {});
     return {};
   }
 }
 
+/**
+ * Written via a temp file and rename so a crash mid-write cannot leave truncated
+ * JSON behind, and under the shared lock so a concurrent writer holding an older
+ * copy in memory cannot clobber records it never read.
+ */
 export async function writeCliState(state: CliState, stateFile?: string): Promise<void> {
   const path = statePath(stateFile);
   if (path === getUpdateStateFilePath()) {
     await migrateLegacyFile(UPDATE_STATE_FILE_NAME, path);
   }
   await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, JSON.stringify(state, null, 2) + "\n", "utf-8");
+
+  const held = await acquireStateLock(path);
+  const temp = `${path}.${process.pid}.tmp`;
+  try {
+    await writeFile(temp, JSON.stringify(state, null, 2) + "\n", "utf-8");
+    await rename(temp, path);
+  } finally {
+    await rm(temp, { force: true }).catch(() => {});
+    if (held) await releaseStateLock(path);
+  }
 }
 
 export async function updateCliState(

@@ -10,7 +10,7 @@ import { customizeSkillFilesForAgent } from "./templates.js";
 
 type Scope = "global" | "project";
 
-interface SkillContent {
+export interface SkillContent {
   files: SkillFile[];
   revision: number;
 }
@@ -37,6 +37,10 @@ export function loadSkillContent(skillName: string): Promise<SkillContent> {
   return pending;
 }
 
+export function resetSkillContentCache(): void {
+  cache.clear();
+}
+
 export function getSkillsRoot(agentName: SetupAgent, scope: Scope): string {
   const agent = getAgent(agentName);
   return scope === "global"
@@ -54,7 +58,16 @@ export async function installSkill(
   skillName: string,
   root: string = getSkillsRoot(agentName, scope)
 ): Promise<string> {
-  const { files, revision } = await loadSkillContent(skillName);
+  return writeSkill(agentName, scope, skillName, root, await loadSkillContent(skillName));
+}
+
+export async function writeSkill(
+  agentName: SetupAgent,
+  scope: Scope,
+  skillName: string,
+  root: string,
+  { files, revision }: SkillContent
+): Promise<string> {
   const customized = customizeSkillFilesForAgent(agentName, skillName, files);
 
   const dir = join(root, skillName);

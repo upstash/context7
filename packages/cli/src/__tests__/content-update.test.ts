@@ -11,6 +11,7 @@ import {
   resolveSkill,
 } from "../utils/content.js";
 import { readCliState, writeCliState, type Install } from "../utils/cli-state.js";
+import { resetSkillContentCache } from "../setup/skills.js";
 import { autoUpdateContent, scanOutdated } from "../commands/update.js";
 
 const SKILL_BODY = "---\nname: find-docs\n---\n\nFind docs.\n";
@@ -68,6 +69,7 @@ beforeEach(async () => {
   await mkdir(skillDir, { recursive: true });
   vi.stubEnv("CTX7_STATE_FILE", stateFile);
   resetManifestCache();
+  resetSkillContentCache();
 });
 
 afterEach(async () => {

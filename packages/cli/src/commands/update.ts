@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { dirname } from "path";
-import { mkdir, rm, stat, writeFile } from "fs/promises";
+
 import ora from "ora";
 import pc from "picocolors";
 import { confirm } from "@inquirer/prompts";
@@ -9,18 +9,26 @@ import { VERSION } from "../constants.js";
 import { log } from "../utils/logger.js";
 import { trackEvent } from "../utils/tracking.js";
 import {
+  acquireStateLock,
   forgetInstall,
+  releaseStateLock,
   getStatePath,
   readCliState,
   updateCliState,
   type Install,
   type SkillInstall,
 } from "../utils/cli-state.js";
-import { getManifest, hashContent, hashFiles, supportsEntry } from "../utils/content.js";
+import {
+  getManifest,
+  hashContent,
+  hashFiles,
+  resolveSkill,
+  supportsEntry,
+} from "../utils/content.js";
 import { readSkillFiles } from "../utils/installer.js";
-import { installSkill } from "../setup/skills.js";
+import { writeSkill } from "../setup/skills.js";
 import { installRule, readRuleBody } from "../setup/rules.js";
-import { getRule } from "../setup/templates.js";
+import { getManifestRule } from "../setup/templates.js";
 import { SETUP_AGENT_NAMES, type SetupAgent } from "../setup/agents.js";
 
 const NOTICE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -96,21 +104,39 @@ export async function scanOutdated(): Promise<Outdated[]> {
   return outdated;
 }
 
+/**
+ * Refreshes strictly from the manifest. The legacy download path is deliberately
+ * not used here: it yields revision 0, which would downgrade the record and make
+ * the same install look outdated on every subsequent command.
+ */
 async function apply(target: Outdated): Promise<void> {
   const agent = target.install.agent as SetupAgent;
 
   if (target.install.kind === "skill") {
-    await installSkill(agent, target.install.scope, target.install.name, dirname(target.path));
+    const resolved = await resolveSkill(target.install.name);
+    if (!resolved || resolved.revision < target.latest) {
+      throw new Error(`could not resolve ${target.install.name} at revision ${target.latest}`);
+    }
+    await writeSkill(
+      agent,
+      target.install.scope,
+      target.install.name,
+      dirname(target.path),
+      resolved
+    );
     return;
   }
 
-  const { content, revision } = await getRule(target.install.mode, agent);
+  const resolved = await getManifestRule(target.install.mode, agent);
+  if (!resolved || resolved.revision < target.latest) {
+    throw new Error(`could not resolve ${target.install.name} at revision ${target.latest}`);
+  }
   await installRule(
     agent,
     target.install.mode,
     target.install.scope,
-    content,
-    revision,
+    resolved.content,
+    resolved.revision,
     target.path
   );
 }
@@ -213,24 +239,8 @@ async function updateCommand(options: UpdateOptions): Promise<void> {
 }
 
 const SKIP_AUTO_UPDATE = ["update", "setup", "remove", "uninstall", "upgrade"];
-const LOCK_STALE_MS = 60_000;
 
-async function acquireLock(path: string): Promise<boolean> {
-  try {
-    await mkdir(dirname(path), { recursive: true });
-    await writeFile(path, String(process.pid), { flag: "wx" });
-    return true;
-  } catch {
-    try {
-      const info = await stat(path);
-      if (Date.now() - info.mtimeMs < LOCK_STALE_MS) return false;
-      await writeFile(path, String(process.pid));
-      return true;
-    } catch {
-      return false;
-    }
-  }
-}
+const RETRY_BACKOFF_MS = 60 * 60 * 1000;
 
 /**
  * Refreshes out-of-date skills and rules during ordinary commands so agent-driven
@@ -238,10 +248,13 @@ async function acquireLock(path: string): Promise<boolean> {
  * running `ctx7 update`. Silent, best-effort, and never fails the host command.
  */
 export async function autoUpdateContent(
-  options: { actionName?: string } = {}
+  options: { actionName?: string; now?: number } = {}
 ): Promise<Outdated[]> {
   if (SKIP_AUTO_UPDATE.includes(options.actionName ?? "")) return [];
   if (process.env.CTX7_NO_AUTO_UPDATE) return [];
+
+  const now = options.now ?? Date.now();
+  if (((await readCliState()).contentRetryAfter ?? 0) > now) return [];
 
   let outdated: Outdated[];
   try {
@@ -253,8 +266,9 @@ export async function autoUpdateContent(
   const ready = outdated.filter((target) => !target.blockedBy && !target.edited);
   if (ready.length === 0) return outdated;
 
-  const lockPath = `${getStatePath()}.lock`;
-  if (!(await acquireLock(lockPath))) return outdated;
+  // Never queue behind another process mid-apply; it is doing the same work.
+  const statePath = getStatePath();
+  if (!(await acquireStateLock(statePath, 0))) return outdated;
 
   const applied = new Set<string>();
   try {
@@ -267,7 +281,11 @@ export async function autoUpdateContent(
       }
     }
   } finally {
-    await rm(lockPath, { force: true }).catch(() => {});
+    await releaseStateLock(statePath);
+  }
+
+  if (applied.size < ready.length) {
+    await updateCliState({ contentRetryAfter: now + RETRY_BACKOFF_MS });
   }
 
   return outdated.filter((target) => !applied.has(target.path));
