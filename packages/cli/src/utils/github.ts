@@ -253,65 +253,102 @@ export async function getSkillFromGitHub(
   return { ...result, skill };
 }
 
+async function downloadSkillTree(
+  owner: string,
+  repo: string,
+  branch: string,
+  skillPath: string,
+  ghHeaders: Record<string, string>
+): Promise<{ files: SkillFile[]; error?: string }> {
+  const treeData = await fetchRepoTree(owner, repo, branch, ghHeaders);
+  if ("error" in treeData) {
+    const hint =
+      !ghHeaders["Authorization"] && /403|429|rate/.test(treeData.error)
+        ? " — run `gh auth login` or set the GITHUB_TOKEN env var to increase rate limits"
+        : "";
+    return { files: [], error: `GitHub API error: ${treeData.error}${hint}` };
+  }
+
+  const skillFiles = treeData.tree.filter(
+    (item) => item.type === "blob" && item.path.startsWith(skillPath + "/")
+  );
+
+  if (skillFiles.length === 0) {
+    return { files: [], error: `No files found in ${skillPath}` };
+  }
+
+  const files: SkillFile[] = [];
+  for (const item of skillFiles) {
+    const rawUrl = `${GITHUB_RAW}/${owner}/${repo}/${branch}/${item.path}`;
+    const fileResponse = await fetch(rawUrl, { headers: ghHeaders });
+
+    if (!fileResponse.ok) {
+      console.warn(`Failed to fetch ${item.path}: ${fileResponse.status}`);
+      continue;
+    }
+
+    const content = await fileResponse.text();
+    const relativePath = item.path.slice(skillPath.length + 1);
+
+    // Reject paths that attempt directory traversal
+    if (relativePath.includes("..")) {
+      console.warn(`Skipping file with unsafe path: ${item.path}`);
+      continue;
+    }
+
+    files.push({
+      path: relativePath,
+      content,
+    });
+  }
+
+  return { files };
+}
+
+async function downloadSingleSkillFile(
+  skillUrl: string,
+  ghHeaders: Record<string, string>
+): Promise<SkillFile[] | null> {
+  let fileName: string;
+  try {
+    const url = new URL(skillUrl);
+    const last = url.pathname.split("/").filter(Boolean).pop();
+    if (url.hostname !== "raw.githubusercontent.com" || !last || !last.includes(".")) {
+      return null;
+    }
+    fileName = last;
+  } catch {
+    return null;
+  }
+
+  const response = await fetch(skillUrl, { headers: ghHeaders });
+  if (!response.ok) return null;
+  const content = await response.text();
+  return [{ path: fileName, content }];
+}
+
 export async function downloadSkillFromGitHub(
   skill: Skill & { project: string }
 ): Promise<{ files: SkillFile[]; error?: string }> {
-  try {
-    const parsed = parseGitHubUrl(skill.url);
-
-    if (!parsed) {
-      return { files: [], error: `Invalid GitHub URL: ${skill.url}` };
-    }
-
-    const { owner, repo, branch, path: skillPath } = parsed;
-
-    const ghHeaders = getGitHubHeaders();
-
-    const treeData = await fetchRepoTree(owner, repo, branch, ghHeaders);
-    if ("error" in treeData) {
-      const hint =
-        !ghHeaders["Authorization"] && /403|429|rate/.test(treeData.error)
-          ? " — run `gh auth login` or set the GITHUB_TOKEN env var to increase rate limits"
-          : "";
-      return { files: [], error: `GitHub API error: ${treeData.error}${hint}` };
-    }
-
-    const skillFiles = treeData.tree.filter(
-      (item) => item.type === "blob" && item.path.startsWith(skillPath + "/")
-    );
-
-    if (skillFiles.length === 0) {
-      return { files: [], error: `No files found in ${skillPath}` };
-    }
-
-    const files: SkillFile[] = [];
-    for (const item of skillFiles) {
-      const rawUrl = `${GITHUB_RAW}/${owner}/${repo}/${branch}/${item.path}`;
-      const fileResponse = await fetch(rawUrl, { headers: ghHeaders });
-
-      if (!fileResponse.ok) {
-        console.warn(`Failed to fetch ${item.path}: ${fileResponse.status}`);
-        continue;
-      }
-
-      const content = await fileResponse.text();
-      const relativePath = item.path.slice(skillPath.length + 1);
-
-      // Reject paths that attempt directory traversal
-      if (relativePath.includes("..")) {
-        console.warn(`Skipping file with unsafe path: ${item.path}`);
-        continue;
-      }
-
-      files.push({
-        path: relativePath,
-        content,
-      });
-    }
-
-    return { files };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return { files: [], error: message };
+  const parsed = parseGitHubUrl(skill.url);
+  if (!parsed) {
+    return { files: [], error: `Invalid GitHub URL: ${skill.url}` };
   }
+
+  const { owner, repo, branch, path: skillPath } = parsed;
+  const ghHeaders = getGitHubHeaders();
+
+  let treeError: string | undefined;
+  try {
+    const result = await downloadSkillTree(owner, repo, branch, skillPath, ghHeaders);
+    if (result.files.length > 0) return { files: result.files };
+    treeError = result.error;
+  } catch (err) {
+    treeError = err instanceof Error ? err.message : String(err);
+  }
+
+  const single = await downloadSingleSkillFile(skill.url, ghHeaders).catch(() => null);
+  if (single) return { files: single };
+
+  return { files: [], error: treeError ?? `No files found in ${skillPath}` };
 }

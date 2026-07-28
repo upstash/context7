@@ -46,7 +46,7 @@ Context7 Enterprise runs as a single-replica StatefulSet with persistent storage
 
 ### StatefulSet
 
-Context7 uses SQLite and LanceDB for local storage, which require a persistent volume. This means it must run as a **StatefulSet with a single replica** since SQLite does not support concurrent writers.
+Context7 uses SQLite and LanceDB for local storage, which require a persistent volume. This means it must run as a **StatefulSet with a single replica** since SQLite does not support concurrent writers. To run multiple replicas, move state to PostgreSQL (with the `pgvector` extension for embeddings) as described in [Scaling](/enterprise/deployment/scaling).
 
 ```yaml statefulset.yaml
 apiVersion: apps/v1
@@ -132,7 +132,7 @@ spec:
 </Note>
 
 <Warning>
-  Do not set `replicas` higher than 1. Context7 uses SQLite which only supports a single writer. Running multiple replicas will cause database lock errors.
+  Do not set `replicas` higher than 1 in this configuration. Context7 uses SQLite which only supports a single writer, so running multiple replicas causes database lock errors. To scale out, see [Scaling](/enterprise/deployment/scaling).
 </Warning>
 
 ### Service
@@ -335,6 +335,18 @@ Look for `[license]` messages in the first few lines. Common causes:
 <Note>
   The startup probe only comes into play after the license is validated. If the pod is crash-looping, the issue is always upstream of the probe. Check logs, not probe events.
 </Note>
+
+## Scaling
+
+The manifests above run a single replica: a StatefulSet with a `ReadWriteOnce` volume holding the embedded SQLite database and LanceDB index. This suits most deployments.
+
+To run multiple replicas behind the Service, move that state to an external PostgreSQL with the `pgvector` extension. Relational data and embeddings both live in Postgres, so every pod becomes stateless and interchangeable: swap the StatefulSet for a `Deployment` with `replicas` greater than one, mount `/data` as scratch (`emptyDir`), and gate readiness on `/api/ready` so a pod only receives traffic once it has connected to Postgres.
+
+<Note>
+A Helm chart renders all of this from a few values: the single-replica StatefulSet by default, or a multi-replica Deployment with `scaling.enabled=true`. It ships with the enterprise distribution.
+</Note>
+
+See [Scaling](/enterprise/deployment/scaling) for the full setup, PostgreSQL and pgvector provisioning, and migrating an existing single-container deployment.
 
 ## Connecting AI Clients
 

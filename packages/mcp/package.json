@@ -1,6 +1,6 @@
 {
   "name": "@upstash/context7-mcp",
-  "version": "3.2.4",
+  "version": "3.2.5",
   "mcpName": "io.github.upstash/context7",
   "description": "MCP server for Context7",
   "scripts": {
@@ -32,9 +32,6 @@
   "author": "abdush",
   "license": "MIT",
   "type": "module",
-  "engines": {
-    "node": ">=20"
-  },
   "bin": {
     "context7-mcp": "dist/index.js"
   },
@@ -54,7 +51,7 @@
     "commander": "^13.1.0",
     "express": "^5.1.0",
     "jose": "^6.2.3",
-    "undici": "^6.26.0",
+    "undici": "^7.0.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -62,5 +59,8 @@
     "@types/node": "^25.0.3",
     "typescript": "^5.8.2",
     "vitest": "^4.1.9"
+  },
+  "engines": {
+    "node": ">=20.18.1"
   }
 }
