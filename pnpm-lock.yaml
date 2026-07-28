@@ -110,11 +110,11 @@ importers:
   packages/mcp:
     dependencies:
       '@modelcontextprotocol/node':
-        specifier: 2.0.0-beta.4
-        version: 2.0.0-beta.4(@modelcontextprotocol/server@2.0.0-beta.4)(hono@4.12.23)
+        specifier: 2.0.0
+        version: 2.0.0(@modelcontextprotocol/server@2.0.0)(hono@4.12.23)
       '@modelcontextprotocol/server':
-        specifier: 2.0.0-beta.4
-        version: 2.0.0-beta.4
+        specifier: 2.0.0
+        version: 2.0.0
       '@types/express':
         specifier: ^5.0.4
         version: 5.0.5
@@ -135,8 +135,8 @@ importers:
         version: 4.4.3
     devDependencies:
       '@modelcontextprotocol/client':
-        specifier: 2.0.0-beta.4
-        version: 2.0.0-beta.4
+        specifier: 2.0.0
+        version: 2.0.0
       '@types/node':
         specifier: ^25.0.3
         version: 25.0.3
@@ -1046,19 +1046,19 @@ packages:
   '@mistralai/mistralai@2.2.1':
     resolution: {integrity: sha512-uKU8CZmL2RzYKmplsU01hii4p3pe4HqJefpWNRWXm1Tcm0Sm4xXfwSLIy4k7ZCPlbETCGcp69E7hZs+WOJ5itQ==}
 
-  '@modelcontextprotocol/client@2.0.0-beta.4':
-    resolution: {integrity: sha512-VNHA/UXDk7mCpVl+jOg5B4WMRRD2OEl+it360Lhi6HiCbrIB2f6pZ0cqSDKXQVUtZvqnhdQHzZAM9h8EKWhq/A==}
+  '@modelcontextprotocol/client@2.0.0':
+    resolution: {integrity: sha512-8f1OghQ2rjzIOfqgUCP+8GiUWqRs89njoWLNqAe8kWmDePv3s1fZXseej+QXemssEuuOvLLmLO/kqM3IQHtISw==}
     engines: {node: '>=20'}
 
-  '@modelcontextprotocol/core@2.0.0-beta.4':
-    resolution: {integrity: sha512-nsMXd4wQBKzmph6r+WOhum+mXjDYljTAqwY/XUg3hLtvNOQ8+JVqBSJOVCMJvx9lXhTpTOPrGZ3BuNiaNPjSvg==}
+  '@modelcontextprotocol/core@2.0.0':
+    resolution: {integrity: sha512-pJCEwGG7Lfr/+PQp9ZTwKXNeO5wzbfKL7H3MYpCorM4oFBoQrdjnBgEoqG+RjhsvS1FKrDbKux+M1HhlnGWqcA==}
     engines: {node: '>=20'}
 
-  '@modelcontextprotocol/node@2.0.0-beta.4':
-    resolution: {integrity: sha512-OqbrRVNYNfLxBB2BRkP5oIHKHa0IPHluMbaLgw7YCRKcj5be9ExzyWFJY3KVMb+1F2AVn+0SRoH0XKcNzh3HYQ==}
+  '@modelcontextprotocol/node@2.0.0':
+    resolution: {integrity: sha512-Y4hAC2XdGDUdDOCbLDOCA4+aL3NUldjsOWlDL/YwpAxrPhRm1xHd7lZ+mLacvZ9t3PaH28wgNoaLQGrIk1P2pg==}
     engines: {node: '>=20'}
     peerDependencies:
-      '@modelcontextprotocol/server': ^2.0.0-beta.4
+      '@modelcontextprotocol/server': ^2.0.0
       hono: ^4.11.4
     peerDependenciesMeta:
       hono:
@@ -1074,8 +1074,8 @@ packages:
       '@cfworker/json-schema':
         optional: true
 
-  '@modelcontextprotocol/server@2.0.0-beta.4':
-    resolution: {integrity: sha512-pjMZcNEt1dOq0aJCcY3b7w1Ayh+qmQN2xlfTELcGV9yiAjEGIczBPBLWWW0k0zzo5T8kiv15jtKPsWeHGxLvLg==}
+  '@modelcontextprotocol/server@2.0.0':
+    resolution: {integrity: sha512-YhHWdHfpFMQfd0prsEnxKeS3Qz3ytIGmsS0sth4KDjnacIT7hxk6hXHkJ9KysxlkvTM+WZAtQbbcUhdoP4Hvtw==}
     engines: {node: '>=20'}
 
   '@nodable/entities@2.1.0':
@@ -4080,9 +4080,9 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@modelcontextprotocol/client@2.0.0-beta.4':
+  '@modelcontextprotocol/client@2.0.0':
     dependencies:
-      '@modelcontextprotocol/core': 2.0.0-beta.4
+      '@modelcontextprotocol/core': 2.0.0
       cross-spawn: 7.0.6
       eventsource: 3.0.7
       eventsource-parser: 3.0.6
@@ -4090,14 +4090,14 @@ snapshots:
       pkce-challenge: 5.0.0
       zod: 4.4.3
 
-  '@modelcontextprotocol/core@2.0.0-beta.4':
+  '@modelcontextprotocol/core@2.0.0':
     dependencies:
       zod: 4.4.3
 
-  '@modelcontextprotocol/node@2.0.0-beta.4(@modelcontextprotocol/server@2.0.0-beta.4)(hono@4.12.23)':
+  '@modelcontextprotocol/node@2.0.0(@modelcontextprotocol/server@2.0.0)(hono@4.12.23)':
     dependencies:
       '@hono/node-server': 1.19.14(hono@4.12.23)
-      '@modelcontextprotocol/server': 2.0.0-beta.4
+      '@modelcontextprotocol/server': 2.0.0
     optionalDependencies:
       hono: 4.12.23
 
@@ -4124,9 +4124,9 @@ snapshots:
       - supports-color
     optional: true
 
-  '@modelcontextprotocol/server@2.0.0-beta.4':
+  '@modelcontextprotocol/server@2.0.0':
     dependencies:
-      '@modelcontextprotocol/core': 2.0.0-beta.4
+      '@modelcontextprotocol/core': 2.0.0
       zod: 4.4.3
 
   '@nodable/entities@2.1.0': {}
