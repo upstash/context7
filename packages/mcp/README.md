@@ -51,7 +51,7 @@ Check out our [project addition guide](https://context7.com/docs/adding-librarie
 
 ### Requirements
 
-- Node.js >= v18.0.0
+- Node.js >= v20.18.1
 - Cursor, Claude Code, VSCode, Devin Desktop or another MCP Client
 - Context7 API Key (Optional) for higher rate limits and private repositories (Get yours by creating an account at [context7.com/dashboard](https://context7.com/dashboard))
 
@@ -852,7 +852,7 @@ If you prefer to run the MCP server in a Docker container:
    <summary>Click to see Dockerfile content</summary>
 
    ```Dockerfile
-   FROM node:18-alpine
+   FROM node:20-alpine
 
    WORKDIR /app
 
@@ -1592,7 +1592,7 @@ Use the `--experimental-fetch` flag to bypass TLS-related problems:
 1. Try adding `@latest` to the package name
 2. Use `bunx` as an alternative to `npx`
 3. Consider using `deno` as another alternative
-4. Ensure you're using Node.js v18 or higher for native fetch support
+4. Ensure you're using Node.js v20 or higher for native fetch support
 
 </details>
 

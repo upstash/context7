@@ -4,7 +4,14 @@ const execFileSync = vi.hoisted(() => vi.fn());
 
 vi.mock("node:child_process", () => ({ execFileSync }));
 
-import { listSkillsFromGitHub } from "../utils/github.js";
+import { downloadSkillFromGitHub, listSkillsFromGitHub } from "../utils/github.js";
+
+const SKILL = {
+  name: "context7-mcp",
+  description: "desc",
+  project: "/upstash/context7",
+  url: "https://raw.githubusercontent.com/upstash/context7/refs/heads/master/plugins/codex/context7/skills/context7-mcp/SKILL.md",
+};
 
 beforeEach(() => {
   // resetAllMocks, not clearAllMocks: the latter keeps implementations, so a
@@ -84,5 +91,76 @@ describe("GitHub authentication", () => {
     expect(result).toEqual({ status: "ok", skills: [] });
     const headers = vi.mocked(fetch).mock.calls[0][1]?.headers as Record<string, string>;
     expect(headers).not.toHaveProperty("Authorization");
+  });
+});
+
+describe("downloadSkillFromGitHub", () => {
+  test("downloads every file in the skill directory when the tree API works", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("api.github.com")) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                sha: "s",
+                truncated: false,
+                tree: [
+                  { type: "tree", path: "plugins/codex/context7/skills/context7-mcp" },
+                  {
+                    type: "blob",
+                    path: "plugins/codex/context7/skills/context7-mcp/SKILL.md",
+                  },
+                  {
+                    type: "blob",
+                    path: "plugins/codex/context7/skills/context7-mcp/references/guide.md",
+                  },
+                ],
+              }),
+          });
+        }
+        return Promise.resolve({ ok: true, text: () => Promise.resolve(`raw:${url}`) });
+      })
+    );
+
+    const result = await downloadSkillFromGitHub(SKILL);
+
+    expect(result.error).toBeUndefined();
+    expect(result.files.map((f) => f.path).sort()).toEqual(["SKILL.md", "references/guide.md"]);
+  });
+
+  test("falls back to the single SKILL.md when the tree API is unreachable (#2936)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("api.github.com")) {
+          return Promise.reject(new TypeError("fetch failed"));
+        }
+        return Promise.resolve({ ok: true, text: () => Promise.resolve("# Context7 skill") });
+      })
+    );
+
+    const result = await downloadSkillFromGitHub(SKILL);
+
+    expect(result.error).toBeUndefined();
+    expect(result.files).toEqual([{ path: "SKILL.md", content: "# Context7 skill" }]);
+  });
+
+  test("surfaces the tree error when both the tree API and the direct fetch fail", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("api.github.com")) {
+          return Promise.reject(new TypeError("fetch failed"));
+        }
+        return Promise.resolve({ ok: false, status: 404 });
+      })
+    );
+
+    const result = await downloadSkillFromGitHub(SKILL);
+
+    expect(result.files).toEqual([]);
+    expect(result.error).toBe("fetch failed");
   });
 });

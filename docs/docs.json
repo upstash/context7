@@ -78,6 +78,7 @@
                 "group": "Integrations",
                 "pages": [
                   "enterprise/integrations/github",
+                  "enterprise/integrations/other-git",
                   "enterprise/integrations/confluence"
                 ]
               },
@@ -93,7 +94,9 @@
                 "group": "Deployment",
                 "pages": [
                   "enterprise/deployment/docker",
-                  "enterprise/deployment/kubernetes"
+                  "enterprise/deployment/kubernetes",
+                  "enterprise/deployment/scaling",
+                  "enterprise/deployment/vector-stores"
                 ]
               },
               {
