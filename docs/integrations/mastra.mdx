@@ -31,7 +31,7 @@ For more details on how Mastra handles MCP, see the [Mastra MCP documentation](h
           url: new URL("https://mcp.context7.com/mcp"),
           requestInit: {
             headers: {
-              CONTEXT7_API_KEY: process.env.CONTEXT7_API_KEY!,
+              Authorization: `Bearer ${process.env.CONTEXT7_API_KEY}`,
             },
           },
         },
