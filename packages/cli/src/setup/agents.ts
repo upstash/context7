@@ -86,9 +86,14 @@ function mcpUrl(auth: AuthOptions): string {
 /**
  * Attaches the API key as a standard `Authorization: Bearer` header.
  *
- * The name must stay `Authorization`: clients that infer an auth mode from
- * header names treat a custom name as "no credential configured" and reach for
- * stored OAuth instead. See `codexStaleOAuthNote` in ./codex-auth.ts.
+ * The name must stay `Authorization`. Codex resolves a server's auth mode from
+ * `bearer_token_env_var` or a header literally named `Authorization`
+ * (`auth_status_before_discovery` in codex-rs/rmcp-client/src/auth_status.rs);
+ * any other name reads as "no credential configured", so it falls through to an
+ * OAuth credential stored against the same server name and URL and refreshes it
+ * at startup. A dead refresh token then fails the server before the key is ever
+ * sent. The server accepts the legacy `CONTEXT7_API_KEY` header too, so existing
+ * configs keep working.
  *
  * Guarded on a non-empty key because the server rejects an empty bearer, while
  * omitting the header falls back to anonymous access.

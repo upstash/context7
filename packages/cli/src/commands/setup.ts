@@ -24,7 +24,6 @@ import {
   detectAgents,
 } from "../setup/agents.js";
 import { customizeSkillFilesForAgent, getRuleContent } from "../setup/templates.js";
-import { codexStaleOAuthNote } from "../setup/codex-auth.js";
 import {
   readJsonConfig,
   mergeServerEntry,
@@ -32,7 +31,6 @@ import {
   resolveMcpPath,
   appendTomlServer,
   readTomlServerEntry,
-  readTomlServerExists,
   isStdioContext7Entry,
   patchStdioApiKey,
   getJsonServerEntry,
@@ -305,7 +303,6 @@ async function setupAgent(
   rulePath: string;
   skillStatus: string;
   skillPath: string;
-  note?: string;
 }> {
   const agent = getAgent(agentName);
 
@@ -314,18 +311,6 @@ async function setupAgent(
       ? agent.mcp.globalPaths
       : agent.mcp.projectPaths.map((p) => join(process.cwd(), p));
   const mcpPath = await resolveMcpPath(mcpCandidates);
-
-  // Must run before the write: once the Authorization header lands, Codex
-  // reports bearer_token and stops reporting the credential at all.
-  let note: string | undefined;
-  if (
-    agentName === "codex" &&
-    auth.mode === "api-key" &&
-    transport === "http" &&
-    (await readTomlServerExists(mcpPath, "context7"))
-  ) {
-    note = await codexStaleOAuthNote("context7");
-  }
 
   let mcpStatus: string;
   try {
@@ -396,7 +381,6 @@ async function setupAgent(
     rulePath,
     skillStatus,
     skillPath,
-    note,
   };
 }
 
@@ -453,9 +437,6 @@ async function setupMcp(agents: SetupAgent[], options: SetupOptions, scope: Scop
     log.plain(`    ${ruleIcon} Rule ${r.ruleStatus}`);
     log.plain(`      ${pc.dim(r.rulePath)}`);
     logSkillStatus(r.skillStatus, r.skillPath);
-    if (r.note) {
-      log.plain(`      ${pc.yellow("tip:")} ${r.note}`);
-    }
   }
   log.blank();
 
