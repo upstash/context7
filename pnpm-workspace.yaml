@@ -5,8 +5,8 @@ allowBuilds:
   esbuild: true
 
 minimumReleaseAge: 10080
-# TODO: remove this exclusion once @modelcontextprotocol/server and /node are
-# off exact-pinned 2.0.0 betas — it waives the release-age cooldown for the
-# whole scope, not just those two packages.
+# TODO: drop after 2026-08-03, when @modelcontextprotocol 2.0.0 clears the
+# 7-day release-age cooldown on its own. Until then this waives the cooldown
+# for the whole scope, not just the packages we pin.
 minimumReleaseAgeExclude:
   - '@modelcontextprotocol/*'
