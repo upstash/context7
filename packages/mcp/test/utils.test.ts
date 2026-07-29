@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { CLIENT_INFO_META_KEY } from "@modelcontextprotocol/server";
 import { envelopeClientInfo } from "../src/lib/utils.js";
 
-// The request _meta envelope is untyped in the current SDK beta, so
+// The request _meta envelope is untyped as of SDK 2.0.0, so
 // envelopeClientInfo's probing of it is not compile-checked. These tests pin
 // the expected shape so an SDK bump that changes it fails loudly.
 describe("envelopeClientInfo", () => {

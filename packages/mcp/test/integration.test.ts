@@ -163,6 +163,15 @@ describe.each([
     ]);
   });
 
+  // The declared `capabilities: { prompts: {}, resources: {} }` replaced three
+  // hand-written empty-list handlers; clients that call these unconditionally
+  // must still get an empty collection rather than "method not found".
+  test("answers prompts/resources list requests with empty collections", async () => {
+    expect((await client.listPrompts()).prompts).toEqual([]);
+    expect((await client.listResources()).resources).toEqual([]);
+    expect((await client.listResourceTemplates()).resourceTemplates).toEqual([]);
+  });
+
   test("calls query-docs end to end", async () => {
     const result = await client.callTool({
       name: "query-docs",

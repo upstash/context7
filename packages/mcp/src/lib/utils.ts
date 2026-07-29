@@ -88,9 +88,9 @@ export function formatSearchResults(searchResponse: SearchResponse): string {
  * every request's `_meta` envelope. Legacy (2025) clients declare it once in
  * the initialize handshake instead.
  *
- * The envelope is untyped (`RequestMetaEnvelope = {}`) in the current SDK
- * beta, so the shape probed here is not compile-checked against the SDK —
- * utils.test.ts locks it so a beta bump that changes it fails loudly.
+ * The envelope is untyped (`RequestMetaEnvelope = {}`) as of SDK 2.0.0, so
+ * the shape probed here is not compile-checked against the SDK —
+ * utils.test.ts locks it so an SDK bump that changes it fails loudly.
  */
 export function envelopeClientInfo(
   envelope: unknown
