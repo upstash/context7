@@ -632,7 +632,7 @@ describe("agent config integration", () => {
       expect(entry).toEqual({
         type: "http",
         url: "https://mcp.context7.com/mcp",
-        headers: { CONTEXT7_API_KEY: "sk-test-123" },
+        headers: { Authorization: "Bearer sk-test-123" },
       });
     });
 
@@ -681,7 +681,7 @@ describe("agent config integration", () => {
       expect(servers.context7).toEqual({
         type: "http",
         url: "https://mcp.context7.com/mcp",
-        headers: { CONTEXT7_API_KEY: "sk-test-123" },
+        headers: { Authorization: "Bearer sk-test-123" },
       });
     });
 
@@ -705,7 +705,7 @@ describe("agent config integration", () => {
       expect((result.mcpServers as Record<string, unknown>).context7).toEqual({
         type: "http",
         url: "https://mcp.context7.com/mcp",
-        headers: { CONTEXT7_API_KEY: "sk-test-123" },
+        headers: { Authorization: "Bearer sk-test-123" },
       });
     });
   });
@@ -717,7 +717,7 @@ describe("agent config integration", () => {
       const entry = agent.mcp.buildEntry(apiKeyAuth, "http");
       expect(entry).toEqual({
         url: "https://mcp.context7.com/mcp",
-        headers: { CONTEXT7_API_KEY: "sk-test-123" },
+        headers: { Authorization: "Bearer sk-test-123" },
       });
       expect(entry).not.toHaveProperty("type");
     });
@@ -766,7 +766,7 @@ describe("agent config integration", () => {
       const servers = result.mcpServers as Record<string, unknown>;
       expect(servers.context7).toEqual({
         url: "https://mcp.context7.com/mcp",
-        headers: { CONTEXT7_API_KEY: "sk-test-123" },
+        headers: { Authorization: "Bearer sk-test-123" },
       });
       expect(servers.other).toEqual({ url: "https://other.com" });
     });
@@ -781,7 +781,7 @@ describe("agent config integration", () => {
         type: "remote",
         url: "https://mcp.context7.com/mcp",
         enabled: true,
-        headers: { CONTEXT7_API_KEY: "sk-test-123" },
+        headers: { Authorization: "Bearer sk-test-123" },
       });
     });
 
@@ -817,7 +817,7 @@ describe("agent config integration", () => {
         type: "remote",
         url: "https://mcp.context7.com/mcp",
         enabled: true,
-        headers: { CONTEXT7_API_KEY: "sk-test-123" },
+        headers: { Authorization: "Bearer sk-test-123" },
       });
     });
 
@@ -875,12 +875,12 @@ describe("agent config integration", () => {
   describe("codex", () => {
     const agent = getAgent("codex");
 
-    test("buildEntry with api-key produces correct shape", () => {
+    test("buildEntry with api-key uses an Authorization header", () => {
       const entry = agent.mcp.buildEntry(apiKeyAuth, "http");
       expect(entry).toEqual({
         type: "http",
         url: "https://mcp.context7.com/mcp",
-        headers: { CONTEXT7_API_KEY: "sk-test-123" },
+        headers: { Authorization: "Bearer sk-test-123" },
       });
     });
 
@@ -906,7 +906,7 @@ describe("agent config integration", () => {
       expect(content).toContain('type = "http"');
       expect(content).toContain('url = "https://mcp.context7.com/mcp"');
       expect(content).toContain("[mcp_servers.context7.http_headers]");
-      expect(content).toContain('CONTEXT7_API_KEY = "sk-test-123"');
+      expect(content).toContain('Authorization = "Bearer sk-test-123"');
     });
 
     test("appends oauth entry to TOML without headers", async () => {
@@ -933,7 +933,7 @@ describe("agent config integration", () => {
       expect(content.match(/\[mcp_servers\.context7\]/g)?.length).toBe(1);
       expect(content).toContain('url = "https://mcp.context7.com/mcp"');
       expect(content).not.toContain("mcp/oauth");
-      expect(content).toContain('CONTEXT7_API_KEY = "sk-test-123"');
+      expect(content).toContain('Authorization = "Bearer sk-test-123"');
     });
 
     test("overwrites TOML config preserving other servers", async () => {
@@ -959,7 +959,7 @@ describe("agent config integration", () => {
       const entry = agent.mcp.buildEntry(apiKeyAuth, "http");
       expect(entry).toEqual({
         httpUrl: "https://mcp.context7.com/mcp",
-        headers: { CONTEXT7_API_KEY: "sk-test-123" },
+        headers: { Authorization: "Bearer sk-test-123" },
       });
       expect(entry).not.toHaveProperty("url");
     });
@@ -992,7 +992,7 @@ describe("agent config integration", () => {
       expect(result.theme).toBe("dark");
       expect((result.mcpServers as Record<string, unknown>).context7).toEqual({
         httpUrl: "https://mcp.context7.com/mcp",
-        headers: { CONTEXT7_API_KEY: "sk-test-123" },
+        headers: { Authorization: "Bearer sk-test-123" },
       });
     });
 
@@ -1015,7 +1015,7 @@ describe("agent config integration", () => {
       const result = await readJsonConfig(path);
       expect((result.mcpServers as Record<string, unknown>).context7).toEqual({
         httpUrl: "https://mcp.context7.com/mcp",
-        headers: { CONTEXT7_API_KEY: "sk-test-123" },
+        headers: { Authorization: "Bearer sk-test-123" },
       });
     });
   });
@@ -1047,7 +1047,7 @@ describe("agent config integration", () => {
       const apiEntry = agent.mcp.buildEntry(apiKeyAuth, "http");
       const oauthEntry = agent.mcp.buildEntry(oauthAuth, "http");
 
-      expect(apiEntry.headers).toEqual({ CONTEXT7_API_KEY: "sk-test-123" });
+      expect(apiEntry.headers).toEqual({ Authorization: "Bearer sk-test-123" });
       expect(oauthEntry).not.toHaveProperty("headers");
     });
 

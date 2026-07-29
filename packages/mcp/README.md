@@ -107,7 +107,7 @@ Pasting the following configuration into your Cursor `~/.cursor/mcp.json` file i
     "context7": {
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+        "Authorization": "Bearer YOUR_API_KEY"
       }
     }
   }
@@ -145,7 +145,7 @@ claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp --api-key Y
 #### Claude Code Remote Server Connection
 
 ```sh
-claude mcp add --scope user --header "CONTEXT7_API_KEY: YOUR_API_KEY" --transport http context7 https://mcp.context7.com/mcp
+claude mcp add --scope user --header "Authorization: Bearer YOUR_API_KEY" --transport http context7 https://mcp.context7.com/mcp
 ```
 
 > Remove `--scope user` to install for the current project only.
@@ -166,7 +166,7 @@ amp mcp add context7 https://mcp.context7.com/mcp
 #### With API Key (Higher Rate Limits & Private Repos)
 
 ```sh
-amp mcp add context7 --header "CONTEXT7_API_KEY=YOUR_API_KEY" https://mcp.context7.com/mcp
+amp mcp add context7 --header "Authorization=Bearer YOUR_API_KEY" https://mcp.context7.com/mcp
 ```
 
 </details>
@@ -184,7 +184,7 @@ Add this to your Devin Desktop MCP config file. See [Devin Desktop MCP docs](htt
     "context7": {
       "serverUrl": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+        "Authorization": "Bearer YOUR_API_KEY"
       }
     }
   }
@@ -223,7 +223,7 @@ Add this to your VS Code MCP config file. See [VS Code MCP docs](https://code.vi
       "type": "http",
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+        "Authorization": "Bearer YOUR_API_KEY"
       }
     }
   }
@@ -432,7 +432,7 @@ Add this to your Antigravity MCP config file. See [Antigravity MCP docs](https:/
     "context7": {
       "serverUrl": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+        "Authorization": "Bearer YOUR_API_KEY"
       }
     }
   }
@@ -468,7 +468,7 @@ Add this to your Roo Code MCP configuration file. See [Roo Code MCP docs](https:
       "type": "streamable-http",
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+        "Authorization": "Bearer YOUR_API_KEY"
       }
     }
   }
@@ -504,7 +504,7 @@ See [Gemini CLI Configuration](https://google-gemini.github.io/gemini-cli/docs/t
     "context7": {
       "httpUrl": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY",
+        "Authorization": "Bearer YOUR_API_KEY",
         "Accept": "application/json, text/event-stream"
       }
     }
@@ -543,7 +543,7 @@ See [Qwen Coder MCP Configuration](https://qwenlm.github.io/qwen-code-docs/en/to
     "context7": {
       "httpUrl": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY",
+        "Authorization": "Bearer YOUR_API_KEY",
         "Accept": "application/json, text/event-stream"
       }
     }
@@ -605,7 +605,7 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
     "type": "remote",
     "url": "https://mcp.context7.com/mcp",
     "headers": {
-      "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      "Authorization": "Bearer YOUR_API_KEY"
     },
     "enabled": true
   }
@@ -649,7 +649,7 @@ startup_timeout_ms = 20_000
 ```toml
 [mcp_servers.context7]
 url = "https://mcp.context7.com/mcp"
-http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
+http_headers = { "Authorization" = "Bearer YOUR_API_KEY" }
 ```
 
 > Optional troubleshooting — only if you see startup "request timed out" or "not found program". Most users can ignore this.
@@ -742,7 +742,7 @@ To use an API key in Kiro, add:
 
 ```json
 "headers": {
-  "CONTEXT7_API_KEY": "YOUR_API_KEY"
+  "Authorization": "Bearer YOUR_API_KEY"
 }
 ```
 
@@ -1015,7 +1015,7 @@ Add the following configuration to the `mcp` section of your Copilot Coding Agen
       "type": "http",
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+        "Authorization": "Bearer YOUR_API_KEY"
       },
       "tools": ["get-library-docs", "resolve-library-id"]
     }
@@ -1040,7 +1040,7 @@ For more information, see the [official GitHub documentation](https://docs.githu
       "type": "http",
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+        "Authorization": "Bearer YOUR_API_KEY"
       },
       "tools": ["get-library-docs", "resolve-library-id"]
     }
@@ -1112,7 +1112,7 @@ Add this to your Visual Studio MCP config file (see the [Visual Studio docs](htt
       "type": "http",
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+        "Authorization": "Bearer YOUR_API_KEY"
       }
     }
   }
@@ -1154,7 +1154,7 @@ Add this to your Crush configuration file. See [Crush MCP docs](https://github.c
       "type": "http",
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+        "Authorization": "Bearer YOUR_API_KEY"
       }
     }
   }
@@ -1327,7 +1327,7 @@ Factory's droid supports MCP servers through its CLI. See [Factory MCP docs](htt
 Run this command in your terminal:
 
 ```sh
-droid mcp add context7 https://mcp.context7.com/mcp --type http --header "CONTEXT7_API_KEY: YOUR_API_KEY"
+droid mcp add context7 https://mcp.context7.com/mcp --type http --header "Authorization: Bearer YOUR_API_KEY"
 ```
 
 Or without an API key (basic usage with rate limits):

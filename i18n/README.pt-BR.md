@@ -371,7 +371,7 @@ command = "npx"
 ```toml
 [mcp_servers.context7]
 url = "https://mcp.context7.com/mcp"
-http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
+http_headers = { "Authorization" = "Bearer YOUR_API_KEY" }
 ```
 </details>
 
@@ -626,7 +626,7 @@ Para mais informações, veja a [documentação oficial do GitHub](https://docs.
       "type": "http",
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+        "Authorization": "Bearer YOUR_API_KEY"
       },
       "tools": ["query-docs", "resolve-library-id"]
     }
