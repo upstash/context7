@@ -3,6 +3,45 @@ title: "Changelog"
 description: "Release notes for the Context7 On-Premise image."
 ---
 
+<Update label="2026-07-24" description="v1.3.0">
+
+### Added
+
+- Added library access control: restrict which libraries each user can query over the MCP server and the REST API, scoped to their single sign-on groups or to individual users, with a workspace-wide allow-by-default or restrict-by-default posture.
+- Added namespace access rules that govern every library under a path, with rules on an individual library taking precedence over the longest matching namespace.
+- Added an access audit log that records access-rule changes and blocked access attempts.
+- Added support for running the on-premise image as multiple replicas behind a load balancer, backed by a shared PostgreSQL database and a shared vector store.
+
+### Changed
+
+- Improved reranking for queries with several requirements, and reduced duplicate snippets in responses.
+
+</Update>
+
+<Update label="2026-07-22" description="v1.2.6">
+
+### Added
+
+- Added the option to create a Confluence source by pasting page URLs, optionally including their sub-pages, instead of browsing the page tree of an entire space.
+
+</Update>
+
+<Update label="2026-07-22" description="v1.2.5">
+
+### Added
+
+- Added the option to configure the Other Git SSH deploy key and its known hosts from the dashboard, instead of mounting a key into the container.
+
+</Update>
+
+<Update label="2026-07-22" description="v1.2.4">
+
+### Added
+
+- Added an Other Git integration for ingesting private repositories from self-managed Git hosts such as Gerrit, Gitea, and self-hosted Bitbucket, over HTTPS with stored credentials or over SSH with a deploy key.
+
+</Update>
+
 <Update label="2026-07-10" description="v1.2.3">
 
 ### Added
