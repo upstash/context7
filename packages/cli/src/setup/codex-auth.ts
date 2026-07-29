@@ -1,72 +1,59 @@
+/**
+ * Codex resolves a server's auth mode from `bearer_token_env_var` or a header
+ * literally named `Authorization` (`auth_status_before_discovery` in
+ * codex-rs/rmcp-client/src/auth_status.rs, mirrored in `create_transport` in
+ * rmcp_client.rs). Anything else falls through to an OAuth credential stored
+ * against the same server name and URL, which Codex then refreshes at startup.
+ * A dead refresh token fails the server before the API key is ever sent, and
+ * rewriting config.toml cannot help because the credential lives elsewhere.
+ *
+ * Writing `Authorization` avoids that, but the credential stays in the store,
+ * so setup points the user at the command that removes it.
+ */
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
-const CODEX_PROBE_TIMEOUT_MS = 5000;
+const PROBE_TIMEOUT_MS = 1500;
 
 /**
- * Auth modes Codex reports for a configured MCP server. Mirrors
- * `McpAuthStatus` in codex-rs/protocol/src/protocol.rs, which serializes
- * snake_case.
+ * True when Codex reports it holds a usable OAuth credential for `serverName`.
+ *
+ * `codex mcp get --json` reports one of unsupported, not_logged_in,
+ * bearer_token, or oauth. Only `oauth` proves a credential exists:
+ * not_logged_in also covers "no credential, server merely advertises OAuth",
+ * which is the normal state for anyone who never logged in.
  */
-export type CodexAuthStatus = "unsupported" | "not_logged_in" | "bearer_token" | "oauth";
-
-const KNOWN_STATUSES: readonly string[] = [
-  "unsupported",
-  "not_logged_in",
-  "bearer_token",
-  "oauth",
-] satisfies readonly CodexAuthStatus[];
-
-export function parseCodexAuthStatus(stdout: string): CodexAuthStatus | undefined {
+export function reportsStoredOAuthCredential(stdout: string): boolean {
   try {
     const parsed: unknown = JSON.parse(stdout);
-    if (!parsed || typeof parsed !== "object") return undefined;
-    const status = (parsed as { auth_status?: unknown }).auth_status;
-    return typeof status === "string" && KNOWN_STATUSES.includes(status)
-      ? (status as CodexAuthStatus)
-      : undefined;
+    return (parsed as { auth_status?: unknown } | null)?.auth_status === "oauth";
   } catch {
-    return undefined;
+    return false;
   }
 }
 
 /**
- * Asks Codex what auth mode it currently resolves for `serverName`.
+ * Warns that Codex is holding an OAuth credential that now goes unused, and
+ * names the command that clears it.
  *
- * Best-effort only: returns undefined when Codex is not installed, the server
- * is not configured yet, or the probe fails for any other reason. Setup must
- * never fail because this could not run.
+ * Best-effort: returns undefined when Codex is absent, the server is not
+ * configured there, or the probe fails. Setup must not depend on this running.
  */
-export async function readCodexAuthStatus(
-  serverName: string
-): Promise<CodexAuthStatus | undefined> {
+export async function codexStaleOAuthNote(serverName: string): Promise<string | undefined> {
+  let stdout: string;
   try {
-    const { stdout } = await execFileAsync("codex", ["mcp", "get", serverName, "--json"], {
-      timeout: CODEX_PROBE_TIMEOUT_MS,
+    ({ stdout } = await execFileAsync("codex", ["mcp", "get", serverName, "--json"], {
+      timeout: PROBE_TIMEOUT_MS,
+      killSignal: "SIGKILL",
       encoding: "utf-8",
-    });
-    return parseCodexAuthStatus(stdout);
+    }));
   } catch {
     return undefined;
   }
-}
 
-/**
- * True when Codex is holding an OAuth credential for a server we are about to
- * configure with an API key.
- *
- * Codex keys stored OAuth credentials by server name + URL and ignores custom
- * header names when deciding whether a server is an OAuth server, so a stale
- * credential can shadow the API key and fail startup on a dead refresh token.
- * Writing an `Authorization` header stops Codex reading that credential, but it
- * stays in the credential store until the user clears it.
- */
-export function hasStaleOAuthCredential(status: CodexAuthStatus | undefined): boolean {
-  return status === "oauth" || status === "not_logged_in";
-}
+  if (!reportsStoredOAuthCredential(stdout)) return undefined;
 
-export function staleOAuthCredentialHint(serverName: string): string {
   return `Codex has a stored OAuth credential for "${serverName}". It is no longer used, but you can clear it with: codex mcp logout ${serverName}`;
 }

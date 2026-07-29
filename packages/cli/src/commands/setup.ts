@@ -24,11 +24,7 @@ import {
   detectAgents,
 } from "../setup/agents.js";
 import { customizeSkillFilesForAgent, getRuleContent } from "../setup/templates.js";
-import {
-  readCodexAuthStatus,
-  hasStaleOAuthCredential,
-  staleOAuthCredentialHint,
-} from "../setup/codex-auth.js";
+import { codexStaleOAuthNote } from "../setup/codex-auth.js";
 import {
   readJsonConfig,
   mergeServerEntry,
@@ -36,6 +32,7 @@ import {
   resolveMcpPath,
   appendTomlServer,
   readTomlServerEntry,
+  readTomlServerExists,
   isStdioContext7Entry,
   patchStdioApiKey,
   getJsonServerEntry,
@@ -308,7 +305,7 @@ async function setupAgent(
   rulePath: string;
   skillStatus: string;
   skillPath: string;
-  notes: string[];
+  note?: string;
 }> {
   const agent = getAgent(agentName);
 
@@ -318,14 +315,16 @@ async function setupAgent(
       : agent.mcp.projectPaths.map((p) => join(process.cwd(), p));
   const mcpPath = await resolveMcpPath(mcpCandidates);
 
-  // Probe before writing: once the Authorization header lands, Codex reports
-  // bearer_token and the stale credential becomes invisible.
-  const notes: string[] = [];
-  if (agentName === "codex" && auth.mode === "api-key" && transport === "http") {
-    const status = await readCodexAuthStatus("context7");
-    if (hasStaleOAuthCredential(status)) {
-      notes.push(staleOAuthCredentialHint("context7"));
-    }
+  // Must run before the write: once the Authorization header lands, Codex
+  // reports bearer_token and stops reporting the credential at all.
+  let note: string | undefined;
+  if (
+    agentName === "codex" &&
+    auth.mode === "api-key" &&
+    transport === "http" &&
+    (await readTomlServerExists(mcpPath, "context7"))
+  ) {
+    note = await codexStaleOAuthNote("context7");
   }
 
   let mcpStatus: string;
@@ -397,7 +396,7 @@ async function setupAgent(
     rulePath,
     skillStatus,
     skillPath,
-    notes,
+    note,
   };
 }
 
@@ -454,8 +453,8 @@ async function setupMcp(agents: SetupAgent[], options: SetupOptions, scope: Scop
     log.plain(`    ${ruleIcon} Rule ${r.ruleStatus}`);
     log.plain(`      ${pc.dim(r.rulePath)}`);
     logSkillStatus(r.skillStatus, r.skillPath);
-    for (const note of r.notes) {
-      log.plain(`    ${pc.yellow("!")} ${note}`);
+    if (r.note) {
+      log.plain(`      ${pc.yellow("tip:")} ${r.note}`);
     }
   }
   log.blank();

@@ -1047,10 +1047,6 @@ describe("agent config integration", () => {
       const apiEntry = agent.mcp.buildEntry(apiKeyAuth, "http");
       const oauthEntry = agent.mcp.buildEntry(oauthAuth, "http");
 
-      // Every agent gets the standard header name. Clients that infer an auth
-      // mode from headers (Codex) otherwise let a stored OAuth credential shadow
-      // the API key. The server still accepts the legacy CONTEXT7_API_KEY header
-      // so existing configs keep working.
       expect(apiEntry.headers).toEqual({ Authorization: "Bearer sk-test-123" });
       expect(oauthEntry).not.toHaveProperty("headers");
     });

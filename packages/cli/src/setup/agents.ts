@@ -86,23 +86,12 @@ function mcpUrl(auth: AuthOptions): string {
 /**
  * Attaches the API key as a standard `Authorization: Bearer` header.
  *
- * The hosted MCP endpoint accepts either this or the legacy `CONTEXT7_API_KEY`
- * header, so existing configs keep working; new configs use the standard one.
+ * The name must stay `Authorization`: clients that infer an auth mode from
+ * header names treat a custom name as "no credential configured" and reach for
+ * stored OAuth instead. See `codexStaleOAuthNote` in ./codex-auth.ts.
  *
- * The standard name matters to clients that infer an auth mode from the headers
- * they were given. Codex decides whether a server authenticates via OAuth by
- * checking only for `bearer_token_env_var` or a header literally named
- * `Authorization` (`auth_status_before_discovery` in
- * codex-rs/rmcp-client/src/auth_status.rs, mirrored in `create_transport` in
- * rmcp_client.rs). A custom header name matches neither, so Codex falls through
- * to any OAuth credential stored for the same server name + URL and refreshes it
- * during startup. If that refresh token is dead the server fails to start and
- * the configured API key is never sent, since the only non-fatal fallback there
- * is AuthError::NoAuthorizationSupport. `Authorization` takes the short-circuit
- * branch so the API key always wins.
- *
- * Only ever called with a non-empty key: the server rejects an empty bearer
- * outright, whereas a missing header falls back to anonymous access.
+ * Guarded on a non-empty key because the server rejects an empty bearer, while
+ * omitting the header falls back to anonymous access.
  */
 function withHeaders(base: Record<string, unknown>, auth: AuthOptions): Record<string, unknown> {
   if (auth.mode === "api-key" && auth.apiKey) {
