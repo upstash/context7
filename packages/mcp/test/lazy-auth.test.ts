@@ -179,14 +179,114 @@ describe("evaluateLazyAuth — anonymous quota", () => {
 });
 
 describe("buildWwwAuthenticate", () => {
+  const base = "https://mcp.context7.com";
+
   test("includes resource_metadata and scope, and error when challenging", async () => {
     const { buildWwwAuthenticate } = await loadModule(BASE_ENV);
-    const base = "https://mcp.context7.com";
     expect(buildWwwAuthenticate(base)).toBe(
       `Bearer resource_metadata="${base}/.well-known/oauth-protected-resource", scope="profile email"`
     );
     expect(buildWwwAuthenticate(base, "invalid_token")).toBe(
       `Bearer error="invalid_token", resource_metadata="${base}/.well-known/oauth-protected-resource", scope="profile email"`
     );
+  });
+
+  test("carries error_description, which ChatGPT needs to recognise an auth failure", async () => {
+    const { buildWwwAuthenticate } = await loadModule(BASE_ENV);
+    expect(buildWwwAuthenticate(base, "invalid_token", "Please sign in")).toBe(
+      `Bearer error="invalid_token", error_description="Please sign in", ` +
+        `resource_metadata="${base}/.well-known/oauth-protected-resource", scope="profile email"`
+    );
+  });
+
+  test("strips quotes and newlines that would break header parsing", async () => {
+    const { buildWwwAuthenticate } = await loadModule(BASE_ENV);
+    const header = buildWwwAuthenticate(base, "invalid_token", 'say "hi"\nthen  bye');
+    expect(header).toContain('error_description="say hi then bye"');
+  });
+
+  test("omits error_description when there is no error to describe", async () => {
+    const { buildWwwAuthenticate } = await loadModule(BASE_ENV);
+    expect(buildWwwAuthenticate(base, undefined, "ignored")).not.toContain("error_description");
+  });
+});
+
+describe("challengeTransportFor", () => {
+  test("defaults to the spec-compliant 401 for unknown and missing clients", async () => {
+    const { challengeTransportFor } = await loadModule(BASE_ENV);
+    expect(challengeTransportFor(undefined)).toBe("http-401");
+    expect(challengeTransportFor("claude-code/2.1.0")).toBe("http-401");
+    expect(challengeTransportFor("node")).toBe("http-401");
+    expect(challengeTransportFor("Visual Studio Code/1.108.0")).toBe("http-401");
+    expect(challengeTransportFor("Cursor/1.9.2")).toBe("http-401");
+  });
+
+  test("selects the tool-result form for OpenAI clients, case-insensitively", async () => {
+    const { challengeTransportFor } = await loadModule(BASE_ENV);
+    expect(challengeTransportFor("openai-mcp/1.0")).toBe("tool-result");
+    expect(challengeTransportFor("ChatGPT/1.2025.0")).toBe("tool-result");
+    expect(challengeTransportFor("codex_cli_rs/0.104.0")).toBe("tool-result");
+  });
+
+  test("the client list is overridable for clients that change their UA", async () => {
+    const { challengeTransportFor } = await loadModule({
+      ...BASE_ENV,
+      CONTEXT7_TOOL_RESULT_CHALLENGE_CLIENTS: "some-new-client",
+    });
+    expect(challengeTransportFor("some-new-client/1.0")).toBe("tool-result");
+    expect(challengeTransportFor("codex_cli_rs/0.104.0")).toBe("http-401");
+  });
+});
+
+describe("challenge bodies", () => {
+  const base = "https://mcp.context7.com";
+  const challenge = {
+    status: 401 as const,
+    error: "invalid_token" as const,
+    message: "Anonymous usage limit reached.",
+    id: 7,
+  };
+
+  test("http form is a JSON-RPC error echoing the request id", async () => {
+    const { buildHttpChallenge } = await loadModule(BASE_ENV);
+    expect(buildHttpChallenge(challenge)).toEqual({
+      jsonrpc: "2.0",
+      error: { code: -32001, message: "Anonymous usage limit reached." },
+      id: 7,
+    });
+  });
+
+  test("http form sends a null id when the request had none", async () => {
+    const { buildHttpChallenge } = await loadModule(BASE_ENV);
+    expect(buildHttpChallenge({ ...challenge, id: null }).id).toBeNull();
+  });
+
+  test("tool-result form is a failed tool call carrying the challenge in _meta", async () => {
+    const { buildToolResultChallenge } = await loadModule(BASE_ENV);
+    const body = buildToolResultChallenge(challenge, base);
+    expect(body.id).toBe(7);
+    expect(body.result.isError).toBe(true);
+    expect(body.result.content).toEqual([{ type: "text", text: challenge.message }]);
+    const header = body.result._meta["mcp/www_authenticate"][0];
+    expect(header).toContain('error="invalid_token"');
+    expect(header).toContain(`error_description="${challenge.message}"`);
+    expect(header).toContain(`resource_metadata="${base}/.well-known/oauth-protected-resource"`);
+  });
+});
+
+describe("securitySchemesFor", () => {
+  test("public tools advertise mixed auth so clients can call them anonymously", async () => {
+    const { securitySchemesFor } = await loadModule(BASE_ENV);
+    expect(securitySchemesFor("query-docs")).toEqual([
+      { type: "noauth" },
+      { type: "oauth2", scopes: ["profile", "email"] },
+    ]);
+  });
+
+  test("protected tools advertise oauth2 only", async () => {
+    const { securitySchemesFor } = await loadModule({ CONTEXT7_PROTECTED_TOOLS: "secret-tool" });
+    expect(securitySchemesFor("secret-tool")).toEqual([
+      { type: "oauth2", scopes: ["profile", "email"] },
+    ]);
   });
 });

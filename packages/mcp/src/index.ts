@@ -26,9 +26,16 @@ import {
   AUTH_SERVER_URL,
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
-import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { getClientIp } from "./lib/client-ip.js";
-import { resolveAuthState, evaluateLazyAuth, buildWwwAuthenticate } from "./lib/auth/lazy-auth.js";
+import {
+  resolveAuthState,
+  evaluateLazyAuth,
+  buildWwwAuthenticate,
+  buildHttpChallenge,
+  buildToolResultChallenge,
+  challengeTransportFor,
+} from "./lib/auth/lazy-auth.js";
+import { advertiseToolSecuritySchemes } from "./lib/auth/tool-security.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -194,7 +201,6 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
 
       if (!searchResponse.results || searchResponse.results.length === 0) {
         const text = searchResponse.error ?? "No libraries found matching the provided name.";
-        maybeElicitAuthSignIn(server, ctx);
         return {
           content: [
             {
@@ -207,7 +213,6 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
 
       const resultsText = formatSearchResults(searchResponse);
       const responseText = `Available Libraries:\n\n${resultsText}`;
-      maybeElicitAuthSignIn(server, ctx);
       return {
         content: [
           {
@@ -250,7 +255,6 @@ Do not call this tool more than 3 times per question.`,
     async ({ query, libraryId }: { query: string; libraryId: string }) => {
       const ctx = getClientContext();
       const response = await fetchLibraryContext({ query, libraryId }, ctx);
-      maybeElicitAuthSignIn(server, ctx);
       return {
         content: [
           {
@@ -261,6 +265,8 @@ Do not call this tool more than 3 times per question.`,
       };
     }
   );
+
+  advertiseToolSecuritySchemes(server);
 
   server.server.registerCapabilities({ prompts: {}, resources: {} });
   server.server.setRequestHandler(ListPromptsRequestSchema, async () => ({ prompts: [] }));
@@ -408,13 +414,11 @@ async function main() {
         if (mode === "required") {
           // Eager auth: challenge on every request, including initialize/tools/list.
           if (!apiKey) {
-            res.set("WWW-Authenticate", buildWwwAuthenticate(baseUrl, "invalid_token"));
+            const message = "Authentication required. Please authenticate to use this MCP server.";
+            res.set("WWW-Authenticate", buildWwwAuthenticate(baseUrl, "invalid_token", message));
             return res.status(401).json({
               jsonrpc: "2.0",
-              error: {
-                code: -32001,
-                message: "Authentication required. Please authenticate to use this MCP server.",
-              },
+              error: { code: -32001, message },
               id: null,
             });
           }
@@ -422,13 +426,11 @@ async function main() {
           if (isJWT(apiKey)) {
             const validationResult = await validateJWT(apiKey);
             if (!validationResult.valid) {
-              res.set("WWW-Authenticate", buildWwwAuthenticate(baseUrl, "invalid_token"));
+              const message = validationResult.error || "Invalid token. Please re-authenticate.";
+              res.set("WWW-Authenticate", buildWwwAuthenticate(baseUrl, "invalid_token", message));
               return res.status(401).json({
                 jsonrpc: "2.0",
-                error: {
-                  code: -32001,
-                  message: validationResult.error || "Invalid token. Please re-authenticate.",
-                },
+                error: { code: -32001, message },
                 id: null,
               });
             }
@@ -445,12 +447,22 @@ async function main() {
             sessionId: extractHeaderValue(req.headers["mcp-session-id"]),
           });
           if (challenge) {
-            res.set("WWW-Authenticate", buildWwwAuthenticate(baseUrl, challenge.error));
-            return res.status(challenge.status).json({
-              jsonrpc: "2.0",
-              error: { code: -32001, message: challenge.message },
-              id: challenge.id ?? null,
-            });
+            res.set(
+              "WWW-Authenticate",
+              buildWwwAuthenticate(baseUrl, challenge.error, challenge.message)
+            );
+            // ChatGPT and Codex only raise their link-account UI for a
+            // challenge carried in the tool result; everyone else needs the
+            // transport-level 401. Same challenge string either way.
+            // A batch would need one result per message to stay well-formed;
+            // the 401 refuses the whole request, which is correct either way.
+            const challengeTransport = Array.isArray(req.body)
+              ? "http-401"
+              : challengeTransportFor(extractHeaderValue(req.headers["user-agent"]));
+            if (challengeTransport === "tool-result") {
+              return res.status(200).json(buildToolResultChallenge(challenge, baseUrl));
+            }
+            return res.status(challenge.status).json(buildHttpChallenge(challenge));
           }
         }
 
@@ -559,17 +571,23 @@ async function main() {
 
     // OAuth 2.0 Protected Resource Metadata (RFC 9728)
     // Used by MCP clients to discover the authorization server
-    app.get(
-      "/.well-known/oauth-protected-resource",
-      (_req: express.Request, res: express.Response) => {
-        res.json({
-          resource: RESOURCE_URL,
-          authorization_servers: [AUTH_SERVER_URL],
-          scopes_supported: ["profile", "email"],
-          bearer_methods_supported: ["header"],
-        });
-      }
-    );
+    const protectedResourceMetadata = (_req: express.Request, res: express.Response) => {
+      res.json({
+        resource: RESOURCE_URL,
+        authorization_servers: [AUTH_SERVER_URL],
+        scopes_supported: ["profile", "email"],
+        bearer_methods_supported: ["header"],
+        resource_documentation: `${AUTH_SERVER_URL}/docs/howto/oauth`,
+      });
+    };
+
+    app.get("/.well-known/oauth-protected-resource", protectedResourceMetadata);
+
+    // Path-suffixed variants (RFC 9728 section 3.1). Clients connecting to
+    // /mcp or /mcp/oauth try these before falling back to the root document,
+    // so serving them avoids a 404 round-trip on every OAuth discovery.
+    app.get("/.well-known/oauth-protected-resource/mcp", protectedResourceMetadata);
+    app.get("/.well-known/oauth-protected-resource/mcp/oauth", protectedResourceMetadata);
 
     app.get(
       "/.well-known/oauth-authorization-server",

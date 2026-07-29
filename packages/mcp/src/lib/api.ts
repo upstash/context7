@@ -94,12 +94,6 @@ if (PROXY_URL && !PROXY_URL.startsWith("$") && /^(http|https):\/\//i.test(PROXY_
   }
 }
 
-function readPromptSignal(response: Response, context: ClientContext): void {
-  if (response.headers.get("X-Context7-Auth-Prompt") === "1") {
-    context.shouldPrompt = true;
-  }
-}
-
 /**
  * Searches for libraries matching the given query
  * @param query The user's question or task (used for LLM relevance ranking)
@@ -120,7 +114,6 @@ export async function searchLibraries(
     const headers = generateHeaders(context);
 
     const response = await fetch(url, { headers });
-    readPromptSignal(response, context);
     if (!response.ok) {
       const errorMessage = await parseErrorResponse(response, context.apiKey);
       console.error(errorMessage);
@@ -153,7 +146,6 @@ export async function fetchLibraryContext(
     const headers = generateHeaders(context);
 
     const response = await fetch(url, { headers });
-    readPromptSignal(response, context);
     if (!response.ok) {
       const errorMessage = await parseErrorResponse(response, context.apiKey);
       console.error(errorMessage);

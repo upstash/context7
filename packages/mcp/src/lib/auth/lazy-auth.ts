@@ -5,9 +5,8 @@ import { isJWT, validateJWT } from "../jwt.js";
  * Lazy ("mixed") authentication for the public `/mcp` endpoint.
  *
  * Anonymous clients can connect, run `initialize`, list tools, and call public
- * tools. The server only challenges — with an HTTP 401 carrying a
- * `WWW-Authenticate` header — when an unauthenticated caller crosses one of two
- * lines:
+ * tools. The server only challenges when an unauthenticated caller crosses one
+ * of two lines:
  *   1. it calls a tool listed in {@link PROTECTED_TOOLS}, or
  *   2. it exhausts the anonymous free-call allowance ({@link ANON_FREE_CALLS}).
  *
@@ -15,6 +14,20 @@ import { isJWT, validateJWT } from "../jwt.js";
  * the StreamableHTTP transport streams a 200 and flushes headers as soon as it
  * starts handling a request, so a tool-level error can no longer become a 401
  * and the client never sees the auth challenge. See {@link evaluateLazyAuth}.
+ *
+ * The challenge is delivered in one of two shapes, because the two client
+ * families disagree on what an auth challenge looks like — see
+ * {@link challengeTransportFor}:
+ *
+ *   - `http-401` (default): HTTP 401 + `WWW-Authenticate`, per the MCP
+ *     authorization spec. Claude, VS Code, Cursor, Cline, Zed and every other
+ *     spec-compliant client pause the call, run OAuth, and retry.
+ *   - `tool-result`: HTTP 200 wrapping a `CallToolResult` with `isError: true`
+ *     and the challenge under `_meta["mcp/www_authenticate"]`. This is what
+ *     ChatGPT and Codex read; a bare 401 does not raise their link-account UI.
+ *
+ * Both shapes carry the same RFC 6750 challenge string, so a client that
+ * understands either one gets the same discovery chain.
  */
 
 const PROTECTED_TOOLS_ENV = (process.env.CONTEXT7_PROTECTED_TOOLS ?? "")
@@ -48,6 +61,32 @@ const ANON_QUOTA_PREFIX = "#mcp#anon-quota#";
 
 /** Scope advertised in the challenge; mirrors PRM `scopes_supported`. */
 const CHALLENGE_SCOPE = "profile email";
+
+/** Scopes advertised per tool in `tools/list`; mirrors {@link CHALLENGE_SCOPE}. */
+const TOOL_SCOPES = CHALLENGE_SCOPE.split(" ");
+
+/**
+ * Per-tool authentication requirements advertised on the `tools/list` wire
+ * format. OpenAI clients read this to decide whether a tool can run before the
+ * user has linked an account: `noauth` alone runs immediately, `oauth2` alone
+ * forces linking first, and both together mean "runs anonymously, links when
+ * the server asks" — which is exactly the lazy-auth contract.
+ *
+ * Clients that don't know the field ignore it, so it is safe to send to
+ * everyone.
+ */
+export type SecurityScheme = { type: "noauth" } | { type: "oauth2"; scopes: string[] };
+
+/**
+ * Security schemes for `toolName`: protected tools require OAuth up front,
+ * every other tool advertises mixed auth.
+ */
+export function securitySchemesFor(toolName: string): SecurityScheme[] {
+  if (PROTECTED_TOOLS.has(toolName)) {
+    return [{ type: "oauth2", scopes: TOOL_SCOPES }];
+  }
+  return [{ type: "noauth" }, { type: "oauth2", scopes: TOOL_SCOPES }];
+}
 
 export interface AuthState {
   /** A credential was presented and accepted (opaque key present, or JWT valid). */
@@ -127,6 +166,65 @@ export interface Challenge {
   id: unknown;
 }
 
+/** How the challenge must be delivered for the calling client to act on it. */
+export type ChallengeTransport = "http-401" | "tool-result";
+
+/**
+ * User-Agent fragments identifying clients that surface an auth prompt from a
+ * `CallToolResult` rather than from an HTTP 401. Override with a
+ * comma-separated `CONTEXT7_TOOL_RESULT_CHALLENGE_CLIENTS` if a client changes
+ * its UA or a new one needs the same treatment.
+ */
+const TOOL_RESULT_CHALLENGE_CLIENTS = (
+  process.env.CONTEXT7_TOOL_RESULT_CHALLENGE_CLIENTS ?? "openai-mcp,chatgpt,codex"
+)
+  .split(",")
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
+
+/**
+ * Pick the challenge shape for a caller. Defaults to the spec-compliant HTTP
+ * 401 and only opts a client into the `_meta` form when its User-Agent says it
+ * needs it — an unrecognised client is far better served by the standard.
+ */
+export function challengeTransportFor(userAgent: string | undefined): ChallengeTransport {
+  if (!userAgent) return "http-401";
+  const ua = userAgent.toLowerCase();
+  return TOOL_RESULT_CHALLENGE_CLIENTS.some((marker) => ua.includes(marker))
+    ? "tool-result"
+    : "http-401";
+}
+
+/**
+ * JSON-RPC body for a `tool-result` challenge: a successful HTTP response
+ * carrying a failed tool call, with the RFC 6750 challenge in
+ * `_meta["mcp/www_authenticate"]`. `error_description` is required here — the
+ * OpenAI clients use its presence to decide the failure is an auth problem
+ * rather than a tool bug.
+ */
+export function buildToolResultChallenge(challenge: Challenge, baseUrl: string) {
+  return {
+    jsonrpc: "2.0" as const,
+    id: challenge.id ?? null,
+    result: {
+      isError: true,
+      content: [{ type: "text" as const, text: challenge.message }],
+      _meta: {
+        "mcp/www_authenticate": [buildWwwAuthenticate(baseUrl, challenge.error, challenge.message)],
+      },
+    },
+  };
+}
+
+/** JSON-RPC body for an `http-401` challenge, sent with `challenge.status`. */
+export function buildHttpChallenge(challenge: Challenge) {
+  return {
+    jsonrpc: "2.0" as const,
+    error: { code: -32001, message: challenge.message },
+    id: challenge.id ?? null,
+  };
+}
+
 export interface LazyAuthDecision {
   challenge?: Challenge;
 }
@@ -173,14 +271,27 @@ export async function evaluateLazyAuth(opts: {
   return {};
 }
 
+/** Strip the quoting characters RFC 6750 does not allow inside a quoted value. */
+function sanitizeAuthParam(value: string): string {
+  return value.replace(/[\\"]/g, "").replace(/\s+/g, " ").trim();
+}
+
 /**
  * Build the RFC 6750 `WWW-Authenticate` value, pointing clients at the Protected
  * Resource Metadata document for OAuth discovery. Pass an `error` on a challenge
  * response; omit it on ordinary responses where the header is purely advisory.
+ *
+ * `scope` tells the client which scopes to request, so it doesn't fall back to
+ * asking for everything in `scopes_supported`.
  */
-export function buildWwwAuthenticate(baseUrl: string, error?: Challenge["error"]): string {
+export function buildWwwAuthenticate(
+  baseUrl: string,
+  error?: Challenge["error"],
+  description?: string
+): string {
   const parts = [
     error ? `error="${error}"` : null,
+    error && description ? `error_description="${sanitizeAuthParam(description)}"` : null,
     `resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`,
     `scope="${CHALLENGE_SCOPE}"`,
   ].filter(Boolean);
