@@ -33,6 +33,14 @@ The embedded LanceDB index is local to one container, so it cannot back multiple
 
 With `auto`, setting `DATABASE_URL` to a Postgres connection (the multi-replica setup) automatically stores vectors in pgvector in that same database. You only set `VECTOR_STORE` explicitly to override that, for example to keep vectors in Milvus while the relational data lives in Postgres.
 
+### Postgres without pgvector
+
+You can run the relational store on an external PostgreSQL and keep embeddings in the embedded index by setting `VECTOR_STORE=lancedb` alongside `DATABASE_URL`. Because only the pgvector backend creates the extension, a database used purely for relational data does not need `pgvector`, and the application user needs no more than normal table privileges.
+
+<Note>
+The embedded index is local to one container, so this pairing suits a single-container deployment that wants its configuration and metadata in a managed database. For multiple replicas, vectors must go to a shared store: pgvector or Milvus.
+</Note>
+
 Whatever the store, the collection or table is created on first write, the vector dimension is taken from your embedding model, and search uses an HNSW index with cosine similarity. There is no manual schema setup, and switching embedding models is a re-index rather than a migration.
 
 ## pgvector
