@@ -23,16 +23,21 @@ Get your API key at [context7.com/dashboard](https://context7.com/dashboard). Le
 | [Refresh Library](/api-reference/refresh/refresh-a-library) | `POST /api/v1/refresh` | Refresh a library's documentation |
 | [Get Policies](/api-reference/policies/get-teamspace-policies) | `GET /api/v2/policies` | Retrieve teamspace policy configuration |
 | [Update Policies](/api-reference/policies/update-teamspace-policies) | `PATCH /api/v2/policies` | Update teamspace policies |
-| [Add Library](/api-reference/add-library/add-a-github-repository) | `POST /api/v2/add/repo/{provider}` | Submit a repository for processing |
+| [Get Metrics](/api-reference/metrics/get-library-usage-metrics) | `GET /api/v2/libs/metrics` | Retrieve usage metrics for libraries |
+| [Add GitHub Repo](/api-reference/add-library/add-a-github-repository) | `POST /api/v2/add/repo/github` | Submit a GitHub repository for processing |
+| [Add GitLab Repo](/api-reference/add-library/add-a-gitlab-repository) | `POST /api/v2/add/repo/gitlab` | Submit a GitLab repository for processing |
+| [Add Bitbucket Repo](/api-reference/add-library/add-a-bitbucket-repository) | `POST /api/v2/add/repo/bitbucket` | Submit a Bitbucket repository for processing |
+| [Add Other Git Repo](/api-reference/add-library/add-from-other-git-providers) | `POST /api/v2/add/repo/git` | Submit a repository from any other Git provider |
 | [Add OpenAPI](/api-reference/add-library/add-an-openapi-specification-by-url) | `POST /api/v2/add/openapi` | Submit an OpenAPI spec |
 | [Upload OpenAPI](/api-reference/add-library/upload-an-openapi-specification-file) | `POST /api/v2/add/openapi-upload` | Upload an OpenAPI spec file |
 | [Add LLMs.txt](/api-reference/add-library/add-an-llmstxt-file) | `POST /api/v2/add/llmstxt` | Submit an llms.txt file |
 | [Add Website](/api-reference/add-library/add-a-website) | `POST /api/v2/add/website` | Submit a website for crawling |
 | [Add Confluence](/api-reference/add-library/add-a-confluence-space) | `POST /api/v2/add/confluence` | Submit a Confluence space |
+| [Add Notion](/api-reference/add-library/add-notion-pages) | `POST /api/v2/add/notion` | Submit Notion pages |
 
 ## Library ID format
 
-A **library ID** is the URL path of the library on context7.com. If the library page is at `https://context7.com/websites/uploadcare_com`, its ID is `/websites/uploadcare_com`. The same ID works for every endpoint that accepts a `libraryId` or `libraryName` — including [Get Context](/api-reference/context/get-documentation-context) and [Refresh Library](/api-reference/refresh/refresh-a-library).
+A **library ID** is the URL path of the library on context7.com. If the library page is at `https://context7.com/websites/uploadcare`, its ID is `/websites/uploadcare`. The same ID works for every endpoint that accepts a `libraryId` or `libraryName` — including [Get Context](/api-reference/context/get-documentation-context) and [Refresh Library](/api-reference/refresh/refresh-a-library).
 
 Use `/owner/repo` for GitHub repositories, or `/<source>/<id>` for other sources:
 
@@ -40,7 +45,7 @@ Use `/owner/repo` for GitHub repositories, or `/<source>/<id>` for other sources
 |--------|--------------------|
 | GitHub repository | `/vercel/next.js` |
 | GitLab / Bitbucket / generic Git repo | `/<owner>/<repo>` (same shape as GitHub) |
-| Website | `/websites/uploadcare_com` |
+| Website | `/websites/uploadcare` |
 | llms.txt source | `/llmstxt/<source>` |
 | npm / package source | `/packages/<name>` or `/npm/<name>` |
 | Uploaded docs | `/docs/<name>` |
@@ -126,7 +131,7 @@ curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js&query=auth" 
   -H "Authorization: Bearer CONTEXT7_API_KEY"
 
 # Non-GitHub source (website) - same endpoint, same shape
-curl "https://context7.com/api/v2/context?libraryId=/websites/uploadcare_com&query=image%20transformations" \
+curl "https://context7.com/api/v2/context?libraryId=/websites/uploadcare&query=image%20transformations" \
   -H "Authorization: Bearer CONTEXT7_API_KEY"
 ```
 
