@@ -55,7 +55,7 @@
     "typescript-eslint": "^8.28.0"
   },
   "dependencies": {
-    "@inquirer/core": "^11.1.1",
+    "@inquirer/core": "^11.2.1",
     "@inquirer/type": "^4.0.3"
   }
 }
