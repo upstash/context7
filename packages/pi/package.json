@@ -63,7 +63,7 @@
     "@types/node": "^25.9.1",
     "dotenv": "^17.4.2",
     "typebox": "^1.1.38",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.9"
   }
 }
