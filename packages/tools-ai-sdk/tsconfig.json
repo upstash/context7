@@ -8,12 +8,11 @@
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "strict": true,
-    "downlevelIteration": true,
+    "ignoreDeprecations": "6.0",
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "allowJs": true,
-    "baseUrl": ".",
     "paths": {
       "@tools": ["./src/tools/index.ts"],
       "@agents": ["./src/agents/index.ts"],

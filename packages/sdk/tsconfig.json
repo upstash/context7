@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "lib": ["ESNext"],
+    "types": ["node"],
     "module": "esnext",
     "target": "esnext",
     "moduleResolution": "bundler",
@@ -8,6 +9,7 @@
     "allowImportingTsExtensions": true,
     "noEmit": true,
     "strict": true,
+    "ignoreDeprecations": "6.0",
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
