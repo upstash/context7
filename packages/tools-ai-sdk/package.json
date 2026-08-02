@@ -38,11 +38,11 @@
     "ai": "^6.0.5",
     "zod": "^4.4.3",
     "@ai-sdk/amazon-bedrock": "^4.0.9",
-    "@types/node": "^25.0.3",
-    "dotenv": "^17.4.2",
-    "tsup": "^8.5.1",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.10"
+    "@types/node": "catalog:",
+    "dotenv": "catalog:",
+    "tsup": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   },
   "repository": {
     "type": "git",

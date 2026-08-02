@@ -1,18 +1,9 @@
 {
+  "extends": "../../tsconfig.bundler.json",
   "compilerOptions": {
-    "lib": ["ESNext"],
-    "module": "esnext",
-    "target": "esnext",
-    "moduleResolution": "bundler",
-    "moduleDetection": "force",
-    "allowImportingTsExtensions": true,
-    "noEmit": true,
-    "strict": true,
+    // tsup forces `baseUrl: compilerOptions.baseUrl || "."` into its dts worker,
+    // which TS 6 reports as TS5101. Drop this once tsup stops injecting it.
     "ignoreDeprecations": "6.0",
-    "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
-    "allowJs": true,
     "paths": {
       "@tools": ["./src/tools/index.ts"],
       "@agents": ["./src/agents/index.ts"],
