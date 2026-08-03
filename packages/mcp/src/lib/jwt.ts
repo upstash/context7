@@ -71,6 +71,16 @@ export function isJWT(token: string): boolean {
   return token.split(".").length === 3;
 }
 
+/**
+ * Shape check only, deliberately permissive: it covers the `ctx7sk` member keys
+ * and the `ctx7op` enterprise keys without pinning either. The key is still
+ * verified upstream; this exists so a credential that cannot possibly be valid
+ * is rejected before it opens a session.
+ */
+export function isApiKeyFormat(token: string): boolean {
+  return /^ctx7[a-z]{2}[-_]/i.test(token);
+}
+
 export async function validateJWT(token: string): Promise<JWTValidationResult> {
   try {
     const decoded = jose.decodeJwt(token);
@@ -103,7 +113,14 @@ export async function validateJWT(token: string): Promise<JWTValidationResult> {
       return { valid: true };
     }
 
-    await jose.jwtVerify(token, clerkJwks, { issuer: CLERK_ISSUER });
+    // Audience matters as much as the signature here. Without it any JWT the
+    // Clerk instance signs for any purpose — a session token, a token minted for
+    // some other client — verifies against this server. The MCP spec requires a
+    // resource server to accept only tokens issued for itself.
+    await jose.jwtVerify(token, clerkJwks, {
+      issuer: CLERK_ISSUER,
+      audience: RESOURCE_URL,
+    });
     return { valid: true };
   } catch (error) {
     if (error instanceof jose.errors.JWTExpired) {
