@@ -146,7 +146,7 @@ Each result includes:
 - Code Snippets: Number of available code examples
 - Source Reputation: Authority indicator (High, Medium, Low, or Unknown)
 - Benchmark Score: Quality indicator (100 is the highest score)
-- Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.
+- Versions: List of versions if available, newest first; the first entry is the latest release, served by default when no version is given. Use one of those versions only if the user provides a version in their query. The format of the version is /org/project/version.
 
 For best results, select libraries based on name match, source reputation, snippet coverage, benchmark score, and relevance to your use case.
 
