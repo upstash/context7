@@ -348,6 +348,10 @@ Do not call this tool more than 3 times per question.`,
             text: response.data,
           },
         ],
+        // Flag failures at the protocol level. Without this an unset `isError`
+        // defaults to success, so a caller that branches on `isError` treats an
+        // error message (invalid ID, upstream failure) as documentation.
+        ...(response.outcome !== "success" ? { isError: true } : {}),
       };
     }
   );
