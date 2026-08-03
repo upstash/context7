@@ -157,7 +157,7 @@ export async function fetchLibraryContext(
     if (!response.ok) {
       const errorMessage = await parseErrorResponse(response, context.apiKey);
       console.error(errorMessage);
-      return { data: errorMessage };
+      return { data: errorMessage, isError: true };
     }
 
     const text = await response.text();
@@ -170,6 +170,6 @@ export async function fetchLibraryContext(
   } catch (error) {
     const errorMessage = `Error fetching library context. Please try again later. ${error}`;
     console.error(errorMessage);
-    return { data: errorMessage };
+    return { data: errorMessage, isError: true };
   }
 }
