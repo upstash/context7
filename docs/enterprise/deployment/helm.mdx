@@ -4,7 +4,7 @@ sidebarTitle: "Helm"
 description: "Deploy Context7 On-Premise on Kubernetes with the Helm chart"
 ---
 
-The Context7 Helm chart is the turnkey way to run Context7 On-Premise on Kubernetes. It renders a single-replica StatefulSet by default and switches to a multi-replica Deployment when you enable scaling, so the same chart covers both the standard install and horizontal scaling. The chart ships with the enterprise distribution.
+The Context7 Helm chart is the turnkey way to run Context7 On-Premise on Kubernetes. It renders a single-replica StatefulSet by default and switches to a multi-replica Deployment when you enable scaling, so the same chart covers both the standard install and horizontal scaling. The chart is published to `oci://ghcr.io/context7/charts`, so no repository setup is needed — `helm install` pulls it directly.
 
 This guide assumes you have completed the [On-Premise setup](/enterprise/on-premise) and have a valid license key.
 
@@ -19,7 +19,7 @@ This guide assumes you have completed the [On-Premise setup](/enterprise/on-prem
 Runs one replica with the embedded database on a persistent volume. Nothing external is required.
 
 ```bash
-helm install context7 ./context7-enterprise \
+helm install context7 oci://ghcr.io/context7/charts/context7-enterprise \
   --namespace context7 --create-namespace \
   --set license=ctx7sk-... \
   --set 'imagePullSecrets[0].name=context7-registry'
@@ -38,7 +38,7 @@ Then open `http://localhost:3000`.
 Provision an external PostgreSQL with the `pgvector` extension first (relational data and embeddings both live there, no object storage needed). See [Scaling](/enterprise/deployment/scaling) for the architecture and how to provision pgvector.
 
 ```bash
-helm install context7 ./context7-enterprise \
+helm install context7 oci://ghcr.io/context7/charts/context7-enterprise \
   --namespace context7 --create-namespace \
   --set license=ctx7sk-... \
   --set 'imagePullSecrets[0].name=context7-registry' \
@@ -59,7 +59,7 @@ With `scaling.enabled=true` the chart runs a Deployment of stateless replicas wh
 Expose the service through an Ingress instead of port-forwarding:
 
 ```bash
-helm upgrade context7 ./context7-enterprise --namespace context7 --reuse-values \
+helm upgrade context7 oci://ghcr.io/context7/charts/context7-enterprise --namespace context7 --reuse-values \
   --set ingress.enabled=true \
   --set ingress.className=nginx \
   --set ingress.host=context7.internal.example.com \
@@ -76,7 +76,7 @@ To move an existing single-container deployment onto Postgres, the chart runs a 
     Set `migration.enabled=true` and `migration.dataPvcName` to the PVC that holds your existing `/data`, and set `scaling.encryptionKey` to the key your single container used.
 
     ```bash
-    helm upgrade context7 ./context7-enterprise --namespace context7 --reuse-values \
+    helm upgrade context7 oci://ghcr.io/context7/charts/context7-enterprise --namespace context7 --reuse-values \
       --set scaling.enabled=true \
       --set scaling.databaseUrl='postgres://user:pass@host:5432/context7' \
       --set scaling.encryptionKey='<your-existing-key>' \
@@ -88,7 +88,7 @@ To move an existing single-container deployment onto Postgres, the chart runs a 
     Once the Job reports success, disable it so it does not run again on the next upgrade.
 
     ```bash
-    helm upgrade context7 ./context7-enterprise --namespace context7 --reuse-values \
+    helm upgrade context7 oci://ghcr.io/context7/charts/context7-enterprise --namespace context7 --reuse-values \
       --set migration.enabled=false
     ```
   </Step>
