@@ -75,6 +75,8 @@ To move an existing single-container deployment onto Postgres, the chart runs a 
   <Step title="Point the Job at your existing data">
     Set `migration.enabled=true` and `migration.dataPvcName` to the PVC that holds your existing `/data`, and set `scaling.encryptionKey` to the key your single container used.
 
+    Find the PVC name with `kubectl get pvc -n context7`. If your existing install used this chart, it is named `data-<release>-context7-enterprise-0` (for example `data-context7-context7-enterprise-0`); the `context7-data` name below matches the raw [Kubernetes guide](/enterprise/deployment/kubernetes).
+
     ```bash
     helm upgrade context7 oci://ghcr.io/context7/charts/context7-enterprise --namespace context7 --reuse-values \
       --set scaling.enabled=true \
