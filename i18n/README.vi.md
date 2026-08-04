@@ -654,7 +654,7 @@ Thêm cấu hình sau vào phần `mcp` trong file cấu hình Copilot Coding Ag
       "type": "http",
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+        "Authorization": "Bearer YOUR_API_KEY"
       },
       "tools": ["query-docs", "resolve-library-id"]
     }
@@ -719,7 +719,7 @@ command = "npx"
 ```toml
 [mcp_servers.context7]
 url = "https://mcp.context7.com/mcp"
-http_headers = { "CONTEXT7_API_KEY" = "YOUR_API_KEY" }
+http_headers = { "Authorization" = "Bearer YOUR_API_KEY" }
 ```
 </details>
 

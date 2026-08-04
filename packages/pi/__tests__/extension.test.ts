@@ -52,5 +52,5 @@ describe("live Context7 API", () => {
     );
     expect(result.content[0].type).toBe("text");
     expect((result.content[0] as { text: string }).text).toMatch(/react/i);
-  });
+  }, 15_000);
 });

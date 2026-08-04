@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.5.7
+
+### Patch Changes
+
+- b89a04e: `ctx7 setup` now writes the API key as a standard `Authorization: Bearer <key>` header instead of a custom `CONTEXT7_API_KEY` header. Codex resolves a server's auth mode from `bearer_token_env_var` or a header literally named `Authorization`, so a custom name read as "no credential configured": Codex fell through to an OAuth credential stored against the same server name and URL, refreshed it during startup, and when that refresh token was dead the server failed with `invalid_grant` before the API key was ever sent. The hosted endpoint accepts both header forms, so existing configs keep working.
+
+## 0.5.6
+
+### Patch Changes
+
+- 23843e9: Read the GitHub CLI auth token by invoking `gh` directly instead of through a shell. The shell wrapper (`cmd.exe /d /s /c` on Windows) caused endpoint protection tools such as Microsoft Defender for Endpoint to raise a "Suspicious Node.js process behavior" alert during `ctx7 setup`.
+- c82cc8a: Fix `ctx7 setup` skill install failing with "fetch failed" when the GitHub git tree API (`api.github.com`) is blocked or unreachable. Skill download now falls back to fetching the single `SKILL.md` directly from `raw.githubusercontent.com` — the URL the docs API already resolves — so setup succeeds in environments where only the docs/raw hosts are reachable.
+- 1c081df: Improve query prompts so agents request relevant library documentation instead of passing the task to complete.
+
 ## 0.5.5
 
 ### Patch Changes

@@ -6,7 +6,7 @@ description: "Index Confluence spaces from Atlassian Cloud or a self-hosted Data
 
 Context7 can index the pages of a Confluence space and serve them like any other library. It works with **Atlassian Cloud** and with self-hosted **Data Center / Server**.
 
-An admin connects Confluence once under **Settings → Integrations** using an API token. After that, anyone who can add libraries picks a space and pages from **Add → Confluence**. There is no OAuth app to register, which keeps the setup self-contained on your own infrastructure.
+An admin connects Confluence once under **Settings → Integrations** using an API token. After that, anyone who can add libraries indexes a space — or a specific set of pages by URL — from **Add → Confluence**. There is no OAuth app to register, which keeps the setup self-contained on your own infrastructure.
 
 <Note>
 Confluence pages are behind authentication, so Context7 reaches them with the token you configure. The token needs read access to the spaces you want to index.
@@ -55,7 +55,12 @@ Go to **Add** and choose **Confluence**.
   ![The Add Libraries source picker with a Confluence tile](/images/enterprise/integrations/confluence-source.png)
 </Frame>
 
-Pick a space, then index the whole space or choose specific pages. Give the project a title and description if you want to override the auto-detected ones, then choose **Start Parsing**.
+The **Source** toggle at the top of the form offers two ways to choose what to index:
+
+- **Browse spaces** — pick a space, then index the whole space or select pages from its tree.
+- **By page URL** — paste the URLs of the exact pages you want. No page tree is loaded, so it stays fast even for spaces with thousands of pages, and the pages can come from different spaces.
+
+### Browse spaces
 
 <Frame>
   ![Selecting a Confluence space and pages, with the page tree and Start Parsing button](/images/enterprise/integrations/confluence-add.png)
@@ -63,7 +68,7 @@ Pick a space, then index the whole space or choose specific pages. Give the proj
 
 <Steps>
   <Step title="Select a space">
-    Choose the space from the dropdown, or paste a space URL (for example `https://your-site.atlassian.net/wiki/spaces/TEAM`) into **Space URL** to select it directly — handy when the account can read many spaces.
+    Open the space picker and choose a space. The list is fetched the first time you open it, so opening the form does no work until you ask for it.
   </Step>
   <Step title="Choose the scope">
     Leave **Index the entire space** on to index everything, which is the fastest path and the right choice for large spaces. Turn it off to pick individual pages: the page tree mirrors the space hierarchy, so selecting a parent selects its children. Very large spaces load their pages in batches — use **Load more pages** to fetch the rest, and the search box to filter.
@@ -73,11 +78,31 @@ Pick a space, then index the whole space or choose specific pages. Give the proj
   </Step>
 </Steps>
 
+### By page URL
+
+Choose **By page URL** to index a specific set of pages without browsing a space. This is the fastest way to index a handful of pages, and it avoids loading a large space's page tree into the browser.
+
+<Frame>
+  ![The By page URL form: a row per Confluence page URL, each with a Sub-pages toggle and a remove button](/images/enterprise/integrations/confluence-by-url.png)
+</Frame>
+
+<Steps>
+  <Step title="Add page URLs">
+    Paste the address-bar URL of each page into its own row. Paste a whole list at once and it splits into one row per URL. Use a URL that contains the page id, for example `https://your-site.atlassian.net/wiki/spaces/TEAM/pages/12345/Overview` (Cloud) or `https://confluence.your-company.com/pages/viewpage.action?pageId=12345` (Data Center). The pages may come from different spaces.
+  </Step>
+  <Step title="Choose sub-pages">
+    Each row has a **Sub-pages** toggle (on by default). Leave it on to also index everything nested under that page; turn it off to index just the page itself.
+  </Step>
+  <Step title="Start parsing">
+    Any URL that can't be resolved is flagged inline with the reason, so you can fix or remove it. Once every row resolves, Context7 indexes the pages the same way as a space.
+  </Step>
+</Steps>
+
 <Note>
-Indexing the entire space means a later refresh also picks up pages added since. Selecting a specific subset pins the project to exactly those pages.
+Indexing the entire space means a later refresh also picks up pages added since. A specific page set — selected pages or **By page URL** — pins the project to exactly those pages.
 </Note>
 
-You can also index Confluence spaces declaratively with [GitOps](/enterprise/gitops) — add a `type: confluence` entry with a `spaceKey` to your manifest, and it reuses this same connection.
+You can also index Confluence declaratively with [GitOps](/enterprise/gitops): add a `type: confluence` entry with either a `spaceKey` (whole space) or a `pageUrls` list (specific pages, optionally with `includeSubPages`). It reuses this same connection.
 
 ## Refresh and delete
 

@@ -179,7 +179,7 @@ Per maggiori informazioni, consulta la [documentazione ufficiale GitHub](https:/
       "type": "http",
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+        "Authorization": "Bearer YOUR_API_KEY"
       },
       "tools": ["query-docs", "resolve-library-id"]
     }

@@ -191,7 +191,7 @@ claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp
       "type": "http",
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+        "Authorization": "Bearer YOUR_API_KEY"
       },
       "tools": ["query-docs", "resolve-library-id"]
     }

@@ -56,8 +56,8 @@
       "url": "https://mcp.context7.com/mcp",
       "headers": [
         {
-          "name": "CONTEXT7_API_KEY",
-          "description": "API key for authentication",
+          "name": "Authorization",
+          "description": "API key for authentication. Accepts \"Bearer <key>\" or the raw key.",
           "isRequired": false,
           "isSecret": true
         }

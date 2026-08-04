@@ -15,7 +15,7 @@ There are multiple ways to add Context7 as an MCP server in Factory AI. Replace 
 ### Using the CLI
 
 ```bash
-droid mcp add context7 https://mcp.context7.com/mcp --type http --header "CONTEXT7_API_KEY: YOUR_API_KEY"
+droid mcp add context7 https://mcp.context7.com/mcp --type http --header "Authorization: Bearer YOUR_API_KEY"
 ```
 
 ### Using the MCP Manager
@@ -33,7 +33,7 @@ Add Context7 directly to your `.factory/mcp.json` (project-level) or `~/.factory
       "type": "http",
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+        "Authorization": "Bearer YOUR_API_KEY"
       }
     }
   }

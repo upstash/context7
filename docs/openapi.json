@@ -330,7 +330,7 @@
                 "properties": {
                   "libraryName": {
                     "type": "string",
-                    "description": "Library identifier — the URL path of the library on context7.com. Use `/owner/repo` for GitHub repositories (e.g., `/vercel/next.js`), or `/<source>/<id>` for other sources (e.g., `/websites/uploadcare_com`, `/llmstxt/<source>`). See [Library ID format](/api-guide#library-id-format)."
+                    "description": "Library identifier — the URL path of the library on context7.com. Use `/owner/repo` for GitHub repositories (e.g., `/vercel/next.js`), or `/<source>/<id>` for other sources (e.g., `/websites/uploadcare`, `/llmstxt/<source>`). See [Library ID format](/api-guide#library-id-format)."
                   },
                   "branch": {
                     "type": "string",
@@ -349,7 +349,7 @@
                 },
                 "website": {
                   "summary": "Website source",
-                  "value": { "libraryName": "/websites/uploadcare_com" }
+                  "value": { "libraryName": "/websites/uploadcare" }
                 },
                 "llmstxt": {
                   "summary": "llms.txt source",
@@ -1493,7 +1493,7 @@
           },
           "website": {
             "summary": "Website source",
-            "value": "/websites/uploadcare_com"
+            "value": "/websites/uploadcare"
           },
           "llmstxt": {
             "summary": "llms.txt source",
@@ -1560,7 +1560,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "Library ID — the URL path of the library on context7.com. `/owner/repo` for GitHub repositories, or `/<source>/<id>` for other sources (e.g., `/vercel/next.js`, `/websites/uploadcare_com`). See [Library ID format](/api-guide#library-id-format).",
+            "description": "Library ID — the URL path of the library on context7.com. `/owner/repo` for GitHub repositories, or `/<source>/<id>` for other sources (e.g., `/vercel/next.js`, `/websites/uploadcare`). See [Library ID format](/api-guide#library-id-format).",
             "example": "/vercel/next.js"
           },
           "title": {
@@ -2052,7 +2052,7 @@
         "properties": {
           "libraryName": {
             "type": "string",
-            "description": "The library identifier assigned — the URL path of the library on context7.com. `/owner/repo` for GitHub repositories, or `/<source>/<id>` for other sources (e.g., `/vercel/next.js`, `/websites/uploadcare_com`). See [Library ID format](/api-guide#library-id-format)."
+            "description": "The library identifier assigned — the URL path of the library on context7.com. `/owner/repo` for GitHub repositories, or `/<source>/<id>` for other sources (e.g., `/vercel/next.js`, `/websites/uploadcare`). See [Library ID format](/api-guide#library-id-format)."
           },
           "message": {
             "type": "string",

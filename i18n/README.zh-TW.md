@@ -58,7 +58,7 @@ Context7 將最新的程式碼範例與文件直接取得到你的 LLM 上下文
     "context7": {
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+        "Authorization": "Bearer YOUR_API_KEY"
       }
     }
   }
@@ -96,7 +96,7 @@ claude mcp add --scope user context7 -- npx -y @upstash/context7-mcp --api-key Y
 #### Claude Code 遠端伺服器連線
 
 ```sh
-claude mcp add --scope user --header "CONTEXT7_API_KEY: YOUR_API_KEY" --transport http context7 https://mcp.context7.com/mcp
+claude mcp add --scope user --header "Authorization: Bearer YOUR_API_KEY" --transport http context7 https://mcp.context7.com/mcp
 ```
 
 </details>
@@ -114,7 +114,7 @@ claude mcp add --scope user --header "CONTEXT7_API_KEY: YOUR_API_KEY" --transpor
     "type": "remote",
     "url": "https://mcp.context7.com/mcp",
     "headers": {
-      "CONTEXT7_API_KEY": "YOUR_API_KEY"
+      "Authorization": "Bearer YOUR_API_KEY"
     },
     "enabled": true
   }

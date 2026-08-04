@@ -347,7 +347,7 @@ claude mcp add --scope user --transport http context7 https://mcp.context7.com/m
       "type": "http",
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "CONTEXT7_API_KEY": "YOUR_API_KEY"
+        "Authorization": "Bearer YOUR_API_KEY"
       },
       "tools": ["query-docs", "resolve-library-id"]
     }
