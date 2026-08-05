@@ -359,3 +359,56 @@ export async function getLibraryContext(
 
   return (await response.json()) as ContextResponse;
 }
+
+export interface AddLibraryResult {
+  libraryName?: string;
+  message?: string;
+  error?: string;
+  status?: number;
+}
+
+export async function addLibrary(
+  target: { endpointPath: string; body: Record<string, unknown> },
+  accessToken?: string
+): Promise<AddLibraryResult> {
+  const headers = {
+    ...getAuthHeaders(accessToken),
+    "Content-Type": "application/json",
+  };
+
+  if (!headers.Authorization) {
+    return {
+      error: "unauthorized",
+      message:
+        "Authentication required. Set CONTEXT7_API_KEY or run `ctx7 login`.",
+      status: 401,
+    };
+  }
+
+  const response = await fetch(`${baseUrl}${target.endpointPath}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(target.body),
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as {
+    libraryName?: string;
+    message?: string;
+    error?: string;
+  };
+
+  if (!response.ok) {
+    return {
+      libraryName: payload.libraryName,
+      error: payload.error || `HTTP error ${response.status}`,
+      message: payload.message || payload.error || `HTTP error ${response.status}`,
+      status: response.status,
+    };
+  }
+
+  return {
+    libraryName: payload.libraryName,
+    message: payload.message || "Repository submitted successfully",
+    status: response.status,
+  };
+}

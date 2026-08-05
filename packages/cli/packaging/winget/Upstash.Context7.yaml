@@ -1,0 +1,9 @@
+# Upstash.Context7
+# Version: {{PACKAGE_VERSION}}
+# Publisher: Upstash
+# PackageVersion: {{PACKAGE_VERSION}}
+PackageIdentifier: Upstash.Context7
+PackageVersion: "{{PACKAGE_VERSION}}"
+DefaultLocale: en-US
+ManifestType: version
+ManifestVersion: 1.9.0

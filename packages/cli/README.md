@@ -1,6 +1,6 @@
-# ctx7
+# ctx7 / context7
 
-CLI for [Context7](https://context7.com) - query up-to-date library documentation and configure Context7 for AI coding agents.
+CLI for [Context7](https://context7.com) - query up-to-date library documentation, submit sources for indexing, and configure Context7 for AI coding agents.
 
 ## Installation
 
@@ -8,8 +8,14 @@ CLI for [Context7](https://context7.com) - query up-to-date library documentatio
 # Run directly with npx (no install needed)
 npx ctx7
 
-# Or install globally
+# Or install globally (exposes both `ctx7` and `context7`)
 npm install -g ctx7
+
+# Homebrew
+brew install ctx7
+
+# WinGet (when published)
+winget install Upstash.Context7
 ```
 
 ## Quick Start
@@ -37,6 +43,14 @@ ctx7 library nextjs "app router"
 # Get documentation
 ctx7 docs /facebook/react "useEffect cleanup"
 ctx7 docs /vercel/next.js "middleware"
+```
+
+### Submit a library
+
+```bash
+# Requires CONTEXT7_API_KEY or `ctx7 login`
+context7 add https://github.com/owner/repo
+ctx7 add https://docs.example.com --type website --json
 ```
 
 ## Usage

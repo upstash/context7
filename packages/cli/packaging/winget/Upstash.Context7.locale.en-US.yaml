@@ -1,0 +1,29 @@
+# Upstash.Context7.locale.en-US
+PackageIdentifier: Upstash.Context7
+PackageVersion: "{{PACKAGE_VERSION}}"
+PackageLocale: en-US
+Publisher: Upstash
+PublisherUrl: https://upstash.com
+PublisherSupportUrl: https://github.com/upstash/context7/issues
+Author: Upstash
+PackageName: Context7 CLI
+PackageUrl: https://context7.com
+License: MIT
+LicenseUrl: https://github.com/upstash/context7/blob/master/LICENSE
+Copyright: Copyright (c) Upstash
+ShortDescription: Context7 CLI — fetch library docs and submit sources for AI coding agents
+Description: >
+  Official Context7 command-line interface. Query up-to-date library documentation,
+  configure Context7 MCP/skills for AI coding agents, and submit documentation sources
+  for indexing. Provides both `context7` and `ctx7` commands.
+Moniker: context7
+Tags:
+  - ai
+  - cli
+  - context7
+  - documentation
+  - mcp
+  - ctx7
+ReleaseNotesUrl: https://github.com/upstash/context7/releases
+ManifestType: defaultLocale
+ManifestVersion: 1.9.0
