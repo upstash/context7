@@ -169,7 +169,7 @@ async function resolveMode(options: SetupOptions): Promise<SetupMode> {
 
 async function resolveCliAuth(apiKey?: string): Promise<void> {
   if (apiKey) {
-    saveTokens({ access_token: apiKey, token_type: "bearer" });
+    await saveTokens({ access_token: apiKey, token_type: "bearer" });
     log.blank();
     log.plain(`${pc.green("✔")} Authenticated`);
     return;

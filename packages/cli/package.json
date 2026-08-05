@@ -29,6 +29,7 @@
     "figlet": "^1.9.4",
     "open": "^10.1.0",
     "ora": "^9.4.0",
+    "keytar": "^7.9.0",
     "picocolors": "^1.1.1"
   },
   "devDependencies": {

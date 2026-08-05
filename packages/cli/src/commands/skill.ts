@@ -55,7 +55,7 @@ import {
 } from "../types.js";
 import { homedir } from "os";
 import { detectProjectDependencies } from "../utils/deps.js";
-import { loadTokens, isTokenExpired } from "../utils/auth.js";
+import { getStoredAccessToken } from "../utils/auth.js";
 
 const SKILL_HUB_DEPRECATION_WARNING =
   "Warning: Skill commands are deprecated and will stop working in the next major release.";
@@ -843,8 +843,7 @@ async function suggestCommand(options: SuggestOptions): Promise<void> {
   // Step 2: Single API call to backend
   const searchSpinner = ora("Finding matching skills...").start();
 
-  const tokens = loadTokens();
-  const accessToken = tokens && !isTokenExpired(tokens) ? tokens.access_token : undefined;
+  const accessToken = await getStoredAccessToken();
 
   let data;
   try {

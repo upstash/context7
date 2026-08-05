@@ -27,6 +27,8 @@ import {
   pollDeviceToken,
   type TokenData,
 } from "../utils/auth.js";
+import { resetCredentialStoreForTests } from "../utils/credential-store/index.js";
+import { resetKeytarCacheForTests } from "../utils/credential-store/keyring-store.js";
 
 const mfs = vi.mocked(fs);
 const CREDENTIALS_PATH = "/fake-home/.config/context7/credentials.json";
@@ -35,13 +37,13 @@ const CONFIG_DIR_PATH = "/fake-home/.config/context7";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // os.homedir() reads $HOME first on POSIX, so stubbing the env var pins the
-  // home directory deterministically without mocking the `os` builtin (which
-  // resolves unreliably across Node versions / worker pooling in CI).
+  resetCredentialStoreForTests();
+  resetKeytarCacheForTests();
   vi.stubEnv("HOME", "/fake-home");
   vi.stubEnv("XDG_CONFIG_HOME", undefined);
   vi.stubEnv("XDG_STATE_HOME", undefined);
   vi.stubEnv("XDG_CACHE_HOME", undefined);
+  vi.stubEnv("CTX7_CREDENTIAL_STORE", "json");
   vi.stubGlobal(
     "fetch",
     vi.fn(() => {
@@ -53,40 +55,42 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
+  resetCredentialStoreForTests();
+  resetKeytarCacheForTests();
 });
 
 describe("saveTokens", () => {
-  test("creates config directory if it does not exist", () => {
+  test("creates config directory if it does not exist", async () => {
     mfs.existsSync.mockReturnValue(false);
-    saveTokens({ access_token: "tok", token_type: "bearer" });
+    await saveTokens({ access_token: "tok", token_type: "bearer" });
     expect(mfs.mkdirSync).toHaveBeenCalledWith(CONFIG_DIR_PATH, { recursive: true, mode: 0o700 });
   });
 
-  test("skips directory creation if it already exists", () => {
+  test("skips directory creation if it already exists", async () => {
     mfs.existsSync.mockReturnValue(true);
-    saveTokens({ access_token: "tok", token_type: "bearer" });
+    await saveTokens({ access_token: "tok", token_type: "bearer" });
     expect(mfs.mkdirSync).not.toHaveBeenCalled();
   });
 
-  test("writes credentials file with 0o600 permissions", () => {
+  test("writes credentials file with 0o600 permissions", async () => {
     mfs.existsSync.mockReturnValue(true);
-    saveTokens({ access_token: "tok", token_type: "bearer" });
+    await saveTokens({ access_token: "tok", token_type: "bearer" });
     expect(mfs.writeFileSync).toHaveBeenCalledWith(CREDENTIALS_PATH, expect.any(String), {
       mode: 0o600,
     });
   });
 
-  test("enforces 0o600 even when the credentials file already exists", () => {
-    // writeFileSync's mode is ignored for an existing file, so chmod must run.
+  test("enforces 0o600 even when the credentials file already exists", async () => {
     mfs.existsSync.mockReturnValue(true);
-    saveTokens({ access_token: "tok", token_type: "bearer" });
+    await saveTokens({ access_token: "tok", token_type: "bearer" });
     expect(mfs.chmodSync).toHaveBeenCalledWith(CREDENTIALS_PATH, 0o600);
   });
 
-  test("honors XDG_CONFIG_HOME for credentials", () => {
+  test("honors XDG_CONFIG_HOME for credentials", async () => {
     vi.stubEnv("XDG_CONFIG_HOME", "/custom-config");
+    resetCredentialStoreForTests();
     mfs.existsSync.mockReturnValue(false);
-    saveTokens({ access_token: "tok", token_type: "bearer" });
+    await saveTokens({ access_token: "tok", token_type: "bearer" });
 
     expect(mfs.mkdirSync).toHaveBeenCalledWith("/custom-config/context7", {
       recursive: true,
@@ -99,37 +103,42 @@ describe("saveTokens", () => {
     );
   });
 
-  test("computes expires_at from expires_in when expires_at is absent", () => {
+  test("computes expires_at from expires_in when expires_at is absent", async () => {
     mfs.existsSync.mockReturnValue(true);
     const now = 1000000;
     vi.spyOn(Date, "now").mockReturnValue(now);
-    saveTokens({ access_token: "tok", token_type: "bearer", expires_in: 3600 });
+    await saveTokens({ access_token: "tok", token_type: "bearer", expires_in: 3600 });
     const written = JSON.parse(mfs.writeFileSync.mock.calls[0][1] as string);
     expect(written.expires_at).toBe(now + 3600 * 1000);
   });
 
-  test("preserves existing expires_at if already set", () => {
+  test("preserves existing expires_at if already set", async () => {
     mfs.existsSync.mockReturnValue(true);
-    saveTokens({ access_token: "tok", token_type: "bearer", expires_at: 999, expires_in: 3600 });
+    await saveTokens({
+      access_token: "tok",
+      token_type: "bearer",
+      expires_at: 999,
+      expires_in: 3600,
+    });
     const written = JSON.parse(mfs.writeFileSync.mock.calls[0][1] as string);
     expect(written.expires_at).toBe(999);
   });
 });
 
 describe("loadTokens", () => {
-  test("returns null when credentials file does not exist", () => {
+  test("returns null when credentials file does not exist", async () => {
     mfs.existsSync.mockReturnValue(false);
-    expect(loadTokens()).toBeNull();
+    expect(await loadTokens()).toBeNull();
   });
 
-  test("returns parsed TokenData when file exists", () => {
+  test("returns parsed TokenData when file exists", async () => {
     const tokens: TokenData = { access_token: "tok", token_type: "bearer" };
     mfs.existsSync.mockReturnValue(true);
     mfs.readFileSync.mockReturnValue(JSON.stringify(tokens));
-    expect(loadTokens()).toEqual(tokens);
+    expect(await loadTokens()).toEqual(tokens);
   });
 
-  test("migrates credentials from the legacy ~/.context7 path before reading", () => {
+  test("migrates credentials from the legacy ~/.context7 path before reading", async () => {
     const tokens: TokenData = { access_token: "tok", token_type: "bearer" };
     let migrated = false;
     mfs.existsSync.mockImplementation((filePath) =>
@@ -142,44 +151,41 @@ describe("loadTokens", () => {
     });
     mfs.readFileSync.mockReturnValue(JSON.stringify(tokens));
 
-    expect(loadTokens()).toEqual(tokens);
+    expect(await loadTokens()).toEqual(tokens);
     expect(mfs.renameSync).toHaveBeenCalledWith(LEGACY_CREDENTIALS_PATH, CREDENTIALS_PATH);
-    // rename preserves the legacy mode, so migration must re-assert 0o600.
     expect(mfs.chmodSync).toHaveBeenCalledWith(CREDENTIALS_PATH, 0o600);
     expect(mfs.readFileSync).toHaveBeenCalledWith(CREDENTIALS_PATH, "utf-8");
   });
 
-  test("returns null on malformed JSON", () => {
+  test("returns null on malformed JSON", async () => {
     mfs.existsSync.mockReturnValue(true);
     mfs.readFileSync.mockReturnValue("not json");
-    expect(loadTokens()).toBeNull();
+    expect(await loadTokens()).toBeNull();
   });
 
-  test("falls back to the legacy file (no throw) when migration fails", () => {
+  test("falls back to the legacy file (no throw) when migration fails", async () => {
     const tokens: TokenData = { access_token: "tok", token_type: "bearer" };
-    // Only the legacy file exists; the rename fails (e.g. EXDEV / EACCES).
     mfs.existsSync.mockImplementation((filePath) => filePath === LEGACY_CREDENTIALS_PATH);
     mfs.renameSync.mockImplementation(() => {
       throw new Error("EXDEV: cross-device link not permitted");
     });
     mfs.readFileSync.mockReturnValue(JSON.stringify(tokens));
 
-    expect(() => loadTokens()).not.toThrow();
-    expect(loadTokens()).toEqual(tokens);
+    await expect(loadTokens()).resolves.toEqual(tokens);
     expect(mfs.readFileSync).toHaveBeenCalledWith(LEGACY_CREDENTIALS_PATH, "utf-8");
   });
 });
 
 describe("clearTokens", () => {
-  test("deletes file and returns true when it exists", () => {
+  test("deletes file and returns true when it exists", async () => {
     mfs.existsSync.mockReturnValue(true);
-    expect(clearTokens()).toBe(true);
+    expect(await clearTokens()).toBe(true);
     expect(mfs.unlinkSync).toHaveBeenCalledWith(CREDENTIALS_PATH);
   });
 
-  test("returns false when file does not exist", () => {
+  test("returns false when file does not exist", async () => {
     mfs.existsSync.mockReturnValue(false);
-    expect(clearTokens()).toBe(false);
+    expect(await clearTokens()).toBe(false);
     expect(mfs.unlinkSync).not.toHaveBeenCalled();
   });
 });
@@ -370,8 +376,6 @@ describe("startDeviceAuthorization", () => {
     expect(url).toBe("https://t.example/api/oauth/device/code");
     expect(init.method).toBe("POST");
     expect(init.headers).toEqual({ "Content-Type": "application/x-www-form-urlencoded" });
-    // Body is form-encoded; hostname is appended best-effort and varies by
-    // machine, so assert on the parsed client_id rather than the exact string.
     expect(new URLSearchParams(init.body as string).get("client_id")).toBe("test-client");
   });
 
