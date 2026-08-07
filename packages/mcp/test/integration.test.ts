@@ -71,13 +71,12 @@ function startStubApi(): Promise<string> {
   });
 }
 
-function startHttpChild(): Promise<{ child: ChildProcess; url: string }> {
+function startHttpChild(port = BASE_PORT): Promise<{ child: ChildProcess; url: string }> {
   return new Promise((resolve, reject) => {
-    const child = spawn(
-      process.execPath,
-      [DIST, "--transport", "http", "--port", String(BASE_PORT)],
-      { env: childEnv, stdio: ["ignore", "ignore", "pipe"] }
-    );
+    const child = spawn(process.execPath, [DIST, "--transport", "http", "--port", String(port)], {
+      env: childEnv,
+      stdio: ["ignore", "ignore", "pipe"],
+    });
     let stderr = "";
     child.stderr!.on("data", (chunk: Buffer) => {
       stderr += chunk.toString();
@@ -103,6 +102,19 @@ beforeAll(async () => {
 afterAll(() => {
   httpChild?.kill();
   stubServer?.close();
+});
+
+test("reports the bound port when port zero requests an ephemeral port", async () => {
+  const { child, url } = await startHttpChild(0);
+  try {
+    expect(new URL(url).port).not.toBe("0");
+
+    const response = await fetch(new URL("/ping", url));
+    expect(response.ok).toBe(true);
+    await expect(response.json()).resolves.toMatchObject({ status: "ok" });
+  } finally {
+    child.kill();
+  }
 });
 
 async function connect(transportKind: "http" | "stdio", era: "modern" | "legacy") {

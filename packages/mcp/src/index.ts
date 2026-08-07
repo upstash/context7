@@ -539,8 +539,10 @@ async function main() {
       });
 
       httpServer.once("listening", () => {
+        const address = httpServer.address();
+        const boundPort = typeof address === "object" && address ? address.port : port;
         console.error(
-          `Context7 Documentation MCP Server v${SERVER_VERSION} running on HTTP at http://localhost:${port}/mcp`
+          `Context7 Documentation MCP Server v${SERVER_VERSION} running on HTTP at http://localhost:${boundPort}/mcp`
         );
       });
     };
