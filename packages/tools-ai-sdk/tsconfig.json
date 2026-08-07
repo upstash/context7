@@ -1,9 +1,6 @@
 {
   "extends": "../../tsconfig.bundler.json",
   "compilerOptions": {
-    // tsup forces `baseUrl: compilerOptions.baseUrl || "."` into its dts worker,
-    // which TS 6 reports as TS5101. Drop this once tsup stops injecting it.
-    "ignoreDeprecations": "6.0",
     "paths": {
       "@tools": ["./src/tools/index.ts"],
       "@agents": ["./src/agents/index.ts"],

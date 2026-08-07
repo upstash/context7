@@ -1,6 +1,4 @@
 {
-  // No "ignoreDeprecations" here: pi has no build step, so it never runs through
-  // tsup's dts worker. That keeps deprecations in tsconfig.bundler.json visible.
   "extends": "../../tsconfig.bundler.json",
   "include": [
     "extensions/**/*",

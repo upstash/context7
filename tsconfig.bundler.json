@@ -3,8 +3,9 @@
   // (sdk, tools-ai-sdk, pi). mcp uses the Node16 profile in tsconfig.json
   // instead, and cli carries its own emit-oriented config.
   //
-  // Deliberately no "ignoreDeprecations" here: the packages that need it declare
-  // it themselves, so deprecations introduced in *this* file still surface.
+  // No "ignoreDeprecations" anywhere in the tsconfigs: the only deprecated
+  // option is the baseUrl tsup injects into its dts worker, suppressed via
+  // dts.compilerOptions in each tsup.config.ts instead.
   "compilerOptions": {
     "lib": ["ESNext"],
     "types": ["node"],
