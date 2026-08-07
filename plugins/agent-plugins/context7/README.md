@@ -60,7 +60,7 @@ key impossible to ship here:
 - Clients must not expand `${VAR}` placeholders in `url` or in header names and values.
 - Header values are "visible package data" and plugins must not embed secrets in them.
 
-So the `"Authorization": "${CONTEXT7_API_KEY}"` pattern used by the client-specific plugins in
+So the `"Authorization": "${CONTEXT7_API_KEY}"` pattern used by some client-specific plugins in
 this repository is not portable. OAuth is the only way a user can authenticate their own account
 in this format, which is why this plugin uses the OAuth endpoint.
 
