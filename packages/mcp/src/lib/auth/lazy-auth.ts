@@ -36,6 +36,29 @@ function csvEnv(name: string, fallback = ""): string[] {
     .filter(Boolean);
 }
 
+/** When the public `/mcp` endpoint asks an anonymous caller to authenticate. */
+export type AuthMode = "required" | "lazy";
+
+/**
+ * How `/mcp` treats an anonymous caller.
+ *
+ * `required` (default) challenges on the very first request, including
+ * `initialize`. That is deliberately the default: MCP clients run OAuth
+ * natively at connect time — Codex starts the flow as soon as it discovers the
+ * resource metadata, Claude Code exposes its authorize helpers for servers
+ * flagged at session start, and Zed raises its prompt on a startup 401. The
+ * same challenge raised mid-conversation is handled far worse: it fails the
+ * turn in progress, and the recovery path often only appears in the next
+ * session.
+ *
+ * `lazy` keeps the gate described in this module: connect, list, and spend the
+ * free monthly requests anonymously, then challenge. It trades a natively
+ * handled prompt for a frictionless trial, so it is the right setting where
+ * anonymous use matters more than conversion.
+ */
+export const MCP_AUTH_MODE: AuthMode =
+  process.env.CONTEXT7_MCP_AUTH_MODE?.trim().toLowerCase() === "lazy" ? "lazy" : "required";
+
 /**
  * Tools that always require authentication. `tools/list` still advertises them
  * to anonymous clients — the challenge fires only on `tools/call`. Set the

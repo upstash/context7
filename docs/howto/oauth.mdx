@@ -20,17 +20,18 @@ Context7 MCP server supports OAuth 2.0 authentication for MCP clients that imple
 
 ## Two Endpoints
 
-| Endpoint     | Behaviour                                                                                    |
-| ------------ | -------------------------------------------------------------------------------------------- |
-| `/mcp`       | Sign-in is requested only once you have used your free monthly requests, or call a protected tool |
-| `/mcp/oauth` | Sign-in is required before the client can connect at all                                       |
+| Endpoint     | Behaviour                                                       |
+| ------------ | --------------------------------------------------------------- |
+| `/mcp`       | Asks you to sign in when your client first connects              |
+| `/mcp/oauth` | Same, and always enforced regardless of server configuration     |
 
-Most clients should use `/mcp`, the default in every Context7 install flow. You can browse
-documentation immediately, and the server asks you to sign in only when you reach the free
-monthly limit for your machine. Signing in raises that limit substantially.
+Both endpoints ask for sign-in up front. That is deliberate: MCP clients run the OAuth
+flow natively at connect time, so you get your editor's own sign-in prompt instead of a
+failed request part-way through a conversation.
 
-Use `/mcp/oauth` when you want authentication enforced up front, for example when every
-request must be attributable to a user.
+Self-hosted deployments can set `CONTEXT7_MCP_AUTH_MODE=lazy` on the MCP server to let
+anonymous callers connect and spend their free monthly requests before being asked to
+sign in. That trades a natively handled prompt for a frictionless trial.
 
 ```diff
 - "url": "https://mcp.context7.com/mcp"
@@ -39,15 +40,14 @@ request must be attributable to a user.
 
 ## How It Works
 
-1. Your MCP client connects and can list and call tools straight away on `/mcp`
-2. When you cross the free limit, the server answers the tool call with an OAuth challenge
-   rather than an error, pointing your client at Context7
+1. Your MCP client connects and receives an OAuth challenge pointing at Context7
+2. Your client shows a sign-in prompt or an authorization link
 3. You're redirected to Context7 to sign in
-4. After signing in, you're redirected back and your client retries the same call
+4. After signing in, your client stores the token and connects
 5. Your client automatically handles token refresh from then on
 
-On `/mcp/oauth` the challenge comes on the first request instead, so steps 3 to 5 happen
-before you can use any tool.
+In `lazy` mode the challenge arrives later — on the tool call that crosses your free
+monthly limit — and steps 2 to 5 are otherwise identical.
 
 <Warning>
 **Some clients need you to start the sign-in yourself.** Whether the OAuth flow opens on its own depends on the client, not on Context7. Claude, Claude Desktop and ChatGPT show an inline connect prompt and retry the call once you finish. Terminal clients generally do not: in Claude Code run `/mcp`, select the server and choose "Authenticate"; in Codex CLI run `codex mcp login <server-name>`.

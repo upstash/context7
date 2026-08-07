@@ -25,6 +25,7 @@ import {
 import { getClientIp } from "./lib/client-ip.js";
 import {
   AUTH_SCOPES,
+  MCP_AUTH_MODE,
   buildHttpChallenge,
   buildToolResultChallenge,
   buildWwwAuthenticate,
@@ -495,12 +496,17 @@ async function main() {
       }
     };
 
-    // Anonymous access endpoint - no authentication required
+    // Public endpoint. Challenges on the first request by default, because
+    // that is when MCP clients actually run OAuth: every client we tested
+    // (Claude Code, Codex, Zed) surfaces a connect-time challenge natively,
+    // while a challenge raised mid-conversation either fails the turn or is
+    // ignored. Set CONTEXT7_MCP_AUTH_MODE=lazy to let anonymous callers
+    // connect, list, and use their free monthly requests before being asked.
     app.all("/mcp", async (req, res) => {
-      await handleMcpRequest(req, res, "lazy");
+      await handleMcpRequest(req, res, MCP_AUTH_MODE);
     });
 
-    // OAuth-protected endpoint - requires authentication
+    // OAuth-protected endpoint - always requires authentication
     app.all("/mcp/oauth", async (req, res) => {
       await handleMcpRequest(req, res, "required");
     });

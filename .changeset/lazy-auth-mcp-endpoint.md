@@ -1,13 +1,15 @@
 ---
-"@upstash/context7-mcp": minor
+"@upstash/context7-mcp": major
 ---
 
-Lazy authentication on the public `/mcp` endpoint. Anonymous clients still connect, list tools and call tools exactly as before; the server now answers with an OAuth challenge, rather than a rate-limit error, once a caller has spent the free monthly requests for their machine or invokes a tool listed in `CONTEXT7_PROTECTED_TOOLS`.
+The public `/mcp` endpoint now asks clients to authenticate when they connect.
 
-The quota trigger defers to the Context7 backend, which already counts anonymous requests per client IP and reports the balance on every response (`Context7-Quota-Tier`, `RateLimit-Remaining`). The MCP server mirrors that verdict instead of counting separately, so the challenge fires exactly when the real quota runs out. Because the balance is known one request ahead, the challenge is issued before the call is proxied: users get a sign-in prompt instead of a 429, and the refused call costs no quota.
+**This is a breaking change for anonymous users.** A client with no credentials that previously connected and called tools now receives a `401` with a `WWW-Authenticate` challenge on its first request. Set `CONTEXT7_MCP_AUTH_MODE=lazy` to restore the previous behaviour, with anonymous callers spending their free monthly requests before being challenged.
 
-The challenge is delivered in whichever shape the calling client acts on: an HTTP 401 with `WWW-Authenticate` for spec-compliant clients (Claude, VS Code, Cursor, Cline, Zed, Codex CLI), or a `CallToolResult` carrying `_meta["mcp/www_authenticate"]` for ChatGPT, which does not raise its link-account UI from a bare 401. Tools also advertise `securitySchemes` in their `_meta` so clients know they are callable before an account is linked.
+The default is `required` because that is when MCP clients actually run OAuth. Codex starts the flow as soon as it discovers the resource metadata, Claude Code exposes its authorize helpers for servers flagged at session start, and Zed raises its prompt on a startup 401. The same challenge raised mid-conversation is handled far worse: it fails the turn in progress, and the recovery path often only appears in the next session. Signing in at connect time means the user gets their client's native prompt instead of a broken request.
 
-Note that whether the sign-in prompt opens by itself is up to the client. Claude, Claude Desktop and ChatGPT show an inline connect card and retry the call automatically; terminal clients flag the server and expect the user to start the flow (`/mcp` in Claude Code, `codex mcp login` in Codex CLI).
+In `lazy` mode the quota trigger defers to the Context7 backend, which already counts anonymous requests per client IP and reports the balance on every response (`Context7-Quota-Tier`, `RateLimit-Remaining`). The MCP server mirrors that verdict rather than counting separately, and because the balance is known one request ahead the challenge is issued before the call is proxied — so users get a sign-in prompt instead of a 429, and the refused call costs no quota.
 
-This replaces the anonymous sign-in elicitation, which interrupted the turn to ask the user to run `ctx7 setup` in a terminal instead of driving the client's own OAuth flow.
+Either mode delivers the challenge in whichever shape the calling client acts on: an HTTP 401 with `WWW-Authenticate` for spec-compliant clients, or a `CallToolResult` carrying `_meta["mcp/www_authenticate"]` for ChatGPT, which does not raise its link-account UI from a bare 401. Tools also advertise `securitySchemes` in their `_meta`.
+
+Also removes the anonymous sign-in elicitation, which interrupted the turn to ask the user to run `ctx7 setup` in a terminal instead of driving the client's own OAuth flow.

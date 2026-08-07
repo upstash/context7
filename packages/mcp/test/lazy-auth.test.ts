@@ -3,7 +3,11 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 // These env vars change module-level constants, so each case re-imports the
 // module. `delete` rather than assignment: `process.env.X = undefined` stores
 // the string "undefined", which would leave a bogus entry in PROTECTED_TOOLS.
-const ENV_KEYS = ["CONTEXT7_PROTECTED_TOOLS", "CONTEXT7_TOOL_RESULT_CHALLENGE_CLIENTS"] as const;
+const ENV_KEYS = [
+  "CONTEXT7_PROTECTED_TOOLS",
+  "CONTEXT7_TOOL_RESULT_CHALLENGE_CLIENTS",
+  "CONTEXT7_MCP_AUTH_MODE",
+] as const;
 
 function clearEnv() {
   for (const key of ENV_KEYS) delete process.env[key];
@@ -403,5 +407,25 @@ describe("resolveAuthState", () => {
     const verify = vi.fn(async () => ({ valid: true }));
     expect(await resolveAuthState("ctx7sk-abc", verify, isJwt)).toEqual({ authenticated: true });
     expect(verify).not.toHaveBeenCalled();
+  });
+});
+
+describe("MCP_AUTH_MODE", () => {
+  test("defaults to required, so /mcp challenges on the first request", async () => {
+    const { MCP_AUTH_MODE } = await loadLazyAuth();
+    expect(MCP_AUTH_MODE).toBe("required");
+  });
+
+  test("CONTEXT7_MCP_AUTH_MODE=lazy restores the free-requests-first behaviour", async () => {
+    const { MCP_AUTH_MODE } = await loadLazyAuth({ CONTEXT7_MCP_AUTH_MODE: "lazy" });
+    expect(MCP_AUTH_MODE).toBe("lazy");
+  });
+
+  test("is case- and whitespace-insensitive, and rejects anything else", async () => {
+    expect((await loadLazyAuth({ CONTEXT7_MCP_AUTH_MODE: "  LAZY " })).MCP_AUTH_MODE).toBe("lazy");
+    expect((await loadLazyAuth({ CONTEXT7_MCP_AUTH_MODE: "anonymous" })).MCP_AUTH_MODE).toBe(
+      "required"
+    );
+    expect((await loadLazyAuth({ CONTEXT7_MCP_AUTH_MODE: "" })).MCP_AUTH_MODE).toBe("required");
   });
 });
