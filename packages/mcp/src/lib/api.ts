@@ -2,6 +2,8 @@ import { SearchResponse, ContextRequest, ContextResponse, ClientContext } from "
 import { generateHeaders } from "./encryption.js";
 import { Agent, ProxyAgent, setGlobalDispatcher } from "undici";
 import { CONTEXT7_API_BASE_URL } from "./constants.js";
+import { readQuotaSignal, recordQuotaSignal } from "./auth/quota-state.js";
+import { quotaFingerprint } from "./auth/lazy-auth.js";
 import { readFileSync } from "fs";
 import tls from "tls";
 
@@ -94,10 +96,19 @@ if (PROXY_URL && !PROXY_URL.startsWith("$") && /^(http|https):\/\//i.test(PROXY_
   }
 }
 
-function readPromptSignal(response: Response, context: ClientContext): void {
-  if (response.headers.get("X-Context7-Auth-Prompt") === "1") {
-    context.shouldPrompt = true;
-  }
+/**
+ * Mirror the backend's quota verdict for this caller so the lazy-auth gate can
+ * challenge on their next request. HTTP only: the verdict is keyed on the
+ * client IP and consumed by the HTTP gate, so recording it under a stdio
+ * process's session id would write state nothing can read.
+ *
+ * Whether the caller counts as anonymous comes from the backend's own
+ * `Context7-Quota-Tier`, not from whether a credential was presented — only the
+ * backend can tell a real key from a string shaped like one.
+ */
+function recordQuota(response: Response, context: ClientContext): void {
+  if (context.transport !== "http") return;
+  recordQuotaSignal(quotaFingerprint(context), readQuotaSignal(response));
 }
 
 /**
@@ -120,7 +131,7 @@ export async function searchLibraries(
     const headers = generateHeaders(context);
 
     const response = await fetch(url, { headers });
-    readPromptSignal(response, context);
+    recordQuota(response, context);
     if (!response.ok) {
       const errorMessage = await parseErrorResponse(response, context.apiKey);
       console.error(errorMessage);
@@ -153,7 +164,7 @@ export async function fetchLibraryContext(
     const headers = generateHeaders(context);
 
     const response = await fetch(url, { headers });
-    readPromptSignal(response, context);
+    recordQuota(response, context);
     if (!response.ok) {
       const errorMessage = await parseErrorResponse(response, context.apiKey);
       console.error(errorMessage);
