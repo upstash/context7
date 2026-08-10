@@ -19,9 +19,6 @@
   ],
   "scripts": {
     "build": "tsup",
-    "dev": "tsup --watch",
-    "test": "vitest run",
-    "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist node_modules",
     "lint": "eslint . --fix",
@@ -65,7 +62,6 @@
     "@opencode-ai/plugin": "^1.18.11",
     "@types/node": "^25.9.1",
     "tsup": "^8.5.0",
-    "typescript": "^5.9.3",
-    "vitest": "^4.1.9"
+    "typescript": "^5.9.3"
   }
 }
