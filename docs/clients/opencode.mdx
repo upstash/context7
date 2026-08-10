@@ -78,7 +78,7 @@ The plugin picks up `CONTEXT7_API_KEY` automatically and sends it as an `Authori
 
 Create or manage API keys in the [Context7 dashboard](https://context7.com/dashboard).
 
-Everything the plugin adds is additive, and your own configuration always wins. If your `opencode.json` already defines an MCP server named `context7`, an agent named `docs-researcher`, or a command named `context7-docs`, the plugin leaves it alone. Set `skill`, `agent`, or `command` to `false` in the plugin options to skip a component.
+Everything the plugin adds is additive, and your own configuration always wins. If your `opencode.json` already defines an MCP server named `context7`, an agent named `docs-researcher`, or a command named `context7-docs`, the plugin leaves it alone. It is also safe to run both `ctx7 setup` and the plugin, since OpenCode loads the `context7-mcp` skill once.
 
 ---
 

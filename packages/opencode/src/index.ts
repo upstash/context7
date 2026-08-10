@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 import type { Plugin, PluginModule } from "@opencode-ai/plugin";
-import { applyContext7Config, resolveOptions } from "./config.js";
+import { applyContext7Config, resolveApiKey } from "./config.js";
 
 /**
  * Absolute path to the skill folders shipped with this package.
@@ -18,11 +18,11 @@ const skillsDir = fileURLToPath(new URL("../skills", import.meta.url));
  * `docs-researcher` subagent, and the `/context7-docs` command.
  */
 const Context7Plugin: Plugin = async (_input, options) => {
-  const resolved = resolveOptions(options);
+  const apiKey = resolveApiKey(options);
 
   return {
     config: async (config) => {
-      applyContext7Config(config, { ...resolved, skillsDir });
+      applyContext7Config(config, { apiKey, skillsDir });
     },
   };
 };

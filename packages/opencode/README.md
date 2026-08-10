@@ -46,18 +46,16 @@ The plugin picks up `CONTEXT7_API_KEY` automatically and sends it as an `Authori
 }
 ```
 
-## Options
+## Overriding What the Plugin Adds
 
-Pass options with the tuple form of the `plugin` entry shown above.
+Every entry the plugin adds is additive, and an entry you configure yourself always wins. If your `opencode.json` already defines an MCP server named `context7`, an agent named `docs-researcher`, or a command named `context7-docs`, the plugin leaves it untouched. To turn off the subagent, for example, define it yourself as disabled:
 
-| Option    | Type      | Default             | Description                                      |
-| --------- | --------- | ------------------- | ------------------------------------------------ |
-| `apiKey`  | `string`  | `$CONTEXT7_API_KEY` | Context7 API key. Skips the OAuth flow when set. |
-| `skill`   | `boolean` | `true`              | Register the bundled `context7-mcp` skill.       |
-| `agent`   | `boolean` | `true`              | Register the `docs-researcher` subagent.         |
-| `command` | `boolean` | `true`              | Register the `/context7-docs` command.           |
-
-Every entry the plugin adds is additive, and an entry you configure yourself always wins. If your `opencode.json` already defines an MCP server named `context7`, an agent named `docs-researcher`, or a command named `context7-docs`, the plugin leaves it untouched.
+```json opencode.json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "agent": { "docs-researcher": { "disable": true } }
+}
+```
 
 ## Usage
 

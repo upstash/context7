@@ -3,76 +3,61 @@ import type { Config } from "@opencode-ai/plugin";
 import {
   AGENT_NAME,
   COMMAND_NAME,
-  MCP_OAUTH_URL,
   MCP_SERVER_NAME,
-  MCP_URL,
   applyContext7Config,
-  resolveOptions,
+  resolveApiKey,
 } from "../src/config.js";
 
 const SKILLS_DIR = "/pkg/skills";
 
 type ConfigWithSkills = Config & { skills?: { paths?: string[]; urls?: string[] } };
 
-function apply(config: Config, overrides: Record<string, unknown> = {}): ConfigWithSkills {
-  applyContext7Config(config, { skillsDir: SKILLS_DIR, ...overrides });
+function apply(config: Config, apiKey?: string): ConfigWithSkills {
+  applyContext7Config(config, { apiKey, skillsDir: SKILLS_DIR });
   return config as ConfigWithSkills;
 }
 
-describe("resolveOptions", () => {
-  it("defaults every component to enabled and reads no key", () => {
-    expect(resolveOptions(undefined, {})).toEqual({
-      apiKey: undefined,
-      skill: true,
-      agent: true,
-      command: true,
-    });
+describe("resolveApiKey", () => {
+  it("returns undefined when neither the options nor the environment carry a key", () => {
+    expect(resolveApiKey(undefined, {})).toBeUndefined();
   });
 
   it("falls back to CONTEXT7_API_KEY", () => {
-    expect(resolveOptions({}, { CONTEXT7_API_KEY: "env-key" }).apiKey).toBe("env-key");
+    expect(resolveApiKey({}, { CONTEXT7_API_KEY: "env-key" })).toBe("env-key");
   });
 
   it("prefers an explicit apiKey option over the environment", () => {
-    expect(resolveOptions({ apiKey: "opt-key" }, { CONTEXT7_API_KEY: "env-key" }).apiKey).toBe(
-      "opt-key"
-    );
+    expect(resolveApiKey({ apiKey: "opt-key" }, { CONTEXT7_API_KEY: "env-key" })).toBe("opt-key");
   });
 
-  it("ignores an empty api key", () => {
-    expect(resolveOptions({ apiKey: "" }, {}).apiKey).toBeUndefined();
+  it("ignores empty strings so they never become a Bearer header", () => {
+    expect(resolveApiKey({ apiKey: "" }, { CONTEXT7_API_KEY: "" })).toBeUndefined();
   });
 
-  it("ignores non-boolean toggles", () => {
-    expect(resolveOptions({ skill: "no" }, {})).toMatchObject({ skill: true });
-  });
-
-  it("honours explicit toggles", () => {
-    expect(resolveOptions({ skill: false, agent: false, command: false }, {})).toMatchObject({
-      skill: false,
-      agent: false,
-      command: false,
-    });
+  it("ignores an apiKey option that is not a string", () => {
+    expect(resolveApiKey({ apiKey: 42 }, {})).toBeUndefined();
   });
 });
 
 describe("applyContext7Config", () => {
-  it("registers the OAuth endpoint when no api key is available", () => {
+  // The endpoints are asserted as literals on purpose. Comparing against the exported
+  // constants would pass even if the URLs were wrong.
+  it("points at the OAuth endpoint when no api key is available", () => {
     const config = apply({});
 
     expect(config.mcp?.[MCP_SERVER_NAME]).toEqual({
       type: "remote",
-      url: MCP_OAUTH_URL,
+      url: "https://mcp.context7.com/mcp/oauth",
       enabled: true,
     });
   });
 
-  it("registers the api key endpoint and disables OAuth when a key is available", () => {
-    const config = apply({}, { apiKey: "secret" });
+  it("points at the plain endpoint and disables OAuth when an api key is available", () => {
+    const config = apply({}, "secret");
 
     expect(config.mcp?.[MCP_SERVER_NAME]).toEqual({
       type: "remote",
-      url: MCP_URL,
+      url: "https://mcp.context7.com/mcp",
       enabled: true,
       headers: { Authorization: "Bearer secret" },
       oauth: false,
@@ -93,18 +78,9 @@ describe("applyContext7Config", () => {
     expect(config.agent?.[AGENT_NAME]?.permission).toEqual({ edit: "deny" });
   });
 
-  it("skips components that are turned off", () => {
-    const config = apply({}, { skill: false, agent: false, command: false });
-
-    expect(config.skills).toBeUndefined();
-    expect(config.agent).toBeUndefined();
-    expect(config.command).toBeUndefined();
-    expect(config.mcp?.[MCP_SERVER_NAME]).toBeDefined();
-  });
-
   it("never overwrites an existing context7 mcp server", () => {
     const existing = { type: "local" as const, command: ["npx", "-y", "@upstash/context7-mcp"] };
-    const config = apply({ mcp: { [MCP_SERVER_NAME]: existing } }, { apiKey: "secret" });
+    const config = apply({ mcp: { [MCP_SERVER_NAME]: existing } }, "secret");
 
     expect(config.mcp?.[MCP_SERVER_NAME]).toBe(existing);
   });
