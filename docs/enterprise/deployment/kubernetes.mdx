@@ -229,15 +229,20 @@ The container runs as root by default, so existing deployments are unaffected. S
 
 `fsGroup` makes that volume writable by whichever UID the pod runs as, so keep it set if you change `runAsUser`. The only other path the container writes is `/tmp`, which is world-writable: it holds Git SSH key material, backup and restore staging, and support bundles.
 
+<Warning>
+  **Changing `runAsUser` on an existing volume.** Files already on the volume belong to the previous UID. Most CSI drivers re-apply ownership from `fsGroup` when the volume mounts, so the change is transparent. Volumes that do not support ownership management — `hostPath`, and some NFS setups — ignore `fsGroup`, and the new UID cannot write the existing files. Chown the volume once, or keep the original UID. The server detects this at startup and names the files it cannot write.
+</Warning>
+
 <Note>
   This requires image version 1.4.0 or later. Earlier images keep source clones on a root-owned layer inside the image, so a non-root UID starts normally but fails on the first parse.
 </Note>
 
-If the volume is not writable by the UID you choose, the server exits at startup with the offending path rather than failing later:
+If the volume is not writable by the UID you choose, the server exits at startup naming the offending paths rather than failing later:
 
 ```
-[config] /data is not writable by uid 10001. Set fsGroup on the volume
-(Kubernetes), or chown it to the user you run as.
+[config] Not writable by uid 12345: /data/context7.db, /data/logs, /data/vectors.
+[config] Set fsGroup on the volume so Kubernetes re-owns it for this uid, or chown
+it: chown -R 12345: /data. Note that hostPath-backed volumes ignore fsGroup.
 ```
 
 Upgrading an existing deployment needs no manual `chown`. The kubelet re-chowns the volume on mount when `fsGroup` is set.
