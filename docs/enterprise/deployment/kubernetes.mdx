@@ -68,10 +68,21 @@ spec:
       imagePullSecrets:
         - name: context7-registry
       terminationGracePeriodSeconds: 60
+      # Runs unprivileged. runAsUser can be any UID; fsGroup makes the volume
+      # writable by it. See Running as non-root below.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
       containers:
         - name: context7
           image: ghcr.io/context7/enterprise:latest
           imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 3000
               name: http
@@ -203,6 +214,40 @@ kubectl logs -n context7 context7-0
 ```
 
 Once the pod is ready, open your Ingress hostname in a browser to complete the setup wizard.
+
+## Running as non-root
+
+The container runs as root by default, so existing deployments are unaffected. Set a `securityContext` to run it unprivileged, as the manifest above does. This satisfies a `runAsNonRoot` admission policy.
+
+`runAsUser` can be **any** UID. Everything Context7 writes lives under `/data`:
+
+| Path | Contents |
+|---|---|
+| `/data` | SQLite database, vector index, logs |
+| `/data/repos` | source clones for the repositories you index |
+| `/data/home` | state for the documentation agent |
+
+`fsGroup` makes that volume writable by whichever UID the pod runs as, so keep it set if you change `runAsUser`. The only other path the container writes is `/tmp`, which is world-writable: it holds Git SSH key material, backup and restore staging, and support bundles.
+
+<Warning>
+  **Changing `runAsUser` on an existing volume.** Files already on the volume belong to the previous UID. Most CSI drivers re-apply ownership from `fsGroup` when the volume mounts, so the change is transparent. Volumes that do not support ownership management — `hostPath`, and some NFS setups — ignore `fsGroup`, and the new UID cannot write the existing files. Chown the volume once, or keep the original UID. The server detects this at startup and names the files it cannot write.
+</Warning>
+
+<Note>
+  This requires image version 1.4.0 or later. Earlier images keep source clones on a root-owned layer inside the image, so a non-root UID starts normally but fails on the first parse.
+</Note>
+
+If the volume is not writable by the UID you choose, the server exits at startup naming the offending paths rather than failing later:
+
+```
+[config] Not writable by uid 12345: /data/context7.db, /data/logs, /data/vectors.
+[config] Set fsGroup on the volume so Kubernetes re-owns it for this uid, or chown
+it: chown -R 12345: /data. Note that hostPath-backed volumes ignore fsGroup.
+```
+
+Upgrading an existing deployment needs no manual `chown`. The kubelet re-chowns the volume on mount when `fsGroup` is set.
+
+To also set `readOnlyRootFilesystem: true`, mount an `emptyDir` at `/tmp`. Nothing else outside `/data` needs to be writable.
 
 ## Networking Requirements
 
