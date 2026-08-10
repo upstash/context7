@@ -68,10 +68,21 @@ spec:
       imagePullSecrets:
         - name: context7-registry
       terminationGracePeriodSeconds: 60
+      # Runs unprivileged. runAsUser can be any UID; fsGroup makes the volume
+      # writable by it. See Running as non-root below.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
       containers:
         - name: context7
           image: ghcr.io/context7/enterprise:latest
           imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           ports:
             - containerPort: 3000
               name: http
@@ -203,6 +214,35 @@ kubectl logs -n context7 context7-0
 ```
 
 Once the pod is ready, open your Ingress hostname in a browser to complete the setup wizard.
+
+## Running as non-root
+
+The container runs as root by default, so existing deployments are unaffected. Set a `securityContext` to run it unprivileged, as the manifest above does. This satisfies a `runAsNonRoot` admission policy.
+
+`runAsUser` can be **any** UID. Everything Context7 writes lives under `/data`:
+
+| Path | Contents |
+|---|---|
+| `/data` | SQLite database, vector index, logs |
+| `/data/repos` | source clones for the repositories you index |
+| `/data/home` | state for the documentation agent |
+
+`fsGroup` makes that volume writable by whichever UID the pod runs as, so keep it set if you change `runAsUser`. The only other path the container writes is `/tmp`, which is world-writable: it holds Git SSH key material, backup and restore staging, and support bundles.
+
+<Note>
+  This requires image version 1.4.0 or later. Earlier images keep source clones on a root-owned layer inside the image, so a non-root UID starts normally but fails on the first parse.
+</Note>
+
+If the volume is not writable by the UID you choose, the server exits at startup with the offending path rather than failing later:
+
+```
+[config] /data is not writable by uid 10001. Set fsGroup on the volume
+(Kubernetes), or chown it to the user you run as.
+```
+
+Upgrading an existing deployment needs no manual `chown`. The kubelet re-chowns the volume on mount when `fsGroup` is set.
+
+To also set `readOnlyRootFilesystem: true`, mount an `emptyDir` at `/tmp`. Nothing else outside `/data` needs to be writable.
 
 ## Networking Requirements
 
