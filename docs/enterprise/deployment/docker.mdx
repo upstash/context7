@@ -126,6 +126,25 @@ Example response:
 }
 ```
 
+## Running as non-root
+
+The container runs as root by default. To run it unprivileged, chown the volume to the UID you want and pass `--user`:
+
+```bash
+docker run --rm -v context7-data:/data alpine chown -R 10001:10001 /data
+
+docker run -d --name context7 \
+  --user 10001:10001 \
+  -v context7-data:/data \
+  -e LICENSE_KEY="$LICENSE_KEY" \
+  -p 3000:3000 \
+  ghcr.io/context7/enterprise:latest
+```
+
+Any UID works. Everything Context7 writes lives under `/data`, including source clones (`/data/repos`) and documentation-agent state (`/data/home`). The only other path it writes is `/tmp`.
+
+Skip the `chown` and the server exits at startup with the path it could not write. This requires image 1.4.0 or later. On Kubernetes, use `fsGroup` instead and the kubelet handles the ownership: see [Kubernetes](/enterprise/deployment/kubernetes#running-as-non-root).
+
 ## Scaling
 
 The setup above runs a single container with a local volume, which suits most deployments. To run multiple replicas behind a load balancer, move state to an external PostgreSQL (embeddings included, via the `pgvector` extension), so every replica is stateless and interchangeable. A turnkey multi-replica Compose file (app replicas + Nginx load balancer) ships in the deployment bundle.
