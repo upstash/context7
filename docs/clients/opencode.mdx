@@ -11,24 +11,7 @@ For more details on MCP server configuration in OpenCode, see the [OpenCode MCP 
 
 ## Installation
 
-Install the Context7 plugin:
-
-```bash
-opencode plugin @upstash/context7-opencode
-```
-
-The plugin adds the hosted MCP server, a skill that looks up documentation when you ask about libraries, a `docs-researcher` subagent, and the `/context7-docs` command. Restart OpenCode after installing. On the first lookup, a browser window opens so you can log in to Context7 via OAuth, which gives you your account's rate limits.
-
-You can also add the plugin to your config by hand:
-
-```json opencode.json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "plugin": ["@upstash/context7-opencode"]
-}
-```
-
-If you only want the MCP server and a skill, run the setup command instead:
+Run the setup command to configure Context7 for OpenCode:
 
 ```bash
 npx ctx7 setup --opencode
@@ -36,11 +19,21 @@ npx ctx7 setup --opencode
 
 Authenticates via OAuth, generates an API key, and installs the appropriate skill. You can choose between CLI or MCP mode.
 
+You can also install Context7 as an OpenCode plugin. It bundles the MCP server with a skill, a subagent, and a command:
+
+```bash
+opencode plugin @upstash/context7-opencode
+```
+
+Restart OpenCode after installing. On the first lookup, a browser window opens so you can log in to Context7 via OAuth, which gives you your account's rate limits.
+
 For manual MCP installation or other configuration options, see [All MCP Clients](/resources/all-clients).
 
 ---
 
-## Plugin Contents
+## Plugin
+
+The plugin is an alternative to `ctx7 setup` for people who want the subagent and the command as well. It adds four things:
 
 <CardGroup cols={2}>
 <Card title="MCP Server" icon="server">
@@ -56,6 +49,15 @@ A `docs-researcher` subagent for focused lookups that keep your main context lea
 `/context7-docs` for manual documentation queries
 </Card>
 </CardGroup>
+
+You can also add the plugin to your config by hand:
+
+```json opencode.json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["@upstash/context7-opencode"]
+}
+```
 
 ### API Key
 
@@ -82,7 +84,7 @@ Everything the plugin adds is additive, and your own configuration always wins. 
 
 ## Using Context7
 
-With the plugin or `ctx7 setup`, a skill is installed that triggers automatically when you ask about libraries. You can also invoke it explicitly:
+With `ctx7 setup` or the plugin, a skill is installed that triggers automatically when you ask about libraries. You can also invoke it explicitly:
 
 ```
 use context7 to show me how to set up middleware in Next.js 15
