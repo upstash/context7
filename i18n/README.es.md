@@ -250,8 +250,5 @@ Esto a menudo resuelve problemas de resolución de módulos, especialmente en en
 - [JeredBlu: "Context 7 MCP: Get Documentation Instantly + VS Code Setup"](https://www.youtube.com/watch?v=-ls0D-rtET4)
 - [Income stream surfers: "Context7: The New MCP Server That Will CHANGE AI Coding"](https://www.youtube.com/watch?v=PS-2Azb-C3M)
 
-## Historial de Estrellas
-[![Gráfico de Historial de Estrellas](https://api.star-history.com/svg?repos=upstash/context7&type=Date)](https://www.star-history.com/#upstash/context7&Date)
-
 ## Licencia
 MIT

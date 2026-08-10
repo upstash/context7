@@ -309,10 +309,6 @@ npx -y @modelcontextprotocol/inspector npx @upstash/context7-mcp@latest
 - [Cline & RooCode + Context7: قوة مضاعفة](https://www.youtube.com/watch?v=qZfENAPMnyo)
 - [أفضل 5 MCP Servers لتجربة برمجة ساحرة](https://www.youtube.com/watch?v=LqTQi8qexJM)
 
-## سجل النجوم
-
-[![Star History Chart](https://api.star-history.com/svg?repos=upstash/context7&type=Date)](https://www.star-history.com/#upstash/context7&Date)
-
 ## الترخيص
 
 MIT

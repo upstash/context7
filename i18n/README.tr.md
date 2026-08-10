@@ -294,8 +294,5 @@ Context7 projeleri topluluk katkılıdır ve yüksek kaliteyi korumaya çalışs
 - [AICodeKing: "Context7 + Cline & RooCode: Bu MCP Sunucusu CLINE'ı 100 KAT DAHA ETKİLİ YAPIYOR!"](https://www.youtube.com/watch?v=qZfENAPMnyo)
 - [Sean Kochel: "Vibe Kodlama İhtişamı İçin 5 MCP Sunucusu (Tak ve Çalıştır)"](https://www.youtube.com/watch?v=LqTQi8qexJM)
 
-## Yıldız Geçmişi
-[![Yıldız Geçmişi Grafiği](https://api.star-history.com/svg?repos=upstash/context7&type=Date)](https://www.star-history.com/#upstash/context7&Date)
-
 ## Lisans
 MIT

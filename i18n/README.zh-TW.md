@@ -236,10 +236,6 @@ Context7 MCP 提供下列 LLM 可使用的工具：
 - [AICodeKing：「Context7 + Cline & RooCode：這個 MCP 伺服器讓 CLINE 效率提升 100 倍！」](https://www.youtube.com/watch?v=qZfENAPMnyo)
 - [Sean Kochel：「5 個讓程式開發如虎添翼的 MCP 伺服器（即插即用）」](https://www.youtube.com/watch?v=LqTQi8qexJM)
 
-## ⭐ Star 歷史
-
-[![Star 歷史圖表](https://api.star-history.com/svg?repos=upstash/context7&type=Date)](https://www.star-history.com/#upstash/context7&Date)
-
 ## 📄 授權
 
 MIT

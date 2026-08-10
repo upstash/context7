@@ -146,10 +146,6 @@ Context7 将自动匹配适当的版本。
 - [AICodeKing："Context7 + Cline & RooCode：这个MCP服务器让CLINE效果提升100倍！"](https://www.youtube.com/watch?v=qZfENAPMnyo)
 - [Sean Kochel："5个让编码更爽的MCP服务器（即插即用）"](https://www.youtube.com/watch?v=LqTQi8qexJM)
 
-## ⭐ Star 历史
-
-[![Star历史图表](https://api.star-history.com/svg?repos=upstash/context7&type=Date)](https://www.star-history.com/#upstash/context7&Date)
-
 ## 📄 许可证
 
 MIT
