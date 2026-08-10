@@ -97,21 +97,21 @@ async function refreshAccessToken(refreshToken: string): Promise<TokenData> {
 }
 
 /**
- * Returns a valid access token, refreshing if expired. Returns null if no
+ * Returns a valid access token, refreshing if expired. Returns undefined if no
  * tokens are stored or refresh fails. Pre-0.5 installs may have OAuth tokens
  * with a `refresh_token`; new installs hold long-lived API keys that never
  * expire and skip the refresh path entirely.
  */
-export async function getValidAccessToken(): Promise<string | null> {
+export async function getValidAccessToken(): Promise<string | undefined> {
   const tokens = loadTokens();
-  if (!tokens) return null;
+  if (!tokens) return undefined;
 
   if (!isTokenExpired(tokens)) {
     return tokens.access_token;
   }
 
   if (!tokens.refresh_token) {
-    return null;
+    return undefined;
   }
 
   try {
@@ -119,7 +119,7 @@ export async function getValidAccessToken(): Promise<string | null> {
     saveTokens(newTokens);
     return newTokens.access_token;
   } catch {
-    return null;
+    return undefined;
   }
 }
 

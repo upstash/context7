@@ -221,9 +221,9 @@ describe("isTokenExpired", () => {
 });
 
 describe("getValidAccessToken", () => {
-  test("returns null when no tokens stored", async () => {
+  test("returns undefined when no tokens stored", async () => {
     mfs.existsSync.mockReturnValue(false);
-    expect(await getValidAccessToken()).toBeNull();
+    expect(await getValidAccessToken()).toBeUndefined();
   });
 
   test("returns access_token when not expired", async () => {
@@ -237,7 +237,7 @@ describe("getValidAccessToken", () => {
     expect(await getValidAccessToken()).toBe("valid-tok");
   });
 
-  test("returns null when expired and no refresh_token", async () => {
+  test("returns undefined when expired and no refresh_token", async () => {
     const tokens: TokenData = {
       access_token: "expired-tok",
       token_type: "bearer",
@@ -245,7 +245,7 @@ describe("getValidAccessToken", () => {
     };
     mfs.existsSync.mockReturnValue(true);
     mfs.readFileSync.mockReturnValue(JSON.stringify(tokens));
-    expect(await getValidAccessToken()).toBeNull();
+    expect(await getValidAccessToken()).toBeUndefined();
   });
 
   test("refreshes token when expired and refresh_token exists", async () => {
@@ -285,7 +285,7 @@ describe("getValidAccessToken", () => {
     expect(mfs.writeFileSync).toHaveBeenCalled();
   });
 
-  test("returns null when refresh fails", async () => {
+  test("returns undefined when refresh fails", async () => {
     const tokens: TokenData = {
       access_token: "expired-tok",
       token_type: "bearer",
@@ -305,12 +305,12 @@ describe("getValidAccessToken", () => {
       })
     );
 
-    expect(await getValidAccessToken()).toBeNull();
+    expect(await getValidAccessToken()).toBeUndefined();
   });
 
   // An expired refresh token is indistinguishable from being logged out, so the
   // caller reports "not logged in" rather than surfacing a network error here.
-  test("returns null when the refresh connection fails", async () => {
+  test("returns undefined when the refresh connection fails", async () => {
     const tokens: TokenData = {
       access_token: "expired-tok",
       token_type: "bearer",
@@ -329,7 +329,7 @@ describe("getValidAccessToken", () => {
         )
     );
 
-    expect(await getValidAccessToken()).toBeNull();
+    expect(await getValidAccessToken()).toBeUndefined();
   });
 });
 

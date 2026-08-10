@@ -51,7 +51,7 @@ async function resolveCommand(
   trackEvent("command", { name: "library" });
 
   const spinner = isTTY ? ora(`Searching for "${library}"...`).start() : null;
-  const accessToken = (await getValidAccessToken()) ?? undefined;
+  const accessToken = await getValidAccessToken();
 
   let data;
   try {
@@ -131,9 +131,8 @@ async function queryCommand(
     return;
   }
 
-  const accessToken = (await getValidAccessToken()) ?? undefined;
-
   const spinner = isTTY ? ora(`Fetching docs for "${libraryId}"...`).start() : null;
+  const accessToken = await getValidAccessToken();
   const outputType = options.json ? "json" : "txt";
 
   let result;
