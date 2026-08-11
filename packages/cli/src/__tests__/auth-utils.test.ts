@@ -285,6 +285,64 @@ describe("getValidAccessToken", () => {
     expect(mfs.writeFileSync).toHaveBeenCalled();
   });
 
+  // RFC 6749 §6: dropping the stored refresh_token here would log the user out
+  // at the next expiry, with no error to explain why.
+  test("keeps the stored refresh_token when the refresh response omits one", async () => {
+    const tokens: TokenData = {
+      access_token: "expired-tok",
+      token_type: "bearer",
+      expires_at: Date.now() - 1000,
+      refresh_token: "refresh-tok",
+    };
+
+    mfs.existsSync.mockReturnValue(true);
+    mfs.readFileSync.mockReturnValue(JSON.stringify(tokens));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({ access_token: "new-tok", token_type: "bearer", expires_in: 3600 }),
+      })
+    );
+
+    expect(await getValidAccessToken()).toBe("new-tok");
+
+    const written = JSON.parse(mfs.writeFileSync.mock.calls[0][1] as string);
+    expect(written.refresh_token).toBe("refresh-tok");
+    expect(written.access_token).toBe("new-tok");
+  });
+
+  test("prefers a rotated refresh_token over the stored one", async () => {
+    const tokens: TokenData = {
+      access_token: "expired-tok",
+      token_type: "bearer",
+      expires_at: Date.now() - 1000,
+      refresh_token: "refresh-tok",
+    };
+
+    mfs.existsSync.mockReturnValue(true);
+    mfs.readFileSync.mockReturnValue(JSON.stringify(tokens));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            access_token: "new-tok",
+            token_type: "bearer",
+            expires_in: 3600,
+            refresh_token: "rotated-tok",
+          }),
+      })
+    );
+
+    expect(await getValidAccessToken()).toBe("new-tok");
+
+    const written = JSON.parse(mfs.writeFileSync.mock.calls[0][1] as string);
+    expect(written.refresh_token).toBe("rotated-tok");
+  });
+
   test("returns undefined when refresh fails", async () => {
     const tokens: TokenData = {
       access_token: "expired-tok",

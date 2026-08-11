@@ -116,7 +116,10 @@ export async function getValidAccessToken(): Promise<string | undefined> {
 
   try {
     const newTokens = await refreshAccessToken(tokens.refresh_token);
-    saveTokens(newTokens);
+    // RFC 6749 §6: the response MAY omit refresh_token, and the client then
+    // keeps the one it already holds. Writing the response verbatim would
+    // drop it and log the user out at the next expiry.
+    saveTokens({ refresh_token: tokens.refresh_token, ...newTokens });
     return newTokens.access_token;
   } catch {
     return undefined;
