@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.8
+
+### Patch Changes
+
+- 91dea9f: Fix `ctx7 library`, `ctx7 docs` and `ctx7 skills suggest` silently falling back to anonymous requests when the stored OAuth token expires, which surfaced misleading quota errors for authenticated users. `ctx7 generate` no longer forces a full interactive re-login when the token can be refreshed instead. All four commands now go through `getValidAccessToken()`, which refreshes expired credentials.
+
+  A successful refresh also keeps the stored `refresh_token` when the server omits one from the response, as permitted by RFC 6749 §6. Previously the response was written verbatim, so the refresh token was dropped and the user was silently logged out at the next expiry.
+
 ## 0.5.7
 
 ### Patch Changes
