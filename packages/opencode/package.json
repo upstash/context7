@@ -1,7 +1,7 @@
 {
   "name": "@upstash/context7-opencode",
   "version": "0.1.0",
-  "description": "Official Context7 plugin for OpenCode — wires up the Context7 MCP server, a documentation skill, and a docs-researcher subagent",
+  "description": "Official Context7 plugin for OpenCode — wires up the Context7 MCP server and a documentation skill",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

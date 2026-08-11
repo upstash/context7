@@ -4,11 +4,10 @@ Context7 solves a common problem with AI coding assistants: outdated training da
 
 ## What's Included
 
-Installing the plugin adds three things to OpenCode:
+Installing the plugin adds two things to OpenCode:
 
 - **MCP Server** - The hosted Context7 server, with `resolve-library-id` and `query-docs`
 - **Skill** - `context7-mcp` auto-triggers documentation lookups when you ask about libraries
-- **Agent** - A `docs-researcher` subagent for focused lookups that keep your main context lean
 
 ## Installation
 
@@ -25,18 +24,18 @@ The command installs the plugin and adds it to your OpenCode config. You can als
 }
 ```
 
-Restart OpenCode after installing. The plugin runs the Context7 MCP server locally through `npx`, so the first lookup downloads `@upstash/context7-mcp` once.
+Restart OpenCode after installing. On the first documentation lookup, OpenCode opens a browser window so you can log in to Context7 via OAuth, which gives you your account's rate limits.
 
 ## API Key
 
-The plugin works without any configuration, but anonymous requests share a common rate limit. To use your own plan, create a key in the [Context7 dashboard](https://context7.com/dashboard) and export it before launching OpenCode:
+OAuth is the default and needs no configuration. If you would rather use an API key, for example on a headless machine, create one in the [Context7 dashboard](https://context7.com/dashboard) and export it before launching OpenCode:
 
 ```bash
 # e.g. in ~/.zshrc or ~/.bashrc
 export CONTEXT7_API_KEY="your-api-key"
 ```
 
-The plugin picks up `CONTEXT7_API_KEY` automatically and passes it to the MCP server. You can also pass the key through the plugin options:
+The plugin picks up `CONTEXT7_API_KEY` automatically and sends it as an `Authorization` header instead of running the OAuth flow. You can also pass the key through the plugin options:
 
 ```json opencode.json
 {
@@ -47,14 +46,7 @@ The plugin picks up `CONTEXT7_API_KEY` automatically and passes it to the MCP se
 
 ## Overriding What the Plugin Adds
 
-Every entry the plugin adds is additive, and an entry you configure yourself always wins. If your `opencode.json` already defines an MCP server named `context7` or an agent named `docs-researcher`, the plugin leaves it untouched. To turn off the subagent, for example, define it yourself as disabled:
-
-```json opencode.json
-{
-  "$schema": "https://opencode.ai/config.json",
-  "agent": { "docs-researcher": { "disable": true } }
-}
-```
+Both entries are additive, and an entry you configure yourself always wins. If your `opencode.json` already defines an MCP server named `context7`, the plugin leaves it untouched.
 
 ## Usage
 
@@ -64,17 +56,9 @@ The skill triggers on its own when you ask about a library:
 - "Show me React Server Components examples"
 - "What's the Prisma syntax for relations?"
 
-Hand the lookup to the subagent when you want to keep your main context clean:
-
-```
-ask docs-researcher to look up Supabase auth methods
-```
-
-The subagent runs with `edit` denied, so it reads documentation and reports back without touching your files.
-
 ## Available Tools
 
-### resolve-library-id
+### context7_resolve-library-id
 
 Searches for libraries and returns Context7-compatible identifiers.
 
@@ -83,7 +67,7 @@ Input: "next.js"
 Output: { id: "/vercel/next.js", name: "Next.js", versions: ["v15.1.8", "v14.2.0", ...] }
 ```
 
-### query-docs
+### context7_query-docs
 
 Fetches documentation for a specific library, ranked by relevance to your question.
 
@@ -101,7 +85,7 @@ To get documentation for a specific version, include the version in the library 
 /supabase/supabase/v2.45.0
 ```
 
-The `resolve-library-id` tool returns available versions, so you can pick the one that matches your project.
+The `context7_resolve-library-id` tool returns available versions, so you can pick the one that matches your project.
 
 ## License
 
