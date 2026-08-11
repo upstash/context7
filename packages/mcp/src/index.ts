@@ -365,7 +365,17 @@ async function main() {
     // no session store. The handler serves modern (2026-07-28) traffic natively
     // and 2025-era traffic through its stateless legacy fallback, which answers
     // GET/DELETE (session operations) with 405.
+    // keepAliveMs: 0 disables SSE keepalive heartbeats. Every tool here is a
+    // millisecond vector query (p100 ~28s), so no legitimate exchange needs a
+    // heartbeat to stay alive — but a hung exchange kept "alive" by heartbeats
+    // can never be reaped by the gateway's stream idle timeout. A batch
+    // carrying a request plus its own notifications/cancelled produces exactly
+    // that: per spec the cancelled request gets no response, the SDK transport
+    // then never closes the stream, and with heartbeats it survived until the
+    // gateway's 1200s hard cap (the 2026-08-11 outage). Silent hangs instead
+    // go idle and the gateway reaps them at streamIdleTimeout (300s).
     const mcpHandler = createMcpHandler(() => createMcpServer(), {
+      keepAliveMs: 0,
       onerror: (error) => console.error("MCP handler error:", error),
     });
     // Without onerror, request-conversion / handler.fetch throws are answered
