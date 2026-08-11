@@ -1,5 +1,12 @@
 # @upstash/context7-mcp
 
+## 4.0.2
+
+### Patch Changes
+
+- 67528f2: Add a 60s `AbortSignal.timeout()` to both Context7 API calls in `lib/api.ts`. Without a signal a stalled backend call rides undici's ~300s default before failing. 60s is generous: these are vector queries with p99.9 ~3.2s, and no request exceeded 30s across a full day of production traffic.
+- c68104e: Disable SSE keepalive heartbeats on the HTTP handler (`keepAliveMs: 0`). Every tool is a millisecond vector query, so no legitimate exchange needs a heartbeat — but a hung exchange kept alive by heartbeats can never be reaped by a proxy's stream idle timeout. One such hang is deterministic: a 2025-era JSON-RPC batch carrying a request plus its own `notifications/cancelled` gets no response for the cancelled request (per spec), the SDK transport then never closes the stream, and heartbeats kept it alive until the gateway's 1200s hard cap — the dominant source of leaked upstream connections in the 2026-08-11 mcp.context7.com outage. With heartbeats off, silent hangs go idle and the proxy reaps them at its idle timeout.
+
 ## 4.0.1
 
 ### Patch Changes
