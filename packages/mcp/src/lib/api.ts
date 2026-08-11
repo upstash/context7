@@ -6,6 +6,14 @@ import { readFileSync } from "fs";
 import tls from "tls";
 
 /**
+ * Ceiling on a single Context7 API call. Without a signal a stalled backend
+ * call rides undici's ~300s default before failing. 60s is generous for these
+ * vector queries: p99.9 is ~3.2s, and no request exceeded 30s across a full
+ * day of production traffic.
+ */
+const API_TIMEOUT_MS = 60_000;
+
+/**
  * Parses error response from the Context7 API
  * Extracts the server's error message, falling back to status-based messages if parsing fails
  * @param response The fetch Response object
@@ -119,7 +127,7 @@ export async function searchLibraries(
 
     const headers = generateHeaders(context);
 
-    const response = await fetch(url, { headers });
+    const response = await fetch(url, { headers, signal: AbortSignal.timeout(API_TIMEOUT_MS) });
     readPromptSignal(response, context);
     if (!response.ok) {
       const errorMessage = await parseErrorResponse(response, context.apiKey);
@@ -152,7 +160,7 @@ export async function fetchLibraryContext(
 
     const headers = generateHeaders(context);
 
-    const response = await fetch(url, { headers });
+    const response = await fetch(url, { headers, signal: AbortSignal.timeout(API_TIMEOUT_MS) });
     readPromptSignal(response, context);
     if (!response.ok) {
       const errorMessage = await parseErrorResponse(response, context.apiKey);
