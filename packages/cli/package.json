@@ -1,6 +1,6 @@
 {
   "name": "ctx7",
-  "version": "0.5.7",
+  "version": "0.5.8",
   "description": "Context7 CLI - Fetch documentation context and configure Context7",
   "type": "module",
   "bin": {
