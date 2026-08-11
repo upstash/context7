@@ -234,7 +234,7 @@ The container runs as root by default, so existing deployments are unaffected. S
 </Warning>
 
 <Note>
-  This requires image version 1.4.0 or later. Earlier images keep source clones on a root-owned layer inside the image, so a non-root UID starts normally but fails on the first parse.
+  This requires image version 1.3.2 or later. Earlier images keep source clones on a root-owned layer inside the image, so a non-root UID starts normally but fails on the first parse.
 </Note>
 
 If the volume is not writable by the UID you choose, the server exits at startup naming the offending paths rather than failing later:
