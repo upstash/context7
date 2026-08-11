@@ -102,6 +102,7 @@ Always use Context7 when I need library/API documentation, code generation, setu
 
 - `ctx7 library <name> <query>`: Searches the Context7 index by library name and returns matching libraries with their IDs.
 - `ctx7 docs <libraryId> <query>`: Retrieves documentation for a library using a Context7-compatible library ID (e.g., `/mongodb/docs`, `/vercel/next.js`).
+- `ctx7 add <repo>`: Submits a GitHub repository for documentation indexing (also available as `context7 add`). Requires login or `CONTEXT7_API_KEY`.
 
 ### MCP Tools
 

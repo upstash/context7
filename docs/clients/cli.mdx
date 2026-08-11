@@ -3,12 +3,15 @@ title: CLI
 description: The ctx7 CLI — fetch library documentation and configure Context7 MCP from your terminal
 ---
 
-The `ctx7` CLI is the command-line interface for Context7. It does two things:
+The `ctx7` CLI is the command-line interface for Context7. It does three things:
 
 - **Fetch library documentation** — resolve any library by name and query its up-to-date docs directly in your terminal, without opening a browser
+- **Submit libraries for indexing** — add a missing GitHub repository so agents can close the loop when docs are not yet in Context7
 - **Configure your AI coding agent** — set up the Context7 MCP server (or a CLI-based `docs` skill) for Claude Code, Cursor, OpenCode, and more with a single command
 
 The CLI is useful both as a standalone tool (fetching docs while you code) and as a setup utility (wiring up Context7 for your AI coding agent).
+
+After a global install, both `ctx7` and `context7` resolve to the same entrypoint (the npm package name remains `ctx7` because `context7` is taken on npm by an unrelated package).
 
 ## Installation
 
@@ -20,18 +23,20 @@ Requires Node.js 18 or later.
 
     ```bash
     npx ctx7 --help
+    npx context7 --help
     npx ctx7 library react
     ```
 
   </Tab>
   <Tab title="Global install">
-    Install globally for faster access — no `npx` prefix needed on every command.
+    Install globally for faster access — no `npx` prefix needed on every command. Installs both the `ctx7` and `context7` commands.
 
     ```bash
     npm install -g ctx7
 
     # Verify installation
     ctx7 --version
+    context7 --version
     ```
 
   </Tab>
@@ -99,6 +104,52 @@ ctx7 docs /facebook/react "How to use hooks for state management" --json
 # Pipe to other tools — output is clean when not in a TTY (no spinners or colors)
 ctx7 docs /facebook/react "How to use hooks for state management" | head -50
 ctx7 docs /vercel/next.js "How to add middleware for route protection" | grep -A 10 "middleware"
+```
+
+---
+
+## Submit a Library
+
+When a library is missing from Context7, submit its public GitHub repository for indexing. This is the CLI façade over the [Add Library API](/api-reference/add-library/add-a-github-repository) — useful for agents that discover missing docs while browsing.
+
+### ctx7 add
+
+```bash
+# Accepts owner/repo, HTTPS, or SSH URLs
+ctx7 add vercel/next.js
+ctx7 add https://github.com/vercel/next.js
+ctx7 add git@github.com:vercel/next.js.git
+
+# Same command via the memorable alias
+context7 add vercel/next.js
+
+# Stable JSON for scripts and agents
+ctx7 add owner/repo --json
+
+# Private repositories (requires a plan that supports private libraries)
+ctx7 add owner/private-repo --private --git-token ghp_xxx
+ctx7 add owner/private-repo --private --generate-docs
+```
+
+Authentication is required: run `ctx7 login` first, or set `CONTEXT7_API_KEY`.
+
+| Exit code | Meaning                                              |
+| --------- | ---------------------------------------------------- |
+| **0**     | Submitted successfully                               |
+| **1**     | Validation error or other client/server failure      |
+| **2**     | Authentication required or invalid API key           |
+| **3**     | Duplicate repository (already indexed / in team)     |
+| **4**     | Rate limited                                         |
+
+JSON success shape:
+
+```json
+{
+  "libraryName": "/owner/repo",
+  "message": "Repository submitted successfully",
+  "docsRepoUrl": "https://github.com/owner/repo",
+  "status": 200
+}
 ```
 
 ---
@@ -221,6 +272,7 @@ export CONTEXT7_API_KEY=your_key
 | Feature                                                  | Required                                                                     |
 | -------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | `ctx7 library` / `ctx7 docs`                             | No — login gives higher rate limits                                          |
+| `ctx7 add`                                               | Yes — `ctx7 login` or `CONTEXT7_API_KEY`                                     |
 | `ctx7 setup`                                             | Yes — unless `--api-key` is passed (`--oauth` also skips login for MCP mode) |
 
 ---

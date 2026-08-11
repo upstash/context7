@@ -13,10 +13,12 @@ vi.mock("../utils/auth.js", () => ({
 const mockResolveLibrary = vi.fn();
 const mockGetLibraryContext = vi.fn();
 const mockSuggestSkills = vi.fn();
+const mockAddGitHubRepository = vi.fn();
 vi.mock("../utils/api.js", () => ({
   resolveLibrary: (...args: unknown[]) => mockResolveLibrary(...args),
   getLibraryContext: (...args: unknown[]) => mockGetLibraryContext(...args),
   suggestSkills: (...args: unknown[]) => mockSuggestSkills(...args),
+  addGitHubRepository: (...args: unknown[]) => mockAddGitHubRepository(...args),
   getBaseUrl: () => "https://test.context7.com",
   listProjectSkills: vi.fn(),
   searchSkills: vi.fn(),
@@ -46,6 +48,7 @@ vi.mock("ora", () => ({ default: () => mockSpinner }));
 
 import { registerDocsCommands } from "../commands/docs.js";
 import { registerSkillCommands } from "../commands/skill.js";
+import { registerAddCommand } from "../commands/add.js";
 
 const REFRESHED = "refreshed-token";
 
@@ -100,6 +103,23 @@ describe("commands pass a refreshed token to the API", () => {
 
     expect(mockGetValidAccessToken).toHaveBeenCalled();
     expect(mockSuggestSkills).toHaveBeenCalledWith(["react"], REFRESHED);
+  });
+
+  test("ctx7 add", async () => {
+    mockAddGitHubRepository.mockResolvedValue({
+      ok: true,
+      status: 200,
+      libraryName: "/a/b",
+      message: "ok",
+    });
+
+    await run(registerAddCommand, "add", "a/b");
+
+    expect(mockGetValidAccessToken).toHaveBeenCalled();
+    expect(mockAddGitHubRepository).toHaveBeenCalledWith(
+      { docsRepoUrl: "https://github.com/a/b" },
+      REFRESHED
+    );
   });
 });
 

@@ -7,8 +7,10 @@ CLI for [Context7](https://context7.com) - query up-to-date library documentatio
 ```bash
 # Run directly with npx (no install needed)
 npx ctx7
+# Alias (same entrypoint):
+npx context7
 
-# Or install globally
+# Or install globally — installs both `ctx7` and `context7` commands
 npm install -g ctx7
 ```
 
@@ -37,6 +39,10 @@ ctx7 library nextjs "app router"
 # Get documentation
 ctx7 docs /facebook/react "useEffect cleanup"
 ctx7 docs /vercel/next.js "middleware"
+
+# Submit a GitHub repo for indexing (requires login or CONTEXT7_API_KEY)
+ctx7 add vercel/next.js
+context7 add https://github.com/vercel/next.js --json
 ```
 
 ## Usage
@@ -66,6 +72,24 @@ ctx7 docs /prisma/prisma "one-to-many relations"
 # Output as JSON
 ctx7 docs /facebook/react "hooks" --json
 ```
+
+### Submit a library
+
+Submit a public GitHub repository for documentation indexing. Requires authentication (`ctx7 login` or `CONTEXT7_API_KEY`).
+
+```bash
+ctx7 add vercel/next.js
+ctx7 add https://github.com/vercel/next.js
+ctx7 add git@github.com:vercel/next.js.git
+
+# Stable JSON for agents/scripts
+ctx7 add owner/repo --json
+
+# Private repo (requires token + plan that supports private libraries)
+ctx7 add owner/private-repo --private --git-token ghp_xxx
+```
+
+Exit codes: `0` success, `1` validation/other error, `2` auth required, `3` duplicate, `4` rate limited.
 
 ### Setup
 

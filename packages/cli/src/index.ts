@@ -6,6 +6,7 @@ import { registerAuthCommands, setAuthBaseUrl } from "./commands/auth.js";
 import { registerSetupCommand } from "./commands/setup.js";
 import { registerRemoveCommand } from "./commands/remove.js";
 import { registerDocsCommands } from "./commands/docs.js";
+import { registerAddCommand } from "./commands/add.js";
 import { maybeShowUpgradeNotice, registerUpgradeCommand } from "./commands/upgrade.js";
 import { setBaseUrl } from "./utils/api.js";
 import { VERSION } from "./constants.js";
@@ -17,9 +18,12 @@ const brand = {
 
 const program = new Command();
 
+// Both `ctx7` and `context7` resolve to this entrypoint (see package.json bin).
 program
   .name("ctx7")
-  .description("Context7 CLI - Fetch documentation context and configure Context7")
+  .description(
+    "Context7 CLI - Fetch documentation context, submit libraries, and configure Context7"
+  )
   .version(VERSION, "-v, --version")
   .option("--base-url <url>")
   .hook("preAction", (thisCommand) => {
@@ -53,6 +57,10 @@ Examples:
   ${brand.dim("# Query library documentation")}
   ${brand.primary('npx ctx7 library react "how to use hooks"')}
   ${brand.primary('npx ctx7 docs /facebook/react "useEffect examples"')}
+
+  ${brand.dim("# Submit a library for indexing (requires login or CONTEXT7_API_KEY)")}
+  ${brand.primary("npx ctx7 add vercel/next.js")}
+  ${brand.primary("npx context7 add https://github.com/vercel/next.js --json")}
 `
   );
 
@@ -62,6 +70,7 @@ registerAuthCommands(program);
 registerSetupCommand(program);
 registerRemoveCommand(program);
 registerDocsCommands(program);
+registerAddCommand(program);
 registerUpgradeCommand(program);
 
 program.action(() => {
@@ -74,9 +83,12 @@ program.action(() => {
   console.log("  Quick start:");
   console.log(`    ${brand.primary("npx ctx7 setup")}`);
   console.log(`    ${brand.primary('npx ctx7 docs /facebook/react "useEffect examples"')}`);
+  console.log(`    ${brand.primary("npx ctx7 add owner/repo")}`);
   console.log("");
 
-  console.log(`  Run ${brand.primary("npx ctx7 --help")} for all commands and options`);
+  console.log(
+    `  Run ${brand.primary("npx ctx7 --help")} (or ${brand.primary("npx context7 --help")}) for all commands and options`
+  );
   console.log("");
 });
 

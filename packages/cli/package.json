@@ -4,7 +4,8 @@
   "description": "Context7 CLI - Fetch documentation context and configure Context7",
   "type": "module",
   "bin": {
-    "ctx7": "./dist/index.js"
+    "ctx7": "./dist/index.js",
+    "context7": "./dist/index.js"
   },
   "files": [
     "dist"

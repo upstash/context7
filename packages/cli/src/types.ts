@@ -250,3 +250,27 @@ export interface ContextResponse {
   message?: string;
   redirectUrl?: string;
 }
+
+// Add library types
+export interface AddLibraryRequest {
+  docsRepoUrl: string;
+  gitToken?: string;
+  private?: boolean;
+  skipVersionFiltering?: boolean;
+  generateDocs?: boolean;
+}
+
+export interface AddLibrarySuccess {
+  libraryName: string;
+  message: string;
+}
+
+export interface AddLibraryError {
+  error: string;
+  message: string;
+  status: number;
+}
+
+export type AddLibraryResult =
+  | ({ ok: true; status: number } & AddLibrarySuccess)
+  | ({ ok: false } & AddLibraryError);

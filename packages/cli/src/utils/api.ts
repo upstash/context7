@@ -10,6 +10,8 @@ import type {
   GenerateStreamEvent,
   SkillQuotaResponse,
   ContextResponse,
+  AddLibraryRequest,
+  AddLibraryResult,
 } from "../types.js";
 import { downloadSkillFromGitHub, getSkillFromGitHub } from "./github.js";
 import { VERSION } from "../constants.js";
@@ -358,4 +360,56 @@ export async function getLibraryContext(
   }
 
   return (await response.json()) as ContextResponse;
+}
+
+/**
+ * Submit a public (or private) GitHub repository for documentation indexing.
+ * Requires an API key or login session (`Authorization: Bearer …`).
+ */
+export async function addGitHubRepository(
+  request: AddLibraryRequest,
+  accessToken?: string
+): Promise<AddLibraryResult> {
+  const headers: Record<string, string> = {
+    ...getAuthHeaders(accessToken),
+    "Content-Type": "application/json",
+  };
+
+  if (!headers["Authorization"]) {
+    return {
+      ok: false,
+      status: 401,
+      error: "unauthorized",
+      message:
+        "Authentication required. Run `ctx7 login` or set CONTEXT7_API_KEY before adding a library.",
+    };
+  }
+
+  const response = await fetch(`${baseUrl}/api/v2/add/repo/github`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(request),
+  });
+
+  const body = (await response.json().catch(() => ({}))) as {
+    libraryName?: string;
+    message?: string;
+    error?: string;
+  };
+
+  if (response.ok) {
+    return {
+      ok: true,
+      status: response.status,
+      libraryName: body.libraryName || "",
+      message: body.message || "Repository submitted successfully",
+    };
+  }
+
+  return {
+    ok: false,
+    status: response.status,
+    error: body.error || `http_${response.status}`,
+    message: body.message || `HTTP error ${response.status}`,
+  };
 }

@@ -31,6 +31,8 @@ npx ctx7@latest <command>
 # Documentation
 ctx7 library <name> <query>           # Step 1: resolve library ID
 ctx7 docs <libraryId> <query>         # Step 2: fetch docs
+ctx7 add <repo>                       # Submit a GitHub repo for indexing (requires auth)
+context7 add <repo> --json            # Same entrypoint; memorable alias + JSON for agents
 
 # Skills
 ctx7 skills install /owner/repo       # Install from a repo (interactive)
@@ -56,7 +58,7 @@ ctx7 logout              # Clear stored tokens
 ctx7 whoami              # Show current login status (name + email)
 ```
 
-Most commands work without login. Exceptions: `skills generate` always requires it; `ctx7 setup` requires it unless `--api-key` or `--oauth` is passed. Login also unlocks higher rate limits on docs commands.
+Most commands work without login. Exceptions: `skills generate` and `ctx7 add` always require it; `ctx7 setup` requires it unless `--api-key` or `--oauth` is passed. Login also unlocks higher rate limits on docs commands.
 
 Set an API key via environment variable to skip interactive login entirely:
 
