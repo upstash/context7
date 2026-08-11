@@ -96,7 +96,14 @@ beforeAll(async () => {
   const stubUrl = await startStubApi();
   // getDefaultEnvironment() inherits only safe vars, so a real
   // CONTEXT7_API_KEY in the parent shell cannot leak into the children.
-  childEnv = { ...getDefaultEnvironment(), CONTEXT7_API_URL: stubUrl };
+  // These cases exercise anonymous protocol behaviour, so the server runs in
+  // lazy mode. The shipped default (`required`) challenges on the first
+  // request, which is covered separately in test/auth-mode.test.ts.
+  childEnv = {
+    ...getDefaultEnvironment(),
+    CONTEXT7_API_URL: stubUrl,
+    CONTEXT7_MCP_AUTH_MODE: "lazy",
+  };
   ({ child: httpChild, url: httpUrl } = await startHttpChild());
 }, 120_000);
 

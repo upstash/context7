@@ -22,8 +22,18 @@ import {
   AUTH_SERVER_URL,
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
-import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { getClientIp } from "./lib/client-ip.js";
+import {
+  AUTH_SCOPES,
+  MCP_AUTH_MODE,
+  buildHttpChallenge,
+  buildToolResultChallenge,
+  buildWwwAuthenticate,
+  challengeTransportFor,
+  evaluateLazyAuth,
+  resolveAuthState,
+  toolAuthMeta,
+} from "./lib/auth/lazy-auth.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -229,6 +239,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
         openWorldHint: true,
         idempotentHint: true,
       },
+      _meta: toolAuthMeta("resolve-library-id"),
     },
     async ({ query, libraryName }: { query: string; libraryName: string }, toolCtx) => {
       const ctx = getClientContext(toolCtx);
@@ -236,7 +247,6 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
 
       if (!searchResponse.results || searchResponse.results.length === 0) {
         const text = searchResponse.error ?? "No libraries found matching the provided name.";
-        maybeElicitAuthSignIn(server, ctx);
         return {
           content: [
             {
@@ -249,7 +259,6 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
 
       const resultsText = formatSearchResults(searchResponse);
       const responseText = `Available Libraries:\n\n${resultsText}`;
-      maybeElicitAuthSignIn(server, ctx);
       return {
         content: [
           {
@@ -291,11 +300,11 @@ Do not call this tool more than 3 times per question.`,
         openWorldHint: true,
         idempotentHint: true,
       },
+      _meta: toolAuthMeta("query-docs"),
     },
     async ({ query, libraryId }: { query: string; libraryId: string }, toolCtx) => {
       const ctx = getClientContext(toolCtx);
       const response = await fetchLibraryContext({ query, libraryId }, ctx);
-      maybeElicitAuthSignIn(server, ctx);
       return {
         content: [
           {
@@ -328,6 +337,10 @@ async function main() {
         "Access-Control-Allow-Headers",
         "Content-Type, MCP-Session-Id, MCP-Protocol-Version, Mcp-Method, Mcp-Name, X-Context7-API-Key, Context7-API-Key, X-API-Key, Authorization"
       );
+      // WWW-Authenticate is not CORS-safelisted, so without this a browser
+      // client sees the 401 but not the challenge that tells it where to
+      // authenticate.
+      res.setHeader("Access-Control-Expose-Headers", "MCP-Session-Id, WWW-Authenticate");
       if (req.method === "OPTIONS") {
         res.sendStatus(200);
         return;
@@ -374,54 +387,88 @@ async function main() {
       onerror: (error) => console.error("MCP node adapter error:", error),
     });
 
+    // Invariant for the process, so it is built once rather than per request.
+    const baseUrl = new URL(RESOURCE_URL).origin;
+    const advisoryWwwAuthenticate = buildWwwAuthenticate(baseUrl);
+
     const handleMcpRequest = async (
       req: express.Request,
       res: express.Response,
-      requireAuth: boolean
+      mode: "lazy" | "required"
     ) => {
       try {
         const apiKey = extractApiKey(req);
-        const baseUrl = new URL(RESOURCE_URL).origin;
+        const clientIp = getClientIp(req);
 
-        // OAuth discovery info header, used by MCP clients to discover the authorization server
+        // OAuth discovery hint, advisory on ordinary responses.
         // TODO: @modelcontextprotocol/server now ships canonical OAuth helpers
         // (bearerAuthChallengeResponse, buildOAuthProtectedResourceMetadata,
         // oauthMetadataResponse) — replace this hand-rolled header and the
         // /.well-known/oauth-protected-resource route with them.
-        res.set(
-          "WWW-Authenticate",
-          `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
-        );
+        res.set("WWW-Authenticate", advisoryWwwAuthenticate);
 
-        if (requireAuth) {
-          if (!apiKey) {
+        // express.json() only populates req.body for application/json, while the
+        // handler falls back to re-reading the raw stream when it gets no parsed
+        // body. Without this, a POST under any other media type would reach the
+        // tool with req.body undefined — invisible to the gate below, which
+        // reads that body to find the tool call.
+        if (req.method === "POST" && req.body === undefined) {
+          return res.status(415).json({
+            jsonrpc: "2.0",
+            error: { code: -32000, message: "Content-Type must be application/json." },
+            id: null,
+          });
+        }
+
+        // One definition of "signed in" for both endpoints. Deferred so the
+        // lazy path only pays for JWT verification once a request is gateable.
+        const authState = () => resolveAuthState(apiKey, validateJWT, isJWT);
+
+        if (mode === "required") {
+          // Eager auth: challenge every request, including initialize/tools/list.
+          const auth = await authState();
+          if (!auth.authenticated) {
+            const message = apiKey
+              ? (auth.error ?? "Invalid token. Please re-authenticate.")
+              : "Authentication required. Please authenticate to use this MCP server.";
+            res.set("WWW-Authenticate", buildWwwAuthenticate(baseUrl, "invalid_token", message));
             return res.status(401).json({
               jsonrpc: "2.0",
-              error: {
-                code: -32001,
-                message: "Authentication required. Please authenticate to use this MCP server.",
-              },
+              error: { code: -32001, message },
               id: null,
             });
           }
-
-          if (isJWT(apiKey)) {
-            const validationResult = await validateJWT(apiKey);
-            if (!validationResult.valid) {
-              return res.status(401).json({
-                jsonrpc: "2.0",
-                error: {
-                  code: -32001,
-                  message: validationResult.error || "Invalid token. Please re-authenticate.",
-                },
-                id: null,
-              });
+        } else {
+          // Lazy auth: connect and list anonymously; challenge only once an
+          // unauthenticated caller reaches a protected tool or spends its free
+          // monthly requests. Decided here, before the handler streams a 200.
+          const challenge = await evaluateLazyAuth({
+            body: req.body,
+            resolveAuth: authState,
+            clientIp,
+            sessionId: extractHeaderValue(req.headers["mcp-session-id"]),
+          });
+          if (challenge) {
+            res.set(
+              "WWW-Authenticate",
+              buildWwwAuthenticate(baseUrl, challenge.error, challenge.message)
+            );
+            // ChatGPT only raises its link-account UI for a challenge carried in
+            // the tool result; everyone else needs the transport-level 401. A
+            // batch always takes the 401, since one result cannot refuse many
+            // messages. Same challenge string either way.
+            const transport = Array.isArray(req.body)
+              ? "http-401"
+              : challengeTransportFor(extractHeaderValue(req.headers["user-agent"]));
+            if (transport === "tool-result") {
+              return res.status(200).json(buildToolResultChallenge(challenge, baseUrl));
             }
+            return res.status(401).json(buildHttpChallenge(challenge));
           }
         }
 
         const context: ClientContext = {
-          clientIp: getClientIp(req),
+          clientIp,
           apiKey: apiKey,
           clientInfo: extractClientInfoFromUserAgent(req.headers["user-agent"]),
           transport: "http",
@@ -442,14 +489,19 @@ async function main() {
       }
     };
 
-    // Anonymous access endpoint - no authentication required
+    // Public endpoint. Challenges on the first request by default, because
+    // that is when MCP clients actually run OAuth: every client we tested
+    // (Claude Code, Codex, Zed) surfaces a connect-time challenge natively,
+    // while a challenge raised mid-conversation either fails the turn or is
+    // ignored. Set CONTEXT7_MCP_AUTH_MODE=lazy to let anonymous callers
+    // connect, list, and use their free monthly requests before being asked.
     app.all("/mcp", async (req, res) => {
-      await handleMcpRequest(req, res, false);
+      await handleMcpRequest(req, res, MCP_AUTH_MODE);
     });
 
-    // OAuth-protected endpoint - requires authentication
+    // OAuth-protected endpoint - always requires authentication
     app.all("/mcp/oauth", async (req, res) => {
-      await handleMcpRequest(req, res, true);
+      await handleMcpRequest(req, res, "required");
     });
 
     app.get("/ping", (_req: express.Request, res: express.Response) => {
@@ -458,17 +510,23 @@ async function main() {
 
     // OAuth 2.0 Protected Resource Metadata (RFC 9728)
     // Used by MCP clients to discover the authorization server
-    app.get(
-      "/.well-known/oauth-protected-resource",
-      (_req: express.Request, res: express.Response) => {
-        res.json({
-          resource: RESOURCE_URL,
-          authorization_servers: [AUTH_SERVER_URL],
-          scopes_supported: ["profile", "email"],
-          bearer_methods_supported: ["header"],
-        });
-      }
-    );
+    const protectedResourceMetadata = (_req: express.Request, res: express.Response) => {
+      res.json({
+        resource: RESOURCE_URL,
+        authorization_servers: [AUTH_SERVER_URL],
+        scopes_supported: [...AUTH_SCOPES],
+        bearer_methods_supported: ["header"],
+        resource_documentation: `${AUTH_SERVER_URL}/docs/howto/oauth`,
+      });
+    };
+
+    app.get("/.well-known/oauth-protected-resource", protectedResourceMetadata);
+
+    // Path-suffixed variants (RFC 9728 section 3.1). A client connecting to
+    // /mcp or /mcp/oauth tries these before falling back to the root document,
+    // so serving them saves a 404 round trip on every OAuth discovery.
+    app.get("/.well-known/oauth-protected-resource/mcp", protectedResourceMetadata);
+    app.get("/.well-known/oauth-protected-resource/mcp/oauth", protectedResourceMetadata);
 
     app.get(
       "/.well-known/oauth-authorization-server",

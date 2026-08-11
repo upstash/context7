@@ -18,9 +18,20 @@ Context7 MCP server supports OAuth 2.0 authentication for MCP clients that imple
 | Automatic token refresh    | ✅    | ❌       |
 | Works with stdio transport | ❌    | ✅       |
 
-## Configuration
+## Two Endpoints
 
-To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client configuration:
+| Endpoint     | Behaviour                                                       |
+| ------------ | --------------------------------------------------------------- |
+| `/mcp`       | Asks you to sign in when your client first connects              |
+| `/mcp/oauth` | Same, and always enforced regardless of server configuration     |
+
+Both endpoints ask for sign-in up front. That is deliberate: MCP clients run the OAuth
+flow natively at connect time, so you get your editor's own sign-in prompt instead of a
+failed request part-way through a conversation.
+
+Self-hosted deployments can set `CONTEXT7_MCP_AUTH_MODE=lazy` on the MCP server to let
+anonymous callers connect and spend their free monthly requests before being asked to
+sign in. That trades a natively handled prompt for a frictionless trial.
 
 ```diff
 - "url": "https://mcp.context7.com/mcp"
@@ -29,15 +40,19 @@ To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client con
 
 ## How It Works
 
-1. Your MCP client connects to the OAuth endpoint
-2. You're redirected to Context7 to sign in
-3. After signing in, you're redirected back to your client
-4. Your client automatically handles token refresh
+1. Your MCP client connects and receives an OAuth challenge pointing at Context7
+2. Your client shows a sign-in prompt or an authorization link
+3. You're redirected to Context7 to sign in
+4. After signing in, your client stores the token and connects
+5. Your client automatically handles token refresh from then on
+
+In `lazy` mode the challenge arrives later — on the tool call that crosses your free
+monthly limit — and steps 2 to 5 are otherwise identical.
 
 <Warning>
-**Authentication required after setup.** Most clients won't authenticate automatically. After adding the OAuth endpoint, you'll need to explicitly authenticate through your client's MCP settings. For example, in Claude Code run `/mcp`, select the server, and choose "Authenticate".
+**Some clients need you to start the sign-in yourself.** Whether the OAuth flow opens on its own depends on the client, not on Context7. Claude, Claude Desktop and ChatGPT show an inline connect prompt and retry the call once you finish. Terminal clients generally do not: in Claude Code run `/mcp`, select the server and choose "Authenticate"; in Codex CLI run `codex mcp login <server-name>`.
 </Warning>
 
 ## Client Support
 
-OAuth authentication requires your MCP client to support the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization). If your client doesn't support OAuth, use [API key authentication](/howto/api-keys) instead.
+OAuth authentication requires your MCP client to support the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization). If your client doesn't support OAuth, use [API key authentication](/howto/api-keys) instead — an API key raises your limit the same way signing in does, and works on both endpoints.
