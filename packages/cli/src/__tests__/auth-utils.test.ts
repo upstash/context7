@@ -221,9 +221,9 @@ describe("isTokenExpired", () => {
 });
 
 describe("getValidAccessToken", () => {
-  test("returns null when no tokens stored", async () => {
+  test("returns undefined when no tokens stored", async () => {
     mfs.existsSync.mockReturnValue(false);
-    expect(await getValidAccessToken()).toBeNull();
+    expect(await getValidAccessToken()).toBeUndefined();
   });
 
   test("returns access_token when not expired", async () => {
@@ -237,7 +237,7 @@ describe("getValidAccessToken", () => {
     expect(await getValidAccessToken()).toBe("valid-tok");
   });
 
-  test("returns null when expired and no refresh_token", async () => {
+  test("returns undefined when expired and no refresh_token", async () => {
     const tokens: TokenData = {
       access_token: "expired-tok",
       token_type: "bearer",
@@ -245,7 +245,7 @@ describe("getValidAccessToken", () => {
     };
     mfs.existsSync.mockReturnValue(true);
     mfs.readFileSync.mockReturnValue(JSON.stringify(tokens));
-    expect(await getValidAccessToken()).toBeNull();
+    expect(await getValidAccessToken()).toBeUndefined();
   });
 
   test("refreshes token when expired and refresh_token exists", async () => {
@@ -285,7 +285,65 @@ describe("getValidAccessToken", () => {
     expect(mfs.writeFileSync).toHaveBeenCalled();
   });
 
-  test("returns null when refresh fails", async () => {
+  // RFC 6749 §6: dropping the stored refresh_token here would log the user out
+  // at the next expiry, with no error to explain why.
+  test("keeps the stored refresh_token when the refresh response omits one", async () => {
+    const tokens: TokenData = {
+      access_token: "expired-tok",
+      token_type: "bearer",
+      expires_at: Date.now() - 1000,
+      refresh_token: "refresh-tok",
+    };
+
+    mfs.existsSync.mockReturnValue(true);
+    mfs.readFileSync.mockReturnValue(JSON.stringify(tokens));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({ access_token: "new-tok", token_type: "bearer", expires_in: 3600 }),
+      })
+    );
+
+    expect(await getValidAccessToken()).toBe("new-tok");
+
+    const written = JSON.parse(mfs.writeFileSync.mock.calls[0][1] as string);
+    expect(written.refresh_token).toBe("refresh-tok");
+    expect(written.access_token).toBe("new-tok");
+  });
+
+  test("prefers a rotated refresh_token over the stored one", async () => {
+    const tokens: TokenData = {
+      access_token: "expired-tok",
+      token_type: "bearer",
+      expires_at: Date.now() - 1000,
+      refresh_token: "refresh-tok",
+    };
+
+    mfs.existsSync.mockReturnValue(true);
+    mfs.readFileSync.mockReturnValue(JSON.stringify(tokens));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            access_token: "new-tok",
+            token_type: "bearer",
+            expires_in: 3600,
+            refresh_token: "rotated-tok",
+          }),
+      })
+    );
+
+    expect(await getValidAccessToken()).toBe("new-tok");
+
+    const written = JSON.parse(mfs.writeFileSync.mock.calls[0][1] as string);
+    expect(written.refresh_token).toBe("rotated-tok");
+  });
+
+  test("returns undefined when refresh fails", async () => {
     const tokens: TokenData = {
       access_token: "expired-tok",
       token_type: "bearer",
@@ -305,12 +363,12 @@ describe("getValidAccessToken", () => {
       })
     );
 
-    expect(await getValidAccessToken()).toBeNull();
+    expect(await getValidAccessToken()).toBeUndefined();
   });
 
   // An expired refresh token is indistinguishable from being logged out, so the
   // caller reports "not logged in" rather than surfacing a network error here.
-  test("returns null when the refresh connection fails", async () => {
+  test("returns undefined when the refresh connection fails", async () => {
     const tokens: TokenData = {
       access_token: "expired-tok",
       token_type: "bearer",
@@ -329,7 +387,7 @@ describe("getValidAccessToken", () => {
         )
     );
 
-    expect(await getValidAccessToken()).toBeNull();
+    expect(await getValidAccessToken()).toBeUndefined();
   });
 });
 

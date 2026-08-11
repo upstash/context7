@@ -90,7 +90,7 @@ describe("login command", () => {
   });
 
   test("calls process.exit(1) when login fails", async () => {
-    mockGetValidAccessToken.mockResolvedValue(null);
+    mockGetValidAccessToken.mockResolvedValue(undefined);
     mockClearTokens.mockReturnValue(false);
     mockStartDeviceAuthorization.mockRejectedValue(new Error("network down"));
 
@@ -121,7 +121,7 @@ describe("logout command", () => {
 
 describe("whoami command", () => {
   test("shows 'Not logged in' when no valid token", async () => {
-    mockGetValidAccessToken.mockResolvedValue(null);
+    mockGetValidAccessToken.mockResolvedValue(undefined);
     await runCommand("whoami");
     expect(logOutput.some((l) => l.includes("Not logged in"))).toBe(true);
   });
@@ -163,7 +163,7 @@ describe("whoami command", () => {
   });
 
   test("tracks whoami event", async () => {
-    mockGetValidAccessToken.mockResolvedValue(null);
+    mockGetValidAccessToken.mockResolvedValue(undefined);
     await runCommand("whoami");
     expect(trackEvent).toHaveBeenCalledWith("command", { name: "whoami" });
   });
