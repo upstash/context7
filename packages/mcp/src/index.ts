@@ -365,14 +365,7 @@ async function main() {
     // no session store. The handler serves modern (2026-07-28) traffic natively
     // and 2025-era traffic through its stateless legacy fallback, which answers
     // GET/DELETE (session operations) with 405.
-    //
-    // responseMode "sse" keeps responses streaming: headers flush immediately
-    // after parsing the request rather than buffering until the tool returns.
-    // This is required for long-running tools because some MCP HTTP clients cap
-    // the underlying fetch at 60s waiting for headers, even though the per-tool
-    // timeout is much higher.
     const mcpHandler = createMcpHandler(() => createMcpServer(), {
-      responseMode: "sse",
       onerror: (error) => console.error("MCP handler error:", error),
     });
     // Without onerror, request-conversion / handler.fetch throws are answered
