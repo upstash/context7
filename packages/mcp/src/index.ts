@@ -23,6 +23,7 @@ import {
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
+import { isPluginClientQuery } from "./lib/auth/plugin-client.js";
 import { getClientIp } from "./lib/client-ip.js";
 
 /** Default HTTP server port */
@@ -452,9 +453,13 @@ async function main() {
       }
     };
 
-    // Anonymous access endpoint - no authentication required
+    // Public endpoint: anonymous by default. Plugin clients pass
+    // `?client=claude-code-plugin` (any `client` value containing "plugin")
+    // so this connection 401s at initialize and the host can start OAuth —
+    // Claude Code only exposes authorize helpers for servers flagged when
+    // the session starts.
     app.all("/mcp", async (req, res) => {
-      await handleMcpRequest(req, res, false);
+      await handleMcpRequest(req, res, isPluginClientQuery(req.query.client));
     });
 
     // OAuth-protected endpoint - requires authentication

@@ -1510,12 +1510,19 @@ CONTEXT7_API_KEY=your_api_key_here
 
 Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization).
 
-To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client configuration:
+To use OAuth, either change the endpoint from `/mcp` to `/mcp/oauth`, or keep `/mcp` and add a plugin client query parameter (this is what the Claude Code plugin uses):
 
 ```diff
 - "url": "https://mcp.context7.com/mcp"
 + "url": "https://mcp.context7.com/mcp/oauth"
 ```
+
+```diff
+- "url": ".../mcp"
++ "url": ".../mcp?client=claude-code-plugin"
+```
+
+Both require authentication on connect. `/mcp` without those options stays anonymous. Any `client` value containing `plugin` (for example `claude-code-plugin`) triggers the same 401 + `WWW-Authenticate` challenge so the host can start its OAuth flow.
 
 > **Note:** OAuth is not supported with stdio transport. For local MCP connections, use API key authentication instead.
 

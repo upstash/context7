@@ -230,3 +230,59 @@ describe.each([
     expect(apiCall.headers["x-context7-client-version"]).toBe(expected.version);
   });
 });
+
+const INITIALIZE = {
+  jsonrpc: "2.0",
+  id: 1,
+  method: "initialize",
+  params: {
+    protocolVersion: "2025-06-18",
+    capabilities: {},
+    clientInfo: { name: "t", version: "1" },
+  },
+};
+
+async function postMcp(target: string, headers: Record<string, string> = {}) {
+  const res = await fetch(target, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      ...headers,
+    },
+    body: JSON.stringify(INITIALIZE),
+  });
+  return { status: res.status, wwwAuthenticate: res.headers.get("www-authenticate") };
+}
+
+describe("plugin client auth gate", () => {
+  test("keeps /mcp anonymous when client is not a plugin", async () => {
+    const res = await postMcp(httpUrl);
+    expect(res.status).toBe(200);
+  });
+
+  test("challenges /mcp?client=claude-code-plugin so the host can start OAuth", async () => {
+    const res = await postMcp(`${httpUrl}?client=claude-code-plugin`);
+    expect(res.status).toBe(401);
+    expect(res.wwwAuthenticate).toContain("resource_metadata=");
+    expect(res.wwwAuthenticate).toContain("/.well-known/oauth-protected-resource");
+  });
+
+  test("lets a credential through the plugin client gate", async () => {
+    const res = await postMcp(`${httpUrl}?client=claude-code-plugin`, {
+      Authorization: "Bearer ctx7sk-test",
+    });
+    expect(res.status).toBe(200);
+  });
+
+  test("does not challenge a non-plugin client query param", async () => {
+    const res = await postMcp(`${httpUrl}?client=claude-code`);
+    expect(res.status).toBe(200);
+  });
+
+  test("still requires auth on /mcp/oauth", async () => {
+    const oauthUrl = httpUrl.replace(/\/mcp$/, "/mcp/oauth");
+    const res = await postMcp(oauthUrl);
+    expect(res.status).toBe(401);
+  });
+});

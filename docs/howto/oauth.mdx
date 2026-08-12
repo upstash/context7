@@ -20,22 +20,30 @@ Context7 MCP server supports OAuth 2.0 authentication for MCP clients that imple
 
 ## Configuration
 
-To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client configuration:
+To use OAuth, either change the endpoint from `/mcp` to `/mcp/oauth`, or keep `/mcp` and add a plugin client query parameter (this is what the Claude Code plugin uses):
 
 ```diff
 - "url": "https://mcp.context7.com/mcp"
 + "url": "https://mcp.context7.com/mcp/oauth"
 ```
 
+```diff
+- "url": ".../mcp"
++ "url": ".../mcp?client=claude-code-plugin"
+```
+
+Both require authentication on connect. `/mcp` without those options stays anonymous. Any `client` value containing `plugin` (for example `claude-code-plugin`) triggers the same 401 + `WWW-Authenticate` challenge so the host can start its OAuth flow.
+
 ## How It Works
 
-1. Your MCP client connects to the OAuth endpoint
-2. You're redirected to Context7 to sign in
-3. After signing in, you're redirected back to your client
-4. Your client automatically handles token refresh
+1. Your MCP client connects to `/mcp/oauth` or `/mcp?client=claude-code-plugin`
+2. The server responds with `401` and a `WWW-Authenticate` challenge pointing at Context7's authorization server
+3. You're redirected to Context7 to sign in
+4. After signing in, you're redirected back to your client
+5. Your client automatically handles token refresh
 
 <Warning>
-**Authentication required after setup.** Most clients won't authenticate automatically. After adding the OAuth endpoint, you'll need to explicitly authenticate through your client's MCP settings. For example, in Claude Code run `/mcp`, select the server, and choose "Authenticate".
+**Some clients still need an explicit authenticate step.** After adding `/mcp/oauth`, you may need to authenticate through your client's MCP settings — for example, in Claude Code run `/mcp`, select the server, and choose "Authenticate". The `?client=claude-code-plugin` URL is the exception: Claude Code treats the connect-time 401 as a signal to start OAuth immediately.
 </Warning>
 
 ## Client Support

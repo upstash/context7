@@ -20,9 +20,11 @@ claude plugin marketplace add upstash/context7
 claude plugin install context7@context7-marketplace
 ```
 
-## API Key (Recommended)
+## Authentication
 
-Without an API key, the plugin connects anonymously and shares the anonymous rate limits. To use your own plan, create an API key in the [Context7 dashboard](https://context7.com/dashboard) and export it as an environment variable before launching Claude Code:
+The plugin URL includes `?client=claude-code-plugin`. That `client` parameter tells the Context7 MCP server to require authentication, so Claude Code can start its OAuth sign-in flow when the plugin connects.
+
+To use an API key instead of OAuth, create one in the [Context7 dashboard](https://context7.com/dashboard) and export it as an environment variable before launching Claude Code:
 
 ```bash
 # e.g. in ~/.zshrc or ~/.bashrc
