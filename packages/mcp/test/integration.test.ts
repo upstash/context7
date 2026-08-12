@@ -230,3 +230,77 @@ describe.each([
     expect(apiCall.headers["x-context7-client-version"]).toBe(expected.version);
   });
 });
+
+// End-to-end auth checks against the spawned HTTP server. /mcp/oauth is the
+// endpoint that advertises authentication; before the credential-format gate
+// any bearer string that did not parse as a JWT opened a session there.
+describe("http /mcp/oauth authentication", () => {
+  const INITIALIZE_BODY = JSON.stringify({
+    jsonrpc: "2.0",
+    id: 1,
+    method: "initialize",
+    params: {
+      protocolVersion: "2025-06-18",
+      capabilities: {},
+      clientInfo: { name: "auth-e2e", version: "1.0.0" },
+    },
+  });
+
+  function postOauth(authorization?: string) {
+    return fetch(`${httpUrl}/oauth`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+        ...(authorization ? { authorization } : {}),
+      },
+      body: INITIALIZE_BODY,
+    });
+  }
+
+  test("rejects a missing credential with 401", async () => {
+    const res = await postOauth();
+    expect(res.status).toBe(401);
+    const body = (await res.json()) as { error: { code: number } };
+    expect(body.error.code).toBe(-32001);
+  });
+
+  test("rejects an arbitrary bearer string with 401", async () => {
+    // This exact request used to open a session (confirmed HTTP 200 in
+    // production before the fix).
+    const res = await postOauth("Bearer totally-not-a-real-token");
+    expect(res.status).toBe(401);
+    const body = (await res.json()) as { error: { message: string } };
+    expect(body.error.message).toContain("Invalid token");
+  });
+
+  test("rejects a forged JWT with 401", async () => {
+    const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");
+    const payload = Buffer.from(JSON.stringify({ iss: "https://evil.example" })).toString(
+      "base64url"
+    );
+    const res = await postOauth(`Bearer ${header}.${payload}.forged-signature`);
+    expect(res.status).toBe(401);
+  });
+
+  test("lets an API-key-shaped credential through to the session layer", async () => {
+    // The key itself is verified upstream on tool calls; the gate must only
+    // stop strings that cannot possibly be a credential.
+    const res = await postOauth("Bearer ctx7sk-7504e73e-dfcf-449f-b19f-f6f8285c4b3c");
+    expect(res.status).toBe(200);
+    await res.body?.cancel();
+  });
+
+  test("anonymous /mcp endpoint is unaffected by the gate", async () => {
+    const res = await fetch(httpUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+      },
+      body: INITIALIZE_BODY,
+    });
+    expect(res.status).toBe(200);
+    await res.body?.cancel();
+  });
+});

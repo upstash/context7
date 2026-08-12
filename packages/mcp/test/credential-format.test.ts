@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isApiKeyFormat, isJWT } from "../lib/jwt.js";
+import { isApiKeyFormat, isJWT } from "../src/lib/jwt.js";
 
 describe("isJWT", () => {
   it("accepts a three-segment token", () => {
