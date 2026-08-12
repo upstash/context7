@@ -16,7 +16,7 @@ Each result includes:
 - Code Snippets: Number of available code examples
 - Source Reputation: Authority indicator (High, Medium, Low, or Unknown)
 - Benchmark Score: Quality indicator (100 is the highest score)
-- Versions: Parsed documentation snapshots. Omit the version to get the latest parsed documentation; use one only if the user asks for a specific version. The format is /org/project/version.
+- Versions: Parsed documentation snapshots. Omit the version to get the latest parsed documentation. If the user asks for a version, use that exact listed version; if it is not listed, say it is unavailable and do not substitute another version. The format is /org/project/version.
 
 For best results, select libraries based on name match, source reputation, snippet coverage, benchmark score, and relevance to your use case.
 
@@ -50,6 +50,8 @@ export const QUERY_DOCS_TITLE = "Query Documentation";
 export const QUERY_DOCS_DESCRIPTION = `Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
 
 You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
+
+If the user requested a version, query that exact version. If it is unavailable, say so and do not retry with a different or unversioned library ID.
 
 Do not call this tool more than 3 times per question.`;
 
