@@ -394,11 +394,11 @@ async function main() {
         const apiKey = extractApiKey(req);
         const baseUrl = new URL(RESOURCE_URL).origin;
 
-        // OAuth discovery info header, used by MCP clients to discover the authorization server
-        // TODO: @modelcontextprotocol/server now ships canonical OAuth helpers
-        // (bearerAuthChallengeResponse, buildOAuthProtectedResourceMetadata,
-        // oauthMetadataResponse) — replace this hand-rolled header and the
-        // /.well-known/oauth-protected-resource route with them.
+        // OAuth discovery info header, used by MCP clients to discover the authorization server.
+        // Hand-rolled rather than the SDK's bearerAuthChallengeResponse /
+        // oauthMetadataResponse: those assume Bearer-only OAuth on a fetch()
+        // handler. This server also accepts API keys, mixes anonymous and
+        // required routes, returns JSON-RPC 401 bodies, and proxies AS metadata.
         res.set(
           "WWW-Authenticate",
           `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
