@@ -7,8 +7,9 @@ description: Sizes, timeouts, and caps at a glance
 
 | Limit | Value |
 |---|---|
-| Repository provider | GitHub (`https://github.com/<owner>/<repo>`) |
+| Repository provider | GitHub, public or private (`https://github.com/<owner>/<repo>`) |
 | Sites per repository | 1 |
+| Sites per teamspace | No cap |
 | Docs source tree | 100,000 files / 1 GB total (dot-directories and `node_modules` don't count) |
 | Clone timeout | 5 minutes |
 | Required file | `docs.json` or `mint.json` in the docs path |
@@ -43,7 +44,7 @@ Files with unknown extensions are served without a `Content-Type` header, so bro
 | Concurrent builds per branch/production target | 1; superseded deployments are dropped in favor of the newest push |
 | Deployment timeout | Marked failed after 45 minutes |
 | Deployment history | Last 50 per site |
-| Webhook triggers | Branch pushes only; redeliveries deduplicated for 24 hours |
+| Webhook triggers | Branch pushes build; closing a pull request removes its preview; redeliveries deduplicated for 24 hours |
 
 ## Custom domains
 

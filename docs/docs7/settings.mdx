@@ -58,7 +58,7 @@ Other `styling` options: `eyebrows: "breadcrumbs"` replaces the section eyebrow 
 }
 ```
 
-`type` is `info`, `warning`, or `critical`. Dismissals are remembered per banner content, so editing the message shows it again to everyone.
+`type` is `info`, `warning`, or `critical`, and `color` (a string or `{light, dark}` pair) overrides the banner background. Dismissals are remembered per banner content, so editing the message shows it again to everyone.
 
 ## Navbar and footer
 
@@ -95,7 +95,7 @@ Other `styling` options: `eyebrows: "breadcrumbs"` replaces the section eyebrow 
 - `seo.indexing: "all"` includes hidden/noindex pages in the sitemap (default `navigable` does not).
 - `seo.organization` emits JSON-LD structured data.
 - `metadata.timestamp: true` shows a git-derived "Last updated" on every page.
-- `errors.404.redirect: true` sends unknown URLs to the home page instead of showing the 404 page.
+- `errors.404.redirect: true` sends unknown URLs to the home page instead of showing the 404 page; `title` and `description` replace the 404 page's heading and body copy.
 
 See [SEO, social cards, and feeds](/docs7/seo) for sitemaps, OG images, and RSS.
 
@@ -105,7 +105,7 @@ See [SEO, social cards, and feeds](/docs7/seo) for sitemaps, OG images, and RSS.
 { "icons": { "library": "lucide" } }
 ```
 
-Libraries: `lucide`, `tabler`, `fontawesome`, `hugeicons` (default). Icon names that don't resolve render as nothing and appear as build warnings.
+Libraries: `lucide`, `fontawesome`, `hugeicons` (default). Icon names that don't resolve render as nothing and appear as build warnings. Any `icon` value anywhere can also be a path or URL to an image file.
 
 ## Variables
 
@@ -127,6 +127,7 @@ Every `{{version}}` in your MDX is replaced at build time, including inside code
 }
 ```
 
+- `markdown.schema` (default `true`) lists your local OpenAPI specs in `llms.txt`; `false` removes that section.
 - `markdown.instructions` is appended as an "Agent Instructions" section to every page's raw Markdown export and to `llms.txt`.
 - `contextual.options` configures the page-action menu (Copy page, View as Markdown, Open in ChatGPT/Claude/Perplexity/Grok/Cursor/VS Code, or fully custom entries). See [AI & agents](/docs7/ai-agents).
 

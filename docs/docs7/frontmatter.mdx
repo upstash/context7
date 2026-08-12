@@ -49,7 +49,7 @@ icon: rocket
 | `boost` | Search ranking weight for this page (overrides any inherited navigation `boost`). |
 | `keywords` | Extra search terms, indexed but not visible on the page. |
 | `canonical` | Overrides the canonical URL. |
-| `og:title`, `og:description`, `og:image` | Per-page social-card overrides. |
+| `og:title`, `og:description`, `og:image` | Per-page social-card overrides. Any key declared in `seo.metatags` can be overridden per page the same way. |
 | `timestamp` | `true` forces the "Last updated" line on this page; `false` opts out of the site-wide setting. |
 
 ## Linking and related content
@@ -57,7 +57,7 @@ icon: rocket
 | Field | Effect |
 |---|---|
 | `url` | Turns the entry into an external sidebar link; no page is generated. |
-| `related` | Renders a "Related" list at the end of the page. Accepts paths (`- /guides/deploy`) or labeled links (`- Deploy guide: /guides/deploy`). |
+| `related` | Renders a "Related" list at the end of the page. Accepts paths (`- /guides/deploy`) or labeled links (`- Deploy guide: /guides/deploy`); `related: false` suppresses it. |
 
 ## API pages
 
@@ -80,5 +80,7 @@ contextual:
   options: ["copy", "view"]
   display: header
 ```
+
+`display: toc` moves the menu into the table-of-contents column instead.
 
 See [AI & agents](/docs7/ai-agents) for the full option list and custom entries.

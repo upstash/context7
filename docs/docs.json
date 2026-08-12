@@ -277,6 +277,7 @@
           {
             "group": "Deploying",
             "pages": [
+              "docs7/dashboard",
               "docs7/deployments",
               "docs7/branch-previews",
               "docs7/custom-domains",

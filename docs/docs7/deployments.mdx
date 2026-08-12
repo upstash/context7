@@ -3,19 +3,20 @@ title: Deployments
 description: How builds run, what the log shows, and how to troubleshoot failures
 ---
 
-Every push to a connected branch creates a deployment: Docs7 clones the repository, builds the site in an isolated sandbox, and publishes the result to the edge. You can also trigger a deployment manually from the dashboard.
+Every push to a connected branch creates a deployment: Docs7 clones the repository, builds the site in an isolated sandbox, and publishes the result to the edge. You can also trigger a production deployment manually from [the dashboard](/docs7/dashboard).
 
 ## Lifecycle
 
 A deployment moves through `queued → running → ready` (or `failed`). The dashboard shows the build log live: clone, build (with the builder's own output streamed in), and publish, with timings per phase.
 
+- **A failed update never takes the site down.** The previous build keeps serving until a new build succeeds.
 - **One build per target at a time.** Pushes to the same branch queue up; if a newer push arrives before an older one starts, the older deployment ends as *"Superseded by a newer deployment"*.
 - **Automatic retries.** Deployments interrupted by infrastructure (not by your content) are retried automatically. A deployment that cannot complete within 45 minutes is marked failed.
 - **History.** The last 50 deployments per site are kept, with logs retained for 7 days.
 
 ## GitHub feedback
 
-Each deployment posts a `docs7/production` or `docs7/preview` commit status on the exact commit it built, and preview deployments upsert a single comment on the open pull request with the preview link. Manual dashboard deployments have no commit, so they post no status.
+Each deployment posts a `docs7/production` or `docs7/preview` commit status on the exact commit it built, and preview deployments upsert a single comment on each open pull request for that branch with the preview link. Manual dashboard deployments have no commit, so they post no status.
 
 ## Understanding build failures
 

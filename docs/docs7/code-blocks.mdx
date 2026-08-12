@@ -32,10 +32,10 @@ const site = await docs7.deploy({
 Mark added and removed lines inside the code itself:
 
 ````mdx
-```diff-example.ts
+```typescript example.ts
   const limit = 25;
-- throw new Error("file too large");
-+ skipped.push(file); // [!code ++]
+  throw new Error("file too large"); // [!code --]
+  skipped.push(file); // [!code ++]
 ```
 ````
 

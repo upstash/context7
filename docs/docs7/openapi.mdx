@@ -54,6 +54,10 @@ openapi: "openapi.json POST /sites"
 
 Operations found in a loaded spec but not claimed by any page are auto-generated into an "API Reference" sidebar group, so nothing in the spec goes missing.
 
+## Page URLs
+
+Generated pages are slugged from the operation's `summary`, matching Mintlify's URLs (`POST /sites` with summary "Create a site" becomes `create-a-site`; without a summary, `post-sites`). Navigation entries like `"GET /users"` mount next to their spec; auto-populated sections mount under their `directory` (default `api-reference`); unclaimed operations mount at `api-reference/<tag>/<summary>`. Only `get`, `post`, `put`, `patch`, and `delete` operations generate pages.
+
 ## What a generated page contains
 
 - Method, path, and description, with an HTTP-method chip in the sidebar.
@@ -61,7 +65,7 @@ Operations found in a loaded spec but not claimed by any page are auto-generated
 - Request-body fields with `$ref`s resolved.
 - Response schemas per status code, plus a response example (from the spec's `example`/`examples`, or synthesized from the schema).
 - A static cURL example in the right-hand rail.
-- An Authorization field when the operation declares `security`.
+- An Authorization field when the operation or the spec declares `security`.
 
 Every API page also gets a structured raw-Markdown export, like all other pages.
 

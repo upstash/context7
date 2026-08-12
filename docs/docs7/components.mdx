@@ -3,7 +3,7 @@ title: Components
 description: The MDX component library available on every page
 ---
 
-All components are available in every MDX page without imports. Unknown components never break a build. They render as inert placeholders and are listed as build warnings, so pseudo-tags like `<YOUR_API_KEY>` in prose are safe.
+All components are available in every MDX page without imports. Unknown components never break a build. They render as inert placeholders and are collected into the build report, so pseudo-tags like `<YOUR_API_KEY>` in prose are safe.
 
 ## Callouts
 
@@ -72,7 +72,7 @@ Tabs with the same titles sync their selection across the page by default (`sync
 </Frame>
 ```
 
-Images get click-to-zoom and copy/download actions by default (`noZoom` disables the zoom). `<Image size="md" border background>` adds sizing and framing.
+Images get click-to-zoom by default (`noZoom` disables it). Add an `actions` attribute for copy/download buttons (`actions="copy"` to pick one, `actionsPlacement` to position them). `<Image size="md" border background>` adds sizing and framing.
 
 ## API fields
 
@@ -98,7 +98,7 @@ rss: true
 </Update>
 ```
 
-`<Update>` labels appear in the table of contents, and with `rss: true` frontmatter the page publishes an RSS feed.
+`<Update>` labels appear in the table of contents. When any entry has `tags`, the table of contents becomes a tag filter instead, and the selection is mirrored into a shareable `?tags=` URL. With `rss: true` frontmatter the page publishes an RSS feed; a per-entry `rss={{ title, description }}` prop overrides that feed item.
 
 ## File trees
 
@@ -113,12 +113,17 @@ rss: true
 
 ## Everything else
 
+- `<Icon icon="rocket" size={20}>` for standalone icons.
 - `<Tooltip tip="…">` and `<Badge>` for inline annotations.
 - `<Tile>` and `<Prompt>` for link tiles and copyable AI prompts.
 - `<View title="…">` for multi-view content behind a dropdown.
 - `<Color>` swatches with click-to-copy values.
 - `<Visibility for="agents">` renders content only in the Markdown/agent exports; `for="humans"` renders it only on the web page.
-- `<Latex>` for inline math. Block math works with `$$ … $$` directly. See [Code blocks](/docs7/code-blocks).
+- Math renders through `$…$` and `$$ … $$`. See [Code blocks](/docs7/code-blocks).
+
+## Heading anchors
+
+Every heading gets an anchor link with a Mintlify-compatible slug; duplicates get `-2`, `-3` suffixes. Write `## Title {#custom-id}` to set your own id, and add `noAnchor` to a heading to keep the id but hide the anchor chip.
 
 ## Snippets and custom components
 

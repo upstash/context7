@@ -20,14 +20,14 @@ Preview deployments post:
 
 ## What triggers a preview
 
-- Only `push` events build. Tags, releases, and PR-opened events do not.
+- Only `push` events to branches in the repository itself build; pushes to forks are ignored. Tags, releases, and opening a pull request do not build.
 - Pushing the configured production branch deploys production instead.
-- Deleting a branch on GitHub tears down its preview: the URL, the deployment target, everything. Deleting the production branch does nothing.
+- Deleting a branch on GitHub, or closing or merging its pull request, tears down the preview: the URL, the deployment target, everything. Deleting the production branch does nothing.
 
 ## The preview cap
 
-A site can hold 50 live branch previews. Past that, deployments for *new* branches fail with a message asking you to delete unused previews from the dashboard. Pushes to branches that already have a preview keep working. Delete stale previews in the dashboard, or just delete merged branches on GitHub (which cleans up their previews automatically).
+A site can hold 50 live branch previews. Past that, pushes to new branches are refused and reported as a failed `docs7/preview` commit status; pushes to branches that already have a preview keep working. Clear previews by deleting merged branches on GitHub or closing their pull requests.
 
 ## Previews vs production
 
-Previews build exactly like production with two differences: they never carry the custom-domain base path, and Context7 indexing/chat-widget features only apply to production deployments.
+Previews build exactly like production with two differences: they never carry the custom-domain base path, and Context7 indexing only applies to production deployments.

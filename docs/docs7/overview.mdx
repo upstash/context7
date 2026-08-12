@@ -9,7 +9,7 @@ Docs7 turns a GitHub repository of Markdown and MDX files into a hosted document
 ## How it works
 
 1. Connect a GitHub repository from your Context7 teamspace and pick the branch and folder that contain your docs.
-2. Docs7 builds the site and publishes it to `<owner>--<repo>.docs7.io`.
+2. Docs7 builds the site and publishes it to `<owner>--<repo>-<id>.docs7.io`.
 3. Every push to the production branch redeploys production. Every push to any other branch creates or updates a preview site with its own stable URL, reported back to the pull request as a commit status and comment.
 
 There is nothing to install and no CI to configure. The GitHub App webhook drives everything.
