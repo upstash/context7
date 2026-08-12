@@ -74,7 +74,7 @@ Each result includes:
 - **Code Snippets** — Number of available code examples
 - **Source Reputation** — Authority indicator (High, Medium, Low, or Unknown)
 - **Benchmark Score** — Quality indicator (100 is the highest score)
-- **Versions** — Parsed documentation snapshots. Omit the version to get the latest parsed documentation. If the user asks for a version, use that exact listed version; if it is not listed, say it is unavailable and do not substitute another version. The format is `/org/project/version`.
+- **Versions** — Available versions. Use an exact listed version only when requested. The format is `/org/project/version`.
 
 ### Selection process
 
