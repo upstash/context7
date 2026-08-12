@@ -6,6 +6,7 @@ import { registerAuthCommands, setAuthBaseUrl } from "./commands/auth.js";
 import { registerSetupCommand } from "./commands/setup.js";
 import { registerRemoveCommand } from "./commands/remove.js";
 import { registerDocsCommands } from "./commands/docs.js";
+import { registerDeployCommands } from "./commands/deploy.js";
 import { maybeShowUpgradeNotice, registerUpgradeCommand } from "./commands/upgrade.js";
 import { setBaseUrl } from "./utils/api.js";
 import { VERSION } from "./constants.js";
@@ -53,6 +54,10 @@ Examples:
   ${brand.dim("# Query library documentation")}
   ${brand.primary('npx ctx7 library react "how to use hooks"')}
   ${brand.primary('npx ctx7 docs /facebook/react "useEffect examples"')}
+
+  ${brand.dim("# Deploy a local Docs7 site")}
+  ${brand.primary("npx ctx7 deploy .")}
+  ${brand.primary("npx ctx7 deploy . --prod")}
 `
   );
 
@@ -62,6 +67,7 @@ registerAuthCommands(program);
 registerSetupCommand(program);
 registerRemoveCommand(program);
 registerDocsCommands(program);
+registerDeployCommands(program);
 registerUpgradeCommand(program);
 
 program.action(() => {

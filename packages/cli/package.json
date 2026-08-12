@@ -29,11 +29,13 @@
     "figlet": "^1.9.4",
     "open": "^10.1.0",
     "ora": "^9.4.0",
-    "picocolors": "^1.1.1"
+    "picocolors": "^1.1.1",
+    "tar-stream": "3.2.0"
   },
   "devDependencies": {
     "@types/figlet": "^1.7.0",
     "@types/node": "^22.19.1",
+    "@types/tar-stream": "3.1.4",
     "@typescript-eslint/eslint-plugin": "^8.28.0",
     "@typescript-eslint/parser": "^8.28.0",
     "eslint": "^9.34.0",

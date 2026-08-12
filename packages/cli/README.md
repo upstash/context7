@@ -130,6 +130,22 @@ ctx7 whoami
 ctx7 logout
 ```
 
+### Deploy documentation
+
+Deploy local documentation files. The first deployment creates a Docs7 site
+and links it to the current directory.
+
+```bash
+ctx7 login
+ctx7 deploy .
+ctx7 deploy . --prod
+```
+
+The default deployment updates the stable CLI preview. `--prod` updates the
+production site. Use `ctx7 link . --site <site-id>` only when you want to link
+the directory to another site. CI can use `CONTEXT7_API_KEY` instead of
+interactive login.
+
 ## Supported Clients
 
 The CLI automatically detects which AI coding assistants you have installed and configures Context7 for them:
