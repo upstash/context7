@@ -3,4 +3,4 @@
 "@upstash/context7-pi": patch
 ---
 
-Clarify that versions are listed newest first and that omitting the version returns the most current documentation
+Clarify that versions are parsed snapshots and omitting the version returns the latest one
