@@ -1,0 +1,105 @@
+---
+title: Navigation
+description: Structure your site with groups, tabs, anchors, and dropdowns
+---
+
+Navigation lives under the `navigation` key in `docs.json`. Pages are referenced by their file path without the extension (`getting-started/install` → `getting-started/install.mdx`).
+
+## Groups
+
+The simplest form is a sidebar of grouped pages, nestable to any depth:
+
+```json
+{
+  "navigation": {
+    "groups": [
+      {
+        "group": "Getting Started",
+        "icon": "rocket",
+        "pages": [
+          "index",
+          "installation",
+          { "group": "Guides", "pages": ["guides/deploy", "guides/domains"] }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Group options:
+
+- `icon` and `tag` decorate the group heading.
+- `root` makes the group title itself a link to a page.
+- `expanded: true` opens a nested group by default (nested groups start collapsed).
+- `hidden: true` removes an item from the sidebar. The page is still built and reachable by URL, is marked `noindex`, and stays out of search and the sitemap.
+- `directory: "accordion"` or `"card"` renders an automatic listing of the group's children on its root page.
+
+## Tabs
+
+Split the site into top-level sections, each with its own sidebar:
+
+```json
+{
+  "navigation": {
+    "tabs": [
+      { "tab": "Guides", "icon": "book", "groups": [ … ] },
+      { "tab": "API Reference", "icon": "braces", "openapi": "openapi.json" },
+      { "tab": "Blog", "href": "https://example.com/blog" }
+    ]
+  }
+}
+```
+
+A tab with `href` is an external link. A tab (or any navigation element) with an `openapi` source and no explicit pages auto-populates from the spec. See [API references](/docs7/openapi).
+
+## Anchors, dropdowns, and products
+
+`anchors` render as a link list at the top of the sidebar; `dropdowns` and `products` render as a selector. All take the same shape as tabs: a label, an optional `icon`, and either nested navigation or an `href`.
+
+```json
+{
+  "navigation": {
+    "anchors": [
+      { "anchor": "Documentation", "icon": "book-open", "groups": [ … ] },
+      { "anchor": "Community", "icon": "discord", "href": "https://discord.gg/example" }
+    ]
+  }
+}
+```
+
+Use one navigation kind per level, for example tabs at the top level and groups inside each tab. If several kinds appear at the same level, only the first is used.
+
+<Note>
+`versions` and `languages` are also accepted and render as selectors, but content is not scoped per version or language; pages are shared across all of them. Avoid building on these for now.
+</Note>
+
+## Global anchors
+
+Links shown across every tab and section:
+
+```json
+{
+  "navigation": {
+    "global": {
+      "anchors": [{ "anchor": "Status", "icon": "activity", "href": "https://status.example.com" }]
+    },
+    "tabs": [ … ]
+  }
+}
+```
+
+Only `global.anchors` is supported, and each entry needs an `href`.
+
+## External links as pages
+
+A page entry can also be declared in frontmatter as an external link: give the MDX file a `url` frontmatter field and it becomes a sidebar link without a generated page.
+
+## Search ranking
+
+Add `boost` to any group or page entry (or `boost` in page frontmatter) to weight it in search results. The value is inherited down the navigation tree; frontmatter wins over navigation.
+
+## Home page and pagination
+
+- If no page maps to `/`, visitors are redirected to the first page of the navigation.
+- Every page gets previous/next pagination within its section, unless disabled per page with `hideFooterPagination`.

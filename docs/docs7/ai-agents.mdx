@@ -1,0 +1,52 @@
+---
+title: AI & Agents
+description: llms.txt, Markdown exports, page actions, and agent discovery, generated for every site
+---
+
+Every Docs7 site is readable by AI tools with no setup. Everything below is generated automatically; repository files with the same names always win.
+
+## llms.txt and llms-full.txt
+
+- `/llms.txt`: the site name, description, links to local API specs, and an index of every page with its description.
+- `/llms-full.txt`: the entire site as one Markdown document, streamed in chunks so it works at any size.
+- Both are also served under `/.well-known/`, and a `Link` header on every page advertises them to crawlers.
+
+## Raw Markdown for every page
+
+Each page has a Markdown sibling: `/guides/deploy` is also available as `/guides/deploy.md` (the home page as `/index.md`). API pages export a structured Markdown rendering of the endpoint.
+
+Use `<Visibility for="agents">` in MDX for content that should appear only in these exports, and `for="humans"` for web-only content.
+
+## Agent instructions
+
+`markdown.instructions` in `docs.json` appends an "Agent Instructions" section to every Markdown export and to `llms.txt`. Guidance like "prefer the v2 API in examples" travels with your content into any AI tool that reads it.
+
+## Page actions
+
+Every page shows an action menu next to the title (defaults: **Copy page**, **View as Markdown**, **Open in ChatGPT**, **Open in Claude**). Configure it site-wide or per page:
+
+```json
+{
+  "contextual": {
+    "options": ["copy", "view", "chatgpt", "claude", "perplexity", "cursor"],
+    "display": "header"
+  }
+}
+```
+
+Built-in options: `copy`, `view`, `chatgpt`, `claude`, `perplexity`, `grok`, `cursor`, `vscode`. Custom entries take `{ "title", "description", "icon", "href" }`, where `href` may use `$page` (the absolute URL of the page's Markdown export) and `$path` placeholders. Set `"options": []` to disable the menu.
+
+## Agent discovery files
+
+Each site also publishes:
+
+- `/skill.md` and `/.well-known/agent-skills/…`: an agent skill describing how to use the docs.
+- `/.well-known/agent-card.json`: an A2A agent card.
+
+Ship your own `skill.md` in the repository to replace the generated one.
+
+## Context7 indexing
+
+A Docs7 site can be indexed into Context7 itself, so coding agents get your latest docs through the Context7 MCP, and you can embed the [chat widget](/howto/chat-widget) on the site. Both are toggles in the site's dashboard settings; production deployments refresh the index automatically.
+
+To see which AI systems actually read your docs, and what they read, check [Analytics](/docs7/analytics).

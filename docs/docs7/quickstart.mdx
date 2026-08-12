@@ -1,0 +1,57 @@
+---
+title: Quickstart
+description: Deploy your first documentation site with Docs7
+---
+
+Deploy a documentation site from a GitHub repository in a few minutes.
+
+## Before you start
+
+You need:
+
+- A GitHub repository containing your documentation as Markdown or MDX files.
+- A `docs.json` (or legacy `mint.json`) file in the documentation folder. A minimal one is enough:
+
+```json docs.json
+{
+  "name": "My Project",
+  "colors": { "primary": "#0D9373" },
+  "navigation": {
+    "groups": [
+      { "group": "Getting Started", "pages": ["index", "installation"] }
+    ]
+  }
+}
+```
+
+## Create the site
+
+<Steps>
+  <Step title="Connect the repository">
+    In your Context7 teamspace, open the **Docs** tab and connect your GitHub repository. If the Context7 GitHub App doesn't have access to the repository yet, you'll be asked to grant it.
+
+    A repository can back exactly one Docs7 site.
+  </Step>
+  <Step title="Choose branch and docs path">
+    Pick the production branch (leave empty for the repository's default branch) and the folder that contains `docs.json`, for example `docs/` or `.` for the repository root.
+  </Step>
+  <Step title="Deploy">
+    Docs7 clones the repository, builds the site, and publishes it. Watch the build log live in the dashboard. When it finishes, your site is up at:
+
+    ```
+    https://<owner>--<repo>.docs7.io
+    ```
+  </Step>
+</Steps>
+
+## From now on
+
+Pushing the production branch redeploys production. Pushing any other branch deploys a preview at a stable per-branch URL, and the commit gets a `docs7/preview` status plus a PR comment linking to it. See [Branch previews](/docs7/branch-previews).
+
+If a build fails, the log lists each failing page and why. See [Deployments](/docs7/deployments).
+
+## Next steps
+
+- Point a [custom domain](/docs7/custom-domains) at the site.
+- Explore what [`docs.json` can configure](/docs7/settings): themes, fonts, banners, SEO, and more.
+- Check the [component library](/docs7/components) available in MDX pages.

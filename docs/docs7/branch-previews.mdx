@@ -1,0 +1,33 @@
+---
+title: Branch Previews
+description: A stable preview URL for every branch, posted to the pull request
+---
+
+Every push to a branch other than the production branch deploys a preview. Each branch gets **one stable URL** that is overwritten in place on every push:
+
+```
+https://preview--<owner>--<repo>--<branch>-<hash>.docs7.io
+```
+
+Long branch names are shortened in the label; the trailing hash keeps the URL unique and stable.
+
+## Pull request integration
+
+Preview deployments post:
+
+- a `docs7/preview` commit status on the pushed commit, and
+- a single comment on the open pull request with the preview link, edited in place on later pushes, never duplicated.
+
+## What triggers a preview
+
+- Only `push` events build. Tags, releases, and PR-opened events do not.
+- Pushing the configured production branch deploys production instead.
+- Deleting a branch on GitHub tears down its preview: the URL, the deployment target, everything. Deleting the production branch does nothing.
+
+## The preview cap
+
+A site can hold 50 live branch previews. Past that, deployments for *new* branches fail with a message asking you to delete unused previews from the dashboard. Pushes to branches that already have a preview keep working. Delete stale previews in the dashboard, or just delete merged branches on GitHub (which cleans up their previews automatically).
+
+## Previews vs production
+
+Previews build exactly like production with two differences: they never carry the custom-domain base path, and Context7 indexing/chat-widget features only apply to production deployments.

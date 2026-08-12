@@ -1,0 +1,84 @@
+---
+title: Frontmatter
+description: Per-page settings for titles, layout, search, SEO, and more
+---
+
+Every MDX page can start with a YAML frontmatter block:
+
+```mdx
+---
+title: Deploy to production
+sidebarTitle: Deploy
+description: Ship your first deployment in five minutes
+icon: rocket
+---
+```
+
+## Titles and sidebar
+
+| Field | Effect |
+|---|---|
+| `title` | The page `<h1>` and browser title (`Title - Site Name`). Defaults to a title-cased version of the file name. |
+| `sidebarTitle` | Overrides the sidebar label only. |
+| `description` | Sub-heading under the title, `<meta name="description">`, and the OG description. |
+| `icon` | Sidebar item icon. |
+| `tag` | Small tag chip next to the sidebar label (e.g. `NEW`). |
+| `deprecated: true` | Red "deprecated" badge next to the title. |
+
+## Layout
+
+`mode` controls the page chrome:
+
+| Mode | Layout |
+|---|---|
+| `default` | Sidebar, title block, table of contents. |
+| `wide` | Full-width article, no table of contents. |
+| `center` | No sidebar, content centered at a capped width. |
+| `frame` | Keeps sidebar and pagination but no generated title block. |
+| `custom` | Bare page with no sidebar, title, or table of contents. Build the page entirely from components. |
+
+`hideFooterPagination: true` removes the previous/next links.
+
+## Visibility, search, and SEO
+
+| Field | Effect |
+|---|---|
+| `hidden: true` | Out of the sidebar, search, and sitemap; still built and reachable by URL (marked `noindex`). |
+| `noindex: true` | `<meta name="robots" content="noindex">`, excluded from search and the sitemap. |
+| `searchable: false` | Excluded from search only. |
+| `boost` | Search ranking weight for this page (overrides any inherited navigation `boost`). |
+| `keywords` | Extra search terms, indexed but not visible on the page. |
+| `canonical` | Overrides the canonical URL. |
+| `og:title`, `og:description`, `og:image` | Per-page social-card overrides. |
+| `timestamp` | `true` forces the "Last updated" line on this page; `false` opts out of the site-wide setting. |
+
+## Linking and related content
+
+| Field | Effect |
+|---|---|
+| `url` | Turns the entry into an external sidebar link; no page is generated. |
+| `related` | Renders a "Related" list at the end of the page. Accepts paths (`- /guides/deploy`) or labeled links (`- Deploy guide: /guides/deploy`). |
+
+## API pages
+
+| Field | Effect |
+|---|---|
+| `openapi` | `"GET /users"` or `"spec.json GET /users"` renders the generated endpoint documentation above the page body. See [API references](/docs7/openapi). |
+| `method` | Overrides the HTTP-method chip in the sidebar (auto-derived from `openapi` otherwise). |
+| `hideApiMarker: true` | Hides the method chip. |
+
+## Changelogs and feeds
+
+`rss: true` on a page built from [`<Update>`](/docs7/components#update) blocks publishes an RSS feed at `<page-url>/rss.xml` and shows a feed icon next to the title. Use ISO dates (`2026-08-12`) as `label` values to get correct publish dates.
+
+## Page actions
+
+`contextual` overrides the page-action menu (Copy page, View as Markdown, Open in ChatGPT, …) for a single page:
+
+```yaml
+contextual:
+  options: ["copy", "view"]
+  display: header
+```
+
+See [AI & agents](/docs7/ai-agents) for the full option list and custom entries.

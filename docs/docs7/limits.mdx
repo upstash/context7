@@ -1,0 +1,59 @@
+---
+title: Limits
+description: Sizes, timeouts, and caps at a glance
+---
+
+## Source repository
+
+| Limit | Value |
+|---|---|
+| Repository provider | GitHub (`https://github.com/<owner>/<repo>`) |
+| Sites per repository | 1 |
+| Docs source tree | 100,000 files / 1 GB total (dot-directories and `node_modules` don't count) |
+| Clone timeout | 5 minutes |
+| Required file | `docs.json` or `mint.json` in the docs path |
+
+Symbolic links to files inside the repository are materialized automatically; links that are broken, point to directories, or leave the repository fail the build.
+
+## Builds
+
+| Limit | Value |
+|---|---|
+| Build timeout | 15 minutes |
+| Page errors | Any page error fails the deployment (files outside the navigation only warn) |
+| Network access | None. Commit remote specs, images, and fonts to the repository |
+| Build log | 250 lines of live output, 200 error lines, retained 7 days |
+
+## Published site
+
+| Limit | Value |
+|---|---|
+| Per-file size | 25 MB. Larger files are skipped, and the end of the build log lists each one. Host large media like video externally |
+| Site size | 100,000 files / 3 GB total |
+| Redirect rules | No practical cap |
+| `llms.txt` page index | 100,000 characters (a repository `llms.txt` wins) |
+
+Files with unknown extensions are served without a `Content-Type` header, so browsers download them instead of rendering them.
+
+## Deployments and previews
+
+| Limit | Value |
+|---|---|
+| Live branch previews per site | 50 (existing branches always redeploy) |
+| Concurrent builds per branch/production target | 1; superseded deployments are dropped in favor of the newest push |
+| Deployment timeout | Marked failed after 45 minutes |
+| Deployment history | Last 50 per site |
+| Webhook triggers | Branch pushes only; redeliveries deduplicated for 24 hours |
+
+## Custom domains
+
+| Limit | Value |
+|---|---|
+| Domains per site | 1 (and one site per domain) |
+| Blocked | Domains under `docs7.io` |
+| Re-claim cooldown | ~2 minutes after removing a live domain |
+| Custom path | 2–128 characters, requires a custom domain |
+
+## Need more?
+
+If a limit blocks a real use case, like a bigger repository, more previews, or a longer build, [contact us](https://context7.com/contact).

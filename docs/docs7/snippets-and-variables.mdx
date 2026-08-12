@@ -1,0 +1,54 @@
+---
+title: Snippets & Variables
+description: Reuse content across pages and substitute values at build time
+---
+
+## Snippets
+
+Put reusable MDX in a `snippets/` (or `_snippets/`) folder and include it anywhere:
+
+```mdx
+<Snippet file="install-instructions" />
+```
+
+The extension is optional. A missing snippet file renders nothing and shows up as a build warning rather than failing the page.
+
+You can also use standard MDX imports for snippets and components:
+
+```mdx
+import Install from "/snippets/install-instructions.mdx";
+
+<Install />
+```
+
+## Custom components
+
+Ship your own React components as `.jsx` files in the repository and import them from any page:
+
+```mdx
+import { PricingTable } from "/snippets/pricing-table.jsx";
+
+<PricingTable tier="pro" />
+```
+
+React hooks are available in these components without imports.
+
+## Variables
+
+Define values once in `docs.json`:
+
+```json
+{ "variables": { "version": "2.4.0", "cli": "docs7-cli" } }
+```
+
+Then reference them anywhere in your content, including inside code fences:
+
+```mdx
+Install version {{version}} with `npm i {{cli}}@{{version}}`.
+```
+
+Variable names use letters, digits, and hyphens. Referencing an undefined variable is a build error for that page. Projects without a `variables` block can use literal `{{…}}` freely.
+
+## Escaping braces
+
+Bare `{expression}` in prose is MDX syntax and would normally fail to compile. Docs7 automatically retries such pages with braces escaped, so stray braces in prose survive. Inside code fences braces are always literal.

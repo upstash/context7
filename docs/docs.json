@@ -23,207 +23,266 @@
     ]
   },
   "navigation": {
-    "groups": [
+    "tabs": [
       {
-        "group": "Overview",
-        "pages": [
-          "overview",
-          "installation",
-          "plans-pricing",
-          "clients/cli",
-          "adding-libraries",
-          "library-owners",
-          "library-updates",
-          "api-guide",
-          "tips"
-        ]
-      },
-      {
-        "group": "How To",
-        "pages": [
+        "tab": "Context7",
+        "groups": [
           {
-            "group": "Authentication",
+            "group": "Overview",
             "pages": [
-              "howto/api-keys",
-              "howto/oauth"
-            ]
-          },
-          "howto/claiming-libraries",
-          "howto/chat-widget",
-          "howto/verification",
-          "howto/private-sources",
-          "howto/policies",
-          "howto/rules",
-          "howto/usage",
-          "howto/teamspace"
-        ]
-      },
-      {
-        "group": "Enterprise",
-        "pages": [
-          "enterprise",
-          {
-            "group": "Enterprise-Managed Auth",
-            "pages": [
-              "enterprise/enterprise-managed-auth/entra",
-              "enterprise/enterprise-managed-auth/okta"
+              "overview",
+              "installation",
+              "plans-pricing",
+              "clients/cli",
+              "adding-libraries",
+              "library-owners",
+              "library-updates",
+              "api-guide",
+              "tips"
             ]
           },
           {
-            "group": "On-Premise",
+            "group": "How To",
             "pages": [
-              "enterprise/on-premise",
-              "enterprise/changelog",
               {
-                "group": "Integrations",
+                "group": "Authentication",
                 "pages": [
-                  "enterprise/integrations/github",
-                  "enterprise/integrations/other-git",
-                  "enterprise/integrations/confluence"
+                  "howto/api-keys",
+                  "howto/oauth"
+                ]
+              },
+              "howto/claiming-libraries",
+              "howto/chat-widget",
+              "howto/verification",
+              "howto/private-sources",
+              "howto/policies",
+              "howto/rules",
+              "howto/usage",
+              "howto/teamspace"
+            ]
+          },
+          {
+            "group": "Enterprise",
+            "pages": [
+              "enterprise",
+              {
+                "group": "Enterprise-Managed Auth",
+                "pages": [
+                  "enterprise/enterprise-managed-auth/entra",
+                  "enterprise/enterprise-managed-auth/okta"
                 ]
               },
               {
-                "group": "Security",
+                "group": "On-Premise",
                 "pages": [
-                  "enterprise/security/entra-sso",
-                  "enterprise/security/oidc-sso",
-                  "enterprise/security/library-access"
-                ]
-              },
-              {
-                "group": "Deployment",
-                "pages": [
-                  "enterprise/deployment/docker",
-                  "enterprise/deployment/kubernetes",
-                  "enterprise/deployment/scaling",
-                  "enterprise/deployment/vector-stores"
-                ]
-              },
-              {
-                "group": "Features",
-                "pages": [
-                  "enterprise/library-import",
-                  "enterprise/gitops",
-                  "enterprise/backup-restore"
-                ]
-              },
-              {
-                "group": "API Reference",
-                "pages": [
-                  "enterprise/api/authentication",
+                  "enterprise/on-premise",
+                  "enterprise/changelog",
                   {
-                    "group": "Search",
-                    "pages": ["enterprise/api/search/search-for-libraries"]
-                  },
-                  {
-                    "group": "Context",
-                    "pages": ["enterprise/api/context/get-documentation-context"]
-                  },
-                  {
-                    "group": "Parse",
+                    "group": "Integrations",
                     "pages": [
-                      "enterprise/api/parse/parse-a-git-repository",
-                      "enterprise/api/parse/parse-an-openapi-spec-by-url",
-                      "enterprise/api/parse/upload-an-openapi-spec-file",
-                      "enterprise/api/parse/import-libraries",
-                      "enterprise/api/parse/parse-a-website",
-                      "enterprise/api/parse/refresh-a-library",
-                      "enterprise/api/parse/get-parse-status"
+                      "enterprise/integrations/github",
+                      "enterprise/integrations/other-git",
+                      "enterprise/integrations/confluence"
+                    ]
+                  },
+                  {
+                    "group": "Security",
+                    "pages": [
+                      "enterprise/security/entra-sso",
+                      "enterprise/security/oidc-sso",
+                      "enterprise/security/library-access"
+                    ]
+                  },
+                  {
+                    "group": "Deployment",
+                    "pages": [
+                      "enterprise/deployment/docker",
+                      "enterprise/deployment/kubernetes",
+                      "enterprise/deployment/scaling",
+                      "enterprise/deployment/vector-stores"
+                    ]
+                  },
+                  {
+                    "group": "Features",
+                    "pages": [
+                      "enterprise/library-import",
+                      "enterprise/gitops",
+                      "enterprise/backup-restore"
+                    ]
+                  },
+                  {
+                    "group": "API Reference",
+                    "pages": [
+                      "enterprise/api/authentication",
+                      {
+                        "group": "Search",
+                        "pages": [
+                          "enterprise/api/search/search-for-libraries"
+                        ]
+                      },
+                      {
+                        "group": "Context",
+                        "pages": [
+                          "enterprise/api/context/get-documentation-context"
+                        ]
+                      },
+                      {
+                        "group": "Parse",
+                        "pages": [
+                          "enterprise/api/parse/parse-a-git-repository",
+                          "enterprise/api/parse/parse-an-openapi-spec-by-url",
+                          "enterprise/api/parse/upload-an-openapi-spec-file",
+                          "enterprise/api/parse/import-libraries",
+                          "enterprise/api/parse/parse-a-website",
+                          "enterprise/api/parse/refresh-a-library",
+                          "enterprise/api/parse/get-parse-status"
+                        ]
+                      }
                     ]
                   }
                 ]
               }
             ]
-          }
-        ]
-      },
-      {
-        "group": "Security",
-        "pages": [
-          "security/overview",
-          "security/data-privacy",
-          "security/infrastructure",
-          "security/auth-and-access-control",
-          "security/compliance-and-reporting",
-          "security/data-safety",
-          "security/best-practices"
-        ]
-      },
-      {
-        "group": "Clients",
-        "pages": [
-          "clients/claude-code",
-          "clients/codex",
-          "clients/copilot-cli",
-          "clients/cursor",
-          "clients/opencode",
-          "clients/pi",
-          "clients/vscode",
-          "resources/all-clients"
-        ]
-      },
-      {
-        "group": "SDKs",
-        "pages": [
+          },
           {
-            "group": "TypeScript",
+            "group": "Security",
             "pages": [
-              "sdks/ts/getting-started",
+              "security/overview",
+              "security/data-privacy",
+              "security/infrastructure",
+              "security/auth-and-access-control",
+              "security/compliance-and-reporting",
+              "security/data-safety",
+              "security/best-practices"
+            ]
+          },
+          {
+            "group": "Clients",
+            "pages": [
+              "clients/claude-code",
+              "clients/codex",
+              "clients/copilot-cli",
+              "clients/cursor",
+              "clients/opencode",
+              "clients/pi",
+              "clients/vscode",
+              "resources/all-clients"
+            ]
+          },
+          {
+            "group": "SDKs",
+            "pages": [
               {
-                "group": "Commands",
+                "group": "TypeScript",
                 "pages": [
-                  "sdks/ts/commands/search-library",
-                  "sdks/ts/commands/get-context"
+                  "sdks/ts/getting-started",
+                  {
+                    "group": "Commands",
+                    "pages": [
+                      "sdks/ts/commands/search-library",
+                      "sdks/ts/commands/get-context"
+                    ]
+                  }
                 ]
               }
+            ]
+          },
+          {
+            "group": "Agentic Tools",
+            "pages": [
+              "agentic-tools/overview",
+              {
+                "group": "Vercel AI SDK",
+                "pages": [
+                  "agentic-tools/ai-sdk/getting-started",
+                  {
+                    "group": "Tools",
+                    "pages": [
+                      "agentic-tools/ai-sdk/tools/resolve-library-id",
+                      "agentic-tools/ai-sdk/tools/query-docs"
+                    ]
+                  },
+                  {
+                    "group": "Agents",
+                    "pages": [
+                      "agentic-tools/ai-sdk/agents/context7-agent"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "group": "API Reference",
+            "openapi": "openapi.json"
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+              "integrations/github-actions",
+              "integrations/code-rabbit",
+              "integrations/factory-ai",
+              "integrations/tembo",
+              "integrations/mastra"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "resources/developer",
+              "resources/troubleshooting"
             ]
           }
         ]
       },
       {
-        "group": "Agentic Tools",
-        "pages": [
-          "agentic-tools/overview",
+        "tab": "Docs7",
+        "groups": [
           {
-            "group": "Vercel AI SDK",
+            "group": "Getting Started",
             "pages": [
-              "agentic-tools/ai-sdk/getting-started",
-              {
-                "group": "Tools",
-                "pages": [
-                  "agentic-tools/ai-sdk/tools/resolve-library-id",
-                  "agentic-tools/ai-sdk/tools/query-docs"
-                ]
-              },
-              {
-                "group": "Agents",
-                "pages": [
-                  "agentic-tools/ai-sdk/agents/context7-agent"
-                ]
-              }
+              "docs7/overview",
+              "docs7/quickstart",
+              "docs7/mintlify-compatibility"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "docs7/settings",
+              "docs7/navigation",
+              "docs7/frontmatter",
+              "docs7/redirects",
+              "docs7/ignoring-files"
+            ]
+          },
+          {
+            "group": "Writing",
+            "pages": [
+              "docs7/components",
+              "docs7/code-blocks",
+              "docs7/snippets-and-variables",
+              "docs7/openapi"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "docs7/analytics",
+              "docs7/search",
+              "docs7/seo",
+              "docs7/ai-agents"
+            ]
+          },
+          {
+            "group": "Deploying",
+            "pages": [
+              "docs7/deployments",
+              "docs7/branch-previews",
+              "docs7/custom-domains",
+              "docs7/limits"
             ]
           }
-        ]
-      },
-      {
-        "group": "API Reference",
-        "openapi": "openapi.json"
-      },
-      {
-        "group": "Integrations",
-        "pages": [
-          "integrations/github-actions",
-          "integrations/code-rabbit",
-          "integrations/factory-ai",
-          "integrations/tembo",
-          "integrations/mastra"
-        ]
-      },
-      {
-        "group": "Resources",
-        "pages": [
-          "resources/developer",
-          "resources/troubleshooting"
         ]
       }
     ]

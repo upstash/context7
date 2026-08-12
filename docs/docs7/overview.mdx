@@ -1,0 +1,45 @@
+---
+title: What is Docs7?
+sidebarTitle: Overview
+description: Host a documentation site straight from a GitHub repository of Markdown and MDX
+---
+
+Docs7 turns a GitHub repository of Markdown and MDX files into a hosted documentation site with a production URL, a stable preview URL for every branch, and optional custom domains. It reads the Mintlify content format directly, so a repository that already has a `docs.json` or `mint.json` deploys as-is.
+
+## How it works
+
+1. Connect a GitHub repository from your Context7 teamspace and pick the branch and folder that contain your docs.
+2. Docs7 builds the site and publishes it to `<owner>--<repo>.docs7.io`.
+3. Every push to the production branch redeploys production. Every push to any other branch creates or updates a preview site with its own stable URL, reported back to the pull request as a commit status and comment.
+
+There is nothing to install and no CI to configure. The GitHub App webhook drives everything.
+
+## What's included
+
+<Columns cols={2}>
+  <Card title="Mintlify-compatible" icon="file-code">
+    `docs.json` configuration, MDX components, snippets, and frontmatter work the way you already know.
+  </Card>
+  <Card title="Branch previews" icon="code-branch">
+    One stable preview URL per branch, linked from the pull request.
+  </Card>
+  <Card title="Readable by AI tools" icon="robot">
+    Every site generates `llms.txt`, `llms-full.txt`, a raw Markdown export of each page, and page actions that open the page in ChatGPT or Claude.
+  </Card>
+  <Card title="Full-text search" icon="search">
+    Static search with a ⌘K modal, per-language indexes, and keyword boosting. No external service.
+  </Card>
+  <Card title="API reference" icon="code">
+    Commit an OpenAPI spec and get generated endpoint pages with request and response examples.
+  </Card>
+  <Card title="Custom domains" icon="globe">
+    Serve from `docs.yourcompany.com`, or below a path like `yourcompany.com/docs`.
+  </Card>
+</Columns>
+
+## Where to start
+
+- [Quickstart](/docs7/quickstart): connect a repository and ship your first deployment.
+- [Mintlify compatibility](/docs7/mintlify-compatibility): what carries over unchanged and what differs.
+- [Site settings](/docs7/settings): everything `docs.json` controls.
+- [Limits](/docs7/limits): sizes, timeouts, and caps at a glance.

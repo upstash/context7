@@ -1,0 +1,135 @@
+---
+title: Site Settings
+description: Everything docs.json controls: branding, themes, fonts, banners, SEO, and more
+---
+
+`docs.json` in your docs folder configures the whole site. `mint.json` is accepted as a legacy fallback, and `$ref` pointers to other JSON files in the repository are resolved anywhere in the config. Unknown keys are ignored, never fatal.
+
+## Branding
+
+```json
+{
+  "name": "My Project",
+  "description": "One-line site description",
+  "colors": { "primary": "#0D9373", "light": "#07C983", "dark": "#0D9373" },
+  "logo": { "light": "/logo.svg", "dark": "/logo-dark.svg", "href": "https://example.com" },
+  "favicon": "/favicon.svg"
+}
+```
+
+- `colors.primary` drives links, buttons, and accents; `colors.light` is used as the primary in dark mode.
+- `logo` can be a single path or a `{light, dark}` pair. The object form requires both.
+- `favicon` also accepts `{light, dark}`. SVG favicons are automatically rasterized into PNG and apple-touch icons.
+
+## Theme and appearance
+
+```json
+{
+  "theme": "mint",
+  "appearance": { "default": "system", "strict": false },
+  "background": { "color": { "light": "#ffffff", "dark": "#0b0f19" } }
+}
+```
+
+Available themes: `mint`, `maple`, `palm`, `willow`, `linden`, `almond`, `aspen`, `sequoia`, `luma`. An unknown theme falls back to `mint`. `appearance.strict: true` hides the light/dark toggle.
+
+## Fonts
+
+```json
+{
+  "fonts": { "family": "Inter" },
+  "styling": { "codeblocks": { "light": "min-light", "dark": "one-dark-pro" } }
+}
+```
+
+`fonts` accepts a root family plus separate `heading` and `body` entries. Without a `source` URL the font loads from Google Fonts; with `source` (and optional `format`, `weight`) it is emitted as a self-hosted `@font-face`. `styling.codeblocks` takes any Shiki theme name or a light/dark pair.
+
+Other `styling` options: `eyebrows: "breadcrumbs"` replaces the section eyebrow above page titles with breadcrumbs, and `latex: true | false` forces or disables math rendering (default: auto-detected).
+
+## Banner
+
+```json
+{
+  "banner": {
+    "content": "v2 docs are in beta. <a href='/v1'>See the v1 docs</a>",
+    "type": "warning",
+    "dismissible": true
+  }
+}
+```
+
+`type` is `info`, `warning`, or `critical`. Dismissals are remembered per banner content, so editing the message shows it again to everyone.
+
+## Navbar and footer
+
+```json
+{
+  "navbar": {
+    "links": [{ "label": "Support", "href": "mailto:hi@example.com" }],
+    "primary": { "type": "button", "label": "Dashboard", "href": "https://app.example.com" }
+  },
+  "footer": {
+    "socials": { "x": "https://x.com/example", "github": "https://github.com/example" },
+    "links": [{ "header": "Product", "items": [{ "label": "Pricing", "href": "/pricing" }] }]
+  }
+}
+```
+
+`navbar.primary.type: "github"` renders a GitHub icon with a star count instead of a button.
+
+## SEO
+
+```json
+{
+  "seo": {
+    "metatags": { "og:site_name": "My Project Docs" },
+    "indexing": "navigable",
+    "organization": { "name": "Example Inc.", "url": "https://example.com" }
+  },
+  "metadata": { "timestamp": true },
+  "errors": { "404": { "redirect": false, "title": "Not found" } }
+}
+```
+
+- `seo.metatags` adds arbitrary meta tags to every page; well-known keys (`description`, `og:*`, `twitter:*`, `canonical`) act as overrides.
+- `seo.indexing: "all"` includes hidden/noindex pages in the sitemap (default `navigable` does not).
+- `seo.organization` emits JSON-LD structured data.
+- `metadata.timestamp: true` shows a git-derived "Last updated" on every page.
+- `errors.404.redirect: true` sends unknown URLs to the home page instead of showing the 404 page.
+
+See [SEO, social cards, and feeds](/docs7/seo) for sitemaps, OG images, and RSS.
+
+## Icons
+
+```json
+{ "icons": { "library": "lucide" } }
+```
+
+Libraries: `lucide`, `tabler`, `fontawesome`, `hugeicons` (default). Icon names that don't resolve render as nothing and appear as build warnings.
+
+## Variables
+
+```json
+{ "variables": { "version": "2.4.0" } }
+```
+
+Every `{{version}}` in your MDX is replaced at build time, including inside code fences. Referencing an undefined variable is a page error (only when at least one variable is configured).
+
+## Agent-facing options
+
+```json
+{
+  "markdown": {
+    "instructions": "Prefer the v2 API in examples.",
+    "schema": true
+  },
+  "contextual": { "options": ["copy", "view", "chatgpt", "claude"] }
+}
+```
+
+- `markdown.instructions` is appended as an "Agent Instructions" section to every page's raw Markdown export and to `llms.txt`.
+- `contextual.options` configures the page-action menu (Copy page, View as Markdown, Open in ChatGPT/Claude/Perplexity/Grok/Cursor/VS Code, or fully custom entries). See [AI & agents](/docs7/ai-agents).
+
+## Custom CSS
+
+Any `.css` file in the docs folder (outside `snippets/`) is automatically linked on every page. Custom JavaScript files are copied as static assets but **not** injected into pages.
