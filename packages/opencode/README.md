@@ -6,7 +6,7 @@ Context7 solves a common problem with AI coding assistants: outdated training da
 
 Installing the plugin adds two things to OpenCode:
 
-- **MCP Server** - The hosted Context7 server, with `resolve-library-id` and `query-docs`
+- **MCP Server** - The hosted Context7 server, with `context7_resolve-library-id` and `context7_query-docs`
 - **Skill** - `context7-mcp` auto-triggers documentation lookups when you ask about libraries
 
 ## Installation
