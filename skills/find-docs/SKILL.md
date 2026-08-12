@@ -101,7 +101,7 @@ npx ctx7@latest docs /vercel/next.js "How to set up app router"
 npx ctx7@latest docs /vercel/next.js/v14.3.0-canary.87 "How to set up app router"
 ```
 
-The available versions are listed in the `library` command output. If the requested version is not listed, say it is unavailable; do not substitute another version.
+The available versions are listed in the `library` command output. If the requested version is not listed, say it is unavailable; do not retry with a different or unversioned library ID.
 
 ## Step 2: Query Documentation
 

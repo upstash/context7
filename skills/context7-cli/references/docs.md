@@ -55,7 +55,7 @@ ctx7 docs /vercel/next.js "How to set up app router"
 ctx7 docs /vercel/next.js/v14.3.0-canary.87 "How to set up app router"
 ```
 
-The available versions are listed in the `ctx7 library` output. If the requested version is not listed, say it is unavailable; do not substitute another version.
+The available versions are listed in the `ctx7 library` output. If the requested version is not listed, say it is unavailable; do not retry with a different or unversioned library ID.
 
 ```bash
 # Output as JSON for scripting
