@@ -33,6 +33,10 @@ function getPluginFromRequest(req: express.Request): typeof CLAUDE_CODE_PLUGIN |
   return req.query.client === CLAUDE_CODE_PLUGIN ? CLAUDE_CODE_PLUGIN : undefined;
 }
 
+function requiresAuthentication(req: express.Request, plugin?: typeof CLAUDE_CODE_PLUGIN): boolean {
+  return req.path === "/mcp/oauth" || Boolean(plugin);
+}
+
 // Parse CLI arguments using commander
 const program = new Command()
   .version(SERVER_VERSION, "-v, --version", "output the current version")
@@ -392,7 +396,6 @@ async function main() {
     const handleMcpRequest = async (req: express.Request, res: express.Response) => {
       try {
         const plugin = getPluginFromRequest(req);
-        const requiresAuth = req.path === "/mcp/oauth" || Boolean(plugin);
         const apiKey = extractApiKey(req);
         const baseUrl = new URL(RESOURCE_URL).origin;
 
@@ -406,7 +409,7 @@ async function main() {
           `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
         );
 
-        if (requiresAuth) {
+        if (requiresAuthentication(req, plugin)) {
           if (!apiKey) {
             return res.status(401).json({
               jsonrpc: "2.0",
