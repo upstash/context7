@@ -23,9 +23,10 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
-          role-to-assume: ${{ vars.AWS_ECR_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-          allowed-account-ids: "640168447591"
+          role-to-assume: ${{ secrets.AWS_ECR_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          allowed-account-ids: ${{ secrets.AWS_ACCOUNT_ID }}
+          mask-aws-account-id: true
           role-session-name: context7-ecr-${{ github.run_id }}
 
       - name: Login to Amazon ECR
@@ -47,7 +48,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ${{ steps.login-ecr.outputs.registry }}/context7mcp:${{ inputs.version }}
+            ${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ inputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
