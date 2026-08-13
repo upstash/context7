@@ -269,6 +269,12 @@ describe("plugin client auth gate", () => {
     expect(res.wwwAuthenticate).toContain("/.well-known/oauth-protected-resource");
   });
 
+  test("keeps the OAuth endpoint protected", async () => {
+    const res = await postMcp(httpUrl.replace(/\/mcp$/, "/mcp/oauth"));
+
+    expect(res.status).toBe(401);
+  });
+
   test("tracks authenticated plugin requests separately", async () => {
     const client = new Client(
       { name: "claude-code", version: "1.0.0" },

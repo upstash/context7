@@ -389,13 +389,10 @@ async function main() {
       onerror: (error) => console.error("MCP node adapter error:", error),
     });
 
-    const handleMcpRequest = async (
-      req: express.Request,
-      res: express.Response,
-      requireAuth: boolean,
-      plugin?: typeof CLAUDE_CODE_PLUGIN
-    ) => {
+    const handleMcpRequest = async (req: express.Request, res: express.Response) => {
       try {
+        const plugin = getPluginFromRequest(req);
+        const requiresAuth = req.path === "/mcp/oauth" || Boolean(plugin);
         const apiKey = extractApiKey(req);
         const baseUrl = new URL(RESOURCE_URL).origin;
 
@@ -409,7 +406,7 @@ async function main() {
           `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
         );
 
-        if (requireAuth) {
+        if (requiresAuth) {
           if (!apiKey) {
             return res.status(401).json({
               jsonrpc: "2.0",
@@ -461,13 +458,12 @@ async function main() {
 
     // The Claude Code plugin requires auth and is tracked separately from its host client.
     app.all("/mcp", async (req, res) => {
-      const plugin = getPluginFromRequest(req);
-      await handleMcpRequest(req, res, Boolean(plugin), plugin);
+      await handleMcpRequest(req, res);
     });
 
     // OAuth-protected endpoint - requires authentication
     app.all("/mcp/oauth", async (req, res) => {
-      await handleMcpRequest(req, res, true);
+      await handleMcpRequest(req, res);
     });
 
     app.get("/ping", (_req: express.Request, res: express.Response) => {
