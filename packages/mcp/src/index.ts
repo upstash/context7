@@ -27,7 +27,7 @@ import { getClientIp } from "./lib/client-ip.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
-const CLAUDE_CODE_PLUGIN_CLIENT = "claude-code-plugin";
+const CLAUDE_CODE_PLUGIN = "claude-code-plugin";
 
 // Parse CLI arguments using commander
 const program = new Command()
@@ -78,11 +78,7 @@ const CLI_PORT = (() => {
   return isNaN(parsed) ? undefined : parsed;
 })();
 
-interface HttpClientContext extends ClientContext {
-  pluginClient?: typeof CLAUDE_CODE_PLUGIN_CLIENT;
-}
-
-const requestContext = new AsyncLocalStorage<HttpClientContext>();
+const requestContext = new AsyncLocalStorage<ClientContext>();
 
 // Global state for stdio mode only
 let stdioApiKey: string | undefined;
@@ -97,13 +93,9 @@ function getClientContext(toolCtx: ServerContext): ClientContext {
   const ctx = requestContext.getStore();
   const requestClientInfo = envelopeClientInfo(toolCtx.mcpReq.envelope);
 
-  // Plugin identity wins; otherwise protocol info beats the HTTP User-Agent.
+  // Use protocol client info when available; fall back to the HTTP User-Agent.
   if (ctx) {
-    const clientInfo = requestClientInfo ?? ctx.clientInfo;
-    return {
-      ...ctx,
-      clientInfo: ctx.pluginClient ? { ...clientInfo, ide: ctx.pluginClient } : clientInfo,
-    };
+    return { ...ctx, clientInfo: requestClientInfo ?? ctx.clientInfo };
   }
 
   // stdio mode: envelope (modern clients) or globals (legacy initialize)
@@ -397,7 +389,7 @@ async function main() {
       req: express.Request,
       res: express.Response,
       requireAuth: boolean,
-      pluginClient?: typeof CLAUDE_CODE_PLUGIN_CLIENT
+      plugin?: typeof CLAUDE_CODE_PLUGIN
     ) => {
       try {
         const apiKey = extractApiKey(req);
@@ -440,11 +432,11 @@ async function main() {
           }
         }
 
-        const context: HttpClientContext = {
+        const context: ClientContext = {
           clientIp: getClientIp(req),
           apiKey: apiKey,
           clientInfo: extractClientInfoFromUserAgent(req.headers["user-agent"]),
-          pluginClient,
+          plugin,
           transport: "http",
         };
 
@@ -463,11 +455,10 @@ async function main() {
       }
     };
 
-    // The Claude Code plugin requires auth and gets its own metrics identifier.
+    // The Claude Code plugin requires auth and is tracked separately from its host client.
     app.all("/mcp", async (req, res) => {
-      const pluginClient =
-        req.query.client === CLAUDE_CODE_PLUGIN_CLIENT ? CLAUDE_CODE_PLUGIN_CLIENT : undefined;
-      await handleMcpRequest(req, res, Boolean(pluginClient), pluginClient);
+      const plugin = req.query.client === CLAUDE_CODE_PLUGIN ? CLAUDE_CODE_PLUGIN : undefined;
+      await handleMcpRequest(req, res, Boolean(plugin), plugin);
     });
 
     // OAuth-protected endpoint - requires authentication

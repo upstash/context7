@@ -54,6 +54,9 @@ export function generateHeaders(context: ClientContext): Record<string, string> 
   if (context.clientInfo?.version) {
     headers["X-Context7-Client-Version"] = context.clientInfo.version;
   }
+  if (context.plugin) {
+    headers["X-Context7-Plugin"] = context.plugin;
+  }
   if (context.transport) {
     headers["X-Context7-Transport"] = context.transport;
   }

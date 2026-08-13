@@ -290,7 +290,8 @@ describe("plugin client auth gate", () => {
     }
 
     const apiCall = requests.find((request) => request.path === "/v2/context");
-    expect(apiCall?.headers["x-context7-client-ide"]).toBe("claude-code-plugin");
+    expect(apiCall?.headers["x-context7-client-ide"]).toBe("claude-code");
     expect(apiCall?.headers["x-context7-client-version"]).toBe("1.0.0");
+    expect(apiCall?.headers["x-context7-plugin"]).toBe("claude-code-plugin");
   });
 });
