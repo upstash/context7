@@ -13,7 +13,6 @@ import {
 
 const bedrock = createAmazonBedrock({
   region: process.env.AWS_REGION,
-  apiKey: process.env.AWS_BEARER_TOKEN_BEDROCK,
 });
 
 describe("@upstash/context7-tools-ai-sdk", () => {

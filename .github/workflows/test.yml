@@ -19,6 +19,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -64,9 +68,17 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Configure AWS credentials
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_BEDROCK_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          allowed-account-ids: ${{ secrets.AWS_ACCOUNT_ID }}
+          mask-aws-account-id: true
+          role-session-name: context7-bedrock-${{ github.run_id }}
+
       - name: Test
         run: pnpm test
         env:
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
