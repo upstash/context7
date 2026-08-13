@@ -131,6 +131,14 @@ Every `{{version}}` in your MDX is replaced at build time, including inside code
 - `markdown.instructions` is appended as an "Agent Instructions" section to every page's raw Markdown export and to `llms.txt`.
 - `contextual.options` configures the page-action menu (Copy page, View as Markdown, Open in ChatGPT/Claude/Perplexity/Grok/Cursor/VS Code, or fully custom entries). See [AI & agents](/docs7/ai-agents).
 
-## Custom CSS
+## Custom CSS and JavaScript
 
-Any `.css` file in the docs folder (outside `snippets/`) is automatically linked on every page. Custom JavaScript files are copied as static assets but **not** injected into pages.
+Any `.css` file in the docs folder (outside `snippets/`) is automatically linked on every page. A loose JavaScript file is copied as a static asset but is not injected automatically.
+
+Use the top-level `scripts` array to load JavaScript on every page. Each entry can be a path in the docs folder or an HTTPS URL, and Docs7 loads it with `defer`:
+
+```json
+{
+  "scripts": ["/scripts/feedback.js", "https://cdn.example.com/widget.js"]
+}
+```

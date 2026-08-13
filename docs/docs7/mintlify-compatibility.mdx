@@ -31,7 +31,7 @@ These are the things most likely to need attention when migrating.
 | **Analytics & integrations** | The `integrations` block (analytics, feedback widgets, support widgets) is not injected. |
 | **Auto OG thumbnails config** | The `thumbnails` block is ignored. Docs7 generates its own OG images: a site card plus per-page cards rendered on demand. Frontmatter `og:image` still overrides everything. |
 | **Icon library default** | Defaults to Hugeicons instead of Font Awesome. Set `"icons": { "library": "fontawesome" }` (or `lucide`) to keep your icon names resolving. Unknown icon names render as nothing and show up as build warnings. |
-| **Custom JavaScript** | Custom `.css` files are auto-included on every page; custom `.js` files are never injected. |
+| **Custom JavaScript** | Custom `.css` files are auto-included on every page. Loose `.js` files are not injected automatically; list local or HTTPS sources in the top-level `scripts` array to load them with `defer`. |
 | **Remote resources** | The build has no network access. Remote OpenAPI spec URLs and remote logo/image URLs are ignored; commit the files to the repository. |
 | **AsyncAPI / SDK references** | `api.asyncapi` and `tabs[].sdk` (typedoc, javadoc, …) are not supported. |
 | **`background.image`** | Only `background.color` is supported. |
