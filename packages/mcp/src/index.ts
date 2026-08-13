@@ -438,7 +438,7 @@ async function main() {
 
         const context: ClientContext = {
           clientIp: getClientIp(req),
-          apiKey: apiKey,
+          apiKey,
           clientInfo: extractClientInfoFromUserAgent(req.headers["user-agent"]),
           plugin,
           transport: "http",
@@ -459,7 +459,6 @@ async function main() {
       }
     };
 
-    // The Claude Code plugin requires auth and is tracked separately from its host client.
     app.all("/mcp", async (req, res) => {
       await handleMcpRequest(req, res);
     });

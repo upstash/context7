@@ -255,12 +255,12 @@ async function postMcp(target: string, headers: Record<string, string> = {}) {
   return { status: res.status, wwwAuthenticate: res.headers.get("www-authenticate") };
 }
 
-describe("plugin client auth gate", () => {
+describe("plugin authentication", () => {
   beforeEach(() => {
     requests.length = 0;
   });
 
-  test("only challenges the supported plugin client", async () => {
+  test("only challenges the supported plugin", async () => {
     expect((await postMcp(`${httpUrl}?client=other-plugin`)).status).toBe(200);
 
     const res = await postMcp(`${httpUrl}?client=claude-code-plugin`);
