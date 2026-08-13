@@ -2,7 +2,8 @@
   "mcpServers": {
     "context7": {
       "type": "http",
-      "url": "https://mcp.context7.com/mcp?client=claude-code-plugin"
+      "url": "https://mcp.context7.com/mcp?client=claude-code-plugin",
+      "headersHelper": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/headers.mjs\""
     }
   }
 }

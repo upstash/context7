@@ -28,7 +28,9 @@ After installing the plugin, restart Claude Code and run:
 /mcp
 ```
 
-Select Context7 and follow the browser sign-in flow. The plugin uses OAuth, so no API key is required.
+Select Context7 and follow the browser sign-in flow. No API key is required.
+
+To use an API key instead, set `CONTEXT7_API_KEY` before starting Claude Code. The plugin sends the key only when it is present; otherwise it uses OAuth.
 
 ## Available Tools
 
