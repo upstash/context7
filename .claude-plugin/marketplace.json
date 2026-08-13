@@ -3,6 +3,7 @@
   "owner": {
     "name": "Upstash"
   },
+  "description": "Context7 plugins for coding agents.",
   "plugins": [
     {
       "name": "context7",

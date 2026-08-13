@@ -23,11 +23,11 @@ import {
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
-import { isPluginClientQuery } from "./lib/auth/plugin-client.js";
 import { getClientIp } from "./lib/client-ip.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
+const CLAUDE_CODE_PLUGIN_CLIENT = "claude-code-plugin";
 
 // Parse CLI arguments using commander
 const program = new Command()
@@ -78,7 +78,11 @@ const CLI_PORT = (() => {
   return isNaN(parsed) ? undefined : parsed;
 })();
 
-const requestContext = new AsyncLocalStorage<ClientContext>();
+interface HttpClientContext extends ClientContext {
+  pluginClient?: typeof CLAUDE_CODE_PLUGIN_CLIENT;
+}
+
+const requestContext = new AsyncLocalStorage<HttpClientContext>();
 
 // Global state for stdio mode only
 let stdioApiKey: string | undefined;
@@ -93,9 +97,13 @@ function getClientContext(toolCtx: ServerContext): ClientContext {
   const ctx = requestContext.getStore();
   const requestClientInfo = envelopeClientInfo(toolCtx.mcpReq.envelope);
 
-  // Use protocol client info when available; fall back to the HTTP User-Agent.
+  // Plugin identity wins; otherwise protocol info beats the HTTP User-Agent.
   if (ctx) {
-    return { ...ctx, clientInfo: requestClientInfo ?? ctx.clientInfo };
+    const clientInfo = requestClientInfo ?? ctx.clientInfo;
+    return {
+      ...ctx,
+      clientInfo: ctx.pluginClient ? { ...clientInfo, ide: ctx.pluginClient } : clientInfo,
+    };
   }
 
   // stdio mode: envelope (modern clients) or globals (legacy initialize)
@@ -388,17 +396,18 @@ async function main() {
     const handleMcpRequest = async (
       req: express.Request,
       res: express.Response,
-      requireAuth: boolean
+      requireAuth: boolean,
+      pluginClient?: typeof CLAUDE_CODE_PLUGIN_CLIENT
     ) => {
       try {
         const apiKey = extractApiKey(req);
         const baseUrl = new URL(RESOURCE_URL).origin;
 
-        // OAuth discovery info header, used by MCP clients to discover the authorization server.
-        // Hand-rolled rather than the SDK's bearerAuthChallengeResponse /
-        // oauthMetadataResponse: those assume Bearer-only OAuth on a fetch()
-        // handler. This server also accepts API keys, mixes anonymous and
-        // required routes, returns JSON-RPC 401 bodies, and proxies AS metadata.
+        // OAuth discovery info header, used by MCP clients to discover the authorization server
+        // TODO: @modelcontextprotocol/server now ships canonical OAuth helpers
+        // (bearerAuthChallengeResponse, buildOAuthProtectedResourceMetadata,
+        // oauthMetadataResponse) — replace this hand-rolled header and the
+        // /.well-known/oauth-protected-resource route with them.
         res.set(
           "WWW-Authenticate",
           `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
@@ -431,10 +440,11 @@ async function main() {
           }
         }
 
-        const context: ClientContext = {
+        const context: HttpClientContext = {
           clientIp: getClientIp(req),
           apiKey: apiKey,
           clientInfo: extractClientInfoFromUserAgent(req.headers["user-agent"]),
+          pluginClient,
           transport: "http",
         };
 
@@ -453,13 +463,11 @@ async function main() {
       }
     };
 
-    // Public endpoint: anonymous by default. Plugin clients pass
-    // `?client=claude-code-plugin` (any `client` value containing "plugin")
-    // so this connection 401s at initialize and the host can start OAuth —
-    // Claude Code only exposes authorize helpers for servers flagged when
-    // the session starts.
+    // The Claude Code plugin requires auth and gets its own metrics identifier.
     app.all("/mcp", async (req, res) => {
-      await handleMcpRequest(req, res, isPluginClientQuery(req.query.client));
+      const pluginClient =
+        req.query.client === CLAUDE_CODE_PLUGIN_CLIENT ? CLAUDE_CODE_PLUGIN_CLIENT : undefined;
+      await handleMcpRequest(req, res, Boolean(pluginClient), pluginClient);
     });
 
     // OAuth-protected endpoint - requires authentication

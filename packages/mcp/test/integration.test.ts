@@ -256,33 +256,41 @@ async function postMcp(target: string, headers: Record<string, string> = {}) {
 }
 
 describe("plugin client auth gate", () => {
-  test("keeps /mcp anonymous when client is not a plugin", async () => {
-    const res = await postMcp(httpUrl);
-    expect(res.status).toBe(200);
+  beforeEach(() => {
+    requests.length = 0;
   });
 
-  test("challenges /mcp?client=claude-code-plugin so the host can start OAuth", async () => {
+  test("only challenges the supported plugin client", async () => {
+    expect((await postMcp(`${httpUrl}?client=other-plugin`)).status).toBe(200);
+
     const res = await postMcp(`${httpUrl}?client=claude-code-plugin`);
     expect(res.status).toBe(401);
     expect(res.wwwAuthenticate).toContain("resource_metadata=");
     expect(res.wwwAuthenticate).toContain("/.well-known/oauth-protected-resource");
   });
 
-  test("lets a credential through the plugin client gate", async () => {
-    const res = await postMcp(`${httpUrl}?client=claude-code-plugin`, {
-      Authorization: "Bearer ctx7sk-test",
-    });
-    expect(res.status).toBe(200);
-  });
+  test("tracks authenticated plugin requests separately", async () => {
+    const client = new Client(
+      { name: "claude-code", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+    await client.connect(
+      new StreamableHTTPClientTransport(new URL(`${httpUrl}?client=claude-code-plugin`), {
+        requestInit: { headers: { Authorization: "Bearer ctx7sk-test" } },
+      })
+    );
 
-  test("does not challenge a non-plugin client query param", async () => {
-    const res = await postMcp(`${httpUrl}?client=claude-code`);
-    expect(res.status).toBe(200);
-  });
+    try {
+      await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/vercel/next.js", query: "app router" },
+      });
+    } finally {
+      await client.close();
+    }
 
-  test("still requires auth on /mcp/oauth", async () => {
-    const oauthUrl = httpUrl.replace(/\/mcp$/, "/mcp/oauth");
-    const res = await postMcp(oauthUrl);
-    expect(res.status).toBe(401);
+    const apiCall = requests.find((request) => request.path === "/v2/context");
+    expect(apiCall?.headers["x-context7-client-ide"]).toBe("claude-code-plugin");
+    expect(apiCall?.headers["x-context7-client-version"]).toBe("1.0.0");
   });
 });
