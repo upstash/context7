@@ -2,11 +2,7 @@
   "mcpServers": {
     "context7": {
       "type": "http",
-      "url": "https://mcp.context7.com/mcp?client=claude-code-plugin",
-      "$comment": "// pragma: allowlist secret",
-      "headers": {
-        "Authorization": "${CONTEXT7_API_KEY:-}"
-      }
+      "url": "https://mcp.context7.com/mcp?client=claude-code-plugin"
     }
   }
 }
