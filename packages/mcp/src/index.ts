@@ -29,6 +29,10 @@ import { getClientIp } from "./lib/client-ip.js";
 const DEFAULT_PORT = 3000;
 const CLAUDE_CODE_PLUGIN = "claude-code-plugin";
 
+function getPluginFromRequest(req: express.Request): typeof CLAUDE_CODE_PLUGIN | undefined {
+  return req.query.client === CLAUDE_CODE_PLUGIN ? CLAUDE_CODE_PLUGIN : undefined;
+}
+
 // Parse CLI arguments using commander
 const program = new Command()
   .version(SERVER_VERSION, "-v, --version", "output the current version")
@@ -457,7 +461,7 @@ async function main() {
 
     // The Claude Code plugin requires auth and is tracked separately from its host client.
     app.all("/mcp", async (req, res) => {
-      const plugin = req.query.client === CLAUDE_CODE_PLUGIN ? CLAUDE_CODE_PLUGIN : undefined;
+      const plugin = getPluginFromRequest(req);
       await handleMcpRequest(req, res, Boolean(plugin), plugin);
     });
 
