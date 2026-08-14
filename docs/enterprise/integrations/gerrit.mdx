@@ -11,7 +11,7 @@ flowchart LR
     A["Gerrit repository"] --> B["Context7 index"]
     B --> C["Context served over MCP"]
     B --> D["Generated docs commit"]
-    D --> E["HEAD:refs/for/branch"]
+    D --> E["HEAD:refs/for/{branch}"]
     E --> F["Gerrit change"]
 ```
 
@@ -32,9 +32,9 @@ See [Other Git](/enterprise/integrations/other-git) for HTTPS, SSH, host key, an
 
 <Steps>
   <Step title="Configure repository access">
-    Open **Settings > Integrations > Other Git** and choose **HTTPS** or **SSH**.
+    Open **Settings > Integrations > Other Git** and enter the Gerrit hostname without a URL scheme, for example `gerrit.example.com`. Context7 uses this value to match repository URLs to the credentials and review settings.
 
-    For HTTPS, enter the Gerrit host, service account username, and HTTP password. For SSH, enter the private key and, if available, the Gerrit `known_hosts` entry.
+    Choose **HTTPS** or **SSH**. For HTTPS, enter the service account username and HTTP password. For SSH, enter the private key and, if available, the Gerrit `known_hosts` entry.
   </Step>
 
   <Step title="Configure review publishing">

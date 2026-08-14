@@ -6,7 +6,7 @@ description: "Ingest private repositories from a self-managed Git host such as G
 
 Context7 can clone and index repositories from any self-managed Git host that isn't GitHub or GitLab, such as **Gerrit**, **Gitea**, or **self-hosted Bitbucket**, over **HTTPS** or **SSH**.
 
-Configure the host under **Settings → Integrations → Other Git**, choose the **HTTPS** or **SSH** tab, then [add repositories](#add-a-repository) with their normal clone URL.
+Under **Settings → Integrations → Other Git**, enter the repository host, choose **HTTPS** or **SSH**, and then [add repositories](#add-a-repository) with their normal clone URL. The host is shared by both authentication methods and also selects which repositories use the review publishing settings.
 
 If you use Gerrit, see the [Gerrit integration guide](/enterprise/integrations/gerrit) to submit generated code documentation through `refs/for/{branch}`.
 
@@ -16,7 +16,7 @@ These hosts have no GitHub-style webhooks. Drive re-indexing on merge from your 
 
 ## HTTPS (basic auth)
 
-On the **HTTPS** tab, fill in the host and an account's credentials:
+Enter the host, select **HTTPS**, and fill in the account credentials:
 
 <Frame>
   ![Other Git HTTPS settings: host, username, and HTTP password under Settings, Integrations](/images/enterprise/integrations/other-git-https.png)
@@ -36,7 +36,7 @@ Presenting a private or self-signed TLS certificate? Point `NODE_EXTRA_CA_CERTS`
 
 ## SSH (deploy key)
 
-When a repository is added with an `ssh://` URL, for example `ssh://<user>@gerrit.your-company.com:29418/platform/sdk`, Context7 authenticates with a deploy key. Register the key's **public** half on a service account in your Git host that can read the repositories you want to index, then give Context7 the private half one of two ways.
+When a repository is added with an `ssh://` URL, for example `ssh://<user>@gerrit.your-company.com:29418/platform/sdk`, Context7 authenticates with a deploy key. Enter the repository host, select **SSH**, and register the key's **public** half on a service account in your Git host that can read the repositories you want to index. Then give Context7 the private half one of two ways.
 
 ### Paste the key in the UI (recommended)
 
