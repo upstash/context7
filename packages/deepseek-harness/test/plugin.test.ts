@@ -1,24 +1,11 @@
 import { readFile } from "node:fs/promises";
-import { Context, Service } from "@deepseek-ai/cordis";
+import { Context } from "@deepseek-ai/cordis";
+import SystemPrompt, { renderPrompt, type PromptSection } from "@deepseek-ai/dsh-system-prompt";
 import ToolRuntime, { type ToolDefinition, type ToolExecutionInput } from "@deepseek-ai/dsh-tools";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as context7 from "../src/index.js";
 
 const { apply } = context7;
-
-class SystemPromptStub extends Service {
-  constructor(ctx: Context) {
-    super(ctx, "systemPrompt");
-  }
-
-  tools(): () => void {
-    return () => undefined;
-  }
-
-  section(): () => void {
-    return () => undefined;
-  }
-}
 
 function loadTools(config: { apiKey?: string } = {}): Map<string, ToolDefinition> {
   const tools = new Map<string, ToolDefinition>();
@@ -26,6 +13,11 @@ function loadTools(config: { apiKey?: string } = {}): Map<string, ToolDefinition
     tools: {
       register(tool: ToolDefinition) {
         tools.set(tool.name, tool);
+      },
+    },
+    systemPrompt: {
+      section(_section: PromptSection) {
+        return () => undefined;
       },
     },
   } as unknown as Context;
@@ -90,14 +82,29 @@ describe("Context7 DeepSeek Harness plugin", () => {
     );
 
     const root = new Context();
-    await root.plugin(SystemPromptStub);
+    await root.plugin(SystemPrompt, {
+      includeHarnessIdentity: false,
+      includeRuntimeContext: false,
+      persona: "",
+    });
     await root.plugin(ToolRuntime);
     await root.plugin(context7);
 
-    expect(root.tools.schemas().map(({ name }) => name)).toEqual([
-      "resolve-library-id",
-      "query-docs",
-    ]);
+    const toolNames = ["resolve-library-id", "query-docs"];
+    expect(root.tools.schemas().map(({ name }) => name)).toEqual(toolNames);
+    const assembly = await root.systemPrompt.assemble();
+    expect(assembly.tools.map(({ name }) => name).sort()).toEqual([...toolNames].sort());
+    const prompt = renderPrompt(assembly);
+    expect(prompt).toContain(
+      "Use Context7 to fetch current documentation whenever the user asks about a library"
+    );
+    expect(prompt).toContain(
+      "Do not use Context7 for refactoring, writing scripts from scratch, debugging business logic"
+    );
+    expect(prompt).toContain(
+      "Call resolve-library-id with the official library name and the user's specific goal"
+    );
+    expect(context7.inject).toEqual(["tools", "systemPrompt"]);
     const resolveInput = toolInput("resolve-library-id", {
       query: "middleware",
       libraryName: "Next.js",

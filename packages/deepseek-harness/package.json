@@ -61,10 +61,14 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": ">=4.0.1 <5",
+    "@deepseek-ai/dsh-system-prompt": ">=0.1.0-rc.6 <1",
     "@deepseek-ai/dsh-tools": ">=0.1.0-rc.6 <1"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-system-prompt": {
       "optional": true
     },
     "@deepseek-ai/dsh-tools": {
@@ -76,6 +80,7 @@
   },
   "devDependencies": {
     "@deepseek-ai/cordis": "4.0.1",
+    "@deepseek-ai/dsh-system-prompt": "0.1.0-rc.6",
     "@deepseek-ai/dsh-tools": "0.1.0-rc.6",
     "@types/node": "^25.9.1",
     "tsup": "^8.5.1",

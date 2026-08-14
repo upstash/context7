@@ -1,6 +1,6 @@
 # Context7 Plugin for DeepSeek Harness
 
-The official [Context7](https://context7.com) plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). It adds native `resolve-library-id` and `query-docs` tools so the harness can retrieve current library documentation and code examples.
+The official [Context7](https://context7.com) plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). It adds native `resolve-library-id` and `query-docs` tools so the harness can retrieve current library documentation and code examples. It also adds invocation guidance to the system prompt so library-specific questions use Context7 automatically.
 
 ## Installation
 
