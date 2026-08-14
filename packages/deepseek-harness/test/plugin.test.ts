@@ -1,0 +1,177 @@
+import { readFile } from "node:fs/promises";
+import { Context, Service } from "@deepseek-ai/cordis";
+import ToolRuntime, { type ToolDefinition, type ToolExecutionInput } from "@deepseek-ai/dsh-tools";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import * as context7 from "../src/index.js";
+
+const { apply } = context7;
+
+class SystemPromptStub extends Service {
+  constructor(ctx: Context) {
+    super(ctx, "systemPrompt");
+  }
+
+  tools(): () => void {
+    return () => undefined;
+  }
+
+  section(): () => void {
+    return () => undefined;
+  }
+}
+
+function loadTools(config: { apiKey?: string } = {}): Map<string, ToolDefinition> {
+  const tools = new Map<string, ToolDefinition>();
+  const ctx = {
+    tools: {
+      register(tool: ToolDefinition) {
+        tools.set(tool.name, tool);
+      },
+    },
+  } as unknown as Context;
+  apply(ctx, config);
+  return tools;
+}
+
+function execution() {
+  return { signal: new AbortController().signal } as never;
+}
+
+function toolInput(name: string, args: Record<string, string>): ToolExecutionInput {
+  return {
+    callId: name as never,
+    name,
+    arguments: args,
+    signal: new AbortController().signal,
+  };
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
+
+describe("Context7 DeepSeek Harness plugin", () => {
+  it("registers both Context7 tools", () => {
+    expect([...loadTools().keys()]).toEqual(["resolve-library-id", "query-docs"]);
+  });
+
+  it("activates the bundle in the real Cordis tool runtime", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: URL) =>
+        Promise.resolve(
+          input.pathname.endsWith("/libs/search")
+            ? new Response(
+                JSON.stringify({
+                  results: [
+                    {
+                      id: "/vercel/next.js",
+                      title: "Next.js",
+                      description: "The React framework",
+                    },
+                  ],
+                })
+              )
+            : new Response("Current documentation")
+        )
+      )
+    );
+
+    const manifest = JSON.parse(
+      await readFile(new URL("../package.json", import.meta.url), "utf8")
+    ) as { dsh: { bundle: { patch: string } } };
+    const patch = await readFile(
+      new URL(`../${manifest.dsh.bundle.patch}`, import.meta.url),
+      "utf8"
+    );
+    expect(patch).toBe(
+      '- insert:\n    - id: context7\n      name: "@upstash/context7-deepseek-harness"\n'
+    );
+
+    const root = new Context();
+    await root.plugin(SystemPromptStub);
+    await root.plugin(ToolRuntime);
+    await root.plugin(context7);
+
+    expect(root.tools.schemas().map(({ name }) => name)).toEqual([
+      "resolve-library-id",
+      "query-docs",
+    ]);
+    const resolveInput = toolInput("resolve-library-id", {
+      query: "middleware",
+      libraryName: "Next.js",
+    });
+    const queryInput = toolInput("query-docs", {
+      libraryId: "/vercel/next.js",
+      query: "middleware",
+    });
+    expect(root.tools.executionMode(resolveInput)).toEqual({ kind: "parallel" });
+    expect(root.tools.executionMode(queryInput)).toEqual({ kind: "parallel" });
+
+    const results = await Promise.all([
+      root.tools.execute(resolveInput),
+      root.tools.execute(queryInput),
+    ]);
+    expect(results.map(({ isError }) => isError)).toEqual([false, false]);
+
+    await root.fiber.dispose();
+  });
+
+  it("resolves libraries with authentication and formats the response", async () => {
+    vi.stubEnv("CONTEXT7_API_KEY", "ctx7sk-environment");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          searchFilterApplied: true,
+          results: [
+            {
+              id: "/vercel/next.js",
+              title: "Next.js",
+              description: "The React framework",
+              totalSnippets: 100,
+              trustScore: 10,
+              benchmarkScore: 92,
+              versions: ["v15.1.8"],
+              source: "https://nextjs.org/docs",
+            },
+          ],
+        })
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const tool = loadTools({ apiKey: "ctx7sk-test" }).get("resolve-library-id")!;
+    const result = await tool.execute({ query: "middleware", libraryName: "Next.js" }, execution());
+
+    expect(result).toContain("/vercel/next.js");
+    expect(result).toContain("teamspace's library filters");
+    expect(result).toContain("Source: https://nextjs.org/docs");
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        href: expect.stringContaining("libraryName=Next.js"),
+      }),
+      expect.objectContaining({
+        headers: { Authorization: "Bearer ctx7sk-test" },
+      })
+    );
+  });
+
+  it("queries documentation without requiring an API key", async () => {
+    vi.stubEnv("CONTEXT7_API_KEY", "");
+    const fetchMock = vi.fn().mockResolvedValue(new Response("Current documentation"));
+    vi.stubGlobal("fetch", fetchMock);
+    const tool = loadTools().get("query-docs")!;
+    const result = await tool.execute(
+      { libraryId: "/vercel/next.js", query: "middleware" },
+      execution()
+    );
+
+    expect(result).toBe("Current documentation");
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        href: expect.stringContaining("libraryId=%2Fvercel%2Fnext.js"),
+      }),
+      expect.objectContaining({ headers: {} })
+    );
+  });
+});
