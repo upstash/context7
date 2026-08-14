@@ -51,6 +51,10 @@ See [Other Git](/enterprise/integrations/other-git) for HTTPS, SSH, host key, an
     ```
 
     Set **Commit email** to an email address registered to the Gerrit service account. Context7 adds a valid `Change-Id` footer to each generated documentation commit.
+
+    <Frame>
+      ![Review publishing settings with a Gerrit push ref, commit email, and generated push command](/images/enterprise/integrations/gerrit-review-publishing.jpg)
+    </Frame>
   </Step>
 
   <Step title="Add the repository">
@@ -71,6 +75,10 @@ See [Other Git](/enterprise/integrations/other-git) for HTTPS, SSH, host key, an
     Enable **Index source code** to generate documentation from the codebase. Enable **Submit generated docs for review** if you also want Context7 to create a Gerrit change containing the generated files.
 
     Generated files are committed under `docs/codedocs/`. If review submission is off, Context7 still indexes the generated documentation internally.
+
+    <Frame>
+      ![Repository options with Index source code and Submit generated docs for review enabled](/images/enterprise/integrations/gerrit-generated-docs-option.jpg)
+    </Frame>
   </Step>
 </Steps>
 
