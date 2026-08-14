@@ -25,16 +25,32 @@ function loadTools(config: { apiKey?: string } = {}): Map<string, ToolDefinition
   return tools;
 }
 
+async function loadRuntime(config: { apiKey?: string } = {}): Promise<Context> {
+  const root = new Context();
+  await root.plugin(SystemPrompt, {
+    includeHarnessIdentity: false,
+    includeRuntimeContext: false,
+    persona: "",
+  });
+  await root.plugin(ToolRuntime);
+  await root.plugin(context7, config);
+  return root;
+}
+
 function execution() {
   return { signal: new AbortController().signal } as never;
 }
 
-function toolInput(name: string, args: Record<string, string>): ToolExecutionInput {
+function toolInput(
+  name: string,
+  args: Record<string, string>,
+  signal = new AbortController().signal
+): ToolExecutionInput {
   return {
     callId: name as never,
     name,
     arguments: args,
-    signal: new AbortController().signal,
+    signal,
   };
 }
 
@@ -45,7 +61,9 @@ afterEach(() => {
 
 describe("Context7 DeepSeek Harness plugin", () => {
   it("registers both Context7 tools", () => {
-    expect([...loadTools().keys()]).toEqual(["resolve-library-id", "query-docs"]);
+    const tools = loadTools();
+    expect([...tools.keys()]).toEqual(["resolve-library-id", "query-docs"]);
+    expect([...tools.values()].map(({ timeoutMs }) => timeoutMs)).toEqual([60_000, 60_000]);
   });
 
   it("activates the bundle in the real Cordis tool runtime", async () => {
@@ -81,14 +99,7 @@ describe("Context7 DeepSeek Harness plugin", () => {
       '- insert:\n    - id: context7\n      name: "@upstash/context7-deepseek-harness"\n'
     );
 
-    const root = new Context();
-    await root.plugin(SystemPrompt, {
-      includeHarnessIdentity: false,
-      includeRuntimeContext: false,
-      persona: "",
-    });
-    await root.plugin(ToolRuntime);
-    await root.plugin(context7);
+    const root = await loadRuntime();
 
     const toolNames = ["resolve-library-id", "query-docs"];
     expect(root.tools.schemas().map(({ name }) => name)).toEqual(toolNames);
@@ -121,6 +132,45 @@ describe("Context7 DeepSeek Harness plugin", () => {
       root.tools.execute(queryInput),
     ]);
     expect(results.map(({ isError }) => isError)).toEqual([false, false]);
+
+    await root.fiber.dispose();
+  });
+
+  it("propagates cancellation to Context7 requests", async () => {
+    let notifyFetchStarted: () => void = () => undefined;
+    let observedSignal: AbortSignal | undefined;
+    const fetchStarted = new Promise<void>((resolve) => {
+      notifyFetchStarted = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_input: URL, init?: RequestInit) => {
+        const signal = init?.signal;
+        if (!signal) throw new Error("Missing request signal");
+        observedSignal = signal;
+        notifyFetchStarted();
+        return new Promise<Response>((_resolve, reject) => {
+          const abort = () => reject(signal.reason);
+          if (signal.aborted) abort();
+          else signal.addEventListener("abort", abort, { once: true });
+        });
+      })
+    );
+
+    const root = await loadRuntime();
+    const controller = new AbortController();
+    const pending = root.tools.execute(
+      toolInput(
+        "query-docs",
+        { libraryId: "/vercel/next.js", query: "middleware" },
+        controller.signal
+      )
+    );
+    await fetchStarted;
+    controller.abort(new Error("cancelled"));
+
+    await expect(pending).resolves.toMatchObject({ isError: true });
+    expect(observedSignal?.aborted).toBe(true);
 
     await root.fiber.dispose();
   });

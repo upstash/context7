@@ -24,6 +24,8 @@ const QUERY_DESCRIPTION = `Retrieves current documentation and code examples fro
 
 Call resolve-library-id first unless the user explicitly provides a library ID in /org/project or /org/project/version format. Use a specific query scoped to one concept and do not include secrets, credentials, personal data, or proprietary code.`;
 
+const API_TIMEOUT_MS = 60_000;
+
 const CONTEXT7_PROMPT: PromptSection = {
   name: "context7:tool-guidance",
   order: 120,
@@ -67,6 +69,7 @@ export function apply(ctx: Context, config: Config = {}): void {
         schema: { type: "string" },
         render: (_args, value) => [{ type: "text", text: value }],
       },
+      timeoutMs: API_TIMEOUT_MS,
       isConcurrencySafe: () => true,
       async execute(args, exec) {
         const response = await searchLibraries(args.query, args.libraryName, apiKey, exec.signal);
@@ -98,6 +101,7 @@ export function apply(ctx: Context, config: Config = {}): void {
         schema: { type: "string" },
         render: (_args, value) => [{ type: "text", text: value }],
       },
+      timeoutMs: API_TIMEOUT_MS,
       isConcurrencySafe: () => true,
       execute: (args, exec) => fetchLibraryContext(args.query, args.libraryId, apiKey, exec.signal),
     })
