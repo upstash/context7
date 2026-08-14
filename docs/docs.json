@@ -79,6 +79,7 @@
                 "pages": [
                   "enterprise/integrations/github",
                   "enterprise/integrations/other-git",
+                  "enterprise/integrations/gerrit",
                   "enterprise/integrations/confluence"
                 ]
               },
