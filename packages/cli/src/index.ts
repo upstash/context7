@@ -43,6 +43,7 @@ Examples:
   ${brand.primary("npx ctx7 setup")}
   ${brand.primary("npx ctx7 setup --mcp")}
   ${brand.primary("npx ctx7 setup --cli")}
+  ${brand.primary("npx ctx7 setup --deepseek headless")}
 
   ${brand.dim("# Remove Context7 setup")}
   ${brand.primary("npx ctx7 remove --cursor")}

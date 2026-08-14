@@ -4,38 +4,55 @@ The official [Context7](https://context7.com) plugin for [DeepSeek Harness](http
 
 ## Installation
 
+Install the plugin and store a Context7 API key in DeepSeek Harness's credential provider:
+
 ```bash
-dsh plugin --profile my-profile add @upstash/context7-deepseek-harness
+npx ctx7@latest setup --deepseek headless
 ```
 
-The bundle adds the Context7 plugin to the selected profile. Verify the composed configuration and start the profile:
+Pass another profile name instead of `headless` when needed. Without an existing Context7 login, setup opens the device authorization flow and creates an API key. To install the bundle without configuring authentication:
 
 ```bash
-dsh --profile my-profile --dump-config
-dsh --profile my-profile
+dsh plugin --profile headless add @upstash/context7-deepseek-harness
+```
+
+Verify the composed configuration and start the profile:
+
+```bash
+dsh --profile headless --dump-config
+dsh --profile headless
 ```
 
 To remove it:
 
 ```bash
-dsh plugin --profile my-profile remove @upstash/context7-deepseek-harness
+dsh plugin --profile headless remove @upstash/context7-deepseek-harness
 ```
 
 ## Authentication
 
-The plugin works without configuration using Context7's anonymous rate limits. For higher limits, create an API key in the [Context7 dashboard](https://context7.com/dashboard) and set it before launching the harness:
+The plugin works without authentication using Context7's anonymous rate limits. For higher limits, it resolves `CONTEXT7_API_KEY` through DeepSeek Harness's credential provider before every request, so credential updates apply without reloading the plugin.
+
+The setup command stores the key in `$DSH_HOME/.credentials.yaml`, which defaults to `~/.dsh/.credentials.yaml`. You can also provide it through the environment:
 
 ```bash
 export CONTEXT7_API_KEY="your-api-key"
 ```
 
-You can also configure the key when loading the plugin directly in `cordis.yml`:
+For manual credential-file setup, edit the flat YAML mapping and apply owner-only permissions:
+
+```bash
+mkdir -p ~/.dsh
+chmod 700 ~/.dsh
+${EDITOR:-vi} ~/.dsh/.credentials.yaml
+chmod 600 ~/.dsh/.credentials.yaml
+```
 
 ```yaml
-- name: "@upstash/context7-deepseek-harness"
-  config:
-    apiKey: "your-api-key"
+CONTEXT7_API_KEY: your-api-key
 ```
+
+Do not put API keys in `cordis.yml` or `cordis.patch.yml`; composed configuration can be printed and shared during debugging.
 
 ## Tools
 

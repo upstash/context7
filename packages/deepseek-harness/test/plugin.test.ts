@@ -1,15 +1,57 @@
 import { readFile } from "node:fs/promises";
 import { Context } from "@deepseek-ai/cordis";
+import CredentialProvider, {
+  credentialRef,
+  type CredentialInfo,
+  type CredentialRef,
+  type ResolvedCredential,
+} from "@deepseek-ai/dsh-credentials";
 import SystemPrompt, { renderPrompt, type PromptSection } from "@deepseek-ai/dsh-system-prompt";
 import ToolRuntime, { type ToolDefinition, type ToolExecutionInput } from "@deepseek-ai/dsh-tools";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as context7 from "../src/index.js";
 
 const { apply } = context7;
+const API_KEY_REF = credentialRef("CONTEXT7_API_KEY");
 
-function loadTools(config: { apiKey?: string } = {}): Map<string, ToolDefinition> {
+class MemoryCredentials extends CredentialProvider {
+  private apiKey?: string;
+
+  constructor(ctx: Context, config: { apiKey?: string } = {}) {
+    super(ctx);
+    this.apiKey = config.apiKey;
+  }
+
+  resolve(ref: CredentialRef): Promise<ResolvedCredential | undefined> {
+    return Promise.resolve(
+      ref === API_KEY_REF && this.apiKey ? { value: this.apiKey, source: "memory" } : undefined
+    );
+  }
+
+  describe(ref: CredentialRef): Promise<CredentialInfo> {
+    return Promise.resolve({
+      configured: ref === API_KEY_REF && Boolean(this.apiKey),
+      writable: true,
+    });
+  }
+
+  set(ref: CredentialRef, value: string): Promise<void> {
+    if (ref === API_KEY_REF) this.apiKey = value;
+    return Promise.resolve();
+  }
+
+  unset(ref: CredentialRef): Promise<void> {
+    if (ref === API_KEY_REF) this.apiKey = undefined;
+    return Promise.resolve();
+  }
+}
+
+function loadTools(apiKey?: string): Map<string, ToolDefinition> {
   const tools = new Map<string, ToolDefinition>();
   const ctx = {
+    credentials: {
+      resolve: () => Promise.resolve(apiKey ? { value: apiKey, source: "memory" } : undefined),
+    },
     tools: {
       register(tool: ToolDefinition) {
         tools.set(tool.name, tool);
@@ -21,19 +63,20 @@ function loadTools(config: { apiKey?: string } = {}): Map<string, ToolDefinition
       },
     },
   } as unknown as Context;
-  apply(ctx, config);
+  apply(ctx);
   return tools;
 }
 
-async function loadRuntime(config: { apiKey?: string } = {}): Promise<Context> {
+async function loadRuntime(apiKey?: string): Promise<Context> {
   const root = new Context();
+  await root.plugin(MemoryCredentials, { apiKey });
   await root.plugin(SystemPrompt, {
     includeHarnessIdentity: false,
     includeRuntimeContext: false,
     persona: "",
   });
   await root.plugin(ToolRuntime);
-  await root.plugin(context7, config);
+  await root.plugin(context7);
   return root;
 }
 
@@ -115,7 +158,7 @@ describe("Context7 DeepSeek Harness plugin", () => {
     expect(prompt).toContain(
       "Call resolve-library-id with the official library name and the user's specific goal"
     );
-    expect(context7.inject).toEqual(["tools", "systemPrompt"]);
+    expect(context7.inject).toEqual(["credentials", "tools", "systemPrompt"]);
     const resolveInput = toolInput("resolve-library-id", {
       query: "middleware",
       libraryName: "Next.js",
@@ -176,7 +219,6 @@ describe("Context7 DeepSeek Harness plugin", () => {
   });
 
   it("resolves libraries with authentication and formats the response", async () => {
-    vi.stubEnv("CONTEXT7_API_KEY", "ctx7sk-environment");
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -197,7 +239,7 @@ describe("Context7 DeepSeek Harness plugin", () => {
       )
     );
     vi.stubGlobal("fetch", fetchMock);
-    const tool = loadTools({ apiKey: "ctx7sk-test" }).get("resolve-library-id")!;
+    const tool = loadTools("ctx7sk-test").get("resolve-library-id")!;
     const result = await tool.execute({ query: "middleware", libraryName: "Next.js" }, execution());
 
     expect(result).toContain("/vercel/next.js");
@@ -213,8 +255,28 @@ describe("Context7 DeepSeek Harness plugin", () => {
     );
   });
 
+  it("resolves the Context7 credential for every request", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("Current documentation"));
+    vi.stubGlobal("fetch", fetchMock);
+    const root = await loadRuntime("ctx7sk-first");
+    const input = toolInput("query-docs", {
+      libraryId: "/vercel/next.js",
+      query: "middleware",
+    });
+
+    await root.tools.execute(input);
+    await root.credentials.set(API_KEY_REF, "ctx7sk-second");
+    await root.tools.execute(input);
+
+    expect(fetchMock.mock.calls.map(([, init]) => init.headers.Authorization)).toEqual([
+      "Bearer ctx7sk-first",
+      "Bearer ctx7sk-second",
+    ]);
+
+    await root.fiber.dispose();
+  });
+
   it("queries documentation without requiring an API key", async () => {
-    vi.stubEnv("CONTEXT7_API_KEY", "");
     const fetchMock = vi.fn().mockResolvedValue(new Response("Current documentation"));
     vi.stubGlobal("fetch", fetchMock);
     const tool = loadTools().get("query-docs")!;

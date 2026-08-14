@@ -1,20 +1,12 @@
 import type { Context } from "@deepseek-ai/cordis";
+import { credentialRef } from "@deepseek-ai/dsh-credentials";
 import type { PromptSection } from "@deepseek-ai/dsh-system-prompt";
 import { defineTool } from "@deepseek-ai/dsh-tools";
-import Schema from "@deepseek-ai/schemastery";
 import { fetchLibraryContext, searchLibraries } from "./api.js";
 import { formatSearchResults } from "./format.js";
 
 export const name = "context7";
-export const inject = ["tools", "systemPrompt"];
-
-export interface Config {
-  apiKey?: string;
-}
-
-export const Config: Schema<Config> = Schema.object({
-  apiKey: Schema.string(),
-});
+export const inject = ["credentials", "tools", "systemPrompt"];
 
 const RESOLVE_DESCRIPTION = `Resolves a package or product name to a Context7-compatible library ID and returns matching libraries.
 
@@ -25,6 +17,7 @@ const QUERY_DESCRIPTION = `Retrieves current documentation and code examples fro
 Call resolve-library-id first unless the user explicitly provides a library ID in /org/project or /org/project/version format. Use a specific query scoped to one concept and do not include secrets, credentials, personal data, or proprietary code.`;
 
 const API_TIMEOUT_MS = 60_000;
+const API_KEY_REF = credentialRef("CONTEXT7_API_KEY");
 
 const CONTEXT7_PROMPT: PromptSection = {
   name: "context7:tool-guidance",
@@ -42,9 +35,7 @@ Workflow:
 Do not call either tool more than three times per question. Never include secrets, credentials, personal data, or proprietary code in a query.`,
 };
 
-export function apply(ctx: Context, config: Config = {}): void {
-  const apiKey = config.apiKey || process.env.CONTEXT7_API_KEY;
-
+export function apply(ctx: Context): void {
   ctx.systemPrompt.section(CONTEXT7_PROMPT);
 
   ctx.tools.register(
@@ -72,6 +63,7 @@ export function apply(ctx: Context, config: Config = {}): void {
       timeoutMs: API_TIMEOUT_MS,
       isConcurrencySafe: () => true,
       async execute(args, exec) {
+        const apiKey = (await ctx.credentials.resolve(API_KEY_REF))?.value;
         const response = await searchLibraries(args.query, args.libraryName, apiKey, exec.signal);
         if (response.results.length === 0 && response.error) throw new Error(response.error);
         return formatSearchResults(response);
@@ -103,7 +95,10 @@ export function apply(ctx: Context, config: Config = {}): void {
       },
       timeoutMs: API_TIMEOUT_MS,
       isConcurrencySafe: () => true,
-      execute: (args, exec) => fetchLibraryContext(args.query, args.libraryId, apiKey, exec.signal),
+      async execute(args, exec) {
+        const apiKey = (await ctx.credentials.resolve(API_KEY_REF))?.value;
+        return fetchLibraryContext(args.query, args.libraryId, apiKey, exec.signal);
+      },
     })
   );
 }

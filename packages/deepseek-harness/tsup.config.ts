@@ -7,5 +7,10 @@ export default defineConfig({
   clean: true,
   sourcemap: true,
   target: "node22",
-  external: ["@deepseek-ai/cordis", "@deepseek-ai/dsh-tools", "@deepseek-ai/schemastery"],
+  external: [
+    "@deepseek-ai/cordis",
+    "@deepseek-ai/dsh-credentials",
+    "@deepseek-ai/dsh-system-prompt",
+    "@deepseek-ai/dsh-tools",
+  ],
 });
