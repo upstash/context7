@@ -8,8 +8,10 @@ Context7 can clone and index repositories from any self-managed Git host that is
 
 Configure the host under **Settings → Integrations → Other Git**, choose the **HTTPS** or **SSH** tab, then [add repositories](#add-a-repository) with their normal clone URL.
 
+If you use Gerrit, see the [Gerrit integration guide](/enterprise/integrations/gerrit) to submit generated code documentation through `refs/for/{branch}`.
+
 <Note>
-These hosts have no GitHub-style webhooks. Drive re-indexing on merge from your CI (for example Jenkins) by calling `POST /api/gitops/reconcile` or `POST /api/projects/<id>/refresh` after a push. See [GitOps](/enterprise/gitops).
+These hosts have no GitHub-style webhooks. Drive re-indexing on merge from your CI, for example Jenkins, by calling `POST /api/projects/<id>/refresh` after a push. Use `POST /api/gitops/reconcile` when your [GitOps](/enterprise/gitops) manifest changes.
 </Note>
 
 ## HTTPS (basic auth)
