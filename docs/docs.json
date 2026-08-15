@@ -217,7 +217,8 @@
           "integrations/code-rabbit",
           "integrations/factory-ai",
           "integrations/tembo",
-          "integrations/mastra"
+          "integrations/mastra",
+          "integrations/eve"
         ]
       },
       {
