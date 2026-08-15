@@ -77,6 +77,19 @@ Symbolic links to files inside the repository are materialized automatically; li
 
 Files with unknown extensions are served without a `Content-Type` header, so browsers download them instead of rendering them.
 
+### Interactive requests
+
+Docs7 limits public requests that can call another service. These limits are the same on every plan.
+
+| Feature | Per visitor IP | Per deployed site |
+|---|---:|---:|
+| API playground | 30 requests per minute | 300 requests per minute |
+| Ask AI | 10 requests per minute | 100 requests per minute |
+
+The visitor limit is separate for each site. The site limit combines requests from all visitors to one production or preview deployment. A Docs7 hostname and custom domain that point to the same deployment share the same site limit. Each preview deployment has its own site limit.
+
+Docs7 returns `429 Too Many Requests` when a limit is reached. Wait one minute before you try again.
+
 ### Deployments and previews
 
 | Limit | Value |

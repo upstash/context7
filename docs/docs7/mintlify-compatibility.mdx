@@ -10,12 +10,12 @@ This page lists the differences so you can audit a migration quickly.
 ## Fully supported
 
 - `docs.json` and legacy `mint.json`, including `$ref` resolution inside the config.
-- Navigation: `groups`, `tabs`, `anchors`, `dropdowns`, `products`, `menu`, nested groups, `hidden`, `expanded`, `icon`, `tag`, `root`, external links, and global anchors.
+- Navigation: `groups`, `tabs`, `anchors`, `dropdowns`, `products`, `versions`, `languages`, `menu`, nested groups, `hidden`, `expanded`, `icon`, `tag`, `root`, external links, and global anchors. Version and language content stays in its own selector scope.
 - Page frontmatter: `title`, `sidebarTitle`, `description`, `icon`, `tag`, `mode` (`default`, `frame`, `custom`, `center`, `wide`), `hidden`, `noindex`, `canonical`, `keywords`, `related`, and more. See [Frontmatter](/docs7/frontmatter).
 - The component library: callouts, Cards, Tabs, Steps, Accordions, CodeGroup, Frame, ParamField/ResponseField, Update, Tree/FileTree, and others. See [Components](/docs7/components).
 - Snippets (`<Snippet file="…" />` and MDX imports), `{{variable}}` substitution, custom `.jsx` components.
 - Code blocks: titles, icons, line highlighting and focus, diff markers, line numbers, wrap, expandable. Mermaid diagrams and LaTeX math also work.
-- OpenAPI reference pages in all the usual declaration styles. See [API references](/docs7/openapi).
+- OpenAPI reference pages and the interactive API playground in all the usual declaration styles. See [API references](/docs7/openapi).
 - Redirects (`redirects` in `docs.json`), `seo.metatags`, custom fonts, themes, banners, custom CSS files.
 
 ## Differences to know about
@@ -26,8 +26,6 @@ These are the things most likely to need attention when migrating.
 
 | Area | Docs7 behavior |
 |---|---|
-| **API playground** | Not available. Endpoint pages are fully rendered static docs with cURL and response examples, but there is no interactive "try it" runner. |
-| **Versions & languages** | The `versions` and `languages` navigation kinds render as selector dropdowns, but content is not scoped or deduplicated per version/language. Avoid relying on them for now. |
 | **Analytics & integrations** | The `integrations` block (analytics, feedback widgets, support widgets) is not injected. |
 | **Auto OG thumbnails config** | The `thumbnails` block is ignored. Docs7 generates its own OG images: a site card plus per-page cards rendered on demand. Frontmatter `og:image` still overrides everything. |
 | **Icon library default** | Defaults to Hugeicons instead of Font Awesome. Set `"icons": { "library": "fontawesome" }` (or `lucide`) to keep your icon names resolving. Unknown icon names render as nothing and show up as build warnings. |
