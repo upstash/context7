@@ -1,0 +1,65 @@
+---
+title: Quickstart
+description: Deploy your first documentation site with Docs7
+---
+
+Deploy a documentation site from a GitHub repository in a few minutes.
+
+## Before you start
+
+You need:
+
+- A GitHub repository containing your documentation as Markdown or MDX files. Private repositories work; access comes from the Context7 GitHub App installation.
+- A `docs.json` (or legacy `mint.json`) file in the documentation folder. A minimal one is enough:
+
+```json docs.json
+{
+  "name": "My Project",
+  "colors": { "primary": "#0D9373" },
+  "navigation": {
+    "groups": [
+      { "group": "Getting Started", "pages": ["index", "installation"] }
+    ]
+  }
+}
+```
+
+Connecting a site requires the owner or admin role in the teamspace; members get read-only access to the Docs7 tab.
+
+Docs7 includes the first 10 members of your teamspace in the plan price. Each member beyond 10 is $10/month.
+
+## Create the site
+
+<Steps>
+  <Step title="Connect the repository">
+    In your Context7 teamspace, open the **Docs7** tab and pick your GitHub repository on the **Publish a docs site** card. If the Context7 GitHub App doesn't have access to the repository yet, you'll be asked to grant it.
+
+    A repository can back exactly one Docs7 site.
+  </Step>
+  <Step title="Review the options">
+    **Add to Context7 index** is checked by default; it makes your docs available to coding agents through the Context7 MCP once the site is live.
+
+    If your `docs.json` is not in the repository root or you want a production branch other than the default, open **Advanced** and set the branch and docs path (the path defaults to `.`).
+  </Step>
+  <Step title="Connect and deploy">
+    Click **Connect repository**. Docs7 clones the repository, builds the site, and publishes it. Watch the build log live in the dashboard. When it finishes, your site is up at:
+
+    ```
+    https://<owner>--<repo>-<id>.docs7.io
+    ```
+
+    where `<id>` is a short stable suffix derived from the repository.
+  </Step>
+</Steps>
+
+## From now on
+
+Pushing the production branch redeploys production. Pushing any other branch deploys a preview at a stable per-branch URL, and the commit gets a `docs7/preview` status plus a PR comment linking to it. See [Branch previews](/docs7/branch-previews).
+
+If a build fails, the log lists each failing page and why. See [Deployments](/docs7/deployments).
+
+## Next steps
+
+- Get to know [the dashboard](/docs7/dashboard): deployments, statuses, and site settings.
+- Point a [custom domain](/docs7/custom-domains) at the site.
+- Explore what [`docs.json` can configure](/docs7/settings): themes, fonts, banners, SEO, and more.

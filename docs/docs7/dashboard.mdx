@@ -1,0 +1,39 @@
+---
+title: The Dashboard
+description: Site statuses, the deployments drawer, manual deploys, settings, and deletion
+---
+
+Each Docs7 site appears as a card in the teamspace's **Docs7** tab, with four tiles: **Deployments**, **Branch previews**, **Custom domain**, and **Settings**. A status chip shows the Context7 index state and links to the library page.
+
+## Site statuses
+
+| Status | Meaning |
+|---|---|
+| Live | The latest production build is serving. |
+| Building / Updating | A production deployment is running. |
+| Preview building | A branch preview is deploying. |
+| Update failed | The newest build failed, **but the previous build keeps serving**. Your site never goes down because of a bad push. |
+| Build failed | The first build failed; nothing is live yet. |
+| Not deployed | The site exists but has no deployment. |
+
+## The deployments drawer
+
+The **Deployments** tile opens a drawer listing every recorded deployment with its target (production or preview), branch, trigger (**First deploy**, **Manual deploy**, or **Git push**), duration, and short commit SHA. Selecting one shows that build's full log. Logs of a running build update every couple of seconds.
+
+## Manual deploys
+
+The **Deploy** button rebuilds production from the current branch head, without waiting for a push. It requires the owner or admin role and is disabled while a deployment is already queued or running. Manual deploys have no triggering commit, so they post no GitHub status.
+
+## Editing build settings
+
+The **Settings** tile lets you change the production branch and docs path after creation. Changes apply on the next deployment; they don't trigger one by themselves. Changing the custom domain or path is the exception: it rebuilds production automatically, because the published site embeds its own URL.
+
+## Permissions
+
+Viewing the Docs7 tab requires teamspace access. Creating, deploying, editing, and deleting sites requires the owner or admin role.
+
+The first 10 teamspace members are included in the Docs7 plan price; each member after that is $10/month.
+
+## Deleting a site
+
+**Settings → Delete site** removes the production site, every branch preview, and the custom domain routing. The GitHub repository is untouched. The repository becomes connectable again immediately; a released custom domain can be re-claimed after a short cooldown (see [Custom domains](/docs7/custom-domains)).

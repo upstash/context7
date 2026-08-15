@@ -1,0 +1,38 @@
+---
+title: Custom Domains
+description: Serve your docs from your own domain or below a path on your main site
+---
+
+By default a site lives at `<owner>--<repo>-<id>.docs7.io`. You can attach one custom domain per site.
+
+## Subdomains (recommended)
+
+Add the domain in the site's **Custom domain** tile. The dashboard shows the DNS records to create at your provider: a routing CNAME plus one or two verification records (a TXT record proving ownership and a certificate-validation record). Create all of them.
+
+<Note>
+If your DNS is on Cloudflare, set the CNAME record to "DNS only" (no proxy). A proxied record hides the origin and breaks certificate validation.
+</Note>
+
+The status moves through **Waiting for DNS**, **Validating domain**, and **Issuing certificate** to **Active**. Use **Check again** to refresh, or **Retry setup** if it lands on **Setup failed**. TLS is 1.2 or newer.
+
+## Apex domains
+
+`example.com` (no subdomain) works only if your DNS provider supports CNAME flattening (ALIAS/ANAME records), since a plain CNAME at the apex is not valid DNS. If yours doesn't, use a subdomain.
+
+## Hosting below a path
+
+Serve the docs at `example.com/docs` while the rest of the domain stays yours:
+
+1. Set the custom domain **and** a custom path (like `/docs`) in the site settings.
+2. Proxy that path from your own infrastructure to the Docs7 origin. The dashboard generates ready-made configuration for common hosts: `vercel.json` rewrites for Vercel, a Worker with routes for Cloudflare, and a generic table for anything else.
+3. Once your proxy is serving, click **Mark as connected**. The site stays in the **Connect path** state until you do.
+
+Links, assets, search, the sitemap, redirects, and Markdown exports are all generated with the path prefix. Path rules: 2–128 characters, starts with `/`, letters/digits/`._~/-`, no `//`, no trailing slash, no `..`; it requires a custom domain. Platform-reserved first segments (`/api`, `/login`, `/mcp`, `/_next`, `/_assets`, `/llms.txt`, `/robots.txt`, `/sitemap.xml`, `/.well-known`) are refused.
+
+## Rules and timing
+
+- One domain per site, and a domain can belong to only one site anywhere.
+- Domains under `docs7.io` cannot be claimed as custom domains.
+- Changing the domain or path automatically rebuilds production, because the published site embeds its own URL.
+- After removing a live domain, re-claiming it is blocked for ~2 minutes while edge caches drain. Moving a domain between sites can briefly serve the old site during that window.
+- The `*.docs7.io` URL keeps working alongside the custom domain.

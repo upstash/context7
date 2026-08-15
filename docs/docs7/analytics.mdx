@@ -1,0 +1,31 @@
+---
+title: Analytics
+description: See which AI systems read your docs, verified against vendor IP ranges, next to privacy-safe human analytics
+---
+
+Every Docs7 site collects two kinds of analytics at the edge, with nothing to install and no cookie banner: AI crawler traffic and human page views. In the dashboard they live in the **AI Visibility** and **Analytics** sections, next to the site **Overview**. A scope selector switches between one site and **All sites** in the teamspace, over a window your plan allows: up to 30 days on Free, up to 12 months on Pro, and unlimited on Enterprise. See [Limits](/docs7/limits).
+
+## AI traffic
+
+AI systems are becoming a primary reader of documentation, and Docs7 shows you that traffic directly. Every request from a known AI crawler is recorded with its provider, bot name, path, and country. The **AI Visibility** section shows:
+
+- Total requests for the window, with a ranking by provider.
+- A daily chart, filterable to a single provider.
+- Top pages by AI fetches, searchable and sortable, so you can see whether agents read `llms.txt`, the raw `.md` exports, or specific guides.
+- A live tail of individual requests (agent, path, country, time) as they happen.
+
+Recognized crawlers currently include Anthropic (`ClaudeBot`, `Claude-User`, `Claude-SearchBot`) and OpenAI (`GPTBot`, `ChatGPT-User`, `OAI-SearchBot`).
+
+### Verification
+
+A user agent string is trivial to fake, so Docs7 checks every AI request's IP address against the ranges the vendor publishes (`claude.com/crawling/bots.json`, `openai.com/gptbot.json`, and so on) and records whether it matched. Traffic wearing a ClaudeBot user agent from an unrelated network is captured as unverified rather than counted as Anthropic.
+
+## Human analytics
+
+Document navigations from real browsers are counted separately, with AI crawlers and generic bots filtered out. The **Analytics** section shows visitors and page views over time, top pages, referrers, and countries.
+
+Visitors are counted with a hash of the day, site, IP address, and browser that rotates daily. No raw IP address is ever stored, there are no cookies, and no script is injected into your pages; counting happens entirely at the edge.
+
+## What traffic is covered
+
+Coverage follows the site's domain setup. A site with an active custom domain reports the traffic on that domain. A site without one currently reports preview traffic, and the dashboard labels those numbers with a "Preview metrics" badge. New requests appear live, within a few seconds.

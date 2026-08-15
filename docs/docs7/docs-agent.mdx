@@ -1,0 +1,62 @@
+---
+title: Docs Agent
+description: An AI agent that reads what your readers asked, fixes the gaps, and opens a pull request
+---
+
+The Docs Agent improves your documentation from two signals your site already produces: the questions readers ask, and the health issues your builds report. It edits the docs in a sandbox and opens a pull request.
+
+<Note>
+The agent never merges anything and never pushes to your production branch. Every change arrives as a pull request for you to review.
+</Note>
+
+## What it works from
+
+**Reader questions.** Every question asked through the Context7 MCP, the chat widget, or search on your site is captured for the site it was asked about. Questions readers keep asking are the gaps your documentation has.
+
+**Deployment health issues.** When a build reports fixable problems — a page that failed to compile, a broken link, an unknown component, a source warning — you can hand them straight to the agent from the deployment's **Docs health** section with **Fix with Docs Agent**.
+
+## Running it
+
+**Daily runs.** Turn on **Daily runs** for a site in the Docs7 tab. The agent runs once a day, and only on days when readers actually asked questions. Quiet days cost nothing and produce no pull request.
+
+**Run now.** Starts a run immediately from the questions of the last 30 days. Useful right after a launch, when new questions arrive in bursts.
+
+One run happens at a time per site. Runs take minutes, not seconds, and the dashboard updates as they progress.
+
+## What a run produces
+
+Each run ends in one of three states, all visible in the site's agent panel:
+
+| Outcome | Meaning |
+|---|---|
+| **Pull request opened** | The agent made changes. The panel links straight to the PR. |
+| **No changes needed** | The agent reviewed the questions and found nothing worth changing. No branch, no PR. |
+| **Failed** | Something went wrong; the error is shown inline. |
+
+Every run keeps its summary, the exact questions or health issues behind it, and the pull request link. The last 20 runs per site are kept.
+
+The pull request body explains what changed and why. For health-issue runs it also lists the issues that prompted it. Reader questions are never copied into the pull request.
+
+## What the agent may change
+
+The agent is confined to your documentation:
+
+- It only writes inside your configured docs path.
+- It can read the rest of the repository to verify a fix — source code, examples, API specs — but never modifies anything outside the docs.
+- `.git`, `.github`, lockfiles, and application source are always off-limits, even when your whole repository is the docs.
+- It cannot run Git commands. Docs7 creates the branch, commit, and pull request after the run ends.
+- Build output and reader questions are treated as untrusted input, so instructions hidden in an error message or a question are ignored.
+
+A run that tries to change a file outside the docs path fails instead of opening a pull request.
+
+## Getting good results
+
+- **Let questions accumulate.** The agent works from real reader questions, so a site with traffic produces better runs than a brand-new one. The first run starts once readers have asked something.
+- **Review like any other PR.** The agent keeps diffs small and preserves your file format, navigation, and writing style, but it is proposing an edit, not making a decision.
+- **Use health runs after a broken build.** They are the most reliable kind, because the build already proved the problem exists.
+
+## Availability
+
+The Docs Agent is included on paid plans. Scheduled runs happen at most once a day per site, and only on days when readers actually asked questions, so a quiet site costs you nothing and produces no pull request.
+
+Each run reads at most 100 questions or 100 health issues and addresses a few topics at a time, so every pull request stays small enough to review.

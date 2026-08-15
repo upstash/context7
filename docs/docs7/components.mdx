@@ -1,0 +1,130 @@
+---
+title: Components
+description: The MDX component library available on every page
+---
+
+All components are available in every MDX page without imports. Unknown components never break a build. They render as inert placeholders and are collected into the build report, so pseudo-tags like `<YOUR_API_KEY>` in prose are safe.
+
+## Callouts
+
+`<Note>`, `<Info>`, `<Tip>`, `<Check>`, `<Warning>`, `<Danger>`, plus a generic `<Callout icon="…" color="…">`.
+
+```mdx
+<Note>Preview deployments are free.</Note>
+<Warning>This action cannot be undone.</Warning>
+```
+
+## Cards and columns
+
+```mdx
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/docs7/quickstart">
+    Ship your first site in minutes.
+  </Card>
+  <Card title="Limits" icon="gauge" href="/docs7/limits" arrow>
+    Sizes, timeouts, and caps.
+  </Card>
+</CardGroup>
+```
+
+`Card` supports `icon`, `href`, `img`, `horizontal`, `cta`, `arrow`, and a callout-style `type`. `Columns`/`Column` give you bare multi-column layout.
+
+## Tabs
+
+```mdx
+<Tabs>
+  <Tab title="npm">`npm install`</Tab>
+  <Tab title="pnpm">`pnpm install`</Tab>
+</Tabs>
+```
+
+Tabs with the same titles sync their selection across the page by default (`sync={false}` to opt out).
+
+## Steps
+
+```mdx
+<Steps>
+  <Step title="Connect the repository">…</Step>
+  <Step title="Deploy">…</Step>
+</Steps>
+```
+
+## Accordions and expandables
+
+```mdx
+<AccordionGroup>
+  <Accordion title="Why did my build fail?">…</Accordion>
+  <Accordion title="How do previews work?" defaultOpen>…</Accordion>
+</AccordionGroup>
+```
+
+`<Expandable title="Show details">` is the inline variant.
+
+## Code groups and API examples
+
+`<CodeGroup>` renders multiple fenced code blocks as one tabbed block. `<RequestExample>` and `<ResponseExample>` pin their content into the right-hand examples rail on API pages, as does `<Panel>`.
+
+## Media
+
+```mdx
+<Frame caption="The deployment log">
+  <img src="/images/build-log.png" alt="Build log" />
+</Frame>
+```
+
+Images get click-to-zoom by default (`noZoom` disables it). Add an `actions` attribute for copy/download buttons (`actions="copy"` to pick one, `actionsPlacement` to position them). `<Image size="md" border background>` adds sizing and framing.
+
+## API fields
+
+```mdx
+<ParamField query="branch" type="string" required>
+  The branch to deploy.
+</ParamField>
+<ResponseField name="state" type="string">
+  One of `queued`, `running`, `ready`, `failed`.
+</ResponseField>
+```
+
+## Changelog entries
+
+```mdx
+---
+title: Changelog
+rss: true
+---
+
+<Update label="2026-08-12" description="v2.4" tags={["build"]}>
+  Oversized files are now skipped instead of failing the deployment.
+</Update>
+```
+
+`<Update>` labels appear in the table of contents. When any entry has `tags`, the table of contents becomes a tag filter instead, and the selection is mirrored into a shareable `?tags=` URL. With `rss: true` frontmatter the page publishes an RSS feed; a per-entry `rss={{ title, description }}` prop overrides that feed item.
+
+## File trees
+
+```mdx
+<Tree>
+  <Tree.Folder name="docs" defaultOpen>
+    <Tree.File name="docs.json" highlight />
+    <Tree.File name="index.mdx" />
+  </Tree.Folder>
+</Tree>
+```
+
+## Everything else
+
+- `<Icon icon="rocket" size={20}>` for standalone icons.
+- `<Tooltip tip="…">` and `<Badge>` for inline annotations.
+- `<Tile>` and `<Prompt>` for link tiles and copyable AI prompts.
+- `<View title="…">` for multi-view content behind a dropdown.
+- `<Color>` swatches with click-to-copy values.
+- `<Visibility for="agents">` renders content only in the Markdown/agent exports; `for="humans"` renders it only on the web page.
+- Math renders through `$…$` and `$$ … $$`. See [Code blocks](/docs7/code-blocks).
+
+## Heading anchors
+
+Every heading gets an anchor link with a Mintlify-compatible slug; duplicates get `-2`, `-3` suffixes. Write `## Title {#custom-id}` to set your own id, and add `noAnchor` to a heading to keep the id but hide the anchor chip.
+
+## Snippets and custom components
+
+Reusable content lives in `snippets/`. See [Snippets & variables](/docs7/snippets-and-variables). You can also ship your own React components as `.jsx` files in the repository and import them from MDX.

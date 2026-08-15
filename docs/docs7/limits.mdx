@@ -1,0 +1,115 @@
+---
+title: Limits
+description: What each plan includes, plus the sizes and timeouts that apply everywhere
+---
+
+Docs7 limits come in two kinds. **Plan limits** depend on the Context7 plan your teamspace is on. **Platform limits** are the same on every plan, including Free.
+
+## Plan limits
+
+Docs7 Pro is an add-on to a Context7 teamspace, priced flat rather than per site or per seat. Seats stay on your [Context7 plan](https://context7.com/plans) and are never billed twice.
+
+| Limit | Free | Pro | Enterprise |
+|---|---|---|---|
+| Sites | 1 | 25 per teamspace | Unlimited |
+| Repository visibility | Public only | Public and private | Public and private |
+| Builds | 100 per month | 5,000 per month across the teamspace | Custom |
+| Build timeout | 15 minutes | 30 minutes | Custom |
+| Live branch previews per site | 5 | 50 | Custom |
+| Custom domains | 1 per site | 1 per site | 1 per site |
+| AI visibility and human analytics retention | 30 days | 12 months, with CSV export | Unlimited, with raw export |
+| Password-protected sites | — | Included | Included |
+| Context7 indexing | Included | Included | Included |
+| Support | Community | Email | SLA, security review, dedicated CSM |
+
+Free covers open-source projects and personal work. In Context7 a personal project is already single-user and cannot reach private repositories, so the public-only limit is not a new gate.
+
+### Going over the build quota
+
+Builds past the monthly quota are **queued at low priority, never dropped and never billed**. A flat price means no surprise invoice, so a burst of pushes at the end of the month slows down rather than failing.
+
+### Enterprise
+
+Beyond the table, Enterprise adds SAML/OIDC SSO, SCIM provisioning, RBAC, audit logs, authenticated docs (JWT/SSO visitor auth), IP allowlists, self-hosting, EU and regional data residency, a priority build queue, and multi-repository sites. [Contact us](https://context7.com/contact) to talk through a deployment.
+
+## What is never metered
+
+These cost nothing to serve, so no plan meters them — not even Free:
+
+- **Page views, bandwidth, and unique visitors.** Unlimited everywhere.
+- **Readers.** There is no viewer seat, on any plan.
+- **Pages per site.** Bounded only by the repository size limits below.
+- **Search.** Static and self-contained, so queries are free.
+- **`llms.txt`, Markdown exports, and MCP discoverability.** Making docs readable by AI tools is the point of the product.
+
+## Platform limits
+
+The rest apply identically on every plan.
+
+### Source repository
+
+| Limit | Value |
+|---|---|
+| Repository provider | GitHub (`https://github.com/<owner>/<repo>`) |
+| Sites per repository | 1 |
+| Docs source tree | 100,000 files / 1 GB total (dot-directories and `node_modules` don't count) |
+| Clone timeout | 5 minutes |
+| Required file | `docs.json` or `mint.json` in the docs path |
+
+Symbolic links to files inside the repository are materialized automatically; links that are broken, point to directories, or leave the repository fail the build.
+
+### Builds
+
+| Limit | Value |
+|---|---|
+| Page errors | Any page error fails the deployment (files outside the navigation only warn) |
+| Network access | None. Commit remote specs, images, and fonts to the repository |
+| Build log | 250 lines of live output, 200 error lines, retained 7 days |
+
+### Published site
+
+| Limit | Value |
+|---|---|
+| Per-file size | 25 MB. Larger files are skipped, and the end of the build log lists each one. Host large media like video externally |
+| Site size | 100,000 files / 3 GB total |
+| Redirect rules | No practical cap |
+| `llms.txt` page index | 100,000 characters (a repository `llms.txt` wins) |
+
+Files with unknown extensions are served without a `Content-Type` header, so browsers download them instead of rendering them.
+
+### Interactive requests
+
+Docs7 limits public requests that can call another service. These limits are the same on every plan.
+
+| Feature | Per visitor IP | Per deployed site |
+|---|---:|---:|
+| API playground | 30 requests per minute | 300 requests per minute |
+| Ask AI | 10 requests per minute | 100 requests per minute |
+
+The visitor limit is separate for each site. The site limit combines requests from all visitors to one production or preview deployment. A Docs7 hostname and custom domain that point to the same deployment share the same site limit. Each preview deployment has its own site limit.
+
+Docs7 returns `429 Too Many Requests` when a limit is reached. Wait one minute before you try again.
+
+### Deployments and previews
+
+| Limit | Value |
+|---|---|
+| Concurrent builds per branch/production target | 1; superseded deployments are dropped in favor of the newest push |
+| Deployment timeout | Marked failed after 45 minutes |
+| Deployment history | Last 50 per site |
+| Webhook triggers | Pushes to the production branch deploy production; opening a pull request creates its preview and closing it removes the preview; redeliveries deduplicated for 24 hours |
+
+Existing branch previews always redeploy, so the per-plan preview cap only refuses previews for branches that don't have one yet.
+
+### Custom domains
+
+| Limit | Value |
+|---|---|
+| Domains per site | 1 (and one site per domain) |
+| Blocked | Domains under `docs7.io` |
+| Re-claim cooldown | ~2 minutes after removing a live domain |
+| Custom path | 2–128 characters, requires a custom domain |
+
+## Need more?
+
+If a limit blocks a real use case, like a bigger repository, more previews, or a longer build, [contact us](https://context7.com/contact).

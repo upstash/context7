@@ -1,0 +1,81 @@
+---
+title: API References
+description: Generate endpoint documentation from an OpenAPI spec
+---
+
+Docs7 renders API reference pages from OpenAPI 3 specs (JSON or YAML) committed to your repository.
+
+<Note>
+The build has no network access: remote spec URLs are ignored. Commit the spec file to the repository.
+</Note>
+
+## Register a spec
+
+Any of these works:
+
+- `"api": { "openapi": "openapi.json" }` in `docs.json` (string or array of paths).
+- An `openapi` field on any navigation element (inherited by everything inside it).
+- Auto-detection: any file named `openapi*.json` / `openapi*.yml` / `openapi*.yaml` in the repository is loaded automatically.
+
+## Declare endpoint pages
+
+**In navigation.** Reference operations directly as pages:
+
+```json
+{
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "API Reference",
+        "openapi": "openapi.json",
+        "groups": [
+          { "group": "Sites", "pages": ["GET /sites", "POST /sites"] }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Auto-populate a whole section.** Give a navigation element an `openapi` source and no pages; every operation in the spec becomes a page, grouped by tag:
+
+```json
+{ "tab": "API Reference", "openapi": { "source": "openapi.json", "directory": "api" } }
+```
+
+**In frontmatter.** Attach an operation to a hand-written MDX page; the generated documentation renders above your prose:
+
+```yaml
+---
+title: Create a site
+openapi: "openapi.json POST /sites"
+---
+```
+
+Operations found in a loaded spec but not claimed by any page are auto-generated into an "API Reference" sidebar group, so nothing in the spec goes missing.
+
+## Page URLs
+
+Generated pages are slugged from the operation's `summary`, matching Mintlify's URLs (`POST /sites` with summary "Create a site" becomes `create-a-site`; without a summary, `post-sites`). Navigation entries like `"GET /users"` mount next to their spec; auto-populated sections mount under their `directory` (default `api-reference`); unclaimed operations mount at `api-reference/<tag>/<summary>`. Only `get`, `post`, `put`, `patch`, and `delete` operations generate pages.
+
+## What a generated page contains
+
+- Method, path, and description, with an HTTP-method chip in the sidebar.
+- Path, query, and header parameters with types, defaults, required flags, and enum values.
+- Request-body fields with `$ref`s resolved.
+- Response schemas per status code, plus a response example (from the spec's `example`/`examples`, or synthesized from the schema).
+- A static cURL example in the right-hand rail.
+- An interactive playground for sending a request and inspecting the response.
+- An Authorization field when the operation or the spec declares `security`.
+
+Every API page also gets a structured raw-Markdown export, like all other pages.
+
+## Interactive playground
+
+The playground lets a reader fill in the operation's parameters, headers, and body, then send the request from the API page. Docs7 sends the request through its edge gateway, so the target API does not need to allow browser CORS requests.
+
+In production, the playground can send requests only to HTTP or HTTPS origins declared in the OpenAPI spec. Private network addresses are blocked. A reader can send up to 30 playground requests per minute to one site. One deployed site can receive up to 300 playground requests per minute across all readers. See [Limits](/docs7/limits#interactive-requests).
+
+## Not supported
+
+AsyncAPI, GraphQL, webhooks sections, and generated SDK references (typedoc, javadoc, …) are not supported, and generated code samples are cURL only.
