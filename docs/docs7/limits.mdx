@@ -97,7 +97,7 @@ Docs7 returns `429 Too Many Requests` when a limit is reached. Wait one minute b
 | Concurrent builds per branch/production target | 1; superseded deployments are dropped in favor of the newest push |
 | Deployment timeout | Marked failed after 45 minutes |
 | Deployment history | Last 50 per site |
-| Webhook triggers | Branch pushes build; closing a pull request removes its preview; redeliveries deduplicated for 24 hours |
+| Webhook triggers | Pushes to the production branch deploy production; opening a pull request creates its preview and closing it removes the preview; redeliveries deduplicated for 24 hours |
 
 Existing branch previews always redeploy, so the per-plan preview cap only refuses previews for branches that don't have one yet.
 

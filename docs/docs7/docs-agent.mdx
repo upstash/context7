@@ -55,13 +55,8 @@ A run that tries to change a file outside the docs path fails instead of opening
 - **Review like any other PR.** The agent keeps diffs small and preserves your file format, navigation, and writing style, but it is proposing an edit, not making a decision.
 - **Use health runs after a broken build.** They are the most reliable kind, because the build already proved the problem exists.
 
-## Limits
+## Availability
 
-| | Free | Pro | Enterprise |
-|---|---|---|---|
-| Docs Agent | Not available | Included | Included |
-| Runs | — | 30/month, then metered | Custom, or bring your own API key |
-| Daily runs | — | Up to 5 sites | All sites |
-| Run history | — | 20 per site | 20 per site |
+The Docs Agent is included on paid plans. Scheduled runs happen at most once a day per site, and only on days when readers actually asked questions, so a quiet site costs you nothing and produces no pull request.
 
-The Docs Agent is a paid feature. Each run reads at most 100 questions or 100 health issues, and addresses at most a few topics, so it stays reviewable.
+Each run reads at most 100 questions or 100 health issues and addresses a few topics at a time, so every pull request stays small enough to review.
