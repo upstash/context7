@@ -1504,7 +1504,8 @@ for server metrics and spans. Trace context is extracted from the `traceparent`,
 The HTTP transport exposes metrics in Prometheus format on a dedicated internal listener at
 `0.0.0.0:9464/metrics`. The stdio transport does not open a telemetry port. Keeping this listener
 separate from the public MCP port prevents the metrics endpoint from being routed through a
-catch-all gateway rule.
+catch-all gateway rule. On stdio EOF or SIGHUP, the server closes the SDK connection, records the
+session duration, and best-effort flushes an externally installed SDK `MeterProvider` before exit.
 
 The exporter uses the standard OpenTelemetry Prometheus settings:
 
@@ -1517,17 +1518,29 @@ starting. If a Node preload has already registered global OpenTelemetry provider
 precedence. The embedded Prometheus listener is not started when a global `MeterProvider` exists,
 and MCP spans are exported through the preload's `TracerProvider`. This supports an OpenTelemetry
 Node SDK or Kubernetes auto-instrumentation without creating a second provider in the application.
+When an external SDK owns the provider, configure its Node runtime instrumentation there as well;
+the application does not register a duplicate collector.
 
 It reports bounded-cardinality counters, histograms, and in-flight gauges for MCP methods, tool
-calls, authentication outcomes, and Context7 upstream requests. Prometheus receives these metric
-families:
+calls, authentication outcomes, Context7 upstream requests, and Node runtime saturation.
+Prometheus receives these metric families:
 
 - `mcp_server_operation_duration` (its `_count` series is the MCP operation count)
+- `mcp_server_session_duration` for real stateful stdio sessions (stateless HTTP request transports
+  are intentionally excluded)
 - `context7_mcp_operations_active`
 - `context7_mcp_tool_calls_total` and `context7_mcp_tool_call_duration`
 - `context7_mcp_upstream_requests_total` and `context7_mcp_upstream_request_duration`
-- `context7_mcp_authentication_attempts_total`
-- `context7_mcp_tool_calls_active` and `context7_mcp_upstream_requests_active`
+- `context7_mcp_authentication_attempts_total` and `context7_mcp_authentication_duration`
+- `context7_mcp_tool_calls_active`, `context7_mcp_upstream_requests_active`, and
+  `context7_mcp_authentication_active`
+- `nodejs_eventloop_*`, `v8js_gc_duration`, `v8js_memory_heap_*`, and
+  `v8js_resource_active` from the official OpenTelemetry Node runtime instrumentation
+
+Tool outcomes distinguish `success`, `not_found`, and `error`. Upstream outcomes distinguish
+HTTP, response-decoding, network, timeout, and cancellation failures and include both the bounded
+status-code class and the exact numeric HTTP status. Authentication reports accepted, missing,
+invalid, and unexpected-error outcomes.
 
 The labels intentionally exclude API keys, client IPs, queries, library IDs, session IDs, and raw
 error text. Expose port `9464` only to your Prometheus scraper or `ServiceMonitor`, not through the

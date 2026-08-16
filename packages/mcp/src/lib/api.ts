@@ -127,10 +127,11 @@ export async function searchLibraries(
     url.searchParams.set("libraryName", libraryName);
 
     const headers = generateHeaders(context);
+    const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);
 
     return await observeUpstreamRequest(
       "search_libraries",
-      () => fetch(url, { headers, signal: AbortSignal.timeout(API_TIMEOUT_MS) }),
+      () => fetch(url, { headers, signal: abortSignal }),
       async (response) => {
         readPromptSignal(response, context);
         if (!response.ok) {
@@ -140,7 +141,8 @@ export async function searchLibraries(
         }
         const searchData = await response.json();
         return searchData as SearchResponse;
-      }
+      },
+      { abortSignal }
     );
   } catch (error) {
     const errorMessage = `Error searching libraries: ${error}`;
@@ -165,10 +167,11 @@ export async function fetchLibraryContext(
     url.searchParams.set("libraryId", request.libraryId);
 
     const headers = generateHeaders(context);
+    const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);
 
     return await observeUpstreamRequest(
       "fetch_context",
-      () => fetch(url, { headers, signal: AbortSignal.timeout(API_TIMEOUT_MS) }),
+      () => fetch(url, { headers, signal: abortSignal }),
       async (response) => {
         readPromptSignal(response, context);
         if (!response.ok) {
@@ -181,10 +184,12 @@ export async function fetchLibraryContext(
         if (!text) {
           return {
             data: "Documentation not found or not finalized for this library. This might have happened because you used an invalid Context7-compatible library ID. To get a valid Context7-compatible library ID, use the 'resolve-library-id' with the package name you wish to retrieve documentation for.",
+            notFound: true,
           };
         }
         return { data: text };
-      }
+      },
+      { abortSignal }
     );
   } catch (error) {
     const errorMessage = `Error fetching library context. Please try again later. ${error}`;

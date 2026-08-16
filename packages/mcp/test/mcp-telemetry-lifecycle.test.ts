@@ -5,13 +5,21 @@ import {
   type Transport,
   type TransportSendOptions,
 } from "@modelcontextprotocol/server";
-import { SpanStatusCode, propagation, trace } from "@opentelemetry/api";
+import { SpanStatusCode, metrics, propagation, trace } from "@opentelemetry/api";
+import {
+  AggregationTemporality,
+  DataPointType,
+  InMemoryMetricExporter,
+  MeterProvider,
+  PeriodicExportingMetricReader,
+} from "@opentelemetry/sdk-metrics";
 import {
   BasicTracerProvider,
   InMemorySpanExporter,
   SimpleSpanProcessor,
 } from "@opentelemetry/sdk-trace-base";
 import { InstrumentedMcpServer, classifyServerResponse } from "../src/lib/mcp-telemetry.js";
+import { observeUpstreamRequest, type UpstreamOperation } from "../src/lib/telemetry.js";
 
 interface Deferred<T> {
   promise: Promise<T>;
@@ -34,6 +42,7 @@ class ControlledTransport implements Transport {
   onerror?: (error: Error) => void;
   onmessage?: <T extends JSONRPCMessage>(message: T, extra?: MessageExtraInfo) => void;
   readonly sent: JSONRPCMessage[] = [];
+  closeOperation: () => Promise<void> = async () => undefined;
   sendOperation: (message: JSONRPCMessage, options?: TransportSendOptions) => Promise<void> =
     async () => undefined;
 
@@ -46,6 +55,7 @@ class ControlledTransport implements Transport {
 
   async close(): Promise<void> {
     this.onclose?.();
+    await this.closeOperation();
   }
 
   receive(message: JSONRPCMessage): void {
@@ -55,15 +65,29 @@ class ControlledTransport implements Transport {
   triggerClose(): void {
     this.onclose?.();
   }
+
+  triggerError(error: Error): void {
+    this.onerror?.(error);
+  }
 }
 
 const spanExporter = new InMemorySpanExporter();
 const tracerProvider = new BasicTracerProvider({
   spanProcessors: [new SimpleSpanProcessor(spanExporter)],
 });
+const metricExporter = new InMemoryMetricExporter(AggregationTemporality.CUMULATIVE);
+const metricProvider = new MeterProvider({
+  readers: [
+    new PeriodicExportingMetricReader({
+      exporter: metricExporter,
+      exportIntervalMillis: 60_000,
+    }),
+  ],
+});
 
 beforeAll(() => {
   expect(trace.setGlobalTracerProvider(tracerProvider)).toBe(true);
+  expect(metrics.setGlobalMeterProvider(metricProvider)).toBe(true);
 });
 
 beforeEach(() => {
@@ -71,7 +95,9 @@ beforeEach(() => {
 });
 
 afterAll(async () => {
+  await metricProvider.shutdown();
   await tracerProvider.shutdown();
+  metrics.disable();
   trace.disable();
   propagation.disable();
 });
@@ -90,15 +116,54 @@ async function eventually(assertion: () => void): Promise<void> {
   throw lastError;
 }
 
-function serverFor(transport: ControlledTransport, requestInfo?: Request): InstrumentedMcpServer {
+function serverFor(
+  transport: ControlledTransport,
+  requestInfo?: Request,
+  era: "legacy" | "modern" = "legacy"
+): InstrumentedMcpServer {
   const server = new InstrumentedMcpServer(
     { name: "telemetry-lifecycle-test", version: "1.0.0" },
     {},
-    { era: "legacy", requestInfo }
+    { era, requestInfo }
   );
   server.server.onerror = () => undefined;
   void server.connect(transport);
   return server;
+}
+
+function sessionObservationCount(): number {
+  const latest = metricExporter.getMetrics().at(-1);
+  const metric = latest?.scopeMetrics
+    .flatMap((scope) => scope.metrics)
+    .find((candidate) => candidate.descriptor.name === "mcp.server.session.duration");
+  if (!metric || metric.dataPointType !== DataPointType.HISTOGRAM) return 0;
+  return metric.dataPoints.reduce((total, point) => total + point.value.count, 0);
+}
+
+function sessionErrorObservationCount(errorType: string): number {
+  const latest = metricExporter.getMetrics().at(-1);
+  const metric = latest?.scopeMetrics
+    .flatMap((scope) => scope.metrics)
+    .find((candidate) => candidate.descriptor.name === "mcp.server.session.duration");
+  if (!metric || metric.dataPointType !== DataPointType.HISTOGRAM) return 0;
+  return metric.dataPoints
+    .filter((point) => point.attributes["error.type"] === errorType)
+    .reduce((total, point) => total + point.value.count, 0);
+}
+
+function upstreamObservationCount(operation: UpstreamOperation, outcome: string): number {
+  const latest = metricExporter.getMetrics().at(-1);
+  const metric = latest?.scopeMetrics
+    .flatMap((scope) => scope.metrics)
+    .find((candidate) => candidate.descriptor.name === "context7.mcp.upstream.requests");
+  if (!metric || metric.dataPointType !== DataPointType.SUM) return 0;
+  return metric.dataPoints
+    .filter(
+      (point) =>
+        point.attributes["context7.upstream.operation"] === operation &&
+        point.attributes["context7.upstream.outcome"] === outcome
+    )
+    .reduce((total, point) => total + point.value, 0);
 }
 
 function responseFor(id: string | number, code: number): JSONRPCMessage {
@@ -140,6 +205,70 @@ describe("MCP server response classification", () => {
 });
 
 describe("MCP operation lifecycle", () => {
+  test("records real stdio sessions but not stateless HTTP request transports", async () => {
+    await metricProvider.forceFlush();
+    const before = sessionObservationCount();
+
+    const stdioTransport = new ControlledTransport();
+    const stdioServer = serverFor(stdioTransport, undefined, "modern");
+    await eventually(() => expect(stdioTransport.onmessage).toBeTypeOf("function"));
+    await stdioServer.close();
+    await metricProvider.forceFlush();
+
+    expect(sessionObservationCount()).toBe(before + 1);
+    const latest = metricExporter.getMetrics().at(-1);
+    const sessionMetric = latest?.scopeMetrics
+      .flatMap((scope) => scope.metrics)
+      .find((candidate) => candidate.descriptor.name === "mcp.server.session.duration");
+    expect(
+      sessionMetric?.dataPoints.some(
+        (point) =>
+          point.attributes["network.transport"] === "pipe" &&
+          point.attributes["mcp.protocol.version"] === "2026-07-28"
+      )
+    ).toBe(true);
+
+    const httpTransport = new ControlledTransport();
+    const httpServer = serverFor(httpTransport, new Request("http://127.0.0.1/mcp"));
+    await eventually(() => expect(httpTransport.onmessage).toBeTypeOf("function"));
+    await httpServer.close();
+    await metricProvider.forceFlush();
+
+    expect(sessionObservationCount()).toBe(before + 1);
+  });
+
+  test("does not fail a gracefully closed session after a nonfatal transport error event", async () => {
+    await metricProvider.forceFlush();
+    const beforeTotal = sessionObservationCount();
+    const beforeErrors = sessionErrorObservationCount("transport_error");
+    const transport = new ControlledTransport();
+    const server = serverFor(transport, undefined, "modern");
+    await eventually(() => expect(transport.onerror).toBeTypeOf("function"));
+
+    transport.triggerError(new Error("reported but recoverable"));
+    await server.close();
+    await metricProvider.forceFlush();
+
+    expect(sessionObservationCount()).toBe(beforeTotal + 1);
+    expect(sessionErrorObservationCount("transport_error")).toBe(beforeErrors);
+  });
+
+  test("marks a session failed when terminal transport close rejects", async () => {
+    await metricProvider.forceFlush();
+    const beforeErrors = sessionErrorObservationCount("transport_error");
+    const transport = new ControlledTransport();
+    transport.closeOperation = async () => {
+      throw new Error("close failed");
+    };
+    const server = serverFor(transport, undefined, "modern");
+    await eventually(() => expect(transport.onmessage).toBeTypeOf("function"));
+
+    await expect(server.close()).rejects.toThrow("close failed");
+    await metricProvider.forceFlush();
+
+    expect(sessionErrorObservationCount("transport_error")).toBe(beforeErrors + 1);
+  });
+
   test("records caller faults without marking the server span as failed", async () => {
     const transport = new ControlledTransport();
     const server = serverFor(transport);
@@ -245,5 +374,31 @@ describe("MCP operation lifecycle", () => {
     expect(span?.status.code).toBe(SpanStatusCode.ERROR);
     expect(span?.attributes["error.type"]).toBe("transport_error");
     await server.close();
+  });
+});
+
+describe("upstream request lifecycle", () => {
+  test.each([
+    ["fetch_context", "timeout", new DOMException("timed out", "TimeoutError")],
+    ["search_libraries", "cancelled", new DOMException("cancelled", "AbortError")],
+  ] as const)("records body-phase %s failures as %s", async (operation, outcome, reason) => {
+    await metricProvider.forceFlush();
+    const before = upstreamObservationCount(operation, outcome);
+    const abortController = new AbortController();
+
+    await expect(
+      observeUpstreamRequest(
+        operation,
+        async () => new Response("partial body"),
+        async () => {
+          abortController.abort(reason);
+          throw new DOMException("body aborted", "AbortError");
+        },
+        { abortSignal: abortController.signal }
+      )
+    ).rejects.toThrow("body aborted");
+    await metricProvider.forceFlush();
+
+    expect(upstreamObservationCount(operation, outcome)).toBe(before + 1);
   });
 });

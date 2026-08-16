@@ -24,6 +24,7 @@ import {
   normalizeMcpMethodName,
   normalizeMcpToolName,
 } from "../src/lib/mcp-telemetry.js";
+import { classifyUpstreamError } from "../src/lib/telemetry.js";
 
 const spanExporter = new InMemorySpanExporter();
 const tracerProvider = new BasicTracerProvider({
@@ -89,6 +90,43 @@ describe("MCP telemetry cardinality", () => {
       tracestate: "vendor=value",
       baggage: "tenant=example",
     });
+  });
+});
+
+describe("upstream failure classification", () => {
+  test("distinguishes timeout, cancellation, and other network failures", () => {
+    expect(classifyUpstreamError(new DOMException("timed out", "TimeoutError"))).toBe("timeout");
+    expect(classifyUpstreamError(new DOMException("cancelled", "AbortError"))).toBe("cancelled");
+    expect(classifyUpstreamError(new TypeError("connection refused"))).toBe("network_error");
+  });
+
+  test("finds Undici timeout codes in nested fetch causes", () => {
+    const cause = Object.assign(new Error("connect timed out"), {
+      code: "UND_ERR_CONNECT_TIMEOUT",
+    });
+    const failure = Object.assign(new TypeError("fetch failed"), { cause });
+    expect(classifyUpstreamError(failure)).toBe("timeout");
+  });
+
+  test("uses abort reasons during response-body consumption", () => {
+    const timeout = new AbortController();
+    timeout.abort(new DOMException("body timed out", "TimeoutError"));
+    expect(
+      classifyUpstreamError(
+        new DOMException("body aborted", "AbortError"),
+        timeout.signal,
+        "response_error"
+      )
+    ).toBe("timeout");
+
+    const cancellation = new AbortController();
+    cancellation.abort();
+    expect(
+      classifyUpstreamError(new Error("body stopped"), cancellation.signal, "response_error")
+    ).toBe("cancelled");
+    expect(
+      classifyUpstreamError(new SyntaxError("invalid JSON"), undefined, "response_error")
+    ).toBe("response_error");
   });
 });
 

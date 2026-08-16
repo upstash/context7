@@ -1,5 +1,6 @@
 import { metrics, type Attributes } from "@opentelemetry/api";
 import { PrometheusExporter } from "@opentelemetry/exporter-prometheus";
+import { RuntimeNodeInstrumentation } from "@opentelemetry/instrumentation-runtime-node";
 import { defaultResource, resourceFromAttributes } from "@opentelemetry/resources";
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import { markCurrentMcpOperationError } from "./mcp-telemetry.js";
@@ -7,16 +8,33 @@ import { markCurrentMcpOperationError } from "./mcp-telemetry.js";
 const METER_NAME = "io.github.upstash.context7.mcp";
 const DEFAULT_PROMETHEUS_HOST = "0.0.0.0";
 const DEFAULT_PROMETHEUS_PORT = 9464;
+const SHUTDOWN_METRIC_FLUSH_TIMEOUT_MS = 4_000;
 const DURATION_BUCKETS_SECONDS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60];
 
 export type McpTool = "query-docs" | "resolve-library-id";
 export type UpstreamOperation = "fetch_context" | "oauth_metadata" | "search_libraries";
-export type AuthenticationOutcome = "accepted" | "invalid" | "missing";
-export type ToolCallOutcome = "error" | "success";
+export type AuthenticationOutcome = "accepted" | "error" | "invalid" | "missing";
+export type ToolCallOutcome = "error" | "not_found" | "success";
+export type UpstreamOutcome =
+  | "cancelled"
+  | "http_error"
+  | "network_error"
+  | "response_error"
+  | "success"
+  | "timeout";
+
+export interface ObservedAuthentication<T> {
+  outcome: AuthenticationOutcome;
+  value: T;
+}
 
 export interface ObservedToolCall<T> {
   outcome: ToolCallOutcome;
   value: T;
+}
+
+export interface UpstreamObservationOptions {
+  abortSignal?: AbortSignal;
 }
 
 function createInstruments() {
@@ -52,10 +70,20 @@ function createInstruments() {
       description: "Number of authentication attempts on the OAuth-protected MCP endpoint",
       unit: "{attempt}",
     }),
+    authenticationDuration: meter.createHistogram("context7.mcp.authentication.duration", {
+      description: "Duration of authentication on the OAuth-protected MCP endpoint",
+      unit: "s",
+      advice: { explicitBucketBoundaries: DURATION_BUCKETS_SECONDS },
+    }),
+    activeAuthentications: meter.createUpDownCounter("context7.mcp.authentication.active", {
+      description: "Number of OAuth-protected MCP requests currently authenticating",
+      unit: "{request}",
+    }),
   };
 }
 
 let instruments: ReturnType<typeof createInstruments> | undefined;
+let embeddedRuntimeInstrumentation: RuntimeNodeInstrumentation | undefined;
 
 function getInstruments(): ReturnType<typeof createInstruments> {
   instruments ??= createInstruments();
@@ -71,6 +99,63 @@ function statusClass(statusCode: number): string {
     return `${Math.floor(statusCode / 100)}xx`;
   }
   return "unknown";
+}
+
+export function classifyUpstreamError(
+  error: unknown,
+  abortSignal?: AbortSignal,
+  fallback: "network_error" | "response_error" = "network_error"
+): "cancelled" | "network_error" | "response_error" | "timeout" {
+  const values: unknown[] = [error];
+  if (abortSignal?.aborted) values.push(abortSignal.reason);
+
+  const chain: Array<{ code?: unknown; name?: unknown }> = [];
+  const seen = new Set<unknown>();
+  for (let value of values) {
+    for (let depth = 0; value && typeof value === "object" && depth < 8; depth += 1) {
+      if (seen.has(value)) break;
+      seen.add(value);
+      chain.push(value as { code?: unknown; name?: unknown });
+      value = (value as { cause?: unknown }).cause;
+    }
+  }
+
+  const names = chain.map((value) => value.name).filter((value) => typeof value === "string");
+  const codes = chain.map((value) => value.code).filter((value) => typeof value === "string");
+  if (
+    names.includes("TimeoutError") ||
+    codes.some((code) =>
+      [
+        "ETIMEDOUT",
+        "UND_ERR_BODY_TIMEOUT",
+        "UND_ERR_CONNECT_TIMEOUT",
+        "UND_ERR_HEADERS_TIMEOUT",
+      ].includes(code)
+    )
+  ) {
+    return "timeout";
+  }
+  if (names.includes("AbortError") || codes.includes("ABORT_ERR") || abortSignal?.aborted) {
+    return "cancelled";
+  }
+  if (
+    codes.some(
+      (code) =>
+        code.startsWith("UND_ERR_") ||
+        [
+          "EAI_AGAIN",
+          "ECONNREFUSED",
+          "ECONNRESET",
+          "EHOSTUNREACH",
+          "ENETUNREACH",
+          "ENOTFOUND",
+          "EPIPE",
+        ].includes(code)
+    )
+  ) {
+    return "network_error";
+  }
+  return fallback;
 }
 
 export async function observeToolCall<T>(
@@ -99,40 +184,84 @@ export async function observeToolCall<T>(
 export async function observeUpstreamRequest<T>(
   operationName: UpstreamOperation,
   request: () => Promise<Response>,
-  consumeResponse: (response: Response) => Promise<T>
+  consumeResponse: (response: Response) => Promise<T>,
+  options: UpstreamObservationOptions = {}
 ): Promise<T> {
   const { activeUpstreamRequests, upstreamRequestDuration, upstreamRequests } = getInstruments();
   const activeAttributes: Attributes = { "context7.upstream.operation": operationName };
   const startedAt = performance.now();
-  let outcome = "network_error";
+  let outcome: UpstreamOutcome = "network_error";
+  let responseStatus: number | undefined;
   let responseStatusClass = "none";
   activeUpstreamRequests.add(1, activeAttributes);
 
   try {
-    const response = await request();
+    let response: Response;
+    try {
+      response = await request();
+    } catch (error) {
+      outcome = classifyUpstreamError(error, options.abortSignal);
+      throw error;
+    }
+    responseStatus = response.status;
     responseStatusClass = statusClass(response.status);
     outcome = response.ok ? "success" : "http_error";
     try {
       return await consumeResponse(response);
     } catch (error) {
-      outcome = "response_error";
+      outcome = classifyUpstreamError(error, options.abortSignal, "response_error");
       throw error;
     }
   } finally {
-    const attributes = {
+    const attributes: Attributes = {
       ...activeAttributes,
       "http.response.status_code_class": responseStatusClass,
       "context7.upstream.outcome": outcome,
     };
+    if (responseStatus !== undefined) {
+      attributes["http.response.status_code"] = responseStatus;
+    }
     activeUpstreamRequests.add(-1, activeAttributes);
     upstreamRequests.add(1, attributes);
     upstreamRequestDuration.record(elapsedSeconds(startedAt), attributes);
   }
 }
 
-export function recordAuthentication(outcome: AuthenticationOutcome): void {
-  const { authenticationAttempts } = getInstruments();
-  authenticationAttempts.add(1, { "context7.authentication.outcome": outcome });
+export async function forceFlushMetrics(): Promise<void> {
+  const provider = metrics.getMeterProvider() as {
+    forceFlush?: (options?: { timeoutMillis?: number }) => Promise<void>;
+  };
+  if (!provider.forceFlush) return;
+
+  try {
+    await provider.forceFlush.call(provider, {
+      timeoutMillis: SHUTDOWN_METRIC_FLUSH_TIMEOUT_MS,
+    });
+  } catch (error) {
+    console.error("OpenTelemetry metrics failed to flush during shutdown:", error);
+  }
+}
+
+export async function observeAuthentication<T>(
+  operation: () => Promise<ObservedAuthentication<T>>
+): Promise<T> {
+  const { activeAuthentications, authenticationAttempts, authenticationDuration } =
+    getInstruments();
+  const activeAttributes: Attributes = { "context7.mcp.route": "oauth" };
+  const startedAt = performance.now();
+  let outcome: AuthenticationOutcome = "error";
+  activeAuthentications.add(1, activeAttributes);
+
+  try {
+    const observed = await operation();
+    outcome = observed.outcome;
+    return observed.value;
+  } finally {
+    const attributes = { "context7.authentication.outcome": outcome };
+    activeAuthentications.add(-1, activeAttributes);
+    authenticationAttempts.add(1, attributes);
+    authenticationDuration.record(elapsedSeconds(startedAt), attributes);
+  }
 }
 
 function prometheusIsEnabled(environment: NodeJS.ProcessEnv): boolean {
@@ -197,6 +326,20 @@ export async function startPrometheusMetrics(
     }
 
     await exporter.startServer();
+    try {
+      // Keep the native 10 ms precision. The same setting controls the
+      // monitorEventLoopDelay resolution, so increasing it to the scrape
+      // interval would make healthy delay percentiles appear artificially high.
+      embeddedRuntimeInstrumentation = new RuntimeNodeInstrumentation();
+      embeddedRuntimeInstrumentation.setMeterProvider(provider);
+      embeddedRuntimeInstrumentation.enable();
+    } catch (error) {
+      // Application metrics remain useful if a particular Node runtime cannot
+      // provide one of the optional process-level collectors.
+      embeddedRuntimeInstrumentation?.disable();
+      embeddedRuntimeInstrumentation = undefined;
+      console.error("OpenTelemetry Node runtime metrics failed to start:", error);
+    }
     console.error(`OpenTelemetry metrics available at http://${host}:${port}/metrics`);
     return provider;
   } catch (error) {

@@ -19,6 +19,8 @@ const PKG_ROOT = path.resolve(fileURLToPath(new URL(".", import.meta.url)), ".."
 const DIST = path.join(PKG_ROOT, "dist", "index.js");
 const BASE_PORT = 43117;
 const STUB_DOCS = "stub docs text";
+const EMPTY_CONTEXT_QUERY = "force-empty-context";
+const NO_RESULTS_QUERY = "force-no-results";
 const UPSTREAM_ERROR_QUERY = "force-upstream-error";
 const INVALID_JSON_QUERY = "force-invalid-json";
 
@@ -68,6 +70,10 @@ function startStubApi(): Promise<string> {
         res.end("not-json");
         return;
       }
+      if (url.searchParams.get("query") === NO_RESULTS_QUERY) {
+        res.end(JSON.stringify({ results: [] }));
+        return;
+      }
       res.end(
         JSON.stringify({
           results: [
@@ -92,7 +98,7 @@ function startStubApi(): Promise<string> {
         return;
       }
       res.setHeader("Content-Type", "text/plain");
-      res.end(STUB_DOCS);
+      res.end(url.searchParams.get("query") === EMPTY_CONTEXT_QUERY ? "" : STUB_DOCS);
     } else {
       res.statusCode = 404;
       res.end();
@@ -309,6 +315,14 @@ describe("OpenTelemetry metrics", () => {
         name: "resolve-library-id",
         arguments: { libraryName: "Next.js", query: INVALID_JSON_QUERY },
       });
+      await client.callTool({
+        name: "resolve-library-id",
+        arguments: { libraryName: "does-not-exist", query: NO_RESULTS_QUERY },
+      });
+      await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/missing/library", query: EMPTY_CONTEXT_QUERY },
+      });
     } finally {
       await client.close();
     }
@@ -322,9 +336,21 @@ describe("OpenTelemetry metrics", () => {
     });
     expect(unauthorizedResponse.status).toBe(401);
 
-    const response = await fetch(metricsUrl);
-    expect(response.status).toBe(200);
-    const exported = await response.text();
+    const acceptedResponse = await fetch(protectedUrl, {
+      method: "DELETE",
+      headers: { authorization: "Bearer ctx7sk-local-test" },
+    });
+    expect(acceptedResponse.status).toBe(405);
+    await acceptedResponse.text();
+
+    let exported = "";
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      const response = await fetch(metricsUrl);
+      expect(response.status).toBe(200);
+      exported = await response.text();
+      if (exported.includes("nodejs_eventloop_utilization")) break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
 
     const operationCounts = exported
       .split("\n")
@@ -360,16 +386,37 @@ describe("OpenTelemetry metrics", () => {
       /context7_mcp_tool_calls_total\{[^}]*mcp_tool_name="query-docs"[^}]*mcp_tool_outcome="error"[^}]*\} [1-9]/
     );
     expect(exported).toMatch(
+      /context7_mcp_tool_calls_total\{[^}]*mcp_tool_outcome="not_found"[^}]*\} [1-9]/
+    );
+    expect(exported).toMatch(
       /context7_mcp_upstream_requests_total\{[^}]*context7_upstream_operation="fetch_context"[^}]*http_response_status_code_class="5xx"[^}]*context7_upstream_outcome="http_error"[^}]*\} [1-9]/
     );
     expect(exported).toMatch(
       /context7_mcp_upstream_requests_total\{[^}]*context7_upstream_operation="search_libraries"[^}]*http_response_status_code_class="2xx"[^}]*context7_upstream_outcome="response_error"[^}]*\} [1-9]/
     );
+    expect(
+      exported
+        .split("\n")
+        .some(
+          (line) =>
+            line.startsWith("context7_mcp_upstream_requests_total{") &&
+            line.includes('context7_upstream_operation="fetch_context"') &&
+            line.includes('http_response_status_code="503"')
+        )
+    ).toBe(true);
     expect(exported).toMatch(
       /context7_mcp_authentication_attempts_total\{[^}]*context7_authentication_outcome="missing"[^}]*\} 1/
     );
+    expect(exported).toMatch(
+      /context7_mcp_authentication_attempts_total\{[^}]*context7_authentication_outcome="accepted"[^}]*\} 1/
+    );
+    expect(exported).toContain("context7_mcp_authentication_duration_count");
+    expect(exported).toContain("context7_mcp_authentication_active");
     expect(exported).toContain("mcp_server_operation_duration_bucket");
     expect(exported).toMatch(/target_info\{[^}]*service_name="context7-mcp"/);
+    expect(exported).toContain("v8js_memory_heap_used");
+    expect(exported).toContain("nodejs_eventloop_utilization");
+    expect(exported).not.toContain("mcp_server_session_duration");
 
     expect(exported).not.toMatch(/(?:\{|,)(?:api_key|client_ip|library_id|query|session_id)="/i);
 

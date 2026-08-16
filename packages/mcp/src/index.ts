@@ -29,15 +29,18 @@ import {
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { getClientIp } from "./lib/client-ip.js";
 import {
+  forceFlushMetrics,
   observeToolCall,
   observeUpstreamRequest,
-  recordAuthentication,
+  observeAuthentication,
   startPrometheusMetrics,
 } from "./lib/telemetry.js";
 import { InstrumentedMcpServer } from "./lib/mcp-telemetry.js";
+import { installStdioShutdown } from "./lib/stdio-shutdown.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
+const OAUTH_METADATA_TIMEOUT_MS = 10_000;
 
 // Parse CLI arguments using commander
 const program = new Command()
@@ -89,6 +92,8 @@ const CLI_PORT = (() => {
 })();
 
 const requestContext = new AsyncLocalStorage<ClientContext>();
+
+type AuthenticationResult = { accepted: true } | { accepted: false; error: string };
 
 // Global state for stdio mode only
 let stdioApiKey: string | undefined;
@@ -251,7 +256,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
           const text = searchResponse.error ?? "No libraries found matching the provided name.";
           maybeElicitAuthSignIn(server, ctx);
           return {
-            outcome: searchResponse.error ? ("error" as const) : ("success" as const),
+            outcome: searchResponse.error ? ("error" as const) : ("not_found" as const),
             value: {
               content: [
                 {
@@ -318,7 +323,11 @@ Do not call this tool more than 3 times per question.`,
         const response = await fetchLibraryContext({ query, libraryId }, ctx);
         maybeElicitAuthSignIn(server, ctx);
         return {
-          outcome: response.error ? ("error" as const) : ("success" as const),
+          outcome: response.error
+            ? ("error" as const)
+            : response.notFound
+              ? ("not_found" as const)
+              : ("success" as const),
           value: {
             content: [
               {
@@ -430,35 +439,44 @@ async function main() {
         );
 
         if (requireAuth) {
-          if (!apiKey) {
-            recordAuthentication("missing");
+          const authentication = await observeAuthentication<AuthenticationResult>(async () => {
+            if (!apiKey) {
+              return {
+                outcome: "missing",
+                value: {
+                  accepted: false,
+                  error: "Authentication required. Please authenticate to use this MCP server.",
+                },
+              };
+            }
+
+            if (isJWT(apiKey)) {
+              const validationResult = await validateJWT(apiKey);
+              if (!validationResult.valid) {
+                return {
+                  outcome: "invalid",
+                  value: {
+                    accepted: false,
+                    error: validationResult.error || "Invalid token. Please re-authenticate.",
+                  },
+                };
+              }
+            }
+
+            return { outcome: "accepted", value: { accepted: true } };
+          });
+
+          if (!authentication.accepted) {
             res.status(401).json({
               jsonrpc: "2.0",
               error: {
                 code: -32001,
-                message: "Authentication required. Please authenticate to use this MCP server.",
+                message: authentication.error,
               },
               id: null,
             });
             return;
           }
-
-          if (isJWT(apiKey)) {
-            const validationResult = await validateJWT(apiKey);
-            if (!validationResult.valid) {
-              recordAuthentication("invalid");
-              res.status(401).json({
-                jsonrpc: "2.0",
-                error: {
-                  code: -32001,
-                  message: validationResult.error || "Invalid token. Please re-authenticate.",
-                },
-                id: null,
-              });
-              return;
-            }
-          }
-          recordAuthentication("accepted");
         }
 
         const context: ClientContext = {
@@ -516,13 +534,18 @@ async function main() {
         const authServerUrl = AUTH_SERVER_URL;
 
         try {
+          const abortSignal = AbortSignal.timeout(OAUTH_METADATA_TIMEOUT_MS);
           const upstream = await observeUpstreamRequest(
             "oauth_metadata",
-            () => fetch(`${authServerUrl}/.well-known/oauth-authorization-server`),
+            () =>
+              fetch(`${authServerUrl}/.well-known/oauth-authorization-server`, {
+                signal: abortSignal,
+              }),
             async (response) => {
               if (!response.ok) return { ok: false as const, status: response.status };
               return { ok: true as const, metadata: await response.json() };
-            }
+            },
+            { abortSignal }
           );
           if (!upstream.ok) {
             console.error("[OAuth] Upstream error:", upstream.status);
@@ -589,11 +612,7 @@ async function main() {
     stdioApiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
     stdioSessionId = randomUUID();
 
-    process.stdin.on("end", () => process.exit(0));
-    process.stdin.on("close", () => process.exit(0));
-    process.on("SIGHUP", () => process.exit(0));
-
-    serveStdio(
+    const stdioHandle = serveStdio(
       (mcpContext) => {
         const server = createMcpServer(mcpContext);
 
@@ -615,6 +634,10 @@ async function main() {
         onerror: (error) => console.error("MCP stdio error:", error),
       }
     );
+    installStdioShutdown(stdioHandle, {
+      flush: forceFlushMetrics,
+      onerror: (error) => console.error("Failed to close MCP stdio server:", error),
+    });
 
     console.error(`Context7 Documentation MCP Server v${SERVER_VERSION} running on stdio`);
   }

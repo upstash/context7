@@ -31,6 +31,7 @@ export type ContextRequest = {
 export type ContextResponse = {
   data: string;
   error?: true;
+  notFound?: true;
 };
 
 export interface ClientContext {

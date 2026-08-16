@@ -121,6 +121,11 @@ function getInstruments() {
       unit: "s",
       advice: { explicitBucketBoundaries: MCP_DURATION_BUCKETS_SECONDS },
     }),
+    sessionDuration: meter.createHistogram("mcp.server.session.duration", {
+      description: "Duration of a stateful MCP server session",
+      unit: "s",
+      advice: { explicitBucketBoundaries: MCP_DURATION_BUCKETS_SECONDS },
+    }),
     activeOperations: meter.createUpDownCounter("context7.mcp.operations.active", {
       description: "Number of MCP requests and notifications currently being handled",
       unit: "{operation}",
@@ -369,6 +374,12 @@ class InstrumentedTransport implements Transport {
   private closeHandler: Transport["onclose"];
   private errorHandler: Transport["onerror"];
   private protocolVersion?: string;
+  private explicitCloseInProgress = false;
+  private sendsInFlight = 0;
+  private sessionErrorType?: string;
+  private sessionFinishPending = false;
+  private sessionFinished = false;
+  private readonly sessionStartedAt = performance.now();
 
   constructor(
     private readonly transport: Transport,
@@ -407,6 +418,7 @@ class InstrumentedTransport implements Transport {
     this.transport.onclose = () => {
       this.finishAll("connection_closed");
       this.detachAbortHandler();
+      if (!this.explicitCloseInProgress) this.requestSessionFinish();
       handler?.();
     };
   }
@@ -440,16 +452,28 @@ class InstrumentedTransport implements Transport {
     this.transport.setSupportedProtocolVersions?.(versions);
   };
 
-  start(): Promise<void> {
-    return this.transport.start();
+  async start(): Promise<void> {
+    try {
+      await this.transport.start();
+    } catch (error) {
+      this.sessionErrorType ??= "transport_error";
+      this.requestSessionFinish();
+      throw error;
+    }
   }
 
   async close(): Promise<void> {
+    this.explicitCloseInProgress = true;
     try {
       await this.transport.close();
+    } catch (error) {
+      this.sessionErrorType ??= "transport_error";
+      throw error;
     } finally {
+      this.explicitCloseInProgress = false;
       this.finishAll("connection_closed");
       this.detachAbortHandler();
+      this.requestSessionFinish();
     }
   }
 
@@ -458,25 +482,31 @@ class InstrumentedTransport implements Transport {
       isJSONRPCResultResponse(message) || isJSONRPCErrorResponse(message) ? message.id : undefined;
     const operation =
       responseId !== undefined && responseId !== null ? this.inFlight.get(responseId) : undefined;
-    if (!operation) {
-      await this.transport.send(message, options);
-      return;
-    }
-
-    applyServerResponse(message, operation);
-    operation.state = "sending";
+    this.sendsInFlight += 1;
     try {
+      if (!operation) {
+        await this.transport.send(message, options);
+        return;
+      }
+
+      applyServerResponse(message, operation);
+      operation.state = "sending";
       await this.transport.send(message, options);
     } catch (error) {
-      if (!operationIsFinished(operation)) {
+      this.sessionErrorType ??= "transport_error";
+      if (operation && !operationIsFinished(operation)) {
         operation.errorType = "transport_error";
         operation.statusDescription = error instanceof Error ? error.message : undefined;
         if (error instanceof Error) operation.span.recordException(error);
       }
       throw error;
     } finally {
-      this.removeInFlight(operation);
-      finishOperation(operation);
+      if (operation) {
+        this.removeInFlight(operation);
+        finishOperation(operation);
+      }
+      this.sendsInFlight -= 1;
+      if (this.sessionFinishPending) this.requestSessionFinish();
     }
   }
 
@@ -544,6 +574,23 @@ class InstrumentedTransport implements Transport {
 
   private detachAbortHandler(): void {
     this.abortSignal?.removeEventListener("abort", this.handleAbort);
+  }
+
+  private requestSessionFinish(): void {
+    // HTTP serving is intentionally stateless: every request gets a fresh SDK
+    // transport, so treating it as an MCP session would only duplicate request
+    // duration. Stdio owns one real session for the life of the process.
+    if (this.config.route !== "stdio" || this.sessionFinished) return;
+
+    this.sessionFinishPending = true;
+    if (this.sendsInFlight > 0) return;
+
+    this.sessionFinished = true;
+    const attributes: Attributes = { "network.transport": this.config.networkTransport };
+    const protocolVersion = this.protocolVersion ?? this.config.protocolVersion;
+    if (protocolVersion) attributes["mcp.protocol.version"] = protocolVersion;
+    if (this.sessionErrorType) attributes["error.type"] = this.sessionErrorType;
+    mcpInstruments().sessionDuration.record(elapsedSeconds(this.sessionStartedAt), attributes);
   }
 
   private finishAll(errorType: string, includeSending = false): void {
