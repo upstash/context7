@@ -1490,12 +1490,21 @@ CONTEXT7_API_KEY=your_api_key_here
 }
 ```
 
-### OpenTelemetry metrics
+### OpenTelemetry observability
 
-The HTTP transport exposes OpenTelemetry metrics in Prometheus format on a dedicated internal
-listener at `0.0.0.0:9464/metrics`. The stdio transport does not open a telemetry port. Keeping
-this listener separate from the public MCP port prevents the metrics endpoint from being routed
-through a catch-all gateway rule.
+Context7 instruments individual MCP requests and notifications dispatched to an MCP server
+instance at the SDK transport boundary, including messages inside a valid batch. Requests rejected
+by the SDK's HTTP envelope and protocol-version validation before dispatch remain visible in normal
+HTTP/gateway telemetry, but are not reported as MCP operations. Dispatched operations follow the
+development-status [OpenTelemetry MCP semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/mcp.md)
+for server metrics and spans. Trace context is extracted from the `traceparent`, `tracestate`, and
+`baggage` fields in MCP `params._meta` as defined by
+[SEP-414](https://modelcontextprotocol.io/seps/414-request-meta).
+
+The HTTP transport exposes metrics in Prometheus format on a dedicated internal listener at
+`0.0.0.0:9464/metrics`. The stdio transport does not open a telemetry port. Keeping this listener
+separate from the public MCP port prevents the metrics endpoint from being routed through a
+catch-all gateway rule.
 
 The exporter uses the standard OpenTelemetry Prometheus settings:
 
@@ -1504,20 +1513,21 @@ The exporter uses the standard OpenTelemetry Prometheus settings:
 - `OTEL_METRICS_EXPORTER=none` or `OTEL_SDK_DISABLED=true` disables the embedded exporter.
 
 Exporter bind or configuration failures are logged but do not prevent the MCP endpoint from
-starting. If a Node preload has already registered a global OpenTelemetry `MeterProvider`, that
-provider takes precedence and the embedded Prometheus listener is not started; use the preload's
-configured reader/exporter in that mode.
+starting. If a Node preload has already registered global OpenTelemetry providers, they take
+precedence. The embedded Prometheus listener is not started when a global `MeterProvider` exists,
+and MCP spans are exported through the preload's `TracerProvider`. This supports an OpenTelemetry
+Node SDK or Kubernetes auto-instrumentation without creating a second provider in the application.
 
 It reports bounded-cardinality counters, histograms, and in-flight gauges for MCP methods, tool
 calls, authentication outcomes, and Context7 upstream requests. Prometheus receives these metric
 families:
 
-- `context7_mcp_requests_total` and `context7_mcp_request_duration`
+- `mcp_server_operation_duration` (its `_count` series is the MCP operation count)
+- `context7_mcp_operations_active`
 - `context7_mcp_tool_calls_total` and `context7_mcp_tool_call_duration`
 - `context7_mcp_upstream_requests_total` and `context7_mcp_upstream_request_duration`
 - `context7_mcp_authentication_attempts_total`
-- `context7_mcp_requests_active`, `context7_mcp_tool_calls_active`, and
-  `context7_mcp_upstream_requests_active`
+- `context7_mcp_tool_calls_active` and `context7_mcp_upstream_requests_active`
 
 The labels intentionally exclude API keys, client IPs, queries, library IDs, session IDs, and raw
 error text. Expose port `9464` only to your Prometheus scraper or `ServiceMonitor`, not through the

@@ -35,6 +35,17 @@ let httpChild: ChildProcess;
 let httpUrl: string;
 let metricsUrl: string;
 
+function operationCount(exported: string, method: string): number {
+  return exported
+    .split("\n")
+    .filter(
+      (line) =>
+        line.startsWith("mcp_server_operation_duration_count{") &&
+        line.includes(`mcp_method_name="${method}"`)
+    )
+    .reduce((total, line) => total + Number(line.slice(line.lastIndexOf(" ") + 1)), 0);
+}
+
 function getFreePort(): Promise<number> {
   const server = http.createServer();
   return new Promise((resolve, reject) => {
@@ -263,6 +274,26 @@ describe.each([
 });
 
 describe("OpenTelemetry metrics", () => {
+  test("counts each dispatched operation in a legacy JSON-RPC batch", async () => {
+    const before = operationCount(await (await fetch(metricsUrl)).text(), "tools/list");
+    const response = await fetch(httpUrl, {
+      method: "POST",
+      headers: {
+        accept: "application/json, text/event-stream",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify([
+        { jsonrpc: "2.0", id: 90_001, method: "tools/list", params: {} },
+        { jsonrpc: "2.0", id: 90_002, method: "tools/list", params: {} },
+      ]),
+    });
+    expect(response.status).toBe(200);
+    await response.text();
+
+    const after = operationCount(await (await fetch(metricsUrl)).text(), "tools/list");
+    expect(after - before).toBe(2);
+  });
+
   test("exports bounded MCP, tool, upstream, and authentication metrics", async () => {
     const client = await connect("http", "modern");
     try {
@@ -295,9 +326,30 @@ describe("OpenTelemetry metrics", () => {
     expect(response.status).toBe(200);
     const exported = await response.text();
 
-    expect(exported).toMatch(
-      /context7_mcp_requests_total\{[^}]*mcp_method_name="tools\/call"[^}]*mcp_request_outcome="success"[^}]*\} [1-9]/
-    );
+    const operationCounts = exported
+      .split("\n")
+      .filter((line) => line.startsWith("mcp_server_operation_duration_count{"));
+    expect(
+      operationCounts.some(
+        (line) =>
+          line.includes('mcp_method_name="tools/call"') &&
+          line.includes('gen_ai_tool_name="query-docs"') &&
+          !line.includes("error_type=")
+      )
+    ).toBe(true);
+    expect(
+      operationCounts
+        .filter((line) => line.includes('mcp_method_name="tools/call"'))
+        .every((line) => !line.includes('error_type="connection_closed"'))
+    ).toBe(true);
+    expect(
+      operationCounts.some(
+        (line) =>
+          line.includes('mcp_method_name="tools/call"') &&
+          line.includes('gen_ai_tool_name="query-docs"') &&
+          line.includes('error_type="tool_error"')
+      )
+    ).toBe(true);
     expect(exported).toMatch(
       /context7_mcp_tool_calls_total\{[^}]*mcp_tool_name="query-docs"[^}]*mcp_tool_outcome="success"[^}]*\} [1-9]/
     );
@@ -316,7 +368,7 @@ describe("OpenTelemetry metrics", () => {
     expect(exported).toMatch(
       /context7_mcp_authentication_attempts_total\{[^}]*context7_authentication_outcome="missing"[^}]*\} 1/
     );
-    expect(exported).toContain("context7_mcp_request_duration_bucket");
+    expect(exported).toContain("mcp_server_operation_duration_bucket");
     expect(exported).toMatch(/target_info\{[^}]*service_name="context7-mcp"/);
 
     expect(exported).not.toMatch(/(?:\{|,)(?:api_key|client_ip|library_id|query|session_id)="/i);

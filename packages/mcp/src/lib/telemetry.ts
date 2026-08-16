@@ -2,36 +2,12 @@ import { metrics, type Attributes } from "@opentelemetry/api";
 import { PrometheusExporter } from "@opentelemetry/exporter-prometheus";
 import { defaultResource, resourceFromAttributes } from "@opentelemetry/resources";
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
+import { markCurrentMcpOperationError } from "./mcp-telemetry.js";
 
 const METER_NAME = "io.github.upstash.context7.mcp";
 const DEFAULT_PROMETHEUS_HOST = "0.0.0.0";
 const DEFAULT_PROMETHEUS_PORT = 9464;
 const DURATION_BUCKETS_SECONDS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60];
-
-const KNOWN_MCP_METHODS = new Set([
-  "initialize",
-  "notifications/cancelled",
-  "notifications/initialized",
-  "ping",
-  "prompts/list",
-  "resources/list",
-  "resources/templates/list",
-  "tools/call",
-  "tools/list",
-]);
-
-export type McpMethod =
-  | "batch"
-  | "initialize"
-  | "notifications/cancelled"
-  | "notifications/initialized"
-  | "ping"
-  | "prompts/list"
-  | "resources/list"
-  | "resources/templates/list"
-  | "tools/call"
-  | "tools/list"
-  | "unknown";
 
 export type McpTool = "query-docs" | "resolve-library-id";
 export type UpstreamOperation = "fetch_context" | "oauth_metadata" | "search_libraries";
@@ -46,19 +22,6 @@ export interface ObservedToolCall<T> {
 function createInstruments() {
   const meter = metrics.getMeter(METER_NAME);
   return {
-    mcpRequests: meter.createCounter("context7.mcp.requests", {
-      description: "Number of MCP protocol requests handled",
-      unit: "{request}",
-    }),
-    mcpRequestDuration: meter.createHistogram("context7.mcp.request.duration", {
-      description: "Duration of MCP protocol requests",
-      unit: "s",
-      advice: { explicitBucketBoundaries: DURATION_BUCKETS_SECONDS },
-    }),
-    activeMcpRequests: meter.createUpDownCounter("context7.mcp.requests.active", {
-      description: "Number of MCP protocol requests currently being handled",
-      unit: "{request}",
-    }),
     toolCalls: meter.createCounter("context7.mcp.tool.calls", {
       description: "Number of MCP tool calls handled",
       unit: "{call}",
@@ -110,58 +73,6 @@ function statusClass(statusCode: number): string {
   return "unknown";
 }
 
-function requestOutcome(statusCode: number): "client_error" | "server_error" | "success" {
-  if (statusCode >= 500) return "server_error";
-  if (statusCode >= 400) return "client_error";
-  return "success";
-}
-
-/**
- * Reads the standard SEP-2243 method header, falling back to the JSON-RPC
- * body for legacy clients. Unknown input is collapsed to a fixed label to
- * prevent attacker-controlled Prometheus cardinality.
- */
-export function getMcpMethod(header: unknown, body: unknown): McpMethod {
-  if (Array.isArray(body)) return "batch";
-
-  const headerValue = Array.isArray(header) ? header[0] : header;
-  const bodyMethod =
-    body && typeof body === "object" && "method" in body
-      ? (body as { method?: unknown }).method
-      : undefined;
-  const candidate = typeof headerValue === "string" ? headerValue : bodyMethod;
-
-  return typeof candidate === "string" && KNOWN_MCP_METHODS.has(candidate)
-    ? (candidate as McpMethod)
-    : "unknown";
-}
-
-export async function observeMcpRequest<T>(
-  route: "anonymous" | "oauth",
-  method: McpMethod,
-  statusCode: () => number,
-  operation: () => Promise<T>
-): Promise<T> {
-  const { activeMcpRequests, mcpRequestDuration, mcpRequests } = getInstruments();
-  const activeAttributes: Attributes = { "mcp.method.name": method, "mcp.route": route };
-  const startedAt = performance.now();
-  activeMcpRequests.add(1, activeAttributes);
-
-  try {
-    return await operation();
-  } finally {
-    const responseStatus = statusCode();
-    const attributes: Attributes = {
-      ...activeAttributes,
-      "http.response.status_code_class": statusClass(responseStatus),
-      "mcp.request.outcome": requestOutcome(responseStatus),
-    };
-    activeMcpRequests.add(-1, activeAttributes);
-    mcpRequests.add(1, attributes);
-    mcpRequestDuration.record(elapsedSeconds(startedAt), attributes);
-  }
-}
-
 export async function observeToolCall<T>(
   tool: McpTool,
   operation: () => Promise<ObservedToolCall<T>>
@@ -177,6 +88,7 @@ export async function observeToolCall<T>(
     outcome = observed.outcome;
     return observed.value;
   } finally {
+    if (outcome === "error") markCurrentMcpOperationError();
     const attributes = { ...activeAttributes, "mcp.tool.outcome": outcome };
     activeToolCalls.add(-1, activeAttributes);
     toolCalls.add(1, attributes);

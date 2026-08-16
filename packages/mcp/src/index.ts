@@ -2,7 +2,11 @@
 
 import { toNodeHandler } from "@modelcontextprotocol/node";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
-import { McpServer, createMcpHandler, type ServerContext } from "@modelcontextprotocol/server";
+import {
+  createMcpHandler,
+  type McpRequestContext,
+  type ServerContext,
+} from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
 import type { ClientContext } from "./lib/types.js";
@@ -25,13 +29,12 @@ import {
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { getClientIp } from "./lib/client-ip.js";
 import {
-  getMcpMethod,
-  observeMcpRequest,
   observeToolCall,
   observeUpstreamRequest,
   recordAuthentication,
   startPrometheusMetrics,
 } from "./lib/telemetry.js";
+import { InstrumentedMcpServer } from "./lib/mcp-telemetry.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -152,8 +155,8 @@ function aliasArgs(aliases: AliasMap) {
   };
 }
 
-function createMcpServer() {
-  const server = new McpServer(
+function createMcpServer(mcpContext: McpRequestContext) {
+  const server = new InstrumentedMcpServer(
     {
       name: "Context7",
       version: SERVER_VERSION,
@@ -176,7 +179,8 @@ function createMcpServer() {
       instructions: `Use this server to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
 
 Do not use for: refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.`,
-    }
+    },
+    mcpContext
   );
 
   server.registerTool(
@@ -396,7 +400,7 @@ async function main() {
     // then never closes the stream, and with heartbeats it survived until the
     // gateway's 1200s hard cap (the 2026-08-11 outage). Silent hangs instead
     // go idle and the gateway reaps them at streamIdleTimeout (300s).
-    const mcpHandler = createMcpHandler(() => createMcpServer(), {
+    const mcpHandler = createMcpHandler((mcpContext) => createMcpServer(mcpContext), {
       keepAliveMs: 0,
       onerror: (error) => console.error("MCP handler error:", error),
     });
@@ -479,29 +483,14 @@ async function main() {
       }
     };
 
-    const handleObservedMcpRequest = async (
-      req: express.Request,
-      res: express.Response,
-      requireAuth: boolean
-    ) => {
-      const route = requireAuth ? "oauth" : "anonymous";
-      const method = getMcpMethod(req.headers["mcp-method"], req.body);
-      await observeMcpRequest(
-        route,
-        method,
-        () => res.statusCode,
-        () => handleMcpRequest(req, res, requireAuth)
-      );
-    };
-
     // Anonymous access endpoint - no authentication required
     app.all("/mcp", async (req, res) => {
-      await handleObservedMcpRequest(req, res, false);
+      await handleMcpRequest(req, res, false);
     });
 
     // OAuth-protected endpoint - requires authentication
     app.all("/mcp/oauth", async (req, res) => {
-      await handleObservedMcpRequest(req, res, true);
+      await handleMcpRequest(req, res, true);
     });
     app.get("/ping", (_req: express.Request, res: express.Response) => {
       res.json({ status: "ok", message: "pong" });
@@ -605,8 +594,8 @@ async function main() {
     process.on("SIGHUP", () => process.exit(0));
 
     serveStdio(
-      () => {
-        const server = createMcpServer();
+      (mcpContext) => {
+        const server = createMcpServer(mcpContext);
 
         // Capture client info from MCP initialize handshake (stdio only — HTTP
         // mode plumbs client info through requestContext per request).

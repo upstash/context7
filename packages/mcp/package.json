@@ -60,6 +60,9 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "2.0.0",
+    "@opentelemetry/context-async-hooks": "^2.10.0",
+    "@opentelemetry/core": "^2.10.0",
+    "@opentelemetry/sdk-trace-base": "^2.10.0",
     "@types/node": "^25.0.3",
     "typescript": "^5.8.2",
     "vitest": "^4.1.9"
