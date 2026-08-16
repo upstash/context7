@@ -1,4 +1,3 @@
-import { AsyncLocalStorage } from "node:async_hooks";
 import {
   BAGGAGE_META_KEY,
   McpServer,
@@ -34,6 +33,8 @@ import {
   type Link,
   type Span,
 } from "@opentelemetry/api";
+import { MCP_TOOL_NAMES, type ToolCallOutcome } from "./tool-names.js";
+import { runInMcpOperationScope } from "./mcp-operation-scope.js";
 
 const INSTRUMENTATION_NAME = "io.github.upstash.context7.mcp";
 const MCP_DURATION_BUCKETS_SECONDS = [
@@ -75,8 +76,13 @@ const KNOWN_MCP_METHODS = new Set([
   "tools/call",
   "tools/list",
 ]);
-const KNOWN_TOOLS = new Set(["query-docs", "resolve-library-id"]);
-const KNOWN_PROTOCOL_VERSIONS = new Set(SUPPORTED_PROTOCOL_VERSIONS);
+const KNOWN_TOOLS: ReadonlySet<string> = new Set(MCP_TOOL_NAMES);
+export const MODERN_MCP_PROTOCOL_VERSION = "2026-07-28";
+const KNOWN_PROTOCOL_VERSIONS = new Set([
+  ...SUPPORTED_PROTOCOL_VERSIONS,
+  MODERN_MCP_PROTOCOL_VERSION,
+]);
+const EMPTY_TRACE_CARRIER: Record<string, string> = Object.freeze({});
 
 type McpRoute = "anonymous" | "oauth" | "stdio";
 type NetworkTransport = "pipe" | "tcp";
@@ -101,6 +107,7 @@ interface McpOperation {
   state: McpOperationState;
   statusDescription?: string;
   startedAt: number;
+  toolOutcome?: ToolCallOutcome;
 }
 
 interface ServerResponseClassification {
@@ -109,7 +116,6 @@ interface ServerResponseClassification {
   statusDescription?: string;
 }
 
-const operationStorage = new AsyncLocalStorage<McpOperation>();
 const CALLER_FAULT_CODES = new Set([-32700, -32600, -32601, -32602, -32002]);
 
 function getInstruments() {
@@ -177,10 +183,10 @@ function messageProtocolVersion(message: JSONRPCMessage): string | undefined {
 }
 
 export function mcpTraceCarrier(message: JSONRPCMessage): Record<string, string> {
-  if (!isJSONRPCRequest(message) && !isJSONRPCNotification(message)) return {};
+  if (!isJSONRPCRequest(message) && !isJSONRPCNotification(message)) return EMPTY_TRACE_CARRIER;
 
   const metadata = asRecord(asRecord(message.params)?._meta);
-  if (!metadata) return {};
+  if (!metadata) return EMPTY_TRACE_CARRIER;
 
   const carrier: Record<string, string> = {};
   for (const key of [TRACEPARENT_META_KEY, TRACESTATE_META_KEY, BAGGAGE_META_KEY]) {
@@ -210,13 +216,15 @@ function requestIdAttribute(requestId: RequestId): string | undefined {
 
 function startOperation(
   message: JSONRPCMessage,
-  config: McpObservationConfig
+  config: McpObservationConfig,
+  transportProtocolVersion?: string
 ): McpOperation | undefined {
   if (!isJSONRPCRequest(message) && !isJSONRPCNotification(message)) return undefined;
 
   const method = normalizeMcpMethodName(message.method);
   const tool = normalizedTool(message);
-  const protocolVersion = messageProtocolVersion(message) ?? config.protocolVersion;
+  const protocolVersion =
+    messageProtocolVersion(message) ?? transportProtocolVersion ?? config.protocolVersion;
   const activeAttributes: Attributes = {
     "context7.mcp.route": config.route,
     "mcp.method.name": method,
@@ -234,22 +242,20 @@ function startOperation(
   }
 
   const requestId = isJSONRPCRequest(message) ? message.id : undefined;
-  const spanAttributes: Attributes = { ...attributes };
-  if (requestId !== undefined) {
-    const requestIdValue = requestIdAttribute(requestId);
-    if (requestIdValue) spanAttributes["jsonrpc.request.id"] = requestIdValue;
-  }
-
   const parentContext = propagation.extract(ROOT_CONTEXT, mcpTraceCarrier(message));
   const span = trace.getTracer(INSTRUMENTATION_NAME).startSpan(
     tool ? `${method} ${tool}` : method,
     {
-      attributes: spanAttributes,
+      attributes,
       kind: SpanKind.SERVER,
       links: ambientLink(parentContext),
     },
     parentContext
   );
+  if (requestId !== undefined) {
+    const requestIdValue = requestIdAttribute(requestId);
+    if (requestIdValue) span.setAttribute("jsonrpc.request.id", requestIdValue);
+  }
   const operation = {
     activeAttributes,
     attributes,
@@ -268,8 +274,15 @@ function finishOperation(operation: McpOperation): void {
   if (operation.state === "finished") return;
   operation.state = "finished";
 
-  const attributes = { ...operation.attributes };
+  const attributes: Attributes =
+    operation.errorType || operation.toolOutcome
+      ? { ...operation.attributes }
+      : operation.attributes;
   if (operation.errorType) attributes["error.type"] = operation.errorType;
+  if (operation.toolOutcome) {
+    attributes["context7.mcp.tool.outcome"] = operation.toolOutcome;
+    operation.span.setAttribute("context7.mcp.tool.outcome", operation.toolOutcome);
+  }
 
   const { activeOperations, operationDuration } = mcpInstruments();
   activeOperations.add(-1, operation.activeAttributes);
@@ -289,7 +302,7 @@ function operationIsFinished(operation: McpOperation): boolean {
 }
 
 function runOperation(operation: McpOperation, handler: () => void): void {
-  operationStorage.run(operation, () => context.with(operation.context, handler));
+  runInMcpOperationScope(operation, () => context.with(operation.context, handler));
 }
 
 export function classifyServerResponse(
@@ -325,6 +338,9 @@ function applyServerResponse(message: JSONRPCMessage, operation: McpOperation): 
   if (isJSONRPCErrorResponse(message) || classification.errorType) {
     operation.errorType = classification.errorType;
   }
+  if (classification.errorType && operation.attributes["mcp.method.name"] === "tools/call") {
+    operation.toolOutcome = "error";
+  }
   operation.statusDescription = classification.statusDescription;
   if (classification.rpcStatusCode) {
     operation.attributes["rpc.response.status_code"] = classification.rpcStatusCode;
@@ -352,7 +368,7 @@ function configFromRequestContext(requestContext: McpRequestContext): McpObserva
     return {
       route: "stdio",
       networkTransport: "pipe",
-      protocolVersion: requestContext.era === "modern" ? "2026-07-28" : undefined,
+      protocolVersion: requestContext.era === "modern" ? MODERN_MCP_PROTOCOL_VERSION : undefined,
     };
   }
 
@@ -363,7 +379,7 @@ function configFromRequestContext(requestContext: McpRequestContext): McpObserva
     networkTransport: "tcp",
     protocolVersion:
       normalizedProtocolVersion(request.headers.get("mcp-protocol-version")) ??
-      (requestContext.era === "modern" ? "2026-07-28" : undefined),
+      (requestContext.era === "modern" ? MODERN_MCP_PROTOCOL_VERSION : undefined),
   };
 }
 
@@ -374,12 +390,6 @@ class InstrumentedTransport implements Transport {
   private closeHandler: Transport["onclose"];
   private errorHandler: Transport["onerror"];
   private protocolVersion?: string;
-  private explicitCloseInProgress = false;
-  private sendsInFlight = 0;
-  private sessionErrorType?: string;
-  private sessionFinishPending = false;
-  private sessionFinished = false;
-  private readonly sessionStartedAt = performance.now();
 
   constructor(
     private readonly transport: Transport,
@@ -418,7 +428,6 @@ class InstrumentedTransport implements Transport {
     this.transport.onclose = () => {
       this.finishAll("connection_closed");
       this.detachAbortHandler();
-      if (!this.explicitCloseInProgress) this.requestSessionFinish();
       handler?.();
     };
   }
@@ -453,27 +462,15 @@ class InstrumentedTransport implements Transport {
   };
 
   async start(): Promise<void> {
-    try {
-      await this.transport.start();
-    } catch (error) {
-      this.sessionErrorType ??= "transport_error";
-      this.requestSessionFinish();
-      throw error;
-    }
+    await this.transport.start();
   }
 
   async close(): Promise<void> {
-    this.explicitCloseInProgress = true;
     try {
       await this.transport.close();
-    } catch (error) {
-      this.sessionErrorType ??= "transport_error";
-      throw error;
     } finally {
-      this.explicitCloseInProgress = false;
       this.finishAll("connection_closed");
       this.detachAbortHandler();
-      this.requestSessionFinish();
     }
   }
 
@@ -482,7 +479,6 @@ class InstrumentedTransport implements Transport {
       isJSONRPCResultResponse(message) || isJSONRPCErrorResponse(message) ? message.id : undefined;
     const operation =
       responseId !== undefined && responseId !== null ? this.inFlight.get(responseId) : undefined;
-    this.sendsInFlight += 1;
     try {
       if (!operation) {
         await this.transport.send(message, options);
@@ -493,7 +489,6 @@ class InstrumentedTransport implements Transport {
       operation.state = "sending";
       await this.transport.send(message, options);
     } catch (error) {
-      this.sessionErrorType ??= "transport_error";
       if (operation && !operationIsFinished(operation)) {
         operation.errorType = "transport_error";
         operation.statusDescription = error instanceof Error ? error.message : undefined;
@@ -505,8 +500,6 @@ class InstrumentedTransport implements Transport {
         this.removeInFlight(operation);
         finishOperation(operation);
       }
-      this.sendsInFlight -= 1;
-      if (this.sessionFinishPending) this.requestSessionFinish();
     }
   }
 
@@ -515,10 +508,7 @@ class InstrumentedTransport implements Transport {
     extra: MessageExtraInfo | undefined,
     handler: NonNullable<Transport["onmessage"]>
   ): void {
-    const operation = startOperation(message, {
-      ...this.config,
-      protocolVersion: this.protocolVersion ?? this.config.protocolVersion,
-    });
+    const operation = startOperation(message, this.config, this.protocolVersion);
     if (!operation) {
       handler(message, extra);
       return;
@@ -576,23 +566,6 @@ class InstrumentedTransport implements Transport {
     this.abortSignal?.removeEventListener("abort", this.handleAbort);
   }
 
-  private requestSessionFinish(): void {
-    // HTTP serving is intentionally stateless: every request gets a fresh SDK
-    // transport, so treating it as an MCP session would only duplicate request
-    // duration. Stdio owns one real session for the life of the process.
-    if (this.config.route !== "stdio" || this.sessionFinished) return;
-
-    this.sessionFinishPending = true;
-    if (this.sendsInFlight > 0) return;
-
-    this.sessionFinished = true;
-    const attributes: Attributes = { "network.transport": this.config.networkTransport };
-    const protocolVersion = this.protocolVersion ?? this.config.protocolVersion;
-    if (protocolVersion) attributes["mcp.protocol.version"] = protocolVersion;
-    if (this.sessionErrorType) attributes["error.type"] = this.sessionErrorType;
-    mcpInstruments().sessionDuration.record(elapsedSeconds(this.sessionStartedAt), attributes);
-  }
-
   private finishAll(errorType: string, includeSending = false): void {
     for (const [requestId, operation] of this.inFlight) {
       // A normal per-request HTTP transport closes its stream from inside send().
@@ -603,6 +576,146 @@ class InstrumentedTransport implements Transport {
       this.inFlight.delete(requestId);
     }
   }
+}
+
+/**
+ * Owns session telemetry at the one process-level stdio wire. The SDK may
+ * create multiple products while probing protocol eras, but they all share
+ * this transport, which also receives the actually negotiated version.
+ */
+class InstrumentedStdioTransport implements Transport {
+  private closeHandler: Transport["onclose"];
+  private closePromise: Promise<void> | undefined;
+  private closeRequested = false;
+  private errorType?: string;
+  private errorHandler: Transport["onerror"];
+  private finished = false;
+  private messageHandler: Transport["onmessage"];
+  private pendingTerminalError = false;
+  private protocolVersion?: string;
+  private readonly startedAt = performance.now();
+
+  constructor(private readonly transport: Transport) {
+    this.onclose = transport.onclose;
+    this.onerror = transport.onerror;
+    this.onmessage = transport.onmessage;
+  }
+
+  get hasPerRequestStream(): boolean | undefined {
+    return this.transport.hasPerRequestStream;
+  }
+
+  get sessionId(): string | undefined {
+    return this.transport.sessionId;
+  }
+
+  set sessionId(value: string | undefined) {
+    this.transport.sessionId = value;
+  }
+
+  get onclose(): Transport["onclose"] {
+    return this.closeHandler;
+  }
+
+  set onclose(handler: Transport["onclose"]) {
+    this.closeHandler = handler;
+    this.transport.onclose = () => {
+      if (!this.closeRequested) {
+        this.finish(this.pendingTerminalError ? "transport_error" : undefined);
+      }
+      handler?.();
+    };
+  }
+
+  get onerror(): Transport["onerror"] {
+    return this.errorHandler;
+  }
+
+  set onerror(handler: Transport["onerror"]) {
+    this.errorHandler = handler;
+    this.transport.onerror = (error) => {
+      this.pendingTerminalError = true;
+      queueMicrotask(() => {
+        this.pendingTerminalError = false;
+      });
+      handler?.(error);
+    };
+  }
+
+  get onmessage(): Transport["onmessage"] {
+    return this.messageHandler;
+  }
+
+  set onmessage(handler: Transport["onmessage"]) {
+    this.messageHandler = handler;
+    this.transport.onmessage = handler
+      ? (message, extra) => {
+          this.protocolVersion = messageProtocolVersion(message) ?? this.protocolVersion;
+          handler(message, extra);
+        }
+      : undefined;
+  }
+
+  setProtocolVersion = (version: string): void => {
+    this.protocolVersion = normalizedProtocolVersion(version);
+    this.transport.setProtocolVersion?.(version);
+  };
+
+  setSupportedProtocolVersions = (versions: string[]): void => {
+    this.transport.setSupportedProtocolVersions?.(versions);
+  };
+
+  async start(): Promise<void> {
+    try {
+      await this.transport.start();
+    } catch (error) {
+      this.errorType = "transport_error";
+      this.finish("transport_error");
+      throw error;
+    }
+  }
+
+  close(): Promise<void> {
+    if (!this.closePromise) {
+      this.closeRequested = true;
+      this.closePromise = this.closeTransport();
+    }
+    return this.closePromise;
+  }
+
+  async send(message: JSONRPCMessage, options?: TransportSendOptions): Promise<void> {
+    try {
+      await this.transport.send(message, options);
+    } catch (error) {
+      this.errorType ??= "transport_error";
+      throw error;
+    }
+  }
+
+  private async closeTransport(): Promise<void> {
+    try {
+      await this.transport.close();
+      this.finish();
+    } catch (error) {
+      this.errorType = "transport_error";
+      this.finish("transport_error");
+      throw error;
+    }
+  }
+
+  private finish(errorType = this.errorType): void {
+    if (this.finished) return;
+    this.finished = true;
+
+    const attributes: Attributes = { "network.transport": "pipe" };
+    if (this.protocolVersion) attributes["mcp.protocol.version"] = this.protocolVersion;
+    if (errorType) attributes["error.type"] = errorType;
+    mcpInstruments().sessionDuration.record(elapsedSeconds(this.startedAt), attributes);
+  }
+}
+
+export function instrumentStdioTransport(transport: Transport): Transport {
+  return new InstrumentedStdioTransport(transport);
 }
 
 /**
@@ -625,9 +738,4 @@ export class InstrumentedMcpServer extends McpServer {
       new InstrumentedTransport(transport, configFromRequestContext(this.requestContext))
     );
   }
-}
-
-export function markCurrentMcpOperationError(errorType = "tool_error"): void {
-  const operation = operationStorage.getStore();
-  if (operation) operation.errorType = errorType;
 }

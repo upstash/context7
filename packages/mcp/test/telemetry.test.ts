@@ -25,6 +25,7 @@ import {
   normalizeMcpToolName,
 } from "../src/lib/mcp-telemetry.js";
 import { classifyUpstreamError } from "../src/lib/telemetry.js";
+import { embeddedPrometheusIsEnabled, telemetryIsDisabled } from "../src/lib/telemetry-config.js";
 
 const spanExporter = new InMemorySpanExporter();
 const tracerProvider = new BasicTracerProvider({
@@ -127,6 +128,19 @@ describe("upstream failure classification", () => {
     expect(
       classifyUpstreamError(new SyntaxError("invalid JSON"), undefined, "response_error")
     ).toBe("response_error");
+  });
+});
+
+describe("telemetry configuration", () => {
+  test("uses OTEL_SDK_DISABLED as the complete telemetry off switch", () => {
+    expect(telemetryIsDisabled({ OTEL_SDK_DISABLED: "TRUE" })).toBe(true);
+    expect(embeddedPrometheusIsEnabled({ OTEL_SDK_DISABLED: "true" })).toBe(false);
+  });
+
+  test("enables only the configured embedded Prometheus exporter", () => {
+    expect(embeddedPrometheusIsEnabled({})).toBe(true);
+    expect(embeddedPrometheusIsEnabled({ OTEL_METRICS_EXPORTER: "none" })).toBe(false);
+    expect(embeddedPrometheusIsEnabled({ OTEL_METRICS_EXPORTER: "otlp, prometheus" })).toBe(true);
   });
 });
 

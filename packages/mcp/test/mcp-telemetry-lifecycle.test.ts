@@ -1,10 +1,14 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
 import {
+  CLIENT_CAPABILITIES_META_KEY,
+  McpServer,
+  PROTOCOL_VERSION_META_KEY,
   type JSONRPCMessage,
   type MessageExtraInfo,
   type Transport,
   type TransportSendOptions,
 } from "@modelcontextprotocol/server";
+import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { SpanStatusCode, metrics, propagation, trace } from "@opentelemetry/api";
 import {
   AggregationTemporality,
@@ -18,7 +22,12 @@ import {
   InMemorySpanExporter,
   SimpleSpanProcessor,
 } from "@opentelemetry/sdk-trace-base";
-import { InstrumentedMcpServer, classifyServerResponse } from "../src/lib/mcp-telemetry.js";
+import {
+  InstrumentedMcpServer,
+  MODERN_MCP_PROTOCOL_VERSION,
+  classifyServerResponse,
+  instrumentStdioTransport,
+} from "../src/lib/mcp-telemetry.js";
 import { observeUpstreamRequest, type UpstreamOperation } from "../src/lib/telemetry.js";
 
 interface Deferred<T> {
@@ -205,14 +214,33 @@ describe("MCP server response classification", () => {
 });
 
 describe("MCP operation lifecycle", () => {
-  test("records real stdio sessions but not stateless HTTP request transports", async () => {
+  test("records a real modern stdio session once with its envelope version", async () => {
     await metricProvider.forceFlush();
     const before = sessionObservationCount();
+    const wire = new ControlledTransport();
+    const sessionTransport = instrumentStdioTransport(wire);
+    const handle = serveStdio(
+      () => new McpServer({ name: "modern-stdio-test", version: "1.0.0" }, {}),
+      { transport: sessionTransport }
+    );
+    await eventually(() => expect(wire.onmessage).toBeTypeOf("function"));
 
-    const stdioTransport = new ControlledTransport();
-    const stdioServer = serverFor(stdioTransport, undefined, "modern");
-    await eventually(() => expect(stdioTransport.onmessage).toBeTypeOf("function"));
-    await stdioServer.close();
+    wire.receive({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "server/discover",
+      params: {
+        _meta: {
+          [PROTOCOL_VERSION_META_KEY]: MODERN_MCP_PROTOCOL_VERSION,
+          [CLIENT_CAPABILITIES_META_KEY]: {},
+        },
+      },
+    });
+    await eventually(() =>
+      expect(wire.sent.some((message) => "id" in message && message.id === 1)).toBe(true)
+    );
+
+    await Promise.all([handle.close(), handle.close()]);
     await metricProvider.forceFlush();
 
     expect(sessionObservationCount()).toBe(before + 1);
@@ -224,46 +252,125 @@ describe("MCP operation lifecycle", () => {
       sessionMetric?.dataPoints.some(
         (point) =>
           point.attributes["network.transport"] === "pipe" &&
-          point.attributes["mcp.protocol.version"] === "2026-07-28"
+          point.attributes["mcp.protocol.version"] === MODERN_MCP_PROTOCOL_VERSION
       )
     ).toBe(true);
+  });
 
-    const httpTransport = new ControlledTransport();
-    const httpServer = serverFor(httpTransport, new Request("http://127.0.0.1/mcp"));
-    await eventually(() => expect(httpTransport.onmessage).toBeTypeOf("function"));
-    await httpServer.close();
+  test("records one session across the SDK modern-probe to legacy fallback", async () => {
+    await metricProvider.forceFlush();
+    const before = sessionObservationCount();
+    const wire = new ControlledTransport();
+    let createdProducts = 0;
+    const sessionTransport = instrumentStdioTransport(wire);
+    const rawHandle = serveStdio(
+      () => {
+        createdProducts += 1;
+        return new McpServer({ name: "stdio-fallback-test", version: "1.0.0" }, {});
+      },
+      { transport: sessionTransport }
+    );
+    await eventually(() => expect(wire.onmessage).toBeTypeOf("function"));
+
+    wire.receive({
+      jsonrpc: "2.0",
+      id: 1,
+      method: "server/discover",
+      params: {
+        _meta: {
+          [PROTOCOL_VERSION_META_KEY]: MODERN_MCP_PROTOCOL_VERSION,
+          [CLIENT_CAPABILITIES_META_KEY]: {},
+        },
+      },
+    });
+    await eventually(() => {
+      expect(createdProducts).toBe(1);
+      expect(wire.sent.some((message) => "id" in message && message.id === 1)).toBe(true);
+    });
+
+    wire.receive({
+      jsonrpc: "2.0",
+      id: 2,
+      method: "initialize",
+      params: {
+        protocolVersion: "2025-11-25",
+        capabilities: {},
+        clientInfo: { name: "fallback-client", version: "1.0.0" },
+      },
+    });
+    await eventually(() => {
+      expect(createdProducts).toBe(2);
+      expect(wire.sent.some((message) => "id" in message && message.id === 2)).toBe(true);
+    });
+
+    wire.triggerClose();
     await metricProvider.forceFlush();
 
     expect(sessionObservationCount()).toBe(before + 1);
-  });
+    const latest = metricExporter.getMetrics().at(-1);
+    const sessionMetric = latest?.scopeMetrics
+      .flatMap((scope) => scope.metrics)
+      .find((candidate) => candidate.descriptor.name === "mcp.server.session.duration");
+    expect(
+      sessionMetric?.dataPoints.some(
+        (point) =>
+          point.attributes["network.transport"] === "pipe" &&
+          point.attributes["mcp.protocol.version"] === "2025-11-25"
+      )
+    ).toBe(true);
 
-  test("does not fail a gracefully closed session after a nonfatal transport error event", async () => {
+    await rawHandle.close();
     await metricProvider.forceFlush();
-    const beforeTotal = sessionObservationCount();
-    const beforeErrors = sessionErrorObservationCount("transport_error");
-    const transport = new ControlledTransport();
-    const server = serverFor(transport, undefined, "modern");
-    await eventually(() => expect(transport.onerror).toBeTypeOf("function"));
-
-    transport.triggerError(new Error("reported but recoverable"));
-    await server.close();
-    await metricProvider.forceFlush();
-
-    expect(sessionObservationCount()).toBe(beforeTotal + 1);
-    expect(sessionErrorObservationCount("transport_error")).toBe(beforeErrors);
+    expect(sessionObservationCount()).toBe(before + 1);
   });
 
   test("marks a session failed when terminal transport close rejects", async () => {
     await metricProvider.forceFlush();
     const beforeErrors = sessionErrorObservationCount("transport_error");
-    const transport = new ControlledTransport();
-    transport.closeOperation = async () => {
+    const wire = new ControlledTransport();
+    wire.closeOperation = async () => {
       throw new Error("close failed");
     };
-    const server = serverFor(transport, undefined, "modern");
-    await eventually(() => expect(transport.onmessage).toBeTypeOf("function"));
+    const session = instrumentStdioTransport(wire);
 
-    await expect(server.close()).rejects.toThrow("close failed");
+    await expect(session.close()).rejects.toThrow("close failed");
+    await metricProvider.forceFlush();
+
+    expect(sessionErrorObservationCount("transport_error")).toBe(beforeErrors + 1);
+  });
+
+  test("marks the eventual session failed after a wire send rejects", async () => {
+    await metricProvider.forceFlush();
+    const beforeErrors = sessionErrorObservationCount("transport_error");
+    const wire = new ControlledTransport();
+    wire.sendOperation = async () => {
+      throw new Error("send failed");
+    };
+    const session = instrumentStdioTransport(wire);
+
+    await expect(session.send({ jsonrpc: "2.0", id: 9, result: {} })).rejects.toThrow(
+      "send failed"
+    );
+    await session.close();
+    await metricProvider.forceFlush();
+
+    expect(sessionErrorObservationCount("transport_error")).toBe(beforeErrors + 1);
+  });
+
+  test("classifies only an error immediately followed by wire close as terminal", async () => {
+    await metricProvider.forceFlush();
+    const beforeErrors = sessionErrorObservationCount("transport_error");
+
+    const fatalWire = new ControlledTransport();
+    instrumentStdioTransport(fatalWire);
+    fatalWire.triggerError(new Error("fatal stdout failure"));
+    fatalWire.triggerClose();
+
+    const recoverableWire = new ControlledTransport();
+    const recoverableSession = instrumentStdioTransport(recoverableWire);
+    recoverableWire.triggerError(new Error("recoverable parse failure"));
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    await recoverableSession.close();
     await metricProvider.forceFlush();
 
     expect(sessionErrorObservationCount("transport_error")).toBe(beforeErrors + 1);

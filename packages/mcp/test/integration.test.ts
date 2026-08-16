@@ -104,8 +104,14 @@ function startStubApi(): Promise<string> {
       res.end();
     }
   });
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    const handleListenError = (error: Error) => {
+      stubServer.close();
+      reject(error);
+    };
+    stubServer.once("error", handleListenError);
     stubServer.listen(0, "127.0.0.1", () => {
+      stubServer.off("error", handleListenError);
       const address = stubServer.address() as { port: number };
       resolve(`http://127.0.0.1:${address.port}/api`);
     });
@@ -376,18 +382,26 @@ describe("OpenTelemetry metrics", () => {
           line.includes('error_type="tool_error"')
       )
     ).toBe(true);
-    expect(exported).toMatch(
-      /context7_mcp_tool_calls_total\{[^}]*mcp_tool_name="query-docs"[^}]*mcp_tool_outcome="success"[^}]*\} [1-9]/
-    );
+    expect(
+      operationCounts.some(
+        (line) =>
+          line.includes('gen_ai_tool_name="query-docs"') &&
+          line.includes('context7_mcp_tool_outcome="success"')
+      )
+    ).toBe(true);
     expect(exported).toMatch(
       /context7_mcp_upstream_requests_total\{[^}]*context7_upstream_operation="fetch_context"[^}]*context7_upstream_outcome="success"[^}]*\} [1-9]/
     );
-    expect(exported).toMatch(
-      /context7_mcp_tool_calls_total\{[^}]*mcp_tool_name="query-docs"[^}]*mcp_tool_outcome="error"[^}]*\} [1-9]/
-    );
-    expect(exported).toMatch(
-      /context7_mcp_tool_calls_total\{[^}]*mcp_tool_outcome="not_found"[^}]*\} [1-9]/
-    );
+    expect(
+      operationCounts.some(
+        (line) =>
+          line.includes('gen_ai_tool_name="query-docs"') &&
+          line.includes('context7_mcp_tool_outcome="error"')
+      )
+    ).toBe(true);
+    expect(
+      operationCounts.some((line) => line.includes('context7_mcp_tool_outcome="not_found"'))
+    ).toBe(true);
     expect(exported).toMatch(
       /context7_mcp_upstream_requests_total\{[^}]*context7_upstream_operation="fetch_context"[^}]*http_response_status_code_class="5xx"[^}]*context7_upstream_outcome="http_error"[^}]*\} [1-9]/
     );

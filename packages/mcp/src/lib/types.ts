@@ -1,3 +1,5 @@
+import type { ToolCallOutcome } from "./tool-names.js";
+
 export interface SearchResult {
   id: string;
   title: string;
@@ -30,8 +32,7 @@ export type ContextRequest = {
 
 export type ContextResponse = {
   data: string;
-  error?: true;
-  notFound?: true;
+  outcome: ToolCallOutcome;
 };
 
 export interface ClientContext {

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 import { toNodeHandler } from "@modelcontextprotocol/node";
-import { serveStdio } from "@modelcontextprotocol/server/stdio";
+import { StdioServerTransport, serveStdio } from "@modelcontextprotocol/server/stdio";
 import {
+  McpServer,
   createMcpHandler,
   type McpRequestContext,
   type ServerContext,
@@ -30,17 +31,19 @@ import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { getClientIp } from "./lib/client-ip.js";
 import {
   forceFlushMetrics,
-  observeToolCall,
+  recordToolCallOutcome,
   observeUpstreamRequest,
   observeAuthentication,
-  startPrometheusMetrics,
 } from "./lib/telemetry.js";
-import { InstrumentedMcpServer } from "./lib/mcp-telemetry.js";
+import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
+import { embeddedPrometheusIsEnabled, telemetryIsDisabled } from "./lib/telemetry-config.js";
 import { installStdioShutdown } from "./lib/stdio-shutdown.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
 const OAUTH_METADATA_TIMEOUT_MS = 10_000;
+const TELEMETRY_DISABLED = telemetryIsDisabled();
+let mcpTelemetry: typeof import("./lib/mcp-telemetry.js") | undefined;
 
 // Parse CLI arguments using commander
 const program = new Command()
@@ -161,35 +164,35 @@ function aliasArgs(aliases: AliasMap) {
 }
 
 function createMcpServer(mcpContext: McpRequestContext) {
-  const server = new InstrumentedMcpServer(
-    {
-      name: "Context7",
-      version: SERVER_VERSION,
-      websiteUrl: "https://context7.com",
-      description:
-        "Context7 provides up-to-date documentation and code examples for libraries and frameworks.",
-      icons: [
-        {
-          src: "https://context7.com/context7-icon-green.png",
-          mimeType: "image/png",
-        },
-      ],
-    },
-    {
-      // Declaring the capabilities makes the SDK install prompts/list,
-      // resources/list, and resources/templates/list handlers that answer
-      // with the registered (i.e. empty) collections, for clients that
-      // request them unconditionally.
-      capabilities: { prompts: {}, resources: {} },
-      instructions: `Use this server to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
+  const serverInfo = {
+    name: "Context7",
+    version: SERVER_VERSION,
+    websiteUrl: "https://context7.com",
+    description:
+      "Context7 provides up-to-date documentation and code examples for libraries and frameworks.",
+    icons: [
+      {
+        src: "https://context7.com/context7-icon-green.png",
+        mimeType: "image/png",
+      },
+    ],
+  };
+  const serverOptions = {
+    // Declaring the capabilities makes the SDK install prompts/list,
+    // resources/list, and resources/templates/list handlers that answer
+    // with the registered (i.e. empty) collections, for clients that
+    // request them unconditionally.
+    capabilities: { prompts: {}, resources: {} },
+    instructions: `Use this server to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
 
 Do not use for: refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.`,
-    },
-    mcpContext
-  );
+  };
+  const server = mcpTelemetry
+    ? new mcpTelemetry.InstrumentedMcpServer(serverInfo, serverOptions, mcpContext)
+    : new McpServer(serverInfo, serverOptions);
 
   server.registerTool(
-    "resolve-library-id",
+    RESOLVE_LIBRARY_ID_TOOL,
     {
       title: "Resolve Context7 Library ID",
       description: `Resolves a package/product name to a Context7-compatible library ID and returns matching libraries.
@@ -248,46 +251,40 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       },
     },
     async ({ query, libraryName }: { query: string; libraryName: string }, toolCtx) => {
-      return observeToolCall("resolve-library-id", async () => {
-        const ctx = getClientContext(toolCtx);
-        const searchResponse = await searchLibraries(query, libraryName, ctx);
+      const ctx = getClientContext(toolCtx);
+      const searchResponse = await searchLibraries(query, libraryName, ctx);
 
-        if (!searchResponse.results || searchResponse.results.length === 0) {
-          const text = searchResponse.error ?? "No libraries found matching the provided name.";
-          maybeElicitAuthSignIn(server, ctx);
-          return {
-            outcome: searchResponse.error ? ("error" as const) : ("not_found" as const),
-            value: {
-              content: [
-                {
-                  type: "text" as const,
-                  text,
-                },
-              ],
-            },
-          };
-        }
-
-        const resultsText = formatSearchResults(searchResponse);
-        const responseText = `Available Libraries:\n\n${resultsText}`;
+      if (!searchResponse.results || searchResponse.results.length === 0) {
+        const text = searchResponse.error ?? "No libraries found matching the provided name.";
         maybeElicitAuthSignIn(server, ctx);
+        recordToolCallOutcome(searchResponse.error ? "error" : "not_found");
         return {
-          outcome: "success" as const,
-          value: {
-            content: [
-              {
-                type: "text" as const,
-                text: responseText,
-              },
-            ],
-          },
+          content: [
+            {
+              type: "text" as const,
+              text,
+            },
+          ],
         };
-      });
+      }
+
+      const resultsText = formatSearchResults(searchResponse);
+      const responseText = `Available Libraries:\n\n${resultsText}`;
+      maybeElicitAuthSignIn(server, ctx);
+      recordToolCallOutcome("success");
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: responseText,
+          },
+        ],
+      };
     }
   );
 
   server.registerTool(
-    "query-docs",
+    QUERY_DOCS_TOOL,
     {
       title: "Query Documentation",
       description: `Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
@@ -318,26 +315,18 @@ Do not call this tool more than 3 times per question.`,
       },
     },
     async ({ query, libraryId }: { query: string; libraryId: string }, toolCtx) => {
-      return observeToolCall("query-docs", async () => {
-        const ctx = getClientContext(toolCtx);
-        const response = await fetchLibraryContext({ query, libraryId }, ctx);
-        maybeElicitAuthSignIn(server, ctx);
-        return {
-          outcome: response.error
-            ? ("error" as const)
-            : response.notFound
-              ? ("not_found" as const)
-              : ("success" as const),
-          value: {
-            content: [
-              {
-                type: "text" as const,
-                text: response.data,
-              },
-            ],
+      const ctx = getClientContext(toolCtx);
+      const response = await fetchLibraryContext({ query, libraryId }, ctx);
+      maybeElicitAuthSignIn(server, ctx);
+      recordToolCallOutcome(response.outcome);
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: response.data,
           },
-        };
-      });
+        ],
+      };
     }
   );
 
@@ -345,9 +334,14 @@ Do not call this tool more than 3 times per question.`,
 }
 
 async function main() {
+  if (!TELEMETRY_DISABLED) mcpTelemetry = await import("./lib/mcp-telemetry.js");
+
   if (TRANSPORT_TYPE === "http") {
     const initialPort = CLI_PORT ?? DEFAULT_PORT;
-    await startPrometheusMetrics(SERVER_VERSION);
+    if (embeddedPrometheusIsEnabled()) {
+      const { startPrometheusMetrics } = await import("./lib/telemetry-provider.js");
+      await startPrometheusMetrics(SERVER_VERSION);
+    }
 
     const app = express();
     app.use(express.json());
@@ -611,6 +605,10 @@ async function main() {
   } else {
     stdioApiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
     stdioSessionId = randomUUID();
+    const rawStdioTransport = new StdioServerTransport();
+    const stdioTransport = mcpTelemetry
+      ? mcpTelemetry.instrumentStdioTransport(rawStdioTransport)
+      : rawStdioTransport;
 
     const stdioHandle = serveStdio(
       (mcpContext) => {
@@ -631,6 +629,7 @@ async function main() {
         return server;
       },
       {
+        transport: stdioTransport,
         onerror: (error) => console.error("MCP stdio error:", error),
       }
     );

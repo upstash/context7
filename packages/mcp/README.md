@@ -1522,22 +1522,22 @@ When an external SDK owns the provider, configure its Node runtime instrumentati
 the application does not register a duplicate collector.
 
 It reports bounded-cardinality counters, histograms, and in-flight gauges for MCP methods, tool
-calls, authentication outcomes, Context7 upstream requests, and Node runtime saturation.
+outcomes, authentication outcomes, Context7 upstream requests, and Node runtime saturation.
 Prometheus receives these metric families:
 
-- `mcp_server_operation_duration` (its `_count` series is the MCP operation count)
+- `mcp_server_operation_duration` (its `_count` series is the MCP operation count, and tool-call
+  series include the `context7_mcp_tool_outcome` label)
 - `mcp_server_session_duration` for real stateful stdio sessions (stateless HTTP request transports
   are intentionally excluded)
 - `context7_mcp_operations_active`
-- `context7_mcp_tool_calls_total` and `context7_mcp_tool_call_duration`
 - `context7_mcp_upstream_requests_total` and `context7_mcp_upstream_request_duration`
 - `context7_mcp_authentication_attempts_total` and `context7_mcp_authentication_duration`
-- `context7_mcp_tool_calls_active`, `context7_mcp_upstream_requests_active`, and
-  `context7_mcp_authentication_active`
+- `context7_mcp_upstream_requests_active` and `context7_mcp_authentication_active`
 - `nodejs_eventloop_*`, `v8js_gc_duration`, `v8js_memory_heap_*`, and
   `v8js_resource_active` from the official OpenTelemetry Node runtime instrumentation
 
-Tool outcomes distinguish `success`, `not_found`, and `error`. Upstream outcomes distinguish
+Tool outcomes on the standard MCP operation metric distinguish `success`, `not_found`, and
+`error`. Upstream outcomes distinguish
 HTTP, response-decoding, network, timeout, and cancellation failures and include both the bounded
 status-code class and the exact numeric HTTP status. Authentication reports accepted, missing,
 invalid, and unexpected-error outcomes.

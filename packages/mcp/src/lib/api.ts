@@ -177,23 +177,23 @@ export async function fetchLibraryContext(
         if (!response.ok) {
           const errorMessage = await parseErrorResponse(response, context.apiKey);
           console.error(errorMessage);
-          return { data: errorMessage, error: true };
+          return { data: errorMessage, outcome: "error" };
         }
 
         const text = await response.text();
         if (!text) {
           return {
             data: "Documentation not found or not finalized for this library. This might have happened because you used an invalid Context7-compatible library ID. To get a valid Context7-compatible library ID, use the 'resolve-library-id' with the package name you wish to retrieve documentation for.",
-            notFound: true,
+            outcome: "not_found",
           };
         }
-        return { data: text };
+        return { data: text, outcome: "success" };
       },
       { abortSignal }
     );
   } catch (error) {
     const errorMessage = `Error fetching library context. Please try again later. ${error}`;
     console.error(errorMessage);
-    return { data: errorMessage, error: true };
+    return { data: errorMessage, outcome: "error" };
   }
 }
