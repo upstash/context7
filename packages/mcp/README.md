@@ -1513,6 +1513,11 @@ The exporter uses the standard OpenTelemetry Prometheus settings:
 - `OTEL_EXPORTER_PROMETHEUS_PORT` changes the port (default `9464`).
 - `OTEL_METRICS_EXPORTER=none` or `OTEL_SDK_DISABLED=true` disables the embedded exporter.
 
+`OTEL_SDK_DISABLED=true` is the hard-off switch: provider modules are not loaded and MCP
+transports and handlers are not wrapped, preserving the baseline request path. In contrast,
+`OTEL_METRICS_EXPORTER=none` disables only the embedded Prometheus bootstrap, so a provider
+installed by a Node preload can still receive the MCP signals.
+
 Exporter bind or configuration failures are logged but do not prevent the MCP endpoint from
 starting. If a Node preload has already registered global OpenTelemetry providers, they take
 precedence. The embedded Prometheus listener is not started when a global `MeterProvider` exists,
