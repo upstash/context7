@@ -1546,6 +1546,34 @@ The labels intentionally exclude API keys, client IPs, queries, library IDs, ses
 error text. Expose port `9464` only to your Prometheus scraper or `ServiceMonitor`, not through the
 public MCP ingress.
 
+#### Signal ownership with an Envoy gateway
+
+Do not treat `mcp_server_operation_duration_count` as another HTTP request counter. An Envoy
+Gateway observes HTTP envelopes, while this metric observes JSON-RPC requests and notifications
+after SDK dispatch. A valid batch is one HTTP request but several MCP operations, and HTTP requests
+rejected before MCP dispatch never increment the MCP metric.
+
+Context7 deliberately does **not** register generic inbound HTTP server metrics. Keep the following
+signals in the existing Envoy scrape instead of collecting them again from the application:
+
+- downstream HTTP request/response totals, status classes, duration, active requests, connections,
+  resets, and gateway timeouts (`envoy_http_*_downstream_*`)
+- Envoy-to-MCP backend request totals, status codes, duration, active/pending requests, connection
+  failures, retries, resets, timeouts, and circuit-breaker overflows (`envoy_cluster_upstream_*`)
+- Envoy process health and resource metrics
+
+The application exporter owns only signals the ingress gateway cannot provide: MCP method and
+protocol semantics (including batches and notifications), tool and authentication outcomes,
+MCP-to-Context7 API calls, and Node event-loop/V8 health. In the Kubernetes deployment Envoy is a
+Gateway API proxy rather than a sidecar in the MCP pod, so `context7_mcp_upstream_*` describes the
+MCP server's outbound Context7 API dependency, not Envoy's inbound MCP backend cluster. Pod and
+container CPU, memory, network, and restart metrics should continue to come from the Kubernetes
+monitoring stack.
+
+See the [Envoy HTTP connection manager statistics](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/stats)
+and [upstream cluster statistics](https://www.envoyproxy.io/docs/envoy/latest/configuration/upstream/cluster_manager/cluster_stats.html)
+for the proxy-owned metric families.
+
 ```yaml
 scrape_configs:
   - job_name: context7-mcp
