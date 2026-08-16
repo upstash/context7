@@ -30,6 +30,7 @@ export type ContextRequest = {
 
 export type ContextResponse = {
   data: string;
+  error?: true;
 };
 
 export interface ClientContext {

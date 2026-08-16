@@ -24,6 +24,14 @@ import {
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { getClientIp } from "./lib/client-ip.js";
+import {
+  getMcpMethod,
+  observeMcpRequest,
+  observeToolCall,
+  observeUpstreamRequest,
+  recordAuthentication,
+  startPrometheusMetrics,
+} from "./lib/telemetry.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -231,33 +239,41 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       },
     },
     async ({ query, libraryName }: { query: string; libraryName: string }, toolCtx) => {
-      const ctx = getClientContext(toolCtx);
-      const searchResponse = await searchLibraries(query, libraryName, ctx);
+      return observeToolCall("resolve-library-id", async () => {
+        const ctx = getClientContext(toolCtx);
+        const searchResponse = await searchLibraries(query, libraryName, ctx);
 
-      if (!searchResponse.results || searchResponse.results.length === 0) {
-        const text = searchResponse.error ?? "No libraries found matching the provided name.";
+        if (!searchResponse.results || searchResponse.results.length === 0) {
+          const text = searchResponse.error ?? "No libraries found matching the provided name.";
+          maybeElicitAuthSignIn(server, ctx);
+          return {
+            outcome: searchResponse.error ? ("error" as const) : ("success" as const),
+            value: {
+              content: [
+                {
+                  type: "text" as const,
+                  text,
+                },
+              ],
+            },
+          };
+        }
+
+        const resultsText = formatSearchResults(searchResponse);
+        const responseText = `Available Libraries:\n\n${resultsText}`;
         maybeElicitAuthSignIn(server, ctx);
         return {
-          content: [
-            {
-              type: "text",
-              text,
-            },
-          ],
-        };
-      }
-
-      const resultsText = formatSearchResults(searchResponse);
-      const responseText = `Available Libraries:\n\n${resultsText}`;
-      maybeElicitAuthSignIn(server, ctx);
-      return {
-        content: [
-          {
-            type: "text",
-            text: responseText,
+          outcome: "success" as const,
+          value: {
+            content: [
+              {
+                type: "text" as const,
+                text: responseText,
+              },
+            ],
           },
-        ],
-      };
+        };
+      });
     }
   );
 
@@ -293,17 +309,22 @@ Do not call this tool more than 3 times per question.`,
       },
     },
     async ({ query, libraryId }: { query: string; libraryId: string }, toolCtx) => {
-      const ctx = getClientContext(toolCtx);
-      const response = await fetchLibraryContext({ query, libraryId }, ctx);
-      maybeElicitAuthSignIn(server, ctx);
-      return {
-        content: [
-          {
-            type: "text",
-            text: response.data,
+      return observeToolCall("query-docs", async () => {
+        const ctx = getClientContext(toolCtx);
+        const response = await fetchLibraryContext({ query, libraryId }, ctx);
+        maybeElicitAuthSignIn(server, ctx);
+        return {
+          outcome: response.error ? ("error" as const) : ("success" as const),
+          value: {
+            content: [
+              {
+                type: "text" as const,
+                text: response.data,
+              },
+            ],
           },
-        ],
-      };
+        };
+      });
     }
   );
 
@@ -313,6 +334,7 @@ Do not call this tool more than 3 times per question.`,
 async function main() {
   if (TRANSPORT_TYPE === "http") {
     const initialPort = CLI_PORT ?? DEFAULT_PORT;
+    await startPrometheusMetrics(SERVER_VERSION);
 
     const app = express();
     app.use(express.json());
@@ -405,7 +427,8 @@ async function main() {
 
         if (requireAuth) {
           if (!apiKey) {
-            return res.status(401).json({
+            recordAuthentication("missing");
+            res.status(401).json({
               jsonrpc: "2.0",
               error: {
                 code: -32001,
@@ -413,12 +436,14 @@ async function main() {
               },
               id: null,
             });
+            return;
           }
 
           if (isJWT(apiKey)) {
             const validationResult = await validateJWT(apiKey);
             if (!validationResult.valid) {
-              return res.status(401).json({
+              recordAuthentication("invalid");
+              res.status(401).json({
                 jsonrpc: "2.0",
                 error: {
                   code: -32001,
@@ -426,8 +451,10 @@ async function main() {
                 },
                 id: null,
               });
+              return;
             }
           }
+          recordAuthentication("accepted");
         }
 
         const context: ClientContext = {
@@ -452,16 +479,30 @@ async function main() {
       }
     };
 
+    const handleObservedMcpRequest = async (
+      req: express.Request,
+      res: express.Response,
+      requireAuth: boolean
+    ) => {
+      const route = requireAuth ? "oauth" : "anonymous";
+      const method = getMcpMethod(req.headers["mcp-method"], req.body);
+      await observeMcpRequest(
+        route,
+        method,
+        () => res.statusCode,
+        () => handleMcpRequest(req, res, requireAuth)
+      );
+    };
+
     // Anonymous access endpoint - no authentication required
     app.all("/mcp", async (req, res) => {
-      await handleMcpRequest(req, res, false);
+      await handleObservedMcpRequest(req, res, false);
     });
 
     // OAuth-protected endpoint - requires authentication
     app.all("/mcp/oauth", async (req, res) => {
-      await handleMcpRequest(req, res, true);
+      await handleObservedMcpRequest(req, res, true);
     });
-
     app.get("/ping", (_req: express.Request, res: express.Response) => {
       res.json({ status: "ok", message: "pong" });
     });
@@ -486,16 +527,22 @@ async function main() {
         const authServerUrl = AUTH_SERVER_URL;
 
         try {
-          const response = await fetch(`${authServerUrl}/.well-known/oauth-authorization-server`);
-          if (!response.ok) {
-            console.error("[OAuth] Upstream error:", response.status);
-            return res.status(response.status).json({
+          const upstream = await observeUpstreamRequest(
+            "oauth_metadata",
+            () => fetch(`${authServerUrl}/.well-known/oauth-authorization-server`),
+            async (response) => {
+              if (!response.ok) return { ok: false as const, status: response.status };
+              return { ok: true as const, metadata: await response.json() };
+            }
+          );
+          if (!upstream.ok) {
+            console.error("[OAuth] Upstream error:", upstream.status);
+            return res.status(upstream.status).json({
               error: "upstream_error",
               message: "Failed to fetch authorization server metadata",
             });
           }
-          const metadata = await response.json();
-          res.json(metadata);
+          res.json(upstream.metadata);
         } catch (error) {
           console.error("[OAuth] Error fetching OAuth metadata:", error);
           res.status(502).json({

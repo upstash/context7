@@ -1490,6 +1490,46 @@ CONTEXT7_API_KEY=your_api_key_here
 }
 ```
 
+### OpenTelemetry metrics
+
+The HTTP transport exposes OpenTelemetry metrics in Prometheus format on a dedicated internal
+listener at `0.0.0.0:9464/metrics`. The stdio transport does not open a telemetry port. Keeping
+this listener separate from the public MCP port prevents the metrics endpoint from being routed
+through a catch-all gateway rule.
+
+The exporter uses the standard OpenTelemetry Prometheus settings:
+
+- `OTEL_EXPORTER_PROMETHEUS_HOST` changes the bind address (default `0.0.0.0`).
+- `OTEL_EXPORTER_PROMETHEUS_PORT` changes the port (default `9464`).
+- `OTEL_METRICS_EXPORTER=none` or `OTEL_SDK_DISABLED=true` disables the embedded exporter.
+
+Exporter bind or configuration failures are logged but do not prevent the MCP endpoint from
+starting. If a Node preload has already registered a global OpenTelemetry `MeterProvider`, that
+provider takes precedence and the embedded Prometheus listener is not started; use the preload's
+configured reader/exporter in that mode.
+
+It reports bounded-cardinality counters, histograms, and in-flight gauges for MCP methods, tool
+calls, authentication outcomes, and Context7 upstream requests. Prometheus receives these metric
+families:
+
+- `context7_mcp_requests_total` and `context7_mcp_request_duration`
+- `context7_mcp_tool_calls_total` and `context7_mcp_tool_call_duration`
+- `context7_mcp_upstream_requests_total` and `context7_mcp_upstream_request_duration`
+- `context7_mcp_authentication_attempts_total`
+- `context7_mcp_requests_active`, `context7_mcp_tool_calls_active`, and
+  `context7_mcp_upstream_requests_active`
+
+The labels intentionally exclude API keys, client IPs, queries, library IDs, session IDs, and raw
+error text. Expose port `9464` only to your Prometheus scraper or `ServiceMonitor`, not through the
+public MCP ingress.
+
+```yaml
+scrape_configs:
+  - job_name: context7-mcp
+    static_configs:
+      - targets: ["context7-mcp:9464"]
+```
+
 <details>
 <summary><b>Local Configuration Example</b></summary>
 
