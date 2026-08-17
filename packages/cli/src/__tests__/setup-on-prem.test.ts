@@ -25,6 +25,7 @@ beforeEach(async () => {
   promptMocks.password.mockReset();
   promptMocks.select.mockReset();
   vi.stubEnv("CTX7_TELEMETRY_DISABLED", "");
+  vi.stubEnv("CONTEXT7_API_KEY", "");
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: string | URL | Request) => {
