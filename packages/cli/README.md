@@ -101,7 +101,7 @@ ctx7 setup --project
 ctx7 setup --yes
 ```
 
-For a custom `--base-url`, setup discovers whether MCP authentication is enabled and writes either an anonymous HTTP entry or an `Authorization: Bearer` header. Custom deployments support MCP HTTP setup; hosted OAuth, stdio, and CLI-query mode are not supported for on-premise targets.
+For a custom `--base-url`, setup discovers whether MCP authentication is enabled and writes either an anonymous HTTP entry or an `Authorization: Bearer` header. It uses bundled rule and skill content and skips the npm update check and telemetry, so after `ctx7` is installed it contacts only the configured deployment. Enterprise environments can mirror `ctx7` and its dependencies in an internal npm registry. Custom deployments support MCP HTTP setup; hosted OAuth, stdio, and CLI-query mode are not supported for on-premise targets.
 
 ### Uninstall setup
 
@@ -144,14 +144,14 @@ ctx7 logout
 
 The CLI automatically detects which AI coding assistants you have installed and configures Context7 for them:
 
-| Client      | Skills Directory   |
-| ----------- | ------------------ |
-| Claude Code | `.claude/skills/`  |
-| Cursor      | `.cursor/skills/`  |
-| OpenCode    | `.agents/skills/`  |
-| Codex       | `.agents/skills/`  |
-| Antigravity | `.agent/skills/`   |
-| Gemini CLI  | `.gemini/skills/`  |
+| Client      | Skills Directory  |
+| ----------- | ----------------- |
+| Claude Code | `.claude/skills/` |
+| Cursor      | `.cursor/skills/` |
+| OpenCode    | `.agents/skills/` |
+| Codex       | `.agents/skills/` |
+| Antigravity | `.agent/skills/`  |
+| Gemini CLI  | `.gemini/skills/` |
 
 ## Disabling Telemetry
 

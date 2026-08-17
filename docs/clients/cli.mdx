@@ -167,6 +167,8 @@ CONTEXT7_API_KEY=ctx7op-... ctx7 setup --mcp \
 
 The CLI checks `/api/auth/mcp` before writing configuration. It either configures anonymous access or writes `Authorization: Bearer <personal-key>`. On-premise setup uses Streamable HTTP and bundled rule/skill content, so the target does not need to serve Context7 Cloud skill endpoints.
 
+When `--base-url` targets a custom deployment, setup skips the npm update check and telemetry and does not fetch rules or skills from GitHub or Context7 Cloud. After the CLI package is installed, the only network request made by setup is to the configured deployment. In a restricted environment, mirror `ctx7` and its dependencies in an internal npm registry and run the installed `ctx7` binary instead of `npx ctx7@latest`.
+
 `--base-url` currently supports MCP setup only. It cannot be combined with `--oauth`, `--stdio`, or `--cli` for a custom deployment.
 
 **What gets written — MCP mode:**
