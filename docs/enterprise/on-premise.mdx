@@ -125,15 +125,17 @@ Pass the root URL of your deployment (without `/mcp` or `/api`) and select the c
   </Tab>
 </Tabs>
 
-Setup reads the deployment's MCP authentication setting. When MCP authentication is disabled, no credential is written. When it is enabled, create a personal key from **Personal Settings > API Keys**, then pass it through `CONTEXT7_API_KEY`:
+Setup reads the deployment's MCP authentication setting. When MCP authentication is disabled, no credential is written. When it is enabled, sign in to the on-premise dashboard and click **Generate setup key** in the Connect card. Run the command for your client and paste the one-time-visible key when the CLI requests it with hidden input.
+
+For non-interactive automation, provide the personal key through the environment:
 
 ```bash
-CONTEXT7_API_KEY=ctx7op-... ctx7 setup --mcp \
+CONTEXT7_API_KEY=ctx7op-... ctx7 setup --mcp --yes \
   --base-url https://context7.internal.yourcompany.com \
   --claude
 ```
 
-You can use `--api-key ctx7op-...` instead, but the environment variable keeps the key out of shell history. Setup writes the MCP client configuration, a Context7 rule, and a bundled `context7-mcp` skill. The bundled files mean the deployment does not need to expose Context7 Cloud's skill APIs.
+You can use `--api-key ctx7op-...` instead, but command-line arguments may be retained in shell history. Setup writes the MCP client configuration, a Context7 rule, and a bundled `context7-mcp` skill. The bundled files mean the deployment does not need to expose Context7 Cloud's skill APIs.
 
 <Note>
   Custom `--base-url` setup uses the deployment's Streamable HTTP endpoint. Hosted OAuth, local stdio transport, and CLI-query mode are not available for on-premise targets.
