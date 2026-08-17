@@ -74,33 +74,51 @@ curl -X POST http://localhost:3000/api/parse \
 
 ## Connecting Your AI Client
 
-The Context7 CLI is the recommended way to connect an AI coding agent. Pass the root URL of your deployment (without `/mcp` or `/api`) and select the client:
+The Context7 CLI is the recommended way to connect an AI coding agent. Install it once on the machine that runs your client:
+
+<Tabs>
+  <Tab title="Public npm registry">
+    ```bash
+    npm install --global ctx7@latest
+    ```
+  </Tab>
+  <Tab title="Internal npm registry">
+    ```bash
+    npm install --global ctx7 \
+      --registry https://npm.internal.yourcompany.com
+    ```
+  </Tab>
+</Tabs>
+
+For restricted or air-gapped environments, mirror the `ctx7` package and its dependencies in your approved internal npm registry. Once installed, on-premise setup does not contact npm, GitHub, or Context7 Cloud. It uses bundled rule and skill content and contacts only your deployment to discover its MCP authentication setting.
+
+Pass the root URL of your deployment (without `/mcp` or `/api`) and select the client:
 
 <Tabs>
   <Tab title="Claude Code">
     ```bash
-    npx ctx7@latest setup --mcp \
+    ctx7 setup --mcp \
       --base-url https://context7.internal.yourcompany.com \
       --claude
     ```
   </Tab>
   <Tab title="Cursor">
     ```bash
-    npx ctx7@latest setup --mcp \
+    ctx7 setup --mcp \
       --base-url https://context7.internal.yourcompany.com \
       --cursor
     ```
   </Tab>
   <Tab title="Codex">
     ```bash
-    npx ctx7@latest setup --mcp \
+    ctx7 setup --mcp \
       --base-url https://context7.internal.yourcompany.com \
       --codex
     ```
   </Tab>
   <Tab title="OpenCode">
     ```bash
-    npx ctx7@latest setup --mcp \
+    ctx7 setup --mcp \
       --base-url https://context7.internal.yourcompany.com \
       --opencode
     ```
@@ -110,7 +128,7 @@ The Context7 CLI is the recommended way to connect an AI coding agent. Pass the 
 Setup reads the deployment's MCP authentication setting. When MCP authentication is disabled, no credential is written. When it is enabled, create a personal key from **Personal Settings > API Keys**, then pass it through `CONTEXT7_API_KEY`:
 
 ```bash
-CONTEXT7_API_KEY=ctx7op-... npx ctx7@latest setup --mcp \
+CONTEXT7_API_KEY=ctx7op-... ctx7 setup --mcp \
   --base-url https://context7.internal.yourcompany.com \
   --claude
 ```

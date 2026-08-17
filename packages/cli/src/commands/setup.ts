@@ -30,9 +30,10 @@ import {
   getRuleContent,
 } from "../setup/templates.js";
 import {
+  getMcpUrl,
   getOnPremMcpAuthStatus,
-  isHostedDeployment,
-  normalizeDeploymentBaseUrl,
+  resolveSetupDeployment,
+  type SetupDeployment,
 } from "../setup/deployment.js";
 import {
   readJsonConfig,
@@ -48,6 +49,12 @@ import {
 
 type Scope = "global" | "project";
 type SetupMode = "mcp" | "cli";
+type SkillFile = { path: string; content: string };
+
+interface McpSkillPayload {
+  files: SkillFile[];
+  status: "installed" | "installed (bundled)" | "installed (bundled fallback)";
+}
 
 interface SetupOptions {
   claude?: boolean;
@@ -106,8 +113,8 @@ export function registerSetupCommand(program: Command): void {
     .option("--oauth", "Use OAuth endpoint (IDE handles auth flow)")
     .option("--stdio", "Configure the MCP server as a local stdio process (default: HTTP)")
     .option("--base-url <url>", "Use a custom Context7 deployment (for example, on-premise)")
-    .action(async (options: SetupOptions, command: Command) => {
-      await setupCommand({ ...options, ...command.optsWithGlobals() } as SetupOptions);
+    .action(async (_options: SetupOptions, command: Command) => {
+      await setupCommand(command.optsWithGlobals<SetupOptions>());
     });
 }
 
@@ -145,16 +152,19 @@ async function authenticateAndGenerateKey(): Promise<string | null> {
   }
 }
 
-async function resolveAuth(options: SetupOptions, baseUrl: string): Promise<AuthOptions | null> {
+async function resolveAuth(
+  options: SetupOptions,
+  deployment: SetupDeployment
+): Promise<AuthOptions | null> {
   const apiKey = options.apiKey?.trim() || process.env.CONTEXT7_API_KEY?.trim();
 
-  if (!isHostedDeployment(baseUrl)) {
+  if (deployment.kind === "custom") {
     try {
-      const auth = await getOnPremMcpAuthStatus(baseUrl);
+      const auth = await getOnPremMcpAuthStatus(deployment);
       if (!auth.enabled) return { mode: "none" };
     } catch (err) {
       log.error(
-        `Could not check MCP authentication at ${baseUrl}: ${err instanceof Error ? err.message : String(err)}`
+        `Could not check MCP authentication at ${deployment.baseUrl}: ${err instanceof Error ? err.message : String(err)}`
       );
       return null;
     }
@@ -162,7 +172,7 @@ async function resolveAuth(options: SetupOptions, baseUrl: string): Promise<Auth
     if (apiKey) return { mode: "api-key", apiKey };
 
     log.error(
-      `MCP authentication is enabled at ${baseUrl}. Pass --api-key or set CONTEXT7_API_KEY with a personal API key.`
+      `MCP authentication is enabled at ${deployment.baseUrl}. Pass --api-key or set CONTEXT7_API_KEY with a personal API key.`
     );
     return null;
   }
@@ -173,6 +183,29 @@ async function resolveAuth(options: SetupOptions, baseUrl: string): Promise<Auth
   const generatedApiKey = await authenticateAndGenerateKey();
   if (!generatedApiKey) return null;
   return { mode: "api-key", apiKey: generatedApiKey };
+}
+
+function getSetupValidationError(
+  mode: SetupMode,
+  options: SetupOptions,
+  deployment: SetupDeployment
+): string | null {
+  if (deployment.kind === "custom") {
+    if (mode === "cli") {
+      return "--base-url currently supports MCP setup only. Use --mcp with an on-premise deployment.";
+    }
+    if (options.stdio) {
+      return "--stdio is not supported with --base-url. On-premise setup uses the HTTP /mcp endpoint.";
+    }
+    if (options.oauth) {
+      return "--oauth is only supported by hosted Context7. Use a personal on-premise API key.";
+    }
+  }
+
+  if (mode === "mcp" && options.stdio && options.oauth) {
+    return "--stdio is incompatible with --oauth (OAuth uses the hosted HTTP endpoint).";
+  }
+  return null;
 }
 
 async function resolveMode(options: SetupOptions): Promise<SetupMode> {
@@ -261,15 +294,11 @@ async function resolveAgents(options: SetupOptions, scope: Scope): Promise<Setup
 /** Install a rule for an agent, handling both "file" (standalone) and "append" (AGENTS.md) types. */
 async function installRule(
   agentName: SetupAgent,
-  mode: SetupMode,
   scope: Scope,
-  bundled = false
+  content: string
 ): Promise<{ status: string; path: string }> {
   const agent = getAgent(agentName);
   const rule = agent.rule;
-  const content = bundled
-    ? getBundledRuleContent(mode, agentName)
-    : await getRuleContent(mode, agentName);
 
   if (rule.kind === "file") {
     const ruleDir =
@@ -306,6 +335,23 @@ async function installRule(
   return { status: "installed", path: filePath };
 }
 
+async function loadMcpSkillPayload(deployment: SetupDeployment): Promise<McpSkillPayload> {
+  const bundled = getBundledMcpSkillFiles();
+  if (deployment.kind === "custom") {
+    return { files: bundled, status: "installed (bundled)" };
+  }
+
+  try {
+    const downloadData = await downloadSkill("/upstash/context7", "context7-mcp");
+    if (downloadData.error || downloadData.files.length === 0) {
+      throw new Error(downloadData.error || "no files");
+    }
+    return { files: downloadData.files, status: "installed" };
+  } catch {
+    return { files: bundled, status: "installed (bundled fallback)" };
+  }
+}
+
 /**
  * For stdio transport, preserve an existing `@upstash/context7-mcp` invocation
  * (e.g., `@upstash/context7-mcp@latest` or a user-pinned version) and only
@@ -318,13 +364,13 @@ function resolveEntryToWrite(
   auth: AuthOptions,
   transport: Transport,
   existingEntry: Record<string, unknown> | undefined,
-  baseUrl: string
+  mcpUrl: string
 ): Record<string, unknown> {
   if (transport === "stdio" && existingEntry && isStdioContext7Entry(existingEntry)) {
     const apiKey = auth.mode === "api-key" ? auth.apiKey : undefined;
     return patchStdioApiKey(existingEntry, apiKey);
   }
-  return agent.mcp.buildEntry(auth, transport, baseUrl);
+  return agent.mcp.buildEntry(auth, transport, mcpUrl);
 }
 
 async function setupAgent(
@@ -332,7 +378,9 @@ async function setupAgent(
   auth: AuthOptions,
   transport: Transport,
   scope: Scope,
-  baseUrl: string
+  deployment: SetupDeployment,
+  mcpUrl: string,
+  skillPayload: McpSkillPayload
 ): Promise<{
   agent: string;
   mcpStatus: string;
@@ -355,7 +403,7 @@ async function setupAgent(
     if (mcpPath.endsWith(".toml")) {
       const existingTomlEntry =
         transport === "stdio" ? await readTomlServerEntry(mcpPath, "context7") : undefined;
-      const entry = resolveEntryToWrite(agent, auth, transport, existingTomlEntry, baseUrl);
+      const entry = resolveEntryToWrite(agent, auth, transport, existingTomlEntry, mcpUrl);
       const { alreadyExists } = await appendTomlServer(mcpPath, "context7", entry);
       mcpStatus = alreadyExists
         ? `reconfigured with ${AUTH_MODE_LABELS[auth.mode]}`
@@ -366,7 +414,7 @@ async function setupAgent(
         transport === "stdio"
           ? getJsonServerEntry(existing, agent.mcp.configKey, "context7")
           : undefined;
-      const entry = resolveEntryToWrite(agent, auth, transport, existingJsonEntry, baseUrl);
+      const entry = resolveEntryToWrite(agent, auth, transport, existingJsonEntry, mcpUrl);
       const { config, alreadyExists } = mergeServerEntry(
         existing,
         agent.mcp.configKey,
@@ -385,7 +433,11 @@ async function setupAgent(
   let ruleStatus: string;
   let rulePath: string;
   try {
-    const result = await installRule(agentName, "mcp", scope, !isHostedDeployment(baseUrl));
+    const ruleContent =
+      deployment.kind === "custom"
+        ? getBundledRuleContent("mcp", agentName)
+        : await getRuleContent("mcp", agentName);
+    const result = await installRule(agentName, scope, ruleContent);
     ruleStatus = result.status;
     rulePath = result.path;
   } catch (err) {
@@ -401,24 +453,10 @@ async function setupAgent(
 
   let skillStatus: string;
   try {
-    if (!isHostedDeployment(baseUrl)) {
-      await installSkillFiles(agent.skill.name, getBundledMcpSkillFiles(), skillDir);
-      skillStatus = "installed (bundled)";
-    } else {
-      const downloadData = await downloadSkill("/upstash/context7", agent.skill.name);
-      if (downloadData.error || downloadData.files.length === 0) {
-        throw new Error(downloadData.error || "no files");
-      }
-      await installSkillFiles(agent.skill.name, downloadData.files, skillDir);
-      skillStatus = "installed";
-    }
+    await installSkillFiles(agent.skill.name, skillPayload.files, skillDir);
+    skillStatus = skillPayload.status;
   } catch (err) {
-    try {
-      await installSkillFiles(agent.skill.name, getBundledMcpSkillFiles(), skillDir);
-      skillStatus = "installed (bundled fallback)";
-    } catch {
-      skillStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
-    }
+    skillStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
   }
 
   return {
@@ -451,25 +489,14 @@ function logSkillStatus(skillStatus: string, skillPath: string): void {
   }
 }
 
-async function setupMcp(agents: SetupAgent[], options: SetupOptions, scope: Scope): Promise<void> {
-  const baseUrl = normalizeDeploymentBaseUrl(options.baseUrl);
+async function setupMcp(
+  agents: SetupAgent[],
+  options: SetupOptions,
+  scope: Scope,
+  deployment: SetupDeployment
+): Promise<void> {
   const transport = resolveTransport(options);
-  if (transport === "stdio" && options.oauth) {
-    log.error("--stdio is incompatible with --oauth (OAuth uses the hosted HTTP endpoint).");
-    return;
-  }
-  if (!isHostedDeployment(baseUrl) && transport === "stdio") {
-    log.error(
-      "--stdio is not supported with --base-url. On-premise setup uses the HTTP /mcp endpoint."
-    );
-    return;
-  }
-  if (!isHostedDeployment(baseUrl) && options.oauth) {
-    log.error("--oauth is only supported by hosted Context7. Use a personal on-premise API key.");
-    return;
-  }
-
-  const auth = await resolveAuth(options, baseUrl);
+  const auth = await resolveAuth(options, deployment);
   if (!auth) {
     log.warn("Setup cancelled");
     return;
@@ -477,11 +504,15 @@ async function setupMcp(agents: SetupAgent[], options: SetupOptions, scope: Scop
 
   log.blank();
   const spinner = ora("Setting up Context7...").start();
+  const mcpUrl = getMcpUrl(deployment, auth);
+  const skillPayload = await loadMcpSkillPayload(deployment);
 
   const results = [];
   for (const agentName of agents) {
     spinner.text = `Setting up ${getAgent(agentName).displayName}...`;
-    results.push(await setupAgent(agentName, auth, transport, scope, baseUrl));
+    results.push(
+      await setupAgent(agentName, auth, transport, scope, deployment, mcpUrl, skillPayload)
+    );
   }
 
   spinner.succeed("Context7 setup complete");
@@ -502,13 +533,10 @@ async function setupMcp(agents: SetupAgent[], options: SetupOptions, scope: Scop
   }
   log.blank();
 
-  trackEvent("setup", {
-    agents,
-    scope,
-    authMode: auth.mode,
-    deployment: isHostedDeployment(baseUrl) ? "hosted" : "custom",
-  });
-  trackEvent("install", { skills: ["/upstash/context7/context7-mcp"], ides: agents });
+  if (deployment.kind === "hosted") {
+    trackEvent("setup", { agents, scope, authMode: auth.mode, deployment: "hosted" });
+    trackEvent("install", { skills: ["/upstash/context7/context7-mcp"], ides: agents });
+  }
 }
 
 async function setupCliAgent(
@@ -535,7 +563,7 @@ async function setupCliAgent(
   let ruleStatus: string;
   let rulePath: string;
   try {
-    const result = await installRule(agentName, "cli", scope);
+    const result = await installRule(agentName, scope, await getRuleContent("cli", agentName));
     ruleStatus = result.status;
     rulePath = result.path;
   } catch (err) {
@@ -598,22 +626,23 @@ async function setupCli(options: SetupOptions): Promise<void> {
 }
 
 async function setupCommand(options: SetupOptions): Promise<void> {
-  trackEvent("command", { name: "setup" });
-
   try {
     const mode = await resolveMode(options);
-    const baseUrl = normalizeDeploymentBaseUrl(options.baseUrl);
-    if (mode === "cli" && !isHostedDeployment(baseUrl)) {
-      log.error(
-        "--base-url currently supports MCP setup only. Use --mcp with an on-premise deployment."
-      );
+    const deployment = resolveSetupDeployment(options.baseUrl);
+    const validationError = getSetupValidationError(mode, options, deployment);
+    if (validationError) {
+      log.error(validationError);
       return;
     }
+    if (deployment.kind === "hosted") {
+      trackEvent("command", { name: "setup" });
+    }
+
     if (mode === "mcp") {
       const scope: Scope = options.project ? "project" : "global";
       const agents = await resolveAgents(options, scope);
       if (agents.length === 0) return;
-      await setupMcp(agents, options, scope);
+      await setupMcp(agents, options, scope, deployment);
     } else {
       await setupCli(options);
     }

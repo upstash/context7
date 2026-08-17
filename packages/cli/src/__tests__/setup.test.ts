@@ -27,8 +27,8 @@ import {
 import {
   getMcpUrl,
   getOnPremMcpAuthStatus,
-  isHostedDeployment,
   normalizeDeploymentBaseUrl,
+  resolveSetupDeployment,
 } from "../setup/deployment.js";
 import {
   mergeServerEntry,
@@ -109,13 +109,15 @@ describe("custom Context7 deployments", () => {
   });
 
   test("keeps hosted MCP routing and builds custom MCP URLs", () => {
-    expect(isHostedDeployment("https://context7.com/")).toBe(true);
-    expect(getMcpUrl("https://context7.com", { mode: "oauth" })).toBe(
-      "https://mcp.context7.com/mcp/oauth"
-    );
-    expect(getMcpUrl("https://context7.internal.example/", { mode: "none" })).toBe(
-      "https://context7.internal.example/mcp"
-    );
+    const hosted = resolveSetupDeployment("https://context7.com/");
+    const custom = resolveSetupDeployment("https://context7.internal.example/");
+    expect(hosted.kind).toBe("hosted");
+    expect(custom).toEqual({
+      kind: "custom",
+      baseUrl: "https://context7.internal.example",
+    });
+    expect(getMcpUrl(hosted, { mode: "oauth" })).toBe("https://mcp.context7.com/mcp/oauth");
+    expect(getMcpUrl(custom, { mode: "none" })).toBe("https://context7.internal.example/mcp");
   });
 
   test("discovers whether an on-premise deployment requires MCP authentication", async () => {
@@ -124,7 +126,11 @@ describe("custom Context7 deployments", () => {
       json: () => Promise.resolve({ enabled: true }),
     } as Response);
 
-    await expect(getOnPremMcpAuthStatus("https://context7.internal.example/")).resolves.toEqual({
+    const deployment = resolveSetupDeployment("https://context7.internal.example/");
+    expect(deployment.kind).toBe("custom");
+    if (deployment.kind !== "custom") throw new Error("expected custom deployment");
+
+    await expect(getOnPremMcpAuthStatus(deployment)).resolves.toEqual({
       enabled: true,
     });
     expect(fetch).toHaveBeenLastCalledWith(
@@ -139,9 +145,10 @@ describe("custom Context7 deployments", () => {
       json: () => Promise.resolve({ enabled: "yes" }),
     } as Response);
 
-    await expect(getOnPremMcpAuthStatus("https://context7.internal.example")).rejects.toThrow(
-      "Invalid response"
-    );
+    const deployment = resolveSetupDeployment("https://context7.internal.example");
+    if (deployment.kind !== "custom") throw new Error("expected custom deployment");
+
+    await expect(getOnPremMcpAuthStatus(deployment)).rejects.toThrow("Invalid response");
   });
 });
 
@@ -701,14 +708,18 @@ describe("agent config integration", () => {
       const authenticated = agent.mcp.buildEntry(
         apiKeyAuth,
         "http",
-        "https://context7.internal.example/"
+        "https://context7.internal.example/mcp"
       );
       expect(JSON.stringify(authenticated)).toContain("https://context7.internal.example/mcp");
       expect(authenticated).toMatchObject({
         headers: { Authorization: "Bearer sk-test-123" },
       });
 
-      const anonymous = agent.mcp.buildEntry(noAuth, "http", "https://context7.internal.example");
+      const anonymous = agent.mcp.buildEntry(
+        noAuth,
+        "http",
+        "https://context7.internal.example/mcp"
+      );
       expect(JSON.stringify(anonymous)).toContain("https://context7.internal.example/mcp");
       expect(anonymous).not.toHaveProperty("headers");
     }
