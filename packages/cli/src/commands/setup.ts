@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import pc from "picocolors";
 import ora from "ora";
-import { select } from "@inquirer/prompts";
+import { password, select } from "@inquirer/prompts";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import { dirname, join } from "path";
 import { randomBytes } from "crypto";
@@ -152,6 +152,21 @@ async function authenticateAndGenerateKey(): Promise<string | null> {
   }
 }
 
+async function promptForOnPremApiKey(deployment: SetupDeployment): Promise<string | null> {
+  if (deployment.kind !== "custom") return null;
+
+  try {
+    return await password({
+      message: `Personal API key (create one at ${deployment.baseUrl}/account)`,
+      mask: true,
+      validate: (value) => value.trim().length > 0 || "API key is required",
+    }).then((value) => value.trim());
+  } catch {
+    log.error("Setup cancelled before a personal API key was entered.");
+    return null;
+  }
+}
+
 async function resolveAuth(
   options: SetupOptions,
   deployment: SetupDeployment
@@ -171,8 +186,13 @@ async function resolveAuth(
 
     if (apiKey) return { mode: "api-key", apiKey };
 
+    if (!options.yes) {
+      const promptedApiKey = await promptForOnPremApiKey(deployment);
+      return promptedApiKey ? { mode: "api-key", apiKey: promptedApiKey } : null;
+    }
+
     log.error(
-      `MCP authentication is enabled at ${deployment.baseUrl}. Pass --api-key or set CONTEXT7_API_KEY with a personal API key.`
+      `MCP authentication is enabled at ${deployment.baseUrl}. Pass --api-key, set CONTEXT7_API_KEY, or rerun without --yes to enter a personal API key securely.`
     );
     return null;
   }

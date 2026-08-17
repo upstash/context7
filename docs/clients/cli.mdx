@@ -159,13 +159,18 @@ Pass the root URL of your on-premise deployment with `--base-url`. Do not includ
 # MCP authentication disabled on the deployment
 ctx7 setup --mcp --base-url https://context7.internal.example --codex
 
-# MCP authentication enabled: prefer the environment variable to avoid shell history
-CONTEXT7_API_KEY=ctx7op-... ctx7 setup --mcp \
+# MCP authentication enabled: the CLI requests the personal key with hidden input
+ctx7 setup --mcp \
+  --base-url https://context7.internal.example \
+  --codex
+
+# Non-interactive automation
+CONTEXT7_API_KEY=ctx7op-... ctx7 setup --mcp --yes \
   --base-url https://context7.internal.example \
   --codex
 ```
 
-The CLI checks `/api/auth/mcp` before writing configuration. It either configures anonymous access or writes `Authorization: Bearer <personal-key>`. On-premise setup uses Streamable HTTP and bundled rule/skill content, so the target does not need to serve Context7 Cloud skill endpoints.
+The CLI checks `/api/auth/mcp` before writing configuration. It either configures anonymous access or writes `Authorization: Bearer <personal-key>`. When authentication is enabled and no key was provided, interactive setup requests the key with masked input. Use `--api-key` or `CONTEXT7_API_KEY` for non-interactive automation. On-premise setup uses Streamable HTTP and bundled rule/skill content, so the target does not need to serve Context7 Cloud skill endpoints.
 
 When `--base-url` targets a custom deployment, setup skips the npm update check and telemetry and does not fetch rules or skills from GitHub or Context7 Cloud. After the CLI package is installed, the only network request made by setup is to the configured deployment. In a restricted environment, mirror `ctx7` and its dependencies in an internal npm registry and run the installed `ctx7` binary instead of `npx ctx7@latest`.
 
