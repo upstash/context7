@@ -21,7 +21,7 @@ program
   .name("ctx7")
   .description("Context7 CLI - Fetch documentation context and configure Context7")
   .version(VERSION, "-v, --version")
-  .option("--base-url <url>")
+  .option("--base-url <url>", "Use a custom Context7 deployment URL")
   .hook("preAction", (thisCommand) => {
     const opts = thisCommand.opts();
     if (opts.baseUrl) {
@@ -43,6 +43,7 @@ Examples:
   ${brand.primary("npx ctx7 setup")}
   ${brand.primary("npx ctx7 setup --mcp")}
   ${brand.primary("npx ctx7 setup --cli")}
+  ${brand.primary("npx ctx7 setup --mcp --base-url https://context7.internal.example --codex")}
 
   ${brand.dim("# Remove Context7 setup")}
   ${brand.primary("npx ctx7 remove --cursor")}

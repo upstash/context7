@@ -38,6 +38,14 @@ const CODEX_CLI_SANDBOX_GUIDANCE = `Run Context7 CLI requests outside Codex's de
 
 export type RuleMode = "mcp" | "cli";
 
+function customizeRuleContent(mode: RuleMode, agent: string, body: string): string {
+  if (mode === "cli" && agent === "codex" && !body.includes(CODEX_CLI_SANDBOX_GUIDANCE)) {
+    body = `${body.trimEnd()}\n${CODEX_CLI_SANDBOX_GUIDANCE}\n`;
+  }
+
+  return agent === "cursor" ? `${CURSOR_FRONTMATTER}${body}` : body;
+}
+
 async function fetchRule(filename: string, fallback: string): Promise<string> {
   for (const base of GITHUB_RAW_URLS) {
     try {
@@ -53,13 +61,21 @@ async function fetchRule(filename: string, fallback: string): Promise<string> {
 export async function getRuleContent(mode: RuleMode, agent: string): Promise<string> {
   const [filename, fallback] =
     mode === "mcp" ? ["context7-mcp.md", FALLBACK_MCP] : ["context7-cli.md", FALLBACK_CLI];
-  let body = await fetchRule(filename, fallback);
+  const body = await fetchRule(filename, fallback);
+  return customizeRuleContent(mode, agent, body);
+}
 
-  if (mode === "cli" && agent === "codex" && !body.includes(CODEX_CLI_SANDBOX_GUIDANCE)) {
-    body = `${body.trimEnd()}\n${CODEX_CLI_SANDBOX_GUIDANCE}\n`;
-  }
+export function getBundledRuleContent(mode: RuleMode, agent: string): string {
+  return customizeRuleContent(mode, agent, mode === "mcp" ? FALLBACK_MCP : FALLBACK_CLI);
+}
 
-  return agent === "cursor" ? `${CURSOR_FRONTMATTER}${body}` : body;
+export function getBundledMcpSkillFiles(): Array<{ path: string; content: string }> {
+  return [
+    {
+      path: "SKILL.md",
+      content: `---\nname: context7-mcp\ndescription: Fetch current library documentation with Context7 MCP tools.\n---\n\n# Context7 MCP\n\n${FALLBACK_MCP}`,
+    },
+  ];
 }
 
 export function customizeSkillFilesForAgent(

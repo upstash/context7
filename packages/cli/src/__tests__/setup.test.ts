@@ -19,7 +19,17 @@ vi.stubGlobal(
   })
 );
 
-import { getRuleContent } from "../setup/templates.js";
+import {
+  getBundledMcpSkillFiles,
+  getBundledRuleContent,
+  getRuleContent,
+} from "../setup/templates.js";
+import {
+  getMcpUrl,
+  getOnPremMcpAuthStatus,
+  isHostedDeployment,
+  normalizeDeploymentBaseUrl,
+} from "../setup/deployment.js";
 import {
   mergeServerEntry,
   removeServerEntry,
@@ -71,6 +81,66 @@ describe("getRuleContent", () => {
           return Promise.resolve({ ok: true, text: () => Promise.resolve(MOCK_CLI_RULE) });
         return Promise.resolve({ ok: false });
       })
+    );
+  });
+
+  test("provides bundled MCP rule and skill content for offline setup", () => {
+    expect(getBundledRuleContent("mcp", "claude")).toContain("resolve-library-id");
+    const files = getBundledMcpSkillFiles();
+    expect(files).toHaveLength(1);
+    expect(files[0].path).toBe("SKILL.md");
+    expect(files[0].content).toContain("name: context7-mcp");
+    expect(files[0].content).toContain("query-docs");
+  });
+});
+
+describe("custom Context7 deployments", () => {
+  test("normalizes deployment roots and rejects endpoint URLs", () => {
+    expect(normalizeDeploymentBaseUrl("https://context7.internal.example///")).toBe(
+      "https://context7.internal.example"
+    );
+    expect(normalizeDeploymentBaseUrl("http://localhost:3000/context7/")).toBe(
+      "http://localhost:3000/context7"
+    );
+    expect(() => normalizeDeploymentBaseUrl("https://example.com/mcp")).toThrow(
+      "without /mcp or /api"
+    );
+    expect(() => normalizeDeploymentBaseUrl("file:///tmp/context7")).toThrow("http:// or https://");
+  });
+
+  test("keeps hosted MCP routing and builds custom MCP URLs", () => {
+    expect(isHostedDeployment("https://context7.com/")).toBe(true);
+    expect(getMcpUrl("https://context7.com", { mode: "oauth" })).toBe(
+      "https://mcp.context7.com/mcp/oauth"
+    );
+    expect(getMcpUrl("https://context7.internal.example/", { mode: "none" })).toBe(
+      "https://context7.internal.example/mcp"
+    );
+  });
+
+  test("discovers whether an on-premise deployment requires MCP authentication", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ enabled: true }),
+    } as Response);
+
+    await expect(getOnPremMcpAuthStatus("https://context7.internal.example/")).resolves.toEqual({
+      enabled: true,
+    });
+    expect(fetch).toHaveBeenLastCalledWith(
+      "https://context7.internal.example/api/auth/mcp",
+      expect.objectContaining({ headers: { Accept: "application/json" } })
+    );
+  });
+
+  test("rejects invalid authentication discovery responses", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ enabled: "yes" }),
+    } as Response);
+
+    await expect(getOnPremMcpAuthStatus("https://context7.internal.example")).rejects.toThrow(
+      "Invalid response"
     );
   });
 });
@@ -623,6 +693,26 @@ describe("agent config integration", () => {
 
   const apiKeyAuth: AuthOptions = { mode: "api-key", apiKey: "sk-test-123" };
   const oauthAuth: AuthOptions = { mode: "oauth" };
+  const noAuth: AuthOptions = { mode: "none" };
+
+  test("all HTTP agents target an on-premise deployment and use bearer authentication", () => {
+    for (const agentName of ALL_AGENT_NAMES) {
+      const agent = getAgent(agentName);
+      const authenticated = agent.mcp.buildEntry(
+        apiKeyAuth,
+        "http",
+        "https://context7.internal.example/"
+      );
+      expect(JSON.stringify(authenticated)).toContain("https://context7.internal.example/mcp");
+      expect(authenticated).toMatchObject({
+        headers: { Authorization: "Bearer sk-test-123" },
+      });
+
+      const anonymous = agent.mcp.buildEntry(noAuth, "http", "https://context7.internal.example");
+      expect(JSON.stringify(anonymous)).toContain("https://context7.internal.example/mcp");
+      expect(anonymous).not.toHaveProperty("headers");
+    }
+  });
 
   describe("claude", () => {
     const agent = getAgent("claude");
