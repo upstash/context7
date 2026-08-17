@@ -131,6 +131,25 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
 
 Add the hosted Context7 server with OpenClaw's MCP client registry. See the [OpenClaw MCP documentation](https://docs.openclaw.ai/tools/mcp) for more details.
 
+#### OAuth (Recommended)
+
+Register the Context7 OAuth endpoint, then sign in through your browser:
+
+```sh
+openclaw mcp add context7 \
+  --url https://mcp.context7.com/mcp/oauth \
+  --transport streamable-http \
+  --auth oauth
+
+openclaw mcp login context7
+```
+
+OpenClaw also provides a code-based login fallback for headless or remote environments. See [Set Up OAuth](/howto/oauth) for more details.
+
+#### API Key or Anonymous Access
+
+To connect without OAuth, register the standard endpoint:
+
 ```sh
 openclaw mcp add context7 \
   --url https://mcp.context7.com/mcp \
