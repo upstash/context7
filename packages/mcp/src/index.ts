@@ -19,7 +19,8 @@ import { randomUUID } from "node:crypto";
 import {
   SERVER_VERSION,
   RESOURCE_URL,
-  AUTH_SERVER_URL,
+  OAUTH_AUTH_SERVER_URL,
+  EMA_ISSUER,
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
@@ -473,7 +474,10 @@ async function main() {
       (_req: express.Request, res: express.Response) => {
         res.json({
           resource: RESOURCE_URL,
-          authorization_servers: [AUTH_SERVER_URL],
+          // Each entry is an independent authorization server. Clerk handles
+          // regular authorization-code flows; Context7 handles only the
+          // enterprise-managed id-jag exchange.
+          authorization_servers: Array.from(new Set([OAUTH_AUTH_SERVER_URL, EMA_ISSUER])),
           scopes_supported: ["profile", "email"],
           bearer_methods_supported: ["header"],
         });
@@ -483,7 +487,7 @@ async function main() {
     app.get(
       "/.well-known/oauth-authorization-server",
       async (_req: express.Request, res: express.Response) => {
-        const authServerUrl = AUTH_SERVER_URL;
+        const authServerUrl = OAUTH_AUTH_SERVER_URL;
 
         try {
           const response = await fetch(`${authServerUrl}/.well-known/oauth-authorization-server`);

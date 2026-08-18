@@ -122,6 +122,19 @@ async function connect(transportKind: "http" | "stdio", era: "modern" | "legacy"
   return client;
 }
 
+describe("OAuth discovery", () => {
+  test("advertises Clerk for user OAuth and Context7 for enterprise auth", async () => {
+    const metadataUrl = new URL("/.well-known/oauth-protected-resource", httpUrl);
+    const response = await fetch(metadataUrl);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      resource: "https://mcp.context7.com",
+      authorization_servers: ["https://clerk.context7.com", "https://context7.com"],
+    });
+  });
+});
+
 describe.each([
   ["http", "modern"],
   ["http", "legacy"],
