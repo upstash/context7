@@ -17,8 +17,13 @@ import path from "node:path";
 
 const PKG_ROOT = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 const DIST = path.join(PKG_ROOT, "dist", "index.js");
+const MODULE_LOAD_RECORDER = path.join(PKG_ROOT, "test", "fixtures", "module-load-recorder.mjs");
 const BASE_PORT = 43117;
 const STUB_DOCS = "stub docs text";
+const EMPTY_CONTEXT_QUERY = "force-empty-context";
+const NO_RESULTS_QUERY = "force-no-results";
+const UPSTREAM_ERROR_QUERY = "force-upstream-error";
+const INVALID_JSON_QUERY = "force-invalid-json";
 
 interface RecordedRequest {
   path: string;
@@ -31,6 +36,29 @@ let stubServer: http.Server;
 let childEnv: Record<string, string>;
 let httpChild: ChildProcess;
 let httpUrl: string;
+let metricsUrl: string;
+
+function operationCount(exported: string, method: string): number {
+  return exported
+    .split("\n")
+    .filter(
+      (line) =>
+        line.startsWith("mcp_server_operation_duration_count{") &&
+        line.includes(`mcp_method_name="${method}"`)
+    )
+    .reduce((total, line) => total + Number(line.slice(line.lastIndexOf(" ") + 1)), 0);
+}
+
+function getFreePort(): Promise<number> {
+  const server = http.createServer();
+  return new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address() as { port: number };
+      server.close((error) => (error ? reject(error) : resolve(address.port)));
+    });
+  });
+}
 
 function startStubApi(): Promise<string> {
   stubServer = http.createServer((req, res) => {
@@ -39,6 +67,14 @@ function startStubApi(): Promise<string> {
     requests.push({ path: apiPath, query: url.searchParams, headers: req.headers });
     if (apiPath === "/v2/libs/search") {
       res.setHeader("Content-Type", "application/json");
+      if (url.searchParams.get("query") === INVALID_JSON_QUERY) {
+        res.end("not-json");
+        return;
+      }
+      if (url.searchParams.get("query") === NO_RESULTS_QUERY) {
+        res.end(JSON.stringify({ results: [] }));
+        return;
+      }
       res.end(
         JSON.stringify({
           results: [
@@ -56,34 +92,55 @@ function startStubApi(): Promise<string> {
         })
       );
     } else if (apiPath === "/v2/context") {
+      if (url.searchParams.get("query") === UPSTREAM_ERROR_QUERY) {
+        res.statusCode = 503;
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ message: "stub upstream failure" }));
+        return;
+      }
       res.setHeader("Content-Type", "text/plain");
-      res.end(STUB_DOCS);
+      res.end(url.searchParams.get("query") === EMPTY_CONTEXT_QUERY ? "" : STUB_DOCS);
     } else {
       res.statusCode = 404;
       res.end();
     }
   });
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    const handleListenError = (error: Error) => {
+      stubServer.close();
+      reject(error);
+    };
+    stubServer.once("error", handleListenError);
     stubServer.listen(0, "127.0.0.1", () => {
+      stubServer.off("error", handleListenError);
       const address = stubServer.address() as { port: number };
       resolve(`http://127.0.0.1:${address.port}/api`);
     });
   });
 }
 
-function startHttpChild(): Promise<{ child: ChildProcess; url: string }> {
+interface HttpChildOptions {
+  environment?: Record<string, string>;
+  nodeArgs?: string[];
+  port?: number;
+}
+
+function startHttpChild(
+  options: HttpChildOptions = {}
+): Promise<{ child: ChildProcess; stderr: () => string; url: string }> {
   return new Promise((resolve, reject) => {
+    const port = options.port ?? BASE_PORT;
     const child = spawn(
       process.execPath,
-      [DIST, "--transport", "http", "--port", String(BASE_PORT)],
-      { env: childEnv, stdio: ["ignore", "ignore", "pipe"] }
+      [...(options.nodeArgs ?? []), DIST, "--transport", "http", "--port", String(port)],
+      { env: options.environment ?? childEnv, stdio: ["ignore", "ignore", "pipe"] }
     );
     let stderr = "";
     child.stderr!.on("data", (chunk: Buffer) => {
       stderr += chunk.toString();
       // The binary retries on EADDRINUSE, so parse the actual port it settled on.
       const match = stderr.match(/running on HTTP at (http:\/\/localhost:\d+\/mcp)/);
-      if (match) resolve({ child, url: match[1] });
+      if (match) resolve({ child, stderr: () => stderr, url: match[1] });
     });
     child.once("exit", (code) => {
       reject(new Error(`HTTP server exited before listening (code ${code}): ${stderr}`));
@@ -94,9 +151,16 @@ function startHttpChild(): Promise<{ child: ChildProcess; url: string }> {
 beforeAll(async () => {
   execSync("pnpm build", { cwd: PKG_ROOT, stdio: "pipe" });
   const stubUrl = await startStubApi();
+  const metricsPort = await getFreePort();
+  metricsUrl = `http://127.0.0.1:${metricsPort}/metrics`;
   // getDefaultEnvironment() inherits only safe vars, so a real
   // CONTEXT7_API_KEY in the parent shell cannot leak into the children.
-  childEnv = { ...getDefaultEnvironment(), CONTEXT7_API_URL: stubUrl };
+  childEnv = {
+    ...getDefaultEnvironment(),
+    CONTEXT7_API_URL: stubUrl,
+    OTEL_EXPORTER_PROMETHEUS_HOST: "127.0.0.1",
+    OTEL_EXPORTER_PROMETHEUS_PORT: String(metricsPort),
+  };
   ({ child: httpChild, url: httpUrl } = await startHttpChild());
 }, 120_000);
 
@@ -228,5 +292,204 @@ describe.each([
         : { ide: "test-harness", version: "1.0.0" };
     expect(apiCall.headers["x-context7-client-ide"]).toBe(expected.ide);
     expect(apiCall.headers["x-context7-client-version"]).toBe(expected.version);
+  });
+});
+
+describe("OpenTelemetry metrics", () => {
+  test("hard-off mode does not load telemetry implementation modules", async () => {
+    const disabledPort = await getFreePort();
+    const disabledServer = await startHttpChild({
+      environment: { ...childEnv, OTEL_SDK_DISABLED: " true\n" },
+      nodeArgs: ["--experimental-loader", MODULE_LOAD_RECORDER],
+      port: disabledPort,
+    });
+    const client = new Client(
+      { name: "telemetry-disabled-test", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+
+    try {
+      await client.connect(new StreamableHTTPClientTransport(new URL(disabledServer.url)));
+      const result = await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/vercel/next.js", query: "disabled telemetry" },
+      });
+      expect(result.isError).toBeFalsy();
+      expect(disabledServer.stderr()).not.toContain("MCP_TELEMETRY_MODULE_LOADED");
+    } finally {
+      await client.close();
+      disabledServer.child.kill();
+    }
+  });
+
+  test("counts each dispatched operation in a legacy JSON-RPC batch", async () => {
+    const before = operationCount(await (await fetch(metricsUrl)).text(), "tools/list");
+    const response = await fetch(httpUrl, {
+      method: "POST",
+      headers: {
+        accept: "application/json, text/event-stream",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify([
+        { jsonrpc: "2.0", id: 90_001, method: "tools/list", params: {} },
+        { jsonrpc: "2.0", id: 90_002, method: "tools/list", params: {} },
+      ]),
+    });
+    expect(response.status).toBe(200);
+    await response.text();
+
+    const after = operationCount(await (await fetch(metricsUrl)).text(), "tools/list");
+    expect(after - before).toBe(2);
+  });
+
+  test("exports bounded MCP, tool, upstream, and authentication metrics", async () => {
+    const client = await connect("http", "modern");
+    try {
+      await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/vercel/next.js", query: "app router" },
+      });
+      await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/vercel/next.js", query: UPSTREAM_ERROR_QUERY },
+      });
+      await client.callTool({
+        name: "resolve-library-id",
+        arguments: { libraryName: "Next.js", query: INVALID_JSON_QUERY },
+      });
+      await client.callTool({
+        name: "resolve-library-id",
+        arguments: { libraryName: "does-not-exist", query: NO_RESULTS_QUERY },
+      });
+      await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/missing/library", query: EMPTY_CONTEXT_QUERY },
+      });
+    } finally {
+      await client.close();
+    }
+
+    const protectedUrl = new URL(httpUrl);
+    protectedUrl.pathname = "/mcp/oauth";
+    const unauthorizedResponse = await fetch(protectedUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json", "mcp-method": "initialize" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} }),
+    });
+    expect(unauthorizedResponse.status).toBe(401);
+
+    const acceptedResponse = await fetch(protectedUrl, {
+      method: "DELETE",
+      headers: { authorization: "Bearer ctx7sk-local-test" },
+    });
+    expect(acceptedResponse.status).toBe(405);
+    await acceptedResponse.text();
+
+    let exported = "";
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      const response = await fetch(metricsUrl);
+      expect(response.status).toBe(200);
+      exported = await response.text();
+      if (exported.includes("nodejs_eventloop_utilization")) break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    const operationCounts = exported
+      .split("\n")
+      .filter((line) => line.startsWith("mcp_server_operation_duration_count{"));
+    expect(
+      operationCounts.some(
+        (line) =>
+          line.includes('mcp_method_name="tools/call"') &&
+          line.includes('gen_ai_tool_name="query-docs"') &&
+          !line.includes("error_type=")
+      )
+    ).toBe(true);
+    expect(
+      operationCounts
+        .filter((line) => line.includes('mcp_method_name="tools/call"'))
+        .every((line) => !line.includes('error_type="connection_closed"'))
+    ).toBe(true);
+    expect(
+      operationCounts.some(
+        (line) =>
+          line.includes('mcp_method_name="tools/call"') &&
+          line.includes('gen_ai_tool_name="query-docs"') &&
+          line.includes('error_type="tool_error"')
+      )
+    ).toBe(true);
+    expect(
+      operationCounts.some(
+        (line) =>
+          line.includes('gen_ai_tool_name="query-docs"') &&
+          line.includes('context7_mcp_tool_outcome="success"')
+      )
+    ).toBe(true);
+    expect(exported).toMatch(
+      /context7_mcp_upstream_requests_total\{[^}]*context7_upstream_operation="fetch_context"[^}]*context7_upstream_outcome="success"[^}]*\} [1-9]/
+    );
+    expect(
+      operationCounts.some(
+        (line) =>
+          line.includes('gen_ai_tool_name="query-docs"') &&
+          line.includes('context7_mcp_tool_outcome="error"')
+      )
+    ).toBe(true);
+    expect(
+      operationCounts.some((line) => line.includes('context7_mcp_tool_outcome="not_found"'))
+    ).toBe(true);
+    expect(exported).toMatch(
+      /context7_mcp_upstream_requests_total\{[^}]*context7_upstream_operation="fetch_context"[^}]*http_response_status_code_class="5xx"[^}]*context7_upstream_outcome="http_error"[^}]*\} [1-9]/
+    );
+    expect(exported).toMatch(
+      /context7_mcp_upstream_requests_total\{[^}]*context7_upstream_operation="search_libraries"[^}]*http_response_status_code_class="2xx"[^}]*context7_upstream_outcome="response_error"[^}]*\} [1-9]/
+    );
+    expect(
+      exported
+        .split("\n")
+        .some(
+          (line) =>
+            line.startsWith("context7_mcp_upstream_requests_total{") &&
+            line.includes('context7_upstream_operation="fetch_context"') &&
+            line.includes('http_response_status_code="503"')
+        )
+    ).toBe(true);
+    expect(exported).toMatch(
+      /context7_mcp_authentication_attempts_total\{[^}]*context7_authentication_outcome="missing"[^}]*\} 1/
+    );
+    expect(exported).toMatch(
+      /context7_mcp_authentication_attempts_total\{[^}]*context7_authentication_outcome="accepted"[^}]*\} 1/
+    );
+    expect(exported).toContain("context7_mcp_authentication_duration_count");
+    expect(exported).toContain("context7_mcp_authentication_active");
+    expect(exported).toContain("mcp_server_operation_duration_bucket");
+    expect(exported).toMatch(/target_info\{[^}]*service_name="context7-mcp"/);
+    expect(exported).toContain("v8js_memory_heap_used");
+    expect(exported).toContain("nodejs_eventloop_utilization");
+    expect(exported).not.toContain("mcp_server_session_duration");
+
+    expect(exported).not.toMatch(/(?:\{|,)(?:api_key|client_ip|library_id|query|session_id)="/i);
+
+    const activeSamples = exported
+      .split("\n")
+      .filter((line) => /^context7_mcp_.*_active\{/.test(line));
+    expect(activeSamples.length).toBeGreaterThan(0);
+    expect(activeSamples.every((line) => line.endsWith(" 0"))).toBe(true);
+
+    const applicationMetricsResponse = await fetch(new URL("/metrics", httpUrl));
+    expect(applicationMetricsResponse.status).toBe(404);
+  });
+
+  test("continues serving when the embedded exporter port is occupied", async () => {
+    const secondServer = await startHttpChild();
+    try {
+      const pingUrl = new URL(secondServer.url);
+      pingUrl.pathname = "/ping";
+      const response = await fetch(pingUrl);
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({ status: "ok" });
+    } finally {
+      secondServer.child.kill();
+    }
   });
 });
