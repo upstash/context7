@@ -29,12 +29,6 @@ import {
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { getClientIp } from "./lib/client-ip.js";
-import {
-  forceFlushMetrics,
-  recordToolCallOutcome,
-  observeUpstreamRequest,
-  observeAuthentication,
-} from "./lib/telemetry.js";
 import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
 import { embeddedPrometheusIsEnabled, telemetryIsDisabled } from "./lib/telemetry-config.js";
 import { installStdioShutdown } from "./lib/stdio-shutdown.js";
@@ -43,7 +37,30 @@ import { installStdioShutdown } from "./lib/stdio-shutdown.js";
 const DEFAULT_PORT = 3000;
 const OAUTH_METADATA_TIMEOUT_MS = 10_000;
 const TELEMETRY_DISABLED = telemetryIsDisabled();
+type TelemetryModule = typeof import("./lib/telemetry.js");
+type ObservedAuthentication<T> = import("./lib/telemetry.js").ObservedAuthentication<T>;
+type UpstreamObservationOptions = import("./lib/telemetry.js").UpstreamObservationOptions;
+type UpstreamOperation = import("./lib/telemetry.js").UpstreamOperation;
+
+let telemetry: TelemetryModule | undefined;
 let mcpTelemetry: typeof import("./lib/mcp-telemetry.js") | undefined;
+
+async function observeAuthentication<T>(
+  operation: () => Promise<ObservedAuthentication<T>>
+): Promise<T> {
+  return telemetry ? telemetry.observeAuthentication(operation) : (await operation()).value;
+}
+
+async function observeUpstreamRequest<T>(
+  operationName: UpstreamOperation,
+  request: () => Promise<Response>,
+  consumeResponse: (response: Response) => Promise<T>,
+  options: UpstreamObservationOptions = {}
+): Promise<T> {
+  return telemetry
+    ? telemetry.observeUpstreamRequest(operationName, request, consumeResponse, options)
+    : consumeResponse(await request());
+}
 
 // Parse CLI arguments using commander
 const program = new Command()
@@ -257,7 +274,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       if (!searchResponse.results || searchResponse.results.length === 0) {
         const text = searchResponse.error ?? "No libraries found matching the provided name.";
         maybeElicitAuthSignIn(server, ctx);
-        recordToolCallOutcome(searchResponse.error ? "error" : "not_found");
+        telemetry?.recordToolCallOutcome(searchResponse.error ? "error" : "not_found");
         return {
           content: [
             {
@@ -271,7 +288,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       const resultsText = formatSearchResults(searchResponse);
       const responseText = `Available Libraries:\n\n${resultsText}`;
       maybeElicitAuthSignIn(server, ctx);
-      recordToolCallOutcome("success");
+      telemetry?.recordToolCallOutcome("success");
       return {
         content: [
           {
@@ -318,7 +335,7 @@ Do not call this tool more than 3 times per question.`,
       const ctx = getClientContext(toolCtx);
       const response = await fetchLibraryContext({ query, libraryId }, ctx);
       maybeElicitAuthSignIn(server, ctx);
-      recordToolCallOutcome(response.outcome);
+      telemetry?.recordToolCallOutcome(response.outcome);
       return {
         content: [
           {
@@ -334,7 +351,12 @@ Do not call this tool more than 3 times per question.`,
 }
 
 async function main() {
-  if (!TELEMETRY_DISABLED) mcpTelemetry = await import("./lib/mcp-telemetry.js");
+  if (!TELEMETRY_DISABLED) {
+    [telemetry, mcpTelemetry] = await Promise.all([
+      import("./lib/telemetry.js"),
+      import("./lib/mcp-telemetry.js"),
+    ]);
+  }
 
   if (TRANSPORT_TYPE === "http") {
     const initialPort = CLI_PORT ?? DEFAULT_PORT;
@@ -634,7 +656,7 @@ async function main() {
       }
     );
     installStdioShutdown(stdioHandle, {
-      flush: forceFlushMetrics,
+      flush: telemetry?.forceFlushMetrics,
       onerror: (error) => console.error("Failed to close MCP stdio server:", error),
     });
 

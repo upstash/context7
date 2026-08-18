@@ -4,7 +4,8 @@ import { Agent, ProxyAgent, setGlobalDispatcher } from "undici";
 import { CONTEXT7_API_BASE_URL } from "./constants.js";
 import { readFileSync } from "fs";
 import tls from "tls";
-import { observeUpstreamRequest } from "./telemetry.js";
+import { telemetryIsDisabled } from "./telemetry-config.js";
+import type { UpstreamObservationOptions, UpstreamOperation } from "./telemetry.js";
 
 /**
  * Ceiling on a single Context7 API call. Without a signal a stalled backend
@@ -13,6 +14,25 @@ import { observeUpstreamRequest } from "./telemetry.js";
  * day of production traffic.
  */
 const API_TIMEOUT_MS = 60_000;
+const TELEMETRY_DISABLED = telemetryIsDisabled();
+let telemetryModule: Promise<typeof import("./telemetry.js")> | undefined;
+
+async function observeUpstreamRequest<T>(
+  operationName: UpstreamOperation,
+  request: () => Promise<Response>,
+  consumeResponse: (response: Response) => Promise<T>,
+  options: UpstreamObservationOptions = {}
+): Promise<T> {
+  if (TELEMETRY_DISABLED) return consumeResponse(await request());
+
+  telemetryModule ??= import("./telemetry.js");
+  return (await telemetryModule).observeUpstreamRequest(
+    operationName,
+    request,
+    consumeResponse,
+    options
+  );
+}
 
 /**
  * Parses error response from the Context7 API

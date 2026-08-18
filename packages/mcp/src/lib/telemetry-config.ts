@@ -1,5 +1,5 @@
 export function telemetryIsDisabled(environment: NodeJS.ProcessEnv = process.env): boolean {
-  return environment.OTEL_SDK_DISABLED?.toLowerCase() === "true";
+  return environment.OTEL_SDK_DISABLED?.trim().toLowerCase() === "true";
 }
 
 export function embeddedPrometheusIsEnabled(environment: NodeJS.ProcessEnv = process.env): boolean {

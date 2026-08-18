@@ -134,6 +134,7 @@ describe("upstream failure classification", () => {
 describe("telemetry configuration", () => {
   test("uses OTEL_SDK_DISABLED as the complete telemetry off switch", () => {
     expect(telemetryIsDisabled({ OTEL_SDK_DISABLED: "TRUE" })).toBe(true);
+    expect(telemetryIsDisabled({ OTEL_SDK_DISABLED: " true\n" })).toBe(true);
     expect(embeddedPrometheusIsEnabled({ OTEL_SDK_DISABLED: "true" })).toBe(false);
   });
 

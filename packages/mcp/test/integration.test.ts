@@ -17,6 +17,7 @@ import path from "node:path";
 
 const PKG_ROOT = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 const DIST = path.join(PKG_ROOT, "dist", "index.js");
+const MODULE_LOAD_RECORDER = path.join(PKG_ROOT, "test", "fixtures", "module-load-recorder.mjs");
 const BASE_PORT = 43117;
 const STUB_DOCS = "stub docs text";
 const EMPTY_CONTEXT_QUERY = "force-empty-context";
@@ -118,19 +119,28 @@ function startStubApi(): Promise<string> {
   });
 }
 
-function startHttpChild(): Promise<{ child: ChildProcess; url: string }> {
+interface HttpChildOptions {
+  environment?: Record<string, string>;
+  nodeArgs?: string[];
+  port?: number;
+}
+
+function startHttpChild(
+  options: HttpChildOptions = {}
+): Promise<{ child: ChildProcess; stderr: () => string; url: string }> {
   return new Promise((resolve, reject) => {
+    const port = options.port ?? BASE_PORT;
     const child = spawn(
       process.execPath,
-      [DIST, "--transport", "http", "--port", String(BASE_PORT)],
-      { env: childEnv, stdio: ["ignore", "ignore", "pipe"] }
+      [...(options.nodeArgs ?? []), DIST, "--transport", "http", "--port", String(port)],
+      { env: options.environment ?? childEnv, stdio: ["ignore", "ignore", "pipe"] }
     );
     let stderr = "";
     child.stderr!.on("data", (chunk: Buffer) => {
       stderr += chunk.toString();
       // The binary retries on EADDRINUSE, so parse the actual port it settled on.
       const match = stderr.match(/running on HTTP at (http:\/\/localhost:\d+\/mcp)/);
-      if (match) resolve({ child, url: match[1] });
+      if (match) resolve({ child, stderr: () => stderr, url: match[1] });
     });
     child.once("exit", (code) => {
       reject(new Error(`HTTP server exited before listening (code ${code}): ${stderr}`));
@@ -286,6 +296,32 @@ describe.each([
 });
 
 describe("OpenTelemetry metrics", () => {
+  test("hard-off mode does not load telemetry implementation modules", async () => {
+    const disabledPort = await getFreePort();
+    const disabledServer = await startHttpChild({
+      environment: { ...childEnv, OTEL_SDK_DISABLED: " true\n" },
+      nodeArgs: ["--experimental-loader", MODULE_LOAD_RECORDER],
+      port: disabledPort,
+    });
+    const client = new Client(
+      { name: "telemetry-disabled-test", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+
+    try {
+      await client.connect(new StreamableHTTPClientTransport(new URL(disabledServer.url)));
+      const result = await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/vercel/next.js", query: "disabled telemetry" },
+      });
+      expect(result.isError).toBeFalsy();
+      expect(disabledServer.stderr()).not.toContain("MCP_TELEMETRY_MODULE_LOADED");
+    } finally {
+      await client.close();
+      disabledServer.child.kill();
+    }
+  });
+
   test("counts each dispatched operation in a legacy JSON-RPC batch", async () => {
     const before = operationCount(await (await fetch(metricsUrl)).text(), "tools/list");
     const response = await fetch(httpUrl, {
