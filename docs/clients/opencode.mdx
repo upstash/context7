@@ -19,19 +19,31 @@ npx ctx7 setup --opencode
 
 Authenticates via OAuth, generates an API key, and installs the appropriate skill. You can choose between CLI or MCP mode.
 
-You can also install Context7 as an OpenCode plugin. It bundles the MCP server with a skill:
+You can also install Context7 as an [OpenCode plugin](#plugin). It bundles the MCP server with a skill:
 
 ```bash
 opencode plugin @upstash/context7-opencode
 ```
 
-Restart OpenCode after installing. On the first lookup, a browser window opens so you can log in to Context7 via OAuth, which gives you your account's rate limits.
+Restart OpenCode after installing, then authenticate the plugin:
+
+```bash
+opencode mcp auth context7
+```
+
+Complete the OAuth flow in your browser to use your account's rate limits. If you skip this command, the browser opens automatically on the first lookup.
 
 For manual MCP installation or other configuration options, see [All MCP Clients](/resources/all-clients).
 
 ---
 
 ## Plugin
+
+Install the plugin from your project directory:
+
+```bash
+opencode plugin @upstash/context7-opencode
+```
 
 The plugin is an alternative to `ctx7 setup` that configures OpenCode in one command. It adds two things:
 
