@@ -22,7 +22,9 @@ export const OAUTH_AUTH_SERVER_URL = process.env.OAUTH_AUTH_SERVER_URL || `https
 
 // Enterprise-Managed Auth (id-jag): access tokens minted by the Context7
 // authorization server, validated against its public JWKS.
-// AUTH_SERVER_URL remains a backwards-compatible alias for local EMA setups.
+// AUTH_SERVER_URL remains a backwards-compatible alias for local EMA setups;
+// it does not move interactive user OAuth. Local end-to-end OAuth environments
+// must set OAUTH_AUTH_SERVER_URL separately when Clerk is not the intended issuer.
 export const EMA_ISSUER =
   process.env.EMA_ISSUER || process.env.AUTH_SERVER_URL || CONTEXT7_BASE_URL;
 export const EMA_JWKS_URL = process.env.EMA_JWKS_URL || `${CONTEXT7_API_BASE_URL}/oauth/ema-jwks`;
