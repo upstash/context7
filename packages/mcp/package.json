@@ -1,6 +1,6 @@
 {
   "name": "@upstash/context7-mcp",
-  "version": "4.0.2",
+  "version": "4.0.3",
   "mcpName": "io.github.upstash/context7",
   "description": "MCP server for Context7",
   "scripts": {
