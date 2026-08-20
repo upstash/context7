@@ -15,6 +15,8 @@ vi.mock("jose", async () => {
 const TENANT_ID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 const ENTRA_ISSUER = `https://login.microsoftonline.com/${TENANT_ID}/v2.0`;
 const AUDIENCE = "6ff6a635-03d9-472d-a7f1-dc98a4e5fde2";
+const originalOAuthAuthServerUrl = process.env.OAUTH_AUTH_SERVER_URL;
+const originalOAuthJwksUrl = process.env.OAUTH_JWKS_URL;
 
 async function loadModule() {
   vi.resetModules();
@@ -42,6 +44,16 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  if (originalOAuthAuthServerUrl === undefined) {
+    delete process.env.OAUTH_AUTH_SERVER_URL;
+  } else {
+    process.env.OAUTH_AUTH_SERVER_URL = originalOAuthAuthServerUrl;
+  }
+  if (originalOAuthJwksUrl === undefined) {
+    delete process.env.OAUTH_JWKS_URL;
+  } else {
+    process.env.OAUTH_JWKS_URL = originalOAuthJwksUrl;
+  }
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
@@ -189,5 +201,37 @@ describe("validateJWT - Clerk path", () => {
 
     expect(result.valid).toBe(false);
     expect(result.error).toBe("Token expired");
+  });
+
+  test("uses the configured OAuth issuer and its JWKS for verification", async () => {
+    process.env.OAUTH_AUTH_SERVER_URL = "https://supreme-foal-19.clerk.accounts.dev/";
+    vi.mocked(jose.jwtVerify).mockResolvedValue({
+      payload: {},
+      protectedHeader: { alg: "RS256" },
+    } as unknown as Awaited<ReturnType<typeof jose.jwtVerify>>);
+
+    const { validateJWT } = await loadModule();
+    const result = await validateJWT(
+      makeEntraToken({ iss: "https://supreme-foal-19.clerk.accounts.dev" })
+    );
+
+    expect(result.valid).toBe(true);
+    expect(jose.createRemoteJWKSet).toHaveBeenCalledWith(
+      new URL("https://supreme-foal-19.clerk.accounts.dev/.well-known/jwks.json")
+    );
+    expect(jose.jwtVerify).toHaveBeenCalledWith(expect.any(String), "fake-jwks", {
+      issuer: "https://supreme-foal-19.clerk.accounts.dev",
+    });
+  });
+
+  test("allows an explicit JWKS URL without changing the OAuth issuer", async () => {
+    process.env.OAUTH_AUTH_SERVER_URL = "https://oauth.example.com";
+    process.env.OAUTH_JWKS_URL = "https://keys.example.com/oauth/jwks.json";
+
+    await loadModule();
+
+    expect(jose.createRemoteJWKSet).toHaveBeenCalledWith(
+      new URL("https://keys.example.com/oauth/jwks.json")
+    );
   });
 });
