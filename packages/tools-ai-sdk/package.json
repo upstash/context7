@@ -38,6 +38,7 @@
     "ai": "^6.0.5",
     "zod": "^4.4.3",
     "@ai-sdk/amazon-bedrock": "^4.0.9",
+    "@ai-sdk/openai": "^3.0.88",
     "@types/node": "^25.0.3",
     "dotenv": "^17.4.2",
     "tsup": "^8.5.1",
