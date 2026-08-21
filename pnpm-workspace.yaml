@@ -5,3 +5,20 @@ allowBuilds:
   esbuild: true
 
 minimumReleaseAge: 10080
+
+# Single source of truth for the shared dev toolchain. Packages reference these
+# with "catalog:" so a bump lands in one place instead of drifting per package.
+# Runtime dependencies stay pinned per package, since those ranges are part of
+# each package's published contract.
+catalog:
+  "@types/node": ^25.9.5
+  "@typescript-eslint/eslint-plugin": ^8.65.0
+  "@typescript-eslint/parser": ^8.65.0
+  dotenv: ^17.4.2
+  eslint: ^10.8.0
+  eslint-plugin-prettier: ^5.5.6
+  prettier: ^3.6.2
+  tsup: ^8.5.1
+  typescript: ^6.0.3
+  typescript-eslint: ^8.65.0
+  vitest: ^4.1.10

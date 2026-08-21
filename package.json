@@ -44,18 +44,18 @@
   "homepage": "https://github.com/upstash/context7#readme",
   "devDependencies": {
     "@changesets/cli": "^2.29.8",
-    "@types/node": "^25.0.3",
-    "@typescript-eslint/eslint-plugin": "^8.28.0",
-    "@typescript-eslint/parser": "^8.28.0",
-    "eslint": "^9.34.0",
+    "@types/node": "catalog:",
+    "@typescript-eslint/eslint-plugin": "catalog:",
+    "@typescript-eslint/parser": "catalog:",
+    "eslint": "catalog:",
     "eslint-config-prettier": "^10.1.1",
-    "eslint-plugin-prettier": "^5.5.6",
-    "prettier": "^3.6.2",
-    "typescript": "^5.8.2",
-    "typescript-eslint": "^8.28.0"
+    "eslint-plugin-prettier": "catalog:",
+    "prettier": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:"
   },
   "dependencies": {
-    "@inquirer/core": "^11.1.1",
-    "@inquirer/type": "^4.0.3"
+    "@inquirer/core": "^11.2.1",
+    "@inquirer/type": "^4.0.7"
   }
 }
