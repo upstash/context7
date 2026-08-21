@@ -128,7 +128,8 @@ ctx7 setup --opencode
 # Target a specific install location (CLI + Skills mode)
 ctx7 setup --cli --claude       # Claude Code (~/.claude/skills)
 ctx7 setup --cli --cursor       # Cursor (~/.cursor/skills)
-ctx7 setup --cli --universal    # Universal (~/.agents/skills)
+ctx7 setup --cli --codex        # Codex (~/.agents/skills)
+ctx7 setup --cli --opencode     # OpenCode (~/.agents/skills)
 ctx7 setup --cli --antigravity  # Antigravity (~/.agent/skills)
 
 # Configure for current project only (default is global)
@@ -149,6 +150,31 @@ ctx7 setup --oauth
 ```
 
 Without `--api-key` or `--oauth`, setup runs the OAuth device flow: it shows a verification link and short code that you open on any device to sign in, so it works the same locally or on a remote, headless, or SSH host. MCP mode additionally generates a new API key after login. `--oauth` is MCP-only — use it when an IDE handles the auth flow on your behalf.
+
+### On-premise setup
+
+Pass the root URL of your on-premise deployment with `--base-url`. Do not include `/mcp` or `/api`:
+
+```bash
+# MCP authentication disabled on the deployment
+ctx7 setup --mcp --base-url https://context7.internal.example --codex
+
+# MCP authentication enabled: the CLI requests the personal key with hidden input
+ctx7 setup --mcp \
+  --base-url https://context7.internal.example \
+  --codex
+
+# Non-interactive automation
+CONTEXT7_API_KEY=ctx7op-... ctx7 setup --mcp --yes \
+  --base-url https://context7.internal.example \
+  --codex
+```
+
+The CLI checks `/api/auth/mcp` before writing configuration. It either configures anonymous access or writes `Authorization: Bearer <personal-key>`. When authentication is enabled and no key was provided, interactive setup requests the key with masked input. Use `--api-key` or `CONTEXT7_API_KEY` for non-interactive automation. On-premise setup uses Streamable HTTP and bundled rule/skill content, so the target does not need to serve Context7 Cloud skill endpoints.
+
+When `--base-url` targets a custom deployment, setup skips the npm update check and telemetry and does not fetch rules or skills from GitHub or Context7 Cloud. After the CLI package is installed, the only network request made by setup is to the configured deployment. In a restricted environment, mirror `ctx7` and its dependencies in an internal npm registry and run the installed `ctx7` binary instead of `npx ctx7@latest`.
+
+`--base-url` currently supports MCP setup only. It cannot be combined with `--oauth`, `--stdio`, or `--cli` for a custom deployment.
 
 **What gets written — MCP mode:**
 
@@ -221,7 +247,8 @@ export CONTEXT7_API_KEY=your_key
 | Feature                                                  | Required                                                                     |
 | -------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | `ctx7 library` / `ctx7 docs`                             | No — login gives higher rate limits                                          |
-| `ctx7 setup`                                             | Yes — unless `--api-key` is passed (`--oauth` also skips login for MCP mode) |
+| Hosted `ctx7 setup`                                      | Yes — unless `--api-key` is passed (`--oauth` also skips login for MCP mode) |
+| On-premise `ctx7 setup --mcp --base-url ...`             | Only when MCP authentication is enabled on the deployment                    |
 
 ---
 
