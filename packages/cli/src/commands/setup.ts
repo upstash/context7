@@ -2,15 +2,13 @@ import { Command } from "commander";
 import pc from "picocolors";
 import ora from "ora";
 import { select } from "@inquirer/prompts";
-import { mkdir, readFile, writeFile } from "fs/promises";
 import { dirname, join } from "path";
 import { randomBytes } from "crypto";
 
 import { log } from "../utils/logger.js";
 import { checkboxWithHover } from "../utils/prompts.js";
 import { trackEvent } from "../utils/tracking.js";
-import { getBaseUrl, downloadSkill } from "../utils/api.js";
-import { installSkillFiles } from "../utils/installer.js";
+import { getBaseUrl } from "../utils/api.js";
 import { performLogin } from "./auth.js";
 import { saveTokens, getValidAccessToken } from "../utils/auth.js";
 import {
@@ -23,7 +21,9 @@ import {
   getAgent,
   detectAgents,
 } from "../setup/agents.js";
-import { customizeSkillFilesForAgent, getRuleContent } from "../setup/templates.js";
+import { getRule } from "../setup/templates.js";
+import { installRule } from "../setup/rules.js";
+import { getSkillDir, installSkill, loadSkillContent } from "../setup/skills.js";
 import {
   readJsonConfig,
   mergeServerEntry,
@@ -225,49 +225,13 @@ async function resolveAgents(options: SetupOptions, scope: Scope): Promise<Setup
   return selected;
 }
 
-/** Install a rule for an agent, handling both "file" (standalone) and "append" (AGENTS.md) types. */
-async function installRule(
+async function setupRule(
   agentName: SetupAgent,
   mode: SetupMode,
   scope: Scope
 ): Promise<{ status: string; path: string }> {
-  const agent = getAgent(agentName);
-  const rule = agent.rule;
-  const content = await getRuleContent(mode, agentName);
-
-  if (rule.kind === "file") {
-    const ruleDir =
-      scope === "global" ? rule.dir("global") : join(process.cwd(), rule.dir("project"));
-    const rulePath = join(ruleDir, rule.filename);
-    await mkdir(dirname(rulePath), { recursive: true });
-    await writeFile(rulePath, content, "utf-8");
-    return { status: "installed", path: rulePath };
-  }
-
-  const filePath =
-    scope === "global" ? rule.file("global") : join(process.cwd(), rule.file("project"));
-  const escapedMarker = rule.sectionMarker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const section = `${rule.sectionMarker}\n${content}${rule.sectionMarker}`;
-
-  let existing = "";
-  try {
-    existing = await readFile(filePath, "utf-8");
-  } catch {
-    // File doesn't exist yet
-  }
-
-  if (existing.includes(rule.sectionMarker)) {
-    const regex = new RegExp(`${escapedMarker}\\n[\\s\\S]*?${escapedMarker}`);
-    const updated = existing.replace(regex, section);
-    await writeFile(filePath, updated, "utf-8");
-    return { status: "updated", path: filePath };
-  }
-
-  const separator =
-    existing.length > 0 && !existing.endsWith("\n") ? "\n\n" : existing.length > 0 ? "\n" : "";
-  await mkdir(dirname(filePath), { recursive: true });
-  await writeFile(filePath, existing + separator + section + "\n", "utf-8");
-  return { status: "installed", path: filePath };
+  const { content, revision } = await getRule(mode, agentName);
+  return installRule(agentName, mode, scope, content, revision);
 }
 
 /**
@@ -347,7 +311,7 @@ async function setupAgent(
   let ruleStatus: string;
   let rulePath: string;
   try {
-    const result = await installRule(agentName, "mcp", scope);
+    const result = await setupRule(agentName, "mcp", scope);
     ruleStatus = result.status;
     rulePath = result.path;
   } catch (err) {
@@ -355,19 +319,11 @@ async function setupAgent(
     rulePath = "";
   }
 
-  const skillDir =
-    scope === "global"
-      ? agent.skill.dir("global")
-      : join(process.cwd(), agent.skill.dir("project"));
-  const skillPath = join(skillDir, agent.skill.name, "SKILL.md");
+  const skillPath = join(getSkillDir(agentName, scope, agent.skill.name), "SKILL.md");
 
   let skillStatus: string;
   try {
-    const downloadData = await downloadSkill("/upstash/context7", agent.skill.name);
-    if (downloadData.error || downloadData.files.length === 0) {
-      throw new Error(downloadData.error || "no files");
-    }
-    await installSkillFiles(agent.skill.name, downloadData.files, skillDir);
+    await installSkill(agentName, scope, agent.skill.name);
     skillStatus = "installed";
   } catch (err) {
     skillStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
@@ -446,29 +402,22 @@ async function setupMcp(agents: SetupAgent[], options: SetupOptions, scope: Scop
 
 async function setupCliAgent(
   agentName: SetupAgent,
-  scope: Scope,
-  downloadData: { files: Array<{ path: string; content: string }> }
+  scope: Scope
 ): Promise<{ skillPath: string; skillStatus: string; rulePath: string; ruleStatus: string }> {
-  const agent = getAgent(agentName);
+  const skillPath = getSkillDir(agentName, scope, "find-docs");
 
-  const skillDir =
-    scope === "global"
-      ? agent.skill.dir("global")
-      : join(process.cwd(), agent.skill.dir("project"));
   let skillStatus: string;
   try {
-    const files = customizeSkillFilesForAgent(agentName, "find-docs", downloadData.files);
-    await installSkillFiles("find-docs", files, skillDir);
+    await installSkill(agentName, scope, "find-docs");
     skillStatus = "installed";
   } catch (err) {
     skillStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
   }
-  const skillPath = join(skillDir, "find-docs");
 
   let ruleStatus: string;
   let rulePath: string;
   try {
-    const result = await installRule(agentName, "cli", scope);
+    const result = await setupRule(agentName, "cli", scope);
     ruleStatus = result.status;
     rulePath = result.path;
   } catch (err) {
@@ -489,9 +438,12 @@ async function setupCli(options: SetupOptions): Promise<void> {
   log.blank();
   const spinner = ora("Downloading find-docs skill...").start();
 
-  const downloadData = await downloadSkill("/upstash/context7", "find-docs");
-  if (downloadData.error || downloadData.files.length === 0) {
-    spinner.fail(`Failed to download find-docs skill: ${downloadData.error || "no files"}`);
+  try {
+    await loadSkillContent("find-docs");
+  } catch (err) {
+    spinner.fail(
+      `Failed to download find-docs skill: ${err instanceof Error ? err.message : String(err)}`
+    );
     return;
   }
 
@@ -509,7 +461,7 @@ async function setupCli(options: SetupOptions): Promise<void> {
   for (const agentName of agents) {
     const agentDef = getAgent(agentName);
     installSpinner.text = `Setting up ${agentDef.displayName}...`;
-    const r = await setupCliAgent(agentName, scope, downloadData);
+    const r = await setupCliAgent(agentName, scope);
     results.push({ agent: agentDef.displayName, ...r });
   }
 

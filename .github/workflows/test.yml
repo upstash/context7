@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - "packages/**"
+      - "skills/**"
+      - "rules/**"
+      - "scripts/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -55,6 +58,11 @@ jobs:
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Check content manifest is up to date
+        run: |
+          node scripts/generate-content-manifest.mjs
+          git diff --exit-code skills/manifest.json
 
       - name: Lint
         run: pnpm lint:check

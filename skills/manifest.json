@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "skills": {
+    "context7-cli": {
+      "revision": 2,
+      "minCliVersion": "0.0.0",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "hash": "d7b70ba126d9"
+        },
+        {
+          "path": "references/docs.md",
+          "hash": "144d463d5aa6"
+        },
+        {
+          "path": "references/setup.md",
+          "hash": "79530eb571b5"
+        },
+        {
+          "path": "references/skills.md",
+          "hash": "a31c9c560444"
+        }
+      ]
+    },
+    "context7-mcp": {
+      "revision": 1,
+      "minCliVersion": "0.0.0",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "hash": "29ef59d34287"
+        }
+      ]
+    },
+    "find-docs": {
+      "revision": 1,
+      "minCliVersion": "0.0.0",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "hash": "5bf22997630f"
+        }
+      ]
+    }
+  },
+  "rules": {
+    "context7-cli.md": {
+      "revision": 1,
+      "minCliVersion": "0.0.0",
+      "hash": "9716d0bcec92"
+    },
+    "context7-mcp.md": {
+      "revision": 1,
+      "minCliVersion": "0.0.0",
+      "hash": "ad7842ecf1da"
+    }
+  }
+}
