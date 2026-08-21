@@ -96,6 +96,7 @@
                 "pages": [
                   "enterprise/deployment/docker",
                   "enterprise/deployment/kubernetes",
+                  "enterprise/deployment/helm",
                   "enterprise/deployment/scaling",
                   "enterprise/deployment/vector-stores"
                 ]
