@@ -35,6 +35,11 @@ import {
   patchStdioApiKey,
   getJsonServerEntry,
 } from "../setup/mcp-writer.js";
+import {
+  installDeepSeekPlugin,
+  validateDeepSeekProfile,
+  writeDeepSeekCredential,
+} from "../setup/deepseek.js";
 
 type Scope = "global" | "project";
 type SetupMode = "mcp" | "cli";
@@ -53,6 +58,7 @@ interface SetupOptions {
   cli?: boolean;
   mcp?: boolean;
   stdio?: boolean;
+  deepseek?: string | boolean;
 }
 
 function resolveTransport(options: SetupOptions): Transport {
@@ -87,6 +93,7 @@ export function registerSetupCommand(program: Command): void {
     .option("--opencode", "Set up for OpenCode")
     .option("--codex", "Set up for Codex")
     .option("--gemini", "Set up for Gemini CLI")
+    .option("--deepseek [profile]", "Set up DeepSeek Harness (default profile: headless)")
     .option("--mcp", "Set up MCP server mode")
     .option("--cli", "Set up CLI + Skills mode (no MCP server)")
     .option("-p, --project", "Configure for current project instead of globally")
@@ -140,6 +147,60 @@ async function resolveAuth(options: SetupOptions): Promise<AuthOptions | null> {
   const apiKey = await authenticateAndGenerateKey();
   if (!apiKey) return null;
   return { mode: "api-key", apiKey };
+}
+
+async function setupDeepSeek(options: SetupOptions): Promise<void> {
+  if (options.project || options.oauth || options.mcp || options.cli || options.stdio) {
+    log.error("--deepseek cannot be combined with --project, --oauth, --mcp, --cli, or --stdio.");
+    process.exitCode = 1;
+    return;
+  }
+  if (getSelectedAgents(options).length > 0) {
+    log.error("--deepseek cannot be combined with another agent option.");
+    process.exitCode = 1;
+    return;
+  }
+
+  const requestedProfile = typeof options.deepseek === "string" ? options.deepseek : "headless";
+  let profile: string;
+  try {
+    profile = validateDeepSeekProfile(requestedProfile);
+  } catch (error) {
+    log.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+    return;
+  }
+
+  const auth = await resolveAuth(options);
+  if (!auth?.apiKey) {
+    log.warn("Setup cancelled");
+    return;
+  }
+  const spinner = ora("Saving Context7 credential...").start();
+  let credentialPath: string;
+  try {
+    credentialPath = await writeDeepSeekCredential(auth.apiKey);
+    spinner.succeed("Saved Context7 credential");
+  } catch (error) {
+    spinner.fail("Failed to save Context7 credential");
+    log.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+    return;
+  }
+
+  try {
+    await installDeepSeekPlugin(profile);
+  } catch (error) {
+    log.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+    return;
+  }
+
+  log.blank();
+  log.success(`Context7 configured for DeepSeek Harness profile ${pc.bold(profile)}`);
+  log.plain(`  Credential ${pc.dim(credentialPath)}`);
+  log.blank();
+  trackEvent("setup", { mode: "deepseek", profile });
 }
 
 async function resolveMode(options: SetupOptions): Promise<SetupMode> {
@@ -534,6 +595,10 @@ async function setupCommand(options: SetupOptions): Promise<void> {
   trackEvent("command", { name: "setup" });
 
   try {
+    if (options.deepseek !== undefined) {
+      await setupDeepSeek(options);
+      return;
+    }
     const mode = await resolveMode(options);
     if (mode === "mcp") {
       const scope: Scope = options.project ? "project" : "global";
