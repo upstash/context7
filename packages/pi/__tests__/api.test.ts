@@ -63,9 +63,7 @@ describe("searchLibraries", () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue({
-        results: [
-          { id: "express-lib", title: "Express", description: "Web framework" },
-        ],
+        results: [{ id: "express-lib", title: "Express", description: "Web framework" }],
       }),
       text: vi.fn(),
     });
