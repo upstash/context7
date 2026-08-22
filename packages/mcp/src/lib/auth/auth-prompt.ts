@@ -54,10 +54,10 @@ const CHOICE_STAY_ANON = "Continue anonymously with smaller limits";
  * the tool result the LLM reads, so it does not trip prompt-injection guards.
  *
  * The backend owns how often this fires: it sets the header at most once per
- * MCP session, so the server holds no suppression state — it simply shows the
- * dialog whenever the header is present. The command itself is shown in the
- * dialog message for the user to copy; the server does not attempt to drive
- * the client to run it.
+ * MCP session. The server consumes that captured signal when it starts the
+ * elicitation so later tool calls do not reopen the same dialog. The command
+ * itself is shown in the dialog message for the user to copy; the server does
+ * not attempt to drive the client to run it.
  *
  * No-op for authenticated callers, when the signal wasn't set, or when the
  * client did not advertise the `elicitation` capability. Fire-and-forget:
@@ -77,6 +77,7 @@ export function maybeElicitAuthSignIn(server: McpServer, ctx: ClientContext): vo
   if (ctx.apiKey || !ctx.shouldPrompt) return;
   if (!server.server.getClientCapabilities()?.elicitation) return;
 
+  ctx.shouldPrompt = false;
   void server.server
     .elicitInput({
       message: buildElicitMessage(ctx.clientInfo?.ide, ctx.transport),
