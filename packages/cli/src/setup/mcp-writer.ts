@@ -119,10 +119,69 @@ export async function readTomlServerExists(filePath: string, serverName: string)
 /**
  * Reads the top-level `[mcp_servers.<serverName>]` block from a TOML config
  * file and parses its key-value lines into a JS object. Handles string and
- * array values (TOML array syntax is JSON-compatible). Sub-tables like
+ * array values (TOML array syntax is JSON-compatible), including arrays
+ * formatted across multiple lines. Sub-tables like
  * `[mcp_servers.<serverName>.http_headers]` are ignored. Returns undefined
  * if the file or section is missing.
  */
+/**
+ * True when every `[` outside a double-quoted string has a matching `]`.
+ * Multi-line arrays (taplo / cargo-fmt style) only parse once closed; TOML
+ * basic strings cannot contain an unescaped quote, so tracking string state
+ * is enough to avoid mis-counting brackets inside values like "[global]".
+ */
+function bracketsBalancedOutsideStrings(text: string): boolean {
+  let inString = false;
+  let depth = 0;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (ch === "\\") i++;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === "[") depth++;
+    else if (ch === "]") depth--;
+  }
+  return depth <= 0 && !inString;
+}
+
+/**
+ * Removes commas that directly precede a closing `]` outside double-quoted
+ * strings. TOML permits trailing commas in arrays; JSON does not, so
+ * `["-y", "pkg",]` fails JSON.parse and the whole value would be dropped.
+ */
+function stripTrailingCommasOutsideStrings(text: string): string {
+  let result = "";
+  let inString = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      result += ch;
+      if (ch === "\\") {
+        i++;
+        if (i < text.length) result += text[i];
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      result += ch;
+      continue;
+    }
+    if (ch === ",") {
+      let j = i + 1;
+      while (j < text.length && /\s/.test(text[j])) j++;
+      if (j < text.length && text[j] === "]") continue; // drop the comma
+    }
+    result += ch;
+  }
+  return result;
+}
+
 export async function readTomlServerEntry(
   filePath: string,
   serverName: string
@@ -147,12 +206,29 @@ export async function readTomlServerEntry(
   const block = nextHeader ? rest.slice(0, nextHeader.index) : rest;
 
   const entry: Record<string, unknown> = {};
-  const lineRe = /^([A-Za-z_][\w-]*)\s*=\s*(.+?)\s*$/gm;
-  let lineMatch: RegExpExecArray | null;
-  while ((lineMatch = lineRe.exec(block)) !== null) {
+  const lineRe = /^([A-Za-z_][\w-]*)\s*=\s*(.+?)\s*$/;
+  const lines = block.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const lineMatch = lineRe.exec(lines[i]);
+    if (!lineMatch) continue;
     const [, key, valueText] = lineMatch;
+
+    // Multi-line array (formatted across lines by taplo, cargo fmt, or by
+    // hand): consume lines until brackets balance, then parse the joined
+    // text. JSON allows newlines as whitespace inside arrays, so the joined
+    // text parses directly. Without this, `args` silently disappears from
+    // the entry and callers treat the server as freshly configured.
+    let fullText = valueText;
+    if (valueText.startsWith("[") && !bracketsBalancedOutsideStrings(valueText)) {
+      const parts = [valueText];
+      while (i + 1 < lines.length && !bracketsBalancedOutsideStrings(parts.join("\n"))) {
+        parts.push(lines[++i].trim());
+      }
+      fullText = parts.join("\n");
+    }
+
     try {
-      entry[key] = JSON.parse(valueText);
+      entry[key] = JSON.parse(stripTrailingCommasOutsideStrings(fullText));
     } catch {
       // Skip values we can't parse as JSON (e.g., bare TOML numbers like 20)
     }
