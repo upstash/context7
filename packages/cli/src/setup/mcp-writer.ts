@@ -147,17 +147,54 @@ export async function readTomlServerEntry(
   const block = nextHeader ? rest.slice(0, nextHeader.index) : rest;
 
   const entry: Record<string, unknown> = {};
-  const lineRe = /^([A-Za-z_][\w-]*)\s*=\s*(.+?)\s*$/gm;
-  let lineMatch: RegExpExecArray | null;
-  while ((lineMatch = lineRe.exec(block)) !== null) {
-    const [, key, valueText] = lineMatch;
+  for (const [key, valueText] of parseTomlAssignmentTexts(block)) {
     try {
-      entry[key] = JSON.parse(valueText);
+      entry[key] = JSON.parse(normalizeTomlJsonValue(valueText));
     } catch {
       // Skip values we can't parse as JSON (e.g., bare TOML numbers like 20)
     }
   }
   return Object.keys(entry).length > 0 ? entry : undefined;
+}
+
+function parseTomlAssignmentTexts(block: string): Array<[string, string]> {
+  const assignments: Array<[string, string]> = [];
+  const lines = block.split("\n");
+  let index = 0;
+  while (index < lines.length) {
+    const line = lines[index].trim();
+    index += 1;
+    if (!line || line.startsWith("#")) {
+      continue;
+    }
+    const equalsIndex = line.indexOf("=");
+    if (equalsIndex === -1) {
+      continue;
+    }
+    const key = line.slice(0, equalsIndex).trim();
+    if (!/^[A-Za-z_][\w-]*$/.test(key)) {
+      continue;
+    }
+    let valueText = line.slice(equalsIndex + 1).trim();
+    if (valueText.startsWith("[") && !valueText.endsWith("]")) {
+      const parts = [valueText];
+      while (index < lines.length) {
+        const nextLine = lines[index].trim();
+        index += 1;
+        parts.push(nextLine);
+        if (nextLine.endsWith("]")) {
+          break;
+        }
+      }
+      valueText = parts.join("\n");
+    }
+    assignments.push([key, valueText]);
+  }
+  return assignments;
+}
+
+function normalizeTomlJsonValue(valueText: string): string {
+  return valueText.replace(/,\s*([\]}])/g, "$1");
 }
 
 /**

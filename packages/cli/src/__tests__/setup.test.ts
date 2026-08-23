@@ -1292,6 +1292,43 @@ describe("agent config integration", () => {
       expect(entry).toEqual({ type: "http", url: "https://mcp.context7.com/mcp" });
     });
 
+    test("parses multi-line array values and trailing commas", async () => {
+      const path = join(tempDir, "config.toml");
+      await writeFile(
+        path,
+        `[mcp_servers.context7]
+command = "npx"
+args = [
+  "-y",
+  "@upstash/context7-mcp@0.6.0",
+  "--api-key",
+  "OLD",
+]
+`,
+        "utf-8"
+      );
+      const entry = await readTomlServerEntry(path, "context7");
+      expect(entry).toEqual({
+        command: "npx",
+        args: ["-y", "@upstash/context7-mcp@0.6.0", "--api-key", "OLD"],
+      });
+      expect(isStdioContext7Entry(entry)).toBe(true);
+    });
+
+    test("parses single-line arrays with trailing commas", async () => {
+      const path = join(tempDir, "config.toml");
+      await writeFile(
+        path,
+        '[mcp_servers.context7]\ncommand = "npx"\nargs = ["-y", "@upstash/context7-mcp@0.6.0",]\n',
+        "utf-8"
+      );
+      const entry = await readTomlServerEntry(path, "context7");
+      expect(entry).toEqual({
+        command: "npx",
+        args: ["-y", "@upstash/context7-mcp@0.6.0"],
+      });
+    });
+
     test("round-trips through patchStdioApiKey + appendTomlServer", async () => {
       const path = join(tempDir, "config.toml");
       await writeFile(
