@@ -58,6 +58,22 @@ function startStubApi(): Promise<string> {
     } else if (apiPath === "/v2/context") {
       res.setHeader("Content-Type", "text/plain");
       res.end(STUB_DOCS);
+    } else if (apiPath === "/dashboard/whoami") {
+      const authorization = req.headers.authorization;
+      if (
+        authorization === "Bearer ctx7sk-valid" ||
+        authorization === "Bearer oat_valid" ||
+        authorization === "Bearer oat_cache"
+      ) {
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ success: true }));
+      } else if (authorization === "Bearer backend-error") {
+        res.statusCode = 500;
+        res.end();
+      } else {
+        res.statusCode = 401;
+        res.end();
+      }
     } else {
       res.statusCode = 404;
       res.end();
@@ -132,6 +148,90 @@ describe("OAuth discovery", () => {
       resource: "https://mcp.context7.com",
       authorization_servers: ["https://clerk.context7.com", "https://context7.com"],
     });
+  });
+});
+
+describe("http /mcp/oauth authentication", () => {
+  const INITIALIZE_BODY = JSON.stringify({
+    jsonrpc: "2.0",
+    id: 1,
+    method: "initialize",
+    params: {
+      protocolVersion: "2025-06-18",
+      capabilities: {},
+      clientInfo: { name: "auth-e2e", version: "1.0.0" },
+    },
+  });
+
+  function postOauth(authorization?: string) {
+    return fetch(`${httpUrl}/oauth`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+        ...(authorization === undefined ? {} : { authorization }),
+      },
+      body: INITIALIZE_BODY,
+    });
+  }
+
+  beforeEach(() => {
+    requests.length = 0;
+  });
+
+  test.each([
+    ["missing credential", undefined],
+    ["empty bearer", "Bearer "],
+    ["arbitrary opaque value", "Bearer not-a-jwt"],
+    ["unknown API key", "Bearer ctx7sk-unknown"],
+    ["malformed token", "Bearer only.two"],
+  ])("rejects %s", async (_name, authorization) => {
+    const response = await postOauth(authorization);
+    expect(response.status).toBe(401);
+  });
+
+  test("rejects a malformed JWT", async () => {
+    const response = await postOauth("Bearer not.valid.jwt");
+    expect(response.status).toBe(401);
+  });
+
+  test.each(["Bearer ctx7sk-valid", "Bearer oat_valid"])(
+    "accepts a backend-validated credential: %s",
+    async (authorization) => {
+      const response = await postOauth(authorization);
+      expect(response.status).toBe(200);
+      await response.body?.cancel();
+    }
+  );
+
+  test("caches a successful opaque credential validation", async () => {
+    const first = await postOauth("Bearer oat_cache");
+    expect(first.status).toBe(200);
+    await first.body?.cancel();
+
+    const second = await postOauth("Bearer oat_cache");
+    expect(second.status).toBe(200);
+    await second.body?.cancel();
+
+    expect(requests.filter((request) => request.path === "/dashboard/whoami")).toHaveLength(1);
+  });
+
+  test("fails closed when credential validation is unavailable", async () => {
+    const response = await postOauth("Bearer backend-error");
+    expect(response.status).toBe(503);
+  });
+
+  test("leaves the anonymous /mcp endpoint unchanged", async () => {
+    const response = await fetch(httpUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+      },
+      body: INITIALIZE_BODY,
+    });
+    expect(response.status).toBe(200);
+    await response.body?.cancel();
   });
 });
 

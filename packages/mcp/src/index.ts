@@ -24,6 +24,7 @@ import {
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
+import { validateOpaqueCredential } from "./lib/auth/credential-validation.js";
 import { getClientIp } from "./lib/client-ip.js";
 
 /** Default HTTP server port */
@@ -424,6 +425,21 @@ async function main() {
                 error: {
                   code: -32001,
                   message: validationResult.error || "Invalid token. Please re-authenticate.",
+                },
+                id: null,
+              });
+            }
+          } else {
+            const validationResult = await validateOpaqueCredential(apiKey);
+            if (validationResult !== "valid") {
+              const unavailable = validationResult === "unavailable";
+              return res.status(unavailable ? 503 : 401).json({
+                jsonrpc: "2.0",
+                error: {
+                  code: -32001,
+                  message: unavailable
+                    ? "Authentication service unavailable. Please try again."
+                    : "Invalid token. Please re-authenticate.",
                 },
                 id: null,
               });
