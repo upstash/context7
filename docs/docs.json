@@ -240,50 +240,42 @@
         "tab": "Docs7",
         "groups": [
           {
-            "group": "Getting Started",
+            "group": "Docs7",
             "pages": [
               "docs7/overview",
               "docs7/quickstart",
-              "docs7/mintlify-compatibility"
+              "docs7/migrate-from-mintlify"
             ]
           },
           {
-            "group": "Configuration",
+            "group": "Components",
             "pages": [
-              "docs7/settings",
-              "docs7/navigation",
-              "docs7/frontmatter",
-              "docs7/redirects",
-              "docs7/ignoring-files"
-            ]
-          },
-          {
-            "group": "Writing",
-            "pages": [
-              "docs7/components",
-              "docs7/code-blocks",
-              "docs7/snippets-and-variables",
-              "docs7/openapi"
-            ]
-          },
-          {
-            "group": "Features",
-            "pages": [
-              "docs7/docs-agent",
-              "docs7/analytics",
-              "docs7/search",
-              "docs7/seo",
-              "docs7/ai-agents"
-            ]
-          },
-          {
-            "group": "Deploying",
-            "pages": [
-              "docs7/dashboard",
-              "docs7/deployments",
-              "docs7/branch-previews",
-              "docs7/custom-domains",
-              "docs7/limits"
+              "docs7/components/callouts",
+              "docs7/components/cards",
+              "docs7/components/columns",
+              "docs7/components/tiles",
+              "docs7/components/tabs",
+              "docs7/components/code-groups",
+              "docs7/components/steps",
+              "docs7/components/accordions",
+              "docs7/components/frames",
+              "docs7/components/icons",
+              "docs7/components/badge",
+              "docs7/components/tooltips",
+              "docs7/components/fields",
+              "docs7/components/expandables",
+              "docs7/components/examples",
+              "docs7/components/panel",
+              "docs7/components/tree",
+              "docs7/components/color",
+              "docs7/components/prompt",
+              "docs7/components/updates",
+              "docs7/components/view",
+              "docs7/components/visibility",
+              "docs7/components/github",
+              "docs7/components/mermaid",
+              "docs7/components/latex",
+              "docs7/components/react-components"
             ]
           }
         ]

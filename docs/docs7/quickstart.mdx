@@ -1,65 +1,85 @@
 ---
 title: Quickstart
-description: Deploy your first documentation site with Docs7
+description: Preview and publish a Docs7 site
 ---
 
-Deploy a documentation site from a GitHub repository in a few minutes.
+## 1. Add your docs
 
-## Before you start
 
-You need:
+In a new folder, create a `docs.json` file:
 
-- A GitHub repository containing your documentation as Markdown or MDX files. Private repositories work; access comes from the Context7 GitHub App installation.
-- A `docs.json` (or legacy `mint.json`) file in the documentation folder. A minimal one is enough:
+<Tip>
+You can skip this step if your project already has a `docs.json` or `mint.json` file.
+</Tip>
+
 
 ```json docs.json
 {
-  "name": "My Project",
-  "colors": { "primary": "#0D9373" },
+  "name": "My docs",
   "navigation": {
     "groups": [
-      { "group": "Getting Started", "pages": ["index", "installation"] }
+      {
+        "group": "Guide",
+        "pages": ["index"]
+      }
     ]
   }
 }
 ```
 
-Connecting a site requires the owner or admin role in the teamspace; members get read-only access to the Docs7 tab.
+Then add the first page:
 
-Docs7 includes the first 10 members of your teamspace in the plan price. Each member beyond 10 is $10/month.
+```mdx index.mdx
+---
+title: Introduction
+description: Welcome to my docs
+---
 
-## Create the site
+Hello, world.
+```
 
-<Steps>
-  <Step title="Connect the repository">
-    In your Context7 teamspace, open the **Docs7** tab and pick your GitHub repository on the **Publish a docs site** card. If the Context7 GitHub App doesn't have access to the repository yet, you'll be asked to grant it.
+## 2. Install the CLI
 
-    A repository can back exactly one Docs7 site.
-  </Step>
-  <Step title="Review the options">
-    **Add to Context7 index** is checked by default; it makes your docs available to coding agents through the Context7 MCP once the site is live.
+Install the package globally:
 
-    If your `docs.json` is not in the repository root or you want a production branch other than the default, open **Advanced** and set the branch and docs path (the path defaults to `.`).
-  </Step>
-  <Step title="Connect and deploy">
-    Click **Connect repository**. Docs7 clones the repository, builds the site, and publishes it. Watch the build log live in the dashboard. When it finishes, your site is up at:
+```bash
+npm install -g @upstash/docs7
+```
 
-    ```
-    https://<owner>--<repo>-<id>.docs7.io
-    ```
+This adds the `docs7` command to your terminal.
 
-    where `<id>` is a short stable suffix derived from the repository.
-  </Step>
-</Steps>
+## 3. Start the dev server
 
-## From now on
+Run this from the folder that contains `docs.json`:
 
-Pushing the production branch redeploys production. Pushing any other branch deploys a preview at a stable per-branch URL, and the commit gets a `docs7/preview` status plus a PR comment linking to it. See [Branch previews](/docs7/branch-previews).
+```bash
+docs7 dev
+```
 
-If a build fails, the log lists each failing page and why. See [Deployments](/docs7/deployments).
+Open [http://localhost:3333](http://localhost:3333). The page reloads when you edit a file.
 
-## Next steps
+The first run downloads the renderer and caches it for later. You can also pass a project folder or use another port:
 
-- Get to know [the dashboard](/docs7/dashboard): deployments, statuses, and site settings.
-- Point a [custom domain](/docs7/custom-domains) at the site.
-- Explore what [`docs.json` can configure](/docs7/settings): themes, fonts, banners, SEO, and more.
+```bash
+docs7 dev ./docs --port 4000
+```
+
+<Note>
+  You can also run the CLI without installing it: `npx @upstash/docs7 dev`.
+</Note>
+
+## 4. Publish
+
+1. Push the project to GitHub.
+2. Open the **Docs7** tab in your Context7 teamspace.
+3. Click **Add New Site** and choose the repository.
+4. Set the production branch and the folder that contains `docs.json`.
+5. Click **Publish Site**.
+
+<Frame>
+<img src="/images/docs7/publish-a-site.png"></img>
+</Frame>
+
+Every push to the production branch creates a new deployment. Pull requests get a preview site.
+
+Next, see the [components you can use in MDX](/docs7/components/callouts).

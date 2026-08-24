@@ -1,45 +1,36 @@
 ---
-title: What is Docs7?
-sidebarTitle: Overview
-description: Host a documentation site straight from a GitHub repository of Markdown and MDX
+title: Docs7
+description: A documentation platform built for the way agents read, search, and decide
 ---
 
-Docs7 turns a GitHub repository of Markdown and MDX files into a hosted documentation site with a production URL, a stable preview URL for every branch, and optional custom domains. It reads the Mintlify content format directly, so a repository that already has a `docs.json` or `mint.json` deploys as-is.
+Docs7 turns your existing GitHub repository into fast, beautiful documentation for people and clean, structured context for agents.
 
-## How it works
+## ❌ Without Docs7
 
-1. Connect a GitHub repository from your Context7 teamspace and pick the branch and folder that contain your docs.
-2. Docs7 builds the site and publishes it to `<owner>--<repo>-<id>.docs7.io`.
-3. Every push to the production branch redeploys production. Every push to any other branch creates or updates a preview site with its own stable URL, reported back to the pull request as a commit status and comment.
+Most documentation platforms make agents work around pages built for humans:
 
-There is nothing to install and no CI to configure. The GitHub App webhook drives everything.
+- ❌ No insights what agents search for, or which questions returned no answer
+- ❌ Agents waste tokens on navigation and reading layouts
+- ❌ Agents hallucinate non-existent documentation links
 
-## What's included
+## ✅ With Docs7
 
-<Columns cols={2}>
-  <Card title="Mintlify-compatible" icon="file-code">
-    `docs.json` configuration, MDX components, snippets, and frontmatter work the way you already know.
+Docs7 is the best way to serve documentation to agents:
+
+- ✅ Distribute your docs to 100,000+ active Context7 users
+- ✅ Deep insights into AI crawler traffic, searches, and assistant questions
+- ✅ Prevents hallucinations by guiding agents to the right page
+
+## Start here
+
+<Columns cols={3}>
+  <Card title="Quickstart" href="/docs7/quickstart">
+    Preview a project with the CLI, then publish it.
   </Card>
-  <Card title="Branch previews" icon="code-branch">
-    One stable preview URL per branch, linked from the pull request.
+  <Card title="Migration guide" href="/docs7/migrate-from-mintlify">
+    Move an existing site without rewriting it.
   </Card>
-  <Card title="Readable by AI tools" icon="robot">
-    Every site generates `llms.txt`, `llms-full.txt`, a raw Markdown export of each page, and page actions that open the page in ChatGPT or Claude.
-  </Card>
-  <Card title="Full-text search" icon="search">
-    Static search with a ⌘K modal, per-language indexes, and keyword boosting. No external service.
-  </Card>
-  <Card title="API reference" icon="code">
-    Commit an OpenAPI spec and get generated endpoint pages with request and response examples.
-  </Card>
-  <Card title="Custom domains" icon="globe">
-    Serve from `docs.yourcompany.com`, or below a path like `yourcompany.com/docs`.
+  <Card title="Components" href="/docs7/components/callouts">
+    Use the built-in MDX component library.
   </Card>
 </Columns>
-
-## Where to start
-
-- [Quickstart](/docs7/quickstart): connect a repository and ship your first deployment.
-- [Mintlify compatibility](/docs7/mintlify-compatibility): what carries over unchanged and what differs.
-- [Site settings](/docs7/settings): everything `docs.json` controls.
-- [Limits](/docs7/limits): sizes, timeouts, and caps at a glance.
