@@ -1,5 +1,11 @@
 # @upstash/context7-mcp
 
+## 4.0.3
+
+### Patch Changes
+
+- 769c6cd: Advertise Clerk as the OAuth authorization server so clients validate authorization responses against the issuer that Clerk returns.
+
 ## 4.0.2
 
 ### Patch Changes

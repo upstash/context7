@@ -224,7 +224,8 @@
               "integrations/code-rabbit",
               "integrations/factory-ai",
               "integrations/tembo",
-              "integrations/mastra"
+              "integrations/mastra",
+              "integrations/eve"
             ]
           },
           {
@@ -285,6 +286,11 @@
   "api": {
     "playground": {
       "display": "simple"
+    }
+  },
+  "integrations": {
+    "intercom": {
+      "appId": "rtjkeau6"
     }
   },
   "logo": {
