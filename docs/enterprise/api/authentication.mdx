@@ -61,4 +61,6 @@ Certain operations can be allowed without authentication. Configure them from **
 | Anonymous parse / refresh | Off |
 | Anonymous delete | Off |
 
-The search (`GET /v2/libs/search`) and context (`GET /v2/context`) endpoints are always publicly accessible unless a global `API_KEY` environment variable is set, in which case every endpoint requires a bearer token.
+MCP authentication is configured separately in **Settings > Authentication**. When enabled, external requests to `/mcp`, `/api/v2/libs/search`, and `/api/v2/context` require a personal API key. When disabled, those endpoints allow anonymous access. The local MCP bridge can still call the v2 endpoints over loopback.
+
+The legacy global `API_KEY` environment variable protects the broader HTTP API independently of personal MCP keys. New deployments should use dashboard users and personal keys for MCP clients.

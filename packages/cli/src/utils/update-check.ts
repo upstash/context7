@@ -296,5 +296,12 @@ export async function markUpdateNotificationShown(
 }
 
 export function shouldSkipUpdateNotifier(argv = process.argv): boolean {
-  return argv.includes("--json") || argv.includes("-v") || argv.includes("--version");
+  return argv.some(
+    (arg) =>
+      arg === "--json" ||
+      arg === "-v" ||
+      arg === "--version" ||
+      arg === "--base-url" ||
+      arg.startsWith("--base-url=")
+  );
 }

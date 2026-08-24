@@ -65,7 +65,7 @@ You can also add libraries via the REST API:
 ```bash
 curl -X POST http://localhost:3000/api/parse \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://github.com/your-org/your-repo"}'
+  -d '{"repoUrl": "https://github.com/your-org/your-repo"}'
 ```
 
 </Step>
@@ -74,37 +74,85 @@ curl -X POST http://localhost:3000/api/parse \
 
 ## Connecting Your AI Client
 
-Point your MCP client at your deployment URL. Replace `https://context7.internal.yourcompany.com` with your actual host.
+The Context7 CLI is the recommended way to connect an AI coding agent. Install it once on the machine that runs your client:
 
-### Claude Code
+<Tabs>
+  <Tab title="Public npm registry">
+    ```bash
+    npm install --global ctx7@latest
+    ```
+  </Tab>
+  <Tab title="Internal npm registry">
+    ```bash
+    npm install --global ctx7 \
+      --registry https://npm.internal.yourcompany.com
+    ```
+  </Tab>
+</Tabs>
+
+For restricted or air-gapped environments, mirror the `ctx7` package and its dependencies in your approved internal npm registry. Once installed, on-premise setup does not contact npm, GitHub, or Context7 Cloud. It uses bundled rule and skill content and contacts only your deployment to discover its MCP authentication setting.
+
+Pass the root URL of your deployment (without `/mcp` or `/api`) and select the client:
+
+<Tabs>
+  <Tab title="Claude Code">
+    ```bash
+    ctx7 setup --mcp \
+      --base-url https://context7.internal.yourcompany.com \
+      --claude
+    ```
+  </Tab>
+  <Tab title="Cursor">
+    ```bash
+    ctx7 setup --mcp \
+      --base-url https://context7.internal.yourcompany.com \
+      --cursor
+    ```
+  </Tab>
+  <Tab title="Codex">
+    ```bash
+    ctx7 setup --mcp \
+      --base-url https://context7.internal.yourcompany.com \
+      --codex
+    ```
+  </Tab>
+  <Tab title="OpenCode">
+    ```bash
+    ctx7 setup --mcp \
+      --base-url https://context7.internal.yourcompany.com \
+      --opencode
+    ```
+  </Tab>
+</Tabs>
+
+Setup reads the deployment's MCP authentication setting. When MCP authentication is disabled, no credential is written. When it is enabled, sign in to the on-premise dashboard and click **Generate setup key** in the Connect card. Run the command for your client and paste the one-time-visible key when the CLI requests it with hidden input.
+
+For non-interactive automation, provide the personal key through the environment:
 
 ```bash
-claude mcp add --scope user --transport http context7 https://context7.internal.yourcompany.com/mcp
+CONTEXT7_API_KEY=ctx7op-... ctx7 setup --mcp --yes \
+  --base-url https://context7.internal.yourcompany.com \
+  --claude
 ```
 
-### Cursor
+You can use `--api-key ctx7op-...` instead, but command-line arguments may be retained in shell history. Setup writes the MCP client configuration, a Context7 rule, and a bundled `context7-mcp` skill. The bundled files mean the deployment does not need to expose Context7 Cloud's skill APIs.
 
-Add to `~/.cursor/mcp.json`:
+<Note>
+  Custom `--base-url` setup uses the deployment's Streamable HTTP endpoint. Hosted OAuth, local stdio transport, and CLI-query mode are not available for on-premise targets.
+</Note>
+
+### Manual configuration
+
+If your client is not supported by `ctx7 setup`, point it at `<deployment-root>/mcp`. When MCP authentication is enabled, send the personal key as a standard bearer token:
 
 ```json
 {
   "mcpServers": {
     "context7": {
-      "url": "https://context7.internal.yourcompany.com/mcp"
-    }
-  }
-}
-```
-
-### Opencode
-
-```json
-{
-  "mcp": {
-    "context7": {
-      "type": "remote",
       "url": "https://context7.internal.yourcompany.com/mcp",
-      "enabled": true
+      "headers": {
+        "Authorization": "Bearer ctx7op-..."
+      }
     }
   }
 }
@@ -186,7 +234,7 @@ You only need tokens for the platforms you use. If you only parse GitLab repos, 
 
 Admin credentials are set during first login (default: `admin` / `admin`). Change these immediately after setup via **Settings > Change Credentials**.
 
-The Settings page lets you control which operations are available without authentication.
+The Settings page lets you control which operations are available without authentication, including MCP and API search access.
 
 | Permission | Default | Description |
 |---|---|---|
@@ -194,8 +242,9 @@ The Settings page lets you control which operations are available without authen
 | Allow anonymous refresh | Off | Allow unauthenticated users to refresh libraries |
 | Allow anonymous delete | Off | Allow unauthenticated users to delete libraries |
 | Allow anonymous support bundle | Off | Allow unauthenticated support bundle downloads |
+| Require MCP authentication | Off | Require a personal API key for `/mcp` and external `/api/v2` search requests |
 
-When a permission is off, the operation requires admin login. The MCP endpoint and search API are always publicly accessible.
+When MCP authentication is enabled, each user creates personal keys from **Personal Settings > API Keys**. Clients send the key as `Authorization: Bearer <key>`.
 
 ## Policies
 
