@@ -16,6 +16,12 @@ interface CacheEntry {
 const cache = new Map<string, CacheEntry>();
 const pending = new Map<string, Promise<CredentialValidationResult>>();
 
+const SUPPORTED_OPAQUE_CREDENTIALS = [/^ctx7(?:sk|op)-[A-Za-z0-9_-]+$/, /^oat_[A-Za-z0-9_-]+$/];
+
+export function isSupportedOpaqueCredential(token: string): boolean {
+  return SUPPORTED_OPAQUE_CREDENTIALS.some((pattern) => pattern.test(token));
+}
+
 function tokenHash(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
@@ -53,6 +59,8 @@ async function requestCredentialValidation(token: string): Promise<CredentialVal
  * protocol resources. Only explicit backend approval authenticates a caller.
  */
 export async function validateOpaqueCredential(token: string): Promise<CredentialValidationResult> {
+  if (!isSupportedOpaqueCredential(token)) return "invalid";
+
   const key = tokenHash(token);
   const cached = cache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.result;

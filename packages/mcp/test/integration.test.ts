@@ -67,7 +67,7 @@ function startStubApi(): Promise<string> {
       ) {
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({ success: true }));
-      } else if (authorization === "Bearer backend-error") {
+      } else if (authorization === "Bearer oat_backend-error") {
         res.statusCode = 500;
         res.end();
       } else {
@@ -190,6 +190,18 @@ describe("http /mcp/oauth authentication", () => {
     expect(response.status).toBe(401);
   });
 
+  test("rejects unsupported opaque formats without backend validation", async () => {
+    const response = await postOauth("Bearer arbitrary-opaque-value");
+    expect(response.status).toBe(401);
+    expect(requests.filter((request) => request.path === "/dashboard/whoami")).toHaveLength(0);
+  });
+
+  test("validates a supported API-key format before rejecting it", async () => {
+    const response = await postOauth("Bearer ctx7sk-unknown-for-introspection");
+    expect(response.status).toBe(401);
+    expect(requests.filter((request) => request.path === "/dashboard/whoami")).toHaveLength(1);
+  });
+
   test("rejects a malformed JWT", async () => {
     const response = await postOauth("Bearer not.valid.jwt");
     expect(response.status).toBe(401);
@@ -217,7 +229,7 @@ describe("http /mcp/oauth authentication", () => {
   });
 
   test("fails closed when credential validation is unavailable", async () => {
-    const response = await postOauth("Bearer backend-error");
+    const response = await postOauth("Bearer oat_backend-error");
     expect(response.status).toBe(503);
   });
 
