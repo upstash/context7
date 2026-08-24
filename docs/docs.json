@@ -235,6 +235,11 @@
       "display": "simple"
     }
   },
+  "integrations": {
+    "intercom": {
+      "appId": "rtjkeau6"
+    }
+  },
   "logo": {
     "light": "/public/logo/logo.svg",
     "dark": "/public/logo/logo-dark.svg",
