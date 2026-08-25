@@ -8,6 +8,10 @@ Automatic repository updates keep indexed Git repositories in sync with their tr
 
 This works with GitHub, GitHub Enterprise Server, GitLab, self-hosted GitLab, Gerrit, Gitea, Bitbucket, and other Git servers connected over HTTPS or SSH.
 
+<Info>
+**Schedules work with every Git provider.** GitHub App is currently the only integration that can trigger an immediate update from a push event. GitLab, Gerrit, Gitea, Bitbucket, and other providers use schedules, or an optional CI call to the repository refresh endpoint.
+</Info>
+
 <Note>
 Automatic updates apply to Git repository sources. Website, Confluence, OpenAPI, and llms.txt sources are not included.
 </Note>
@@ -30,8 +34,8 @@ You can configure up to 10 schedules. Each schedule has a name, a cron expressio
       ![Schedule editor with name, frequency, and cron expression fields](/images/enterprise/automatic-repository-updates/schedule-editor.png)
     </Frame>
   </Step>
-  <Step title="Enable GitHub push events">
-    Turn on **GitHub push** to refresh matching repositories as soon as a push arrives. This requires a connected GitHub App with an active webhook and the **Push** event subscription. See [GitHub Integration](/enterprise/integrations/github#webhooks).
+  <Step title="Optional: enable GitHub App push events">
+    Turn on **GitHub push** to refresh matching repositories as soon as a push arrives. GitHub App is currently the only provider integration with this event-driven trigger. It requires an active webhook and the **Push** event subscription. See [GitHub Integration](/enterprise/integrations/github#webhooks).
   </Step>
   <Step title="Save the configuration">
     Select **Save & Apply**. Enabling at least one schedule also starts a repository check when Context7 starts.
@@ -42,13 +46,13 @@ Select **Check now** at any time to run the same check manually.
 
 ## Choose a trigger
 
-| Trigger | Best for | Requirements |
-| ------- | -------- | ------------ |
-| Schedule | Every supported Git provider | Repository credentials and network access |
-| GitHub push | Faster updates for GitHub and GitHub Enterprise Server | Connected GitHub App, reachable webhook, and Push event subscription |
-| Check now | Testing, recovery, and operator-controlled refreshes | Administrator access |
+| Trigger | Provider support | Requirements |
+| ------- | ---------------- | ------------ |
+| Schedule | Every Git provider, including on-premise installations | Repository credentials and network access |
+| GitHub push | GitHub and GitHub Enterprise Server only | Connected GitHub App, reachable webhook, and Push event subscription |
+| Check now | Every Git provider | Administrator access |
 
-Schedules are the provider-neutral fallback. For GitLab, Gerrit, Gitea, Bitbucket, and other Git servers, use a schedule. You can also call the [repository refresh endpoint](/enterprise/api/parse/refresh-a-library) from CI when an update must start immediately.
+Schedules are the provider-neutral automatic update mechanism. For GitLab, Gerrit, Gitea, Bitbucket, and other Git servers, use a schedule. You can also call the [repository refresh endpoint](/enterprise/api/parse/refresh-a-library) from CI when an update must start immediately.
 
 ## How checks and caching work
 
