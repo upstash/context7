@@ -1,0 +1,99 @@
+---
+title: "Automatic Repository Updates"
+sidebarTitle: "Automatic Updates"
+description: "Keep indexed Git repositories current with schedules, GitHub push events, and cached refreshes"
+---
+
+Automatic repository updates keep indexed Git repositories in sync with their tracked branches. Context7 checks the latest commit, skips repositories that are already current, and queues a cached refresh only when needed.
+
+This works with GitHub, GitHub Enterprise Server, GitLab, self-hosted GitLab, Gerrit, Gitea, Bitbucket, and other Git servers connected over HTTPS or SSH.
+
+<Note>
+Automatic updates apply to Git repository sources. Website, Confluence, OpenAPI, and llms.txt sources are not included.
+</Note>
+
+## Configure updates
+
+Open **Settings → Indexing → Automatic Updates**.
+
+<Frame>
+  ![Automatic repository update triggers and activity counters](/images/enterprise/automatic-repository-updates/overview.png)
+</Frame>
+
+You can configure up to 10 schedules. Each schedule has a name, a cron expression, and an enabled state. Cron expressions run in the server timezone.
+
+<Steps>
+  <Step title="Add a schedule">
+    Select **Add schedule**, choose a preset or enter a custom cron expression, then select **Add**.
+
+    <Frame>
+      ![Schedule editor with name, frequency, and cron expression fields](/images/enterprise/automatic-repository-updates/schedule-editor.png)
+    </Frame>
+  </Step>
+  <Step title="Enable GitHub push events">
+    Turn on **GitHub push** to refresh matching repositories as soon as a push arrives. This requires a connected GitHub App with an active webhook and the **Push** event subscription. See [GitHub Integration](/enterprise/integrations/github#webhooks).
+  </Step>
+  <Step title="Save the configuration">
+    Select **Save & Apply**. Enabling at least one schedule also starts a repository check when Context7 starts.
+  </Step>
+</Steps>
+
+Select **Check now** at any time to run the same check manually.
+
+## Choose a trigger
+
+| Trigger | Best for | Requirements |
+| ------- | -------- | ------------ |
+| Schedule | Every supported Git provider | Repository credentials and network access |
+| GitHub push | Faster updates for GitHub and GitHub Enterprise Server | Connected GitHub App, reachable webhook, and Push event subscription |
+| Check now | Testing, recovery, and operator-controlled refreshes | Administrator access |
+
+Schedules are the provider-neutral fallback. For GitLab, Gerrit, Gitea, Bitbucket, and other Git servers, use a schedule. You can also call the [repository refresh endpoint](/enterprise/api/parse/refresh-a-library) from CI when an update must start immediately.
+
+## How checks and caching work
+
+For each indexed Git repository, Context7 checks the configured branch on the remote:
+
+1. If the remote commit matches the fully indexed commit, the repository is marked **Unchanged** and no parse is queued.
+2. If the commit changed, Context7 queues a normal refresh for that repository.
+3. During the refresh, files whose content and extraction settings have not changed reuse the extraction cache. This avoids repeating LLM extraction for unchanged files.
+4. Changed or new files are processed normally. Removed files are removed from the index when the refresh completes.
+
+The cache is keyed by file content, extraction configuration, and language. Relevant changes to those inputs invalidate the cached entry. If source code indexing is enabled, Context7 also verifies that generated source documentation belongs to the same commit before the repository is considered current.
+
+## Retries and multiple instances
+
+When an automatic refresh does not complete for a commit, Context7 retries immediately, then waits 15 minutes, 1 hour, and 6 hours between attempts. After four unsuccessful attempts for the same commit, automatic retries pause and an operator notice is recorded.
+
+Select **Check now** to retry a paused commit. A new commit starts a fresh retry sequence.
+
+In a multi-replica deployment, a shared lock prevents duplicate scheduled and manual scans. The shared parse queue also prevents duplicate active refreshes for the same repository.
+
+## Read the activity summary
+
+| Counter | Meaning |
+| ------- | ------- |
+| Checked | Repositories whose tracked branch was checked |
+| Queued | Repositories added to the refresh queue |
+| Unchanged | Repositories already indexed at the remote commit |
+| Deferred | Refreshes waiting for retry backoff or paused after repeated failures |
+| Failed | Checks that could not read the remote branch |
+
+The trigger table also shows the last result for each schedule and for GitHub push events.
+
+## Automatic updates and GitOps
+
+These features solve different problems and can be used together.
+
+| Feature | Purpose |
+| ------- | ------- |
+| Automatic updates | Refresh the contents of Git repositories that are already indexed |
+| [GitOps](/enterprise/gitops) | Manage which sources exist and their indexing settings from a manifest |
+
+## Troubleshooting
+
+- **GitHub push cannot be enabled:** Confirm the GitHub App webhook is configured and subscribed to Push events.
+- **A repository is not checked:** Confirm it completed its first index and has a tracked branch.
+- **A check fails:** Verify the repository credentials, branch name, DNS, TLS trust, and network access from the Context7 container.
+- **A refresh is deferred:** Wait for the next retry, select **Check now**, or push a new commit.
+- **A schedule runs at the wrong time:** Cron expressions use the server timezone. Check the container timezone and deployment configuration.
