@@ -123,6 +123,65 @@ const QUERY_DOCS_ALIASES: AliasMap = {
   libraryId: ["context7CompatibleLibraryID", "libraryID", "libraryName"],
 };
 
+type JsonRpcId = string | number;
+
+function jsonRpcRequestId(message: unknown): JsonRpcId | undefined {
+  if (!message || typeof message !== "object") return undefined;
+
+  const candidate = message as Record<string, unknown>;
+  if (
+    candidate.jsonrpc === "2.0" &&
+    typeof candidate.method === "string" &&
+    (typeof candidate.id === "string" || typeof candidate.id === "number")
+  ) {
+    return candidate.id;
+  }
+}
+
+function cancellationRequestId(message: unknown): JsonRpcId | undefined {
+  if (!message || typeof message !== "object") return undefined;
+
+  const candidate = message as Record<string, unknown>;
+  if (
+    candidate.jsonrpc !== "2.0" ||
+    candidate.method !== "notifications/cancelled" ||
+    "id" in candidate ||
+    !candidate.params ||
+    typeof candidate.params !== "object"
+  ) {
+    return undefined;
+  }
+
+  const requestId = (candidate.params as Record<string, unknown>).requestId;
+  if (typeof requestId === "string" || typeof requestId === "number") return requestId;
+}
+
+function filterBatchSelfCancellations(body: unknown): {
+  body: unknown;
+  removedSelfCancellation: boolean;
+} {
+  if (!Array.isArray(body)) return { body, removedSelfCancellation: false };
+
+  const requestIds = new Set(body.map(jsonRpcRequestId).filter((id) => id !== undefined));
+  const selfCancelledIds = new Set(
+    body
+      .map(cancellationRequestId)
+      .filter((id): id is JsonRpcId => id !== undefined && requestIds.has(id))
+  );
+  if (selfCancelledIds.size === 0) return { body, removedSelfCancellation: false };
+
+  return {
+    body: body.filter((message) => {
+      const requestId = jsonRpcRequestId(message);
+      if (requestId !== undefined && selfCancelledIds.has(requestId)) return false;
+
+      const cancelledId = cancellationRequestId(message);
+      return cancelledId === undefined || !selfCancelledIds.has(cancelledId);
+    }),
+    removedSelfCancellation: true,
+  };
+}
+
 // z.preprocess step that rewrites aliased arg names before validation. Living
 // in the schema keeps aliasing transport-agnostic: the SDK parses the wire
 // message (any transport, any protocol era) and runs this on validation.
@@ -431,6 +490,21 @@ async function main() {
           }
         }
 
+        // A cancelled request deliberately produces no protocol response, but
+        // the SDK's legacy stateless transport still waits for one before it
+        // closes the batch's POST stream. Consume request/cancellation pairs
+        // that occur in the same batch before SDK dispatch. This applies the
+        // cancellation without starting the tool and without leaving an ID in
+        // the transport's response accounting.
+        const filteredBody = filterBatchSelfCancellations(req.body);
+        if (
+          filteredBody.removedSelfCancellation &&
+          Array.isArray(filteredBody.body) &&
+          filteredBody.body.length === 0
+        ) {
+          return res.status(202).end();
+        }
+
         const context: ClientContext = {
           clientIp: getClientIp(req),
           apiKey: apiKey,
@@ -439,7 +513,7 @@ async function main() {
         };
 
         await requestContext.run(context, async () => {
-          await nodeHandler(req, res, req.body);
+          await nodeHandler(req, res, filteredBody.body);
         });
       } catch (error) {
         console.error("Error handling MCP request:", error);
