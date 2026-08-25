@@ -120,8 +120,10 @@ function findTomlServerArgs(
   serverName: string
 ): { start: number; end: number; tokens: TomlStringToken[] } | null {
   const escapedName = serverName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const tableKey = `(?:mcp_servers|"mcp_servers"|'mcp_servers')`;
+  const serverKey = `(?:${escapedName}|"${escapedName}"|'${escapedName}')`;
   const headerRe = new RegExp(
-    `^[\\t ]*\\[mcp_servers\\.${escapedName}\\][\\t ]*(?:#.*)?\\r?$`,
+    `^[\\uFEFF\\t ]*\\[[\\t ]*${tableKey}[\\t ]*\\.[\\t ]*${serverKey}[\\t ]*\\][\\t ]*(?:#.*)?\\r?$`,
     "m"
   );
   const header = headerRe.exec(raw);
@@ -135,10 +137,10 @@ function findTomlServerArgs(
   const bodyEnd = nextHeader?.index ?? raw.length;
 
   const body = raw.slice(effectiveBodyStart, bodyEnd);
-  const argsRe = /^[\t ]*args[\t ]*=[\t ]*/gm;
+  const argsRe = /^[\t ]*(?:args|"args"|'args')[\t ]*=[\t ]*/gm;
   const args = argsRe.exec(body);
   if (!args) {
-    if (/^[\t ]*(?:command|args)[\t ]*=/m.test(body)) {
+    if (/^[\t ]*(?:command|args|"command"|"args"|'command'|'args')[\t ]*=/m.test(body)) {
       throw new Error("Existing MCP stdio entry has no safely editable args array");
     }
     return null;
@@ -159,6 +161,10 @@ function withoutApiKey(args: string[]): string[] {
     result.push(args[index]);
   }
   return result;
+}
+
+function isContext7Package(arg: string): boolean {
+  return arg === STDIO_PACKAGE || arg.startsWith(`${STDIO_PACKAGE}@`);
 }
 
 /**
@@ -183,7 +189,7 @@ export async function patchTomlStdioApiKey(
   if (!range) return false;
 
   const args = range.tokens.map((token) => token.value);
-  if (!args.some((arg) => arg.includes(STDIO_PACKAGE))) return false;
+  if (!args.some(isContext7Package)) return false;
 
   const apiKeyIndexes = args.flatMap((arg, index) => (arg === "--api-key" ? [index] : []));
   let content: string;
