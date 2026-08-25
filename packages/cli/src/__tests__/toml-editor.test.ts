@@ -193,16 +193,32 @@ const preservationVariants = [
   },
 ] as const;
 
-interface NonTargetCase {
+interface OptionalSourceCase {
   name: string;
   source?: string;
 }
 
-const nonTargets: NonTargetCase[] = [
+interface SourceCase {
+  name: string;
+  source: string;
+}
+
+const absentTargets: OptionalSourceCase[] = [
   { name: "missing file" },
   { name: "empty file", source: "" },
   { name: "different server", source: `[mcp_servers.other]\nargs = ["${PACKAGE}"]\n` },
+  {
+    name: "similar server name",
+    source: `[mcp_servers.context70]\nargs = ["${PACKAGE}", "--api-key", "OLD"]\n`,
+  },
+];
+
+const unsafeTargets: SourceCase[] = [
   { name: "HTTP server", source: `[mcp_servers.context7]\nurl = "https://mcp.context7.com/mcp"\n` },
+  {
+    name: "quoted HTTP server",
+    source: `[mcp_servers."context7"]\nurl = "https://mcp.context7.com/mcp"\n`,
+  },
   {
     name: "different package",
     source: `[mcp_servers.context7]\nargs = ["other-package", "--api-key", "OLD"]\n`,
@@ -220,12 +236,19 @@ const nonTargets: NonTargetCase[] = [
     source: `[mcp_servers.context7]\nargs = ["evil-${PACKAGE}", "--api-key", "OLD"]\n`,
   },
   {
-    name: "similar server name",
-    source: `[mcp_servers.context70]\nargs = ["${PACKAGE}", "--api-key", "OLD"]\n`,
-  },
-  {
     name: "package belongs to another server",
     source: `[mcp_servers.context7]\nargs = ["other-package"]\n\n[mcp_servers.other]\nargs = ["${PACKAGE}"]\n`,
+  },
+  {
+    name: "target table and args inside a multiline string",
+    source: `description = """
+[mcp_servers.context7]
+args = ["${PACKAGE}", "--api-key", "DECOY"]
+[not-a-real-table]
+"""
+[mcp_servers.context7]
+args = ["${PACKAGE}", "--api-key", "REAL"]
+`,
   },
 ];
 
@@ -246,11 +269,12 @@ const CONFIG_COUNT =
   rotations.length +
   mutations.length +
   preservationVariants.length +
-  nonTargets.length +
+  absentTargets.length +
+  unsafeTargets.length +
   invalidArgs.length;
-if (CONFIG_COUNT !== 60) throw new Error(`Expected 60 TOML fixtures, received ${CONFIG_COUNT}`);
+if (CONFIG_COUNT !== 62) throw new Error(`Expected 62 TOML fixtures, received ${CONFIG_COUNT}`);
 
-describe("patchTomlStdioApiKey 60-config compatibility matrix", () => {
+describe("patchTomlStdioApiKey 62-config compatibility matrix", () => {
   let tempDir: string;
   let configPath: string;
 
@@ -292,12 +316,25 @@ describe("patchTomlStdioApiKey 60-config compatibility matrix", () => {
     }
   );
 
-  test.each(nonTargets)("leaves non-target config unchanged: $name", async ({ source }) => {
-    if (source !== undefined) await writeFile(configPath, source, "utf-8");
+  test.each(absentTargets)(
+    "leaves configs without the target unchanged: $name",
+    async ({ source }) => {
+      if (source !== undefined) await writeFile(configPath, source, "utf-8");
 
-    expect(await patchTomlStdioApiKey(configPath, "context7", "NEW")).toBe(false);
-    if (source !== undefined) expect(await readFile(configPath, "utf-8")).toBe(source);
-  });
+      expect(await patchTomlStdioApiKey(configPath, "context7", "NEW")).toBe(false);
+      if (source !== undefined) expect(await readFile(configPath, "utf-8")).toBe(source);
+    }
+  );
+
+  test.each(unsafeTargets)(
+    "fails closed for an unsafe existing target: $name",
+    async ({ source }) => {
+      await writeFile(configPath, source, "utf-8");
+
+      await expect(patchTomlStdioApiKey(configPath, "context7", "NEW")).rejects.toThrow();
+      expect(await readFile(configPath, "utf-8")).toBe(source);
+    }
+  );
 
   test.each(invalidArgs)("fails closed: $name", async ({ value }) => {
     const source =

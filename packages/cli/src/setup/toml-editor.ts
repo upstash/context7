@@ -140,10 +140,7 @@ function findTomlServerArgs(
   const argsRe = /^[\t ]*(?:args|"args"|'args')[\t ]*=[\t ]*/gm;
   const args = argsRe.exec(body);
   if (!args) {
-    if (/^[\t ]*(?:command|args|"command"|"args"|'command'|'args')[\t ]*=/m.test(body)) {
-      throw new Error("Existing MCP stdio entry has no safely editable args array");
-    }
-    return null;
+    throw new Error("Existing MCP server has no safely editable args array");
   }
 
   const start = effectiveBodyStart + args.index + args[0].length;
@@ -171,7 +168,7 @@ function isContext7Package(arg: string): boolean {
  * Updates only the `args` value of an existing Context7 stdio TOML entry.
  * Every other byte in the config is preserved. Unsupported `args` syntax
  * throws instead of allowing setup to replace a configuration it cannot read.
- * Returns false when no existing Context7 stdio invocation is present.
+ * Returns false only when the requested server table is absent.
  */
 export async function patchTomlStdioApiKey(
   filePath: string,
@@ -185,11 +182,17 @@ export async function patchTomlStdioApiKey(
     return false;
   }
 
+  if (raw.includes('"""') || raw.includes("'''")) {
+    throw new Error("TOML files containing multiline strings are not safely editable");
+  }
+
   const range = findTomlServerArgs(raw, serverName);
   if (!range) return false;
 
   const args = range.tokens.map((token) => token.value);
-  if (!args.some(isContext7Package)) return false;
+  if (!args.some(isContext7Package)) {
+    throw new Error(`Existing MCP args do not invoke ${STDIO_PACKAGE}`);
+  }
 
   const apiKeyIndexes = args.flatMap((arg, index) => (arg === "--api-key" ? [index] : []));
   let content: string;
