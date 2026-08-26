@@ -26,6 +26,17 @@ describe("recoverLibraryId", () => {
     expect(recoverLibraryId("D:/tools/PortableGit/facebook/react")).toBe("/facebook/react");
   });
 
+  test("recovers from a versioned Scoop Git install", () => {
+    expect(recoverLibraryId("D:/Scoop/apps/git/2.54.0/vercel/next.js")).toBe("/vercel/next.js");
+    expect(recoverLibraryId("D:\\Scoop\\apps\\git\\2.54.0.windows.1\\vercel\\next.js")).toBe(
+      "/vercel/next.js"
+    );
+  });
+
+  test("does not treat a version-like owner in a standard Git install as a Scoop version", () => {
+    expect(recoverLibraryId("C:/Program Files/Git/2.54.0/vercel")).toBe("/2.54.0/vercel");
+  });
+
   test("recovers an owner that looks like a system dir", () => {
     expect(recoverLibraryId("C:/Program Files/Git/usr/some-repo")).toBe("/usr/some-repo");
   });
