@@ -355,6 +355,7 @@ async function main() {
     const extractApiKey = (req: express.Request): string | undefined => {
       return (
         extractBearerToken(req.headers.authorization) ||
+        extractHeaderValue(req.headers["x-context7-api-key"]) ||
         extractHeaderValue(req.headers["context7-api-key"]) ||
         extractHeaderValue(req.headers["x-api-key"]) ||
         extractHeaderValue(req.headers["context7_api_key"]) ||

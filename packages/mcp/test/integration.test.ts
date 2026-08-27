@@ -135,6 +135,32 @@ describe("OAuth discovery", () => {
   });
 });
 
+describe("HTTP API key headers", () => {
+  test("accepts the advertised X-Context7-API-Key header", async () => {
+    const apiKey = "ctx7sk-advertised-header-test";
+    const client = new Client({ name: "api-key-header-test", version: "1.0.0" });
+
+    await client.connect(
+      new StreamableHTTPClientTransport(new URL(httpUrl), {
+        requestInit: { headers: { "X-Context7-API-Key": apiKey } },
+      })
+    );
+
+    try {
+      requests.length = 0;
+      await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/vercel/next.js", query: "app router" },
+      });
+
+      const apiCall = requests.find((request) => request.path === "/v2/context");
+      expect(apiCall?.headers.authorization).toBe(`Bearer ${apiKey}`);
+    } finally {
+      await client.close();
+    }
+  });
+});
+
 describe.each([
   ["http", "modern"],
   ["http", "legacy"],
