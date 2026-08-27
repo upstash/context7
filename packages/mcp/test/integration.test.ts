@@ -19,6 +19,7 @@ const PKG_ROOT = path.resolve(fileURLToPath(new URL(".", import.meta.url)), ".."
 const DIST = path.join(PKG_ROOT, "dist", "index.js");
 const BASE_PORT = 43117;
 const STUB_DOCS = "stub docs text";
+const CLIENT_IP_ASSERTION_KEY = "0123456789abcdef".repeat(4);
 
 interface RecordedRequest {
   path: string;
@@ -96,7 +97,11 @@ beforeAll(async () => {
   const stubUrl = await startStubApi();
   // getDefaultEnvironment() inherits only safe vars, so a real
   // CONTEXT7_API_KEY in the parent shell cannot leak into the children.
-  childEnv = { ...getDefaultEnvironment(), CONTEXT7_API_URL: stubUrl };
+  childEnv = {
+    ...getDefaultEnvironment(),
+    CONTEXT7_API_URL: stubUrl,
+    MCP_CLIENT_IP_ASSERTION_KEY: CLIENT_IP_ASSERTION_KEY,
+  };
   ({ child: httpChild, url: httpUrl } = await startHttpChild());
 }, 120_000);
 
@@ -198,6 +203,12 @@ describe.each([
     expect(apiCalls[0].query.get("libraryId")).toBe("/vercel/next.js");
     expect(apiCalls[0].query.get("query")).toBe("app router");
     expect(apiCalls[0].headers["x-context7-transport"]).toBe(transportKind);
+    if (transportKind === "http") {
+      expect(apiCalls[0].headers["mcp-client-ip-assertion"]).toMatch(/^v1:/);
+      expect(apiCalls[0].headers["mcp-client-ip"]).toMatch(/^[0-9a-f]{32}:[0-9a-f]+$/);
+    } else {
+      expect(apiCalls[0].headers["mcp-client-ip-assertion"]).toBeUndefined();
+    }
   });
 
   test("calls resolve-library-id end to end", async () => {

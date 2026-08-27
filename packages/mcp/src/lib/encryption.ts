@@ -12,7 +12,7 @@ function validateEncryptionKey(key: string): boolean {
 }
 
 function getEncryptionKey(): Buffer | null {
-  const key = process.env.CLIENT_IP_ENCRYPTION_KEY;
+  const key = process.env.MCP_CLIENT_IP_ASSERTION_KEY;
   return key && validateEncryptionKey(key) ? Buffer.from(key, "hex") : null;
 }
 
