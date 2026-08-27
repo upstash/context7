@@ -8,10 +8,12 @@ const NONCE = Buffer.from("00112233445566778899aabb", "hex");
 describe("client IP assertions", () => {
   beforeEach(() => {
     process.env.MCP_CLIENT_IP_ASSERTION_KEY = KEY;
+    process.env.CLIENT_IP_ENCRYPTION_KEY = KEY;
   });
 
   afterEach(() => {
     delete process.env.MCP_CLIENT_IP_ASSERTION_KEY;
+    delete process.env.CLIENT_IP_ENCRYPTION_KEY;
   });
 
   test("creates a versioned AES-GCM assertion", () => {
@@ -31,6 +33,7 @@ describe("client IP assertions", () => {
 
   test("fails closed instead of sending plaintext when the key is absent or invalid", () => {
     delete process.env.MCP_CLIENT_IP_ASSERTION_KEY;
+    delete process.env.CLIENT_IP_ENCRYPTION_KEY;
     expect(
       generateHeaders({ clientIp: "203.0.113.99" })["mcp-client-ip-assertion"]
     ).toBeUndefined();

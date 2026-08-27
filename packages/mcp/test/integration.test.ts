@@ -101,6 +101,7 @@ beforeAll(async () => {
     ...getDefaultEnvironment(),
     CONTEXT7_API_URL: stubUrl,
     MCP_CLIENT_IP_ASSERTION_KEY: CLIENT_IP_ASSERTION_KEY,
+    CLIENT_IP_ENCRYPTION_KEY: CLIENT_IP_ASSERTION_KEY,
   };
   ({ child: httpChild, url: httpUrl } = await startHttpChild());
 }, 120_000);

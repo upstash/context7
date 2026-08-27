@@ -11,8 +11,8 @@ function validateEncryptionKey(key: string): boolean {
   return /^[0-9a-fA-F]{64}$/.test(key);
 }
 
-function getEncryptionKey(): Buffer | null {
-  const key = process.env.MCP_CLIENT_IP_ASSERTION_KEY;
+function encryptionKey(name: "MCP_CLIENT_IP_ASSERTION_KEY" | "CLIENT_IP_ENCRYPTION_KEY") {
+  const key = process.env[name];
   return key && validateEncryptionKey(key) ? Buffer.from(key, "hex") : null;
 }
 
@@ -40,7 +40,7 @@ export function createClientIpAssertion(
   nowMs = Date.now(),
   nonce = randomBytes(12)
 ): string | null {
-  const key = getEncryptionKey();
+  const key = encryptionKey("MCP_CLIENT_IP_ASSERTION_KEY");
   if (!key || nonce.length !== 12) return null;
 
   try {
@@ -72,7 +72,7 @@ export function generateHeaders(context: ClientContext): Record<string, string> 
       headers["mcp-client-ip-assertion"] = assertion;
 
       // Keep the encrypted legacy header only for producer-first rollout compatibility.
-      const key = getEncryptionKey();
+      const key = encryptionKey("CLIENT_IP_ENCRYPTION_KEY");
       const legacyValue = key ? encryptLegacyClientIp(context.clientIp, key) : null;
       if (legacyValue) headers["mcp-client-ip"] = legacyValue;
     }
