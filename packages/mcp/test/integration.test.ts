@@ -135,6 +135,117 @@ describe("OAuth discovery", () => {
   });
 });
 
+describe("HTTP batch cancellation", () => {
+  beforeEach(() => {
+    requests.length = 0;
+  });
+
+  test("consumes a request cancelled by the same batch and closes promptly", async () => {
+    const response = await fetch(httpUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify([
+        {
+          jsonrpc: "2.0",
+          id: 102,
+          method: "tools/call",
+          params: {
+            name: "resolve-library-id",
+            arguments: { query: "framework documentation", libraryName: "Next.js" },
+          },
+        },
+        {
+          jsonrpc: "2.0",
+          method: "notifications/cancelled",
+          params: { requestId: 102, reason: "regression-test" },
+        },
+      ]),
+      signal: AbortSignal.timeout(1_000),
+    });
+
+    expect(response.status).toBe(202);
+    expect(await response.text()).toBe("");
+    expect(requests).toHaveLength(0);
+  });
+
+  test("returns responses for the uncancelled requests in a mixed batch", async () => {
+    const response = await fetch(httpUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify([
+        {
+          jsonrpc: "2.0",
+          id: 104,
+          method: "tools/call",
+          params: {
+            name: "resolve-library-id",
+            arguments: { query: "cancelled", libraryName: "Cancelled.js" },
+          },
+        },
+        {
+          jsonrpc: "2.0",
+          id: 105,
+          method: "tools/call",
+          params: {
+            name: "resolve-library-id",
+            arguments: { query: "framework documentation", libraryName: "Next.js" },
+          },
+        },
+        {
+          jsonrpc: "2.0",
+          method: "notifications/cancelled",
+          params: { requestId: 104, reason: "regression-test" },
+        },
+      ]),
+      signal: AbortSignal.timeout(1_000),
+    });
+
+    expect(response.status).toBe(200);
+    const responseText = await response.text();
+    expect(responseText).not.toContain('"id":104');
+    expect(responseText).toContain('"id":105');
+    expect(requests.filter((request) => request.path === "/v2/libs/search")).toHaveLength(1);
+    expect(requests[0].query.get("libraryName")).toBe("Next.js");
+  });
+
+  test("allows a cancellation for an ID outside the batch", async () => {
+    const response = await fetch(httpUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify([
+        {
+          jsonrpc: "2.0",
+          id: 103,
+          method: "tools/call",
+          params: {
+            name: "resolve-library-id",
+            arguments: { query: "framework documentation", libraryName: "Next.js" },
+          },
+        },
+        {
+          jsonrpc: "2.0",
+          method: "notifications/cancelled",
+          params: { requestId: 999, reason: "different-request" },
+        },
+      ]),
+      signal: AbortSignal.timeout(1_000),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('"id":103');
+    expect(requests.filter((request) => request.path === "/v2/libs/search")).toHaveLength(1);
+  });
+});
+
 describe.each([
   ["http", "modern"],
   ["http", "legacy"],
