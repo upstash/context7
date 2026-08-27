@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.9
+
+### Patch Changes
+
+- 3abc99a: Recover library IDs mangled by Git Bash when Git is installed through Scoop.
+- 118c852: Preserve existing Codex TOML settings when rotating stdio API keys.
+
 ## 0.5.8
 
 ### Patch Changes
