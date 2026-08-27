@@ -42,4 +42,11 @@ describe("client IP assertions", () => {
     process.env.MCP_CLIENT_IP_ASSERTION_KEY = "not-a-key";
     expect(createClientIpAssertion("203.0.113.99", NOW_MS, NONCE)).toBeNull();
   });
+
+  test.each(["999.999.999.999", "1:2:3", "attacker-selected-bucket"])(
+    "refuses to sign an invalid IP address (%s)",
+    (value) => {
+      expect(createClientIpAssertion(value, NOW_MS, NONCE)).toBeNull();
+    }
+  );
 });

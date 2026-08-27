@@ -1,10 +1,12 @@
 import { createCipheriv, randomBytes } from "crypto";
+import { isIP } from "node:net";
 import { SERVER_VERSION } from "./constants.js";
 import type { ClientContext } from "./types.js";
 
 const LEGACY_ALGORITHM = "aes-256-cbc";
 const ASSERTION_ALGORITHM = "aes-256-gcm";
 const ASSERTION_VERSION = "v1";
+let reportedInvalidAssertionKey = false;
 
 function validateEncryptionKey(key: string): boolean {
   // Must be exactly 64 hex characters (32 bytes)
@@ -18,7 +20,7 @@ function encryptionKey(name: "MCP_CLIENT_IP_ASSERTION_KEY" | "CLIENT_IP_ENCRYPTI
 
 /**
  * Temporary compatibility header for API deployments that predate authenticated assertions.
- * This header is ignored by patched API deployments and can be removed after rollout.
+ * This header is ignored by patched API deployments. Removal is tracked by CTX7-2536.
  */
 function encryptLegacyClientIp(clientIp: string, key: Buffer): string | null {
   try {
@@ -41,7 +43,16 @@ export function createClientIpAssertion(
   nonce = randomBytes(12)
 ): string | null {
   const key = encryptionKey("MCP_CLIENT_IP_ASSERTION_KEY");
-  if (!key || nonce.length !== 12) return null;
+  if (!key) {
+    if (!reportedInvalidAssertionKey) {
+      reportedInvalidAssertionKey = true;
+      console.error(
+        "MCP_CLIENT_IP_ASSERTION_KEY is missing or invalid; client IP assertions are disabled."
+      );
+    }
+    return null;
+  }
+  if (nonce.length !== 12 || isIP(clientIp) === 0) return null;
 
   try {
     const timestamp = Math.floor(nowMs / 1000).toString();
@@ -71,7 +82,7 @@ export function generateHeaders(context: ClientContext): Record<string, string> 
     if (assertion) {
       headers["mcp-client-ip-assertion"] = assertion;
 
-      // Keep the encrypted legacy header only for producer-first rollout compatibility.
+      // Producer-first rollout compatibility. Removal is tracked by CTX7-2536.
       const key = encryptionKey("CLIENT_IP_ENCRYPTION_KEY");
       const legacyValue = key ? encryptLegacyClientIp(context.clientIp, key) : null;
       if (legacyValue) headers["mcp-client-ip"] = legacyValue;
