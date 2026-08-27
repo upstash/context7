@@ -18,10 +18,10 @@ export function recoverLibraryId(input: string): string {
   // Strip the Git install dir, keeping the "/owner/repo[/version]" tail.
   const normalized = input.replace(/\\/g, "/");
 
-  // Scoop installs Git under apps/git/<version>. MSYS resolves Scoop's "current"
-  // junction, so discard that version segment before recovering the library ID.
+  // Scoop installs Git under apps/git/<version> with a "current" junction.
+  // Discard either form before recovering the library ID.
   const scoopMatch = normalized.match(
-    /^[A-Za-z]:\/.*\/apps\/git\/v?\d+(?:\.\d+)+(?:[^/]*)\/(.+)$/i
+    /^[A-Za-z]:\/.*\/apps\/git\/(?:v?\d+(?:\.\d+)+[^/]*|current)\/(.+)$/i
   );
   if (scoopMatch) return `/${scoopMatch[1]}`;
 

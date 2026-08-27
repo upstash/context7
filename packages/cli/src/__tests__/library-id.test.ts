@@ -33,6 +33,10 @@ describe("recoverLibraryId", () => {
     );
   });
 
+  test("recovers from an unresolved Scoop current junction", () => {
+    expect(recoverLibraryId("D:/Scoop/apps/git/current/vercel/next.js")).toBe("/vercel/next.js");
+  });
+
   test("does not treat a version-like owner in a standard Git install as a Scoop version", () => {
     expect(recoverLibraryId("C:/Program Files/Git/2.54.0/vercel")).toBe("/2.54.0/vercel");
   });
