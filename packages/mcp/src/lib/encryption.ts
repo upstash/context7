@@ -2,30 +2,57 @@ import { createCipheriv, randomBytes } from "crypto";
 import { SERVER_VERSION } from "./constants.js";
 import type { ClientContext } from "./types.js";
 
-const DEFAULT_ENCRYPTION_KEY = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
-const ENCRYPTION_KEY = process.env.CLIENT_IP_ENCRYPTION_KEY || DEFAULT_ENCRYPTION_KEY;
-const ALGORITHM = "aes-256-cbc";
+const LEGACY_ALGORITHM = "aes-256-cbc";
+const ASSERTION_ALGORITHM = "aes-256-gcm";
+const ASSERTION_VERSION = "v1";
 
 function validateEncryptionKey(key: string): boolean {
   // Must be exactly 64 hex characters (32 bytes)
   return /^[0-9a-fA-F]{64}$/.test(key);
 }
 
-function encryptClientIp(clientIp: string): string {
-  if (!validateEncryptionKey(ENCRYPTION_KEY)) {
-    console.error("Invalid encryption key format. Must be 64 hex characters.");
-    return clientIp; // Fallback to unencrypted
-  }
+function getEncryptionKey(): Buffer | null {
+  const key = process.env.CLIENT_IP_ENCRYPTION_KEY;
+  return key && validateEncryptionKey(key) ? Buffer.from(key, "hex") : null;
+}
 
+/**
+ * Temporary compatibility header for API deployments that predate authenticated assertions.
+ * This header is ignored by patched API deployments and can be removed after rollout.
+ */
+function encryptLegacyClientIp(clientIp: string, key: Buffer): string | null {
   try {
     const iv = randomBytes(16);
-    const cipher = createCipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY, "hex"), iv);
-    let encrypted = cipher.update(clientIp, "utf8", "hex");
-    encrypted += cipher.final("hex");
-    return iv.toString("hex") + ":" + encrypted;
-  } catch (error) {
-    console.error("Error encrypting client IP:", error);
-    return clientIp; // Fallback to unencrypted
+    const cipher = createCipheriv(LEGACY_ALGORITHM, key, iv);
+    const encrypted = Buffer.concat([cipher.update(clientIp, "utf8"), cipher.final()]);
+    return `${iv.toString("hex")}:${encrypted.toString("hex")}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Create a short-lived, authenticated client-IP assertion.
+ * Format: v1:<unix timestamp seconds>:<12-byte nonce hex>:<ciphertext + tag hex>
+ */
+export function createClientIpAssertion(
+  clientIp: string,
+  nowMs = Date.now(),
+  nonce = randomBytes(12)
+): string | null {
+  const key = getEncryptionKey();
+  if (!key || nonce.length !== 12) return null;
+
+  try {
+    const timestamp = Math.floor(nowMs / 1000).toString();
+    const aad = `${ASSERTION_VERSION}:${timestamp}`;
+    const cipher = createCipheriv(ASSERTION_ALGORITHM, key, nonce);
+    cipher.setAAD(Buffer.from(aad, "utf8"));
+    const ciphertext = Buffer.concat([cipher.update(clientIp, "utf8"), cipher.final()]);
+    const ciphertextAndTag = Buffer.concat([ciphertext, cipher.getAuthTag()]);
+    return `${aad}:${nonce.toString("hex")}:${ciphertextAndTag.toString("hex")}`;
+  } catch {
+    return null;
   }
 }
 
@@ -40,7 +67,15 @@ export function generateHeaders(context: ClientContext): Record<string, string> 
   };
 
   if (context.clientIp) {
-    headers["mcp-client-ip"] = encryptClientIp(context.clientIp);
+    const assertion = createClientIpAssertion(context.clientIp);
+    if (assertion) {
+      headers["mcp-client-ip-assertion"] = assertion;
+
+      // Keep the encrypted legacy header only for producer-first rollout compatibility.
+      const key = getEncryptionKey();
+      const legacyValue = key ? encryptLegacyClientIp(context.clientIp, key) : null;
+      if (legacyValue) headers["mcp-client-ip"] = legacyValue;
+    }
   }
   if (context.sessionId) {
     headers["mcp-session-id"] = context.sessionId;
