@@ -25,6 +25,7 @@ import {
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { getClientIp } from "./lib/client-ip.js";
+import { createHttpSecurityMiddleware } from "./lib/http-security.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -34,6 +35,11 @@ const program = new Command()
   .version(SERVER_VERSION, "-v, --version", "output the current version")
   .option("--transport <stdio|http>", "transport type", "stdio")
   .option("--port <number>", "port for HTTP transport", DEFAULT_PORT.toString())
+  .option(
+    "--host <host>",
+    "host interface for HTTP transport",
+    process.env.CONTEXT7_MCP_HOST || "127.0.0.1"
+  )
   .option("--api-key <key>", "API key for authentication (or set CONTEXT7_API_KEY env var)")
   .allowUnknownOption() // let MCP Inspector / other wrappers pass through extra flags
   .parse(process.argv);
@@ -41,6 +47,7 @@ const program = new Command()
 const cliOptions = program.opts<{
   transport: string;
   port: string;
+  host: string;
   apiKey?: string;
 }>();
 
@@ -58,6 +65,7 @@ const TRANSPORT_TYPE = (cliOptions.transport || "stdio") as "stdio" | "http";
 
 // Disallow incompatible flags based on transport
 const passedPortFlag = process.argv.includes("--port");
+const passedHostFlag = process.argv.includes("--host");
 const passedApiKeyFlag = process.argv.includes("--api-key");
 
 if (TRANSPORT_TYPE === "http" && passedApiKeyFlag) {
@@ -67,8 +75,8 @@ if (TRANSPORT_TYPE === "http" && passedApiKeyFlag) {
   process.exit(1);
 }
 
-if (TRANSPORT_TYPE === "stdio" && passedPortFlag) {
-  console.error("The --port flag is not allowed when using --transport stdio.");
+if (TRANSPORT_TYPE === "stdio" && (passedPortFlag || passedHostFlag)) {
+  console.error("The --port and --host flags are not allowed when using --transport stdio.");
   process.exit(1);
 }
 
@@ -77,6 +85,8 @@ const CLI_PORT = (() => {
   const parsed = parseInt(cliOptions.port, 10);
   return isNaN(parsed) ? undefined : parsed;
 })();
+
+const HTTP_HOST = cliOptions.host;
 
 const requestContext = new AsyncLocalStorage<ClientContext>();
 
@@ -316,25 +326,8 @@ async function main() {
     const initialPort = CLI_PORT ?? DEFAULT_PORT;
 
     const app = express();
+    app.use(createHttpSecurityMiddleware(HTTP_HOST, process.env.CONTEXT7_MCP_ALLOWED_ORIGINS));
     app.use(express.json());
-
-    app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
-      // Mcp-Method / Mcp-Name are the SEP-2243 standard headers 2026-07-28
-      // clients send on every request; without them here, browser-based modern
-      // clients fail the CORS preflight. (Mcp-Param-* mirroring is skipped by
-      // browser clients, so those are not needed.)
-      res.setHeader(
-        "Access-Control-Allow-Headers",
-        "Content-Type, MCP-Session-Id, MCP-Protocol-Version, Mcp-Method, Mcp-Name, X-Context7-API-Key, Context7-API-Key, X-API-Key, Authorization"
-      );
-      if (req.method === "OPTIONS") {
-        res.sendStatus(200);
-        return;
-      }
-      next();
-    });
 
     const extractHeaderValue = (value: string | string[] | undefined): string | undefined => {
       if (!value) return undefined;
@@ -533,7 +526,7 @@ async function main() {
     });
 
     const startServer = (port: number, maxAttempts = 10) => {
-      const httpServer = app.listen(port);
+      const httpServer = app.listen(port, HTTP_HOST);
 
       httpServer.once("error", (err: NodeJS.ErrnoException) => {
         if (err.code === "EADDRINUSE" && port < initialPort + maxAttempts) {
@@ -546,8 +539,9 @@ async function main() {
       });
 
       httpServer.once("listening", () => {
+        const displayHost = HTTP_HOST.includes(":") ? `[${HTTP_HOST}]` : HTTP_HOST;
         console.error(
-          `Context7 Documentation MCP Server v${SERVER_VERSION} running on HTTP at http://localhost:${port}/mcp`
+          `Context7 Documentation MCP Server v${SERVER_VERSION} running on HTTP at http://${displayHost}:${port}/mcp`
         );
       });
     };

@@ -31,6 +31,8 @@ let stubServer: http.Server;
 let childEnv: Record<string, string>;
 let httpChild: ChildProcess;
 let httpUrl: string;
+let hostedHttpChild: ChildProcess;
+let hostedHttpUrl: string;
 
 function startStubApi(): Promise<string> {
   stubServer = http.createServer((req, res) => {
@@ -71,19 +73,27 @@ function startStubApi(): Promise<string> {
   });
 }
 
-function startHttpChild(): Promise<{ child: ChildProcess; url: string }> {
+function startHttpChild(
+  port: number,
+  host?: string
+): Promise<{ child: ChildProcess; url: string }> {
   return new Promise((resolve, reject) => {
-    const child = spawn(
-      process.execPath,
-      [DIST, "--transport", "http", "--port", String(BASE_PORT)],
-      { env: childEnv, stdio: ["ignore", "ignore", "pipe"] }
-    );
+    const args = [DIST, "--transport", "http", "--port", String(port)];
+    if (host) args.push("--host", host);
+    const child = spawn(process.execPath, args, {
+      env: childEnv,
+      stdio: ["ignore", "ignore", "pipe"],
+    });
     let stderr = "";
     child.stderr!.on("data", (chunk: Buffer) => {
       stderr += chunk.toString();
       // The binary retries on EADDRINUSE, so parse the actual port it settled on.
-      const match = stderr.match(/running on HTTP at (http:\/\/localhost:\d+\/mcp)/);
-      if (match) resolve({ child, url: match[1] });
+      const match = stderr.match(/running on HTTP at (http:\/\/[^\s]+\/mcp)/);
+      if (match) {
+        const url = new URL(match[1]);
+        if (url.hostname === "0.0.0.0") url.hostname = "127.0.0.1";
+        resolve({ child, url: url.href });
+      }
     });
     child.once("exit", (code) => {
       reject(new Error(`HTTP server exited before listening (code ${code}): ${stderr}`));
@@ -96,12 +106,22 @@ beforeAll(async () => {
   const stubUrl = await startStubApi();
   // getDefaultEnvironment() inherits only safe vars, so a real
   // CONTEXT7_API_KEY in the parent shell cannot leak into the children.
-  childEnv = { ...getDefaultEnvironment(), CONTEXT7_API_URL: stubUrl };
-  ({ child: httpChild, url: httpUrl } = await startHttpChild());
+  childEnv = {
+    ...getDefaultEnvironment(),
+    CONTEXT7_API_URL: stubUrl,
+    CONTEXT7_MCP_ALLOWED_ORIGINS: "https://docs.example.com",
+  };
+  const [localServer, hostedServer] = await Promise.all([
+    startHttpChild(BASE_PORT),
+    startHttpChild(BASE_PORT + 20, "0.0.0.0"),
+  ]);
+  ({ child: httpChild, url: httpUrl } = localServer);
+  ({ child: hostedHttpChild, url: hostedHttpUrl } = hostedServer);
 }, 120_000);
 
 afterAll(() => {
   httpChild?.kill();
+  hostedHttpChild?.kill();
   stubServer?.close();
 });
 
@@ -133,6 +153,109 @@ describe("OAuth discovery", () => {
       authorization_servers: ["https://clerk.context7.com", "https://context7.com"],
     });
   });
+});
+
+function preflight(url: string, origin: string, requestHeaders = "content-type") {
+  return fetch(url, {
+    method: "OPTIONS",
+    headers: {
+      origin,
+      "access-control-request-method": "POST",
+      "access-control-request-headers": requestHeaders,
+    },
+  });
+}
+
+describe("HTTP request origin and host validation", () => {
+  test("binds the local HTTP server to loopback by default", () => {
+    expect(new URL(httpUrl).hostname).toBe("127.0.0.1");
+  });
+
+  test("rejects a foreign origin before dispatch", async () => {
+    const response = await preflight(
+      httpUrl,
+      "https://evil-attacker.example",
+      "authorization,content-type"
+    );
+
+    expect(response.status).toBe(403);
+    expect(response.headers.get("access-control-allow-origin")).toBeNull();
+  });
+
+  test("rejects an untrusted request before parsing its JSON body", async () => {
+    const response = await fetch(httpUrl, {
+      method: "POST",
+      headers: { origin: "https://evil-attacker.example", "content-type": "application/json" },
+      body: "{invalid",
+    });
+
+    expect(response.status).toBe(403);
+  });
+
+  test("echoes an allowed loopback origin on preflight", async () => {
+    const origin = "http://localhost:5173";
+    const response = await preflight(httpUrl, origin, "content-type,mcp-protocol-version");
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get("access-control-allow-origin")).toBe(origin);
+    expect(response.headers.get("vary")).toContain("Origin");
+  });
+
+  test.each(["", "null", "https://context7.com", "https://docs.example.com"])(
+    "rejects non-loopback origin %s on the local server",
+    async (origin) => {
+      const response = await fetch(httpUrl, { headers: { origin } });
+      expect(response.status).toBe(403);
+      expect(response.headers.get("access-control-allow-origin")).toBeNull();
+    }
+  );
+
+  test("rejects a DNS-rebinding Host value", async () => {
+    const url = new URL(httpUrl);
+    const response = await new Promise<http.IncomingMessage>((resolve, reject) => {
+      const request = http.request(
+        {
+          hostname: url.hostname,
+          port: url.port,
+          path: url.pathname,
+          method: "GET",
+          headers: { host: "localhost.attacker.example" },
+        },
+        resolve
+      );
+      request.on("error", reject);
+      request.end();
+    });
+
+    expect(response.statusCode).toBe(403);
+    response.resume();
+  });
+
+  test.each(["https://context7.com", "https://docs.example.com"])(
+    "allows configured hosted origin %s",
+    async (origin) => {
+      const response = await preflight(hostedHttpUrl, origin);
+      expect(response.status).toBe(204);
+      expect(response.headers.get("access-control-allow-origin")).toBe(origin);
+    }
+  );
+
+  test("allows hosted health checks without an Origin header", async () => {
+    const response = await fetch(new URL("/ping", hostedHttpUrl));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("access-control-allow-origin")).toBeNull();
+  });
+
+  test.each(["", "https://evil-attacker.example", "https://subdomain.context7.com", "null"])(
+    "rejects origin %s on the hosted server",
+    async (origin) => {
+      const response = await fetch(hostedHttpUrl, { headers: { origin } });
+
+      expect(response.status).toBe(403);
+      expect(response.headers.get("access-control-allow-origin")).toBeNull();
+    }
+  );
 });
 
 describe.each([
