@@ -34,6 +34,7 @@ If a command fails with a quota error, inform the user and suggest \`npx ctx7@la
 `;
 
 const CURSOR_FRONTMATTER = `---\nalwaysApply: true\n---\n\n`;
+const VSCODE_FRONTMATTER = `---\napplyTo: "**"\n---\n\n`;
 const CODEX_CLI_SANDBOX_GUIDANCE = `Run Context7 CLI requests outside Codex's default sandbox. If a Context7 CLI command fails with DNS or network errors such as ENOTFOUND, host resolution failures, or fetch failed, rerun it outside the sandbox instead of retrying inside the sandbox.`;
 
 export type RuleMode = "mcp" | "cli";
@@ -59,7 +60,9 @@ export async function getRuleContent(mode: RuleMode, agent: string): Promise<str
     body = `${body.trimEnd()}\n${CODEX_CLI_SANDBOX_GUIDANCE}\n`;
   }
 
-  return agent === "cursor" ? `${CURSOR_FRONTMATTER}${body}` : body;
+  if (agent === "cursor") return `${CURSOR_FRONTMATTER}${body}`;
+  if (agent === "vscode") return `${VSCODE_FRONTMATTER}${body}`;
+  return body;
 }
 
 export function customizeSkillFilesForAgent(

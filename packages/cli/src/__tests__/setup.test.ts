@@ -1,7 +1,7 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import { mkdir, readFile, writeFile, rm } from "fs/promises";
 import { join } from "path";
-import { tmpdir } from "os";
+import { homedir, tmpdir } from "os";
 
 const MOCK_MCP_RULE = "Use Context7 MCP to fetch docs.\n";
 const MOCK_CLI_RULE = "Use the `ctx7` CLI to fetch docs.\n";
@@ -46,10 +46,16 @@ describe("getRuleContent", () => {
     expect(cursor).toContain("---\nalwaysApply: true\n---");
     expect(cursor).toContain(MOCK_MCP_RULE);
 
-    for (const agent of ["claude", "antigravity", "codex", "opencode", "gemini"]) {
+    for (const agent of ["claude", "vscode", "antigravity", "codex", "opencode", "gemini"]) {
       const content = await getRuleContent("mcp", agent);
       expect(content).not.toContain("alwaysApply");
     }
+  });
+
+  test("VS Code gets always-on instructions frontmatter", async () => {
+    const content = await getRuleContent("mcp", "vscode");
+    expect(content).toContain('---\napplyTo: "**"\n---');
+    expect(content).toContain(MOCK_MCP_RULE);
   });
 
   test("returns fallback content when all fetch URLs fail", async () => {
@@ -771,6 +777,58 @@ describe("agent config integration", () => {
     });
   });
 
+  describe("vscode", () => {
+    const agent = getAgent("vscode");
+
+    test("buildEntry with api-key produces VS Code HTTP shape", () => {
+      expect(agent.mcp.buildEntry(apiKeyAuth, "http")).toEqual({
+        type: "http",
+        url: "https://mcp.context7.com/mcp",
+        headers: { Authorization: "Bearer sk-test-123" },
+      });
+    });
+
+    test("buildEntry with oauth produces VS Code HTTP shape without headers", () => {
+      expect(agent.mcp.buildEntry(oauthAuth, "http")).toEqual({
+        type: "http",
+        url: "https://mcp.context7.com/mcp/oauth",
+      });
+    });
+
+    test("uses project and platform-specific global MCP paths", () => {
+      expect(agent.mcp.projectPaths).toEqual([join(".vscode", "mcp.json")]);
+      if (process.platform === "darwin") {
+        expect(agent.mcp.globalPaths).toEqual([
+          join(homedir(), "Library", "Application Support", "Code", "User", "mcp.json"),
+        ]);
+      }
+    });
+
+    test("merges into the VS Code servers section", async () => {
+      const path = join(tempDir, "mcp.json");
+      await writeJsonConfig(path, { servers: { other: { url: "https://other.com" } } });
+
+      const existing = await readJsonConfig(path);
+      const { config } = mergeServerEntry(
+        existing,
+        agent.mcp.configKey,
+        "context7",
+        agent.mcp.buildEntry(apiKeyAuth, "http")
+      );
+      await writeJsonConfig(path, config);
+
+      const result = await readJsonConfig(path);
+      expect((result.servers as Record<string, unknown>).context7).toEqual({
+        type: "http",
+        url: "https://mcp.context7.com/mcp",
+        headers: { Authorization: "Bearer sk-test-123" },
+      });
+      expect((result.servers as Record<string, unknown>).other).toEqual({
+        url: "https://other.com",
+      });
+    });
+  });
+
   describe("opencode", () => {
     const agent = getAgent("opencode");
 
@@ -1024,6 +1082,7 @@ describe("agent config integration", () => {
       expect(ALL_AGENT_NAMES).toEqual([
         "claude",
         "cursor",
+        "vscode",
         "opencode",
         "codex",
         "antigravity",
@@ -1072,6 +1131,15 @@ describe("agent config integration", () => {
     test("cursor stdio entry uses npx command with --api-key in args", () => {
       const entry = getAgent("cursor").mcp.buildEntry(apiKeyAuth, "stdio");
       expect(entry).toEqual({
+        command: "npx",
+        args: ["-y", "@upstash/context7-mcp", "--api-key", "sk-test-stdio"],
+      });
+    });
+
+    test("vscode stdio entry includes the stdio transport discriminator", () => {
+      const entry = getAgent("vscode").mcp.buildEntry(apiKeyAuth, "stdio");
+      expect(entry).toEqual({
+        type: "stdio",
         command: "npx",
         args: ["-y", "@upstash/context7-mcp", "--api-key", "sk-test-stdio"],
       });

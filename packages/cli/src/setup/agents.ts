@@ -2,7 +2,14 @@ import { access } from "fs/promises";
 import { join } from "path";
 import { homedir } from "os";
 
-export type SetupAgent = "claude" | "cursor" | "opencode" | "codex" | "antigravity" | "gemini";
+export type SetupAgent =
+  | "claude"
+  | "cursor"
+  | "vscode"
+  | "opencode"
+  | "codex"
+  | "antigravity"
+  | "gemini";
 export type AuthMode = "oauth" | "api-key";
 export type Transport = "http" | "stdio";
 
@@ -14,6 +21,7 @@ export interface AuthOptions {
 export const SETUP_AGENT_NAMES: Record<SetupAgent, string> = {
   claude: "Claude Code",
   cursor: "Cursor",
+  vscode: "VS Code",
   opencode: "OpenCode",
   codex: "Codex",
   antigravity: "Antigravity",
@@ -49,6 +57,16 @@ function claudeGlobalMcpPath(): string {
     return join(claudeConfigDir(), ".claude.json");
   }
   return join(homedir(), ".claude.json");
+}
+
+function vscodeUserDir(): string {
+  if (process.platform === "win32") {
+    return join(process.env.APPDATA || join(homedir(), "AppData", "Roaming"), "Code", "User");
+  }
+  if (process.platform === "darwin") {
+    return join(homedir(), "Library", "Application Support", "Code", "User");
+  }
+  return join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "Code", "User");
 }
 
 export type RuleType =
@@ -163,6 +181,39 @@ const agents: Record<SetupAgent, AgentConfig> = {
     detect: {
       projectPaths: [".cursor"],
       globalPaths: [join(homedir(), ".cursor")],
+    },
+  },
+
+  vscode: {
+    name: "vscode",
+    displayName: "VS Code",
+    mcp: {
+      projectPaths: [join(".vscode", "mcp.json")],
+      get globalPaths() {
+        return [join(vscodeUserDir(), "mcp.json")];
+      },
+      configKey: "servers",
+      buildEntry: (auth, transport) =>
+        transport === "stdio"
+          ? { type: "stdio", ...stdioEntry(auth) }
+          : withHeaders({ type: "http", url: mcpUrl(auth) }, auth),
+    },
+    rule: {
+      kind: "file",
+      dir: (scope) =>
+        scope === "global" ? join(vscodeUserDir(), "prompts") : join(".github", "instructions"),
+      filename: "context7.instructions.md",
+    },
+    skill: {
+      name: "context7-mcp",
+      dir: (scope) =>
+        scope === "global" ? join(homedir(), ".agents", "skills") : join(".agents", "skills"),
+    },
+    detect: {
+      projectPaths: [".vscode"],
+      get globalPaths() {
+        return [vscodeUserDir()];
+      },
     },
   },
 

@@ -22,6 +22,7 @@ type UninstallMode = "mcp" | "cli";
 interface UninstallOptions {
   claude?: boolean;
   cursor?: boolean;
+  vscode?: boolean;
   opencode?: boolean;
   codex?: boolean;
   antigravity?: boolean;
@@ -74,6 +75,7 @@ export function registerRemoveCommand(program: Command): void {
     .description("Remove Context7 setup from your AI coding agent")
     .option("--claude", "Remove from Claude Code")
     .option("--cursor", "Remove from Cursor")
+    .option("--vscode", "Remove from VS Code")
     .option("--opencode", "Remove from OpenCode")
     .option("--codex", "Remove from Codex")
     .option("--antigravity", "Remove from Antigravity")
@@ -92,6 +94,7 @@ function getSelectedAgents(options: UninstallOptions): SetupAgent[] {
   const agents: SetupAgent[] = [];
   if (options.claude) agents.push("claude");
   if (options.cursor) agents.push("cursor");
+  if (options.vscode) agents.push("vscode");
   if (options.opencode) agents.push("opencode");
   if (options.codex) agents.push("codex");
   if (options.antigravity) agents.push("antigravity");
@@ -154,7 +157,7 @@ async function resolveAgents(options: UninstallOptions, scope: Scope): Promise<S
 
   if (detected.length === 0) {
     log.warn(
-      "No Context7 setup detected. Pass --claude, --cursor, --opencode, --codex, --antigravity, or --gemini."
+      "No Context7 setup detected. Pass --claude, --cursor, --vscode, --opencode, --codex, --antigravity, or --gemini."
     );
     return [];
   }
