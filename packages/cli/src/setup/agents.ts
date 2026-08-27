@@ -2,14 +2,6 @@ import { access } from "fs/promises";
 import { join } from "path";
 import { homedir } from "os";
 
-export type SetupAgent =
-  | "claude"
-  | "cursor"
-  | "vscode"
-  | "opencode"
-  | "codex"
-  | "antigravity"
-  | "gemini";
 export type AuthMode = "oauth" | "api-key";
 export type Transport = "http" | "stdio";
 
@@ -17,16 +9,6 @@ export interface AuthOptions {
   mode: AuthMode;
   apiKey?: string;
 }
-
-export const SETUP_AGENT_NAMES: Record<SetupAgent, string> = {
-  claude: "Claude Code",
-  cursor: "Cursor",
-  vscode: "VS Code",
-  opencode: "OpenCode",
-  codex: "Codex",
-  antigravity: "Antigravity",
-  gemini: "Gemini CLI",
-};
 
 export const AUTH_MODE_LABELS: Record<AuthMode, string> = {
   oauth: "OAuth",
@@ -59,14 +41,21 @@ function claudeGlobalMcpPath(): string {
   return join(homedir(), ".claude.json");
 }
 
-function vscodeUserDir(): string {
-  if (process.platform === "win32") {
-    return join(process.env.APPDATA || join(homedir(), "AppData", "Roaming"), "Code", "User");
+export function resolveVscodeUserDir(
+  platform: NodeJS.Platform = process.platform,
+  home: string = homedir(),
+  env: { APPDATA?: string; XDG_CONFIG_HOME?: string } = {
+    APPDATA: process.env.APPDATA,
+    XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME,
   }
-  if (process.platform === "darwin") {
-    return join(homedir(), "Library", "Application Support", "Code", "User");
+): string {
+  if (platform === "win32") {
+    return join(env.APPDATA || join(home, "AppData", "Roaming"), "Code", "User");
   }
-  return join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "Code", "User");
+  if (platform === "darwin") {
+    return join(home, "Library", "Application Support", "Code", "User");
+  }
+  return join(env.XDG_CONFIG_HOME || join(home, ".config"), "Code", "User");
 }
 
 export type RuleType =
@@ -74,12 +63,13 @@ export type RuleType =
       kind: "file";
       dir: (scope: "project" | "global") => string;
       filename: string;
+      contentPrefix?: string;
     }
   | { kind: "append"; file: (scope: "project" | "global") => string; sectionMarker: string };
 
 export interface AgentConfig {
-  name: SetupAgent;
   displayName: string;
+  setupDescription?: string;
   mcp: {
     projectPaths: string[];
     globalPaths: string[];
@@ -123,9 +113,8 @@ function withHeaders(base: Record<string, unknown>, auth: AuthOptions): Record<s
   return base;
 }
 
-const agents: Record<SetupAgent, AgentConfig> = {
+const agents = {
   claude: {
-    name: "claude",
     displayName: "Claude Code",
     mcp: {
       projectPaths: [".mcp.json"],
@@ -158,7 +147,6 @@ const agents: Record<SetupAgent, AgentConfig> = {
   },
 
   cursor: {
-    name: "cursor",
     displayName: "Cursor",
     mcp: {
       projectPaths: [join(".cursor", "mcp.json")],
@@ -172,6 +160,7 @@ const agents: Record<SetupAgent, AgentConfig> = {
       dir: (scope) =>
         scope === "global" ? join(homedir(), ".cursor", "rules") : join(".cursor", "rules"),
       filename: "context7.mdc",
+      contentPrefix: `---\nalwaysApply: true\n---\n\n`,
     },
     skill: {
       name: "context7-mcp",
@@ -185,12 +174,11 @@ const agents: Record<SetupAgent, AgentConfig> = {
   },
 
   vscode: {
-    name: "vscode",
     displayName: "VS Code",
     mcp: {
       projectPaths: [join(".vscode", "mcp.json")],
       get globalPaths() {
-        return [join(vscodeUserDir(), "mcp.json")];
+        return [join(resolveVscodeUserDir(), "mcp.json")];
       },
       configKey: "servers",
       buildEntry: (auth, transport) =>
@@ -201,8 +189,11 @@ const agents: Record<SetupAgent, AgentConfig> = {
     rule: {
       kind: "file",
       dir: (scope) =>
-        scope === "global" ? join(vscodeUserDir(), "prompts") : join(".github", "instructions"),
+        scope === "global"
+          ? join(resolveVscodeUserDir(), "prompts")
+          : join(".github", "instructions"),
       filename: "context7.instructions.md",
+      contentPrefix: `---\napplyTo: "**"\n---\n\n`,
     },
     skill: {
       name: "context7-mcp",
@@ -212,13 +203,12 @@ const agents: Record<SetupAgent, AgentConfig> = {
     detect: {
       projectPaths: [".vscode"],
       get globalPaths() {
-        return [vscodeUserDir()];
+        return [resolveVscodeUserDir()];
       },
     },
   },
 
   opencode: {
-    name: "opencode",
     displayName: "OpenCode",
     mcp: {
       projectPaths: ["opencode.json", "opencode.jsonc", ".opencode.json", ".opencode.jsonc"],
@@ -252,7 +242,6 @@ const agents: Record<SetupAgent, AgentConfig> = {
   },
 
   codex: {
-    name: "codex",
     displayName: "Codex",
     mcp: {
       projectPaths: [join(".codex", "config.toml")],
@@ -284,8 +273,8 @@ const agents: Record<SetupAgent, AgentConfig> = {
   // ~/.gemini/config/mcp_config.json globally; there is no project-level MCP
   // config, so projectPaths is empty and setupAgent falls back to global.
   antigravity: {
-    name: "antigravity",
     displayName: "Antigravity",
+    setupDescription: "Set up for Antigravity (.agent/skills)",
     mcp: {
       projectPaths: [],
       globalPaths: [join(homedir(), ".gemini", "config", "mcp_config.json")],
@@ -310,7 +299,6 @@ const agents: Record<SetupAgent, AgentConfig> = {
   },
 
   gemini: {
-    name: "gemini",
     displayName: "Gemini CLI",
     mcp: {
       projectPaths: [join(".gemini", "settings.json")],
@@ -334,7 +322,9 @@ const agents: Record<SetupAgent, AgentConfig> = {
       globalPaths: [join(homedir(), ".gemini")],
     },
   },
-};
+} satisfies Record<string, AgentConfig>;
+
+export type SetupAgent = keyof typeof agents;
 
 export function getAgent(name: SetupAgent): AgentConfig {
   return agents[name];
@@ -354,12 +344,13 @@ async function pathExists(p: string): Promise<boolean> {
 export async function detectAgents(scope: "project" | "global"): Promise<SetupAgent[]> {
   const detected: SetupAgent[] = [];
 
-  for (const agent of Object.values(agents)) {
+  for (const name of ALL_AGENT_NAMES) {
+    const agent = agents[name];
     const paths = scope === "global" ? agent.detect.globalPaths : agent.detect.projectPaths;
     for (const p of paths) {
       const fullPath = scope === "global" ? p : join(process.cwd(), p);
       if (await pathExists(fullPath)) {
-        detected.push(agent.name);
+        detected.push(name);
         break;
       }
     }

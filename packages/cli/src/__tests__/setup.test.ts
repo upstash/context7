@@ -1,7 +1,7 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import { mkdir, readFile, writeFile, rm } from "fs/promises";
 import { join } from "path";
-import { homedir, tmpdir } from "os";
+import { tmpdir } from "os";
 
 const MOCK_MCP_RULE = "Use Context7 MCP to fetch docs.\n";
 const MOCK_CLI_RULE = "Use the `ctx7` CLI to fetch docs.\n";
@@ -33,29 +33,17 @@ import {
   isStdioContext7Entry,
   patchStdioApiKey,
 } from "../setup/mcp-writer.js";
-import { getAgent, ALL_AGENT_NAMES, type AuthOptions } from "../setup/agents.js";
+import {
+  getAgent,
+  ALL_AGENT_NAMES,
+  resolveVscodeUserDir,
+  type AuthOptions,
+} from "../setup/agents.js";
 
 describe("getRuleContent", () => {
   test("returns correct content per mode", async () => {
     expect(await getRuleContent("mcp", "claude")).toBe(MOCK_MCP_RULE);
     expect(await getRuleContent("cli", "claude")).toBe(MOCK_CLI_RULE);
-  });
-
-  test("only cursor gets alwaysApply frontmatter", async () => {
-    const cursor = await getRuleContent("mcp", "cursor");
-    expect(cursor).toContain("---\nalwaysApply: true\n---");
-    expect(cursor).toContain(MOCK_MCP_RULE);
-
-    for (const agent of ["claude", "vscode", "antigravity", "codex", "opencode", "gemini"]) {
-      const content = await getRuleContent("mcp", agent);
-      expect(content).not.toContain("alwaysApply");
-    }
-  });
-
-  test("VS Code gets always-on instructions frontmatter", async () => {
-    const content = await getRuleContent("mcp", "vscode");
-    expect(content).toContain('---\napplyTo: "**"\n---');
-    expect(content).toContain(MOCK_MCP_RULE);
   });
 
   test("returns fallback content when all fetch URLs fail", async () => {
@@ -795,12 +783,29 @@ describe("agent config integration", () => {
       });
     });
 
-    test("uses project and platform-specific global MCP paths", () => {
+    test("uses the VS Code project MCP path", () => {
       expect(agent.mcp.projectPaths).toEqual([join(".vscode", "mcp.json")]);
-      if (process.platform === "darwin") {
-        expect(agent.mcp.globalPaths).toEqual([
-          join(homedir(), "Library", "Application Support", "Code", "User", "mcp.json"),
-        ]);
+    });
+
+    test.each([
+      ["darwin", "/home/test", {}, "/home/test/Library/Application Support/Code/User"],
+      [
+        "win32",
+        "/home/test",
+        { APPDATA: "C:\\Users\\test\\AppData\\Roaming" },
+        "C:\\Users\\test\\AppData\\Roaming/Code/User",
+      ],
+      ["win32", "/home/test", {}, "/home/test/AppData/Roaming/Code/User"],
+      ["linux", "/home/test", { XDG_CONFIG_HOME: "/xdg" }, "/xdg/Code/User"],
+      ["linux", "/home/test", {}, "/home/test/.config/Code/User"],
+    ] as const)("resolves the %s user directory", (platform, home, env, expected) => {
+      expect(resolveVscodeUserDir(platform, home, env)).toBe(expected);
+    });
+
+    test("owns its instructions frontmatter in the agent rule policy", () => {
+      expect(agent.rule.kind).toBe("file");
+      if (agent.rule.kind === "file") {
+        expect(agent.rule.contentPrefix).toBe('---\napplyTo: "**"\n---\n\n');
       }
     });
 
@@ -1078,18 +1083,6 @@ describe("agent config integration", () => {
   });
 
   describe("all agents have consistent config", () => {
-    test("all agents are covered", () => {
-      expect(ALL_AGENT_NAMES).toEqual([
-        "claude",
-        "cursor",
-        "vscode",
-        "opencode",
-        "codex",
-        "antigravity",
-        "gemini",
-      ]);
-    });
-
     test.each(ALL_AGENT_NAMES)("%s buildEntry returns url for both auth modes", (name) => {
       const agent = getAgent(name);
       const apiEntry = agent.mcp.buildEntry(apiKeyAuth, "http");
