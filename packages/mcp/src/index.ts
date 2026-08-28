@@ -24,7 +24,6 @@ import {
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
-import { getClientIp } from "./lib/client-ip.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -316,6 +315,9 @@ async function main() {
     const initialPort = CLI_PORT ?? DEFAULT_PORT;
 
     const app = express();
+    // Only private/local infrastructure may supply forwarding headers. Express
+    // then walks the chain right-to-left and ignores attacker-added prefixes.
+    app.set("trust proxy", ["loopback", "linklocal", "uniquelocal", "100.64.0.0/10"]);
     app.use(express.json());
 
     app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -433,7 +435,7 @@ async function main() {
         }
 
         const context: ClientContext = {
-          clientIp: getClientIp(req),
+          clientIp: req.ip,
           apiKey: apiKey,
           clientInfo: extractClientInfoFromUserAgent(req.headers["user-agent"]),
           transport: "http",
