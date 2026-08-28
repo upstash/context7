@@ -13,7 +13,8 @@
     "format:check": "prettier --check .",
     "dev": "tsc --watch",
     "start": "node dist/index.js --transport http",
-    "pack-mcpb": "pnpm install && pnpm run build && rm -rf node_modules && pnpm install --prod && cp mcpb/manifest.json manifest.json && cp mcpb/.mcpbignore .mcpbignore && cp ../../public/icon.png icon.png && mcpb validate manifest.json && mcpb pack . mcpb/context7.mcpb && rm manifest.json .mcpbignore icon.png && pnpm install"
+    "build:mcpb": "esbuild src/index.ts --bundle --platform=node --target=node20 --format=esm --outfile=mcpb/stage/server/dist/index.mjs --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\"",
+    "pack-mcpb": "rm -rf mcpb/stage && pnpm run build:mcpb && cp package.json mcpb/stage/package.json && cp mcpb/manifest.json mcpb/stage/manifest.json && cp ../../public/icon.png mcpb/stage/icon.png && mcpb validate mcpb/stage/manifest.json && mcpb pack mcpb/stage mcpb/context7.mcpb && rm -rf mcpb/stage"
   },
   "repository": {
     "type": "git",
@@ -57,6 +58,7 @@
   "devDependencies": {
     "@modelcontextprotocol/client": "2.0.0",
     "@types/node": "^25.0.3",
+    "esbuild": "^0.28.2",
     "typescript": "^5.8.2",
     "vitest": "^4.1.9"
   },
