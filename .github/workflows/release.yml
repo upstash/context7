@@ -11,6 +11,8 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    outputs:
+      mcp-version: ${{ steps.mcp-release.outputs.version }}
     permissions:
       contents: write
       pull-requests: write
@@ -48,3 +50,23 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Find published Context7 MCP version
+        id: mcp-release
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
+        run: |
+          VERSION=$(jq -r 'map(select(.name == "@upstash/context7-mcp")) | first | .version // empty' <<< "$PUBLISHED_PACKAGES")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+  publish-mcp-registry:
+    name: Publish MCP Registry metadata
+    needs: release
+    if: needs.release.outputs.mcp-version != ''
+    permissions:
+      contents: read
+      id-token: write
+    uses: ./.github/workflows/mcp-registry.yml
+    with:
+      version: ${{ needs.release.outputs.mcp-version }}
