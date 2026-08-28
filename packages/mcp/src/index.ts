@@ -317,7 +317,7 @@ async function main() {
     const app = express();
     // Only private/local infrastructure may supply forwarding headers. Express
     // then walks the chain right-to-left and ignores attacker-added prefixes.
-    app.set("trust proxy", ["loopback", "linklocal", "uniquelocal"]);
+    app.set("trust proxy", ["loopback", "linklocal", "uniquelocal", "100.64.0.0/10"]);
     app.use(express.json());
 
     app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
