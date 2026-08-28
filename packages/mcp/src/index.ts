@@ -24,6 +24,7 @@ import {
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
+import { getMaxSubscriptions } from "./lib/subscriptions.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -380,6 +381,7 @@ async function main() {
     // go idle and the gateway reaps them at streamIdleTimeout (300s).
     const mcpHandler = createMcpHandler(() => createMcpServer(), {
       keepAliveMs: 0,
+      maxSubscriptions: getMaxSubscriptions(),
       onerror: (error) => console.error("MCP handler error:", error),
     });
     // Without onerror, request-conversion / handler.fetch throws are answered
