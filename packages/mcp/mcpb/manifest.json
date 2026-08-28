@@ -1,5 +1,5 @@
 {
-  "manifest_version": "0.3",
+  "manifest_version": "0.4",
   "name": "context7",
   "display_name": "Context7",
   "version": "4.0.3",
@@ -54,7 +54,8 @@
       "title": "Context7 API Key",
       "description": "Optional API key for higher rate limits. Get one at https://context7.com/dashboard",
       "sensitive": true,
-      "required": false
+      "required": false,
+      "default": ""
     }
   }
 }
