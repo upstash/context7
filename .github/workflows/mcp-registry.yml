@@ -50,14 +50,14 @@ jobs:
             server.json > server.updated.json
           mv server.updated.json server.json
 
-      - name: Validate server.json
-        run: npx --yes mcp-registry-validator@1.0.5 validate server.json
-
       - name: Install MCP Publisher
         run: |
           curl --fail --show-error --location \
-            "https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" \
+            "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" \
             | tar xz mcp-publisher
+
+      - name: Validate server.json
+        run: ./mcp-publisher validate server.json
 
       - name: Login to MCP Registry
         run: ./mcp-publisher login github-oidc
