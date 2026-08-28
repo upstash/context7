@@ -73,7 +73,12 @@ jobs:
         # Retry to tolerate npm propagation delay when chained after a release
         run: |
           for i in 1 2 3; do
-            ./mcp-publisher publish && exit 0
+            OUT=$(./mcp-publisher publish 2>&1) && { echo "$OUT"; exit 0; }
+            echo "$OUT"
+            if echo "$OUT" | grep -q "duplicate version"; then
+              echo "This version is already in the registry (versions are immutable) — nothing to do."
+              exit 0
+            fi
             echo "Publish failed (attempt $i), retrying in 30s..."
             sleep 30
           done
