@@ -6,20 +6,8 @@ import { tmpdir } from "os";
 const MOCK_MCP_RULE = "Use Context7 MCP to fetch docs.\n";
 const MOCK_CLI_RULE = "Use the `ctx7` CLI to fetch docs.\n";
 
-vi.stubGlobal(
-  "fetch",
-  vi.fn((url: string) => {
-    if (url.includes("context7-mcp.md")) {
-      return Promise.resolve({ ok: true, text: () => Promise.resolve(MOCK_MCP_RULE) });
-    }
-    if (url.includes("context7-cli.md")) {
-      return Promise.resolve({ ok: true, text: () => Promise.resolve(MOCK_CLI_RULE) });
-    }
-    return Promise.resolve({ ok: false });
-  })
-);
-
 import { getRuleContent } from "../setup/templates.js";
+import { hashContent, resetManifestCache } from "../utils/content.js";
 import {
   mergeServerEntry,
   removeServerEntry,
@@ -36,6 +24,47 @@ import {
 import { getAgent, ALL_AGENT_NAMES, type AuthOptions } from "../setup/agents.js";
 
 describe("getRuleContent", () => {
+  const manifest = {
+    schema: 1,
+    skills: {},
+    rules: {
+      "context7-mcp.md": { revision: 3, minCliVersion: "0.0.0", hash: hashContent(MOCK_MCP_RULE) },
+      "context7-cli.md": { revision: 3, minCliVersion: "0.0.0", hash: hashContent(MOCK_CLI_RULE) },
+    },
+  };
+
+  function stubRemote() {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.endsWith("skills/manifest.json")) {
+          return Promise.resolve({
+            ok: true,
+            text: () => Promise.resolve(JSON.stringify(manifest)),
+          });
+        }
+        if (url.endsWith("rules/context7-mcp.md")) {
+          return Promise.resolve({ ok: true, text: () => Promise.resolve(MOCK_MCP_RULE) });
+        }
+        if (url.endsWith("rules/context7-cli.md")) {
+          return Promise.resolve({ ok: true, text: () => Promise.resolve(MOCK_CLI_RULE) });
+        }
+        return Promise.resolve({ ok: false });
+      })
+    );
+  }
+
+  beforeEach(async () => {
+    vi.stubEnv("CTX7_STATE_FILE", join(tmpdir(), `ctx7-rules-${Date.now()}.json`));
+    resetManifestCache();
+    stubRemote();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
   test("returns correct content per mode", async () => {
     expect(await getRuleContent("mcp", "claude")).toBe(MOCK_MCP_RULE);
     expect(await getRuleContent("cli", "claude")).toBe(MOCK_CLI_RULE);
@@ -52,25 +81,36 @@ describe("getRuleContent", () => {
     }
   });
 
-  test("returns fallback content when all fetch URLs fail", async () => {
+  test("falls back to built-in content when the manifest is unreachable", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() => Promise.resolve({ ok: false }))
     );
+    resetManifestCache();
+
     const content = await getRuleContent("mcp", "claude");
     expect(content).toContain("Context7 MCP");
     expect(content.length).toBeGreaterThan(100);
+  });
 
+  test("ignores remote content whose hash does not match the manifest", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn((url: string) => {
-        if (url.includes("context7-mcp.md"))
-          return Promise.resolve({ ok: true, text: () => Promise.resolve(MOCK_MCP_RULE) });
-        if (url.includes("context7-cli.md"))
-          return Promise.resolve({ ok: true, text: () => Promise.resolve(MOCK_CLI_RULE) });
-        return Promise.resolve({ ok: false });
+        if (url.endsWith("skills/manifest.json")) {
+          return Promise.resolve({
+            ok: true,
+            text: () => Promise.resolve(JSON.stringify(manifest)),
+          });
+        }
+        return Promise.resolve({ ok: true, text: () => Promise.resolve("tampered\n") });
       })
     );
+    resetManifestCache();
+
+    const content = await getRuleContent("mcp", "claude");
+    expect(content).not.toContain("tampered");
+    expect(content).toContain("Context7 MCP");
   });
 });
 

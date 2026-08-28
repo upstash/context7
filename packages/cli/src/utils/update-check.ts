@@ -1,12 +1,5 @@
-import { dirname } from "path";
-import { mkdir, readFile, writeFile } from "fs/promises";
 import { NAME, VERSION } from "../constants.js";
-import {
-  UPDATE_STATE_FILE_NAME,
-  getUpdateStateFilePath,
-  migrateLegacyFile,
-  resolveReadPath,
-} from "./storage-paths.js";
+import { readCliState, writeCliState } from "./cli-state.js";
 
 const DEFAULT_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -18,13 +11,6 @@ export type InstallMethod =
   | "pnpm-dlx"
   | "bunx"
   | "unknown";
-
-interface UpdateState {
-  latestVersion?: string;
-  lastCheckedAt?: number;
-  notifiedVersion?: string;
-  lastNotifiedAt?: number;
-}
 
 export interface UpgradePlan {
   installMethod: InstallMethod;
@@ -48,42 +34,6 @@ interface CheckForUpdatesOptions {
   now?: number;
   cacheTtlMs?: number;
   stateFile?: string;
-}
-
-function getStateFilePath(stateFile?: string): string {
-  return stateFile ?? getUpdateStateFilePath();
-}
-
-// Reads resolve to the legacy `~/.context7` file if migration could not move it.
-async function readStateFilePath(stateFile?: string): Promise<string> {
-  if (stateFile) {
-    return stateFile;
-  }
-  return resolveReadPath(UPDATE_STATE_FILE_NAME, getUpdateStateFilePath());
-}
-
-// Writes always target the XDG path; migrate the legacy file first if present.
-async function writeStateFilePath(stateFile?: string): Promise<string> {
-  const path = getStateFilePath(stateFile);
-  if (!stateFile) {
-    await migrateLegacyFile(UPDATE_STATE_FILE_NAME, path);
-  }
-  return path;
-}
-
-async function readUpdateState(stateFile?: string): Promise<UpdateState> {
-  try {
-    const raw = await readFile(await readStateFilePath(stateFile), "utf-8");
-    return JSON.parse(raw) as UpdateState;
-  } catch {
-    return {};
-  }
-}
-
-async function writeUpdateState(state: UpdateState, stateFile?: string): Promise<void> {
-  const path = await writeStateFilePath(stateFile);
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, JSON.stringify(state, null, 2) + "\n", "utf-8");
 }
 
 export function compareVersions(a: string, b: string): number {
@@ -221,7 +171,7 @@ export async function checkForUpdates(
   const now = options.now ?? Date.now();
   const cacheTtlMs = options.cacheTtlMs ?? DEFAULT_CACHE_TTL_MS;
   const stateFile = options.stateFile;
-  const state = await readUpdateState(stateFile);
+  const state = await readCliState(stateFile);
   const isStale =
     options.force ||
     !state.lastCheckedAt ||
@@ -234,7 +184,7 @@ export async function checkForUpdates(
     const fetchedVersion = await fetchLatestVersion();
     if (fetchedVersion) {
       latestVersion = fetchedVersion;
-      await writeUpdateState(
+      await writeCliState(
         {
           ...state,
           latestVersion: fetchedVersion,
@@ -266,7 +216,7 @@ export async function shouldShowUpdateNotification(
 
   const now = options.now ?? Date.now();
   const cooldownMs = options.cooldownMs ?? DEFAULT_CACHE_TTL_MS;
-  const state = await readUpdateState(options.stateFile);
+  const state = await readCliState(options.stateFile);
 
   if (
     state.notifiedVersion === info.latestVersion &&
@@ -284,8 +234,8 @@ export async function markUpdateNotificationShown(
   options: { now?: number; stateFile?: string } = {}
 ): Promise<void> {
   const now = options.now ?? Date.now();
-  const state = await readUpdateState(options.stateFile);
-  await writeUpdateState(
+  const state = await readCliState(options.stateFile);
+  await writeCliState(
     {
       ...state,
       notifiedVersion: latestVersion,
