@@ -94,9 +94,17 @@ jobs:
       - name: Upload to GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+        # Dedicated slash-free tag: the MCP Registry rejects mcpb URLs whose
+        # release tag contains '/', which changesets tags (@scope/pkg@x.y.z) do.
         run: |
           VERSION=$(node -p "require('./packages/mcp/package.json').version")
-          gh release upload "@upstash/context7-mcp@$VERSION" packages/mcp/mcpb/context7.mcpb --clobber -R ${{ github.repository }}
+          TAG="mcpb-v$VERSION"
+          gh release view "$TAG" -R ${{ github.repository }} >/dev/null 2>&1 || \
+            gh release create "$TAG" --latest=false \
+              --title "context7.mcpb $VERSION" \
+              --notes "MCP Bundle for [@upstash/context7-mcp@$VERSION](https://github.com/${{ github.repository }}/releases/tag/%40upstash%2Fcontext7-mcp%40$VERSION)" \
+              -R ${{ github.repository }}
+          gh release upload "$TAG" packages/mcp/mcpb/context7.mcpb --clobber -R ${{ github.repository }}
 
   publish-mcp-registry:
     name: Publish to MCP Registry

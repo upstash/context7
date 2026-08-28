@@ -40,7 +40,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION=$(jq -r .version server.json)
-          TAG="@upstash/context7-mcp@$VERSION"
+          # Slash-free tag: the registry rejects mcpb URLs whose tag contains '/'
+          TAG="mcpb-v$VERSION"
           if gh release download "$TAG" --pattern context7.mcpb --output context7.mcpb -R ${{ github.repository }}; then
             SHA=$(sha256sum context7.mcpb | cut -d' ' -f1)
             URL="https://github.com/${{ github.repository }}/releases/download/$TAG/context7.mcpb"
