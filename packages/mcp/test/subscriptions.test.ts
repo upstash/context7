@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { DEFAULT_MAX_SUBSCRIPTIONS, getMaxSubscriptions } from "../src/lib/subscriptions.js";
 
 describe("getMaxSubscriptions", () => {
-  test("defaults to 24576 subscriptions", () => {
+  test("defaults to 24000 subscriptions", () => {
     expect(getMaxSubscriptions(undefined)).toBe(DEFAULT_MAX_SUBSCRIPTIONS);
   });
 
