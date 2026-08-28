@@ -1,4 +1,4 @@
-export const DEFAULT_MAX_SUBSCRIPTIONS = 4_096;
+export const DEFAULT_MAX_SUBSCRIPTIONS = 24_576;
 
 export function getMaxSubscriptions(value = process.env.MCP_MAX_SUBSCRIPTIONS): number {
   if (value === undefined) return DEFAULT_MAX_SUBSCRIPTIONS;
