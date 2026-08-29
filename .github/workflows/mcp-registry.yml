@@ -33,7 +33,7 @@ jobs:
             VERSION=$(node -p "require('./packages/mcp/package.json').version")
           fi
           echo "Publishing version: $VERSION"
-          jq --arg v "$VERSION" '.version = $v | .packages[].version = $v' server.json > server.tmp && mv server.tmp server.json
+          jq --arg v "$VERSION" '.version = $v | .packages[].version = $v | ._meta["io.modelcontextprotocol.registry/publisher-provided"].asm.service_id = "upstash/context7@\($v)"' server.json > server.tmp && mv server.tmp server.json
 
       - name: Install MCP Publisher
         run: |

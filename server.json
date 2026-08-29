@@ -46,5 +46,81 @@
         }
       ]
     }
-  ]
+  ],
+  "_meta": {
+    "io.modelcontextprotocol.registry/publisher-provided": {
+      "asm": {
+        "asm_version": "0.3",
+        "service_id": "upstash/context7@4.0.3",
+        "taxonomy": "tool.development.documentation",
+        "display_name": "Context7",
+        "provenance": {
+          "source_url": "https://context7.com/plans",
+          "retrieved_at": "2026-08-29T07:28:02Z",
+          "last_verified_at": "2026-08-29T07:28:02Z",
+          "verification_status": "self_reported",
+          "notes": "Publisher claims checked against the official pricing page, MCP documentation, server manifest, and read-only tool annotations. The free-plan allowance does not include the documented post-cap daily bonus. This metadata does not independently attest service quality or availability."
+        },
+        "capabilities": {
+          "description": "Resolve software-library identifiers and retrieve current, version-specific documentation and code examples.",
+          "functions": ["resolve-library-id", "query-docs"],
+          "input_modalities": ["text"],
+          "output_modalities": ["text"]
+        },
+        "invocation": {
+          "interface": "mcp",
+          "reach": "hybrid",
+          "agent_operable": true,
+          "auth_to_invoke": "optional_api_token",
+          "agent_completable_setup": true,
+          "setup_requires": [],
+          "platforms": ["any"],
+          "docs_url": "https://context7.com/docs/resources/developer"
+        },
+        "pricing": {
+          "billing_dimensions": [
+            {
+              "dimension": "seat",
+              "unit": "per_month",
+              "cost_per_unit": 10,
+              "currency": "USD",
+              "conditions": {
+                "when": "Pro plan; includes 5,000 API calls per seat per month",
+                "cost_per_unit": 10
+              }
+            },
+            {
+              "dimension": "api_call",
+              "unit": "per_1K",
+              "cost_per_unit": 10,
+              "currency": "USD",
+              "conditions": {
+                "when": "Pro usage above the 5,000 included API calls per seat per month",
+                "cost_per_unit": 10
+              }
+            }
+          ],
+          "free_tier": {
+            "dimension": "api_call",
+            "limit": 1000,
+            "period": "monthly"
+          },
+          "estimated": false
+        },
+        "sla": {
+          "rate_limit": "Anonymous callers have lower limits; API-key limits vary by plan and current limits are returned in response headers."
+        },
+        "operational_constraints": {
+          "risk_class": "low",
+          "side_effects": ["read_only", "external_api_call", "network_access"],
+          "approval": {
+            "required": "never",
+            "conditions": [],
+            "human_readable": "The published resolve-library-id and query-docs tools are read-only."
+          },
+          "policy_notes": "The published /mcp endpoint supports limited anonymous use; an API key provides higher plan-dependent limits. Context7's separate REST API requires an API key. Clients remain responsible for local approval and data-handling policy."
+        }
+      }
+    }
+  }
 }
