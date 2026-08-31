@@ -4,15 +4,15 @@ import ora from "ora";
 import { select } from "@inquirer/prompts";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import { dirname, join } from "path";
-import { randomBytes } from "crypto";
 
 import { log } from "../utils/logger.js";
 import { checkboxWithHover } from "../utils/prompts.js";
 import { trackEvent } from "../utils/tracking.js";
-import { getBaseUrl, downloadSkill } from "../utils/api.js";
+import { downloadSkill } from "../utils/api.js";
 import { installSkillFiles } from "../utils/installer.js";
 import { performLogin } from "./auth.js";
 import { saveTokens, getValidAccessToken } from "../utils/auth.js";
+import { resolveSetupApiKey } from "../setup/auth.js";
 import {
   type SetupAgent,
   type AuthOptions,
@@ -99,45 +99,11 @@ export function registerSetupCommand(program: Command): void {
     });
 }
 
-async function authenticateAndGenerateKey(): Promise<string | null> {
-  const accessToken = (await getValidAccessToken()) ?? (await performLogin());
-
-  if (!accessToken) return null;
-
-  const spinner = ora("Configuring authentication...").start();
-
-  try {
-    const response = await fetch(`${getBaseUrl()}/api/dashboard/api-keys`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ name: `ctx7-cli-${randomBytes(3).toString("hex")}` }),
-    });
-
-    if (!response.ok) {
-      const err = (await response.json().catch(() => ({}))) as { message?: string; error?: string };
-      spinner.fail("Authentication failed");
-      log.error(err.message || err.error || `HTTP ${response.status}`);
-      return null;
-    }
-
-    const result = (await response.json()) as { data: { apiKey: string } };
-    spinner.succeed("Authenticated");
-    return result.data.apiKey;
-  } catch (err) {
-    spinner.fail("Authentication failed");
-    log.error(err instanceof Error ? err.message : String(err));
-    return null;
-  }
-}
-
 async function resolveAuth(options: SetupOptions): Promise<AuthOptions | null> {
   if (options.apiKey) return { mode: "api-key", apiKey: options.apiKey };
   if (options.oauth) return { mode: "oauth" };
 
-  const apiKey = await authenticateAndGenerateKey();
+  const apiKey = await resolveSetupApiKey();
   if (!apiKey) return null;
   return { mode: "api-key", apiKey };
 }
