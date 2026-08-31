@@ -1501,15 +1501,18 @@ for server metrics and spans. Trace context is extracted from the `traceparent`,
 `baggage` fields in MCP `params._meta` as defined by
 [SEP-414](https://modelcontextprotocol.io/seps/414-request-meta).
 
-The HTTP transport exposes metrics in Prometheus format on a dedicated internal listener at
-`0.0.0.0:9464/metrics`. The stdio transport does not open a telemetry port. Keeping this listener
-separate from the public MCP port prevents the metrics endpoint from being routed through a
-catch-all gateway rule. On stdio EOF or SIGHUP, the server closes the SDK connection, records the
-session duration, and best-effort flushes an externally installed SDK `MeterProvider` before exit.
+The HTTP transport exposes metrics in Prometheus format on a dedicated listener at
+`127.0.0.1:9464/metrics` by default. The production Docker image explicitly binds that listener to
+`0.0.0.0` so an internal Prometheus sidecar or `ServiceMonitor` can reach it. The stdio transport
+does not open a telemetry port. Keeping this listener separate from the public MCP port prevents
+the metrics endpoint from being routed through a catch-all gateway rule. On stdio EOF or SIGHUP,
+the server closes the SDK connection, records the session duration, and best-effort flushes an
+externally installed SDK `MeterProvider` before exit.
 
 The exporter uses the standard OpenTelemetry Prometheus settings:
 
-- `OTEL_EXPORTER_PROMETHEUS_HOST` changes the bind address (default `0.0.0.0`).
+- `OTEL_EXPORTER_PROMETHEUS_HOST` changes the bind address (default `127.0.0.1`; the Docker image
+  sets `0.0.0.0`).
 - `OTEL_EXPORTER_PROMETHEUS_PORT` changes the port (default `9464`).
 - `OTEL_METRICS_EXPORTER=none` or `OTEL_SDK_DISABLED=true` disables the embedded exporter.
 
@@ -1545,7 +1548,8 @@ Tool outcomes on the standard MCP operation metric distinguish `success`, `not_f
 `error`. Upstream outcomes distinguish
 HTTP, response-decoding, network, timeout, and cancellation failures and include both the bounded
 status-code class and the exact numeric HTTP status. Authentication reports accepted, missing,
-invalid, and unexpected-error outcomes.
+invalid, and unexpected-error outcomes. The OAuth authorization-server metadata proxy caps its
+upstream fetch at 10 seconds and returns `502` if that dependency times out.
 
 The labels intentionally exclude API keys, client IPs, queries, library IDs, session IDs, and raw
 error text. Expose port `9464` only to your Prometheus scraper or `ServiceMonitor`, not through the

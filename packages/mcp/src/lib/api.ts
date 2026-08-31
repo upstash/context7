@@ -25,7 +25,10 @@ async function observeUpstreamRequest<T>(
 ): Promise<T> {
   if (TELEMETRY_DISABLED) return consumeResponse(await request());
 
-  telemetryModule ??= import("./telemetry.js");
+  telemetryModule ??= import("./telemetry.js").catch((error) => {
+    telemetryModule = undefined;
+    throw error;
+  });
   return (await telemetryModule).observeUpstreamRequest(
     operationName,
     request,

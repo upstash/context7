@@ -5,7 +5,7 @@ import { defaultResource, resourceFromAttributes } from "@opentelemetry/resource
 import { MeterProvider } from "@opentelemetry/sdk-metrics";
 import { embeddedPrometheusIsEnabled } from "./telemetry-config.js";
 
-const DEFAULT_PROMETHEUS_HOST = "0.0.0.0";
+const DEFAULT_PROMETHEUS_HOST = "127.0.0.1";
 const DEFAULT_PROMETHEUS_PORT = 9464;
 
 let embeddedRuntimeInstrumentation: RuntimeNodeInstrumentation | undefined;

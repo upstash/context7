@@ -369,6 +369,29 @@ describe.each([
 });
 
 describe("OpenTelemetry metrics", () => {
+  test("binds the default metrics listener to loopback", async () => {
+    const defaultMetricsPort = await getFreePort();
+    const defaultHostEnvironment = {
+      ...childEnv,
+      OTEL_EXPORTER_PROMETHEUS_PORT: String(defaultMetricsPort),
+    };
+    delete defaultHostEnvironment.OTEL_EXPORTER_PROMETHEUS_HOST;
+    const defaultHostServer = await startHttpChild({
+      environment: defaultHostEnvironment,
+      port: await getFreePort(),
+    });
+
+    try {
+      expect(defaultHostServer.stderr()).toContain(
+        `OpenTelemetry metrics available at http://127.0.0.1:${defaultMetricsPort}/metrics`
+      );
+      const response = await fetch(`http://127.0.0.1:${defaultMetricsPort}/metrics`);
+      expect(response.status).toBe(200);
+    } finally {
+      defaultHostServer.child.kill();
+    }
+  });
+
   test("hard-off mode does not load telemetry implementation modules", async () => {
     const disabledPort = await getFreePort();
     const disabledServer = await startHttpChild({
