@@ -118,7 +118,6 @@ beforeAll(async () => {
     ...getDefaultEnvironment(),
     CONTEXT7_API_URL: stubUrl,
     MCP_CLIENT_IP_ASSERTION_KEY: CLIENT_IP_ASSERTION_KEY,
-    CLIENT_IP_ENCRYPTION_KEY: CLIENT_IP_ASSERTION_KEY,
   };
   ({ child: httpChild, url: httpUrl } = await startHttpChild());
 }, 120_000);
@@ -257,7 +256,7 @@ describe.each([
       expect(
         decryptClientIpAssertion(apiCalls[0].headers["mcp-client-ip-assertion"] as string)
       ).toBe("203.0.113.77");
-      expect(apiCalls[0].headers["mcp-client-ip"]).toMatch(/^[0-9a-f]{32}:[0-9a-f]+$/);
+      expect(apiCalls[0].headers["mcp-client-ip"]).toBeUndefined();
     } else {
       expect(apiCalls[0].headers["mcp-client-ip-assertion"]).toBeUndefined();
     }
