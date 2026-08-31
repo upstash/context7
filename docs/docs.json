@@ -107,6 +107,7 @@
                     "group": "Features",
                     "pages": [
                       "enterprise/library-import",
+                      "enterprise/automatic-repository-updates",
                       "enterprise/gitops",
                       "enterprise/backup-restore"
                     ]

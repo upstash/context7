@@ -30,7 +30,7 @@ import {
   writeJsonConfig,
   resolveMcpPath,
   appendTomlServer,
-  readTomlServerEntry,
+  patchTomlStdioApiKey,
   isStdioContext7Entry,
   patchStdioApiKey,
   getJsonServerEntry,
@@ -315,10 +315,16 @@ async function setupAgent(
   let mcpStatus: string;
   try {
     if (mcpPath.endsWith(".toml")) {
-      const existingTomlEntry =
-        transport === "stdio" ? await readTomlServerEntry(mcpPath, "context7") : undefined;
-      const entry = resolveEntryToWrite(agent, auth, transport, existingTomlEntry);
-      const { alreadyExists } = await appendTomlServer(mcpPath, "context7", entry);
+      const apiKey = auth.mode === "api-key" ? auth.apiKey : undefined;
+      const patched =
+        transport === "stdio" ? await patchTomlStdioApiKey(mcpPath, "context7", apiKey) : false;
+      const { alreadyExists } = patched
+        ? { alreadyExists: true }
+        : await appendTomlServer(
+            mcpPath,
+            "context7",
+            resolveEntryToWrite(agent, auth, transport, undefined)
+          );
       mcpStatus = alreadyExists
         ? `reconfigured with ${AUTH_MODE_LABELS[auth.mode]}`
         : `configured with ${AUTH_MODE_LABELS[auth.mode]}`;

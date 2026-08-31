@@ -26,7 +26,6 @@ import {
   readJsonConfig,
   writeJsonConfig,
   readTomlServerExists,
-  readTomlServerEntry,
   buildTomlServerBlock,
   appendTomlServer,
   removeTomlServer,
@@ -1242,72 +1241,6 @@ describe("agent config integration", () => {
         "NEW"
       );
       expect(patched.cwd).toBe("/custom");
-    });
-  });
-
-  describe("readTomlServerEntry", () => {
-    let tempDir: string;
-
-    beforeEach(async () => {
-      tempDir = join(tmpdir(), `ctx7-test-${Date.now()}`);
-      await mkdir(tempDir, { recursive: true });
-    });
-
-    afterEach(async () => {
-      await rm(tempDir, { recursive: true, force: true });
-    });
-
-    test("returns undefined for missing file", async () => {
-      expect(await readTomlServerEntry(join(tempDir, "nope.toml"), "context7")).toBeUndefined();
-    });
-
-    test("returns undefined for missing section", async () => {
-      const path = join(tempDir, "config.toml");
-      await writeFile(path, '[mcp_servers.other]\nurl = "https://other.com"\n', "utf-8");
-      expect(await readTomlServerEntry(path, "context7")).toBeUndefined();
-    });
-
-    test("parses string and array values from a stdio block", async () => {
-      const path = join(tempDir, "config.toml");
-      await writeFile(
-        path,
-        '[mcp_servers.context7]\ncommand = "npx"\nargs = ["-y", "@upstash/context7-mcp@latest", "--api-key", "OLD"]\n',
-        "utf-8"
-      );
-      const entry = await readTomlServerEntry(path, "context7");
-      expect(entry).toEqual({
-        command: "npx",
-        args: ["-y", "@upstash/context7-mcp@latest", "--api-key", "OLD"],
-      });
-    });
-
-    test("ignores http_headers sub-table", async () => {
-      const path = join(tempDir, "config.toml");
-      await writeFile(
-        path,
-        '[mcp_servers.context7]\ntype = "http"\nurl = "https://mcp.context7.com/mcp"\n\n[mcp_servers.context7.http_headers]\nCONTEXT7_API_KEY = "k"\n',
-        "utf-8"
-      );
-      const entry = await readTomlServerEntry(path, "context7");
-      expect(entry).toEqual({ type: "http", url: "https://mcp.context7.com/mcp" });
-    });
-
-    test("round-trips through patchStdioApiKey + appendTomlServer", async () => {
-      const path = join(tempDir, "config.toml");
-      await writeFile(
-        path,
-        '[mcp_servers.context7]\ncommand = "npx"\nargs = ["-y", "@upstash/context7-mcp@latest", "--api-key", "OLD"]\n',
-        "utf-8"
-      );
-      const existing = await readTomlServerEntry(path, "context7");
-      expect(existing).toBeDefined();
-      expect(isStdioContext7Entry(existing)).toBe(true);
-      const patched = patchStdioApiKey(existing!, "NEW");
-      await appendTomlServer(path, "context7", patched);
-      const content = await readFile(path, "utf-8");
-      expect(content).toContain("@upstash/context7-mcp@latest");
-      expect(content).toContain('"--api-key","NEW"');
-      expect(content).not.toContain('"OLD"');
     });
   });
 });
