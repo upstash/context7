@@ -245,6 +245,7 @@
             "pages": [
               "docs7/overview",
               "docs7/quickstart",
+              "docs7/configuration",
               "docs7/migrate-from-mintlify"
             ]
           },
