@@ -79,6 +79,7 @@
                 "pages": [
                   "enterprise/integrations/github",
                   "enterprise/integrations/other-git",
+                  "enterprise/integrations/gerrit",
                   "enterprise/integrations/confluence"
                 ]
               },
@@ -103,6 +104,7 @@
                 "group": "Features",
                 "pages": [
                   "enterprise/library-import",
+                  "enterprise/automatic-repository-updates",
                   "enterprise/gitops",
                   "enterprise/backup-restore"
                 ]
@@ -216,7 +218,8 @@
           "integrations/code-rabbit",
           "integrations/factory-ai",
           "integrations/tembo",
-          "integrations/mastra"
+          "integrations/mastra",
+          "integrations/eve"
         ]
       },
       {
@@ -231,6 +234,11 @@
   "api": {
     "playground": {
       "display": "simple"
+    }
+  },
+  "integrations": {
+    "intercom": {
+      "appId": "rtjkeau6"
     }
   },
   "logo": {
