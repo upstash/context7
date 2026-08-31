@@ -2,6 +2,8 @@ import { access, readFile, writeFile, mkdir } from "fs/promises";
 import { dirname } from "path";
 import { STDIO_PACKAGE } from "./agents.js";
 
+export { patchTomlStdioApiKey } from "./toml-editor.js";
+
 function stripJsonComments(text: string): string {
   let result = "";
   let i = 0;
@@ -114,50 +116,6 @@ export async function readTomlServerExists(filePath: string, serverName: string)
   } catch {
     return false;
   }
-}
-
-/**
- * Reads the top-level `[mcp_servers.<serverName>]` block from a TOML config
- * file and parses its key-value lines into a JS object. Handles string and
- * array values (TOML array syntax is JSON-compatible). Sub-tables like
- * `[mcp_servers.<serverName>.http_headers]` are ignored. Returns undefined
- * if the file or section is missing.
- */
-export async function readTomlServerEntry(
-  filePath: string,
-  serverName: string
-): Promise<Record<string, unknown> | undefined> {
-  let raw: string;
-  try {
-    raw = await readFile(filePath, "utf-8");
-  } catch {
-    return undefined;
-  }
-
-  const sectionHeader = `[mcp_servers.${serverName}]`;
-  const startIdx = raw.indexOf(sectionHeader);
-  if (startIdx === -1) return undefined;
-
-  // The top-level table's values live between its header and the next `[...]`
-  // header (whether that's a sub-table like `[mcp_servers.foo.http_headers]`
-  // or an unrelated section). Sub-table values belong to the sub-table, not
-  // here, so excluding them is correct.
-  const rest = raw.slice(startIdx + sectionHeader.length);
-  const nextHeader = /^\[/m.exec(rest);
-  const block = nextHeader ? rest.slice(0, nextHeader.index) : rest;
-
-  const entry: Record<string, unknown> = {};
-  const lineRe = /^([A-Za-z_][\w-]*)\s*=\s*(.+?)\s*$/gm;
-  let lineMatch: RegExpExecArray | null;
-  while ((lineMatch = lineRe.exec(block)) !== null) {
-    const [, key, valueText] = lineMatch;
-    try {
-      entry[key] = JSON.parse(valueText);
-    } catch {
-      // Skip values we can't parse as JSON (e.g., bare TOML numbers like 20)
-    }
-  }
-  return Object.keys(entry).length > 0 ? entry : undefined;
 }
 
 /**

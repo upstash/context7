@@ -1,5 +1,18 @@
 # @upstash/context7-mcp
 
+## 4.0.4
+
+### Patch Changes
+
+- 8fa6c6b: Honor the advertised `X-Context7-API-Key` header in HTTP MCP requests.
+- 794cc6b: Authenticate hosted MCP client-IP forwarding with short-lived AES-GCM assertions.
+
+## 4.0.3
+
+### Patch Changes
+
+- 769c6cd: Advertise Clerk as the OAuth authorization server so clients validate authorization responses against the issuer that Clerk returns.
+
 ## 4.0.2
 
 ### Patch Changes

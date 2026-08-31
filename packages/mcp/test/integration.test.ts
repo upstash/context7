@@ -4,6 +4,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { StdioClientTransport, getDefaultEnvironment } from "@modelcontextprotocol/client/stdio";
 import { execSync } from "node:child_process";
 import { spawn, type ChildProcess } from "node:child_process";
+import { createDecipheriv } from "node:crypto";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -24,6 +25,23 @@ const EMPTY_CONTEXT_QUERY = "force-empty-context";
 const NO_RESULTS_QUERY = "force-no-results";
 const UPSTREAM_ERROR_QUERY = "force-upstream-error";
 const INVALID_JSON_QUERY = "force-invalid-json";
+const CLIENT_IP_ASSERTION_KEY = "0123456789abcdef".repeat(4);
+
+function decryptClientIpAssertion(value: string): string {
+  const [version, timestamp, nonceHex, ciphertextAndTagHex] = value.split(":");
+  const ciphertextAndTag = Buffer.from(ciphertextAndTagHex, "hex");
+  const decipher = createDecipheriv(
+    "aes-256-gcm",
+    Buffer.from(CLIENT_IP_ASSERTION_KEY, "hex"),
+    Buffer.from(nonceHex, "hex")
+  );
+  decipher.setAAD(Buffer.from(`${version}:${timestamp}`, "utf8"));
+  decipher.setAuthTag(ciphertextAndTag.subarray(-16));
+  return Buffer.concat([
+    decipher.update(ciphertextAndTag.subarray(0, -16)),
+    decipher.final(),
+  ]).toString("utf8");
+}
 
 interface RecordedRequest {
   path: string;
@@ -160,6 +178,8 @@ beforeAll(async () => {
     CONTEXT7_API_URL: stubUrl,
     OTEL_EXPORTER_PROMETHEUS_HOST: "127.0.0.1",
     OTEL_EXPORTER_PROMETHEUS_PORT: String(metricsPort),
+    MCP_CLIENT_IP_ASSERTION_KEY: CLIENT_IP_ASSERTION_KEY,
+    CLIENT_IP_ENCRYPTION_KEY: CLIENT_IP_ASSERTION_KEY,
   };
   ({ child: httpChild, url: httpUrl } = await startHttpChild());
 }, 120_000);
@@ -179,12 +199,56 @@ async function connect(transportKind: "http" | "stdio", era: "modern" | "legacy"
       ? new StreamableHTTPClientTransport(new URL(httpUrl), {
           // Parseable UA so the legacy-HTTP fallback path (no protocol client
           // info) is observable; modern clients must beat it via the envelope.
-          requestInit: { headers: { "user-agent": "ua-fallback/9.9.9" } },
+          requestInit: {
+            headers: {
+              "user-agent": "ua-fallback/9.9.9",
+              "x-forwarded-for": "attacker-selected-bucket, 203.0.113.77",
+            },
+          },
         })
       : new StdioClientTransport({ command: process.execPath, args: [DIST], env: childEnv });
   await client.connect(transport);
   return client;
 }
+
+describe("OAuth discovery", () => {
+  test("advertises Clerk for user OAuth and Context7 for enterprise auth", async () => {
+    const metadataUrl = new URL("/.well-known/oauth-protected-resource", httpUrl);
+    const response = await fetch(metadataUrl);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      resource: "https://mcp.context7.com",
+      authorization_servers: ["https://clerk.context7.com", "https://context7.com"],
+    });
+  });
+});
+
+describe("HTTP API key headers", () => {
+  test("accepts the advertised X-Context7-API-Key header", async () => {
+    const apiKey = "ctx7sk-advertised-header-test";
+    const client = new Client({ name: "api-key-header-test", version: "1.0.0" });
+
+    await client.connect(
+      new StreamableHTTPClientTransport(new URL(httpUrl), {
+        requestInit: { headers: { "X-Context7-API-Key": apiKey } },
+      })
+    );
+
+    try {
+      requests.length = 0;
+      await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/vercel/next.js", query: "app router" },
+      });
+
+      const apiCall = requests.find((request) => request.path === "/v2/context");
+      expect(apiCall?.headers.authorization).toBe(`Bearer ${apiKey}`);
+    } finally {
+      await client.close();
+    }
+  });
+});
 
 describe.each([
   ["http", "modern"],
@@ -249,6 +313,15 @@ describe.each([
     expect(apiCalls[0].query.get("libraryId")).toBe("/vercel/next.js");
     expect(apiCalls[0].query.get("query")).toBe("app router");
     expect(apiCalls[0].headers["x-context7-transport"]).toBe(transportKind);
+    if (transportKind === "http") {
+      expect(apiCalls[0].headers["mcp-client-ip-assertion"]).toMatch(/^v1:/);
+      expect(
+        decryptClientIpAssertion(apiCalls[0].headers["mcp-client-ip-assertion"] as string)
+      ).toBe("203.0.113.77");
+      expect(apiCalls[0].headers["mcp-client-ip"]).toMatch(/^[0-9a-f]{32}:[0-9a-f]+$/);
+    } else {
+      expect(apiCalls[0].headers["mcp-client-ip-assertion"]).toBeUndefined();
+    }
   });
 
   test("calls resolve-library-id end to end", async () => {
