@@ -23,7 +23,7 @@ When you use Context7 through an MCP client, the AI assistant (not the user dire
 - API key (if provided, for authentication)
 - MCP client name and version (e.g., IDE info, for analytics)
 - Transport type (`stdio` or `http`)
-- Client IP address, encrypted with AES-256-CBC (HTTP transport only, for rate limiting)
+- Client IP address, sent as a short-lived authenticated AES-256-GCM assertion by hosted HTTP deployments (for rate limiting)
 
 <Note>
   The MCP client formulates search queries on your behalf and is instructed not to include
