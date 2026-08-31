@@ -158,6 +158,7 @@
           "clients/codex",
           "clients/copilot-cli",
           "clients/cursor",
+          "clients/deepseek-harness",
           "clients/opencode",
           "clients/pi",
           "clients/vscode",

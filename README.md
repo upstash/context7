@@ -127,6 +127,7 @@ Always use Context7 when I need library/API documentation, code generation, setu
 - [`ctx7`](https://www.npmjs.com/package/ctx7) - CLI
 - [`@upstash/context7-sdk`](https://www.npmjs.com/package/@upstash/context7-sdk) - TypeScript SDK
 - [`@upstash/context7-tools-ai-sdk`](https://www.npmjs.com/package/@upstash/context7-tools-ai-sdk) - Vercel AI SDK tools
+- [`@upstash/context7-deepseek-harness`](https://www.npmjs.com/package/@upstash/context7-deepseek-harness) - DeepSeek Harness plugin
 - [`@upstash/context7-pi`](https://www.npmjs.com/package/@upstash/context7-pi) - pi.dev extension
 
 ## Disclaimer

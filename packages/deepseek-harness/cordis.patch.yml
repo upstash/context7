@@ -1,0 +1,3 @@
+- insert:
+    - id: context7
+      name: "@upstash/context7-deepseek-harness"

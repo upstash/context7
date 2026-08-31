@@ -1,0 +1,79 @@
+---
+title: DeepSeek Harness
+description: Using Context7 with DeepSeek Harness
+---
+
+Context7 integrates with [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) through the official [`@upstash/context7-deepseek-harness`](https://github.com/upstash/context7/tree/master/packages/deepseek-harness) plugin. It registers Context7's documentation tools natively through the harness tool service and adds system-prompt guidance so library-specific questions invoke them automatically.
+
+## Installation
+
+Install the bundle into a DeepSeek Harness profile and store a Context7 API key in the Harness credential provider:
+
+```bash
+npx ctx7@latest setup --deepseek headless
+```
+
+Pass another profile name instead of `headless` when needed. Without an existing Context7 login, setup starts the device authorization flow and creates an API key.
+
+To use anonymous Context7 limits without configuring a key, install the bundle directly:
+
+```bash
+dsh plugin --profile headless add @upstash/context7-deepseek-harness
+```
+
+Verify the composed configuration and start the profile:
+
+```bash
+dsh --profile headless --dump-config
+dsh --profile headless
+```
+
+Remove it with `dsh plugin --profile headless remove @upstash/context7-deepseek-harness`.
+
+## Authentication
+
+The plugin resolves `CONTEXT7_API_KEY` through DeepSeek Harness's credential provider before every request. The setup command stores it in `$DSH_HOME/.credentials.yaml`, which defaults to `~/.dsh/.credentials.yaml`. Credential changes apply without reloading the plugin.
+
+The launching environment remains supported:
+
+```bash
+export CONTEXT7_API_KEY=ctx7sk_...
+```
+
+For manual credential-file setup, edit the flat YAML mapping and apply owner-only permissions:
+
+```bash
+mkdir -p ~/.dsh
+chmod 700 ~/.dsh
+${EDITOR:-vi} ~/.dsh/.credentials.yaml
+chmod 600 ~/.dsh/.credentials.yaml
+```
+
+```yaml
+CONTEXT7_API_KEY: ctx7sk_...
+```
+
+Never put API keys in `cordis.yml` or `cordis.patch.yml`; composed configuration can be printed and shared during debugging.
+
+## What it adds
+
+<CardGroup cols={2}>
+<Card title="resolve-library-id" icon="magnifying-glass">
+Finds Context7-compatible library IDs and available versions for a package or product.
+</Card>
+<Card title="query-docs" icon="book">
+Fetches current documentation and code examples for a selected library ID.
+</Card>
+</CardGroup>
+
+## Usage
+
+Ask a documentation question in a DeepSeek Harness session:
+
+```
+How do I configure caching in Next.js 16?
+Show me the current Prisma syntax for relations.
+What are the Supabase authentication methods?
+```
+
+The model resolves the relevant Context7 library ID and then queries its documentation.
