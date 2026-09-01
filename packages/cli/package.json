@@ -41,7 +41,7 @@
     "prettier": "^3.6.2",
     "tsup": "^8.5.0",
     "typescript": "^5.8.2",
-    "typescript-eslint": "^8.28.0",
+    "typescript-eslint": "^8.68.0",
     "vitest": "^4.1.9"
   },
   "keywords": [
