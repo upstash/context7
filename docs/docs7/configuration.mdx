@@ -19,7 +19,7 @@ The default value is `false`.
 
 ## Group products
 
-Add `productGroups` to the navigation tab that owns the product switcher. The tab's `pages` or `groups` are the initial sidebar. Each product has its own `pages` or `groups`.
+Add `productGroups` to one navigation tab in each navigation scope. This tab owns the product switcher. Its `pages` or `groups` are the initial sidebar. Each product has its own `pages` or `groups`.
 
 ```json docs.json
 {
@@ -67,9 +67,5 @@ In this example:
 - `API Reference` stays in the top navigation.
 
 A product must contain `pages` or `groups`, but not both. The arrays must not be empty. Product and group names must be unique within the owning tab.
-
-<Note>
-  Do not set `productGroups` at the top level. Only one tab in a navigation scope can contain it. Do not use it inside Mintlify `navigation.products`.
-</Note>
 
 If `productGroups` is not set, Docs7 uses your regular Mintlify navigation.
