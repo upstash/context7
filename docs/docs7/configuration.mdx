@@ -3,7 +3,7 @@ title: Docs7 configuration
 description: Configure Docs7-only fields in docs.json
 ---
 
-Docs7 supports the Mintlify `docs.json` format and adds two optional top-level fields.
+Docs7 supports the Mintlify `docs.json` format. It also adds `filterSidebar` at the top level and `productGroups` on navigation tabs.
 
 ## Filter the sidebar
 
@@ -19,40 +19,37 @@ The default value is `false`.
 
 ## Group products
 
-Use `productGroups` to move product tabs from the top navigation into named groups on the documentation sidebar.
+Add `productGroups` to the navigation tab that owns the product switcher. The tab's `pages` or `groups` are the initial sidebar. Each product has its own `pages` or `groups`.
 
 ```json docs.json
 {
-  "productGroups": [
-    {
-      "group": "Products",
-      "products": [
-        {
-          "product": "Redis",
-          "icon": "/images/redis.svg",
-          "description": "Serverless Redis"
-        }
-      ]
-    },
-    {
-      "group": "Utility",
-      "products": [
-        {
-          "product": "Rate Limit",
-          "pages": ["ratelimit/overview", "ratelimit/get-started"]
-        }
-      ]
-    }
-  ],
   "navigation": {
     "tabs": [
       {
         "tab": "Documentation",
-        "pages": ["index"]
-      },
-      {
-        "tab": "Redis",
-        "pages": ["redis/overview", "redis/get-started"]
+        "pages": ["index"],
+        "productGroups": [
+          {
+            "group": "Products",
+            "products": [
+              {
+                "product": "Redis",
+                "icon": "/images/redis.svg",
+                "description": "Serverless Redis",
+                "pages": ["redis/overview", "redis/get-started"]
+              }
+            ]
+          },
+          {
+            "group": "Utility",
+            "products": [
+              {
+                "product": "Rate Limit",
+                "pages": ["ratelimit/overview", "ratelimit/get-started"]
+              }
+            ]
+          }
+        ]
       },
       {
         "tab": "API Reference",
@@ -65,15 +62,14 @@ Use `productGroups` to move product tabs from the top navigation into named grou
 
 In this example:
 
-- `Documentation` is the landing tab.
-- `Redis` uses the existing tab with the same name.
-- `Rate Limit` owns its pages and does not need a tab.
+- `Documentation` owns the product groups. Its `index` page is the initial sidebar.
+- `Redis` and `Rate Limit` each own their pages.
 - `API Reference` stays in the top navigation.
 
-A product can own `pages` or `groups`, but not both. Product and group names must be unique.
+A product must contain `pages` or `groups`, but not both. The arrays must not be empty. Product and group names must be unique within the owning tab.
 
 <Note>
-  Do not add the landing tab to `productGroups`. Do not use `productGroups` with Mintlify `navigation.products`.
+  Do not set `productGroups` at the top level. Only one tab in a navigation scope can contain it. Do not use it inside Mintlify `navigation.products`.
 </Note>
 
 If `productGroups` is not set, Docs7 uses your regular Mintlify navigation.
