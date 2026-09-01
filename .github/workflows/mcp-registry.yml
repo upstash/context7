@@ -35,6 +35,33 @@ jobs:
           echo "Publishing version: $VERSION"
           jq --arg v "$VERSION" '.version = $v | .packages[].version = $v' server.json > server.tmp && mv server.tmp server.json
 
+      - name: Add mcpb package to server.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(jq -r .version server.json)
+          # Slash-free tag: the registry rejects mcpb URLs whose tag contains '/'
+          TAG="mcpb-v$VERSION"
+          if gh release download "$TAG" --pattern context7.mcpb --output context7.mcpb -R ${{ github.repository }}; then
+            SHA=$(sha256sum context7.mcpb | cut -d' ' -f1)
+            URL="https://github.com/${{ github.repository }}/releases/download/$TAG/context7.mcpb"
+            jq --arg url "$URL" --arg sha "$SHA" --arg v "$VERSION" '.packages += [{
+              "registryType": "mcpb",
+              "identifier": $url,
+              "version": $v,
+              "fileSha256": $sha,
+              "transport": { "type": "stdio" },
+              "environmentVariables": [{
+                "name": "CONTEXT7_API_KEY",
+                "description": "API key for authentication",
+                "isRequired": false,
+                "isSecret": true
+              }]
+            }]' server.json > server.tmp && mv server.tmp server.json
+          else
+            echo "::warning::No context7.mcpb asset on release $TAG — publishing without mcpb package"
+          fi
+
       - name: Install MCP Publisher
         run: |
           curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
@@ -46,7 +73,12 @@ jobs:
         # Retry to tolerate npm propagation delay when chained after a release
         run: |
           for i in 1 2 3; do
-            ./mcp-publisher publish && exit 0
+            OUT=$(./mcp-publisher publish 2>&1) && { echo "$OUT"; exit 0; }
+            echo "$OUT"
+            if echo "$OUT" | grep -q "duplicate version"; then
+              echo "This version is already in the registry (versions are immutable) — nothing to do."
+              exit 0
+            fi
             echo "Publish failed (attempt $i), retrying in 30s..."
             sleep 30
           done
