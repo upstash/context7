@@ -35,6 +35,7 @@ import {
 } from "../setup/mcp-writer.js";
 import {
   getAgent,
+  detectAgents,
   ALL_AGENT_NAMES,
   resolveVscodeUserDir,
   resolveDevinConfigDir,
@@ -899,6 +900,62 @@ describe("agent config integration", () => {
     });
   });
 
+  describe("copilot", () => {
+    const agent = getAgent("copilot");
+
+    test("buildEntry produces the Copilot CLI HTTP shape", () => {
+      expect(agent.mcp.buildEntry(apiKeyAuth, "http")).toEqual({
+        type: "http",
+        url: "https://mcp.context7.com/mcp",
+        tools: ["*"],
+        headers: { Authorization: "Bearer sk-test-123" },
+      });
+    });
+
+    test("uses the Copilot CLI mcpServers config section", () => {
+      expect(agent.mcp.configKey).toBe("mcpServers");
+    });
+
+    test("does not claim Claude's shared project .mcp.json during auto-detection", async () => {
+      const previousCwd = process.cwd();
+      await writeFile(join(tempDir, ".mcp.json"), JSON.stringify({ mcpServers: {} }));
+      try {
+        process.chdir(tempDir);
+        const detected = await detectAgents("project");
+        expect(detected).toContain("claude");
+        expect(detected).not.toContain("copilot");
+      } finally {
+        process.chdir(previousCwd);
+      }
+    });
+
+    test("merges an entry without replacing other Copilot configuration", async () => {
+      const path = join(tempDir, "mcp-config.json");
+      await writeJsonConfig(path, {
+        telemetry: { enabled: false },
+        mcpServers: { other: { type: "local", command: "other" } },
+      });
+
+      const existing = await readJsonConfig(path);
+      const { config } = mergeServerEntry(
+        existing,
+        agent.mcp.configKey,
+        "context7",
+        agent.mcp.buildEntry(apiKeyAuth, "http")
+      );
+      await writeJsonConfig(path, config);
+
+      const result = await readJsonConfig(path);
+      expect(result.telemetry).toEqual({ enabled: false });
+      expect((result.mcpServers as Record<string, unknown>).context7).toEqual({
+        type: "http",
+        url: "https://mcp.context7.com/mcp",
+        tools: ["*"],
+        headers: { Authorization: "Bearer sk-test-123" },
+      });
+    });
+  });
+
   describe("opencode", () => {
     const agent = getAgent("opencode");
 
@@ -1208,6 +1265,16 @@ describe("agent config integration", () => {
       expect(entry).toEqual({
         command: "npx",
         args: ["-y", "@upstash/context7-mcp", "--api-key", "sk-test-stdio"],
+      });
+    });
+
+    test("copilot stdio entry includes all tools", () => {
+      const entry = getAgent("copilot").mcp.buildEntry(apiKeyAuth, "stdio");
+      expect(entry).toEqual({
+        type: "stdio",
+        command: "npx",
+        args: ["-y", "@upstash/context7-mcp", "--api-key", "sk-test-stdio"],
+        tools: ["*"],
       });
     });
 
