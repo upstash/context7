@@ -421,18 +421,27 @@ async function main() {
             });
           }
 
-          if (isJWT(apiKey)) {
-            const validationResult = await validateJWT(apiKey);
-            if (!validationResult.valid) {
-              return res.status(401).json({
-                jsonrpc: "2.0",
-                error: {
-                  code: -32001,
-                  message: validationResult.error || "Invalid token. Please re-authenticate.",
-                },
-                id: null,
-              });
-            }
+          if (!isJWT(apiKey)) {
+            return res.status(401).json({
+              jsonrpc: "2.0",
+              error: {
+                code: -32001,
+                message: "OAuth access token must be a JWT. Please re-authenticate.",
+              },
+              id: null,
+            });
+          }
+
+          const validationResult = await validateJWT(apiKey);
+          if (!validationResult.valid) {
+            return res.status(401).json({
+              jsonrpc: "2.0",
+              error: {
+                code: -32001,
+                message: validationResult.error || "Invalid token. Please re-authenticate.",
+              },
+              id: null,
+            });
           }
         }
 

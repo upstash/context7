@@ -162,6 +162,31 @@ describe("OAuth discovery", () => {
   });
 });
 
+describe("OAuth-protected endpoint", () => {
+  test.each(["oat_legacy-opaque-token", "ctx7sk-api-key", "arbitrary-secret"])(
+    "rejects non-JWT bearer credential %s",
+    async (credential) => {
+      const oauthUrl = new URL("/mcp/oauth", httpUrl);
+      const response = await fetch(oauthUrl, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${credential}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ jsonrpc: "2.0", method: "initialize", id: 1 }),
+      });
+
+      expect(response.status).toBe(401);
+      expect(await response.json()).toMatchObject({
+        error: {
+          code: -32001,
+          message: "OAuth access token must be a JWT. Please re-authenticate.",
+        },
+      });
+    }
+  );
+});
+
 describe("HTTP API key headers", () => {
   test("accepts the advertised X-Context7-API-Key header", async () => {
     const apiKey = "ctx7sk-advertised-header-test";

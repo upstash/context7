@@ -1508,7 +1508,7 @@ CONTEXT7_API_KEY=your_api_key_here
 
 ### OAuth Authentication
 
-Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization).
+Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization). The protected endpoint accepts OAuth JWT access tokens; OIDC ID tokens, opaque tokens, and Context7 API keys are not valid credentials for this endpoint.
 
 To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client configuration:
 
