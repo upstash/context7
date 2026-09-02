@@ -49,8 +49,6 @@ let stubServer: http.Server;
 let childEnv: Record<string, string>;
 let httpChild: ChildProcess;
 let httpUrl: string;
-let hostedHttpChild: ChildProcess;
-let hostedHttpUrl: string;
 
 function startStubApi(): Promise<string> {
   stubServer = http.createServer((req, res) => {
@@ -130,17 +128,11 @@ beforeAll(async () => {
     CONTEXT7_MCP_ALLOWED_ORIGINS: "https://docs.example.com/",
     MCP_CLIENT_IP_ASSERTION_KEY: CLIENT_IP_ASSERTION_KEY,
   };
-  const [localServer, hostedServer] = await Promise.all([
-    startHttpChild(BASE_PORT),
-    startHttpChild(BASE_PORT + 20, "0.0.0.0"),
-  ]);
-  ({ child: httpChild, url: httpUrl } = localServer);
-  ({ child: hostedHttpChild, url: hostedHttpUrl } = hostedServer);
+  ({ child: httpChild, url: httpUrl } = await startHttpChild(BASE_PORT));
 }, 120_000);
 
 afterAll(() => {
   httpChild?.kill();
-  hostedHttpChild?.kill();
   stubServer?.close();
 });
 
@@ -262,31 +254,47 @@ describe("HTTP request origin and host validation", () => {
     response.resume();
   });
 
-  test.each(["https://context7.com", "https://docs.example.com"])(
-    "allows configured hosted origin %s",
-    async (origin) => {
-      const response = await preflight(hostedHttpUrl, origin);
-      expect(response.status).toBe(204);
-      expect(response.headers.get("access-control-allow-origin")).toBe(origin);
-    }
-  );
+  describe("hosted server", () => {
+    let hostedHttpChild: ChildProcess;
+    let hostedHttpUrl: string;
 
-  test("allows hosted health checks without an Origin header", async () => {
-    const response = await fetch(new URL("/ping", hostedHttpUrl));
+    beforeAll(async () => {
+      ({ child: hostedHttpChild, url: hostedHttpUrl } = await startHttpChild(
+        BASE_PORT + 20,
+        "0.0.0.0"
+      ));
+    });
 
-    expect(response.status).toBe(200);
-    expect(response.headers.get("access-control-allow-origin")).toBeNull();
-  });
+    afterAll(() => {
+      hostedHttpChild?.kill();
+    });
 
-  test.each(["", "https://evil-attacker.example", "https://subdomain.context7.com", "null"])(
-    "rejects origin %s on the hosted server",
-    async (origin) => {
-      const response = await fetch(hostedHttpUrl, { headers: { origin } });
+    test.each(["https://context7.com", "https://docs.example.com"])(
+      "allows configured origin %s",
+      async (origin) => {
+        const response = await preflight(hostedHttpUrl, origin);
+        expect(response.status).toBe(204);
+        expect(response.headers.get("access-control-allow-origin")).toBe(origin);
+      }
+    );
 
-      expect(response.status).toBe(403);
+    test("allows health checks without an Origin header", async () => {
+      const response = await fetch(new URL("/ping", hostedHttpUrl));
+
+      expect(response.status).toBe(200);
       expect(response.headers.get("access-control-allow-origin")).toBeNull();
-    }
-  );
+    });
+
+    test.each(["", "https://evil-attacker.example", "https://subdomain.context7.com", "null"])(
+      "rejects origin %s",
+      async (origin) => {
+        const response = await fetch(hostedHttpUrl, { headers: { origin } });
+
+        expect(response.status).toBe(403);
+        expect(response.headers.get("access-control-allow-origin")).toBeNull();
+      }
+    );
+  });
 });
 
 describe("CLI transport option validation", () => {
@@ -294,6 +302,7 @@ describe("CLI transport option validation", () => {
     ["stdio", "--host=127.0.0.1", "--port and --host flags are not allowed"],
     ["stdio", "--port=3000", "--port and --host flags are not allowed"],
     ["http", "--api-key=test-key", "--api-key flag is not allowed"],
+    ["http", "--host=", "HTTP host must not be empty"],
   ])("rejects %s with %s", (transport, option, expectedError) => {
     const result = spawnSync(process.execPath, [DIST, "--transport", transport, option], {
       env: childEnv,

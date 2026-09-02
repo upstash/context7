@@ -1,11 +1,37 @@
 import { describe, expect, test } from "vitest";
-import { isLoopbackHost, isLoopbackHostname, isLoopbackOrigin } from "./http-security.js";
+import {
+  isLoopbackHost,
+  isLoopbackHostname,
+  isLoopbackOrigin,
+  normalizeBindHost,
+} from "./http-security.js";
+
+describe("HTTP bind host normalization", () => {
+  test.each([
+    ["127.0.0.1", "127.0.0.1"],
+    ["127.1", "127.0.0.1"],
+    ["LOCALHOST.", "localhost."],
+    ["::1", "::1"],
+    ["[0:0:0:0:0:0:0:1]", "::1"],
+    ["0.0.0.0", "0.0.0.0"],
+  ])("normalizes %s to %s", (input, expected) => {
+    expect(normalizeBindHost(input)).toBe(expected);
+  });
+
+  test.each(["", "   ", "user@example.com", "localhost:3000", "localhost/path"])(
+    "rejects invalid host %j",
+    (host) => {
+      expect(() => normalizeBindHost(host)).toThrow();
+    }
+  );
+});
 
 describe("loopback request validation", () => {
-  test("recognizes supported bind-host spellings", () => {
+  test("recognizes loopback hostname spellings", () => {
     expect(isLoopbackHostname("localhost")).toBe(true);
     expect(isLoopbackHostname("localhost.")).toBe(true);
     expect(isLoopbackHostname("127.0.0.2")).toBe(true);
+    expect(isLoopbackHostname("127.1")).toBe(true);
     expect(isLoopbackHostname("::1")).toBe(true);
     expect(isLoopbackHostname("[0:0:0:0:0:0:0:1]")).toBe(true);
     expect(isLoopbackHostname("0.0.0.0")).toBe(false);

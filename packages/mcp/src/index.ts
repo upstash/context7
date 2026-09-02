@@ -13,7 +13,7 @@ import {
 } from "./lib/utils.js";
 import { isJWT, validateJWT } from "./lib/jwt.js";
 import express from "express";
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
 import { randomUUID } from "node:crypto";
 import {
@@ -24,7 +24,7 @@ import {
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
-import { createHttpSecurityMiddleware } from "./lib/http-security.js";
+import { createHttpSecurityMiddleware, normalizeBindHost } from "./lib/http-security.js";
 import { getMaxSubscriptions } from "./lib/subscriptions.js";
 
 /** Default HTTP server port */
@@ -35,10 +35,10 @@ const program = new Command()
   .version(SERVER_VERSION, "-v, --version", "output the current version")
   .option("--transport <stdio|http>", "transport type", "stdio")
   .option("--port <number>", "port for HTTP transport", DEFAULT_PORT.toString())
-  .option(
-    "--host <host>",
-    "host interface for HTTP transport",
-    process.env.CONTEXT7_MCP_HOST || "127.0.0.1"
+  .addOption(
+    new Option("--host <host>", "host interface for HTTP transport")
+      .env("CONTEXT7_MCP_HOST")
+      .default("127.0.0.1")
   )
   .option("--api-key <key>", "API key for authentication (or set CONTEXT7_API_KEY env var)")
   .allowUnknownOption() // let MCP Inspector / other wrappers pass through extra flags
@@ -64,20 +64,17 @@ if (!allowedTransports.includes(cliOptions.transport)) {
 const TRANSPORT_TYPE = (cliOptions.transport || "stdio") as "stdio" | "http";
 
 // Disallow incompatible flags based on transport
-const hasCliOption = (name: string) =>
-  process.argv.some((argument) => argument === name || argument.startsWith(`${name}=`));
-const passedPortFlag = hasCliOption("--port");
-const passedHostFlag = hasCliOption("--host");
-const passedApiKeyFlag = hasCliOption("--api-key");
+const wasPassed = (option: "port" | "host" | "apiKey") =>
+  program.getOptionValueSource(option) === "cli";
 
-if (TRANSPORT_TYPE === "http" && passedApiKeyFlag) {
+if (TRANSPORT_TYPE === "http" && wasPassed("apiKey")) {
   console.error(
     "The --api-key flag is not allowed when using --transport http. Use header-based auth at the HTTP layer instead."
   );
   process.exit(1);
 }
 
-if (TRANSPORT_TYPE === "stdio" && (passedPortFlag || passedHostFlag)) {
+if (TRANSPORT_TYPE === "stdio" && (wasPassed("port") || wasPassed("host"))) {
   console.error("The --port and --host flags are not allowed when using --transport stdio.");
   process.exit(1);
 }
@@ -88,7 +85,12 @@ const CLI_PORT = (() => {
   return isNaN(parsed) ? undefined : parsed;
 })();
 
-const HTTP_HOST = cliOptions.host;
+let HTTP_HOST: string;
+try {
+  HTTP_HOST = normalizeBindHost(cliOptions.host);
+} catch (error) {
+  program.error(error instanceof Error ? error.message : "Invalid HTTP host.");
+}
 
 const requestContext = new AsyncLocalStorage<ClientContext>();
 

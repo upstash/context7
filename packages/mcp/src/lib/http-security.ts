@@ -41,15 +41,41 @@ function normalizeConfiguredOrigins(value: string | undefined): Set<string> {
   );
 }
 
+export function normalizeBindHost(value: string): string {
+  const host = value.trim().toLowerCase();
+  if (!host) throw new Error("HTTP host must not be empty.");
+
+  try {
+    // URL parsing canonicalizes numeric IPv4 forms such as 127.1. IPv6 needs
+    // brackets while parsing, but Node's listener expects the returned bare address.
+    const authority = isIP(host) === 6 ? `[${host}]` : host;
+    const url = new URL(`http://${authority}`);
+    if (
+      url.username ||
+      url.password ||
+      url.port ||
+      url.pathname !== "/" ||
+      url.search ||
+      url.hash
+    ) {
+      throw new Error();
+    }
+
+    return url.hostname.replace(/^\[|\]$/g, "");
+  } catch {
+    throw new Error(`Invalid HTTP host: '${value}'.`);
+  }
+}
+
 export function isLoopbackHostname(hostname: string): boolean {
-  const unwrapped = hostname
-    .toLowerCase()
-    .replace(/^\[|\]$/g, "")
-    .replace(/\.$/, "");
-  if (unwrapped === "localhost") return true;
-  if (isIP(unwrapped) === 4) return unwrapped.startsWith("127.");
-  if (isIP(unwrapped) === 6) return new URL(`http://[${unwrapped}]`).hostname === "[::1]";
-  return false;
+  try {
+    const normalized = normalizeBindHost(hostname).replace(/\.$/, "");
+    if (normalized === "localhost") return true;
+    if (isIP(normalized) === 4) return normalized.startsWith("127.");
+    return normalized === "::1";
+  } catch {
+    return false;
+  }
 }
 
 export function isLoopbackOrigin(origin: string): boolean {
