@@ -16,12 +16,14 @@ describe("loopback request validation", () => {
     expect(isLoopbackOrigin("https://localhost")).toBe(true);
     expect(isLoopbackOrigin("http://127.0.0.1:8080")).toBe(true);
     expect(isLoopbackOrigin("http://[::1]:3000")).toBe(true);
+    expect(isLoopbackOrigin("http://[0:0:0:0:0:0:0:1]:3000")).toBe(true);
   });
 
-  test("rejects null, malformed, userinfo, and lookalike origins", () => {
+  test("rejects null, malformed, userinfo, paths, and lookalike origins", () => {
     expect(isLoopbackOrigin("null")).toBe(false);
     expect(isLoopbackOrigin("not a URL")).toBe(false);
     expect(isLoopbackOrigin("http://user@localhost:3000")).toBe(false);
+    expect(isLoopbackOrigin("http://localhost:3000/mcp")).toBe(false);
     expect(isLoopbackOrigin("http://localhost.attacker.example")).toBe(false);
   });
 

@@ -4,7 +4,7 @@ import ora from "ora";
 import { checkboxWithHover } from "../utils/prompts.js";
 import { log } from "../utils/logger.js";
 import { trackEvent } from "../utils/tracking.js";
-import { ALL_AGENT_NAMES, SETUP_AGENT_NAMES, getAgent, type SetupAgent } from "../setup/agents.js";
+import { ALL_AGENT_NAMES, getAgent, type SetupAgent } from "../setup/agents.js";
 import {
   readJsonConfig,
   readTomlServerExists,
@@ -19,19 +19,13 @@ import { access, readFile, rm, writeFile } from "fs/promises";
 type Scope = "global" | "project";
 type UninstallMode = "mcp" | "cli";
 
-interface UninstallOptions {
-  claude?: boolean;
-  cursor?: boolean;
-  opencode?: boolean;
-  codex?: boolean;
-  antigravity?: boolean;
-  gemini?: boolean;
+type UninstallOptions = Partial<Record<SetupAgent, boolean>> & {
   project?: boolean;
   yes?: boolean;
   all?: boolean;
   cli?: boolean;
   mcp?: boolean;
-}
+};
 
 interface CleanupStatus {
   status: string;
@@ -68,16 +62,17 @@ const MODE_LABELS: Record<UninstallMode, string> = {
 };
 
 export function registerRemoveCommand(program: Command): void {
-  program
+  const command = program
     .command("remove")
     .alias("uninstall")
-    .description("Remove Context7 setup from your AI coding agent")
-    .option("--claude", "Remove from Claude Code")
-    .option("--cursor", "Remove from Cursor")
-    .option("--opencode", "Remove from OpenCode")
-    .option("--codex", "Remove from Codex")
-    .option("--antigravity", "Remove from Antigravity")
-    .option("--gemini", "Remove from Gemini CLI")
+    .description("Remove Context7 setup from your AI coding agent");
+
+  for (const name of ALL_AGENT_NAMES) {
+    const agent = getAgent(name);
+    command.option(`--${name}`, `Remove from ${agent.displayName}`);
+  }
+
+  command
     .option("--all", "Remove both MCP setup and CLI + Skills setup")
     .option("--mcp", "Remove MCP setup")
     .option("--cli", "Remove CLI + Skills setup")
@@ -89,24 +84,17 @@ export function registerRemoveCommand(program: Command): void {
 }
 
 function getSelectedAgents(options: UninstallOptions): SetupAgent[] {
-  const agents: SetupAgent[] = [];
-  if (options.claude) agents.push("claude");
-  if (options.cursor) agents.push("cursor");
-  if (options.opencode) agents.push("opencode");
-  if (options.codex) agents.push("codex");
-  if (options.antigravity) agents.push("antigravity");
-  if (options.gemini) agents.push("gemini");
-  return agents;
+  return ALL_AGENT_NAMES.filter((name) => options[name]);
 }
 
 async function promptAgents(detected: SetupAgent[]): Promise<SetupAgent[] | null> {
   const choices = detected.map((name) => ({
-    name: SETUP_AGENT_NAMES[name],
+    name: getAgent(name).displayName,
     value: name,
   }));
 
   if (detected.length > 0) {
-    log.dim(`Detected: ${detected.map((agent) => SETUP_AGENT_NAMES[agent]).join(", ")}`);
+    log.dim(`Detected: ${detected.map((agent) => getAgent(agent).displayName).join(", ")}`);
   }
 
   try {
@@ -117,7 +105,7 @@ async function promptAgents(detected: SetupAgent[]): Promise<SetupAgent[] | null
         loop: false,
         theme: CHECKBOX_THEME,
       },
-      { getName: (agent: SetupAgent) => SETUP_AGENT_NAMES[agent] }
+      { getName: (agent: SetupAgent) => getAgent(agent).displayName }
     );
   } catch {
     return null;
@@ -154,7 +142,7 @@ async function resolveAgents(options: UninstallOptions, scope: Scope): Promise<S
 
   if (detected.length === 0) {
     log.warn(
-      "No Context7 setup detected. Pass --claude, --cursor, --opencode, --codex, --antigravity, or --gemini."
+      `No Context7 setup detected. Pass one of: ${ALL_AGENT_NAMES.map((name) => `--${name}`).join(", ")}.`
     );
     return [];
   }

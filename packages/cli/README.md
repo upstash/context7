@@ -25,6 +25,9 @@ ctx7 remove
 ctx7 setup --cursor
 ctx7 setup --claude
 ctx7 setup --opencode
+ctx7 setup --vscode
+ctx7 setup --devin
+ctx7 setup --copilot
 ```
 
 ### Library Documentation
@@ -79,6 +82,9 @@ ctx7 setup
 ctx7 setup --cursor
 ctx7 setup --claude
 ctx7 setup --opencode
+ctx7 setup --vscode
+ctx7 setup --devin
+ctx7 setup --copilot
 
 # Use an existing API key instead of OAuth
 ctx7 setup --api-key YOUR_API_KEY
@@ -104,6 +110,9 @@ ctx7 remove
 # Target specific agents
 ctx7 remove --cursor
 ctx7 remove --claude --project
+ctx7 remove --vscode --project
+ctx7 remove --devin --project
+ctx7 remove --copilot --project
 
 # Remove both setup modes explicitly
 ctx7 remove --cursor --all
@@ -139,6 +148,9 @@ The CLI automatically detects which AI coding assistants you have installed and 
 | Universal (Amp, Codex, Gemini CLI, GitHub Copilot, OpenCode + more) | `.agents/skills/` |
 | Claude Code                                                         | `.claude/skills/` |
 | Cursor                                                              | `.cursor/skills/` |
+| VS Code                                                             | `.agents/skills/` |
+| Devin                                                               | `.devin/skills/`  |
+| GitHub Copilot CLI                                                  | `.agents/skills/` |
 | Antigravity                                                         | `.agent/skills/`  |
 
 ## Disabling Telemetry

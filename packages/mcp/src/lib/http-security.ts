@@ -11,10 +11,12 @@ function parseOrigin(value: string): URL | undefined {
   try {
     const url = new URL(value);
     if (
-      url.origin !== value ||
       !["http:", "https:"].includes(url.protocol) ||
       url.username ||
-      url.password
+      url.password ||
+      url.pathname !== "/" ||
+      url.search ||
+      url.hash
     ) {
       return undefined;
     }
@@ -81,9 +83,18 @@ export function createHttpSecurityMiddleware(
   const hostedOrigins = isLocal ? undefined : normalizeConfiguredOrigins(additionalHostedOrigins);
   const isOriginAllowed = isLocal
     ? isLoopbackOrigin
-    : (origin: string) => hostedOrigins?.has(origin) === true;
+    : (origin: string) => {
+        const parsed = parseOrigin(origin);
+        return parsed !== undefined && hostedOrigins?.has(parsed.origin) === true;
+      };
 
   return (req, res, next) => {
+    res.vary("Origin");
+    if (req.method === "OPTIONS") {
+      res.vary("Access-Control-Request-Method");
+      res.vary("Access-Control-Request-Headers");
+    }
+
     if (isLocal && !isLoopbackHost(req.headers.host)) {
       res.status(403).json({ error: "forbidden", message: "Untrusted Host header." });
       return;
@@ -95,7 +106,6 @@ export function createHttpSecurityMiddleware(
       return;
     }
 
-    res.vary("Origin");
     if (origin !== undefined) {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Access-Control-Allow-Methods", ALLOWED_METHODS);
@@ -103,8 +113,6 @@ export function createHttpSecurityMiddleware(
     }
 
     if (req.method === "OPTIONS") {
-      res.vary("Access-Control-Request-Method");
-      res.vary("Access-Control-Request-Headers");
       res.sendStatus(204);
       return;
     }

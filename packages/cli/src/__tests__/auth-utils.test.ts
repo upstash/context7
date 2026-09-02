@@ -22,6 +22,7 @@ import {
   loadTokens,
   clearTokens,
   isTokenExpired,
+  isContext7ApiKey,
   getValidAccessToken,
   startDeviceAuthorization,
   pollDeviceToken,
@@ -217,6 +218,16 @@ describe("isTokenExpired", () => {
     expect(
       isTokenExpired({ access_token: "tok", token_type: "bearer", expires_at: now + 60_000 })
     ).toBe(false);
+  });
+});
+
+describe("isContext7ApiKey", () => {
+  test("recognizes Context7 API keys", () => {
+    expect(isContext7ApiKey("ctx7sk-example")).toBe(true);
+  });
+
+  test("rejects OAuth access tokens", () => {
+    expect(isContext7ApiKey("legacy-oauth-token")).toBe(false);
   });
 });
 

@@ -1,3 +1,5 @@
+import type { SetupAgent } from "./agents.js";
+
 const GITHUB_RAW_URLS = [
   "https://raw.githubusercontent.com/upstash/context7/master/rules",
   "https://raw.githubusercontent.com/upstash/context7/main/rules",
@@ -33,7 +35,6 @@ For version-specific docs, use \`/org/project/version\` from the \`library\` out
 If a command fails with a quota error, inform the user and suggest \`npx ctx7@latest login\` or setting \`CONTEXT7_API_KEY\` env var for higher limits. Do not silently fall back to training data.
 `;
 
-const CURSOR_FRONTMATTER = `---\nalwaysApply: true\n---\n\n`;
 const CODEX_CLI_SANDBOX_GUIDANCE = `Run Context7 CLI requests outside Codex's default sandbox. If a Context7 CLI command fails with DNS or network errors such as ENOTFOUND, host resolution failures, or fetch failed, rerun it outside the sandbox instead of retrying inside the sandbox.`;
 
 export type RuleMode = "mcp" | "cli";
@@ -50,7 +51,7 @@ async function fetchRule(filename: string, fallback: string): Promise<string> {
   return fallback;
 }
 
-export async function getRuleContent(mode: RuleMode, agent: string): Promise<string> {
+export async function getRuleContent(mode: RuleMode, agent: SetupAgent): Promise<string> {
   const [filename, fallback] =
     mode === "mcp" ? ["context7-mcp.md", FALLBACK_MCP] : ["context7-cli.md", FALLBACK_CLI];
   let body = await fetchRule(filename, fallback);
@@ -59,11 +60,11 @@ export async function getRuleContent(mode: RuleMode, agent: string): Promise<str
     body = `${body.trimEnd()}\n${CODEX_CLI_SANDBOX_GUIDANCE}\n`;
   }
 
-  return agent === "cursor" ? `${CURSOR_FRONTMATTER}${body}` : body;
+  return body;
 }
 
 export function customizeSkillFilesForAgent(
-  agent: string,
+  agent: SetupAgent,
   skillName: string,
   files: Array<{ path: string; content: string }>
 ): Array<{ path: string; content: string }> {
