@@ -1,0 +1,93 @@
+---
+title: Builds
+description: Configure production builds, previews, and local builds
+---
+
+Connect a GitHub repository once. Docs7 then reads the configured documentation folder whenever it builds that site.
+
+The folder must contain `docs.json` or `mint.json`. It can also contain MDX pages, assets, snippets, OpenAPI files, and any other files referenced by the documentation.
+
+<Frame caption="The Builds view records the status, branch, commit, and start time for each deployment.">
+  <img
+    src="/images/docs7/dashboard/builds.jpg"
+    alt="Docs7 Builds dashboard with successful deployments across recent documentation commits"
+  />
+</Frame>
+
+## Build settings
+
+Open **Docs7**, choose a site, then open **Settings**.
+
+| Setting | What it controls |
+| --- | --- |
+| **Slug** | The site's `*.docs7.io` hostname. Changing it moves the production site and its previews. |
+| **Production branch** | The branch used for production builds. Leave it on the GitHub default branch, or select another branch. |
+| **Docs path** | The repository-relative folder that contains `docs.json` or `mint.json`. Use `.` for the repository root. |
+
+Branch and docs path changes take effect on the next deployment. You can also serve the site from its own custom domain or from a path such as `example.com/docs`.
+
+## Production builds
+
+Docs7 starts a production build in three cases:
+
+1. You publish a site for the first time.
+2. You push a commit to the production branch.
+3. You click **Redeploy** in Docs7.
+
+For each build, Docs7 resolves the exact commit, checks out the repository, and reads the configured docs path. It then renders the pages, builds the search index, runs documentation health checks, and publishes the completed release.
+
+Publication happens only after the release is ready. If a build fails, the previous successful release stays live.
+
+<Note>
+A push to another branch does not create a preview by itself. Preview builds come from pull requests or a manual preview deployment.
+</Note>
+
+## Pull request previews
+
+Docs7 creates or updates a preview when a pull request:
+
+- comes from a branch in the connected repository
+- uses a head branch other than the site's production branch
+- changes a file inside the configured docs path
+- is opened, reopened, or receives a new commit
+
+Closing or merging the pull request removes its preview. Pull requests from forks do not get a preview because Docs7 cannot check out the fork branch through the connected repository.
+
+Preview responses include `X-Robots-Tag: noindex`, so temporary URLs do not compete with the production site in search results.
+
+You can also create a preview for a selected branch manually. Open a preview build to redeploy it or delete its live preview.
+
+## Inspect a build
+
+Open **Builds**, then select a row. Each build records its branch, commit, trigger, status, and commit message.
+
+The detail view contains:
+
+- **Log** for renderer and deployment output
+- **Files changed** for pull request builds
+- **Health** for page errors, broken internal links, unknown components, source warnings, and deployment failures
+
+Fixable issues from the latest production build also appear in the [Agent work queue](/docs7/agent#context7-agent).
+
+## Build locally
+
+Use the CLI before you push:
+
+```bash
+docs7 dev ./docs
+```
+
+The development server watches the docs folder and reloads changes. Common options are:
+
+```bash
+docs7 dev ./docs --port 4000
+docs7 dev ./docs --host 0.0.0.0
+```
+
+Use `--port` to change the port and `--host` to bind another address. The first run downloads the Docs7 renderer and caches it for later previews.
+
+The public CLI previews documentation but does not publish it. Push the repository or click **Redeploy** to start a hosted build.
+
+<Warning>
+A local preview executes trusted MDX with your local user permissions. Do not run it against a documentation source you do not trust.
+</Warning>

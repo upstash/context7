@@ -1,0 +1,102 @@
+---
+title: Agent
+description: Configure autonomous fixes, pull request reviews, and scheduled checks
+---
+
+The Docs7 Agent works from your GitHub repository and keeps every proposed change reviewable. Open **Docs7**, choose a site, then select **Agent**.
+
+<Frame caption="The Context7 Agent keeps suggestions, build issues, its schedule, and run history in one place.">
+  <img
+    src="/images/docs7/dashboard/agent.jpg"
+    alt="Docs7 Agent dashboard showing suggestions, build issues, scheduling, and history"
+  />
+</Frame>
+
+There are three workflows:
+
+- **Context7 Agent** fixes queued suggestions or build issues in a pull request.
+- **PR Review Agent** reviews documentation changes in each eligible pull request.
+- **Monthly Checkup** is a planned full-site review and is not available yet.
+
+## Context7 Agent
+
+The Context7 Agent has two work queues.
+
+### Suggestions
+
+Suggestions come from Context7's analysis of the indexed documentation. Each suggestion points to the source files that support it.
+
+Select up to 10 suggestions and click **Run agent**. The agent verifies each suggestion against the repository and edits only the configured docs path. If it produces supported changes, Docs7 opens one pull request.
+
+### Build issues
+
+Build issues come from the latest live production build. The queue includes fixable page errors, broken internal links, unknown components, and source warnings.
+
+Select up to 20 issues and run the agent. It checks each issue against the repository. If it produces supported fixes, Docs7 opens one pull request.
+
+Ignoring a suggestion or build issue removes it from the queue. It does not remove the issue from an older build's Health report.
+
+### Schedule
+
+New sites start with the schedule disabled. Enable it and choose **Daily** or **Weekly**.
+
+A scheduled run starts only when at least three suggestions are waiting. It handles up to 10 suggestions in one pull request. The schedule does not run the build issue queue automatically.
+
+You can review completed, failed, and running work under **History**.
+
+## PR Review Agent
+
+The PR Review Agent runs after an eligible pull request preview finishes. It reviews only files inside the configured docs path and posts its findings in the pull request's Docs7 summary.
+
+<Frame caption="PR Review Agent settings control its response mode and the checks applied to pull requests.">
+  <img
+    src="/images/docs7/dashboard/agent-pr-review.jpg"
+    alt="PR Review Agent settings with response modes and documentation checks"
+  />
+</Frame>
+
+New sites start with PR reviews disabled and **Comment only** selected.
+
+### Checks
+
+| Check | What it reviews | Default |
+| --- | --- | --- |
+| **Broken links** | Broken internal links, dead external links, and links to missing headings in changed docs files. | On |
+| **Build health issues** | New fixable issues introduced by the preview compared with production. | On |
+| **Grammar and spelling** | Mistakes in text added or changed by the pull request. | On |
+| **Codebase standards in a monorepo** | Changed pages against repository instructions and nearby documentation patterns. | Off |
+
+Build health requires a hosted Docs7 site. The other checks can also run for a repository connected only for the agent.
+
+### Response modes
+
+The findings comment is always posted. The response mode controls what happens to fixes:
+
+- **Comment only** reports findings and does not change files.
+- **Pull request** opens a separate pull request with supported fixes.
+- **Commit** pushes supported fixes to the pull request branch. If the branch refuses the push, Docs7 opens a pull request against it instead.
+
+Docs7 skips pull requests from forks and pull requests that do not change the configured docs path. It also skips commits created by the agent, which prevents review loops.
+
+<Note>
+Do not make **Docs7 PR Review** a required GitHub check. Fork pull requests do not receive that check.
+</Note>
+
+## Monthly Checkup
+
+<Info>
+Monthly Checkup is **coming soon**.
+</Info>
+
+The planned workflow reads the entire site once a month and opens one pull request with 
+- link checks
+- grammar and spelling
+- build health
+- pages that no longer match their source
+- and a code compilation check.
+
+## Safety and scope
+
+Agent runs receive read access to the connected repository. The agent can inspect repository source to verify a documentation change, but trusted Docs7 code publishes the resulting files through GitHub.
+
+Changes are limited to the configured docs path. When the docs path is the repository root, Docs7 still blocks common application paths, package manifests, lockfiles, `.github`, and `.git` from agent changes.
