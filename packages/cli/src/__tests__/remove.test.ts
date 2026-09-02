@@ -293,6 +293,32 @@ describe("remove command", () => {
     });
   });
 
+  test("removes only context7 from VS Code MCP config", async () => {
+    const mcpPath = join(tempDir, ".vscode", "mcp.json");
+
+    await mkdir(join(tempDir, ".vscode"), { recursive: true });
+    await writeFile(
+      mcpPath,
+      JSON.stringify(
+        {
+          servers: {
+            other: { type: "http", url: "https://other.com" },
+            context7: { type: "http", url: "https://mcp.context7.com/mcp" },
+          },
+        },
+        null,
+        2
+      ),
+      "utf-8"
+    );
+
+    await runCommand("remove", "--vscode", "--mcp", "--project");
+
+    expect(JSON.parse(await readFile(mcpPath, "utf-8"))).toEqual({
+      servers: { other: { type: "http", url: "https://other.com" } },
+    });
+  });
+
   test("removes only context7 from opencode JSONC MCP config", async () => {
     const configPath = join(tempDir, "opencode.jsonc");
 

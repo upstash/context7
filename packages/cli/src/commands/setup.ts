@@ -17,7 +17,6 @@ import {
   type SetupAgent,
   type AuthOptions,
   type Transport,
-  SETUP_AGENT_NAMES,
   AUTH_MODE_LABELS,
   ALL_AGENT_NAMES,
   getAgent,
@@ -39,13 +38,7 @@ import {
 type Scope = "global" | "project";
 type SetupMode = "mcp" | "cli";
 
-interface SetupOptions {
-  claude?: boolean;
-  cursor?: boolean;
-  antigravity?: boolean;
-  opencode?: boolean;
-  codex?: boolean;
-  gemini?: boolean;
+type SetupOptions = Partial<Record<SetupAgent, boolean>> & {
   project?: boolean;
   yes?: boolean;
   apiKey?: string;
@@ -53,7 +46,7 @@ interface SetupOptions {
   cli?: boolean;
   mcp?: boolean;
   stdio?: boolean;
-}
+};
 
 function resolveTransport(options: SetupOptions): Transport {
   return options.stdio ? "stdio" : "http";
@@ -67,26 +60,18 @@ const CHECKBOX_THEME = {
 };
 
 function getSelectedAgents(options: SetupOptions): SetupAgent[] {
-  const agents: SetupAgent[] = [];
-  if (options.claude) agents.push("claude");
-  if (options.cursor) agents.push("cursor");
-  if (options.opencode) agents.push("opencode");
-  if (options.codex) agents.push("codex");
-  if (options.antigravity) agents.push("antigravity");
-  if (options.gemini) agents.push("gemini");
-  return agents;
+  return ALL_AGENT_NAMES.filter((name) => options[name]);
 }
 
 export function registerSetupCommand(program: Command): void {
-  program
-    .command("setup")
-    .description("Set up Context7 for your AI coding agent")
-    .option("--claude", "Set up for Claude Code")
-    .option("--cursor", "Set up for Cursor")
-    .option("--antigravity", "Set up for Antigravity (.agent/skills)")
-    .option("--opencode", "Set up for OpenCode")
-    .option("--codex", "Set up for Codex")
-    .option("--gemini", "Set up for Gemini CLI")
+  const command = program.command("setup").description("Set up Context7 for your AI coding agent");
+
+  for (const name of ALL_AGENT_NAMES) {
+    const agent = getAgent(name);
+    command.option(`--${name}`, agent.setupDescription ?? `Set up for ${agent.displayName}`);
+  }
+
+  command
     .option("--mcp", "Set up MCP server mode")
     .option("--cli", "Set up CLI + Skills mode (no MCP server)")
     .option("-p, --project", "Configure for current project instead of globally")
@@ -153,7 +138,7 @@ async function resolveCliAuth(apiKey?: string): Promise<void> {
 
 async function promptAgents(): Promise<SetupAgent[] | null> {
   const choices = ALL_AGENT_NAMES.map((name) => ({
-    name: SETUP_AGENT_NAMES[name],
+    name: getAgent(name).displayName,
     value: name,
   }));
 
@@ -167,7 +152,7 @@ async function promptAgents(): Promise<SetupAgent[] | null> {
         loop: false,
         theme: CHECKBOX_THEME,
       },
-      { getName: (a: SetupAgent) => SETUP_AGENT_NAMES[a] }
+      { getName: (a: SetupAgent) => getAgent(a).displayName }
     );
   } catch {
     return null;
@@ -199,9 +184,10 @@ async function installRule(
 ): Promise<{ status: string; path: string }> {
   const agent = getAgent(agentName);
   const rule = agent.rule;
-  const content = await getRuleContent(mode, agentName);
+  const body = await getRuleContent(mode, agentName);
 
   if (rule.kind === "file") {
+    const content = `${rule.contentPrefix ?? ""}${body}`;
     const ruleDir =
       scope === "global" ? rule.dir("global") : join(process.cwd(), rule.dir("project"));
     const rulePath = join(ruleDir, rule.filename);
@@ -213,7 +199,7 @@ async function installRule(
   const filePath =
     scope === "global" ? rule.file("global") : join(process.cwd(), rule.file("project"));
   const escapedMarker = rule.sectionMarker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const section = `${rule.sectionMarker}\n${content}${rule.sectionMarker}`;
+  const section = `${rule.sectionMarker}\n${body}${rule.sectionMarker}`;
 
   let existing = "";
   try {

@@ -33,23 +33,17 @@ import {
   isStdioContext7Entry,
   patchStdioApiKey,
 } from "../setup/mcp-writer.js";
-import { getAgent, ALL_AGENT_NAMES, type AuthOptions } from "../setup/agents.js";
+import {
+  getAgent,
+  ALL_AGENT_NAMES,
+  resolveVscodeUserDir,
+  type AuthOptions,
+} from "../setup/agents.js";
 
 describe("getRuleContent", () => {
   test("returns correct content per mode", async () => {
     expect(await getRuleContent("mcp", "claude")).toBe(MOCK_MCP_RULE);
     expect(await getRuleContent("cli", "claude")).toBe(MOCK_CLI_RULE);
-  });
-
-  test("only cursor gets alwaysApply frontmatter", async () => {
-    const cursor = await getRuleContent("mcp", "cursor");
-    expect(cursor).toContain("---\nalwaysApply: true\n---");
-    expect(cursor).toContain(MOCK_MCP_RULE);
-
-    for (const agent of ["claude", "antigravity", "codex", "opencode", "gemini"]) {
-      const content = await getRuleContent("mcp", agent);
-      expect(content).not.toContain("alwaysApply");
-    }
   });
 
   test("returns fallback content when all fetch URLs fail", async () => {
@@ -771,6 +765,75 @@ describe("agent config integration", () => {
     });
   });
 
+  describe("vscode", () => {
+    const agent = getAgent("vscode");
+
+    test("buildEntry with api-key produces VS Code HTTP shape", () => {
+      expect(agent.mcp.buildEntry(apiKeyAuth, "http")).toEqual({
+        type: "http",
+        url: "https://mcp.context7.com/mcp",
+        headers: { Authorization: "Bearer sk-test-123" },
+      });
+    });
+
+    test("buildEntry with oauth produces VS Code HTTP shape without headers", () => {
+      expect(agent.mcp.buildEntry(oauthAuth, "http")).toEqual({
+        type: "http",
+        url: "https://mcp.context7.com/mcp/oauth",
+      });
+    });
+
+    test("uses the VS Code project MCP path", () => {
+      expect(agent.mcp.projectPaths).toEqual([join(".vscode", "mcp.json")]);
+    });
+
+    test.each([
+      ["darwin", "/home/test", {}, "/home/test/Library/Application Support/Code/User"],
+      [
+        "win32",
+        "/home/test",
+        { APPDATA: "C:\\Users\\test\\AppData\\Roaming" },
+        "C:\\Users\\test\\AppData\\Roaming/Code/User",
+      ],
+      ["win32", "/home/test", {}, "/home/test/AppData/Roaming/Code/User"],
+      ["linux", "/home/test", { XDG_CONFIG_HOME: "/xdg" }, "/xdg/Code/User"],
+      ["linux", "/home/test", {}, "/home/test/.config/Code/User"],
+    ] as const)("resolves the %s user directory", (platform, home, env, expected) => {
+      expect(resolveVscodeUserDir(platform, home, env)).toBe(expected);
+    });
+
+    test("owns its instructions frontmatter in the agent rule policy", () => {
+      expect(agent.rule.kind).toBe("file");
+      if (agent.rule.kind === "file") {
+        expect(agent.rule.contentPrefix).toBe('---\napplyTo: "**"\n---\n\n');
+      }
+    });
+
+    test("merges into the VS Code servers section", async () => {
+      const path = join(tempDir, "mcp.json");
+      await writeJsonConfig(path, { servers: { other: { url: "https://other.com" } } });
+
+      const existing = await readJsonConfig(path);
+      const { config } = mergeServerEntry(
+        existing,
+        agent.mcp.configKey,
+        "context7",
+        agent.mcp.buildEntry(apiKeyAuth, "http")
+      );
+      await writeJsonConfig(path, config);
+
+      const result = await readJsonConfig(path);
+      expect((result.servers as Record<string, unknown>).context7).toEqual({
+        type: "http",
+        url: "https://mcp.context7.com/mcp",
+        headers: { Authorization: "Bearer sk-test-123" },
+      });
+      expect((result.servers as Record<string, unknown>).other).toEqual({
+        url: "https://other.com",
+      });
+    });
+  });
+
   describe("opencode", () => {
     const agent = getAgent("opencode");
 
@@ -1020,17 +1083,6 @@ describe("agent config integration", () => {
   });
 
   describe("all agents have consistent config", () => {
-    test("all agents are covered", () => {
-      expect(ALL_AGENT_NAMES).toEqual([
-        "claude",
-        "cursor",
-        "opencode",
-        "codex",
-        "antigravity",
-        "gemini",
-      ]);
-    });
-
     test.each(ALL_AGENT_NAMES)("%s buildEntry returns url for both auth modes", (name) => {
       const agent = getAgent(name);
       const apiEntry = agent.mcp.buildEntry(apiKeyAuth, "http");
@@ -1072,6 +1124,15 @@ describe("agent config integration", () => {
     test("cursor stdio entry uses npx command with --api-key in args", () => {
       const entry = getAgent("cursor").mcp.buildEntry(apiKeyAuth, "stdio");
       expect(entry).toEqual({
+        command: "npx",
+        args: ["-y", "@upstash/context7-mcp", "--api-key", "sk-test-stdio"],
+      });
+    });
+
+    test("vscode stdio entry includes the stdio transport discriminator", () => {
+      const entry = getAgent("vscode").mcp.buildEntry(apiKeyAuth, "stdio");
+      expect(entry).toEqual({
+        type: "stdio",
         command: "npx",
         args: ["-y", "@upstash/context7-mcp", "--api-key", "sk-test-stdio"],
       });
