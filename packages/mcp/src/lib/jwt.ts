@@ -3,8 +3,10 @@ import {
   CONTEXT7_API_BASE_URL,
   EMA_ISSUER,
   EMA_JWKS_URL,
+  OAUTH_ACCESS_TOKEN_AUDIENCE,
   OAUTH_AUTH_SERVER_URL,
   OAUTH_JWKS_URL,
+  OAUTH_REQUIRED_SCOPES,
   RESOURCE_URL,
 } from "./constants.js";
 
@@ -103,7 +105,21 @@ export async function validateJWT(token: string): Promise<JWTValidationResult> {
       return { valid: true };
     }
 
-    await jose.jwtVerify(token, oauthJwks, { issuer: OAUTH_AUTH_SERVER_URL });
+    const { payload } = await jose.jwtVerify(token, oauthJwks, {
+      issuer: OAUTH_AUTH_SERVER_URL,
+      audience: OAUTH_ACCESS_TOKEN_AUDIENCE,
+      algorithms: ["RS256"],
+      requiredClaims: ["sub", "exp", "iat"],
+    });
+
+    // OAuth access tokens carry delegated scopes. Requiring them prevents an
+    // OIDC ID token with otherwise similar issuer/audience claims from being
+    // accepted as an API credential.
+    const scopes = typeof payload.scope === "string" ? payload.scope.split(/\s+/) : [];
+    if (OAUTH_REQUIRED_SCOPES.some((scope) => !scopes.includes(scope))) {
+      return { valid: false, error: "Missing required scope" };
+    }
+
     return { valid: true };
   } catch (error) {
     if (error instanceof jose.errors.JWTExpired) {
