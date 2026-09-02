@@ -7,6 +7,7 @@ import {
   saveTokens,
   clearTokens,
   getValidAccessToken,
+  isContext7ApiKey,
   startDeviceAuthorization,
   pollDeviceToken,
   DEFAULT_DEVICE_POLL_INTERVAL_SECONDS,
@@ -95,6 +96,8 @@ function waitForEnter(prompt: string): Promise<void> {
 }
 
 async function announceIdentity(accessToken: string): Promise<string> {
+  if (isContext7ApiKey(accessToken)) return "Authenticated with API key";
+
   try {
     const whoami = await fetchWhoami(accessToken);
     const name = whoami.email || whoami.name;
@@ -227,6 +230,10 @@ async function whoamiCommand(): Promise<void> {
   }
 
   console.log(pc.green("Logged in"));
+
+  if (isContext7ApiKey(accessToken)) {
+    return;
+  }
 
   try {
     const whoami = await fetchWhoami(accessToken);

@@ -104,6 +104,7 @@
                 "group": "Features",
                 "pages": [
                   "enterprise/library-import",
+                  "enterprise/automatic-repository-updates",
                   "enterprise/gitops",
                   "enterprise/backup-restore"
                 ]
@@ -233,6 +234,11 @@
   "api": {
     "playground": {
       "display": "simple"
+    }
+  },
+  "integrations": {
+    "intercom": {
+      "appId": "rtjkeau6"
     }
   },
   "logo": {

@@ -25,7 +25,7 @@ import {
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { validateOpaqueCredential } from "./lib/auth/credential-validation.js";
-import { getClientIp } from "./lib/client-ip.js";
+import { getMaxSubscriptions } from "./lib/subscriptions.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -317,6 +317,9 @@ async function main() {
     const initialPort = CLI_PORT ?? DEFAULT_PORT;
 
     const app = express();
+    // Only private/local infrastructure may supply forwarding headers. Express
+    // then walks the chain right-to-left and ignores attacker-added prefixes.
+    app.set("trust proxy", ["loopback", "linklocal", "uniquelocal", "100.64.0.0/10"]);
     app.use(express.json());
 
     app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -356,6 +359,7 @@ async function main() {
     const extractApiKey = (req: express.Request): string | undefined => {
       return (
         extractBearerToken(req.headers.authorization) ||
+        extractHeaderValue(req.headers["x-context7-api-key"]) ||
         extractHeaderValue(req.headers["context7-api-key"]) ||
         extractHeaderValue(req.headers["x-api-key"]) ||
         extractHeaderValue(req.headers["context7_api_key"]) ||
@@ -378,6 +382,7 @@ async function main() {
     // go idle and the gateway reaps them at streamIdleTimeout (300s).
     const mcpHandler = createMcpHandler(() => createMcpServer(), {
       keepAliveMs: 0,
+      maxSubscriptions: getMaxSubscriptions(),
       onerror: (error) => console.error("MCP handler error:", error),
     });
     // Without onerror, request-conversion / handler.fetch throws are answered
@@ -448,7 +453,7 @@ async function main() {
         }
 
         const context: ClientContext = {
-          clientIp: getClientIp(req),
+          clientIp: req.ip,
           apiKey: apiKey,
           clientInfo: extractClientInfoFromUserAgent(req.headers["user-agent"]),
           transport: "http",
