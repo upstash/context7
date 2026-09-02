@@ -319,6 +319,32 @@ describe("remove command", () => {
     });
   });
 
+  test("removes only context7 from Devin MCP config", async () => {
+    const configPath = join(tempDir, ".devin", "mcp_config.json");
+
+    await mkdir(join(tempDir, ".devin"), { recursive: true });
+    await writeFile(
+      configPath,
+      JSON.stringify(
+        {
+          mcpServers: {
+            context7: { transport: "http", url: "https://mcp.context7.com/mcp" },
+            other: { command: "other" },
+          },
+        },
+        null,
+        2
+      ),
+      "utf-8"
+    );
+
+    await runCommand("remove", "--devin", "--mcp", "--project");
+
+    expect(JSON.parse(await readFile(configPath, "utf-8"))).toEqual({
+      mcpServers: { other: { command: "other" } },
+    });
+  });
+
   test("removes only context7 from opencode JSONC MCP config", async () => {
     const configPath = join(tempDir, "opencode.jsonc");
 

@@ -26,6 +26,7 @@ ctx7 setup --cursor
 ctx7 setup --claude
 ctx7 setup --opencode
 ctx7 setup --vscode
+ctx7 setup --devin
 ```
 
 ### Library Documentation
@@ -81,6 +82,7 @@ ctx7 setup --cursor
 ctx7 setup --claude
 ctx7 setup --opencode
 ctx7 setup --vscode
+ctx7 setup --devin
 
 # Use an existing API key instead of OAuth
 ctx7 setup --api-key YOUR_API_KEY
@@ -107,6 +109,7 @@ ctx7 remove
 ctx7 remove --cursor
 ctx7 remove --claude --project
 ctx7 remove --vscode --project
+ctx7 remove --devin --project
 
 # Remove both setup modes explicitly
 ctx7 remove --cursor --all
@@ -143,6 +146,7 @@ The CLI automatically detects which AI coding assistants you have installed and 
 | Claude Code                                                         | `.claude/skills/` |
 | Cursor                                                              | `.cursor/skills/` |
 | VS Code                                                             | `.agents/skills/` |
+| Devin                                                               | `.devin/skills/`  |
 | Antigravity                                                         | `.agent/skills/`  |
 
 ## Disabling Telemetry

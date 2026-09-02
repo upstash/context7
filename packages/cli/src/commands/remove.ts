@@ -142,7 +142,7 @@ async function resolveAgents(options: UninstallOptions, scope: Scope): Promise<S
 
   if (detected.length === 0) {
     log.warn(
-      "No Context7 setup detected. Pass --claude, --cursor, --vscode, --opencode, --codex, --antigravity, or --gemini."
+      `No Context7 setup detected. Pass one of: ${ALL_AGENT_NAMES.map((name) => `--${name}`).join(", ")}.`
     );
     return [];
   }
