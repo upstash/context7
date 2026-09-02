@@ -37,6 +37,7 @@ import {
   getAgent,
   ALL_AGENT_NAMES,
   resolveVscodeUserDir,
+  resolveDevinConfigDir,
   type AuthOptions,
 } from "../setup/agents.js";
 
@@ -834,6 +835,70 @@ describe("agent config integration", () => {
     });
   });
 
+  describe("devin", () => {
+    const agent = getAgent("devin");
+
+    test("buildEntry with api-key produces Devin HTTP shape", () => {
+      expect(agent.mcp.buildEntry(apiKeyAuth, "http")).toEqual({
+        transport: "http",
+        url: "https://mcp.context7.com/mcp",
+        headers: { Authorization: "Bearer sk-test-123" },
+      });
+    });
+
+    test("buildEntry with oauth produces Devin HTTP shape without headers", () => {
+      expect(agent.mcp.buildEntry(oauthAuth, "http")).toEqual({
+        transport: "http",
+        url: "https://mcp.context7.com/mcp/oauth",
+      });
+    });
+
+    test("uses the dedicated project MCP config introduced in Devin 3000.3", () => {
+      expect(agent.mcp.projectPaths).toEqual([join(".devin", "mcp_config.json")]);
+      expect(agent.skill.dir("project")).toBe(join(".devin", "skills"));
+    });
+
+    test.each([
+      ["darwin", "/home/test", {}, "/home/test/.config/devin"],
+      ["linux", "/home/test", {}, "/home/test/.config/devin"],
+      [
+        "win32",
+        "/home/test",
+        { APPDATA: "C:\\Users\\test\\AppData\\Roaming" },
+        "C:\\Users\\test\\AppData\\Roaming/devin",
+      ],
+      ["win32", "/home/test", {}, "/home/test/AppData/Roaming/devin"],
+    ] as const)("resolves the %s Devin config directory", (platform, home, env, expected) => {
+      expect(resolveDevinConfigDir(platform, home, env)).toBe(expected);
+    });
+
+    test("merges into Devin config without replacing other settings", async () => {
+      const path = join(tempDir, "mcp_config.json");
+      await writeJsonConfig(path, {
+        permissions: { allow: ["git status"] },
+        mcpServers: { other: { command: "other" } },
+      });
+
+      const existing = await readJsonConfig(path);
+      const { config } = mergeServerEntry(
+        existing,
+        agent.mcp.configKey,
+        "context7",
+        agent.mcp.buildEntry(apiKeyAuth, "http")
+      );
+      await writeJsonConfig(path, config);
+
+      const result = await readJsonConfig(path);
+      expect(result.permissions).toEqual({ allow: ["git status"] });
+      expect((result.mcpServers as Record<string, unknown>).context7).toEqual({
+        transport: "http",
+        url: "https://mcp.context7.com/mcp",
+        headers: { Authorization: "Bearer sk-test-123" },
+      });
+      expect((result.mcpServers as Record<string, unknown>).other).toEqual({ command: "other" });
+    });
+  });
+
   describe("opencode", () => {
     const agent = getAgent("opencode");
 
@@ -1133,6 +1198,14 @@ describe("agent config integration", () => {
       const entry = getAgent("vscode").mcp.buildEntry(apiKeyAuth, "stdio");
       expect(entry).toEqual({
         type: "stdio",
+        command: "npx",
+        args: ["-y", "@upstash/context7-mcp", "--api-key", "sk-test-stdio"],
+      });
+    });
+
+    test("devin stdio entry uses npx command with --api-key in args", () => {
+      const entry = getAgent("devin").mcp.buildEntry(apiKeyAuth, "stdio");
+      expect(entry).toEqual({
         command: "npx",
         args: ["-y", "@upstash/context7-mcp", "--api-key", "sk-test-stdio"],
       });

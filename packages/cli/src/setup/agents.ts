@@ -58,6 +58,17 @@ export function resolveVscodeUserDir(
   return join(env.XDG_CONFIG_HOME || join(home, ".config"), "Code", "User");
 }
 
+export function resolveDevinConfigDir(
+  platform: NodeJS.Platform = process.platform,
+  home: string = homedir(),
+  env: { APPDATA?: string } = { APPDATA: process.env.APPDATA }
+): string {
+  if (platform === "win32") {
+    return join(env.APPDATA || join(home, "AppData", "Roaming"), "devin");
+  }
+  return join(home, ".config", "devin");
+}
+
 export type RuleType =
   | {
       kind: "file";
@@ -204,6 +215,38 @@ const agents = {
       projectPaths: [".vscode"],
       get globalPaths() {
         return [resolveVscodeUserDir()];
+      },
+    },
+  },
+
+  devin: {
+    displayName: "Devin",
+    mcp: {
+      projectPaths: [join(".devin", "mcp_config.json")],
+      get globalPaths() {
+        return [join(resolveDevinConfigDir(), "mcp_config.json")];
+      },
+      configKey: "mcpServers",
+      buildEntry: (auth, transport) =>
+        transport === "stdio"
+          ? stdioEntry(auth)
+          : withHeaders({ transport: "http", url: mcpUrl(auth) }, auth),
+    },
+    rule: {
+      kind: "append",
+      file: (scope) =>
+        scope === "global" ? join(resolveDevinConfigDir(), "AGENTS.md") : "AGENTS.md",
+      sectionMarker: "<!-- context7 -->",
+    },
+    skill: {
+      name: "context7-mcp",
+      dir: (scope) =>
+        scope === "global" ? join(resolveDevinConfigDir(), "skills") : join(".devin", "skills"),
+    },
+    detect: {
+      projectPaths: [".devin"],
+      get globalPaths() {
+        return [resolveDevinConfigDir()];
       },
     },
   },
