@@ -345,6 +345,35 @@ describe("remove command", () => {
     });
   });
 
+  test("removes Copilot CLI project config from .mcp.json", async () => {
+    const configPath = join(tempDir, ".mcp.json");
+
+    await writeFile(
+      configPath,
+      JSON.stringify(
+        {
+          mcpServers: {
+            other: { type: "http", url: "https://other.com" },
+            context7: {
+              type: "http",
+              url: "https://mcp.context7.com/mcp",
+              tools: ["*"],
+            },
+          },
+        },
+        null,
+        2
+      ),
+      "utf-8"
+    );
+
+    await runCommand("remove", "--copilot", "--mcp", "--project");
+
+    expect(JSON.parse(await readFile(configPath, "utf-8"))).toEqual({
+      mcpServers: { other: { type: "http", url: "https://other.com" } },
+    });
+  });
+
   test("removes only context7 from opencode JSONC MCP config", async () => {
     const configPath = join(tempDir, "opencode.jsonc");
 

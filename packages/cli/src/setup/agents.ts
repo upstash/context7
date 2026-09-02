@@ -251,6 +251,36 @@ const agents = {
     },
   },
 
+  copilot: {
+    displayName: "GitHub Copilot CLI",
+    mcp: {
+      projectPaths: [".mcp.json"],
+      globalPaths: [join(homedir(), ".copilot", "mcp-config.json")],
+      configKey: "mcpServers",
+      buildEntry: (auth, transport) =>
+        transport === "stdio"
+          ? { type: "stdio", ...stdioEntry(auth), tools: ["*"] }
+          : withHeaders({ type: "http", url: mcpUrl(auth), tools: ["*"] }, auth),
+    },
+    rule: {
+      kind: "append",
+      file: (scope) =>
+        scope === "global" ? join(homedir(), ".copilot", "AGENTS.md") : "AGENTS.md",
+      sectionMarker: "<!-- context7 -->",
+    },
+    skill: {
+      name: "context7-mcp",
+      dir: (scope) =>
+        scope === "global" ? join(homedir(), ".agents", "skills") : join(".agents", "skills"),
+    },
+    detect: {
+      // Copilot shares .mcp.json with Claude Code, so project ownership cannot
+      // be inferred safely. Project setup remains available via --copilot.
+      projectPaths: [],
+      globalPaths: [join(homedir(), ".copilot")],
+    },
+  },
+
   opencode: {
     displayName: "OpenCode",
     mcp: {
