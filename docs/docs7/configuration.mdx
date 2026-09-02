@@ -3,23 +3,29 @@ title: Docs7 configuration
 description: Configure Docs7-only fields in docs.json
 ---
 
-Docs7 supports the Mintlify `docs.json` format. It also adds `filterSidebar` at the top level and `productGroups` on navigation tabs.
+Docs7 supports the `docs.json` format that was established by Mintlify. We also support options beyond this spec to make your documentation easier to navigate and create custom content groups.
 
-## Filter the sidebar
 
-Set `filterSidebar` to `true` to add a filter above the sidebar. Readers can press `/` to focus it.
-
-```json docs.json
-{
-  "filterSidebar": true
-}
-```
-
-The default value is `false`.
 
 ## Group products
 
-Add `productGroups` to one navigation tab in each navigation scope. This tab owns the product switcher. Its `pages` or `groups` are the initial sidebar. Each product has its own `pages` or `groups`.
+Product groups add a product switcher to the sidebar. A reader picks a product, and the sidebar shows only the pages for that product.
+
+<Frame caption="Before a reader picks a product, the sidebar lists the tab's own pages and every product group.">
+  <img
+    src="/images/docs7/product-groups.png"
+    alt="Docs7 sidebar showing the Products and Utility Tools product groups"
+  />
+</Frame>
+
+<Frame caption="After picking Redis, the sidebar shows only Redis pages. The dropdown at the top switches products.">
+  <img
+    src="/images/docs7/product-groups-selected.png"
+    alt="Docs7 sidebar with Redis selected in the product switcher"
+  />
+</Frame>
+
+To set this up, add a `productGroups` list to one tab. That tab shows the product switcher. The tab's own pages fill the sidebar until the reader picks a product. Each product then lists its own pages. If your docs have several versions or languages, add the list to one tab in each of them.
 
 ```json docs.json
 {
@@ -62,10 +68,33 @@ Add `productGroups` to one navigation tab in each navigation scope. This tab own
 
 In this example:
 
-- `Documentation` owns the product groups. Its `index` page is the initial sidebar.
-- `Redis` and `Rate Limit` each own their pages.
-- `API Reference` stays in the top navigation.
+- The Documentation tab shows the product switcher. Until the reader picks a product, the sidebar shows the index page.
+- Redis and Rate Limit are the two products. Each one lists the pages that appear when it is selected.
+- The API Reference tab is a normal tab and does not use product groups.
 
-A product must contain `pages` or `groups`, but not both. The arrays must not be empty. Product and group names must be unique within the owning tab.
+Rules:
 
-If `productGroups` is not set, Docs7 uses your regular Mintlify navigation.
+- Each product needs either a list of pages or a list of groups, not both.
+- That list must have at least one entry.
+- Inside one tab, product names must be unique, and group names must be unique.
+
+If you do not add product groups, Docs7 uses your regular navigation.
+
+## Enable sidebar filtering
+
+Set `filterSidebar` to `true` to add a filter above the sidebar. Readers can press `/` to focus it.
+
+```json docs.json
+{
+  "filterSidebar": true
+}
+```
+
+<Frame caption="The filter box sits above the sidebar. Typing in it narrows the sidebar to matching pages.">
+  <img
+    src="/images/docs7/filter-sidebar.png"
+    alt="Docs7 sidebar with the filter box above the page list"
+  />
+</Frame>
+
+The default value is `false`.

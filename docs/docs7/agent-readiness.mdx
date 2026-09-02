@@ -23,6 +23,19 @@ An agent can also request a normal page URL with `Accept: text/markdown`. Docs7 
 
 If you provide `llms.txt` or `llms-full.txt` at the docs root, your file replaces the generated version.
 
+## Recover from hallucinated URLs
+
+Agents often request URLs that do not exist. They guess a path from a page title, drop a segment, or reuse a URL from an older version of the docs. Instead of returning an empty 404, Docs7 responds with smart suggestions: the pages the agent was most likely looking for, with their Markdown URLs.
+
+<Frame caption="A request for a page that does not exist returns the closest matching pages instead of an empty 404.">
+  <img
+    src="/images/docs7/url-suggestions.png"
+    alt="Docs7 404 page listing suggested pages for a URL that does not exist"
+  />
+</Frame>
+
+For example, an agent that requests `/config.md` on a site whose page lives at `/configuration.md` receives that page as a suggestion. The agent can follow it directly without running a separate search, so a wrong guess costs one extra request instead of a dead end.
+
 ## Write content for agents
 
 Use the same source for people and agents whenever possible. When an agent needs extra context, use `Visibility`:
