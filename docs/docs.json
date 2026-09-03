@@ -3,6 +3,7 @@
   "theme": "mint",
   "name": "Context7 MCP",
   "description": "Up-to-date code docs for any prompt.",
+  "poweredByDocs7": true,
   "redirects": [
     {
       "source": "/enterprise/azure-apim",
