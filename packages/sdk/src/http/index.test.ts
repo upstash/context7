@@ -21,6 +21,14 @@ describe("HttpClient error handling", () => {
     vi.unstubAllGlobals();
   });
 
+  test("does not retry network errors when retries are disabled", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error("network unavailable"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(newClient().request({ path: ["search"] })).rejects.toThrow("network unavailable");
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
   test("throws Context7Error with message from JSON error body", async () => {
     mockFetch(
       new Response(JSON.stringify({ error: "rate limit exceeded" }), {

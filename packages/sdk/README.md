@@ -87,6 +87,12 @@ See the [documentation](https://context7.com/docs/sdks/ts/getting-started) for d
 pnpm test
 ```
 
+Run the live API integration tests separately with a configured API key:
+
+```sh
+pnpm test:integration
+```
+
 ### Building
 
 ```sh

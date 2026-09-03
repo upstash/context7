@@ -2,7 +2,7 @@ import { describe, test, expect } from "vitest";
 import { Context7 } from "./client";
 import { Context7Error } from "@error";
 
-describe("Context7 Client", () => {
+describe("Context7 Client integration", () => {
   const apiKey = process.env.CONTEXT7_API_KEY || process.env.API_KEY!;
 
   describe("constructor", () => {
