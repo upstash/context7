@@ -1,42 +1,8 @@
 import { describe, test, expect } from "vitest";
 import { Context7 } from "./client";
-import { Context7Error } from "@error";
 
 describe("Context7 Client integration", () => {
   const apiKey = process.env.CONTEXT7_API_KEY || process.env.API_KEY!;
-
-  describe("constructor", () => {
-    test("should create client with API key", () => {
-      const client = new Context7({ apiKey });
-      expect(client).toBeDefined();
-    });
-
-    test("should create client from environment variables", () => {
-      const client = new Context7();
-      expect(client).toBeDefined();
-    });
-
-    test("should throw error when API key is missing", () => {
-      const originalEnv = process.env.CONTEXT7_API_KEY;
-      const originalApiKey = process.env.API_KEY;
-
-      delete process.env.CONTEXT7_API_KEY;
-      delete process.env.API_KEY;
-
-      expect(() => new Context7({ apiKey: "" })).toThrow(Context7Error);
-      expect(() => new Context7({})).toThrow(Context7Error);
-      expect(() => new Context7()).toThrow("API key is required");
-
-      if (originalEnv) process.env.CONTEXT7_API_KEY = originalEnv;
-      if (originalApiKey) process.env.API_KEY = originalApiKey;
-    });
-
-    test("should prefer config API key over environment variable", () => {
-      const customApiKey = "ctx7sk-custom-key";
-      const client = new Context7({ apiKey: customApiKey });
-      expect(client).toBeDefined();
-    });
-  });
 
   describe("searchLibrary", () => {
     const client = new Context7({ apiKey });
@@ -144,36 +110,11 @@ describe("Context7 Client integration", () => {
     });
   });
 
-  describe("error handling", () => {
+  describe("live error handling", () => {
     const client = new Context7({ apiKey });
 
     test("should handle invalid library ID gracefully", async () => {
       await expect(client.getContext("test query", "/nonexistent/library")).rejects.toThrow();
-    });
-
-    test("should handle invalid search query", async () => {
-      await expect(client.searchLibrary("", "")).rejects.toThrow(Context7Error);
-    });
-  });
-
-  describe("type inference", () => {
-    const client = new Context7({ apiKey });
-
-    test("should infer Documentation[] for default (json) format", async () => {
-      const result = await client.getContext("How to use hooks", "/react/react");
-
-      expect(Array.isArray(result)).toBe(true);
-      expect(result[0]).toHaveProperty("title");
-      expect(result[0]).toHaveProperty("content");
-      expect(result[0]).toHaveProperty("source");
-    });
-
-    test("should infer string type for txt format", async () => {
-      const result = await client.getContext("How to use hooks", "/react/react", {
-        type: "txt",
-      });
-
-      expect(typeof result).toBe("string");
     });
   });
 });

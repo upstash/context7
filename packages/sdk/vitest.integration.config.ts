@@ -1,23 +1,16 @@
 import { defineConfig } from "vitest/config";
 import path from "path";
 import dotenv from "dotenv";
+import { sharedConfig } from "./vitest.config";
 
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 export default defineConfig({
+  ...sharedConfig,
   test: {
-    globals: true,
-    environment: "node",
+    ...sharedConfig.test,
     include: ["src/**/*.integration.test.ts"],
     env: process.env,
     testTimeout: 30_000,
-  },
-  resolve: {
-    alias: {
-      "@commands": path.resolve(__dirname, "./src/commands"),
-      "@http": path.resolve(__dirname, "./src/http"),
-      "@error": path.resolve(__dirname, "./src/error/index.ts"),
-      "@utils": path.resolve(__dirname, "./src/utils"),
-    },
   },
 });

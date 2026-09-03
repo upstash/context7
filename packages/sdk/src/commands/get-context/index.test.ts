@@ -1,12 +1,6 @@
 import { describe, test, expect } from "vitest";
 import { GetContextCommand } from "./index";
-import type { Requester } from "@http";
-
-function requesterWith(result: unknown): Requester {
-  return {
-    request: async <TResult>() => ({ result: result as TResult }),
-  };
-}
+import { requesterWith } from "@utils/test-utils";
 
 describe("GetContextCommand", () => {
   test("maps code and information snippets to documentation", async () => {

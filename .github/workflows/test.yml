@@ -82,3 +82,9 @@ jobs:
         run: pnpm test
         env:
           CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}
+
+      - name: SDK Integration Test
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+        run: pnpm --filter @upstash/context7-sdk test:integration
+        env:
+          CONTEXT7_API_KEY: ${{ secrets.CONTEXT7_API_KEY }}

@@ -1,13 +1,7 @@
 import { describe, test, expect } from "vitest";
 import { SearchLibraryCommand } from "./index";
-import type { Requester } from "@http";
 import { Context7Error } from "@error";
-
-function requesterWith(result: unknown): Requester {
-  return {
-    request: async <TResult>() => ({ result: result as TResult }),
-  };
-}
+import { requesterWith } from "@utils/test-utils";
 
 const apiResult = {
   results: [

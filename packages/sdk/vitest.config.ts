@@ -1,12 +1,10 @@
 import { defineConfig } from "vitest/config";
 import path from "path";
 
-export default defineConfig({
+export const sharedConfig = {
   test: {
     globals: true,
     environment: "node",
-    include: ["src/**/*.test.ts"],
-    exclude: ["src/**/*.integration.test.ts"],
   },
   resolve: {
     alias: {
@@ -15,5 +13,14 @@ export default defineConfig({
       "@error": path.resolve(__dirname, "./src/error/index.ts"),
       "@utils": path.resolve(__dirname, "./src/utils"),
     },
+  },
+};
+
+export default defineConfig({
+  ...sharedConfig,
+  test: {
+    ...sharedConfig.test,
+    include: ["src/**/*.test.ts"],
+    exclude: ["src/**/*.integration.test.ts"],
   },
 });
