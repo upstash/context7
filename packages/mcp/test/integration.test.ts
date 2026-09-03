@@ -150,7 +150,7 @@ async function connect(transportKind: "http" | "stdio", era: "modern" | "legacy"
 }
 
 describe("OAuth discovery", () => {
-  test("advertises Clerk for user OAuth and Context7 for enterprise auth", async () => {
+  test("keeps Clerk first for interactive OAuth", async () => {
     const metadataUrl = new URL("/.well-known/oauth-protected-resource", httpUrl);
     const response = await fetch(metadataUrl);
 
@@ -159,6 +159,32 @@ describe("OAuth discovery", () => {
       resource: "https://mcp.context7.com",
       authorization_servers: ["https://clerk.context7.com", "https://context7.com"],
     });
+  });
+
+  test("advertises only the EMA issuer for the path-bound EMA resource", async () => {
+    const metadataUrl = new URL("/.well-known/oauth-protected-resource/mcp/ema", httpUrl);
+    const response = await fetch(metadataUrl);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      resource: "https://mcp.context7.com/mcp/ema",
+      authorization_servers: ["https://context7.com"],
+      scopes_supported: ["profile", "email"],
+      bearer_methods_supported: ["header"],
+    });
+  });
+
+  test("challenges unauthenticated EMA requests with the path-bound metadata URL", async () => {
+    const response = await fetch(new URL("/mcp/ema", httpUrl), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("www-authenticate")).toBe(
+      'Bearer resource_metadata="https://mcp.context7.com/.well-known/oauth-protected-resource/mcp/ema"'
+    );
   });
 });
 

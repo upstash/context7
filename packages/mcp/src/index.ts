@@ -19,6 +19,8 @@ import { randomUUID } from "node:crypto";
 import {
   SERVER_VERSION,
   RESOURCE_URL,
+  EMA_RESOURCE_METADATA_URL,
+  EMA_RESOURCE_URL,
   OAUTH_AUTH_SERVER_URL,
   EMA_ISSUER,
   OPENAI_APPS_CHALLENGE_TOKEN,
@@ -393,21 +395,18 @@ async function main() {
     const handleMcpRequest = async (
       req: express.Request,
       res: express.Response,
-      requireAuth: boolean
+      requireAuth: boolean,
+      resourceMetadataUrl = `${new URL(RESOURCE_URL).origin}/.well-known/oauth-protected-resource`
     ) => {
       try {
         const apiKey = extractApiKey(req);
-        const baseUrl = new URL(RESOURCE_URL).origin;
 
         // OAuth discovery info header, used by MCP clients to discover the authorization server
         // TODO: @modelcontextprotocol/server now ships canonical OAuth helpers
         // (bearerAuthChallengeResponse, buildOAuthProtectedResourceMetadata,
         // oauthMetadataResponse) — replace this hand-rolled header and the
         // /.well-known/oauth-protected-resource route with them.
-        res.set(
-          "WWW-Authenticate",
-          `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
-        );
+        res.set("WWW-Authenticate", `Bearer resource_metadata="${resourceMetadataUrl}"`);
 
         if (requireAuth) {
           if (!apiKey) {
@@ -468,6 +467,13 @@ async function main() {
       await handleMcpRequest(req, res, true);
     });
 
+    // Enterprise-Managed Auth endpoint. It has separate protected-resource
+    // metadata so clients discover Context7's id-jag exchange instead of the
+    // Clerk authorization server used by interactive OAuth.
+    app.all("/mcp/ema", async (req, res) => {
+      await handleMcpRequest(req, res, true, EMA_RESOURCE_METADATA_URL);
+    });
+
     app.get("/ping", (_req: express.Request, res: express.Response) => {
       res.json({ status: "ok", message: "pong" });
     });
@@ -483,6 +489,18 @@ async function main() {
           // regular authorization-code flows; Context7 handles only the
           // enterprise-managed id-jag exchange.
           authorization_servers: Array.from(new Set([OAUTH_AUTH_SERVER_URL, EMA_ISSUER])),
+          scopes_supported: ["profile", "email"],
+          bearer_methods_supported: ["header"],
+        });
+      }
+    );
+
+    app.get(
+      "/.well-known/oauth-protected-resource/mcp/ema",
+      (_req: express.Request, res: express.Response) => {
+        res.json({
+          resource: EMA_RESOURCE_URL,
+          authorization_servers: [EMA_ISSUER],
           scopes_supported: ["profile", "email"],
           bearer_methods_supported: ["header"],
         });

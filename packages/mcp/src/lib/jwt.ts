@@ -3,9 +3,9 @@ import {
   CONTEXT7_API_BASE_URL,
   EMA_ISSUER,
   EMA_JWKS_URL,
+  EMA_RESOURCE_URL,
   OAUTH_AUTH_SERVER_URL,
   OAUTH_JWKS_URL,
-  RESOURCE_URL,
 } from "./constants.js";
 
 const oauthJwks = jose.createRemoteJWKSet(new URL(OAUTH_JWKS_URL));
@@ -99,7 +99,7 @@ export async function validateJWT(token: string): Promise<JWTValidationResult> {
     }
 
     if (iss === EMA_ISSUER) {
-      await jose.jwtVerify(token, emaJwks, { issuer: EMA_ISSUER, audience: RESOURCE_URL });
+      await jose.jwtVerify(token, emaJwks, { issuer: EMA_ISSUER, audience: EMA_RESOURCE_URL });
       return { valid: true };
     }
 

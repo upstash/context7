@@ -17,6 +17,7 @@ const ENTRA_ISSUER = `https://login.microsoftonline.com/${TENANT_ID}/v2.0`;
 const AUDIENCE = "6ff6a635-03d9-472d-a7f1-dc98a4e5fde2";
 const originalOAuthAuthServerUrl = process.env.OAUTH_AUTH_SERVER_URL;
 const originalOAuthJwksUrl = process.env.OAUTH_JWKS_URL;
+const originalEmaResourceUrl = process.env.EMA_RESOURCE_URL;
 
 async function loadModule() {
   vi.resetModules();
@@ -54,8 +55,32 @@ afterEach(() => {
   } else {
     process.env.OAUTH_JWKS_URL = originalOAuthJwksUrl;
   }
+  if (originalEmaResourceUrl === undefined) {
+    delete process.env.EMA_RESOURCE_URL;
+  } else {
+    process.env.EMA_RESOURCE_URL = originalEmaResourceUrl;
+  }
   vi.unstubAllGlobals();
   vi.clearAllMocks();
+});
+
+describe("validateJWT - EMA path", () => {
+  test("requires the path-bound EMA resource as the token audience", async () => {
+    process.env.EMA_RESOURCE_URL = "https://mcp.example.com/enterprise/mcp";
+    vi.mocked(jose.jwtVerify).mockResolvedValue({
+      payload: {},
+      protectedHeader: { alg: "RS256" },
+    } as unknown as Awaited<ReturnType<typeof jose.jwtVerify>>);
+
+    const { validateJWT } = await loadModule();
+    const result = await validateJWT(makeEntraToken({ iss: "https://context7.com" }));
+
+    expect(result.valid).toBe(true);
+    expect(jose.jwtVerify).toHaveBeenCalledWith(expect.any(String), "fake-jwks", {
+      issuer: "https://context7.com",
+      audience: "https://mcp.example.com/enterprise/mcp",
+    });
+  });
 });
 
 describe("isJWT", () => {
