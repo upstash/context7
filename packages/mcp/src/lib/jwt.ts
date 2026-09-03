@@ -71,6 +71,28 @@ export function isJWT(token: string): boolean {
   return token.split(".").length === 3;
 }
 
+function jwtValidationFailure(error: unknown): JWTValidationResult {
+  if (error instanceof jose.errors.JWTExpired) {
+    return { valid: false, error: "Token expired" };
+  }
+  if (error instanceof jose.errors.JWTClaimValidationFailed) {
+    return { valid: false, error: "Invalid token claims" };
+  }
+  if (error instanceof jose.errors.JWSSignatureVerificationFailed) {
+    return { valid: false, error: "Invalid signature" };
+  }
+  return { valid: false, error: "Invalid token" };
+}
+
+export async function validateEmaJWT(token: string): Promise<JWTValidationResult> {
+  try {
+    await jose.jwtVerify(token, emaJwks, { issuer: EMA_ISSUER, audience: EMA_RESOURCE_URL });
+    return { valid: true };
+  } catch (error) {
+    return jwtValidationFailure(error);
+  }
+}
+
 export async function validateJWT(token: string): Promise<JWTValidationResult> {
   try {
     const decoded = jose.decodeJwt(token);
@@ -99,22 +121,12 @@ export async function validateJWT(token: string): Promise<JWTValidationResult> {
     }
 
     if (iss === EMA_ISSUER) {
-      await jose.jwtVerify(token, emaJwks, { issuer: EMA_ISSUER, audience: EMA_RESOURCE_URL });
-      return { valid: true };
+      return validateEmaJWT(token);
     }
 
     await jose.jwtVerify(token, oauthJwks, { issuer: OAUTH_AUTH_SERVER_URL });
     return { valid: true };
   } catch (error) {
-    if (error instanceof jose.errors.JWTExpired) {
-      return { valid: false, error: "Token expired" };
-    }
-    if (error instanceof jose.errors.JWTClaimValidationFailed) {
-      return { valid: false, error: "Invalid token claims" };
-    }
-    if (error instanceof jose.errors.JWSSignatureVerificationFailed) {
-      return { valid: false, error: "Invalid signature" };
-    }
-    return { valid: false, error: "Invalid token" };
+    return jwtValidationFailure(error);
   }
 }

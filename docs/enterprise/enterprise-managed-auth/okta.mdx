@@ -60,14 +60,14 @@ Click **Done**.
 
 Browse the catalog again, search for **XAA Requesting App**, and click **Add Integration**.
 
-- **Application label:** `Claude Code`
+- **Application label:** `Claude`
 - **Issuer URL:** `https://context7.com`
-- **Client ID:** `https://claude.ai/oauth/claude-code-client-metadata`
+- **Client ID:** the fixed client identifier provided during your Claude EMA onboarding
 
-The Client ID is Claude Code's published
-[Client ID Metadata Document](https://claude.ai/oauth/claude-code-client-metadata). Enterprise-Managed
-Auth does not use Dynamic Client Registration: the same fixed Client ID must be configured in Okta,
-Claude, and Context7 before an assertion can be exchanged.
+Enterprise-Managed Auth does not use Dynamic Client Registration. The identity assertion contains a
+fixed Client ID, so the exact value supplied during onboarding must be configured in Okta, Claude,
+and Context7 before an assertion can be exchanged. Do not substitute a dynamically registered client
+or a client identifier from a different Claude surface.
 
 Click **Done**.
 

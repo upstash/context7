@@ -2,7 +2,13 @@
 
 import { toNodeHandler } from "@modelcontextprotocol/node";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
-import { McpServer, createMcpHandler, type ServerContext } from "@modelcontextprotocol/server";
+import {
+  McpServer,
+  createMcpHandler,
+  getOAuthProtectedResourceMetadataUrl,
+  type OAuthProtectedResourceMetadata,
+  type ServerContext,
+} from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
 import type { ClientContext } from "./lib/types.js";
@@ -11,7 +17,6 @@ import {
   extractClientInfoFromUserAgent,
   envelopeClientInfo,
 } from "./lib/utils.js";
-import { isJWT, validateJWT } from "./lib/jwt.js";
 import express from "express";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
@@ -19,13 +24,13 @@ import { randomUUID } from "node:crypto";
 import {
   SERVER_VERSION,
   RESOURCE_URL,
-  EMA_RESOURCE_METADATA_URL,
   EMA_RESOURCE_URL,
   OAUTH_AUTH_SERVER_URL,
   EMA_ISSUER,
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
+import { validateMcpCredential, type HttpAuthPolicy } from "./lib/auth/http-auth.js";
 import { getMaxSubscriptions } from "./lib/subscriptions.js";
 
 /** Default HTTP server port */
@@ -368,6 +373,27 @@ async function main() {
       );
     };
 
+    const scopesSupported = ["profile", "email"];
+    const oauthResourceUrl = new URL(RESOURCE_URL);
+    const emaResourceUrl = new URL(EMA_RESOURCE_URL);
+    const oauthResourceMetadataUrl = getOAuthProtectedResourceMetadataUrl(oauthResourceUrl);
+    const emaResourceMetadataUrl = getOAuthProtectedResourceMetadataUrl(emaResourceUrl);
+    const oauthResourceMetadata = {
+      resource: RESOURCE_URL,
+      authorization_servers: Array.from(new Set([OAUTH_AUTH_SERVER_URL, EMA_ISSUER])),
+      scopes_supported: scopesSupported,
+    } satisfies OAuthProtectedResourceMetadata;
+    const emaResourceMetadata = {
+      resource: EMA_RESOURCE_URL,
+      authorization_servers: [EMA_ISSUER],
+      scopes_supported: scopesSupported,
+    } satisfies OAuthProtectedResourceMetadata;
+    const authPolicies = {
+      anonymous: { kind: "anonymous", resourceMetadataUrl: oauthResourceMetadataUrl },
+      oauth: { kind: "oauth", resourceMetadataUrl: oauthResourceMetadataUrl },
+      ema: { kind: "ema", resourceMetadataUrl: emaResourceMetadataUrl },
+    } satisfies Record<string, HttpAuthPolicy>;
+
     // Stateless serving: a fresh server instance per request, no Mcp-Session-Id,
     // no session store. The handler serves modern (2026-07-28) traffic natively
     // and 2025-era traffic through its stateless legacy fallback, which answers
@@ -392,39 +418,29 @@ async function main() {
       onerror: (error) => console.error("MCP node adapter error:", error),
     });
 
-    const handleMcpRequest = async (
-      req: express.Request,
-      res: express.Response,
-      requireAuth: boolean
-    ) => {
-      try {
-        const apiKey = extractApiKey(req);
-        const resourceMetadataUrl =
-          req.path === "/mcp/ema"
-            ? EMA_RESOURCE_METADATA_URL
-            : `${new URL(RESOURCE_URL).origin}/.well-known/oauth-protected-resource`;
+    const createMcpRequestHandler =
+      (authPolicy: HttpAuthPolicy) => async (req: express.Request, res: express.Response) => {
+        try {
+          const apiKey = extractApiKey(req);
 
-        // OAuth discovery info header, used by MCP clients to discover the authorization server
-        // TODO: @modelcontextprotocol/server now ships canonical OAuth helpers
-        // (bearerAuthChallengeResponse, buildOAuthProtectedResourceMetadata,
-        // oauthMetadataResponse) — replace this hand-rolled header and the
-        // /.well-known/oauth-protected-resource route with them.
-        res.set("WWW-Authenticate", `Bearer resource_metadata="${resourceMetadataUrl}"`);
+          res.set(
+            "WWW-Authenticate",
+            `Bearer resource_metadata="${authPolicy.resourceMetadataUrl}"`
+          );
 
-        if (requireAuth) {
-          if (!apiKey) {
-            return res.status(401).json({
-              jsonrpc: "2.0",
-              error: {
-                code: -32001,
-                message: "Authentication required. Please authenticate to use this MCP server.",
-              },
-              id: null,
-            });
-          }
+          if (authPolicy.kind !== "anonymous") {
+            if (!apiKey) {
+              return res.status(401).json({
+                jsonrpc: "2.0",
+                error: {
+                  code: -32001,
+                  message: "Authentication required. Please authenticate to use this MCP server.",
+                },
+                id: null,
+              });
+            }
 
-          if (isJWT(apiKey)) {
-            const validationResult = await validateJWT(apiKey);
+            const validationResult = await validateMcpCredential(authPolicy, apiKey);
             if (!validationResult.valid) {
               return res.status(401).json({
                 jsonrpc: "2.0",
@@ -436,46 +452,39 @@ async function main() {
               });
             }
           }
-        }
 
-        const context: ClientContext = {
-          clientIp: req.ip,
-          apiKey: apiKey,
-          clientInfo: extractClientInfoFromUserAgent(req.headers["user-agent"]),
-          transport: "http",
-        };
+          const context: ClientContext = {
+            clientIp: req.ip,
+            apiKey: apiKey,
+            clientInfo: extractClientInfoFromUserAgent(req.headers["user-agent"]),
+            transport: "http",
+          };
 
-        await requestContext.run(context, async () => {
-          await nodeHandler(req, res, req.body);
-        });
-      } catch (error) {
-        console.error("Error handling MCP request:", error);
-        if (!res.headersSent) {
-          res.status(500).json({
-            jsonrpc: "2.0",
-            error: { code: -32603, message: "Internal server error" },
-            id: null,
+          await requestContext.run(context, async () => {
+            await nodeHandler(req, res, req.body);
           });
+        } catch (error) {
+          console.error("Error handling MCP request:", error);
+          if (!res.headersSent) {
+            res.status(500).json({
+              jsonrpc: "2.0",
+              error: { code: -32603, message: "Internal server error" },
+              id: null,
+            });
+          }
         }
-      }
-    };
+      };
 
     // Anonymous access endpoint - no authentication required
-    app.all("/mcp", async (req, res) => {
-      await handleMcpRequest(req, res, false);
-    });
+    app.all("/mcp", createMcpRequestHandler(authPolicies.anonymous));
 
     // OAuth-protected endpoint - requires authentication
-    app.all("/mcp/oauth", async (req, res) => {
-      await handleMcpRequest(req, res, true);
-    });
+    app.all("/mcp/oauth", createMcpRequestHandler(authPolicies.oauth));
 
     // Enterprise-Managed Auth endpoint. It has separate protected-resource
     // metadata so clients discover Context7's id-jag exchange instead of the
     // Clerk authorization server used by interactive OAuth.
-    app.all("/mcp/ema", async (req, res) => {
-      await handleMcpRequest(req, res, true);
-    });
+    app.all("/mcp/ema", createMcpRequestHandler(authPolicies.ema));
 
     app.get("/ping", (_req: express.Request, res: express.Response) => {
       res.json({ status: "ok", message: "pong" });
@@ -483,32 +492,13 @@ async function main() {
 
     // OAuth 2.0 Protected Resource Metadata (RFC 9728)
     // Used by MCP clients to discover the authorization server
-    app.get(
-      "/.well-known/oauth-protected-resource",
-      (_req: express.Request, res: express.Response) => {
-        res.json({
-          resource: RESOURCE_URL,
-          // Each entry is an independent authorization server. Clerk handles
-          // regular authorization-code flows; Context7 handles only the
-          // enterprise-managed id-jag exchange.
-          authorization_servers: Array.from(new Set([OAUTH_AUTH_SERVER_URL, EMA_ISSUER])),
-          scopes_supported: ["profile", "email"],
-          bearer_methods_supported: ["header"],
-        });
-      }
-    );
+    app.get(new URL(oauthResourceMetadataUrl).pathname, (_req, res) => {
+      res.json(oauthResourceMetadata);
+    });
 
-    app.get(
-      "/.well-known/oauth-protected-resource/mcp/ema",
-      (_req: express.Request, res: express.Response) => {
-        res.json({
-          resource: EMA_RESOURCE_URL,
-          authorization_servers: [EMA_ISSUER],
-          scopes_supported: ["profile", "email"],
-          bearer_methods_supported: ["header"],
-        });
-      }
-    );
+    app.get(new URL(emaResourceMetadataUrl).pathname, (_req, res) => {
+      res.json(emaResourceMetadata);
+    });
 
     app.get(
       "/.well-known/oauth-authorization-server",

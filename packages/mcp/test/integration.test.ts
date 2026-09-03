@@ -170,7 +170,6 @@ describe("OAuth discovery", () => {
       resource: "https://mcp.context7.com/mcp/ema",
       authorization_servers: ["https://context7.com"],
       scopes_supported: ["profile", "email"],
-      bearer_methods_supported: ["header"],
     });
   });
 
@@ -185,6 +184,22 @@ describe("OAuth discovery", () => {
     expect(response.headers.get("www-authenticate")).toBe(
       'Bearer resource_metadata="https://mcp.context7.com/.well-known/oauth-protected-resource/mcp/ema"'
     );
+  });
+
+  test("rejects opaque bearer credentials on the EMA endpoint", async () => {
+    const response = await fetch(new URL("/mcp/ema", httpUrl), {
+      method: "POST",
+      headers: {
+        authorization: "Bearer not-an-ema-token",
+        "content-type": "application/json",
+      },
+      body: "{}",
+    });
+
+    expect(response.status).toBe(401);
+    expect(await response.json()).toMatchObject({
+      error: { message: "EMA access token required" },
+    });
   });
 });
 

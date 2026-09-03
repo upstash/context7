@@ -59,14 +59,14 @@ afterEach(() => {
 });
 
 describe("validateJWT - EMA path", () => {
-  test("requires the path-bound EMA resource as the token audience", async () => {
+  test("requires the EMA issuer and path-bound resource", async () => {
     vi.mocked(jose.jwtVerify).mockResolvedValue({
       payload: {},
       protectedHeader: { alg: "RS256" },
     } as unknown as Awaited<ReturnType<typeof jose.jwtVerify>>);
 
-    const { validateJWT } = await loadModule();
-    const result = await validateJWT(makeEntraToken({ iss: "https://context7.com" }));
+    const { validateEmaJWT } = await loadModule();
+    const result = await validateEmaJWT(makeEntraToken({ iss: "https://clerk.context7.com" }));
 
     expect(result.valid).toBe(true);
     expect(jose.jwtVerify).toHaveBeenCalledWith(expect.any(String), "fake-jwks", {
