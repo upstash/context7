@@ -150,7 +150,7 @@ async function connect(transportKind: "http" | "stdio", era: "modern" | "legacy"
 }
 
 describe("OAuth discovery", () => {
-  test("keeps Clerk first for interactive OAuth", async () => {
+  test("advertises Clerk for user OAuth and Context7 for enterprise auth", async () => {
     const metadataUrl = new URL("/.well-known/oauth-protected-resource", httpUrl);
     const response = await fetch(metadataUrl);
 
@@ -170,6 +170,7 @@ describe("OAuth discovery", () => {
       resource: "https://mcp.context7.com/mcp/ema",
       authorization_servers: ["https://context7.com"],
       scopes_supported: ["profile", "email"],
+      bearer_methods_supported: ["header"],
     });
   });
 

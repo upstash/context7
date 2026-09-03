@@ -14,6 +14,7 @@ const DEFAULT_OAUTH_AUTH_SERVER_URL = "https://clerk.context7.com";
 export const CONTEXT7_API_BASE_URL = process.env.CONTEXT7_API_URL || `${CONTEXT7_BASE_URL}/api`;
 export const RESOURCE_URL = process.env.RESOURCE_URL || MCP_RESOURCE_URL;
 export const EMA_RESOURCE_URL = `${MCP_RESOURCE_URL}/mcp/ema`;
+export const EMA_RESOURCE_METADATA_URL = `${MCP_RESOURCE_URL}/.well-known/oauth-protected-resource/mcp/ema`;
 
 // Clerk owns the interactive OAuth flow and is the issuer returned in the
 // authorization response. Advertising Clerk directly keeps RFC 8414 discovery
