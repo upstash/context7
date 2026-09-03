@@ -395,11 +395,14 @@ async function main() {
     const handleMcpRequest = async (
       req: express.Request,
       res: express.Response,
-      requireAuth: boolean,
-      resourceMetadataUrl = `${new URL(RESOURCE_URL).origin}/.well-known/oauth-protected-resource`
+      requireAuth: boolean
     ) => {
       try {
         const apiKey = extractApiKey(req);
+        const resourceMetadataUrl =
+          req.path === "/mcp/ema"
+            ? EMA_RESOURCE_METADATA_URL
+            : `${new URL(RESOURCE_URL).origin}/.well-known/oauth-protected-resource`;
 
         // OAuth discovery info header, used by MCP clients to discover the authorization server
         // TODO: @modelcontextprotocol/server now ships canonical OAuth helpers
@@ -471,7 +474,7 @@ async function main() {
     // metadata so clients discover Context7's id-jag exchange instead of the
     // Clerk authorization server used by interactive OAuth.
     app.all("/mcp/ema", async (req, res) => {
-      await handleMcpRequest(req, res, true, EMA_RESOURCE_METADATA_URL);
+      await handleMcpRequest(req, res, true);
     });
 
     app.get("/ping", (_req: express.Request, res: express.Response) => {
