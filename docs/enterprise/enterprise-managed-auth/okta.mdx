@@ -9,7 +9,8 @@ Enterprise-Managed Auth (EMA) lets your Okta administrators decide who can use t
 It implements the MCP [Enterprise-Managed Authorization](https://modelcontextprotocol.io/extensions/auth/enterprise-managed-authorization) extension: Okta issues a short-lived Identity Assertion (ID-JAG) for the user, Context7 validates it against your Okta tenant, and resolves the user to your teamspace by email.
 
 <Warning>
-Enterprise-Managed Auth currently works with **Claude Code** as the MCP client.
+Enterprise-Managed Auth is available on Claude Team and Enterprise plans and currently requires
+preview access from both Anthropic and Context7. Contact Context7 support before starting the setup.
 </Warning>
 
 <Note>
@@ -29,6 +30,7 @@ Access is governed entirely in Okta. There is no user list to maintain in Contex
 
 - An **Okta org** with **Cross App Access** enabled.
 - A **Context7 enterprise teamspace**. The Enterprise-Managed Auth settings appear only for enterprise plans.
+- A **Claude Team or Enterprise organization** with Enterprise-Managed Auth enabled.
 - Developers assigned to the connected Okta app. They are provisioned into the teamspace automatically on first sign-in, so there is no manual user list to maintain.
 
 ## Part 1: Configure Okta
@@ -58,11 +60,16 @@ Click **Done**.
 
 Browse the catalog again, search for **XAA Requesting App**, and click **Add Integration**.
 
-- **Application label:** a name for the MCP client (for example `MCP Client`)
+- **Application label:** `Claude Code`
 - **Issuer URL:** `https://context7.com`
-- **Client ID:** the client identifier the MCP client uses (for example `mcpclient-at-context7`)
+- **Client ID:** `https://claude.ai/oauth/claude-code-client-metadata`
 
-Click **Done**, then open the **Sign On** tab and note the Client ID and secret if your client needs them.
+The Client ID is Claude Code's published
+[Client ID Metadata Document](https://claude.ai/oauth/claude-code-client-metadata). Enterprise-Managed
+Auth does not use Dynamic Client Registration: the same fixed Client ID must be configured in Okta,
+Claude, and Context7 before an assertion can be exchanged.
+
+Click **Done**.
 
 <Frame>
   ![Add XAA Requesting App general settings with label, issuer URL, and client ID](/images/enterprise/enterprise-managed-auth/okta-requesting-app.png)
@@ -103,17 +110,39 @@ Use your **org** authorization server issuer (`https://<your-org>.okta.com`), no
 
 ## Part 3: How developers connect
 
-Enterprise-Managed Auth is wired on the **client** side by your organization, not per developer. The Okta sign-in isn't triggered by a server URL someone pastes. It happens because Claude Code is configured to use your enterprise IdP for managed connectors.
+Enterprise-Managed Auth is wired on the **client** side by your organization, not per developer. The Okta sign-in isn't triggered by a server URL someone pastes. It happens because Claude is configured to use your enterprise IdP for managed connectors.
 
-Your admin connects the Okta org to Claude and enables the Context7 MCP server (`https://mcp.context7.com/mcp`) as a managed connector. After that, anyone using Claude Code with their corporate Okta identity gets Context7 automatically: Claude Code obtains an ID-JAG from Okta and exchanges it with Context7 for an access token. There is no token to paste and no per-user OAuth.
+Your admin connects the Okta org to Claude and enables the dedicated Context7 EMA endpoint as a managed connector:
 
-See Claude's [Enterprise-Managed Auth](https://claude.com/blog/enterprise-managed-auth) documentation for the client-side admin setup.
+```text
+https://mcp.context7.com/mcp/ema
+```
+
+This URL is intentionally different from the authless `/mcp` endpoint and the interactive OAuth
+`/mcp/oauth` endpoint. It returns an authentication challenge whose protected-resource metadata is
+bound to the full `/mcp/ema` URL and points Claude to Context7's JWT bearer token exchange.
+
+After the connector is enabled, Claude obtains an ID-JAG from Okta and exchanges it with Context7
+for a path-bound access token. There is no token to paste and no per-user OAuth consent screen.
+
+See Claude's
+[Enterprise-Managed Auth for connectors](https://claude.com/docs/connectors/building/enterprise-managed-auth)
+documentation for the client-side admin setup and current availability.
 
 ## Troubleshooting
 
 ### `unauthorized_client` / "client cannot use a custom authorization server"
 
-The sign-in or token-exchange used a custom authorization server. Use the org authorization server endpoints (`https://<your-org>.okta.com/oauth2/v1/...`).
+First confirm that the requesting app uses the fixed Claude Client ID from Step 3 and that Context7
+has enabled Claude EMA for your teamspace. If those match, check whether sign-in or token exchange
+used a custom Okta authorization server. Cross-App Access requires the org authorization server
+endpoints (`https://<your-org>.okta.com/oauth2/v1/...`).
+
+### Claude opens an interactive OAuth screen
+
+Confirm that the managed connector URL ends in `/mcp/ema`. The `/mcp/oauth` endpoint is for
+interactive OAuth and advertises a different authorization server. Also confirm that your Claude
+organization has Enterprise-Managed Auth enabled for the connector.
 
 ### A valid Okta user can't be provisioned
 
