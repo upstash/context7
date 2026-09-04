@@ -57,6 +57,9 @@ importers:
       ai:
         specifier: ^6.0.5
         version: 6.0.23(zod@4.4.3)
+      dotenv:
+        specifier: ^17.4.2
+        version: 17.4.2
       next:
         specifier: ^16.2.9
         version: 16.3.3(@opentelemetry/api@1.9.0)(@types/node@25.9.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -79,6 +82,9 @@ importers:
       '@types/react-dom':
         specifier: ^19.2.0
         version: 19.2.5(@types/react@19.2.18)
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
       typescript:
         specifier: ^5.8.2
         version: 5.9.3

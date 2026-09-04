@@ -2,7 +2,7 @@
 
 These examples show how to expose the Context7 SDK as native tools in popular TypeScript agent frameworks.
 
-- [Vercel AI SDK](./ai-sdk): a deployable Next.js app with a `ToolLoopAgent`
+- [Vercel AI SDK](./ai-sdk): a standalone `ToolLoopAgent` with a deployable Next.js app
 - [LangChain](./langchain): a LangChain agent with Context7 tools
 
 ## Run an example
@@ -20,9 +20,10 @@ cp examples/ai-sdk/.env.example examples/ai-sdk/.env.local
 cp examples/langchain/.env.example examples/langchain/.env
 ```
 
-Then run either example:
+Then run the standalone Vercel AI SDK agent, its Next.js app, or the LangChain agent:
 
 ```bash
+pnpm --dir examples/ai-sdk agent
 pnpm --dir examples/ai-sdk dev
 pnpm --dir examples/langchain start
 ```
