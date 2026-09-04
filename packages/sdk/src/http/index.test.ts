@@ -150,6 +150,28 @@ describe("HttpClient error handling", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
+  test("reports a timeout when the deadline expires during retry backoff", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue(new Response("unavailable", { status: 503 }));
+    const client = new HttpClient({
+      baseUrl: "https://example.com/api",
+      fetch: fetchMock,
+      retry: { retries: 1, backoff: () => 1_000 },
+      timeout: 25,
+    });
+
+    const request = client.request({ method: "GET", path: ["search"] }).catch((e) => e);
+    await vi.advanceTimersByTimeAsync(25);
+    const error = await request;
+
+    expect(error).toMatchObject({
+      code: "request_timeout",
+      message: "Request timed out",
+      retryable: true,
+    });
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
   test("honors a per-request abort signal", async () => {
     const controller = new AbortController();
     const fetchMock = vi.fn((_url: string | URL, init?: RequestInit) => {
@@ -344,6 +366,8 @@ describe("HttpClient error handling", () => {
   test("rejects invalid base URLs", () => {
     expect(() => new HttpClient({ baseUrl: "example.com" })).toThrow(Context7UrlError);
     expect(() => new HttpClient({ baseUrl: "ftp://example.com" })).toThrow(Context7UrlError);
+    expect(() => new HttpClient({ baseUrl: " https://example.com" })).toThrow(Context7UrlError);
+    expect(() => new HttpClient({ baseUrl: "https://example.com\n" })).toThrow(Context7UrlError);
   });
 
   test("allows keepalive to be disabled", async () => {

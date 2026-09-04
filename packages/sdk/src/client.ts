@@ -23,7 +23,7 @@ export type {
 export * from "@error";
 
 export class Context7 {
-  private httpClient: HttpClient;
+  private readonly httpClient: HttpClient;
 
   constructor(config: Context7Config = {}) {
     const apiKey = config.apiKey || getEnvironmentApiKey();
@@ -94,7 +94,7 @@ export class Context7 {
     options?: SearchLibraryOptions
   ): Promise<Library[] | string> {
     const command = new SearchLibraryCommand(query, libraryName, options);
-    return await command.exec(this.httpClient);
+    return command.exec(this.httpClient);
   }
 
   /**
@@ -137,7 +137,7 @@ export class Context7 {
     options?: GetContextOptions
   ): Promise<Documentation[] | string> {
     const command = new GetContextCommand(query, libraryId, options);
-    return await command.exec(this.httpClient);
+    return command.exec(this.httpClient);
   }
 }
 

@@ -10,7 +10,6 @@ export default defineConfig({
   test: {
     ...sharedConfig.test,
     include: ["src/**/*.integration.test.ts"],
-    env: process.env,
     testTimeout: 30_000,
   },
 });
