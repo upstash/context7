@@ -1504,7 +1504,7 @@ for server metrics and spans. Trace context is extracted from the `traceparent`,
 
 The HTTP transport exposes metrics in Prometheus format on a dedicated listener at
 `127.0.0.1:9464/metrics` by default. The production Docker image explicitly binds that listener to
-`0.0.0.0` so an internal Prometheus sidecar or `ServiceMonitor` can reach it. The stdio transport
+`0.0.0.0` so an internal Prometheus pod scraper or `PodMonitor` can reach it. The stdio transport
 does not open a telemetry port. Keeping this listener separate from the public MCP port prevents
 the metrics endpoint from being routed through a catch-all gateway rule. On SIGTERM, SIGINT, or
 SIGHUP, both transports use a bounded shutdown path that stops serving, closes active MCP
@@ -1590,12 +1590,32 @@ See the [Envoy HTTP connection manager statistics](https://www.envoyproxy.io/doc
 and [upstream cluster statistics](https://www.envoyproxy.io/docs/envoy/latest/configuration/upstream/cluster_manager/cluster_stats.html)
 for the proxy-owned metric families.
 
+For a replicated Kubernetes deployment, discover and scrape every MCP pod directly. Do not use one
+static, load-balanced Service target: successive scrapes can reach different replicas and produce
+incomplete per-process counters and runtime series. For an annotation-based `kubernetes-pods`
+scrape job, add the following fields to the MCP workload's pod template:
+
 ```yaml
-scrape_configs:
-  - job_name: context7-mcp
-    static_configs:
-      - targets: ["context7-mcp:9464"]
+spec:
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9464"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: mcp
+          ports:
+            - name: metrics
+              containerPort: 9464
+              protocol: TCP
 ```
+
+Prometheus will then scrape `http://<mcp-pod-ip>:9464/metrics` for each replica. Declaring
+`EXPOSE 9464` in the image does not add the Kubernetes `containerPort` metadata. The scrape interval
+is controlled by Prometheus; the exporter does not impose one. If the monitoring stack uses the
+Prometheus Operator instead, configure the equivalent per-pod endpoint with a `PodMonitor`.
 
 <details>
 <summary><b>Local Configuration Example</b></summary>
