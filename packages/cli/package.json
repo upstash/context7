@@ -28,7 +28,7 @@
     "commander": "^15.0.0",
     "figlet": "^1.9.4",
     "open": "^10.1.0",
-    "ora": "^9.4.0",
+    "ora": "^9.4.1",
     "picocolors": "^1.1.1"
   },
   "devDependencies": {
