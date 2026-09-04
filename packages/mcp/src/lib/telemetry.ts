@@ -1,12 +1,16 @@
-import { metrics, type Attributes } from "@opentelemetry/api";
+import { metrics, trace, type Attributes } from "@opentelemetry/api";
 import { markCurrentMcpOperationError, markCurrentMcpToolOutcome } from "./mcp-operation-scope.js";
-import { telemetryIsDisabled } from "./telemetry-config.js";
+import type {
+  AuthenticationOutcome,
+  ObservedAuthentication,
+  UpstreamObservationOptions,
+  UpstreamOperation,
+  UpstreamOutcome,
+} from "./telemetry-contracts.js";
 import type { ToolCallOutcome } from "./tool-names.js";
 
 const METER_NAME = "io.github.upstash.context7.mcp";
-const SHUTDOWN_METRIC_FLUSH_TIMEOUT_MS = 4_000;
 const DURATION_BUCKETS_SECONDS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60];
-const TELEMETRY_DISABLED = telemetryIsDisabled();
 const TIMEOUT_ERROR_CODES = new Set([
   "ETIMEDOUT",
   "UND_ERR_BODY_TIMEOUT",
@@ -23,24 +27,13 @@ const NETWORK_ERROR_CODES = new Set([
   "EPIPE",
 ]);
 
-export type UpstreamOperation = "fetch_context" | "oauth_metadata" | "search_libraries";
-export type AuthenticationOutcome = "accepted" | "error" | "invalid" | "missing";
-export type UpstreamOutcome =
-  | "cancelled"
-  | "http_error"
-  | "network_error"
-  | "response_error"
-  | "success"
-  | "timeout";
-
-export interface ObservedAuthentication<T> {
-  outcome: AuthenticationOutcome;
-  value: T;
-}
-
-export interface UpstreamObservationOptions {
-  abortSignal?: AbortSignal;
-}
+export type {
+  AuthenticationOutcome,
+  ObservedAuthentication,
+  UpstreamObservationOptions,
+  UpstreamOperation,
+  UpstreamOutcome,
+} from "./telemetry-contracts.js";
 
 function createInstruments() {
   const meter = metrics.getMeter(METER_NAME);
@@ -129,7 +122,6 @@ export function classifyUpstreamError(
 }
 
 export function recordToolCallOutcome(outcome: ToolCallOutcome): void {
-  if (TELEMETRY_DISABLED) return;
   if (outcome === "error") markCurrentMcpOperationError();
   markCurrentMcpToolOutcome(outcome);
 }
@@ -140,8 +132,6 @@ export async function observeUpstreamRequest<T>(
   consumeResponse: (response: Response) => Promise<T>,
   options: UpstreamObservationOptions = {}
 ): Promise<T> {
-  if (TELEMETRY_DISABLED) return consumeResponse(await request());
-
   const { activeUpstreamRequests, upstreamRequestDuration, upstreamRequests } = getInstruments();
   const activeAttributes: Attributes = { "context7.upstream.operation": operationName };
   const startedAt = performance.now();
@@ -182,28 +172,48 @@ export async function observeUpstreamRequest<T>(
   }
 }
 
-export async function forceFlushMetrics(): Promise<void> {
-  if (TELEMETRY_DISABLED) return;
+interface FlushableProvider {
+  forceFlush(): Promise<void>;
+}
 
-  const provider = metrics.getMeterProvider() as {
-    forceFlush?: (options?: { timeoutMillis?: number }) => Promise<void>;
-  };
-  if (!provider.forceFlush) return;
+interface DelegatingProvider {
+  getDelegate(): unknown;
+}
 
-  try {
-    await provider.forceFlush.call(provider, {
-      timeoutMillis: SHUTDOWN_METRIC_FLUSH_TIMEOUT_MS,
-    });
-  } catch (error) {
-    console.error("OpenTelemetry metrics failed to flush during shutdown:", error);
+function flushableProvider(provider: unknown): FlushableProvider | undefined {
+  let current = provider;
+  for (let depth = 0; current && typeof current === "object" && depth < 4; depth += 1) {
+    if ("forceFlush" in current && typeof current.forceFlush === "function") {
+      return current as FlushableProvider;
+    }
+    if (!("getDelegate" in current) || typeof current.getDelegate !== "function") return undefined;
+
+    const delegate = (current as DelegatingProvider).getDelegate();
+    if (delegate === current) return undefined;
+    current = delegate;
+  }
+  return undefined;
+}
+
+export async function forceFlushTelemetry(): Promise<void> {
+  const providers = [
+    flushableProvider(metrics.getMeterProvider()),
+    flushableProvider(trace.getTracerProvider()),
+  ].filter((provider): provider is FlushableProvider => provider !== undefined);
+  const results = await Promise.allSettled(
+    providers.map((provider) => provider.forceFlush.call(provider))
+  );
+  const failures = results
+    .filter((result): result is PromiseRejectedResult => result.status === "rejected")
+    .map((result) => result.reason);
+  if (failures.length > 0) {
+    throw new AggregateError(failures, "OpenTelemetry providers failed to flush during shutdown");
   }
 }
 
 export async function observeAuthentication<T>(
   operation: () => Promise<ObservedAuthentication<T>>
 ): Promise<T> {
-  if (TELEMETRY_DISABLED) return (await operation()).value;
-
   const { activeAuthentications, authenticationAttempts, authenticationDuration } =
     getInstruments();
   const activeAttributes: Attributes = { "context7.mcp.route": "oauth" };

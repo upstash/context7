@@ -13,6 +13,7 @@ import {
   type Implementation,
   type JSONRPCMessage,
   type McpRequestContext,
+  type McpHttpHandler,
   type MessageExtraInfo,
   type RequestId,
   type ServerOptions,
@@ -35,6 +36,15 @@ import {
 } from "@opentelemetry/api";
 import { MCP_TOOL_NAMES, type ToolCallOutcome } from "./tool-names.js";
 import { runInMcpOperationScope } from "./mcp-operation-scope.js";
+import {
+  StdioSubscriptionTelemetry,
+  instrumentMcpHttpHandler as instrumentHttpSubscriptions,
+  mcpRouteFromUrl,
+  type SubscriptionEntryOperation,
+  type SubscriptionObservation,
+} from "./mcp-subscription-telemetry.js";
+
+export { mcpRouteFromUrl } from "./mcp-subscription-telemetry.js";
 
 const INSTRUMENTATION_NAME = "io.github.upstash.context7.mcp";
 const MCP_DURATION_BUCKETS_SECONDS = [
@@ -84,16 +94,7 @@ const KNOWN_PROTOCOL_VERSIONS = new Set([
 ]);
 const EMPTY_TRACE_CARRIER: Record<string, string> = Object.freeze({});
 
-type McpRoute = "anonymous" | "oauth" | "stdio";
-type NetworkTransport = "pipe" | "tcp";
-
-interface McpObservationConfig {
-  abortSignal?: AbortSignal;
-  route: McpRoute;
-  networkTransport: NetworkTransport;
-  networkProtocol?: "http";
-  protocolVersion?: string;
-}
+type McpObservationConfig = SubscriptionObservation;
 
 type McpOperationState = "finished" | "handling" | "sending";
 
@@ -301,8 +302,8 @@ function operationIsFinished(operation: McpOperation): boolean {
   return operation.state === "finished";
 }
 
-function runOperation(operation: McpOperation, handler: () => void): void {
-  runInMcpOperationScope(operation, () => context.with(operation.context, handler));
+function runOperation<T>(operation: McpOperation, handler: () => T): T {
+  return runInMcpOperationScope(operation, () => context.with(operation.context, handler));
 }
 
 export function classifyServerResponse(
@@ -357,11 +358,6 @@ function cancellationRequestId(message: JSONRPCMessage): RequestId | undefined {
   return typeof requestId === "string" || typeof requestId === "number" ? requestId : undefined;
 }
 
-export function mcpRouteFromUrl(url: string): McpRoute {
-  const pathname = new URL(url).pathname.replace(/\/+$/, "");
-  return pathname === "/mcp/oauth" ? "oauth" : "anonymous";
-}
-
 function configFromRequestContext(requestContext: McpRequestContext): McpObservationConfig {
   const request = requestContext.requestInfo;
   if (!request) {
@@ -381,6 +377,37 @@ function configFromRequestContext(requestContext: McpRequestContext): McpObserva
       normalizedProtocolVersion(request.headers.get("mcp-protocol-version")) ??
       (requestContext.era === "modern" ? MODERN_MCP_PROTOCOL_VERSION : undefined),
   };
+}
+
+function startSubscriptionEntryOperation(
+  message: JSONRPCMessage,
+  observation: SubscriptionObservation
+): SubscriptionEntryOperation {
+  const operation = startOperation(message, {
+    ...observation,
+    protocolVersion: normalizedProtocolVersion(observation.protocolVersion),
+  });
+  if (!operation) throw new TypeError("Expected an MCP request or notification");
+  return {
+    applyResponse(response) {
+      if (!operationIsFinished(operation)) applyServerResponse(response, operation);
+    },
+    fail(errorType, error) {
+      if (operationIsFinished(operation)) return;
+      operation.errorType = errorType;
+      operation.statusDescription = error instanceof Error ? error.message : undefined;
+      if (error instanceof Error) operation.span.recordException(error);
+      finishOperation(operation);
+    },
+    finish() {
+      finishOperation(operation);
+    },
+    run: <T>(callback: () => T): T => runOperation(operation, callback),
+  };
+}
+
+export function instrumentMcpHttpHandler(handler: McpHttpHandler): McpHttpHandler {
+  return instrumentHttpSubscriptions(handler, startSubscriptionEntryOperation);
 }
 
 class InstrumentedTransport implements Transport {
@@ -594,6 +621,10 @@ class InstrumentedStdioTransport implements Transport {
   private pendingTerminalError = false;
   private protocolVersion?: string;
   private readonly startedAt = performance.now();
+  private readonly subscriptions = new StdioSubscriptionTelemetry(
+    startSubscriptionEntryOperation,
+    MODERN_MCP_PROTOCOL_VERSION
+  );
 
   constructor(private readonly transport: Transport) {
     this.onclose = transport.onclose;
@@ -620,6 +651,7 @@ class InstrumentedStdioTransport implements Transport {
   set onclose(handler: Transport["onclose"]) {
     this.closeHandler = handler;
     this.transport.onclose = () => {
+      this.subscriptions.close("connection_closed");
       if (!this.closeRequested) {
         this.finish(this.pendingTerminalError ? "transport_error" : undefined);
       }
@@ -649,10 +681,7 @@ class InstrumentedStdioTransport implements Transport {
   set onmessage(handler: Transport["onmessage"]) {
     this.messageHandler = handler;
     this.transport.onmessage = handler
-      ? (message, extra) => {
-          this.protocolVersion = messageProtocolVersion(message) ?? this.protocolVersion;
-          handler(message, extra);
-        }
+      ? (message, extra) => this.receive(message, extra, handler)
       : undefined;
   }
 
@@ -685,19 +714,36 @@ class InstrumentedStdioTransport implements Transport {
 
   async send(message: JSONRPCMessage, options?: TransportSendOptions): Promise<void> {
     try {
-      await this.transport.send(message, options);
+      await this.subscriptions.send(
+        message,
+        options,
+        (outbound, sendOptions) => this.transport.send(outbound, sendOptions),
+        this.protocolVersion
+      );
     } catch (error) {
       this.errorType ??= "transport_error";
       throw error;
     }
   }
 
+  private receive(
+    message: JSONRPCMessage,
+    extra: MessageExtraInfo | undefined,
+    handler: NonNullable<Transport["onmessage"]>
+  ): void {
+    this.protocolVersion = messageProtocolVersion(message) ?? this.protocolVersion;
+    if (this.subscriptions.receive(message, extra, handler, this.protocolVersion)) return;
+    handler(message, extra);
+  }
+
   private async closeTransport(): Promise<void> {
     try {
       await this.transport.close();
+      this.subscriptions.close("connection_closed", true);
       this.finish();
     } catch (error) {
       this.errorType = "transport_error";
+      this.subscriptions.close("transport_error", true);
       this.finish("transport_error");
       throw error;
     }

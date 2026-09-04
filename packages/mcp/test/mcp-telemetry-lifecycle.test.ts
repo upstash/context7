@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   CLIENT_CAPABILITIES_META_KEY,
   McpServer,
@@ -28,7 +28,11 @@ import {
   classifyServerResponse,
   instrumentStdioTransport,
 } from "../src/lib/mcp-telemetry.js";
-import { observeUpstreamRequest, type UpstreamOperation } from "../src/lib/telemetry.js";
+import {
+  forceFlushTelemetry,
+  observeUpstreamRequest,
+  type UpstreamOperation,
+} from "../src/lib/telemetry.js";
 
 interface Deferred<T> {
   promise: Promise<T>;
@@ -210,6 +214,56 @@ describe("MCP server response classification", () => {
         "tools/call"
       )
     ).toEqual({ errorType: "tool_error" });
+  });
+});
+
+describe("OpenTelemetry provider lifecycle", () => {
+  test("flushes both the meter provider and the tracer provider delegate", async () => {
+    const metricFlush = vi.spyOn(metricProvider, "forceFlush");
+    const traceFlush = vi.spyOn(tracerProvider, "forceFlush");
+
+    try {
+      await forceFlushTelemetry();
+      expect(metricFlush).toHaveBeenCalledOnce();
+      expect(traceFlush).toHaveBeenCalledOnce();
+    } finally {
+      metricFlush.mockRestore();
+      traceFlush.mockRestore();
+    }
+  });
+
+  test("waits for every provider before reporting flush failures", async () => {
+    const traceCompletion = deferred<void>();
+    const failure = new Error("metric flush failed");
+    const metricFlush = vi.spyOn(metricProvider, "forceFlush").mockRejectedValue(failure);
+    const traceFlush = vi
+      .spyOn(tracerProvider, "forceFlush")
+      .mockImplementation(() => traceCompletion.promise);
+
+    try {
+      const flushing = forceFlushTelemetry();
+      await eventually(() => {
+        expect(metricFlush).toHaveBeenCalledOnce();
+        expect(traceFlush).toHaveBeenCalledOnce();
+      });
+      let settled = false;
+      void flushing.then(
+        () => {
+          settled = true;
+        },
+        () => {
+          settled = true;
+        }
+      );
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(settled).toBe(false);
+
+      traceCompletion.resolve();
+      await expect(flushing).rejects.toMatchObject({ errors: [failure] });
+    } finally {
+      metricFlush.mockRestore();
+      traceFlush.mockRestore();
+    }
   });
 });
 

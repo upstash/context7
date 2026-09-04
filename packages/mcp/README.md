@@ -1492,10 +1492,11 @@ CONTEXT7_API_KEY=your_api_key_here
 
 ### OpenTelemetry observability
 
-Context7 instruments individual MCP requests and notifications dispatched to an MCP server
-instance at the SDK transport boundary, including messages inside a valid batch. Requests rejected
-by the SDK's HTTP envelope and protocol-version validation before dispatch remain visible in normal
-HTTP/gateway telemetry, but are not reported as MCP operations. Dispatched operations follow the
+Context7 instruments individual MCP requests and notifications at the SDK transport boundary,
+including messages inside a valid batch and MCP v2 `subscriptions/listen` operations handled by the
+SDK entry layer. Requests rejected by the SDK's HTTP envelope and protocol-version validation before
+dispatch remain visible in normal HTTP/gateway telemetry, but are not reported as MCP operations.
+Observed operations follow the
 development-status [OpenTelemetry MCP semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/mcp.md)
 for server metrics and spans. Trace context is extracted from the `traceparent`, `tracestate`, and
 `baggage` fields in MCP `params._meta` as defined by
@@ -1505,9 +1506,10 @@ The HTTP transport exposes metrics in Prometheus format on a dedicated listener 
 `127.0.0.1:9464/metrics` by default. The production Docker image explicitly binds that listener to
 `0.0.0.0` so an internal Prometheus sidecar or `ServiceMonitor` can reach it. The stdio transport
 does not open a telemetry port. Keeping this listener separate from the public MCP port prevents
-the metrics endpoint from being routed through a catch-all gateway rule. On stdio EOF or SIGHUP,
-the server closes the SDK connection, records the session duration, and best-effort flushes an
-externally installed SDK `MeterProvider` before exit.
+the metrics endpoint from being routed through a catch-all gateway rule. On SIGTERM, SIGINT, or
+SIGHUP, both transports use a bounded shutdown path that stops serving, closes active MCP
+connections and subscriptions, and best-effort flushes externally installed SDK metric and trace
+providers before exit. Stdio EOF triggers the same path.
 
 The exporter uses the standard OpenTelemetry Prometheus settings:
 
@@ -1529,8 +1531,9 @@ Node SDK or Kubernetes auto-instrumentation without creating a second provider i
 When an external SDK owns the provider, configure its Node runtime instrumentation there as well;
 the application does not register a duplicate collector.
 
-It reports bounded-cardinality counters, histograms, and in-flight gauges for MCP methods, tool
-outcomes, authentication outcomes, Context7 upstream requests, and Node runtime saturation.
+It reports bounded-cardinality counters, histograms, and in-flight gauges for MCP methods,
+subscriptions, tool outcomes, authentication outcomes, Context7 upstream requests, and Node runtime
+saturation.
 Prometheus receives these metric families:
 
 - `mcp_server_operation_duration` (its `_count` series is the MCP operation count, and tool-call
@@ -1538,6 +1541,7 @@ Prometheus receives these metric families:
 - `mcp_server_session_duration` for real stateful stdio sessions (stateless HTTP request transports
   are intentionally excluded)
 - `context7_mcp_operations_active`
+- `context7_mcp_subscriptions_active` and `context7_mcp_subscription_duration`
 - `context7_mcp_upstream_requests_total` and `context7_mcp_upstream_request_duration`
 - `context7_mcp_authentication_attempts_total` and `context7_mcp_authentication_duration`
 - `context7_mcp_upstream_requests_active` and `context7_mcp_authentication_active`
@@ -1545,7 +1549,9 @@ Prometheus receives these metric families:
   `v8js_resource_active` from the official OpenTelemetry Node runtime instrumentation
 
 Tool outcomes on the standard MCP operation metric distinguish `success`, `not_found`, and
-`error`. Upstream outcomes distinguish
+`error`. An acknowledged `subscriptions/listen` operation is timed through its acknowledgement;
+the separate subscription metrics track the active stream and its bounded terminal outcome.
+Upstream outcomes distinguish
 HTTP, response-decoding, network, timeout, and cancellation failures and include both the bounded
 status-code class and the exact numeric HTTP status. Authentication reports accepted, missing,
 invalid, and unexpected-error outcomes. The OAuth authorization-server metadata proxy caps its
@@ -1572,8 +1578,9 @@ signals in the existing Envoy scrape instead of collecting them again from the a
 - Envoy process health and resource metrics
 
 The application exporter owns only signals the ingress gateway cannot provide: MCP method and
-protocol semantics (including batches and notifications), tool and authentication outcomes,
-MCP-to-Context7 API calls, and Node event-loop/V8 health. In the Kubernetes deployment Envoy is a
+protocol semantics (including batches, notifications, and active MCP v2 subscriptions), tool and
+authentication outcomes, MCP-to-Context7 API calls, and Node event-loop/V8 health. In the
+Kubernetes deployment Envoy is a
 Gateway API proxy rather than a sidecar in the MCP pod, so `context7_mcp_upstream_*` describes the
 MCP server's outbound Context7 API dependency, not Envoy's inbound MCP backend cluster. Pod and
 container CPU, memory, network, and restart metrics should continue to come from the Kubernetes

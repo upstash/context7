@@ -9,8 +9,13 @@ import {
 
 const previousDisabled = process.env.OTEL_SDK_DISABLED;
 process.env.OTEL_SDK_DISABLED = "true";
-const { forceFlushMetrics, observeAuthentication, recordToolCallOutcome, observeUpstreamRequest } =
-  await import("../src/lib/telemetry.js");
+const {
+  forceFlushTelemetry,
+  initializeTelemetry,
+  observeAuthentication,
+  recordToolCallOutcome,
+  observeUpstreamRequest,
+} = await import("../src/lib/telemetry-runtime.js");
 
 const exporter = new InMemoryMetricExporter(AggregationTemporality.CUMULATIVE);
 const provider = new MeterProvider({
@@ -34,6 +39,9 @@ afterAll(async () => {
 });
 
 test("OTEL_SDK_DISABLED bypasses all application metric instruments", async () => {
+  await expect(
+    initializeTelemetry({ allowEmbeddedPrometheus: true, serviceVersion: "test" })
+  ).resolves.toBeUndefined();
   expect(() => recordToolCallOutcome("success")).not.toThrow();
   await expect(
     observeUpstreamRequest(
@@ -45,7 +53,7 @@ test("OTEL_SDK_DISABLED bypasses all application metric instruments", async () =
   await expect(
     observeAuthentication(async () => ({ outcome: "accepted", value: "auth" }))
   ).resolves.toBe("auth");
-  await forceFlushMetrics();
+  await forceFlushTelemetry();
   await provider.forceFlush();
 
   const metricNames = exporter
