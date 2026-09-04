@@ -1,7 +1,6 @@
 import type { RequestHandler } from "express";
 import { isIP } from "node:net";
 
-const DEFAULT_HOSTED_ORIGINS = ["https://context7.com", "https://www.context7.com"];
 const ALLOWED_METHODS = "GET,POST,OPTIONS,DELETE";
 // Mcp-Method and Mcp-Name are SEP-2243 headers sent by modern browser clients.
 const ALLOWED_HEADERS =
@@ -24,21 +23,6 @@ function parseOrigin(value: string): URL | undefined {
   } catch {
     return undefined;
   }
-}
-
-function normalizeConfiguredOrigins(value: string | undefined): Set<string> {
-  const origins = (value ?? "")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-
-  return new Set(
-    [...DEFAULT_HOSTED_ORIGINS, ...origins].map((origin) => {
-      const parsed = parseOrigin(origin);
-      if (!parsed) throw new Error(`Invalid allowed origin: '${origin}'`);
-      return parsed.origin;
-    })
-  );
 }
 
 export function normalizeBindHost(value: string): string {
@@ -101,42 +85,35 @@ export function isLoopbackHost(hostHeader: string | undefined): boolean {
   }
 }
 
-export function createHttpSecurityMiddleware(
-  bindHost: string,
-  additionalHostedOrigins?: string
-): RequestHandler {
+export function createHttpSecurityMiddleware(bindHost: string): RequestHandler {
   const isLocal = isLoopbackHostname(bindHost);
-  const hostedOrigins = isLocal ? undefined : normalizeConfiguredOrigins(additionalHostedOrigins);
-  const isOriginAllowed = isLocal
-    ? isLoopbackOrigin
-    : (origin: string) => {
-        const parsed = parseOrigin(origin);
-        return parsed !== undefined && hostedOrigins?.has(parsed.origin) === true;
-      };
 
   return (req, res, next) => {
-    res.vary("Origin");
-    if (req.method === "OPTIONS") {
-      res.vary("Access-Control-Request-Method");
-      res.vary("Access-Control-Request-Headers");
-    }
-
-    if (isLocal && !isLoopbackHost(req.headers.host)) {
-      res.status(403).json({ error: "forbidden", message: "Untrusted Host header." });
-      return;
-    }
-
     const origin = req.headers.origin;
-    if (origin !== undefined && !isOriginAllowed(origin)) {
-      res.status(403).json({ error: "forbidden", message: "Untrusted Origin header." });
-      return;
+    if (isLocal) {
+      res.vary("Origin");
+      if (req.method === "OPTIONS") {
+        res.vary("Access-Control-Request-Method");
+        res.vary("Access-Control-Request-Headers");
+      }
+
+      if (!isLoopbackHost(req.headers.host)) {
+        res.status(403).json({ error: "forbidden", message: "Untrusted Host header." });
+        return;
+      }
+
+      if (origin !== undefined && !isLoopbackOrigin(origin)) {
+        res.status(403).json({ error: "forbidden", message: "Untrusted Origin header." });
+        return;
+      }
     }
 
-    if (origin !== undefined) {
-      res.setHeader("Access-Control-Allow-Origin", origin);
-      res.setHeader("Access-Control-Allow-Methods", ALLOWED_METHODS);
-      res.setHeader("Access-Control-Allow-Headers", ALLOWED_HEADERS);
-    }
+    // Hosted authentication is header-only, so wildcard CORS keeps browser MCP
+    // clients compatible without exposing ambient credentials.
+    const allowedOrigin = isLocal ? origin : "*";
+    if (allowedOrigin !== undefined) res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
+    res.setHeader("Access-Control-Allow-Methods", ALLOWED_METHODS);
+    res.setHeader("Access-Control-Allow-Headers", ALLOWED_HEADERS);
 
     if (req.method === "OPTIONS") {
       res.sendStatus(204);

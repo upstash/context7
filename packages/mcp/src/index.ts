@@ -85,13 +85,6 @@ const CLI_PORT = (() => {
   return isNaN(parsed) ? undefined : parsed;
 })();
 
-let HTTP_HOST: string;
-try {
-  HTTP_HOST = normalizeBindHost(cliOptions.host);
-} catch (error) {
-  program.error(error instanceof Error ? error.message : "Invalid HTTP host.");
-}
-
 const requestContext = new AsyncLocalStorage<ClientContext>();
 
 // Global state for stdio mode only
@@ -328,12 +321,19 @@ Do not call this tool more than 3 times per question.`,
 async function main() {
   if (TRANSPORT_TYPE === "http") {
     const initialPort = CLI_PORT ?? DEFAULT_PORT;
+    let httpHost: string;
+    try {
+      httpHost = normalizeBindHost(cliOptions.host);
+    } catch (error) {
+      program.error(error instanceof Error ? error.message : "Invalid HTTP host.");
+      throw error;
+    }
 
     const app = express();
     // Only private/local infrastructure may supply forwarding headers. Express
     // then walks the chain right-to-left and ignores attacker-added prefixes.
     app.set("trust proxy", ["loopback", "linklocal", "uniquelocal", "100.64.0.0/10"]);
-    app.use(createHttpSecurityMiddleware(HTTP_HOST, process.env.CONTEXT7_MCP_ALLOWED_ORIGINS));
+    app.use(createHttpSecurityMiddleware(httpHost));
     app.use(express.json());
 
     const extractHeaderValue = (value: string | string[] | undefined): string | undefined => {
@@ -535,7 +535,7 @@ async function main() {
     });
 
     const startServer = (port: number, maxAttempts = 10) => {
-      const httpServer = app.listen(port, HTTP_HOST);
+      const httpServer = app.listen(port, httpHost);
 
       httpServer.once("error", (err: NodeJS.ErrnoException) => {
         if (err.code === "EADDRINUSE" && port < initialPort + maxAttempts) {
@@ -548,7 +548,7 @@ async function main() {
       });
 
       httpServer.once("listening", () => {
-        const displayHost = HTTP_HOST.includes(":") ? `[${HTTP_HOST}]` : HTTP_HOST;
+        const displayHost = httpHost.includes(":") ? `[${httpHost}]` : httpHost;
         console.error(
           `Context7 Documentation MCP Server v${SERVER_VERSION} running on HTTP at http://${displayHost}:${port}/mcp`
         );

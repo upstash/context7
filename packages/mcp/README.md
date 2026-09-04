@@ -1452,6 +1452,9 @@ Example with HTTP transport and port 8080:
 bun run dist/index.js --transport http --port 8080
 ```
 
+Connect the client to `http://127.0.0.1:8080/mcp`. The default server binds the
+IPv4 loopback address directly, so use `127.0.0.1` rather than `localhost`.
+
 Another example with stdio transport:
 
 ```bash
@@ -1475,12 +1478,11 @@ You can use the `CONTEXT7_API_KEY` environment variable instead of passing the `
 CONTEXT7_API_KEY=your_api_key_here
 ```
 
-HTTP deployments can also set these security options:
+HTTP deployments can also set the bind interface:
 
 - `CONTEXT7_MCP_HOST` – Interface to bind; the CLI `--host` value takes precedence.
-- `CONTEXT7_MCP_ALLOWED_ORIGINS` – Comma-separated additional browser origins allowed to call the server. Values must be exact origins, such as `https://docs.example.com`.
 
-Requests without an `Origin` header, such as normal server-to-server MCP clients, continue to work. When bound to loopback, browser requests must use a loopback origin and the Host header is validated against DNS rebinding. With a non-loopback bind, Context7's production web origins and any explicitly configured origins are allowed.
+When bound to loopback, browser requests must use a loopback origin and the Host header is validated against DNS rebinding. Non-loopback deployments preserve wildcard CORS for browser-based MCP clients and should be placed behind a trusted network boundary.
 
 **Example MCP configuration using environment variable:**
 

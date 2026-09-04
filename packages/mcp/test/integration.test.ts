@@ -125,7 +125,6 @@ beforeAll(async () => {
   childEnv = {
     ...getDefaultEnvironment(),
     CONTEXT7_API_URL: stubUrl,
-    CONTEXT7_MCP_ALLOWED_ORIGINS: "https://docs.example.com/",
     MCP_CLIENT_IP_ASSERTION_KEY: CLIENT_IP_ASSERTION_KEY,
   };
   ({ child: httpChild, url: httpUrl } = await startHttpChild(BASE_PORT));
@@ -269,12 +268,12 @@ describe("HTTP request origin and host validation", () => {
       hostedHttpChild?.kill();
     });
 
-    test.each(["https://context7.com", "https://docs.example.com"])(
-      "allows configured origin %s",
+    test.each(["https://context7.com", "https://mcp-inspector.example", "null", ""])(
+      "allows browser origin %j",
       async (origin) => {
         const response = await preflight(hostedHttpUrl, origin);
         expect(response.status).toBe(204);
-        expect(response.headers.get("access-control-allow-origin")).toBe(origin);
+        expect(response.headers.get("access-control-allow-origin")).toBe("*");
       }
     );
 
@@ -282,18 +281,8 @@ describe("HTTP request origin and host validation", () => {
       const response = await fetch(new URL("/ping", hostedHttpUrl));
 
       expect(response.status).toBe(200);
-      expect(response.headers.get("access-control-allow-origin")).toBeNull();
+      expect(response.headers.get("access-control-allow-origin")).toBe("*");
     });
-
-    test.each(["", "https://evil-attacker.example", "https://subdomain.context7.com", "null"])(
-      "rejects origin %s",
-      async (origin) => {
-        const response = await fetch(hostedHttpUrl, { headers: { origin } });
-
-        expect(response.status).toBe(403);
-        expect(response.headers.get("access-control-allow-origin")).toBeNull();
-      }
-    );
   });
 });
 
@@ -311,6 +300,17 @@ describe("CLI transport option validation", () => {
 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(expectedError);
+  });
+
+  test("ignores CONTEXT7_MCP_HOST in stdio mode", () => {
+    const result = spawnSync(process.execPath, [DIST, "--transport", "stdio"], {
+      env: { ...childEnv, CONTEXT7_MCP_HOST: "localhost/path" },
+      encoding: "utf8",
+      input: "",
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stderr).toContain("running on stdio");
   });
 });
 
