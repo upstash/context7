@@ -185,3 +185,6 @@ prompt.txt
 reports
 reports-old
 src/test/questions*
+
+# mcpb bundles are built in CI and attached to GitHub releases
+*.mcpb

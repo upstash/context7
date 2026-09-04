@@ -1,0 +1,30 @@
+---
+title: Color
+description: Show click-to-copy color swatches
+---
+
+Add one `<Color.Item>` for each swatch.
+
+## Usage
+
+```mdx
+<Color>
+  <Color.Item name="Primary" value="#10B981" />
+  <Color.Item
+    name="Surface"
+    value={{ light: "#FFFFFF", dark: "#18181B" }}
+  />
+</Color>
+```
+
+Use `variant="table"` with `<Color.Row title="...">` to group a larger palette.
+
+## Example
+
+<Color>
+  <Color.Item name="Primary" value="#10B981" />
+  <Color.Item
+    name="Surface"
+    value={{ light: "#FFFFFF", dark: "#18181B" }}
+  />
+</Color>

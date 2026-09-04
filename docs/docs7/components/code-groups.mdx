@@ -1,0 +1,42 @@
+---
+title: Code groups
+description: Show code examples in tabs
+---
+
+Place titled code fences inside `<CodeGroup>`. Use `<CodeBlock>` when code comes from an MDX component.
+
+## Usage
+
+````mdx
+<CodeGroup>
+```js JavaScript
+console.log("hello")
+```
+
+```py Python
+print("hello")
+```
+</CodeGroup>
+
+<CodeBlock language="ts" filename="index.ts" lines>
+  {"const ready = true"}
+</CodeBlock>
+````
+
+`<CodeBlock>` also accepts `icon`, `highlight`, `focus`, `wrap`, and `expandable`.
+
+## Example
+
+<CodeGroup>
+```js JavaScript
+console.log("hello")
+```
+
+```py Python
+print("hello")
+```
+</CodeGroup>
+
+<CodeBlock language="ts" filename="index.ts" lines>
+  {"const ready = true"}
+</CodeBlock>
