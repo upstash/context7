@@ -45,6 +45,18 @@ describe("SearchLibraryCommand", () => {
     expect(result).toContain("Trust Score: High");
   });
 
+  test("throws a Context7 error when the response has no result", async () => {
+    const command = new SearchLibraryCommand("I need to build a UI", "react");
+
+    const error = await command.exec(requesterWith(undefined)).catch((e) => e);
+
+    expect(error).toBeInstanceOf(Context7Error);
+    expect(error).toMatchObject({
+      message: "Request did not return a result",
+      code: "invalid_response",
+    });
+  });
+
   test("rejects missing inputs without making a request", () => {
     expect(() => new SearchLibraryCommand("", "react")).toThrow(Context7Error);
     expect(() => new SearchLibraryCommand("query", "")).toThrow(Context7Error);

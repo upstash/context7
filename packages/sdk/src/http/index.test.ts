@@ -398,6 +398,27 @@ describe("HttpClient error handling", () => {
     expect(error.message).toBe("Service Unavailable");
   });
 
+  test("falls back to statusText when a JSON error body is null", async () => {
+    mockFetch(
+      new Response("null", {
+        status: 500,
+        statusText: "Internal Server Error",
+        headers: { "content-type": "application/json" },
+      })
+    );
+
+    const error = await newClient()
+      .request({ method: "GET", path: ["search"] })
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(Context7Error);
+    expect(error).toMatchObject({
+      message: "Internal Server Error",
+      code: "http_error",
+      status: 500,
+    });
+  });
+
   test("validates timeout and retry configuration", () => {
     expect(() => new HttpClient({ baseUrl: "https://example.com", timeout: 0 })).toThrowError(
       "timeout must be a positive number or false"

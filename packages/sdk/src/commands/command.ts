@@ -1,3 +1,4 @@
+import { Context7Error } from "@error";
 import type { Context7Request, Requester } from "@http";
 
 export const _ENDPOINTS = ["v2/libs/search", "v2/context"];
@@ -26,7 +27,9 @@ export class Command<TResult> {
     const { result } = await client.request<T>({ ...this.request, path: [this.endpoint] });
 
     if (result === undefined) {
-      throw new TypeError("Request did not return a result");
+      throw new Context7Error("Request did not return a result", {
+        code: "invalid_response",
+      });
     }
 
     return result;

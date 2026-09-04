@@ -60,7 +60,14 @@ export async function throwResponseError(
 
   if (rawBody) {
     try {
-      errorBody = JSON.parse(rawBody) as typeof errorBody;
+      const parsed: unknown = JSON.parse(rawBody);
+      if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+        const { error, message } = parsed as Record<string, unknown>;
+        errorBody = {
+          error: typeof error === "string" ? error : undefined,
+          message: typeof message === "string" ? message : undefined,
+        };
+      }
     } catch (cause) {
       if (response.headers.get("content-type")?.includes("application/json")) {
         throw jsonParseError(rawBody, metadata, cause, retryable);
