@@ -36,30 +36,38 @@ async function parseErrorResponse(response: Response): Promise<string> {
 }
 
 export async function searchLibraries(query: string, libraryName: string): Promise<SearchResponse> {
-  const url = new URL(`${BASE_URL}/v2/libs/search`);
-  url.searchParams.set("query", query);
-  url.searchParams.set("libraryName", libraryName);
+  try {
+    const url = new URL(`${BASE_URL}/v2/libs/search`);
+    url.searchParams.set("query", query);
+    url.searchParams.set("libraryName", libraryName);
 
-  const response = await fetch(url, { headers: authHeaders() });
-  if (!response.ok) {
-    return { results: [], error: await parseErrorResponse(response) };
+    const response = await fetch(url, { headers: authHeaders() });
+    if (!response.ok) {
+      return { results: [], error: await parseErrorResponse(response) };
+    }
+    return (await response.json()) as SearchResponse;
+  } catch (error) {
+    return { results: [], error: `Error searching libraries: ${error}` };
   }
-  return (await response.json()) as SearchResponse;
 }
 
 export async function fetchLibraryContext(query: string, libraryId: string): Promise<string> {
-  const url = new URL(`${BASE_URL}/v2/context`);
-  url.searchParams.set("query", query);
-  url.searchParams.set("libraryId", libraryId);
+  try {
+    const url = new URL(`${BASE_URL}/v2/context`);
+    url.searchParams.set("query", query);
+    url.searchParams.set("libraryId", libraryId);
 
-  const response = await fetch(url, { headers: authHeaders() });
-  if (!response.ok) {
-    return parseErrorResponse(response);
-  }
+    const response = await fetch(url, { headers: authHeaders() });
+    if (!response.ok) {
+      return await parseErrorResponse(response);
+    }
 
-  const text = await response.text();
-  if (!text) {
-    return "Documentation not found or not finalized for this library. This might have happened because you used an invalid Context7-compatible library ID. To get a valid Context7-compatible library ID, use the 'resolve-library-id' with the package name you wish to retrieve documentation for.";
+    const text = await response.text();
+    if (!text) {
+      return "Documentation not found or not finalized for this library. This might have happened because you used an invalid Context7-compatible library ID. To get a valid Context7-compatible library ID, use the 'resolve-library-id' with the package name you wish to retrieve documentation for.";
+    }
+    return text;
+  } catch (error) {
+    return `Error fetching library context: ${error}`;
   }
-  return text;
 }
