@@ -115,9 +115,9 @@ export class HttpClient implements Requester {
     method: "GET" | "POST",
     abortState: AbortState
   ): Promise<FetchResult> {
-    const canRetry = this.retry.methods.has(method);
+    const canRetry = method === "GET";
 
-    for (let attempt = 0; attempt <= this.retry.attempts; attempt++) {
+    for (let attempt = 0; attempt <= this.retry.retries; attempt++) {
       let response: Response;
       try {
         response = await this.fetch(url, init);
@@ -125,7 +125,7 @@ export class HttpClient implements Requester {
         if (abortState.signal?.aborted) {
           throw abortError(cause, abortState.timedOut());
         }
-        if (canRetry && attempt < this.retry.attempts) {
+        if (canRetry && attempt < this.retry.retries) {
           await wait(this.retry.backoff(attempt), abortState.signal);
           continue;
         }
@@ -139,7 +139,7 @@ export class HttpClient implements Requester {
       const metadata = extractResponseMetadata(response, attempt);
       this.onResponse?.(metadata);
       const shouldRetry =
-        canRetry && this.retry.statuses.has(response.status) && attempt < this.retry.attempts;
+        canRetry && this.retry.statuses.has(response.status) && attempt < this.retry.retries;
       if (!shouldRetry) return { response, metadata };
 
       await response.body?.cancel().catch(() => undefined);

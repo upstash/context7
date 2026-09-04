@@ -110,7 +110,7 @@ describe("HttpClient error handling", () => {
     expect(error).toMatchObject({ code: "network_error", message: "connection reset" });
   });
 
-  test("does not retry POST requests unless explicitly configured", async () => {
+  test("does not retry POST requests", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("unavailable", { status: 503 }));
     const client = new HttpClient({
       baseUrl: "https://example.com/api",

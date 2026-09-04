@@ -82,7 +82,8 @@ const client = new Context7({
 #### Production HTTP configuration
 
 The SDK applies a 30-second request timeout and retries transient network failures, `408`, `425`,
-`429`, and `5xx` responses. Only `GET` requests are retried by default.
+`429`, and `5xx` responses. Only `GET` requests are retried; mutating requests remain
+single-attempt.
 
 ```typescript
 const client = new Context7({

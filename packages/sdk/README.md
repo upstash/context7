@@ -121,8 +121,7 @@ const client = new Context7({
 Set `retry: false` to make exactly one request, `timeout: false` to disable the request timeout,
 or `cache: false` to omit the native fetch cache option.
 
-Only `GET` requests are retried by default. Future mutating operations remain single-attempt unless
-you explicitly include `"POST"` in `retry.methods`.
+Only `GET` requests are retried. Mutating requests remain single-attempt.
 
 ## Docs
 

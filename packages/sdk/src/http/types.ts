@@ -10,9 +10,13 @@ export type CacheSetting =
 export type Context7Fetch = (input: string | URL, init?: RequestInit) => Promise<Response>;
 
 export type RateLimitMetadata = {
+  /** Maximum requests allowed in the current rate-limit window. */
   limit?: number;
+  /** Requests remaining in the current rate-limit window. */
   remaining?: number;
+  /** Unix timestamp, in seconds, when the current rate-limit window resets. */
   reset?: number;
+  /** Server-requested delay, in seconds, before the next request. */
   retryAfter?: number;
 };
 
@@ -69,9 +73,7 @@ export type RetryConfig =
        */
       backoff?: (retryCount: number) => number;
       /** HTTP statuses that may be retried. */
-      statuses?: number[];
-      /** @default ["GET"] */
-      methods?: Array<"GET" | "POST">;
+      statuses?: readonly number[];
     };
 
 export type RequesterConfig = {
@@ -93,8 +95,7 @@ export type HttpClientConfig = {
 } & RequesterConfig;
 
 export type RetryPolicy = {
-  attempts: number;
+  retries: number;
   backoff: (retryCount: number) => number;
   statuses: ReadonlySet<number>;
-  methods: ReadonlySet<"GET" | "POST">;
 };
