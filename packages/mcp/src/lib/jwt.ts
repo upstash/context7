@@ -12,6 +12,10 @@ const oauthJwks = jose.createRemoteJWKSet(new URL(OAUTH_JWKS_URL));
 
 const emaJwks = jose.createRemoteJWKSet(new URL(EMA_JWKS_URL));
 
+const vercelOidcJwks = jose.createRemoteJWKSet(new URL("https://oidc.vercel.com/.well-known/jwks"));
+const VERCEL_OIDC_AUDIENCE = "https://context7.com";
+const VERCEL_OIDC_ISSUER_RE = /^https:\/\/oidc\.vercel\.com(?:\/[a-z0-9-]+)?$/i;
+
 const ENTRA_V2_ISSUER_RE = /^https:\/\/login\.microsoftonline\.com\/[0-9a-f-]{36}\/v2\.0$/;
 
 const jwksByTenant = new Map<string, ReturnType<typeof jose.createRemoteJWKSet>>();
@@ -100,6 +104,18 @@ export async function validateJWT(token: string): Promise<JWTValidationResult> {
 
     if (iss === EMA_ISSUER) {
       await jose.jwtVerify(token, emaJwks, { issuer: EMA_ISSUER, audience: RESOURCE_URL });
+      return { valid: true };
+    }
+
+    if (VERCEL_OIDC_ISSUER_RE.test(iss)) {
+      const { payload } = await jose.jwtVerify(token, vercelOidcJwks, {
+        algorithms: ["RS256"],
+        audience: VERCEL_OIDC_AUDIENCE,
+        issuer: iss,
+      });
+      if (typeof payload.owner_id !== "string" || typeof payload.project_id !== "string") {
+        return { valid: false, error: "Missing Vercel project identity" };
+      }
       return { valid: true };
     }
 

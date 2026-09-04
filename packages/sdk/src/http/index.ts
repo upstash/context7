@@ -19,6 +19,7 @@ import type {
   HttpClientConfig,
   Requester,
   RetryPolicy,
+  AuthTokenProvider,
 } from "./types";
 
 export * from "./types";
@@ -42,6 +43,7 @@ export class HttpClient implements Requester {
   public readonly retry: RetryPolicy;
 
   private readonly fetch: Context7Fetch;
+  private readonly authToken?: string | AuthTokenProvider;
   private readonly onResponse?: (metadata: Context7ResponseMetadata) => void;
 
   public constructor(config: HttpClientConfig) {
@@ -57,6 +59,7 @@ export class HttpClient implements Requester {
     if (!isHttpUrl(this.baseUrl)) throw new Context7UrlError(this.baseUrl);
 
     this.headers = { "Content-Type": "application/json", ...config.headers };
+    this.authToken = config.authToken;
     if (!config.fetch && !globalThis.fetch) {
       throw new TypeError("A fetch implementation is required");
     }
@@ -71,19 +74,29 @@ export class HttpClient implements Requester {
       [resolveSignal(this.options.signal), request.signal],
       request.timeout ?? this.options.timeout
     );
-    const init: RequestInit = {
-      cache: normalizeCache(request.cache ?? this.options.cache),
-      method,
-      headers: this.headers,
-      body: request.body === undefined ? undefined : JSON.stringify(request.body),
-      keepalive: this.options.keepAlive,
-      signal: abortState.signal,
-    };
-
     try {
       if (abortState.signal?.aborted) {
         throw abortError(abortState.signal.reason, abortState.timedOut());
       }
+
+      const authToken =
+        typeof this.authToken === "function" ? await this.authToken() : this.authToken;
+      if (this.authToken !== undefined && !authToken) {
+        throw new Context7Error("The auth token provider returned an empty token", {
+          code: "authentication_error",
+          retryable: false,
+        });
+      }
+      const init: RequestInit = {
+        cache: normalizeCache(request.cache ?? this.options.cache),
+        method,
+        headers: authToken
+          ? { ...this.headers, Authorization: `Bearer ${authToken}` }
+          : this.headers,
+        body: request.body === undefined ? undefined : JSON.stringify(request.body),
+        keepalive: this.options.keepAlive,
+        signal: abortState.signal,
+      };
 
       const { response, metadata } = await this.fetchWithRetry(
         buildUrl(this.baseUrl, method, request),

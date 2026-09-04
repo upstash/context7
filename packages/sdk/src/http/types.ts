@@ -8,6 +8,7 @@ export type CacheSetting =
   | false;
 
 export type Context7Fetch = (input: string | URL, init?: RequestInit) => Promise<Response>;
+export type AuthTokenProvider = () => string | Promise<string>;
 
 export type RateLimitMetadata = {
   /** Maximum requests allowed in the current rate-limit window. */
@@ -85,6 +86,7 @@ export type RequesterConfig = {
 
 export type HttpClientConfig = {
   headers?: Record<string, string>;
+  authToken?: string | AuthTokenProvider;
   baseUrl: string;
   signal?: AbortSignal | (() => AbortSignal);
   timeout?: number | false;

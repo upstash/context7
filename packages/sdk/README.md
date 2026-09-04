@@ -68,6 +68,26 @@ Then initialize without options:
 const client = new Context7();
 ```
 
+### Vercel OIDC
+
+Vercel deployments can authenticate without a long-lived Context7 API key.
+Pass a token provider so each request receives a current OIDC token:
+
+```ts
+import { getVercelOidcToken } from "@vercel/oidc";
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7({
+  authToken: () =>
+    getVercelOidcToken({
+      audience: "https://context7.com",
+    }),
+});
+```
+
+The Vercel project must first be connected to a Context7 Marketplace resource.
+Do not resolve the token once at startup: Vercel OIDC tokens are short-lived.
+
 ### Production HTTP options
 
 Requests time out after 30 seconds and retry transient network errors, `408`, `425`, `429`,

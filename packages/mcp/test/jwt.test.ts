@@ -235,3 +235,52 @@ describe("validateJWT - Clerk path", () => {
     );
   });
 });
+
+describe("validateJWT - Vercel OIDC path", () => {
+  test("verifies the Vercel signature, issuer, algorithm, and Context7 audience", async () => {
+    vi.mocked(jose.jwtVerify).mockResolvedValue({
+      payload: { owner_id: "team_123", project_id: "prj_123" },
+      protectedHeader: { alg: "RS256" },
+    } as unknown as Awaited<ReturnType<typeof jose.jwtVerify>>);
+
+    const { validateJWT } = await loadModule();
+    const token = makeEntraToken({ iss: "https://oidc.vercel.com/acme-team" });
+
+    await expect(validateJWT(token)).resolves.toEqual({ valid: true });
+    expect(jose.jwtVerify).toHaveBeenCalledWith(token, "fake-jwks", {
+      algorithms: ["RS256"],
+      audience: "https://context7.com",
+      issuer: "https://oidc.vercel.com/acme-team",
+    });
+  });
+
+  test("does not trust lookalike Vercel issuers", async () => {
+    vi.mocked(jose.jwtVerify).mockResolvedValue({
+      payload: {},
+      protectedHeader: { alg: "RS256" },
+    } as unknown as Awaited<ReturnType<typeof jose.jwtVerify>>);
+
+    const { validateJWT } = await loadModule();
+    const token = makeEntraToken({ iss: "https://oidc.vercel.com.attacker.test" });
+
+    await validateJWT(token);
+    expect(jose.jwtVerify).toHaveBeenCalledWith(token, "fake-jwks", {
+      issuer: "https://clerk.context7.com",
+    });
+  });
+
+  test("requires stable Vercel owner and project IDs", async () => {
+    vi.mocked(jose.jwtVerify).mockResolvedValue({
+      payload: {},
+      protectedHeader: { alg: "RS256" },
+    } as unknown as Awaited<ReturnType<typeof jose.jwtVerify>>);
+
+    const { validateJWT } = await loadModule();
+    const token = makeEntraToken({ iss: "https://oidc.vercel.com" });
+
+    await expect(validateJWT(token)).resolves.toEqual({
+      valid: false,
+      error: "Missing Vercel project identity",
+    });
+  });
+});

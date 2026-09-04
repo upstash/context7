@@ -55,6 +55,25 @@ Check out our [project addition guide](https://context7.com/docs/adding-librarie
 - Cursor, Claude Code, VSCode, Devin Desktop or another MCP Client
 - Context7 API Key (Optional) for higher rate limits and private repositories (Get yours by creating an account at [context7.com/dashboard](https://context7.com/dashboard))
 
+### Vercel OIDC
+
+Vercel Marketplace-connected projects can call the remote MCP server without a
+long-lived Context7 API key. Obtain a fresh deployment token with the
+`https://context7.com` audience and send it as the bearer credential:
+
+```ts
+import { getVercelOidcToken } from "@vercel/oidc";
+
+const authorization = `Bearer ${await getVercelOidcToken({
+  audience: "https://context7.com",
+})}`;
+```
+
+Use `authorization` as the `Authorization` header when creating the MCP HTTP
+transport. Create the transport inside the request that uses it so a short-lived
+token is not retained across function invocations. The Vercel project must first
+be connected to a Context7 Marketplace resource.
+
 > [!TIP]
 > **Recommended Post-Setup: Add a Rule to Auto-Invoke Context7**
 >
