@@ -48,6 +48,7 @@ export class Context7 {
       cache: config.cache ?? "no-store",
       timeout: config.timeout,
       signal: config.signal,
+      keepAlive: config.keepAlive,
       fetch: config.fetch,
       onResponse: config.onResponse,
     });

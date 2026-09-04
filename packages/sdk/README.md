@@ -105,9 +105,18 @@ try {
 }
 ```
 
-The client also accepts `baseUrl`, `headers`, and a custom `fetch` implementation for proxies,
-instrumentation, tests, and runtimes that do not expose a global `fetch`. The configured API key
-always controls the `Authorization` header.
+The client also accepts `baseUrl`, `headers`, `keepAlive`, and a custom `fetch` implementation for
+proxies, instrumentation, tests, and runtimes that do not expose a global `fetch`. The configured
+API key always controls the `Authorization` header.
+
+As in `@upstash/redis`, you can express a timeout with a fresh signal for every request:
+
+```ts
+const client = new Context7({
+  apiKey: process.env.CONTEXT7_API_KEY,
+  signal: () => AbortSignal.timeout(10_000),
+});
+```
 
 Set `retry: false` to make exactly one request, `timeout: false` to disable the request timeout,
 or `cache: false` to omit the native fetch cache option.

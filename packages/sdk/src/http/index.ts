@@ -1,4 +1,4 @@
-import { Context7Error } from "@error";
+import { Context7Error, Context7JSONParseError, Context7UrlError } from "@error";
 
 export type CacheSetting =
   | "default"
@@ -109,6 +109,8 @@ export type HttpClientConfig = {
   retry?: RetryConfig;
   signal?: AbortSignal | (() => AbortSignal);
   timeout?: number | false;
+  /** Whether fetch may keep the connection alive. @default true */
+  keepAlive?: boolean;
   fetch?: Context7Fetch;
   onResponse?: (metadata: Context7ResponseMetadata) => void;
 } & RequesterConfig;
@@ -129,6 +131,7 @@ export class HttpClient implements Requester {
     signal?: AbortSignal | (() => AbortSignal);
     cache?: CacheSetting;
     timeout: number | false;
+    keepAlive: boolean;
   };
 
   private readonly fetch: Context7Fetch;
@@ -146,11 +149,15 @@ export class HttpClient implements Requester {
       cache: config.cache,
       signal: config.signal,
       timeout: config.timeout ?? DEFAULT_TIMEOUT,
+      keepAlive: config.keepAlive ?? true,
     };
 
     validateTimeout(this.options.timeout);
 
     this.baseUrl = config.baseUrl.replace(/\/$/, "");
+    if (!isHttpUrl(this.baseUrl)) {
+      throw new Context7UrlError(this.baseUrl);
+    }
 
     this.headers = {
       "Content-Type": "application/json",
@@ -211,7 +218,7 @@ export class HttpClient implements Requester {
       method,
       headers: this.headers,
       body: req.body === undefined ? undefined : JSON.stringify(req.body),
-      keepalive: true,
+      keepalive: this.options.keepAlive,
       signal: abortState.signal,
     };
 
@@ -273,10 +280,24 @@ export class HttpClient implements Requester {
           error?: string;
           message?: string;
         } = {};
-        try {
-          errorBody = (await res.json()) as typeof errorBody;
-        } catch (error_) {
-          if (abortState.signal?.aborted) throw error_;
+        const rawBody = await res.text();
+        if (rawBody) {
+          try {
+            errorBody = JSON.parse(rawBody) as typeof errorBody;
+          } catch (error_) {
+            if (abortState.signal?.aborted) throw error_;
+            if (res.headers.get("content-type")?.includes("application/json")) {
+              throw new Context7JSONParseError(rawBody, {
+                status: res.status,
+                requestId: responseMetadata?.requestId,
+                rateLimit: responseMetadata?.rateLimit,
+                retryable:
+                  DEFAULT_RETRY_STATUSES.includes(res.status) ||
+                  this.retry.statuses.has(res.status),
+                cause: error_,
+              });
+            }
+          }
         }
         throw new Context7Error(errorBody.message || errorBody.error || res.statusText, {
           code: errorBody.error ?? "http_error",
@@ -291,7 +312,18 @@ export class HttpClient implements Requester {
       const contentType = res.headers.get("content-type");
 
       if (contentType?.includes("application/json")) {
-        const body = await res.json();
+        const rawBody = await res.text();
+        let body: unknown;
+        try {
+          body = JSON.parse(rawBody);
+        } catch (error_) {
+          throw new Context7JSONParseError(rawBody, {
+            status: res.status,
+            requestId: responseMetadata?.requestId,
+            rateLimit: responseMetadata?.rateLimit,
+            cause: error_,
+          });
+        }
         return { result: body as TResult };
       } else {
         const text = await res.text();
@@ -332,6 +364,15 @@ export class HttpClient implements Requester {
       hasPrev: hasPrev === "true",
       totalTokens: parseInt(totalTokens, 10),
     };
+  }
+}
+
+function isHttpUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
   }
 }
 

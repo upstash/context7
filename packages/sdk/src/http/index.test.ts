@@ -1,6 +1,6 @@
 import { describe, test, expect, vi, afterEach } from "vitest";
 import { HttpClient } from "./index";
-import { Context7Error } from "@error";
+import { Context7Error, Context7JSONParseError, Context7UrlError } from "@error";
 
 function newClient(): HttpClient {
   return new HttpClient({
@@ -295,6 +295,72 @@ describe("HttpClient error handling", () => {
     expect(error).toBeInstanceOf(Context7Error);
     expect(error).not.toBeInstanceOf(SyntaxError);
     expect(error.message).toBe("Bad Gateway");
+  });
+
+  test("throws a structured parse error for malformed JSON responses", async () => {
+    const body = "{" + "x".repeat(250);
+    mockFetch(
+      new Response(body, {
+        status: 200,
+        headers: { "content-type": "application/json", "x-request-id": "req-json" },
+      })
+    );
+
+    const error = await newClient()
+      .request({ path: ["search"] })
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(Context7JSONParseError);
+    expect(error).toMatchObject({
+      code: "invalid_json_response",
+      status: 200,
+      requestId: "req-json",
+    });
+    expect(error.message).toHaveLength("Unable to parse response body: ".length + 203);
+    expect(error.cause).toBeInstanceOf(SyntaxError);
+  });
+
+  test("keeps HTTP metadata when an error response contains malformed JSON", async () => {
+    mockFetch(
+      new Response("{invalid", {
+        status: 502,
+        headers: { "content-type": "application/json", "x-request-id": "req-bad-json" },
+      })
+    );
+
+    const error = await newClient()
+      .request({ path: ["search"] })
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(Context7JSONParseError);
+    expect(error).toMatchObject({
+      code: "invalid_json_response",
+      status: 502,
+      requestId: "req-bad-json",
+      retryable: true,
+    });
+  });
+
+  test("rejects invalid base URLs", () => {
+    expect(() => new HttpClient({ baseUrl: "example.com" })).toThrow(Context7UrlError);
+    expect(() => new HttpClient({ baseUrl: "ftp://example.com" })).toThrow(Context7UrlError);
+  });
+
+  test("allows keepalive to be disabled", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("ok"));
+    const client = new HttpClient({
+      baseUrl: "https://example.com",
+      fetch: fetchMock,
+      retry: false,
+      keepAlive: false,
+    });
+
+    await client.request({ path: ["search"] });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://example.com/search",
+      expect.objectContaining({ keepalive: false })
+    );
   });
 
   test("falls back to statusText on empty error body", async () => {

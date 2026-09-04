@@ -98,9 +98,19 @@ const client = new Context7({
 });
 ```
 
-You can also configure `baseUrl`, additional `headers`, the native fetch `cache` mode, a client-wide
-abort `signal`, or a custom `fetch` implementation. The SDK always sets `Authorization` from the
-configured API key; additional headers cannot override it.
+You can also configure `baseUrl`, additional `headers`, `keepAlive`, the native fetch `cache` mode,
+a client-wide abort `signal`, or a custom `fetch` implementation. The SDK always sets
+`Authorization` from the configured API key; additional headers cannot override it.
+
+Following the same convention as `@upstash/redis`, a signal factory can provide a fresh timeout
+signal for each request:
+
+```typescript
+const client = new Context7({
+  apiKey: "YOUR_API_KEY",
+  signal: () => AbortSignal.timeout(10_000),
+});
+```
 
 Set `retry: false` to make exactly one request or `timeout: false` to disable the default timeout.
 

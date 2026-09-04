@@ -34,3 +34,26 @@ export class Context7Error extends Error {
     this.cause = options.cause;
   }
 }
+
+/** Raised when a configured API URL is not a valid HTTP(S) URL. */
+export class Context7UrlError extends Context7Error {
+  constructor(url: string) {
+    super(
+      `Context7 client was passed an invalid URL. You should pass a URL starting with http:// or https://. Received: "${url}".`,
+      { code: "invalid_url" }
+    );
+    this.name = "Context7UrlError";
+  }
+}
+
+/** Raised when a response advertised as JSON cannot be parsed. */
+export class Context7JSONParseError extends Context7Error {
+  constructor(body: string, options: Context7ErrorOptions = {}) {
+    const truncatedBody = body.length > 200 ? `${body.slice(0, 200)}...` : body;
+    super(`Unable to parse response body: ${truncatedBody}`, {
+      ...options,
+      code: options.code ?? "invalid_json_response",
+    });
+    this.name = "Context7JSONParseError";
+  }
+}

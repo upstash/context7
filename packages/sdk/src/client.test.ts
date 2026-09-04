@@ -55,6 +55,7 @@ describe("Context7 Client", () => {
       cache: "force-cache",
       retry: false,
       timeout: false,
+      keepAlive: false,
       fetch: fetchMock,
       headers: {
         authorization: "Bearer should-not-win",
@@ -72,6 +73,7 @@ describe("Context7 Client", () => {
     );
     expect(init).toMatchObject({
       cache: "force-cache",
+      keepalive: false,
       headers: {
         Authorization: "Bearer ctx7sk-config",
         "Content-Type": "application/json",

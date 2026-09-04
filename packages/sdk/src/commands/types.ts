@@ -12,6 +12,8 @@ export interface Context7Config {
   timeout?: number | false;
   /** Abort all requests made by this client when this signal aborts. */
   signal?: AbortSignal | (() => AbortSignal);
+  /** Whether fetch may keep the connection alive. @default true */
+  keepAlive?: boolean;
   /** Custom fetch implementation for non-standard runtimes, testing, or instrumentation. */
   fetch?: Context7Fetch;
   /** Additional headers sent with every request. Authorization cannot be overridden. */
