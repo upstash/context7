@@ -79,6 +79,42 @@ const client = new Context7({
   `process.env.CONTEXT7_API_KEY`
 </Note>
 
+#### Production HTTP configuration
+
+The SDK applies a 30-second request timeout and retries transient network failures, `408`, `425`,
+`429`, and `5xx` responses. Only `GET` requests are retried; mutating requests remain
+single-attempt.
+
+```typescript
+const client = new Context7({
+  apiKey: "YOUR_API_KEY",
+  timeout: 10_000,
+  retry: {
+    retries: 3,
+    backoff: (attempt) => 100 * 2 ** attempt,
+  },
+  onResponse: ({ status, requestId, rateLimit, attempt }) => {
+    console.log({ status, requestId, rateLimit, attempt });
+  },
+});
+```
+
+You can also configure `baseUrl`, additional `headers`, `keepAlive`, the native fetch `cache` mode,
+a client-wide abort `signal`, or a custom `fetch` implementation. The SDK always sets
+`Authorization` from the configured API key; additional headers cannot override it.
+
+Following the same convention as `@upstash/redis`, a signal factory can provide a fresh timeout
+signal for each request:
+
+```typescript
+const client = new Context7({
+  apiKey: "YOUR_API_KEY",
+  signal: () => AbortSignal.timeout(10_000),
+});
+```
+
+Set `retry: false` to make exactly one request or `timeout: false` to disable the default timeout.
+
 ## Quick Start Example
 
 ```typescript
@@ -104,6 +140,7 @@ console.log(docs[0].title, docs[0].content);
 // Get documentation context as plain text
 const context = await client.getContext("How do I use hooks?", "/facebook/react", {
   type: "txt",
+  timeout: 5_000,
 });
 console.log(context);
 ```
@@ -121,7 +158,14 @@ try {
   const context = await client.getContext("query", "/invalid/library");
 } catch (error) {
   if (error instanceof Context7Error) {
-    console.error("Context7 API Error:", error.message);
+    console.error("Context7 API Error:", {
+      message: error.message,
+      code: error.code,
+      status: error.status,
+      requestId: error.requestId,
+      rateLimit: error.rateLimit,
+      retryable: error.retryable,
+    });
   } else {
     console.error("Unexpected error:", error);
   }

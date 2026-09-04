@@ -1,45 +1,64 @@
 import { describe, test, expect } from "vitest";
 import { SearchLibraryCommand } from "./index";
-import { newHttpClient } from "../../utils/test-utils";
-import { Context7 } from "../../client";
+import { Context7Error } from "@error";
+import { requesterWith } from "@utils/test-utils";
 
-const httpClient = newHttpClient();
+const apiResult = {
+  results: [
+    {
+      id: "/facebook/react",
+      title: "React",
+      description: "A UI library",
+      totalSnippets: 42,
+      trustScore: 10,
+      benchmarkScore: 95,
+      versions: ["v19"],
+    },
+  ],
+};
 
 describe("SearchLibraryCommand", () => {
-  test("should search for a library", async () => {
+  test("maps an API response to libraries", async () => {
     const command = new SearchLibraryCommand("I need to build a UI", "react");
-    const result = await command.exec(httpClient);
 
-    expect(result).toBeDefined();
-    expect(Array.isArray(result)).toBe(true);
-    expect(result.length).toBeGreaterThan(0);
-
-    const library = result[0];
-    expect(library).toHaveProperty("id");
-    expect(library).toHaveProperty("name");
-    expect(library).toHaveProperty("description");
-    expect(library).toHaveProperty("totalSnippets");
-    expect(library).toHaveProperty("trustScore");
-    expect(library).toHaveProperty("benchmarkScore");
+    await expect(command.exec(requesterWith(apiResult))).resolves.toEqual([
+      {
+        id: "/facebook/react",
+        name: "React",
+        description: "A UI library",
+        totalSnippets: 42,
+        trustScore: 10,
+        benchmarkScore: 95,
+        versions: ["v19"],
+      },
+    ]);
   });
 
-  test("should search for a library using client", async () => {
-    const client = new Context7({
-      apiKey: process.env.CONTEXT7_API_KEY || process.env.API_KEY!,
+  test("formats a text response locally", async () => {
+    const command = new SearchLibraryCommand("I need to build a UI", "react", {
+      type: "txt",
     });
 
-    const result = await client.searchLibrary("I need to build a UI", "react");
+    const result = await command.exec(requesterWith(apiResult));
 
-    expect(result).toBeDefined();
-    expect(Array.isArray(result)).toBe(true);
-    expect(result.length).toBeGreaterThan(0);
+    expect(result).toContain("Context7-compatible library ID: /facebook/react");
+    expect(result).toContain("Trust Score: High");
+  });
 
-    const library = result[0];
-    expect(library).toHaveProperty("id");
-    expect(library).toHaveProperty("name");
-    expect(library).toHaveProperty("description");
-    expect(library).toHaveProperty("totalSnippets");
-    expect(library).toHaveProperty("trustScore");
-    expect(library).toHaveProperty("benchmarkScore");
+  test("throws a Context7 error when the response has no result", async () => {
+    const command = new SearchLibraryCommand("I need to build a UI", "react");
+
+    const error = await command.exec(requesterWith(undefined)).catch((e) => e);
+
+    expect(error).toBeInstanceOf(Context7Error);
+    expect(error).toMatchObject({
+      message: "Request did not return a result",
+      code: "invalid_response",
+    });
+  });
+
+  test("rejects missing inputs without making a request", () => {
+    expect(() => new SearchLibraryCommand("", "react")).toThrow(Context7Error);
+    expect(() => new SearchLibraryCommand("query", "")).toThrow(Context7Error);
   });
 });

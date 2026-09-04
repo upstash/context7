@@ -40,10 +40,7 @@ const client = new Context7({
 });
 
 // Search for libraries
-const libraries = await client.searchLibrary(
-  "I need to build a UI with components",
-  "react"
-);
+const libraries = await client.searchLibrary("I need to build a UI with components", "react");
 console.log(libraries[0].id); // "/facebook/react"
 
 // Get documentation as JSON array (default)
@@ -51,11 +48,7 @@ const docs = await client.getContext("How do I use hooks?", "/facebook/react");
 console.log(docs[0].title, docs[0].content);
 
 // Get documentation context as plain text
-const context = await client.getContext(
-  "How do I use hooks?",
-  "/facebook/react",
-  { type: "txt" }
-);
+const context = await client.getContext("How do I use hooks?", "/facebook/react", { type: "txt" });
 console.log(context);
 ```
 
@@ -75,6 +68,61 @@ Then initialize without options:
 const client = new Context7();
 ```
 
+### Production HTTP options
+
+Requests time out after 30 seconds and retry transient network errors, `408`, `425`, `429`,
+and `5xx` responses by default. You can configure those defaults for the client and override
+timeout, cancellation, and native fetch caching per request:
+
+```ts
+import { Context7, Context7Error } from "@upstash/context7-sdk";
+
+const client = new Context7({
+  apiKey: process.env.CONTEXT7_API_KEY,
+  timeout: 10_000,
+  retry: {
+    retries: 3,
+    backoff: (attempt) => 100 * 2 ** attempt,
+  },
+  onResponse: ({ status, requestId, rateLimit, attempt }) => {
+    console.log({ status, requestId, rateLimit, attempt });
+  },
+});
+
+const controller = new AbortController();
+
+try {
+  const docs = await client.getContext("How do I use hooks?", "/facebook/react", {
+    signal: controller.signal,
+    timeout: 5_000,
+    cache: "no-store",
+  });
+  console.log(docs);
+} catch (error) {
+  if (error instanceof Context7Error) {
+    console.error(error.code, error.status, error.requestId, error.rateLimit);
+  }
+}
+```
+
+The client also accepts `baseUrl`, `headers`, `keepAlive`, and a custom `fetch` implementation for
+proxies, instrumentation, tests, and runtimes that do not expose a global `fetch`. The configured
+API key always controls the `Authorization` header.
+
+As in `@upstash/redis`, you can express a timeout with a fresh signal for every request:
+
+```ts
+const client = new Context7({
+  apiKey: process.env.CONTEXT7_API_KEY,
+  signal: () => AbortSignal.timeout(10_000),
+});
+```
+
+Set `retry: false` to make exactly one request, `timeout: false` to disable the request timeout,
+or `cache: false` to omit the native fetch cache option.
+
+Only `GET` requests are retried. Mutating requests remain single-attempt.
+
 ## Docs
 
 See the [documentation](https://context7.com/docs/sdks/ts/getting-started) for details.
@@ -85,6 +133,12 @@ See the [documentation](https://context7.com/docs/sdks/ts/getting-started) for d
 
 ```sh
 pnpm test
+```
+
+Run the live API integration tests separately with a configured API key:
+
+```sh
+pnpm test:integration
 ```
 
 ### Building

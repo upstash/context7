@@ -15,26 +15,22 @@ export class SearchLibraryCommand extends Command<Library[] | string> {
       throw new Context7Error("query and libraryName are required");
     }
 
-    const queryParams: Record<string, string | number | undefined> = {};
+    const { type = DEFAULT_TYPE, ...requestOptions } = options ?? {};
 
-    queryParams.query = query;
-    queryParams.libraryName = libraryName;
+    super(
+      {
+        method: "GET",
+        query: { query, libraryName },
+        ...requestOptions,
+      },
+      "v2/libs/search"
+    );
 
-    super({ method: "GET", query: queryParams }, "v2/libs/search");
-
-    this.responseType = options?.type ?? DEFAULT_TYPE;
+    this.responseType = type;
   }
 
   public override async exec(client: Requester): Promise<Library[] | string> {
-    const { result } = await client.request<ApiSearchResponse>({
-      method: this.request.method || "GET",
-      path: [this.endpoint],
-      query: this.request.query,
-    });
-
-    if (result === undefined) {
-      throw new Context7Error("Request did not return a result");
-    }
+    const result = await this.requestResult<ApiSearchResponse>(client);
 
     const libraries = result.results.map(formatLibrary);
 

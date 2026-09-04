@@ -26,6 +26,15 @@ Retrieve documentation context for a specific library. Returns documentation as 
 
       Default: `"json"`
     </ParamField>
+    <ParamField path="signal" type="AbortSignal">
+      Abort signal for cancelling this request.
+    </ParamField>
+    <ParamField path="timeout" type="number | false">
+      Per-request timeout in milliseconds. Use `false` to disable the client timeout.
+    </ParamField>
+    <ParamField path="cache" type="CacheSetting">
+      Native fetch cache mode. Use `false` to omit the cache option.
+    </ParamField>
   </Expandable>
 </ParamField>
 
