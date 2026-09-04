@@ -177,6 +177,24 @@ describe("validateJWT - Entra path", () => {
   });
 });
 
+describe("validateJWT - EMA path", () => {
+  test("verifies Context7-issued tokens for the shared MCP resource", async () => {
+    vi.mocked(jose.jwtVerify).mockResolvedValue({
+      payload: {},
+      protectedHeader: { alg: "RS256" },
+    } as unknown as Awaited<ReturnType<typeof jose.jwtVerify>>);
+
+    const { validateJWT } = await loadModule();
+    const result = await validateJWT(makeEntraToken({ iss: "https://context7.com" }));
+
+    expect(result.valid).toBe(true);
+    expect(jose.jwtVerify).toHaveBeenCalledWith(expect.any(String), "fake-jwks", {
+      issuer: "https://context7.com",
+      audience: "https://mcp.context7.com",
+    });
+  });
+});
+
 describe("validateJWT - Clerk path", () => {
   test("verifies against Clerk JWKS for non-Entra issuers", async () => {
     vi.mocked(jose.jwtVerify).mockResolvedValue({
