@@ -319,8 +319,12 @@ async function main() {
     // Only private/local infrastructure may supply forwarding headers. Express
     // then walks the chain right-to-left and ignores attacker-added prefixes.
     app.set("trust proxy", ["loopback", "linklocal", "uniquelocal", "100.64.0.0/10"]);
-    app.use(express.json());
 
+    // CORS runs ahead of the body parser: a malformed body makes express.json()
+    // hand off to next(err), which skips every remaining 3-arg middleware. With
+    // CORS below it the resulting error response carried no
+    // Access-Control-Allow-Origin, so browser clients saw an opaque CORS
+    // failure instead of the status the error handler had chosen for them.
     app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
       res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
@@ -338,6 +342,8 @@ async function main() {
       }
       next();
     });
+
+    app.use(express.json());
 
     const extractHeaderValue = (value: string | string[] | undefined): string | undefined => {
       if (!value) return undefined;
@@ -536,6 +542,65 @@ async function main() {
         message: "Endpoint not found. Use /mcp for MCP protocol communication.",
       });
     });
+
+    // Matches body-parser's parse failure only, so an unrelated SyntaxError
+    // from application code is not reclassified as a malformed request.
+    const isJsonParseFailure = (err: unknown): boolean =>
+      err instanceof SyntaxError &&
+      (err as SyntaxError & { type?: string }).type === "entity.parse.failed";
+
+    // body-parser also rejects bodies that are too large or undecodable, each
+    // with its own 4xx. Keep that status: a 500 would invite the client to
+    // retry a request that can never succeed.
+    const rejectedBodyStatus = (err: unknown): number | undefined => {
+      const status = (err as { status?: unknown } | null)?.status;
+      return typeof status === "number" && status >= 400 && status < 500 ? status : undefined;
+    };
+
+    // express.json() raises next(err) on a rejected body, which bypasses the
+    // routes above and their try/catch. Without this, those fell through to
+    // Express's default handler and its HTML stack trace.
+    const errorHandler: express.ErrorRequestHandler = (err, req, res, _next) => {
+      const parseFailure = isJsonParseFailure(err);
+      const rejectedStatus = rejectedBodyStatus(err);
+
+      const where = `${req.method} ${req.path} bytes=${req.headers["content-length"] ?? "unknown"}`;
+      if (rejectedStatus !== undefined) {
+        const tag = (err as { type?: unknown } | null)?.type ?? "unknown";
+        console.error(`Rejected request body (${rejectedStatus}, ${String(tag)}): ${where}`);
+      } else {
+        console.error(`Unhandled request error: ${where}`, err);
+      }
+
+      if (res.headersSent) {
+        return;
+      }
+
+      if (parseFailure) {
+        res.status(400).json({
+          jsonrpc: "2.0",
+          error: { code: -32700, message: "Parse error" },
+          id: null,
+        });
+        return;
+      }
+
+      if (rejectedStatus !== undefined) {
+        res.status(rejectedStatus).json({
+          jsonrpc: "2.0",
+          error: { code: -32600, message: "Invalid Request" },
+          id: null,
+        });
+        return;
+      }
+
+      res.status(500).json({
+        jsonrpc: "2.0",
+        error: { code: -32603, message: "Internal server error" },
+        id: null,
+      });
+    };
+    app.use(errorHandler);
 
     const startServer = (port: number, maxAttempts = 10) => {
       const httpServer = app.listen(port);
