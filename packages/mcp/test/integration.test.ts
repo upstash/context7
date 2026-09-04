@@ -162,6 +162,97 @@ describe("OAuth discovery", () => {
   });
 });
 
+// A malformed body fails inside express.json(), which calls next(err). That
+// jumps past every 3-arg middleware — CORS, both /mcp routes (so neither the
+// auth check nor handleMcpRequest's catch runs) and the catch-all 404 — and
+// used to land in Express's default handler and its HTML stack trace.
+describe.each(["/mcp", "/mcp/oauth"])("malformed JSON body on %s", (endpoint) => {
+  test("answers with a sanitized JSON-RPC parse error", async () => {
+    const response = await fetch(new URL(endpoint, httpUrl), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
+        // Credentials ride along on real traffic, so assert they are not echoed.
+        Authorization: "Bearer ctx7sk-parse-error-canary",
+      },
+      body: '{"jsonrpc":"2.0","method":"tools/list","params":{"leak-canary":',
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get("content-type")).toMatch(/^application\/json/);
+    // The throw happens upstream of the CORS middleware, so browser clients see
+    // a CORS failure instead of the 400 unless the headers are restored.
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
+
+    const raw = await response.text();
+    for (const leak of [
+      "node_modules",
+      "body-parser",
+      "raw-body",
+      "SyntaxError",
+      "<html",
+      "<pre",
+      "at JSON.parse",
+      PKG_ROOT,
+      "leak-canary",
+      "ctx7sk-parse-error-canary",
+    ]) {
+      expect(raw).not.toContain(leak);
+    }
+
+    expect(JSON.parse(raw)).toEqual({
+      jsonrpc: "2.0",
+      error: { code: -32700, message: "Parse error" },
+      id: null,
+    });
+  });
+});
+
+// body-parser refuses some bodies before JSON.parse is reached. Those are still
+// client mistakes, so they keep the status it assigned instead of being
+// reported as a server fault that invites the client to retry forever.
+test("keeps an oversized body a sanitized 413 rather than a 500", async () => {
+  const response = await fetch(new URL("/mcp", httpUrl), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    // Comfortably past express.json()'s 100kb default limit.
+    body: JSON.stringify({ jsonrpc: "2.0", padding: "A".repeat(200_000) }),
+  });
+
+  expect(response.status).toBe(413);
+  expect(response.headers.get("content-type")).toMatch(/^application\/json/);
+
+  const raw = await response.text();
+  for (const leak of ["node_modules", "PayloadTooLargeError", "<html", "<pre", PKG_ROOT]) {
+    expect(raw).not.toContain(leak);
+  }
+  expect(JSON.parse(raw)).toEqual({
+    jsonrpc: "2.0",
+    error: { code: -32600, message: "Invalid Request" },
+    id: null,
+  });
+});
+
+// Guard against over-classifying: only body-parser's entity.parse.failed is a
+// parse error. These bodies parse fine and must keep their existing SDK-issued
+// codes rather than collapsing into -32700.
+describe.each([
+  ["a non-JSON-RPC object", '{"hello":"world"}', 400, -32600],
+  ["an empty body", "", 400, -32600],
+])("valid JSON: %s", (_label, body, status, code) => {
+  test("is not reported as a parse error", async () => {
+    const response = await fetch(new URL("/mcp", httpUrl), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body,
+    });
+
+    expect(response.status).toBe(status);
+    expect(await response.json()).toMatchObject({ error: { code } });
+  });
+});
+
 describe("HTTP API key headers", () => {
   test("accepts the advertised X-Context7-API-Key header", async () => {
     const apiKey = "ctx7sk-advertised-header-test";

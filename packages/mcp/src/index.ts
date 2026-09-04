@@ -328,8 +328,12 @@ async function main() {
     // Only private/local infrastructure may supply forwarding headers. Express
     // then walks the chain right-to-left and ignores attacker-added prefixes.
     app.set("trust proxy", ["loopback", "linklocal", "uniquelocal", "100.64.0.0/10"]);
-    app.use(express.json());
 
+    // CORS runs ahead of the body parser: a malformed body makes express.json()
+    // hand off to next(err), which skips every remaining 3-arg middleware. With
+    // CORS below it the resulting error response carried no
+    // Access-Control-Allow-Origin, so browser clients saw an opaque CORS
+    // failure instead of the status the error handler had chosen for them.
     app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
       res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
@@ -347,6 +351,44 @@ async function main() {
       }
       next();
     });
+
+    app.use(express.json());
+
+    // Mounted against the parser so it only ever sees errors the parser raised:
+    // routes are registered past this point, so a 4xx one of them throws
+    // reaches the terminal handler instead of being relabelled a rejected body.
+    const bodyErrorBoundary: express.ErrorRequestHandler = (err, req, res, next) => {
+      const tagged = err as { status?: unknown; type?: unknown };
+      const status = tagged.status;
+
+      // Every rejection body-parser raises carries a 4xx. Anything else landing
+      // here is a middleware fault rather than a bad body, and answering it 400
+      // would blame the client for a server error.
+      if (typeof status !== "number" || status < 400 || status >= 500) {
+        return next(err);
+      }
+      if (res.headersSent) {
+        return next(err);
+      }
+
+      // Method, path and size only: the body is the rejected input, and the
+      // headers carry the API key.
+      const where = `${req.method} ${req.path} bytes=${req.headers["content-length"] ?? "unknown"}`;
+      console.error(
+        `Rejected request body (${status}, ${String(tagged.type ?? "unknown")}): ${where}`
+      );
+
+      // Fixed messages: body-parser's own quote offsets into the body.
+      const parseFailure = err instanceof SyntaxError && tagged.type === "entity.parse.failed";
+      res.status(status).json({
+        jsonrpc: "2.0",
+        error: parseFailure
+          ? { code: -32700, message: "Parse error" }
+          : { code: -32600, message: "Invalid Request" },
+        id: null,
+      });
+    };
+    app.use(bodyErrorBoundary);
 
     const extractHeaderValue = (value: string | string[] | undefined): string | undefined => {
       if (!value) return undefined;
@@ -542,6 +584,24 @@ async function main() {
         message: "Endpoint not found. Use /mcp for MCP protocol communication.",
       });
     });
+
+    // Anything reaching here escaped a route's own handling, so it is opaque by
+    // definition. Without it Express replies with an HTML stack trace.
+    const terminalErrorHandler: express.ErrorRequestHandler = (err, req, res, next) => {
+      console.error(`Unhandled request error: ${req.method} ${req.path}`, err);
+
+      // Only Express can wind down a response that has already started.
+      if (res.headersSent) {
+        return next(err);
+      }
+
+      res.status(500).json({
+        jsonrpc: "2.0",
+        error: { code: -32603, message: "Internal server error" },
+        id: null,
+      });
+    };
+    app.use(terminalErrorHandler);
 
     const startServer = (port: number, maxAttempts = 10) => {
       const httpServer = app.listen(port);
