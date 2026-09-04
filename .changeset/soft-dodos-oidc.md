@@ -3,4 +3,4 @@
 "@upstash/context7-mcp": minor
 ---
 
-Add per-request OIDC bearer token support for Vercel Marketplace connections.
+Add per-request bearer-token providers and Vercel Marketplace resource OIDC validation.
