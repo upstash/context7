@@ -19,7 +19,16 @@ export class GetContextCommand extends Command<Documentation[] | string> {
     const responseType = options?.type ?? DEFAULT_TYPE;
     queryParams.type = responseType;
 
-    super({ method: "GET", query: queryParams }, "v2/context");
+    super(
+      {
+        method: "GET",
+        query: queryParams,
+        signal: options?.signal,
+        timeout: options?.timeout,
+        cache: options?.cache,
+      },
+      "v2/context"
+    );
 
     this.responseType = responseType;
   }
@@ -30,6 +39,9 @@ export class GetContextCommand extends Command<Documentation[] | string> {
       path: [this.endpoint],
       query: this.request.query,
       body: this.request.body,
+      signal: this.request.signal,
+      timeout: this.request.timeout,
+      cache: this.request.cache,
     });
 
     if (result === undefined) {

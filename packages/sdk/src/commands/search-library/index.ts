@@ -20,7 +20,16 @@ export class SearchLibraryCommand extends Command<Library[] | string> {
     queryParams.query = query;
     queryParams.libraryName = libraryName;
 
-    super({ method: "GET", query: queryParams }, "v2/libs/search");
+    super(
+      {
+        method: "GET",
+        query: queryParams,
+        signal: options?.signal,
+        timeout: options?.timeout,
+        cache: options?.cache,
+      },
+      "v2/libs/search"
+    );
 
     this.responseType = options?.type ?? DEFAULT_TYPE;
   }
@@ -30,6 +39,9 @@ export class SearchLibraryCommand extends Command<Library[] | string> {
       method: this.request.method || "GET",
       path: [this.endpoint],
       query: this.request.query,
+      signal: this.request.signal,
+      timeout: this.request.timeout,
+      cache: this.request.cache,
     });
 
     if (result === undefined) {

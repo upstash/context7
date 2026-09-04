@@ -13,13 +13,20 @@ const DEFAULT_BASE_URL = "https://context7.com/api";
 const API_KEY_PREFIX = "ctx7sk";
 
 export type * from "@commands/types";
+export type {
+  CacheSetting,
+  Context7Fetch,
+  Context7ResponseMetadata,
+  RateLimitMetadata,
+  RetryConfig,
+} from "@http";
 export * from "@error";
 
 export class Context7 {
   private httpClient: HttpClient;
 
   constructor(config: Context7Config = {}) {
-    const apiKey = config.apiKey || process.env.CONTEXT7_API_KEY;
+    const apiKey = config.apiKey || getEnvironmentApiKey();
 
     if (!apiKey) {
       throw new Context7Error(
@@ -32,15 +39,17 @@ export class Context7 {
     }
 
     this.httpClient = new HttpClient({
-      baseUrl: DEFAULT_BASE_URL,
+      baseUrl: config.baseUrl ?? DEFAULT_BASE_URL,
       headers: {
+        ...withoutAuthorizationHeader(config.headers),
         Authorization: `Bearer ${apiKey}`,
       },
-      retry: {
-        retries: 5,
-        backoff: (retryCount) => Math.exp(retryCount) * 50,
-      },
-      cache: "no-store",
+      retry: config.retry,
+      cache: config.cache ?? "no-store",
+      timeout: config.timeout,
+      signal: config.signal,
+      fetch: config.fetch,
+      onResponse: config.onResponse,
     });
   }
 
@@ -129,4 +138,14 @@ export class Context7 {
     const command = new GetContextCommand(query, libraryId, options);
     return await command.exec(this.httpClient);
   }
+}
+
+function getEnvironmentApiKey(): string | undefined {
+  return typeof process === "undefined" ? undefined : process.env?.CONTEXT7_API_KEY;
+}
+
+function withoutAuthorizationHeader(headers?: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(headers ?? {}).filter(([name]) => name.toLowerCase() !== "authorization")
+  );
 }

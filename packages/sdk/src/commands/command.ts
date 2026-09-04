@@ -1,4 +1,4 @@
-import type { Requester } from "@http";
+import type { CacheSetting, Requester } from "@http";
 
 export const _ENDPOINTS = ["v2/libs/search", "v2/context"];
 
@@ -8,6 +8,9 @@ export interface CommandRequest {
   method?: "GET" | "POST";
   body?: unknown;
   query?: Record<string, string | number | boolean | undefined>;
+  signal?: AbortSignal;
+  timeout?: number | false;
+  cache?: CacheSetting;
 }
 
 export class Command<TResult> {
@@ -28,6 +31,9 @@ export class Command<TResult> {
       path: [this.endpoint],
       query: this.request.query,
       body: this.request.body,
+      signal: this.request.signal,
+      timeout: this.request.timeout,
+      cache: this.request.cache,
     });
 
     if (result === undefined) {
