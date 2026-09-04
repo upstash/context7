@@ -13,7 +13,7 @@ import {
 } from "./lib/utils.js";
 import { isJWT, validateJWT } from "./lib/jwt.js";
 import express from "express";
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
 import { randomUUID } from "node:crypto";
 import {
@@ -24,6 +24,7 @@ import {
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
+import { createHttpSecurityMiddleware, normalizeBindHost } from "./lib/http-security.js";
 import { getMaxSubscriptions } from "./lib/subscriptions.js";
 
 /** Default HTTP server port */
@@ -34,6 +35,11 @@ const program = new Command()
   .version(SERVER_VERSION, "-v, --version", "output the current version")
   .option("--transport <stdio|http>", "transport type", "stdio")
   .option("--port <number>", "port for HTTP transport", DEFAULT_PORT.toString())
+  .addOption(
+    new Option("--host <host>", "host interface for HTTP transport")
+      .env("CONTEXT7_MCP_HOST")
+      .default("127.0.0.1")
+  )
   .option("--api-key <key>", "API key for authentication (or set CONTEXT7_API_KEY env var)")
   .allowUnknownOption() // let MCP Inspector / other wrappers pass through extra flags
   .parse(process.argv);
@@ -41,6 +47,7 @@ const program = new Command()
 const cliOptions = program.opts<{
   transport: string;
   port: string;
+  host: string;
   apiKey?: string;
 }>();
 
@@ -57,18 +64,18 @@ if (!allowedTransports.includes(cliOptions.transport)) {
 const TRANSPORT_TYPE = (cliOptions.transport || "stdio") as "stdio" | "http";
 
 // Disallow incompatible flags based on transport
-const passedPortFlag = process.argv.includes("--port");
-const passedApiKeyFlag = process.argv.includes("--api-key");
+const wasPassed = (option: "port" | "host" | "apiKey") =>
+  program.getOptionValueSource(option) === "cli";
 
-if (TRANSPORT_TYPE === "http" && passedApiKeyFlag) {
+if (TRANSPORT_TYPE === "http" && wasPassed("apiKey")) {
   console.error(
     "The --api-key flag is not allowed when using --transport http. Use header-based auth at the HTTP layer instead."
   );
   process.exit(1);
 }
 
-if (TRANSPORT_TYPE === "stdio" && passedPortFlag) {
-  console.error("The --port flag is not allowed when using --transport stdio.");
+if (TRANSPORT_TYPE === "stdio" && (wasPassed("port") || wasPassed("host"))) {
+  console.error("The --port and --host flags are not allowed when using --transport stdio.");
   process.exit(1);
 }
 
@@ -314,30 +321,20 @@ Do not call this tool more than 3 times per question.`,
 async function main() {
   if (TRANSPORT_TYPE === "http") {
     const initialPort = CLI_PORT ?? DEFAULT_PORT;
+    let httpHost: string;
+    try {
+      httpHost = normalizeBindHost(cliOptions.host);
+    } catch (error) {
+      program.error(error instanceof Error ? error.message : "Invalid HTTP host.");
+      throw error;
+    }
 
     const app = express();
     // Only private/local infrastructure may supply forwarding headers. Express
     // then walks the chain right-to-left and ignores attacker-added prefixes.
     app.set("trust proxy", ["loopback", "linklocal", "uniquelocal", "100.64.0.0/10"]);
+    app.use(createHttpSecurityMiddleware(httpHost));
     app.use(express.json());
-
-    app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
-      // Mcp-Method / Mcp-Name are the SEP-2243 standard headers 2026-07-28
-      // clients send on every request; without them here, browser-based modern
-      // clients fail the CORS preflight. (Mcp-Param-* mirroring is skipped by
-      // browser clients, so those are not needed.)
-      res.setHeader(
-        "Access-Control-Allow-Headers",
-        "Content-Type, MCP-Session-Id, MCP-Protocol-Version, Mcp-Method, Mcp-Name, X-Context7-API-Key, Context7-API-Key, X-API-Key, Authorization"
-      );
-      if (req.method === "OPTIONS") {
-        res.sendStatus(200);
-        return;
-      }
-      next();
-    });
 
     const extractHeaderValue = (value: string | string[] | undefined): string | undefined => {
       if (!value) return undefined;
@@ -538,7 +535,7 @@ async function main() {
     });
 
     const startServer = (port: number, maxAttempts = 10) => {
-      const httpServer = app.listen(port);
+      const httpServer = app.listen(port, httpHost);
 
       httpServer.once("error", (err: NodeJS.ErrnoException) => {
         if (err.code === "EADDRINUSE" && port < initialPort + maxAttempts) {
@@ -551,8 +548,9 @@ async function main() {
       });
 
       httpServer.once("listening", () => {
+        const displayHost = httpHost.includes(":") ? `[${httpHost}]` : httpHost;
         console.error(
-          `Context7 Documentation MCP Server v${SERVER_VERSION} running on HTTP at http://localhost:${port}/mcp`
+          `Context7 Documentation MCP Server v${SERVER_VERSION} running on HTTP at http://${displayHost}:${port}/mcp`
         );
       });
     };

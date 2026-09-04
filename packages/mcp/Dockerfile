@@ -26,4 +26,4 @@ COPY --from=builder /app/packages/mcp/dist ./packages/mcp/dist
 
 WORKDIR /app/packages/mcp
 EXPOSE 8080
-CMD ["node", "dist/index.js", "--transport", "http", "--port", "8080"]
+CMD ["node", "dist/index.js", "--transport", "http", "--port", "8080", "--host", "0.0.0.0"]

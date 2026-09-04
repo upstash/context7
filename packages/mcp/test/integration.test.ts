@@ -3,7 +3,7 @@ import { Client } from "@modelcontextprotocol/client";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { StdioClientTransport, getDefaultEnvironment } from "@modelcontextprotocol/client/stdio";
 import { execSync } from "node:child_process";
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { createDecipheriv } from "node:crypto";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
@@ -89,19 +89,27 @@ function startStubApi(): Promise<string> {
   });
 }
 
-function startHttpChild(): Promise<{ child: ChildProcess; url: string }> {
+function startHttpChild(
+  port: number,
+  host?: string
+): Promise<{ child: ChildProcess; url: string }> {
   return new Promise((resolve, reject) => {
-    const child = spawn(
-      process.execPath,
-      [DIST, "--transport", "http", "--port", String(BASE_PORT)],
-      { env: childEnv, stdio: ["ignore", "ignore", "pipe"] }
-    );
+    const args = [DIST, "--transport", "http", "--port", String(port)];
+    if (host) args.push("--host", host);
+    const child = spawn(process.execPath, args, {
+      env: childEnv,
+      stdio: ["ignore", "ignore", "pipe"],
+    });
     let stderr = "";
     child.stderr!.on("data", (chunk: Buffer) => {
       stderr += chunk.toString();
       // The binary retries on EADDRINUSE, so parse the actual port it settled on.
-      const match = stderr.match(/running on HTTP at (http:\/\/localhost:\d+\/mcp)/);
-      if (match) resolve({ child, url: match[1] });
+      const match = stderr.match(/running on HTTP at (http:\/\/[^\s]+\/mcp)/);
+      if (match) {
+        const url = new URL(match[1]);
+        if (url.hostname === "0.0.0.0") url.hostname = "127.0.0.1";
+        resolve({ child, url: url.href });
+      }
     });
     child.once("exit", (code) => {
       reject(new Error(`HTTP server exited before listening (code ${code}): ${stderr}`));
@@ -119,7 +127,7 @@ beforeAll(async () => {
     CONTEXT7_API_URL: stubUrl,
     MCP_CLIENT_IP_ASSERTION_KEY: CLIENT_IP_ASSERTION_KEY,
   };
-  ({ child: httpChild, url: httpUrl } = await startHttpChild());
+  ({ child: httpChild, url: httpUrl } = await startHttpChild(BASE_PORT));
 }, 120_000);
 
 afterAll(() => {
@@ -159,6 +167,150 @@ describe("OAuth discovery", () => {
       resource: "https://mcp.context7.com",
       authorization_servers: ["https://clerk.context7.com", "https://context7.com"],
     });
+  });
+});
+
+function preflight(url: string, origin: string, requestHeaders = "content-type") {
+  return fetch(url, {
+    method: "OPTIONS",
+    headers: {
+      origin,
+      "access-control-request-method": "POST",
+      "access-control-request-headers": requestHeaders,
+    },
+  });
+}
+
+describe("HTTP request origin and host validation", () => {
+  test("binds the local HTTP server to loopback by default", () => {
+    expect(new URL(httpUrl).hostname).toBe("127.0.0.1");
+  });
+
+  test("rejects a foreign origin before dispatch", async () => {
+    const response = await preflight(
+      httpUrl,
+      "https://evil-attacker.example",
+      "authorization,content-type"
+    );
+
+    expect(response.status).toBe(403);
+    expect(response.headers.get("access-control-allow-origin")).toBeNull();
+    expect(response.headers.get("vary")?.split(", ")).toEqual(
+      expect.arrayContaining([
+        "Origin",
+        "Access-Control-Request-Method",
+        "Access-Control-Request-Headers",
+      ])
+    );
+  });
+
+  test("rejects an untrusted request before parsing its JSON body", async () => {
+    const response = await fetch(httpUrl, {
+      method: "POST",
+      headers: { origin: "https://evil-attacker.example", "content-type": "application/json" },
+      body: "{invalid",
+    });
+
+    expect(response.status).toBe(403);
+  });
+
+  test("echoes an allowed loopback origin on preflight", async () => {
+    const origin = "http://localhost:5173";
+    const response = await preflight(httpUrl, origin, "content-type,mcp-protocol-version");
+
+    expect(response.status).toBe(204);
+    expect(response.headers.get("access-control-allow-origin")).toBe(origin);
+    expect(response.headers.get("vary")).toContain("Origin");
+  });
+
+  test.each(["", "null", "https://context7.com", "https://docs.example.com"])(
+    "rejects non-loopback origin %s on the local server",
+    async (origin) => {
+      const response = await fetch(httpUrl, { headers: { origin } });
+      expect(response.status).toBe(403);
+      expect(response.headers.get("access-control-allow-origin")).toBeNull();
+    }
+  );
+
+  test("rejects a DNS-rebinding Host value", async () => {
+    const url = new URL(httpUrl);
+    const response = await new Promise<http.IncomingMessage>((resolve, reject) => {
+      const request = http.request(
+        {
+          hostname: url.hostname,
+          port: url.port,
+          path: url.pathname,
+          method: "GET",
+          headers: { host: "localhost.attacker.example" },
+        },
+        resolve
+      );
+      request.on("error", reject);
+      request.end();
+    });
+
+    expect(response.statusCode).toBe(403);
+    response.resume();
+  });
+
+  describe("hosted server", () => {
+    let hostedHttpChild: ChildProcess;
+    let hostedHttpUrl: string;
+
+    beforeAll(async () => {
+      ({ child: hostedHttpChild, url: hostedHttpUrl } = await startHttpChild(
+        BASE_PORT + 20,
+        "0.0.0.0"
+      ));
+    });
+
+    afterAll(() => {
+      hostedHttpChild?.kill();
+    });
+
+    test.each(["https://context7.com", "https://mcp-inspector.example", "null", ""])(
+      "allows browser origin %j",
+      async (origin) => {
+        const response = await preflight(hostedHttpUrl, origin);
+        expect(response.status).toBe(204);
+        expect(response.headers.get("access-control-allow-origin")).toBe("*");
+      }
+    );
+
+    test("allows health checks without an Origin header", async () => {
+      const response = await fetch(new URL("/ping", hostedHttpUrl));
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("access-control-allow-origin")).toBe("*");
+    });
+  });
+});
+
+describe("CLI transport option validation", () => {
+  test.each([
+    ["stdio", "--host=127.0.0.1", "--port and --host flags are not allowed"],
+    ["stdio", "--port=3000", "--port and --host flags are not allowed"],
+    ["http", "--api-key=test-key", "--api-key flag is not allowed"],
+    ["http", "--host=", "HTTP host must not be empty"],
+  ])("rejects %s with %s", (transport, option, expectedError) => {
+    const result = spawnSync(process.execPath, [DIST, "--transport", transport, option], {
+      env: childEnv,
+      encoding: "utf8",
+    });
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(expectedError);
+  });
+
+  test("ignores CONTEXT7_MCP_HOST in stdio mode", () => {
+    const result = spawnSync(process.execPath, [DIST, "--transport", "stdio"], {
+      env: { ...childEnv, CONTEXT7_MCP_HOST: "localhost/path" },
+      encoding: "utf8",
+      input: "",
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stderr).toContain("running on stdio");
   });
 });
 
