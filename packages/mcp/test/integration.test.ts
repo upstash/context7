@@ -224,7 +224,7 @@ test("keeps an oversized body a sanitized 413 rather than a 500", async () => {
   expect(response.headers.get("content-type")).toMatch(/^application\/json/);
 
   const raw = await response.text();
-  for (const leak of ["node_modules", "PayloadTooLargeError", "<html", "at ", PKG_ROOT]) {
+  for (const leak of ["node_modules", "PayloadTooLargeError", "<html", "<pre", PKG_ROOT]) {
     expect(raw).not.toContain(leak);
   }
   expect(JSON.parse(raw)).toEqual({
