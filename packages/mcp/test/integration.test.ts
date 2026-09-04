@@ -588,3 +588,74 @@ describe("OpenTelemetry metrics", () => {
     }
   });
 });
+
+const INITIALIZE = {
+  jsonrpc: "2.0",
+  id: 1,
+  method: "initialize",
+  params: {
+    protocolVersion: "2025-06-18",
+    capabilities: {},
+    clientInfo: { name: "t", version: "1" },
+  },
+};
+
+async function postMcp(target: string, headers: Record<string, string> = {}) {
+  const res = await fetch(target, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      ...headers,
+    },
+    body: JSON.stringify(INITIALIZE),
+  });
+  return { status: res.status, wwwAuthenticate: res.headers.get("www-authenticate") };
+}
+
+describe("plugin authentication", () => {
+  beforeEach(() => {
+    requests.length = 0;
+  });
+
+  test("only challenges the supported plugin", async () => {
+    expect((await postMcp(`${httpUrl}?client=other-plugin`)).status).toBe(200);
+
+    const res = await postMcp(`${httpUrl}?client=claude-code-plugin`);
+    expect(res.status).toBe(401);
+    expect(res.wwwAuthenticate).toContain("resource_metadata=");
+    expect(res.wwwAuthenticate).toContain("/.well-known/oauth-protected-resource");
+  });
+
+  test("keeps the OAuth endpoint protected", async () => {
+    const res = await postMcp(httpUrl.replace(/\/mcp$/, "/mcp/oauth"));
+
+    expect(res.status).toBe(401);
+  });
+
+  test("tracks authenticated plugin requests separately", async () => {
+    const client = new Client(
+      { name: "claude-code", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+    await client.connect(
+      new StreamableHTTPClientTransport(new URL(`${httpUrl}?client=claude-code-plugin`), {
+        requestInit: { headers: { Authorization: "Bearer ctx7sk-test" } },
+      })
+    );
+
+    try {
+      await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/vercel/next.js", query: "app router" },
+      });
+    } finally {
+      await client.close();
+    }
+
+    const apiCall = requests.find((request) => request.path === "/v2/context");
+    expect(apiCall?.headers["x-context7-client-ide"]).toBe("claude-code");
+    expect(apiCall?.headers["x-context7-client-version"]).toBe("1.0.0");
+    expect(apiCall?.headers["x-context7-plugin"]).toBe("claude-code-plugin");
+  });
+});

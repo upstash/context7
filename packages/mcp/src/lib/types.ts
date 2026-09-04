@@ -42,6 +42,7 @@ export interface ClientContext {
     ide?: string;
     version?: string;
   };
+  plugin?: string;
   transport?: "stdio" | "http";
   sessionId?: string;
   /** Mutable: set by the upstream API layer when the backend signals the
