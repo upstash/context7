@@ -1,5 +1,13 @@
 # @upstash/context7-mcp
 
+## 4.0.5
+
+### Patch Changes
+
+- 21c3dd4: Require authentication and track usage separately for the Claude Code plugin.
+- 4e980f6: Increase the default HTTP subscription capacity and allow deployments to configure it with `MCP_MAX_SUBSCRIPTIONS`.
+- 2a851fc: Remove the legacy AES-CBC client-IP header now that authenticated assertions are deployed.
+
 ## 4.0.4
 
 ### Patch Changes
