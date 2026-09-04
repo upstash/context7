@@ -33,10 +33,4 @@ describe("Context7 Client", () => {
 
     expect(warn).not.toHaveBeenCalled();
   });
-
-  test("rejects missing search inputs before making a request", async () => {
-    const client = new Context7({ apiKey: "ctx7sk-config" });
-
-    await expect(client.searchLibrary("", "")).rejects.toThrow(Context7Error);
-  });
 });

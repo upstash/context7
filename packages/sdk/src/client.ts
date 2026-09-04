@@ -50,7 +50,7 @@ export class Context7 {
   async searchLibrary(
     query: string,
     libraryName: string,
-    options: SearchLibraryOptions & { type?: "json" }
+    options?: SearchLibraryOptions & { type?: "json" }
   ): Promise<Library[]>;
 
   /**
@@ -63,17 +63,12 @@ export class Context7 {
   ): Promise<string>;
 
   /**
-   * Search for libraries matching the given query (defaults to JSON)
-   */
-  async searchLibrary(query: string, libraryName: string): Promise<Library[]>;
-
-  /**
    * Search for libraries with options whose response type is determined at runtime
    */
   async searchLibrary(
     query: string,
     libraryName: string,
-    options: SearchLibraryOptions
+    options?: SearchLibraryOptions
   ): Promise<Library[] | string>;
 
   /**
@@ -98,7 +93,7 @@ export class Context7 {
   async getContext(
     query: string,
     libraryId: string,
-    options: GetContextOptions & { type?: "json" }
+    options?: GetContextOptions & { type?: "json" }
   ): Promise<Documentation[]>;
 
   /**
@@ -111,17 +106,12 @@ export class Context7 {
   ): Promise<string>;
 
   /**
-   * Get documentation context for a library (defaults to JSON)
-   */
-  async getContext(query: string, libraryId: string): Promise<Documentation[]>;
-
-  /**
    * Get documentation context with options whose response type is determined at runtime
    */
   async getContext(
     query: string,
     libraryId: string,
-    options: GetContextOptions
+    options?: GetContextOptions
   ): Promise<Documentation[] | string>;
 
   /**

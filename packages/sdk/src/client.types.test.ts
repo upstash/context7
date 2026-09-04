@@ -15,6 +15,14 @@ function getContextWithOptions(client: Context7, options: GetContextOptions) {
   return client.getContext("query", "/react/react", options);
 }
 
+function searchWithOptionalOptions(client: Context7, options: SearchLibraryOptions | undefined) {
+  return client.searchLibrary("query", "react", options);
+}
+
+function getContextWithOptionalOptions(client: Context7, options: GetContextOptions | undefined) {
+  return client.getContext("query", "/react/react", options);
+}
+
 function searchWithDefaultOptions(client: Context7) {
   return client.searchLibrary("query", "react", {});
 }
@@ -30,6 +38,13 @@ describe("Context7 Client types", () => {
 
   test("returns a union when the context response type is determined at runtime", () => {
     expectTypeOf(getContextWithOptions).returns.toEqualTypeOf<Promise<Documentation[] | string>>();
+  });
+
+  test("accepts optional response options", () => {
+    expectTypeOf(searchWithOptionalOptions).returns.toEqualTypeOf<Promise<Library[] | string>>();
+    expectTypeOf(getContextWithOptionalOptions).returns.toEqualTypeOf<
+      Promise<Documentation[] | string>
+    >();
   });
 
   test("preserves JSON return types for empty options", () => {

@@ -110,7 +110,7 @@ export class HttpClient implements Requester {
     };
 
     this.retry =
-      typeof config?.retry === "boolean" && config?.retry === false
+      config.retry === false
         ? {
             attempts: 0,
             backoff: () => 0,
