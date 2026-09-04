@@ -30,6 +30,15 @@ import { getMaxSubscriptions } from "./lib/subscriptions.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
+const CLAUDE_CODE_PLUGIN = "claude-code-plugin";
+
+function getPluginFromRequest(req: express.Request): typeof CLAUDE_CODE_PLUGIN | undefined {
+  return req.query.client === CLAUDE_CODE_PLUGIN ? CLAUDE_CODE_PLUGIN : undefined;
+}
+
+function requiresAuthentication(req: express.Request, plugin?: typeof CLAUDE_CODE_PLUGIN): boolean {
+  return req.path === "/mcp/oauth" || req.path === "/mcp/ema" || Boolean(plugin);
+}
 
 // Parse CLI arguments using commander
 const program = new Command()
@@ -392,12 +401,9 @@ async function main() {
       onerror: (error) => console.error("MCP node adapter error:", error),
     });
 
-    const handleMcpRequest = async (
-      req: express.Request,
-      res: express.Response,
-      requireAuth: boolean
-    ) => {
+    const handleMcpRequest = async (req: express.Request, res: express.Response) => {
       try {
+        const plugin = getPluginFromRequest(req);
         const apiKey = extractApiKey(req);
         const isEmaRequest = req.path === "/mcp/ema";
         const resourceMetadataUrl = isEmaRequest
@@ -411,7 +417,7 @@ async function main() {
         // /.well-known/oauth-protected-resource route with them.
         res.set("WWW-Authenticate", `Bearer resource_metadata="${resourceMetadataUrl}"`);
 
-        if (requireAuth) {
+        if (requiresAuthentication(req, plugin)) {
           if (!apiKey) {
             return res.status(401).json({
               jsonrpc: "2.0",
@@ -450,8 +456,9 @@ async function main() {
 
         const context: ClientContext = {
           clientIp: req.ip,
-          apiKey: apiKey,
+          apiKey,
           clientInfo: extractClientInfoFromUserAgent(req.headers["user-agent"]),
+          plugin,
           transport: "http",
         };
 
@@ -470,21 +477,20 @@ async function main() {
       }
     };
 
-    // Anonymous access endpoint - no authentication required
     app.all("/mcp", async (req, res) => {
-      await handleMcpRequest(req, res, false);
+      await handleMcpRequest(req, res);
     });
 
     // OAuth-protected endpoint - requires authentication
     app.all("/mcp/oauth", async (req, res) => {
-      await handleMcpRequest(req, res, true);
+      await handleMcpRequest(req, res);
     });
 
     // Enterprise-Managed Auth endpoint. It has separate protected-resource
     // metadata so clients discover Context7's id-jag exchange instead of the
     // Clerk authorization server used by interactive OAuth.
     app.all("/mcp/ema", async (req, res) => {
-      await handleMcpRequest(req, res, true);
+      await handleMcpRequest(req, res);
     });
 
     app.get("/ping", (_req: express.Request, res: express.Response) => {

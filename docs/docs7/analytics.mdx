@@ -1,0 +1,52 @@
+---
+title: Analytics
+description: Understand visitors, searches, assistant questions, and referrers
+---
+
+Analytics reports how people use your Docs7 site. Open **Docs7**, choose a site, then select **Analytics**.
+
+Choose a 7, 30, or 90 day window. If the site has branch previews, you can include their traffic. Preview traffic is excluded by default.
+
+<Frame caption="Analytics separates human visitors from AI traffic and shows activity for the selected period.">
+  <img
+    src="/images/docs7/dashboard/analytics.jpg"
+    alt="Docs7 Analytics dashboard with visitor totals and visitor activity"
+  />
+</Frame>
+
+## Visitors and views
+
+Docs7 records a page view for a document navigation from a browser after filtering known AI crawlers and generic bots.
+
+| Metric | Meaning |
+| --- | --- |
+| **Visitors** | Privacy-preserving daily visitor identifiers in the selected window. |
+| **Views** | Document page views in the selected window. |
+| **Country** | The countries with the most visitors. |
+| **Visitor activity** | Visitors or views plotted by day. |
+
+Visitor identifiers are derived from the day, site, IP address, and user agent, then stored as a hash. Docs7 does not store the raw IP address. Because the identifier changes daily, the same browser can count again on a later day.
+
+## Searches
+
+The search report shows what readers type into the site's search box, how many times each query was used, and how many visitors searched for it.
+
+Search runs as the reader types. Docs7 folds short prefixes into the completed query when the same visitor continues typing within ten seconds. For example, `rate`, `rate l`, and `rate limit` count as `rate limit` instead of three separate searches.
+
+A **No results** label means every recorded search for that term returned no result. Use these terms to find missing pages, missing vocabulary, or titles that do not match the words readers use.
+
+## Assistant questions
+
+This report covers questions visitors send to the documentation assistant. It shows the total number of questions and conversations.
+
+Questions are grouped into topics once per day. Expand a topic to see recent examples. Questions that have not been grouped yet appear under **Uncategorized**.
+
+## Top pages and referrers
+
+**Top pages** ranks documentation paths by visitors and views. **Referrers** shows where visitors came from. Requests without a referrer are grouped under **Direct**.
+
+Use Top pages to see what readers rely on, then compare it with Searches and Assistant questions. A frequently requested topic with no strong destination page is a concrete documentation gap.
+
+<Note>
+AI crawler traffic is reported separately under [AI Visibility](/docs7/ai-visibility).
+</Note>
