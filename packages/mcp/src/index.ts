@@ -345,6 +345,42 @@ async function main() {
 
     app.use(express.json());
 
+    // Mounted against the parser so it only ever sees errors the parser raised:
+    // routes are registered past this point, so a 4xx one of them throws
+    // reaches the terminal handler instead of being relabelled a rejected body.
+    const bodyErrorBoundary: express.ErrorRequestHandler = (err, req, res, next) => {
+      const tagged = err as { status?: unknown; type?: unknown };
+      const status = tagged.status;
+
+      // Every rejection body-parser raises carries a 4xx. Anything else landing
+      // here is a middleware fault rather than a bad body, and answering it 400
+      // would blame the client for a server error.
+      if (typeof status !== "number" || status < 400 || status >= 500) {
+        return next(err);
+      }
+      if (res.headersSent) {
+        return next(err);
+      }
+
+      // Method, path and size only: the body is the rejected input, and the
+      // headers carry the API key.
+      const where = `${req.method} ${req.path} bytes=${req.headers["content-length"] ?? "unknown"}`;
+      console.error(
+        `Rejected request body (${status}, ${String(tagged.type ?? "unknown")}): ${where}`
+      );
+
+      // Fixed messages: body-parser's own quote offsets into the body.
+      const parseFailure = err instanceof SyntaxError && tagged.type === "entity.parse.failed";
+      res.status(status).json({
+        jsonrpc: "2.0",
+        error: parseFailure
+          ? { code: -32700, message: "Parse error" }
+          : { code: -32600, message: "Invalid Request" },
+        id: null,
+      });
+    };
+    app.use(bodyErrorBoundary);
+
     const extractHeaderValue = (value: string | string[] | undefined): string | undefined => {
       if (!value) return undefined;
       return typeof value === "string" ? value : value[0];
@@ -543,55 +579,14 @@ async function main() {
       });
     });
 
-    // Matches body-parser's parse failure only, so an unrelated SyntaxError
-    // from application code is not reclassified as a malformed request.
-    const isJsonParseFailure = (err: unknown): boolean =>
-      err instanceof SyntaxError &&
-      (err as SyntaxError & { type?: string }).type === "entity.parse.failed";
+    // Anything reaching here escaped a route's own handling, so it is opaque by
+    // definition. Without it Express replies with an HTML stack trace.
+    const terminalErrorHandler: express.ErrorRequestHandler = (err, req, res, next) => {
+      console.error(`Unhandled request error: ${req.method} ${req.path}`, err);
 
-    // body-parser also rejects bodies that are too large or undecodable, each
-    // with its own 4xx. Keep that status: a 500 would invite the client to
-    // retry a request that can never succeed.
-    const rejectedBodyStatus = (err: unknown): number | undefined => {
-      const status = (err as { status?: unknown } | null)?.status;
-      return typeof status === "number" && status >= 400 && status < 500 ? status : undefined;
-    };
-
-    // express.json() raises next(err) on a rejected body, which bypasses the
-    // routes above and their try/catch. Without this, those fell through to
-    // Express's default handler and its HTML stack trace.
-    const errorHandler: express.ErrorRequestHandler = (err, req, res, _next) => {
-      const parseFailure = isJsonParseFailure(err);
-      const rejectedStatus = rejectedBodyStatus(err);
-
-      const where = `${req.method} ${req.path} bytes=${req.headers["content-length"] ?? "unknown"}`;
-      if (rejectedStatus !== undefined) {
-        const tag = (err as { type?: unknown } | null)?.type ?? "unknown";
-        console.error(`Rejected request body (${rejectedStatus}, ${String(tag)}): ${where}`);
-      } else {
-        console.error(`Unhandled request error: ${where}`, err);
-      }
-
+      // Only Express can wind down a response that has already started.
       if (res.headersSent) {
-        return;
-      }
-
-      if (parseFailure) {
-        res.status(400).json({
-          jsonrpc: "2.0",
-          error: { code: -32700, message: "Parse error" },
-          id: null,
-        });
-        return;
-      }
-
-      if (rejectedStatus !== undefined) {
-        res.status(rejectedStatus).json({
-          jsonrpc: "2.0",
-          error: { code: -32600, message: "Invalid Request" },
-          id: null,
-        });
-        return;
+        return next(err);
       }
 
       res.status(500).json({
@@ -600,7 +595,7 @@ async function main() {
         id: null,
       });
     };
-    app.use(errorHandler);
+    app.use(terminalErrorHandler);
 
     const startServer = (port: number, maxAttempts = 10) => {
       const httpServer = app.listen(port);
