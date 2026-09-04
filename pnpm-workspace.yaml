@@ -1,6 +1,6 @@
 packages:
   - "packages/*"
-  - "examples"
+  - "examples/*"
 
 allowBuilds:
   esbuild: true

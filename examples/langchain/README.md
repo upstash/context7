@@ -5,9 +5,9 @@ This example wraps the Context7 SDK in two LangChain tools. The agent resolves t
 From the repository root:
 
 ```bash
-cp examples/.env.example examples/.env
+cp examples/langchain/.env.example examples/langchain/.env
 pnpm install
-pnpm --dir examples langchain
+pnpm --dir examples/langchain start
 ```
 
 See [`index.ts`](./index.ts) for the complete example.
