@@ -19,11 +19,48 @@ describe("Context7 Client", () => {
     expect(new Context7()).toBeDefined();
   });
 
-  test("requires an API key", () => {
+  test("requires an API key or auth token", () => {
     vi.stubEnv("CONTEXT7_API_KEY", "");
 
     expect(() => new Context7({ apiKey: "" })).toThrow(Context7Error);
-    expect(() => new Context7()).toThrow("API key is required");
+    expect(() => new Context7()).toThrow("Authentication is required");
+  });
+
+  test("resolves a fresh OIDC token for every request", async () => {
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ results: [] }), {
+          headers: { "content-type": "application/json" },
+        })
+      )
+    );
+    const authToken = vi
+      .fn<() => Promise<string>>()
+      .mockResolvedValueOnce("oidc-token-1")
+      .mockResolvedValueOnce("oidc-token-2");
+    const client = new Context7({ authToken, fetch: fetchMock, retry: false });
+
+    await client.searchLibrary("state management", "react");
+    await client.searchLibrary("routing", "next.js");
+
+    expect(authToken).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      headers: expect.objectContaining({ Authorization: "Bearer oidc-token-1" }),
+    });
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+      headers: expect.objectContaining({ Authorization: "Bearer oidc-token-2" }),
+    });
+  });
+
+  test("rejects an empty token returned by a provider", async () => {
+    const fetchMock = vi.fn();
+    const client = new Context7({ authToken: () => "", fetch: fetchMock });
+
+    await expect(client.searchLibrary("routing", "next.js")).rejects.toMatchObject({
+      code: "authentication_error",
+      retryable: false,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   test("prefers the configured API key over the environment", () => {

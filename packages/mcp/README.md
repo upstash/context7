@@ -55,8 +55,33 @@ Check out our [project addition guide](https://context7.com/docs/adding-librarie
 - Cursor, Claude Code, VSCode, Devin Desktop or another MCP Client
 - Context7 API Key (Optional) for higher rate limits and private repositories (Get yours by creating an account at [context7.com/dashboard](https://context7.com/dashboard))
 
-> [!TIP]
-> **Recommended Post-Setup: Add a Rule to Auto-Invoke Context7**
+### Vercel Marketplace OIDC
+
+Vercel Marketplace resources can call the remote MCP server without a
+long-lived Context7 API key. Obtain a fresh per-resource access token from
+Vercel's Marketplace integration runtime and send it as the bearer credential:
+
+```ts
+// Supplied by Vercel's Marketplace integration runtime.
+declare function getMarketplaceResourceToken(): Promise<string>;
+
+const authorization = `Bearer ${await getMarketplaceResourceToken()}`;
+```
+
+Use `authorization` as the `Authorization` header when creating the MCP HTTP
+transport. Create the transport inside the request that uses it so a short-lived
+token is not retained across function invocations. Its `resource` claim must
+match the Context7 resource created during Marketplace provisioning.
+
+The hosted MCP service must be configured with the exact issuer and audience
+assigned by Vercel when the Context7 Marketplace product is created:
+
+```sh
+VERCEL_MARKETPLACE_OIDC_ISSUER=https://integrations.vercel.com/oac_...
+VERCEL_MARKETPLACE_OIDC_AUDIENCE=https://integrations.vercel.com/context7/icfg_...
+```
+
+> [!TIP] > **Recommended Post-Setup: Add a Rule to Auto-Invoke Context7**
 >
 > After installing Context7 (see instructions below), enhance your workflow by adding a rule so you don't have to type `use context7` in every prompt. Define a simple rule in your MCP client's rule section to automatically invoke Context7 on any code question:
 >
@@ -1390,6 +1415,7 @@ autohand mcp add --transport http context7 https://mcp.context7.com/mcp
 Context7 MCP provides the following tools that LLMs can use:
 
 - `resolve-library-id`: Resolves a general library name into a Context7-compatible library ID.
+
   - `libraryName` (required): The name of the library to search for
 
 - `get-library-docs`: Fetches documentation for a library using a Context7-compatible library ID.

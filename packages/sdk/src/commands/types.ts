@@ -1,7 +1,18 @@
-import type { CacheSetting, Context7Fetch, Context7ResponseMetadata, RetryConfig } from "@http";
+import type {
+  AuthTokenProvider,
+  CacheSetting,
+  Context7Fetch,
+  Context7ResponseMetadata,
+  RetryConfig,
+} from "@http";
 
 export interface Context7Config {
   apiKey?: string;
+  /**
+   * Bearer token or per-request token provider. Use a provider for short-lived
+   * OIDC tokens so the SDK never caches an expired credential.
+   */
+  authToken?: string | AuthTokenProvider;
   /** Override the Context7 API URL, for example when using a proxy. */
   baseUrl?: string;
   /** Retry transient network and HTTP failures. Set to false to disable retries. */
