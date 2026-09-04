@@ -58,24 +58,6 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("validateJWT - EMA path", () => {
-  test("requires the EMA issuer and path-bound resource", async () => {
-    vi.mocked(jose.jwtVerify).mockResolvedValue({
-      payload: {},
-      protectedHeader: { alg: "RS256" },
-    } as unknown as Awaited<ReturnType<typeof jose.jwtVerify>>);
-
-    const { validateEmaJWT } = await loadModule();
-    const result = await validateEmaJWT(makeEntraToken({ iss: "https://clerk.context7.com" }));
-
-    expect(result.valid).toBe(true);
-    expect(jose.jwtVerify).toHaveBeenCalledWith(expect.any(String), "fake-jwks", {
-      issuer: "https://context7.com",
-      audience: "https://mcp.context7.com/mcp/ema",
-    });
-  });
-});
-
 describe("isJWT", () => {
   test("returns true for 3-part dotted strings", async () => {
     const { isJWT } = await loadModule();
@@ -192,6 +174,24 @@ describe("validateJWT - Entra path", () => {
     const second = await validateJWT(token);
     expect(second.valid).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("validateJWT - EMA path", () => {
+  test("verifies Context7-issued tokens for the shared MCP resource", async () => {
+    vi.mocked(jose.jwtVerify).mockResolvedValue({
+      payload: {},
+      protectedHeader: { alg: "RS256" },
+    } as unknown as Awaited<ReturnType<typeof jose.jwtVerify>>);
+
+    const { validateJWT } = await loadModule();
+    const result = await validateJWT(makeEntraToken({ iss: "https://context7.com" }));
+
+    expect(result.valid).toBe(true);
+    expect(jose.jwtVerify).toHaveBeenCalledWith(expect.any(String), "fake-jwks", {
+      issuer: "https://context7.com",
+      audience: "https://mcp.context7.com",
+    });
   });
 });
 

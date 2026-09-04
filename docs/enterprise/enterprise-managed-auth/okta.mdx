@@ -112,18 +112,20 @@ Use your **org** authorization server issuer (`https://<your-org>.okta.com`), no
 
 Enterprise-Managed Auth is wired on the **client** side by your organization, not per developer. The Okta sign-in isn't triggered by a server URL someone pastes. It happens because Claude is configured to use your enterprise IdP for managed connectors.
 
-Your admin connects the Okta org to Claude and enables the dedicated Context7 EMA endpoint as a managed connector:
+Your admin connects the Okta org to Claude and enables the same Context7 endpoint used by the
+Claude Code marketplace plugin as a managed connector:
 
 ```text
-https://mcp.context7.com/mcp/ema
+https://mcp.context7.com/mcp?client=claude-code-plugin
 ```
 
-This URL is intentionally different from the authless `/mcp` endpoint and the interactive OAuth
-`/mcp/oauth` endpoint. It returns an authentication challenge whose protected-resource metadata is
-bound to the full `/mcp/ema` URL and points Claude to Context7's JWT bearer token exchange.
+The `client=claude-code-plugin` query identifies marketplace traffic and makes authentication
+mandatory. It does not select EMA by itself. Claude selects managed authorization when your Claude
+organization enables it for Context7; otherwise Claude Code uses the normal interactive OAuth flow.
+Both flows use the same MCP resource and protected-resource metadata.
 
 After the connector is enabled, Claude obtains an ID-JAG from Okta and exchanges it with Context7
-for a path-bound access token. There is no token to paste and no per-user OAuth consent screen.
+for an access token. There is no token to paste and no per-user OAuth consent screen.
 
 See Claude's
 [Enterprise-Managed Auth for connectors](https://claude.com/docs/connectors/building/enterprise-managed-auth)
@@ -140,9 +142,10 @@ endpoints (`https://<your-org>.okta.com/oauth2/v1/...`).
 
 ### Claude opens an interactive OAuth screen
 
-Confirm that the managed connector URL ends in `/mcp/ema`. The `/mcp/oauth` endpoint is for
-interactive OAuth and advertises a different authorization server. Also confirm that your Claude
-organization has Enterprise-Managed Auth enabled for the connector.
+Confirm that the managed connector URL exactly matches the URL above and that your Claude
+organization has managed authorization enabled for Context7. The query parameter only identifies
+the marketplace plugin; Claude's organization setting determines whether it uses EMA or interactive
+OAuth.
 
 ### A valid Okta user can't be provisioned
 

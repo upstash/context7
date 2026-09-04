@@ -11,7 +11,7 @@ import {
   extractClientInfoFromUserAgent,
   envelopeClientInfo,
 } from "./lib/utils.js";
-import { isJWT, validateEmaJWT, validateJWT } from "./lib/jwt.js";
+import { isJWT, validateJWT } from "./lib/jwt.js";
 import express from "express";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
@@ -19,8 +19,6 @@ import { randomUUID } from "node:crypto";
 import {
   SERVER_VERSION,
   RESOURCE_URL,
-  EMA_RESOURCE_METADATA_URL,
-  EMA_RESOURCE_URL,
   OAUTH_AUTH_SERVER_URL,
   EMA_ISSUER,
   OPENAI_APPS_CHALLENGE_TOKEN,
@@ -37,7 +35,7 @@ function getPluginFromRequest(req: express.Request): typeof CLAUDE_CODE_PLUGIN |
 }
 
 function requiresAuthentication(req: express.Request, plugin?: typeof CLAUDE_CODE_PLUGIN): boolean {
-  return req.path === "/mcp/oauth" || req.path === "/mcp/ema" || Boolean(plugin);
+  return req.path === "/mcp/oauth" || Boolean(plugin);
 }
 
 // Parse CLI arguments using commander
@@ -405,17 +403,17 @@ async function main() {
       try {
         const plugin = getPluginFromRequest(req);
         const apiKey = extractApiKey(req);
-        const isEmaRequest = req.path === "/mcp/ema";
-        const resourceMetadataUrl = isEmaRequest
-          ? EMA_RESOURCE_METADATA_URL
-          : `${new URL(RESOURCE_URL).origin}/.well-known/oauth-protected-resource`;
+        const baseUrl = new URL(RESOURCE_URL).origin;
 
         // OAuth discovery info header, used by MCP clients to discover the authorization server
         // TODO: @modelcontextprotocol/server now ships canonical OAuth helpers
         // (bearerAuthChallengeResponse, buildOAuthProtectedResourceMetadata,
         // oauthMetadataResponse) — replace this hand-rolled header and the
         // /.well-known/oauth-protected-resource route with them.
-        res.set("WWW-Authenticate", `Bearer resource_metadata="${resourceMetadataUrl}"`);
+        res.set(
+          "WWW-Authenticate",
+          `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
+        );
 
         if (requiresAuthentication(req, plugin)) {
           if (!apiKey) {
@@ -429,18 +427,8 @@ async function main() {
             });
           }
 
-          if (isEmaRequest && !isJWT(apiKey)) {
-            return res.status(401).json({
-              jsonrpc: "2.0",
-              error: { code: -32001, message: "EMA access token required" },
-              id: null,
-            });
-          }
-
           if (isJWT(apiKey)) {
-            const validationResult = isEmaRequest
-              ? await validateEmaJWT(apiKey)
-              : await validateJWT(apiKey);
+            const validationResult = await validateJWT(apiKey);
             if (!validationResult.valid) {
               return res.status(401).json({
                 jsonrpc: "2.0",
@@ -486,13 +474,6 @@ async function main() {
       await handleMcpRequest(req, res);
     });
 
-    // Enterprise-Managed Auth endpoint. It has separate protected-resource
-    // metadata so clients discover Context7's id-jag exchange instead of the
-    // Clerk authorization server used by interactive OAuth.
-    app.all("/mcp/ema", async (req, res) => {
-      await handleMcpRequest(req, res);
-    });
-
     app.get("/ping", (_req: express.Request, res: express.Response) => {
       res.json({ status: "ok", message: "pong" });
     });
@@ -508,18 +489,6 @@ async function main() {
           // regular authorization-code flows; Context7 handles only the
           // enterprise-managed id-jag exchange.
           authorization_servers: Array.from(new Set([OAUTH_AUTH_SERVER_URL, EMA_ISSUER])),
-          scopes_supported: ["profile", "email"],
-          bearer_methods_supported: ["header"],
-        });
-      }
-    );
-
-    app.get(
-      "/.well-known/oauth-protected-resource/mcp/ema",
-      (_req: express.Request, res: express.Response) => {
-        res.json({
-          resource: EMA_RESOURCE_URL,
-          authorization_servers: [EMA_ISSUER],
           scopes_supported: ["profile", "email"],
           bearer_methods_supported: ["header"],
         });

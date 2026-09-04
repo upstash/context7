@@ -3,9 +3,9 @@ import {
   CONTEXT7_API_BASE_URL,
   EMA_ISSUER,
   EMA_JWKS_URL,
-  EMA_RESOURCE_URL,
   OAUTH_AUTH_SERVER_URL,
   OAUTH_JWKS_URL,
+  RESOURCE_URL,
 } from "./constants.js";
 
 const oauthJwks = jose.createRemoteJWKSet(new URL(OAUTH_JWKS_URL));
@@ -71,24 +71,6 @@ export function isJWT(token: string): boolean {
   return token.split(".").length === 3;
 }
 
-export async function validateEmaJWT(token: string): Promise<JWTValidationResult> {
-  try {
-    await jose.jwtVerify(token, emaJwks, { issuer: EMA_ISSUER, audience: EMA_RESOURCE_URL });
-    return { valid: true };
-  } catch (error) {
-    if (error instanceof jose.errors.JWTExpired) {
-      return { valid: false, error: "Token expired" };
-    }
-    if (error instanceof jose.errors.JWTClaimValidationFailed) {
-      return { valid: false, error: "Invalid token claims" };
-    }
-    if (error instanceof jose.errors.JWSSignatureVerificationFailed) {
-      return { valid: false, error: "Invalid signature" };
-    }
-    return { valid: false, error: "Invalid token" };
-  }
-}
-
 export async function validateJWT(token: string): Promise<JWTValidationResult> {
   try {
     const decoded = jose.decodeJwt(token);
@@ -117,7 +99,7 @@ export async function validateJWT(token: string): Promise<JWTValidationResult> {
     }
 
     if (iss === EMA_ISSUER) {
-      await jose.jwtVerify(token, emaJwks, { issuer: EMA_ISSUER, audience: EMA_RESOURCE_URL });
+      await jose.jwtVerify(token, emaJwks, { issuer: EMA_ISSUER, audience: RESOURCE_URL });
       return { valid: true };
     }
 
