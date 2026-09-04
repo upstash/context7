@@ -557,8 +557,13 @@ async function main() {
       });
 
       httpServer.once("listening", () => {
+        const address = httpServer.address();
+        if (!address || typeof address === "string") {
+          console.error("Failed to determine the bound HTTP port");
+          process.exit(1);
+        }
         console.error(
-          `Context7 Documentation MCP Server v${SERVER_VERSION} running on HTTP at http://localhost:${port}/mcp`
+          `Context7 Documentation MCP Server v${SERVER_VERSION} running on HTTP at http://localhost:${address.port}/mcp`
         );
       });
     };
