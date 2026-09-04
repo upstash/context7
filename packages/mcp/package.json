@@ -48,6 +48,11 @@
   "dependencies": {
     "@modelcontextprotocol/node": "2.0.0",
     "@modelcontextprotocol/server": "2.0.0",
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/exporter-prometheus": "^0.221.0",
+    "@opentelemetry/instrumentation-runtime-node": "^0.34.0",
+    "@opentelemetry/resources": "^2.10.0",
+    "@opentelemetry/sdk-metrics": "^2.10.0",
     "@types/express": "^5.0.4",
     "commander": "^13.1.0",
     "express": "^5.1.0",
@@ -57,6 +62,9 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "2.0.0",
+    "@opentelemetry/context-async-hooks": "^2.10.0",
+    "@opentelemetry/core": "^2.10.0",
+    "@opentelemetry/sdk-trace-base": "^2.10.0",
     "@types/node": "^25.0.3",
     "esbuild": "^0.28.2",
     "typescript": "^5.8.2",

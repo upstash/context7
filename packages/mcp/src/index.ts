@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 
 import { toNodeHandler } from "@modelcontextprotocol/node";
-import { serveStdio } from "@modelcontextprotocol/server/stdio";
-import { McpServer, createMcpHandler, type ServerContext } from "@modelcontextprotocol/server";
+import { StdioServerTransport, serveStdio } from "@modelcontextprotocol/server/stdio";
+import {
+  McpServer,
+  createMcpHandler,
+  type McpRequestContext,
+  type ServerContext,
+} from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
 import type { ClientContext } from "./lib/types.js";
@@ -24,11 +29,23 @@ import {
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
+import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
+import { installProcessShutdown } from "./lib/process-shutdown.js";
 import { getMaxSubscriptions } from "./lib/subscriptions.js";
+import {
+  forceFlushTelemetry,
+  initializeTelemetry,
+  observeAuthentication,
+  observeUpstreamRequest,
+  recordToolCallOutcome,
+} from "./lib/telemetry-runtime.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
+const OAUTH_METADATA_TIMEOUT_MS = 10_000;
 const CLAUDE_CODE_PLUGIN = "claude-code-plugin";
+type McpInstrumentation = NonNullable<Awaited<ReturnType<typeof initializeTelemetry>>>;
+let mcpInstrumentation: McpInstrumentation | undefined;
 
 function getPluginFromRequest(req: express.Request): typeof CLAUDE_CODE_PLUGIN | undefined {
   return req.query.client === CLAUDE_CODE_PLUGIN ? CLAUDE_CODE_PLUGIN : undefined;
@@ -88,6 +105,8 @@ const CLI_PORT = (() => {
 })();
 
 const requestContext = new AsyncLocalStorage<ClientContext>();
+
+type AuthenticationResult = { accepted: true } | { accepted: false; error: string };
 
 // Global state for stdio mode only
 let stdioApiKey: string | undefined;
@@ -154,35 +173,36 @@ function aliasArgs(aliases: AliasMap) {
   };
 }
 
-function createMcpServer() {
-  const server = new McpServer(
-    {
-      name: "Context7",
-      version: SERVER_VERSION,
-      websiteUrl: "https://context7.com",
-      description:
-        "Context7 provides up-to-date documentation and code examples for libraries and frameworks.",
-      icons: [
-        {
-          src: "https://context7.com/context7-icon-green.png",
-          mimeType: "image/png",
-        },
-      ],
-    },
-    {
-      // Declaring the capabilities makes the SDK install prompts/list,
-      // resources/list, and resources/templates/list handlers that answer
-      // with the registered (i.e. empty) collections, for clients that
-      // request them unconditionally.
-      capabilities: { prompts: {}, resources: {} },
-      instructions: `Use this server to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
+function createMcpServer(mcpContext: McpRequestContext) {
+  const serverInfo = {
+    name: "Context7",
+    version: SERVER_VERSION,
+    websiteUrl: "https://context7.com",
+    description:
+      "Context7 provides up-to-date documentation and code examples for libraries and frameworks.",
+    icons: [
+      {
+        src: "https://context7.com/context7-icon-green.png",
+        mimeType: "image/png",
+      },
+    ],
+  };
+  const serverOptions = {
+    // Declaring the capabilities makes the SDK install prompts/list,
+    // resources/list, and resources/templates/list handlers that answer
+    // with the registered (i.e. empty) collections, for clients that
+    // request them unconditionally.
+    capabilities: { prompts: {}, resources: {} },
+    instructions: `Use this server to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
 
 Do not use for: refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.`,
-    }
-  );
+  };
+  const server = mcpInstrumentation
+    ? mcpInstrumentation.createServer(serverInfo, serverOptions, mcpContext)
+    : new McpServer(serverInfo, serverOptions);
 
   server.registerTool(
-    "resolve-library-id",
+    RESOLVE_LIBRARY_ID_TOOL,
     {
       title: "Resolve Context7 Library ID",
       description: `Resolves a package/product name to a Context7-compatible library ID and returns matching libraries.
@@ -247,10 +267,11 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       if (!searchResponse.results || searchResponse.results.length === 0) {
         const text = searchResponse.error ?? "No libraries found matching the provided name.";
         maybeElicitAuthSignIn(server, ctx);
+        recordToolCallOutcome(searchResponse.error ? "error" : "not_found");
         return {
           content: [
             {
-              type: "text",
+              type: "text" as const,
               text,
             },
           ],
@@ -260,10 +281,11 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       const resultsText = formatSearchResults(searchResponse);
       const responseText = `Available Libraries:\n\n${resultsText}`;
       maybeElicitAuthSignIn(server, ctx);
+      recordToolCallOutcome("success");
       return {
         content: [
           {
-            type: "text",
+            type: "text" as const,
             text: responseText,
           },
         ],
@@ -272,7 +294,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
   );
 
   server.registerTool(
-    "query-docs",
+    QUERY_DOCS_TOOL,
     {
       title: "Query Documentation",
       description: `Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
@@ -306,10 +328,11 @@ Do not call this tool more than 3 times per question.`,
       const ctx = getClientContext(toolCtx);
       const response = await fetchLibraryContext({ query, libraryId }, ctx);
       maybeElicitAuthSignIn(server, ctx);
+      recordToolCallOutcome(response.outcome);
       return {
         content: [
           {
-            type: "text",
+            type: "text" as const,
             text: response.data,
           },
         ],
@@ -321,6 +344,11 @@ Do not call this tool more than 3 times per question.`,
 }
 
 async function main() {
+  mcpInstrumentation = await initializeTelemetry({
+    allowEmbeddedPrometheus: TRANSPORT_TYPE === "http",
+    serviceVersion: SERVER_VERSION,
+  });
+
   if (TRANSPORT_TYPE === "http") {
     const initialPort = CLI_PORT ?? DEFAULT_PORT;
 
@@ -388,11 +416,14 @@ async function main() {
     // then never closes the stream, and with heartbeats it survived until the
     // gateway's 1200s hard cap (the 2026-08-11 outage). Silent hangs instead
     // go idle and the gateway reaps them at streamIdleTimeout (300s).
-    const mcpHandler = createMcpHandler(() => createMcpServer(), {
+    const rawMcpHandler = createMcpHandler((mcpContext) => createMcpServer(mcpContext), {
       keepAliveMs: 0,
       maxSubscriptions: getMaxSubscriptions(),
       onerror: (error) => console.error("MCP handler error:", error),
     });
+    const mcpHandler = mcpInstrumentation
+      ? mcpInstrumentation.instrumentHttpHandler(rawMcpHandler)
+      : rawMcpHandler;
     // Without onerror, request-conversion / handler.fetch throws are answered
     // with a bare 500 inside the adapter and never reach our express handler.
     const nodeHandler = toNodeHandler(mcpHandler, {
@@ -406,39 +437,49 @@ async function main() {
         const baseUrl = new URL(RESOURCE_URL).origin;
 
         // OAuth discovery info header, used by MCP clients to discover the authorization server
-        // TODO: @modelcontextprotocol/server now ships canonical OAuth helpers
-        // (bearerAuthChallengeResponse, buildOAuthProtectedResourceMetadata,
-        // oauthMetadataResponse) — replace this hand-rolled header and the
-        // /.well-known/oauth-protected-resource route with them.
         res.set(
           "WWW-Authenticate",
           `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
         );
 
         if (requiresAuthentication(req, plugin)) {
-          if (!apiKey) {
-            return res.status(401).json({
+          const authentication = await observeAuthentication<AuthenticationResult>(async () => {
+            if (!apiKey) {
+              return {
+                outcome: "missing",
+                value: {
+                  accepted: false,
+                  error: "Authentication required. Please authenticate to use this MCP server.",
+                },
+              };
+            }
+
+            if (isJWT(apiKey)) {
+              const validationResult = await validateJWT(apiKey);
+              if (!validationResult.valid) {
+                return {
+                  outcome: "invalid",
+                  value: {
+                    accepted: false,
+                    error: validationResult.error || "Invalid token. Please re-authenticate.",
+                  },
+                };
+              }
+            }
+
+            return { outcome: "accepted", value: { accepted: true } };
+          });
+
+          if (!authentication.accepted) {
+            res.status(401).json({
               jsonrpc: "2.0",
               error: {
                 code: -32001,
-                message: "Authentication required. Please authenticate to use this MCP server.",
+                message: authentication.error,
               },
               id: null,
             });
-          }
-
-          if (isJWT(apiKey)) {
-            const validationResult = await validateJWT(apiKey);
-            if (!validationResult.valid) {
-              return res.status(401).json({
-                jsonrpc: "2.0",
-                error: {
-                  code: -32001,
-                  message: validationResult.error || "Invalid token. Please re-authenticate.",
-                },
-                id: null,
-              });
-            }
+            return;
           }
         }
 
@@ -473,7 +514,6 @@ async function main() {
     app.all("/mcp/oauth", async (req, res) => {
       await handleMcpRequest(req, res);
     });
-
     app.get("/ping", (_req: express.Request, res: express.Response) => {
       res.json({ status: "ok", message: "pong" });
     });
@@ -501,16 +541,27 @@ async function main() {
         const authServerUrl = OAUTH_AUTH_SERVER_URL;
 
         try {
-          const response = await fetch(`${authServerUrl}/.well-known/oauth-authorization-server`);
-          if (!response.ok) {
-            console.error("[OAuth] Upstream error:", response.status);
-            return res.status(response.status).json({
+          const abortSignal = AbortSignal.timeout(OAUTH_METADATA_TIMEOUT_MS);
+          const upstream = await observeUpstreamRequest(
+            "oauth_metadata",
+            () =>
+              fetch(`${authServerUrl}/.well-known/oauth-authorization-server`, {
+                signal: abortSignal,
+              }),
+            async (response) => {
+              if (!response.ok) return { ok: false as const, status: response.status };
+              return { ok: true as const, metadata: await response.json() };
+            },
+            { abortSignal }
+          );
+          if (!upstream.ok) {
+            console.error("[OAuth] Upstream error:", upstream.status);
+            return res.status(upstream.status).json({
               error: "upstream_error",
               message: "Failed to fetch authorization server metadata",
             });
           }
-          const metadata = await response.json();
-          res.json(metadata);
+          res.json(upstream.metadata);
         } catch (error) {
           console.error("[OAuth] Error fetching OAuth metadata:", error);
           res.status(502).json({
@@ -543,8 +594,40 @@ async function main() {
       });
     });
 
+    let activeHttpServer: ReturnType<typeof app.listen> | undefined;
+    installProcessShutdown(
+      {
+        close: async () => {
+          const server = activeHttpServer;
+          const operations: Promise<void>[] = [mcpHandler.close()];
+          if (server) {
+            operations.unshift(
+              new Promise<void>((resolve, reject) => {
+                server.close((error) => {
+                  if (error) reject(error);
+                  else resolve();
+                });
+              })
+            );
+          }
+          const results = await Promise.allSettled(operations);
+          const failures = results
+            .filter((result): result is PromiseRejectedResult => result.status === "rejected")
+            .map((result) => result.reason);
+          if (failures.length > 0) {
+            throw new AggregateError(failures, "MCP HTTP server failed to close cleanly");
+          }
+        },
+      },
+      {
+        flush: forceFlushTelemetry,
+        onerror: (error) => console.error("Failed to close MCP HTTP server:", error),
+      }
+    );
+
     const startServer = (port: number, maxAttempts = 10) => {
       const httpServer = app.listen(port);
+      activeHttpServer = httpServer;
 
       httpServer.once("error", (err: NodeJS.ErrnoException) => {
         if (err.code === "EADDRINUSE" && port < initialPort + maxAttempts) {
@@ -567,14 +650,14 @@ async function main() {
   } else {
     stdioApiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
     stdioSessionId = randomUUID();
+    const rawStdioTransport = new StdioServerTransport();
+    const stdioTransport = mcpInstrumentation
+      ? mcpInstrumentation.instrumentStdioTransport(rawStdioTransport)
+      : rawStdioTransport;
 
-    process.stdin.on("end", () => process.exit(0));
-    process.stdin.on("close", () => process.exit(0));
-    process.on("SIGHUP", () => process.exit(0));
-
-    serveStdio(
-      () => {
-        const server = createMcpServer();
+    const stdioHandle = serveStdio(
+      (mcpContext) => {
+        const server = createMcpServer(mcpContext);
 
         // Capture client info from MCP initialize handshake (stdio only — HTTP
         // mode plumbs client info through requestContext per request).
@@ -591,9 +674,15 @@ async function main() {
         return server;
       },
       {
+        transport: stdioTransport,
         onerror: (error) => console.error("MCP stdio error:", error),
       }
     );
+    installProcessShutdown(stdioHandle, {
+      flush: forceFlushTelemetry,
+      input: process.stdin,
+      onerror: (error) => console.error("Failed to close MCP stdio server:", error),
+    });
 
     console.error(`Context7 Documentation MCP Server v${SERVER_VERSION} running on stdio`);
   }
