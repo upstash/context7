@@ -35,6 +35,7 @@ node packages/mcp/dist/index.js
 |------|-------------|---------|
 | `--transport <stdio\|http>` | Transport to use. Use `http` for remote HTTP server or `stdio` for local integration. | `stdio` |
 | `--port <number>` | Port to listen on when using `http` transport. | `3000` |
+| `--host <host>` | Interface to bind when using `http` transport. | `127.0.0.1` |
 | `--api-key <key>` | API key for authentication (or set `CONTEXT7_API_KEY` env var). | - |
 
 <Note>
@@ -48,6 +49,9 @@ HTTP transport on port 8080:
 ```bash
 node packages/mcp/dist/index.js --transport http --port 8080
 ```
+
+Connect the client to `http://127.0.0.1:8080/mcp`. The default server binds the
+IPv4 loopback address directly, so use `127.0.0.1` rather than `localhost`.
 
 Stdio transport with API key:
 
@@ -73,6 +77,12 @@ You can use the `CONTEXT7_API_KEY` environment variable instead of passing the `
 # .env
 CONTEXT7_API_KEY=your_api_key_here
 ```
+
+HTTP deployments can set `CONTEXT7_MCP_HOST` to choose the bind interface. The
+`--host` flag takes precedence. Keep the default loopback bind for local use;
+set `--host 0.0.0.0` only behind a trusted network boundary. Loopback servers
+restrict browser origins and validate the Host header; non-loopback deployments
+preserve wildcard CORS for browser-based MCP clients.
 
 ### MCP Configuration with Environment Variable
 
