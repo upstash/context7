@@ -234,6 +234,26 @@ test("keeps an oversized body a sanitized 413 rather than a 500", async () => {
   });
 });
 
+// The parser is mounted on the MCP router only. A malformed body sent anywhere
+// else never reaches it, so the route answers on its own terms: /ping is
+// GET-only and an unknown path is unknown, and both land on the catch-all 404
+// exactly as they would with a well-formed body.
+describe.each(["/ping", "/does-not-exist"])("malformed JSON body on %s", (path) => {
+  test("follows that route's own contract rather than JSON-RPC", async () => {
+    const response = await fetch(new URL(path, httpUrl), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{",
+    });
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      error: "not_found",
+      message: "Endpoint not found. Use /mcp for MCP protocol communication.",
+    });
+  });
+});
+
 // Guard against over-classifying: only body-parser's entity.parse.failed is a
 // parse error. These bodies parse fine and must keep their existing SDK-issued
 // codes rather than collapsing into -32700.
