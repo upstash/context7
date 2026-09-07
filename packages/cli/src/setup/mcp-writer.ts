@@ -1,7 +1,7 @@
 import { access, readFile, writeFile, mkdir } from "fs/promises";
 import { dirname } from "path";
 import { STDIO_PACKAGE } from "./agents.js";
-import { assertTomlIsSafeToEdit, classifyTomlServerHeader } from "./toml-editor.js";
+import { findTomlServerSection } from "./toml-editor.js";
 
 export { patchTomlStdioApiKey } from "./toml-editor.js";
 
@@ -108,27 +108,6 @@ export async function writeJsonConfig(
 ): Promise<void> {
   await mkdir(dirname(filePath), { recursive: true });
   await writeFile(filePath, JSON.stringify(config, null, 2) + "\n", "utf-8");
-}
-
-function findTomlServerSection(
-  source: string,
-  serverName: string
-): { start: number; end: number } | undefined {
-  assertTomlIsSafeToEdit(source);
-  const headerRe = /^[\uFEFF\t ]*\[[^\r\n]+\][\t ]*(?:#.*)?\r?$/gm;
-  let start: number | undefined;
-  let match: RegExpExecArray | null;
-
-  while ((match = headerRe.exec(source)) !== null) {
-    const kind = classifyTomlServerHeader(match[0], serverName);
-    if (start === undefined) {
-      if (kind === "server") start = match.index;
-      continue;
-    }
-    if (kind !== "subtable") return { start, end: match.index };
-  }
-
-  return start === undefined ? undefined : { start, end: source.length };
 }
 
 export async function readTomlServerExists(filePath: string, serverName: string): Promise<boolean> {

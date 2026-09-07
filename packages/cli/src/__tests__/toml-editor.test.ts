@@ -46,6 +46,14 @@ const rotations: RotationCase[] = [
     `["mcp_servers"."context7"]\nargs = ["${PACKAGE}", "--api-key", "OLD"]\n`
   ),
   rotation(
+    "Unicode-escaped quoted server key",
+    `[mcp_servers."context\\u0037"]\nargs = ["${PACKAGE}", "--api-key", "OLD"]\n`
+  ),
+  rotation(
+    "Unicode-escaped quoted args key",
+    `[mcp_servers.context7]\n"a\\u0072gs" = ["${PACKAGE}", "--api-key", "OLD"]\n`
+  ),
+  rotation(
     "spaced dotted table path",
     `[ mcp_servers . context7 ]\nargs = ["${PACKAGE}", "--api-key", "OLD"]\n`
   ),
@@ -98,6 +106,17 @@ const rotations: RotationCase[] = [
   rotation(
     "Unicode package escape",
     `[mcp_servers.context7]\nargs = ["@upstash/context7-mcp\\u0040latest", "--api-key", "OLD"]\n`
+  ),
+  rotation(
+    "target-like table inside multiline string",
+    `description = """
+[mcp_servers.context7]
+args = ["${PACKAGE}", "--api-key", "DECOY"]
+[not-a-real-table]
+"""
+[mcp_servers.context7]
+args = ["${PACKAGE}", "--api-key", "OLD"]
+`
   ),
 ];
 
@@ -240,14 +259,10 @@ const unsafeTargets: SourceCase[] = [
     source: `[mcp_servers.context7]\nargs = ["other-package"]\n\n[mcp_servers.other]\nargs = ["${PACKAGE}"]\n`,
   },
   {
-    name: "target table and args inside a multiline string",
+    name: "unterminated multiline string before target-like table",
     source: `description = """
 [mcp_servers.context7]
 args = ["${PACKAGE}", "--api-key", "DECOY"]
-[not-a-real-table]
-"""
-[mcp_servers.context7]
-args = ["${PACKAGE}", "--api-key", "REAL"]
 `,
   },
 ];
@@ -272,9 +287,9 @@ const CONFIG_COUNT =
   absentTargets.length +
   unsafeTargets.length +
   invalidArgs.length;
-if (CONFIG_COUNT !== 62) throw new Error(`Expected 62 TOML fixtures, received ${CONFIG_COUNT}`);
+if (CONFIG_COUNT !== 65) throw new Error(`Expected 65 TOML fixtures, received ${CONFIG_COUNT}`);
 
-describe("patchTomlStdioApiKey 62-config compatibility matrix", () => {
+describe("patchTomlStdioApiKey 65-config compatibility matrix", () => {
   let tempDir: string;
   let configPath: string;
 

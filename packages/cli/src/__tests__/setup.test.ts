@@ -325,6 +325,16 @@ describe("TOML config", () => {
       headersHeader: '["mcp_servers"."context7"."http_headers"]',
     },
     {
+      name: "Unicode-escaped quoted server key",
+      header: '[mcp_servers."context\\u0037"]',
+      headersHeader: '[mcp_servers."context\\u0037".http_headers]',
+    },
+    {
+      name: "Unicode-escaped quoted root key",
+      header: '["mcp\\u005fservers".context7]',
+      headersHeader: '["mcp\\u005fservers".context7.http_headers]',
+    },
+    {
       name: "spaced dotted table path",
       header: "[ mcp_servers . context7 ]",
       headersHeader: "[ mcp_servers . context7 . http_headers ]",
@@ -449,26 +459,70 @@ describe("TOML config", () => {
     });
   }
 
-  test("does not edit table-like text inside multiline strings", async () => {
-    const path = join(tempDir, "config.toml");
-    const original = `description = """
+  for (const delimiter of ['"""', "'''"] as const) {
+    test(`ignores table-like text inside ${delimiter} multiline strings`, async () => {
+      const path = join(tempDir, "config.toml");
+      const original = `description = ${delimiter}
 [mcp_servers."context7"]
 url = "https://decoy.example"
-"""
+${delimiter}
 
 [mcp_servers.other]
 url = "https://other.com"
 `;
+      await writeFile(path, original, "utf-8");
+
+      expect(await readTomlServerExists(path, "context7")).toBe(false);
+      const { alreadyExists } = await appendTomlServer(path, "context7", {
+        url: "https://mcp.context7.com/mcp",
+      });
+      expect(alreadyExists).toBe(false);
+      expect(await readTomlServerExists(path, "context7")).toBe(true);
+
+      const appended = await readFile(path, "utf-8");
+      expect(appended).toContain("https://decoy.example");
+      expect(appended).toContain("https://mcp.context7.com/mcp");
+
+      expect((await removeTomlServer(path, "context7")).removed).toBe(true);
+      expect(await readFile(path, "utf-8")).toBe(original);
+    });
+  }
+
+  test("ignores multiline delimiters in comments and single-line strings", async () => {
+    const path = join(tempDir, "config.toml");
+    const original = `# TOML multiline delimiters: """ and '''
+description = '"""'
+
+[mcp_servers.context7]
+url = "https://old.com"
+`;
     await writeFile(path, original, "utf-8");
 
+    expect(await readTomlServerExists(path, "context7")).toBe(true);
+    expect(
+      await appendTomlServer(path, "context7", { url: "https://mcp.context7.com/mcp" })
+    ).toEqual({ alreadyExists: true });
+
+    const updated = await readFile(path, "utf-8");
+    expect(updated).toContain(`# TOML multiline delimiters: """ and '''`);
+    expect(updated).toContain(`description = '"""'`);
+    expect(updated).toContain('url = "https://mcp.context7.com/mcp"');
+  });
+
+  test("does not edit files with unterminated multiline strings", async () => {
+    const path = join(tempDir, "config.toml");
+    const original = `description = """
+[mcp_servers.context7]
+url = "https://decoy.example"
+`;
+    await writeFile(path, original, "utf-8");
+
+    expect(await readTomlServerExists(path, "context7")).toBe(false);
     await expect(
       appendTomlServer(path, "context7", { url: "https://mcp.context7.com/mcp" })
-    ).rejects.toThrow("multiline strings are not safely editable");
-    expect(await readFile(path, "utf-8")).toBe(original);
-    expect(await readTomlServerExists(path, "context7")).toBe(false);
-
+    ).rejects.toThrow("Unterminated TOML multiline string");
     await expect(removeTomlServer(path, "context7")).rejects.toThrow(
-      "multiline strings are not safely editable"
+      "Unterminated TOML multiline string"
     );
     expect(await readFile(path, "utf-8")).toBe(original);
   });
