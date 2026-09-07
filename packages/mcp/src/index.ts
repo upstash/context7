@@ -29,6 +29,16 @@ import { mcpBodyErrorHandler } from "./lib/mcp-body-error-handler.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
+const CLAUDE_CODE_PLUGIN = "claude-code-plugin";
+
+function getPluginFromRequest(req: express.Request): typeof CLAUDE_CODE_PLUGIN | undefined {
+  return req.query.client === CLAUDE_CODE_PLUGIN ? CLAUDE_CODE_PLUGIN : undefined;
+}
+
+function requiresAuthentication(req: express.Request, plugin?: typeof CLAUDE_CODE_PLUGIN): boolean {
+  // The MCP routes live on a router mounted at /mcp, so req.path is relative to it.
+  return `${req.baseUrl}${req.path}` === "/mcp/oauth" || Boolean(plugin);
+}
 
 // Parse CLI arguments using commander
 const program = new Command()
@@ -393,12 +403,9 @@ async function main() {
       onerror: (error) => console.error("MCP node adapter error:", error),
     });
 
-    const handleMcpRequest = async (
-      req: express.Request,
-      res: express.Response,
-      requireAuth: boolean
-    ) => {
+    const handleMcpRequest = async (req: express.Request, res: express.Response) => {
       try {
+        const plugin = getPluginFromRequest(req);
         const apiKey = extractApiKey(req);
         const baseUrl = new URL(RESOURCE_URL).origin;
 
@@ -412,7 +419,7 @@ async function main() {
           `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
         );
 
-        if (requireAuth) {
+        if (requiresAuthentication(req, plugin)) {
           if (!apiKey) {
             return res.status(401).json({
               jsonrpc: "2.0",
@@ -441,8 +448,9 @@ async function main() {
 
         const context: ClientContext = {
           clientIp: req.ip,
-          apiKey: apiKey,
+          apiKey,
           clientInfo: extractClientInfoFromUserAgent(req.headers["user-agent"]),
+          plugin,
           transport: "http",
         };
 
@@ -467,10 +475,9 @@ async function main() {
     const mcpRouter = express.Router();
     mcpRouter.use(express.json());
     mcpRouter.use(mcpBodyErrorHandler);
-    // Anonymous access endpoint - no authentication required
-    mcpRouter.all("/", (req, res) => handleMcpRequest(req, res, false));
+    mcpRouter.all("/", (req, res) => handleMcpRequest(req, res));
     // OAuth-protected endpoint - requires authentication
-    mcpRouter.all("/oauth", (req, res) => handleMcpRequest(req, res, true));
+    mcpRouter.all("/oauth", (req, res) => handleMcpRequest(req, res));
     app.use("/mcp", mcpRouter);
 
     app.get("/ping", (_req: express.Request, res: express.Response) => {
