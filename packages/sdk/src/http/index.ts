@@ -79,20 +79,9 @@ export class HttpClient implements Requester {
         throw abortError(abortState.signal.reason, abortState.timedOut());
       }
 
-      const authToken =
-        typeof this.authToken === "function" ? await this.authToken() : this.authToken;
-      if (this.authToken !== undefined && !authToken) {
-        throw new Context7Error("The auth token provider returned an empty token", {
-          code: "authentication_error",
-          retryable: false,
-        });
-      }
       const init: RequestInit = {
         cache: normalizeCache(request.cache ?? this.options.cache),
         method,
-        headers: authToken
-          ? { ...this.headers, Authorization: `Bearer ${authToken}` }
-          : this.headers,
         body: request.body === undefined ? undefined : JSON.stringify(request.body),
         keepalive: this.options.keepAlive,
         signal: abortState.signal,
@@ -131,9 +120,16 @@ export class HttpClient implements Requester {
     const canRetry = method === "GET";
 
     for (let attempt = 0; attempt <= this.retry.retries; attempt++) {
+      const headers =
+        typeof this.authToken === "function"
+          ? this.headersForToken(await this.authToken())
+          : this.headersForToken(this.authToken);
+      if (abortState.signal?.aborted) {
+        throw abortError(abortState.signal.reason, abortState.timedOut());
+      }
       let response: Response;
       try {
-        response = await this.fetch(url, init);
+        response = await this.fetch(url, { ...init, headers });
       } catch (cause) {
         if (abortState.signal?.aborted) {
           throw abortError(cause, abortState.timedOut());
@@ -163,6 +159,17 @@ export class HttpClient implements Requester {
     }
 
     throw new Error("Unreachable retry state");
+  }
+
+  private headersForToken(authToken: string | undefined): Record<string, string> {
+    if (this.authToken !== undefined && !authToken) {
+      throw new Context7Error("The auth token provider returned an empty token", {
+        code: "authentication_error",
+        retryable: false,
+      });
+    }
+
+    return authToken ? { ...this.headers, Authorization: `Bearer ${authToken}` } : this.headers;
   }
 }
 

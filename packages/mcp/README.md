@@ -55,33 +55,8 @@ Check out our [project addition guide](https://context7.com/docs/adding-librarie
 - Cursor, Claude Code, VSCode, Devin Desktop or another MCP Client
 - Context7 API Key (Optional) for higher rate limits and private repositories (Get yours by creating an account at [context7.com/dashboard](https://context7.com/dashboard))
 
-### Vercel Marketplace OIDC
-
-Vercel Marketplace resources can call the remote MCP server without a
-long-lived Context7 API key. Obtain a fresh per-resource access token from
-Vercel's Marketplace integration runtime and send it as the bearer credential:
-
-```ts
-// Supplied by Vercel's Marketplace integration runtime.
-declare function getMarketplaceResourceToken(): Promise<string>;
-
-const authorization = `Bearer ${await getMarketplaceResourceToken()}`;
-```
-
-Use `authorization` as the `Authorization` header when creating the MCP HTTP
-transport. Create the transport inside the request that uses it so a short-lived
-token is not retained across function invocations. Its `resource` claim must
-match the Context7 resource created during Marketplace provisioning.
-
-The hosted MCP service must be configured with the exact issuer and audience
-assigned by Vercel when the Context7 Marketplace product is created:
-
-```sh
-VERCEL_MARKETPLACE_OIDC_ISSUER=https://integrations.vercel.com/oac_...
-VERCEL_MARKETPLACE_OIDC_AUDIENCE=https://integrations.vercel.com/context7/icfg_...
-```
-
-> [!TIP] > **Recommended Post-Setup: Add a Rule to Auto-Invoke Context7**
+> [!TIP]
+> **Recommended Post-Setup: Add a Rule to Auto-Invoke Context7**
 >
 > After installing Context7 (see instructions below), enhance your workflow by adding a rule so you don't have to type `use context7` in every prompt. Define a simple rule in your MCP client's rule section to automatically invoke Context7 on any code question:
 >
@@ -1645,6 +1620,34 @@ Stay updated and join our community:
 - [Income Stream Surfers: "Context7: The New MCP Server That Will CHANGE AI Coding"](https://www.youtube.com/watch?v=PS-2Azb-C3M)
 - [AICodeKing: "Context7 + Cline & RooCode: This MCP Server Makes CLINE 100X MORE EFFECTIVE!"](https://www.youtube.com/watch?v=qZfENAPMnyo)
 - [Sean Kochel: "5 MCP Servers For Vibe Coding Glory (Just Plug-In & Go)"](https://www.youtube.com/watch?v=LqTQi8qexJM)
+
+## Vercel Marketplace OIDC
+
+Vercel Marketplace resources can call the remote MCP server without a
+long-lived Context7 API key. Obtain a fresh per-resource access token from
+Vercel's Marketplace integration runtime and send it as the bearer credential:
+
+```ts
+import { getIntegrationToken } from "@vercel/integrations";
+
+const authorization = `Bearer ${await getIntegrationToken("context7")}`;
+```
+
+The `getIntegrationToken` signature is based on Vercel's current provider
+specification and may change before Marketplace OIDC is generally available.
+
+Use `authorization` as the `Authorization` header when creating the MCP HTTP
+transport. Create the transport inside the request that uses it so a short-lived
+token is not retained across function invocations. Its `resource` claim must
+match the Context7 resource created during Marketplace provisioning.
+
+The hosted MCP service must be configured with the exact issuer and audience
+assigned by Vercel when the Context7 Marketplace product is created:
+
+```sh
+VERCEL_MARKETPLACE_OIDC_ISSUER=https://integrations.vercel.com/oac_...
+VERCEL_MARKETPLACE_OIDC_AUDIENCE=https://integrations.vercel.com/context7/icfg_...
+```
 
 ## 📄 License
 

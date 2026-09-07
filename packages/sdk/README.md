@@ -76,14 +76,15 @@ so each request receives a current token:
 
 ```ts
 import { Context7 } from "@upstash/context7-sdk";
-
-// Supplied by Vercel's Marketplace integration runtime.
-declare function getMarketplaceResourceToken(): Promise<string>;
+import { getIntegrationToken } from "@vercel/integrations";
 
 const client = new Context7({
-  authToken: getMarketplaceResourceToken,
+  authToken: () => getIntegrationToken("context7"),
 });
 ```
+
+The `getIntegrationToken` signature is based on Vercel's current provider
+specification and may change before Marketplace OIDC is generally available.
 
 The token's `resource` claim must match the Context7 resource created during
 Marketplace provisioning. Do not resolve the token once at startup: Vercel
