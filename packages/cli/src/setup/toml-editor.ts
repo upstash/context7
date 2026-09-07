@@ -115,18 +115,41 @@ function parseTomlStringArray(
   throw new Error("Unterminated TOML array in MCP args");
 }
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export function classifyTomlServerHeader(
+  line: string,
+  serverName: string
+): "server" | "subtable" | undefined {
+  const serverKey = escapeRegExp(serverName);
+  const rootKey = `(?:mcp_servers|"mcp_servers"|'mcp_servers')`;
+  const targetKey = `(?:${serverKey}|"${serverKey}"|'${serverKey}')`;
+  const childKey = `(?:[A-Za-z0-9_-]+|"(?:[^"\\\\]|\\\\.)*"|'[^']*')`;
+  const match = new RegExp(
+    `^[\\uFEFF\\t ]*\\[[\\t ]*${rootKey}[\\t ]*\\.[\\t ]*${targetKey}((?:[\\t ]*\\.[\\t ]*${childKey})*)[\\t ]*\\][\\t ]*(?:#.*)?\\r?$`
+  ).exec(line);
+
+  if (!match) return undefined;
+  return match[1].length > 0 ? "subtable" : "server";
+}
+
+export function assertTomlIsSafeToEdit(source: string): void {
+  if (source.includes('"""') || source.includes("'''")) {
+    throw new Error("TOML files containing multiline strings are not safely editable");
+  }
+}
+
 function findTomlServerArgs(
   raw: string,
   serverName: string
 ): { start: number; end: number; tokens: TomlStringToken[] } | null {
-  const escapedName = serverName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const tableKey = `(?:mcp_servers|"mcp_servers"|'mcp_servers')`;
-  const serverKey = `(?:${escapedName}|"${escapedName}"|'${escapedName}')`;
-  const headerRe = new RegExp(
-    `^[\\uFEFF\\t ]*\\[[\\t ]*${tableKey}[\\t ]*\\.[\\t ]*${serverKey}[\\t ]*\\][\\t ]*(?:#.*)?\\r?$`,
-    "m"
-  );
-  const header = headerRe.exec(raw);
+  const headerRe = /^[\uFEFF\t ]*\[[^\r\n]+\][\t ]*(?:#.*)?\r?$/gm;
+  let header: RegExpExecArray | null;
+  do {
+    header = headerRe.exec(raw);
+  } while (header && classifyTomlServerHeader(header[0], serverName) !== "server");
   if (!header) return null;
 
   const bodyStart = raw.indexOf("\n", header.index + header[0].length) + 1;
@@ -182,9 +205,7 @@ export async function patchTomlStdioApiKey(
     return false;
   }
 
-  if (raw.includes('"""') || raw.includes("'''")) {
-    throw new Error("TOML files containing multiline strings are not safely editable");
-  }
+  assertTomlIsSafeToEdit(raw);
 
   const range = findTomlServerArgs(raw, serverName);
   if (!range) return false;

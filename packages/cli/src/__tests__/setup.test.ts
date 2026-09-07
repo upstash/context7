@@ -313,6 +313,24 @@ describe("JSONC support", () => {
 describe("TOML config", () => {
   let tempDir: string;
 
+  const equivalentServerTables = [
+    {
+      name: "quoted server key",
+      header: '[mcp_servers."context7"]',
+      headersHeader: '[mcp_servers."context7".http_headers]',
+    },
+    {
+      name: "fully quoted table path",
+      header: '["mcp_servers"."context7"]',
+      headersHeader: '["mcp_servers"."context7"."http_headers"]',
+    },
+    {
+      name: "spaced dotted table path",
+      header: "[ mcp_servers . context7 ]",
+      headersHeader: "[ mcp_servers . context7 . http_headers ]",
+    },
+  ] as const;
+
   beforeEach(async () => {
     tempDir = join(tmpdir(), `ctx7-test-${Date.now()}`);
     await mkdir(tempDir, { recursive: true });
@@ -395,6 +413,64 @@ describe("TOML config", () => {
     expect(content.match(/\[mcp_servers\.context7\]/g)?.length).toBe(1);
     expect(content).toContain('url = "https://mcp.context7.com/mcp"');
     expect(content).not.toContain("https://old.com");
+  });
+
+  for (const { name, header, headersHeader } of equivalentServerTables) {
+    test(`recognizes and replaces ${name}`, async () => {
+      const path = join(tempDir, "config.toml");
+      const original = `model = "gpt-5"\n\n${header}\nurl = "https://old.com"\n\n${headersHeader}\nX_API_KEY = "old-key"\n\n[mcp_servers.other]\nurl = "https://other.com"\n`;
+      await writeFile(path, original, "utf-8");
+
+      const { alreadyExists } = await appendTomlServer(path, "context7", {
+        url: "https://mcp.context7.com/mcp",
+        headers: { X_API_KEY: "new-key" },
+      });
+
+      expect(alreadyExists).toBe(true);
+      expect(await readTomlServerExists(path, "context7")).toBe(true);
+
+      const updated = await readFile(path, "utf-8");
+      expect(updated.match(/\[mcp_servers\.context7\]/g)?.length).toBe(1);
+      expect(updated).toContain('url = "https://mcp.context7.com/mcp"');
+      expect(updated).toContain('X_API_KEY = "new-key"');
+      expect(updated).not.toContain("https://old.com");
+      expect(updated).not.toContain("old-key");
+      expect(updated).toContain("[mcp_servers.other]");
+
+      await writeFile(path, original, "utf-8");
+      expect(await readTomlServerExists(path, "context7")).toBe(true);
+      const { removed } = await removeTomlServer(path, "context7");
+      expect(removed).toBe(true);
+
+      const removedContent = await readFile(path, "utf-8");
+      expect(removedContent).toContain("[mcp_servers.other]");
+      expect(removedContent).not.toContain("https://old.com");
+      expect(removedContent).not.toContain("old-key");
+    });
+  }
+
+  test("does not edit table-like text inside multiline strings", async () => {
+    const path = join(tempDir, "config.toml");
+    const original = `description = """
+[mcp_servers."context7"]
+url = "https://decoy.example"
+"""
+
+[mcp_servers.other]
+url = "https://other.com"
+`;
+    await writeFile(path, original, "utf-8");
+
+    await expect(
+      appendTomlServer(path, "context7", { url: "https://mcp.context7.com/mcp" })
+    ).rejects.toThrow("multiline strings are not safely editable");
+    expect(await readFile(path, "utf-8")).toBe(original);
+    expect(await readTomlServerExists(path, "context7")).toBe(false);
+
+    await expect(removeTomlServer(path, "context7")).rejects.toThrow(
+      "multiline strings are not safely editable"
+    );
+    expect(await readFile(path, "utf-8")).toBe(original);
   });
 
   test("appendTomlServer overwrites server without affecting other servers", async () => {
