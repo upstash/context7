@@ -23,6 +23,10 @@ export const OAUTH_AUTH_SERVER_URL = (
 ).replace(/\/+$/, "");
 export const OAUTH_JWKS_URL =
   process.env.OAUTH_JWKS_URL || `${OAUTH_AUTH_SERVER_URL}/.well-known/jwks.json`;
+export const OAUTH_ACCESS_TOKEN_AUDIENCE = process.env.OAUTH_ACCESS_TOKEN_AUDIENCE || RESOURCE_URL;
+export const OAUTH_REQUIRED_SCOPES = (process.env.OAUTH_REQUIRED_SCOPES || "profile email")
+  .split(/\s+/)
+  .filter(Boolean);
 
 // Enterprise-Managed Auth (id-jag): access tokens minted by the Context7
 // authorization server, validated against its public JWKS.

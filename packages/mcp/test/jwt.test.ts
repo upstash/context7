@@ -17,6 +17,8 @@ const ENTRA_ISSUER = `https://login.microsoftonline.com/${TENANT_ID}/v2.0`;
 const AUDIENCE = "6ff6a635-03d9-472d-a7f1-dc98a4e5fde2";
 const originalOAuthAuthServerUrl = process.env.OAUTH_AUTH_SERVER_URL;
 const originalOAuthJwksUrl = process.env.OAUTH_JWKS_URL;
+const originalOAuthAudience = process.env.OAUTH_ACCESS_TOKEN_AUDIENCE;
+const originalOAuthRequiredScopes = process.env.OAUTH_REQUIRED_SCOPES;
 
 async function loadModule() {
   vi.resetModules();
@@ -53,6 +55,16 @@ afterEach(() => {
     delete process.env.OAUTH_JWKS_URL;
   } else {
     process.env.OAUTH_JWKS_URL = originalOAuthJwksUrl;
+  }
+  if (originalOAuthAudience === undefined) {
+    delete process.env.OAUTH_ACCESS_TOKEN_AUDIENCE;
+  } else {
+    process.env.OAUTH_ACCESS_TOKEN_AUDIENCE = originalOAuthAudience;
+  }
+  if (originalOAuthRequiredScopes === undefined) {
+    delete process.env.OAUTH_REQUIRED_SCOPES;
+  } else {
+    process.env.OAUTH_REQUIRED_SCOPES = originalOAuthRequiredScopes;
   }
   vi.unstubAllGlobals();
   vi.clearAllMocks();
@@ -180,7 +192,7 @@ describe("validateJWT - Entra path", () => {
 describe("validateJWT - Clerk path", () => {
   test("verifies against Clerk JWKS for non-Entra issuers", async () => {
     vi.mocked(jose.jwtVerify).mockResolvedValue({
-      payload: {},
+      payload: { scope: "profile email" },
       protectedHeader: { alg: "RS256" },
     } as unknown as Awaited<ReturnType<typeof jose.jwtVerify>>);
 
@@ -189,6 +201,24 @@ describe("validateJWT - Clerk path", () => {
 
     expect(result.valid).toBe(true);
     expect(fetch).not.toHaveBeenCalled();
+    expect(jose.jwtVerify).toHaveBeenCalledWith(expect.any(String), "fake-jwks", {
+      issuer: "https://clerk.context7.com",
+      audience: "https://mcp.context7.com",
+      algorithms: ["RS256"],
+      requiredClaims: ["sub", "exp", "iat"],
+    });
+  });
+
+  test("rejects a token without the required OAuth scopes", async () => {
+    vi.mocked(jose.jwtVerify).mockResolvedValue({
+      payload: { scope: "profile" },
+      protectedHeader: { alg: "RS256" },
+    } as unknown as Awaited<ReturnType<typeof jose.jwtVerify>>);
+
+    const { validateJWT } = await loadModule();
+    const result = await validateJWT(makeEntraToken({ iss: "https://clerk.context7.com" }));
+
+    expect(result).toEqual({ valid: false, error: "Missing required scope" });
   });
 
   test("returns 'Token expired' when jwtVerify throws JWTExpired", async () => {
@@ -205,8 +235,10 @@ describe("validateJWT - Clerk path", () => {
 
   test("uses the configured OAuth issuer and its JWKS for verification", async () => {
     process.env.OAUTH_AUTH_SERVER_URL = "https://supreme-foal-19.clerk.accounts.dev/";
+    process.env.OAUTH_ACCESS_TOKEN_AUDIENCE = "https://staging-mcp.context7.com";
+    process.env.OAUTH_REQUIRED_SCOPES = "profile";
     vi.mocked(jose.jwtVerify).mockResolvedValue({
-      payload: {},
+      payload: { scope: "profile" },
       protectedHeader: { alg: "RS256" },
     } as unknown as Awaited<ReturnType<typeof jose.jwtVerify>>);
 
@@ -221,6 +253,9 @@ describe("validateJWT - Clerk path", () => {
     );
     expect(jose.jwtVerify).toHaveBeenCalledWith(expect.any(String), "fake-jwks", {
       issuer: "https://supreme-foal-19.clerk.accounts.dev",
+      audience: "https://staging-mcp.context7.com",
+      algorithms: ["RS256"],
+      requiredClaims: ["sub", "exp", "iat"],
     });
   });
 
