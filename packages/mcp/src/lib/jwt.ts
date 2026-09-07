@@ -7,47 +7,11 @@ import {
   OAUTH_JWKS_URL,
   RESOURCE_URL,
 } from "./constants.js";
+import { isVercelMarketplaceIssuer, validateVercelMarketplaceJwt } from "./vercelMarketplaceJwt.js";
 
 const oauthJwks = jose.createRemoteJWKSet(new URL(OAUTH_JWKS_URL));
 
 const emaJwks = jose.createRemoteJWKSet(new URL(EMA_JWKS_URL));
-
-const VERCEL_INTEGRATIONS_ORIGIN = "https://integrations.vercel.com";
-const VERCEL_ISSUER_PATH = /^\/oac_[A-Za-z0-9]+$/;
-const VERCEL_AUDIENCE_PATH = /^\/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\/icfg_[A-Za-z0-9]+$/;
-const VERCEL_MARKETPLACE_OIDC_ISSUER = process.env.VERCEL_MARKETPLACE_OIDC_ISSUER ?? "";
-const VERCEL_MARKETPLACE_OIDC_AUDIENCE = process.env.VERCEL_MARKETPLACE_OIDC_AUDIENCE ?? "";
-
-let vercelMarketplaceJwks: ReturnType<typeof jose.createRemoteJWKSet> | undefined;
-
-function isExpectedVercelUrl(value: string, pathPattern: RegExp): boolean {
-  try {
-    const url = new URL(value);
-    return (
-      url.origin === VERCEL_INTEGRATIONS_ORIGIN &&
-      !url.username &&
-      !url.password &&
-      !url.search &&
-      !url.hash &&
-      pathPattern.test(url.pathname)
-    );
-  } catch {
-    return false;
-  }
-}
-
-function isVercelMarketplaceIssuer(issuer: string): boolean {
-  return isExpectedVercelUrl(issuer, VERCEL_ISSUER_PATH);
-}
-
-function getVercelMarketplaceJwks() {
-  if (!vercelMarketplaceJwks) {
-    vercelMarketplaceJwks = jose.createRemoteJWKSet(
-      new URL(`${VERCEL_MARKETPLACE_OIDC_ISSUER}/.well-known/jwks`)
-    );
-  }
-  return vercelMarketplaceJwks;
-}
 
 const ENTRA_V2_ISSUER_RE = /^https:\/\/login\.microsoftonline\.com\/[0-9a-f-]{36}\/v2\.0$/;
 
@@ -141,26 +105,7 @@ export async function validateJWT(token: string): Promise<JWTValidationResult> {
     }
 
     if (isVercelMarketplaceIssuer(iss)) {
-      if (
-        !isVercelMarketplaceIssuer(VERCEL_MARKETPLACE_OIDC_ISSUER) ||
-        !isExpectedVercelUrl(VERCEL_MARKETPLACE_OIDC_AUDIENCE, VERCEL_AUDIENCE_PATH)
-      ) {
-        return { valid: false, error: "Vercel Marketplace OIDC not configured" };
-      }
-      if (iss !== VERCEL_MARKETPLACE_OIDC_ISSUER) {
-        return { valid: false, error: "Untrusted Vercel Marketplace issuer" };
-      }
-
-      const { payload } = await jose.jwtVerify(token, getVercelMarketplaceJwks(), {
-        algorithms: ["RS256"],
-        audience: VERCEL_MARKETPLACE_OIDC_AUDIENCE,
-        issuer: VERCEL_MARKETPLACE_OIDC_ISSUER,
-        clockTolerance: 60,
-      });
-      if (typeof payload.resource !== "string" || !payload.resource) {
-        return { valid: false, error: "Missing Vercel Marketplace resource" };
-      }
-      return { valid: true };
+      return validateVercelMarketplaceJwt(token, iss);
     }
 
     await jose.jwtVerify(token, oauthJwks, { issuer: OAUTH_AUTH_SERVER_URL });

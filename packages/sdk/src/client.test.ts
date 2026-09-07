@@ -74,6 +74,28 @@ describe("Context7 Client", () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
+  test("prefers an explicit API key when both credential forms are provided", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ results: [] }), {
+        headers: { "content-type": "application/json" },
+      })
+    );
+    const authToken = vi.fn(() => "oidc-token");
+    const client = new Context7({
+      apiKey: "ctx7sk-config",
+      authToken,
+      fetch: fetchMock,
+      retry: false,
+    });
+
+    await client.searchLibrary("routing", "next.js");
+
+    expect(authToken).not.toHaveBeenCalled();
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      headers: expect.objectContaining({ Authorization: "Bearer ctx7sk-config" }),
+    });
+  });
+
   test("works in runtimes without process when an API key is configured", () => {
     vi.stubGlobal("process", undefined);
 
