@@ -27,7 +27,10 @@ export class Context7 {
   private readonly httpClient: HttpClient;
 
   constructor(config: Context7Config = {}) {
-    const apiKey = config.apiKey || getEnvironmentApiKey();
+    // Explicit credentials must win over the environment. This lets callers
+    // exercise short-lived OIDC during Vercel's dual-auth migration even when
+    // a legacy CONTEXT7_API_KEY is still present.
+    const apiKey = config.apiKey || (config.authToken ? undefined : getEnvironmentApiKey());
 
     if (!apiKey && !config.authToken) {
       throw new Context7Error(

@@ -89,6 +89,10 @@ The token's `resource` claim must match the Context7 resource created during
 Marketplace provisioning. Do not resolve the token once at startup: Vercel
 Marketplace OIDC tokens are short-lived.
 
+Explicit credentials take precedence in this order: `apiKey`, `authToken`, then
+`CONTEXT7_API_KEY`. This allows OIDC to be tested while a legacy API key remains
+available during a dual-auth migration.
+
 ### Production HTTP options
 
 Requests time out after 30 seconds and retry transient network errors, `408`, `425`, `429`,

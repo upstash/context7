@@ -26,7 +26,8 @@ describe("Context7 Client", () => {
     expect(() => new Context7()).toThrow("Authentication is required");
   });
 
-  test("resolves a fresh OIDC token for every request", async () => {
+  test("prefers an explicit OIDC provider over the environment and refreshes every request", async () => {
+    vi.stubEnv("CONTEXT7_API_KEY", "ctx7sk-legacy-environment-key");
     const fetchMock = vi.fn().mockImplementation(() =>
       Promise.resolve(
         new Response(JSON.stringify({ results: [] }), {
@@ -53,6 +54,7 @@ describe("Context7 Client", () => {
   });
 
   test("rejects an empty token returned by a provider", async () => {
+    vi.stubEnv("CONTEXT7_API_KEY", "ctx7sk-legacy-environment-key");
     const fetchMock = vi.fn();
     const client = new Context7({ authToken: () => "", fetch: fetchMock });
 
