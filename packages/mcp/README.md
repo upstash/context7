@@ -1415,7 +1415,6 @@ autohand mcp add --transport http context7 https://mcp.context7.com/mcp
 Context7 MCP provides the following tools that LLMs can use:
 
 - `resolve-library-id`: Resolves a general library name into a Context7-compatible library ID.
-
   - `libraryName` (required): The name of the library to search for
 
 - `get-library-docs`: Fetches documentation for a library using a Context7-compatible library ID.
