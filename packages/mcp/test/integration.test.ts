@@ -8,6 +8,7 @@ import { createDecipheriv } from "node:crypto";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import * as jose from "jose";
 
 // End-to-end tests: the real built binary (dist/index.js) is exercised over
 // both transports (spawned HTTP server, spawned stdio child) by both protocol
@@ -49,13 +50,18 @@ let stubServer: http.Server;
 let childEnv: Record<string, string>;
 let httpChild: ChildProcess;
 let httpUrl: string;
+let emaPrivateKey: Awaited<ReturnType<typeof jose.generateKeyPair>>["privateKey"];
+let emaPublicJwk: jose.JWK;
 
 function startStubApi(): Promise<string> {
   stubServer = http.createServer((req, res) => {
     const url = new URL(req.url!, "http://stub.local");
     const apiPath = url.pathname.replace(/^\/api/, "");
     requests.push({ path: apiPath, query: url.searchParams, headers: req.headers });
-    if (apiPath === "/v2/libs/search") {
+    if (apiPath === "/oauth/ema-jwks") {
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ keys: [emaPublicJwk] }));
+    } else if (apiPath === "/v2/libs/search") {
       res.setHeader("Content-Type", "application/json");
       res.end(
         JSON.stringify({
@@ -111,6 +117,14 @@ function startHttpChild(): Promise<{ child: ChildProcess; url: string }> {
 
 beforeAll(async () => {
   execSync("pnpm build", { cwd: PKG_ROOT, stdio: "pipe" });
+  const keyPair = await jose.generateKeyPair("RS256");
+  emaPrivateKey = keyPair.privateKey;
+  emaPublicJwk = {
+    ...(await jose.exportJWK(keyPair.publicKey)),
+    alg: "RS256",
+    kid: "integration-test-ema",
+    use: "sig",
+  };
   const stubUrl = await startStubApi();
   // getDefaultEnvironment() inherits only safe vars, so a real
   // CONTEXT7_API_KEY in the parent shell cannot leak into the children.
@@ -159,6 +173,117 @@ describe("OAuth discovery", () => {
       resource: "https://mcp.context7.com",
       authorization_servers: ["https://clerk.context7.com", "https://context7.com"],
     });
+  });
+});
+
+// A malformed body fails inside express.json(), which calls next(err). That
+// jumps past every 3-arg middleware — CORS, both /mcp routes (so neither the
+// auth check nor handleMcpRequest's catch runs) and the catch-all 404 — and
+// used to land in Express's default handler and its HTML stack trace.
+describe.each(["/mcp", "/mcp/oauth"])("malformed JSON body on %s", (endpoint) => {
+  test("answers with a sanitized JSON-RPC parse error", async () => {
+    const response = await fetch(new URL(endpoint, httpUrl), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
+        // Credentials ride along on real traffic, so assert they are not echoed.
+        Authorization: "Bearer ctx7sk-parse-error-canary",
+      },
+      body: '{"jsonrpc":"2.0","method":"tools/list","params":{"leak-canary":',
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get("content-type")).toMatch(/^application\/json/);
+    // The throw happens upstream of the CORS middleware, so browser clients see
+    // a CORS failure instead of the 400 unless the headers are restored.
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
+
+    const raw = await response.text();
+    for (const leak of [
+      "node_modules",
+      "body-parser",
+      "raw-body",
+      "SyntaxError",
+      "<html",
+      "<pre",
+      "at JSON.parse",
+      PKG_ROOT,
+      "leak-canary",
+      "ctx7sk-parse-error-canary",
+    ]) {
+      expect(raw).not.toContain(leak);
+    }
+
+    expect(JSON.parse(raw)).toEqual({
+      jsonrpc: "2.0",
+      error: { code: -32700, message: "Parse error" },
+      id: null,
+    });
+  });
+});
+
+// body-parser refuses some bodies before JSON.parse is reached. Those are still
+// client mistakes, so they keep the status it assigned instead of being
+// reported as a server fault that invites the client to retry forever.
+test("keeps an oversized body a sanitized 413 rather than a 500", async () => {
+  const response = await fetch(new URL("/mcp", httpUrl), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    // Comfortably past express.json()'s 100kb default limit.
+    body: JSON.stringify({ jsonrpc: "2.0", padding: "A".repeat(200_000) }),
+  });
+
+  expect(response.status).toBe(413);
+  expect(response.headers.get("content-type")).toMatch(/^application\/json/);
+
+  const raw = await response.text();
+  for (const leak of ["node_modules", "PayloadTooLargeError", "<html", "<pre", PKG_ROOT]) {
+    expect(raw).not.toContain(leak);
+  }
+  expect(JSON.parse(raw)).toEqual({
+    jsonrpc: "2.0",
+    error: { code: -32600, message: "Invalid Request" },
+    id: null,
+  });
+});
+
+// The parser is mounted on the MCP router only. A malformed body sent anywhere
+// else never reaches it, so the route answers on its own terms: /ping is
+// GET-only and an unknown path is unknown, and both land on the catch-all 404
+// exactly as they would with a well-formed body.
+describe.each(["/ping", "/does-not-exist"])("malformed JSON body on %s", (path) => {
+  test("follows that route's own contract rather than JSON-RPC", async () => {
+    const response = await fetch(new URL(path, httpUrl), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{",
+    });
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      error: "not_found",
+      message: "Endpoint not found. Use /mcp for MCP protocol communication.",
+    });
+  });
+});
+
+// Guard against over-classifying: only body-parser's entity.parse.failed is a
+// parse error. These bodies parse fine and must keep their existing SDK-issued
+// codes rather than collapsing into -32700.
+describe.each([
+  ["a non-JSON-RPC object", '{"hello":"world"}', 400, -32600],
+  ["an empty body", "", 400, -32600],
+])("valid JSON: %s", (_label, body, status, code) => {
+  test("is not reported as a parse error", async () => {
+    const response = await fetch(new URL("/mcp", httpUrl), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body,
+    });
+
+    expect(response.status).toBe(status);
+    expect(await response.json()).toMatchObject({ error: { code } });
   });
 });
 
@@ -330,6 +455,17 @@ async function postMcp(target: string, headers: Record<string, string> = {}) {
   return { status: res.status, wwwAuthenticate: res.headers.get("www-authenticate") };
 }
 
+function createEmaAccessToken() {
+  return new jose.SignJWT({ email: "developer@example.com" })
+    .setProtectedHeader({ alg: "RS256", kid: "integration-test-ema" })
+    .setIssuer("https://context7.com")
+    .setAudience("https://mcp.context7.com")
+    .setSubject("ema-user")
+    .setIssuedAt()
+    .setExpirationTime("5m")
+    .sign(emaPrivateKey);
+}
+
 describe("plugin authentication", () => {
   beforeEach(() => {
     requests.length = 0;
@@ -348,6 +484,33 @@ describe("plugin authentication", () => {
     const res = await postMcp(httpUrl.replace(/\/mcp$/, "/mcp/oauth"));
 
     expect(res.status).toBe(401);
+  });
+
+  test("accepts an EMA access token on the marketplace plugin endpoint", async () => {
+    const accessToken = await createEmaAccessToken();
+    const client = new Client(
+      { name: "claude-code", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+    await client.connect(
+      new StreamableHTTPClientTransport(new URL(`${httpUrl}?client=claude-code-plugin`), {
+        requestInit: { headers: { Authorization: `Bearer ${accessToken}` } },
+      })
+    );
+
+    try {
+      requests.length = 0;
+      await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/vercel/next.js", query: "app router" },
+      });
+    } finally {
+      await client.close();
+    }
+
+    const apiCall = requests.find((request) => request.path === "/v2/context");
+    expect(apiCall?.headers.authorization).toBe(`Bearer ${accessToken}`);
+    expect(apiCall?.headers["x-context7-plugin"]).toBe("claude-code-plugin");
   });
 
   test("tracks authenticated plugin requests separately", async () => {

@@ -1,212 +1,184 @@
-import { Context7Error } from "@error";
+import { Context7Error, Context7UrlError } from "@error";
+import {
+  abortError,
+  createAbortState,
+  isContext7AbortError,
+  resolveSignal,
+  validateTimeout,
+  wait,
+  type AbortState,
+} from "./abort";
+import { createRetryPolicy, isTransientStatus, retryDelay } from "./retry";
+import { extractResponseMetadata, parseSuccessResponse, throwResponseError } from "./response";
+import type {
+  CacheSetting,
+  Context7Fetch,
+  Context7Request,
+  Context7Response,
+  Context7ResponseMetadata,
+  HttpClientConfig,
+  Requester,
+  RetryPolicy,
+} from "./types";
 
-type CacheSetting =
-  | "default"
-  | "force-cache"
-  | "no-cache"
-  | "no-store"
-  | "only-if-cached"
-  | "reload"
-  | false;
+export * from "./types";
 
-export type Context7Request = {
-  path?: string[];
-  /**
-   * Request body will be serialized to json
-   */
-  body?: unknown;
-  /**
-   * HTTP method to use
-   * @default "POST"
-   */
-  method?: "GET" | "POST";
-  /**
-   * Query parameters for GET requests
-   */
-  query?: Record<string, string | number | boolean | undefined>;
+const DEFAULT_TIMEOUT = 30_000;
+
+type FetchResult = {
+  response: Response;
+  metadata: Context7ResponseMetadata;
 };
-export type TxtResponseHeaders = {
-  page: number;
-  limit: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrev: boolean;
-  totalTokens: number;
-};
-
-export type Context7Response<TResult> = {
-  result?: TResult;
-  headers?: TxtResponseHeaders;
-};
-
-export type Requester = {
-  request: <TResult = unknown>(req: Context7Request) => Promise<Context7Response<TResult>>;
-};
-
-export type RetryConfig =
-  | false
-  | {
-      /**
-       * The number of retries to attempt before giving up.
-       *
-       * @default 5
-       */
-      retries?: number;
-      /**
-       * A backoff function receives the current retry count and returns a number in milliseconds to wait before retrying.
-       *
-       * @default
-       * ```ts
-       * Math.exp(retryCount) * 50
-       * ```
-       */
-      backoff?: (retryCount: number) => number;
-    };
-
-export type RequesterConfig = {
-  /**
-   * Configure the retry behaviour in case of network errors
-   */
-  retry?: RetryConfig;
-
-  /**
-   * Configure the cache behaviour
-   * @default "no-store"
-   */
-  cache?: CacheSetting;
-};
-
-export type HttpClientConfig = {
-  headers?: Record<string, string>;
-  baseUrl: string;
-  retry?: RetryConfig;
-  signal?: () => AbortSignal;
-} & RequesterConfig;
 
 export class HttpClient implements Requester {
-  public baseUrl: string;
-  public headers: Record<string, string>;
+  public readonly baseUrl: string;
+  public readonly headers: Record<string, string>;
   public readonly options: {
-    signal?: HttpClientConfig["signal"];
+    signal?: AbortSignal | (() => AbortSignal);
     cache?: CacheSetting;
+    timeout: number | false;
+    keepAlive: boolean;
   };
+  public readonly retry: RetryPolicy;
 
-  public readonly retry: {
-    attempts: number;
-    backoff: (retryCount: number) => number;
-  };
+  private readonly fetch: Context7Fetch;
+  private readonly onResponse?: (metadata: Context7ResponseMetadata) => void;
 
   public constructor(config: HttpClientConfig) {
     this.options = {
       cache: config.cache,
       signal: config.signal,
+      timeout: config.timeout ?? DEFAULT_TIMEOUT,
+      keepAlive: config.keepAlive ?? true,
     };
+    validateTimeout(this.options.timeout);
 
     this.baseUrl = config.baseUrl.replace(/\/$/, "");
+    if (!isHttpUrl(this.baseUrl)) throw new Context7UrlError(this.baseUrl);
 
-    this.headers = {
-      "Content-Type": "application/json",
-      ...config.headers,
-    };
-
-    this.retry =
-      typeof config?.retry === "boolean" && config?.retry === false
-        ? {
-            attempts: 1,
-            backoff: () => 0,
-          }
-        : {
-            attempts: config?.retry?.retries ?? 5,
-            backoff: config?.retry?.backoff ?? ((retryCount) => Math.exp(retryCount) * 50),
-          };
+    this.headers = { "Content-Type": "application/json", ...config.headers };
+    if (!config.fetch && !globalThis.fetch) {
+      throw new TypeError("A fetch implementation is required");
+    }
+    this.fetch = config.fetch ?? globalThis.fetch.bind(globalThis);
+    this.onResponse = config.onResponse;
+    this.retry = createRetryPolicy(config.retry);
   }
 
-  public async request<TResult>(req: Context7Request): Promise<Context7Response<TResult>> {
-    const method = req.method || "POST";
-
-    let url = [this.baseUrl, ...(req.path ?? [])].join("/");
-    if (method === "GET" && req.query) {
-      const queryParams = new URLSearchParams();
-      Object.entries(req.query).forEach(([key, value]) => {
-        if (value !== undefined) {
-          queryParams.append(key, String(value));
-        }
-      });
-      const queryString = queryParams.toString();
-      if (queryString) {
-        url += `?${queryString}`;
-      }
-    }
-
-    const requestOptions = {
-      cache: this.options.cache,
+  public async request<TResult>(request: Context7Request): Promise<Context7Response<TResult>> {
+    const method = request.method ?? "POST";
+    const abortState = createAbortState(
+      [resolveSignal(this.options.signal), request.signal],
+      request.timeout ?? this.options.timeout
+    );
+    const init: RequestInit = {
+      cache: normalizeCache(request.cache ?? this.options.cache),
       method,
       headers: this.headers,
-      body: req.body ? JSON.stringify(req.body) : undefined,
-      keepalive: true,
-      signal: this.options.signal?.(),
+      body: request.body === undefined ? undefined : JSON.stringify(request.body),
+      keepalive: this.options.keepAlive,
+      signal: abortState.signal,
     };
 
-    let res: Response | null = null;
-    let error: Error | null = null;
-
-    for (let i = 0; i <= this.retry.attempts; i++) {
-      try {
-        res = await fetch(url, requestOptions as RequestInit);
-        break;
-      } catch (error_) {
-        if (requestOptions.signal?.aborted) {
-          throw error_;
-        }
-        error = error_ as Error;
-        if (i < this.retry.attempts) {
-          await new Promise((r) => setTimeout(r, this.retry.backoff(i)));
-        }
+    try {
+      if (abortState.signal?.aborted) {
+        throw abortError(abortState.signal.reason, abortState.timedOut());
       }
-    }
-    if (!res) {
-      throw error ?? new Error("Exhausted all retries");
-    }
 
-    if (!res.ok) {
-      const errorBody = (await res.json().catch(() => ({}))) as {
-        error?: string;
-        message?: string;
-      };
-      throw new Context7Error(errorBody.error || errorBody.message || res.statusText);
-    }
-
-    const contentType = res.headers.get("content-type");
-
-    if (contentType?.includes("application/json")) {
-      const body = await res.json();
-      return { result: body as TResult };
-    } else {
-      const text = await res.text();
-      const headers = this.extractTxtResponseHeaders(res.headers);
-      return { result: text as TResult, headers };
+      const { response, metadata } = await this.fetchWithRetry(
+        buildUrl(this.baseUrl, method, request),
+        init,
+        method,
+        abortState
+      );
+      if (!response.ok) {
+        await throwResponseError(
+          response,
+          metadata,
+          isTransientStatus(response.status) || this.retry.statuses.has(response.status)
+        );
+      }
+      return await parseSuccessResponse<TResult>(response, metadata);
+    } catch (error) {
+      if (abortState.signal?.aborted && !isContext7AbortError(error)) {
+        throw abortError(error, abortState.timedOut());
+      }
+      throw error;
+    } finally {
+      abortState.cleanup();
     }
   }
 
-  private extractTxtResponseHeaders(headers: Headers): TxtResponseHeaders | undefined {
-    const page = headers.get("x-context7-page");
-    const limit = headers.get("x-context7-limit");
-    const totalPages = headers.get("x-context7-total-pages");
-    const hasNext = headers.get("x-context7-has-next");
-    const hasPrev = headers.get("x-context7-has-prev");
-    const totalTokens = headers.get("x-context7-total-tokens");
+  private async fetchWithRetry(
+    url: string,
+    init: RequestInit,
+    method: "GET" | "POST",
+    abortState: AbortState
+  ): Promise<FetchResult> {
+    const canRetry = method === "GET";
 
-    if (!page || !limit || !totalPages || !hasNext || !hasPrev || !totalTokens) {
-      return undefined;
+    for (let attempt = 0; attempt <= this.retry.retries; attempt++) {
+      let response: Response;
+      try {
+        response = await this.fetch(url, init);
+      } catch (cause) {
+        if (abortState.signal?.aborted) {
+          throw abortError(cause, abortState.timedOut());
+        }
+        if (canRetry && attempt < this.retry.retries) {
+          await wait(this.retry.backoff(attempt), abortState.signal);
+          continue;
+        }
+        throw new Context7Error(errorMessage(cause), {
+          code: "network_error",
+          retryable: true,
+          cause,
+        });
+      }
+
+      const metadata = extractResponseMetadata(response, attempt);
+      this.onResponse?.(metadata);
+      const shouldRetry =
+        canRetry && this.retry.statuses.has(response.status) && attempt < this.retry.retries;
+      if (!shouldRetry) return { response, metadata };
+
+      await response.body?.cancel().catch(() => undefined);
+      await wait(
+        retryDelay(this.retry.backoff(attempt), metadata.rateLimit?.retryAfter),
+        abortState.signal
+      );
     }
 
-    return {
-      page: parseInt(page, 10),
-      limit: parseInt(limit, 10),
-      totalPages: parseInt(totalPages, 10),
-      hasNext: hasNext === "true",
-      hasPrev: hasPrev === "true",
-      totalTokens: parseInt(totalTokens, 10),
-    };
+    throw new Error("Unreachable retry state");
   }
+}
+
+function buildUrl(baseUrl: string, method: "GET" | "POST", request: Context7Request): string {
+  const url = [baseUrl, ...(request.path ?? [])].join("/");
+  if (method !== "GET" || !request.query) return url;
+
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(request.query)) {
+    if (value !== undefined) query.append(key, String(value));
+  }
+  const queryString = query.toString();
+  return queryString ? `${url}?${queryString}` : url;
+}
+
+function isHttpUrl(url: string): boolean {
+  if (url !== url.trim() || /[\r\n]/.test(url)) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function normalizeCache(cache?: CacheSetting): Exclude<CacheSetting, false> | undefined {
+  return cache === false ? undefined : cache;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
