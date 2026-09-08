@@ -293,9 +293,15 @@ describe("update notifications", () => {
     ).toBe(true);
   });
 
-  test("skips notifier for json and version argv", () => {
+  test("skips notifier for json, version, and custom deployments", () => {
     expect(shouldSkipUpdateNotifier(["node", "ctx7", "library", "react", "--json"])).toBe(true);
     expect(shouldSkipUpdateNotifier(["node", "ctx7", "--version"])).toBe(true);
+    expect(
+      shouldSkipUpdateNotifier(["node", "ctx7", "setup", "--base-url", "https://context7.internal"])
+    ).toBe(true);
+    expect(shouldSkipUpdateNotifier(["node", "ctx7", "--base-url=https://context7.internal"])).toBe(
+      true
+    );
     expect(shouldSkipUpdateNotifier(["node", "ctx7", "skills", "list"])).toBe(false);
   });
 });
