@@ -52,9 +52,7 @@ export function getMcpUrl(deployment: SetupDeployment, auth: AuthOptions): strin
   return `${deployment.baseUrl}/mcp`;
 }
 
-export async function getOnPremMcpAuthStatus(
-  deployment: CustomSetupDeployment
-): Promise<{ enabled: boolean }> {
+export async function getOnPremMcpAuthStatus(deployment: CustomSetupDeployment): Promise<boolean> {
   const response = await fetch(`${deployment.baseUrl}/api/auth/mcp`, {
     headers: { Accept: "application/json" },
     redirect: "error",
@@ -69,5 +67,5 @@ export async function getOnPremMcpAuthStatus(
   if (typeof body.enabled !== "boolean") {
     throw new Error(`Invalid response from ${deployment.baseUrl}/api/auth/mcp`);
   }
-  return { enabled: body.enabled };
+  return body.enabled;
 }

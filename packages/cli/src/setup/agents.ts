@@ -2,13 +2,12 @@ import { access } from "fs/promises";
 import { join } from "path";
 import { homedir } from "os";
 
-export type AuthMode = "oauth" | "api-key" | "none";
 export type Transport = "http" | "stdio";
 
-export interface AuthOptions {
-  mode: AuthMode;
-  apiKey?: string;
-}
+export type AuthOptions =
+  | { mode: "api-key"; apiKey: string }
+  | { mode: "oauth" | "none"; apiKey?: never };
+export type AuthMode = AuthOptions["mode"];
 
 export const AUTH_MODE_LABELS: Record<AuthMode, string> = {
   oauth: "OAuth",
@@ -21,7 +20,7 @@ const HOSTED_MCP_BASE_URL = "https://mcp.context7.com";
 
 function stdioArgs(auth: AuthOptions): string[] {
   const args = ["-y", STDIO_PACKAGE];
-  if (auth.mode === "api-key" && auth.apiKey) {
+  if (auth.mode === "api-key") {
     args.push("--api-key", auth.apiKey);
   }
   return args;
@@ -119,11 +118,9 @@ export interface AgentConfig {
  * sent. The server accepts the legacy `CONTEXT7_API_KEY` header too, so existing
  * configs keep working.
  *
- * Guarded on a non-empty key because the server rejects an empty bearer, while
- * omitting the header falls back to anonymous access.
  */
 function withHeaders(base: Record<string, unknown>, auth: AuthOptions): Record<string, unknown> {
-  if (auth.mode === "api-key" && auth.apiKey) {
+  if (auth.mode === "api-key") {
     return { ...base, headers: { Authorization: `Bearer ${auth.apiKey}` } };
   }
   return base;

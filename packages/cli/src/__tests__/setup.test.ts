@@ -125,9 +125,7 @@ describe("custom Context7 deployments", () => {
     expect(deployment.kind).toBe("custom");
     if (deployment.kind !== "custom") throw new Error("expected custom deployment");
 
-    await expect(getOnPremMcpAuthStatus(deployment)).resolves.toEqual({
-      enabled: true,
-    });
+    await expect(getOnPremMcpAuthStatus(deployment)).resolves.toBe(true);
     expect(fetch).toHaveBeenLastCalledWith(
       "https://context7.internal.example/api/auth/mcp",
       expect.objectContaining({
@@ -1326,12 +1324,6 @@ describe("agent config integration", () => {
 
       expect(apiEntry.headers).toEqual({ Authorization: "Bearer sk-test-123" });
       expect(oauthEntry).not.toHaveProperty("headers");
-    });
-
-    test.each(ALL_AGENT_NAMES)("%s buildEntry without apiKey omits headers", (name) => {
-      const agent = getAgent(name);
-      const entry = agent.mcp.buildEntry({ mode: "api-key" }, "http");
-      expect(entry).not.toHaveProperty("headers");
     });
   });
 

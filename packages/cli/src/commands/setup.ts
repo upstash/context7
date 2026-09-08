@@ -12,6 +12,7 @@ import { downloadSkill } from "../utils/api.js";
 import { installSkillFiles } from "../utils/installer.js";
 import { performLogin } from "./auth.js";
 import { saveTokens, getValidAccessToken } from "../utils/auth.js";
+import type { SkillFile } from "../types.js";
 import { resolveSetupApiKey } from "../setup/auth.js";
 import {
   type SetupAgent,
@@ -32,6 +33,7 @@ import {
   getMcpUrl,
   getOnPremMcpAuthStatus,
   resolveSetupDeployment,
+  type CustomSetupDeployment,
   type SetupDeployment,
 } from "../setup/deployment.js";
 import {
@@ -48,8 +50,6 @@ import {
 
 type Scope = "global" | "project";
 type SetupMode = "mcp" | "cli";
-type SkillFile = { path: string; content: string };
-
 interface McpSkillPayload {
   files: SkillFile[];
   status: "installed" | "installed (bundled)" | "installed (bundled fallback)";
@@ -103,9 +103,7 @@ export function registerSetupCommand(program: Command): void {
     });
 }
 
-async function promptForOnPremApiKey(deployment: SetupDeployment): Promise<string | null> {
-  if (deployment.kind !== "custom") return null;
-
+async function promptForOnPremApiKey(deployment: CustomSetupDeployment): Promise<string | null> {
   try {
     return await password({
       message: `Personal API key (create one at ${deployment.baseUrl}/account)`,
@@ -122,12 +120,11 @@ async function resolveAuth(
   options: SetupOptions,
   deployment: SetupDeployment
 ): Promise<AuthOptions | null> {
-  const apiKey = options.apiKey?.trim() || process.env.CONTEXT7_API_KEY?.trim();
+  const explicitApiKey = options.apiKey?.trim();
 
   if (deployment.kind === "custom") {
     try {
-      const auth = await getOnPremMcpAuthStatus(deployment);
-      if (!auth.enabled) return { mode: "none" };
+      if (!(await getOnPremMcpAuthStatus(deployment))) return { mode: "none" };
     } catch (err) {
       log.error(
         `Could not check MCP authentication at ${deployment.baseUrl}: ${err instanceof Error ? err.message : String(err)}`
@@ -136,6 +133,7 @@ async function resolveAuth(
       return null;
     }
 
+    const apiKey = explicitApiKey || process.env.CONTEXT7_API_KEY?.trim();
     if (apiKey) return { mode: "api-key", apiKey };
 
     if (!options.yes) {
@@ -150,7 +148,7 @@ async function resolveAuth(
     return null;
   }
 
-  if (apiKey) return { mode: "api-key", apiKey };
+  if (explicitApiKey) return { mode: "api-key", apiKey: explicitApiKey };
   if (options.oauth) return { mode: "oauth" };
 
   const resolvedApiKey = await resolveSetupApiKey();
