@@ -68,6 +68,32 @@ Then initialize without options:
 const client = new Context7();
 ```
 
+### Vercel Marketplace OIDC
+
+Vercel Marketplace resources can authenticate without a long-lived Context7
+API key. Pass Vercel's per-resource access-token callback as a token provider
+so each request receives a current token:
+
+```ts
+import { Context7 } from "@upstash/context7-sdk";
+import { getIntegrationToken } from "@vercel/integrations";
+
+const client = new Context7({
+  authToken: () => getIntegrationToken("context7"),
+});
+```
+
+The `getIntegrationToken` signature is based on Vercel's current provider
+specification and may change before Marketplace OIDC is generally available.
+
+The token's `resource` claim must match the Context7 resource created during
+Marketplace provisioning. Do not resolve the token once at startup: Vercel
+Marketplace OIDC tokens are short-lived.
+
+Explicit credentials take precedence in this order: `apiKey`, `authToken`, then
+`CONTEXT7_API_KEY`. This allows OIDC to be tested while a legacy API key remains
+available during a dual-auth migration.
+
 ### Production HTTP options
 
 Requests time out after 30 seconds and retry transient network errors, `408`, `425`, `429`,

@@ -7,13 +7,19 @@ import type {
 } from "@commands/types";
 import { Context7Error } from "@error";
 import { HttpClient } from "@http";
+import type { AuthTokenProvider } from "@http";
 import { SearchLibraryCommand, GetContextCommand } from "@commands/index";
 
 const DEFAULT_BASE_URL = "https://context7.com/api";
 const API_KEY_PREFIX = "ctx7sk";
 
+type Credential =
+  | { kind: "apiKey"; value: string }
+  | { kind: "authToken"; value: string | AuthTokenProvider };
+
 export type * from "@commands/types";
 export type {
+  AuthTokenProvider,
   CacheSetting,
   Context7Fetch,
   Context7ResponseMetadata,
@@ -26,15 +32,9 @@ export class Context7 {
   private readonly httpClient: HttpClient;
 
   constructor(config: Context7Config = {}) {
-    const apiKey = config.apiKey || getEnvironmentApiKey();
+    const credential = resolveCredential(config);
 
-    if (!apiKey) {
-      throw new Context7Error(
-        "API key is required. Pass it in the config or set CONTEXT7_API_KEY environment variable."
-      );
-    }
-
-    if (!apiKey.startsWith(API_KEY_PREFIX)) {
+    if (credential.kind === "apiKey" && !credential.value.startsWith(API_KEY_PREFIX)) {
       console.warn(`API key should start with '${API_KEY_PREFIX}'`);
     }
 
@@ -42,8 +42,8 @@ export class Context7 {
       baseUrl: config.baseUrl ?? DEFAULT_BASE_URL,
       headers: {
         ...withoutAuthorizationHeader(config.headers),
-        Authorization: `Bearer ${apiKey}`,
       },
+      authToken: credential.value,
       retry: config.retry,
       cache: config.cache ?? "no-store",
       timeout: config.timeout,
@@ -139,6 +139,18 @@ export class Context7 {
     const command = new GetContextCommand(query, libraryId, options);
     return command.exec(this.httpClient);
   }
+}
+
+function resolveCredential(config: Context7Config): Credential {
+  if (config.apiKey) return { kind: "apiKey", value: config.apiKey };
+  if (config.authToken) return { kind: "authToken", value: config.authToken };
+
+  const environmentApiKey = getEnvironmentApiKey();
+  if (environmentApiKey) return { kind: "apiKey", value: environmentApiKey };
+
+  throw new Context7Error(
+    "Authentication is required. Pass apiKey or authToken, or set CONTEXT7_API_KEY."
+  );
 }
 
 function getEnvironmentApiKey(): string | undefined {

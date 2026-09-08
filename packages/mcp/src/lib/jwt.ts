@@ -7,6 +7,7 @@ import {
   OAUTH_JWKS_URL,
   RESOURCE_URL,
 } from "./constants.js";
+import { isVercelMarketplaceIssuer, validateVercelMarketplaceJwt } from "./vercelMarketplaceJwt.js";
 
 const oauthJwks = jose.createRemoteJWKSet(new URL(OAUTH_JWKS_URL));
 
@@ -101,6 +102,10 @@ export async function validateJWT(token: string): Promise<JWTValidationResult> {
     if (iss === EMA_ISSUER) {
       await jose.jwtVerify(token, emaJwks, { issuer: EMA_ISSUER, audience: RESOURCE_URL });
       return { valid: true };
+    }
+
+    if (isVercelMarketplaceIssuer(iss)) {
+      return validateVercelMarketplaceJwt(token, iss);
     }
 
     await jose.jwtVerify(token, oauthJwks, { issuer: OAUTH_AUTH_SERVER_URL });
