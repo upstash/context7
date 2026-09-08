@@ -97,6 +97,8 @@ export function registerSetupCommand(program: Command): void {
     .option("--api-key <key>", "Use API key authentication")
     .option("--oauth", "Use OAuth endpoint (IDE handles auth flow)")
     .option("--stdio", "Configure the MCP server as a local stdio process (default: HTTP)")
+    // The root option handles shared API configuration; this local declaration also
+    // lets Commander accept --base-url after `setup`.
     .option("--base-url <url>", "Use a custom Context7 deployment (for example, on-premise)")
     .action(async (_options: SetupOptions, command: Command) => {
       await setupCommand(command.optsWithGlobals<SetupOptions>());
@@ -181,7 +183,7 @@ function getSetupValidationError(
 
 async function resolveMode(options: SetupOptions): Promise<SetupMode> {
   if (options.cli) return "cli";
-  if (options.mcp || options.yes || options.oauth || options.stdio) return "mcp";
+  if (options.baseUrl || options.mcp || options.yes || options.oauth || options.stdio) return "mcp";
 
   return select<SetupMode>({
     message: "How should your agent access Context7?",
@@ -511,10 +513,8 @@ async function setupMcp(
   }
   log.blank();
 
-  if (deployment.kind === "hosted") {
-    trackEvent("setup", { agents, scope, authMode: auth.mode, deployment: "hosted" });
-    trackEvent("install", { skills: ["/upstash/context7/context7-mcp"], ides: agents });
-  }
+  trackEvent("setup", { agents, scope, authMode: auth.mode });
+  trackEvent("install", { skills: ["/upstash/context7/context7-mcp"], ides: agents });
 }
 
 async function setupCliAgent(
@@ -605,17 +605,23 @@ async function setupCli(options: SetupOptions): Promise<void> {
 
 async function setupCommand(options: SetupOptions): Promise<void> {
   try {
+    let deployment: SetupDeployment;
+    try {
+      deployment = resolveSetupDeployment(options.baseUrl);
+    } catch (err) {
+      log.error(err instanceof Error ? err.message : String(err));
+      process.exitCode = 1;
+      return;
+    }
+
     const mode = await resolveMode(options);
-    const deployment = resolveSetupDeployment(options.baseUrl);
     const validationError = getSetupValidationError(mode, options, deployment);
     if (validationError) {
       log.error(validationError);
       process.exitCode = 1;
       return;
     }
-    if (deployment.kind === "hosted") {
-      trackEvent("command", { name: "setup" });
-    }
+    trackEvent("command", { name: "setup" });
 
     if (mode === "mcp") {
       const scope: Scope = options.project ? "project" : "global";

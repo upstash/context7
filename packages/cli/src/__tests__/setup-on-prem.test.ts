@@ -3,6 +3,7 @@ import { mkdir, readFile, rm } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
 import { Command } from "commander";
+import { DEFAULT_CONTEXT7_BASE_URL, setBaseUrl } from "../utils/api.js";
 
 const promptMocks = vi.hoisted(() => ({
   password: vi.fn(),
@@ -27,6 +28,7 @@ beforeEach(async () => {
   promptMocks.select.mockReset();
   vi.stubEnv("CTX7_TELEMETRY_DISABLED", "");
   vi.stubEnv("CONTEXT7_API_KEY", "");
+  setBaseUrl("https://context7.internal.example");
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: string | URL | Request) => {
@@ -47,6 +49,7 @@ beforeEach(async () => {
 afterEach(async () => {
   process.exitCode = undefined;
   process.chdir(originalCwd);
+  setBaseUrl(DEFAULT_CONTEXT7_BASE_URL);
   await rm(tempDir, { recursive: true, force: true });
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
@@ -76,7 +79,7 @@ describe("on-premise setup network boundary", () => {
       "https://context7.internal.example/api/auth/mcp",
       expect.objectContaining({
         headers: { Accept: "application/json" },
-        redirect: "error",
+        redirect: "manual",
       })
     );
 
@@ -91,6 +94,53 @@ describe("on-premise setup network boundary", () => {
     expect(skill).toContain("name: context7-mcp");
     expect(skill).toContain("resolve-library-id");
     expect(await readFile(join(tempDir, "AGENTS.md"), "utf-8")).toContain("query-docs");
+  });
+
+  test("selects MCP mode automatically for a custom deployment", async () => {
+    const program = new Command();
+    program.exitOverride();
+    registerSetupCommand(program);
+
+    await program.parseAsync([
+      "node",
+      "ctx7",
+      "setup",
+      "--base-url",
+      "https://context7.internal.example",
+      "--codex",
+      "--project",
+    ]);
+
+    expect(promptMocks.select).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(await readFile(join(tempDir, ".codex", "config.toml"), "utf-8")).toContain(
+      'url = "https://context7.internal.example/mcp"'
+    );
+  });
+
+  test("reports an invalid deployment URL without throwing", async () => {
+    const program = new Command();
+    program.exitOverride();
+    registerSetupCommand(program);
+
+    await expect(
+      program.parseAsync([
+        "node",
+        "ctx7",
+        "setup",
+        "--base-url",
+        "https://context7.internal.example/mcp",
+        "--codex",
+        "--project",
+      ])
+    ).resolves.toBe(program);
+
+    expect(process.exitCode).toBe(1);
+    expect(promptMocks.select).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining("Pass the Context7 deployment root")
+    );
   });
 
   test("prompts securely for an on-premise key when MCP auth is enabled", async () => {
