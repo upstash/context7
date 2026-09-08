@@ -1,5 +1,12 @@
 # @upstash/context7-mcp
 
+## 4.0.6
+
+### Patch Changes
+
+- 5a7039b: Add per-request bearer-token providers and Vercel Marketplace resource OIDC validation.
+- 80e681a: Return sanitized JSON-RPC errors for rejected MCP request bodies.
+
 ## 4.0.5
 
 ### Patch Changes

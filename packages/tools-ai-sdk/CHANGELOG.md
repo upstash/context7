@@ -1,5 +1,12 @@
 # @upstash/context7-tools-ai-sdk
 
+## 1.0.1
+
+### Patch Changes
+
+- Updated dependencies [5a7039b]
+  - @upstash/context7-sdk@0.4.1
+
 ## 1.0.0
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.11
+
+### Patch Changes
+
+- e127fa1: Add outbound-independent on-premise MCP setup through `ctx7 setup --base-url`, including secure interactive personal API-key entry and anonymous-auth discovery support.
+
 ## 0.5.10
 
 ### Patch Changes
