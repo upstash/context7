@@ -109,6 +109,13 @@ Pass the root URL of your deployment (without `/mcp` or `/api`) and select the c
       --cursor
     ```
   </Tab>
+  <Tab title="VS Code">
+    ```bash
+    ctx7 setup --mcp \
+      --base-url https://context7.internal.yourcompany.com \
+      --vscode
+    ```
+  </Tab>
   <Tab title="Codex">
     ```bash
     ctx7 setup --mcp \
@@ -125,7 +132,7 @@ Pass the root URL of your deployment (without `/mcp` or `/api`) and select the c
   </Tab>
 </Tabs>
 
-Setup reads the deployment's MCP authentication setting. When MCP authentication is disabled, no credential is written. When it is enabled, sign in to the on-premise dashboard and click **Generate setup key** in the Connect card. Run the command for your client and paste the one-time-visible key when the CLI requests it with hidden input.
+Setup reads the deployment's MCP authentication setting. When MCP authentication is disabled, no credential is written. When it is enabled, the dashboard's Connect card presents two steps: sign in and click **Create API key**, then copy the command after the dashboard inserts the one-time-visible key. Select **Configure manually** to reveal the equivalent client-native configuration instead. If you run the base command without `--api-key`, the CLI requests the key with hidden input.
 
 For non-interactive automation, provide the personal key through the environment:
 
