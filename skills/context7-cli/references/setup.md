@@ -32,7 +32,7 @@ ctx7 setup --api-key YOUR_KEY  # Use an existing API key (both MCP and CLI + Ski
 ctx7 setup --oauth             # OAuth endpoint — MCP mode only (IDE handles the auth flow)
 ```
 
-Without `--api-key` or `--oauth`, setup opens a browser for OAuth login. MCP mode additionally generates a new API key after login. `--oauth` is MCP-only.
+Without `--api-key` or `--oauth`, setup opens a browser for OAuth login. The device flow returns an API key that setup uses for authentication. `--oauth` is MCP-only.
 
 **What gets written — MCP mode:**
 - MCP server entry in the agent's config file (`.mcp.json` for Claude, `.cursor/mcp.json` for Cursor, `.opencode.json` for OpenCode)

@@ -14,29 +14,12 @@
       "mimeType": "image/png"
     }
   ],
-  "version": "2.0.0",
+  "version": "4.0.3",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@upstash/context7-mcp",
-      "version": "2.0.2",
-      "transport": {
-        "type": "stdio"
-      },
-      "environmentVariables": [
-        {
-          "name": "CONTEXT7_API_KEY",
-          "description": "API key for authentication",
-          "isRequired": false,
-          "isSecret": true
-        }
-      ]
-    },
-    {
-      "registryType": "mcpb",
-      "identifier": "https://github.com/upstash/context7/releases/download/@upstash/context7-mcp@2.0.2/context7.mcpb",
-      "version": "2.0.2",
-      "fileSha256": "aea76f179ceb92d22c289147c9d8343fb558d6dec93b144c9794e99239bb8194",
+      "version": "4.0.3",
       "transport": {
         "type": "stdio"
       },

@@ -1,0 +1,59 @@
+{
+  "name": "@upstash/context7-opencode",
+  "version": "0.1.0",
+  "description": "Official Context7 plugin for OpenCode — wires up the Context7 MCP server and a documentation skill",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "skills",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules",
+    "lint": "eslint . --fix",
+    "lint:check": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/upstash/context7.git",
+    "directory": "packages/opencode"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "context7",
+    "documentation",
+    "upstash",
+    "mcp",
+    "ai",
+    "coding-agent"
+  ],
+  "author": "Upstash",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/upstash/context7/issues"
+  },
+  "homepage": "https://github.com/upstash/context7#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "^1.18.11",
+    "@types/node": "^25.9.1",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3"
+  }
+}
