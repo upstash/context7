@@ -1,5 +1,11 @@
 # @upstash/context7-sdk
 
+## 0.5.0
+
+### Minor Changes
+
+- 5a7039b: Add per-request bearer-token providers and Vercel Marketplace resource OIDC validation.
+
 ## 0.4.0
 
 ### Minor Changes
