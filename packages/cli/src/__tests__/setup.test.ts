@@ -130,7 +130,10 @@ describe("custom Context7 deployments", () => {
     });
     expect(fetch).toHaveBeenLastCalledWith(
       "https://context7.internal.example/api/auth/mcp",
-      expect.objectContaining({ headers: { Accept: "application/json" } })
+      expect.objectContaining({
+        headers: { Accept: "application/json" },
+        redirect: "error",
+      })
     );
   });
 

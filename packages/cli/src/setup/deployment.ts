@@ -57,6 +57,7 @@ export async function getOnPremMcpAuthStatus(
 ): Promise<{ enabled: boolean }> {
   const response = await fetch(`${deployment.baseUrl}/api/auth/mcp`, {
     headers: { Accept: "application/json" },
+    redirect: "error",
     signal: AbortSignal.timeout(10_000),
   });
 

@@ -17,6 +17,7 @@ let originalCwd: string;
 let tempDir: string;
 
 beforeEach(async () => {
+  process.exitCode = undefined;
   originalCwd = process.cwd();
   tempDir = join(tmpdir(), `ctx7-on-prem-setup-${Date.now()}`);
   await mkdir(tempDir, { recursive: true });
@@ -44,6 +45,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  process.exitCode = undefined;
   process.chdir(originalCwd);
   await rm(tempDir, { recursive: true, force: true });
   vi.unstubAllGlobals();
@@ -72,7 +74,10 @@ describe("on-premise setup network boundary", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(fetch).toHaveBeenCalledWith(
       "https://context7.internal.example/api/auth/mcp",
-      expect.objectContaining({ headers: { Accept: "application/json" } })
+      expect.objectContaining({
+        headers: { Accept: "application/json" },
+        redirect: "error",
+      })
     );
 
     const config = await readFile(join(tempDir, ".codex", "config.toml"), "utf-8");
@@ -123,6 +128,43 @@ describe("on-premise setup network boundary", () => {
     expect(config).toContain('Authorization = "Bearer ctx7op-preview_secret"');
   });
 
+  test("configures newly registered HTTP clients against the on-premise URL", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ enabled: true }),
+    } as Response);
+
+    const program = new Command();
+    program.exitOverride();
+    registerSetupCommand(program);
+
+    await program.parseAsync([
+      "node",
+      "ctx7",
+      "setup",
+      "--mcp",
+      "--base-url",
+      "https://context7.internal.example",
+      "--vscode",
+      "--project",
+      "--yes",
+      "--api-key",
+      "ctx7op-preview_secret",
+    ]);
+
+    const config = JSON.parse(await readFile(join(tempDir, ".vscode", "mcp.json"), "utf-8")) as {
+      servers: Record<string, unknown>;
+    };
+    expect(config.servers.context7).toEqual({
+      type: "http",
+      url: "https://context7.internal.example/mcp",
+      headers: { Authorization: "Bearer ctx7op-preview_secret" },
+    });
+    expect(
+      await readFile(join(tempDir, ".github", "instructions", "context7.instructions.md"), "utf-8")
+    ).toContain('applyTo: "**"');
+  });
+
   test("does not prompt during non-interactive --yes setup", async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: true,
@@ -146,6 +188,30 @@ describe("on-premise setup network boundary", () => {
     ]);
 
     expect(promptMocks.password).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+    await expect(readFile(join(tempDir, ".codex", "config.toml"), "utf-8")).rejects.toThrow();
+  });
+
+  test("returns a failure status when authentication discovery is unreachable", async () => {
+    vi.mocked(fetch).mockRejectedValueOnce(new Error("connection refused"));
+
+    const program = new Command();
+    program.exitOverride();
+    registerSetupCommand(program);
+
+    await program.parseAsync([
+      "node",
+      "ctx7",
+      "setup",
+      "--mcp",
+      "--base-url",
+      "https://context7.internal.example",
+      "--codex",
+      "--project",
+      "--yes",
+    ]);
+
+    expect(process.exitCode).toBe(1);
     await expect(readFile(join(tempDir, ".codex", "config.toml"), "utf-8")).rejects.toThrow();
   });
 });

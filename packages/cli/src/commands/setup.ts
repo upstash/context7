@@ -132,6 +132,7 @@ async function resolveAuth(
       log.error(
         `Could not check MCP authentication at ${deployment.baseUrl}: ${err instanceof Error ? err.message : String(err)}`
       );
+      process.exitCode = 1;
       return null;
     }
 
@@ -145,6 +146,7 @@ async function resolveAuth(
     log.error(
       `MCP authentication is enabled at ${deployment.baseUrl}. Pass --api-key, set CONTEXT7_API_KEY, or rerun without --yes to enter a personal API key securely.`
     );
+    process.exitCode = 1;
     return null;
   }
 
@@ -610,6 +612,7 @@ async function setupCommand(options: SetupOptions): Promise<void> {
     const validationError = getSetupValidationError(mode, options, deployment);
     if (validationError) {
       log.error(validationError);
+      process.exitCode = 1;
       return;
     }
     if (deployment.kind === "hosted") {
