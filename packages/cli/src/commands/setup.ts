@@ -4,20 +4,19 @@ import ora from "ora";
 import { password, select } from "@inquirer/prompts";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import { dirname, join } from "path";
-import { randomBytes } from "crypto";
 
 import { log } from "../utils/logger.js";
 import { checkboxWithHover } from "../utils/prompts.js";
 import { trackEvent } from "../utils/tracking.js";
-import { getBaseUrl, downloadSkill } from "../utils/api.js";
+import { downloadSkill } from "../utils/api.js";
 import { installSkillFiles } from "../utils/installer.js";
 import { performLogin } from "./auth.js";
 import { saveTokens, getValidAccessToken } from "../utils/auth.js";
+import { resolveSetupApiKey } from "../setup/auth.js";
 import {
   type SetupAgent,
   type AuthOptions,
   type Transport,
-  SETUP_AGENT_NAMES,
   AUTH_MODE_LABELS,
   ALL_AGENT_NAMES,
   getAgent,
@@ -41,7 +40,7 @@ import {
   writeJsonConfig,
   resolveMcpPath,
   appendTomlServer,
-  readTomlServerEntry,
+  patchTomlStdioApiKey,
   isStdioContext7Entry,
   patchStdioApiKey,
   getJsonServerEntry,
@@ -56,13 +55,7 @@ interface McpSkillPayload {
   status: "installed" | "installed (bundled)" | "installed (bundled fallback)";
 }
 
-interface SetupOptions {
-  claude?: boolean;
-  cursor?: boolean;
-  antigravity?: boolean;
-  opencode?: boolean;
-  codex?: boolean;
-  gemini?: boolean;
+type SetupOptions = Partial<Record<SetupAgent, boolean>> & {
   project?: boolean;
   yes?: boolean;
   apiKey?: string;
@@ -71,7 +64,7 @@ interface SetupOptions {
   mcp?: boolean;
   stdio?: boolean;
   baseUrl?: string;
-}
+};
 
 function resolveTransport(options: SetupOptions): Transport {
   return options.stdio ? "stdio" : "http";
@@ -85,26 +78,18 @@ const CHECKBOX_THEME = {
 };
 
 function getSelectedAgents(options: SetupOptions): SetupAgent[] {
-  const agents: SetupAgent[] = [];
-  if (options.claude) agents.push("claude");
-  if (options.cursor) agents.push("cursor");
-  if (options.opencode) agents.push("opencode");
-  if (options.codex) agents.push("codex");
-  if (options.antigravity) agents.push("antigravity");
-  if (options.gemini) agents.push("gemini");
-  return agents;
+  return ALL_AGENT_NAMES.filter((name) => options[name]);
 }
 
 export function registerSetupCommand(program: Command): void {
-  program
-    .command("setup")
-    .description("Set up Context7 for your AI coding agent")
-    .option("--claude", "Set up for Claude Code")
-    .option("--cursor", "Set up for Cursor")
-    .option("--antigravity", "Set up for Antigravity (.agent/skills)")
-    .option("--opencode", "Set up for OpenCode")
-    .option("--codex", "Set up for Codex")
-    .option("--gemini", "Set up for Gemini CLI")
+  const command = program.command("setup").description("Set up Context7 for your AI coding agent");
+
+  for (const name of ALL_AGENT_NAMES) {
+    const agent = getAgent(name);
+    command.option(`--${name}`, agent.setupDescription ?? `Set up for ${agent.displayName}`);
+  }
+
+  command
     .option("--mcp", "Set up MCP server mode")
     .option("--cli", "Set up CLI + Skills mode (no MCP server)")
     .option("-p, --project", "Configure for current project instead of globally")
@@ -116,40 +101,6 @@ export function registerSetupCommand(program: Command): void {
     .action(async (_options: SetupOptions, command: Command) => {
       await setupCommand(command.optsWithGlobals<SetupOptions>());
     });
-}
-
-async function authenticateAndGenerateKey(): Promise<string | null> {
-  const accessToken = (await getValidAccessToken()) ?? (await performLogin());
-
-  if (!accessToken) return null;
-
-  const spinner = ora("Configuring authentication...").start();
-
-  try {
-    const response = await fetch(`${getBaseUrl()}/api/dashboard/api-keys`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ name: `ctx7-cli-${randomBytes(3).toString("hex")}` }),
-    });
-
-    if (!response.ok) {
-      const err = (await response.json().catch(() => ({}))) as { message?: string; error?: string };
-      spinner.fail("Authentication failed");
-      log.error(err.message || err.error || `HTTP ${response.status}`);
-      return null;
-    }
-
-    const result = (await response.json()) as { data: { apiKey: string } };
-    spinner.succeed("Authenticated");
-    return result.data.apiKey;
-  } catch (err) {
-    spinner.fail("Authentication failed");
-    log.error(err instanceof Error ? err.message : String(err));
-    return null;
-  }
 }
 
 async function promptForOnPremApiKey(deployment: SetupDeployment): Promise<string | null> {
@@ -200,9 +151,9 @@ async function resolveAuth(
   if (apiKey) return { mode: "api-key", apiKey };
   if (options.oauth) return { mode: "oauth" };
 
-  const generatedApiKey = await authenticateAndGenerateKey();
-  if (!generatedApiKey) return null;
-  return { mode: "api-key", apiKey: generatedApiKey };
+  const resolvedApiKey = await resolveSetupApiKey();
+  if (!resolvedApiKey) return null;
+  return { mode: "api-key", apiKey: resolvedApiKey };
 }
 
 function getSetupValidationError(
@@ -273,7 +224,7 @@ async function resolveCliAuth(apiKey?: string): Promise<void> {
 
 async function promptAgents(): Promise<SetupAgent[] | null> {
   const choices = ALL_AGENT_NAMES.map((name) => ({
-    name: SETUP_AGENT_NAMES[name],
+    name: getAgent(name).displayName,
     value: name,
   }));
 
@@ -287,7 +238,7 @@ async function promptAgents(): Promise<SetupAgent[] | null> {
         loop: false,
         theme: CHECKBOX_THEME,
       },
-      { getName: (a: SetupAgent) => SETUP_AGENT_NAMES[a] }
+      { getName: (a: SetupAgent) => getAgent(a).displayName }
     );
   } catch {
     return null;
@@ -321,11 +272,12 @@ async function installRule(
   const rule = agent.rule;
 
   if (rule.kind === "file") {
+    const ruleContent = `${rule.contentPrefix ?? ""}${content}`;
     const ruleDir =
       scope === "global" ? rule.dir("global") : join(process.cwd(), rule.dir("project"));
     const rulePath = join(ruleDir, rule.filename);
     await mkdir(dirname(rulePath), { recursive: true });
-    await writeFile(rulePath, content, "utf-8");
+    await writeFile(rulePath, ruleContent, "utf-8");
     return { status: "installed", path: rulePath };
   }
 
@@ -421,10 +373,16 @@ async function setupAgent(
   let mcpStatus: string;
   try {
     if (mcpPath.endsWith(".toml")) {
-      const existingTomlEntry =
-        transport === "stdio" ? await readTomlServerEntry(mcpPath, "context7") : undefined;
-      const entry = resolveEntryToWrite(agent, auth, transport, existingTomlEntry, mcpUrl);
-      const { alreadyExists } = await appendTomlServer(mcpPath, "context7", entry);
+      const apiKey = auth.mode === "api-key" ? auth.apiKey : undefined;
+      const patched =
+        transport === "stdio" ? await patchTomlStdioApiKey(mcpPath, "context7", apiKey) : false;
+      const { alreadyExists } = patched
+        ? { alreadyExists: true }
+        : await appendTomlServer(
+            mcpPath,
+            "context7",
+            resolveEntryToWrite(agent, auth, transport, undefined, mcpUrl)
+          );
       mcpStatus = alreadyExists
         ? `reconfigured with ${AUTH_MODE_LABELS[auth.mode]}`
         : `configured with ${AUTH_MODE_LABELS[auth.mode]}`;

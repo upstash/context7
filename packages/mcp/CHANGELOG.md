@@ -1,5 +1,26 @@
 # @upstash/context7-mcp
 
+## 4.0.5
+
+### Patch Changes
+
+- 21c3dd4: Require authentication and track usage separately for the Claude Code plugin.
+- 4e980f6: Increase the default HTTP subscription capacity and allow deployments to configure it with `MCP_MAX_SUBSCRIPTIONS`.
+- 2a851fc: Remove the legacy AES-CBC client-IP header now that authenticated assertions are deployed.
+
+## 4.0.4
+
+### Patch Changes
+
+- 8fa6c6b: Honor the advertised `X-Context7-API-Key` header in HTTP MCP requests.
+- 794cc6b: Authenticate hosted MCP client-IP forwarding with short-lived AES-GCM assertions.
+
+## 4.0.3
+
+### Patch Changes
+
+- 769c6cd: Advertise Clerk as the OAuth authorization server so clients validate authorization responses against the issuer that Clerk returns.
+
 ## 4.0.2
 
 ### Patch Changes

@@ -1,14 +1,14 @@
 import * as jose from "jose";
 import {
-  CLERK_DOMAIN,
   CONTEXT7_API_BASE_URL,
   EMA_ISSUER,
   EMA_JWKS_URL,
+  OAUTH_AUTH_SERVER_URL,
+  OAUTH_JWKS_URL,
   RESOURCE_URL,
 } from "./constants.js";
 
-const CLERK_ISSUER = `https://${CLERK_DOMAIN}`;
-const clerkJwks = jose.createRemoteJWKSet(new URL(`https://${CLERK_DOMAIN}/.well-known/jwks.json`));
+const oauthJwks = jose.createRemoteJWKSet(new URL(OAUTH_JWKS_URL));
 
 const emaJwks = jose.createRemoteJWKSet(new URL(EMA_JWKS_URL));
 
@@ -103,7 +103,7 @@ export async function validateJWT(token: string): Promise<JWTValidationResult> {
       return { valid: true };
     }
 
-    await jose.jwtVerify(token, clerkJwks, { issuer: CLERK_ISSUER });
+    await jose.jwtVerify(token, oauthJwks, { issuer: OAUTH_AUTH_SERVER_URL });
     return { valid: true };
   } catch (error) {
     if (error instanceof jose.errors.JWTExpired) {

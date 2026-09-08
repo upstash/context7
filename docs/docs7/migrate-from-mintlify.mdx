@@ -1,0 +1,45 @@
+---
+title: Migrate from Mintlify
+description: Move an existing Mintlify project to Docs7
+---
+
+Docs7 reads the Mintlify content format. Keep your `docs.json` or `mint.json`, MDX pages, assets, snippets, redirects, and OpenAPI files.
+
+## 1. Preview the project
+
+From the folder that contains `docs.json` or `mint.json`, run:
+
+```bash
+npm install -g @upstash/docs7
+docs7 dev
+```
+
+Open [http://localhost:3333](http://localhost:3333) to see your documentation site.
+
+## 2. Connect the repository
+
+In your Context7 teamspace:
+
+1. Open **Docs7** and click **Add New Site**.
+2. Connect GitHub if needed.
+3. Choose the repository and production branch.
+4. Set **Docs path** to the folder that contains `docs.json`. Use `.` when it is at the repository root.
+5. Publish the site.
+
+<Frame>
+<img src="/images/docs7/publish-a-site.png" alt="Publish a site in Docs7"></img>
+</Frame>
+
+Review the build log and compare the new site with the current Mintlify site. Your Mintlify deployment can stay online while you test Docs7.
+
+## 3. Move the domain
+
+If you use a custom domain, add it to the Docs7 site before changing traffic. Docs7 will show the DNS records it needs.
+
+Switch the routing record only after the domain is ready and the Docs7 site looks correct.
+
+<Frame>
+<img src="/images/docs7/custom-domain.png" alt="Configure a custom domain in Docs7"></img>
+</Frame>
+
+After the switch, remove the Mintlify GitHub integration so one push does not deploy to both services.

@@ -20,6 +20,13 @@ export interface TokenData {
   scope?: string;
 }
 
+const CONTEXT7_API_KEY_PREFIX = "ctx7sk-";
+
+/** Returns true when a credential uses Context7's API-key format. */
+export function isContext7ApiKey(accessToken: string): boolean {
+  return accessToken.startsWith(CONTEXT7_API_KEY_PREFIX);
+}
+
 function ensureConfigDir(): void {
   const configDir = getConfigDir();
   if (!fs.existsSync(configDir)) {

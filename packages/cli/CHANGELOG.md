@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.5.10
+
+### Patch Changes
+
+- 76140fc: Use API keys returned by the device login flow directly during MCP setup instead of sending them to a dashboard session endpoint to generate another key.
+
+## 0.5.9
+
+### Patch Changes
+
+- 3abc99a: Recover library IDs mangled by Git Bash when Git is installed through Scoop.
+- 118c852: Preserve existing Codex TOML settings when rotating stdio API keys.
+
 ## 0.5.8
 
 ### Patch Changes

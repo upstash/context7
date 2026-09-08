@@ -1,0 +1,57 @@
+---
+title: Agent readiness
+description: Expose searchable Markdown and structured discovery for AI agents
+---
+
+Docs7 turns each documentation page into clean Markdown for agents and publishes discovery endpoints for the full site.
+
+## Agent-readable endpoints
+
+Every Docs7 site publishes these machine-readable surfaces:
+
+The paths below are relative to the documentation root. For a site mounted at `example.com/docs`, `/llms.txt` is available at `example.com/docs/llms.txt`.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `/llms.txt` | Lists routable pages with their Markdown URL and description. Pages in navigation come first. |
+| `/llms-full.txt` | Combines the complete Markdown content of the site into one file. |
+| `/<page>.md` | Returns the Markdown representation of one page. |
+| `/search?q=<query>` | Searches the site and returns matching pages, headings, and snippets as JSON. |
+| `/.well-known/agent-skills/index.json` | Advertises a site-specific Agent Skill with links to the docs and search. |
+
+An agent can also request a normal page URL with `Accept: text/markdown`. Docs7 returns Markdown when the client prefers it. HTML responses advertise the Markdown page, both `llms.txt` files, and the Agent Skills index through `Link` headers.
+
+If you provide `llms.txt` or `llms-full.txt` at the docs root, your file replaces the generated version.
+
+## Recover from hallucinated URLs
+
+Agents often request URLs that do not exist. They guess a path from a page title, drop a segment, or reuse a URL from an older version of the docs. Instead of returning an empty 404, Docs7 responds with smart suggestions: the pages the agent was most likely looking for, with their Markdown URLs.
+
+<Frame caption="A request for a page that does not exist returns the closest matching pages instead of an empty 404.">
+  <img
+    src="/images/docs7/url-suggestions.png"
+    alt="Docs7 404 page listing suggested pages for a URL that does not exist"
+  />
+</Frame>
+
+For example, an agent that requests `/config.md` on a site whose page lives at `/configuration.md` receives that page as a suggestion. The agent can follow it directly without running a separate search, so a wrong guess costs one extra request instead of a dead end.
+
+## Write content for agents
+
+Use the same source for people and agents whenever possible. When an agent needs extra context, use `Visibility`:
+
+```mdx
+<Visibility for="agents">
+When the API returns 409, read the existing resource before retrying.
+</Visibility>
+```
+
+Content inside `for="agents"` appears in Markdown output but not on the website. Content inside `for="humans"` appears on the website and is removed from Markdown output. See the [Visibility component](/docs7/components/visibility).
+
+For reliable retrieval, use exact API names, configuration keys, error messages, and stable headings. Link to the page that owns a fact instead of copying the same instructions into several pages.
+
+## Add the site to Context7
+
+Enable **Add to Context7** when you connect the repository, or open the **Context7** tab for an existing site. A successful production build then refreshes the corresponding Context7 library.
+
+This makes the documentation available through the Context7 MCP server and lets the site's assistant use the indexed library. Disconnecting stops automatic refreshes but does not remove the library from Context7.

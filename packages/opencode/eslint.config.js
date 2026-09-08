@@ -1,0 +1,39 @@
+import { defineConfig } from "eslint/config";
+import tseslint from "typescript-eslint";
+import eslintPluginPrettier from "eslint-plugin-prettier";
+
+export default defineConfig(
+  {
+    ignores: ["node_modules/**", "build/**", "dist/**", ".git/**", ".github/**"],
+  },
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    languageOptions: {
+      ecmaVersion: 2020,
+      sourceType: "module",
+      parser: tseslint.parser,
+      parserOptions: {
+        project: "./tsconfig.json",
+        tsconfigRootDir: import.meta.dirname,
+      },
+      globals: {
+        process: "readonly",
+        console: "readonly",
+      },
+    },
+    linterOptions: {
+      reportUnusedDisableDirectives: true,
+    },
+    plugins: {
+      "@typescript-eslint": tseslint.plugin,
+      prettier: eslintPluginPrettier,
+    },
+    rules: {
+      ...tseslint.configs.recommended.rules,
+      "@typescript-eslint/explicit-module-boundary-types": "off",
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-explicit-any": "warn",
+      "prettier/prettier": "error",
+    },
+  }
+);
