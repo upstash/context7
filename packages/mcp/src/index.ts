@@ -19,14 +19,31 @@ import { randomUUID } from "node:crypto";
 import {
   SERVER_VERSION,
   RESOURCE_URL,
-  AUTH_SERVER_URL,
+  OAUTH_AUTH_SERVER_URL,
+  EMA_ISSUER,
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
-import { getClientIp } from "./lib/client-ip.js";
+import { getMaxSubscriptions } from "./lib/subscriptions.js";
+import { mcpBodyErrorHandler } from "./lib/mcp-body-error-handler.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
+const CLAUDE_CODE_PLUGIN = "claude-code-plugin";
+
+function getPluginFromRequest(req: express.Request): typeof CLAUDE_CODE_PLUGIN | undefined {
+  return req.query.client === CLAUDE_CODE_PLUGIN ? CLAUDE_CODE_PLUGIN : undefined;
+}
+
+function requiresAuthentication(req: express.Request, plugin?: typeof CLAUDE_CODE_PLUGIN): boolean {
+  // The MCP routes live on a router mounted at /mcp, so req.path is relative to it.
+  const isOAuthEndpoint = `${req.baseUrl}${req.path}` === "/mcp/oauth";
+  // The current official Claude plugin expands an unset API key to an empty header.
+  const hasEmptyPluginAuthorization =
+    plugin === CLAUDE_CODE_PLUGIN && req.headers.authorization === "";
+
+  return isOAuthEndpoint || (Boolean(plugin) && !hasEmptyPluginAuthorization);
+}
 
 // Parse CLI arguments using commander
 const program = new Command()
@@ -315,8 +332,13 @@ async function main() {
     const initialPort = CLI_PORT ?? DEFAULT_PORT;
 
     const app = express();
-    app.use(express.json());
+    // Only private/local infrastructure may supply forwarding headers. Express
+    // then walks the chain right-to-left and ignores attacker-added prefixes.
+    app.set("trust proxy", ["loopback", "linklocal", "uniquelocal", "100.64.0.0/10"]);
 
+    // Registered ahead of the MCP router so its error responses carry the CORS
+    // headers too; browser clients would otherwise see a CORS failure instead
+    // of the status.
     app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
       res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
@@ -354,6 +376,7 @@ async function main() {
     const extractApiKey = (req: express.Request): string | undefined => {
       return (
         extractBearerToken(req.headers.authorization) ||
+        extractHeaderValue(req.headers["x-context7-api-key"]) ||
         extractHeaderValue(req.headers["context7-api-key"]) ||
         extractHeaderValue(req.headers["x-api-key"]) ||
         extractHeaderValue(req.headers["context7_api_key"]) ||
@@ -365,14 +388,18 @@ async function main() {
     // no session store. The handler serves modern (2026-07-28) traffic natively
     // and 2025-era traffic through its stateless legacy fallback, which answers
     // GET/DELETE (session operations) with 405.
-    //
-    // responseMode "sse" keeps responses streaming: headers flush immediately
-    // after parsing the request rather than buffering until the tool returns.
-    // This is required for long-running tools because some MCP HTTP clients cap
-    // the underlying fetch at 60s waiting for headers, even though the per-tool
-    // timeout is much higher.
+    // keepAliveMs: 0 disables SSE keepalive heartbeats. Every tool here is a
+    // millisecond vector query (p100 ~28s), so no legitimate exchange needs a
+    // heartbeat to stay alive — but a hung exchange kept "alive" by heartbeats
+    // can never be reaped by the gateway's stream idle timeout. A batch
+    // carrying a request plus its own notifications/cancelled produces exactly
+    // that: per spec the cancelled request gets no response, the SDK transport
+    // then never closes the stream, and with heartbeats it survived until the
+    // gateway's 1200s hard cap (the 2026-08-11 outage). Silent hangs instead
+    // go idle and the gateway reaps them at streamIdleTimeout (300s).
     const mcpHandler = createMcpHandler(() => createMcpServer(), {
-      responseMode: "sse",
+      keepAliveMs: 0,
+      maxSubscriptions: getMaxSubscriptions(),
       onerror: (error) => console.error("MCP handler error:", error),
     });
     // Without onerror, request-conversion / handler.fetch throws are answered
@@ -381,12 +408,9 @@ async function main() {
       onerror: (error) => console.error("MCP node adapter error:", error),
     });
 
-    const handleMcpRequest = async (
-      req: express.Request,
-      res: express.Response,
-      requireAuth: boolean
-    ) => {
+    const handleMcpRequest = async (req: express.Request, res: express.Response) => {
       try {
+        const plugin = getPluginFromRequest(req);
         const apiKey = extractApiKey(req);
         const baseUrl = new URL(RESOURCE_URL).origin;
 
@@ -400,7 +424,7 @@ async function main() {
           `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
         );
 
-        if (requireAuth) {
+        if (requiresAuthentication(req, plugin)) {
           if (!apiKey) {
             return res.status(401).json({
               jsonrpc: "2.0",
@@ -428,9 +452,10 @@ async function main() {
         }
 
         const context: ClientContext = {
-          clientIp: getClientIp(req),
-          apiKey: apiKey,
+          clientIp: req.ip,
+          apiKey,
           clientInfo: extractClientInfoFromUserAgent(req.headers["user-agent"]),
+          plugin,
           transport: "http",
         };
 
@@ -449,15 +474,16 @@ async function main() {
       }
     };
 
-    // Anonymous access endpoint - no authentication required
-    app.all("/mcp", async (req, res) => {
-      await handleMcpRequest(req, res, false);
-    });
-
+    // JSON bodies and JSON-RPC error envelopes are the MCP contract only, so the
+    // parser and its error boundary live on the MCP router: every other route
+    // stays out of the parser and keeps its own response shape.
+    const mcpRouter = express.Router();
+    mcpRouter.use(express.json());
+    mcpRouter.use(mcpBodyErrorHandler);
+    mcpRouter.all("/", (req, res) => handleMcpRequest(req, res));
     // OAuth-protected endpoint - requires authentication
-    app.all("/mcp/oauth", async (req, res) => {
-      await handleMcpRequest(req, res, true);
-    });
+    mcpRouter.all("/oauth", (req, res) => handleMcpRequest(req, res));
+    app.use("/mcp", mcpRouter);
 
     app.get("/ping", (_req: express.Request, res: express.Response) => {
       res.json({ status: "ok", message: "pong" });
@@ -470,7 +496,10 @@ async function main() {
       (_req: express.Request, res: express.Response) => {
         res.json({
           resource: RESOURCE_URL,
-          authorization_servers: [AUTH_SERVER_URL],
+          // Each entry is an independent authorization server. Clerk handles
+          // regular authorization-code flows; Context7 handles only the
+          // enterprise-managed id-jag exchange.
+          authorization_servers: Array.from(new Set([OAUTH_AUTH_SERVER_URL, EMA_ISSUER])),
           scopes_supported: ["profile", "email"],
           bearer_methods_supported: ["header"],
         });
@@ -480,7 +509,7 @@ async function main() {
     app.get(
       "/.well-known/oauth-authorization-server",
       async (_req: express.Request, res: express.Response) => {
-        const authServerUrl = AUTH_SERVER_URL;
+        const authServerUrl = OAUTH_AUTH_SERVER_URL;
 
         try {
           const response = await fetch(`${authServerUrl}/.well-known/oauth-authorization-server`);

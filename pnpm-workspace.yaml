@@ -2,7 +2,10 @@ packages:
   - "packages/*"
 
 allowBuilds:
+  "@google/genai": false
   esbuild: true
+  msgpackr-extract: false
+  protobufjs: false
 
 minimumReleaseAge: 10080
 
@@ -12,13 +15,13 @@ minimumReleaseAge: 10080
 # each package's published contract.
 catalog:
   "@types/node": ^25.9.5
-  "@typescript-eslint/eslint-plugin": ^8.65.0
-  "@typescript-eslint/parser": ^8.65.0
+  "@typescript-eslint/eslint-plugin": ^8.68.0
+  "@typescript-eslint/parser": ^8.68.0
   dotenv: ^17.4.2
-  eslint: ^10.8.0
+  eslint: ^10.9.1
   eslint-plugin-prettier: ^5.5.6
   prettier: ^3.6.2
   tsup: ^8.5.1
   typescript: ^6.0.3
-  typescript-eslint: ^8.65.0
+  typescript-eslint: ^8.68.0
   vitest: ^4.1.10

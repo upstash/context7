@@ -293,6 +293,87 @@ describe("remove command", () => {
     });
   });
 
+  test("removes only context7 from VS Code MCP config", async () => {
+    const mcpPath = join(tempDir, ".vscode", "mcp.json");
+
+    await mkdir(join(tempDir, ".vscode"), { recursive: true });
+    await writeFile(
+      mcpPath,
+      JSON.stringify(
+        {
+          servers: {
+            other: { type: "http", url: "https://other.com" },
+            context7: { type: "http", url: "https://mcp.context7.com/mcp" },
+          },
+        },
+        null,
+        2
+      ),
+      "utf-8"
+    );
+
+    await runCommand("remove", "--vscode", "--mcp", "--project");
+
+    expect(JSON.parse(await readFile(mcpPath, "utf-8"))).toEqual({
+      servers: { other: { type: "http", url: "https://other.com" } },
+    });
+  });
+
+  test("removes only context7 from Devin MCP config", async () => {
+    const configPath = join(tempDir, ".devin", "mcp_config.json");
+
+    await mkdir(join(tempDir, ".devin"), { recursive: true });
+    await writeFile(
+      configPath,
+      JSON.stringify(
+        {
+          mcpServers: {
+            context7: { transport: "http", url: "https://mcp.context7.com/mcp" },
+            other: { command: "other" },
+          },
+        },
+        null,
+        2
+      ),
+      "utf-8"
+    );
+
+    await runCommand("remove", "--devin", "--mcp", "--project");
+
+    expect(JSON.parse(await readFile(configPath, "utf-8"))).toEqual({
+      mcpServers: { other: { command: "other" } },
+    });
+  });
+
+  test("removes Copilot CLI project config from .mcp.json", async () => {
+    const configPath = join(tempDir, ".mcp.json");
+
+    await writeFile(
+      configPath,
+      JSON.stringify(
+        {
+          mcpServers: {
+            other: { type: "http", url: "https://other.com" },
+            context7: {
+              type: "http",
+              url: "https://mcp.context7.com/mcp",
+              tools: ["*"],
+            },
+          },
+        },
+        null,
+        2
+      ),
+      "utf-8"
+    );
+
+    await runCommand("remove", "--copilot", "--mcp", "--project");
+
+    expect(JSON.parse(await readFile(configPath, "utf-8"))).toEqual({
+      mcpServers: { other: { type: "http", url: "https://other.com" } },
+    });
+  });
+
   test("removes only context7 from opencode JSONC MCP config", async () => {
     const configPath = join(tempDir, "opencode.jsonc");
 

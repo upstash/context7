@@ -25,6 +25,9 @@ ctx7 remove
 ctx7 setup --cursor
 ctx7 setup --claude
 ctx7 setup --opencode
+ctx7 setup --vscode
+ctx7 setup --devin
+ctx7 setup --copilot
 ```
 
 ### Library Documentation
@@ -79,6 +82,9 @@ ctx7 setup
 ctx7 setup --cursor
 ctx7 setup --claude
 ctx7 setup --opencode
+ctx7 setup --vscode
+ctx7 setup --devin
+ctx7 setup --copilot
 
 # Use an existing API key instead of OAuth
 ctx7 setup --api-key YOUR_API_KEY
@@ -86,12 +92,27 @@ ctx7 setup --api-key YOUR_API_KEY
 # Use OAuth endpoint (IDE handles auth flow)
 ctx7 setup --oauth
 
+# Configure an on-premise deployment (pass the deployment root)
+ctx7 setup --mcp --base-url https://context7.internal.example --codex
+
+# When on-premise MCP auth is enabled, the CLI prompts for the key with hidden input
+ctx7 setup --mcp \
+  --base-url https://context7.internal.example \
+  --codex
+
+# For non-interactive automation, provide the key through the environment
+CONTEXT7_API_KEY=ctx7op-... ctx7 setup --mcp --yes \
+  --base-url https://context7.internal.example \
+  --codex
+
 # Configure for current project only (default is global)
 ctx7 setup --project
 
 # Skip prompts
 ctx7 setup --yes
 ```
+
+For a custom `--base-url`, setup discovers whether MCP authentication is enabled and writes either an anonymous HTTP entry or an `Authorization: Bearer` header. Interactive setup requests the personal key with masked input, keeping it out of shell history; `--api-key` and `CONTEXT7_API_KEY` remain available for automation. Setup uses bundled rule and skill content and skips the npm update check and telemetry, so after `ctx7` is installed it contacts only the configured deployment. Enterprise environments can mirror `ctx7` and its dependencies in an internal npm registry. Custom deployments support MCP HTTP setup; hosted OAuth, stdio, and CLI-query mode are not supported for on-premise targets.
 
 ### Uninstall setup
 
@@ -104,6 +125,9 @@ ctx7 remove
 # Target specific agents
 ctx7 remove --cursor
 ctx7 remove --claude --project
+ctx7 remove --vscode --project
+ctx7 remove --devin --project
+ctx7 remove --copilot --project
 
 # Remove both setup modes explicitly
 ctx7 remove --cursor --all
@@ -139,6 +163,9 @@ The CLI automatically detects which AI coding assistants you have installed and 
 | Universal (Amp, Codex, Gemini CLI, GitHub Copilot, OpenCode + more) | `.agents/skills/` |
 | Claude Code                                                         | `.claude/skills/` |
 | Cursor                                                              | `.cursor/skills/` |
+| VS Code                                                             | `.agents/skills/` |
+| Devin                                                               | `.devin/skills/`  |
+| GitHub Copilot CLI                                                  | `.agents/skills/` |
 | Antigravity                                                         | `.agent/skills/`  |
 
 ## Disabling Telemetry

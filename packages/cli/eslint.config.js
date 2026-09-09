@@ -43,5 +43,24 @@ export default defineConfig(
       // Prettier integration
       "prettier/prettier": "error",
     },
+  },
+  {
+    // Commands must not hand-roll the "load tokens, check expiry" dance: it
+    // skips the refresh and silently degrades to an anonymous request.
+    files: ["src/commands/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "../utils/auth.js",
+              importNames: ["loadTokens", "isTokenExpired"],
+              message: "Use getValidAccessToken() so an expired token refreshes.",
+            },
+          ],
+        },
+      ],
+    },
   }
 );

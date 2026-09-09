@@ -17,6 +17,23 @@ Search across available libraries. Returns an array of matching libraries with m
   The library name to search for
 </ParamField>
 
+<ParamField path="options" type="SearchLibraryOptions">
+  <Expandable title="properties">
+    <ParamField path="type" type="'json' | 'txt'">
+      Format of the response. Defaults to `json`.
+    </ParamField>
+    <ParamField path="signal" type="AbortSignal">
+      Abort signal for cancelling this request.
+    </ParamField>
+    <ParamField path="timeout" type="number | false">
+      Per-request timeout in milliseconds. Use `false` to disable the client timeout.
+    </ParamField>
+    <ParamField path="cache" type="CacheSetting">
+      Native fetch cache mode. Use `false` to omit the cache option.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
 ## Response
 
 Returns `Library[]` - an array of library objects.

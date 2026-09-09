@@ -7,14 +7,17 @@ const mockSaveTokens = vi.fn();
 const mockStartDeviceAuthorization = vi.fn();
 const mockPollDeviceToken = vi.fn();
 
-vi.mock("../utils/auth.js", () => ({
-  getValidAccessToken: (...args: unknown[]) => mockGetValidAccessToken(...args),
-  clearTokens: (...args: unknown[]) => mockClearTokens(...args),
-  saveTokens: (...args: unknown[]) => mockSaveTokens(...args),
-  startDeviceAuthorization: (...args: unknown[]) => mockStartDeviceAuthorization(...args),
-  pollDeviceToken: (...args: unknown[]) => mockPollDeviceToken(...args),
-  DEFAULT_DEVICE_POLL_INTERVAL_SECONDS: 5,
-}));
+vi.mock("../utils/auth.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../utils/auth.js")>();
+  return {
+    ...original,
+    getValidAccessToken: (...args: unknown[]) => mockGetValidAccessToken(...args),
+    clearTokens: (...args: unknown[]) => mockClearTokens(...args),
+    saveTokens: (...args: unknown[]) => mockSaveTokens(...args),
+    startDeviceAuthorization: (...args: unknown[]) => mockStartDeviceAuthorization(...args),
+    pollDeviceToken: (...args: unknown[]) => mockPollDeviceToken(...args),
+  };
+});
 
 vi.mock("../utils/tracking.js", () => ({
   trackEvent: vi.fn(),
@@ -90,7 +93,7 @@ describe("login command", () => {
   });
 
   test("calls process.exit(1) when login fails", async () => {
-    mockGetValidAccessToken.mockResolvedValue(null);
+    mockGetValidAccessToken.mockResolvedValue(undefined);
     mockClearTokens.mockReturnValue(false);
     mockStartDeviceAuthorization.mockRejectedValue(new Error("network down"));
 
@@ -121,7 +124,7 @@ describe("logout command", () => {
 
 describe("whoami command", () => {
   test("shows 'Not logged in' when no valid token", async () => {
-    mockGetValidAccessToken.mockResolvedValue(null);
+    mockGetValidAccessToken.mockResolvedValue(undefined);
     await runCommand("whoami");
     expect(logOutput.some((l) => l.includes("Not logged in"))).toBe(true);
   });
@@ -148,6 +151,19 @@ describe("whoami command", () => {
     expect(logOutput.some((l) => l.includes("test@example.com"))).toBe(true);
   });
 
+  test("reports API-key authentication without calling the dashboard", async () => {
+    mockGetValidAccessToken.mockResolvedValue("ctx7sk-valid-key");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await runCommand("whoami");
+
+    expect(logOutput.some((l) => l.includes("Logged in"))).toBe(true);
+    expect(logOutput).toHaveLength(1);
+    expect(logOutput.some((l) => l.includes("Session may be expired"))).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   test("shows session expired hint when fetch fails", async () => {
     mockGetValidAccessToken.mockResolvedValue("valid-token");
     vi.stubGlobal(
@@ -163,7 +179,7 @@ describe("whoami command", () => {
   });
 
   test("tracks whoami event", async () => {
-    mockGetValidAccessToken.mockResolvedValue(null);
+    mockGetValidAccessToken.mockResolvedValue(undefined);
     await runCommand("whoami");
     expect(trackEvent).toHaveBeenCalledWith("command", { name: "whoami" });
   });
@@ -200,6 +216,8 @@ describe("performLogin", () => {
       access_token: "ctx7sk-x",
       token_type: "bearer",
     });
+    expect(fetch).not.toHaveBeenCalled();
+    expect(mockSpinner.succeed).toHaveBeenCalledWith(expect.stringContaining("API key"));
   });
 
   test("returns null on denied", async () => {

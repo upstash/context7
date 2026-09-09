@@ -1,5 +1,54 @@
 # @upstash/context7-mcp
 
+## 4.0.7
+
+### Patch Changes
+
+- 0087bab: Allow the Claude Code plugin to use anonymous access when its API key header is empty.
+
+## 4.0.6
+
+### Patch Changes
+
+- 5a7039b: Add per-request bearer-token providers and Vercel Marketplace resource OIDC validation.
+- 80e681a: Return sanitized JSON-RPC errors for rejected MCP request bodies.
+
+## 4.0.5
+
+### Patch Changes
+
+- 21c3dd4: Require authentication and track usage separately for the Claude Code plugin.
+- 4e980f6: Increase the default HTTP subscription capacity and allow deployments to configure it with `MCP_MAX_SUBSCRIPTIONS`.
+- 2a851fc: Remove the legacy AES-CBC client-IP header now that authenticated assertions are deployed.
+
+## 4.0.4
+
+### Patch Changes
+
+- 8fa6c6b: Honor the advertised `X-Context7-API-Key` header in HTTP MCP requests.
+- 794cc6b: Authenticate hosted MCP client-IP forwarding with short-lived AES-GCM assertions.
+
+## 4.0.3
+
+### Patch Changes
+
+- 769c6cd: Advertise Clerk as the OAuth authorization server so clients validate authorization responses against the issuer that Clerk returns.
+
+## 4.0.2
+
+### Patch Changes
+
+- 67528f2: Add a 60s `AbortSignal.timeout()` to both Context7 API calls in `lib/api.ts`. Without a signal a stalled backend call rides undici's ~300s default before failing. 60s is generous: these are vector queries with p99.9 ~3.2s, and no request exceeded 30s across a full day of production traffic.
+- c68104e: Disable SSE keepalive heartbeats on the HTTP handler (`keepAliveMs: 0`). Every tool is a millisecond vector query, so no legitimate exchange needs a heartbeat — but a hung exchange kept alive by heartbeats can never be reaped by a proxy's stream idle timeout. One such hang is deterministic: a 2025-era JSON-RPC batch carrying a request plus its own `notifications/cancelled` gets no response for the cancelled request (per spec), the SDK transport then never closes the stream, and heartbeats kept it alive until the gateway's 1200s hard cap — the dominant source of leaked upstream connections in the 2026-08-11 mcp.context7.com outage. With heartbeats off, silent hangs go idle and the proxy reaps them at its idle timeout.
+
+## 4.0.1
+
+### Patch Changes
+
+- af7e4ad: Stop forcing `responseMode: "sse"` on the HTTP handler and use the SDK default `"auto"` instead. Forcing `"sse"` put every response on an SSE stream, and those streams were not released: concurrent upstream streams went from ~10 before v4.0.0 to over 5000, exhausting the gateway connection pool and returning 503 `reset reason: overflow` on `mcp.context7.com`. Traffic and latency were unchanged over that period, so the growth was not load.
+
+  With `"auto"` a request is answered with a single JSON body unless a handler emits a related message before its result, which upgrades that one exchange to SSE. No tool emits progress today, so modern-protocol responses are now plain JSON. The 2025-era legacy fallback is constructed without a `responseMode` and still streams over SSE, so it is unaffected.
+
 ## 4.0.0
 
 ### Major Changes

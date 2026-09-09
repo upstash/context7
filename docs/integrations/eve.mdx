@@ -1,0 +1,84 @@
+---
+title: eve
+sidebarTitle: eve
+description: Filesystem-first framework for building durable AI agents
+---
+
+[eve](https://eve.dev) is Vercel's filesystem-first framework for building durable AI agents. By adding Context7 as an MCP connection, an eve agent can retrieve up-to-date, version-specific library documentation and code examples while it works.
+
+For more details on how eve handles MCP connections, see the [eve MCP connections documentation](https://eve.dev/docs/connections/mcp).
+
+## Setup
+
+<Steps>
+  <Step title="Create the Context7 connection">
+    Create `agent/connections/context7.ts` in your eve project:
+
+    ```typescript
+    import { defineMcpClientConnection } from "eve/connections";
+
+    const apiKey = process.env.CONTEXT7_API_KEY;
+
+    export default defineMcpClientConnection({
+      url: "https://mcp.context7.com/mcp",
+      description:
+        "Context7: up-to-date, version-specific library documentation and code examples.",
+      ...(apiKey
+        ? {
+            auth: {
+              getToken: async () => ({ token: apiKey }),
+            },
+          }
+        : {}),
+      tools: {
+        allow: ["resolve-library-id", "query-docs"],
+      },
+    });
+    ```
+
+    The API key is optional, so the connection can use Context7's anonymous limits when `CONTEXT7_API_KEY` is not set. For higher rate limits, create an API key in the [Context7 dashboard](https://context7.com/dashboard).
+  </Step>
+
+  <Step title="Configure an API key (recommended)">
+    Add the key to `.env.local` for local development. Do not commit this file.
+
+    ```bash
+    CONTEXT7_API_KEY=YOUR_API_KEY
+    ```
+
+    For a deployed eve agent, add the same variable to the linked Vercel project and pull it locally:
+
+    ```bash
+    vercel env add CONTEXT7_API_KEY
+    vercel env pull .env.local
+    ```
+
+    eve's `getToken` callback sends the value as an `Authorization: Bearer` token. Vercel Connect is not required when using an API key.
+  </Step>
+
+  <Step title="Verify the connection">
+    Inspect the agent and confirm that it compiles with `0 errors` and `0 warnings`:
+
+    ```bash
+    npx eve info
+    ```
+
+    Then start the agent and ask a documentation question. When the connection is used, eve discovers only the two tools in the allowlist:
+
+    ```bash
+    pnpm dev
+    ```
+
+    ```text
+    Use Context7 to show me how to configure caching in Next.js.
+    ```
+  </Step>
+</Steps>
+
+## How It Works
+
+The filename registers the connection as `context7`. eve discovers the remote MCP tools and makes them available as `context7__resolve-library-id` and `context7__query-docs` when the model searches for a relevant connection.
+
+The allowlist keeps the connection limited to Context7's documentation tools, including if the server adds more tools later. Both tools are read-only, so they do not require an approval gate.
+
+When a request names a library, the agent first calls `resolve-library-id` to find its Context7 library ID, then calls `query-docs` with that ID and the user's specific question. If the prompt already includes a Context7 library ID such as `/vercel/next.js`, the agent can call `query-docs` directly.

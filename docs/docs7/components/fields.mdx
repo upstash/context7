@@ -1,0 +1,30 @@
+---
+title: Fields
+description: Document request parameters and response fields
+---
+
+Use one of `query`, `path`, `body`, or `header` as the name of a request parameter.
+
+## Usage
+
+```mdx
+<ParamField query="limit" type="number" default="20">
+  Maximum results to return.
+</ParamField>
+
+<ResponseField name="items" type="object[]" required>
+  The returned items.
+</ResponseField>
+```
+
+Both components accept `type`, `required`, `deprecated`, and `default`.
+
+## Example
+
+<ParamField query="limit" type="number" default="20">
+  Maximum results to return.
+</ParamField>
+
+<ResponseField name="items" type="object[]" required>
+  The returned items.
+</ResponseField>

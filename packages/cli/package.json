@@ -1,6 +1,6 @@
 {
   "name": "ctx7",
-  "version": "0.5.7",
+  "version": "0.5.11",
   "description": "Context7 CLI - Fetch documentation context and configure Context7",
   "type": "module",
   "bin": {
@@ -22,13 +22,13 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@inquirer/core": "^11.2.1",
+    "@inquirer/core": "^12.0.1",
     "@inquirer/prompts": "^8.2.0",
     "boxen": "^8.0.1",
     "commander": "^15.0.0",
-    "figlet": "^1.9.4",
-    "open": "^10.1.0",
-    "ora": "^9.4.0",
+    "figlet": "^1.11.4",
+    "open": "^11.0.2",
+    "ora": "^9.4.1",
     "picocolors": "^1.1.1"
   },
   "devDependencies": {
