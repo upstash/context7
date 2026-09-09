@@ -30,6 +30,12 @@ export type ContextRequest = {
 
 export type ContextResponse = {
   data: string;
+  /**
+   * True when `data` is an error message rather than documentation, so the
+   * caller can surface it as a tool error (`isError: true`) instead of letting
+   * it default to a successful result.
+   */
+  isError?: boolean;
 };
 
 export interface ClientContext {
