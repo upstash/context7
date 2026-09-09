@@ -1,0 +1,9 @@
+node_modules
+.env*
+!.env.example
+.eve
+.vercel
+.output
+.nitro
+dist
+*.tsbuildinfo

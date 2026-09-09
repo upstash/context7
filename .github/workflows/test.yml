@@ -3,6 +3,7 @@ name: Test
 on:
   pull_request:
     paths:
+      - "examples/**"
       - "packages/**"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -32,7 +33,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
-          node-version: "20"
+          node-version: "24"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
