@@ -100,6 +100,82 @@ for info in docs["infoSnippets"]:
   For TypeScript SDK usage, see [Search Library](/sdks/ts/commands/search-library) and [Get Context](/sdks/ts/commands/get-context).
 </Info>
 
+## Response Schemas
+
+### Search response
+
+`GET /api/v2/libs/search` returns a JSON object:
+
+```json
+{
+  "results": [
+    {
+      "id": "/facebook/react",
+      "title": "React",
+      "description": "The library for web and native user interfaces",
+      "branch": "main",
+      "lastUpdateDate": "2026-09-01T10:30:00.000Z",
+      "state": "finalized",
+      "totalTokens": 607822,
+      "totalSnippets": 3629,
+      "stars": 231000,
+      "trustScore": 10,
+      "benchmarkScore": 95.5,
+      "versions": ["v19.0.0", "v18.3.1"]
+    }
+  ],
+  "searchFilterApplied": false
+}
+```
+
+- `results` — array of matching libraries ranked by relevance, using the [Library ID format](#library-id-format) for `id`.
+- `searchFilterApplied` — `true` when the teamspace's public library access settings filtered the results (e.g. verified-only or a hand-picked list).
+- `totalTokens` is the **total number of indexed tokens in the library's documentation**, not the amount returned by a single context request — a context request returns a reranked subset of snippets.
+
+### Get Context
+
+`GET /api/v2/context` returns a `ContextResponse` JSON object:
+
+| Field         | Type                                   | Description                                  |
+| ------------- | -------------------------------------- | -------------------------------------------- |
+| `codeSnippets` | array of `CodeSnippet`                | Relevant code snippets                       |
+| `infoSnippets` | array of `InfoSnippet`                | Relevant prose documentation snippets        |
+| `rules`       | object                                 | Optional library-specific rules and guidelines (`global`, `libraryOwn`, `libraryTeam`, each an array of strings) |
+
+**`CodeSnippet`** — `codeTitle`, `codeDescription`, `codeLanguage`, `codeTokens` (token count for the snippet), `codeId` (URL to the source location), `pageTitle` (title of the documentation page), and `codeList` (the examples array) are all present. Snippets recovered from the dynamic source-code index additionally carry `isDynamic` and `sourceFile`.
+
+The per-snippet examples array is **`codeList`** — not `codeExamples`. Each entry is a `{ "language", "code" }` pair describing a single code example:
+
+```json
+"codeList": [{ "language": "jsx", "code": "<App />" }]
+```
+
+**`InfoSnippet`** — `content` and `contentTokens` (token count for the content) are required; `pageId` (URL to the source page) and `breadcrumb` (navigation path) are returned when available.
+
+```json
+{
+  "codeSnippets": [
+    {
+      "codeTitle": "Adding a Counter",
+      "codeDescription": "A minimal counter component",
+      "codeLanguage": "jsx",
+      "codeTokens": 150,
+      "codeId": "https://react.dev/reference/react/useState",
+      "pageTitle": "useState",
+      "codeList": [{ "language": "jsx", "code": "const [n, setN] = useState(0);" }]
+    }
+  ],
+  "infoSnippets": [
+    {
+      "pageId": "https://react.dev/reference/react/useState",
+      "breadcrumb": "Reference > React > useState",
+      "content": "useState is a React Hook that adds state...",
+      "contentTokens": 200
+    }
+  ]
+}
+```
+
 ## Rate Limits
 
 - **Without API key**: Low rate limits and no custom configuration

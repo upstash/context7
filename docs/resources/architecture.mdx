@@ -1,0 +1,57 @@
+---
+title: Architecture & Operational Behavior
+description: How the Context7 MCP server and REST API behave on the network — endpoints, timeouts, streams, and argument names
+---
+
+This page describes the network behavior of the hosted Context7 MCP server and REST API, so you can reason about timeouts, error handling, and client configuration without reading source code.
+
+## Endpoints
+
+| Service                | URL                                            |
+| ---------------------- | ---------------------------------------------- |
+| Hosted MCP server      | `https://mcp.context7.com/mcp`                 |
+| MCP OAuth endpoint     | `https://mcp.context7.com/mcp/oauth`           |
+| REST API (v2)          | `https://context7.com/api/v2/...`              |
+| Health check           | `GET https://mcp.context7.com/ping`            |
+
+The MCP endpoint serves `POST` and `GET` requests and rejects session-style `GET`/`DELETE` operations with `405`. Everything else returns a JSON `404`. OAuth discovery metadata is available at `/.well-known/oauth-protected-resource` (RFC 9728).
+
+## Stateless HTTP serving
+
+The hosted HTTP server serves each MCP request with a fresh server instance: there is no `Mcp-Session-Id`, no session store, and no Redis-backed state. The 2025-era legacy clients are answered through a stateless fallback. This means the server holds no per-session state between requests.
+
+## API call timeout
+
+Every call the MCP server makes to the Context7 API (both library search and context fetch) applies a **60-second timeout** via `AbortSignal.timeout()`. These are vector queries with a p99.9 of ~3.2 seconds and no observed request exceeding 30 seconds, so 60s is generous; a stalled backend call fails at 60s instead of riding the fetch default.
+
+## SSE heartbeats
+
+HTTP serving disables SSE keepalive heartbeats (`keepAliveMs: 0`). Tools are millisecond vector queries, so no legitimate exchange needs a heartbeat to stay alive. A hung exchange therefore goes silent and is reaped by the gateway's stream idle timeout rather than being kept alive until the gateway's hard cap.
+
+## Transport differences
+
+- **stdio** — authenticates with `--api-key` or `CONTEXT7_API_KEY`; `--port` is not allowed.
+- **http** — `--api-key` is not allowed; authenticate with an HTTP header instead (`Authorization: Bearer ...`, or the `X-Context7-API-Key` / `X-API-Key` variants). `--port` selects the listen port; the server tries successive ports when one is in use.
+
+## Tool argument aliasing
+
+On `tools/call`, the server rewrites hallucinated argument names to their canonical names before validation, so clients that echo tool-description phrasing still work:
+
+| Tool | Canonical argument | Accepted aliases |
+| ---- | ------------------ | ---------------- |
+| `resolve-library-id` | `query` | `userQuery`, `question` |
+| `query-docs` | `query` | `userQuery`, `question` |
+| `query-docs` | `libraryId` | `context7CompatibleLibraryID`, `libraryID`, `libraryName` |
+
+`libraryName` is only rewritten on `query-docs` calls, since it is the canonical argument for `resolve-library-id`. The schemas published via `tools/list` are unchanged — canonical names remain the documented required fields.
+
+## Downtime and error handling
+
+Transient failures surface as HTTP status codes (`503` when the gateway connection pool overflows, `5xx` otherwise). Retry with backoff; see the [API Guide error handling](/api-guide#error-handling) for the full status-code table. Hung exchanges (for example, a batch that carries its own `notifications/cancelled`) receive no response by spec; with heartbeats disabled they go idle and are reaped by the gateway instead of leaking an upstream connection.
+
+## Query behavior
+
+- Keep each query to a single concept — separate queries give better results than one combined query.
+- `resolve-library-id` and `query-docs` each allow at most 3 calls per question.
+- Search results may be filtered by your teamspace's public library access settings; the API reports this via the `searchFilterApplied` flag.
+- See [Keeping Libraries Fresh](/library-updates) for how documentation staleness and refresh scheduling work.

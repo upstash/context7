@@ -41,10 +41,14 @@ Allow any public library that clears the quality bar you set. Available filters:
 | Referring domains | All · 100+ · 500+ · 1,000+           |
 | Organic traffic   | All · 100+ · 1,000+ · 10,000+        |
 
+The filters you enable are combined with AND semantics: a library must clear every threshold you set — verification, trust score, freshness, and so on — to be eligible. Leaving a filter on **All** skips that check entirely, and setting more filters narrows the pool.
+
+Repo star and license thresholds apply only to public GitHub repositories; websites and other non-repo sources pass through those checks. Likewise, backlink, referring-domain, and organic-traffic thresholds apply only to websites. You can also restrict public repositories to an allowlist of licenses (SPDX identifiers such as `MIT` or `Apache-2.0`) — a repository under any other license fails the quality check.
+
 You can also maintain two override lists in quality mode:
 
 - **Blocked libraries** — always excluded, even if they pass every filter.
-- **Excepted libraries** — always allowed, even if they fail the filters.
+- **Excepted libraries** — always allowed, even if they fail the filters. Excepted libraries act as wildcards over the entire configuration: they also bypass the blocked list and the source type access settings.
 
 ### Select Manually
 

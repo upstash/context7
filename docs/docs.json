@@ -234,7 +234,9 @@
             "group": "Resources",
             "pages": [
               "resources/developer",
-              "resources/troubleshooting"
+              "resources/architecture",
+              "resources/troubleshooting",
+              "resources/release-notes"
             ]
           }
         ]

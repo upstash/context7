@@ -1,0 +1,79 @@
+---
+title: Release Notes
+description: Release history and changelog for the @upstash/context7-mcp MCP server
+---
+
+# Release Notes
+
+Release history for the [`@upstash/context7-mcp`](https://www.npmjs.com/package/@upstash/context7-mcp) MCP server. The npm badge and the current version are tracked in the [GitHub repository](https://github.com/upstash/context7/blob/master/packages/mcp/CHANGELOG.md).
+
+## 4.0.6
+
+- Add per-request bearer-token providers and Vercel Marketplace resource OIDC validation.
+- Return sanitized JSON-RPC errors for rejected MCP request bodies.
+
+## 4.0.5
+
+- Require authentication and track usage separately for the Claude Code plugin.
+- Increase the default HTTP subscription capacity; deployments can configure it with `MCP_MAX_SUBSCRIPTIONS`.
+- Remove the legacy AES-CBC client-IP header.
+
+## 4.0.4
+
+- Honor the advertised `X-Context7-API-Key` header in HTTP MCP requests.
+- Authenticate hosted MCP client-IP forwarding with short-lived AES-GCM assertions.
+
+## 4.0.3
+
+- Advertise Clerk as the OAuth authorization server so clients validate authorization responses against the issuer that Clerk returns.
+
+## 4.0.2
+
+- Add a 60s `AbortSignal.timeout()` to both Context7 API calls in `lib/api.ts`. Without a signal a stalled backend call rides undici's ~300s default before failing.
+- Disable SSE keepalive heartbeats on the HTTP handler (`keepAliveMs: 0`). Tools are millisecond vector queries, so no legitimate exchange needs a heartbeat; a hung exchange kept alive by heartbeats could never be reaped by a proxy's stream idle timeout. With heartbeats off, silent hangs go idle and the proxy reaps them.
+
+## 4.0.1
+
+- Stop forcing `responseMode: "sse"` on the HTTP handler and use the SDK default `"auto"` instead. Forcing SSE streamed every response and those streams were not released. With `auto`, a request is answered with a single JSON body unless a handler emits a related message before its result.
+
+## 4.0.0
+
+- Major: Migrate the MCP server to the v2 SDK (`@modelcontextprotocol/{node,server,client}` 2.0.0) and the 2026-07-28 protocol revision. HTTP serving is now stateless for both modern and legacy clients, and Redis-backed sessions are removed.
+
+## 3.2.5
+
+- Node.js >= 20.18.1 is now required (Node 18 is no longer supported). Proxy and custom-CA support was restored by bumping `undici` to 7.
+- Improve query prompts so agents request relevant documentation instead of passing the task to complete.
+
+## 3.2.0
+
+- Replace the in-result sign-in nudge with an MCP form elicitation (`elicitation/create`) shown out-of-band when the backend signals that an anonymous client crossed the per-IP threshold.
+- Advertise empty `prompts` and `resources` capabilities so clients that call them unconditionally can load.
+
+## 3.1.0
+
+- Add multi-tenant Microsoft Entra ID validation for MCP tokens.
+
+## 3.0.0
+
+- Major: Convert the stateless MCP implementation to a stateful one using Redis for session management.
+
+## 2.3.0
+
+- Prompt anonymous users to sign in with a tool-result notice after the backend signals the per-IP threshold.
+
+## 2.2.0
+
+- Expose research mode through the MCP `researchMode` tool and the CLI `docs --research` flag. The parameter was removed again in 2.2.4 because several clients hit per-request timeouts on long-running research calls.
+
+## 2.1.0
+
+- Add OAuth 2.0 authentication support, including the `/mcp/oauth` endpoint, JWT validation, the OAuth Protected Resource Metadata endpoint (RFC 9728) at `/.well-known/oauth-protected-resource`, and the `WWW-Authenticate` header for OAuth discovery.
+
+## 2.0.0
+
+- Major: Upgrade to the v2.0.0 query-based architecture.
+- Breaking changes: `get-library-docs` is replaced by `query-docs`; `resolve-library-id` now requires both `query` and `libraryName`; the `mode`, `topic`, `page`, and `limit` parameters are removed; `context7CompatibleLibraryID` is renamed to `libraryId`.
+- Add reranked and deduplicated library selection, query-driven context fetching, and a tool call limit of 3 calls per question.
+
+Earlier releases and full details are available in the [repository changelog](https://github.com/upstash/context7/blob/master/packages/mcp/CHANGELOG.md) and on [npm](https://www.npmjs.com/package/@upstash/context7-mcp).

@@ -137,7 +137,29 @@ ctx7 setup --project
 
 # Skip confirmation prompts
 ctx7 setup --yes
+
+# Non-interactive Claude Code setup (stdio transport, no prompts)
+ctx7 setup --claude --stdio --yes --api-key YOUR_API_KEY
 ```
+
+**Setup options:**
+
+| Option | Description |
+| ------ | ----------- |
+| `--mcp` | MCP server mode |
+| `--cli` | CLI + Skills mode (no MCP server) |
+| `--claude` / `--cursor` / `--codex` / `--opencode` / ... | Target a specific agent |
+| `--stdio` | Configure the MCP server as a local stdio process (default is HTTP) |
+| `-y, --yes` | Skip confirmation prompts |
+| `-p, --project` | Configure for the current project instead of globally |
+| `--api-key <key>` | Authenticate with an existing API key |
+| `--oauth` | Use the OAuth endpoint (MCP mode only) |
+| `--base-url <url>` | Use a custom Context7 deployment (for example, on-premise) |
+
+Agent flags and `-y`/`--yes` combine freely with `--mcp` or `--stdio`, so
+`ctx7 setup --claude --stdio -y` runs non-interactively. `--stdio` cannot be
+combined with `--oauth` or with `--base-url`; `--base-url` also does not
+support `--cli` (see [On-premise setup](#on-premise-setup)).
 
 **Authentication options:**
 
