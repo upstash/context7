@@ -1,5 +1,11 @@
 # @upstash/context7-mcp
 
+## 4.0.7
+
+### Patch Changes
+
+- 0087bab: Allow the Claude Code plugin to use anonymous access when its API key header is empty.
+
 ## 4.0.6
 
 ### Patch Changes
