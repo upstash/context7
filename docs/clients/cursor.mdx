@@ -19,148 +19,6 @@ For manual MCP installation or other configuration options, see [All MCP Clients
 
 ---
 
-## Cursor Cloud Agents
-
-Cursor Cloud Agents use MCP servers configured for the cloud agent, not the MCP configuration from your local Cursor installation. If Context7 works in the IDE but a Cloud Agent reports an anonymous quota, add an authenticated HTTP server in the Cloud Agent UI.
-
-<Note>
-  The MCP connection is independent of the model selected for the agent. You can
-  use the same Context7 server with any model available in Cursor Cloud Agents.
-</Note>
-
-### Before you begin
-
-Create an API key in the [Context7 dashboard](https://context7.com/dashboard). Keep the key available while you complete the steps below, but do not commit it to your repository or include it in screenshots.
-
-### Add Context7 to Cursor Cloud Agents
-
-<Steps>
-<Step title="Open a Cloud Agent">
-Go to [cursor.com/agents](https://cursor.com/agents) and start a new agent. If you start the agent from the Cursor desktop app, select **Cloud** from the environment menu below the agent input.
-
-<Frame>
-  <img src="/images/clients/cursor/cloud-agents/01-new-cloud-agent.jpg" alt="New Cursor Cloud Agent composer" />
-</Frame>
-</Step>
-
-<Step title="Open the MCP server menu">
-Select **+** (**Add context and tools**), then **MCP Servers** and **Add MCP**.
-
-<Frame>
-  <img src="/images/clients/cursor/cloud-agents/02-open-mcp-servers.jpg" alt="MCP Servers menu in a Cursor Cloud Agent" />
-</Frame>
-</Step>
-
-<Step title="Choose Custom MCP">
-In the MCP browser, select **Custom MCP**.
-
-<Frame>
-  <img src="/images/clients/cursor/cloud-agents/03-add-custom-mcp.jpg" alt="Custom MCP option in Cursor's MCP browser" />
-</Frame>
-</Step>
-
-<Step title="Configure the authenticated Context7 server">
-Enter the following values:
-
-| Field | Value |
-| --- | --- |
-| **Name** | `context7-api-key` |
-| **Type** | `URL` |
-| **Server URL** | `https://mcp.context7.com/mcp` |
-| **Header key** | `Context7-API-Key` |
-| **Header value** | Your Context7 API key |
-
-<Warning>
-  Use `Context7-API-Key` as the HTTP header name. `CONTEXT7_API_KEY` is an
-  environment variable name and is not the correct HTTP header for this setup.
-</Warning>
-
-<Frame>
-  <img src="/images/clients/cursor/cloud-agents/04-configure-context7-api-key.jpg" alt="Context7 URL and API key header in Cursor's custom MCP form" />
-</Frame>
-
-Alternatively, select **Edit JSON** and use this configuration:
-
-```json
-{
-  "mcpServers": {
-    "context7-api-key": {
-      "url": "https://mcp.context7.com/mcp",
-      "headers": {
-        "Context7-API-Key": "YOUR_CONTEXT7_API_KEY"
-      }
-    }
-  }
-}
-```
-
-<Frame>
-  <img src="/images/clients/cursor/cloud-agents/05-context7-json-config.jpg" alt="Context7 custom MCP JSON configuration in Cursor Cloud Agents" />
-</Frame>
-</Step>
-
-<Step title="Add and enable the server">
-Select **Add MCP**. Before starting the run, open **+** → **MCP Servers** again and confirm that `context7-api-key` is enabled.
-
-A green or ready status confirms that Cursor initialized the MCP server. It does not by itself prove that the request was authenticated.
-</Step>
-
-<Step title="Verify authenticated access">
-Start a new Cloud Agent run and test both tools:
-
-```text
-Use Context7 to resolve the library ID for Next.js, then query its documentation
-for middleware. Tell me which Context7 tools you called.
-```
-
-To verify authentication conclusively, query a private library that belongs to the Context7 account associated with the API key:
-
-```text
-Use Context7 to query <YOUR_PRIVATE_LIBRARY_ID>. Summarize its installation docs.
-```
-
-If the private library can be read, the Cloud Agent is using the API key. If the agent reports **Monthly quota exceeded** even though the key has quota, the request is reaching Context7 anonymously; recheck the header name and start a new run after saving the MCP server.
-
-After the API-key header is applied, the same Cloud Agent should be able to resolve a library and return documentation without the anonymous quota error:
-
-<Frame>
-  <img src="/images/clients/cursor/cloud-agents/06-verify-context7.jpg" alt="Successful Context7 documentation query from a Cursor Cloud Agent" />
-</Frame>
-</Step>
-</Steps>
-
-### OAuth and the Context7 Cursor plugin
-
-The Context7 plugin uses the OAuth endpoint and does not currently provide a field for an API key. Cursor supports OAuth for Cloud MCP servers, but installing or enabling the plugin does not guarantee that its OAuth sign-in flow has completed.
-
-- Use the plugin when you want OAuth and complete the sign-in prompt for the same Cursor account that launches the Cloud Agent.
-- Use the custom HTTP setup above when you need explicit API-key authentication, including access to private Context7 libraries.
-- Do not add the key to **Cloud Agents → My Secrets** for this HTTP connection. Cursor proxies HTTP MCP requests through its backend and applies the saved headers there; the header is not read from the agent VM.
-
-See Cursor's documentation for [custom MCP servers](https://cursor.com/docs/cloud-agent/capabilities#custom-mcp-servers) and [Cloud Agent MCP support](https://cursor.com/docs/cloud-agent#mcp-support).
-
-### Troubleshooting
-
-<AccordionGroup>
-<Accordion title="Monthly quota exceeded">
-The request is usually anonymous. Confirm that the custom server URL is `https://mcp.context7.com/mcp`, the header is named `Context7-API-Key`, and the saved value is the current API key. Then enable the server and start a new Cloud Agent run.
-</Accordion>
-
-<Accordion title="The server is ready, but private docs are unavailable">
-A ready status only confirms MCP initialization. Test a private library ID to verify authentication, then confirm that the library belongs to the same Context7 account as the API key.
-</Accordion>
-
-<Accordion title="Context7 tools or namespace are missing">
-Open **+** → **MCP Servers** before starting the run and enable `context7-api-key`. If the run was already started, enable the server and create a new run so Cursor can expose its tools to the agent.
-</Accordion>
-
-<Accordion title="A repository mcp.json or symlink does not work in Cloud Agents">
-Configure the personal HTTP MCP server from the Cloud Agent UI. A local `~/.cursor/mcp.json`, a repository `.cursor/mcp.json`, or a symlink created inside the Cloud Agent VM does not configure the backend-proxied personal HTTP connection.
-</Accordion>
-</AccordionGroup>
-
----
-
 ## Setting Up Rules
 
 With `ctx7 setup`, a skill is installed that triggers Context7 automatically. If you prefer to use a rule instead, add one in Cursor.
@@ -221,6 +79,153 @@ If you know the library ID, use it directly to skip resolution:
 use context7 with /supabase/supabase for authentication docs
 use context7 with /vercel/next.js for app router setup
 ```
+
+---
+
+## Cursor Cloud Agents
+
+Cursor Cloud Agents use MCP servers configured for the cloud agent, not the MCP configuration from your local Cursor installation. If Context7 works in the IDE but a Cloud Agent reports an anonymous quota, add an authenticated HTTP server in the Cloud Agent UI.
+
+<Note>
+  The MCP connection is independent of the model selected for the agent. You can
+  use the same Context7 server with any model available in Cursor Cloud Agents.
+</Note>
+
+### Before you begin
+
+Create an API key in the [Context7 dashboard](https://context7.com/dashboard). Keep the key available while you complete the steps below, but do not commit it to your repository or include it in screenshots.
+
+### Add Context7 to Cursor Cloud Agents
+
+<Steps>
+<Step title="Open a Cloud Agent">
+Go to [cursor.com/agents](https://cursor.com/agents) and start a new agent. If you start the agent from the Cursor desktop app, select **Cloud** from the environment menu below the agent input.
+
+<Frame>
+  <img src="/images/clients/cursor/cloud-agents/01-new-cloud-agent.png" alt="New Cursor Cloud Agent composer" />
+</Frame>
+</Step>
+
+<Step title="Open the MCP server menu">
+Select **+** (**Add context and tools**), then **MCP Servers** and **Add MCP**.
+
+<Frame>
+  <img src="/images/clients/cursor/cloud-agents/02-open-mcp-servers.png" alt="MCP Servers menu in a Cursor Cloud Agent" />
+</Frame>
+</Step>
+
+<Step title="Choose Custom MCP">
+In the MCP browser, select **Custom MCP**.
+
+<Frame>
+  <img src="/images/clients/cursor/cloud-agents/03-add-custom-mcp.png" alt="Custom MCP option in Cursor's MCP browser" />
+</Frame>
+</Step>
+
+<Step title="Configure the authenticated Context7 server">
+Enter the following values:
+
+| Field | Value |
+| --- | --- |
+| **Name** | `context7-api-key` |
+| **Type** | `URL` |
+| **Server URL** | `https://mcp.context7.com/mcp` |
+| **Header key** | `Context7-API-Key` |
+| **Header value** | Your Context7 API key |
+
+The distinct `context7-api-key` name avoids a namespace collision when the OAuth-based Context7 plugin is also installed. If you do not use the plugin, you can name the server `context7`.
+
+Context7 also accepts `Authorization: Bearer YOUR_API_KEY`, as shown in the general MCP client examples. This guide uses `Context7-API-Key` because that configuration was verified with Cursor Cloud Agents and keeps API-key authentication separate from the plugin's OAuth connection.
+
+<Warning>
+  Use a hyphenated header name in Cursor Cloud. Header names containing
+  underscores, such as `CONTEXT7_API_KEY`, can be dropped by Cursor's proxy.
+  `CONTEXT7_API_KEY` remains the environment variable name for local stdio
+  connections.
+</Warning>
+
+<Frame>
+  <img src="/images/clients/cursor/cloud-agents/04-configure-context7-api-key.png" alt="Context7 URL and API key header in Cursor's custom MCP form" />
+</Frame>
+
+Alternatively, select **Edit JSON** and use this configuration:
+
+```json
+{
+  "mcpServers": {
+    "context7-api-key": {
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "Context7-API-Key": "YOUR_CONTEXT7_API_KEY"
+      }
+    }
+  }
+}
+```
+
+<Frame>
+  <img src="/images/clients/cursor/cloud-agents/05-context7-json-config.png" alt="Context7 custom MCP JSON configuration in Cursor Cloud Agents" />
+</Frame>
+</Step>
+
+<Step title="Add and enable the server">
+Select **Add MCP**. Before starting the run, open **+** → **MCP Servers** again and confirm that `context7-api-key` is enabled.
+
+A green status confirms that Cursor initialized the MCP server. It does not by itself prove that the request was authenticated.
+</Step>
+
+<Step title="Verify authenticated access">
+Start a new Cloud Agent run and test both tools:
+
+```text
+Use Context7 to resolve the library ID for Next.js, then query its documentation
+for middleware. Tell me which Context7 tools you called.
+```
+
+To verify authentication conclusively, query a private library that belongs to the Context7 account associated with the API key:
+
+```text
+Use Context7 to query <YOUR_PRIVATE_LIBRARY_ID>. Summarize its installation docs.
+```
+
+If the private library can be read, the Cloud Agent is using the API key. If the agent reports **Monthly quota exceeded** even though the key has quota, the request is reaching Context7 anonymously; recheck the header name and start a new run after saving the MCP server.
+
+After the API-key header is applied, the same Cloud Agent should be able to resolve a library and return documentation without the anonymous quota error:
+
+<Frame>
+  <img src="/images/clients/cursor/cloud-agents/06-verify-context7.png" alt="Successful Context7 documentation query from a Cursor Cloud Agent" />
+</Frame>
+</Step>
+</Steps>
+
+### OAuth and the Context7 Cursor plugin
+
+The Context7 plugin uses the OAuth endpoint and does not currently provide a field for an API key. Cursor supports OAuth for Cloud MCP servers, but installing or enabling the plugin does not guarantee that its OAuth sign-in flow has completed.
+
+- Use the plugin when you want OAuth and complete the sign-in prompt for the same Cursor account that launches the Cloud Agent.
+- Use the custom HTTP setup above when you need explicit API-key authentication, including access to private Context7 libraries.
+
+See Cursor's documentation for [custom MCP servers](https://cursor.com/docs/cloud-agent/capabilities#custom-mcp-servers) and [Cloud Agent MCP support](https://cursor.com/docs/cloud-agent#mcp-support).
+
+### Troubleshooting
+
+<AccordionGroup>
+<Accordion title="Monthly quota exceeded">
+The request is usually anonymous. Confirm that the custom server URL is `https://mcp.context7.com/mcp`, the header is named `Context7-API-Key`, and the saved value is the current API key. Then enable the server and start a new Cloud Agent run.
+</Accordion>
+
+<Accordion title="The server is ready, but private docs are unavailable">
+A ready status only confirms MCP initialization. Test a private library ID to verify authentication, then confirm that the library belongs to the same Context7 account as the API key.
+</Accordion>
+
+<Accordion title="Context7 tools or namespace are missing">
+Open **+** → **MCP Servers** before starting the run and enable `context7-api-key`. If the run was already started, enable the server and create a new run so Cursor can expose its tools to the agent.
+</Accordion>
+
+<Accordion title="A repository mcp.json or symlink does not work in Cloud Agents">
+Configure the personal HTTP MCP server from the Cloud Agent UI. A local `~/.cursor/mcp.json`, a repository `.cursor/mcp.json`, or a symlink created inside the Cloud Agent VM does not configure the backend-proxied personal HTTP connection.
+</Accordion>
+</AccordionGroup>
 
 ---
 
