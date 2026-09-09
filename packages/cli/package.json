@@ -22,27 +22,27 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@inquirer/core": "^11.1.1",
+    "@inquirer/core": "^12.0.1",
     "@inquirer/prompts": "^8.2.0",
     "boxen": "^8.0.1",
     "commander": "^15.0.0",
-    "figlet": "^1.9.4",
-    "open": "^10.1.0",
-    "ora": "^9.4.0",
+    "figlet": "^1.11.4",
+    "open": "^11.0.2",
+    "ora": "^9.4.1",
     "picocolors": "^1.1.1"
   },
   "devDependencies": {
     "@types/figlet": "^1.7.0",
-    "@types/node": "^22.19.1",
-    "@typescript-eslint/eslint-plugin": "^8.28.0",
-    "@typescript-eslint/parser": "^8.28.0",
-    "eslint": "^9.34.0",
-    "eslint-plugin-prettier": "^5.5.6",
-    "prettier": "^3.6.2",
-    "tsup": "^8.5.0",
-    "typescript": "^5.8.2",
-    "typescript-eslint": "^8.28.0",
-    "vitest": "^4.1.9"
+    "@types/node": "catalog:",
+    "@typescript-eslint/eslint-plugin": "catalog:",
+    "@typescript-eslint/parser": "catalog:",
+    "eslint": "catalog:",
+    "eslint-plugin-prettier": "catalog:",
+    "prettier": "catalog:",
+    "tsup": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
   },
   "keywords": [
     "context7",
