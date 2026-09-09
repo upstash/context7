@@ -455,10 +455,22 @@ describe("plugin authentication", () => {
     expect(res.wwwAuthenticate).toContain("/.well-known/oauth-protected-resource");
   });
 
-  test("keeps the OAuth endpoint protected", async () => {
-    const res = await postMcp(httpUrl.replace(/\/mcp$/, "/mcp/oauth"));
+  test("allows the Claude Code plugin's empty API key fallback", async () => {
+    const res = await postMcp(`${httpUrl}?client=claude-code-plugin`, {
+      Authorization: "",
+    });
 
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(200);
+  });
+
+  test("keeps the OAuth endpoint protected", async () => {
+    const oauthUrl = httpUrl.replace(/\/mcp$/, "/mcp/oauth");
+    const emptyHeaderRes = await postMcp(`${oauthUrl}?client=claude-code-plugin`, {
+      Authorization: "",
+    });
+
+    expect((await postMcp(oauthUrl)).status).toBe(401);
+    expect(emptyHeaderRes.status).toBe(401);
   });
 
   test("tracks authenticated plugin requests separately", async () => {

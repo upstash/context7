@@ -37,7 +37,12 @@ function getPluginFromRequest(req: express.Request): typeof CLAUDE_CODE_PLUGIN |
 
 function requiresAuthentication(req: express.Request, plugin?: typeof CLAUDE_CODE_PLUGIN): boolean {
   // The MCP routes live on a router mounted at /mcp, so req.path is relative to it.
-  return `${req.baseUrl}${req.path}` === "/mcp/oauth" || Boolean(plugin);
+  const isOAuthEndpoint = `${req.baseUrl}${req.path}` === "/mcp/oauth";
+  // The current official Claude plugin expands an unset API key to an empty header.
+  const hasEmptyPluginAuthorization =
+    plugin === CLAUDE_CODE_PLUGIN && req.headers.authorization === "";
+
+  return isOAuthEndpoint || (Boolean(plugin) && !hasEmptyPluginAuthorization);
 }
 
 // Parse CLI arguments using commander
