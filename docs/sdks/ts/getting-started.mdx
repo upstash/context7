@@ -99,9 +99,23 @@ const client = new Context7({
 });
 ```
 
-You can also configure `baseUrl`, additional `headers`, `keepAlive`, the native fetch `cache` mode,
+`baseUrl` defaults to `https://context7.com/api` and overrides where the SDK
+sends requests. Point it at a proxy or a self-hosted deployment to route the
+SDK elsewhere:
+
+```typescript
+const client = new Context7({
+  apiKey: "YOUR_API_KEY",
+  baseUrl: "https://context7.internal.example/api",
+});
+```
+
+You can also configure additional `headers`, `keepAlive`, the native fetch `cache` mode,
 a client-wide abort `signal`, or a custom `fetch` implementation. The SDK always sets
 `Authorization` from the configured API key; additional headers cannot override it.
+
+The MCP server reads the equivalent `CONTEXT7_API_URL` environment variable; see
+the [Developer Guide](/resources/developer#environment-variables).
 
 Following the same convention as `@upstash/redis`, a signal factory can provide a fresh timeout
 signal for each request:

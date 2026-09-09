@@ -72,7 +72,11 @@ You can use the `CONTEXT7_API_KEY` environment variable instead of passing the `
 ```bash
 # .env
 CONTEXT7_API_KEY=your_api_key_here
+CONTEXT7_API_URL=https://context7.com/api
 ```
+
+`CONTEXT7_API_URL` sets the base URL for Context7 API calls and defaults to `https://context7.com/api`.
+Override it for self-hosted deployments or proxies that sit in front of the API.
 
 ### MCP Configuration with Environment Variable
 
