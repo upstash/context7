@@ -1,4 +1,11 @@
-import { SearchResponse, ContextRequest, ContextResponse, ClientContext } from "./types.js";
+import {
+  SearchResponse,
+  ContextRequest,
+  ContextResponse,
+  AutoContextOptions,
+  AutoContextResponse,
+  ClientContext,
+} from "./types.js";
 import { generateHeaders } from "./encryption.js";
 import { Agent, ProxyAgent, setGlobalDispatcher } from "undici";
 import { CONTEXT7_API_BASE_URL } from "./constants.js";
@@ -12,6 +19,27 @@ import tls from "tls";
  * day of production traffic.
  */
 const API_TIMEOUT_MS = 60_000;
+export const MAX_AUTO_CONTEXT_ROUTES = 6;
+export const MAX_AUTO_CONTEXT_CHARACTERS = 32_000;
+const LIBRARY_ID_PATTERN = /^\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(?:[\/@][A-Za-z0-9_.-]+)?$/;
+
+export function truncateDocumentationContext(data: string, characterBudget: number): string {
+  if (data.length <= characterBudget) return data;
+  const marker = "\n\n[Context truncated to keep the combined response bounded.]";
+  const target = Math.max(0, characterBudget - marker.length - 5);
+  const candidate = data.slice(0, target);
+  const lastSnippetSeparator = candidate.lastIndexOf("\n\n--------------------------------");
+  const lastLineBreak = candidate.lastIndexOf("\n");
+  const safeEnd =
+    lastSnippetSeparator >= target * 0.2
+      ? lastSnippetSeparator
+      : lastLineBreak >= target * 0.8
+        ? lastLineBreak
+        : target;
+  const prefix = candidate.slice(0, safeEnd).trimEnd();
+  const closesCodeFence = (prefix.match(/```/g)?.length ?? 0) % 2 === 1 ? "\n```" : "";
+  return `${prefix}${closesCodeFence}${marker}`;
+}
 
 /**
  * Parses error response from the Context7 API
@@ -179,5 +207,82 @@ export async function fetchLibraryContext(
     const errorMessage = `Error fetching library context. Please try again later. ${error}`;
     console.error(errorMessage);
     return { data: errorMessage };
+  }
+}
+
+/** Fetches selection and bounded documentation context in one Search API request. */
+export async function fetchAutoLibraryContext(
+  query: string,
+  context: ClientContext = {},
+  options: AutoContextOptions = {}
+): Promise<AutoContextResponse> {
+  try {
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/context/search`);
+    url.searchParams.set("query", query);
+    url.searchParams.set("type", "txt");
+    if (options.library) url.searchParams.set("library", options.library);
+    if (options.libraryId) url.searchParams.set("libraryId", options.libraryId);
+    if (options.version) url.searchParams.set("version", options.version);
+
+    const response = await fetch(url, {
+      headers: generateHeaders(context),
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
+    });
+    readPromptSignal(response, context);
+    const status = response.headers.get("x-context7-search-status") ?? undefined;
+    const retryHeader = response.headers.get("x-context7-retryable");
+    const retryable = retryHeader
+      ? retryHeader === "true"
+      : response.status === 429 || response.status >= 500;
+    const retryReason = response.headers.get("x-context7-retry-reason") ?? undefined;
+    const suggestedActionHeader = response.headers.get("x-context7-suggested-action");
+    const suggestedAction = suggestedActionHeader
+      ? suggestedActionHeader.replace(/-([a-z])/g, (_, character: string) =>
+          character.toUpperCase()
+        )
+      : undefined;
+    const metadata = {
+      status: status as AutoContextResponse["status"],
+      retryable,
+      retryReason,
+      suggestedAction: suggestedAction as AutoContextResponse["suggestedAction"],
+    };
+
+    if (!response.ok) {
+      const errorMessage = await parseErrorResponse(response, context.apiKey);
+      return { data: errorMessage, error: errorMessage, ...metadata };
+    }
+    const data = await response.text();
+    if (!data.trim()) {
+      return {
+        data: "No relevant documentation was found. Include the exact product or library name and try again.",
+        error: "No relevant documentation was found.",
+        ...metadata,
+        retryable: false,
+        retryReason: "no-relevant-documentation",
+        suggestedAction: "refineQuery",
+      };
+    }
+    const libraryIds = (response.headers.get("x-context7-library-ids") ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter((value, index, all) => LIBRARY_ID_PATTERN.test(value) && all.indexOf(value) === index)
+      .slice(0, MAX_AUTO_CONTEXT_ROUTES);
+    return {
+      data: truncateDocumentationContext(data, MAX_AUTO_CONTEXT_CHARACTERS),
+      libraryIds,
+      ...metadata,
+    };
+  } catch (error) {
+    const errorMessage = `Error searching documentation. Please try again later. ${error}`;
+    console.error(errorMessage);
+    return {
+      data: errorMessage,
+      error: errorMessage,
+      status: "failed",
+      retryable: true,
+      retryReason: "transport-failure",
+      suggestedAction: "retryLater",
+    };
   }
 }

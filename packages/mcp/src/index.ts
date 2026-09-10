@@ -4,7 +4,7 @@ import { toNodeHandler } from "@modelcontextprotocol/node";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { McpServer, createMcpHandler, type ServerContext } from "@modelcontextprotocol/server";
 import { z } from "zod";
-import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
+import { searchLibraries, fetchLibraryContext, fetchAutoLibraryContext } from "./lib/api.js";
 import type { ClientContext } from "./lib/types.js";
 import {
   formatSearchResults,
@@ -51,6 +51,11 @@ const program = new Command()
   .option("--transport <stdio|http>", "transport type", "stdio")
   .option("--port <number>", "port for HTTP transport", DEFAULT_PORT.toString())
   .option("--api-key <key>", "API key for authentication (or set CONTEXT7_API_KEY env var)")
+  .option(
+    "--tool-mode <two-step|single>",
+    "MCP tool surface (experimental)",
+    process.env.CONTEXT7_MCP_TOOL_MODE || "two-step"
+  )
   .allowUnknownOption() // let MCP Inspector / other wrappers pass through extra flags
   .parse(process.argv);
 
@@ -58,6 +63,7 @@ const cliOptions = program.opts<{
   transport: string;
   port: string;
   apiKey?: string;
+  toolMode: string;
 }>();
 
 // Validate transport option
@@ -71,6 +77,15 @@ if (!allowedTransports.includes(cliOptions.transport)) {
 
 // Transport configuration
 const TRANSPORT_TYPE = (cliOptions.transport || "stdio") as "stdio" | "http";
+
+const allowedToolModes = ["two-step", "single"] as const;
+if (!allowedToolModes.includes(cliOptions.toolMode as (typeof allowedToolModes)[number])) {
+  console.error(
+    `Invalid --tool-mode value: '${cliOptions.toolMode}'. Must be one of: ${allowedToolModes.join(", ")}`
+  );
+  process.exit(1);
+}
+const TOOL_MODE = cliOptions.toolMode as (typeof allowedToolModes)[number];
 
 // Disallow incompatible flags based on transport
 const passedPortFlag = process.argv.includes("--port");
@@ -132,6 +147,12 @@ const GLOBAL_ALIASES: AliasMap = {
   query: ["userQuery", "question"],
 };
 
+const AUTO_QUERY_ALIASES: AliasMap = {
+  ...GLOBAL_ALIASES,
+  library: ["libraryName", "repository", "domain"],
+  libraryId: ["context7CompatibleLibraryID", "libraryID"],
+};
+
 // Tool-scoped aliases, for keys that are canonical on one tool but a
 // hallucination on another (e.g. `libraryName` is canonical for
 // `resolve-library-id`, so we only rewrite it on `query-docs` calls).
@@ -187,6 +208,110 @@ function createMcpServer() {
 Do not use for: refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.`,
     }
   );
+
+  if (TOOL_MODE === "single") {
+    server.registerTool(
+      "query-docs",
+      {
+        title: "Query Documentation",
+        description: `Retrieves up-to-date documentation and code examples for a natural-language implementation question in one call.
+
+Context7 selects up to four relevant documentation libraries, searches their namespaces in parallel, deduplicates the evidence, and reranks the combined snippets. Explicit Context7 IDs are used directly within the response safety cap.
+
+Call this tool exactly once per user question. Put the complete question in query, including product names, versions, languages, and all concepts needed to answer. Optional library and version fields are routing hints only: pass them when the user supplied that information, but do not guess a Context7 library ID. Use the returned context to answer without calling this tool again.`,
+        inputSchema: z.preprocess(
+          aliasArgs(AUTO_QUERY_ALIASES),
+          z
+            .object({
+              query: z
+                .string()
+                .describe(
+                  "The user's complete implementation question, including the exact library or product name, version, language, and all requested concepts. Do not shorten or split it. Do not include secrets, personal data, or proprietary code."
+                ),
+              library: z
+                .string()
+                .min(1)
+                .max(120)
+                .optional()
+                .describe(
+                  "Optional fuzzy package, product, repository, or documentation-domain hint supplied by the user. The name does not need to be exact."
+                ),
+              libraryId: z
+                .string()
+                .regex(/^\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(?:[\/@][A-Za-z0-9_.-]+)?$/)
+                .optional()
+                .describe(
+                  "Optional exact Context7 library ID supplied by the user or a trusted source. Never guess this value."
+                ),
+              version: z
+                .string()
+                .regex(/^v?\d+(?:[._]\d+){0,2}(?:[-+][a-z0-9.-]+)?$/i)
+                .optional()
+                .describe(
+                  "Optional library version supplied by the user. Requires one library or libraryId hint."
+                ),
+            })
+            .superRefine((value, context) => {
+              if (value.library && value.libraryId) {
+                context.addIssue({ code: "custom", message: "Use library or libraryId, not both" });
+              }
+              if (value.version && !value.library && !value.libraryId) {
+                context.addIssue({
+                  code: "custom",
+                  message: "Version requires a library or libraryId hint",
+                });
+              }
+            })
+        ),
+        annotations: {
+          readOnlyHint: true,
+          destructiveHint: false,
+          openWorldHint: true,
+          idempotentHint: true,
+        },
+      },
+      async (
+        {
+          query,
+          library,
+          libraryId,
+          version,
+        }: { query: string; library?: string; libraryId?: string; version?: string },
+        toolCtx
+      ) => {
+        const ctx = getClientContext(toolCtx);
+        const response = await fetchAutoLibraryContext(query, ctx, {
+          library,
+          libraryId,
+          version,
+        });
+        maybeElicitAuthSignIn(server, ctx);
+        const selectedLibraries = response.libraryIds?.length
+          ? `Selected ${response.libraryIds.length === 1 ? "library" : "libraries"}: ${response.libraryIds.join(", ")}\n\n`
+          : "";
+        const retryGuidance = response.error
+          ? response.retryable
+            ? "\n\nThis was a transient search failure. Retry the same request later."
+            : `\n\nDo not repeat the identical request. ${
+                response.retryReason === "no-relevant-documentation"
+                  ? "Refine the question or add a library hint."
+                  : "Check the library or version hint."
+              }`
+          : "";
+        return {
+          isError: response.retryable === true,
+          content: [
+            {
+              type: "text",
+              text: `${selectedLibraries}${response.data}${retryGuidance}`,
+            },
+          ],
+        };
+      }
+    );
+
+    return server;
+  }
 
   server.registerTool(
     "resolve-library-id",

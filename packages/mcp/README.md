@@ -1444,6 +1444,7 @@ bun run dist/index.js
 - `--transport <stdio|http>` – Transport to use (`stdio` by default). Use `http` for remote HTTP server or `stdio` for local integration.
 - `--port <number>` – Port to listen on when using `http` transport (default `3000`).
 - `--api-key <key>` – API key for authentication (or set `CONTEXT7_API_KEY` env var). You can get your API key by creating an account at [context7.com/dashboard](https://context7.com/dashboard).
+- `--tool-mode <two-step|single>` – Tool surface to expose (`two-step` by default). The experimental `single` mode uses the Context7 Search API to select and retrieve documentation in one request. It can also be set with `CONTEXT7_MCP_TOOL_MODE`.
 
 Example with HTTP transport and port 8080:
 
@@ -1456,6 +1457,14 @@ Another example with stdio transport:
 ```bash
 bun run dist/index.js --transport stdio --api-key YOUR_API_KEY
 ```
+
+Experimental one-call Search API mode:
+
+```bash
+bun run dist/index.js --transport stdio --tool-mode single --api-key YOUR_API_KEY
+```
+
+In single mode, keep language and framework details in `query`. Use `library` for a fuzzy package, repository, or documentation-domain name; it does not need to be exact. Use `libraryId` only when the exact Context7 ID is already known. A `version` must be paired with one of those hints. Terminal misses tell the agent to refine the query or check the hint, while transient failures explicitly permit retrying the same request.
 
 ### Environment Variables
 
