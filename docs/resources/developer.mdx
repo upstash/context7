@@ -90,6 +90,30 @@ CONTEXT7_API_KEY=your_api_key_here
 }
 ```
 
+## MCP Tools
+
+The server registers two tools. Both are read-only, idempotent, and open-world (annotations: `readOnlyHint`, `idempotentHint`, and `openWorldHint` are `true`; `destructiveHint` is `false`).
+
+### resolve-library-id
+
+Resolves a package/product name to a Context7-compatible library ID and returns matching libraries. Call this before `query-docs` unless the user already provides a library ID in `/org/project` or `/org/project/version` format.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `libraryName` | string | yes | Library name to search for and resolve to a Context7-compatible library ID. Use the official name with proper punctuation (e.g., "Next.js" not "nextjs"). |
+| `query` | string | yes | What to look up in the library's documentation, used to rank results by relevance. Sent to the Context7 API; do not include sensitive or confidential information. |
+
+### query-docs
+
+Retrieves and queries up-to-date documentation and code examples for a library. Requires a valid library ID from `resolve-library-id` (or one provided directly by the user).
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `libraryId` | string | yes | Exact Context7-compatible library ID (e.g., `/vercel/next.js` or `/vercel/next.js/v14.3.0-canary.87`). |
+| `query` | string | yes | What to look up, scoped to a single concept. Make a separate call per concept unless the question is about how concepts interact. Do not include sensitive or confidential information. |
+
+The server declares the `prompts` and `resources` capabilities but registers no prompts and no resources — `prompts/list` and `resources/list` answer with empty collections.
+
 ## Local Development Configuration
 
 When developing locally, use this configuration to run from source:

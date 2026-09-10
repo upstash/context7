@@ -1,0 +1,39 @@
+---
+title: Technical Reference
+description: Package names, versions, runtime requirements, and version migration notes for the Context7 SDK, CLI, and MCP server
+---
+
+Reference for the Context7 packages: current versions, runtime requirements, and breaking changes to watch for when upgrading.
+
+## Packages
+
+| Package | npm name | Current version | Node.js |
+|---------|----------|-----------------|---------|
+| CLI | [`ctx7`](https://www.npmjs.com/package/ctx7) | `0.5.11` | 18+ |
+| MCP server | [`@upstash/context7-mcp`](https://www.npmjs.com/package/@upstash/context7-mcp) | `4.0.7` | 20.18.1+ |
+| TypeScript SDK | [`@upstash/context7-sdk`](https://www.npmjs.com/package/@upstash/context7-sdk) | `0.4.1` | 18+ |
+
+Related packages: [`@upstash/context7-tools-ai-sdk`](https://www.npmjs.com/package/@upstash/context7-tools-ai-sdk) (Vercel AI SDK tools) and [`@upstash/context7-pi`](https://www.npmjs.com/package/@upstash/context7-pi) (pi.dev extension).
+
+For how queries are stored and used (reranking providers, retention, and enterprise opt-out), see [Data Privacy](/security/data-privacy).
+
+## Versioning & Migration
+
+Breaking changes and deprecations to be aware of when upgrading.
+
+### SDK — v0.2.0 API simplification
+
+The SDK API was simplified in `0.2.0`:
+
+- `getDocs()` was replaced by `getContext(query, libraryId, options)`, which takes a `query` for relevance-based retrieval
+- `searchLibrary(query, libraryName)` now takes both a query and a library name
+- Response types were renamed (`Library` and `Documentation` instead of `SearchResult`, `CodeDocsResponse`, etc.)
+- Pagination, mode, topic, and limit options were removed from context retrieval
+
+### CLI — research mode removed (v0.4.1)
+
+Research mode was removed entirely. The `query-docs` MCP tool no longer accepts or forwards a `researchMode` parameter, and the CLI no longer exposes a `--research` flag on `ctx7 docs`.
+
+### CLI — skill commands deprecated
+
+The `ctx7 skills ...` commands are deprecated and will stop working in the next major release. The `context7-mcp` and `find-docs` skills installed by `ctx7 setup` are unaffected.
