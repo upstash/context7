@@ -1,5 +1,26 @@
 # @upstash/context7-mcp
 
+## 4.0.7
+
+### Patch Changes
+
+- 0087bab: Allow the Claude Code plugin to use anonymous access when its API key header is empty.
+
+## 4.0.6
+
+### Patch Changes
+
+- 5a7039b: Add per-request bearer-token providers and Vercel Marketplace resource OIDC validation.
+- 80e681a: Return sanitized JSON-RPC errors for rejected MCP request bodies.
+
+## 4.0.5
+
+### Patch Changes
+
+- 21c3dd4: Require authentication and track usage separately for the Claude Code plugin.
+- 4e980f6: Increase the default HTTP subscription capacity and allow deployments to configure it with `MCP_MAX_SUBSCRIPTIONS`.
+- 2a851fc: Remove the legacy AES-CBC client-IP header now that authenticated assertions are deployed.
+
 ## 4.0.4
 
 ### Patch Changes

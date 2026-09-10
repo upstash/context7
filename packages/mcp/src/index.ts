@@ -39,6 +39,7 @@ import {
   observeUpstreamRequest,
   recordToolCallOutcome,
 } from "./lib/telemetry-runtime.js";
+import { mcpBodyErrorHandler } from "./lib/mcp-body-error-handler.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -52,7 +53,13 @@ function getPluginFromRequest(req: express.Request): typeof CLAUDE_CODE_PLUGIN |
 }
 
 function requiresAuthentication(req: express.Request, plugin?: typeof CLAUDE_CODE_PLUGIN): boolean {
-  return req.path === "/mcp/oauth" || Boolean(plugin);
+  // The MCP routes live on a router mounted at /mcp, so req.path is relative to it.
+  const isOAuthEndpoint = `${req.baseUrl}${req.path}` === "/mcp/oauth";
+  // The current official Claude plugin expands an unset API key to an empty header.
+  const hasEmptyPluginAuthorization =
+    plugin === CLAUDE_CODE_PLUGIN && req.headers.authorization === "";
+
+  return isOAuthEndpoint || (Boolean(plugin) && !hasEmptyPluginAuthorization);
 }
 
 // Parse CLI arguments using commander
@@ -356,8 +363,10 @@ async function main() {
     // Only private/local infrastructure may supply forwarding headers. Express
     // then walks the chain right-to-left and ignores attacker-added prefixes.
     app.set("trust proxy", ["loopback", "linklocal", "uniquelocal", "100.64.0.0/10"]);
-    app.use(express.json());
 
+    // Registered ahead of the MCP router so its error responses carry the CORS
+    // headers too; browser clients would otherwise see a CORS failure instead
+    // of the status.
     app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
       res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
@@ -506,14 +515,17 @@ async function main() {
       }
     };
 
-    app.all("/mcp", async (req, res) => {
-      await handleMcpRequest(req, res);
-    });
-
+    // JSON bodies and JSON-RPC error envelopes are the MCP contract only, so the
+    // parser and its error boundary live on the MCP router: every other route
+    // stays out of the parser and keeps its own response shape.
+    const mcpRouter = express.Router();
+    mcpRouter.use(express.json());
+    mcpRouter.use(mcpBodyErrorHandler);
+    mcpRouter.all("/", (req, res) => handleMcpRequest(req, res));
     // OAuth-protected endpoint - requires authentication
-    app.all("/mcp/oauth", async (req, res) => {
-      await handleMcpRequest(req, res);
-    });
+    mcpRouter.all("/oauth", (req, res) => handleMcpRequest(req, res));
+    app.use("/mcp", mcpRouter);
+
     app.get("/ping", (_req: express.Request, res: express.Response) => {
       res.json({ status: "ok", message: "pong" });
     });

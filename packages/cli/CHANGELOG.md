@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.11
+
+### Patch Changes
+
+- e127fa1: Add outbound-independent on-premise MCP setup through `ctx7 setup --base-url`, including secure interactive personal API-key entry and anonymous-auth discovery support.
+
+## 0.5.10
+
+### Patch Changes
+
+- 76140fc: Use API keys returned by the device login flow directly during MCP setup instead of sending them to a dashboard session endpoint to generate another key.
+
 ## 0.5.9
 
 ### Patch Changes
