@@ -8,6 +8,7 @@ import { createDecipheriv } from "node:crypto";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import * as jose from "jose";
 
 // End-to-end tests: the real built binary (dist/index.js) is exercised over
 // both transports (spawned HTTP server, spawned stdio child) by both protocol
@@ -49,13 +50,18 @@ let stubServer: http.Server;
 let childEnv: Record<string, string>;
 let httpChild: ChildProcess;
 let httpUrl: string;
+let emaPrivateKey: Awaited<ReturnType<typeof jose.generateKeyPair>>["privateKey"];
+let emaPublicJwk: jose.JWK;
 
 function startStubApi(): Promise<string> {
   stubServer = http.createServer((req, res) => {
     const url = new URL(req.url!, "http://stub.local");
     const apiPath = url.pathname.replace(/^\/api/, "");
     requests.push({ path: apiPath, query: url.searchParams, headers: req.headers });
-    if (apiPath === "/v2/libs/search") {
+    if (apiPath === "/oauth/ema-jwks") {
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ keys: [emaPublicJwk] }));
+    } else if (apiPath === "/v2/libs/search") {
       res.setHeader("Content-Type", "application/json");
       res.end(
         JSON.stringify({
@@ -111,6 +117,14 @@ function startHttpChild(): Promise<{ child: ChildProcess; url: string }> {
 
 beforeAll(async () => {
   execSync("pnpm build", { cwd: PKG_ROOT, stdio: "pipe" });
+  const keyPair = await jose.generateKeyPair("RS256");
+  emaPrivateKey = keyPair.privateKey;
+  emaPublicJwk = {
+    ...(await jose.exportJWK(keyPair.publicKey)),
+    alg: "RS256",
+    kid: "integration-test-ema",
+    use: "sig",
+  };
   const stubUrl = await startStubApi();
   // getDefaultEnvironment() inherits only safe vars, so a real
   // CONTEXT7_API_KEY in the parent shell cannot leak into the children.
@@ -441,6 +455,17 @@ async function postMcp(target: string, headers: Record<string, string> = {}) {
   return { status: res.status, wwwAuthenticate: res.headers.get("www-authenticate") };
 }
 
+function createEmaAccessToken() {
+  return new jose.SignJWT({ email: "developer@example.com" })
+    .setProtectedHeader({ alg: "RS256", kid: "integration-test-ema" })
+    .setIssuer("https://context7.com")
+    .setAudience("https://mcp.context7.com")
+    .setSubject("ema-user")
+    .setIssuedAt()
+    .setExpirationTime("5m")
+    .sign(emaPrivateKey);
+}
+
 describe("plugin authentication", () => {
   beforeEach(() => {
     requests.length = 0;
@@ -471,6 +496,33 @@ describe("plugin authentication", () => {
 
     expect((await postMcp(oauthUrl)).status).toBe(401);
     expect(emptyHeaderRes.status).toBe(401);
+  });
+
+  test("accepts an EMA access token on the marketplace plugin endpoint", async () => {
+    const accessToken = await createEmaAccessToken();
+    const client = new Client(
+      { name: "claude-code", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+    await client.connect(
+      new StreamableHTTPClientTransport(new URL(`${httpUrl}?client=claude-code-plugin`), {
+        requestInit: { headers: { Authorization: `Bearer ${accessToken}` } },
+      })
+    );
+
+    try {
+      requests.length = 0;
+      await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/vercel/next.js", query: "app router" },
+      });
+    } finally {
+      await client.close();
+    }
+
+    const apiCall = requests.find((request) => request.path === "/v2/context");
+    expect(apiCall?.headers.authorization).toBe(`Bearer ${accessToken}`);
+    expect(apiCall?.headers["x-context7-plugin"]).toBe("claude-code-plugin");
   });
 
   test("tracks authenticated plugin requests separately", async () => {
