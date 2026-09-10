@@ -32,6 +32,25 @@ export type ContextResponse = {
   data: string;
 };
 
+export type AutoContextOptions = {
+  /** Fuzzy package, product, repository, or documentation-domain hint. */
+  library?: string;
+  /** Exact Context7 ID supplied by the user or another trusted source. */
+  libraryId?: string;
+  /** Version paired with exactly one library or libraryId hint. */
+  version?: string;
+};
+
+export type AutoContextResponse = {
+  data: string;
+  error?: string;
+  libraryIds?: string[];
+  status?: "complete" | "partial" | "not-found" | "failed";
+  retryable?: boolean;
+  retryReason?: string;
+  suggestedAction?: "none" | "retryLater" | "refineQuery" | "checkLibraryOrVersion";
+};
+
 export interface ClientContext {
   clientIp?: string;
   apiKey?: string;

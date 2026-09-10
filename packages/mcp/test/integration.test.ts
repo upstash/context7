@@ -55,7 +55,42 @@ function startStubApi(): Promise<string> {
     const url = new URL(req.url!, "http://stub.local");
     const apiPath = url.pathname.replace(/^\/api/, "");
     requests.push({ path: apiPath, query: url.searchParams, headers: req.headers });
-    if (apiPath === "/v2/libs/search") {
+    if (apiPath === "/v2/context/search") {
+      const query = url.searchParams.get("query") ?? "";
+      if (query.includes("temporary search failure")) {
+        res.statusCode = 503;
+        res.setHeader("Content-Type", "application/json");
+        res.setHeader("X-Context7-Search-Status", "failed");
+        res.setHeader("X-Context7-Retryable", "true");
+        res.setHeader("X-Context7-Retry-Reason", "transient-search-failure");
+        res.setHeader("X-Context7-Suggested-Action", "retry-later");
+        res.end(JSON.stringify({ message: "The documentation search could not be completed." }));
+        return;
+      }
+      if (query.includes("Acme Quantum Router")) {
+        res.statusCode = 404;
+        res.setHeader("Content-Type", "application/json");
+        res.setHeader("X-Context7-Search-Status", "not-found");
+        res.setHeader("X-Context7-Retryable", "false");
+        res.setHeader("X-Context7-Retry-Reason", "no-matching-library");
+        res.setHeader("X-Context7-Suggested-Action", "check-library-or-version");
+        res.end(JSON.stringify({ message: "No documentation library matched the request." }));
+        return;
+      }
+      const explicitIds = query.includes("/vercel/next.js") && query.includes("/facebook/react");
+      const libraryIds = explicitIds
+        ? "/vercel/next.js,/facebook/react"
+        : url.searchParams.get("version")
+          ? "/vercel/next.js/v15"
+          : "/vercel/next.js";
+      res.setHeader("Content-Type", "text/plain");
+      res.setHeader("X-Context7-Library-Ids", libraryIds);
+      res.setHeader("X-Context7-Search-Status", "complete");
+      res.setHeader("X-Context7-Retryable", "false");
+      res.setHeader("X-Context7-Retry-Reason", "none");
+      res.setHeader("X-Context7-Suggested-Action", "none");
+      res.end(`## Documentation for ${libraryIds.split(",")[0]}\n\n${STUB_DOCS}`);
+    } else if (apiPath === "/v2/libs/search") {
       res.setHeader("Content-Type", "application/json");
       res.end(
         JSON.stringify({
@@ -414,6 +449,92 @@ describe.each([
         : { ide: "test-harness", version: "1.0.0" };
     expect(apiCall.headers["x-context7-client-ide"]).toBe(expected.ide);
     expect(apiCall.headers["x-context7-client-version"]).toBe(expected.version);
+  });
+});
+
+describe("single Search API tool mode", () => {
+  let client: Client;
+
+  beforeAll(async () => {
+    client = new Client({ name: "single-tool-test", version: "1.0.0" });
+    await client.connect(
+      new StdioClientTransport({
+        command: process.execPath,
+        args: [DIST, "--tool-mode", "single"],
+        env: childEnv,
+      })
+    );
+  }, 15_000);
+
+  afterAll(async () => {
+    await client.close();
+  });
+
+  beforeEach(() => {
+    requests.length = 0;
+  });
+
+  test("exposes one tool with optional routing hints", async () => {
+    const { tools } = await client.listTools();
+    expect(tools.map((tool) => tool.name)).toEqual(["query-docs"]);
+    expect(Object.keys(tools[0].inputSchema.properties ?? {})).toEqual([
+      "query",
+      "library",
+      "libraryId",
+      "version",
+    ]);
+    expect(tools[0].inputSchema.required).toEqual(["query"]);
+  });
+
+  test("selects and retrieves documentation in one backend request", async () => {
+    const query = "How does the Next.js app router work?";
+    const result = await client.callTool({ name: "query-docs", arguments: { query } });
+
+    expect(result.isError).toBeFalsy();
+    expect((result.content as Array<{ type: string; text: string }>)[0].text).toContain(
+      "Selected library: /vercel/next.js"
+    );
+    expect(requests.map((request) => request.path)).toEqual(["/v2/context/search"]);
+    expect(requests[0].query.get("query")).toBe(query);
+  });
+
+  test("forwards fuzzy library and version hints in the same request", async () => {
+    const result = await client.callTool({
+      name: "query-docs",
+      arguments: { query: "How does caching work?", library: "nextjs", version: "15" },
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(requests.map((request) => request.path)).toEqual(["/v2/context/search"]);
+    expect(requests[0].query.get("library")).toBe("nextjs");
+    expect(requests[0].query.get("version")).toBe("15");
+    expect((result.content as Array<{ type: string; text: string }>)[0].text).toContain(
+      "Selected library: /vercel/next.js/v15"
+    );
+  });
+
+  test("does not turn terminal misses into retry loops", async () => {
+    const result = await client.callTool({
+      name: "query-docs",
+      arguments: { query: "Configure the Acme Quantum Router flux capacitor" },
+    });
+
+    expect(result.isError).toBeFalsy();
+    const text = (result.content as Array<{ type: string; text: string }>)[0].text;
+    expect(text).toContain("No documentation library matched the request");
+    expect(text).toContain("Do not repeat the identical request");
+  });
+
+  test("marks transient failures as retryable MCP tool errors", async () => {
+    const result = await client.callTool({
+      name: "query-docs",
+      arguments: { query: "temporary search failure" },
+    });
+
+    expect(result.isError).toBe(true);
+    expect((result.content as Array<{ type: string; text: string }>)[0].text).toContain(
+      "Retry the same request later"
+    );
   });
 });
 
