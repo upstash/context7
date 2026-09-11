@@ -190,6 +190,21 @@ When `--base-url` targets a custom deployment, setup skips the npm update check 
 | ---------------------- | ------------------------------------------------------------------------------ |
 | Agent skills directory | `docs` skill — guides the agent to use `ctx7 library` and `ctx7 docs` commands |
 
+### Skill installation
+
+`ctx7 setup` installs a skill alongside the rule and MCP config:
+
+- **MCP mode** downloads the `context7-mcp` skill from GitHub. If the download fails, setup falls back to a bundled copy of the skill (`installed (bundled fallback)`) and still completes — the skill install is not a hard failure.
+- **CLI + Skills mode** downloads the `find-docs` skill. If that download fails, setup stops with an error before installing anything.
+
+Skills are written to the agent's skills directory — for example `.agents/skills/` for Codex and other universal agents, `.claude/skills/` for Claude Code, `.cursor/skills/` for Cursor. To retry or install manually after a failure, use the skills command:
+
+```bash
+ctx7 skills install /upstash/context7 context7-mcp
+```
+
+or place the `SKILL.md` manually in the target skills directory. The source file lives at [`skills/context7-mcp/SKILL.md`](https://github.com/upstash/context7/blob/master/skills/context7-mcp/SKILL.md) in the repository.
+
 ### ctx7 remove
 
 Remove the setup written by `ctx7 setup`. By default this removes both MCP setup and CLI setup for the selected agent.

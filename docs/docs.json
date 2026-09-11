@@ -238,7 +238,7 @@
               {
                 "group": "Resources",
                 "expanded": false,
-                "pages": ["resources/developer", "resources/troubleshooting"]
+                "pages": ["resources/developer", "resources/technical-reference", "resources/troubleshooting"]
               }
             ]
           }

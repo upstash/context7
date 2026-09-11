@@ -36,3 +36,12 @@ How do I set up Next.js 14 middleware? use context7
 ```
 
 Context7 will automatically match the appropriate version.
+
+## Query Strategy
+
+Context7 grounds your assistant with up-to-date docs, but the quality of what it retrieves depends on how the retrieval is scoped. These habits keep the retrieved context minimal and relevant:
+
+- **Retrieve only when needed** — Context7 is for library, framework, SDK, API, and CLI-tool questions. Skip it for refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.
+- **One concept per query** — scope each query to a single topic. Split multi-topic questions (e.g. "routing and auth and caching") into a separate query per concept, unless the question is about how the concepts interact. Combined queries dilute ranking and return shallow results for each topic.
+- **Be specific, not vague** — a query like `"How to set up authentication with JWT in Express.js"` returns far better results than `"auth"` or `"hooks"`.
+- **Keep the context relevant** — don't include sensitive or confidential information in queries, and use the best-matching library ID (and version-specific ID when a version matters) so you don't pull docs for the wrong package.
