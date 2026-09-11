@@ -92,9 +92,13 @@ describe("automatic context response controls", () => {
     const fetchMock = vi.fn(async () => new Response("## Documentation"));
     vi.stubGlobal("fetch", fetchMock);
 
-    await fetchAutoLibraryContext("Compare esbuild and Bun bundling commands", {}, {
-      libraries: ["esbuild", "Bun"],
-    });
+    await fetchAutoLibraryContext(
+      "Compare esbuild and Bun bundling commands",
+      {},
+      {
+        libraries: ["esbuild", "Bun"],
+      }
+    );
 
     expect(fetchMock).toHaveBeenCalledOnce();
     const url = new URL(String(fetchMock.mock.calls[0]?.[0]));

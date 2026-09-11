@@ -513,6 +513,23 @@ describe("single Search API tool mode", () => {
     );
   });
 
+  test("accepts multiple fuzzy package hints with shared version context", async () => {
+    const query = "In Prisma ORM 7, configure prisma-client with @prisma/adapter-pg";
+    const result = await client.callTool({
+      name: "query-docs",
+      arguments: {
+        query,
+        libraries: ["Prisma ORM", "@prisma/adapter-pg"],
+        version: "7",
+      },
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(requests.map((request) => request.path)).toEqual(["/v2/context/search"]);
+    expect(requests[0].query.getAll("library")).toEqual(["Prisma ORM", "@prisma/adapter-pg"]);
+    expect(requests[0].query.get("version")).toBe("7");
+  });
+
   test("does not turn terminal misses into retry loops", async () => {
     const result = await client.callTool({
       name: "query-docs",

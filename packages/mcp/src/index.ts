@@ -248,9 +248,7 @@ Call this tool exactly once per user question. This still means one invocation w
                 ),
               libraryIds: z
                 .array(
-                  z
-                    .string()
-                    .regex(/^\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(?:[\/@][A-Za-z0-9_.-]+)?$/)
+                  z.string().regex(/^\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(?:[\/@][A-Za-z0-9_.-]+)?$/)
                 )
                 .min(1)
                 .max(4)
@@ -263,19 +261,28 @@ Call this tool exactly once per user question. This still means one invocation w
                 .regex(/^v?\d+(?:[._]\d+){0,2}(?:[-+][a-z0-9.-]+)?$/i)
                 .optional()
                 .describe(
-                  "Optional library version supplied by the user. Requires one library or libraryId hint."
+                  "Optional version supplied by the user. It may accompany one or more fuzzy library names, but at most one exact libraryId. For fuzzy names it is retrieval context, so include the complete version-qualified product wording in query."
                 ),
             })
             .superRefine((value, context) => {
               const fuzzyHintCount = value.libraries?.length ?? 0;
               const exactHintCount = value.libraryIds?.length ?? 0;
               if (fuzzyHintCount > 0 && exactHintCount > 0) {
-                context.addIssue({ code: "custom", message: "Use library names or library IDs, not both" });
-              }
-              if (value.version && fuzzyHintCount + exactHintCount !== 1) {
                 context.addIssue({
                   code: "custom",
-                  message: "Version requires exactly one library or libraryId hint",
+                  message: "Use library names or library IDs, not both",
+                });
+              }
+              if (value.version && fuzzyHintCount + exactHintCount === 0) {
+                context.addIssue({
+                  code: "custom",
+                  message: "Version requires a library or libraryId hint",
+                });
+              }
+              if (value.version && exactHintCount > 1) {
+                context.addIssue({
+                  code: "custom",
+                  message: "Version can accompany at most one exact libraryId",
                 });
               }
             })
