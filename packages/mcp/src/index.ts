@@ -177,6 +177,21 @@ function aliasArgs(aliases: AliasMap) {
   };
 }
 
+function normalizeAutoQueryArgs(value: unknown) {
+  const aliased = aliasArgs(AUTO_QUERY_ALIASES)(value);
+  if (!aliased || typeof aliased !== "object") return aliased;
+  const args: Record<string, unknown> = { ...aliased };
+  if (typeof args.library === "string" && !("libraries" in args)) {
+    args.libraries = [args.library];
+  }
+  if (typeof args.libraryId === "string" && !("libraryIds" in args)) {
+    args.libraryIds = [args.libraryId];
+  }
+  delete args.library;
+  delete args.libraryId;
+  return args;
+}
+
 function createMcpServer() {
   const server = new McpServer(
     {
@@ -213,30 +228,35 @@ Do not use for: refactoring, writing scripts from scratch, debugging business lo
 
 Context7 selects up to four relevant documentation libraries, searches their namespaces in parallel, deduplicates the evidence, and reranks the combined snippets. Explicit Context7 IDs are used directly within the response safety cap.
 
-Call this tool exactly once per user question. Put the complete question in query, including product names, versions, languages, and all concepts needed to answer. Optional library and version fields are routing hints only: pass them when the user supplied that information, but do not guess a Context7 library ID. Use the returned context to answer without calling this tool again.`,
+Call this tool exactly once per user question. This still means one invocation when the question compares, integrates, or migrates between multiple libraries: keep every named product in the single complete query and, when useful, put the user-supplied names in libraries. Never split one user question into parallel or sequential query-docs calls. Put the complete question in query, including product names, versions, languages, and all concepts needed to answer. Optional library/libraries and version fields are routing hints only; do not guess a Context7 library ID. Use the returned context to answer without calling this tool again.`,
         inputSchema: z.preprocess(
-          aliasArgs(AUTO_QUERY_ALIASES),
+          normalizeAutoQueryArgs,
           z
             .object({
               query: z
                 .string()
                 .describe(
-                  "The user's complete implementation question, including the exact library or product name, version, language, and all requested concepts. Do not shorten or split it. Do not include secrets, personal data, or proprietary code."
+                  "The user's complete implementation question, including every named library or product, version, language, and all requested concepts. For comparisons, integrations, and migrations, put all products here and make one tool call. Do not shorten or split it. Do not include secrets, personal data, or proprietary code."
                 ),
-              library: z
-                .string()
+              libraries: z
+                .array(z.string().min(1).max(120))
                 .min(1)
-                .max(120)
+                .max(4)
                 .optional()
                 .describe(
-                  "Optional fuzzy package, product, repository, or documentation-domain hint supplied by the user. The name does not need to be exact."
+                  "Optional fuzzy product names supplied by the user for a comparison, integration, or migration. Keep the complete multi-product question in query and make only one tool call."
                 ),
-              libraryId: z
-                .string()
-                .regex(/^\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(?:[\/@][A-Za-z0-9_.-]+)?$/)
+              libraryIds: z
+                .array(
+                  z
+                    .string()
+                    .regex(/^\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(?:[\/@][A-Za-z0-9_.-]+)?$/)
+                )
+                .min(1)
+                .max(4)
                 .optional()
                 .describe(
-                  "Optional exact Context7 library ID supplied by the user or a trusted source. Never guess this value."
+                  "Optional exact Context7 IDs supplied by the user or trusted sources for one multi-library question. Never guess these values."
                 ),
               version: z
                 .string()
@@ -247,13 +267,15 @@ Call this tool exactly once per user question. Put the complete question in quer
                 ),
             })
             .superRefine((value, context) => {
-              if (value.library && value.libraryId) {
-                context.addIssue({ code: "custom", message: "Use library or libraryId, not both" });
+              const fuzzyHintCount = value.libraries?.length ?? 0;
+              const exactHintCount = value.libraryIds?.length ?? 0;
+              if (fuzzyHintCount > 0 && exactHintCount > 0) {
+                context.addIssue({ code: "custom", message: "Use library names or library IDs, not both" });
               }
-              if (value.version && !value.library && !value.libraryId) {
+              if (value.version && fuzzyHintCount + exactHintCount !== 1) {
                 context.addIssue({
                   code: "custom",
-                  message: "Version requires a library or libraryId hint",
+                  message: "Version requires exactly one library or libraryId hint",
                 });
               }
             })
@@ -268,16 +290,21 @@ Call this tool exactly once per user question. Put the complete question in quer
       async (
         {
           query,
-          library,
-          libraryId,
+          libraries,
+          libraryIds,
           version,
-        }: { query: string; library?: string; libraryId?: string; version?: string },
+        }: {
+          query: string;
+          libraries?: string[];
+          libraryIds?: string[];
+          version?: string;
+        },
         toolCtx
       ) => {
         const ctx = getClientContext(toolCtx);
         const response = await fetchAutoLibraryContext(query, ctx, {
-          library,
-          libraryId,
+          libraries,
+          libraryIds,
           version,
         });
         maybeElicitAuthSignIn(server, ctx);

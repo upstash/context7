@@ -88,6 +88,19 @@ describe("automatic context response controls", () => {
     expect(url.searchParams.has("libraryId")).toBe(false);
   });
 
+  it("forwards multiple library hints in one Search API request", async () => {
+    const fetchMock = vi.fn(async () => new Response("## Documentation"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await fetchAutoLibraryContext("Compare esbuild and Bun bundling commands", {}, {
+      libraries: ["esbuild", "Bun"],
+    });
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const url = new URL(String(fetchMock.mock.calls[0]?.[0]));
+    expect(url.searchParams.getAll("library")).toEqual(["esbuild", "Bun"]);
+  });
+
   it("preserves terminal miss metadata so agents do not retry the same call", async () => {
     vi.stubGlobal(
       "fetch",

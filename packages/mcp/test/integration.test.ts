@@ -479,8 +479,8 @@ describe("single Search API tool mode", () => {
     expect(tools.map((tool) => tool.name)).toEqual(["query-docs"]);
     expect(Object.keys(tools[0].inputSchema.properties ?? {})).toEqual([
       "query",
-      "library",
-      "libraryId",
+      "libraries",
+      "libraryIds",
       "version",
     ]);
     expect(tools[0].inputSchema.required).toEqual(["query"]);
@@ -501,7 +501,7 @@ describe("single Search API tool mode", () => {
   test("forwards fuzzy library and version hints in the same request", async () => {
     const result = await client.callTool({
       name: "query-docs",
-      arguments: { query: "How does caching work?", library: "nextjs", version: "15" },
+      arguments: { query: "How does caching work?", libraries: ["nextjs"], version: "15" },
     });
 
     expect(result.isError).toBeFalsy();

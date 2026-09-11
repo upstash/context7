@@ -220,8 +220,12 @@ export async function fetchAutoLibraryContext(
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/context/search`);
     url.searchParams.set("query", query);
     url.searchParams.set("type", "txt");
-    if (options.library) url.searchParams.set("library", options.library);
-    if (options.libraryId) url.searchParams.set("libraryId", options.libraryId);
+    for (const library of options.libraries ?? (options.library ? [options.library] : [])) {
+      url.searchParams.append("library", library);
+    }
+    for (const libraryId of options.libraryIds ?? (options.libraryId ? [options.libraryId] : [])) {
+      url.searchParams.append("libraryId", libraryId);
+    }
     if (options.version) url.searchParams.set("version", options.version);
 
     const response = await fetch(url, {

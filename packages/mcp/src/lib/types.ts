@@ -35,8 +35,12 @@ export type ContextResponse = {
 export type AutoContextOptions = {
   /** Fuzzy package, product, repository, or documentation-domain hint. */
   library?: string;
+  /** Multiple fuzzy hints for comparison, integration, or migration questions. */
+  libraries?: string[];
   /** Exact Context7 ID supplied by the user or another trusted source. */
   libraryId?: string;
+  /** Multiple exact Context7 IDs supplied by the user or another trusted source. */
+  libraryIds?: string[];
   /** Version paired with exactly one library or libraryId hint. */
   version?: string;
 };
