@@ -2,35 +2,24 @@ import { access } from "fs/promises";
 import { join } from "path";
 import { homedir } from "os";
 
-export type SetupAgent = "claude" | "cursor" | "opencode" | "codex" | "antigravity" | "gemini";
-export type AuthMode = "oauth" | "api-key";
 export type Transport = "http" | "stdio";
 
-export interface AuthOptions {
-  mode: AuthMode;
-  apiKey?: string;
-}
-
-export const SETUP_AGENT_NAMES: Record<SetupAgent, string> = {
-  claude: "Claude Code",
-  cursor: "Cursor",
-  opencode: "OpenCode",
-  codex: "Codex",
-  antigravity: "Antigravity",
-  gemini: "Gemini CLI",
-};
+export type AuthOptions =
+  | { mode: "api-key"; apiKey: string }
+  | { mode: "oauth" | "none"; apiKey?: never };
+export type AuthMode = AuthOptions["mode"];
 
 export const AUTH_MODE_LABELS: Record<AuthMode, string> = {
   oauth: "OAuth",
   "api-key": "API Key",
+  none: "no authentication",
 };
 
-const MCP_BASE_URL = "https://mcp.context7.com";
 export const STDIO_PACKAGE = "@upstash/context7-mcp";
 
 function stdioArgs(auth: AuthOptions): string[] {
   const args = ["-y", STDIO_PACKAGE];
-  if (auth.mode === "api-key" && auth.apiKey) {
+  if (auth.mode === "api-key") {
     args.push("--api-key", auth.apiKey);
   }
   return args;
@@ -51,22 +40,55 @@ function claudeGlobalMcpPath(): string {
   return join(homedir(), ".claude.json");
 }
 
+export function resolveVscodeUserDir(
+  platform: NodeJS.Platform = process.platform,
+  home: string = homedir(),
+  env: { APPDATA?: string; XDG_CONFIG_HOME?: string } = {
+    APPDATA: process.env.APPDATA,
+    XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME,
+  }
+): string {
+  if (platform === "win32") {
+    return join(env.APPDATA || join(home, "AppData", "Roaming"), "Code", "User");
+  }
+  if (platform === "darwin") {
+    return join(home, "Library", "Application Support", "Code", "User");
+  }
+  return join(env.XDG_CONFIG_HOME || join(home, ".config"), "Code", "User");
+}
+
+export function resolveDevinConfigDir(
+  platform: NodeJS.Platform = process.platform,
+  home: string = homedir(),
+  env: { APPDATA?: string } = { APPDATA: process.env.APPDATA }
+): string {
+  if (platform === "win32") {
+    return join(env.APPDATA || join(home, "AppData", "Roaming"), "devin");
+  }
+  return join(home, ".config", "devin");
+}
+
 export type RuleType =
   | {
       kind: "file";
       dir: (scope: "project" | "global") => string;
       filename: string;
+      contentPrefix?: string;
     }
   | { kind: "append"; file: (scope: "project" | "global") => string; sectionMarker: string };
 
 export interface AgentConfig {
-  name: SetupAgent;
   displayName: string;
+  setupDescription?: string;
   mcp: {
     projectPaths: string[];
     globalPaths: string[];
     configKey: string;
-    buildEntry: (auth: AuthOptions, transport: Transport) => Record<string, unknown>;
+    buildEntry: (
+      auth: AuthOptions,
+      transport: Transport,
+      mcpUrl: string
+    ) => Record<string, unknown>;
   };
   rule: RuleType;
   skill: {
@@ -77,10 +99,6 @@ export interface AgentConfig {
     projectPaths: string[];
     globalPaths: string[];
   };
-}
-
-function mcpUrl(auth: AuthOptions): string {
-  return auth.mode === "oauth" ? `${MCP_BASE_URL}/mcp/oauth` : `${MCP_BASE_URL}/mcp`;
 }
 
 /**
@@ -95,19 +113,16 @@ function mcpUrl(auth: AuthOptions): string {
  * sent. The server accepts the legacy `CONTEXT7_API_KEY` header too, so existing
  * configs keep working.
  *
- * Guarded on a non-empty key because the server rejects an empty bearer, while
- * omitting the header falls back to anonymous access.
  */
 function withHeaders(base: Record<string, unknown>, auth: AuthOptions): Record<string, unknown> {
-  if (auth.mode === "api-key" && auth.apiKey) {
+  if (auth.mode === "api-key") {
     return { ...base, headers: { Authorization: `Bearer ${auth.apiKey}` } };
   }
   return base;
 }
 
-const agents: Record<SetupAgent, AgentConfig> = {
+const agents = {
   claude: {
-    name: "claude",
     displayName: "Claude Code",
     mcp: {
       projectPaths: [".mcp.json"],
@@ -115,10 +130,8 @@ const agents: Record<SetupAgent, AgentConfig> = {
         return [claudeGlobalMcpPath()];
       },
       configKey: "mcpServers",
-      buildEntry: (auth, transport) =>
-        transport === "stdio"
-          ? stdioEntry(auth)
-          : withHeaders({ type: "http", url: mcpUrl(auth) }, auth),
+      buildEntry: (auth, transport, mcpUrl) =>
+        transport === "stdio" ? stdioEntry(auth) : withHeaders({ type: "http", url: mcpUrl }, auth),
     },
     rule: {
       kind: "file",
@@ -140,20 +153,20 @@ const agents: Record<SetupAgent, AgentConfig> = {
   },
 
   cursor: {
-    name: "cursor",
     displayName: "Cursor",
     mcp: {
       projectPaths: [join(".cursor", "mcp.json")],
       globalPaths: [join(homedir(), ".cursor", "mcp.json")],
       configKey: "mcpServers",
-      buildEntry: (auth, transport) =>
-        transport === "stdio" ? stdioEntry(auth) : withHeaders({ url: mcpUrl(auth) }, auth),
+      buildEntry: (auth, transport, mcpUrl) =>
+        transport === "stdio" ? stdioEntry(auth) : withHeaders({ url: mcpUrl }, auth),
     },
     rule: {
       kind: "file",
       dir: (scope) =>
         scope === "global" ? join(homedir(), ".cursor", "rules") : join(".cursor", "rules"),
       filename: "context7.mdc",
+      contentPrefix: `---\nalwaysApply: true\n---\n\n`,
     },
     skill: {
       name: "context7-mcp",
@@ -166,8 +179,104 @@ const agents: Record<SetupAgent, AgentConfig> = {
     },
   },
 
+  vscode: {
+    displayName: "VS Code",
+    mcp: {
+      projectPaths: [join(".vscode", "mcp.json")],
+      get globalPaths() {
+        return [join(resolveVscodeUserDir(), "mcp.json")];
+      },
+      configKey: "servers",
+      buildEntry: (auth, transport, mcpUrl) =>
+        transport === "stdio"
+          ? { type: "stdio", ...stdioEntry(auth) }
+          : withHeaders({ type: "http", url: mcpUrl }, auth),
+    },
+    rule: {
+      kind: "file",
+      dir: (scope) =>
+        scope === "global"
+          ? join(resolveVscodeUserDir(), "prompts")
+          : join(".github", "instructions"),
+      filename: "context7.instructions.md",
+      contentPrefix: `---\napplyTo: "**"\n---\n\n`,
+    },
+    skill: {
+      name: "context7-mcp",
+      dir: (scope) =>
+        scope === "global" ? join(homedir(), ".agents", "skills") : join(".agents", "skills"),
+    },
+    detect: {
+      projectPaths: [".vscode"],
+      get globalPaths() {
+        return [resolveVscodeUserDir()];
+      },
+    },
+  },
+
+  devin: {
+    displayName: "Devin",
+    mcp: {
+      projectPaths: [join(".devin", "mcp_config.json")],
+      get globalPaths() {
+        return [join(resolveDevinConfigDir(), "mcp_config.json")];
+      },
+      configKey: "mcpServers",
+      buildEntry: (auth, transport, mcpUrl) =>
+        transport === "stdio"
+          ? stdioEntry(auth)
+          : withHeaders({ transport: "http", url: mcpUrl }, auth),
+    },
+    rule: {
+      kind: "append",
+      file: (scope) =>
+        scope === "global" ? join(resolveDevinConfigDir(), "AGENTS.md") : "AGENTS.md",
+      sectionMarker: "<!-- context7 -->",
+    },
+    skill: {
+      name: "context7-mcp",
+      dir: (scope) =>
+        scope === "global" ? join(resolveDevinConfigDir(), "skills") : join(".devin", "skills"),
+    },
+    detect: {
+      projectPaths: [".devin"],
+      get globalPaths() {
+        return [resolveDevinConfigDir()];
+      },
+    },
+  },
+
+  copilot: {
+    displayName: "GitHub Copilot CLI",
+    mcp: {
+      projectPaths: [".mcp.json"],
+      globalPaths: [join(homedir(), ".copilot", "mcp-config.json")],
+      configKey: "mcpServers",
+      buildEntry: (auth, transport, mcpUrl) =>
+        transport === "stdio"
+          ? { type: "stdio", ...stdioEntry(auth), tools: ["*"] }
+          : withHeaders({ type: "http", url: mcpUrl, tools: ["*"] }, auth),
+    },
+    rule: {
+      kind: "append",
+      file: (scope) =>
+        scope === "global" ? join(homedir(), ".copilot", "AGENTS.md") : "AGENTS.md",
+      sectionMarker: "<!-- context7 -->",
+    },
+    skill: {
+      name: "context7-mcp",
+      dir: (scope) =>
+        scope === "global" ? join(homedir(), ".agents", "skills") : join(".agents", "skills"),
+    },
+    detect: {
+      // Copilot shares .mcp.json with Claude Code, so project ownership cannot
+      // be inferred safely. Project setup remains available via --copilot.
+      projectPaths: [],
+      globalPaths: [join(homedir(), ".copilot")],
+    },
+  },
+
   opencode: {
-    name: "opencode",
     displayName: "OpenCode",
     mcp: {
       projectPaths: ["opencode.json", "opencode.jsonc", ".opencode.json", ".opencode.jsonc"],
@@ -178,10 +287,10 @@ const agents: Record<SetupAgent, AgentConfig> = {
         join(homedir(), ".config", "opencode", ".opencode.jsonc"),
       ],
       configKey: "mcp",
-      buildEntry: (auth, transport) =>
+      buildEntry: (auth, transport, mcpUrl) =>
         transport === "stdio"
           ? { type: "local", command: ["npx", ...stdioArgs(auth)], enabled: true }
-          : withHeaders({ type: "remote", url: mcpUrl(auth), enabled: true }, auth),
+          : withHeaders({ type: "remote", url: mcpUrl, enabled: true }, auth),
     },
     rule: {
       kind: "append",
@@ -201,16 +310,13 @@ const agents: Record<SetupAgent, AgentConfig> = {
   },
 
   codex: {
-    name: "codex",
     displayName: "Codex",
     mcp: {
       projectPaths: [join(".codex", "config.toml")],
       globalPaths: [join(homedir(), ".codex", "config.toml")],
       configKey: "mcp_servers",
-      buildEntry: (auth, transport) =>
-        transport === "stdio"
-          ? stdioEntry(auth)
-          : withHeaders({ type: "http", url: mcpUrl(auth) }, auth),
+      buildEntry: (auth, transport, mcpUrl) =>
+        transport === "stdio" ? stdioEntry(auth) : withHeaders({ type: "http", url: mcpUrl }, auth),
     },
     rule: {
       kind: "append",
@@ -233,14 +339,14 @@ const agents: Record<SetupAgent, AgentConfig> = {
   // ~/.gemini/config/mcp_config.json globally; there is no project-level MCP
   // config, so projectPaths is empty and setupAgent falls back to global.
   antigravity: {
-    name: "antigravity",
     displayName: "Antigravity",
+    setupDescription: "Set up for Antigravity (.agent/skills)",
     mcp: {
       projectPaths: [],
       globalPaths: [join(homedir(), ".gemini", "config", "mcp_config.json")],
       configKey: "mcpServers",
-      buildEntry: (auth, transport) =>
-        transport === "stdio" ? stdioEntry(auth) : withHeaders({ serverUrl: mcpUrl(auth) }, auth),
+      buildEntry: (auth, transport, mcpUrl) =>
+        transport === "stdio" ? stdioEntry(auth) : withHeaders({ serverUrl: mcpUrl }, auth),
     },
     rule: {
       kind: "append",
@@ -259,14 +365,13 @@ const agents: Record<SetupAgent, AgentConfig> = {
   },
 
   gemini: {
-    name: "gemini",
     displayName: "Gemini CLI",
     mcp: {
       projectPaths: [join(".gemini", "settings.json")],
       globalPaths: [join(homedir(), ".gemini", "settings.json")],
       configKey: "mcpServers",
-      buildEntry: (auth, transport) =>
-        transport === "stdio" ? stdioEntry(auth) : withHeaders({ httpUrl: mcpUrl(auth) }, auth),
+      buildEntry: (auth, transport, mcpUrl) =>
+        transport === "stdio" ? stdioEntry(auth) : withHeaders({ httpUrl: mcpUrl }, auth),
     },
     rule: {
       kind: "append",
@@ -283,7 +388,9 @@ const agents: Record<SetupAgent, AgentConfig> = {
       globalPaths: [join(homedir(), ".gemini")],
     },
   },
-};
+} satisfies Record<string, AgentConfig>;
+
+export type SetupAgent = keyof typeof agents;
 
 export function getAgent(name: SetupAgent): AgentConfig {
   return agents[name];
@@ -303,12 +410,13 @@ async function pathExists(p: string): Promise<boolean> {
 export async function detectAgents(scope: "project" | "global"): Promise<SetupAgent[]> {
   const detected: SetupAgent[] = [];
 
-  for (const agent of Object.values(agents)) {
+  for (const name of ALL_AGENT_NAMES) {
+    const agent = agents[name];
     const paths = scope === "global" ? agent.detect.globalPaths : agent.detect.projectPaths;
     for (const p of paths) {
       const fullPath = scope === "global" ? p : join(process.cwd(), p);
       if (await pathExists(fullPath)) {
-        detected.push(agent.name);
+        detected.push(name);
         break;
       }
     }

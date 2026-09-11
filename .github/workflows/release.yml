@@ -14,6 +14,9 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+    outputs:
+      published: ${{ steps.changesets.outputs.published }}
+      publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v7
@@ -48,3 +51,68 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-mcpb:
+    name: Upload mcpb Bundle to GitHub Release
+    needs: release
+    if: needs.release.outputs.published == 'true' && contains(needs.release.outputs.publishedPackages, '"@upstash/context7-mcp"')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build mcpb bundle
+        working-directory: packages/mcp
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          jq --arg v "$VERSION" '.version = $v' mcpb/manifest.json > manifest.tmp && mv manifest.tmp mcpb/manifest.json
+          npm install -g @anthropic-ai/mcpb
+          pnpm run pack-mcpb
+
+      - name: Smoke-test bundle
+        working-directory: packages/mcp
+        run: |
+          unzip -q mcpb/context7.mcpb -d /tmp/mcpb-smoke
+          printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"1"}}}' \
+            | node /tmp/mcpb-smoke/server/dist/index.mjs | grep -q '"serverInfo"'
+
+      - name: Upload to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Dedicated slash-free tag: the MCP Registry rejects mcpb URLs whose
+        # release tag contains '/', which changesets tags (@scope/pkg@x.y.z) do.
+        run: |
+          VERSION=$(node -p "require('./packages/mcp/package.json').version")
+          TAG="mcpb-v$VERSION"
+          gh release view "$TAG" -R ${{ github.repository }} >/dev/null 2>&1 || \
+            gh release create "$TAG" --latest=false \
+              --title "context7.mcpb $VERSION" \
+              --notes "MCP Bundle for [@upstash/context7-mcp@$VERSION](https://github.com/${{ github.repository }}/releases/tag/%40upstash%2Fcontext7-mcp%40$VERSION)" \
+              -R ${{ github.repository }}
+          gh release upload "$TAG" packages/mcp/mcpb/context7.mcpb --clobber -R ${{ github.repository }}
+
+  publish-mcp-registry:
+    name: Publish to MCP Registry
+    needs: [release, publish-mcpb]
+    # changesets pushes tags with GITHUB_TOKEN, which cannot trigger other
+    # workflows — so the registry publish must chain off this job directly.
+    if: needs.release.outputs.published == 'true' && contains(needs.release.outputs.publishedPackages, '"@upstash/context7-mcp"')
+    permissions:
+      id-token: write
+      contents: read
+    uses: ./.github/workflows/mcp-registry.yml

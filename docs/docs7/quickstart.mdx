@@ -1,0 +1,83 @@
+---
+title: Quickstart
+description: Preview and publish a Docs7 site
+---
+
+## 1. Add your docs
+
+In a new folder, create a `docs.json` file:
+
+<Tip>
+You can skip this step if your project already has a `docs.json` or `mint.json` file.
+</Tip>
+
+```json docs.json
+{
+  "name": "My docs",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Guide",
+        "pages": ["index"]
+      }
+    ]
+  }
+}
+```
+
+Then add the first page:
+
+```mdx index.mdx
+---
+title: Introduction
+description: Welcome to my docs
+---
+
+Hello, world.
+```
+
+## 2. Install the CLI
+
+Install the package globally:
+
+```bash
+npm install -g @upstash/docs7
+```
+
+This adds the `docs7` command to your terminal.
+
+## 3. Start the dev server
+
+Run this from the folder that contains `docs.json`:
+
+```bash
+docs7 dev
+```
+
+Open [http://localhost:3333](http://localhost:3333). The page reloads when you edit a file.
+
+The first run downloads the renderer and caches it for later. You can also pass a project folder or use another port:
+
+```bash
+docs7 dev ./docs --port 4000
+```
+
+<Note>
+  You can also run the CLI without installing it: `npx @upstash/docs7 dev`.
+</Note>
+
+## 4. Publish
+
+1. Push the project to GitHub.
+2. Open the **Docs7** tab in your Context7 teamspace.
+3. Click **Add New Site** and choose the repository.
+4. Set the production branch and the folder that contains `docs.json`.
+5. Click **Publish Site**.
+
+<Frame>
+<img src="/images/docs7/publish-a-site.png" alt="Publish a site in Docs7"></img>
+</Frame>
+
+Every push to the production branch creates a new deployment. Pull requests get a preview site.
+
+Next, learn [how production and preview builds work](/docs7/builds) or browse the [MDX components](/docs7/components/callouts).

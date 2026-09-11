@@ -4,6 +4,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { StdioClientTransport, getDefaultEnvironment } from "@modelcontextprotocol/client/stdio";
 import { execSync } from "node:child_process";
 import { spawn, type ChildProcess } from "node:child_process";
+import { createDecipheriv } from "node:crypto";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -17,8 +18,30 @@ import path from "node:path";
 
 const PKG_ROOT = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 const DIST = path.join(PKG_ROOT, "dist", "index.js");
+const MODULE_LOAD_RECORDER = path.join(PKG_ROOT, "test", "fixtures", "module-load-recorder.mjs");
 const BASE_PORT = 43117;
 const STUB_DOCS = "stub docs text";
+const EMPTY_CONTEXT_QUERY = "force-empty-context";
+const NO_RESULTS_QUERY = "force-no-results";
+const UPSTREAM_ERROR_QUERY = "force-upstream-error";
+const INVALID_JSON_QUERY = "force-invalid-json";
+const CLIENT_IP_ASSERTION_KEY = "0123456789abcdef".repeat(4);
+
+function decryptClientIpAssertion(value: string): string {
+  const [version, timestamp, nonceHex, ciphertextAndTagHex] = value.split(":");
+  const ciphertextAndTag = Buffer.from(ciphertextAndTagHex, "hex");
+  const decipher = createDecipheriv(
+    "aes-256-gcm",
+    Buffer.from(CLIENT_IP_ASSERTION_KEY, "hex"),
+    Buffer.from(nonceHex, "hex")
+  );
+  decipher.setAAD(Buffer.from(`${version}:${timestamp}`, "utf8"));
+  decipher.setAuthTag(ciphertextAndTag.subarray(-16));
+  return Buffer.concat([
+    decipher.update(ciphertextAndTag.subarray(0, -16)),
+    decipher.final(),
+  ]).toString("utf8");
+}
 
 interface RecordedRequest {
   path: string;
@@ -31,6 +54,29 @@ let stubServer: http.Server;
 let childEnv: Record<string, string>;
 let httpChild: ChildProcess;
 let httpUrl: string;
+let metricsUrl: string;
+
+function operationCount(exported: string, method: string): number {
+  return exported
+    .split("\n")
+    .filter(
+      (line) =>
+        line.startsWith("mcp_server_operation_duration_count{") &&
+        line.includes(`mcp_method_name="${method}"`)
+    )
+    .reduce((total, line) => total + Number(line.slice(line.lastIndexOf(" ") + 1)), 0);
+}
+
+function getFreePort(): Promise<number> {
+  const server = http.createServer();
+  return new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address() as { port: number };
+      server.close((error) => (error ? reject(error) : resolve(address.port)));
+    });
+  });
+}
 
 function startStubApi(): Promise<string> {
   stubServer = http.createServer((req, res) => {
@@ -39,6 +85,14 @@ function startStubApi(): Promise<string> {
     requests.push({ path: apiPath, query: url.searchParams, headers: req.headers });
     if (apiPath === "/v2/libs/search") {
       res.setHeader("Content-Type", "application/json");
+      if (url.searchParams.get("query") === INVALID_JSON_QUERY) {
+        res.end("not-json");
+        return;
+      }
+      if (url.searchParams.get("query") === NO_RESULTS_QUERY) {
+        res.end(JSON.stringify({ results: [] }));
+        return;
+      }
       res.end(
         JSON.stringify({
           results: [
@@ -56,33 +110,55 @@ function startStubApi(): Promise<string> {
         })
       );
     } else if (apiPath === "/v2/context") {
+      if (url.searchParams.get("query") === UPSTREAM_ERROR_QUERY) {
+        res.statusCode = 503;
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ message: "stub upstream failure" }));
+        return;
+      }
       res.setHeader("Content-Type", "text/plain");
-      res.end(STUB_DOCS);
+      res.end(url.searchParams.get("query") === EMPTY_CONTEXT_QUERY ? "" : STUB_DOCS);
     } else {
       res.statusCode = 404;
       res.end();
     }
   });
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
+    const handleListenError = (error: Error) => {
+      stubServer.close();
+      reject(error);
+    };
+    stubServer.once("error", handleListenError);
     stubServer.listen(0, "127.0.0.1", () => {
+      stubServer.off("error", handleListenError);
       const address = stubServer.address() as { port: number };
       resolve(`http://127.0.0.1:${address.port}/api`);
     });
   });
 }
 
-function startHttpChild(port = BASE_PORT): Promise<{ child: ChildProcess; url: string }> {
+interface HttpChildOptions {
+  environment?: Record<string, string>;
+  nodeArgs?: string[];
+  port?: number;
+}
+
+function startHttpChild(
+  options: HttpChildOptions = {}
+): Promise<{ child: ChildProcess; stderr: () => string; url: string }> {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [DIST, "--transport", "http", "--port", String(port)], {
-      env: childEnv,
-      stdio: ["ignore", "ignore", "pipe"],
-    });
+    const port = options.port ?? BASE_PORT;
+    const child = spawn(
+      process.execPath,
+      [...(options.nodeArgs ?? []), DIST, "--transport", "http", "--port", String(port)],
+      { env: options.environment ?? childEnv, stdio: ["ignore", "ignore", "pipe"] }
+    );
     let stderr = "";
     child.stderr!.on("data", (chunk: Buffer) => {
       stderr += chunk.toString();
       // The binary retries on EADDRINUSE, so parse the actual port it settled on.
       const match = stderr.match(/running on HTTP at (http:\/\/localhost:\d+\/mcp)/);
-      if (match) resolve({ child, url: match[1] });
+      if (match) resolve({ child, stderr: () => stderr, url: match[1] });
     });
     child.once("exit", (code) => {
       reject(new Error(`HTTP server exited before listening (code ${code}): ${stderr}`));
@@ -93,9 +169,17 @@ function startHttpChild(port = BASE_PORT): Promise<{ child: ChildProcess; url: s
 beforeAll(async () => {
   execSync("pnpm build", { cwd: PKG_ROOT, stdio: "pipe" });
   const stubUrl = await startStubApi();
+  const metricsPort = await getFreePort();
+  metricsUrl = `http://127.0.0.1:${metricsPort}/metrics`;
   // getDefaultEnvironment() inherits only safe vars, so a real
   // CONTEXT7_API_KEY in the parent shell cannot leak into the children.
-  childEnv = { ...getDefaultEnvironment(), CONTEXT7_API_URL: stubUrl };
+  childEnv = {
+    ...getDefaultEnvironment(),
+    CONTEXT7_API_URL: stubUrl,
+    OTEL_EXPORTER_PROMETHEUS_HOST: "127.0.0.1",
+    OTEL_EXPORTER_PROMETHEUS_PORT: String(metricsPort),
+    MCP_CLIENT_IP_ASSERTION_KEY: CLIENT_IP_ASSERTION_KEY,
+  };
   ({ child: httpChild, url: httpUrl } = await startHttpChild());
 }, 120_000);
 
@@ -105,7 +189,7 @@ afterAll(() => {
 });
 
 test("reports the bound port when port zero requests an ephemeral port", async () => {
-  const { child, url } = await startHttpChild(0);
+  const { child, url } = await startHttpChild({ port: 0 });
   try {
     expect(new URL(url).port).not.toBe("0");
 
@@ -127,12 +211,167 @@ async function connect(transportKind: "http" | "stdio", era: "modern" | "legacy"
       ? new StreamableHTTPClientTransport(new URL(httpUrl), {
           // Parseable UA so the legacy-HTTP fallback path (no protocol client
           // info) is observable; modern clients must beat it via the envelope.
-          requestInit: { headers: { "user-agent": "ua-fallback/9.9.9" } },
+          requestInit: {
+            headers: {
+              "user-agent": "ua-fallback/9.9.9",
+              "x-forwarded-for": "attacker-selected-bucket, 203.0.113.77",
+            },
+          },
         })
       : new StdioClientTransport({ command: process.execPath, args: [DIST], env: childEnv });
   await client.connect(transport);
   return client;
 }
+
+describe("OAuth discovery", () => {
+  test("advertises Clerk for user OAuth and Context7 for enterprise auth", async () => {
+    const metadataUrl = new URL("/.well-known/oauth-protected-resource", httpUrl);
+    const response = await fetch(metadataUrl);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      resource: "https://mcp.context7.com",
+      authorization_servers: ["https://clerk.context7.com", "https://context7.com"],
+    });
+  });
+});
+
+// A malformed body fails inside express.json(), which calls next(err). That
+// jumps past every 3-arg middleware — CORS, both /mcp routes (so neither the
+// auth check nor handleMcpRequest's catch runs) and the catch-all 404 — and
+// used to land in Express's default handler and its HTML stack trace.
+describe.each(["/mcp", "/mcp/oauth"])("malformed JSON body on %s", (endpoint) => {
+  test("answers with a sanitized JSON-RPC parse error", async () => {
+    const response = await fetch(new URL(endpoint, httpUrl), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
+        // Credentials ride along on real traffic, so assert they are not echoed.
+        Authorization: "Bearer ctx7sk-parse-error-canary",
+      },
+      body: '{"jsonrpc":"2.0","method":"tools/list","params":{"leak-canary":',
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get("content-type")).toMatch(/^application\/json/);
+    // The throw happens upstream of the CORS middleware, so browser clients see
+    // a CORS failure instead of the 400 unless the headers are restored.
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
+
+    const raw = await response.text();
+    for (const leak of [
+      "node_modules",
+      "body-parser",
+      "raw-body",
+      "SyntaxError",
+      "<html",
+      "<pre",
+      "at JSON.parse",
+      PKG_ROOT,
+      "leak-canary",
+      "ctx7sk-parse-error-canary",
+    ]) {
+      expect(raw).not.toContain(leak);
+    }
+
+    expect(JSON.parse(raw)).toEqual({
+      jsonrpc: "2.0",
+      error: { code: -32700, message: "Parse error" },
+      id: null,
+    });
+  });
+});
+
+// body-parser refuses some bodies before JSON.parse is reached. Those are still
+// client mistakes, so they keep the status it assigned instead of being
+// reported as a server fault that invites the client to retry forever.
+test("keeps an oversized body a sanitized 413 rather than a 500", async () => {
+  const response = await fetch(new URL("/mcp", httpUrl), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    // Comfortably past express.json()'s 100kb default limit.
+    body: JSON.stringify({ jsonrpc: "2.0", padding: "A".repeat(200_000) }),
+  });
+
+  expect(response.status).toBe(413);
+  expect(response.headers.get("content-type")).toMatch(/^application\/json/);
+
+  const raw = await response.text();
+  for (const leak of ["node_modules", "PayloadTooLargeError", "<html", "<pre", PKG_ROOT]) {
+    expect(raw).not.toContain(leak);
+  }
+  expect(JSON.parse(raw)).toEqual({
+    jsonrpc: "2.0",
+    error: { code: -32600, message: "Invalid Request" },
+    id: null,
+  });
+});
+
+// The parser is mounted on the MCP router only. A malformed body sent anywhere
+// else never reaches it, so the route answers on its own terms: /ping is
+// GET-only and an unknown path is unknown, and both land on the catch-all 404
+// exactly as they would with a well-formed body.
+describe.each(["/ping", "/does-not-exist"])("malformed JSON body on %s", (path) => {
+  test("follows that route's own contract rather than JSON-RPC", async () => {
+    const response = await fetch(new URL(path, httpUrl), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{",
+    });
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({
+      error: "not_found",
+      message: "Endpoint not found. Use /mcp for MCP protocol communication.",
+    });
+  });
+});
+
+// Guard against over-classifying: only body-parser's entity.parse.failed is a
+// parse error. These bodies parse fine and must keep their existing SDK-issued
+// codes rather than collapsing into -32700.
+describe.each([
+  ["a non-JSON-RPC object", '{"hello":"world"}', 400, -32600],
+  ["an empty body", "", 400, -32600],
+])("valid JSON: %s", (_label, body, status, code) => {
+  test("is not reported as a parse error", async () => {
+    const response = await fetch(new URL("/mcp", httpUrl), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body,
+    });
+
+    expect(response.status).toBe(status);
+    expect(await response.json()).toMatchObject({ error: { code } });
+  });
+});
+
+describe("HTTP API key headers", () => {
+  test("accepts the advertised X-Context7-API-Key header", async () => {
+    const apiKey = "ctx7sk-advertised-header-test";
+    const client = new Client({ name: "api-key-header-test", version: "1.0.0" });
+
+    await client.connect(
+      new StreamableHTTPClientTransport(new URL(httpUrl), {
+        requestInit: { headers: { "X-Context7-API-Key": apiKey } },
+      })
+    );
+
+    try {
+      requests.length = 0;
+      await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/vercel/next.js", query: "app router" },
+      });
+
+      const apiCall = requests.find((request) => request.path === "/v2/context");
+      expect(apiCall?.headers.authorization).toBe(`Bearer ${apiKey}`);
+    } finally {
+      await client.close();
+    }
+  });
+});
 
 describe.each([
   ["http", "modern"],
@@ -197,6 +436,15 @@ describe.each([
     expect(apiCalls[0].query.get("libraryId")).toBe("/vercel/next.js");
     expect(apiCalls[0].query.get("query")).toBe("app router");
     expect(apiCalls[0].headers["x-context7-transport"]).toBe(transportKind);
+    if (transportKind === "http") {
+      expect(apiCalls[0].headers["mcp-client-ip-assertion"]).toMatch(/^v1:/);
+      expect(
+        decryptClientIpAssertion(apiCalls[0].headers["mcp-client-ip-assertion"] as string)
+      ).toBe("203.0.113.77");
+      expect(apiCalls[0].headers["mcp-client-ip"]).toBeUndefined();
+    } else {
+      expect(apiCalls[0].headers["mcp-client-ip-assertion"]).toBeUndefined();
+    }
   });
 
   test("calls resolve-library-id end to end", async () => {
@@ -240,5 +488,310 @@ describe.each([
         : { ide: "test-harness", version: "1.0.0" };
     expect(apiCall.headers["x-context7-client-ide"]).toBe(expected.ide);
     expect(apiCall.headers["x-context7-client-version"]).toBe(expected.version);
+  });
+});
+
+describe("OpenTelemetry metrics", () => {
+  test("binds the default metrics listener to loopback", async () => {
+    const defaultMetricsPort = await getFreePort();
+    const defaultHostEnvironment = {
+      ...childEnv,
+      OTEL_EXPORTER_PROMETHEUS_PORT: String(defaultMetricsPort),
+    };
+    delete defaultHostEnvironment.OTEL_EXPORTER_PROMETHEUS_HOST;
+    const defaultHostServer = await startHttpChild({
+      environment: defaultHostEnvironment,
+      port: await getFreePort(),
+    });
+
+    try {
+      expect(defaultHostServer.stderr()).toContain(
+        `OpenTelemetry metrics available at http://127.0.0.1:${defaultMetricsPort}/metrics`
+      );
+      const response = await fetch(`http://127.0.0.1:${defaultMetricsPort}/metrics`);
+      expect(response.status).toBe(200);
+    } finally {
+      defaultHostServer.child.kill();
+    }
+  });
+
+  test("hard-off mode does not load telemetry implementation modules", async () => {
+    const disabledPort = await getFreePort();
+    const disabledServer = await startHttpChild({
+      environment: { ...childEnv, OTEL_SDK_DISABLED: " true\n" },
+      nodeArgs: ["--experimental-loader", MODULE_LOAD_RECORDER],
+      port: disabledPort,
+    });
+    const client = new Client(
+      { name: "telemetry-disabled-test", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+
+    try {
+      await client.connect(new StreamableHTTPClientTransport(new URL(disabledServer.url)));
+      const result = await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/vercel/next.js", query: "disabled telemetry" },
+      });
+      expect(result.isError).toBeFalsy();
+      expect(disabledServer.stderr()).not.toContain("MCP_TELEMETRY_MODULE_LOADED");
+    } finally {
+      await client.close();
+      disabledServer.child.kill();
+    }
+  });
+
+  test("counts each dispatched operation in a legacy JSON-RPC batch", async () => {
+    const before = operationCount(await (await fetch(metricsUrl)).text(), "tools/list");
+    const response = await fetch(httpUrl, {
+      method: "POST",
+      headers: {
+        accept: "application/json, text/event-stream",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify([
+        { jsonrpc: "2.0", id: 90_001, method: "tools/list", params: {} },
+        { jsonrpc: "2.0", id: 90_002, method: "tools/list", params: {} },
+      ]),
+    });
+    expect(response.status).toBe(200);
+    await response.text();
+
+    const after = operationCount(await (await fetch(metricsUrl)).text(), "tools/list");
+    expect(after - before).toBe(2);
+  });
+
+  test("exports bounded MCP, tool, upstream, and authentication metrics", async () => {
+    const client = await connect("http", "modern");
+    try {
+      await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/vercel/next.js", query: "app router" },
+      });
+      await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/vercel/next.js", query: UPSTREAM_ERROR_QUERY },
+      });
+      await client.callTool({
+        name: "resolve-library-id",
+        arguments: { libraryName: "Next.js", query: INVALID_JSON_QUERY },
+      });
+      await client.callTool({
+        name: "resolve-library-id",
+        arguments: { libraryName: "does-not-exist", query: NO_RESULTS_QUERY },
+      });
+      await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/missing/library", query: EMPTY_CONTEXT_QUERY },
+      });
+    } finally {
+      await client.close();
+    }
+
+    const protectedUrl = new URL(httpUrl);
+    protectedUrl.pathname = "/mcp/oauth";
+    const unauthorizedResponse = await fetch(protectedUrl, {
+      method: "POST",
+      headers: { "content-type": "application/json", "mcp-method": "initialize" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} }),
+    });
+    expect(unauthorizedResponse.status).toBe(401);
+
+    const acceptedResponse = await fetch(protectedUrl, {
+      method: "DELETE",
+      headers: { authorization: "Bearer ctx7sk-local-test" },
+    });
+    expect(acceptedResponse.status).toBe(405);
+    await acceptedResponse.text();
+
+    let exported = "";
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      const response = await fetch(metricsUrl);
+      expect(response.status).toBe(200);
+      exported = await response.text();
+      if (exported.includes("nodejs_eventloop_utilization")) break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    const operationCounts = exported
+      .split("\n")
+      .filter((line) => line.startsWith("mcp_server_operation_duration_count{"));
+    expect(
+      operationCounts.some(
+        (line) =>
+          line.includes('mcp_method_name="tools/call"') &&
+          line.includes('gen_ai_tool_name="query-docs"') &&
+          !line.includes("error_type=")
+      )
+    ).toBe(true);
+    expect(
+      operationCounts
+        .filter((line) => line.includes('mcp_method_name="tools/call"'))
+        .every((line) => !line.includes('error_type="connection_closed"'))
+    ).toBe(true);
+    expect(
+      operationCounts.some(
+        (line) =>
+          line.includes('mcp_method_name="tools/call"') &&
+          line.includes('gen_ai_tool_name="query-docs"') &&
+          line.includes('error_type="tool_error"')
+      )
+    ).toBe(true);
+    expect(
+      operationCounts.some(
+        (line) =>
+          line.includes('gen_ai_tool_name="query-docs"') &&
+          line.includes('context7_mcp_tool_outcome="success"')
+      )
+    ).toBe(true);
+    expect(exported).toMatch(
+      /context7_mcp_upstream_requests_total\{[^}]*context7_upstream_operation="fetch_context"[^}]*context7_upstream_outcome="success"[^}]*\} [1-9]/
+    );
+    expect(
+      operationCounts.some(
+        (line) =>
+          line.includes('gen_ai_tool_name="query-docs"') &&
+          line.includes('context7_mcp_tool_outcome="error"')
+      )
+    ).toBe(true);
+    expect(
+      operationCounts.some((line) => line.includes('context7_mcp_tool_outcome="not_found"'))
+    ).toBe(true);
+    expect(exported).toMatch(
+      /context7_mcp_upstream_requests_total\{[^}]*context7_upstream_operation="fetch_context"[^}]*http_response_status_code_class="5xx"[^}]*context7_upstream_outcome="http_error"[^}]*\} [1-9]/
+    );
+    expect(exported).toMatch(
+      /context7_mcp_upstream_requests_total\{[^}]*context7_upstream_operation="search_libraries"[^}]*http_response_status_code_class="2xx"[^}]*context7_upstream_outcome="response_error"[^}]*\} [1-9]/
+    );
+    expect(
+      exported
+        .split("\n")
+        .some(
+          (line) =>
+            line.startsWith("context7_mcp_upstream_requests_total{") &&
+            line.includes('context7_upstream_operation="fetch_context"') &&
+            line.includes('http_response_status_code="503"')
+        )
+    ).toBe(true);
+    expect(exported).toMatch(
+      /context7_mcp_authentication_attempts_total\{[^}]*context7_authentication_outcome="missing"[^}]*\} 1/
+    );
+    expect(exported).toMatch(
+      /context7_mcp_authentication_attempts_total\{[^}]*context7_authentication_outcome="accepted"[^}]*\} 1/
+    );
+    expect(exported).toContain("context7_mcp_authentication_duration_count");
+    expect(exported).toContain("context7_mcp_authentication_active");
+    expect(exported).toContain("mcp_server_operation_duration_bucket");
+    expect(exported).toMatch(/target_info\{[^}]*service_name="context7-mcp"/);
+    expect(exported).toContain("v8js_memory_heap_used");
+    expect(exported).toContain("nodejs_eventloop_utilization");
+    expect(exported).not.toContain("mcp_server_session_duration");
+
+    expect(exported).not.toMatch(/(?:\{|,)(?:api_key|client_ip|library_id|query|session_id)="/i);
+
+    const activeSamples = exported
+      .split("\n")
+      .filter((line) => /^context7_mcp_.*_active\{/.test(line));
+    expect(activeSamples.length).toBeGreaterThan(0);
+    expect(activeSamples.every((line) => line.endsWith(" 0"))).toBe(true);
+
+    const applicationMetricsResponse = await fetch(new URL("/metrics", httpUrl));
+    expect(applicationMetricsResponse.status).toBe(404);
+  });
+
+  test("continues serving when the embedded exporter port is occupied", async () => {
+    const secondServer = await startHttpChild();
+    try {
+      const pingUrl = new URL(secondServer.url);
+      pingUrl.pathname = "/ping";
+      const response = await fetch(pingUrl);
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({ status: "ok" });
+    } finally {
+      secondServer.child.kill();
+    }
+  });
+});
+
+const INITIALIZE = {
+  jsonrpc: "2.0",
+  id: 1,
+  method: "initialize",
+  params: {
+    protocolVersion: "2025-06-18",
+    capabilities: {},
+    clientInfo: { name: "t", version: "1" },
+  },
+};
+
+async function postMcp(target: string, headers: Record<string, string> = {}) {
+  const res = await fetch(target, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      ...headers,
+    },
+    body: JSON.stringify(INITIALIZE),
+  });
+  return { status: res.status, wwwAuthenticate: res.headers.get("www-authenticate") };
+}
+
+describe("plugin authentication", () => {
+  beforeEach(() => {
+    requests.length = 0;
+  });
+
+  test("only challenges the supported plugin", async () => {
+    expect((await postMcp(`${httpUrl}?client=other-plugin`)).status).toBe(200);
+
+    const res = await postMcp(`${httpUrl}?client=claude-code-plugin`);
+    expect(res.status).toBe(401);
+    expect(res.wwwAuthenticate).toContain("resource_metadata=");
+    expect(res.wwwAuthenticate).toContain("/.well-known/oauth-protected-resource");
+  });
+
+  test("allows the Claude Code plugin's empty API key fallback", async () => {
+    const res = await postMcp(`${httpUrl}?client=claude-code-plugin`, {
+      Authorization: "",
+    });
+
+    expect(res.status).toBe(200);
+  });
+
+  test("keeps the OAuth endpoint protected", async () => {
+    const oauthUrl = httpUrl.replace(/\/mcp$/, "/mcp/oauth");
+    const emptyHeaderRes = await postMcp(`${oauthUrl}?client=claude-code-plugin`, {
+      Authorization: "",
+    });
+
+    expect((await postMcp(oauthUrl)).status).toBe(401);
+    expect(emptyHeaderRes.status).toBe(401);
+  });
+
+  test("tracks authenticated plugin requests separately", async () => {
+    const client = new Client(
+      { name: "claude-code", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+    await client.connect(
+      new StreamableHTTPClientTransport(new URL(`${httpUrl}?client=claude-code-plugin`), {
+        requestInit: { headers: { Authorization: "Bearer ctx7sk-test" } },
+      })
+    );
+
+    try {
+      await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/vercel/next.js", query: "app router" },
+      });
+    } finally {
+      await client.close();
+    }
+
+    const apiCall = requests.find((request) => request.path === "/v2/context");
+    expect(apiCall?.headers["x-context7-client-ide"]).toBe("claude-code");
+    expect(apiCall?.headers["x-context7-client-version"]).toBe("1.0.0");
+    expect(apiCall?.headers["x-context7-plugin"]).toBe("claude-code-plugin");
   });
 });

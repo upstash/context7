@@ -1,0 +1,79 @@
+---
+title: SEO
+description: Control indexing, metadata, sitemaps, and structured data
+---
+
+Docs7 automatically generates search metadata for your website.
+
+## Defaults
+
+Every indexable page receives:
+
+- a canonical URL based on the deployed site URL
+- a meta description from frontmatter or the page's opening text
+- Open Graph and Twitter metadata with a generated preview image
+- JSON-LD for the organization, website, page, breadcrumbs, and article
+- a sitemap entry with the last modification date when Git history provides one
+
+Docs7 also generates `robots.txt` and `sitemap.xml`. The generated robots file sets `Content-Signal: ai-train=yes, search=yes, ai-input=yes`. 
+
+Preview deployments are automatically excluded from indexing.
+
+API pages use `APIReference` structured data. Other documentation pages use `Article` and `TechArticle` to make it easy for agents to parse your content.
+
+
+## Configure site metadata
+
+Set shared SEO values in `docs.json`:
+
+```json docs.json
+{
+  "name": "Acme Docs",
+  "seo": {
+    "indexing": "navigable",
+    "trailingSlash": false,
+    "metatags": {
+      "canonical": "https://docs.acme.com",
+      "robots": "index, follow",
+      "og:site_name": "Acme Docs"
+    },
+    "organization": {
+      "name": "Acme",
+      "url": "https://acme.com",
+      "sameAs": ["https://github.com/acme"]
+    }
+  }
+}
+```
+
+`seo.indexing` accepts:
+
+- `navigable`, the default, which indexes pages listed in navigation and excludes hidden or unlisted pages
+- `all`, which indexes every routable page unless the page sets `noindex: true`
+
+A hidden navigation group can opt back in with `searchable: true`.
+
+<Note>
+If the site is mounted at a path such as `example.com/docs`, the parent website's root `robots.txt` controls crawler policy. Add `Sitemap: https://example.com/docs/sitemap.xml` there. Crawlers do not treat `/docs/robots.txt` as the origin's robots file.
+</Note>
+
+
+Set page-specific values in frontmatter:
+
+```yaml
+---
+title: Create an API key
+description: Create and rotate API keys for the Acme API
+keywords:
+  - API key
+  - authentication
+image: /images/api-key-card.png
+canonical: https://docs.acme.com/auth/api-keys
+---
+```
+
+Use `noindex: true` to keep a routable page out of search results. You can also set a `robots` value or `og:*`, `twitter:*`, and `article:*` fields directly in frontmatter.
+
+<Note>
+A `robots.txt` or `sitemap.xml` file at the docs root replaces the generated file. Keep the generated version unless you need full control.
+</Note>

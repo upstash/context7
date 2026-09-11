@@ -2,10 +2,8 @@
   "mcpServers": {
     "context7": {
       "type": "http",
-      "url": "https://mcp.context7.com/mcp",
-      "headers": {
-        "Authorization": "${CONTEXT7_API_KEY:-}"
-      }
+      "url": "https://mcp.context7.com/mcp?client=claude-code-plugin",
+      "headersHelper": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/headers.mjs\""
     }
   }
 }

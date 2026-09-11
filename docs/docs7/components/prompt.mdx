@@ -1,0 +1,22 @@
+---
+title: Prompt
+description: Present a prompt that readers can copy or open in Cursor
+---
+
+The default action is `copy`.
+
+## Usage
+
+```mdx
+<Prompt description="Copy this prompt" actions={["copy", "cursor"]}>
+  Explain this API in one paragraph.
+</Prompt>
+```
+
+Set `actions={[]}` to hide the actions. `icon` and `iconType` are optional.
+
+## Example
+
+<Prompt description="Copy this prompt" actions={["copy", "cursor"]}>
+  Explain this API in one paragraph.
+</Prompt>

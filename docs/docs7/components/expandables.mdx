@@ -1,0 +1,30 @@
+---
+title: Expandables
+description: Document nested object properties
+---
+
+Place `<Expandable>` inside a field.
+
+## Usage
+
+```mdx
+<ResponseField name="user" type="object">
+  A user record.
+  <Expandable title="properties" defaultOpen>
+    <ResponseField name="id" type="string" required />
+    <ResponseField name="name" type="string" />
+  </Expandable>
+</ResponseField>
+```
+
+The default title is `properties`.
+
+## Example
+
+<ResponseField name="user" type="object">
+  A user record.
+  <Expandable title="properties" defaultOpen>
+    <ResponseField name="id" type="string" required />
+    <ResponseField name="name" type="string" />
+  </Expandable>
+</ResponseField>

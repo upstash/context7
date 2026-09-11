@@ -1,3 +1,5 @@
+import type { ToolCallOutcome } from "./tool-names.js";
+
 export interface SearchResult {
   id: string;
   title: string;
@@ -30,6 +32,7 @@ export type ContextRequest = {
 
 export type ContextResponse = {
   data: string;
+  outcome: ToolCallOutcome;
 };
 
 export interface ClientContext {
@@ -39,6 +42,7 @@ export interface ClientContext {
     ide?: string;
     version?: string;
   };
+  plugin?: string;
   transport?: "stdio" | "http";
   sessionId?: string;
   /** Mutable: set by the upstream API layer when the backend signals the

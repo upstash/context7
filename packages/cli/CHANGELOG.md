@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.5.11
+
+### Patch Changes
+
+- e127fa1: Add outbound-independent on-premise MCP setup through `ctx7 setup --base-url`, including secure interactive personal API-key entry and anonymous-auth discovery support.
+
+## 0.5.10
+
+### Patch Changes
+
+- 76140fc: Use API keys returned by the device login flow directly during MCP setup instead of sending them to a dashboard session endpoint to generate another key.
+
+## 0.5.9
+
+### Patch Changes
+
+- 3abc99a: Recover library IDs mangled by Git Bash when Git is installed through Scoop.
+- 118c852: Preserve existing Codex TOML settings when rotating stdio API keys.
+
+## 0.5.8
+
+### Patch Changes
+
+- 91dea9f: Fix `ctx7 library`, `ctx7 docs` and `ctx7 skills suggest` silently falling back to anonymous requests when the stored OAuth token expires, which surfaced misleading quota errors for authenticated users. `ctx7 generate` no longer forces a full interactive re-login when the token can be refreshed instead. All four commands now go through `getValidAccessToken()`, which refreshes expired credentials.
+
+  A successful refresh also keeps the stored `refresh_token` when the server omits one from the response, as permitted by RFC 6749 §6. Previously the response was written verbatim, so the refresh token was dropped and the user was silently logged out at the next expiry.
+
 ## 0.5.7
 
 ### Patch Changes
