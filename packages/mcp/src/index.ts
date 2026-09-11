@@ -394,8 +394,12 @@ async function main() {
       const header = extractHeaderValue(authHeader);
       if (!header) return undefined;
 
-      if (header.startsWith("Bearer ")) {
-        return header.substring(7).trim();
+      // The auth-scheme is case-insensitive (RFC 9110 section 11.1): some clients
+      // and proxies send "bearer" or "BEARER". Strip it in any casing, otherwise
+      // the scheme ends up inside the forwarded credential.
+      const bearer = /^bearer\s+(.*)$/i.exec(header);
+      if (bearer) {
+        return bearer[1].trim();
       }
 
       return header;
