@@ -172,6 +172,9 @@ dist
 .idea
 
 .cursor
+!.cursor/
+.cursor/*
+!.cursor/environment.json
 !plugins/cursor/context7/.cursor
 .opencode
 .claude
