@@ -101,6 +101,16 @@ ctx7 docs /facebook/react "How to use hooks for state management" | head -50
 ctx7 docs /vercel/next.js "How to add middleware for route protection" | grep -A 10 "middleware"
 ```
 
+### No documentation found
+
+`ctx7 docs` matches your query by meaning against the library's indexed documentation — not by exact keyword — so a query can return nothing if the topic is not covered or your phrasing differs from the docs' vocabulary. When that happens, the CLI prints `No documentation found for: "<query>"`.
+
+To get results:
+
+- Make the query specific and concrete — describe one clear goal ("How to clean up useEffect with async operations") rather than a bare keyword like `"async"`
+- Reword the question — the docs use their own vocabulary, so describing the same thing differently often matches
+- Verify the library resolves and covers the topic — run `ctx7 library "<name>"` to confirm the ID, and browse the library at [context7.com](https://context7.com)
+
 ---
 
 ## Setup
