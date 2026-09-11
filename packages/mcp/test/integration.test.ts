@@ -358,6 +358,33 @@ describe("HTTP API key headers", () => {
       await client.close();
     }
   });
+
+  test.each(["bearer", "BEARER"])(
+    "accepts the %s auth-scheme spelling without forwarding it as part of the key",
+    async (scheme) => {
+      const apiKey = "ctx7sk-scheme-case-test";
+      const client = new Client({ name: "auth-scheme-case-test", version: "1.0.0" });
+
+      await client.connect(
+        new StreamableHTTPClientTransport(new URL(httpUrl), {
+          requestInit: { headers: { Authorization: `${scheme} ${apiKey}` } },
+        })
+      );
+
+      try {
+        requests.length = 0;
+        await client.callTool({
+          name: "query-docs",
+          arguments: { libraryId: "/vercel/next.js", query: "app router" },
+        });
+
+        const apiCall = requests.find((request) => request.path === "/v2/context");
+        expect(apiCall?.headers.authorization).toBe(`Bearer ${apiKey}`);
+      } finally {
+        await client.close();
+      }
+    }
+  );
 });
 
 describe.each([
