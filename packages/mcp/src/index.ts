@@ -228,7 +228,7 @@ Do not use for: refactoring, writing scripts from scratch, debugging business lo
 
 Context7 selects up to four relevant documentation libraries, searches their namespaces in parallel, deduplicates the evidence, and reranks the combined snippets. Explicit Context7 IDs are used directly within the response safety cap.
 
-Make one initial call per user question. For comparisons, integrations, and migrations, keep every named product in that one complete query and, when useful, put the user-supplied names in libraries; never fan one question out into parallel query-docs calls. Put the complete question in query, including product names, versions, languages, and all concepts needed to answer. Optional library/libraries and version fields are routing hints only; do not guess a Context7 library ID.
+Make one initial call per user question. For comparisons, integrations, and migrations, keep every named product in that one complete query and put every user-supplied product name in libraries; omitting one product is incorrect. Never fan one question out into parallel query-docs calls. Put the complete question in query, including product names, versions, languages, and all concepts needed to answer. Optional library/libraries and version fields are routing hints only; do not guess a Context7 library ID.
 
 Retry policy: when a failure explicitly says it is transient/retryable, retry the same request at most once later. For a non-retryable documentation miss, never repeat the identical request. Make at most one refined call only when you can add genuinely new routing information from the user, such as an explicit library name, Context7 ID, version, or a materially more specific question. Do not retry a successful response.`,
         inputSchema: z.preprocess(
@@ -238,7 +238,7 @@ Retry policy: when a failure explicitly says it is transient/retryable, retry th
               query: z
                 .string()
                 .describe(
-                  "The user's complete implementation question, including every named library or product, version, language, and all requested concepts. For comparisons, integrations, and migrations, put all products here and make one tool call. Do not shorten or split it. Do not include secrets, personal data, or proprietary code."
+                  "The user's complete implementation question, including every named library or product, version, language, and all requested concepts. For comparisons, integrations, and migrations, every product must remain here and in libraries; omitting one is incorrect. Make one tool call. Do not shorten or split it. Do not include secrets, personal data, or proprietary code."
                 ),
               libraries: z
                 .array(z.string().min(1).max(120))
@@ -246,7 +246,7 @@ Retry policy: when a failure explicitly says it is transient/retryable, retry th
                 .max(4)
                 .optional()
                 .describe(
-                  "Optional fuzzy product names supplied by the user for a comparison, integration, or migration. Keep the complete multi-product question in query and make only one tool call."
+                  "Fuzzy product names supplied by the user. When the question names two or more products for a comparison, integration, or migration, include every named product here and keep all of them in query. Make only one tool call."
                 ),
               libraryIds: z
                 .array(
