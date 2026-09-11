@@ -756,6 +756,15 @@ describe("plugin authentication", () => {
     expect(emptyHeaderRes.status).toBe(401);
   });
 
+  test("protects every spelling Express routes to the OAuth endpoint", async () => {
+    // Express matches routes case-insensitively and with an optional trailing
+    // slash; the gate must not depend on the request's spelling.
+    for (const spelling of ["/mcp/oauth/", "/MCP/OAUTH", "/Mcp/OAuth/"]) {
+      const url = httpUrl.replace(/\/mcp$/, spelling);
+      expect((await postMcp(url)).status, spelling).toBe(401);
+    }
+  });
+
   test("tracks authenticated plugin requests separately", async () => {
     const client = new Client(
       { name: "claude-code", version: "1.0.0" },
