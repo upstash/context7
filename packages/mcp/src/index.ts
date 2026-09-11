@@ -228,7 +228,9 @@ Do not use for: refactoring, writing scripts from scratch, debugging business lo
 
 Context7 selects up to four relevant documentation libraries, searches their namespaces in parallel, deduplicates the evidence, and reranks the combined snippets. Explicit Context7 IDs are used directly within the response safety cap.
 
-Call this tool exactly once per user question. This still means one invocation when the question compares, integrates, or migrates between multiple libraries: keep every named product in the single complete query and, when useful, put the user-supplied names in libraries. Never split one user question into parallel or sequential query-docs calls. Put the complete question in query, including product names, versions, languages, and all concepts needed to answer. Optional library/libraries and version fields are routing hints only; do not guess a Context7 library ID. Use the returned context to answer without calling this tool again.`,
+Make one initial call per user question. For comparisons, integrations, and migrations, keep every named product in that one complete query and, when useful, put the user-supplied names in libraries; never fan one question out into parallel query-docs calls. Put the complete question in query, including product names, versions, languages, and all concepts needed to answer. Optional library/libraries and version fields are routing hints only; do not guess a Context7 library ID.
+
+Retry policy: when a failure explicitly says it is transient/retryable, retry the same request at most once later. For a non-retryable documentation miss, never repeat the identical request. Make at most one refined call only when you can add genuinely new routing information from the user, such as an explicit library name, Context7 ID, version, or a materially more specific question. Do not retry a successful response.`,
         inputSchema: z.preprocess(
           normalizeAutoQueryArgs,
           z
