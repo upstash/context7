@@ -1490,6 +1490,133 @@ CONTEXT7_API_KEY=your_api_key_here
 }
 ```
 
+### OpenTelemetry observability
+
+Context7 instruments individual MCP requests and notifications at the SDK transport boundary,
+including messages inside a valid batch and MCP v2 `subscriptions/listen` operations handled by the
+SDK entry layer. Requests rejected by the SDK's HTTP envelope and protocol-version validation before
+dispatch remain visible in normal HTTP/gateway telemetry, but are not reported as MCP operations.
+Observed operations follow the
+development-status [OpenTelemetry MCP semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/mcp.md)
+for server metrics and spans. Trace context is extracted from the `traceparent`, `tracestate`, and
+`baggage` fields in MCP `params._meta` as defined by
+[SEP-414](https://modelcontextprotocol.io/seps/414-request-meta).
+
+The HTTP transport exposes metrics in Prometheus format on a dedicated listener at
+`127.0.0.1:9464/metrics` by default. The production Docker image explicitly binds that listener to
+`0.0.0.0` so an internal Prometheus pod scraper or `PodMonitor` can reach it. The stdio transport
+does not open a telemetry port. Keeping this listener separate from the public MCP port prevents
+the metrics endpoint from being routed through a catch-all gateway rule. On SIGTERM, SIGINT, or
+SIGHUP, both transports use a bounded shutdown path that stops serving, closes active MCP
+connections and subscriptions, and best-effort flushes externally installed SDK metric and trace
+providers before exit. Stdio EOF triggers the same path.
+
+The exporter uses the standard OpenTelemetry Prometheus settings:
+
+- `OTEL_EXPORTER_PROMETHEUS_HOST` changes the bind address (default `127.0.0.1`; the Docker image
+  sets `0.0.0.0`).
+- `OTEL_EXPORTER_PROMETHEUS_PORT` changes the port (default `9464`).
+- `OTEL_METRICS_EXPORTER=none` or `OTEL_SDK_DISABLED=true` disables the embedded exporter.
+
+`OTEL_SDK_DISABLED=true` is the hard-off switch: provider modules are not loaded and MCP
+transports and handlers are not wrapped, preserving the baseline request path. In contrast,
+`OTEL_METRICS_EXPORTER=none` disables only the embedded Prometheus bootstrap, so a provider
+installed by a Node preload can still receive the MCP signals.
+
+Exporter bind or configuration failures are logged but do not prevent the MCP endpoint from
+starting. If a Node preload has already registered global OpenTelemetry providers, they take
+precedence. The embedded Prometheus listener is not started when a global `MeterProvider` exists,
+and MCP spans are exported through the preload's `TracerProvider`. This supports an OpenTelemetry
+Node SDK or Kubernetes auto-instrumentation without creating a second provider in the application.
+When an external SDK owns the provider, configure its Node runtime instrumentation there as well;
+the application does not register a duplicate collector.
+
+It reports bounded-cardinality counters, histograms, and in-flight gauges for MCP methods,
+subscriptions, tool outcomes, authentication outcomes, Context7 upstream requests, and Node runtime
+saturation.
+Prometheus receives these metric families:
+
+- `mcp_server_operation_duration` (its `_count` series is the MCP operation count, and tool-call
+  series include the `context7_mcp_tool_outcome` label)
+- `mcp_server_session_duration` for real stateful stdio sessions (stateless HTTP request transports
+  are intentionally excluded)
+- `context7_mcp_operations_active`
+- `context7_mcp_subscriptions_active` and `context7_mcp_subscription_duration`
+- `context7_mcp_upstream_requests_total` and `context7_mcp_upstream_request_duration`
+- `context7_mcp_authentication_attempts_total` and `context7_mcp_authentication_duration`
+- `context7_mcp_upstream_requests_active` and `context7_mcp_authentication_active`
+- `nodejs_eventloop_*`, `v8js_gc_duration`, `v8js_memory_heap_*`, and
+  `v8js_resource_active` from the official OpenTelemetry Node runtime instrumentation
+
+Tool outcomes on the standard MCP operation metric distinguish `success`, `not_found`, and
+`error`. An acknowledged `subscriptions/listen` operation is timed through its acknowledgement;
+the separate subscription metrics track the active stream and its bounded terminal outcome.
+Upstream outcomes distinguish
+HTTP, response-decoding, network, timeout, and cancellation failures and include both the bounded
+status-code class and the exact numeric HTTP status. Authentication reports accepted, missing,
+invalid, and unexpected-error outcomes. The OAuth authorization-server metadata proxy caps its
+upstream fetch at 10 seconds and returns `502` if that dependency times out.
+
+The labels intentionally exclude API keys, client IPs, queries, library IDs, session IDs, and raw
+error text. Expose port `9464` only to your Prometheus scraper or `ServiceMonitor`, not through the
+public MCP ingress.
+
+#### Signal ownership with an Envoy gateway
+
+Do not treat `mcp_server_operation_duration_count` as another HTTP request counter. An Envoy
+Gateway observes HTTP envelopes, while this metric observes JSON-RPC requests and notifications
+after SDK dispatch. A valid batch is one HTTP request but several MCP operations, and HTTP requests
+rejected before MCP dispatch never increment the MCP metric.
+
+Context7 deliberately does **not** register generic inbound HTTP server metrics. Keep the following
+signals in the existing Envoy scrape instead of collecting them again from the application:
+
+- downstream HTTP request/response totals, status classes, duration, active requests, connections,
+  resets, and gateway timeouts (`envoy_http_*_downstream_*`)
+- Envoy-to-MCP backend request totals, status codes, duration, active/pending requests, connection
+  failures, retries, resets, timeouts, and circuit-breaker overflows (`envoy_cluster_upstream_*`)
+- Envoy process health and resource metrics
+
+The application exporter owns only signals the ingress gateway cannot provide: MCP method and
+protocol semantics (including batches, notifications, and active MCP v2 subscriptions), tool and
+authentication outcomes, MCP-to-Context7 API calls, and Node event-loop/V8 health. In the
+Kubernetes deployment Envoy is a
+Gateway API proxy rather than a sidecar in the MCP pod, so `context7_mcp_upstream_*` describes the
+MCP server's outbound Context7 API dependency, not Envoy's inbound MCP backend cluster. Pod and
+container CPU, memory, network, and restart metrics should continue to come from the Kubernetes
+monitoring stack.
+
+See the [Envoy HTTP connection manager statistics](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/stats)
+and [upstream cluster statistics](https://www.envoyproxy.io/docs/envoy/latest/configuration/upstream/cluster_manager/cluster_stats.html)
+for the proxy-owned metric families.
+
+For a replicated Kubernetes deployment, discover and scrape every MCP pod directly. Do not use one
+static, load-balanced Service target: successive scrapes can reach different replicas and produce
+incomplete per-process counters and runtime series. For an annotation-based `kubernetes-pods`
+scrape job, add the following fields to the MCP workload's pod template:
+
+```yaml
+spec:
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9464"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: mcp
+          ports:
+            - name: metrics
+              containerPort: 9464
+              protocol: TCP
+```
+
+Prometheus will then scrape `http://<mcp-pod-ip>:9464/metrics` for each replica. Declaring
+`EXPOSE 9464` in the image does not add the Kubernetes `containerPort` metadata. The scrape interval
+is controlled by Prometheus; the exporter does not impose one. If the monitoring stack uses the
+Prometheus Operator instead, configure the equivalent per-pod endpoint with a `PodMonitor`.
+
 <details>
 <summary><b>Local Configuration Example</b></summary>
 
