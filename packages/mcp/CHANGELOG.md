@@ -1,5 +1,11 @@
 # @upstash/context7-mcp
 
+## 4.1.1
+
+### Patch Changes
+
+- 5ed5e9a: Disable unused MCP notification subscriptions so clients do not hold open SSE streams for static tool, prompt, and resource collections.
+
 ## 4.1.0
 
 ### Minor Changes
