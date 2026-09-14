@@ -4,6 +4,11 @@
   "name": "Context7 MCP",
   "description": "Up-to-date code docs for any prompt.",
   "poweredByDocs7": true,
+  "feedback": {
+    "thumbsRating": true,
+    "suggestEdit": true,
+    "raiseIssue": true
+  },
   "redirects": [
     {
       "source": "/enterprise/azure-apim",

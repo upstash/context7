@@ -1,5 +1,23 @@
 # @upstash/context7-mcp
 
+## 4.1.1
+
+### Patch Changes
+
+- 5ed5e9a: Disable unused MCP notification subscriptions so clients do not hold open SSE streams for static tool, prompt, and resource collections.
+
+## 4.1.0
+
+### Minor Changes
+
+- 915abfe: Add bounded OpenTelemetry metrics for MCP requests, tools, authentication, and upstream API calls, exposed for Prometheus on the HTTP server's internal telemetry port.
+
+## 4.0.7
+
+### Patch Changes
+
+- 0087bab: Allow the Claude Code plugin to use anonymous access when its API key header is empty.
+
 ## 4.0.6
 
 ### Patch Changes
