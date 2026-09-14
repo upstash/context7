@@ -276,14 +276,14 @@ Retry policy: when a failure explicitly says it is transient/retryable, retry th
                 .regex(/^v?\d+(?:[._]\d+){0,2}(?:[-+][a-z0-9.-]+)?$/i)
                 .optional()
                 .describe(
-                  "Optional version supplied by the user. Requires exactly one libraries value. Keep the complete version-qualified product wording in query."
+                  "Optional version supplied by the user. Requires at least one libraries value. With multiple libraries, it is a strict constraint for matching versioned libraries and a reranking hint for the others. Keep the complete version-qualified product wording in query."
                 ),
             })
             .superRefine((value, context) => {
-              if (value.version && value.libraries?.length !== 1) {
+              if (value.version && !value.libraries?.length) {
                 context.addIssue({
                   code: "custom",
-                  message: "Version requires exactly one library hint",
+                  message: "Version requires at least one library hint",
                   path: ["version"],
                 });
               }
