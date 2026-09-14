@@ -195,11 +195,16 @@ function createMcpServer(mcpContext: McpRequestContext) {
     ],
   };
   const serverOptions = {
-    // Declaring the capabilities makes the SDK install prompts/list,
-    // resources/list, and resources/templates/list handlers that answer
-    // with the registered (i.e. empty) collections, for clients that
-    // request them unconditionally.
-    capabilities: { prompts: {}, resources: {} },
+    // The collections are static for the process lifetime. Explicitly disabling
+    // change notifications prevents clients from opening subscriptions/listen
+    // streams for events this server never publishes. Declaring prompts and
+    // resources still installs their empty list handlers for clients that call
+    // them unconditionally.
+    capabilities: {
+      tools: { listChanged: false },
+      prompts: { listChanged: false },
+      resources: { listChanged: false, subscribe: false },
+    },
     instructions: `Use this server to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
 
 Do not use for: refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.`,
@@ -687,6 +692,7 @@ async function main() {
       },
       {
         transport: stdioTransport,
+        maxSubscriptions: getMaxSubscriptions(),
         onerror: (error) => console.error("MCP stdio error:", error),
       }
     );
