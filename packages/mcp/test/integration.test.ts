@@ -60,36 +60,59 @@ function startStubApi(): Promise<string> {
       if (query.includes("temporary search failure")) {
         res.statusCode = 503;
         res.setHeader("Content-Type", "application/json");
-        res.setHeader("X-Context7-Search-Status", "failed");
-        res.setHeader("X-Context7-Retryable", "true");
-        res.setHeader("X-Context7-Retry-Reason", "transient-search-failure");
-        res.setHeader("X-Context7-Suggested-Action", "retry-later");
-        res.end(JSON.stringify({ message: "The documentation search could not be completed." }));
+        res.end(
+          JSON.stringify({
+            message: "The documentation search could not be completed.",
+            meta: {
+              status: "failed",
+              retryable: true,
+              reason: "transientSearchFailure",
+              suggestedAction: "retryLater",
+            },
+          })
+        );
         return;
       }
       if (query.includes("Acme Quantum Router")) {
         res.statusCode = 404;
         res.setHeader("Content-Type", "application/json");
-        res.setHeader("X-Context7-Search-Status", "not-found");
-        res.setHeader("X-Context7-Retryable", "false");
-        res.setHeader("X-Context7-Retry-Reason", "no-matching-library");
-        res.setHeader("X-Context7-Suggested-Action", "check-library-or-version");
-        res.end(JSON.stringify({ message: "No documentation library matched the request." }));
+        res.end(
+          JSON.stringify({
+            message: "No documentation library matched the request.",
+            meta: {
+              status: "notFound",
+              retryable: false,
+              reason: "noMatchingLibrary",
+              suggestedAction: "checkLibraryOrVersion",
+            },
+          })
+        );
         return;
       }
-      const explicitIds = query.includes("/vercel/next.js") && query.includes("/facebook/react");
-      const libraryIds = explicitIds
-        ? "/vercel/next.js,/facebook/react"
-        : url.searchParams.get("version")
-          ? "/vercel/next.js/v15"
-          : "/vercel/next.js";
-      res.setHeader("Content-Type", "text/plain");
-      res.setHeader("X-Context7-Library-Ids", libraryIds);
-      res.setHeader("X-Context7-Search-Status", "complete");
-      res.setHeader("X-Context7-Retryable", "false");
-      res.setHeader("X-Context7-Retry-Reason", "none");
-      res.setHeader("X-Context7-Suggested-Action", "none");
-      res.end(`## Documentation for ${libraryIds.split(",")[0]}\n\n${STUB_DOCS}`);
+      const explicitIds = url.searchParams
+        .getAll("library")
+        .filter((value) => value.startsWith("/"));
+      const libraryIds =
+        explicitIds.length > 0
+          ? explicitIds
+          : url.searchParams.get("version")
+            ? ["/vercel/next.js/v15"]
+            : ["/vercel/next.js"];
+      const text = `## Documentation for ${libraryIds[0]}\n\n${STUB_DOCS}`;
+      res.setHeader("Content-Type", "application/json");
+      res.end(
+        JSON.stringify({
+          text,
+          routes: libraryIds.map((libraryId) => ({ libraryId, query })),
+          results: libraryIds.map((libraryId) => ({ libraryId })),
+          meta: {
+            status: "complete",
+            retryable: false,
+            reason: "none",
+            suggestedAction: "none",
+          },
+        })
+      );
     } else if (apiPath === "/v2/libs/search") {
       res.setHeader("Content-Type", "application/json");
       res.end(
@@ -480,7 +503,6 @@ describe("single Search API tool mode", () => {
     expect(Object.keys(tools[0].inputSchema.properties ?? {})).toEqual([
       "query",
       "libraries",
-      "libraryIds",
       "version",
     ]);
     expect(tools[0].inputSchema.required).toEqual(["query"]);
@@ -513,21 +535,22 @@ describe("single Search API tool mode", () => {
     );
   });
 
-  test("accepts multiple fuzzy package hints with shared version context", async () => {
-    const query = "In Prisma ORM 7, configure prisma-client with @prisma/adapter-pg";
+  test("accepts fuzzy and exact hints in the same library list", async () => {
+    const query = "Compare React and Next.js rendering";
     const result = await client.callTool({
       name: "query-docs",
       arguments: {
         query,
-        libraries: ["Prisma ORM", "@prisma/adapter-pg"],
-        version: "7",
+        libraries: ["React", "/vercel/next.js"],
       },
     });
 
     expect(result.isError).toBeFalsy();
     expect(requests.map((request) => request.path)).toEqual(["/v2/context/search"]);
-    expect(requests[0].query.getAll("library")).toEqual(["Prisma ORM", "@prisma/adapter-pg"]);
-    expect(requests[0].query.get("version")).toBe("7");
+    expect(requests[0].query.getAll("library")).toEqual(["React", "/vercel/next.js"]);
+    expect((result.content as Array<{ type: string; text: string }>)[0].text).toContain(
+      "Selected library: /vercel/next.js"
+    );
   });
 
   test("does not turn terminal misses into retry loops", async () => {

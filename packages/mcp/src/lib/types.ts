@@ -33,15 +33,9 @@ export type ContextResponse = {
 };
 
 export type AutoContextOptions = {
-  /** Fuzzy package, product, repository, or documentation-domain hint. */
-  library?: string;
-  /** Multiple fuzzy hints for comparison, integration, or migration questions. */
+  /** Fuzzy product names or exact Context7 IDs for one question. */
   libraries?: string[];
-  /** Exact Context7 ID supplied by the user or another trusted source. */
-  libraryId?: string;
-  /** Multiple exact Context7 IDs supplied by the user or another trusted source. */
-  libraryIds?: string[];
-  /** Version paired with exactly one library or libraryId hint. */
+  /** Version paired with exactly one library hint. */
   version?: string;
 };
 
@@ -49,10 +43,10 @@ export type AutoContextResponse = {
   data: string;
   error?: string;
   libraryIds?: string[];
-  status?: "complete" | "partial" | "not-found" | "failed";
+  status?: "complete" | "partial" | "notFound" | "failed";
   retryable?: boolean;
   retryReason?: string;
-  suggestedAction?: "none" | "retryLater" | "refineQuery" | "checkLibraryOrVersion";
+  suggestedAction?: "none" | "retryLater" | "checkLibraryOrVersion";
 };
 
 export interface ClientContext {

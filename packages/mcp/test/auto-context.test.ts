@@ -34,17 +34,18 @@ describe("automatic context response controls", () => {
   });
 
   it("uses one Search API request and reads selected-library metadata", async () => {
-    const fetchMock = vi.fn(
-      async () =>
-        new Response("## Documentation", {
-          headers: {
-            "X-Context7-Library-Ids": "/vercel/next.js,/colinhacks/zod",
-            "X-Context7-Search-Status": "complete",
-            "X-Context7-Retryable": "false",
-            "X-Context7-Retry-Reason": "none",
-            "X-Context7-Suggested-Action": "none",
-          },
-        })
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        text: "## Documentation",
+        routes: [],
+        results: [{ libraryId: "/vercel/next.js" }, { libraryId: "/colinhacks/zod" }],
+        meta: {
+          status: "complete",
+          retryable: false,
+          reason: "none",
+          suggestedAction: "none",
+        },
+      })
     );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -58,27 +59,25 @@ describe("automatic context response controls", () => {
     });
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain(
-      "/v2/context/search?query=Next.js+with+Zod&type=txt"
+      "/v2/context/search?query=Next.js+with+Zod&type=json"
     );
   });
 
   it("forwards optional routing hints without adding a second request", async () => {
-    const fetchMock = vi.fn(
-      async () =>
-        new Response("## Documentation", {
-          headers: {
-            "X-Context7-Library-Ids": "/vercel/next.js/v15",
-            "X-Context7-Search-Status": "complete",
-            "X-Context7-Retryable": "false",
-          },
-        })
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        text: "## Documentation",
+        routes: [],
+        results: [{ libraryId: "/vercel/next.js/v15" }],
+        meta: { status: "complete", retryable: false },
+      })
     );
     vi.stubGlobal("fetch", fetchMock);
 
     await fetchAutoLibraryContext(
       "How does caching work?",
       {},
-      { library: "nextjs", version: "15" }
+      { libraries: ["nextjs"], version: "15" }
     );
 
     expect(fetchMock).toHaveBeenCalledOnce();
@@ -89,7 +88,9 @@ describe("automatic context response controls", () => {
   });
 
   it("forwards multiple library hints in one Search API request", async () => {
-    const fetchMock = vi.fn(async () => new Response("## Documentation"));
+    const fetchMock = vi.fn(async () =>
+      Response.json({ text: "## Documentation", results: [], routes: [], meta: {} })
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     await fetchAutoLibraryContext(
@@ -110,26 +111,26 @@ describe("automatic context response controls", () => {
       "fetch",
       vi.fn(async () =>
         Response.json(
-          { message: "No documentation matched the request." },
           {
-            status: 404,
-            headers: {
-              "X-Context7-Search-Status": "not-found",
-              "X-Context7-Retryable": "false",
-              "X-Context7-Retry-Reason": "no-relevant-documentation",
-              "X-Context7-Suggested-Action": "refine-query",
+            message: "No documentation matched the request.",
+            meta: {
+              status: "notFound",
+              retryable: false,
+              reason: "noMatchingLibrary",
+              suggestedAction: "checkLibraryOrVersion",
             },
-          }
+          },
+          { status: 404 }
         )
       )
     );
 
     await expect(fetchAutoLibraryContext("unknown symbol")).resolves.toMatchObject({
       error: "No documentation matched the request.",
-      status: "not-found",
+      status: "notFound",
       retryable: false,
-      retryReason: "no-relevant-documentation",
-      suggestedAction: "refineQuery",
+      retryReason: "noMatchingLibrary",
+      suggestedAction: "checkLibraryOrVersion",
     });
   });
 

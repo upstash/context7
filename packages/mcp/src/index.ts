@@ -144,8 +144,6 @@ const GLOBAL_ALIASES: AliasMap = {
 
 const AUTO_QUERY_ALIASES: AliasMap = {
   ...GLOBAL_ALIASES,
-  library: ["libraryName", "repository", "domain"],
-  libraryId: ["context7CompatibleLibraryID", "libraryID"],
 };
 
 // Tool-scoped aliases, for keys that are canonical on one tool but a
@@ -181,14 +179,39 @@ function normalizeAutoQueryArgs(value: unknown) {
   const aliased = aliasArgs(AUTO_QUERY_ALIASES)(value);
   if (!aliased || typeof aliased !== "object") return aliased;
   const args: Record<string, unknown> = { ...aliased };
-  if (typeof args.library === "string" && !("libraries" in args)) {
-    args.libraries = [args.library];
+  const libraries = [
+    "libraries",
+    "library",
+    "libraryIds",
+    "libraryId",
+    "libraryName",
+    "repository",
+    "domain",
+    "context7CompatibleLibraryID",
+    "libraryID",
+  ].flatMap((key) => {
+    const hint = args[key];
+    return typeof hint === "string"
+      ? [hint]
+      : Array.isArray(hint) && hint.every((item) => typeof item === "string")
+        ? hint
+        : [];
+  });
+  if (libraries.length > 0) {
+    args.libraries = [...new Set(libraries)];
   }
-  if (typeof args.libraryId === "string" && !("libraryIds" in args)) {
-    args.libraryIds = [args.libraryId];
+  for (const key of [
+    "library",
+    "libraryIds",
+    "libraryId",
+    "libraryName",
+    "repository",
+    "domain",
+    "context7CompatibleLibraryID",
+    "libraryID",
+  ]) {
+    delete args[key];
   }
-  delete args.library;
-  delete args.libraryId;
   return args;
 }
 
@@ -226,9 +249,9 @@ Do not use for: refactoring, writing scripts from scratch, debugging business lo
         title: "Query Documentation",
         description: `Retrieves up-to-date documentation and code examples for a natural-language implementation question in one call.
 
-Context7 selects up to four relevant documentation libraries, searches their namespaces in parallel, deduplicates the evidence, and reranks the combined snippets. Explicit Context7 IDs are used directly within the response safety cap.
+Context7 selects up to four relevant documentation libraries, searches their namespaces in parallel, deduplicates the evidence, and reranks the combined snippets. A libraries value may be a fuzzy product name or an exact Context7 ID.
 
-Make one initial call per user question. For comparisons, integrations, and migrations, keep every named product in that one complete query and put every user-supplied product name in libraries; omitting one product is incorrect. Never fan one question out into parallel query-docs calls. Put the complete question in query, including product names, versions, languages, and all concepts needed to answer. Optional library/libraries and version fields are routing hints only; do not guess a Context7 library ID.
+Make one initial call per user question. For comparisons, integrations, and migrations, keep every named product in that one complete query and put every user-supplied product name in libraries; omitting one product is incorrect. Never fan one question out into parallel query-docs calls. Put the complete question in query, including product names, versions, languages, and all concepts needed to answer. Optional libraries and version fields are routing hints only; do not guess a Context7 library ID.
 
 Retry policy: when a failure explicitly says it is transient/retryable, retry the same request at most once later. For a non-retryable documentation miss, never repeat the identical request. Make at most one refined call only when you can add genuinely new routing information from the user, such as an explicit library name, Context7 ID, version, or a materially more specific question. Do not retry a successful response.`,
         inputSchema: z.preprocess(
@@ -246,45 +269,22 @@ Retry policy: when a failure explicitly says it is transient/retryable, retry th
                 .max(4)
                 .optional()
                 .describe(
-                  "Fuzzy product names supplied by the user. When the question names two or more products for a comparison, integration, or migration, include every named product here and keep all of them in query. Make only one tool call."
-                ),
-              libraryIds: z
-                .array(
-                  z.string().regex(/^\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(?:[\/@][A-Za-z0-9_.-]+)?$/)
-                )
-                .min(1)
-                .max(4)
-                .optional()
-                .describe(
-                  "Optional exact Context7 IDs supplied by the user or trusted sources for one multi-library question. Never guess these values."
+                  "Up to four library hints supplied by the user. Each may be a fuzzy product name or an exact Context7 ID from a trusted source. For comparisons, integrations, or migrations, include every named product here and keep all of them in query. Never guess an exact ID."
                 ),
               version: z
                 .string()
                 .regex(/^v?\d+(?:[._]\d+){0,2}(?:[-+][a-z0-9.-]+)?$/i)
                 .optional()
                 .describe(
-                  "Optional version supplied by the user. It may accompany one or more fuzzy library names, but at most one exact libraryId. For fuzzy names it is retrieval context, so include the complete version-qualified product wording in query."
+                  "Optional version supplied by the user. Requires exactly one libraries value. Keep the complete version-qualified product wording in query."
                 ),
             })
             .superRefine((value, context) => {
-              const fuzzyHintCount = value.libraries?.length ?? 0;
-              const exactHintCount = value.libraryIds?.length ?? 0;
-              if (fuzzyHintCount > 0 && exactHintCount > 0) {
+              if (value.version && value.libraries?.length !== 1) {
                 context.addIssue({
                   code: "custom",
-                  message: "Use library names or library IDs, not both",
-                });
-              }
-              if (value.version && fuzzyHintCount + exactHintCount === 0) {
-                context.addIssue({
-                  code: "custom",
-                  message: "Version requires a library or libraryId hint",
-                });
-              }
-              if (value.version && exactHintCount > 1) {
-                context.addIssue({
-                  code: "custom",
-                  message: "Version can accompany at most one exact libraryId",
+                  message: "Version requires exactly one library hint",
+                  path: ["version"],
                 });
               }
             })
@@ -300,12 +300,10 @@ Retry policy: when a failure explicitly says it is transient/retryable, retry th
         {
           query,
           libraries,
-          libraryIds,
           version,
         }: {
           query: string;
           libraries?: string[];
-          libraryIds?: string[];
           version?: string;
         },
         toolCtx
@@ -313,7 +311,6 @@ Retry policy: when a failure explicitly says it is transient/retryable, retry th
         const ctx = getClientContext(toolCtx);
         const response = await fetchAutoLibraryContext(query, ctx, {
           libraries,
-          libraryIds,
           version,
         });
         maybeElicitAuthSignIn(server, ctx);
@@ -323,11 +320,7 @@ Retry policy: when a failure explicitly says it is transient/retryable, retry th
         const retryGuidance = response.error
           ? response.retryable
             ? "\n\nThis was a transient search failure. Retry the same request later."
-            : `\n\nDo not repeat the identical request. ${
-                response.retryReason === "no-relevant-documentation"
-                  ? "Refine the question or add a library hint."
-                  : "Check the library or version hint."
-              }`
+            : "\n\nDo not repeat the identical request. Check the library or version hint."
           : "";
         return {
           isError: response.retryable === true,

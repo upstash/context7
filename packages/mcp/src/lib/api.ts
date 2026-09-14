@@ -219,12 +219,9 @@ export async function fetchAutoLibraryContext(
   try {
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/context/search`);
     url.searchParams.set("query", query);
-    url.searchParams.set("type", "txt");
-    for (const library of options.libraries ?? (options.library ? [options.library] : [])) {
+    url.searchParams.set("type", "json");
+    for (const library of options.libraries ?? []) {
       url.searchParams.append("library", library);
-    }
-    for (const libraryId of options.libraryIds ?? (options.libraryId ? [options.libraryId] : [])) {
-      url.searchParams.append("libraryId", libraryId);
     }
     if (options.version) url.searchParams.set("version", options.version);
 
@@ -233,30 +230,32 @@ export async function fetchAutoLibraryContext(
       signal: AbortSignal.timeout(API_TIMEOUT_MS),
     });
     readPromptSignal(response, context);
-    const status = response.headers.get("x-context7-search-status") ?? undefined;
-    const retryHeader = response.headers.get("x-context7-retryable");
-    const retryable = retryHeader
-      ? retryHeader === "true"
-      : response.status === 429 || response.status >= 500;
-    const retryReason = response.headers.get("x-context7-retry-reason") ?? undefined;
-    const suggestedActionHeader = response.headers.get("x-context7-suggested-action");
-    const suggestedAction = suggestedActionHeader
-      ? suggestedActionHeader.replace(/-([a-z])/g, (_, character: string) =>
-          character.toUpperCase()
-        )
-      : undefined;
+    const body = (await response.json().catch(() => undefined)) as
+      | {
+          text?: string;
+          message?: string;
+          routes?: Array<{ libraryId?: string }>;
+          results?: Array<{ libraryId?: string }>;
+          meta?: {
+            status?: AutoContextResponse["status"];
+            retryable?: boolean;
+            reason?: string;
+            suggestedAction?: AutoContextResponse["suggestedAction"];
+          };
+        }
+      | undefined;
     const metadata = {
-      status: status as AutoContextResponse["status"],
-      retryable,
-      retryReason,
-      suggestedAction: suggestedAction as AutoContextResponse["suggestedAction"],
+      status: body?.meta?.status,
+      retryable: body?.meta?.retryable ?? (response.status === 429 || response.status >= 500),
+      retryReason: body?.meta?.reason,
+      suggestedAction: body?.meta?.suggestedAction,
     };
 
     if (!response.ok) {
-      const errorMessage = await parseErrorResponse(response, context.apiKey);
+      const errorMessage = body?.message ?? `Request failed with status ${response.status}.`;
       return { data: errorMessage, error: errorMessage, ...metadata };
     }
-    const data = await response.text();
+    const data = body?.text ?? "";
     if (!data.trim()) {
       return {
         data: "No relevant documentation was found. Include the exact product or library name and try again.",
@@ -264,12 +263,11 @@ export async function fetchAutoLibraryContext(
         ...metadata,
         retryable: false,
         retryReason: "no-relevant-documentation",
-        suggestedAction: "refineQuery",
+        suggestedAction: "checkLibraryOrVersion",
       };
     }
-    const libraryIds = (response.headers.get("x-context7-library-ids") ?? "")
-      .split(",")
-      .map((value) => value.trim())
+    const libraryIds = [...(body?.results ?? []), ...(body?.routes ?? [])]
+      .map((value) => value.libraryId?.trim() ?? "")
       .filter((value, index, all) => LIBRARY_ID_PATTERN.test(value) && all.indexOf(value) === index)
       .slice(0, MAX_AUTO_CONTEXT_ROUTES);
     return {
