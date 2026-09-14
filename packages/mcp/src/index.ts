@@ -432,7 +432,7 @@ async function main() {
     // go idle and the gateway reaps them at streamIdleTimeout (300s).
     const rawMcpHandler = createMcpHandler((mcpContext) => createMcpServer(mcpContext), {
       keepAliveMs: 0,
-      maxSubscriptions: process.env.MCP_MAX_SUBSCRIPTIONS === undefined ? 0 : getMaxSubscriptions(),
+      maxSubscriptions: getMaxSubscriptions(),
       onerror: (error) => console.error("MCP handler error:", error),
     });
     const mcpHandler = mcpInstrumentation
@@ -692,8 +692,7 @@ async function main() {
       },
       {
         transport: stdioTransport,
-        maxSubscriptions:
-          process.env.MCP_MAX_SUBSCRIPTIONS === undefined ? 0 : getMaxSubscriptions(),
+        maxSubscriptions: getMaxSubscriptions(),
         onerror: (error) => console.error("MCP stdio error:", error),
       }
     );

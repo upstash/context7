@@ -6,21 +6,20 @@ describe("getMaxSubscriptions", () => {
     vi.restoreAllMocks();
   });
 
-  test("defaults to 16000 subscriptions", () => {
+  test("disables subscriptions by default", () => {
     expect(getMaxSubscriptions(undefined)).toBe(DEFAULT_MAX_SUBSCRIPTIONS);
+    expect(DEFAULT_MAX_SUBSCRIPTIONS).toBe(0);
   });
 
-  test("accepts a positive integer override", () => {
+  test("accepts non-negative integer overrides", () => {
+    expect(getMaxSubscriptions("0")).toBe(0);
     expect(getMaxSubscriptions("8192")).toBe(8_192);
   });
 
-  test.each(["0", "-1", "1.5", "invalid", "Infinity"])(
-    "falls back for invalid value %s",
-    (value) => {
-      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  test.each(["-1", "1.5", "invalid", "Infinity"])("falls back for invalid value %s", (value) => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-      expect(getMaxSubscriptions(value)).toBe(DEFAULT_MAX_SUBSCRIPTIONS);
-      expect(warn).toHaveBeenCalledOnce();
-    }
-  );
+    expect(getMaxSubscriptions(value)).toBe(DEFAULT_MAX_SUBSCRIPTIONS);
+    expect(warn).toHaveBeenCalledOnce();
+  });
 });
