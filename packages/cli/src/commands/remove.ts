@@ -13,6 +13,7 @@ import {
   resolveMcpPath,
   removeTomlServer,
 } from "../setup/mcp-writer.js";
+import { readOpenCodeConfig, updateOpenCodeServer } from "../setup/opencode-editor.js";
 import { join } from "path";
 import { access, readFile, rm, writeFile } from "fs/promises";
 
@@ -194,7 +195,8 @@ async function hasMcpConfig(agentName: SetupAgent, scope: Scope): Promise<boolea
 
   let existing: Record<string, unknown>;
   try {
-    existing = await readJsonConfig(mcpPath);
+    existing =
+      agentName === "opencode" ? await readOpenCodeConfig(mcpPath) : await readJsonConfig(mcpPath);
   } catch (err) {
     log.warn(
       `Skipped ${mcpPath}: could not parse (${err instanceof Error ? err.message : String(err)})`
@@ -325,6 +327,11 @@ async function uninstallMcp(agentName: SetupAgent, scope: Scope): Promise<Cleanu
   try {
     if (mcpPath.endsWith(".toml")) {
       const { removed } = await removeTomlServer(mcpPath, "context7");
+      return { status: removed ? "removed" : "not found", path: mcpPath };
+    }
+
+    if (agentName === "opencode") {
+      const { removed } = await updateOpenCodeServer(mcpPath, () => undefined);
       return { status: removed ? "removed" : "not found", path: mcpPath };
     }
 
