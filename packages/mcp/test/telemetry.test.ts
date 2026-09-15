@@ -60,6 +60,7 @@ describe("MCP telemetry cardinality", () => {
 
   test("retains only registered Context7 tool names", () => {
     expect(normalizeMcpToolName("query-docs")).toBe("query-docs");
+    expect(normalizeMcpToolName("get-library-docs")).toBe("query-docs");
     expect(normalizeMcpToolName("resolve-library-id")).toBe("resolve-library-id");
     expect(normalizeMcpToolName("attacker-controlled-tool")).toBe("unknown");
   });

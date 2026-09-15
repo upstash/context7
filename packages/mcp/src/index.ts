@@ -23,15 +23,22 @@ import { AsyncLocalStorage } from "async_hooks";
 import { randomUUID } from "node:crypto";
 import {
   SERVER_VERSION,
-  RESOURCE_URL,
   OAUTH_AUTH_SERVER_URL,
-  EMA_ISSUER,
   OPENAI_APPS_CHALLENGE_TOKEN,
+  canonicalMcpResourceUrl,
+  mcpServerCard,
+  protectedResourceMetadataDocument,
+  protectedResourceMetadataPath,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
-import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
+import {
+  GET_LIBRARY_DOCS_TOOL,
+  QUERY_DOCS_TOOL,
+  RESOLVE_LIBRARY_ID_TOOL,
+} from "./lib/tool-names.js";
 import { installProcessShutdown } from "./lib/process-shutdown.js";
-import { getMaxSubscriptions } from "./lib/subscriptions.js";
+import { getMaxSubscriptions, logMcpHandlerError } from "./lib/subscriptions.js";
+import { isForwardableApiCredential } from "./lib/encryption.js";
 import {
   forceFlushTelemetry,
   initializeTelemetry,
@@ -352,6 +359,57 @@ Do not call this tool more than 3 times per question.`,
     }
   );
 
+  // Older README / Copilot snippets still whitelist this name. Same handler as
+  // query-docs; telemetry maps it back to the canonical tool.
+  server.registerTool(
+    GET_LIBRARY_DOCS_TOOL,
+    {
+      title: "Query Documentation",
+      description: `Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
+
+This is an alias of 'query-docs' for older client configs that still call get-library-docs.
+
+You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
+
+Do not call this tool more than 3 times per question.`,
+      inputSchema: z.preprocess(
+        aliasArgs({ ...GLOBAL_ALIASES, ...QUERY_DOCS_ALIASES }),
+        z.object({
+          libraryId: z
+            .string()
+            .describe(
+              "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
+            ),
+          query: z
+            .string()
+            .describe(
+              "What to look up in the library's documentation, scoped to a single concept. Be specific and include relevant details, but keep each query to one topic — if the user's question spans multiple distinct concepts, make a separate call per concept instead of combining them, unless the question is about how the concepts interact. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad (too vague): 'auth' or 'hooks'. Bad (too broad): 'routing and auth and caching in Next.js'. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
+            ),
+        })
+      ),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: true,
+        idempotentHint: true,
+      },
+    },
+    async ({ query, libraryId }: { query: string; libraryId: string }, toolCtx) => {
+      const ctx = getClientContext(toolCtx);
+      const response = await fetchLibraryContext({ query, libraryId }, ctx);
+      maybeElicitAuthSignIn(server, ctx);
+      recordToolCallOutcome(response.outcome);
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: response.data,
+          },
+        ],
+      };
+    }
+  );
+
   return server;
 }
 
@@ -407,8 +465,10 @@ async function main() {
     };
 
     const extractApiKey = (req: express.Request): string | undefined => {
+      const bearer = extractBearerToken(req.headers.authorization);
+      if (bearer && isForwardableApiCredential(bearer)) return bearer;
+
       return (
-        extractBearerToken(req.headers.authorization) ||
         extractHeaderValue(req.headers["x-context7-api-key"]) ||
         extractHeaderValue(req.headers["context7-api-key"]) ||
         extractHeaderValue(req.headers["x-api-key"]) ||
@@ -433,7 +493,7 @@ async function main() {
     const rawMcpHandler = createMcpHandler((mcpContext) => createMcpServer(mcpContext), {
       keepAliveMs: 0,
       maxSubscriptions: getMaxSubscriptions(),
-      onerror: (error) => console.error("MCP handler error:", error),
+      onerror: (error) => logMcpHandlerError("MCP handler error:", error),
     });
     const mcpHandler = mcpInstrumentation
       ? mcpInstrumentation.instrumentHttpHandler(rawMcpHandler)
@@ -441,20 +501,17 @@ async function main() {
     // Without onerror, request-conversion / handler.fetch throws are answered
     // with a bare 500 inside the adapter and never reach our express handler.
     const nodeHandler = toNodeHandler(mcpHandler, {
-      onerror: (error) => console.error("MCP node adapter error:", error),
+      onerror: (error) => logMcpHandlerError("MCP node adapter error:", error),
     });
 
     const handleMcpRequest = async (req: express.Request, res: express.Response) => {
       try {
         const plugin = getPluginFromRequest(req);
         const apiKey = extractApiKey(req);
-        const baseUrl = new URL(RESOURCE_URL).origin;
+        const metadataUrl = `${new URL(canonicalMcpResourceUrl()).origin}${protectedResourceMetadataPath()}`;
 
         // OAuth discovery info header, used by MCP clients to discover the authorization server
-        res.set(
-          "WWW-Authenticate",
-          `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
-        );
+        res.set("WWW-Authenticate", `Bearer resource_metadata="${metadataUrl}"`);
 
         if (requiresAuthentication(req, plugin)) {
           const authentication = await observeAuthentication<AuthenticationResult>(async () => {
@@ -529,28 +586,30 @@ async function main() {
     mcpRouter.all("/", (req, res) => handleMcpRequest(req, res));
     // OAuth-protected endpoint - requires authentication
     mcpRouter.all("/oauth", (req, res) => handleMcpRequest(req, res));
+
+    const sendServerCard = (_req: express.Request, res: express.Response) => {
+      res.setHeader("Content-Type", "application/mcp-server-card+json");
+      res.status(200).send(mcpServerCard());
+    };
+    // SEP-2127: the card lives at `{streamable-http}/server-card`. Register
+    // these before the /mcp router so they are not answered as MCP JSON-RPC.
+    app.get("/mcp/server-card", sendServerCard);
+    app.get("/server-card", sendServerCard);
+
     app.use("/mcp", mcpRouter);
 
     app.get("/ping", (_req: express.Request, res: express.Response) => {
       res.json({ status: "ok", message: "pong" });
     });
 
-    // OAuth 2.0 Protected Resource Metadata (RFC 9728)
-    // Used by MCP clients to discover the authorization server
-    app.get(
-      "/.well-known/oauth-protected-resource",
-      (_req: express.Request, res: express.Response) => {
-        res.json({
-          resource: RESOURCE_URL,
-          // Each entry is an independent authorization server. Clerk handles
-          // regular authorization-code flows; Context7 handles only the
-          // enterprise-managed id-jag exchange.
-          authorization_servers: Array.from(new Set([OAUTH_AUTH_SERVER_URL, EMA_ISSUER])),
-          scopes_supported: ["profile", "email"],
-          bearer_methods_supported: ["header"],
-        });
-      }
-    );
+    // OAuth 2.0 Protected Resource Metadata (RFC 9728). Origin and path-aware
+    // (`/.../mcp`) lookups share one document whose `resource` is the canonical
+    // `/mcp` identifier clients actually connect to.
+    const sendProtectedResourceMetadata = (_req: express.Request, res: express.Response) => {
+      res.json(protectedResourceMetadataDocument());
+    };
+    app.get("/.well-known/oauth-protected-resource", sendProtectedResourceMetadata);
+    app.get("/.well-known/oauth-protected-resource/{*path}", sendProtectedResourceMetadata);
 
     app.get(
       "/.well-known/oauth-authorization-server",
@@ -693,7 +752,7 @@ async function main() {
       {
         transport: stdioTransport,
         maxSubscriptions: getMaxSubscriptions(),
-        onerror: (error) => console.error("MCP stdio error:", error),
+        onerror: (error) => logMcpHandlerError("MCP stdio error:", error),
       }
     );
     installProcessShutdown(stdioHandle, {

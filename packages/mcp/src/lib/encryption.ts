@@ -52,6 +52,19 @@ export function createClientIpAssertion(
 }
 
 /**
+ * Credentials the Context7 REST API will accept. Cursor `direct_` tokens and
+ * other IDE session secrets must not be forwarded — REST only understands
+ * `ctx7sk` keys, Clerk `oat_` tokens, and JWTs (OAuth / EMA / Entra / Vercel).
+ */
+export function isForwardableApiCredential(token: string): boolean {
+  const value = token.trim();
+  if (!value) return false;
+  if (value.startsWith("ctx7sk")) return true;
+  if (value.startsWith("oat_")) return true;
+  return value.split(".").length === 3;
+}
+
+/**
  * Generate headers for Context7 API requests.
  * Handles client IP encryption, authentication, and telemetry headers.
  */
@@ -68,7 +81,7 @@ export function generateHeaders(context: ClientContext): Record<string, string> 
   if (context.sessionId) {
     headers["mcp-session-id"] = context.sessionId;
   }
-  if (context.apiKey) {
+  if (context.apiKey && isForwardableApiCredential(context.apiKey)) {
     headers["Authorization"] = `Bearer ${context.apiKey}`;
   }
   if (context.clientInfo?.ide) {

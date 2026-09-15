@@ -8,6 +8,7 @@ import { createDecipheriv } from "node:crypto";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { canonicalMcpResourceUrl } from "../src/lib/constants.js";
 
 // End-to-end tests: the real built binary (dist/index.js) is exercised over
 // both transports (spawned HTTP server, spawned stdio child) by both protocol
@@ -217,8 +218,29 @@ describe("OAuth discovery", () => {
 
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
-      resource: "https://mcp.context7.com",
+      resource: canonicalMcpResourceUrl(),
       authorization_servers: ["https://clerk.context7.com", "https://context7.com"],
+    });
+  });
+
+  test("serves the same PRM at the path-aware RFC 9728 URL", async () => {
+    const metadataUrl = new URL("/.well-known/oauth-protected-resource/mcp", httpUrl);
+    const response = await fetch(metadataUrl);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      resource: canonicalMcpResourceUrl(),
+    });
+  });
+
+  test("serves the SEP-2127 server card at /mcp/server-card", async () => {
+    const response = await fetch(new URL("/mcp/server-card", httpUrl));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toMatch(/application\/mcp-server-card\+json/);
+    expect(await response.json()).toMatchObject({
+      name: "io.github.upstash/context7",
+      remotes: [{ type: "streamable-http", url: canonicalMcpResourceUrl() }],
     });
   });
 });
@@ -358,6 +380,58 @@ describe("HTTP API key headers", () => {
       await client.close();
     }
   });
+
+  test("does not forward Cursor IDE bearer tokens to the Context7 API", async () => {
+    const client = new Client({ name: "cursor-token-test", version: "1.0.0" });
+
+    await client.connect(
+      new StreamableHTTPClientTransport(new URL(httpUrl), {
+        requestInit: { headers: { Authorization: "Bearer direct_cursor-session" } },
+      })
+    );
+
+    try {
+      requests.length = 0;
+      await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/vercel/next.js", query: "app router" },
+      });
+
+      const apiCall = requests.find((request) => request.path === "/v2/context");
+      expect(apiCall?.headers.authorization).toBeUndefined();
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("prefers a Context7 API key header when Authorization is not forwardable", async () => {
+    const apiKey = "ctx7sk-alongside-cursor-token";
+    const client = new Client({ name: "mixed-auth-test", version: "1.0.0" });
+
+    await client.connect(
+      new StreamableHTTPClientTransport(new URL(httpUrl), {
+        requestInit: {
+          headers: {
+            Authorization: "Bearer direct_cursor-session",
+            "X-Context7-API-Key": apiKey,
+          },
+        },
+      })
+    );
+
+    try {
+      requests.length = 0;
+      await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/vercel/next.js", query: "app router" },
+      });
+
+      const apiCall = requests.find((request) => request.path === "/v2/context");
+      expect(apiCall?.headers.authorization).toBe(`Bearer ${apiKey}`);
+    } finally {
+      await client.close();
+    }
+  });
 });
 
 describe.each([
@@ -384,9 +458,13 @@ describe.each([
     expect(client.getProtocolEra()).toBe(era);
   });
 
-  test("lists both tools with derived input schemas", async () => {
+  test("lists tools with derived input schemas", async () => {
     const { tools } = await client.listTools();
-    expect(tools.map((t) => t.name).sort()).toEqual(["query-docs", "resolve-library-id"]);
+    expect(tools.map((t) => t.name).sort()).toEqual([
+      "get-library-docs",
+      "query-docs",
+      "resolve-library-id",
+    ]);
 
     // The z.preprocess wrapper must not break JSON Schema derivation.
     const resolve = tools.find((t) => t.name === "resolve-library-id")!;
@@ -432,6 +510,19 @@ describe.each([
     } else {
       expect(apiCalls[0].headers["mcp-client-ip-assertion"]).toBeUndefined();
     }
+  });
+
+  test("calls get-library-docs as an alias of query-docs", async () => {
+    const result = await client.callTool({
+      name: "get-library-docs",
+      arguments: { libraryId: "/vercel/next.js", query: "app router" },
+    });
+    expect(result.isError).toBeFalsy();
+    expect(result.content).toMatchObject([{ type: "text", text: STUB_DOCS }]);
+
+    const apiCalls = requests.filter((r) => r.path === "/v2/context");
+    expect(apiCalls).toHaveLength(1);
+    expect(apiCalls[0].query.get("libraryId")).toBe("/vercel/next.js");
   });
 
   test("calls resolve-library-id end to end", async () => {
@@ -735,7 +826,7 @@ describe("plugin authentication", () => {
     const res = await postMcp(`${httpUrl}?client=claude-code-plugin`);
     expect(res.status).toBe(401);
     expect(res.wwwAuthenticate).toContain("resource_metadata=");
-    expect(res.wwwAuthenticate).toContain("/.well-known/oauth-protected-resource");
+    expect(res.wwwAuthenticate).toContain("/.well-known/oauth-protected-resource/mcp");
   });
 
   test("allows the Claude Code plugin's empty API key fallback", async () => {

@@ -11,3 +11,14 @@ export function getMaxSubscriptions(value = process.env.MCP_MAX_SUBSCRIPTIONS): 
   console.warn(`Invalid MCP_MAX_SUBSCRIPTIONS; using the default of ${DEFAULT_MAX_SUBSCRIPTIONS}.`);
   return DEFAULT_MAX_SUBSCRIPTIONS;
 }
+
+export function isSubscriptionLimitError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes("subscription limit reached");
+}
+
+/** Drop cap-0 listen refusals; those are expected and drown Humio (~1M/day). */
+export function logMcpHandlerError(label: string, error: unknown): void {
+  if (isSubscriptionLimitError(error)) return;
+  console.error(label, error);
+}

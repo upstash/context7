@@ -34,7 +34,12 @@ import {
   type Link,
   type Span,
 } from "@opentelemetry/api";
-import { MCP_TOOL_NAMES, type ToolCallOutcome } from "./tool-names.js";
+import {
+  MCP_TOOL_NAMES,
+  QUERY_DOCS_TOOL,
+  QUERY_DOCS_TOOL_ALIASES,
+  type ToolCallOutcome,
+} from "./tool-names.js";
 import { runInMcpOperationScope } from "./mcp-operation-scope.js";
 import {
   StdioSubscriptionTelemetry,
@@ -158,7 +163,9 @@ export function normalizeMcpMethodName(method: unknown): string {
 }
 
 export function normalizeMcpToolName(tool: unknown): string {
-  return typeof tool === "string" && KNOWN_TOOLS.has(tool) ? tool : "unknown";
+  if (typeof tool !== "string") return "unknown";
+  if ((QUERY_DOCS_TOOL_ALIASES as readonly string[]).includes(tool)) return QUERY_DOCS_TOOL;
+  return KNOWN_TOOLS.has(tool) ? tool : "unknown";
 }
 
 function normalizedTool(message: JSONRPCMessage): string | undefined {
