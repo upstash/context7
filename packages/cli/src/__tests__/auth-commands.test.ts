@@ -179,6 +179,36 @@ describe("whoami command", () => {
     expect(logOutput.join("\n")).toMatch(/ctx7 logout.*ctx7 login/);
   });
 
+  test.each([403, 500])("does not recommend logout for HTTP %i", async (status) => {
+    mockGetValidAccessToken.mockResolvedValue("valid-token");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status })));
+
+    await runCommand("whoami");
+
+    expect(logOutput.join("\n")).toContain("Could not verify your session");
+    expect(logOutput.join("\n")).not.toMatch(/ctx7 logout|ctx7 login/);
+  });
+
+  test("does not recommend logout when the identity request fails", async () => {
+    mockGetValidAccessToken.mockResolvedValue("valid-token");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("fetch failed")));
+
+    await runCommand("whoami");
+
+    expect(logOutput.join("\n")).toContain("Could not verify your session");
+    expect(logOutput.join("\n")).not.toMatch(/ctx7 logout|ctx7 login/);
+  });
+
+  test("does not recommend logout for an invalid identity response", async () => {
+    mockGetValidAccessToken.mockResolvedValue("valid-token");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{")));
+
+    await runCommand("whoami");
+
+    expect(logOutput.join("\n")).toContain("Could not verify your session");
+    expect(logOutput.join("\n")).not.toMatch(/ctx7 logout|ctx7 login/);
+  });
+
   test("tracks whoami event", async () => {
     mockGetValidAccessToken.mockResolvedValue(undefined);
     await runCommand("whoami");
