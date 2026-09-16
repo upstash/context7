@@ -4,7 +4,7 @@ sidebarTitle: "Getting Started"
 description: "Run the Context7 stack inside your infrastructure with your chosen AI and storage services"
 ---
 
-Context7 On-Premise runs the parser, application database, vector store, and MCP server inside your infrastructure. When you configure an external AI provider, Context7 sends the content required for parsing, embedding, reranking, or source-code documentation to that provider.
+Context7 On-Premise keeps your repositories, generated documentation, application database, vector store, and MCP server in your infrastructure. Only the content required for parsing, embedding, reranking, or source-code documentation is sent to the AI provider you choose.
 
 ## What's Included
 
@@ -193,7 +193,7 @@ Configured via the **Settings** page in the web UI.
 | LLM API Key | API key for your chosen provider; optional for Bedrock with workload credentials |
 | LLM Model | Model name or Bedrock model/inference-profile ID |
 | AWS Region | Region used for Bedrock LLM and embedding requests |
-| LLM Base URL | Custom OpenAI-compatible endpoint, or an optional Bedrock Runtime endpoint |
+| Base URL / Bedrock endpoint | Custom OpenAI-compatible endpoint, or an optional Bedrock Runtime endpoint |
 
 #### Examples
 
@@ -225,7 +225,7 @@ By default, Context7 uses the same provider as your LLM for generating embedding
 | Embedding Provider | `openai`, `gemini`, `bedrock`, or custom |
 | Embedding API Key | Separate key; inherits the LLM key only when both use the same provider |
 | Embedding Model | Embedding model name, such as `text-embedding-3-small` or `amazon.titan-embed-text-v2:0` |
-| Embedding Base URL | Custom embedding endpoint, or an optional Bedrock Runtime endpoint |
+| Embedding base URL / Bedrock endpoint | Custom embedding endpoint, or an optional Bedrock Runtime endpoint |
 
 See [AWS Bedrock](/enterprise/integrations/aws-bedrock) for IAM, model, region, and private-network configuration.
 

@@ -6,10 +6,12 @@ description: "Use Anthropic models and Amazon Titan embeddings through native AW
 
 Context7 On-Premise can call AWS Bedrock directly for parsing, source-code documentation, reranking, and embeddings. LiteLLM and other OpenAI-compatible proxies are not required.
 
+Native AWS Bedrock support is available in Context7 Enterprise v1.3.9 and later.
+
 ## Prerequisites
 
 - Enable access to the Claude and Amazon Titan models you plan to use in the selected AWS Region.
-- Allow `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` for those models or inference profiles.
+- Allow `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` for the models you use. For a [geographic cross-region inference profile](https://docs.aws.amazon.com/bedrock/latest/userguide/geographic-cross-region-inference.html), allow both the inference-profile ARN and the underlying foundation-model ARN in the source Region and every destination Region.
 - Give the Context7 container network access to the regional Bedrock Runtime endpoint.
 
 ## Authenticate
@@ -45,11 +47,15 @@ A workload IAM role is recommended. Context7 uses the standard AWS SDK credentia
     ```
 
     A profile that uses `credential_process` also requires its helper executable inside the container image.
+
+    Ensure the mounted files are readable by the UID that runs the container, especially when using Docker `--user` or Kubernetes `runAsUser`.
   </Tab>
   <Tab title="Bedrock API key">
     Paste a Bedrock API key into Context7's **API Key** field, or pass it as `AWS_BEARER_TOKEN_BEDROCK`. The value is used for both Claude and Titan when both providers are set to Bedrock.
 
     `AWS_BEARER_TOKEN_BEDROCK` takes precedence over the standard AWS credential chain. Remove an expired or revoked value from the container environment to fall back to a workload role or shared profile.
+
+    Console-generated short-term keys expire with the session or after at most 12 hours. A key saved in Context7 stops working when it expires, so use a workload role for unattended production deployments. AWS positions long-term Bedrock API keys for exploration and development rather than production workloads.
   </Tab>
 </Tabs>
 
@@ -76,7 +82,7 @@ The AWS credential chain does not skip credentials merely because they are inval
 </Steps>
 
 <Warning>
-Model IDs prefixed with `us.`, `eu.`, or `apac.` are geographic cross-region inference profiles. They can route requests among supported regions in that geography. The AWS Region field selects the Bedrock endpoint; it does not constrain a cross-region profile to that single region.
+Model IDs prefixed with values such as `us.`, `eu.`, `apac.`, or `global.` are cross-region inference profiles. They can route requests among supported regions. The AWS Region field selects the Bedrock endpoint; it does not constrain a cross-region profile to that single region.
 </Warning>
 
 ## Private connectivity

@@ -84,11 +84,11 @@
                       {
                         "group": "Integrations",
                         "pages": [
-                          "enterprise/integrations/aws-bedrock",
                           "enterprise/integrations/github",
                           "enterprise/integrations/other-git",
                           "enterprise/integrations/gerrit",
-                          "enterprise/integrations/confluence"
+                          "enterprise/integrations/confluence",
+                          "enterprise/integrations/aws-bedrock"
                         ]
                       },
                       {
