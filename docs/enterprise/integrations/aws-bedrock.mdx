@@ -6,7 +6,7 @@ description: "Use Anthropic models and Amazon Titan embeddings through native AW
 
 Context7 On-Premise can call AWS Bedrock directly for parsing, source-code documentation, reranking, and embeddings. LiteLLM and other OpenAI-compatible proxies are not required.
 
-Native AWS Bedrock support is available in Context7 Enterprise v1.3.9 and later.
+Native AWS Bedrock support requires a Context7 Enterprise image tagged v1.3.9 or later. Updating these docs or configuration alone does not add Bedrock support to an earlier image.
 
 ## Prerequisites
 
@@ -69,7 +69,15 @@ The AWS credential chain does not skip credentials merely because they are inval
   <Step title="Configure the LLM">
     In the setup wizard or **Settings → AI & Models**, select **AWS Bedrock**. Enter the raw Bedrock model or inference-profile ID—without an `amazon-bedrock/` prefix—and select its AWS Region.
 
-    For example: `us.anthropic.claude-haiku-4-5-20251001-v1:0`.
+    Use an inference-profile prefix that matches the selected Region's geography:
+
+    | AWS Region | Example inference profile |
+    |---|---|
+    | `us-east-1` | `us.anthropic.claude-haiku-4-5-20251001-v1:0` |
+    | `eu-west-1` | `eu.anthropic.claude-haiku-4-5-20251001-v1:0` |
+    | `ap-southeast-1` | `apac.anthropic.claude-haiku-4-5-20251001-v1:0` |
+
+    Context7 selects region-aware defaults in v1.3.9 and later. If you enter a custom model or inference-profile ID, verify that it is invocable from the configured Region.
   </Step>
   <Step title="Configure embeddings">
     Select **Same as LLM** to use Bedrock embeddings, or select **AWS Bedrock** separately. Use an Amazon Titan model such as `amazon.titan-embed-text-v2:0`.
