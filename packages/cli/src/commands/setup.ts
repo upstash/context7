@@ -326,13 +326,6 @@ async function loadMcpSkillPayload(deployment: SetupDeployment): Promise<McpSkil
   }
 }
 
-/**
- * For stdio transport, preserve an existing `@upstash/context7-mcp` invocation
- * (e.g., `@upstash/context7-mcp@latest` or a user-pinned version) and only
- * swap the `--api-key` value. Falls back to the agent's canonical shape when
- * no existing stdio entry is detected. HTTP transport always uses the
- * canonical shape.
- */
 function resolveEntryToWrite(
   agent: ReturnType<typeof getAgent>,
   auth: AuthOptions,
@@ -340,11 +333,12 @@ function resolveEntryToWrite(
   existingEntry: Record<string, unknown> | undefined,
   mcpUrl: string
 ): Record<string, unknown> {
+  const canonicalEntry = agent.mcp.buildEntry(auth, transport, mcpUrl);
   if (transport === "stdio" && existingEntry && isStdioContext7Entry(existingEntry)) {
     const apiKey = auth.mode === "api-key" ? auth.apiKey : undefined;
-    return patchStdioApiKey(existingEntry, apiKey);
+    return patchStdioApiKey(existingEntry, apiKey, canonicalEntry);
   }
-  return agent.mcp.buildEntry(auth, transport, mcpUrl);
+  return canonicalEntry;
 }
 
 async function setupAgent(
@@ -390,11 +384,11 @@ async function setupAgent(
         : `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
     } else {
       const existing = await readJsonConfig(mcpPath);
-      const existingJsonEntry =
+      const existingEntry =
         transport === "stdio"
           ? getJsonServerEntry(existing, agent.mcp.configKey, "context7")
           : undefined;
-      const entry = resolveEntryToWrite(agent, auth, transport, existingJsonEntry, mcpUrl);
+      const entry = resolveEntryToWrite(agent, auth, transport, existingEntry, mcpUrl);
       const { config, alreadyExists } = mergeServerEntry(
         existing,
         agent.mcp.configKey,

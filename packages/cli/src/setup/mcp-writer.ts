@@ -4,6 +4,33 @@ import { STDIO_PACKAGE } from "./agents.js";
 
 export { patchTomlStdioApiKey } from "./toml-editor.js";
 
+const TRUSTED_STDIO_COMMANDS = new Set(["npx", "bunx", "pnpx"]);
+const SAFE_STDIO_FLAGS = new Set(["-y", "--yes", "--debug"]);
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isContext7PackageSpecifier(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  if (value === STDIO_PACKAGE) return true;
+  if (!value.startsWith(`${STDIO_PACKAGE}@`)) return false;
+
+  const version = value.slice(STDIO_PACKAGE.length + 1);
+  return /^[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(version);
+}
+
+function sanitizeStdioArgs(args: string[], apiKey: string | undefined): string[] {
+  const packageSpecifier = args.find(isContext7PackageSpecifier) ?? STDIO_PACKAGE;
+  const runnerFlags = args.filter((arg) => arg === "-y" || arg === "--yes");
+  const serverFlags = args.filter(
+    (arg) => SAFE_STDIO_FLAGS.has(arg) && arg !== "-y" && arg !== "--yes"
+  );
+  const sanitized = [...runnerFlags, packageSpecifier, ...serverFlags];
+  if (apiKey) sanitized.push("--api-key", apiKey);
+  return sanitized;
+}
+
 function stripJsonComments(text: string): string {
   let result = "";
   let i = 0;
@@ -124,17 +151,19 @@ export async function readTomlServerExists(filePath: string, serverName: string)
  * OpenCode-style `command: ["npx", ..., "@upstash/context7-mcp", ...]`).
  */
 export function isStdioContext7Entry(entry: unknown): entry is Record<string, unknown> {
-  if (!entry || typeof entry !== "object") return false;
-  const e = entry as Record<string, unknown>;
-  const refs = (s: unknown) => typeof s === "string" && s.includes(STDIO_PACKAGE);
+  if (!entry || typeof entry !== "object" || Array.isArray(entry)) return false;
+  const candidate = entry as Record<string, unknown>;
 
-  if (Array.isArray(e.command)) {
-    return (e.command as unknown[]).some(refs);
+  if (isStringArray(candidate.command)) {
+    const [command, ...args] = candidate.command;
+    return TRUSTED_STDIO_COMMANDS.has(command) && args.some(isContext7PackageSpecifier);
   }
-  if (typeof e.command === "string" && Array.isArray(e.args)) {
-    return (e.args as unknown[]).some(refs);
-  }
-  return false;
+  return (
+    typeof candidate.command === "string" &&
+    TRUSTED_STDIO_COMMANDS.has(candidate.command) &&
+    isStringArray(candidate.args) &&
+    candidate.args.some(isContext7PackageSpecifier)
+  );
 }
 
 /**
@@ -153,36 +182,33 @@ export function getJsonServerEntry(
   return entry && typeof entry === "object" ? (entry as Record<string, unknown>) : undefined;
 }
 
-function stripApiKeyPair(args: string[]): string[] {
-  const result: string[] = [];
-  for (let i = 0; i < args.length; i++) {
-    if (args[i] === "--api-key") {
-      i++; // skip the value too
-      continue;
-    }
-    result.push(args[i]);
-  }
-  return result;
-}
-
 /**
- * Returns a copy of `entry` with any existing `--api-key <value>` pair
- * removed from args (or array-form command), then a new `--api-key <apiKey>`
- * appended when `apiKey` is provided. All other fields — including the
- * package specifier (e.g., `@upstash/context7-mcp@latest`) — are preserved.
+ * Rebuilds a recognized stdio entry from its agent's canonical shape and
+ * carries over only the trusted runner, Context7 package specifier, safe
+ * flags, and OpenCode's type/enabled fields.
  */
 export function patchStdioApiKey(
   entry: Record<string, unknown>,
-  apiKey: string | undefined
+  apiKey: string | undefined,
+  canonicalEntry?: Record<string, unknown>
 ): Record<string, unknown> {
-  if (Array.isArray(entry.command)) {
-    const cmd = stripApiKeyPair(entry.command as string[]);
-    if (apiKey) cmd.push("--api-key", apiKey);
-    return { ...entry, command: cmd };
+  if (isStringArray(entry.command)) {
+    const [command, ...args] = entry.command;
+    const canonical = canonicalEntry ?? { type: "local", command: [], enabled: true };
+    const patched: Record<string, unknown> = { ...canonical };
+    if ("type" in entry) patched.type = entry.type;
+    patched.command = [command, ...sanitizeStdioArgs(args, apiKey)];
+    if ("enabled" in entry) patched.enabled = entry.enabled;
+    return patched;
   }
-  const args = Array.isArray(entry.args) ? stripApiKeyPair(entry.args as string[]) : [];
-  if (apiKey) args.push("--api-key", apiKey);
-  return { ...entry, args };
+
+  const canonical = canonicalEntry ?? { command: "npx", args: ["-y", STDIO_PACKAGE] };
+  const command =
+    typeof entry.command === "string" && TRUSTED_STDIO_COMMANDS.has(entry.command)
+      ? entry.command
+      : "npx";
+  const args = isStringArray(entry.args) ? entry.args : ["-y", STDIO_PACKAGE];
+  return { ...canonical, command, args: sanitizeStdioArgs(args, apiKey) };
 }
 
 export function buildTomlServerBlock(serverName: string, entry: Record<string, unknown>): string {

@@ -17,6 +17,8 @@ const TOML_BASIC_ESCAPES: Readonly<Record<string, string>> = {
   '"': '"',
   "\\": "\\",
 };
+const TRUSTED_STDIO_COMMANDS = new Set(["npx", "bunx", "pnpx"]);
+const SAFE_STDIO_FLAGS = new Set(["-y", "--yes", "--debug"]);
 
 function skipTomlArrayTrivia(source: string, start: number): number {
   let index = start;
@@ -115,10 +117,10 @@ function parseTomlStringArray(
   throw new Error("Unterminated TOML array in MCP args");
 }
 
-function findTomlServerArgs(
+function findTomlServerBody(
   raw: string,
   serverName: string
-): { start: number; end: number; tokens: TomlStringToken[] } | null {
+): { start: number; end: number } | null {
   const escapedName = serverName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const tableKey = `(?:mcp_servers|"mcp_servers"|'mcp_servers')`;
   const serverKey = `(?:${escapedName}|"${escapedName}"|'${escapedName}')`;
@@ -135,17 +137,38 @@ function findTomlServerArgs(
   nextHeaderRe.lastIndex = effectiveBodyStart;
   const nextHeader = nextHeaderRe.exec(raw);
   const bodyEnd = nextHeader?.index ?? raw.length;
+  return { start: effectiveBodyStart, end: bodyEnd };
+}
 
-  const body = raw.slice(effectiveBodyStart, bodyEnd);
+function findTomlServerArgs(
+  raw: string,
+  serverName: string
+): {
+  start: number;
+  end: number;
+  tokens: TomlStringToken[];
+  bodyStart: number;
+  bodyEnd: number;
+} | null {
+  const bodyRange = findTomlServerBody(raw, serverName);
+  if (!bodyRange) return null;
+
+  const body = raw.slice(bodyRange.start, bodyRange.end);
   const argsRe = /^[\t ]*(?:args|"args"|'args')[\t ]*=[\t ]*/gm;
   const args = argsRe.exec(body);
   if (!args) {
     throw new Error("Existing MCP server has no safely editable args array");
   }
 
-  const start = effectiveBodyStart + args.index + args[0].length;
+  const start = bodyRange.start + args.index + args[0].length;
   const parsed = parseTomlStringArray(raw, start);
-  return { start, end: parsed.end, tokens: parsed.tokens };
+  return {
+    start,
+    end: parsed.end,
+    tokens: parsed.tokens,
+    bodyStart: bodyRange.start,
+    bodyEnd: bodyRange.end,
+  };
 }
 
 function withoutApiKey(args: string[]): string[] {
@@ -161,14 +184,78 @@ function withoutApiKey(args: string[]): string[] {
 }
 
 function isContext7Package(arg: string): boolean {
-  return arg === STDIO_PACKAGE || arg.startsWith(`${STDIO_PACKAGE}@`);
+  if (arg === STDIO_PACKAGE) return true;
+  if (!arg.startsWith(`${STDIO_PACKAGE}@`)) return false;
+  const version = arg.slice(STDIO_PACKAGE.length + 1);
+  return /^[A-Za-z0-9][A-Za-z0-9._+-]*$/.test(version);
+}
+
+function findTomlServerCommand(raw: string, bodyStart: number, bodyEnd: number): string | null {
+  const body = raw.slice(bodyStart, bodyEnd);
+  const commandRe = /^[\t ]*(?:command|"command"|'command')[\t ]*=[\t ]*/gm;
+  const command = commandRe.exec(body);
+  if (!command) return null;
+
+  const start = bodyStart + command.index + command[0].length;
+  const quote = raw[start];
+  if (quote !== '"' && quote !== "'") return null;
+  if (raw.slice(start, start + 3) === quote.repeat(3)) return null;
+  const token =
+    quote === '"' ? parseTomlBasicString(raw, start) : parseTomlLiteralString(raw, start);
+  const lineEnd = raw.indexOf("\n", token.end);
+  const trailing = raw.slice(token.end, lineEnd === -1 ? bodyEnd : Math.min(lineEnd, bodyEnd));
+  return /^[\t ]*(?:#.*)?\r?$/.test(trailing) ? token.value : null;
+}
+
+function sanitizeStdioArgs(args: string[], apiKey: string | undefined): string[] {
+  const packageSpecifier = args.find(isContext7Package) ?? STDIO_PACKAGE;
+  const runnerFlags = args.filter((arg) => arg === "-y" || arg === "--yes");
+  const serverFlags = args.filter(
+    (arg) => SAFE_STDIO_FLAGS.has(arg) && arg !== "-y" && arg !== "--yes"
+  );
+  const sanitized = [...runnerFlags, packageSpecifier, ...serverFlags];
+  if (apiKey) sanitized.push("--api-key", apiKey);
+  return sanitized;
+}
+
+function arraysEqual(left: string[], right: string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+function removeInlineServerEnv(raw: string, serverName: string): string {
+  const bodyRange = findTomlServerBody(raw, serverName);
+  if (!bodyRange) return raw;
+  const body = raw.slice(bodyRange.start, bodyRange.end);
+  const envRe = /^[\t ]*(?:env|"env"|'env')[\t ]*=.*(?:\r?\n|$)/gm;
+  return raw.slice(0, bodyRange.start) + body.replace(envRe, "") + raw.slice(bodyRange.end);
+}
+
+function removeServerEnvTables(raw: string, serverName: string): string {
+  const escapedName = serverName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const key = (value: string) => `(?:${value}|"${value}"|'${value}')`;
+  const headerRe = new RegExp(
+    `^[\\uFEFF\\t ]*\\[[\\t ]*${key("mcp_servers")}[\\t ]*\\.[\\t ]*${key(escapedName)}[\\t ]*\\.[\\t ]*${key("env")}[\\t ]*\\][\\t ]*(?:#.*)?\\r?$(?:\\n)?`,
+    "gm"
+  );
+
+  let content = raw;
+  let header = headerRe.exec(content);
+  while (header) {
+    const nextHeaderRe = /^[\t ]*\[[^\r\n]+\][\t ]*(?:#.*)?\r?$/gm;
+    nextHeaderRe.lastIndex = header.index + header[0].length;
+    const nextHeader = nextHeaderRe.exec(content);
+    const end = nextHeader?.index ?? content.length;
+    content = content.slice(0, header.index) + content.slice(end);
+    headerRe.lastIndex = 0;
+    header = headerRe.exec(content);
+  }
+  return content;
 }
 
 /**
- * Updates only the `args` value of an existing Context7 stdio TOML entry.
- * Every other byte in the config is preserved. Unsupported `args` syntax
- * throws instead of allowing setup to replace a configuration it cannot read.
- * Returns false only when the requested server table is absent.
+ * Sanitizes an existing Context7 stdio TOML entry. Returns false when the
+ * server is absent or its command is not a trusted package runner, allowing
+ * setup to replace it with the canonical entry.
  */
 export async function patchTomlStdioApiKey(
   filePath: string,
@@ -186,6 +273,10 @@ export async function patchTomlStdioApiKey(
     throw new Error("TOML files containing multiline strings are not safely editable");
   }
 
+  const bodyRange = findTomlServerBody(raw, serverName);
+  if (!bodyRange) return false;
+  const command = findTomlServerCommand(raw, bodyRange.start, bodyRange.end);
+  if (!command || !TRUSTED_STDIO_COMMANDS.has(command)) return false;
   const range = findTomlServerArgs(raw, serverName);
   if (!range) return false;
 
@@ -196,14 +287,22 @@ export async function patchTomlStdioApiKey(
 
   const apiKeyIndexes = args.flatMap((arg, index) => (arg === "--api-key" ? [index] : []));
   let content: string;
-  if (apiKey && apiKeyIndexes.length === 1 && apiKeyIndexes[0] + 1 < range.tokens.length) {
+  const sanitizedWithoutKey = sanitizeStdioArgs(args, undefined);
+  if (
+    apiKey &&
+    apiKeyIndexes.length === 1 &&
+    apiKeyIndexes[0] + 1 < range.tokens.length &&
+    arraysEqual(withoutApiKey(args), sanitizedWithoutKey)
+  ) {
     const valueToken = range.tokens[apiKeyIndexes[0] + 1];
     content = raw.slice(0, valueToken.start) + JSON.stringify(apiKey) + raw.slice(valueToken.end);
   } else {
-    const patched = withoutApiKey(args);
-    if (apiKey) patched.push("--api-key", apiKey);
+    const patched = sanitizeStdioArgs(args, apiKey);
     content = raw.slice(0, range.start) + JSON.stringify(patched) + raw.slice(range.end);
   }
+
+  content = removeInlineServerEnv(content, serverName);
+  content = removeServerEnvTables(content, serverName);
 
   if (content !== raw) {
     await mkdir(dirname(filePath), { recursive: true });
