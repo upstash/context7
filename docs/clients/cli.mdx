@@ -12,7 +12,7 @@ The CLI is useful both as a standalone tool (fetching docs while you code) and a
 
 ## Installation
 
-Requires Node.js 18 or later.
+Use Node.js 22.12 or later. Current CLI dependencies require this version, even though the CLI package metadata still lists Node.js 18.
 
 <Tabs>
   <Tab title="npx (no install)">
@@ -101,6 +101,23 @@ ctx7 docs /facebook/react "How to use hooks for state management" | head -50
 ctx7 docs /vercel/next.js "How to add middleware for route protection" | grep -A 10 "middleware"
 ```
 
+### No documentation found
+
+`ctx7 docs` searches the library's indexed documentation for content relevant to
+your question. A query can return no matches if the topic is not covered or the
+wording does not match the documentation. The API reports this as
+`no_relevant_snippets`, with the message `No documentation in "<libraryId>" matched this query.`
+and advice to change the query or library.
+
+If a successful `--json` response contains no code or info snippets, the CLI
+instead prints `No documentation found for: "<query>"`.
+
+To get results:
+
+- Make the query specific and concrete — describe one clear goal ("How to clean up useEffect with async operations") rather than a bare keyword like `"async"`
+- Reword the question — the docs use their own vocabulary, so describing the same thing differently often matches
+- Verify the library resolves and covers the topic — run `ctx7 library "<name>"` to confirm the ID, and browse the library at [context7.com](https://context7.com)
+
 ---
 
 ## Setup
@@ -137,7 +154,30 @@ ctx7 setup --project
 
 # Skip confirmation prompts
 ctx7 setup --yes
+
+# Non-interactive Claude Code setup (stdio transport, no prompts)
+ctx7 setup --claude --stdio --yes --api-key YOUR_API_KEY
 ```
+
+**Setup options:**
+
+| Option | Description |
+| ------ | ----------- |
+| `--mcp` | MCP server mode |
+| `--cli` | CLI + Skills mode (no MCP server) |
+| `--claude` / `--cursor` / `--codex` / `--opencode` / ... | Target a specific agent |
+| `--stdio` | Configure the MCP server as a local stdio process (default is HTTP) |
+| `-y, --yes` | Skip confirmation prompts |
+| `-p, --project` | Configure for the current project instead of globally |
+| `--api-key <key>` | Authenticate with an existing API key |
+| `--oauth` | Use the OAuth endpoint (MCP mode only) |
+| `--base-url <url>` | Use a custom Context7 deployment (for example, on-premise) |
+
+Agent flags and `-y`/`--yes` combine freely with `--mcp` or `--stdio`, so
+`ctx7 setup --claude --stdio -y --api-key YOUR_API_KEY` runs non-interactively.
+The `--yes` flag skips confirmation prompts; it does not provide authentication. `--stdio` cannot be
+combined with `--oauth` or with `--base-url`; `--base-url` also does not
+support `--cli` (see [On-premise setup](#on-premise-setup)).
 
 **Authentication options:**
 
@@ -189,6 +229,21 @@ When `--base-url` targets a custom deployment, setup skips the npm update check 
 | File                   | Purpose                                                                        |
 | ---------------------- | ------------------------------------------------------------------------------ |
 | Agent skills directory | `docs` skill — guides the agent to use `ctx7 library` and `ctx7 docs` commands |
+
+### Skill installation
+
+`ctx7 setup` installs a skill alongside the rule and MCP config:
+
+- **MCP mode** downloads the `context7-mcp` skill from GitHub. If the download fails, setup falls back to a bundled copy of the skill (`installed (bundled fallback)`) and still completes — the skill install is not a hard failure.
+- **CLI + Skills mode** downloads the `find-docs` skill. If that download fails, setup stops with an error before installing anything.
+
+Skills are written to the agent's skills directory — for example `.agents/skills/` for Codex and other universal agents, `.claude/skills/` for Claude Code, `.cursor/skills/` for Cursor. To retry or install manually after a failure, use the skills command:
+
+```bash
+ctx7 skills install /upstash/context7 context7-mcp
+```
+
+or place the `SKILL.md` manually in the target skills directory. The source file lives at [`skills/context7-mcp/SKILL.md`](https://github.com/upstash/context7/blob/master/skills/context7-mcp/SKILL.md) in the repository.
 
 ### ctx7 remove
 
