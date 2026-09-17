@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { searchDocumentation } from "../utils/api.js";
+import { getLibraryContext, searchDocumentation } from "../utils/api.js";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -38,11 +38,50 @@ describe("searchDocumentation", () => {
     const response = {
       codeSnippets: [{ libraryId: "/facebook/react", codeTitle: "Hooks" }],
       infoSnippets: [],
+      rules: {
+        global: ["Use approved packages"],
+        libraries: [{ libraryId: "/facebook/react", libraryOwn: ["Use hooks"], libraryTeam: [] }],
+      },
     };
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(response)));
 
     await expect(
       searchDocumentation("how do I use hooks?", { type: "json" }, "access-token")
     ).resolves.toEqual(response);
+  });
+
+  test("returns an error separately from successful snippets", async () => {
+    vi.stubEnv("CONTEXT7_API_KEY", "");
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          Response.json(
+            { error: "no_documentation_found", message: "No matching documentation" },
+            { status: 404 }
+          )
+        )
+    );
+
+    await expect(searchDocumentation("missing docs", { type: "json" })).resolves.toEqual({
+      error: "no_documentation_found",
+      message: "No matching documentation",
+      redirectUrl: undefined,
+    });
+  });
+
+  test("keeps the existing context redirect behavior", async () => {
+    vi.stubEnv("CONTEXT7_API_KEY", "");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(Response.json({ redirectUrl: "/facebook/react" }, { status: 301 }))
+    );
+
+    await expect(getLibraryContext("/old/react", "hooks", { type: "json" })).resolves.toEqual({
+      error: "library_redirected",
+      message: undefined,
+      redirectUrl: "/facebook/react",
+    });
   });
 });

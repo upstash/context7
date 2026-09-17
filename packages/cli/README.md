@@ -71,7 +71,7 @@ ctx7 search "how do I cache a server function?" \
   --version 15.4.0 \
   --language TypeScript
 
-# Output structured snippets with their library IDs
+# Output structured snippets with their library IDs and any configured rules
 ctx7 search "how do I use hooks?" --library React --json
 ```
 

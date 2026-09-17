@@ -10,6 +10,8 @@ import type {
   GenerateStreamEvent,
   SkillQuotaResponse,
   ContextResponse,
+  DocumentationSearchResponse,
+  DocumentationError,
 } from "../types.js";
 import { downloadSkillFromGitHub, getSkillFromGitHub } from "./github.js";
 import { VERSION } from "../constants.js";
@@ -320,46 +322,17 @@ export async function getLibraryContext(
   query: string,
   options?: GetContextOptions,
   accessToken?: string
-): Promise<ContextResponse | string> {
+): Promise<ContextResponse | DocumentationError | string> {
   const params = new URLSearchParams({ libraryId, query });
   if (options?.type) {
     params.set("type", options.type);
   }
-  const headers = getAuthHeaders(accessToken);
-  const response = await fetch(`${baseUrl}/api/v2/context?${params}`, {
-    headers,
-  });
-
-  if (!response.ok) {
-    const errorData = (await response.json().catch(() => ({}))) as {
-      error?: string;
-      message?: string;
-      redirectUrl?: string;
-    };
-
-    if (response.status === 301 && errorData.redirectUrl) {
-      return {
-        codeSnippets: [],
-        infoSnippets: [],
-        error: errorData.error || "library_redirected",
-        message: errorData.message,
-        redirectUrl: errorData.redirectUrl,
-      };
-    }
-
-    return {
-      codeSnippets: [],
-      infoSnippets: [],
-      error: errorData.error || `HTTP error ${response.status}`,
-      message: errorData.message,
-    };
-  }
-
-  if (options?.type === "txt") {
-    return await response.text();
-  }
-
-  return (await response.json()) as ContextResponse;
+  return requestDocumentation<ContextResponse>(
+    "context",
+    params,
+    options?.type ?? "json",
+    accessToken
+  );
 }
 
 export interface SearchDocumentationOptions {
@@ -373,7 +346,7 @@ export async function searchDocumentation(
   query: string,
   options?: SearchDocumentationOptions,
   accessToken?: string
-): Promise<ContextResponse | string> {
+): Promise<DocumentationSearchResponse | DocumentationError | string> {
   const params = new URLSearchParams({ query });
   for (const library of options?.libraries ?? []) {
     params.append("library", library);
@@ -382,26 +355,39 @@ export async function searchDocumentation(
   if (options?.language) params.set("language", options.language);
   if (options?.type) params.set("type", options.type);
 
-  const response = await fetch(`${baseUrl}/api/v2/search?${params}`, {
+  return requestDocumentation<DocumentationSearchResponse>(
+    "search",
+    params,
+    options?.type ?? "txt",
+    accessToken
+  );
+}
+
+async function requestDocumentation<T>(
+  endpoint: "context" | "search",
+  params: URLSearchParams,
+  type: "json" | "txt",
+  accessToken?: string
+): Promise<T | DocumentationError | string> {
+  const response = await fetch(`${baseUrl}/api/v2/${endpoint}?${params}`, {
     headers: getAuthHeaders(accessToken),
   });
-
   if (!response.ok) {
-    const errorData = (await response.json().catch(() => ({}))) as {
-      error?: string;
-      message?: string;
-    };
+    const errorData = (await response.json().catch(() => ({}))) as Partial<DocumentationError>;
     return {
-      codeSnippets: [],
-      infoSnippets: [],
-      error: errorData.error || `HTTP error ${response.status}`,
+      error:
+        errorData.error ||
+        (response.status === 301 && errorData.redirectUrl
+          ? "library_redirected"
+          : `HTTP error ${response.status}`),
       message: errorData.message,
+      redirectUrl: response.status === 301 ? errorData.redirectUrl : undefined,
     };
   }
 
-  if (options?.type !== "json") {
+  if (type === "txt") {
     return await response.text();
   }
 
-  return (await response.json()) as ContextResponse;
+  return (await response.json()) as T;
 }

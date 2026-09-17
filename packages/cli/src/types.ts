@@ -227,7 +227,6 @@ export interface CodeExample {
 }
 
 export interface CodeSnippet {
-  libraryId?: string;
   codeTitle: string;
   codeDescription: string;
   codeLanguage: string;
@@ -238,7 +237,6 @@ export interface CodeSnippet {
 }
 
 export interface InfoSnippet {
-  libraryId?: string;
   pageId?: string;
   breadcrumb?: string;
   content: string;
@@ -248,7 +246,23 @@ export interface InfoSnippet {
 export interface ContextResponse {
   codeSnippets: CodeSnippet[];
   infoSnippets: InfoSnippet[];
-  error?: string;
+}
+
+export interface DocumentationSearchResponse {
+  codeSnippets: (CodeSnippet & { libraryId: string })[];
+  infoSnippets: (InfoSnippet & { libraryId: string })[];
+  rules?: {
+    global: string[];
+    libraries: {
+      libraryId: string;
+      libraryOwn: string[];
+      libraryTeam: string[];
+    }[];
+  };
+}
+
+export interface DocumentationError {
+  error: string;
   message?: string;
   redirectUrl?: string;
 }

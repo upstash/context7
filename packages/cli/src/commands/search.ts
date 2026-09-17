@@ -6,7 +6,6 @@ import { getValidAccessToken } from "../utils/auth.js";
 import { recoverLibraryId } from "../utils/library-id.js";
 import { log } from "../utils/logger.js";
 import { trackEvent } from "../utils/tracking.js";
-import type { ContextResponse } from "../types.js";
 
 const isTTY = process.stdout.isTTY;
 
@@ -65,9 +64,8 @@ async function searchCommand(query: string, options: SearchCommandOptions): Prom
     return;
   }
 
-  const response = result as ContextResponse;
-  if (response.error) {
-    const message = response.message || response.error;
+  if ("error" in result) {
+    const message = result.message || result.error;
     spinner?.fail(message);
     if (!spinner) log.error(message);
     process.exitCode = 1;
@@ -75,7 +73,7 @@ async function searchCommand(query: string, options: SearchCommandOptions): Prom
   }
 
   spinner?.stop();
-  console.log(JSON.stringify(response, null, 2));
+  console.log(JSON.stringify(result, null, 2));
 }
 
 export function registerSearchCommand(program: Command): void {
