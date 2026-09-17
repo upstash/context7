@@ -198,7 +198,11 @@
                       {
                         "group": "Commands",
                         "expanded": false,
-                        "pages": ["sdks/ts/commands/search-library", "sdks/ts/commands/get-context"]
+                        "pages": [
+                          "sdks/ts/commands/search",
+                          "sdks/ts/commands/search-library",
+                          "sdks/ts/commands/get-context"
+                        ]
                       }
                     ]
                   },

@@ -1,0 +1,97 @@
+---
+title: "Search"
+description: "Find relevant documentation without resolving a library first"
+---
+
+# Search
+
+Search Context7 documentation in one request. Context7 selects relevant libraries, searches them in parallel, and returns the best snippets together.
+
+The default response is plain text that is ready to include in an LLM prompt. Set `type` to `json` when your application needs structured snippets.
+
+## Arguments
+
+<ParamField path="query" type="string" required>
+  The question or task to search for. Specific, natural language questions produce the best results.
+</ParamField>
+
+<ParamField path="options" type="SearchOptions">
+  <Expandable title="properties">
+    <ParamField path="libraries" type="string[]">
+      Up to four library names or Context7 library IDs. These hints narrow the search when you already know which products are relevant.
+    </ParamField>
+    <ParamField path="version" type="string">
+      A version to prefer. Provide at least one library hint when using this option.
+    </ParamField>
+    <ParamField path="language" type="string">
+      A programming language to prefer when ranking snippets, such as `TypeScript` or `Python`. This is a preference, so Context7 can still return product documentation when a language-specific snippet is unavailable.
+    </ParamField>
+    <ParamField path="type" type="'json' | 'txt'">
+      The response format. The default is `txt`.
+    </ParamField>
+    <ParamField path="signal" type="AbortSignal">
+      An abort signal for cancelling this request.
+    </ParamField>
+    <ParamField path="timeout" type="number | false">
+      A timeout in milliseconds for this request. Use `false` to disable the client timeout.
+    </ParamField>
+    <ParamField path="cache" type="CacheSetting">
+      A native fetch cache mode. Use `false` to omit the cache option.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Text response
+
+```typescript
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7();
+
+const context = await client.search(
+  "How do I validate a request body with a schema?"
+);
+
+console.log(context);
+```
+
+## JSON response
+
+JSON responses return `SearchDocumentation[]`. Each snippet includes the `libraryId` that it came from.
+
+```typescript
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7();
+
+const snippets = await client.search(
+  "How do I stream an OpenAI response from a Next.js route?",
+  {
+    libraries: ["Next.js", "OpenAI"],
+    language: "TypeScript",
+    type: "json",
+  }
+);
+
+for (const snippet of snippets) {
+  console.log(snippet.libraryId, snippet.title);
+  console.log(snippet.content);
+}
+```
+
+## Version-specific search
+
+Use a library hint with `version` when your question depends on a particular release.
+
+```typescript
+const context = await client.search(
+  "How do I cache the result of a server function?",
+  {
+    libraries: ["Next.js"],
+    version: "15.4.0",
+    language: "TypeScript",
+  }
+);
+```
+
+Library names do not need to be exact. Use a Context7 library ID when you need to select a specific documentation source.

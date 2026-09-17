@@ -17,6 +17,101 @@
     }
   ],
   "paths": {
+    "/v2/search": {
+      "get": {
+        "summary": "Search documentation",
+        "description": "Find relevant documentation without resolving a library first. Context7 selects up to four relevant libraries, searches their documentation in parallel, and reranks the combined snippets.",
+        "operationId": "searchDocumentation",
+        "tags": [
+          "Search"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/QueryParam"
+          },
+          {
+            "$ref": "#/components/parameters/LibraryHintParam"
+          },
+          {
+            "$ref": "#/components/parameters/VersionParam"
+          },
+          {
+            "$ref": "#/components/parameters/LanguageParam"
+          },
+          {
+            "$ref": "#/components/parameters/TypeParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Documentation snippets ranked across the selected libraries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchContextResponse"
+                },
+                "example": {
+                  "codeSnippets": [
+                    {
+                      "libraryId": "/vercel/next.js",
+                      "codeTitle": "Cache a server function",
+                      "codeDescription": "Caches the result of an asynchronous server function.",
+                      "codeLanguage": "typescript",
+                      "codeTokens": 72,
+                      "codeId": "https://github.com/vercel/next.js/blob/canary/docs/cache.mdx#_snippet_0",
+                      "pageTitle": "Caching",
+                      "codeList": [
+                        {
+                          "language": "typescript",
+                          "code": "import { cache } from 'react'\n\nexport const getUser = cache(async (id: string) => {\n  return db.user.findUnique({ where: { id } })\n})"
+                        }
+                      ]
+                    }
+                  ],
+                  "infoSnippets": []
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Library: /vercel/next.js\n\n### Cache a server function\n\nCaches the result of an asynchronous server function."
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "402": {
+            "$ref": "#/components/responses/SpendingLimitError"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenError"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundError"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailableError"
+          }
+        },
+        "security": [
+          {},
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/v2/libs/search": {
       "get": {
         "summary": "Search for libraries",
@@ -1509,6 +1604,50 @@
           }
         }
       },
+      "LibraryHintParam": {
+        "name": "library",
+        "in": "query",
+        "description": "A library name or exact Context7 library ID. Repeat this parameter to search up to four libraries. Names do not need to be exact.",
+        "required": false,
+        "style": "form",
+        "explode": true,
+        "schema": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        },
+        "example": [
+          "Next.js",
+          "OpenAI"
+        ]
+      },
+      "VersionParam": {
+        "name": "version",
+        "in": "query",
+        "description": "A version to use when selecting and ranking documentation. At least one library hint is required. With one library, Context7 targets that version. With multiple libraries, the version is treated as a preference for compatible candidates.",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "pattern": "^v?\\d+(?:[._]\\d+){0,2}(?:[-+][a-z0-9.-]+)?$"
+        },
+        "example": "15.4.0"
+      },
+      "LanguageParam": {
+        "name": "language",
+        "in": "query",
+        "description": "A programming language to prefer when selecting and ranking snippets. This is a soft preference, so product documentation can still be returned when a language-specific snippet is unavailable.",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "example": "TypeScript"
+      },
       "TypeParam": {
         "name": "type",
         "in": "query",
@@ -1798,6 +1937,108 @@
                 "description": "Library-specific rules from the team",
                 "items": {
                   "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "codeSnippets",
+          "infoSnippets"
+        ]
+      },
+      "SearchCodeSnippet": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CodeSnippet"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "libraryId": {
+                "type": "string",
+                "description": "Context7 library ID that produced this snippet"
+              }
+            },
+            "required": [
+              "libraryId"
+            ]
+          }
+        ]
+      },
+      "SearchInfoSnippet": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/InfoSnippet"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "libraryId": {
+                "type": "string",
+                "description": "Context7 library ID that produced this snippet"
+              }
+            },
+            "required": [
+              "libraryId"
+            ]
+          }
+        ]
+      },
+      "SearchContextResponse": {
+        "type": "object",
+        "description": "Documentation snippets ranked across one or more libraries",
+        "properties": {
+          "codeSnippets": {
+            "type": "array",
+            "description": "Relevant code snippets",
+            "items": {
+              "$ref": "#/components/schemas/SearchCodeSnippet"
+            }
+          },
+          "infoSnippets": {
+            "type": "array",
+            "description": "Relevant documentation snippets",
+            "items": {
+              "$ref": "#/components/schemas/SearchInfoSnippet"
+            }
+          },
+          "rules": {
+            "type": "object",
+            "description": "Optional global and library-specific rules",
+            "properties": {
+              "global": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "libraries": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "libraryId": {
+                      "type": "string"
+                    },
+                    "libraryOwn": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "libraryTeam": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "libraryId",
+                    "libraryOwn",
+                    "libraryTeam"
+                  ]
                 }
               }
             }

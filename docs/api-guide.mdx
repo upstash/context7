@@ -18,6 +18,7 @@ Get your API key at [context7.com/dashboard](https://context7.com/dashboard). Le
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| [Search Documentation](/api-reference/search/search-documentation) | `GET /api/v2/search` | Find relevant documentation without resolving a library first |
 | [Search Library](/api-reference/search/search-for-libraries) | `GET /api/v2/libs/search` | Find libraries by name |
 | [Get Context](/api-reference/context/get-documentation-context) | `GET /api/v2/context` | Retrieve documentation snippets for a library |
 | [Refresh Library](/api-reference/refresh/refresh-a-library) | `POST /api/v1/refresh` | Refresh a library's documentation |
@@ -61,7 +62,9 @@ You can pin a specific version with either `/owner/repo/<version>` or `/owner/re
   Don't know the ID for a library? Find it on [context7.com](https://context7.com) — the URL path of the library page **is** the ID. Or call [Search Library](/api-reference/search/search-for-libraries) and use the `id` from the response.
 </Tip>
 
-### Complete Workflow Example
+### Search documentation in one request
+
+The Search API is the simplest way to retrieve documentation. You provide a question, and Context7 selects relevant libraries before searching and reranking their snippets.
 
 ```python
 import os
@@ -69,25 +72,21 @@ import requests
 
 headers = {"Authorization": f"Bearer {os.environ['CONTEXT7_API_KEY']}"}
 
-# Step 1: Search for the library
-search_response = requests.get(
-    "https://context7.com/api/v2/libs/search",
+# Context7 selects the library and returns the best snippets
+response = requests.get(
+    "https://context7.com/api/v2/search",
     headers=headers,
-    params={"libraryName": "react", "query": "I need to manage state"}
+    params={
+        "query": "How do I stream an OpenAI response from a Next.js route?",
+        "library": ["Next.js", "OpenAI"],
+        "language": "TypeScript",
+        "type": "json",
+    },
 )
-data = search_response.json()
-best_match = data["results"][0]
-print(f"Found: {best_match['title']} ({best_match['id']})")
-
-# Step 2: Get documentation context
-context_response = requests.get(
-    "https://context7.com/api/v2/context",
-    headers=headers,
-    params={"libraryId": best_match["id"], "query": "How do I use useState?", "type": "json"}
-)
-docs = context_response.json()
+docs = response.json()
 
 for snippet in docs["codeSnippets"]:
+    print(f"Library: {snippet['libraryId']}")
     print(f"Title: {snippet['codeTitle']}")
     for code in snippet["codeList"]:
         print(f"Code: {code['code'][:200]}...")
@@ -96,8 +95,14 @@ for info in docs["infoSnippets"]:
     print(f"Content: {info['content'][:200]}...")
 ```
 
+Library hints are optional and do not need to be exact. You can provide up to four names or exact Context7 library IDs. Use `version` with at least one library hint, and use `language` when you want language-specific examples to rank higher.
+
 <Info>
-  For TypeScript SDK usage, see [Search Library](/sdks/ts/commands/search-library) and [Get Context](/sdks/ts/commands/get-context).
+  Each Search API call counts as one request. You can still use Search Library followed by Get Context when your application needs to inspect or choose a library itself.
+</Info>
+
+<Info>
+  For TypeScript SDK usage, see [Search](/sdks/ts/commands/search), [Search Library](/sdks/ts/commands/search-library), and [Get Context](/sdks/ts/commands/get-context).
 </Info>
 
 ## Rate Limits
@@ -133,6 +138,19 @@ curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js&query=auth" 
 # Non-GitHub source (website) - same endpoint, same shape
 curl "https://context7.com/api/v2/context?libraryId=/websites/uploadcare&query=image%20transformations" \
   -H "Authorization: Bearer CONTEXT7_API_KEY"
+```
+
+### Add hints only when they provide useful context
+
+Start with only the question when the relevant library is clear from the task. Add library hints when a name is ambiguous or when the answer needs documentation from more than one product.
+
+```bash
+curl -G "https://context7.com/api/v2/search" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY" \
+  --data-urlencode "query=How do I stream an OpenAI response from a Next.js route?" \
+  --data-urlencode "library=Next.js" \
+  --data-urlencode "library=OpenAI" \
+  --data-urlencode "language=TypeScript"
 ```
 
 ### Cache Responses
