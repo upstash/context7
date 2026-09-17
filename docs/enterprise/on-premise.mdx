@@ -180,7 +180,7 @@ These are set in your `docker-compose.yml` or `.env` file before starting the co
 | `DATA_DIR` | No | Data directory inside the container (default: `/data`) |
 
 <Note>
-AI provider keys, model settings, and git tokens are **not** set via environment variables. They are configured through the setup wizard and can be updated anytime from the Settings page in the web UI.
+Provider and model selection, non-Bedrock provider keys, and git tokens are configured through the setup wizard and can be updated anytime from the Settings page in the web UI. Bedrock is the exception for authentication: it can use `AWS_BEARER_TOKEN_BEDROCK`, standard AWS credential environment variables, a mounted shared profile, or a workload IAM role. See [AWS Bedrock](/enterprise/integrations/aws-bedrock) for the supported credential chain.
 </Note>
 
 ### AI Provider Settings
