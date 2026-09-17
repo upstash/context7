@@ -13,7 +13,7 @@ export class SearchCommand extends Command<SearchResponse | string> {
         query: { query, type, library: libraries, version, language },
         ...requestOptions,
       },
-      "v2/search"
+      "v3/search"
     );
   }
 }

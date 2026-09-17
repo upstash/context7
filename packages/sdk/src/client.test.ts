@@ -188,7 +188,7 @@ describe("Context7 Client", () => {
     });
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
-      "https://context7.com/api/v2/search?query=How+do+I+cache+a+function%3F&type=json&library=Next.js&library=%2Fvercel%2Fnext.js&version=15.4.0&language=TypeScript"
+      "https://context7.com/api/v3/search?query=How+do+I+cache+a+function%3F&type=json&library=Next.js&library=%2Fvercel%2Fnext.js&version=15.4.0&language=TypeScript"
     );
   });
 });
