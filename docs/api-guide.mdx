@@ -110,7 +110,7 @@ for info in docs["infoSnippets"]:
 {
   "results": [
     {
-      "id": "/facebook/react",
+      "id": "/react/react",
       "title": "React",
       "description": "The library for web and native user interfaces",
       "branch": "main",
@@ -129,7 +129,7 @@ for info in docs["infoSnippets"]:
 ```
 
 - `results` — array of matching libraries ranked by relevance, using the [Library ID format](#library-id-format) for `id`.
-- `searchFilterApplied` — `true` when the teamspace's public library access settings filtered the results (e.g. verified-only or a hand-picked list).
+- `searchFilterApplied` is `true` when the teamspace has active source-access or library-filter settings. It can be `true` even when no results are excluded.
 - `totalTokens` is the **total number of indexed tokens in the library's documentation**, not the number returned by a single context request — a context request returns a reranked subset of snippets.
 
 ### Get Context
@@ -139,7 +139,7 @@ a `ContextResponse` JSON object:
 
 ```bash
 curl --get "https://context7.com/api/v2/context" \
-  --data-urlencode "libraryId=/facebook/react" \
+  --data-urlencode "libraryId=/react/react" \
   --data-urlencode "query=How to use useState" \
   --data-urlencode "type=json" \
   -H "Authorization: Bearer $CONTEXT7_API_KEY"

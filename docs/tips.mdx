@@ -39,9 +39,9 @@ Context7 will automatically match the appropriate version.
 
 ## Query Strategy
 
-Context7 grounds your assistant with up-to-date docs, but the quality of what it retrieves depends on how the retrieval is scoped. These habits keep the retrieved context minimal and relevant:
+Use these guidelines when searching for documentation with Context7:
 
 - **Retrieve only when needed** — Context7 is for library, framework, SDK, API, and CLI-tool questions. Use it during implementation or review when you need to check an external API. Skip requests that do not depend on external library documentation.
-- **One concept per query** — scope each query to a single topic. Split multi-topic questions (e.g. "routing and auth and caching") into a separate query per concept, unless the question is about how the concepts interact. Combined queries dilute ranking and return shallow results for each topic.
-- **Be specific, not vague** — a query like `"How to set up authentication with JWT in Express.js"` returns far better results than `"auth"` or `"hooks"`.
+- **One concept per query**. Use a separate query for each topic, unless the question is about how the topics interact.
+- **Be specific**. Describe what you want to do. For example, ask `"How to set up authentication with JWT in Express.js"` instead of `"auth"`.
 - **Keep the context relevant** — don't include sensitive or confidential information in queries, and use the best-matching library ID (and version-specific ID when a version matters) so you don't pull docs for the wrong package.

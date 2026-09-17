@@ -61,9 +61,9 @@ for API error codes and retry guidance.
 
 ## Query behavior
 
-- Keep each query to a single concept — separate queries give better results than one combined query.
+- Use a separate query for each topic, unless the question is about how the topics interact.
 - Tool descriptions instruct agents to call each tool no more than 3 times per
   question. This is agent guidance, not a server-enforced per-question counter.
   Account and request [rate limits](/api-guide#rate-limits) apply separately.
-- Search results may be filtered by your teamspace's public library access settings; the API reports this via the `searchFilterApplied` flag.
+- The `searchFilterApplied` flag reports active source-access or library-filter settings for your teamspace. It does not indicate whether any results were excluded.
 - See [Keeping Libraries Fresh](/library-updates) for how documentation staleness and refresh scheduling work.
