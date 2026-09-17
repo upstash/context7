@@ -80,7 +80,9 @@ describe("Context7 Client types", () => {
     expectTypeOf(documentationSearchWithOptionalOptions).returns.toEqualTypeOf<
       Promise<SearchResponse | string>
     >();
-    expectTypeOf(documentationSearchWithDefaultOptions).returns.toEqualTypeOf<Promise<string>>();
+    expectTypeOf(documentationSearchWithDefaultOptions).returns.toEqualTypeOf<
+      Promise<SearchResponse>
+    >();
     expectTypeOf(documentationSearchWithJsonOptions).returns.toEqualTypeOf<
       Promise<SearchResponse>
     >();

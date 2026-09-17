@@ -109,9 +109,9 @@ export interface SearchOptions extends Context7RequestOptions {
   language?: string;
   /**
    * Response format.
-   * - "json": Returns SearchResponse with snippets and optional rules
-   * - "txt": Returns formatted text (default)
-   * @default "txt"
+   * - "json": Returns SearchResponse with snippets and optional rules (default)
+   * - "txt": Returns formatted text
+   * @default "json"
    */
   type?: "json" | "txt";
 }

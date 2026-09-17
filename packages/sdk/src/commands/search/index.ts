@@ -1,7 +1,7 @@
 import { Command } from "@commands/command";
 import type { SearchOptions, SearchResponse } from "@commands/types";
 
-const DEFAULT_TYPE = "txt";
+const DEFAULT_TYPE = "json";
 
 export class SearchCommand extends Command<SearchResponse | string> {
   constructor(query: string, options?: SearchOptions) {

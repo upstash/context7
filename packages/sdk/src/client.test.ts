@@ -170,7 +170,11 @@ describe("Context7 Client", () => {
   });
 
   test("sends repeated library hints to the Search API", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response("documentation"));
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ codeSnippets: [], infoSnippets: [] }), {
+        headers: { "content-type": "application/json" },
+      })
+    );
     const client = new Context7({
       apiKey: "ctx7sk-config",
       fetch: fetchMock,
@@ -184,7 +188,7 @@ describe("Context7 Client", () => {
     });
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
-      "https://context7.com/api/v2/search?query=How+do+I+cache+a+function%3F&type=txt&library=Next.js&library=%2Fvercel%2Fnext.js&version=15.4.0&language=TypeScript"
+      "https://context7.com/api/v2/search?query=How+do+I+cache+a+function%3F&type=json&library=Next.js&library=%2Fvercel%2Fnext.js&version=15.4.0&language=TypeScript"
     );
   });
 });

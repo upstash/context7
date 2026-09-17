@@ -54,10 +54,16 @@ describe("SearchCommand", () => {
   });
 
   test("returns text responses unchanged", async () => {
-    const command = new SearchCommand("How do I use hooks?");
+    const command = new SearchCommand("How do I use hooks?", { type: "txt" });
 
     await expect(command.exec(requesterWith("documentation text"))).resolves.toBe(
       "documentation text"
     );
+  });
+
+  test("defaults to a structured JSON response", () => {
+    expect(new SearchCommand("How do I use hooks?").request.query).toMatchObject({
+      type: "json",
+    });
   });
 });
