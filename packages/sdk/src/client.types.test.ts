@@ -5,7 +5,7 @@ import {
   type GetContextOptions,
   type Library,
   type SearchLibraryOptions,
-  type SearchDocumentation,
+  type SearchResponse,
   type SearchOptions,
 } from "./client";
 
@@ -34,6 +34,13 @@ function getContextWithDefaultOptions(client: Context7) {
 }
 
 function documentationSearchWithOptions(client: Context7, options: SearchOptions) {
+  return client.search("query", options);
+}
+
+function documentationSearchWithOptionalOptions(
+  client: Context7,
+  options: SearchOptions | undefined
+) {
   return client.search("query", options);
 }
 
@@ -68,11 +75,14 @@ describe("Context7 Client types", () => {
 
   test("types search responses from the requested format", () => {
     expectTypeOf(documentationSearchWithOptions).returns.toEqualTypeOf<
-      Promise<SearchDocumentation[] | string>
+      Promise<SearchResponse | string>
+    >();
+    expectTypeOf(documentationSearchWithOptionalOptions).returns.toEqualTypeOf<
+      Promise<SearchResponse | string>
     >();
     expectTypeOf(documentationSearchWithDefaultOptions).returns.toEqualTypeOf<Promise<string>>();
     expectTypeOf(documentationSearchWithJsonOptions).returns.toEqualTypeOf<
-      Promise<SearchDocumentation[]>
+      Promise<SearchResponse>
     >();
   });
 });

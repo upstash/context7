@@ -46,7 +46,8 @@ const results = await client.search("How do I cache a Next.js function?", {
   language: "TypeScript",
   type: "json",
 });
-console.log(results[0].libraryId, results[0].content);
+console.log(results.codeSnippets[0]?.libraryId, results.codeSnippets[0]?.codeTitle);
+console.log(results.rules);
 
 // Search for libraries
 const libraries = await client.searchLibrary("I need to build a UI with components", "react");

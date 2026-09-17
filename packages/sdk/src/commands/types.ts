@@ -5,6 +5,7 @@ import type {
   Context7ResponseMetadata,
   RetryConfig,
 } from "@http";
+import type { ApiCodeSnippet, ApiInfoSnippet } from "@commands/get-context/types";
 
 export interface Context7Config {
   apiKey?: string;
@@ -74,12 +75,27 @@ export interface Documentation {
   source: string;
 }
 
-/**
- * A piece of documentation returned by the Search API
- */
-export interface SearchDocumentation extends Documentation {
+export interface SearchCodeSnippet extends ApiCodeSnippet {
   /** Context7 library ID that produced this snippet */
   libraryId: string;
+}
+
+export interface SearchInfoSnippet extends ApiInfoSnippet {
+  /** Context7 library ID that produced this snippet */
+  libraryId: string;
+}
+
+export interface SearchResponse {
+  codeSnippets: SearchCodeSnippet[];
+  infoSnippets: SearchInfoSnippet[];
+  rules?: {
+    global: string[];
+    libraries: {
+      libraryId: string;
+      libraryOwn: string[];
+      libraryTeam: string[];
+    }[];
+  };
 }
 
 export interface SearchOptions extends Context7RequestOptions {
@@ -93,7 +109,7 @@ export interface SearchOptions extends Context7RequestOptions {
   language?: string;
   /**
    * Response format.
-   * - "json": Returns SearchDocumentation[]
+   * - "json": Returns SearchResponse with snippets and optional rules
    * - "txt": Returns formatted text (default)
    * @default "txt"
    */

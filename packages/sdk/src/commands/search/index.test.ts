@@ -23,45 +23,34 @@ describe("SearchCommand", () => {
     });
   });
 
-  test("maps JSON snippets and preserves their library IDs", async () => {
+  test("preserves JSON snippets and rules without a lossy conversion", async () => {
     const command = new SearchCommand("How do I use hooks?", { type: "json" });
-    const result = await command.exec(
-      requesterWith({
-        codeSnippets: [
-          {
-            libraryId: "/facebook/react",
-            codeTitle: "State hook",
-            codeDescription: "Store component state.",
-            codeLanguage: "tsx",
-            codeList: [{ language: "tsx", code: "const [value] = useState(0);" }],
-            codeId: "hooks/use-state",
-          },
-        ],
-        infoSnippets: [
-          {
-            libraryId: "/facebook/react",
-            breadcrumb: "Hooks > State",
-            content: "State is local to a component instance.",
-            pageId: "hooks/state",
-          },
-        ],
-      })
-    );
+    const response = {
+      codeSnippets: [
+        {
+          libraryId: "/facebook/react",
+          codeTitle: "State hook",
+          codeDescription: "Store component state.",
+          codeLanguage: "tsx",
+          codeList: [{ language: "tsx", code: "const [value] = useState(0);" }],
+          codeId: "hooks/use-state",
+        },
+      ],
+      infoSnippets: [
+        {
+          libraryId: "/facebook/react",
+          breadcrumb: "Hooks > State",
+          content: "State is local to a component instance.",
+          pageId: "hooks/state",
+        },
+      ],
+      rules: {
+        global: ["Use approved packages"],
+        libraries: [{ libraryId: "/facebook/react", libraryOwn: ["Use hooks"], libraryTeam: [] }],
+      },
+    };
 
-    expect(result).toEqual([
-      {
-        libraryId: "/facebook/react",
-        title: "State hook",
-        content: "Store component state.\n\n```tsx\nconst [value] = useState(0);\n```",
-        source: "hooks/use-state",
-      },
-      {
-        libraryId: "/facebook/react",
-        title: "Hooks > State",
-        content: "State is local to a component instance.",
-        source: "hooks/state",
-      },
-    ]);
+    await expect(command.exec(requesterWith(response))).resolves.toEqual(response);
   });
 
   test("returns text responses unchanged", async () => {

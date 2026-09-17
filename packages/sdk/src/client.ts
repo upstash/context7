@@ -5,7 +5,7 @@ import type {
   SearchOptions,
   Library,
   Documentation,
-  SearchDocumentation,
+  SearchResponse,
 } from "@commands/types";
 import { Context7Error } from "@error";
 import { HttpClient } from "@http";
@@ -150,23 +150,20 @@ export class Context7 {
   /**
    * Search documentation as structured snippets
    */
-  async search(
-    query: string,
-    options: SearchOptions & { type: "json" }
-  ): Promise<SearchDocumentation[]>;
+  async search(query: string, options: SearchOptions & { type: "json" }): Promise<SearchResponse>;
 
   /**
    * Search documentation with options whose response type is determined at runtime
    */
-  async search(query: string, options: SearchOptions): Promise<SearchDocumentation[] | string>;
+  async search(query: string, options?: SearchOptions): Promise<SearchResponse | string>;
 
   /**
    * Search documentation without resolving a library first
    * @param query The user's question or task
    * @param options Library, version, language, response format, and request options
-   * @returns Formatted text by default, or SearchDocumentation[] when type is "json"
+   * @returns Formatted text by default, or SearchResponse when type is "json"
    */
-  async search(query: string, options?: SearchOptions): Promise<SearchDocumentation[] | string> {
+  async search(query: string, options?: SearchOptions): Promise<SearchResponse | string> {
     const command = new SearchCommand(query, options);
     return command.exec(this.httpClient);
   }
