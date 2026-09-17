@@ -83,6 +83,7 @@ response = requests.get(
         "type": "json",
     },
 )
+response.raise_for_status()
 docs = response.json()
 
 for snippet in docs["codeSnippets"]:
@@ -97,8 +98,46 @@ for info in docs["infoSnippets"]:
 
 Library hints are optional and do not need to be exact. You can provide up to four names or exact Context7 library IDs. Use `version` with at least one library hint, and use `language` when you want language-specific examples to rank higher.
 
+### Choose a library yourself
+
+Use Search Library followed by Get Context when your application needs to inspect or choose a specific documentation source.
+
+```python
+import os
+import requests
+
+headers = {"Authorization": f"Bearer {os.environ['CONTEXT7_API_KEY']}"}
+
+# Find libraries that match the task
+search_response = requests.get(
+    "https://context7.com/api/v2/libs/search",
+    headers=headers,
+    params={"libraryName": "react", "query": "I need to manage state"},
+)
+search_response.raise_for_status()
+best_match = search_response.json()["results"][0]
+print(f"Found: {best_match['title']} ({best_match['id']})")
+
+# Request documentation from the selected library
+context_response = requests.get(
+    "https://context7.com/api/v2/context",
+    headers=headers,
+    params={"libraryId": best_match["id"], "query": "How do I use useState?", "type": "json"},
+)
+context_response.raise_for_status()
+docs = context_response.json()
+
+for snippet in docs["codeSnippets"]:
+    print(f"Title: {snippet['codeTitle']}")
+    for code in snippet["codeList"]:
+        print(f"Code: {code['code'][:200]}...")
+
+for info in docs["infoSnippets"]:
+    print(f"Content: {info['content'][:200]}...")
+```
+
 <Info>
-  Each Search API call counts as one request. You can still use Search Library followed by Get Context when your application needs to inspect or choose a library itself.
+  Each Search API call counts as one request. The two-step flow makes two API calls when it searches for a library and then retrieves its documentation.
 </Info>
 
 <Info>
