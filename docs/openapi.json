@@ -19,8 +19,8 @@
   "paths": {
     "/v2/search": {
       "get": {
-        "summary": "Search documentation",
-        "description": "Find relevant documentation without resolving a library first. Context7 selects up to four relevant libraries, searches their documentation in parallel, and reranks the combined snippets.",
+        "summary": "Search documentation in one request",
+        "description": "Select up to four relevant Context7 libraries, retrieve their documentation in parallel, deduplicate and globally rerank the evidence, and return one bounded response. Optional library, version, and language values improve routing and ranking.",
         "operationId": "searchDocumentation",
         "tags": [
           "Search"
@@ -30,52 +30,66 @@
             "$ref": "#/components/parameters/QueryParam"
           },
           {
-            "$ref": "#/components/parameters/LibraryHintParam"
-          },
-          {
-            "$ref": "#/components/parameters/VersionParam"
-          },
-          {
-            "$ref": "#/components/parameters/LanguageParam"
-          },
-          {
             "$ref": "#/components/parameters/TypeParam"
+          },
+          {
+            "name": "library",
+            "in": "query",
+            "description": "Optional library hints. Repeat for up to four values; each may be a fuzzy product name such as `next.js` or an exact Context7 ID such as `/vercel/next.js`.",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "maxItems": 4,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              }
+            },
+            "example": [
+              "next.js",
+              "react"
+            ]
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "description": "Optional version constraint. Requires at least one library value. It is strict when one library is provided and contextual when multiple libraries are provided.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^v?[0-9]+([._][0-9]+){0,2}([-+][a-zA-Z0-9.-]+)?$"
+            },
+            "example": "15.2"
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "description": "Optional programming-language preference used for library selection, retrieval, and reranking. This is a soft preference and does not exclude language-neutral documentation.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            },
+            "example": "TypeScript"
           }
         ],
         "responses": {
           "200": {
-            "description": "Documentation snippets ranked across the selected libraries",
+            "description": "Bounded documentation evidence from the selected libraries",
             "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SearchContextResponse"
-                },
-                "example": {
-                  "codeSnippets": [
-                    {
-                      "libraryId": "/vercel/next.js",
-                      "codeTitle": "Cache a server function",
-                      "codeDescription": "Caches the result of an asynchronous server function.",
-                      "codeLanguage": "typescript",
-                      "codeTokens": 72,
-                      "codeId": "https://github.com/vercel/next.js/blob/canary/docs/cache.mdx#_snippet_0",
-                      "pageTitle": "Caching",
-                      "codeList": [
-                        {
-                          "language": "typescript",
-                          "code": "import { cache } from 'react'\n\nexport const getUser = cache(async (id: string) => {\n  return db.user.findUnique({ where: { id } })\n})"
-                        }
-                      ]
-                    }
-                  ],
-                  "infoSnippets": []
-                }
-              },
               "text/plain": {
                 "schema": {
                   "type": "string"
-                },
-                "example": "Library: /vercel/next.js\n\n### Cache a server function\n\nCaches the result of an asynchronous server function."
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchContextResponse"
+                }
               }
             }
           },
@@ -88,20 +102,36 @@
           "402": {
             "$ref": "#/components/responses/SpendingLimitError"
           },
-          "403": {
-            "$ref": "#/components/responses/ForbiddenError"
-          },
           "404": {
-            "$ref": "#/components/responses/NotFoundError"
+            "description": "No documentation matched the question or library hints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "no_documentation_found",
+                  "message": "No documentation library matched the request. Check the library hint or name."
+                }
+              }
+            }
           },
           "429": {
             "$ref": "#/components/responses/RateLimitError"
           },
-          "500": {
-            "$ref": "#/components/responses/InternalServerError"
-          },
           "503": {
-            "$ref": "#/components/responses/ServiceUnavailableError"
+            "description": "Documentation search could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "search_failed",
+                  "message": "The documentation search could not be completed."
+                }
+              }
+            }
           }
         },
         "security": [
@@ -1986,67 +2016,71 @@
         ]
       },
       "SearchContextResponse": {
-        "type": "object",
-        "description": "Documentation snippets ranked across one or more libraries",
-        "properties": {
-          "codeSnippets": {
-            "type": "array",
-            "description": "Relevant code snippets",
-            "items": {
-              "$ref": "#/components/schemas/SearchCodeSnippet"
-            }
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ContextResponse"
           },
-          "infoSnippets": {
-            "type": "array",
-            "description": "Relevant documentation snippets",
-            "items": {
-              "$ref": "#/components/schemas/SearchInfoSnippet"
-            }
-          },
-          "rules": {
+          {
             "type": "object",
-            "description": "Optional global and library-specific rules",
             "properties": {
-              "global": {
+              "codeSnippets": {
                 "type": "array",
+                "description": "Relevant code snippets with their selected library",
                 "items": {
-                  "type": "string"
+                  "$ref": "#/components/schemas/SearchCodeSnippet"
                 }
               },
-              "libraries": {
+              "infoSnippets": {
                 "type": "array",
+                "description": "Relevant documentation snippets with their selected library",
                 "items": {
-                  "type": "object",
-                  "properties": {
-                    "libraryId": {
+                  "$ref": "#/components/schemas/SearchInfoSnippet"
+                }
+              },
+              "rules": {
+                "type": "object",
+                "description": "Optional global rules and library-scoped guidelines",
+                "properties": {
+                  "global": {
+                    "type": "array",
+                    "description": "Global team rules that apply to every returned library",
+                    "items": {
                       "type": "string"
-                    },
-                    "libraryOwn": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    },
-                    "libraryTeam": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
                     }
                   },
-                  "required": [
-                    "libraryId",
-                    "libraryOwn",
-                    "libraryTeam"
-                  ]
+                  "libraries": {
+                    "type": "array",
+                    "description": "Rules scoped to a specific returned library",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "libraryId": {
+                          "type": "string"
+                        },
+                        "libraryOwn": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "libraryTeam": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "libraryId",
+                        "libraryOwn",
+                        "libraryTeam"
+                      ]
+                    }
+                  }
                 }
               }
             }
           }
-        },
-        "required": [
-          "codeSnippets",
-          "infoSnippets"
         ]
       },
       "Error": {

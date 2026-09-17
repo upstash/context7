@@ -66,6 +66,8 @@ You can pin a specific version with either `/owner/repo/<version>` or `/owner/re
 
 The Search API is the simplest way to retrieve documentation. You provide a question, and Context7 selects relevant libraries before searching and reranking their snippets.
 
+If no documentation matches, Search returns `404 no_documentation_found`; treat it as an empty result. A temporary search failure returns `503 search_failed` and can be retried.
+
 ```python
 import os
 import requests
