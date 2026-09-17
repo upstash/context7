@@ -2,7 +2,6 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   DEFAULT_MAX_SUBSCRIPTIONS,
   getMaxSubscriptions,
-  isSubscriptionLimitError,
   logMcpHandlerError,
 } from "../src/lib/subscriptions.js";
 
@@ -34,18 +33,26 @@ describe("logMcpHandlerError", () => {
     vi.restoreAllMocks();
   });
 
-  test("recognizes cap-0 listen refusals", () => {
-    expect(isSubscriptionLimitError(new Error("subscription limit reached (0)"))).toBe(true);
-    expect(isSubscriptionLimitError(new Error("boom"))).toBe(false);
-  });
-
-  test("drops expected listen refusals instead of logging them", () => {
+  test("drops only refusals caused by disabled subscriptions", () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
 
-    logMcpHandlerError("MCP handler error:", new Error("subscription limit reached (0)"));
-    logMcpHandlerError("MCP handler error:", new Error("real failure"));
+    logMcpHandlerError(
+      "MCP handler error:",
+      new Error("subscriptions/listen refused: subscription limit reached (0)")
+    );
 
-    expect(error).toHaveBeenCalledOnce();
-    expect(error).toHaveBeenCalledWith("MCP handler error:", expect.any(Error));
+    expect(error).not.toHaveBeenCalled();
   });
+
+  test.each(["subscriptions/listen refused: subscription limit reached (16000)", "real failure"])(
+    "keeps unexpected failures visible: %s",
+    (message) => {
+      const error = vi.spyOn(console, "error").mockImplementation(() => {});
+      const failure = new Error(message);
+      logMcpHandlerError("MCP handler error:", failure);
+
+      expect(error).toHaveBeenCalledOnce();
+      expect(error).toHaveBeenCalledWith("MCP handler error:", failure);
+    }
+  );
 });

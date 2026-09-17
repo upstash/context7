@@ -52,13 +52,12 @@ export function createClientIpAssertion(
 }
 
 /**
- * Credentials the Context7 REST API will accept. Cursor `direct_` tokens and
- * other IDE session secrets must not be forwarded — REST only understands
- * `ctx7sk` keys, Clerk `oat_` tokens, and JWTs (OAuth / EMA / Entra / Vercel).
+ * Recognize supported credential formats before forwarding. The REST API
+ * validates the key or token. Cursor `direct_` session tokens are not API credentials.
  */
 export function isForwardableApiCredential(token: string): boolean {
   const value = token.trim();
-  if (!value) return false;
+  if (!value || value.startsWith("direct_")) return false;
   if (value.startsWith("ctx7sk")) return true;
   if (value.startsWith("oat_")) return true;
   return value.split(".").length === 3;

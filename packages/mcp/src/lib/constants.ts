@@ -53,6 +53,7 @@ export const EMA_ISSUER =
 export const EMA_JWKS_URL = process.env.EMA_JWKS_URL || `${CONTEXT7_API_BASE_URL}/oauth/ema-jwks`;
 export const OPENAI_APPS_CHALLENGE_TOKEN = process.env.OPENAI_APPS_CHALLENGE_TOKEN;
 
+/** Describe authorization for the canonical MCP resource. */
 export function protectedResourceMetadataDocument(resourceUrl = RESOURCE_URL) {
   return {
     resource: canonicalMcpResourceUrl(resourceUrl),
@@ -62,12 +63,13 @@ export function protectedResourceMetadataDocument(resourceUrl = RESOURCE_URL) {
   };
 }
 
+/** Describe the remote server using the experimental Server Card v1 schema. */
 export function mcpServerCard(resourceUrl = RESOURCE_URL) {
   return {
+    $schema: "https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json",
     name: "io.github.upstash/context7",
     title: "Context7",
-    description:
-      "Up-to-date, version-specific documentation and code examples for software libraries, for AI coding agents.",
+    description: "Current documentation and code examples for software libraries and frameworks.",
     version: SERVER_VERSION,
     remotes: [
       {

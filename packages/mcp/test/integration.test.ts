@@ -2,6 +2,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest"
 import { Client } from "@modelcontextprotocol/client";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { StdioClientTransport, getDefaultEnvironment } from "@modelcontextprotocol/client/stdio";
+import {
+  CLIENT_CAPABILITIES_META_KEY,
+  CLIENT_INFO_META_KEY,
+  PROTOCOL_VERSION_META_KEY,
+} from "@modelcontextprotocol/server";
 import { execSync } from "node:child_process";
 import { spawn, type ChildProcess } from "node:child_process";
 import { createDecipheriv } from "node:crypto";
@@ -233,15 +238,23 @@ describe("OAuth discovery", () => {
     });
   });
 
+  test("does not advertise metadata for an unknown resource", async () => {
+    const response = await fetch(new URL("/.well-known/oauth-protected-resource/unknown", httpUrl));
+    expect(response.status).toBe(404);
+  });
+
   test("serves the SEP-2127 server card at /mcp/server-card", async () => {
     const response = await fetch(new URL("/mcp/server-card", httpUrl));
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toMatch(/application\/mcp-server-card\+json/);
-    expect(await response.json()).toMatchObject({
+    const card = await response.json();
+    expect(card).toMatchObject({
+      $schema: "https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json",
       name: "io.github.upstash/context7",
       remotes: [{ type: "streamable-http", url: canonicalMcpResourceUrl() }],
     });
+    expect(card.description.length).toBeLessThanOrEqual(100);
   });
 });
 
@@ -356,6 +369,68 @@ describe.each([
   });
 });
 
+test.each([
+  ["get-library-docs", "query-docs"],
+  ["query-docs", "get-library-docs"],
+])("rejects mismatched tool names in body %s and header %s", async (name, header) => {
+  requests.length = 0;
+  const response = await fetch(httpUrl, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      accept: "application/json, text/event-stream",
+      "mcp-method": "tools/call",
+      "mcp-name": header,
+      "mcp-protocol-version": "2026-07-28",
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 71,
+      method: "tools/call",
+      params: {
+        name,
+        arguments: { libraryId: "/vercel/next.js", query: "app router" },
+        _meta: {
+          [PROTOCOL_VERSION_META_KEY]: "2026-07-28",
+          [CLIENT_INFO_META_KEY]: { name: "header-mismatch-test", version: "1.0.0" },
+          [CLIENT_CAPABILITIES_META_KEY]: {},
+        },
+      },
+    }),
+  });
+
+  expect(response.status).toBe(400);
+  expect(await response.json()).toMatchObject({ error: { code: -32020 } });
+  expect(requests).toHaveLength(0);
+});
+
+test.each(["modern", "legacy"] as const)(
+  "redirects stdio tool names with telemetry disabled for %s clients",
+  async (era) => {
+    const client = new Client(
+      { name: "disabled-stdio-test", version: "1.0.0" },
+      era === "modern" ? { versionNegotiation: { mode: { pin: "2026-07-28" } } } : undefined
+    );
+    try {
+      await client.connect(
+        new StdioClientTransport({
+          command: process.execPath,
+          args: [DIST],
+          env: { ...childEnv, OTEL_SDK_DISABLED: "true" },
+        })
+      );
+      const result = await client.callTool({
+        name: "get-library-docs",
+        arguments: { libraryId: "/vercel/next.js", query: "app router" },
+      });
+      expect(result.isError).toBeFalsy();
+      expect(result.content).toMatchObject([{ type: "text", text: STUB_DOCS }]);
+    } finally {
+      await client.close();
+    }
+  }
+);
+
 describe("HTTP API key headers", () => {
   test("accepts the advertised X-Context7-API-Key header", async () => {
     const apiKey = "ctx7sk-advertised-header-test";
@@ -381,57 +456,64 @@ describe("HTTP API key headers", () => {
     }
   });
 
-  test("does not forward Cursor IDE bearer tokens to the Context7 API", async () => {
-    const client = new Client({ name: "cursor-token-test", version: "1.0.0" });
+  test.each(["direct_cursor-session", "direct_example.payload.signature"])(
+    "does not forward Cursor IDE bearer token %s to the Context7 API",
+    async (token) => {
+      const client = new Client({ name: "cursor-token-test", version: "1.0.0" });
 
-    await client.connect(
-      new StreamableHTTPClientTransport(new URL(httpUrl), {
-        requestInit: { headers: { Authorization: "Bearer direct_cursor-session" } },
-      })
-    );
+      await client.connect(
+        new StreamableHTTPClientTransport(new URL(httpUrl), {
+          requestInit: { headers: { Authorization: `Bearer ${token}` } },
+        })
+      );
 
-    try {
-      requests.length = 0;
-      await client.callTool({
-        name: "query-docs",
-        arguments: { libraryId: "/vercel/next.js", query: "app router" },
-      });
+      try {
+        requests.length = 0;
+        await client.callTool({
+          name: "query-docs",
+          arguments: { libraryId: "/vercel/next.js", query: "app router" },
+        });
 
-      const apiCall = requests.find((request) => request.path === "/v2/context");
-      expect(apiCall?.headers.authorization).toBeUndefined();
-    } finally {
-      await client.close();
+        const apiCall = requests.find((request) => request.path === "/v2/context");
+        expect(apiCall).toBeDefined();
+        expect(apiCall?.headers.authorization).toBeUndefined();
+      } finally {
+        await client.close();
+      }
     }
-  });
+  );
 
-  test("prefers a Context7 API key header when Authorization is not forwardable", async () => {
-    const apiKey = "ctx7sk-alongside-cursor-token";
-    const client = new Client({ name: "mixed-auth-test", version: "1.0.0" });
+  test.each(["direct_cursor-session", "direct_example.payload.signature"])(
+    "prefers a Context7 API key header over %s",
+    async (token) => {
+      const apiKey = "ctx7sk-alongside-cursor-token";
+      const client = new Client({ name: "mixed-auth-test", version: "1.0.0" });
 
-    await client.connect(
-      new StreamableHTTPClientTransport(new URL(httpUrl), {
-        requestInit: {
-          headers: {
-            Authorization: "Bearer direct_cursor-session",
-            "X-Context7-API-Key": apiKey,
+      await client.connect(
+        new StreamableHTTPClientTransport(new URL(httpUrl), {
+          requestInit: {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "X-Context7-API-Key": apiKey,
+            },
           },
-        },
-      })
-    );
+        })
+      );
 
-    try {
-      requests.length = 0;
-      await client.callTool({
-        name: "query-docs",
-        arguments: { libraryId: "/vercel/next.js", query: "app router" },
-      });
+      try {
+        requests.length = 0;
+        await client.callTool({
+          name: "query-docs",
+          arguments: { libraryId: "/vercel/next.js", query: "app router" },
+        });
 
-      const apiCall = requests.find((request) => request.path === "/v2/context");
-      expect(apiCall?.headers.authorization).toBe(`Bearer ${apiKey}`);
-    } finally {
-      await client.close();
+        const apiCall = requests.find((request) => request.path === "/v2/context");
+        expect(apiCall?.headers.authorization).toBe(`Bearer ${apiKey}`);
+      } finally {
+        await client.close();
+      }
     }
-  });
+  );
 });
 
 describe.each([
@@ -458,13 +540,9 @@ describe.each([
     expect(client.getProtocolEra()).toBe(era);
   });
 
-  test("lists tools with derived input schemas", async () => {
+  test("lists only the two canonical tools with derived input schemas", async () => {
     const { tools } = await client.listTools();
-    expect(tools.map((t) => t.name).sort()).toEqual([
-      "get-library-docs",
-      "query-docs",
-      "resolve-library-id",
-    ]);
+    expect(tools.map((t) => t.name).sort()).toEqual(["query-docs", "resolve-library-id"]);
 
     // The z.preprocess wrapper must not break JSON Schema derivation.
     const resolve = tools.find((t) => t.name === "resolve-library-id")!;
@@ -608,7 +686,7 @@ describe("OpenTelemetry metrics", () => {
     try {
       await client.connect(new StreamableHTTPClientTransport(new URL(disabledServer.url)));
       const result = await client.callTool({
-        name: "query-docs",
+        name: "get-library-docs",
         arguments: { libraryId: "/vercel/next.js", query: "disabled telemetry" },
       });
       expect(result.isError).toBeFalsy();

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { toNodeHandler } from "@modelcontextprotocol/node";
-import { StdioServerTransport, serveStdio } from "@modelcontextprotocol/server/stdio";
+import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import {
   McpServer,
   createMcpHandler,
@@ -31,11 +31,8 @@ import {
   protectedResourceMetadataPath,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
-import {
-  GET_LIBRARY_DOCS_TOOL,
-  QUERY_DOCS_TOOL,
-  RESOLVE_LIBRARY_ID_TOOL,
-} from "./lib/tool-names.js";
+import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
+import { redirectHttpToolCalls, ToolNameRedirectStdioTransport } from "./lib/tool-name-redirect.js";
 import { installProcessShutdown } from "./lib/process-shutdown.js";
 import { getMaxSubscriptions, logMcpHandlerError } from "./lib/subscriptions.js";
 import { isForwardableApiCredential } from "./lib/encryption.js";
@@ -359,57 +356,6 @@ Do not call this tool more than 3 times per question.`,
     }
   );
 
-  // Older README / Copilot snippets still whitelist this name. Same handler as
-  // query-docs; telemetry maps it back to the canonical tool.
-  server.registerTool(
-    GET_LIBRARY_DOCS_TOOL,
-    {
-      title: "Query Documentation",
-      description: `Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
-
-This is an alias of 'query-docs' for older client configs that still call get-library-docs.
-
-You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
-
-Do not call this tool more than 3 times per question.`,
-      inputSchema: z.preprocess(
-        aliasArgs({ ...GLOBAL_ALIASES, ...QUERY_DOCS_ALIASES }),
-        z.object({
-          libraryId: z
-            .string()
-            .describe(
-              "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
-            ),
-          query: z
-            .string()
-            .describe(
-              "What to look up in the library's documentation, scoped to a single concept. Be specific and include relevant details, but keep each query to one topic — if the user's question spans multiple distinct concepts, make a separate call per concept instead of combining them, unless the question is about how the concepts interact. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad (too vague): 'auth' or 'hooks'. Bad (too broad): 'routing and auth and caching in Next.js'. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
-            ),
-        })
-      ),
-      annotations: {
-        readOnlyHint: true,
-        destructiveHint: false,
-        openWorldHint: true,
-        idempotentHint: true,
-      },
-    },
-    async ({ query, libraryId }: { query: string; libraryId: string }, toolCtx) => {
-      const ctx = getClientContext(toolCtx);
-      const response = await fetchLibraryContext({ query, libraryId }, ctx);
-      maybeElicitAuthSignIn(server, ctx);
-      recordToolCallOutcome(response.outcome);
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: response.data,
-          },
-        ],
-      };
-    }
-  );
-
   return server;
 }
 
@@ -563,6 +509,7 @@ async function main() {
         };
 
         await requestContext.run(context, async () => {
+          redirectHttpToolCalls(req);
           await nodeHandler(req, res, req.body);
         });
       } catch (error) {
@@ -609,7 +556,7 @@ async function main() {
       res.json(protectedResourceMetadataDocument());
     };
     app.get("/.well-known/oauth-protected-resource", sendProtectedResourceMetadata);
-    app.get("/.well-known/oauth-protected-resource/{*path}", sendProtectedResourceMetadata);
+    app.get(protectedResourceMetadataPath(), sendProtectedResourceMetadata);
 
     app.get(
       "/.well-known/oauth-authorization-server",
@@ -726,7 +673,7 @@ async function main() {
   } else {
     stdioApiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
     stdioSessionId = randomUUID();
-    const rawStdioTransport = new StdioServerTransport();
+    const rawStdioTransport = new ToolNameRedirectStdioTransport();
     const stdioTransport = mcpInstrumentation
       ? mcpInstrumentation.instrumentStdioTransport(rawStdioTransport)
       : rawStdioTransport;

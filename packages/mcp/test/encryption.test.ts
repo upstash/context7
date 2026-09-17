@@ -60,8 +60,10 @@ describe("isForwardableApiCredential", () => {
     }
   );
 
-  test("does not forward Cursor IDE session tokens", () => {
-    expect(isForwardableApiCredential("direct_cursor-session")).toBe(false);
-    expect(generateHeaders({ apiKey: "direct_cursor-session" }).Authorization).toBeUndefined();
-  });
+  test.each(["direct_cursor-session", "direct_example.payload.signature"])(
+    "does not forward Cursor IDE session token %s",
+    (token) => {
+      expect(generateHeaders({ apiKey: token }).Authorization).toBeUndefined();
+    }
+  );
 });
