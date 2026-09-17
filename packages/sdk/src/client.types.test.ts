@@ -5,6 +5,8 @@ import {
   type GetContextOptions,
   type Library,
   type SearchLibraryOptions,
+  type SearchDocumentation,
+  type SearchOptions,
 } from "./client";
 
 function searchWithOptions(client: Context7, options: SearchLibraryOptions) {
@@ -31,6 +33,18 @@ function getContextWithDefaultOptions(client: Context7) {
   return client.getContext("query", "/react/react", {});
 }
 
+function documentationSearchWithOptions(client: Context7, options: SearchOptions) {
+  return client.search("query", options);
+}
+
+function documentationSearchWithDefaultOptions(client: Context7) {
+  return client.search("query");
+}
+
+function documentationSearchWithJsonOptions(client: Context7) {
+  return client.search("query", { type: "json" });
+}
+
 describe("Context7 Client types", () => {
   test("returns a union when the search response type is determined at runtime", () => {
     expectTypeOf(searchWithOptions).returns.toEqualTypeOf<Promise<Library[] | string>>();
@@ -50,5 +64,15 @@ describe("Context7 Client types", () => {
   test("preserves JSON return types for empty options", () => {
     expectTypeOf(searchWithDefaultOptions).returns.toEqualTypeOf<Promise<Library[]>>();
     expectTypeOf(getContextWithDefaultOptions).returns.toEqualTypeOf<Promise<Documentation[]>>();
+  });
+
+  test("types search responses from the requested format", () => {
+    expectTypeOf(documentationSearchWithOptions).returns.toEqualTypeOf<
+      Promise<SearchDocumentation[] | string>
+    >();
+    expectTypeOf(documentationSearchWithDefaultOptions).returns.toEqualTypeOf<Promise<string>>();
+    expectTypeOf(documentationSearchWithJsonOptions).returns.toEqualTypeOf<
+      Promise<SearchDocumentation[]>
+    >();
   });
 });
