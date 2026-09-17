@@ -227,6 +227,7 @@ export interface CodeExample {
 }
 
 export interface CodeSnippet {
+  libraryId?: string;
   codeTitle: string;
   codeDescription: string;
   codeLanguage: string;
@@ -237,6 +238,7 @@ export interface CodeSnippet {
 }
 
 export interface InfoSnippet {
+  libraryId?: string;
   pageId?: string;
   breadcrumb?: string;
   content: string;

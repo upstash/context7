@@ -361,3 +361,47 @@ export async function getLibraryContext(
 
   return (await response.json()) as ContextResponse;
 }
+
+export interface SearchDocumentationOptions {
+  libraries?: string[];
+  version?: string;
+  language?: string;
+  type?: "json" | "txt";
+}
+
+export async function searchDocumentation(
+  query: string,
+  options?: SearchDocumentationOptions,
+  accessToken?: string
+): Promise<ContextResponse | string> {
+  const params = new URLSearchParams({ query });
+  for (const library of options?.libraries ?? []) {
+    params.append("library", library);
+  }
+  if (options?.version) params.set("version", options.version);
+  if (options?.language) params.set("language", options.language);
+  if (options?.type) params.set("type", options.type);
+
+  const response = await fetch(`${baseUrl}/api/v2/search?${params}`, {
+    headers: getAuthHeaders(accessToken),
+  });
+
+  if (!response.ok) {
+    const errorData = (await response.json().catch(() => ({}))) as {
+      error?: string;
+      message?: string;
+    };
+    return {
+      codeSnippets: [],
+      infoSnippets: [],
+      error: errorData.error || `HTTP error ${response.status}`,
+      message: errorData.message,
+    };
+  }
+
+  if (options?.type !== "json") {
+    return await response.text();
+  }
+
+  return (await response.json()) as ContextResponse;
+}
