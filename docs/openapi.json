@@ -17,7 +17,7 @@
     }
   ],
   "paths": {
-    "/v2/search": {
+    "/v3/search": {
       "get": {
         "summary": "Search documentation in one request",
         "description": "Select up to four relevant Context7 libraries, retrieve their documentation in parallel, deduplicate and globally rerank the evidence, and return one bounded response. Optional library, version, and language values improve routing and ranking.",
