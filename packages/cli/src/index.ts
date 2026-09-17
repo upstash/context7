@@ -2,7 +2,7 @@ import { Command } from "commander";
 import pc from "picocolors";
 import figlet from "figlet";
 import { registerSkillCommands, registerSkillAliases } from "./commands/skill.js";
-import { registerAuthCommands, setAuthBaseUrl } from "./commands/auth.js";
+import { registerAuthCommands } from "./commands/auth.js";
 import { registerSetupCommand } from "./commands/setup.js";
 import { registerRemoveCommand } from "./commands/remove.js";
 import { registerDocsCommands } from "./commands/docs.js";
@@ -26,7 +26,6 @@ program
     const opts = thisCommand.opts();
     if (opts.baseUrl) {
       setBaseUrl(opts.baseUrl);
-      setAuthBaseUrl(opts.baseUrl);
     }
   })
   .hook("preAction", async (_thisCommand, actionCommand) => {

@@ -257,7 +257,8 @@ Context7 requires outbound connectivity to the following:
 |---|---|
 | `ghcr.io` | Container image pulls (`imagePullPolicy: Always`) |
 | `context7.com` | License validation |
-| Your LLM provider (e.g. `api.openai.com`) | AI inference and embeddings |
+| Your LLM provider (for example, `api.openai.com` or the regional AWS Bedrock Runtime endpoint) | AI inference and embeddings |
+| AWS credential endpoints, when using workload credentials | Resolving EKS Pod Identity, IRSA, ECS, or EC2 role credentials for Bedrock |
 | `github.com` / `gitlab.com` | Repository cloning |
 
 If you use NetworkPolicies, ensure egress to these endpoints is allowed:
@@ -279,6 +280,8 @@ spec:
 ```
 
 For stricter policies, allow egress on port 443 to the specific domains listed above, and ensure egress to `kube-dns` on port 53 (UDP/TCP) is permitted for DNS resolution.
+
+When using AWS Bedrock, allow the regional Bedrock Runtime endpoint (`bedrock-runtime.<region>.amazonaws.com`) and any endpoint required by your AWS credential provider. For private clusters, you can instead use a Bedrock Runtime interface VPC endpoint and enter its URL in Context7. See [AWS Bedrock](/enterprise/integrations/aws-bedrock) for IAM, credential, region, and PrivateLink configuration.
 
 ## Operations
 
