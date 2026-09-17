@@ -18,7 +18,7 @@ Get your API key at [context7.com/dashboard](https://context7.com/dashboard). Le
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| [Search Documentation](/api-reference/search/search-documentation) | `GET /api/v2/search` | Find relevant documentation without resolving a library first |
+| [Search Documentation](/api-reference/search/search-documentation) | `GET /api/v3/search` | Find relevant documentation without resolving a library first |
 | [Search Library](/api-reference/search/search-for-libraries) | `GET /api/v2/libs/search` | Find libraries by name |
 | [Get Context](/api-reference/context/get-documentation-context) | `GET /api/v2/context` | Retrieve documentation snippets for a library |
 | [Refresh Library](/api-reference/refresh/refresh-a-library) | `POST /api/v1/refresh` | Refresh a library's documentation |
@@ -76,7 +76,7 @@ headers = {"Authorization": f"Bearer {os.environ['CONTEXT7_API_KEY']}"}
 
 # Context7 selects the library and returns the best snippets
 response = requests.get(
-    "https://context7.com/api/v2/search",
+    "https://context7.com/api/v3/search",
     headers=headers,
     params={
         "query": "How do I stream an OpenAI response from a Next.js route?",
@@ -186,7 +186,7 @@ curl "https://context7.com/api/v2/context?libraryId=/websites/uploadcare&query=i
 Start with only the question when the relevant library is clear from the task. Add library hints when a name is ambiguous or when the answer needs documentation from more than one product.
 
 ```bash
-curl -G "https://context7.com/api/v2/search" \
+curl -G "https://context7.com/api/v3/search" \
   -H "Authorization: Bearer CONTEXT7_API_KEY" \
   --data-urlencode "query=How do I stream an OpenAI response from a Next.js route?" \
   --data-urlencode "library=Next.js" \
