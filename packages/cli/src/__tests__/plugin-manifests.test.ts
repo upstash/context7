@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { readFile } from "fs/promises";
+import { access, readdir, readFile } from "fs/promises";
 import { join } from "path";
 import { execFile } from "child_process";
 import { promisify } from "util";
@@ -39,5 +39,30 @@ describe("plugin MCP manifests", () => {
     expect(config.mcpServers.context7.headers).toEqual({
       Authorization: "${CONTEXT7_API_KEY:-}",
     });
+  });
+
+  test("Cursor plugin names a skill it actually ships", async () => {
+    const relPath = "plugins/cursor/context7/rules/use-context7.mdc";
+    const rule = await readFile(join(REPO_ROOT, relPath), "utf-8");
+    const readme = await readFile(join(REPO_ROOT, "plugins/cursor/context7/README.md"), "utf-8");
+    const shipped = (await readdir(join(REPO_ROOT, "plugins/cursor/context7/skills"))).sort();
+
+    // Both files point the reader at a skill by name; a rename that misses one
+    // of them leaves a dangling reference the agent cannot resolve.
+    for (const [file, content] of [
+      [relPath, rule],
+      ["plugins/cursor/context7/README.md", readme],
+    ] as const) {
+      const reference = content.match(/`(context7-[a-z0-9-]+)` skill/)?.[1];
+      expect(reference, `${file} should reference a skill by name`).toBeDefined();
+      expect(shipped, `${file} references "${reference}"`).toContain(reference);
+    }
+  });
+
+  test("Cursor plugin's skill directories all contain a SKILL.md", async () => {
+    const dir = join(REPO_ROOT, "plugins/cursor/context7/skills");
+    for (const entry of await readdir(dir)) {
+      await expect(access(join(dir, entry, "SKILL.md"))).resolves.toBeUndefined();
+    }
   });
 });
