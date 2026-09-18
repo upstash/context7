@@ -188,6 +188,19 @@ afterAll(() => {
   stubServer?.close();
 });
 
+test("reports the bound port when port zero requests an ephemeral port", async () => {
+  const { child, url } = await startHttpChild({ port: 0 });
+  try {
+    expect(new URL(url).port).not.toBe("0");
+
+    const response = await fetch(new URL("/ping", url));
+    expect(response.ok).toBe(true);
+    await expect(response.json()).resolves.toMatchObject({ status: "ok" });
+  } finally {
+    child.kill();
+  }
+});
+
 async function connect(transportKind: "http" | "stdio", era: "modern" | "legacy") {
   const client = new Client(
     { name: "test-harness", version: "1.0.0" },
