@@ -1017,7 +1017,7 @@ Add the following configuration to the `mcp` section of your Copilot Coding Agen
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY"
       },
-      "tools": ["get-library-docs", "resolve-library-id"]
+      "tools": ["query-docs", "resolve-library-id"]
     }
   }
 }
@@ -1042,7 +1042,7 @@ For more information, see the [official GitHub documentation](https://docs.githu
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY"
       },
-      "tools": ["get-library-docs", "resolve-library-id"]
+      "tools": ["query-docs", "resolve-library-id"]
     }
   }
 }
@@ -1056,7 +1056,7 @@ Or, for a local server:
     "context7": {
       "type": "local",
       "command": "npx",
-      "tools": ["get-library-docs", "resolve-library-id"],
+      "tools": ["query-docs", "resolve-library-id"],
       "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
     }
   }
@@ -1194,7 +1194,7 @@ Open the "Settings" page of the app, navigate to "Plugins," and enter the follow
 }
 ```
 
-Once saved, enter in the chat `get-library-docs` followed by your Context7 documentation ID (e.g., `get-library-docs /nuxt/ui`). More information is available on [BoltAI's Documentation site](https://docs.boltai.com/docs/plugins/mcp-servers). For BoltAI on iOS, [see this guide](https://docs.boltai.com/docs/boltai-mobile/mcp-servers).
+Once saved, enter in the chat `query-docs` followed by your Context7 documentation ID (e.g., `query-docs /nuxt/ui`). More information is available on [BoltAI's Documentation site](https://docs.boltai.com/docs/plugins/mcp-servers). For BoltAI on iOS, [see this guide](https://docs.boltai.com/docs/boltai-mobile/mcp-servers).
 
 </details>
 
@@ -1391,11 +1391,13 @@ Context7 MCP provides the following tools that LLMs can use:
 
 - `resolve-library-id`: Resolves a general library name into a Context7-compatible library ID.
   - `libraryName` (required): The name of the library to search for
+  - `query` (required): What you need the docs for, used to rank matches
 
-- `get-library-docs`: Fetches documentation for a library using a Context7-compatible library ID.
-  - `context7CompatibleLibraryID` (required): Exact Context7-compatible library ID (e.g., `/mongodb/docs`, `/vercel/next.js`)
-  - `topic` (optional): Focus the docs on a specific topic (e.g., "routing", "hooks")
-  - `page` (optional, default 1): Page number for pagination (1-10). If the context is not sufficient, try page=2, page=3, etc. with the same topic.
+- `query-docs`: Queries up-to-date documentation and code examples for a Context7-compatible library ID.
+  - `libraryId` (required): Exact Context7-compatible library ID (e.g., `/mongodb/docs`, `/vercel/next.js`)
+  - `query` (required): The concept to look up, scoped to a single topic
+
+Calls to the old name `get-library-docs` are redirected to `query-docs` with the same arguments (`libraryId`, `query`). Only the two tools above are advertised. Update client tool allowlists to use `query-docs`.
 
 ## 🛟 Tips
 
@@ -1635,7 +1637,7 @@ Prometheus Operator instead, configure the equivalent per-pod endpoint with a `P
 
 ### OAuth Authentication
 
-Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization).
+Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization).
 
 To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client configuration:
 

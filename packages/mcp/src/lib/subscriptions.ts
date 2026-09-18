@@ -11,3 +11,14 @@ export function getMaxSubscriptions(value = process.env.MCP_MAX_SUBSCRIPTIONS): 
   console.warn(`Invalid MCP_MAX_SUBSCRIPTIONS; using the default of ${DEFAULT_MAX_SUBSCRIPTIONS}.`);
   return DEFAULT_MAX_SUBSCRIPTIONS;
 }
+
+/** Suppress refusals from disabled subscriptions, but log capacity and other failures. */
+export function logMcpHandlerError(label: string, error: unknown): void {
+  if (
+    error instanceof Error &&
+    error.message === "subscriptions/listen refused: subscription limit reached (0)"
+  ) {
+    return;
+  }
+  console.error(label, error);
+}
