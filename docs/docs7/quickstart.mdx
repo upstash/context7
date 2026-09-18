@@ -38,7 +38,7 @@ Hello, world.
 
 ## 2. Install the CLI
 
-Install the package globally:
+Use Node.js 20.19 or newer. Install the package globally:
 
 ```bash
 npm install -g @upstash/docs7
@@ -67,6 +67,23 @@ docs7 dev ./docs --port 4000
 </Note>
 
 ## 4. Publish
+
+### With the CLI
+
+Run these commands from your documentation folder:
+
+```bash
+docs7 login
+docs7 deploy
+```
+
+The login command shows a one-time code and an approval link. Press Enter to open the browser, then approve access with your Context7 account.
+
+`docs7 deploy` publishes to production without a GitHub repository. It shows the site overview link and prints the public URL when the build is ready.
+
+Run `docs7 deploy` again after you edit your docs to update the same site. Keep `.docs7/project.json`, which stores the site link. See the [CLI reference](/docs7/cli) for login options, previews, and upload exclusions.
+
+### With GitHub
 
 1. Push the project to GitHub.
 2. Open the **Docs7** tab in your Context7 teamspace.
