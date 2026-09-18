@@ -3,7 +3,7 @@ title: Builds
 description: Configure production builds, previews, and local builds
 ---
 
-Connect a GitHub repository once. Docs7 then reads the configured documentation folder whenever it builds that site.
+Publish from a connected GitHub repository or upload local files with [`docs7 deploy`](/docs7/cli#deploy). For GitHub sites, Docs7 reads the configured documentation folder whenever it builds.
 
 The folder must contain `docs.json` or `mint.json`. It can also contain MDX pages, assets, snippets, OpenAPI files, and any other files referenced by the documentation.
 
@@ -16,7 +16,7 @@ The folder must contain `docs.json` or `mint.json`. It can also contain MDX page
 
 ## Build settings
 
-Open **Docs7**, choose a site, then open **Settings**.
+For a GitHub site, open **Docs7**, choose a site, then open **Settings**.
 
 | Setting | What it controls |
 | --- | --- |
@@ -28,13 +28,14 @@ Branch and docs path changes take effect on the next deployment. You can also se
 
 ## Production builds
 
-Docs7 starts a production build in three cases:
+Docs7 starts a production build when:
 
 1. You publish a site for the first time.
 2. You push a commit to the production branch.
 3. You click **Redeploy** in Docs7.
+4. You run `docs7 deploy` for a CLI site.
 
-For each build, Docs7 resolves the exact commit, checks out the repository, and reads the configured docs path. It then renders the pages, builds the search index, runs documentation health checks, and publishes the completed release.
+For GitHub builds, Docs7 resolves the exact commit, checks out the repository, and reads the configured docs path. CLI builds use the uploaded local files instead. Both render the pages, build the search index, run documentation health checks, and publish the completed release.
 
 Publication happens only after the release is ready. If a build fails, the previous successful release stays live.
 
@@ -59,7 +60,7 @@ You can also create a preview for a selected branch manually. Open a preview bui
 
 ## Inspect a build
 
-Open **Builds**, then select a row. Each build records its branch, commit, trigger, status, and commit message.
+Open **Builds**, then select a row. GitHub builds record the branch, commit, trigger, status, and commit message. For CLI sites, open the overview link from the command and select a deployment. These builds show a CLI source instead of a Git branch or commit.
 
 The detail view contains:
 
@@ -67,7 +68,7 @@ The detail view contains:
 - **Files changed** for pull request builds
 - **Health** for page errors, broken internal links, unknown components, source warnings, and deployment failures
 
-Fixable issues from the latest production build also appear in the [Agent work queue](/docs7/agent#context7-agent).
+For GitHub sites, fixable issues from the latest production build also appear in the [Agent work queue](/docs7/agent#context7-agent).
 
 ## Build locally
 
@@ -86,7 +87,7 @@ docs7 dev ./docs --host 0.0.0.0
 
 Use `--port` to change the port and `--host` to bind another address. The first run downloads the Docs7 renderer and caches it for later previews.
 
-The public CLI previews documentation but does not publish it. Push the repository or click **Redeploy** to start a hosted build.
+To publish local files, run `docs7 login`, then `docs7 deploy`. See the [CLI reference](/docs7/cli) for production and preview deployments.
 
 <Warning>
 A local preview executes trusted MDX with your local user permissions. Do not run it against a documentation source you do not trust.

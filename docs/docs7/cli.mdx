@@ -1,0 +1,124 @@
+---
+title: CLI
+description: Preview, sign in, and deploy documentation with the Docs7 CLI
+---
+
+## Install
+
+Use Node.js 20.19 or newer:
+
+```bash
+npm install -g @upstash/docs7
+```
+
+You can also run commands without a global installation, such as `npx @upstash/docs7 deploy`.
+
+| Command              | What it does                                      |
+| -------------------- | ------------------------------------------------- |
+| `docs7 dev [dir]`    | Preview your docs locally with live reload.       |
+| `docs7 login`        | Sign in with your Context7 account.               |
+| `docs7 whoami`       | Show your saved login status and teamspace.       |
+| `docs7 logout`       | Remove your saved Docs7 login.                    |
+| `docs7 deploy [dir]` | Upload your local docs and publish to production. |
+
+For `dev` and `deploy`, the directory defaults to the current folder. It must contain `docs.json` or `mint.json`.
+
+## Sign in
+
+```bash
+docs7 login
+```
+
+The CLI shows a one-time code and an approval link. Press Enter to open the browser, then approve access with your Context7 account.
+
+To open the link yourself, including on another device:
+
+```bash
+docs7 login --no-browser
+```
+
+Use `docs7 whoami` to check your login. To change accounts, run `docs7 logout`, then `docs7 login` again.
+
+Docs7 stores its login in `~/.config/docs7/credentials.json`. If `XDG_CONFIG_HOME` is an absolute path, it uses that directory instead of `~/.config`. Docs7 does not read or change credentials saved by `ctx7 login`.
+
+For deployment without browser login, set `CONTEXT7_API_KEY` in your environment, such as a CI secret. This key takes priority over the saved login for `docs7 deploy`. `docs7 logout` removes only the saved login, not the environment variable.
+
+## Preview locally
+
+```bash
+docs7 dev
+docs7 dev ./docs --port 4000
+```
+
+The default address is `http://localhost:3333`. The first run downloads the renderer and caches it. The server reloads pages when you edit files. Use `--host` to change the bind address. Local previews do not require login.
+
+<Warning>
+  A local preview executes MDX with your local user permissions. Only preview documentation sources
+  you trust.
+</Warning>
+
+## Deploy
+
+After login, run this from your documentation folder:
+
+```bash
+docs7 deploy
+```
+
+Or pass the folder:
+
+```bash
+docs7 deploy ./docs
+```
+
+No GitHub repository is required. The CLI uploads your local files, shows the site overview and deployment links, and waits for the build. It prints the public URL when the site is ready.
+
+The first deployment creates a site using the required `name` in `docs.json` or `mint.json`. The name must be nonempty and at most 100 characters. Docs7 assigns an available `*.docs7.io` address from the name.
+
+The CLI saves the site ID in `.docs7/project.json` inside the documentation folder. Keep this file. Later runs update that same site, even if the assigned address differs from the name. They do not create another site or use another site slot.
+
+<Note>
+  Free teamspaces can have one site across GitHub and CLI deployments. Preview deployments require
+  Pro. Updating an existing site does not count as adding a site.
+</Note>
+
+### Deploy options
+
+| Option          | What it does                                                                               |
+| --------------- | ------------------------------------------------------------------------------------------ |
+| `--preview`     | Create a preview without replacing production. Requires Pro.                               |
+| `--slug <slug>` | Request the site's address when you first create it. Not available for a linked directory. |
+
+To request an address for a new site, use `docs7 deploy --slug acme-docs` on its first deployment. For later updates, run `docs7 deploy` without `--slug`.
+
+To create a preview:
+
+```bash
+docs7 deploy --preview
+```
+
+### Files in the upload
+
+Docs7 excludes common private paths, symbolic links, and build folders such as `node_modules`, `.next`, and `dist`.
+
+Add project-specific exclusions to `.docs7ignore` or `.mintignore` in the documentation folder:
+
+```text .docs7ignore
+drafts/
+internal-notes.md
+```
+
+The upload does not use `.gitignore` rules. This lets you deploy generated docs that Git ignores. Check the folder for private files and add exclusions before you deploy.
+
+### Connect GitHub later
+
+Open the overview link from the CLI and select **Connect GitHub**. The site keeps its address and deployment history.
+
+After connection, GitHub becomes the source. Push to the connected production branch to update the site. The CLI will no longer deploy to it. See [Builds](/docs7/builds) for automatic deployments and pull request previews.
+
+Until you connect GitHub, use `docs7 deploy` for updates. Automatic GitHub deployments, pull request previews, and Docs7 agents are not available.
+
+<Warning>
+  If you downgrade from Pro to Free, you cannot keep a CLI-only site. The downgrade confirmation
+  lists it for removal. Deploy it again after the downgrade.
+</Warning>
