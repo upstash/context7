@@ -101,6 +101,10 @@ docs7 deploy --preview
 
 Docs7 excludes common private paths, symbolic links, and build folders such as `node_modules`, `.next`, and `dist`.
 
+It also excludes all files and folders whose names start with a dot, except `.docs7ignore`, `.mintignore`, and `.gitignore` in the documentation root.
+
+The upload can contain at most 100,000 files. Its total size must be at most 1 GiB before compression and 200 MiB after compression.
+
 Add project-specific exclusions to `.docs7ignore` or `.mintignore` in the documentation folder:
 
 ```text .docs7ignore
@@ -120,5 +124,6 @@ Until you connect GitHub, use `docs7 deploy` for updates. Automatic GitHub deplo
 
 <Warning>
   If you downgrade from Pro to Free, you cannot keep a CLI-only site. The downgrade confirmation
-  lists it for removal. Deploy it again after the downgrade.
+  lists it for removal. After the downgrade, delete `.docs7/project.json` from your documentation
+  folder. Then run `docs7 deploy` to create a new site.
 </Warning>
