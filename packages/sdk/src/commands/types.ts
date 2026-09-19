@@ -5,6 +5,7 @@ import type {
   Context7ResponseMetadata,
   RetryConfig,
 } from "@http";
+import type { ApiCodeSnippet, ApiInfoSnippet } from "@commands/get-context/types";
 
 export interface Context7Config {
   apiKey?: string;
@@ -74,6 +75,47 @@ export interface Documentation {
   source: string;
 }
 
+export interface SearchCodeSnippet extends ApiCodeSnippet {
+  /** Context7 library ID that produced this snippet */
+  libraryId: string;
+}
+
+export interface SearchInfoSnippet extends ApiInfoSnippet {
+  /** Context7 library ID that produced this snippet */
+  libraryId: string;
+}
+
+export interface SearchResponse {
+  codeSnippets: SearchCodeSnippet[];
+  infoSnippets: SearchInfoSnippet[];
+  rules?: {
+    global: string[];
+    libraries: {
+      libraryId: string;
+      libraryOwn: string[];
+      libraryTeam: string[];
+    }[];
+  };
+}
+
+export interface SearchOptions extends Context7RequestOptions {
+  /**
+   * Library names or Context7 library IDs to prefer. Up to four values are accepted.
+   */
+  libraries?: string[];
+  /** Version to prefer. A library hint is required when a version is provided. */
+  version?: string;
+  /** Programming language to prefer when ranking snippets. */
+  language?: string;
+  /**
+   * Response format.
+   * - "json": Returns SearchResponse with snippets and optional rules (default)
+   * - "txt": Returns formatted text
+   * @default "json"
+   */
+  type?: "json" | "txt";
+}
+
 export interface GetContextOptions extends Context7RequestOptions {
   /**
    * Response format.
@@ -94,4 +136,7 @@ export interface SearchLibraryOptions extends Context7RequestOptions {
   type?: "json" | "txt";
 }
 
-export type QueryParams = Record<string, string | number | boolean | undefined>;
+export type QueryParams = Record<
+  string,
+  string | number | boolean | readonly (string | number | boolean)[] | undefined
+>;
