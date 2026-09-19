@@ -59,7 +59,9 @@ function requiresAuthentication(req: express.Request, plugin?: typeof CLAUDE_COD
   const hasEmptyPluginAuthorization =
     plugin === CLAUDE_CODE_PLUGIN && req.headers.authorization === "";
 
-  return isOAuthEndpoint || (Boolean(plugin) && !hasEmptyPluginAuthorization);
+  return (
+    isOAuthEndpoint || req.query.auth === "ema" || (Boolean(plugin) && !hasEmptyPluginAuthorization)
+  );
 }
 
 // Parse CLI arguments using commander
@@ -449,12 +451,10 @@ async function main() {
         const plugin = getPluginFromRequest(req);
         const apiKey = extractApiKey(req);
         const baseUrl = new URL(RESOURCE_URL).origin;
+        const resourceMetadataUrl = `${baseUrl}/.well-known/oauth-protected-resource${req.query.auth === "ema" ? "?auth=ema" : ""}`;
 
         // OAuth discovery info header, used by MCP clients to discover the authorization server
-        res.set(
-          "WWW-Authenticate",
-          `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
-        );
+        res.set("WWW-Authenticate", `Bearer resource_metadata="${resourceMetadataUrl}"`);
 
         if (requiresAuthentication(req, plugin)) {
           const authentication = await observeAuthentication<AuthenticationResult>(async () => {
@@ -539,13 +539,16 @@ async function main() {
     // Used by MCP clients to discover the authorization server
     app.get(
       "/.well-known/oauth-protected-resource",
-      (_req: express.Request, res: express.Response) => {
+      (req: express.Request, res: express.Response) => {
         res.json({
           resource: RESOURCE_URL,
           // Each entry is an independent authorization server. Clerk handles
           // regular authorization-code flows; Context7 handles only the
           // enterprise-managed id-jag exchange.
-          authorization_servers: Array.from(new Set([OAUTH_AUTH_SERVER_URL, EMA_ISSUER])),
+          authorization_servers:
+            req.query.auth === "ema"
+              ? [EMA_ISSUER]
+              : Array.from(new Set([OAUTH_AUTH_SERVER_URL, EMA_ISSUER])),
           scopes_supported: ["profile", "email"],
           bearer_methods_supported: ["header"],
         });
