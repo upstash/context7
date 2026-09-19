@@ -1382,6 +1382,19 @@ Install the [context7.mcpb](https://github.com/upstash/context7/tree/master/pack
 
 </Accordion>
 
+<Accordion title="FLUJO">
+
+[FLUJO](https://github.com/mario-andreschak/FLUJO) connects to Context7 through its remote-server setup.
+
+1. Open **Connected Apps** and select **Connect App** → **I have connection details** → **At a remote URL**.
+2. Enter `https://mcp.context7.com/mcp` as the **Server URL** and click **Connect**.
+3. Select **Continue to setup** if prompted. In **Configure & Test**, confirm that **Streamable HTTP** is selected.
+4. To use a Context7 API key, add an `Authorization` header under **Custom HTTP headers** with the value `Bearer YOUR_API_KEY`. Select **Secret** to mask the value. Leave the optional OAuth client credentials blank for this endpoint.
+5. Run **3) Test run** if the connection test has not started automatically. After the test passes, click **Update server** to save.
+6. Open the connected server's **Tools** tab. Select `resolve-library-id`, provide a library name and a documentation query, and click **Test tool**. Use a returned library ID with `query-docs` to retrieve documentation.
+
+</Accordion>
+
 <Accordion title="AnythingLLM">
 
 AnythingLLM supports MCP Servers through GUI. 
