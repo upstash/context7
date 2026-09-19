@@ -1,0 +1,17 @@
+{
+  "name": "Context7 monorepo",
+  "install": "pnpm install --frozen-lockfile && pnpm build",
+  "terminals": [
+    {
+      "name": "mcp-http-server",
+      "command": "node packages/mcp/dist/index.js --transport http --port 3000",
+      "description": "Context7 MCP server (HTTP transport) on port 3000. Health check: GET http://localhost:3000/ping"
+    }
+  ],
+  "ports": [
+    {
+      "name": "mcp-http",
+      "port": 3000
+    }
+  ]
+}
