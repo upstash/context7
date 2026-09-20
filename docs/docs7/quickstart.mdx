@@ -13,7 +13,11 @@ You can skip this step if your project already has a `docs.json` or `mint.json` 
 
 ```json docs.json
 {
+  "theme": "mint",
   "name": "My docs",
+  "colors": {
+    "primary": "#16A34A"
+  },
   "navigation": {
     "groups": [
       {
@@ -24,6 +28,8 @@ You can skip this step if your project already has a `docs.json` or `mint.json` 
   }
 }
 ```
+
+`theme`, `name`, `colors.primary`, and `navigation` are required. The dev server reports a missing field as `docs.json is invalid`.
 
 Then add the first page:
 
