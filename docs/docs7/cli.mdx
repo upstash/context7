@@ -73,7 +73,7 @@ docs7 deploy ./docs
 
 No GitHub repository is required. The CLI uploads your local files, shows the site overview and deployment links, and waits for the build. It prints the public URL when the site is ready.
 
-The first deployment creates a site using the required `name` in `docs.json` or `mint.json`. The name must be nonempty and at most 100 characters. Docs7 assigns an available `*.docs7.io` address from the name.
+The first deployment creates a site using the required `name` in `docs.json` or `mint.json`. The name must be nonempty. Docs7 assigns an available `*.docs7.io` address from the name.
 
 The CLI saves the site ID in `.docs7/project.json` inside the documentation folder. Keep this file. Later runs update that same site, even if the assigned address differs from the name. They do not create another site or use another site slot.
 
@@ -101,6 +101,8 @@ docs7 deploy --preview
 
 Docs7 excludes common private paths, symbolic links, and build folders such as `node_modules`, `.next`, and `dist`.
 
+It also excludes all files and folders whose names start with a dot, except `.docs7ignore`, `.mintignore`, and `.gitignore` in the documentation root.
+
 Add project-specific exclusions to `.docs7ignore` or `.mintignore` in the documentation folder:
 
 ```text .docs7ignore
@@ -118,7 +120,8 @@ After connection, GitHub becomes the source. Push to the connected production br
 
 Until you connect GitHub, use `docs7 deploy` for updates. Automatic GitHub deployments, pull request previews, and Docs7 agents are not available.
 
-<Warning>
-  If you downgrade from Pro to Free, you cannot keep a CLI-only site. The downgrade confirmation
-  lists it for removal. Deploy it again after the downgrade.
-</Warning>
+### Downgrade to Free
+
+When you downgrade from Pro to Free, you can select your CLI site as the site to keep. It keeps its address, deployment history, and saved link in `.docs7/project.json`. Continue to update it with `docs7 deploy`.
+
+The current published build stays online. Free-plan branding applies on the next deployment. Preview deployments and sites you do not select are removed.
