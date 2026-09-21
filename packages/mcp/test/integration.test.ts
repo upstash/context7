@@ -179,6 +179,7 @@ beforeAll(async () => {
     OTEL_EXPORTER_PROMETHEUS_HOST: "127.0.0.1",
     OTEL_EXPORTER_PROMETHEUS_PORT: String(metricsPort),
     MCP_CLIENT_IP_ASSERTION_KEY: CLIENT_IP_ASSERTION_KEY,
+    MCP_AUTH_ENFORCEMENT: "required",
   };
   ({ child: httpChild, url: httpUrl } = await startHttpChild());
 }, 120_000);
@@ -765,7 +766,7 @@ describe("hosted HTTP authentication", () => {
     }
   );
 
-  test("accepts credentials without advertising another challenge", async () => {
+  test("allows an opaque credential for downstream validation", async () => {
     const res = await postMcp(httpUrl, { Authorization: "Bearer ctx7sk-test" });
 
     expect(res.status).toBe(200);
@@ -776,6 +777,19 @@ describe("hosted HTTP authentication", () => {
     const observeServer = await startHttpChild({
       environment: { ...childEnv, MCP_AUTH_ENFORCEMENT: "observe" },
     });
+    try {
+      const res = await postMcp(observeServer.url);
+      expect(res.status).toBe(200);
+      expect(res.wwwAuthenticate).toBeNull();
+    } finally {
+      observeServer.child.kill();
+    }
+  });
+
+  test("defaults to observe mode when the rollout setting is absent", async () => {
+    const environment = { ...childEnv };
+    delete environment.MCP_AUTH_ENFORCEMENT;
+    const observeServer = await startHttpChild({ environment });
     try {
       const res = await postMcp(observeServer.url);
       expect(res.status).toBe(200);

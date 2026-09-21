@@ -24,7 +24,7 @@ describe("MCP auth telemetry", () => {
       actorIp: "203.0.113.9",
       authMethod: "oauth",
       endpoint: "/mcp",
-      event: "credential_accepted",
+      event: "credential_validated",
       plugin: "test-plugin",
       userAgent: "test-client/1.2.3 secret-fragment",
     });
@@ -33,7 +33,7 @@ describe("MCP auth telemetry", () => {
     const event = JSON.parse(serialized) as Record<string, unknown>;
     expect(event).toMatchObject({
       message: "mcp_auth_event",
-      event: "credential_accepted",
+      event: "credential_validated",
       endpoint: "/mcp",
       authMethod: "oauth",
       actorId: expect.stringMatching(/^anon_[a-f0-9]{24}$/),

@@ -3,9 +3,10 @@ import { extractClientInfoFromUserAgent } from "./utils.js";
 
 export type McpAuthEvent =
   | "challenge_issued"
-  | "credential_accepted"
   | "credential_missing"
+  | "credential_present"
   | "credential_rejected"
+  | "credential_validated"
   | "metadata_requested";
 
 export type McpAuthMethod = "api_key" | "jwt" | "none" | "oauth";

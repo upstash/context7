@@ -16,7 +16,6 @@ import {
   extractClientInfoFromUserAgent,
   envelopeClientInfo,
 } from "./lib/utils.js";
-import { isJWT, validateJWT } from "./lib/jwt.js";
 import express from "express";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
@@ -25,7 +24,6 @@ import {
   SERVER_VERSION,
   RESOURCE_URL,
   OAUTH_AUTH_SERVER_URL,
-  EMA_ISSUER,
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
@@ -40,7 +38,15 @@ import {
   recordToolCallOutcome,
 } from "./lib/telemetry-runtime.js";
 import { mcpBodyErrorHandler } from "./lib/mcp-body-error-handler.js";
-import { classifyAuthMethod, logMcpAuthEvent, type McpAuthMethod } from "./lib/auth-telemetry.js";
+import { logMcpAuthEvent } from "./lib/auth-telemetry.js";
+import {
+  canonicalMcpEndpoint,
+  evaluateMcpAuthentication,
+  parseMcpAuthMode,
+  protectedResourceMetadata,
+  protectedResourceUrl,
+  setBearerChallenge,
+} from "./lib/mcp-http-auth.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -51,47 +57,6 @@ let mcpInstrumentation: McpInstrumentation | undefined;
 
 function getPluginFromRequest(req: express.Request): typeof CLAUDE_CODE_PLUGIN | undefined {
   return req.query.client === CLAUDE_CODE_PLUGIN ? CLAUDE_CODE_PLUGIN : undefined;
-}
-
-function canonicalMcpEndpoint(req: express.Request): "/mcp" | "/mcp/oauth" {
-  return `${req.baseUrl}${req.path}`.replace(/\/$/, "") === "/mcp/oauth" ? "/mcp/oauth" : "/mcp";
-}
-
-function protectedResourceUrl(endpoint: "/mcp" | "/mcp/oauth"): string {
-  return new URL(endpoint, new URL(RESOURCE_URL).origin).toString();
-}
-
-function protectedResourceMetadataUrl(endpoint: "/mcp" | "/mcp/oauth"): string {
-  return new URL(`/.well-known/oauth-protected-resource${endpoint}`, RESOURCE_URL).toString();
-}
-
-function setBearerChallenge(
-  res: express.Response,
-  endpoint: "/mcp" | "/mcp/oauth",
-  errorDescription?: string
-): void {
-  const parameters = [`resource_metadata="${protectedResourceMetadataUrl(endpoint)}"`];
-  if (errorDescription) {
-    const description = errorDescription.replace(/["\\]/g, "");
-    parameters.unshift(`error="invalid_token"`, `error_description="${description}"`);
-  }
-  res.set("WWW-Authenticate", `Bearer ${parameters.join(", ")}`);
-}
-
-function protectedResourceMetadata(resource: string) {
-  return {
-    resource,
-    // Each entry is an independent authorization server. Clerk handles
-    // regular authorization-code flows; Context7 handles only the
-    // enterprise-managed id-jag exchange.
-    authorization_servers: Array.from(new Set([OAUTH_AUTH_SERVER_URL, EMA_ISSUER])),
-    scopes_supported: ["profile", "email"],
-    bearer_methods_supported: ["header"],
-  };
-}
-
-function authenticationIsRequired(): boolean {
-  return process.env.MCP_AUTH_ENFORCEMENT?.trim().toLowerCase() !== "observe";
 }
 
 // Parse CLI arguments using commander
@@ -144,8 +109,6 @@ const CLI_PORT = (() => {
 })();
 
 const requestContext = new AsyncLocalStorage<ClientContext>();
-
-type AuthenticationResult = { accepted: true } | { accepted: false; error: string };
 
 // Global state for stdio mode only
 let stdioApiKey: string | undefined;
@@ -475,57 +438,28 @@ async function main() {
     const nodeHandler = toNodeHandler(mcpHandler, {
       onerror: (error) => console.error("MCP node adapter error:", error),
     });
+    const authMode = parseMcpAuthMode();
 
     const handleMcpRequest = async (req: express.Request, res: express.Response) => {
       try {
         const plugin = getPluginFromRequest(req);
         const apiKey = extractApiKey(req);
         const endpoint = canonicalMcpEndpoint(req);
-        const authMethod: McpAuthMethod = classifyAuthMethod(apiKey);
-        const enforceAuthentication = authenticationIsRequired();
-        const authentication = await observeAuthentication<AuthenticationResult>(async () => {
-          if (!apiKey) {
-            return {
-              outcome: "missing",
-              value: {
-                accepted: false,
-                error: "Authentication required. Please authenticate to use this MCP server.",
-              },
-            };
-          }
-
-          if (isJWT(apiKey)) {
-            const validationResult = await validateJWT(apiKey);
-            if (!validationResult.valid) {
-              return {
-                outcome: "invalid",
-                value: {
-                  accepted: false,
-                  error: validationResult.error || "Invalid token. Please re-authenticate.",
-                },
-              };
-            }
-          }
-
-          return { outcome: "accepted", value: { accepted: true } };
+        const authentication = await observeAuthentication(async () => {
+          const value = await evaluateMcpAuthentication(apiKey, authMode);
+          return { outcome: value.outcome, value };
         });
 
         logMcpAuthEvent({
           actorIp: req.ip,
-          authMethod,
+          authMethod: authentication.authMethod,
           endpoint,
-          event: authentication.accepted
-            ? "credential_accepted"
-            : apiKey
-              ? "credential_rejected"
-              : enforceAuthentication
-                ? "challenge_issued"
-                : "credential_missing",
+          event: authentication.event,
           plugin,
           userAgent: req.headers["user-agent"],
         });
 
-        if (!authentication.accepted && (enforceAuthentication || apiKey)) {
+        if (!authentication.allowed) {
           setBearerChallenge(res, endpoint, apiKey ? authentication.error : undefined);
           res.status(401).json({
             jsonrpc: "2.0",
