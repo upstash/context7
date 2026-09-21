@@ -13,7 +13,6 @@ You can skip this step if your project already has a `docs.json` or `mint.json` 
 
 ```json docs.json
 {
-  "theme": "mint",
   "name": "My docs",
   "colors": {
     "primary": "#16A34A"
@@ -29,7 +28,7 @@ You can skip this step if your project already has a `docs.json` or `mint.json` 
 }
 ```
 
-`theme`, `name`, `colors.primary`, and `navigation` are required. The dev server reports a missing field as `docs.json is invalid`.
+`name`, `colors.primary`, and `navigation` are required. `theme` is optional: Docs7 renders every site with the `mint` theme. The dev server reports a missing field as `docs.json is invalid`.
 
 Then add the first page:
 
