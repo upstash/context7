@@ -90,6 +90,10 @@ function protectedResourceMetadata(resource: string) {
   };
 }
 
+function authenticationIsRequired(): boolean {
+  return process.env.MCP_AUTH_ENFORCEMENT?.trim().toLowerCase() !== "observe";
+}
+
 // Parse CLI arguments using commander
 const program = new Command()
   .version(SERVER_VERSION, "-v, --version", "output the current version")
@@ -478,6 +482,7 @@ async function main() {
         const apiKey = extractApiKey(req);
         const endpoint = canonicalMcpEndpoint(req);
         const authMethod: McpAuthMethod = classifyAuthMethod(apiKey);
+        const enforceAuthentication = authenticationIsRequired();
         const authentication = await observeAuthentication<AuthenticationResult>(async () => {
           if (!apiKey) {
             return {
@@ -513,12 +518,14 @@ async function main() {
             ? "credential_accepted"
             : apiKey
               ? "credential_rejected"
-              : "challenge_issued",
+              : enforceAuthentication
+                ? "challenge_issued"
+                : "credential_missing",
           plugin,
           userAgent: req.headers["user-agent"],
         });
 
-        if (!authentication.accepted) {
+        if (!authentication.accepted && (enforceAuthentication || apiKey)) {
           setBearerChallenge(res, endpoint, apiKey ? authentication.error : undefined);
           res.status(401).json({
             jsonrpc: "2.0",

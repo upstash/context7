@@ -4,6 +4,7 @@ import { extractClientInfoFromUserAgent } from "./utils.js";
 export type McpAuthEvent =
   | "challenge_issued"
   | "credential_accepted"
+  | "credential_missing"
   | "credential_rejected"
   | "metadata_requested";
 

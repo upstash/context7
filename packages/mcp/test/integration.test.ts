@@ -772,6 +772,19 @@ describe("hosted HTTP authentication", () => {
     expect(res.wwwAuthenticate).toBeNull();
   });
 
+  test("observe mode measures missing credentials without denying access", async () => {
+    const observeServer = await startHttpChild({
+      environment: { ...childEnv, MCP_AUTH_ENFORCEMENT: "observe" },
+    });
+    try {
+      const res = await postMcp(observeServer.url);
+      expect(res.status).toBe(200);
+      expect(res.wwwAuthenticate).toBeNull();
+    } finally {
+      observeServer.child.kill();
+    }
+  });
+
   test("keeps the OAuth endpoint protected", async () => {
     const oauthUrl = httpUrl.replace(/\/mcp$/, "/mcp/oauth");
     const emptyHeaderRes = await postMcp(`${oauthUrl}?client=claude-code-plugin`, {
