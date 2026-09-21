@@ -200,6 +200,7 @@ async function connect(transportKind: "http" | "stdio", era: "modern" | "legacy"
           // info) is observable; modern clients must beat it via the envelope.
           requestInit: {
             headers: {
+              Authorization: "Bearer ctx7sk-local-test",
               "user-agent": "ua-fallback/9.9.9",
               "x-forwarded-for": "attacker-selected-bucket, 203.0.113.77",
             },
@@ -218,6 +219,19 @@ describe("OAuth discovery", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
       resource: "https://mcp.context7.com",
+      authorization_servers: ["https://clerk.context7.com", "https://context7.com"],
+    });
+  });
+
+  test.each([
+    ["/mcp", "/.well-known/oauth-protected-resource/mcp"],
+    ["/mcp/oauth", "/.well-known/oauth-protected-resource/mcp/oauth"],
+  ])("advertises endpoint-specific metadata for %s", async (endpoint, metadataPath) => {
+    const response = await fetch(new URL(metadataPath, httpUrl));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      resource: `https://mcp.context7.com${endpoint}`,
       authorization_servers: ["https://clerk.context7.com", "https://context7.com"],
     });
   });
@@ -325,7 +339,11 @@ describe.each([
   test("is not reported as a parse error", async () => {
     const response = await fetch(new URL("/mcp", httpUrl), {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: "Bearer ctx7sk-local-test",
+      },
       body,
     });
 
@@ -515,7 +533,11 @@ describe("OpenTelemetry metrics", () => {
     );
 
     try {
-      await client.connect(new StreamableHTTPClientTransport(new URL(disabledServer.url)));
+      await client.connect(
+        new StreamableHTTPClientTransport(new URL(disabledServer.url), {
+          requestInit: { headers: { Authorization: "Bearer ctx7sk-local-test" } },
+        })
+      );
       const result = await client.callTool({
         name: "query-docs",
         arguments: { libraryId: "/vercel/next.js", query: "disabled telemetry" },
@@ -535,6 +557,7 @@ describe("OpenTelemetry metrics", () => {
       headers: {
         accept: "application/json, text/event-stream",
         "content-type": "application/json",
+        authorization: "Bearer ctx7sk-local-test",
       },
       body: JSON.stringify([
         { jsonrpc: "2.0", id: 90_001, method: "tools/list", params: {} },
@@ -661,10 +684,10 @@ describe("OpenTelemetry metrics", () => {
         )
     ).toBe(true);
     expect(exported).toMatch(
-      /context7_mcp_authentication_attempts_total\{[^}]*context7_authentication_outcome="missing"[^}]*\} 1/
+      /context7_mcp_authentication_attempts_total\{[^}]*context7_authentication_outcome="missing"[^}]*\} [1-9][0-9]*/
     );
     expect(exported).toMatch(
-      /context7_mcp_authentication_attempts_total\{[^}]*context7_authentication_outcome="accepted"[^}]*\} 1/
+      /context7_mcp_authentication_attempts_total\{[^}]*context7_authentication_outcome="accepted"[^}]*\} [1-9][0-9]*/
     );
     expect(exported).toContain("context7_mcp_authentication_duration_count");
     expect(exported).toContain("context7_mcp_authentication_active");
@@ -724,26 +747,29 @@ async function postMcp(target: string, headers: Record<string, string> = {}) {
   return { status: res.status, wwwAuthenticate: res.headers.get("www-authenticate") };
 }
 
-describe("plugin authentication", () => {
+describe("hosted HTTP authentication", () => {
   beforeEach(() => {
     requests.length = 0;
   });
 
-  test("only challenges the supported plugin", async () => {
-    expect((await postMcp(`${httpUrl}?client=other-plugin`)).status).toBe(200);
+  test.each([undefined, "", "other-plugin", "claude-code-plugin"])(
+    "challenges unauthenticated clients (%s)",
+    async (client) => {
+      const target = client ? `${httpUrl}?client=${client}` : httpUrl;
+      const res = await postMcp(target, client === "" ? { Authorization: "" } : undefined);
 
-    const res = await postMcp(`${httpUrl}?client=claude-code-plugin`);
-    expect(res.status).toBe(401);
-    expect(res.wwwAuthenticate).toContain("resource_metadata=");
-    expect(res.wwwAuthenticate).toContain("/.well-known/oauth-protected-resource");
-  });
+      expect(res.status).toBe(401);
+      expect(res.wwwAuthenticate).toContain(
+        'resource_metadata="https://mcp.context7.com/.well-known/oauth-protected-resource/mcp"'
+      );
+    }
+  );
 
-  test("allows the Claude Code plugin's empty API key fallback", async () => {
-    const res = await postMcp(`${httpUrl}?client=claude-code-plugin`, {
-      Authorization: "",
-    });
+  test("accepts credentials without advertising another challenge", async () => {
+    const res = await postMcp(httpUrl, { Authorization: "Bearer ctx7sk-test" });
 
     expect(res.status).toBe(200);
+    expect(res.wwwAuthenticate).toBeNull();
   });
 
   test("keeps the OAuth endpoint protected", async () => {
@@ -752,8 +778,13 @@ describe("plugin authentication", () => {
       Authorization: "",
     });
 
-    expect((await postMcp(oauthUrl)).status).toBe(401);
+    const missingCredentialRes = await postMcp(oauthUrl);
+    expect(missingCredentialRes.status).toBe(401);
+    expect(missingCredentialRes.wwwAuthenticate).toContain(
+      'resource_metadata="https://mcp.context7.com/.well-known/oauth-protected-resource/mcp/oauth"'
+    );
     expect(emptyHeaderRes.status).toBe(401);
+    expect((await postMcp(oauthUrl, { Authorization: "Bearer ctx7sk-test" })).status).toBe(200);
   });
 
   test("tracks authenticated plugin requests separately", async () => {

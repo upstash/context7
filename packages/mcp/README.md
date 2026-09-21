@@ -157,7 +157,7 @@ claude mcp add --scope user --header "Authorization: Bearer YOUR_API_KEY" --tran
 
 Run this command in your terminal. See [Amp MCP docs](https://ampcode.com/manual#mcp) for more info.
 
-#### Without API Key (Basic Usage)
+#### With OAuth
 
 ```sh
 amp mcp add context7 https://mcp.context7.com/mcp
@@ -1635,14 +1635,7 @@ Prometheus Operator instead, configure the equivalent per-pod endpoint with a `P
 
 ### OAuth Authentication
 
-Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization).
-
-To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client configuration:
-
-```diff
-- "url": "https://mcp.context7.com/mcp"
-+ "url": "https://mcp.context7.com/mcp/oauth"
-```
+The canonical `https://mcp.context7.com/mcp` endpoint supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization). Connect to that URL and follow your client's authentication prompt. The older `/mcp/oauth` URL remains available as a compatibility alias.
 
 > **Note:** OAuth is not supported with stdio transport. For local MCP connections, use API key authentication instead.
 
