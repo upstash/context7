@@ -2,6 +2,9 @@ import { createHmac } from "node:crypto";
 import { extractClientInfoFromUserAgent } from "./utils.js";
 
 export type McpAuthEvent =
+  | "authenticated_initialize_failed"
+  | "authenticated_initialize_succeeded"
+  | "authenticated_tool_call"
   | "challenge_issued"
   | "credential_missing"
   | "credential_present"
@@ -11,12 +14,14 @@ export type McpAuthEvent =
 
 export type McpAuthMethod = "api_key" | "jwt" | "none" | "oauth";
 
-interface McpAuthEventInput {
+export interface McpAuthEventInput {
   actorIp?: string;
   authMethod: McpAuthMethod;
+  clientInfo?: { ide?: string; version?: string };
   endpoint: string;
   event: McpAuthEvent;
   plugin?: string;
+  rolloutMode?: "observe" | "required";
   userAgent?: string;
 }
 
@@ -39,7 +44,7 @@ export function classifyAuthMethod(token: string | undefined): McpAuthMethod {
  * credentials, OAuth state/codes, raw IPs, or the full user-agent string.
  */
 export function logMcpAuthEvent(input: McpAuthEventInput): void {
-  const clientInfo = extractClientInfoFromUserAgent(input.userAgent);
+  const clientInfo = input.clientInfo ?? extractClientInfoFromUserAgent(input.userAgent);
   console.log(
     JSON.stringify({
       level: "info",
@@ -51,6 +56,7 @@ export function logMcpAuthEvent(input: McpAuthEventInput): void {
       clientIde: clientInfo?.ide,
       clientVersion: clientInfo?.version,
       plugin: input.plugin,
+      rolloutMode: input.rolloutMode,
       source: "mcp-server",
     })
   );

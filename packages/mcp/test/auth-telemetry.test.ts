@@ -26,6 +26,7 @@ describe("MCP auth telemetry", () => {
       endpoint: "/mcp",
       event: "credential_validated",
       plugin: "test-plugin",
+      rolloutMode: "required",
       userAgent: "test-client/1.2.3 secret-fragment",
     });
 
@@ -40,9 +41,28 @@ describe("MCP auth telemetry", () => {
       clientIde: "test-client",
       clientVersion: "1.2.3",
       plugin: "test-plugin",
+      rolloutMode: "required",
+      source: "mcp-server",
     });
     expect(serialized).not.toContain("203.0.113.9");
     expect(serialized).not.toContain("secret-fragment");
     expect(serialized).not.toContain("oat_");
+  });
+
+  test("prefers protocol client info when it is available", () => {
+    const output = vi.spyOn(console, "log").mockImplementation(() => undefined);
+
+    logMcpAuthEvent({
+      authMethod: "oauth",
+      clientInfo: { ide: "claude-code", version: "2.0.0" },
+      endpoint: "/mcp",
+      event: "authenticated_initialize_succeeded",
+      userAgent: "fallback-client/1.0.0",
+    });
+
+    expect(JSON.parse(String(output.mock.calls[0][0]))).toMatchObject({
+      clientIde: "claude-code",
+      clientVersion: "2.0.0",
+    });
   });
 });

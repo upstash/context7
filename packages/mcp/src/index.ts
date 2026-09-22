@@ -35,10 +35,13 @@ import {
   initializeTelemetry,
   observeAuthentication,
   observeUpstreamRequest,
-  recordToolCallOutcome,
 } from "./lib/telemetry-runtime.js";
 import { mcpBodyErrorHandler } from "./lib/mcp-body-error-handler.js";
 import { logMcpAuthEvent } from "./lib/auth-telemetry.js";
+import {
+  observeAuthenticatedInitialize,
+  recordAuthenticatedToolCall,
+} from "./lib/auth-lifecycle-telemetry.js";
 import {
   canonicalMcpEndpoint,
   evaluateMcpAuthentication,
@@ -274,7 +277,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       if (!searchResponse.results || searchResponse.results.length === 0) {
         const text = searchResponse.error ?? "No libraries found matching the provided name.";
         maybeElicitAuthSignIn(server, ctx);
-        recordToolCallOutcome(searchResponse.error ? "error" : "not_found");
+        recordAuthenticatedToolCall(ctx, searchResponse.error ? "error" : "not_found");
         return {
           content: [
             {
@@ -288,7 +291,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       const resultsText = formatSearchResults(searchResponse);
       const responseText = `Available Libraries:\n\n${resultsText}`;
       maybeElicitAuthSignIn(server, ctx);
-      recordToolCallOutcome("success");
+      recordAuthenticatedToolCall(ctx, "success");
       return {
         content: [
           {
@@ -335,7 +338,7 @@ Do not call this tool more than 3 times per question.`,
       const ctx = getClientContext(toolCtx);
       const response = await fetchLibraryContext({ query, libraryId }, ctx);
       maybeElicitAuthSignIn(server, ctx);
-      recordToolCallOutcome(response.outcome);
+      recordAuthenticatedToolCall(ctx, response.outcome);
       return {
         content: [
           {
@@ -456,6 +459,7 @@ async function main() {
           endpoint,
           event: authentication.event,
           plugin,
+          rolloutMode: authMode,
           userAgent: req.headers["user-agent"],
         });
 
@@ -476,9 +480,20 @@ async function main() {
           clientIp: req.ip,
           apiKey,
           clientInfo: extractClientInfoFromUserAgent(req.headers["user-agent"]),
+          mcpAuthMode: authMode,
+          mcpEndpoint: endpoint,
           plugin,
           transport: "http",
         };
+
+        observeAuthenticatedInitialize(res, req.body, {
+          actorIp: req.ip,
+          authMethod: authentication.authMethod,
+          clientInfo: context.clientInfo,
+          endpoint,
+          plugin,
+          rolloutMode: authMode,
+        });
 
         await requestContext.run(context, async () => {
           await nodeHandler(req, res, req.body);
@@ -520,6 +535,7 @@ async function main() {
           authMethod: "none",
           endpoint: RESOURCE_URL,
           event: "metadata_requested",
+          rolloutMode: authMode,
           userAgent: req.headers["user-agent"],
         });
         res.json(protectedResourceMetadata(RESOURCE_URL));
@@ -536,6 +552,7 @@ async function main() {
             authMethod: "none",
             endpoint: resource,
             event: "metadata_requested",
+            rolloutMode: authMode,
             userAgent: req.headers["user-agent"],
           });
           res.json(protectedResourceMetadata(resource));
