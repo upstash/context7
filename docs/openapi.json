@@ -20,7 +20,7 @@
     "/v3/search": {
       "get": {
         "summary": "Search Context7 documentation",
-        "description": "Search Context7 documentation with a natural language query. Optionally provide libraries, a version, or a programming language to narrow the results.",
+        "description": "Search Context7 with a natural language query. Context7 finds the most relevant libraries, searches their documentation, and returns the best matching code and documentation snippets. Optionally provide libraries, a version, or a programming language to narrow the results.",
         "operationId": "searchDocumentation",
         "tags": [
           "Search"
