@@ -6,7 +6,12 @@ vi.mock("../src/lib/jwt.js", () => ({
 }));
 
 import { validateJWT } from "../src/lib/jwt.js";
-import { evaluateMcpAuthentication, parseMcpAuthMode } from "../src/lib/mcp-http-auth.js";
+import {
+  authenticationRoute,
+  classifyAuthMethod,
+  evaluateMcpAuthentication,
+  parseMcpAuthMode,
+} from "../src/lib/mcp-http-auth.js";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -14,6 +19,15 @@ afterEach(() => {
 });
 
 describe("MCP HTTP authentication policy", () => {
+  test("uses bounded authentication dimensions", () => {
+    expect(classifyAuthMethod(undefined)).toBe("none");
+    expect(classifyAuthMethod("oat_example")).toBe("oauth");
+    expect(classifyAuthMethod("header.payload.signature")).toBe("jwt");
+    expect(classifyAuthMethod("ctx7sk_example")).toBe("api_key");
+    expect(authenticationRoute("/mcp")).toBe("anonymous");
+    expect(authenticationRoute("/mcp/oauth")).toBe("oauth");
+  });
+
   test("defaults to observation and rejects unknown rollout modes", () => {
     vi.stubEnv("MCP_AUTH_ENFORCEMENT", "");
     expect(parseMcpAuthMode()).toBe("observe");

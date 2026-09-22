@@ -13,6 +13,7 @@ const {
   forceFlushTelemetry,
   initializeTelemetry,
   observeAuthentication,
+  recordAuthenticationEvent,
   recordToolCallOutcome,
   observeUpstreamRequest,
 } = await import("../src/lib/telemetry-runtime.js");
@@ -43,6 +44,14 @@ test("OTEL_SDK_DISABLED bypasses all application metric instruments", async () =
     initializeTelemetry({ allowEmbeddedPrometheus: true, serviceVersion: "test" })
   ).resolves.toBeUndefined();
   expect(() => recordToolCallOutcome("success")).not.toThrow();
+  expect(() =>
+    recordAuthenticationEvent({
+      enforcementMode: "required",
+      event: "challenge_issued",
+      method: "none",
+      route: "anonymous",
+    })
+  ).not.toThrow();
   await expect(
     observeUpstreamRequest(
       "fetch_context",
@@ -51,7 +60,12 @@ test("OTEL_SDK_DISABLED bypasses all application metric instruments", async () =
     )
   ).resolves.toBe("ok");
   await expect(
-    observeAuthentication(async () => ({ outcome: "accepted", value: "auth" }))
+    observeAuthentication({ enforcementMode: "required", route: "anonymous" }, async () => ({
+      event: "credential_present",
+      method: "oauth",
+      outcome: "accepted",
+      value: "auth",
+    }))
   ).resolves.toBe("auth");
   await forceFlushTelemetry();
   await provider.forceFlush();

@@ -1,68 +1,95 @@
-import { afterEach, describe, expect, test, vi } from "vitest";
-import { classifyAuthMethod, logMcpAuthEvent } from "../src/lib/auth-telemetry.js";
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
+import { metrics } from "@opentelemetry/api";
+import {
+  AggregationTemporality,
+  DataPointType,
+  InMemoryMetricExporter,
+  MeterProvider,
+  PeriodicExportingMetricReader,
+} from "@opentelemetry/sdk-metrics";
+import {
+  forceFlushTelemetry,
+  observeAuthentication,
+  recordAuthenticationEvent,
+} from "../src/lib/telemetry.js";
 
-afterEach(() => {
-  vi.unstubAllEnvs();
-  vi.restoreAllMocks();
+const exporter = new InMemoryMetricExporter(AggregationTemporality.CUMULATIVE);
+const provider = new MeterProvider({
+  readers: [
+    new PeriodicExportingMetricReader({
+      exporter,
+      exportIntervalMillis: 60_000,
+    }),
+  ],
 });
 
-describe("MCP auth telemetry", () => {
-  test.each([
-    [undefined, "none"],
-    ["oat_example", "oauth"],
-    ["header.payload.signature", "jwt"],
-    ["ctx7sk_example", "api_key"],
-  ] as const)("classifies %s as %s", (token, expected) => {
-    expect(classifyAuthMethod(token)).toBe(expected);
+beforeAll(() => {
+  expect(metrics.setGlobalMeterProvider(provider)).toBe(true);
+});
+
+beforeEach(() => {
+  exporter.reset();
+});
+
+afterAll(async () => {
+  await provider.shutdown();
+  metrics.disable();
+});
+
+function authenticationEvents() {
+  const metric = exporter
+    .getMetrics()
+    .at(-1)
+    ?.scopeMetrics.flatMap((scope) => scope.metrics)
+    .find((candidate) => candidate.descriptor.name === "context7.mcp.authentication.events");
+  if (!metric || metric.dataPointType !== DataPointType.SUM) return [];
+  return metric.dataPoints;
+}
+
+describe("MCP authentication OpenTelemetry", () => {
+  test("records authentication decisions with bounded migration attributes", async () => {
+    await expect(
+      observeAuthentication({ enforcementMode: "required", route: "anonymous" }, async () => ({
+        event: "challenge_issued",
+        method: "none",
+        outcome: "missing",
+        value: "denied",
+      }))
+    ).resolves.toBe("denied");
+    await forceFlushTelemetry();
+
+    expect(authenticationEvents()).toContainEqual(
+      expect.objectContaining({
+        attributes: {
+          "context7.authentication.enforcement": "required",
+          "context7.authentication.event": "challenge_issued",
+          "context7.authentication.method": "none",
+          "context7.authentication.outcome": "missing",
+          "context7.mcp.route": "anonymous",
+        },
+        value: 1,
+      })
+    );
   });
 
-  test("logs a stable actor without exposing IPs, credentials, or the full user agent", () => {
-    vi.stubEnv("USAGE_ANONYMIZATION_SECRET", "local-test-secret");
-    const output = vi.spyOn(console, "log").mockImplementation(() => undefined);
-
-    logMcpAuthEvent({
-      actorIp: "203.0.113.9",
-      authMethod: "oauth",
-      endpoint: "/mcp",
-      event: "credential_validated",
-      plugin: "test-plugin",
-      rolloutMode: "required",
-      userAgent: "test-client/1.2.3 secret-fragment",
+  test("records lifecycle events on the same meter", async () => {
+    recordAuthenticationEvent({
+      enforcementMode: "required",
+      event: "authenticated_tool_call",
+      method: "oauth",
+      outcome: "accepted",
+      route: "anonymous",
     });
+    await forceFlushTelemetry();
 
-    const serialized = String(output.mock.calls[0][0]);
-    const event = JSON.parse(serialized) as Record<string, unknown>;
-    expect(event).toMatchObject({
-      message: "mcp_auth_event",
-      event: "credential_validated",
-      endpoint: "/mcp",
-      authMethod: "oauth",
-      actorId: expect.stringMatching(/^anon_[a-f0-9]{24}$/),
-      clientIde: "test-client",
-      clientVersion: "1.2.3",
-      plugin: "test-plugin",
-      rolloutMode: "required",
-      source: "mcp-server",
-    });
-    expect(serialized).not.toContain("203.0.113.9");
-    expect(serialized).not.toContain("secret-fragment");
-    expect(serialized).not.toContain("oat_");
-  });
-
-  test("prefers protocol client info when it is available", () => {
-    const output = vi.spyOn(console, "log").mockImplementation(() => undefined);
-
-    logMcpAuthEvent({
-      authMethod: "oauth",
-      clientInfo: { ide: "claude-code", version: "2.0.0" },
-      endpoint: "/mcp",
-      event: "authenticated_initialize_succeeded",
-      userAgent: "fallback-client/1.0.0",
-    });
-
-    expect(JSON.parse(String(output.mock.calls[0][0]))).toMatchObject({
-      clientIde: "claude-code",
-      clientVersion: "2.0.0",
-    });
+    expect(authenticationEvents()).toContainEqual(
+      expect.objectContaining({
+        attributes: expect.objectContaining({
+          "context7.authentication.event": "authenticated_tool_call",
+          "context7.authentication.method": "oauth",
+        }),
+        value: 1,
+      })
+    );
   });
 });

@@ -690,6 +690,25 @@ describe("OpenTelemetry metrics", () => {
     expect(exported).toMatch(
       /context7_mcp_authentication_attempts_total\{[^}]*context7_authentication_outcome="accepted"[^}]*\} [1-9][0-9]*/
     );
+    const authenticationEvents = exported
+      .split("\n")
+      .filter((line) => line.startsWith("context7_mcp_authentication_events_total{"));
+    expect(
+      authenticationEvents.some(
+        (line) =>
+          line.includes('context7_authentication_event="challenge_issued"') &&
+          line.includes('context7_authentication_method="none"') &&
+          line.includes('context7_mcp_route="oauth"')
+      )
+    ).toBe(true);
+    expect(
+      authenticationEvents.some(
+        (line) =>
+          line.includes('context7_authentication_event="credential_present"') &&
+          line.includes('context7_authentication_method="api_key"') &&
+          line.includes('context7_mcp_route="oauth"')
+      )
+    ).toBe(true);
     expect(exported).toContain("context7_mcp_authentication_duration_count");
     expect(exported).toContain("context7_mcp_authentication_active");
     expect(exported).toContain("mcp_server_operation_duration_bucket");

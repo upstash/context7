@@ -1,12 +1,20 @@
 import { EventEmitter } from "node:events";
 import { afterEach, describe, expect, test, vi } from "vitest";
+
+const telemetry = vi.hoisted(() => ({
+  recordAuthenticationEvent: vi.fn(),
+  recordToolCallOutcome: vi.fn(),
+}));
+
+vi.mock("../src/lib/telemetry-runtime.js", () => telemetry);
+
 import {
   observeAuthenticatedInitialize,
   recordAuthenticatedToolCall,
 } from "../src/lib/auth-lifecycle-telemetry.js";
 
 afterEach(() => {
-  vi.restoreAllMocks();
+  vi.clearAllMocks();
 });
 
 describe("MCP authentication lifecycle telemetry", () => {
@@ -14,22 +22,31 @@ describe("MCP authentication lifecycle telemetry", () => {
     [200, "authenticated_initialize_succeeded"],
     [500, "authenticated_initialize_failed"],
   ] as const)("records authenticated initialize completion for status %s", (statusCode, event) => {
-    const output = vi.spyOn(console, "log").mockImplementation(() => undefined);
     const response = new EventEmitter() as EventEmitter & { statusCode: number };
     response.statusCode = statusCode;
 
     observeAuthenticatedInitialize(
       response,
       { jsonrpc: "2.0", method: "initialize", id: 1 },
-      { authMethod: "oauth", endpoint: "/mcp", rolloutMode: "required" }
+      {
+        enforcementMode: "required",
+        method: "oauth",
+        outcome: "accepted",
+        route: "anonymous",
+      }
     );
     response.emit("finish");
 
-    expect(JSON.parse(String(output.mock.calls[0][0]))).toMatchObject({ event });
+    expect(telemetry.recordAuthenticationEvent).toHaveBeenCalledWith({
+      enforcementMode: "required",
+      event,
+      method: "oauth",
+      outcome: "accepted",
+      route: "anonymous",
+    });
   });
 
   test("ignores unauthenticated initialize and failed tool calls", () => {
-    const output = vi.spyOn(console, "log").mockImplementation(() => undefined);
     const response = new EventEmitter() as EventEmitter & { statusCode: number };
     response.statusCode = 200;
 
@@ -37,8 +54,9 @@ describe("MCP authentication lifecycle telemetry", () => {
       response,
       { method: "initialize" },
       {
-        authMethod: "none",
-        endpoint: "/mcp",
+        enforcementMode: "observe",
+        method: "none",
+        route: "anonymous",
       }
     );
     response.emit("finish");
@@ -47,20 +65,27 @@ describe("MCP authentication lifecycle telemetry", () => {
       "error"
     );
 
-    expect(output).not.toHaveBeenCalled();
+    expect(telemetry.recordToolCallOutcome).toHaveBeenCalledWith("error");
+    expect(telemetry.recordAuthenticationEvent).not.toHaveBeenCalled();
   });
 
   test("records successful authenticated tool use", () => {
-    const output = vi.spyOn(console, "log").mockImplementation(() => undefined);
-
     recordAuthenticatedToolCall(
-      { apiKey: "oat_example", transport: "http", mcpEndpoint: "/mcp" },
+      {
+        apiKey: "oat_example",
+        transport: "http",
+        mcpAuthMode: "required",
+        mcpEndpoint: "/mcp",
+      },
       "success"
     );
 
-    expect(JSON.parse(String(output.mock.calls[0][0]))).toMatchObject({
-      authMethod: "oauth",
+    expect(telemetry.recordAuthenticationEvent).toHaveBeenCalledWith({
+      enforcementMode: "required",
       event: "authenticated_tool_call",
+      method: "oauth",
+      outcome: "accepted",
+      route: "anonymous",
     });
   });
 });

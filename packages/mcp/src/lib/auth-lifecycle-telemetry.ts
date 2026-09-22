@@ -1,10 +1,11 @@
 import type { Response } from "express";
-import { classifyAuthMethod, logMcpAuthEvent, type McpAuthEventInput } from "./auth-telemetry.js";
-import { recordToolCallOutcome } from "./telemetry-runtime.js";
+import { authenticationRoute, classifyAuthMethod } from "./mcp-http-auth.js";
+import type { AuthenticationEventObservation } from "./telemetry-contracts.js";
+import { recordAuthenticationEvent, recordToolCallOutcome } from "./telemetry-runtime.js";
 import type { ToolCallOutcome } from "./tool-names.js";
 import type { ClientContext } from "./types.js";
 
-type AuthEventContext = Omit<McpAuthEventInput, "event">;
+type AuthEventContext = Omit<AuthenticationEventObservation, "event">;
 
 function containsJsonRpcMethod(body: unknown, method: string): boolean {
   const messages = Array.isArray(body) ? body : [body];
@@ -22,10 +23,10 @@ export function observeAuthenticatedInitialize(
   body: unknown,
   context: AuthEventContext
 ): void {
-  if (context.authMethod === "none" || !containsJsonRpcMethod(body, "initialize")) return;
+  if (context.method === "none" || !containsJsonRpcMethod(body, "initialize")) return;
 
   response.once("finish", () => {
-    logMcpAuthEvent({
+    recordAuthenticationEvent({
       ...context,
       event:
         response.statusCode >= 200 && response.statusCode < 300
@@ -39,13 +40,12 @@ export function recordAuthenticatedToolCall(ctx: ClientContext, outcome: ToolCal
   recordToolCallOutcome(outcome);
   if (ctx.transport !== "http" || !ctx.apiKey || outcome === "error") return;
 
-  logMcpAuthEvent({
-    actorIp: ctx.clientIp,
-    authMethod: classifyAuthMethod(ctx.apiKey),
-    clientInfo: ctx.clientInfo,
-    endpoint: ctx.mcpEndpoint ?? "/mcp",
+  const endpoint = ctx.mcpEndpoint ?? "/mcp";
+  recordAuthenticationEvent({
+    enforcementMode: ctx.mcpAuthMode ?? "observe",
     event: "authenticated_tool_call",
-    plugin: ctx.plugin,
-    rolloutMode: ctx.mcpAuthMode,
+    method: classifyAuthMethod(ctx.apiKey),
+    outcome: "accepted",
+    route: authenticationRoute(endpoint),
   });
 }

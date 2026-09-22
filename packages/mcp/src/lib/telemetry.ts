@@ -2,6 +2,8 @@ import { metrics, trace, type Attributes } from "@opentelemetry/api";
 import { markCurrentMcpOperationError, markCurrentMcpToolOutcome } from "./mcp-operation-scope.js";
 import type {
   AuthenticationOutcome,
+  AuthenticationEventObservation,
+  AuthenticationObservationOptions,
   ObservedAuthentication,
   UpstreamObservationOptions,
   UpstreamOperation,
@@ -54,6 +56,10 @@ function createInstruments() {
     authenticationAttempts: meter.createCounter("context7.mcp.authentication.attempts", {
       description: "Number of authentication attempts on the OAuth-protected MCP endpoint",
       unit: "{attempt}",
+    }),
+    authenticationEvents: meter.createCounter("context7.mcp.authentication.events", {
+      description: "Number of MCP authentication migration events",
+      unit: "{event}",
     }),
     authenticationDuration: meter.createHistogram("context7.mcp.authentication.duration", {
       description: "Duration of authentication on the OAuth-protected MCP endpoint",
@@ -212,11 +218,16 @@ export async function forceFlushTelemetry(): Promise<void> {
 }
 
 export async function observeAuthentication<T>(
+  options: AuthenticationObservationOptions,
   operation: () => Promise<ObservedAuthentication<T>>
 ): Promise<T> {
-  const { activeAuthentications, authenticationAttempts, authenticationDuration } =
-    getInstruments();
-  const activeAttributes: Attributes = { "context7.mcp.route": "oauth" };
+  const {
+    activeAuthentications,
+    authenticationAttempts,
+    authenticationDuration,
+    authenticationEvents,
+  } = getInstruments();
+  const activeAttributes: Attributes = { "context7.mcp.route": options.route };
   const startedAt = performance.now();
   let outcome: AuthenticationOutcome = "error";
   activeAuthentications.add(1, activeAttributes);
@@ -224,11 +235,36 @@ export async function observeAuthentication<T>(
   try {
     const observed = await operation();
     outcome = observed.outcome;
+    const attributes: Attributes = {
+      ...activeAttributes,
+      "context7.authentication.enforcement": options.enforcementMode,
+      "context7.authentication.event": observed.event,
+      "context7.authentication.method": observed.method,
+      "context7.authentication.outcome": outcome,
+    };
+    authenticationEvents.add(1, attributes);
     return observed.value;
   } finally {
-    const attributes = { "context7.authentication.outcome": outcome };
+    const attributes: Attributes = {
+      ...activeAttributes,
+      "context7.authentication.enforcement": options.enforcementMode,
+      "context7.authentication.outcome": outcome,
+    };
     activeAuthentications.add(-1, activeAttributes);
     authenticationAttempts.add(1, attributes);
     authenticationDuration.record(elapsedSeconds(startedAt), attributes);
   }
+}
+
+export function recordAuthenticationEvent(observation: AuthenticationEventObservation): void {
+  const attributes: Attributes = {
+    "context7.authentication.enforcement": observation.enforcementMode,
+    "context7.authentication.event": observation.event,
+    "context7.authentication.method": observation.method,
+    "context7.mcp.route": observation.route,
+  };
+  if (observation.outcome) {
+    attributes["context7.authentication.outcome"] = observation.outcome;
+  }
+  getInstruments().authenticationEvents.add(1, attributes);
 }

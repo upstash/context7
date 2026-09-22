@@ -1,18 +1,33 @@
 import type { Request, Response } from "express";
 import { EMA_ISSUER, OAUTH_AUTH_SERVER_URL, RESOURCE_URL } from "./constants.js";
-import { classifyAuthMethod, type McpAuthEvent, type McpAuthMethod } from "./auth-telemetry.js";
 import { isJWT, validateJWT } from "./jwt.js";
-import type { AuthenticationOutcome } from "./telemetry-contracts.js";
+import type {
+  AuthenticationEvent,
+  AuthenticationMethod,
+  AuthenticationOutcome,
+  AuthenticationRoute,
+} from "./telemetry-contracts.js";
 
 export type McpAuthMode = "observe" | "required";
 export type McpEndpoint = "/mcp" | "/mcp/oauth";
 
 export interface McpAuthDecision {
   allowed: boolean;
-  authMethod: McpAuthMethod;
+  authMethod: AuthenticationMethod;
   error?: string;
-  event: McpAuthEvent;
+  event: AuthenticationEvent;
   outcome: AuthenticationOutcome;
+}
+
+export function classifyAuthMethod(token: string | undefined): AuthenticationMethod {
+  if (!token) return "none";
+  if (token.startsWith("oat_")) return "oauth";
+  if (token.split(".").length === 3) return "jwt";
+  return "api_key";
+}
+
+export function authenticationRoute(endpoint: McpEndpoint): AuthenticationRoute {
+  return endpoint === "/mcp/oauth" ? "oauth" : "anonymous";
 }
 
 export function parseMcpAuthMode(raw = process.env.MCP_AUTH_ENFORCEMENT): McpAuthMode {

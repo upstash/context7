@@ -8,6 +8,8 @@ import type {
 } from "@modelcontextprotocol/server";
 import type {
   ObservedAuthentication,
+  AuthenticationEventObservation,
+  AuthenticationObservationOptions,
   UpstreamObservationOptions,
   UpstreamOperation,
 } from "./telemetry-contracts.js";
@@ -93,10 +95,15 @@ export async function initializeTelemetry(
 }
 
 export async function observeAuthentication<T>(
+  options: AuthenticationObservationOptions,
   operation: () => Promise<ObservedAuthentication<T>>
 ): Promise<T> {
   if (TELEMETRY_DISABLED) return (await operation()).value;
-  return (await loadImplementation()).observeAuthentication(operation);
+  return (await loadImplementation()).observeAuthentication(options, operation);
+}
+
+export function recordAuthenticationEvent(observation: AuthenticationEventObservation): void {
+  implementation?.recordAuthenticationEvent(observation);
 }
 
 export async function observeUpstreamRequest<T>(
@@ -124,6 +131,8 @@ export async function forceFlushTelemetry(): Promise<void> {
 
 export type {
   ObservedAuthentication,
+  AuthenticationEventObservation,
+  AuthenticationObservationOptions,
   UpstreamObservationOptions,
   UpstreamOperation,
 } from "./telemetry-contracts.js";

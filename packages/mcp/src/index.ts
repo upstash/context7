@@ -35,15 +35,16 @@ import {
   initializeTelemetry,
   observeAuthentication,
   observeUpstreamRequest,
+  recordAuthenticationEvent,
 } from "./lib/telemetry-runtime.js";
 import { mcpBodyErrorHandler } from "./lib/mcp-body-error-handler.js";
-import { logMcpAuthEvent } from "./lib/auth-telemetry.js";
 import {
   observeAuthenticatedInitialize,
   recordAuthenticatedToolCall,
 } from "./lib/auth-lifecycle-telemetry.js";
 import {
   canonicalMcpEndpoint,
+  authenticationRoute,
   evaluateMcpAuthentication,
   parseMcpAuthMode,
   protectedResourceMetadata,
@@ -448,20 +449,19 @@ async function main() {
         const plugin = getPluginFromRequest(req);
         const apiKey = extractApiKey(req);
         const endpoint = canonicalMcpEndpoint(req);
-        const authentication = await observeAuthentication(async () => {
-          const value = await evaluateMcpAuthentication(apiKey, authMode);
-          return { outcome: value.outcome, value };
-        });
-
-        logMcpAuthEvent({
-          actorIp: req.ip,
-          authMethod: authentication.authMethod,
-          endpoint,
-          event: authentication.event,
-          plugin,
-          rolloutMode: authMode,
-          userAgent: req.headers["user-agent"],
-        });
+        const route = authenticationRoute(endpoint);
+        const authentication = await observeAuthentication(
+          { enforcementMode: authMode, route },
+          async () => {
+            const value = await evaluateMcpAuthentication(apiKey, authMode);
+            return {
+              event: value.event,
+              method: value.authMethod,
+              outcome: value.outcome,
+              value,
+            };
+          }
+        );
 
         if (!authentication.allowed) {
           setBearerChallenge(res, endpoint, apiKey ? authentication.error : undefined);
@@ -487,12 +487,10 @@ async function main() {
         };
 
         observeAuthenticatedInitialize(res, req.body, {
-          actorIp: req.ip,
-          authMethod: authentication.authMethod,
-          clientInfo: context.clientInfo,
-          endpoint,
-          plugin,
-          rolloutMode: authMode,
+          enforcementMode: authMode,
+          method: authentication.authMethod,
+          outcome: authentication.outcome,
+          route,
         });
 
         await requestContext.run(context, async () => {
@@ -530,13 +528,11 @@ async function main() {
     app.get(
       "/.well-known/oauth-protected-resource",
       (req: express.Request, res: express.Response) => {
-        logMcpAuthEvent({
-          actorIp: req.ip,
-          authMethod: "none",
-          endpoint: RESOURCE_URL,
+        recordAuthenticationEvent({
+          enforcementMode: authMode,
           event: "metadata_requested",
-          rolloutMode: authMode,
-          userAgent: req.headers["user-agent"],
+          method: "none",
+          route: "anonymous",
         });
         res.json(protectedResourceMetadata(RESOURCE_URL));
       }
@@ -547,13 +543,11 @@ async function main() {
         `/.well-known/oauth-protected-resource${endpoint}`,
         (req: express.Request, res: express.Response) => {
           const resource = protectedResourceUrl(endpoint);
-          logMcpAuthEvent({
-            actorIp: req.ip,
-            authMethod: "none",
-            endpoint: resource,
+          recordAuthenticationEvent({
+            enforcementMode: authMode,
             event: "metadata_requested",
-            rolloutMode: authMode,
-            userAgent: req.headers["user-agent"],
+            method: "none",
+            route: authenticationRoute(endpoint),
           });
           res.json(protectedResourceMetadata(resource));
         }
