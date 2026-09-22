@@ -39,18 +39,18 @@ import {
 } from "./lib/telemetry-runtime.js";
 import { mcpBodyErrorHandler } from "./lib/mcp-body-error-handler.js";
 import {
-  observeAuthenticatedInitialize,
-  recordAuthenticatedToolCall,
+  observeCredentialedInitialize,
+  recordToolCallTelemetry,
 } from "./lib/auth-lifecycle-telemetry.js";
 import {
   canonicalMcpEndpoint,
-  authenticationRoute,
   evaluateMcpAuthentication,
   parseMcpAuthMode,
   protectedResourceMetadata,
   protectedResourceUrl,
   setBearerChallenge,
 } from "./lib/mcp-http-auth.js";
+import { mcpRouteFromUrl } from "./lib/mcp-route.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -278,7 +278,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       if (!searchResponse.results || searchResponse.results.length === 0) {
         const text = searchResponse.error ?? "No libraries found matching the provided name.";
         maybeElicitAuthSignIn(server, ctx);
-        recordAuthenticatedToolCall(ctx, searchResponse.error ? "error" : "not_found");
+        recordToolCallTelemetry(ctx, searchResponse.error ? "error" : "not_found");
         return {
           content: [
             {
@@ -292,7 +292,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       const resultsText = formatSearchResults(searchResponse);
       const responseText = `Available Libraries:\n\n${resultsText}`;
       maybeElicitAuthSignIn(server, ctx);
-      recordAuthenticatedToolCall(ctx, "success");
+      recordToolCallTelemetry(ctx, "success");
       return {
         content: [
           {
@@ -339,7 +339,7 @@ Do not call this tool more than 3 times per question.`,
       const ctx = getClientContext(toolCtx);
       const response = await fetchLibraryContext({ query, libraryId }, ctx);
       maybeElicitAuthSignIn(server, ctx);
-      recordAuthenticatedToolCall(ctx, response.outcome);
+      recordToolCallTelemetry(ctx, response.outcome);
       return {
         content: [
           {
@@ -449,18 +449,10 @@ async function main() {
         const plugin = getPluginFromRequest(req);
         const apiKey = extractApiKey(req);
         const endpoint = canonicalMcpEndpoint(req);
-        const route = authenticationRoute(endpoint);
+        const route = mcpRouteFromUrl(endpoint);
         const authentication = await observeAuthentication(
           { enforcementMode: authMode, route },
-          async () => {
-            const value = await evaluateMcpAuthentication(apiKey, authMode);
-            return {
-              event: value.event,
-              method: value.authMethod,
-              outcome: value.outcome,
-              value,
-            };
-          }
+          () => evaluateMcpAuthentication(apiKey, authMode)
         );
 
         if (!authentication.allowed) {
@@ -486,9 +478,9 @@ async function main() {
           transport: "http",
         };
 
-        observeAuthenticatedInitialize(res, req.body, {
+        observeCredentialedInitialize(res, req.body, {
           enforcementMode: authMode,
-          method: authentication.authMethod,
+          method: authentication.method,
           outcome: authentication.outcome,
           route,
         });
@@ -532,7 +524,7 @@ async function main() {
           enforcementMode: authMode,
           event: "metadata_requested",
           method: "none",
-          route: "anonymous",
+          route: mcpRouteFromUrl(RESOURCE_URL),
         });
         res.json(protectedResourceMetadata(RESOURCE_URL));
       }
@@ -547,7 +539,7 @@ async function main() {
             enforcementMode: authMode,
             event: "metadata_requested",
             method: "none",
-            route: authenticationRoute(endpoint),
+            route: mcpRouteFromUrl(endpoint),
           });
           res.json(protectedResourceMetadata(resource));
         }

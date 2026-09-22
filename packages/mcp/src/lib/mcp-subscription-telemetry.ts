@@ -14,13 +14,13 @@ import {
   type TransportSendOptions,
 } from "@modelcontextprotocol/server";
 import { metrics, type Attributes } from "@opentelemetry/api";
+import { mcpRouteFromUrl, type McpRoute } from "./mcp-route.js";
 
 const INSTRUMENTATION_NAME = "io.github.upstash.context7.mcp";
 const SUBSCRIPTION_DURATION_BUCKETS_SECONDS = [
   0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 30, 60, 120, 300,
 ];
 
-export type McpRoute = "anonymous" | "oauth" | "stdio";
 export type SubscriptionOutcome =
   | "cancelled"
   | "completed"
@@ -409,11 +409,6 @@ export class StdioSubscriptionTelemetry {
   private observation(protocolVersion?: string): SubscriptionObservation {
     return { networkTransport: "pipe", protocolVersion, route: "stdio" };
   }
-}
-
-export function mcpRouteFromUrl(url: string): McpRoute {
-  const pathname = new URL(url).pathname.replace(/\/+$/, "").toLowerCase();
-  return pathname === "/mcp/oauth" ? "oauth" : "anonymous";
 }
 
 interface ModernListenRequest {

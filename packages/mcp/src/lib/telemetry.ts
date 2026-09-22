@@ -3,8 +3,8 @@ import { markCurrentMcpOperationError, markCurrentMcpToolOutcome } from "./mcp-o
 import type {
   AuthenticationOutcome,
   AuthenticationEventObservation,
+  AuthenticationObservation,
   AuthenticationObservationOptions,
-  ObservedAuthentication,
   UpstreamObservationOptions,
   UpstreamOperation,
   UpstreamOutcome,
@@ -31,7 +31,7 @@ const NETWORK_ERROR_CODES = new Set([
 
 export type {
   AuthenticationOutcome,
-  ObservedAuthentication,
+  AuthenticationObservation,
   UpstreamObservationOptions,
   UpstreamOperation,
   UpstreamOutcome,
@@ -54,20 +54,20 @@ function createInstruments() {
       unit: "{request}",
     }),
     authenticationAttempts: meter.createCounter("context7.mcp.authentication.attempts", {
-      description: "Number of authentication attempts on the OAuth-protected MCP endpoint",
+      description: "Number of hosted MCP authentication decisions",
       unit: "{attempt}",
     }),
     authenticationEvents: meter.createCounter("context7.mcp.authentication.events", {
-      description: "Number of MCP authentication migration events",
+      description: "Number of hosted MCP authentication lifecycle events",
       unit: "{event}",
     }),
     authenticationDuration: meter.createHistogram("context7.mcp.authentication.duration", {
-      description: "Duration of authentication on the OAuth-protected MCP endpoint",
+      description: "Duration of hosted MCP authentication decisions",
       unit: "s",
       advice: { explicitBucketBoundaries: DURATION_BUCKETS_SECONDS },
     }),
     activeAuthentications: meter.createUpDownCounter("context7.mcp.authentication.active", {
-      description: "Number of OAuth-protected MCP requests currently authenticating",
+      description: "Number of hosted MCP requests currently authenticating",
       unit: "{request}",
     }),
   };
@@ -217,9 +217,9 @@ export async function forceFlushTelemetry(): Promise<void> {
   }
 }
 
-export async function observeAuthentication<T>(
+export async function observeAuthentication<T extends AuthenticationObservation>(
   options: AuthenticationObservationOptions,
-  operation: () => Promise<ObservedAuthentication<T>>
+  operation: () => Promise<T>
 ): Promise<T> {
   const {
     activeAuthentications,
@@ -243,7 +243,7 @@ export async function observeAuthentication<T>(
       "context7.authentication.outcome": outcome,
     };
     authenticationEvents.add(1, attributes);
-    return observed.value;
+    return observed;
   } finally {
     const attributes: Attributes = {
       ...activeAttributes,

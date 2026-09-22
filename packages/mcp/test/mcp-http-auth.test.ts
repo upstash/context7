@@ -7,7 +7,6 @@ vi.mock("../src/lib/jwt.js", () => ({
 
 import { validateJWT } from "../src/lib/jwt.js";
 import {
-  authenticationRoute,
   classifyAuthMethod,
   evaluateMcpAuthentication,
   parseMcpAuthMode,
@@ -24,8 +23,6 @@ describe("MCP HTTP authentication policy", () => {
     expect(classifyAuthMethod("oat_example")).toBe("oauth");
     expect(classifyAuthMethod("header.payload.signature")).toBe("jwt");
     expect(classifyAuthMethod("ctx7sk_example")).toBe("api_key");
-    expect(authenticationRoute("/mcp")).toBe("anonymous");
-    expect(authenticationRoute("/mcp/oauth")).toBe("oauth");
   });
 
   test("defaults to observation and rejects unknown rollout modes", () => {
@@ -50,7 +47,7 @@ describe("MCP HTTP authentication policy", () => {
   test("records opaque credentials as present until the API validates them", async () => {
     await expect(evaluateMcpAuthentication("ctx7sk-example", "required")).resolves.toMatchObject({
       allowed: true,
-      authMethod: "api_key",
+      method: "api_key",
       event: "credential_present",
     });
   });

@@ -61,12 +61,12 @@ test("OTEL_SDK_DISABLED bypasses all application metric instruments", async () =
   ).resolves.toBe("ok");
   await expect(
     observeAuthentication({ enforcementMode: "required", route: "anonymous" }, async () => ({
+      allowed: true,
       event: "credential_present",
       method: "oauth",
       outcome: "accepted",
-      value: "auth",
     }))
-  ).resolves.toBe("auth");
+  ).resolves.toMatchObject({ allowed: true, event: "credential_present" });
   await forceFlushTelemetry();
   await provider.forceFlush();
 

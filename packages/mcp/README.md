@@ -1544,8 +1544,9 @@ Prometheus receives these metric families:
 - `context7_mcp_subscriptions_active` and `context7_mcp_subscription_duration`
 - `context7_mcp_upstream_requests_total` and `context7_mcp_upstream_request_duration`
 - `context7_mcp_authentication_attempts_total` and `context7_mcp_authentication_duration`
-- `context7_mcp_authentication_events_total` for bounded migration lifecycle events such as
-  credential challenges, metadata discovery, authenticated initialization, and tool use
+- `context7_mcp_authentication_events_total` for bounded authentication lifecycle events such as
+  credential challenges, metadata discovery, credentialed initialization, and authenticated tool
+  use
 - `context7_mcp_upstream_requests_active` and `context7_mcp_authentication_active`
 - `nodejs_eventloop_*`, `v8js_gc_duration`, `v8js_memory_heap_*`, and
   `v8js_resource_active` from the official OpenTelemetry Node runtime instrumentation
@@ -1562,7 +1563,9 @@ proxy caps its upstream fetch at 10 seconds and returns `502` if that dependency
 
 The labels intentionally exclude API keys, client IPs, queries, library IDs, session IDs, and raw
 error text. Expose port `9464` only to your Prometheus scraper or `ServiceMonitor`, not through the
-public MCP ingress.
+public MCP ingress. For continuity with existing MCP series, the route label uses `anonymous` for
+the standard `/mcp` path and `oauth` for the `/mcp/oauth` compatibility alias; the `anonymous` value
+identifies the route and does not imply that the request bypassed authentication.
 
 #### Signal ownership with an Envoy gateway
 

@@ -9,8 +9,8 @@ const telemetry = vi.hoisted(() => ({
 vi.mock("../src/lib/telemetry-runtime.js", () => telemetry);
 
 import {
-  observeAuthenticatedInitialize,
-  recordAuthenticatedToolCall,
+  observeCredentialedInitialize,
+  recordToolCallTelemetry,
 } from "../src/lib/auth-lifecycle-telemetry.js";
 
 afterEach(() => {
@@ -19,13 +19,13 @@ afterEach(() => {
 
 describe("MCP authentication lifecycle telemetry", () => {
   test.each([
-    [200, "authenticated_initialize_succeeded"],
-    [500, "authenticated_initialize_failed"],
-  ] as const)("records authenticated initialize completion for status %s", (statusCode, event) => {
+    [200, "credentialed_initialize_succeeded"],
+    [500, "credentialed_initialize_failed"],
+  ] as const)("records credentialed initialize completion for status %s", (statusCode, event) => {
     const response = new EventEmitter() as EventEmitter & { statusCode: number };
     response.statusCode = statusCode;
 
-    observeAuthenticatedInitialize(
+    observeCredentialedInitialize(
       response,
       { jsonrpc: "2.0", method: "initialize", id: 1 },
       {
@@ -50,7 +50,7 @@ describe("MCP authentication lifecycle telemetry", () => {
     const response = new EventEmitter() as EventEmitter & { statusCode: number };
     response.statusCode = 200;
 
-    observeAuthenticatedInitialize(
+    observeCredentialedInitialize(
       response,
       { method: "initialize" },
       {
@@ -60,7 +60,7 @@ describe("MCP authentication lifecycle telemetry", () => {
       }
     );
     response.emit("finish");
-    recordAuthenticatedToolCall(
+    recordToolCallTelemetry(
       { apiKey: "oat_example", transport: "http", mcpEndpoint: "/mcp" },
       "error"
     );
@@ -69,8 +69,18 @@ describe("MCP authentication lifecycle telemetry", () => {
     expect(telemetry.recordAuthenticationEvent).not.toHaveBeenCalled();
   });
 
+  test("does not invent missing HTTP telemetry context", () => {
+    recordToolCallTelemetry(
+      { apiKey: "oat_example", transport: "http", mcpEndpoint: "/mcp" },
+      "success"
+    );
+
+    expect(telemetry.recordToolCallOutcome).toHaveBeenCalledWith("success");
+    expect(telemetry.recordAuthenticationEvent).not.toHaveBeenCalled();
+  });
+
   test("records successful authenticated tool use", () => {
-    recordAuthenticatedToolCall(
+    recordToolCallTelemetry(
       {
         apiKey: "oat_example",
         transport: "http",

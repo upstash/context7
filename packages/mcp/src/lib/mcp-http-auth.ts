@@ -1,33 +1,19 @@
 import type { Request, Response } from "express";
 import { EMA_ISSUER, OAUTH_AUTH_SERVER_URL, RESOURCE_URL } from "./constants.js";
 import { isJWT, validateJWT } from "./jwt.js";
-import type {
-  AuthenticationEvent,
-  AuthenticationMethod,
-  AuthenticationOutcome,
-  AuthenticationRoute,
-} from "./telemetry-contracts.js";
+import type { AuthenticationObservation, AuthenticationMethod } from "./telemetry-contracts.js";
 
 export type McpAuthMode = "observe" | "required";
 export type McpEndpoint = "/mcp" | "/mcp/oauth";
 
-export interface McpAuthDecision {
-  allowed: boolean;
-  authMethod: AuthenticationMethod;
-  error?: string;
-  event: AuthenticationEvent;
-  outcome: AuthenticationOutcome;
-}
+export type McpAuthDecision = AuthenticationObservation &
+  ({ allowed: true } | { allowed: false; error: string });
 
 export function classifyAuthMethod(token: string | undefined): AuthenticationMethod {
   if (!token) return "none";
   if (token.startsWith("oat_")) return "oauth";
   if (token.split(".").length === 3) return "jwt";
   return "api_key";
-}
-
-export function authenticationRoute(endpoint: McpEndpoint): AuthenticationRoute {
-  return endpoint === "/mcp/oauth" ? "oauth" : "anonymous";
 }
 
 export function parseMcpAuthMode(raw = process.env.MCP_AUTH_ENFORCEMENT): McpAuthMode {
@@ -47,22 +33,23 @@ export async function evaluateMcpAuthentication(
   token: string | undefined,
   mode: McpAuthMode
 ): Promise<McpAuthDecision> {
-  const authMethod = classifyAuthMethod(token);
+  const method = classifyAuthMethod(token);
   if (!token) {
-    const allowed = mode === "observe";
-    return {
-      allowed,
-      authMethod,
-      error: "Authentication required. Please authenticate to use this MCP server.",
-      event: allowed ? "credential_missing" : "challenge_issued",
-      outcome: "missing",
-    };
+    return mode === "observe"
+      ? { allowed: true, method, event: "credential_missing", outcome: "missing" }
+      : {
+          allowed: false,
+          method,
+          error: "Authentication required. Please authenticate to use this MCP server.",
+          event: "challenge_issued",
+          outcome: "missing",
+        };
   }
 
   if (!isJWT(token)) {
     return {
       allowed: true,
-      authMethod,
+      method,
       event: "credential_present",
       outcome: "accepted",
     };
@@ -72,7 +59,7 @@ export async function evaluateMcpAuthentication(
   if (!validation.valid) {
     return {
       allowed: false,
-      authMethod,
+      method,
       error: validation.error || "Invalid token. Please re-authenticate.",
       event: "credential_rejected",
       outcome: "invalid",
@@ -81,7 +68,7 @@ export async function evaluateMcpAuthentication(
 
   return {
     allowed: true,
-    authMethod,
+    method,
     event: "credential_validated",
     outcome: "accepted",
   };

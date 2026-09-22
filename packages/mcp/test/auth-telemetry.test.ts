@@ -50,12 +50,12 @@ describe("MCP authentication OpenTelemetry", () => {
   test("records authentication decisions with bounded migration attributes", async () => {
     await expect(
       observeAuthentication({ enforcementMode: "required", route: "anonymous" }, async () => ({
+        allowed: false,
         event: "challenge_issued",
         method: "none",
         outcome: "missing",
-        value: "denied",
       }))
-    ).resolves.toBe("denied");
+    ).resolves.toMatchObject({ allowed: false, event: "challenge_issued" });
     await forceFlushTelemetry();
 
     expect(authenticationEvents()).toContainEqual(
