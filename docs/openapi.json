@@ -17,6 +17,131 @@
     }
   ],
   "paths": {
+    "/v3/search": {
+      "get": {
+        "summary": "Search documentation in one request",
+        "description": "Select up to four relevant Context7 libraries, retrieve their documentation in parallel, deduplicate and globally rerank the evidence, and return one bounded response. Optional library, version, and language values improve routing and ranking.",
+        "operationId": "searchDocumentation",
+        "tags": [
+          "Search"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/QueryParam"
+          },
+          {
+            "$ref": "#/components/parameters/TypeParam"
+          },
+          {
+            "name": "library",
+            "in": "query",
+            "description": "Optional library hints. Repeat for up to four values; each may be a fuzzy product name such as `next.js` or an exact Context7 ID such as `/vercel/next.js`.",
+            "required": false,
+            "style": "form",
+            "explode": true,
+            "schema": {
+              "type": "array",
+              "maxItems": 4,
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              }
+            },
+            "example": [
+              "next.js",
+              "react"
+            ]
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "description": "Optional version constraint. Requires at least one library value. It is strict when one library is provided and contextual when multiple libraries are provided.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^v?[0-9]+([._][0-9]+){0,2}([-+][a-zA-Z0-9.-]+)?$"
+            },
+            "example": "15.2"
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "description": "Optional programming-language preference used for library selection, retrieval, and reranking. This is a soft preference and does not exclude language-neutral documentation.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40
+            },
+            "example": "TypeScript"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bounded documentation evidence from the selected libraries",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchContextResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestError"
+          },
+          "401": {
+            "$ref": "#/components/responses/UnauthorizedError"
+          },
+          "402": {
+            "$ref": "#/components/responses/SpendingLimitError"
+          },
+          "404": {
+            "description": "No documentation matched the question or library hints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "no_documentation_found",
+                  "message": "No documentation library matched the request. Check the library hint or name."
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitError"
+          },
+          "503": {
+            "description": "Documentation search could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "example": {
+                  "error": "search_failed",
+                  "message": "The documentation search could not be completed."
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {},
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/v2/libs/search": {
       "get": {
         "summary": "Search for libraries",
@@ -1509,6 +1634,50 @@
           }
         }
       },
+      "LibraryHintParam": {
+        "name": "library",
+        "in": "query",
+        "description": "A library name or exact Context7 library ID. Repeat this parameter to search up to four libraries. Names do not need to be exact.",
+        "required": false,
+        "style": "form",
+        "explode": true,
+        "schema": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        },
+        "example": [
+          "Next.js",
+          "OpenAI"
+        ]
+      },
+      "VersionParam": {
+        "name": "version",
+        "in": "query",
+        "description": "A version to use when selecting and ranking documentation. At least one library hint is required. With one library, Context7 targets that version. With multiple libraries, the version is treated as a preference for compatible candidates.",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "pattern": "^v?\\d+(?:[._]\\d+){0,2}(?:[-+][a-z0-9.-]+)?$"
+        },
+        "example": "15.4.0"
+      },
+      "LanguageParam": {
+        "name": "language",
+        "in": "query",
+        "description": "A programming language to prefer when selecting and ranking snippets. This is a soft preference, so product documentation can still be returned when a language-specific snippet is unavailable.",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "example": "TypeScript"
+      },
       "TypeParam": {
         "name": "type",
         "in": "query",
@@ -1806,6 +1975,112 @@
         "required": [
           "codeSnippets",
           "infoSnippets"
+        ]
+      },
+      "SearchCodeSnippet": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CodeSnippet"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "libraryId": {
+                "type": "string",
+                "description": "Context7 library ID that produced this snippet"
+              }
+            },
+            "required": [
+              "libraryId"
+            ]
+          }
+        ]
+      },
+      "SearchInfoSnippet": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/InfoSnippet"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "libraryId": {
+                "type": "string",
+                "description": "Context7 library ID that produced this snippet"
+              }
+            },
+            "required": [
+              "libraryId"
+            ]
+          }
+        ]
+      },
+      "SearchContextResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ContextResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "codeSnippets": {
+                "type": "array",
+                "description": "Relevant code snippets with their selected library",
+                "items": {
+                  "$ref": "#/components/schemas/SearchCodeSnippet"
+                }
+              },
+              "infoSnippets": {
+                "type": "array",
+                "description": "Relevant documentation snippets with their selected library",
+                "items": {
+                  "$ref": "#/components/schemas/SearchInfoSnippet"
+                }
+              },
+              "rules": {
+                "type": "object",
+                "description": "Optional global rules and library-scoped guidelines",
+                "properties": {
+                  "global": {
+                    "type": "array",
+                    "description": "Global team rules that apply to every returned library",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "libraries": {
+                    "type": "array",
+                    "description": "Rules scoped to a specific returned library",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "libraryId": {
+                          "type": "string"
+                        },
+                        "libraryOwn": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "libraryTeam": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "libraryId",
+                        "libraryOwn",
+                        "libraryTeam"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
         ]
       },
       "Error": {
