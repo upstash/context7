@@ -39,6 +39,16 @@ const client = new Context7({
   apiKey: "<CONTEXT7_API_KEY>",
 });
 
+// Search documentation in one request. Context7 selects the relevant library.
+const results = await client.search("How do I cache a Next.js function?", {
+  libraries: ["Next.js"],
+  version: "15.4.0",
+  language: "TypeScript",
+  type: "json",
+});
+console.log(results.codeSnippets[0]?.libraryId, results.codeSnippets[0]?.codeTitle);
+console.log(results.rules);
+
 // Search for libraries
 const libraries = await client.searchLibrary("I need to build a UI with components", "react");
 console.log(libraries[0].id); // "/facebook/react"

@@ -179,7 +179,9 @@ function buildUrl(baseUrl: string, method: "GET" | "POST", request: Context7Requ
 
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(request.query)) {
-    if (value !== undefined) query.append(key, String(value));
+    if (value === undefined) continue;
+    const values = Array.isArray(value) ? value : [value];
+    for (const item of values) query.append(key, String(item));
   }
   const queryString = query.toString();
   return queryString ? `${url}?${queryString}` : url;
