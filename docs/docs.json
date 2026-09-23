@@ -38,7 +38,7 @@
               {
                 "group": "Get Started",
                 "expanded": true,
-                "pages": ["overview", "installation", "clients/cli", "plans-pricing", "library-owners", "tips"]
+                "pages": ["overview", "installation", "search-api", "clients/cli", "plans-pricing", "library-owners", "tips"]
               },
               {
                 "group": "How To",

@@ -1,0 +1,104 @@
+---
+title: Search API
+description: Search all Context7 documentation with one request
+---
+
+The Search API is the simplest way to use Context7. You send a question, and Context7 picks the relevant libraries, searches them, and returns the best snippets in one request. No library ID is needed.
+
+It is a plain GET request, so you can try it in your browser:
+
+[https://context7.com/api/v3/search?query=what+is+nextjs](https://context7.com/api/v3/search?query=what+is+nextjs)
+
+<Note>
+  Requests without an API key are for testing only and are rate-limited by IP address. For real use, send your [API key](/howto/api-keys) as a bearer token.
+</Note>
+
+## Send a question
+
+<CodeGroup>
+
+```bash curl
+curl -G "https://context7.com/api/v3/search" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY" \
+  --data-urlencode "query=How do I stream an OpenAI response from a Next.js route?"
+```
+
+```typescript TypeScript SDK
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7({ apiKey: process.env.CONTEXT7_API_KEY });
+
+const result = await client.search(
+  "How do I stream an OpenAI response from a Next.js route?"
+);
+
+for (const snippet of result.codeSnippets) {
+  console.log(snippet.libraryId, snippet.codeTitle);
+}
+```
+
+```python Python
+import os
+import requests
+
+response = requests.get(
+    "https://context7.com/api/v3/search",
+    headers={"Authorization": f"Bearer {os.environ['CONTEXT7_API_KEY']}"},
+    params={"query": "How do I stream an OpenAI response from a Next.js route?", "type": "json"},
+)
+response.raise_for_status()
+
+for snippet in response.json()["codeSnippets"]:
+    print(snippet["libraryId"], snippet["codeTitle"])
+```
+
+</CodeGroup>
+
+The REST endpoint returns plain text by default, ready to add to a prompt. Set `type=json` for structured results. The TypeScript SDK returns JSON by default.
+
+Every snippet includes the library it came from and a link to the source page.
+
+## Add hints
+
+A query is all you need. If you know the library, version, or language, add them to narrow the results:
+
+```bash
+curl -G "https://context7.com/api/v3/search" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY" \
+  --data-urlencode "query=How do I stream an OpenAI response from a route handler?" \
+  --data-urlencode "library=Next.js" \
+  --data-urlencode "library=OpenAI" \
+  --data-urlencode "language=TypeScript" \
+  --data-urlencode "type=json"
+```
+
+| Parameter  | Description                                                                                                                                                     |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `query`    | The question or task. Required.                                                                                                                                 |
+| `library`  | A library name (`next.js`) or Context7 ID (`/vercel/next.js`). Repeat for up to four hints.                                                                     |
+| `version`  | A version such as `15.4.0`. Requires at least one `library`. Strict with one library, a preference with several.                                                |
+| `language` | A programming language to prefer, such as `TypeScript`. It is a preference, so language-neutral documentation can still appear.                                 |
+| `type`     | `txt` (default) or `json`.                                                                                                                                      |
+
+If nothing matches, the API returns `404 no_documentation_found`. Treat it as an empty result.
+
+## Pricing
+
+Search API calls count as regular Context7 API calls. There is no separate price:
+
+- **Free:** 1,000 calls per month.
+- **Pro:** 5,000 calls per month per seat, then $10 per 1,000 calls.
+
+See [Plans & Pricing](/plans-pricing) for details.
+
+## Search API or Context API?
+
+Use the **Search API** for a quick answer: one request, and Context7 picks the libraries and snippets for you. It is the easiest way to integrate Context7 into an agent, for example as a grounding step before the agent writes code.
+
+Use the **Context API** ([Search Library](/api-reference/search/search-for-libraries) and [Get Context](/api-reference/context/get-documentation-context)) when you know exactly which library you want, or when you need to go deep: choose the library, ask follow-up questions, and combine results from several libraries yourself.
+
+## Next steps
+
+- [Search Documentation reference](/api-reference/search/search-documentation) for all parameters and the response schema
+- [TypeScript SDK](/sdks/ts/commands/search) for the `search()` method
+- [API guide](/api-guide) for authentication, rate limits, and caching
