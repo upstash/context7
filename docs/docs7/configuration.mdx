@@ -5,6 +5,16 @@ description: Configure Docs7-only fields in docs.json
 
 Docs7 supports the `docs.json` format that was established by Mintlify. We also support options beyond this spec to make your documentation easier to navigate and to create custom content groups.
 
+## Validate docs.json in your editor
+
+Point `$schema` at the Docs7 schema. Your editor then completes and checks the Mintlify fields and the Docs7-only fields on this page.
+
+```json docs.json
+{
+  "$schema": "https://context7.com/schema/docs7.json"
+}
+```
+
 
 
 ## Group products
