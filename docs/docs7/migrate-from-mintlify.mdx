@@ -34,9 +34,9 @@ Review the build log and compare the new site with the current Mintlify site. Yo
 
 ## 3. Move the domain
 
-If you use a custom domain, add it to the Docs7 site before changing traffic. Docs7 will show the DNS records it needs.
+If you use a custom domain, add it to the Docs7 site before changing traffic. Docs7 will show the DNS records it needs. See [Custom Domains](/docs7/custom-domains) for each record and for serving the docs from a path.
 
-Switch the routing record only after the domain is ready and the Docs7 site looks correct.
+Add the `TXT` records first. Change the `CNAME` to Docs7 only after the Docs7 site looks correct on its `*.docs7.io` URL. Docs7 issues the HTTPS certificate after the `CNAME` points at Docs7, so HTTPS can fail for a few minutes after the switch. Lower the TTL of the `CNAME` a day before, so the change reaches visitors faster.
 
 <Frame>
 <img src="/images/docs7/custom-domain.png" alt="Configure a custom domain in Docs7"></img>
