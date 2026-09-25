@@ -434,6 +434,16 @@ describe.each([
     }
   });
 
+  test("flags a failed query-docs lookup as an error result", async () => {
+    const result = await client.callTool({
+      name: "query-docs",
+      arguments: { libraryId: "/vercel/next.js", query: UPSTREAM_ERROR_QUERY },
+    });
+    expect(result.isError).toBe(true);
+    const text = (result.content as { type: string; text: string }[])[0].text;
+    expect(text).toContain("stub upstream failure");
+  });
+
   test("calls resolve-library-id end to end", async () => {
     const result = await client.callTool({
       name: "resolve-library-id",
