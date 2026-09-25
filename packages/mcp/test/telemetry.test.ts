@@ -68,6 +68,8 @@ describe("MCP telemetry cardinality", () => {
     expect(mcpRouteFromUrl("https://example.com/mcp/oauth")).toBe("oauth");
     expect(mcpRouteFromUrl("https://example.com/mcp/oauth/")).toBe("oauth");
     expect(mcpRouteFromUrl("https://example.com/mcp")).toBe("anonymous");
+    expect(mcpRouteFromUrl("/mcp/oauth")).toBe("oauth");
+    expect(mcpRouteFromUrl("/mcp")).toBe("anonymous");
   });
 
   test("extracts only SEP-414 trace propagation fields", () => {

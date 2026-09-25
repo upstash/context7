@@ -19,14 +19,7 @@ Context7 supports all MCP clients. Below are configuration examples for popular 
 
 ## OAuth Authentication
 
-Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization).
-
-To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client configuration:
-
-```diff
-- "url": "https://mcp.context7.com/mcp"
-+ "url": "https://mcp.context7.com/mcp/oauth"
-```
+The canonical `https://mcp.context7.com/mcp` endpoint supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization). Connect to that URL and follow your client's authentication prompt. The older `/mcp/oauth` URL remains available as a compatibility alias.
 
 OAuth is only available for remote HTTP connections. For local MCP connections using stdio transport, use API key authentication instead.
 
@@ -146,20 +139,15 @@ openclaw mcp login context7
 
 OpenClaw also provides a code-based login fallback for headless or remote environments. See [Set Up OAuth](/howto/oauth) for more details.
 
-#### API Key or Anonymous Access
+#### API Key
 
-To connect without OAuth, register the standard endpoint:
+To connect with an API key, register the standard endpoint:
 
 ```sh
 openclaw mcp add context7 \
   --url https://mcp.context7.com/mcp \
-  --transport streamable-http
-```
-
-This works without an API key at the anonymous rate limit. For higher limits, create a key in the [Context7 dashboard](https://context7.com/dashboard) and append this option to the command:
-
-```sh
---header "Authorization: Bearer YOUR_API_KEY"
+  --transport streamable-http \
+  --header "Authorization: Bearer YOUR_API_KEY"
 ```
 
 Verify that OpenClaw can connect and discover the Context7 tools:
@@ -870,7 +858,7 @@ See [Warp Model Context Protocol Documentation](https://docs.warp.dev/knowledge-
 
 Run this command in your terminal. See [Amp MCP docs](https://ampcode.com/manual#mcp) for more info.
 
-#### Without API Key (Basic Usage)
+#### With OAuth
 
 ```sh
 amp mcp add context7 https://mcp.context7.com/mcp
@@ -1046,7 +1034,7 @@ docker build -t context7-mcp .
 Context7 is available in the [Docker MCP Catalog](https://hub.docker.com/mcp/server/context7/overview) as a **remote** server, so you don't need to build, pull, or run a local image. The MCP Toolkit connects to the hosted endpoint for you.
 
 1. In Docker Desktop, open **MCP Toolkit → Catalog**, search for **Context7**, and enable it.
-2. (Optional) In the server's **Config** tab, set your Context7 API key (`CONTEXT7_API_KEY`) for higher rate limits. The server also works without one.
+2. In the server's **Config** tab, set your free Context7 API key (`CONTEXT7_API_KEY`).
 3. Connect your MCP client to Docker's MCP gateway. Either run `docker mcp client connect <client>` (for example `vscode`, `cursor`, or `claude-desktop`), or add the gateway to your client config manually:
 
 ```json
@@ -1370,7 +1358,7 @@ droid mcp add context7 "npx -y @upstash/context7-mcp" --env CONTEXT7_API_KEY=YOU
 
 [Emdash](https://github.com/generalaction/emdash) is an orchestration layer for running multiple coding agents in parallel.
 
-Context7 is available as a built-in entry in Emdash's MCP catalog. Enable it from the MCP view and provide your `CONTEXT7_API_KEY` (optional, for higher rate limits). Emdash adapts and writes the MCP config into your selected coding agent's config (Codex, Claude Code, Cursor, etc.) for you.
+Context7 is available as a built-in entry in Emdash's MCP catalog. Enable it from the MCP view and authenticate with OAuth, or provide your `CONTEXT7_API_KEY` when the selected agent does not support OAuth. Emdash adapts and writes the MCP config into your selected coding agent's config (Codex, Claude Code, Cursor, etc.) for you.
 
 See the [Emdash repository](https://github.com/generalaction/emdash) for more information.
 
@@ -1378,7 +1366,7 @@ See the [Emdash repository](https://github.com/generalaction/emdash) for more in
 
 <Accordion title="Desktop Extension">
 
-Install the [context7.mcpb](https://github.com/upstash/context7/tree/master/packages/mcp/mcpb/context7.mcpb) file and add it to your client. See [MCP bundles docs](https://github.com/modelcontextprotocol/mcpb#mcp-bundles-mcpb) for more info.
+Install the [context7.mcpb](https://github.com/upstash/context7/releases/download/mcpb-v4.1.1/context7.mcpb) file and add it to your client. See [MCP bundles docs](https://github.com/modelcontextprotocol/mcpb#mcp-bundles-mcpb) for more info.
 
 </Accordion>
 

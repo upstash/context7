@@ -74,7 +74,7 @@ This adds the Context7 marketplace and installs the plugin with skills, agents, 
 
 ### Using Your API Key with the Plugin
 
-Without an API key, the plugin connects anonymously and shares the anonymous rate limits. To use your own plan, create an API key in the [Context7 dashboard](https://context7.com/dashboard) and export it as an environment variable before launching Claude Code:
+Without an API key, the plugin asks Claude Code to complete OAuth in the browser. To use an API key instead, create a free key in the [Context7 dashboard](https://context7.com/dashboard) and export it as an environment variable before launching Claude Code:
 
 ```bash
 # e.g. in ~/.zshrc or ~/.bashrc
@@ -84,7 +84,7 @@ export CONTEXT7_API_KEY="your-api-key"
 The plugin reads `CONTEXT7_API_KEY` from your environment automatically. Restart Claude Code after setting it, then confirm requests are counted against your plan in the [dashboard](https://context7.com/dashboard).
 
 <Note>
-If the variable is not set, the plugin still works — requests just go through the anonymous tier, which has lower rate limits.
+If the variable is not set, run `/mcp`, select Context7, and follow the browser sign-in flow.
 </Note>
 
 ### Skills
@@ -175,4 +175,3 @@ Using a library ID directly skips the resolution step.
 - You know exactly which library and topic you need
 - You want a quick lookup without explaining your full context
 - You're testing what documentation is available
-

@@ -36,15 +36,15 @@ import {
 } from "@opentelemetry/api";
 import { MCP_TOOL_NAMES, type ToolCallOutcome } from "./tool-names.js";
 import { runInMcpOperationScope } from "./mcp-operation-scope.js";
+import { mcpRouteFromUrl } from "./mcp-route.js";
 import {
   StdioSubscriptionTelemetry,
   instrumentMcpHttpHandler as instrumentHttpSubscriptions,
-  mcpRouteFromUrl,
   type SubscriptionEntryOperation,
   type SubscriptionObservation,
 } from "./mcp-subscription-telemetry.js";
 
-export { mcpRouteFromUrl } from "./mcp-subscription-telemetry.js";
+export { mcpRouteFromUrl } from "./mcp-route.js";
 
 const INSTRUMENTATION_NAME = "io.github.upstash.context7.mcp";
 const MCP_DURATION_BUCKETS_SECONDS = [

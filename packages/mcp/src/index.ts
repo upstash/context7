@@ -16,7 +16,6 @@ import {
   extractClientInfoFromUserAgent,
   envelopeClientInfo,
 } from "./lib/utils.js";
-import { isJWT, validateJWT } from "./lib/jwt.js";
 import express from "express";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
@@ -25,7 +24,6 @@ import {
   SERVER_VERSION,
   RESOURCE_URL,
   OAUTH_AUTH_SERVER_URL,
-  EMA_ISSUER,
   OPENAI_APPS_CHALLENGE_TOKEN,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
@@ -37,9 +35,22 @@ import {
   initializeTelemetry,
   observeAuthentication,
   observeUpstreamRequest,
-  recordToolCallOutcome,
+  recordAuthenticationEvent,
 } from "./lib/telemetry-runtime.js";
 import { mcpBodyErrorHandler } from "./lib/mcp-body-error-handler.js";
+import {
+  observeCredentialedInitialize,
+  recordToolCallTelemetry,
+} from "./lib/auth-lifecycle-telemetry.js";
+import {
+  canonicalMcpEndpoint,
+  evaluateMcpAuthentication,
+  parseMcpAuthMode,
+  protectedResourceMetadata,
+  protectedResourceUrl,
+  setBearerChallenge,
+} from "./lib/mcp-http-auth.js";
+import { mcpRouteFromUrl } from "./lib/mcp-route.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -50,16 +61,6 @@ let mcpInstrumentation: McpInstrumentation | undefined;
 
 function getPluginFromRequest(req: express.Request): typeof CLAUDE_CODE_PLUGIN | undefined {
   return req.query.client === CLAUDE_CODE_PLUGIN ? CLAUDE_CODE_PLUGIN : undefined;
-}
-
-function requiresAuthentication(req: express.Request, plugin?: typeof CLAUDE_CODE_PLUGIN): boolean {
-  // The MCP routes live on a router mounted at /mcp, so req.path is relative to it.
-  const isOAuthEndpoint = `${req.baseUrl}${req.path}` === "/mcp/oauth";
-  // The current official Claude plugin expands an unset API key to an empty header.
-  const hasEmptyPluginAuthorization =
-    plugin === CLAUDE_CODE_PLUGIN && req.headers.authorization === "";
-
-  return isOAuthEndpoint || (Boolean(plugin) && !hasEmptyPluginAuthorization);
 }
 
 // Parse CLI arguments using commander
@@ -112,8 +113,6 @@ const CLI_PORT = (() => {
 })();
 
 const requestContext = new AsyncLocalStorage<ClientContext>();
-
-type AuthenticationResult = { accepted: true } | { accepted: false; error: string };
 
 // Global state for stdio mode only
 let stdioApiKey: string | undefined;
@@ -279,7 +278,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       if (!searchResponse.results || searchResponse.results.length === 0) {
         const text = searchResponse.error ?? "No libraries found matching the provided name.";
         maybeElicitAuthSignIn(server, ctx);
-        recordToolCallOutcome(searchResponse.error ? "error" : "not_found");
+        recordToolCallTelemetry(ctx, searchResponse.error ? "error" : "not_found");
         return {
           content: [
             {
@@ -293,7 +292,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       const resultsText = formatSearchResults(searchResponse);
       const responseText = `Available Libraries:\n\n${resultsText}`;
       maybeElicitAuthSignIn(server, ctx);
-      recordToolCallOutcome("success");
+      recordToolCallTelemetry(ctx, "success");
       return {
         content: [
           {
@@ -340,7 +339,7 @@ Do not call this tool more than 3 times per question.`,
       const ctx = getClientContext(toolCtx);
       const response = await fetchLibraryContext({ query, libraryId }, ctx);
       maybeElicitAuthSignIn(server, ctx);
-      recordToolCallOutcome(response.outcome);
+      recordToolCallTelemetry(ctx, response.outcome);
       return {
         content: [
           {
@@ -443,67 +442,48 @@ async function main() {
     const nodeHandler = toNodeHandler(mcpHandler, {
       onerror: (error) => console.error("MCP node adapter error:", error),
     });
+    const authMode = parseMcpAuthMode();
 
     const handleMcpRequest = async (req: express.Request, res: express.Response) => {
       try {
         const plugin = getPluginFromRequest(req);
         const apiKey = extractApiKey(req);
-        const baseUrl = new URL(RESOURCE_URL).origin;
-
-        // OAuth discovery info header, used by MCP clients to discover the authorization server
-        res.set(
-          "WWW-Authenticate",
-          `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
+        const endpoint = canonicalMcpEndpoint(req);
+        const route = mcpRouteFromUrl(endpoint);
+        const authentication = await observeAuthentication(
+          { enforcementMode: authMode, route },
+          () => evaluateMcpAuthentication(apiKey, authMode)
         );
 
-        if (requiresAuthentication(req, plugin)) {
-          const authentication = await observeAuthentication<AuthenticationResult>(async () => {
-            if (!apiKey) {
-              return {
-                outcome: "missing",
-                value: {
-                  accepted: false,
-                  error: "Authentication required. Please authenticate to use this MCP server.",
-                },
-              };
-            }
-
-            if (isJWT(apiKey)) {
-              const validationResult = await validateJWT(apiKey);
-              if (!validationResult.valid) {
-                return {
-                  outcome: "invalid",
-                  value: {
-                    accepted: false,
-                    error: validationResult.error || "Invalid token. Please re-authenticate.",
-                  },
-                };
-              }
-            }
-
-            return { outcome: "accepted", value: { accepted: true } };
+        if (!authentication.allowed) {
+          setBearerChallenge(res, endpoint, apiKey ? authentication.error : undefined);
+          res.status(401).json({
+            jsonrpc: "2.0",
+            error: {
+              code: -32001,
+              message: authentication.error,
+            },
+            id: null,
           });
-
-          if (!authentication.accepted) {
-            res.status(401).json({
-              jsonrpc: "2.0",
-              error: {
-                code: -32001,
-                message: authentication.error,
-              },
-              id: null,
-            });
-            return;
-          }
+          return;
         }
 
         const context: ClientContext = {
           clientIp: req.ip,
           apiKey,
           clientInfo: extractClientInfoFromUserAgent(req.headers["user-agent"]),
+          mcpAuthMode: authMode,
+          mcpEndpoint: endpoint,
           plugin,
           transport: "http",
         };
+
+        observeCredentialedInitialize(res, req.body, {
+          enforcementMode: authMode,
+          method: authentication.method,
+          outcome: authentication.outcome,
+          route,
+        });
 
         await requestContext.run(context, async () => {
           await nodeHandler(req, res, req.body);
@@ -527,7 +507,7 @@ async function main() {
     mcpRouter.use(express.json());
     mcpRouter.use(mcpBodyErrorHandler);
     mcpRouter.all("/", (req, res) => handleMcpRequest(req, res));
-    // OAuth-protected endpoint - requires authentication
+    // Compatibility alias for clients already configured with /mcp/oauth.
     mcpRouter.all("/oauth", (req, res) => handleMcpRequest(req, res));
     app.use("/mcp", mcpRouter);
 
@@ -539,18 +519,32 @@ async function main() {
     // Used by MCP clients to discover the authorization server
     app.get(
       "/.well-known/oauth-protected-resource",
-      (_req: express.Request, res: express.Response) => {
-        res.json({
-          resource: RESOURCE_URL,
-          // Each entry is an independent authorization server. Clerk handles
-          // regular authorization-code flows; Context7 handles only the
-          // enterprise-managed id-jag exchange.
-          authorization_servers: Array.from(new Set([OAUTH_AUTH_SERVER_URL, EMA_ISSUER])),
-          scopes_supported: ["profile", "email"],
-          bearer_methods_supported: ["header"],
+      (req: express.Request, res: express.Response) => {
+        recordAuthenticationEvent({
+          enforcementMode: authMode,
+          event: "metadata_requested",
+          method: "none",
+          route: mcpRouteFromUrl(RESOURCE_URL),
         });
+        res.json(protectedResourceMetadata(RESOURCE_URL));
       }
     );
+
+    for (const endpoint of ["/mcp", "/mcp/oauth"] as const) {
+      app.get(
+        `/.well-known/oauth-protected-resource${endpoint}`,
+        (req: express.Request, res: express.Response) => {
+          const resource = protectedResourceUrl(endpoint);
+          recordAuthenticationEvent({
+            enforcementMode: authMode,
+            event: "metadata_requested",
+            method: "none",
+            route: mcpRouteFromUrl(endpoint),
+          });
+          res.json(protectedResourceMetadata(resource));
+        }
+      );
+    }
 
     app.get(
       "/.well-known/oauth-authorization-server",
