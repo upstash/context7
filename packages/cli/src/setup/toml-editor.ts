@@ -115,35 +115,201 @@ function parseTomlStringArray(
   throw new Error("Unterminated TOML array in MCP args");
 }
 
+type TomlMultilineDelimiter = '"""' | "'''";
+
+interface TomlCodeLine {
+  start: number;
+  text: string;
+}
+
+interface TomlTableHeader extends TomlCodeLine {
+  keys: string[];
+}
+
+function skipTomlKeyWhitespace(source: string, start: number): number {
+  let index = start;
+  while (source[index] === " " || source[index] === "\t") index++;
+  return index;
+}
+
+function parseTomlKeySegment(
+  source: string,
+  start: number
+): { value: string; end: number } | undefined {
+  const quote = source[start];
+  if (quote === '"' || quote === "'") {
+    try {
+      return quote === '"'
+        ? parseTomlBasicString(source, start)
+        : parseTomlLiteralString(source, start);
+    } catch {
+      return undefined;
+    }
+  }
+
+  const bareKey = /^[A-Za-z0-9_-]+/.exec(source.slice(start));
+  return bareKey ? { value: bareKey[0], end: start + bareKey[0].length } : undefined;
+}
+
+function parseTomlTableHeader(line: string): string[] | undefined {
+  let index = skipTomlKeyWhitespace(line, line.charCodeAt(0) === 0xfeff ? 1 : 0);
+  if (line[index] !== "[" || line[index + 1] === "[") return undefined;
+  index = skipTomlKeyWhitespace(line, index + 1);
+
+  const keys: string[] = [];
+  while (index < line.length) {
+    const key = parseTomlKeySegment(line, index);
+    if (!key) return undefined;
+    keys.push(key.value);
+    index = skipTomlKeyWhitespace(line, key.end);
+
+    if (line[index] === ".") {
+      index = skipTomlKeyWhitespace(line, index + 1);
+      continue;
+    }
+    if (line[index] !== "]") return undefined;
+
+    index = skipTomlKeyWhitespace(line, index + 1);
+    if (line[index] === "\r") index++;
+    return index === line.length || line[index] === "#" ? keys : undefined;
+  }
+  return undefined;
+}
+
+function findTomlValueStart(line: string, keyName: string): number | undefined {
+  let index = skipTomlKeyWhitespace(line, 0);
+  const key = parseTomlKeySegment(line, index);
+  if (!key || key.value !== keyName) return undefined;
+  index = skipTomlKeyWhitespace(line, key.end);
+  if (line[index] !== "=") return undefined;
+  return skipTomlKeyWhitespace(line, index + 1);
+}
+
+function isEscapedTomlQuote(line: string, quoteIndex: number): boolean {
+  let backslashes = 0;
+  for (let index = quoteIndex - 1; index >= 0 && line[index] === "\\"; index--) backslashes++;
+  return backslashes % 2 === 1;
+}
+
+function advanceTomlMultilineState(
+  line: string,
+  initial: TomlMultilineDelimiter | undefined
+): TomlMultilineDelimiter | undefined {
+  let multiline = initial;
+  let index = 0;
+
+  while (index < line.length) {
+    if (multiline) {
+      const delimiterIndex = line.indexOf(multiline, index);
+      if (delimiterIndex === -1) return multiline;
+      if (multiline === '"""' && isEscapedTomlQuote(line, delimiterIndex)) {
+        index = delimiterIndex + 1;
+        continue;
+      }
+      multiline = undefined;
+      index = delimiterIndex + 3;
+      continue;
+    }
+
+    if (line[index] === "#") return undefined;
+    if (line.startsWith('"""', index) || line.startsWith("'''", index)) {
+      multiline = line.slice(index, index + 3) as TomlMultilineDelimiter;
+      index += 3;
+      continue;
+    }
+    if (line[index] === '"') {
+      index++;
+      while (index < line.length && line[index] !== '"') {
+        index += line[index] === "\\" ? 2 : 1;
+      }
+      index++;
+      continue;
+    }
+    if (line[index] === "'") {
+      const endQuote = line.indexOf("'", index + 1);
+      index = endQuote === -1 ? line.length : endQuote + 1;
+      continue;
+    }
+    index++;
+  }
+
+  return multiline;
+}
+
+function findTomlCodeLines(source: string, start = 0, end = source.length): TomlCodeLine[] {
+  const lines: TomlCodeLine[] = [];
+  let multiline: TomlMultilineDelimiter | undefined;
+  let lineStart = start;
+
+  while (lineStart < end) {
+    const newline = source.indexOf("\n", lineStart);
+    const lineEnd = newline === -1 || newline >= end ? end : newline;
+    const text = source.slice(lineStart, lineEnd);
+    if (!multiline) lines.push({ start: lineStart, text });
+    multiline = advanceTomlMultilineState(text, multiline);
+    if (newline === -1 || newline >= end) break;
+    lineStart = newline + 1;
+  }
+
+  if (multiline) throw new Error("Unterminated TOML multiline string");
+  return lines;
+}
+
+function findTomlTableHeaders(source: string): TomlTableHeader[] {
+  return findTomlCodeLines(source).flatMap((line) => {
+    const keys = parseTomlTableHeader(line.text);
+    return keys ? [{ ...line, keys }] : [];
+  });
+}
+
+function classifyTomlServerHeader(
+  header: TomlTableHeader,
+  serverName: string
+): "server" | "subtable" | undefined {
+  if (header.keys[0] !== "mcp_servers" || header.keys[1] !== serverName) return undefined;
+  return header.keys.length === 2 ? "server" : "subtable";
+}
+
+export function findTomlServerSection(
+  source: string,
+  serverName: string
+): { start: number; end: number } | undefined {
+  let start: number | undefined;
+
+  for (const header of findTomlTableHeaders(source)) {
+    const kind = classifyTomlServerHeader(header, serverName);
+    if (start === undefined) {
+      if (kind === "server") start = header.start;
+      continue;
+    }
+    if (kind !== "subtable") return { start, end: header.start };
+  }
+
+  return start === undefined ? undefined : { start, end: source.length };
+}
+
 function findTomlServerArgs(
   raw: string,
   serverName: string
 ): { start: number; end: number; tokens: TomlStringToken[] } | null {
-  const escapedName = serverName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const tableKey = `(?:mcp_servers|"mcp_servers"|'mcp_servers')`;
-  const serverKey = `(?:${escapedName}|"${escapedName}"|'${escapedName}')`;
-  const headerRe = new RegExp(
-    `^[\\uFEFF\\t ]*\\[[\\t ]*${tableKey}[\\t ]*\\.[\\t ]*${serverKey}[\\t ]*\\][\\t ]*(?:#.*)?\\r?$`,
-    "m"
+  const headers = findTomlTableHeaders(raw);
+  const headerIndex = headers.findIndex(
+    (header) => classifyTomlServerHeader(header, serverName) === "server"
   );
-  const header = headerRe.exec(raw);
-  if (!header) return null;
+  if (headerIndex === -1) return null;
 
-  const bodyStart = raw.indexOf("\n", header.index + header[0].length) + 1;
+  const header = headers[headerIndex];
+  const bodyStart = raw.indexOf("\n", header.start + header.text.length) + 1;
   const effectiveBodyStart = bodyStart === 0 ? raw.length : bodyStart;
-  const nextHeaderRe = /^[\t ]*\[[^\r\n]+\][\t ]*(?:#.*)?\r?$/gm;
-  nextHeaderRe.lastIndex = effectiveBodyStart;
-  const nextHeader = nextHeaderRe.exec(raw);
-  const bodyEnd = nextHeader?.index ?? raw.length;
-
-  const body = raw.slice(effectiveBodyStart, bodyEnd);
-  const argsRe = /^[\t ]*(?:args|"args"|'args')[\t ]*=[\t ]*/gm;
-  const args = argsRe.exec(body);
-  if (!args) {
+  const bodyEnd = headers[headerIndex + 1]?.start ?? raw.length;
+  const args = findTomlCodeLines(raw, effectiveBodyStart, bodyEnd)
+    .map((line) => ({ line, valueStart: findTomlValueStart(line.text, "args") }))
+    .find(({ valueStart }) => valueStart !== undefined);
+  if (!args || args.valueStart === undefined) {
     throw new Error("Existing MCP server has no safely editable args array");
   }
 
-  const start = effectiveBodyStart + args.index + args[0].length;
+  const start = args.line.start + args.valueStart;
   const parsed = parseTomlStringArray(raw, start);
   return { start, end: parsed.end, tokens: parsed.tokens };
 }
@@ -180,10 +346,6 @@ export async function patchTomlStdioApiKey(
     raw = await readFile(filePath, "utf-8");
   } catch {
     return false;
-  }
-
-  if (raw.includes('"""') || raw.includes("'''")) {
-    throw new Error("TOML files containing multiline strings are not safely editable");
   }
 
   const range = findTomlServerArgs(raw, serverName);
