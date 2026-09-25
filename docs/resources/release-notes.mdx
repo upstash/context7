@@ -1,0 +1,29 @@
+---
+title: Release Notes
+description: Find the release history and migration notes for Context7 packages
+---
+
+Context7 packages have separate release schedules. Use each package's changelog
+for its full release history, including fixes, new features, and breaking changes.
+
+| Package | Release history | Latest published version |
+| ------- | --------------- | ------------------------ |
+| MCP server | [MCP changelog](https://github.com/upstash/context7/blob/master/packages/mcp/CHANGELOG.md) | [npm](https://www.npmjs.com/package/@upstash/context7-mcp) |
+| CLI | [CLI changelog](https://github.com/upstash/context7/blob/master/packages/cli/CHANGELOG.md) | [npm](https://www.npmjs.com/package/ctx7) |
+| TypeScript SDK | [SDK changelog](https://github.com/upstash/context7/blob/master/packages/sdk/CHANGELOG.md) | [npm](https://www.npmjs.com/package/@upstash/context7-sdk) |
+
+## Before you upgrade
+
+1. Check the changelog for changes since your installed version.
+2. Check the [runtime requirements and migration notes](/resources/technical-reference).
+3. Test your client configuration and documentation queries with the new version.
+
+For the MCP server, version 2 replaced `get-library-docs` with `query-docs` and
+introduced query-based retrieval. Version 3 introduced HTTP sessions; version 4
+removed those sessions and uses stateless HTTP serving. See
+[Architecture & Operational Behavior](/resources/architecture) for current
+transport behavior.
+
+Tool descriptions ask agents to use each tool at most 3 times per question.
+This instruction does not create a server-enforced request limit. See
+[rate limits](/api-guide#rate-limits) for account and request limits.
