@@ -8,7 +8,7 @@ This plugin provides:
 
 - **MCP Server** — Connects Cursor to Context7's documentation service
 - **Rules** — An always-on `use-context7` rule that nudges the agent to fetch docs when unsure about library APIs
-- **Skills** — A `context7-docs-lookup` skill with detailed instructions on resolving libraries and fetching documentation
+- **Skills** — A `context7-mcp` skill with detailed instructions on resolving libraries and fetching documentation
 - **Agents** — A dedicated `docs-researcher` agent for focused lookups
 
 ## Available Tools
