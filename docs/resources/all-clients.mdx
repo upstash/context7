@@ -30,6 +30,37 @@ To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client con
 
 OAuth is only available for remote HTTP connections. For local MCP connections using stdio transport, use API key authentication instead.
 
+## MCP Tools
+
+The Context7 MCP server exposes two tools. Clients list them under these exact names:
+
+| Tool | Description |
+|------|-------------|
+| `resolve-library-id` | Resolve a library name to a Context7-compatible library ID |
+| `query-docs` | Fetch up-to-date documentation and code examples for a library |
+
+### `resolve-library-id`
+
+Search for a library by name and resolve it to a Context7-compatible library ID (e.g., `/vercel/next.js`). Call this tool before `query-docs` unless the user already provides a library ID in the `/owner/repo` format.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `libraryName` | string, required | Library name to search for, with the official punctuation — e.g., `Next.js`, not `nextjs` |
+| `query` | string, required | What to look up in the library's documentation; used to rank matching libraries |
+
+The tool returns the matching libraries with their ID, title, description, code snippet count, source reputation, benchmark score, and available versions.
+
+### `query-docs`
+
+Fetch documentation context for a library and a specific question.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `libraryId` | string, required | Exact Context7-compatible library ID, e.g., `/vercel/next.js` or `/vercel/next.js/v15.1.8` |
+| `query` | string, required | What to look up, scoped to a single concept |
+
+The tool returns the relevant documentation and code examples as text.
+
 <AccordionGroup>
 
 <Accordion title="Claude Code">

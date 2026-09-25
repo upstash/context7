@@ -146,6 +146,17 @@ for info in docs["infoSnippets"]:
   For TypeScript SDK usage, see [Search](/sdks/ts/commands/search), [Search Library](/sdks/ts/commands/search-library), and [Get Context](/sdks/ts/commands/get-context).
 </Info>
 
+## MCP Tools
+
+The [Context7 MCP server](/resources/all-clients) exposes the same lookups as agent tools. Each tool maps to one REST endpoint, with the same parameters as the query fields:
+
+| MCP tool | Endpoint | Parameters |
+|----------|----------|------------|
+| `resolve-library-id` | [Search Library](/api-reference/search/search-for-libraries) — `GET /api/v2/libs/search` | `libraryName`, `query` |
+| `query-docs` | [Get Context](/api-reference/context/get-documentation-context) — `GET /api/v2/context` | `libraryId`, `query` |
+
+Call the REST API directly to control requests from your own code, or use the MCP tools when you want an agent to fetch documentation automatically during inference. Tools and endpoints share the same [authentication](#authentication) and rate limits.
+
 ## Rate Limits
 
 - **Without API key**: Low rate limits and no custom configuration
