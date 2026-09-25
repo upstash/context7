@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { createClientIpAssertion, generateHeaders } from "../src/lib/encryption.js";
+import {
+  createClientIpAssertion,
+  generateHeaders,
+  isForwardableApiCredential,
+} from "../src/lib/encryption.js";
 
 const KEY = "0123456789abcdef".repeat(4);
 const NOW_MS = 1_788_000_000_000;
@@ -44,6 +48,22 @@ describe("client IP assertions", () => {
     "refuses to sign an invalid IP address (%s)",
     (value) => {
       expect(createClientIpAssertion(value, NOW_MS, NONCE)).toBeNull();
+    }
+  );
+});
+
+describe("isForwardableApiCredential", () => {
+  test.each(["ctx7sk-live", "oat_clerk", "header.payload.signature"])(
+    "forwards Context7 REST credentials (%s)",
+    (value) => {
+      expect(isForwardableApiCredential(value)).toBe(true);
+    }
+  );
+
+  test.each(["direct_cursor-session", "direct_example.payload.signature"])(
+    "does not forward Cursor IDE session token %s",
+    (token) => {
+      expect(generateHeaders({ apiKey: token }).Authorization).toBeUndefined();
     }
   );
 });
