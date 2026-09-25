@@ -14,8 +14,9 @@ function authHeaders(): Record<string, string> {
 
 async function parseErrorResponse(response: Response): Promise<string> {
   try {
-    const json = (await response.json()) as { message?: string };
+    const json = (await response.json()) as { message?: string; error?: string };
     if (json.message) return json.message;
+    if (json.error) return json.error;
   } catch {
     // JSON parsing failed, fall through to status-based message
   }
