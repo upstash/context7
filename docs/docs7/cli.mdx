@@ -50,7 +50,7 @@ docs7 dev
 docs7 dev ./docs --port 4000
 ```
 
-The default address is `http://localhost:3333`. The first run downloads the renderer and caches it. The server reloads pages when you edit files. Use `--host` to change the bind address. Local previews do not require login.
+The default address is `http://localhost:3000`. If that port is in use, the server uses the next free port and prints the address. If you set `--port` and the port is in use, the command stops. The first run downloads the renderer and caches it. The server reloads pages when you edit files. Use `--host` to change the bind address. Local previews do not require login.
 
 <Warning>
   A local preview executes MDX with your local user permissions. Only preview documentation sources
