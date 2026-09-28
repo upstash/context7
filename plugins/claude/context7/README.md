@@ -6,7 +6,7 @@ Context7 solves a common problem with AI coding assistants: outdated training da
 
 This plugin provides:
 
-- **MCP Server** - Connects Claude Code to Context7's documentation service
+- **MCP Server** - Connects Claude Code to Context7's hosted MCP server (`https://mcp.context7.com/mcp`), with no local Node.js, npm, or npx required
 - **Skills** - Auto-triggers documentation lookups when you ask about libraries
 - **Agents** - A dedicated `docs-researcher` agent for focused lookups
 - **Commands** - `/context7:docs` for manual documentation queries
@@ -30,7 +30,9 @@ After installing the plugin, restart Claude Code and run:
 
 Select Context7 and follow the browser sign-in flow. No API key is required.
 
-To use an API key instead, set `CONTEXT7_API_KEY` before starting Claude Code. The plugin sends the key only when it is present; otherwise it uses OAuth.
+## Data and Privacy
+
+The plugin sends only the parameters of each tool call, such as the library name and the documentation question, to the Context7 MCP server, together with your Context7 OAuth token. It does not read or upload your files, and it does not run local commands or hooks. See the [Context7 privacy policy](https://context7.com/privacy) for how Context7 handles this data.
 
 ## Available Tools
 
