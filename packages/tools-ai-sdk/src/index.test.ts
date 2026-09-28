@@ -1,6 +1,6 @@
 import { describe, test, expect } from "vitest";
 import { generateText, stepCountIs, tool } from "ai";
-import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { z } from "zod";
 import {
   resolveLibraryId,
@@ -11,9 +11,11 @@ import {
   RESOLVE_LIBRARY_ID_DESCRIPTION,
 } from "./index";
 
-const bedrock = createAmazonBedrock({
-  region: process.env.AWS_REGION,
+const openrouter = createOpenRouter({
+  apiKey: process.env.OPENROUTER_API_KEY,
 });
+
+const model = openrouter("anthropic/claude-haiku-4.5");
 
 describe("@upstash/context7-tools-ai-sdk", () => {
   describe("Tool structure", () => {
@@ -54,7 +56,7 @@ describe("@upstash/context7-tools-ai-sdk", () => {
   describe("Tool usage with generateText", () => {
     test("resolveLibraryId tool should be called when searching for a library", async () => {
       const result = await generateText({
-        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+        model,
         tools: {
           resolveLibraryId: resolveLibraryId(),
         },
@@ -73,7 +75,7 @@ describe("@upstash/context7-tools-ai-sdk", () => {
 
     test("queryDocs tool should fetch documentation", async () => {
       const result = await generateText({
-        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+        model,
         tools: {
           queryDocs: queryDocs(),
         },
@@ -92,7 +94,7 @@ describe("@upstash/context7-tools-ai-sdk", () => {
 
     test("both tools can work together in a multi-step flow", async () => {
       const result = await generateText({
-        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+        model,
         tools: {
           resolveLibraryId: resolveLibraryId(),
           queryDocs: queryDocs(),
@@ -112,7 +114,7 @@ describe("@upstash/context7-tools-ai-sdk", () => {
   describe("Context7Agent class", () => {
     test("should create an agent instance with model", () => {
       const agent = new Context7Agent({
-        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+        model,
       });
 
       expect(agent).toBeDefined();
@@ -122,7 +124,7 @@ describe("@upstash/context7-tools-ai-sdk", () => {
 
     test("should accept custom stopWhen condition", () => {
       const agent = new Context7Agent({
-        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+        model,
         stopWhen: stepCountIs(3),
       });
 
@@ -131,7 +133,7 @@ describe("@upstash/context7-tools-ai-sdk", () => {
 
     test("should accept custom instructions", () => {
       const agent = new Context7Agent({
-        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+        model,
         instructions: "Custom instructions for testing",
       });
 
@@ -140,7 +142,7 @@ describe("@upstash/context7-tools-ai-sdk", () => {
 
     test("should accept Context7 config options", () => {
       const agent = new Context7Agent({
-        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+        model,
         apiKey: "ctx7sk-test-key",
       });
 
@@ -157,7 +159,7 @@ describe("@upstash/context7-tools-ai-sdk", () => {
       });
 
       const agent = new Context7Agent({
-        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+        model,
         tools: {
           customTool,
         },
@@ -168,7 +170,7 @@ describe("@upstash/context7-tools-ai-sdk", () => {
 
     test("should generate response using agent workflow", async () => {
       const agent = new Context7Agent({
-        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+        model,
         stopWhen: stepCountIs(5),
       });
 
@@ -186,7 +188,7 @@ describe("@upstash/context7-tools-ai-sdk", () => {
 
     test("should include Context7 tools in generate result", async () => {
       const agent = new Context7Agent({
-        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+        model,
         stopWhen: stepCountIs(5),
       });
 
