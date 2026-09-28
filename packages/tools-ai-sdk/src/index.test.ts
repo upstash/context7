@@ -1,6 +1,6 @@
 import { describe, test, expect } from "vitest";
 import { generateText, stepCountIs, tool } from "ai";
-import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { z } from "zod";
 import {
   resolveLibraryId,
@@ -11,18 +11,11 @@ import {
   RESOLVE_LIBRARY_ID_DESCRIPTION,
 } from "./index";
 
-const bedrock = createAmazonBedrock({
-  region: process.env.AWS_REGION,
+const openrouter = createOpenRouter({
+  apiKey: process.env.OPENROUTER_API_KEY,
 });
 
-// Claude Haiku 4.5 is only invocable through an inference profile for the region's geography.
-const region = process.env.AWS_REGION ?? "us-east-1";
-const inferenceProfilePrefix = region.startsWith("eu-")
-  ? "eu"
-  : region.startsWith("ap-")
-    ? "apac"
-    : "us";
-const model = bedrock(`${inferenceProfilePrefix}.anthropic.claude-haiku-4-5-20251001-v1:0`);
+const model = openrouter("anthropic/claude-haiku-4.5");
 
 describe("@upstash/context7-tools-ai-sdk", () => {
   describe("Tool structure", () => {
