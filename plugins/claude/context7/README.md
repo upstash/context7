@@ -25,9 +25,11 @@ After installing the plugin, restart Claude Code and run:
 
 Select Context7 and follow the browser sign-in flow. No API key is required.
 
+The plugin does not read `CONTEXT7_API_KEY`. To use an API key, for example on a headless, SSH, or CI host, run `npx ctx7 setup --claude` or add the MCP server manually as described in [All MCP Clients](https://context7.com/docs/resources/all-clients).
+
 ## Data and Privacy
 
-The plugin sends only the parameters of each tool call, such as the library name and the documentation question, to the Context7 MCP server, together with your Context7 OAuth token. It does not read or upload your files, and it does not run local commands or hooks. See the [Context7 privacy policy](https://context7.com/privacy) for how Context7 handles this data.
+The plugin sends only the tool-call parameters that the model writes, such as the library name and the question, to the Context7 MCP server, together with your Context7 OAuth token. The plugin does not run local commands or hooks. See the [Context7 privacy policy](https://context7.com/privacy) for how Context7 handles this data.
 
 ## Available Tools
 
