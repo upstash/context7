@@ -4,12 +4,7 @@ Context7 solves a common problem with AI coding assistants: outdated training da
 
 ## What's Included
 
-This plugin provides:
-
-- **MCP Server** - Connects Claude Code to Context7's hosted MCP server (`https://mcp.context7.com/mcp`), with no local Node.js, npm, or npx required
-- **Skills** - Auto-triggers documentation lookups when you ask about libraries
-- **Agents** - A dedicated `docs-researcher` agent for focused lookups
-- **Commands** - `/context7:docs` for manual documentation queries
+This plugin connects Claude Code to Context7's hosted MCP server (`https://mcp.context7.com/mcp`), with no local Node.js, npm, or npx required.
 
 ## Installation
 
@@ -61,19 +56,6 @@ The plugin works automatically when you ask about libraries:
 - "How do I set up authentication in Next.js 15?"
 - "Show me React Server Components examples"
 - "What's the Prisma syntax for relations?"
-
-For manual lookups, use the command:
-
-```
-/context7:docs next.js app router
-/context7:docs /vercel/next.js/v15.1.8 middleware
-```
-
-Or spawn the docs-researcher agent when you want to keep your main context clean:
-
-```
-spawn docs-researcher to look up Supabase auth methods
-```
 
 ## Version Pinning
 
