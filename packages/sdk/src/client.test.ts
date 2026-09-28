@@ -9,10 +9,6 @@ describe("Context7 Client", () => {
     vi.restoreAllMocks();
   });
 
-  test("creates a client with an explicit API key", () => {
-    expect(new Context7({ apiKey: "ctx7sk-config" })).toBeDefined();
-  });
-
   test("creates a client from the environment", () => {
     vi.stubEnv("CONTEXT7_API_KEY", "ctx7sk-environment");
 

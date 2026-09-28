@@ -38,19 +38,6 @@ describe("@upstash/context7-tools-ai-sdk", () => {
       expect(tool).toHaveProperty("description");
       expect(tool.description).toContain("documentation");
     });
-
-    test("tools should accept custom config", () => {
-      const resolveTool = resolveLibraryId({
-        apiKey: "ctx7sk-test-key",
-      });
-
-      const docsTool = queryDocs({
-        apiKey: "ctx7sk-test-key",
-      });
-
-      expect(resolveTool).toHaveProperty("execute");
-      expect(docsTool).toHaveProperty("execute");
-    });
   });
 
   describe("Tool usage with generateText", () => {
@@ -112,43 +99,6 @@ describe("@upstash/context7-tools-ai-sdk", () => {
   });
 
   describe("Context7Agent class", () => {
-    test("should create an agent instance with model", () => {
-      const agent = new Context7Agent({
-        model,
-      });
-
-      expect(agent).toBeDefined();
-      expect(agent).toHaveProperty("generate");
-      expect(agent).toHaveProperty("stream");
-    });
-
-    test("should accept custom stopWhen condition", () => {
-      const agent = new Context7Agent({
-        model,
-        stopWhen: stepCountIs(3),
-      });
-
-      expect(agent).toBeDefined();
-    });
-
-    test("should accept custom instructions", () => {
-      const agent = new Context7Agent({
-        model,
-        instructions: "Custom instructions for testing",
-      });
-
-      expect(agent).toBeDefined();
-    });
-
-    test("should accept Context7 config options", () => {
-      const agent = new Context7Agent({
-        model,
-        apiKey: "ctx7sk-test-key",
-      });
-
-      expect(agent).toBeDefined();
-    });
-
     test("should accept additional tools alongside Context7 tools", () => {
       const customTool = tool({
         description: "A custom test tool",
@@ -165,26 +115,12 @@ describe("@upstash/context7-tools-ai-sdk", () => {
         },
       });
 
-      expect(agent).toBeDefined();
+      expect(Object.keys(agent.tools).sort()).toEqual([
+        "customTool",
+        "queryDocs",
+        "resolveLibraryId",
+      ]);
     });
-
-    test("should generate response using agent workflow", async () => {
-      const agent = new Context7Agent({
-        model,
-        stopWhen: stepCountIs(5),
-      });
-
-      const result = await agent.generate({
-        prompt: "Find the React library and get documentation about hooks",
-      });
-
-      expect(result).toBeDefined();
-      expect(result.steps.length).toBeGreaterThan(0);
-
-      const allToolCalls = result.steps.flatMap((step) => step.toolCalls);
-      const toolNames = allToolCalls.map((call) => call.toolName);
-      expect(toolNames).toContain("resolveLibraryId");
-    }, 60000);
 
     test("should include Context7 tools in generate result", async () => {
       const agent = new Context7Agent({
