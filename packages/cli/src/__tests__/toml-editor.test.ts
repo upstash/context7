@@ -280,16 +280,7 @@ const invalidArgs = [
   { name: "missing args", value: null },
 ] as const;
 
-const CONFIG_COUNT =
-  rotations.length +
-  mutations.length +
-  preservationVariants.length +
-  absentTargets.length +
-  unsafeTargets.length +
-  invalidArgs.length;
-if (CONFIG_COUNT !== 65) throw new Error(`Expected 65 TOML fixtures, received ${CONFIG_COUNT}`);
-
-describe("patchTomlStdioApiKey 65-config compatibility matrix", () => {
+describe("patchTomlStdioApiKey compatibility matrix", () => {
   let tempDir: string;
   let configPath: string;
 

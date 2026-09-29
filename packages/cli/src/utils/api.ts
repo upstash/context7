@@ -14,7 +14,9 @@ import type {
 import { downloadSkillFromGitHub, getSkillFromGitHub } from "./github.js";
 import { VERSION } from "../constants.js";
 
-let baseUrl = "https://context7.com";
+export const DEFAULT_CONTEXT7_BASE_URL = "https://context7.com";
+
+let baseUrl = DEFAULT_CONTEXT7_BASE_URL;
 
 export function getBaseUrl(): string {
   return baseUrl;

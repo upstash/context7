@@ -2,7 +2,7 @@ import { Command } from "commander";
 import pc from "picocolors";
 import figlet from "figlet";
 import { registerSkillCommands, registerSkillAliases } from "./commands/skill.js";
-import { registerAuthCommands, setAuthBaseUrl } from "./commands/auth.js";
+import { registerAuthCommands } from "./commands/auth.js";
 import { registerSetupCommand } from "./commands/setup.js";
 import { registerRemoveCommand } from "./commands/remove.js";
 import { registerDocsCommands } from "./commands/docs.js";
@@ -21,12 +21,11 @@ program
   .name("ctx7")
   .description("Context7 CLI - Fetch documentation context and configure Context7")
   .version(VERSION, "-v, --version")
-  .option("--base-url <url>")
+  .option("--base-url <url>", "Use a custom Context7 deployment URL")
   .hook("preAction", (thisCommand) => {
     const opts = thisCommand.opts();
     if (opts.baseUrl) {
       setBaseUrl(opts.baseUrl);
-      setAuthBaseUrl(opts.baseUrl);
     }
   })
   .hook("preAction", async (_thisCommand, actionCommand) => {
@@ -43,6 +42,7 @@ Examples:
   ${brand.primary("npx ctx7 setup")}
   ${brand.primary("npx ctx7 setup --mcp")}
   ${brand.primary("npx ctx7 setup --cli")}
+  ${brand.primary("npx ctx7 setup --mcp --base-url https://context7.internal.example --codex")}
 
   ${brand.dim("# Remove Context7 setup")}
   ${brand.primary("npx ctx7 remove --cursor")}

@@ -1,5 +1,27 @@
 # @upstash/context7-sdk
 
+## 0.5.0
+
+### Minor Changes
+
+- 2c6c8e7: Add a typed `search` method that finds relevant documentation without a separate library resolution request.
+
+## 0.4.1
+
+### Patch Changes
+
+- 5a7039b: Add per-request bearer-token providers and Vercel Marketplace resource OIDC validation.
+
+## 0.4.0
+
+### Minor Changes
+
+- 4eff2b9: Fix response type inference for runtime-selected formats, honor disabled retries, and separate deterministic SDK tests from live API integration tests. Calls that forward options whose response format is selected at runtime now correctly return an array-or-string union and may require result narrowing.
+
+  Add production HTTP controls while keeping API-key authentication required: client and per-request timeouts, abort signals, configurable transient HTTP retries, native fetch cache settings, custom fetch/base URL/header/keepalive support, URL validation, response metadata hooks, and structured `Context7Error` fields for status, code, request ID, rate limits, retryability, malformed JSON, and cause.
+
+  Requests now time out after 30 seconds by default. Set `timeout: false` on the client or an individual request to disable the timeout.
+
 ## 0.3.1
 
 ### Patch Changes

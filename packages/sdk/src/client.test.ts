@@ -9,21 +9,56 @@ describe("Context7 Client", () => {
     vi.restoreAllMocks();
   });
 
-  test("creates a client with an explicit API key", () => {
-    expect(new Context7({ apiKey: "ctx7sk-config" })).toBeDefined();
-  });
-
   test("creates a client from the environment", () => {
     vi.stubEnv("CONTEXT7_API_KEY", "ctx7sk-environment");
 
     expect(new Context7()).toBeDefined();
   });
 
-  test("requires an API key", () => {
+  test("requires an API key or auth token", () => {
     vi.stubEnv("CONTEXT7_API_KEY", "");
 
     expect(() => new Context7({ apiKey: "" })).toThrow(Context7Error);
-    expect(() => new Context7()).toThrow("API key is required");
+    expect(() => new Context7()).toThrow("Authentication is required");
+  });
+
+  test("prefers an explicit OIDC provider over the environment and refreshes every request", async () => {
+    vi.stubEnv("CONTEXT7_API_KEY", "ctx7sk-legacy-environment-key");
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ results: [] }), {
+          headers: { "content-type": "application/json" },
+        })
+      )
+    );
+    const authToken = vi
+      .fn<() => Promise<string>>()
+      .mockResolvedValueOnce("oidc-token-1")
+      .mockResolvedValueOnce("oidc-token-2");
+    const client = new Context7({ authToken, fetch: fetchMock, retry: false });
+
+    await client.searchLibrary("state management", "react");
+    await client.searchLibrary("routing", "next.js");
+
+    expect(authToken).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      headers: expect.objectContaining({ Authorization: "Bearer oidc-token-1" }),
+    });
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+      headers: expect.objectContaining({ Authorization: "Bearer oidc-token-2" }),
+    });
+  });
+
+  test("rejects an empty token returned by a provider", async () => {
+    vi.stubEnv("CONTEXT7_API_KEY", "ctx7sk-legacy-environment-key");
+    const fetchMock = vi.fn();
+    const client = new Context7({ authToken: () => "", fetch: fetchMock });
+
+    await expect(client.searchLibrary("routing", "next.js")).rejects.toMatchObject({
+      code: "authentication_error",
+      retryable: false,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   test("prefers the configured API key over the environment", () => {
@@ -33,6 +68,28 @@ describe("Context7 Client", () => {
     new Context7({ apiKey: "ctx7sk-config" });
 
     expect(warn).not.toHaveBeenCalled();
+  });
+
+  test("prefers an explicit API key when both credential forms are provided", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ results: [] }), {
+        headers: { "content-type": "application/json" },
+      })
+    );
+    const authToken = vi.fn(() => "oidc-token");
+    const client = new Context7({
+      apiKey: "ctx7sk-config",
+      authToken,
+      fetch: fetchMock,
+      retry: false,
+    });
+
+    await client.searchLibrary("routing", "next.js");
+
+    expect(authToken).not.toHaveBeenCalled();
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      headers: expect.objectContaining({ Authorization: "Bearer ctx7sk-config" }),
+    });
   });
 
   test("works in runtimes without process when an API key is configured", () => {
@@ -106,5 +163,28 @@ describe("Context7 Client", () => {
     const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(init.cache).toBe("reload");
     expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  test("sends repeated library hints to the Search API", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ codeSnippets: [], infoSnippets: [] }), {
+        headers: { "content-type": "application/json" },
+      })
+    );
+    const client = new Context7({
+      apiKey: "ctx7sk-config",
+      fetch: fetchMock,
+      retry: false,
+    });
+
+    await client.search("How do I cache a function?", {
+      libraries: ["Next.js", "/vercel/next.js"],
+      version: "15.4.0",
+      language: "TypeScript",
+    });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "https://context7.com/api/v3/search?query=How+do+I+cache+a+function%3F&type=json&library=Next.js&library=%2Fvercel%2Fnext.js&version=15.4.0&language=TypeScript"
+    );
   });
 });

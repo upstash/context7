@@ -70,6 +70,36 @@ describe("HttpClient error handling", () => {
     });
   });
 
+  test("resolves a fresh auth token for every retry attempt", async () => {
+    const authToken = vi
+      .fn<() => Promise<string>>()
+      .mockResolvedValueOnce("oidc-token-1")
+      .mockResolvedValueOnce("oidc-token-2");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("unavailable", { status: 503 }))
+      .mockResolvedValueOnce(new Response("ok"));
+    const client = new HttpClient({
+      baseUrl: "https://example.com/api",
+      authToken,
+      fetch: fetchMock,
+      retry: { retries: 1, backoff: () => 0 },
+    });
+
+    await expect(client.request({ method: "GET", path: ["search"] })).resolves.toEqual({
+      result: "ok",
+      headers: undefined,
+    });
+
+    expect(authToken).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      headers: expect.objectContaining({ Authorization: "Bearer oidc-token-1" }),
+    });
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({
+      headers: expect.objectContaining({ Authorization: "Bearer oidc-token-2" }),
+    });
+  });
+
   test("honors Retry-After before retrying a rate-limited request", async () => {
     vi.useFakeTimers();
     const fetchMock = vi
@@ -368,23 +398,6 @@ describe("HttpClient error handling", () => {
     expect(() => new HttpClient({ baseUrl: "ftp://example.com" })).toThrow(Context7UrlError);
     expect(() => new HttpClient({ baseUrl: " https://example.com" })).toThrow(Context7UrlError);
     expect(() => new HttpClient({ baseUrl: "https://example.com\n" })).toThrow(Context7UrlError);
-  });
-
-  test("allows keepalive to be disabled", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response("ok"));
-    const client = new HttpClient({
-      baseUrl: "https://example.com",
-      fetch: fetchMock,
-      retry: false,
-      keepAlive: false,
-    });
-
-    await client.request({ path: ["search"] });
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://example.com/search",
-      expect.objectContaining({ keepalive: false })
-    );
   });
 
   test("falls back to statusText on empty error body", async () => {

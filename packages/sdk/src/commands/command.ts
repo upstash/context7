@@ -1,7 +1,7 @@
 import { Context7Error } from "@error";
 import type { Context7Request, Requester } from "@http";
 
-export const _ENDPOINTS = ["v2/libs/search", "v2/context"];
+export const _ENDPOINTS = ["v2/libs/search", "v2/context", "v3/search"];
 
 export type EndpointVariants = (typeof _ENDPOINTS)[number];
 

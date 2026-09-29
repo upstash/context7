@@ -17,12 +17,6 @@ import { trackEvent } from "../utils/tracking.js";
 import { CLI_CLIENT_ID } from "../constants.js";
 import { getBaseUrl } from "../utils/api.js";
 
-let baseUrl = "https://context7.com";
-
-export function setAuthBaseUrl(url: string): void {
-  baseUrl = url;
-}
-
 export function registerAuthCommands(program: Command): void {
   program
     .command("login")
@@ -112,6 +106,7 @@ async function announceIdentity(accessToken: string): Promise<string> {
 }
 
 export async function performLogin(openBrowser = true): Promise<string | null> {
+  const baseUrl = getBaseUrl();
   const spinner = ora("Preparing login...").start();
 
   let authorization;
@@ -246,8 +241,14 @@ async function whoamiCommand(): Promise<void> {
     if (whoami.teamspace) {
       console.log(`${pc.dim("Teamspace:".padEnd(13))}${whoami.teamspace.name}`);
     }
-  } catch {
-    console.log(pc.dim("(Session may be expired - run 'ctx7 login' to refresh)"));
+  } catch (error) {
+    console.log(
+      pc.dim(
+        error instanceof SessionRejectedError
+          ? "Session was rejected by the server. Run 'ctx7 logout', then 'ctx7 login' to sign in again."
+          : "Could not verify your session. Try again later."
+      )
+    );
   }
 }
 
@@ -258,6 +259,8 @@ interface WhoamiResponse {
   teamspace: { id: string; name: string } | null;
 }
 
+class SessionRejectedError extends Error {}
+
 async function fetchWhoami(accessToken: string): Promise<WhoamiResponse> {
   const response = await fetch(`${getBaseUrl()}/api/dashboard/whoami`, {
     headers: {
@@ -265,6 +268,9 @@ async function fetchWhoami(accessToken: string): Promise<WhoamiResponse> {
     },
   });
 
+  if (response.status === 401) {
+    throw new SessionRejectedError("Session was rejected by the server");
+  }
   if (!response.ok) {
     throw new Error("Failed to fetch user info");
   }

@@ -2,25 +2,24 @@ import { access } from "fs/promises";
 import { join } from "path";
 import { homedir } from "os";
 
-export type AuthMode = "oauth" | "api-key";
 export type Transport = "http" | "stdio";
 
-export interface AuthOptions {
-  mode: AuthMode;
-  apiKey?: string;
-}
+export type AuthOptions =
+  | { mode: "api-key"; apiKey: string }
+  | { mode: "oauth" | "none"; apiKey?: never };
+export type AuthMode = AuthOptions["mode"];
 
 export const AUTH_MODE_LABELS: Record<AuthMode, string> = {
   oauth: "OAuth",
   "api-key": "API Key",
+  none: "no authentication",
 };
 
-const MCP_BASE_URL = "https://mcp.context7.com";
 export const STDIO_PACKAGE = "@upstash/context7-mcp";
 
 function stdioArgs(auth: AuthOptions): string[] {
   const args = ["-y", STDIO_PACKAGE];
-  if (auth.mode === "api-key" && auth.apiKey) {
+  if (auth.mode === "api-key") {
     args.push("--api-key", auth.apiKey);
   }
   return args;
@@ -85,7 +84,11 @@ export interface AgentConfig {
     projectPaths: string[];
     globalPaths: string[];
     configKey: string;
-    buildEntry: (auth: AuthOptions, transport: Transport) => Record<string, unknown>;
+    buildEntry: (
+      auth: AuthOptions,
+      transport: Transport,
+      mcpUrl: string
+    ) => Record<string, unknown>;
   };
   rule: RuleType;
   skill: {
@@ -96,10 +99,6 @@ export interface AgentConfig {
     projectPaths: string[];
     globalPaths: string[];
   };
-}
-
-function mcpUrl(auth: AuthOptions): string {
-  return auth.mode === "oauth" ? `${MCP_BASE_URL}/mcp/oauth` : `${MCP_BASE_URL}/mcp`;
 }
 
 /**
@@ -114,11 +113,9 @@ function mcpUrl(auth: AuthOptions): string {
  * sent. The server accepts the legacy `CONTEXT7_API_KEY` header too, so existing
  * configs keep working.
  *
- * Guarded on a non-empty key because the server rejects an empty bearer, while
- * omitting the header falls back to anonymous access.
  */
 function withHeaders(base: Record<string, unknown>, auth: AuthOptions): Record<string, unknown> {
-  if (auth.mode === "api-key" && auth.apiKey) {
+  if (auth.mode === "api-key") {
     return { ...base, headers: { Authorization: `Bearer ${auth.apiKey}` } };
   }
   return base;
@@ -133,10 +130,8 @@ const agents = {
         return [claudeGlobalMcpPath()];
       },
       configKey: "mcpServers",
-      buildEntry: (auth, transport) =>
-        transport === "stdio"
-          ? stdioEntry(auth)
-          : withHeaders({ type: "http", url: mcpUrl(auth) }, auth),
+      buildEntry: (auth, transport, mcpUrl) =>
+        transport === "stdio" ? stdioEntry(auth) : withHeaders({ type: "http", url: mcpUrl }, auth),
     },
     rule: {
       kind: "file",
@@ -163,8 +158,8 @@ const agents = {
       projectPaths: [join(".cursor", "mcp.json")],
       globalPaths: [join(homedir(), ".cursor", "mcp.json")],
       configKey: "mcpServers",
-      buildEntry: (auth, transport) =>
-        transport === "stdio" ? stdioEntry(auth) : withHeaders({ url: mcpUrl(auth) }, auth),
+      buildEntry: (auth, transport, mcpUrl) =>
+        transport === "stdio" ? stdioEntry(auth) : withHeaders({ url: mcpUrl }, auth),
     },
     rule: {
       kind: "file",
@@ -192,10 +187,10 @@ const agents = {
         return [join(resolveVscodeUserDir(), "mcp.json")];
       },
       configKey: "servers",
-      buildEntry: (auth, transport) =>
+      buildEntry: (auth, transport, mcpUrl) =>
         transport === "stdio"
           ? { type: "stdio", ...stdioEntry(auth) }
-          : withHeaders({ type: "http", url: mcpUrl(auth) }, auth),
+          : withHeaders({ type: "http", url: mcpUrl }, auth),
     },
     rule: {
       kind: "file",
@@ -227,10 +222,10 @@ const agents = {
         return [join(resolveDevinConfigDir(), "mcp_config.json")];
       },
       configKey: "mcpServers",
-      buildEntry: (auth, transport) =>
+      buildEntry: (auth, transport, mcpUrl) =>
         transport === "stdio"
           ? stdioEntry(auth)
-          : withHeaders({ transport: "http", url: mcpUrl(auth) }, auth),
+          : withHeaders({ transport: "http", url: mcpUrl }, auth),
     },
     rule: {
       kind: "append",
@@ -257,10 +252,10 @@ const agents = {
       projectPaths: [".mcp.json"],
       globalPaths: [join(homedir(), ".copilot", "mcp-config.json")],
       configKey: "mcpServers",
-      buildEntry: (auth, transport) =>
+      buildEntry: (auth, transport, mcpUrl) =>
         transport === "stdio"
           ? { type: "stdio", ...stdioEntry(auth), tools: ["*"] }
-          : withHeaders({ type: "http", url: mcpUrl(auth), tools: ["*"] }, auth),
+          : withHeaders({ type: "http", url: mcpUrl, tools: ["*"] }, auth),
     },
     rule: {
       kind: "append",
@@ -292,10 +287,10 @@ const agents = {
         join(homedir(), ".config", "opencode", ".opencode.jsonc"),
       ],
       configKey: "mcp",
-      buildEntry: (auth, transport) =>
+      buildEntry: (auth, transport, mcpUrl) =>
         transport === "stdio"
           ? { type: "local", command: ["npx", ...stdioArgs(auth)], enabled: true }
-          : withHeaders({ type: "remote", url: mcpUrl(auth), enabled: true }, auth),
+          : withHeaders({ type: "remote", url: mcpUrl, enabled: true }, auth),
     },
     rule: {
       kind: "append",
@@ -320,10 +315,8 @@ const agents = {
       projectPaths: [join(".codex", "config.toml")],
       globalPaths: [join(homedir(), ".codex", "config.toml")],
       configKey: "mcp_servers",
-      buildEntry: (auth, transport) =>
-        transport === "stdio"
-          ? stdioEntry(auth)
-          : withHeaders({ type: "http", url: mcpUrl(auth) }, auth),
+      buildEntry: (auth, transport, mcpUrl) =>
+        transport === "stdio" ? stdioEntry(auth) : withHeaders({ type: "http", url: mcpUrl }, auth),
     },
     rule: {
       kind: "append",
@@ -352,8 +345,8 @@ const agents = {
       projectPaths: [],
       globalPaths: [join(homedir(), ".gemini", "config", "mcp_config.json")],
       configKey: "mcpServers",
-      buildEntry: (auth, transport) =>
-        transport === "stdio" ? stdioEntry(auth) : withHeaders({ serverUrl: mcpUrl(auth) }, auth),
+      buildEntry: (auth, transport, mcpUrl) =>
+        transport === "stdio" ? stdioEntry(auth) : withHeaders({ serverUrl: mcpUrl }, auth),
     },
     rule: {
       kind: "append",
@@ -377,8 +370,8 @@ const agents = {
       projectPaths: [join(".gemini", "settings.json")],
       globalPaths: [join(homedir(), ".gemini", "settings.json")],
       configKey: "mcpServers",
-      buildEntry: (auth, transport) =>
-        transport === "stdio" ? stdioEntry(auth) : withHeaders({ httpUrl: mcpUrl(auth) }, auth),
+      buildEntry: (auth, transport, mcpUrl) =>
+        transport === "stdio" ? stdioEntry(auth) : withHeaders({ httpUrl: mcpUrl }, auth),
     },
     rule: {
       kind: "append",
