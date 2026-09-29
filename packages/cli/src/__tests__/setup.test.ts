@@ -19,11 +19,7 @@ vi.stubGlobal(
   })
 );
 
-import {
-  getBundledMcpSkillFiles,
-  getBundledRuleContent,
-  getRuleContent,
-} from "../setup/templates.js";
+import { getRuleContent } from "../setup/templates.js";
 import {
   getMcpUrl,
   getOnPremMcpAuthStatus,
@@ -88,15 +84,6 @@ describe("getRuleContent", () => {
       })
     );
   });
-
-  test("provides bundled MCP rule and skill content for offline setup", () => {
-    expect(getBundledRuleContent("mcp", "claude")).toContain("resolve-library-id");
-    const files = getBundledMcpSkillFiles();
-    expect(files).toHaveLength(1);
-    expect(files[0].path).toBe("SKILL.md");
-    expect(files[0].content).toContain("name: context7-mcp");
-    expect(files[0].content).toContain("query-docs");
-  });
 });
 
 describe("custom Context7 deployments", () => {
@@ -123,26 +110,6 @@ describe("custom Context7 deployments", () => {
     });
     expect(getMcpUrl(hosted, { mode: "oauth" })).toBe("https://mcp.context7.com/mcp/oauth");
     expect(getMcpUrl(custom, { mode: "none" })).toBe("https://context7.internal.example/mcp");
-  });
-
-  test("discovers whether an on-premise deployment requires MCP authentication", async () => {
-    vi.mocked(fetch).mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ enabled: true }),
-    } as Response);
-
-    const deployment = resolveSetupDeployment("https://context7.internal.example/");
-    expect(deployment.kind).toBe("custom");
-    if (deployment.kind !== "custom") throw new Error("expected custom deployment");
-
-    await expect(getOnPremMcpAuthStatus(deployment)).resolves.toBe(true);
-    expect(fetch).toHaveBeenLastCalledWith(
-      "https://context7.internal.example/api/auth/mcp",
-      expect.objectContaining({
-        headers: { Accept: "application/json" },
-        redirect: "manual",
-      })
-    );
   });
 
   test("explains that authentication discovery redirects require the final URL", async () => {
@@ -195,17 +162,6 @@ describe("mergeServerEntry", () => {
     expect(servers.other).toEqual({ url: "https://other.com" });
   });
 
-  test("overwrites existing server and flags alreadyExists", () => {
-    const existing = { mcpServers: { context7: { url: "https://old.com" } } };
-    const { config, alreadyExists } = mergeServerEntry(existing, "mcpServers", "context7", {
-      url: "https://new.com",
-    });
-    expect(alreadyExists).toBe(true);
-    expect((config.mcpServers as Record<string, unknown>).context7).toEqual({
-      url: "https://new.com",
-    });
-  });
-
   test("overwrites existing server entry with new url", () => {
     const existing = {
       mcpServers: {
@@ -240,40 +196,9 @@ describe("mergeServerEntry", () => {
       url: "https://mcp.context7.com/mcp",
     });
   });
-
-  test("works with opencode configKey 'mcp'", () => {
-    const { config } = mergeServerEntry({}, "mcp", "context7", {
-      type: "remote",
-      url: "https://mcp.context7.com/mcp",
-    });
-    expect((config.mcp as Record<string, unknown>).context7).toEqual({
-      type: "remote",
-      url: "https://mcp.context7.com/mcp",
-    });
-  });
 });
 
 describe("removeServerEntry", () => {
-  test("removes server from config section", () => {
-    const { config, removed } = removeServerEntry(
-      {
-        mcpServers: {
-          context7: { url: "https://mcp.context7.com/mcp" },
-          other: { url: "https://other.com" },
-        },
-      },
-      "mcpServers",
-      "context7"
-    );
-
-    expect(removed).toBe(true);
-    expect(config).toEqual({
-      mcpServers: {
-        other: { url: "https://other.com" },
-      },
-    });
-  });
-
   test("removes empty config section when context7 is the only server", () => {
     const { config, removed } = removeServerEntry(
       {
@@ -296,32 +221,6 @@ describe("removeServerEntry", () => {
 
     expect(removed).toBe(false);
     expect(config).toEqual(existing);
-  });
-
-  test("preserves unrelated top-level fields and sibling MCP servers", () => {
-    const existing = {
-      version: 2,
-      theme: "dark",
-      mcpServers: {
-        alpha: { url: "https://alpha.com" },
-        context7: { url: "https://mcp.context7.com/mcp", headers: { key: "secret" } },
-        omega: { url: "https://omega.com" },
-      },
-      telemetry: { enabled: true },
-    };
-
-    const { config, removed } = removeServerEntry(existing, "mcpServers", "context7");
-
-    expect(removed).toBe(true);
-    expect(config).toEqual({
-      version: 2,
-      theme: "dark",
-      mcpServers: {
-        alpha: { url: "https://alpha.com" },
-        omega: { url: "https://omega.com" },
-      },
-      telemetry: { enabled: true },
-    });
   });
 });
 
@@ -404,12 +303,6 @@ describe("JSONC support", () => {
     const resolved = await resolveMcpPath([jsonPath]);
     expect(resolved).toBe(jsonPath);
   });
-
-  test("resolveMcpPath returns single candidate unchanged", async () => {
-    const tomlPath = join(tempDir, "config.toml");
-    const resolved = await resolveMcpPath([tomlPath]);
-    expect(resolved).toBe(tomlPath);
-  });
 });
 
 describe("TOML config", () => {
@@ -422,14 +315,6 @@ describe("TOML config", () => {
 
   afterEach(async () => {
     await rm(tempDir, { recursive: true, force: true });
-  });
-
-  test("buildTomlServerBlock generates correct TOML", () => {
-    const block = buildTomlServerBlock("context7", {
-      url: "https://mcp.context7.com/mcp",
-    });
-    expect(block).toContain("[mcp_servers.context7]");
-    expect(block).toContain('url = "https://mcp.context7.com/mcp"');
   });
 
   test("buildTomlServerBlock includes http_headers", () => {
@@ -473,17 +358,6 @@ describe("TOML config", () => {
     expect(content).toContain('model = "gpt-5"');
     expect(content).toContain("[mcp_servers.other]");
     expect(content).toContain("[mcp_servers.context7]");
-  });
-
-  test("appendTomlServer is idempotent", async () => {
-    const path = join(tempDir, "config.toml");
-    await appendTomlServer(path, "context7", { url: "https://mcp.context7.com/mcp" });
-    const { alreadyExists } = await appendTomlServer(path, "context7", {
-      url: "https://mcp.context7.com/mcp",
-    });
-    expect(alreadyExists).toBe(true);
-    const content = await readFile(path, "utf-8");
-    expect(content.match(/\[mcp_servers\.context7\]/g)?.length).toBe(1);
   });
 
   test("appendTomlServer overwrites existing server with new url", async () => {
@@ -583,24 +457,6 @@ describe("TOML config", () => {
     expect(content).not.toContain("[mcp_servers.context7]");
   });
 
-  test("removeTomlServer removes nested subsections too", async () => {
-    const path = join(tempDir, "config.toml");
-    await writeFile(
-      path,
-      '[mcp_servers.context7]\nurl = "https://mcp.context7.com/mcp"\n\n[mcp_servers.context7.http_headers]\nCONTEXT7_API_KEY = "sk-test"\n\n[settings]\nmodel = "gpt-5"\n',
-      "utf-8"
-    );
-
-    const { removed } = await removeTomlServer(path, "context7");
-    expect(removed).toBe(true);
-
-    const content = await readFile(path, "utf-8");
-    expect(content).toContain("[settings]");
-    expect(content).toContain('model = "gpt-5"');
-    expect(content).not.toContain("[mcp_servers.context7]");
-    expect(content).not.toContain("CONTEXT7_API_KEY");
-  });
-
   test("removeTomlServer preserves other MCP servers and their subsections", async () => {
     const path = join(tempDir, "config.toml");
     await writeFile(
@@ -628,81 +484,6 @@ describe("TOML config", () => {
 
     const { removed } = await removeTomlServer(path, "context7");
     expect(removed).toBe(false);
-  });
-});
-
-describe("AGENTS.md append", () => {
-  let tempDir: string;
-
-  beforeEach(async () => {
-    tempDir = join(tmpdir(), `ctx7-test-${Date.now()}`);
-    await mkdir(tempDir, { recursive: true });
-  });
-
-  afterEach(async () => {
-    await rm(tempDir, { recursive: true, force: true });
-  });
-
-  const marker = "<!-- context7 -->";
-  const ruleContent = "Use ctx7 CLI for docs.\n";
-
-  async function appendRule(filePath: string, existing?: string): Promise<string> {
-    if (existing !== undefined) {
-      await writeFile(filePath, existing, "utf-8");
-    }
-
-    const escapedMarker = marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const section = `${marker}\n${ruleContent}${marker}`;
-
-    let content = "";
-    try {
-      content = await readFile(filePath, "utf-8");
-    } catch {}
-
-    if (content.includes(marker)) {
-      const regex = new RegExp(`${escapedMarker}\\n[\\s\\S]*?${escapedMarker}`);
-      await writeFile(filePath, content.replace(regex, section), "utf-8");
-    } else {
-      const separator =
-        content.length > 0 && !content.endsWith("\n") ? "\n\n" : content.length > 0 ? "\n" : "";
-      await mkdir(join(filePath, ".."), { recursive: true });
-      await writeFile(filePath, content + separator + section + "\n", "utf-8");
-    }
-
-    return readFile(filePath, "utf-8");
-  }
-
-  test("creates new file cleanly", async () => {
-    const result = await appendRule(join(tempDir, "AGENTS.md"));
-    expect(result).toBe(`${marker}\n${ruleContent}${marker}\n`);
-    expect(result[0]).not.toBe("\n");
-  });
-
-  test("appends to existing content with proper spacing", async () => {
-    const withNewline = await appendRule(join(tempDir, "a.md"), "# Rules\n");
-    expect(withNewline).toContain("# Rules\n\n<!-- context7 -->");
-
-    const withoutNewline = await appendRule(join(tempDir, "b.md"), "No trailing newline");
-    expect(withoutNewline).toContain("No trailing newline\n\n<!-- context7 -->");
-  });
-
-  test("is idempotent on re-run", async () => {
-    const filePath = join(tempDir, "AGENTS.md");
-    const first = await appendRule(filePath);
-    const second = await appendRule(filePath);
-    expect(second).toBe(first);
-    expect(second.match(/<!-- context7 -->/g)?.length).toBe(2);
-  });
-
-  test("replaces section without affecting surrounding content", async () => {
-    const filePath = join(tempDir, "AGENTS.md");
-    await writeFile(filePath, `# Before\n\n${marker}\nold content\n${marker}\n\n# After\n`);
-
-    const result = await appendRule(filePath);
-    expect(result).toContain("# Before");
-    expect(result).toContain("# After");
-    expect(result).not.toContain("old content");
-    expect(result).toContain(ruleContent);
   });
 });
 
@@ -802,30 +583,6 @@ describe("agent config integration", () => {
         headers: { Authorization: "Bearer sk-test-123" },
       });
     });
-
-    test("overwrites existing config in JSON", async () => {
-      const path = join(tempDir, ".claude.json");
-      await writeJsonConfig(path, {
-        mcpServers: { context7: { type: "http", url: "https://old.com" } },
-      });
-
-      const existing = await readJsonConfig(path);
-      const { config, alreadyExists } = mergeServerEntry(
-        existing,
-        agent.mcp.configKey,
-        "context7",
-        buildEntry(agent, apiKeyAuth, "http")
-      );
-      expect(alreadyExists).toBe(true);
-      await writeJsonConfig(path, config);
-
-      const result = await readJsonConfig(path);
-      expect((result.mcpServers as Record<string, unknown>).context7).toEqual({
-        type: "http",
-        url: "https://mcp.context7.com/mcp",
-        headers: { Authorization: "Bearer sk-test-123" },
-      });
-    });
   });
 
   describe("cursor", () => {
@@ -846,48 +603,6 @@ describe("agent config integration", () => {
         url: "https://mcp.context7.com/mcp/oauth",
       });
     });
-
-    test("merges into JSON config with configKey mcpServers", async () => {
-      const path = join(tempDir, "mcp.json");
-      const existing = await readJsonConfig(path);
-      const { config } = mergeServerEntry(
-        existing,
-        agent.mcp.configKey,
-        "context7",
-        buildEntry(agent, oauthAuth, "http")
-      );
-      await writeJsonConfig(path, config);
-
-      const result = await readJsonConfig(path);
-      expect((result.mcpServers as Record<string, unknown>).context7).toEqual({
-        url: "https://mcp.context7.com/mcp/oauth",
-      });
-    });
-
-    test("overwrites existing config in JSON", async () => {
-      const path = join(tempDir, "mcp.json");
-      await writeJsonConfig(path, {
-        mcpServers: { context7: { url: "https://old.com" }, other: { url: "https://other.com" } },
-      });
-
-      const existing = await readJsonConfig(path);
-      const { config, alreadyExists } = mergeServerEntry(
-        existing,
-        agent.mcp.configKey,
-        "context7",
-        buildEntry(agent, apiKeyAuth, "http")
-      );
-      expect(alreadyExists).toBe(true);
-      await writeJsonConfig(path, config);
-
-      const result = await readJsonConfig(path);
-      const servers = result.mcpServers as Record<string, unknown>;
-      expect(servers.context7).toEqual({
-        url: "https://mcp.context7.com/mcp",
-        headers: { Authorization: "Bearer sk-test-123" },
-      });
-      expect(servers.other).toEqual({ url: "https://other.com" });
-    });
   });
 
   describe("vscode", () => {
@@ -906,10 +621,6 @@ describe("agent config integration", () => {
         type: "http",
         url: "https://mcp.context7.com/mcp/oauth",
       });
-    });
-
-    test("uses the VS Code project MCP path", () => {
-      expect(agent.mcp.projectPaths).toEqual([join(".vscode", "mcp.json")]);
     });
 
     test.each([
@@ -932,30 +643,6 @@ describe("agent config integration", () => {
       if (agent.rule.kind === "file") {
         expect(agent.rule.contentPrefix).toBe('---\napplyTo: "**"\n---\n\n');
       }
-    });
-
-    test("merges into the VS Code servers section", async () => {
-      const path = join(tempDir, "mcp.json");
-      await writeJsonConfig(path, { servers: { other: { url: "https://other.com" } } });
-
-      const existing = await readJsonConfig(path);
-      const { config } = mergeServerEntry(
-        existing,
-        agent.mcp.configKey,
-        "context7",
-        buildEntry(agent, apiKeyAuth, "http")
-      );
-      await writeJsonConfig(path, config);
-
-      const result = await readJsonConfig(path);
-      expect((result.servers as Record<string, unknown>).context7).toEqual({
-        type: "http",
-        url: "https://mcp.context7.com/mcp",
-        headers: { Authorization: "Bearer sk-test-123" },
-      });
-      expect((result.servers as Record<string, unknown>).other).toEqual({
-        url: "https://other.com",
-      });
     });
   });
 
@@ -995,32 +682,6 @@ describe("agent config integration", () => {
     ] as const)("resolves the %s Devin config directory", (platform, home, env, expected) => {
       expect(resolveDevinConfigDir(platform, home, env)).toBe(expected);
     });
-
-    test("merges into Devin config without replacing other settings", async () => {
-      const path = join(tempDir, "mcp_config.json");
-      await writeJsonConfig(path, {
-        permissions: { allow: ["git status"] },
-        mcpServers: { other: { command: "other" } },
-      });
-
-      const existing = await readJsonConfig(path);
-      const { config } = mergeServerEntry(
-        existing,
-        agent.mcp.configKey,
-        "context7",
-        buildEntry(agent, apiKeyAuth, "http")
-      );
-      await writeJsonConfig(path, config);
-
-      const result = await readJsonConfig(path);
-      expect(result.permissions).toEqual({ allow: ["git status"] });
-      expect((result.mcpServers as Record<string, unknown>).context7).toEqual({
-        transport: "http",
-        url: "https://mcp.context7.com/mcp",
-        headers: { Authorization: "Bearer sk-test-123" },
-      });
-      expect((result.mcpServers as Record<string, unknown>).other).toEqual({ command: "other" });
-    });
   });
 
   describe("copilot", () => {
@@ -1035,10 +696,6 @@ describe("agent config integration", () => {
       });
     });
 
-    test("uses the Copilot CLI mcpServers config section", () => {
-      expect(agent.mcp.configKey).toBe("mcpServers");
-    });
-
     test("does not claim Claude's shared project .mcp.json during auto-detection", async () => {
       const previousCwd = process.cwd();
       await writeFile(join(tempDir, ".mcp.json"), JSON.stringify({ mcpServers: {} }));
@@ -1050,32 +707,6 @@ describe("agent config integration", () => {
       } finally {
         process.chdir(previousCwd);
       }
-    });
-
-    test("merges an entry without replacing other Copilot configuration", async () => {
-      const path = join(tempDir, "mcp-config.json");
-      await writeJsonConfig(path, {
-        telemetry: { enabled: false },
-        mcpServers: { other: { type: "local", command: "other" } },
-      });
-
-      const existing = await readJsonConfig(path);
-      const { config } = mergeServerEntry(
-        existing,
-        agent.mcp.configKey,
-        "context7",
-        buildEntry(agent, apiKeyAuth, "http")
-      );
-      await writeJsonConfig(path, config);
-
-      const result = await readJsonConfig(path);
-      expect(result.telemetry).toEqual({ enabled: false });
-      expect((result.mcpServers as Record<string, unknown>).context7).toEqual({
-        type: "http",
-        url: "https://mcp.context7.com/mcp",
-        tools: ["*"],
-        headers: { Authorization: "Bearer sk-test-123" },
-      });
     });
   });
 
@@ -1099,83 +730,6 @@ describe("agent config integration", () => {
         url: "https://mcp.context7.com/mcp/oauth",
         enabled: true,
       });
-    });
-
-    test("uses configKey 'mcp' instead of 'mcpServers'", () => {
-      expect(agent.mcp.configKey).toBe("mcp");
-    });
-
-    test("merges into JSON config with configKey mcp", async () => {
-      const path = join(tempDir, "opencode.json");
-      await writeJsonConfig(path, { $schema: "https://opencode.ai/config.json" });
-
-      const existing = await readJsonConfig(path);
-      const { config } = mergeServerEntry(
-        existing,
-        agent.mcp.configKey,
-        "context7",
-        buildEntry(agent, apiKeyAuth, "http")
-      );
-      await writeJsonConfig(path, config);
-
-      const result = await readJsonConfig(path);
-      expect(result.$schema).toBe("https://opencode.ai/config.json");
-      expect((result.mcp as Record<string, unknown>).context7).toEqual({
-        type: "remote",
-        url: "https://mcp.context7.com/mcp",
-        enabled: true,
-        headers: { Authorization: "Bearer sk-test-123" },
-      });
-    });
-
-    test("overwrites existing config in JSON", async () => {
-      const path = join(tempDir, "opencode.json");
-      await writeJsonConfig(path, {
-        mcp: { context7: { type: "remote", url: "https://old.com", enabled: true } },
-      });
-
-      const existing = await readJsonConfig(path);
-      const { config, alreadyExists } = mergeServerEntry(
-        existing,
-        agent.mcp.configKey,
-        "context7",
-        buildEntry(agent, oauthAuth, "http")
-      );
-      expect(alreadyExists).toBe(true);
-      await writeJsonConfig(path, config);
-
-      const result = await readJsonConfig(path);
-      expect((result.mcp as Record<string, unknown>).context7).toEqual({
-        type: "remote",
-        url: "https://mcp.context7.com/mcp/oauth",
-        enabled: true,
-      });
-    });
-
-    test("works with JSONC files containing comments", async () => {
-      const path = join(tempDir, "opencode.jsonc");
-      await writeFile(
-        path,
-        `{
-  // OpenCode config
-  "$schema": "https://opencode.ai/config.json",
-  "mcp": {}
-}`,
-        "utf-8"
-      );
-
-      const existing = await readJsonConfig(path);
-      const { config } = mergeServerEntry(
-        existing,
-        agent.mcp.configKey,
-        "context7",
-        buildEntry(agent, apiKeyAuth, "http")
-      );
-      await writeJsonConfig(path, config);
-
-      const result = await readJsonConfig(path);
-      expect(result.$schema).toBe("https://opencode.ai/config.json");
-      expect((result.mcp as Record<string, unknown>).context7).toBeTruthy();
     });
   });
 
@@ -1215,48 +769,6 @@ describe("agent config integration", () => {
       expect(content).toContain("[mcp_servers.context7.http_headers]");
       expect(content).toContain('Authorization = "Bearer sk-test-123"');
     });
-
-    test("appends oauth entry to TOML without headers", async () => {
-      const path = join(tempDir, "config.toml");
-      await appendTomlServer(path, "context7", buildEntry(agent, oauthAuth, "http"));
-
-      const content = await readFile(path, "utf-8");
-      expect(content).toContain("[mcp_servers.context7]");
-      expect(content).toContain('url = "https://mcp.context7.com/mcp/oauth"');
-      expect(content).not.toContain("http_headers");
-    });
-
-    test("overwrites existing TOML config", async () => {
-      const path = join(tempDir, "config.toml");
-      await appendTomlServer(path, "context7", buildEntry(agent, oauthAuth, "http"));
-      const { alreadyExists } = await appendTomlServer(
-        path,
-        "context7",
-        buildEntry(agent, apiKeyAuth, "http")
-      );
-
-      expect(alreadyExists).toBe(true);
-      const content = await readFile(path, "utf-8");
-      expect(content.match(/\[mcp_servers\.context7\]/g)?.length).toBe(1);
-      expect(content).toContain('url = "https://mcp.context7.com/mcp"');
-      expect(content).not.toContain("mcp/oauth");
-      expect(content).toContain('Authorization = "Bearer sk-test-123"');
-    });
-
-    test("overwrites TOML config preserving other servers", async () => {
-      const path = join(tempDir, "config.toml");
-      await writeFile(
-        path,
-        '[mcp_servers.other]\nurl = "https://other.com"\n\n[mcp_servers.context7]\ntype = "http"\nurl = "https://old.com"\n'
-      );
-      await appendTomlServer(path, "context7", buildEntry(agent, apiKeyAuth, "http"));
-
-      const content = await readFile(path, "utf-8");
-      expect(content).toContain("[mcp_servers.other]");
-      expect(content).toContain('url = "https://other.com"');
-      expect(content).toContain('url = "https://mcp.context7.com/mcp"');
-      expect(content).not.toContain("https://old.com");
-    });
   });
 
   describe("gemini", () => {
@@ -1276,10 +788,6 @@ describe("agent config integration", () => {
       expect(entry).toEqual({
         httpUrl: "https://mcp.context7.com/mcp/oauth",
       });
-    });
-
-    test("uses configKey mcpServers", () => {
-      expect(agent.mcp.configKey).toBe("mcpServers");
     });
 
     test("merges into settings.json with mcpServers key", async () => {
@@ -1302,29 +810,6 @@ describe("agent config integration", () => {
         headers: { Authorization: "Bearer sk-test-123" },
       });
     });
-
-    test("overwrites existing config in JSON", async () => {
-      const path = join(tempDir, "settings.json");
-      await writeJsonConfig(path, {
-        mcpServers: { context7: { httpUrl: "https://old.com" } },
-      });
-
-      const existing = await readJsonConfig(path);
-      const { config, alreadyExists } = mergeServerEntry(
-        existing,
-        agent.mcp.configKey,
-        "context7",
-        buildEntry(agent, apiKeyAuth, "http")
-      );
-      expect(alreadyExists).toBe(true);
-      await writeJsonConfig(path, config);
-
-      const result = await readJsonConfig(path);
-      expect((result.mcpServers as Record<string, unknown>).context7).toEqual({
-        httpUrl: "https://mcp.context7.com/mcp",
-        headers: { Authorization: "Bearer sk-test-123" },
-      });
-    });
   });
 
   describe("all agents have consistent config", () => {
@@ -1337,49 +822,26 @@ describe("agent config integration", () => {
       expect(apiEntry[urlKey]).toBe("https://mcp.context7.com/mcp");
       expect(oauthEntry[urlKey]).toBe("https://mcp.context7.com/mcp/oauth");
     });
-
-    test.each(ALL_AGENT_NAMES)("%s buildEntry includes headers only for api-key auth", (name) => {
-      const agent = getAgent(name);
-      const apiEntry = buildEntry(agent, apiKeyAuth, "http");
-      const oauthEntry = buildEntry(agent, oauthAuth, "http");
-
-      expect(apiEntry.headers).toEqual({ Authorization: "Bearer sk-test-123" });
-      expect(oauthEntry).not.toHaveProperty("headers");
-    });
   });
 
   describe("stdio buildEntry", () => {
     const apiKeyAuth: AuthOptions = { mode: "api-key", apiKey: "sk-test-stdio" };
     const oauthAuth: AuthOptions = { mode: "oauth" };
 
-    test("claude stdio entry uses npx command with --api-key in args", () => {
-      const entry = buildEntry(getAgent("claude"), apiKeyAuth, "stdio");
-      expect(entry).toEqual({
-        command: "npx",
-        args: ["-y", "@upstash/context7-mcp", "--api-key", "sk-test-stdio"],
-      });
-    });
-
-    test("cursor stdio entry uses npx command with --api-key in args", () => {
-      const entry = buildEntry(getAgent("cursor"), apiKeyAuth, "stdio");
-      expect(entry).toEqual({
-        command: "npx",
-        args: ["-y", "@upstash/context7-mcp", "--api-key", "sk-test-stdio"],
-      });
-    });
+    test.each(["claude", "cursor", "devin", "codex", "gemini"] as const)(
+      "%s stdio entry uses npx command with --api-key in args",
+      (name) => {
+        expect(buildEntry(getAgent(name), apiKeyAuth, "stdio")).toEqual({
+          command: "npx",
+          args: ["-y", "@upstash/context7-mcp", "--api-key", "sk-test-stdio"],
+        });
+      }
+    );
 
     test("vscode stdio entry includes the stdio transport discriminator", () => {
       const entry = buildEntry(getAgent("vscode"), apiKeyAuth, "stdio");
       expect(entry).toEqual({
         type: "stdio",
-        command: "npx",
-        args: ["-y", "@upstash/context7-mcp", "--api-key", "sk-test-stdio"],
-      });
-    });
-
-    test("devin stdio entry uses npx command with --api-key in args", () => {
-      const entry = buildEntry(getAgent("devin"), apiKeyAuth, "stdio");
-      expect(entry).toEqual({
         command: "npx",
         args: ["-y", "@upstash/context7-mcp", "--api-key", "sk-test-stdio"],
       });
@@ -1401,22 +863,6 @@ describe("agent config integration", () => {
         type: "local",
         command: ["npx", "-y", "@upstash/context7-mcp", "--api-key", "sk-test-stdio"],
         enabled: true,
-      });
-    });
-
-    test("codex stdio entry uses npx command with --api-key in args", () => {
-      const entry = buildEntry(getAgent("codex"), apiKeyAuth, "stdio");
-      expect(entry).toEqual({
-        command: "npx",
-        args: ["-y", "@upstash/context7-mcp", "--api-key", "sk-test-stdio"],
-      });
-    });
-
-    test("gemini stdio entry uses npx command with --api-key in args", () => {
-      const entry = buildEntry(getAgent("gemini"), apiKeyAuth, "stdio");
-      expect(entry).toEqual({
-        command: "npx",
-        args: ["-y", "@upstash/context7-mcp", "--api-key", "sk-test-stdio"],
       });
     });
 

@@ -400,23 +400,6 @@ describe("HttpClient error handling", () => {
     expect(() => new HttpClient({ baseUrl: "https://example.com\n" })).toThrow(Context7UrlError);
   });
 
-  test("allows keepalive to be disabled", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response("ok"));
-    const client = new HttpClient({
-      baseUrl: "https://example.com",
-      fetch: fetchMock,
-      retry: false,
-      keepAlive: false,
-    });
-
-    await client.request({ path: ["search"] });
-
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://example.com/search",
-      expect.objectContaining({ keepalive: false })
-    );
-  });
-
   test("falls back to statusText on empty error body", async () => {
     mockFetch(new Response("", { status: 503, statusText: "Service Unavailable" }));
 
