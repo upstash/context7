@@ -6,8 +6,10 @@ description: "How to authenticate requests to your on-premise Context7 instance"
 The on-premise API supports API keys for server-to-server and MCP access. Pass the key in the `Authorization` header:
 
 ```bash
-Authorization: Bearer ctx7op-xxxxxxxx_xxxxxxxxxxxxxxxx
+Authorization: Bearer ctx7op-xxxxxxxxxxxx_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
+
+A key is `ctx7op-`, then 12 hexadecimal characters, then `_`, then 48 hexadecimal characters.
 
 Keys are scoped to the user account that created them and inherit that user's role (`admin` or `member`). There are no per-key scopes or expiry - revoke a key to invalidate it.
 
@@ -41,7 +43,7 @@ Keys are scoped to the user account that created them and inherit that user's ro
 
 ## Revoking a Key
 
-Go to **Settings > API Keys** and click the delete icon next to the key. Revocation is immediate and cannot be undone. Update any integrations using the key before revoking.
+Go to **Personal Settings > API Keys** and click the **Revoke** icon next to the key. Revocation is immediate and cannot be undone. Update any integrations using the key before revoking.
 
 ## Roles
 
@@ -50,17 +52,18 @@ Go to **Settings > API Keys** and click the delete icon next to the key. Revocat
 | `admin` | Full access to all endpoints including settings, user management, and delete operations |
 | `member` | Can trigger parsing and search. Cannot access admin endpoints |
 
-Default credentials on a fresh install are `admin` / `admin`. Change them immediately from **Settings > Change Credentials**.
+Default credentials on a fresh install are `admin` / `admin`. Change them immediately from **Personal Settings > Password Sign-In**.
 
 ## Anonymous Access
 
-Certain operations can be allowed without authentication. Configure them from **Settings > Permissions**:
+Certain operations can be allowed without authentication. Configure them from **Workspace Settings > General > Authorization > Non-admin Permissions**:
 
 | Permission | Default |
 |---|---|
 | Anonymous parse / refresh | Off |
 | Anonymous delete | Off |
+| Download support bundle | Off |
 
-MCP authentication is configured separately in **Settings > Authentication**. When enabled, external requests to `/mcp`, `/api/v2/libs/search`, and `/api/v2/context` require a personal API key. When disabled, those endpoints allow anonymous access. The local MCP bridge can still call the v2 endpoints over loopback.
+MCP authentication is configured separately in the **MCP Authentication** card under **Workspace Settings > General > Authentication**. When enabled, external requests to `/mcp`, `/api/v2/libs/search`, and `/api/v2/context` require a personal API key. When disabled, those endpoints allow anonymous access. The local MCP bridge can still call the v2 endpoints over loopback.
 
 The legacy global `API_KEY` environment variable protects the broader HTTP API independently of personal MCP keys. New deployments should use dashboard users and personal keys for MCP clients.
