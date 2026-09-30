@@ -348,6 +348,11 @@
       "href": "https://context7.com"
     }
   },
+  "seo": {
+    "metatags": {
+      "context7-ask": "This site has a search endpoint for its pages: https://context7.com/api/v2/ask?siteKey=ask_92e6857778b942efb8e8d884&query=<URL-encoded question>. It returns the excerpts that match the question, each with its page URL. It needs no API key, and the request holds only the question. If nothing matches, the response says so."
+    }
+  },
   "footer": {
     "socials": {
       "x": "https://x.com/context7ai",
