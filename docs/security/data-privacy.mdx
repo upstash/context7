@@ -22,6 +22,9 @@ When you use Context7 through an MCP client, the AI assistant (not the user dire
 - `libraryName` or `libraryId` — the library to look up
 - API key (if provided, for authentication)
 - MCP client name and version (e.g., IDE info, for analytics)
+- MCP session ID
+- Plugin name, when you connect through a Context7 plugin (for example, the Claude Code plugin)
+- Context7 MCP server version
 - Transport type (`stdio` or `http`)
 - Client IP address, sent as a short-lived authenticated AES-256-GCM assertion by hosted HTTP deployments (for rate limiting)
 
@@ -37,7 +40,13 @@ The search queries formulated by the MCP client (not your original prompts) are 
 
 **Documentation Reranking**
 
-MCP-formulated queries are passed to LLMs to rerank and select the most relevant documentation for your request. Context7 uses well-known, trusted LLM providers for this purpose — including **OpenAI**, **Google Gemini**, and **Anthropic**.
+MCP-formulated queries are passed to LLMs to rerank and select the most relevant documentation for your request. Context7 reaches these LLMs through **OpenRouter**, using models from **Alibaba (Qwen)** and **Google (Gemini)**.
+
+Other Context7 features use these LLM providers:
+
+- **Search API** — queries are also reranked with models from **TypeSafe (Jev)** and **Voyage AI**, reached through **OpenRouter**
+- **Chat features** (such as Chat with Docs) — messages are answered by **DeepSeek** models, reached through **OpenRouter**
+- **Skill generation in the Context7 CLI** — your request is processed by **Anthropic (Claude)** models on **Amazon Bedrock**
 
 **Benchmarking and Quality Improvement**
 
@@ -75,7 +84,7 @@ Toggle which types of documentation sources are accessible to your teamspace:
 - **Websites** — documentation crawled from websites
 - **llms.txt** — documentation from llms.txt files
 - **Confluence** — Atlassian Confluence workspace pages and documentation
-- **Uploaded Files** — uploaded OpenAPI specifications and PDFs
+- **Uploaded Files** — uploaded OpenAPI specifications, PDFs, DOCX files, and folders
 - **Private Sources** — private sources connected to this teamspace
 
 <Frame>
