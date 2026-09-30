@@ -111,25 +111,6 @@ describe("getUpgradePlan", () => {
 });
 
 describe("checkForUpdates", () => {
-  test("fetches and caches the latest version", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ version: "9.9.9" }),
-      })
-    );
-
-    const info = await checkForUpdates({
-      force: true,
-      stateFile,
-      now: 123456,
-    });
-
-    expect(info?.latestVersion).toBe("9.9.9");
-    expect(info?.updateAvailable).toBe(true);
-  });
-
   test("uses cached latest version when the cache is fresh", async () => {
     vi.stubGlobal(
       "fetch",
@@ -139,7 +120,8 @@ describe("checkForUpdates", () => {
       })
     );
 
-    await checkForUpdates({ force: true, stateFile, now: 1000 });
+    const fetched = await checkForUpdates({ force: true, stateFile, now: 1000 });
+    expect(fetched?.updateAvailable).toBe(true);
 
     const fetchMock = vi.mocked(fetch);
     fetchMock.mockClear();

@@ -191,13 +191,7 @@ describe("upgrade command", () => {
     expect(plainLogOutput().some((line) => line.includes("permissions"))).toBe(true);
   });
 
-  test("shows permissions guidance when install method is unknown but command is global npm", async () => {
-    spawn.mockReturnValue({
-      on: (event: string, handler: (value?: number) => void) => {
-        if (event === "close") handler(243);
-        return undefined;
-      },
-    });
+  test("prints the manual command without running it for unknown installs", async () => {
     checkForUpdates.mockResolvedValue({
       currentVersion: "0.3.13",
       latestVersion: "0.3.99",

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.12
+
+### Patch Changes
+
+- 4416fb8: Use the shared API URL for login and explain how to sign in again when the server rejects a saved session.
+
+  Recommend logout and login only when the server returns HTTP 401. Report other identity-check failures without asking users to discard saved credentials.
+
 ## 0.5.11
 
 ### Patch Changes

@@ -3,7 +3,7 @@ title: Claude Code
 description: Using Context7 with Claude Code
 ---
 
-Context7 integrates with Claude Code to provide current library documentation instead of relying on training data. Claude Code supports skills, agents, and commands that make documentation lookups more powerful.
+Context7 integrates with Claude Code to provide current library documentation instead of relying on training data. Set it up with `ctx7 setup`, or install the Context7 plugin.
 
 ## Installation
 
@@ -36,30 +36,11 @@ use context7 with /supabase/supabase for authentication docs
 use context7 with /vercel/next.js for app router setup
 ```
 
-<Tip>
-With the [Context7 plugin](#the-context7-plugin) installed, you get additional agents and commands on top of the skill.
-</Tip>
-
 ---
 
 ## The Context7 Plugin
 
-The full Context7 plugin for Claude Code includes more than just the MCP server:
-
-<CardGroup cols={2}>
-<Card title="MCP Server" icon="server">
-The tools for fetching documentation (`resolve-library-id`, `query-docs`)
-</Card>
-<Card title="Skills" icon="sparkles">
-Auto-triggers documentation lookups when you ask about libraries
-</Card>
-<Card title="Agents" icon="robot">
-A `docs-researcher` agent for focused lookups that keep context lean
-</Card>
-<Card title="Commands" icon="terminal">
-`/context7:docs` for manual documentation queries
-</Card>
-</CardGroup>
+The Context7 plugin connects Claude Code to the hosted Context7 MCP server (`https://mcp.context7.com/mcp`). It adds the `resolve-library-id` and `query-docs` tools, with no local Node.js, npm, or npx required.
 
 ### Installing the Plugin
 
@@ -70,109 +51,10 @@ The plugin is available from the Context7 marketplace. Run these commands in Cla
 /plugin install context7@context7-marketplace
 ```
 
-This adds the Context7 marketplace and installs the plugin with skills, agents, and commands.
+### Signing In
 
-### Using Your API Key with the Plugin
-
-Without an API key, the plugin connects anonymously and shares the anonymous rate limits. To use your own plan, create an API key in the [Context7 dashboard](https://context7.com/dashboard) and export it as an environment variable before launching Claude Code:
-
-```bash
-# e.g. in ~/.zshrc or ~/.bashrc
-export CONTEXT7_API_KEY="your-api-key"
-```
-
-The plugin reads `CONTEXT7_API_KEY` from your environment automatically. Restart Claude Code after setting it, then confirm requests are counted against your plan in the [dashboard](https://context7.com/dashboard).
+After installing the plugin, restart Claude Code and run `/mcp`. Select Context7 and follow the browser sign-in flow. No API key is required.
 
 <Note>
-If the variable is not set, the plugin still works — requests just go through the anonymous tier, which has lower rate limits.
+The plugin does not read `CONTEXT7_API_KEY`. To use an API key, for example on a headless, SSH, or CI host, run `npx ctx7 setup --claude` or add the MCP server manually as described in [All MCP Clients](/resources/all-clients).
 </Note>
-
-### Skills
-
-#### Documentation Lookup Skill
-
-This skill triggers automatically when you ask about libraries, frameworks, or need code examples. You don't need to type "use context7" — the skill recognizes when documentation would help.
-
-<AccordionGroup>
-<Accordion title="What triggers the skill">
-- Setup questions: "How do I configure Next.js middleware?"
-- Code generation: "Write a Prisma query for user relations"
-- API references: "What are the Supabase auth methods?"
-- Framework mentions: React, Vue, Svelte, Express, Tailwind, etc.
-</Accordion>
-<Accordion title="How it works">
-1. **Resolve**: Finds the library ID using `resolve-library-id` with your question as context
-2. **Select**: Picks the best match based on name accuracy and quality scores
-3. **Fetch**: Calls `query-docs` with the library ID and your specific question
-4. **Return**: Provides code examples and explanations from current documentation
-</Accordion>
-</AccordionGroup>
-
-### Agents
-
-#### docs-researcher Agent
-
-When you're in the middle of a long task and don't want documentation tool calls cluttering your context, spawn the `docs-researcher` agent. It runs in a separate context and returns just the answer.
-
-<Tabs>
-<Tab title="When to Use" icon="question">
-- You need docs but want to keep your main context clean
-- You're working on something complex and context is getting long
-- You want a focused answer without side effects
-</Tab>
-<Tab title="Examples" icon="code">
-```
-spawn docs-researcher to look up React hooks documentation
-spawn docs-researcher: how do I set up Prisma with PostgreSQL?
-spawn docs-researcher to find Tailwind CSS grid utilities
-```
-</Tab>
-</Tabs>
-
-The agent uses the same tools (`resolve-library-id` and `query-docs`) but runs on a lighter model (Sonnet) to keep things fast.
-
-#### When to Use Agents vs Inline Tools
-
-| Scenario | Use |
-|----------|-----|
-| Deep into a task with long context | Agent |
-| Want to avoid context bloat | Agent |
-| Context is short | Inline tools |
-| Want docs visible in conversation | Inline tools |
-
-### Commands
-
-#### /context7:docs
-
-Manual command for documentation lookups.
-
-**Format:**
-```
-/context7:docs <library> [query]
-```
-
-**Examples:**
-
-<Tabs>
-<Tab title="Basic" icon="search">
-```
-/context7:docs react hooks
-/context7:docs next.js authentication
-/context7:docs prisma relations
-```
-</Tab>
-<Tab title="With Library ID" icon="link">
-```
-/context7:docs /vercel/next.js app router
-/context7:docs /supabase/supabase row level security
-```
-
-Using a library ID directly skips the resolution step.
-</Tab>
-</Tabs>
-
-**When to use:**
-- You know exactly which library and topic you need
-- You want a quick lookup without explaining your full context
-- You're testing what documentation is available
-

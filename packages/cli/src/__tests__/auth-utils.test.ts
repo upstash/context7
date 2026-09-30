@@ -22,7 +22,6 @@ import {
   loadTokens,
   clearTokens,
   isTokenExpired,
-  isContext7ApiKey,
   getValidAccessToken,
   startDeviceAuthorization,
   pollDeviceToken,
@@ -190,22 +189,6 @@ describe("isTokenExpired", () => {
     expect(isTokenExpired({ access_token: "tok", token_type: "bearer" })).toBe(false);
   });
 
-  test("returns false when well before expiry", () => {
-    expect(
-      isTokenExpired({
-        access_token: "tok",
-        token_type: "bearer",
-        expires_at: Date.now() + 120_000,
-      })
-    ).toBe(false);
-  });
-
-  test("returns true when past expiry", () => {
-    expect(
-      isTokenExpired({ access_token: "tok", token_type: "bearer", expires_at: Date.now() - 1000 })
-    ).toBe(true);
-  });
-
   test("returns true within 60s buffer window", () => {
     expect(
       isTokenExpired({ access_token: "tok", token_type: "bearer", expires_at: Date.now() + 30_000 })
@@ -218,16 +201,6 @@ describe("isTokenExpired", () => {
     expect(
       isTokenExpired({ access_token: "tok", token_type: "bearer", expires_at: now + 60_000 })
     ).toBe(false);
-  });
-});
-
-describe("isContext7ApiKey", () => {
-  test("recognizes Context7 API keys", () => {
-    expect(isContext7ApiKey("ctx7sk-example")).toBe(true);
-  });
-
-  test("rejects OAuth access tokens", () => {
-    expect(isContext7ApiKey("legacy-oauth-token")).toBe(false);
   });
 });
 

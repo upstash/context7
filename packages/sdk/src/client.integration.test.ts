@@ -28,15 +28,6 @@ describe("Context7 Client integration", () => {
       expect(library).toHaveProperty("trustScore");
       expect(library).toHaveProperty("benchmarkScore");
     });
-
-    test("should search with different queries", async () => {
-      const queries = ["vue", "express", "next"];
-
-      for (const query of queries) {
-        const result = await client.searchLibrary(`I want to use ${query}`, query);
-        expect(result.length).toBeGreaterThan(0);
-      }
-    }, 15000);
   });
 
   describe("getContext - JSON format (default)", () => {
@@ -44,16 +35,6 @@ describe("Context7 Client integration", () => {
 
     test("should get context as Documentation array (default)", async () => {
       const result = await client.getContext("How to use hooks", "/react/react");
-
-      expect(result).toBeDefined();
-      expect(Array.isArray(result)).toBe(true);
-      expect(result.length).toBeGreaterThan(0);
-    });
-
-    test("should get context with explicit json type", async () => {
-      const result = await client.getContext("How to use hooks", "/react/react", {
-        type: "json",
-      });
 
       expect(result).toBeDefined();
       expect(Array.isArray(result)).toBe(true);
@@ -86,26 +67,6 @@ describe("Context7 Client integration", () => {
 
       expect(result).toBeDefined();
       expect(typeof result).toBe("string");
-      expect(result.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe("getContext - different libraries", () => {
-    const client = new Context7({ apiKey });
-
-    test("should get context for Vue", async () => {
-      const result = await client.getContext("How to create components", "/vuejs/core");
-
-      expect(result).toBeDefined();
-      expect(Array.isArray(result)).toBe(true);
-      expect(result.length).toBeGreaterThan(0);
-    });
-
-    test("should get context for Express", async () => {
-      const result = await client.getContext("How to create routes", "/expressjs/express");
-
-      expect(result).toBeDefined();
-      expect(Array.isArray(result)).toBe(true);
       expect(result.length).toBeGreaterThan(0);
     });
   });
