@@ -5,7 +5,7 @@ description: See which AI agents request your docs and what they fetch
 
 AI Visibility shows which AI products visit your Docs7 site. Open **Docs7**, choose a site, then select **AI Visibility**.
 
-Choose a 7, 30, or 90 day window. If the site has branch previews, you can include their traffic. Preview traffic is excluded by default.
+Choose a 24 hour, 7 day, 30 day, or 90 day window. The 30 and 90 day windows require Pro. If the site has branch previews, you can include their traffic. Preview traffic is excluded by default.
 
 <Frame caption="AI Visibility ranks tracked providers and plots their activity.">
   <img
@@ -31,14 +31,15 @@ Docs7 currently tracks:
 - OpenCode
 - Meta
 - Mistral
+- Grok (xAI)
 
 <Note>
 AI Visibility shows which product made the request. It does not show the exact model version.
 </Note>
 
-## WebMCP searches
+## Agent searches
 
-Docs7 exposes a read-only `search_docs` WebMCP tool in browsers that support WebMCP. The **WebMCP searches** table shows the most common queries sent through that tool.
+Docs7 exposes a read-only `search_docs` WebMCP tool in browsers that support WebMCP. Agents can also call the site's search API directly. The **Agent searches** table shows the most common queries from both. The **Source** column shows whether a query came through WebMCP or the search API.
 
 These are separate from searches typed by people in the website search box. Human search terms appear under [Analytics](/docs7/analytics#searches).
 
