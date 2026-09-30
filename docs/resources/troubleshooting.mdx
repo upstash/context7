@@ -7,7 +7,7 @@ This guide helps you resolve common issues when setting up or using Context7 MCP
 
 ## Quick Checklist
 
-- Confirm Node.js v20+ is installed (`node --version`)
+- Confirm Node.js v20.18.1 or later is installed (`node --version`)
 - Update to the latest Context7 MCP package (`@upstash/context7-mcp@latest`)
 - Verify connectivity with `curl https://mcp.context7.com/ping`
 - Add your API key to the configuration if you hit rate limits
@@ -54,7 +54,7 @@ If you encounter `ERR_MODULE_NOT_FOUND`, try `bunx` or `deno` instead of `npx`:
   "mcpServers": {
     "context7": {
       "command": "deno",
-      "args": ["run", "--allow-env=NO_DEPRECATION,TRACE_DEPRECATION", "--allow-net", "npm:@upstash/context7-mcp"]
+      "args": ["run", "--allow-env", "--allow-net", "npm:@upstash/context7-mcp"]
     }
   }
 }
@@ -69,7 +69,7 @@ For `Error: Cannot find module 'uriTemplate.js'`, use the `--experimental-vm-mod
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
+      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@latest"]
     }
   }
 }
@@ -92,7 +92,7 @@ Use the `--experimental-fetch` flag:
 
 ### Node.js Version
 
-Ensure you're using Node.js v20 or higher (`node --version`).
+Ensure you're using Node.js v20.18.1 or higher (`node --version`).
 
 ## Platform-Specific Issues
 
@@ -232,7 +232,7 @@ If you get `404 Not Found` errors:
 ### Claude Code
 
 - Verify the MCP server is added correctly with `claude mcp list`
-- Check logs with `claude mcp logs context7`
+- Check the server status with `claude mcp get context7`, or start Claude Code with `claude --debug` to see MCP connection errors
 - Try removing and re-adding the server
 
 ## Configure HTTPS Proxy

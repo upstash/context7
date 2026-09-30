@@ -14,7 +14,7 @@ Context7 supports all MCP clients. Below are configuration examples for popular 
 <Note>
   For detailed guides including rules, skills, agents, and best practices, see
   [Cursor](/clients/cursor) for rules and Composer integration tips, and [Claude
-  Code](/clients/claude-code) for skills, agents, commands, and plugin installation.
+  Code](/clients/claude-code) for plugin installation and sign-in.
 </Note>
 
 ## OAuth Authentication
@@ -176,7 +176,7 @@ See [OpenAI Codex MCP docs](https://developers.openai.com/codex/mcp) for more in
 
 #### Context7 Plugin
 
-You can also install Context7 as a Codex plugin. It connects to the hosted MCP server and includes a documentation lookup skill. After installation, a browser window opens so you can log in via OAuth.
+You can also install Context7 as a Codex plugin. It connects to the hosted MCP server and includes a documentation lookup skill. The first time Codex uses the plugin, a browser window opens so you can log in via OAuth.
 
 ```sh
 codex plugin marketplace add upstash/context7
@@ -755,7 +755,7 @@ Use these alternatives to run the local Context7 MCP server with other runtimes.
       "command": "deno",
       "args": [
         "run",
-        "--allow-env=NO_DEPRECATION,TRACE_DEPRECATION",
+        "--allow-env",
         "--allow-net",
         "npm:@upstash/context7-mcp"
       ]
@@ -1378,7 +1378,7 @@ See the [Emdash repository](https://github.com/generalaction/emdash) for more in
 
 <Accordion title="Desktop Extension">
 
-Install the [context7.mcpb](https://github.com/upstash/context7/tree/master/packages/mcp/mcpb/context7.mcpb) file and add it to your client. See [MCP bundles docs](https://github.com/modelcontextprotocol/mcpb#mcp-bundles-mcpb) for more info.
+Download the `context7.mcpb` file from the latest `mcpb-v*` release on [GitHub Releases](https://github.com/upstash/context7/releases?q=mcpb) and add it to your client. See [MCP bundles docs](https://github.com/modelcontextprotocol/mcpb#mcp-bundles-mcpb) for more info.
 
 </Accordion>
 
