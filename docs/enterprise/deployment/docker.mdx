@@ -105,13 +105,14 @@ Example response:
 ```json
 {
   "status": "healthy",
-  "version": "1.0.0",
+  "version": "1.3.9",
   "setup": "complete",
   "license": "configured",
   "licenseInfo": {
     "valid": true,
     "teamSize": 10,
-    "expiresAt": "2026-06-01T00:00:00.000Z"
+    "expiresAt": "2026-06-01T00:00:00.000Z",
+    "offline": false
   },
   "repos_parsed": 5,
   "uptime": 3600,
@@ -121,14 +122,15 @@ Example response:
     "embedding": "configured",
     "embedding_provider": "openai",
     "github": "configured",
-    "gitlab": "not configured"
+    "github_method": "PAT",
+    "gitlab": "missing"
   }
 }
 ```
 
 ## Running as non-root
 
-The container runs as root by default. To run it unprivileged, chown the volume to the UID you want and pass `--user`:
+The container runs as root by default. To run it unprivileged, pass `--user`. If the volume already holds files written by a root container, or the UID you choose cannot write `/data`, chown the volume to that UID first:
 
 ```bash
 docker run --rm -v context7-data:/data alpine chown -R 10001:10001 /data
@@ -143,7 +145,7 @@ docker run -d --name context7 \
 
 Any UID works. Everything Context7 writes lives under `/data`, including source clones (`/data/repos`) and documentation-agent state (`/data/home`). The only other path it writes is `/tmp`.
 
-Skip the `chown` and the server exits at startup with the path it could not write. This requires image 1.3.2 or later. On Kubernetes, use `fsGroup` instead and the kubelet handles the ownership: see [Kubernetes](/enterprise/deployment/kubernetes#running-as-non-root).
+A new volume starts with `/data` owned by UID `10001` and group `0` and group-writable, so UID `10001` or any UID in group `0` needs no `chown`. If the UID cannot write `/data`, the server exits at startup with the path it could not write. This requires image 1.3.2 or later. On Kubernetes, use `fsGroup` instead and the kubelet handles the ownership: see [Kubernetes](/enterprise/deployment/kubernetes#running-as-non-root).
 
 ## Scaling
 
