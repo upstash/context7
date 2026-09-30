@@ -43,3 +43,14 @@ See [Custom Domains](/docs7/custom-domains) for each record and for serving the 
 </Frame>
 
 After the switch, remove the Mintlify GitHub integration so one push does not deploy to both services.
+
+## Custom CSS
+
+Docs7 loads the `.css` files in your docs folder on every page. It puts Mintlify's published [ID and class selectors](https://www.mintlify.com/docs/customize/custom-scripts) on the matching elements, so a stylesheet written for Mintlify keeps working.
+
+Docs7 has no element for the selectors below, so rules that use them have no effect:
+
+- IDs: `#body-content`, `#mobile-nav`, `#mobile-nav-content`, `#api-playground-input`, `#endpoints-menu-trigger`, `#ask-assistant-code-block-button`, `#code-snippet-feedback-*`, `#feedback-form*`, `#page-context-menu*`, `#text-selection-tooltip*`, `#localization-select-*`, `#changelog-filters*`, `#multi-view-dropdown`
+- Classes: `.sidebar-nav-group-divider`, `.option-dropdown`, `.tree-folder`, `.tree-file`, `.directory*`, `.login-link`, `.logout-link`, `.contextual-feedback-*`, `.code-snippet-feedback-*`, `.chat-assistant-floating-input`, `.chat-assistant-payload-item`, `.starter-question-text`
+
+On small screens the navigation drawer is `#sidebar`. Generated API pages have no `#content`, because their body can hold several MDX blocks.
