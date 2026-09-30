@@ -5,7 +5,7 @@ description: Understand visitors, searches, assistant questions, and referrers
 
 Analytics reports how people use your Docs7 site. Open **Docs7**, choose a site, then select **Analytics**.
 
-Choose a 7, 30, or 90 day window. If the site has branch previews, you can include their traffic. Preview traffic is excluded by default.
+Choose a 24 hour, 7 day, 30 day, or 90 day window. The 30 and 90 day windows require Pro. If the site has branch previews, you can include their traffic. Preview traffic is excluded by default.
 
 <Frame caption="Analytics separates human visitors from AI traffic and shows activity for the selected period.">
   <img
@@ -31,7 +31,7 @@ Visitor identifiers are derived from the day, site, IP address, and user agent, 
 
 The search report shows what readers type into the site's search box, how many times each query was used, and how many visitors searched for it.
 
-Search runs as the reader types. Docs7 folds short prefixes into the completed query when the same visitor continues typing within ten seconds. For example, `rate`, `rate l`, and `rate limit` count as `rate limit` instead of three separate searches.
+Search runs as the reader types. While the search box stays open, all edits count as one search if each pause is shorter than 30 seconds and the search lasts less than 5 minutes. Docs7 keeps the last text. For example, `rate`, `rate l`, and `rate limit` count as one search for `rate limit`.
 
 A **No results** label means every recorded search for that term returned no result. Use these terms to find missing pages, missing vocabulary, or titles that do not match the words readers use.
 
