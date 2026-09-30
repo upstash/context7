@@ -7,7 +7,9 @@ Context7 automatically refreshes library documentation so that developers always
 
 ## Automatic Refresh
 
-Every time a library is requested through Context7 — whether via the MCP server or the REST API — the system checks when the documentation was last updated. If it's older than a threshold based on the library's popularity, a background refresh is triggered automatically.
+When a library's documentation is requested through Context7 — whether via the MCP server or the REST API — the system can check when the documentation was last updated. If it's older than a threshold based on the library's popularity, a background refresh is triggered automatically.
+
+The check does not run on every request. It runs only for documentation context requests (`GET /api/v2/context`, which the MCP server also uses), only for a sample of those requests, and at most once a day for each library.
 
 ### Refresh Thresholds
 
@@ -20,7 +22,7 @@ The staleness threshold is based on each library's popularity rank in Context7:
 | Top 5,000       | 30 days           |
 | All others      | 45 days           |
 
-Popular libraries are refreshed more frequently because developers rely on them more heavily and they tend to get updated faster. Website libraries use a slightly higher threshold than the values above.
+Popular libraries are refreshed more frequently because developers rely on them more heavily and they tend to get updated faster. Website and llms.txt libraries use a longer threshold than the values above.
 
 <Note>
   The refresh is triggered in the background and does not affect the response time of your current request. You will receive the existing documentation immediately while the update runs asynchronously.
@@ -28,7 +30,12 @@ Popular libraries are refreshed more frequently because developers rely on them 
 
 ## Manual Refresh
 
-Logged-in users can manually trigger a refresh for any library directly from the library page on Context7 or via the [refresh API endpoint](/api-reference/refresh/refresh-a-library). This is useful when you know a library has just released a new version and want the updated documentation immediately, without waiting for the automatic cycle to complete.
+Logged-in users can manually trigger a refresh for most libraries directly from the library page on Context7 or via the [refresh API endpoint](/api-reference/refresh/refresh-a-library). This is useful when you know a library has just released a new version and want the updated documentation immediately, without waiting for the automatic cycle to complete.
+
+Some libraries cannot be refreshed manually:
+
+- **Very large public libraries** (over 1 million tokens) — create a [GitHub issue](https://github.com/upstash/context7/issues/new/choose) to request a refresh.
+- **Uploaded files** (such as uploaded OpenAPI specs, PDFs, and DOCX files) — upload the file again to update it.
 
 Library owners who have [claimed their library](/howto/claiming-libraries) receive higher refresh rate limits, giving them more control over how frequently their documentation can be updated.
 
@@ -47,11 +54,14 @@ If a library hasn't been requested recently, it won't be refreshed — keeping t
 
 ## Supported Library Types
 
-Automatic and manual refreshes work across all supported source types:
+Automatic refreshes work for these source types:
 
 - **Git repositories** — re-parsed from the configured branch
 - **Websites** — re-crawled from the base URL
+- **llms.txt** — re-fetched from the `llms.txt` URL
 - **OpenAPI specs** — re-fetched and re-indexed from the spec source
+
+Manual refreshes work for the same types, and also for **Confluence** and **Notion** sources. Uploaded files cannot be refreshed.
 
 ## Related
 
