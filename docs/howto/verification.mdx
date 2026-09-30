@@ -37,10 +37,10 @@ There are two paths to verification:
 
 Libraries are automatically verified when they meet certain quality thresholds:
 
-- **High trust score**: Libraries with a trust score of 9 or above. Trust score is calculated based on the GitHub organization/user profile, considering factors like total stars, number of repositories, account age, recent activity, followers, and profile completeness.
-- **Top 100 libraries**: Most-used libraries by API requests
+- **High trust score**: Libraries with a trust score of 9 or above are verified when a parse completes. Trust score is calculated based on the GitHub organization/user profile, considering factors like total stars, number of repositories, account age, recent activity, followers, and profile completeness.
+- **Top libraries by popularity**: Every 5 days, Context7 ranks libraries by MCP requests. The top 99 libraries with a trust score of 6 or above are verified.
 
-Automatic verification is checked daily. If your library qualifies, it will be verified automatically without any action required.
+If your library qualifies, it will be verified automatically without any action required.
 
 ### Manual Verification
 
@@ -60,7 +60,7 @@ If your library doesn't qualify for automatic verification, you can apply manual
   </Step>
 
   <Step title="Apply for Verification">
-    If your library is not yet verified, you'll see a banner at the top of the configuration page with an "Apply for Verification" button. Click it to start the process.
+    If your library is not yet verified, you'll see a banner at the top of the configuration page with an "apply for verification" link. Click it to start the process.
 
     <Frame>
       <img src="/images/howto/verification/apply-button.png" alt="Apply for Verification button" />
@@ -70,10 +70,10 @@ If your library doesn't qualify for automatic verification, you can apply manual
   <Step title="Instant Quality Check">
     When you initiate a verification request, Context7 automatically checks a set of quality criteria. If your library meets **any one** of the following criteria, it is verified instantly — no form required:
 
-    - **Trust score above 7**: Calculated from your GitHub organization/user profile, including stars, repository count, account age, recent activity, followers, and profile completeness.
+    - **Trust score of 7.0 or above**: Calculated from your GitHub organization/user profile, including stars, repository count, account age, recent activity, followers, and profile completeness.
     - **250+ GitHub stars** *(repositories only)*: Indicates a strong and established community.
     - **Top 1% by popularity ranking**: Your library is among the most in-demand sources indexed on Context7.
-    - **200+ referring domains** *(websites and llms.txt sources only)*: Your source is cited or linked to by more than 200 unique external domains, demonstrating broad recognition across the web.
+    - **200+ referring domains** *(websites and llms.txt sources only)*: Your source is cited or linked to by 200 or more unique external domains, demonstrating broad recognition across the web.
 
     If any of these thresholds are met, verification is granted immediately.
   </Step>
@@ -83,9 +83,9 @@ If your library doesn't qualify for automatic verification, you can apply manual
 
     | Field | Description | Required |
     | --- | --- | --- |
-    | **Website/Docs URL** | Link to your library's official website or documentation | Yes |
-    | **Library Description** | Brief description of what your library does | Yes |
-    | **Developer Value** | How your library helps developers | No |
+    | **Docs or website URL** | Link to your library's official website or documentation (up to 5 URLs) | Yes |
+    | **Description** | Brief description of what your library does | Yes |
+    | **Benefits** | How your library helps developers | No |
 
     <Frame>
       <img src="/images/howto/verification/apply-modal.png" alt="Verification application modal" />
@@ -93,7 +93,7 @@ If your library doesn't qualify for automatic verification, you can apply manual
   </Step>
 
   <Step title="Submit for Review">
-    Click "Submit Application" to send your request. Your application will be reviewed immediately.
+    Click "Verify Now" to send your request. An automated check reviews your application immediately. If it is rejected, click "Create GitHub Issue" to request a manual review.
   </Step>
 </Steps>
 
@@ -138,7 +138,7 @@ No. Verification is completely free and based solely on library quality.
 
 ### I was automatically verified. Can I lose it?
 
-Automatic verification is recalculated daily. If your library no longer meets the automatic criteria, you'll retain your verification status but may need to apply manually if it's ever revoked.
+Automatic verification is recalculated when your library is parsed and every 5 days. If your library no longer meets the automatic criteria, you'll retain your verification status but may need to apply manually if it's ever revoked.
 
 ### My library is popular but not verified. Why?
 

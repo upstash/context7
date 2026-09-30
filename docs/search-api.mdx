@@ -5,13 +5,7 @@ description: Search all Context7 documentation with one request
 
 The Search API is the simplest way to use Context7. You send a question, and Context7 picks the relevant libraries, searches them, and returns the best snippets in one request. No library ID is needed.
 
-It is a plain GET request, so you can try it in your browser:
-
-[https://context7.com/api/v3/search?query=what+is+nextjs](https://context7.com/api/v3/search?query=what+is+nextjs)
-
-<Note>
-  Requests without an API key are for testing only and are rate-limited by IP address. For real use, send your [API key](/howto/api-keys) as a bearer token.
-</Note>
+It is a plain GET request. Use an [API key](/howto/api-keys) with every request, sent as a bearer token.
 
 ## Send a question
 
@@ -99,6 +93,6 @@ Use the **Context API** ([Search Library](/api-reference/search/search-for-libra
 
 ## Next steps
 
-- [Search Documentation reference](/api-reference/search/search-documentation) for all parameters and the response schema
+- [Search Documentation reference](/api-reference/search/search-context7-documentation) for all parameters and the response schema
 - [TypeScript SDK](/sdks/ts/commands/search) for the `search()` method
 - [API guide](/api-guide) for authentication, rate limits, and caching

@@ -31,7 +31,7 @@ For more control over how Context7 parses and presents your library, you can add
 
 ### Configuration Fields
 
-Here's an example `context7.json` file with all available options:
+Here's an example `context7.json` file with the most common options:
 
 ```json
 {
@@ -40,11 +40,14 @@ Here's an example `context7.json` file with all available options:
   "description": "Ratelimiting library based on Upstash Redis",
   "folders": [],
   "excludeFolders": ["src"],
-  "excludeFiles": [],
+  "excludeFiles": ["CHANGELOG.md", "NEWS.md"],
   "rules": ["Use Upstash Redis as a database", "Use single region set up"],
   "previousVersions": [
     {
       "tag": "v1.2.1"
+    },
+    {
+      "branch": "release-1.x"
     }
   ]
 }
@@ -57,13 +60,13 @@ Here's an example `context7.json` file with all available options:
 
 ## Field Descriptions
 
-- **`projectTitle`** (string): Suggested display name for your project in Context7. Only used when the LLM cannot generate a name with high confidence.
+- **`projectTitle`** (string): Display name for your project in Context7. When set, it is used instead of the generated name.
 
-- **`description`** (string): Suggested description for your project in Context7. Only used when the LLM cannot generate a description with high confidence.
+- **`description`** (string): Description for your project in Context7. When set, it is used instead of the generated description. Max 200 characters.
 
 - **`branch`** (string): The name of the git branch to parse. If not provided, the default branch will be used.
 
-- **`folders`** (array): Specific folder paths to include when parsing. If empty, Context7 scans the entire repository. Root-level markdown files are always included.
+- **`folders`** (array): Specific folder paths to include when parsing. If empty, Context7 scans the entire repository. When `folders` is set, only the `README` files in the repository root are always included.
 
 - **`excludeFolders`** (array): Patterns to exclude from documentation parsing. Supports simple names, paths, and glob patterns (see Exclusion Patterns below).
 
@@ -71,12 +74,19 @@ Here's an example `context7.json` file with all available options:
 
 - **`rules`** (array): Best practices or important guidelines that coding agents should follow when using your library. These appear as recommendations in the documentation context provided to coding agents.
 
-- **`previousVersions`** (array): Information about previous versions of your library that should also be available in Context7.
+- **`previousVersions`** (array): Information about previous versions of your library that should also be available in Context7. Each entry has exactly one of:
   - **`tag`**: The Git tag or version identifier
-
-- **`branchVersions`** (array): Information about previous versions (branch-based) of your library that should also
-  be available in Context7.
   - **`branch`**: The Git branch
+
+- **`disallow`** (boolean): Set to `true` to stop Context7 from parsing the repository. Its documentation is removed from Context7.
+
+- **`redirect`** (string): Redirect this library to another Context7 library. Use a library ID such as `"/org/repo"` or a full repository URL. Context7 does not parse the repository and sends users to the target library.
+
+- **`url`** and **`public_key`** (string): Used together to claim ownership of the library. See [Claim Your Library](/howto/claiming-libraries).
+
+<Warning>
+  Context7 rejects the whole file if it contains an unknown field, such as `branchVersions`. When this happens, none of the settings in the file are applied.
+</Warning>
 
 ### How `folders` and `excludeFolders` interact
 
@@ -102,8 +112,7 @@ This scans only `docs/` and `api-reference/`, but within those it skips `docs/ar
 The `excludeFolders` parameter supports various pattern types for flexible exclusion:
 
 - **Simple folder names**: `"node_modules"` - Excludes any folder named "node_modules" anywhere in the tree
-- **Root-specific patterns**: `"./xyz"` - Excludes the folder only at repository root (e.g., excludes `/xyz` but not `/dist/xyz`)
-- **Path patterns**: `"app-sdk/v2.3"` - Excludes specific paths and everything under them
+- **Path patterns**: `"app-sdk/v2.3"` - Excludes the path and everything under it, at any depth (e.g., also `packages/app-sdk/v2.3`)
 - **Glob patterns**: `"*.test"`, `"temp*"` - Excludes folders matching the pattern
 - **Globstar patterns**: `"**/dist"`, `"docs/**/internal"` - Advanced path matching
 - **Complex patterns**: `"src/**/*.test.js"` - Exclude test files in the src directory
@@ -111,7 +120,6 @@ The `excludeFolders` parameter supports various pattern types for flexible exclu
 Examples:
 
 - `"node_modules"` - Excludes all node_modules folders anywhere
-- `"./build"` - Excludes the build folder only at root (not `src/build`)
 - `"app-sdk/v2.3"` - Excludes the app-sdk/v2.3 path and all its contents
 - `"*.test"` - Excludes folders ending with .test
 - `"docs/**/internal"` - Excludes any "internal" folder under docs
@@ -119,7 +127,9 @@ Examples:
 
 ### Default Exclusions
 
-If you don't specify `excludeFiles` or `excludeFolders` in your `context7.json` file, Context7 uses these default patterns:
+If you don't specify `excludeFiles` or `excludeFolders` in your `context7.json` file, Context7 uses these default patterns. Folder names match exactly, at any depth.
+
+If you specify one of these fields, your list replaces the defaults for that field. For example, `"excludeFiles": ["NEWS.md"]` means `CHANGELOG.md` is no longer excluded, and an empty list (`"excludeFiles": []`) turns the default file exclusions off.
 
 #### Default Excluded Files
 
@@ -127,13 +137,14 @@ If you don't specify `excludeFiles` or `excludeFolders` in your `context7.json` 
 CHANGELOG.md, changelog.md, CHANGELOG.mdx, changelog.mdx
 LICENSE.md, license.md
 CODE_OF_CONDUCT.md, code_of_conduct.md
+NEWS.md
 ```
 
 #### Default Excluded Folders
 
 ```
-*archive*, *archived*, old, docs/old, *deprecated*, *legacy*
-*previous*, *outdated*, *superseded*
+archive, archived, old, docs/old, deprecated, legacy
+previous, outdated, superseded, _snaps
 i18n/zh*, i18n/es*, i18n/fr*, i18n/de*, i18n/ja*, i18n/ko*
 i18n/ru*, i18n/pt*, i18n/it*, i18n/ar*, i18n/hi*, i18n/tr*
 i18n/nl*, i18n/pl*, i18n/sv*, i18n/vi*, i18n/th*
