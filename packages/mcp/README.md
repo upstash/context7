@@ -1397,7 +1397,7 @@ Context7 MCP provides the following tools that LLMs can use:
   - `libraryId` (required): Exact Context7-compatible library ID (e.g., `/mongodb/docs`, `/vercel/next.js`)
   - `query` (required): The concept to look up, scoped to a single topic
 
-Calls to the old name `get-library-docs` are redirected to `query-docs` with the same arguments (`libraryId`, `query`). Only the two tools above are advertised. Update client tool allowlists to use `query-docs`.
+`get-library-docs` was renamed to `query-docs`. Update client tool allowlists to use `query-docs`.
 
 ## 🛟 Tips
 

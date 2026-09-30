@@ -53,10 +53,13 @@ export const EMA_ISSUER =
 export const EMA_JWKS_URL = process.env.EMA_JWKS_URL || `${CONTEXT7_API_BASE_URL}/oauth/ema-jwks`;
 export const OPENAI_APPS_CHALLENGE_TOKEN = process.env.OPENAI_APPS_CHALLENGE_TOKEN;
 
-/** Describe authorization for the canonical MCP resource. */
-export function protectedResourceMetadataDocument(resourceUrl = RESOURCE_URL) {
+/**
+ * RFC 9728 metadata. `resource` must equal the identifier the metadata URL was
+ * built from: the origin for the root document, `/mcp` for the path-aware one.
+ */
+export function protectedResourceMetadataDocument(resource = canonicalMcpResourceUrl()) {
   return {
-    resource: canonicalMcpResourceUrl(resourceUrl),
+    resource,
     authorization_servers: Array.from(new Set([OAUTH_AUTH_SERVER_URL, EMA_ISSUER])),
     scopes_supported: ["profile", "email"],
     bearer_methods_supported: ["header"],
@@ -69,7 +72,8 @@ export function mcpServerCard(resourceUrl = RESOURCE_URL) {
     $schema: "https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json",
     name: "io.github.upstash/context7",
     title: "Context7",
-    description: "Current documentation and code examples for software libraries and frameworks.",
+    description:
+      "Up-to-date, version-specific documentation and code examples for software libraries.",
     version: SERVER_VERSION,
     remotes: [
       {

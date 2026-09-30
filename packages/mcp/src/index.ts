@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { toNodeHandler } from "@modelcontextprotocol/node";
-import { serveStdio } from "@modelcontextprotocol/server/stdio";
+import { StdioServerTransport, serveStdio } from "@modelcontextprotocol/server/stdio";
 import {
   McpServer,
   createMcpHandler,
@@ -32,7 +32,6 @@ import {
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
-import { redirectHttpToolCalls, ToolNameRedirectStdioTransport } from "./lib/tool-name-redirect.js";
 import { installProcessShutdown } from "./lib/process-shutdown.js";
 import { getMaxSubscriptions, logMcpHandlerError } from "./lib/subscriptions.js";
 import { isForwardableApiCredential } from "./lib/encryption.js";
@@ -509,7 +508,6 @@ async function main() {
         };
 
         await requestContext.run(context, async () => {
-          redirectHttpToolCalls(req);
           await nodeHandler(req, res, req.body);
         });
       } catch (error) {
@@ -538,10 +536,9 @@ async function main() {
       res.setHeader("Content-Type", "application/mcp-server-card+json");
       res.status(200).send(mcpServerCard());
     };
-    // SEP-2127: the card lives at `{streamable-http}/server-card`. Register
-    // these before the /mcp router so they are not answered as MCP JSON-RPC.
+    // SEP-2127 reserves `{streamable-http-url}/server-card`. Register it
+    // before the /mcp router so it is not answered as MCP JSON-RPC.
     app.get("/mcp/server-card", sendServerCard);
-    app.get("/server-card", sendServerCard);
 
     app.use("/mcp", mcpRouter);
 
@@ -549,14 +546,14 @@ async function main() {
       res.json({ status: "ok", message: "pong" });
     });
 
-    // OAuth 2.0 Protected Resource Metadata (RFC 9728). Origin and path-aware
-    // (`/.../mcp`) lookups share one document whose `resource` is the canonical
-    // `/mcp` identifier clients actually connect to.
-    const sendProtectedResourceMetadata = (_req: express.Request, res: express.Response) => {
+    // OAuth 2.0 Protected Resource Metadata (RFC 9728): the root document
+    // describes the origin, the path-aware one the canonical `/mcp` resource.
+    app.get("/.well-known/oauth-protected-resource", (_req, res) => {
+      res.json(protectedResourceMetadataDocument(new URL(canonicalMcpResourceUrl()).origin));
+    });
+    app.get(protectedResourceMetadataPath(), (_req, res) => {
       res.json(protectedResourceMetadataDocument());
-    };
-    app.get("/.well-known/oauth-protected-resource", sendProtectedResourceMetadata);
-    app.get(protectedResourceMetadataPath(), sendProtectedResourceMetadata);
+    });
 
     app.get(
       "/.well-known/oauth-authorization-server",
@@ -673,7 +670,7 @@ async function main() {
   } else {
     stdioApiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
     stdioSessionId = randomUUID();
-    const rawStdioTransport = new ToolNameRedirectStdioTransport();
+    const rawStdioTransport = new StdioServerTransport();
     const stdioTransport = mcpInstrumentation
       ? mcpInstrumentation.instrumentStdioTransport(rawStdioTransport)
       : rawStdioTransport;
