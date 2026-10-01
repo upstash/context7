@@ -45,7 +45,7 @@ For manual MCP installation or other configuration options, see [All MCP Clients
 
 ## Plugin
 
-Install the plugin from your project directory:
+Install the plugin with the command for your OpenCode version:
 
 <CodeGroup>
 ```bash OpenCode v2
@@ -56,6 +56,8 @@ opencode plugin add @upstash/context7-opencode
 opencode plugin @upstash/context7-opencode
 ```
 </CodeGroup>
+
+On OpenCode v2, `opencode plugin add` installs the plugin globally. To enable it for a single project only, add it to the `plugins` key in that project's `opencode.json` instead, as shown below.
 
 The plugin is an alternative to `ctx7 setup` that configures OpenCode in one command. It works on OpenCode v2 and on v1 (1.18.29 or newer). It adds two things:
 

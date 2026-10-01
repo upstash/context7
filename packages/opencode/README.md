@@ -23,7 +23,7 @@ On OpenCode v1 (1.18.29 or newer):
 opencode plugin @upstash/context7-opencode
 ```
 
-The command installs the plugin and adds it to your OpenCode config. You can also add it by hand. OpenCode v2 uses the `plugins` key:
+The command installs the plugin and adds it to your OpenCode config. On OpenCode v2 this is the global config. To enable the plugin for a single project only, add it to that project's `opencode.json` by hand. OpenCode v2 uses the `plugins` key:
 
 ```json opencode.json
 {
