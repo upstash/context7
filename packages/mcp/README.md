@@ -1330,12 +1330,6 @@ Run this command in your terminal:
 droid mcp add context7 https://mcp.context7.com/mcp --type http --header "Authorization: Bearer YOUR_API_KEY"
 ```
 
-Or without an API key (basic usage with rate limits):
-
-```sh
-droid mcp add context7 https://mcp.context7.com/mcp --type http
-```
-
 #### Factory Local Server Connection (Stdio)
 
 Run this command in your terminal:
@@ -1376,12 +1370,6 @@ autohand mcp add context7 npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 ```
 
 Add `--scope project` before `context7` to save the server in the current project's `.autohand` configuration instead of your user configuration.
-
-For basic usage without an API key, you can connect to the remote server instead:
-
-```sh
-autohand mcp add --transport http context7 https://mcp.context7.com/mcp
-```
 
 </details>
 
@@ -1565,7 +1553,10 @@ The labels intentionally exclude API keys, client IPs, queries, library IDs, ses
 error text. Expose port `9464` only to your Prometheus scraper or `ServiceMonitor`, not through the
 public MCP ingress. For continuity with existing MCP series, the route label uses `anonymous` for
 the standard `/mcp` path and `oauth` for the `/mcp/oauth` compatibility alias; the `anonymous` value
-identifies the route and does not imply that the request bypassed authentication.
+identifies the route and does not imply that the request bypassed authentication. The enforcement
+label reports the mode applied to each request: `/mcp/oauth` and Claude Code plugin requests report
+`required` while the server runs in `observe` mode, because those clients always receive the
+challenge.
 
 #### Signal ownership with an Envoy gateway
 

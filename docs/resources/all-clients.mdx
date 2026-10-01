@@ -126,11 +126,11 @@ Add the hosted Context7 server with OpenClaw's MCP client registry. See the [Ope
 
 #### OAuth (Recommended)
 
-Register the Context7 OAuth endpoint, then sign in through your browser:
+Register the Context7 endpoint, then sign in through your browser:
 
 ```sh
 openclaw mcp add context7 \
-  --url https://mcp.context7.com/mcp/oauth \
+  --url https://mcp.context7.com/mcp \
   --transport streamable-http \
   --auth oauth
 
@@ -490,7 +490,7 @@ Fill in the following:
 | ------------------ | ------------------------------------------------------------------------------------------- |
 | **Name**           | `Context7`                                                                                  |
 | **Description**    | `Fetch up-to-date documentation and code examples for any library directly from the source` |
-| **MCP Server URL** | `https://mcp.context7.com/mcp/oauth`                                                        |
+| **MCP Server URL** | `https://mcp.context7.com/mcp`                                                              |
 
 > Accept the security notice and complete the one-time OAuth authorization.
 
@@ -522,7 +522,7 @@ Fill in the following:
 | ------------------ | ------------------------------------------------------------------------------------------- |
 | **Name**           | `Context7`                                                                                  |
 | **Description**    | `Fetch up-to-date documentation and code examples for any library directly from the source` |
-| **MCP Server URL** | `https://mcp.context7.com/mcp/oauth`                                                        |
+| **MCP Server URL** | `https://mcp.context7.com/mcp`                                                              |
 
 > Accept the security notice and complete the one-time OAuth authorization.
 
@@ -692,14 +692,14 @@ mcp_servers:
 ```yaml
 mcp_servers:
   context7:
-    url: "https://mcp.context7.com/mcp/oauth"
+    url: "https://mcp.context7.com/mcp"
     auth: oauth
 ```
 
 #### Using CLI (OAuth)
 
 ```sh
-hermes mcp add context7 --url https://mcp.context7.com/mcp/oauth --auth oauth
+hermes mcp add context7 --url https://mcp.context7.com/mcp --auth oauth
 ```
 
 #### Local Server Connection

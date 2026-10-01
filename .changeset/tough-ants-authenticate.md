@@ -2,4 +2,4 @@
 "@upstash/context7-mcp": patch
 ---
 
-Require credentials on the hosted HTTP `/mcp` endpoint, keep `/mcp/oauth` as a compatibility alias, publish endpoint-specific OAuth metadata, and emit privacy-safe authentication migration events. Operators can use `MCP_AUTH_ENFORCEMENT=observe` to measure missing credentials before enforcing the migration.
+Stage credential enforcement on the hosted HTTP `/mcp` endpoint with `MCP_AUTH_ENFORCEMENT`. The default `observe` mode keeps anonymous `/mcp` access and records privacy-safe authentication migration events, while `/mcp/oauth` and Claude Code plugin requests keep their existing challenge. Set `required` to reject requests without credentials. `/mcp/oauth` stays as a compatibility alias, and each endpoint publishes its own OAuth protected-resource metadata.
