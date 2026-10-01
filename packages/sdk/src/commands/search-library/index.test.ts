@@ -42,7 +42,7 @@ describe("SearchLibraryCommand", () => {
     const result = await command.exec(requesterWith(apiResult));
 
     expect(result).toContain("Context7-compatible library ID: /facebook/react");
-    expect(result).toContain("Trust Score: High");
+    expect(result).toContain("Source Reputation: High");
   });
 
   test("throws a Context7 error when the response has no result", async () => {

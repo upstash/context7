@@ -46,9 +46,9 @@ export function formatLibrary(r: {
 }
 
 /**
- * Maps numeric trust score to an interpretable label.
+ * Maps the numeric trust score to a source reputation label, as the MCP server does.
  */
-function getTrustScoreLabel(trustScore?: number): "High" | "Medium" | "Low" | "Unknown" {
+function getSourceReputationLabel(trustScore?: number): "High" | "Medium" | "Low" | "Unknown" {
   if (trustScore === undefined || trustScore < 0) return "Unknown";
   if (trustScore >= 7) return "High";
   if (trustScore >= 4) return "Medium";
@@ -69,7 +69,7 @@ export function formatLibraryAsText(library: Library): string {
     lines.push(`- Code Snippets: ${library.totalSnippets}`);
   }
 
-  lines.push(`- Trust Score: ${getTrustScoreLabel(library.trustScore)}`);
+  lines.push(`- Source Reputation: ${getSourceReputationLabel(library.trustScore)}`);
 
   if (library.benchmarkScore > 0) {
     lines.push(`- Benchmark Score: ${library.benchmarkScore}`);

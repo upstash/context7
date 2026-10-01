@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { Context7 } from "@upstash/context7-sdk";
+import { Context7, Context7Error } from "@upstash/context7-sdk";
 import type { Context7ToolsConfig } from "./types";
 import { QUERY_DOCS_DESCRIPTION } from "@prompts";
 
@@ -53,16 +53,20 @@ export function queryDocs(config: Context7ToolsConfig = {}) {
         const client = getClient();
         const documentation = await client.getContext(query, libraryId, { type: "txt" });
 
-        if (!documentation || documentation.length === 0) {
-          return `No documentation found for library "${libraryId}". This might have happened because you used an invalid Context7-compatible library ID. Use 'resolveLibraryId' to get a valid ID.`;
-        }
+        if (!documentation || documentation.length === 0) return noDocumentation(libraryId);
 
         return documentation;
       } catch (error) {
+        // The API answers 404 for an unknown library ID; point the agent back to resolveLibraryId.
+        if (error instanceof Context7Error && error.status === 404) return noDocumentation(libraryId);
         const errorMessage =
           error instanceof Error ? error.message : "Failed to fetch documentation";
         return `Error fetching documentation for "${libraryId}": ${errorMessage}`;
       }
     },
   });
+}
+
+function noDocumentation(libraryId: string): string {
+  return `No documentation found for library "${libraryId}". This might have happened because you used an invalid Context7-compatible library ID. Use 'resolveLibraryId' to get a valid ID.`;
 }
