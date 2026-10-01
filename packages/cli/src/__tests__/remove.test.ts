@@ -3,6 +3,7 @@ import { Command } from "commander";
 import { mkdir, readFile, writeFile, rm, access } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
+import { readOpenCodeConfig } from "../setup/opencode-editor.js";
 
 const trackEvent = vi.fn();
 const mockCheckboxWithHover = vi.fn();
@@ -385,7 +386,7 @@ describe("remove command", () => {
   "mcp": {
     "alpha": { "type": "remote", "url": "https://alpha.com", "enabled": true },
     "context7": { "type": "remote", "url": "https://mcp.context7.com/mcp", "enabled": true },
-    "omega": { "type": "remote", "url": "https://omega.com", "enabled": false }
+    "omega": { "type": "remote", "url": "https://omega.com", "enabled": false },
   },
   "telemetry": { "enabled": true }
 }
@@ -395,7 +396,10 @@ describe("remove command", () => {
 
     await runCommand("remove", "--opencode", "--mcp", "--project");
 
-    expect(JSON.parse(await readFile(configPath, "utf-8"))).toEqual({
+    expect(await readFile(configPath, "utf-8")).toContain(
+      "// keep this file functional after removing Context7"
+    );
+    expect(await readOpenCodeConfig(configPath)).toEqual({
       theme: "night",
       mcp: {
         alpha: { type: "remote", url: "https://alpha.com", enabled: true },
