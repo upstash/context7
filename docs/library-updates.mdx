@@ -7,9 +7,7 @@ Context7 automatically refreshes library documentation so that developers always
 
 ## Automatic Refresh
 
-When a library's documentation is requested through Context7 — whether via the MCP server or the REST API — the system can check when the documentation was last updated. If it's older than a threshold based on the library's popularity, a background refresh is triggered automatically.
-
-The check does not run on every request. It runs only for documentation context requests (`GET /api/v2/context`, which the MCP server also uses), only for a sample of those requests, and at most once a day for each library.
+Context7 checks freshness when documentation is requested, and refreshes older libraries in the background.
 
 ### Refresh Thresholds
 

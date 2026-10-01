@@ -40,13 +40,9 @@ The search queries formulated by the MCP client (not your original prompts) are 
 
 **Documentation Reranking**
 
-MCP-formulated queries are passed to LLMs to rerank and select the most relevant documentation for your request. Context7 reaches these LLMs through **OpenRouter**, using models from **Alibaba (Qwen)** and **Google (Gemini)**.
+MCP-formulated queries are passed to LLMs to rerank and select the most relevant documentation for your request.
 
-Other Context7 features use these LLM providers:
-
-- **Search API** — queries are also reranked with models from **TypeSafe (Jev)** and **Voyage AI**, reached through **OpenRouter**
-- **Chat features** (such as Chat with Docs) — messages are answered by **DeepSeek** models, reached through **OpenRouter**
-- **Skill generation in the Context7 CLI** — your request is processed by **Anthropic (Claude)** models on **Amazon Bedrock**
+Context7 uses LLM providers from these companies: OpenRouter, Alibaba, Google, TypeSafe, Voyage AI, DeepSeek, Anthropic and Amazon Web Services.
 
 **Benchmarking and Quality Improvement**
 
