@@ -167,6 +167,16 @@ These commands save the server in `~/.pi/agent/mcp.json`. Add `--local` to `pi m
 
 Run `pi mcp list` to check the connection. In an open Pi session, run `/reload`, then use `/mcp` to inspect the server. Ask Pi to use Context7 for a library documentation question.
 
+#### Context7 extension
+
+You can also use the [official Context7 extension](/clients/pi#context7-extension). It includes a documentation skill and the `/c7-docs` prompt, and calls the Context7 API without an MCP server configuration:
+
+```sh
+pi install npm:@upstash/context7-pi
+```
+
+Run `/reload` or start a new Pi session, then ask a documentation question or use `/c7-docs next.js Cache Components`. It supports anonymous access and the `CONTEXT7_API_KEY` environment variable. Choose either the extension or the MCP setup above to avoid duplicate tools.
+
 </Accordion>
 
 <Accordion title="OpenClaw">
