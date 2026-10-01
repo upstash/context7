@@ -44,6 +44,7 @@ import {
 } from "./lib/auth-lifecycle-telemetry.js";
 import {
   canonicalMcpEndpoint,
+  effectiveMcpAuthMode,
   evaluateMcpAuthentication,
   parseMcpAuthMode,
   protectedResourceMetadata,
@@ -450,9 +451,14 @@ async function main() {
         const apiKey = extractApiKey(req);
         const endpoint = canonicalMcpEndpoint(req);
         const route = mcpRouteFromUrl(endpoint);
-        const authentication = await observeAuthentication(
-          { enforcementMode: authMode, route },
-          () => evaluateMcpAuthentication(apiKey, authMode)
+        const enforcementMode = effectiveMcpAuthMode(
+          authMode,
+          endpoint,
+          plugin,
+          req.headers.authorization
+        );
+        const authentication = await observeAuthentication({ enforcementMode, route }, () =>
+          evaluateMcpAuthentication(apiKey, enforcementMode)
         );
 
         if (!authentication.allowed) {
@@ -472,14 +478,14 @@ async function main() {
           clientIp: req.ip,
           apiKey,
           clientInfo: extractClientInfoFromUserAgent(req.headers["user-agent"]),
-          mcpAuthMode: authMode,
+          mcpAuthMode: enforcementMode,
           mcpEndpoint: endpoint,
           plugin,
           transport: "http",
         };
 
         observeCredentialedInitialize(res, req.body, {
-          enforcementMode: authMode,
+          enforcementMode,
           method: authentication.method,
           outcome: authentication.outcome,
           route,
@@ -519,7 +525,7 @@ async function main() {
     // Used by MCP clients to discover the authorization server
     app.get(
       "/.well-known/oauth-protected-resource",
-      (req: express.Request, res: express.Response) => {
+      (_req: express.Request, res: express.Response) => {
         recordAuthenticationEvent({
           enforcementMode: authMode,
           event: "metadata_requested",
@@ -533,7 +539,7 @@ async function main() {
     for (const endpoint of ["/mcp", "/mcp/oauth"] as const) {
       app.get(
         `/.well-known/oauth-protected-resource${endpoint}`,
-        (req: express.Request, res: express.Response) => {
+        (_req: express.Request, res: express.Response) => {
           const resource = protectedResourceUrl(endpoint);
           recordAuthenticationEvent({
             enforcementMode: authMode,

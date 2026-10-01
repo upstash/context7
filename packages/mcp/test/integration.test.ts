@@ -805,6 +805,29 @@ describe("hosted HTTP authentication", () => {
     }
   });
 
+  test("observe mode keeps the challenge for OAuth and plugin clients", async () => {
+    const observeServer = await startHttpChild({
+      environment: { ...childEnv, MCP_AUTH_ENFORCEMENT: "observe" },
+    });
+    try {
+      const oauthRes = await postMcp(observeServer.url.replace(/\/mcp$/, "/mcp/oauth"));
+      expect(oauthRes.status).toBe(401);
+      expect(oauthRes.wwwAuthenticate).toContain(
+        'resource_metadata="https://mcp.context7.com/.well-known/oauth-protected-resource/mcp/oauth"'
+      );
+
+      const pluginUrl = `${observeServer.url}?client=claude-code-plugin`;
+      const pluginRes = await postMcp(pluginUrl);
+      expect(pluginRes.status).toBe(401);
+      expect(pluginRes.wwwAuthenticate).toContain(
+        'resource_metadata="https://mcp.context7.com/.well-known/oauth-protected-resource/mcp"'
+      );
+      expect((await postMcp(pluginUrl, { Authorization: "" })).status).toBe(200);
+    } finally {
+      observeServer.child.kill();
+    }
+  });
+
   test("defaults to observe mode when the rollout setting is absent", async () => {
     const environment = { ...childEnv };
     delete environment.MCP_AUTH_ENFORCEMENT;

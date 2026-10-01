@@ -8,6 +8,7 @@ vi.mock("../src/lib/jwt.js", () => ({
 import { validateJWT } from "../src/lib/jwt.js";
 import {
   classifyAuthMethod,
+  effectiveMcpAuthMode,
   evaluateMcpAuthentication,
   parseMcpAuthMode,
 } from "../src/lib/mcp-http-auth.js";
@@ -29,6 +30,16 @@ describe("MCP HTTP authentication policy", () => {
     vi.stubEnv("MCP_AUTH_ENFORCEMENT", "");
     expect(parseMcpAuthMode()).toBe("observe");
     expect(() => parseMcpAuthMode("enforce-ish")).toThrow(/observe.*required/);
+  });
+
+  test("keeps the existing challenge for OAuth and plugin clients in observe mode", () => {
+    expect(effectiveMcpAuthMode("observe", "/mcp", undefined, undefined)).toBe("observe");
+    expect(effectiveMcpAuthMode("observe", "/mcp/oauth", undefined, undefined)).toBe("required");
+    expect(effectiveMcpAuthMode("observe", "/mcp", "claude-code-plugin", undefined)).toBe(
+      "required"
+    );
+    expect(effectiveMcpAuthMode("observe", "/mcp", "claude-code-plugin", "")).toBe("observe");
+    expect(effectiveMcpAuthMode("required", "/mcp", "claude-code-plugin", "")).toBe("required");
   });
 
   test("separates observation from enforcement for missing credentials", async () => {

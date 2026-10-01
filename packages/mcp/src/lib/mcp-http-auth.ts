@@ -12,7 +12,7 @@ export type McpAuthDecision = AuthenticationObservation &
 export function classifyAuthMethod(token: string | undefined): AuthenticationMethod {
   if (!token) return "none";
   if (token.startsWith("oat_")) return "oauth";
-  if (token.split(".").length === 3) return "jwt";
+  if (isJWT(token)) return "jwt";
   return "api_key";
 }
 
@@ -21,6 +21,23 @@ export function parseMcpAuthMode(raw = process.env.MCP_AUTH_ENFORCEMENT): McpAut
   if (!value) return "observe";
   if (value === "observe" || value === "required") return value;
   throw new Error(`MCP_AUTH_ENFORCEMENT must be "observe" or "required"; received "${raw}"`);
+}
+
+/**
+ * Clients of `/mcp/oauth` and the Claude Code plugin start OAuth only after a
+ * 401, so they keep that challenge in observe mode and observation covers only
+ * the plain `/mcp` route. An empty plugin Authorization header comes from older
+ * plugin versions that expanded an unset API key; it stays anonymous until
+ * enforcement is required.
+ */
+export function effectiveMcpAuthMode(
+  mode: McpAuthMode,
+  endpoint: McpEndpoint,
+  plugin: string | undefined,
+  authorizationHeader: string | undefined
+): McpAuthMode {
+  if (mode === "required" || endpoint === "/mcp/oauth") return "required";
+  return plugin && authorizationHeader !== "" ? "required" : "observe";
 }
 
 /**
