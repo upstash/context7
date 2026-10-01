@@ -18,7 +18,7 @@ export function classifyAuthMethod(token: string | undefined): AuthenticationMet
 
 export function parseMcpAuthMode(raw = process.env.MCP_AUTH_ENFORCEMENT): McpAuthMode {
   const value = raw?.trim().toLowerCase();
-  if (!value) return "observe";
+  if (!value) return "required";
   if (value === "observe" || value === "required") return value;
   throw new Error(`MCP_AUTH_ENFORCEMENT must be "observe" or "required"; received "${raw}"`);
 }

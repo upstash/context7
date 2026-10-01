@@ -828,16 +828,18 @@ describe("hosted HTTP authentication", () => {
     }
   });
 
-  test("defaults to observe mode when the rollout setting is absent", async () => {
+  test("defaults to required mode when the rollout setting is absent", async () => {
     const environment = { ...childEnv };
     delete environment.MCP_AUTH_ENFORCEMENT;
-    const observeServer = await startHttpChild({ environment });
+    const defaultServer = await startHttpChild({ environment });
     try {
-      const res = await postMcp(observeServer.url);
-      expect(res.status).toBe(200);
-      expect(res.wwwAuthenticate).toBeNull();
+      const res = await postMcp(defaultServer.url);
+      expect(res.status).toBe(401);
+      expect(res.wwwAuthenticate).toContain(
+        'resource_metadata="https://mcp.context7.com/.well-known/oauth-protected-resource/mcp"'
+      );
     } finally {
-      observeServer.child.kill();
+      defaultServer.child.kill();
     }
   });
 

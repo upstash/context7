@@ -1439,6 +1439,8 @@ Example with HTTP transport and port 8080:
 bun run dist/index.js --transport http --port 8080
 ```
 
+HTTP transport requires a credential on every request by default. Clients send `Authorization: Bearer YOUR_API_KEY`. Set `MCP_AUTH_ENFORCEMENT=observe` to also accept requests without credentials on `/mcp`.
+
 Another example with stdio transport:
 
 ```bash

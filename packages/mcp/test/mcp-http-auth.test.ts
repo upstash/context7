@@ -26,9 +26,9 @@ describe("MCP HTTP authentication policy", () => {
     expect(classifyAuthMethod("ctx7sk_example")).toBe("api_key");
   });
 
-  test("defaults to observation and rejects unknown rollout modes", () => {
+  test("defaults to enforcement and rejects unknown rollout modes", () => {
     vi.stubEnv("MCP_AUTH_ENFORCEMENT", "");
-    expect(parseMcpAuthMode()).toBe("observe");
+    expect(parseMcpAuthMode()).toBe("required");
     expect(() => parseMcpAuthMode("enforce-ish")).toThrow(/observe.*required/);
   });
 
