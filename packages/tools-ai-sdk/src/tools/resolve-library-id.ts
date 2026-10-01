@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { Context7, Context7Error } from "@upstash/context7-sdk";
+import { Context7 } from "@upstash/context7-sdk";
 import { RESOLVE_LIBRARY_ID_DESCRIPTION } from "@prompts";
 import type { Context7ToolsConfig } from "./types";
 
@@ -51,21 +51,11 @@ export function resolveLibraryId(config: Context7ToolsConfig = {}) {
     execute: async ({ query, libraryName }: { query: string; libraryName: string }) => {
       try {
         const client = getClient();
-        const results = await client.searchLibrary(query, libraryName, { type: "txt" });
-
-        if (!results || results.length === 0) return noLibraries(libraryName);
-
-        return results;
+        return await client.searchLibrary(query, libraryName, { type: "txt" });
       } catch (error) {
-        // The API answers 404 when nothing matches; that is a result, not a failure.
-        if (error instanceof Context7Error && error.status === 404) return noLibraries(libraryName);
         const errorMessage = error instanceof Error ? error.message : "Failed to search libraries";
         return `Error searching for libraries: ${errorMessage}`;
       }
     },
   });
-}
-
-function noLibraries(libraryName: string): string {
-  return `No libraries found matching "${libraryName}". Try a different search term or check the library name.`;
 }

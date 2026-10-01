@@ -2,6 +2,7 @@ import { describe, test, expect } from "vitest";
 import { SearchLibraryCommand } from "./index";
 import { Context7Error } from "@error";
 import { requesterWith } from "@utils/test-utils";
+import type { Requester } from "@http";
 
 const apiResult = {
   results: [
@@ -55,6 +56,18 @@ describe("SearchLibraryCommand", () => {
       message: "Request did not return a result",
       code: "invalid_response",
     });
+  });
+
+  test("returns no libraries when the API finds no match", async () => {
+    const notFound: Requester = {
+      request: async () => {
+        throw new Context7Error("No libraries found", { status: 404, code: "no_libraries_found" });
+      },
+    };
+
+    await expect(new SearchLibraryCommand("query", "unknown-lib").exec(notFound)).resolves.toEqual(
+      []
+    );
   });
 
   test("rejects missing inputs without making a request", () => {

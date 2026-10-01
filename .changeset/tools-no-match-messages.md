@@ -2,4 +2,4 @@
 "@upstash/context7-tools-ai-sdk": patch
 ---
 
-`resolveLibraryId` and `queryDocs` return their "no libraries found" and "no documentation found" messages when the API answers 404, and other errors no longer end with ".. Check your API key and try again."
+`resolveLibraryId` returns the SDK's "No libraries found" message when nothing matches, and `queryDocs` returns its "No documentation found" message for an unknown library ID. Other errors no longer end with ".. Check your API key and try again."
