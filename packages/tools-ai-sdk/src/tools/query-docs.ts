@@ -58,7 +58,8 @@ export function queryDocs(config: Context7ToolsConfig = {}) {
         return documentation;
       } catch (error) {
         // The API answers 404 for an unknown library ID; point the agent back to resolveLibraryId.
-        if (error instanceof Context7Error && error.status === 404) return noDocumentation(libraryId);
+        if (error instanceof Context7Error && error.status === 404)
+          return noDocumentation(libraryId);
         const errorMessage =
           error instanceof Error ? error.message : "Failed to fetch documentation";
         return `Error fetching documentation for "${libraryId}": ${errorMessage}`;
