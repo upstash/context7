@@ -129,17 +129,9 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
 
 <Accordion title="Pi">
 
-#### Context7 extension
-
-We recommend the [official Context7 extension](/clients/pi#context7-extension). It includes a documentation skill and the `/c7-docs` prompt. It calls the hosted Context7 HTTP API directly, without using the remote MCP server:
-
-```sh
-pi install npm:@upstash/context7-pi
-```
-
-Run `/reload` or start a new Pi session, then ask a documentation question or use `/c7-docs next.js Cache Components`. It supports anonymous access and the `CONTEXT7_API_KEY` environment variable. Choose either the extension or the MCP setup below to avoid duplicate tools.
-
 #### Built-in MCP
+
+We recommend built-in MCP because the Context7 MCP server receives updates more frequently than the Pi extension.
 
 Pi has built-in MCP support from version 0.99.0. Run `pi update` to update Pi, then choose one connection method below. See the [Pi guide](/clients/pi) for usage examples and [Pi's MCP documentation](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/mcp.md) for configuration details.
 
@@ -178,6 +170,16 @@ pi mcp add context7 --exposure direct \
 These commands save the server in `~/.pi/agent/mcp.json`. Add `--local` to `pi mcp add` to use `.pi/mcp.json` for a trusted project. The `--exposure direct` option makes Context7's tools visible to the model immediately.
 
 Run `pi mcp list` to check the connection. In an open Pi session, run `/reload`, then use `/mcp` to inspect the server. Ask Pi to use Context7 for a library documentation question.
+
+#### Context7 extension
+
+The [official Context7 extension](/clients/pi#context7-extension) is an alternative. It includes a documentation skill and the `/c7-docs` prompt. It calls the hosted Context7 HTTP API directly, without using the remote MCP server:
+
+```sh
+pi install npm:@upstash/context7-pi
+```
+
+Run `/reload` or start a new Pi session, then ask a documentation question or use `/c7-docs next.js Cache Components`. It supports anonymous access and the `CONTEXT7_API_KEY` environment variable. Choose either the extension or the MCP setup above to avoid duplicate tools.
 
 </Accordion>
 

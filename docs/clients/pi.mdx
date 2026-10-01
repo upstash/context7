@@ -1,43 +1,11 @@
 ---
 title: Pi
-description: Use Context7 in Pi with the official extension or built-in MCP support
+description: Use Context7 in Pi with built-in MCP support or the official extension
 ---
 
 Connect the [Pi coding agent](https://pi.dev) to Context7 to get current library documentation and code examples in your coding sessions.
 
-We recommend the [official Context7 extension](#context7-extension). It includes a documentation skill and the `/c7-docs` prompt. Use [built-in MCP](#built-in-mcp-setup) if you prefer MCP configuration or OAuth sign-in.
-
-## Context7 extension
-
-The official [`@upstash/context7-pi`](https://github.com/upstash/context7/tree/master/packages/pi) extension registers documentation tools directly in Pi and calls the hosted Context7 HTTP API. It does not connect to the remote MCP server. Choose either the extension or the MCP setup below to avoid duplicate documentation tools.
-
-Install it with Pi's package command:
-
-```bash
-pi install npm:@upstash/context7-pi
-```
-
-Start a new Pi session, or run `/reload` in an open session to load the extension.
-
-The extension works without an API key at the anonymous rate limit. For higher limits, create a key in the [Context7 dashboard](https://context7.com/dashboard) and export it before starting Pi:
-
-```bash
-export CONTEXT7_API_KEY="YOUR_API_KEY"
-```
-
-Add the export to your shell profile for future sessions. The extension uses this key independently of the built-in MCP OAuth sign-in.
-
-The package includes the `resolve-library-id` and `query-docs` tools, the `context7-docs` skill, and the `/c7-docs` prompt template. The skill instructs Pi to look up documentation when you ask about a library. For an explicit lookup, use:
-
-```text
-/c7-docs next.js How do I enable Cache Components?
-```
-
-You can also provide a Context7 library ID to skip the library search:
-
-```text
-/c7-docs /vercel/next.js How do I enable Cache Components?
-```
+We recommend [built-in MCP](#built-in-mcp-setup). The Context7 MCP server receives updates more frequently than the Pi extension. The [official extension](#context7-extension) remains an alternative with a documentation skill and the `/c7-docs` prompt.
 
 ## Built-in MCP setup
 
@@ -126,3 +94,35 @@ then query its documentation. Skip resolution when the prompt includes a library
 ```
 
 Ask for one documentation topic at a time. Include the library version when it matters. For questions about separate topics, request a separate lookup for each topic.
+
+## Context7 extension
+
+The official [`@upstash/context7-pi`](https://github.com/upstash/context7/tree/master/packages/pi) extension registers documentation tools directly in Pi and calls the hosted Context7 HTTP API. It does not connect to the remote MCP server. Choose either the extension or the MCP setup above to avoid duplicate documentation tools.
+
+Install it with Pi's package command:
+
+```bash
+pi install npm:@upstash/context7-pi
+```
+
+Start a new Pi session, or run `/reload` in an open session to load the extension.
+
+The extension works without an API key at the anonymous rate limit. For higher limits, create a key in the [Context7 dashboard](https://context7.com/dashboard) and export it before starting Pi:
+
+```bash
+export CONTEXT7_API_KEY="YOUR_API_KEY"
+```
+
+Add the export to your shell profile for future sessions. The extension uses this key independently of the built-in MCP OAuth sign-in.
+
+The package includes the `resolve-library-id` and `query-docs` tools, the `context7-docs` skill, and the `/c7-docs` prompt template. The skill instructs Pi to look up documentation when you ask about a library. For an explicit lookup, use:
+
+```text
+/c7-docs next.js How do I enable Cache Components?
+```
+
+You can also provide a Context7 library ID to skip the library search:
+
+```text
+/c7-docs /vercel/next.js How do I enable Cache Components?
+```
