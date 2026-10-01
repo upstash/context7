@@ -212,7 +212,7 @@ openclaw mcp add context7 \
   --transport streamable-http
 ```
 
-This works without an API key at the anonymous rate limit. For higher limits, create a key in the [Context7 dashboard](https://context7.com/dashboard) and append this option to the command:
+We recommend using an API key. Create a key in the [Context7 dashboard](https://context7.com/dashboard) and append this option to the command:
 
 ```sh
 --header "Authorization: Bearer YOUR_API_KEY"
@@ -1102,7 +1102,7 @@ docker build -t context7-mcp .
 Context7 is available in the [Docker MCP Catalog](https://hub.docker.com/mcp/server/context7/overview) as a **remote** server, so you don't need to build, pull, or run a local image. The MCP Toolkit connects to the hosted endpoint for you.
 
 1. In Docker Desktop, open **MCP Toolkit → Catalog**, search for **Context7**, and enable it.
-2. (Optional) In the server's **Config** tab, set your Context7 API key (`CONTEXT7_API_KEY`) for higher rate limits. The server also works without one.
+2. In the server's **Config** tab, set your Context7 API key (`CONTEXT7_API_KEY`). We recommend using an API key.
 3. Connect your MCP client to Docker's MCP gateway. Either run `docker mcp client connect <client>` (for example `vscode`, `cursor`, or `claude-desktop`), or add the gateway to your client config manually:
 
 ```json
