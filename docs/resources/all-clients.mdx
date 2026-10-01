@@ -32,6 +32,22 @@ OAuth is only available for remote HTTP connections. For local MCP connections u
 
 <AccordionGroup>
 
+<Accordion title="Pi">
+
+Pi has built-in MCP support. These commands use the syntax in [Pi v0.99.2](https://github.com/earendil-works/pi/releases/tag/v0.99.2):
+
+```bash
+export CONTEXT7_API_KEY=YOUR_API_KEY
+pi mcp add context7 --url https://mcp.context7.com/mcp --bearer-token-env-var CONTEXT7_API_KEY
+pi mcp list
+```
+
+The server is saved in `~/.pi/agent/mcp.json`. Run `/reload` if Pi is already open, then use `/mcp` to inspect the connection.
+
+For OAuth setup, project configuration, or the Context7 extension with `/c7-docs`, see the [Pi guide](/clients/pi).
+
+</Accordion>
+
 <Accordion title="Claude Code">
 
 Run this command. See [Claude Code MCP docs](https://code.claude.com/docs/en/mcp) for more info.

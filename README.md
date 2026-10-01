@@ -60,6 +60,18 @@ To configure manually, use the Context7 server URL `https://mcp.context7.com/mcp
 
 **[Manual Installation / Other Clients →](https://context7.com/docs/resources/all-clients)**
 
+### Pi
+
+Connect Pi to Context7 with its built-in MCP support:
+
+```bash
+export CONTEXT7_API_KEY=YOUR_API_KEY
+pi mcp add context7 --url https://mcp.context7.com/mcp --bearer-token-env-var CONTEXT7_API_KEY
+pi mcp list
+```
+
+See the [Pi guide](https://context7.com/docs/clients/pi) for OAuth setup and the Context7 extension.
+
 ## Important Tips
 
 ### Use Library Id
