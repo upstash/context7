@@ -21,9 +21,15 @@ Authenticates via OAuth, generates an API key, and installs the appropriate skil
 
 You can also install Context7 as an [OpenCode plugin](#plugin). It bundles the MCP server with a skill:
 
-```bash
+<CodeGroup>
+```bash OpenCode v2
+opencode plugin add @upstash/context7-opencode
+```
+
+```bash OpenCode v1
 opencode plugin @upstash/context7-opencode
 ```
+</CodeGroup>
 
 Restart OpenCode after installing, then authenticate the plugin:
 
@@ -41,11 +47,17 @@ For manual MCP installation or other configuration options, see [All MCP Clients
 
 Install the plugin from your project directory:
 
-```bash
-opencode plugin @upstash/context7-opencode
+<CodeGroup>
+```bash OpenCode v2
+opencode plugin add @upstash/context7-opencode
 ```
 
-The plugin is an alternative to `ctx7 setup` that configures OpenCode in one command. It adds two things:
+```bash OpenCode v1
+opencode plugin @upstash/context7-opencode
+```
+</CodeGroup>
+
+The plugin is an alternative to `ctx7 setup` that configures OpenCode in one command. It works on OpenCode v2 and on v1 (1.18.29 or newer). It adds two things:
 
 <CardGroup cols={2}>
 <Card title="MCP Server" icon="server">
@@ -56,14 +68,23 @@ The tools for fetching documentation (`context7_resolve-library-id`, `context7_q
 </Card>
 </CardGroup>
 
-You can also add the plugin to your config by hand:
+You can also add the plugin to your `opencode.json` by hand. OpenCode v2 uses the `plugins` key, v1 uses `plugin`:
 
-```json opencode.json
+<CodeGroup>
+```json OpenCode v2
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugins": ["@upstash/context7-opencode"]
+}
+```
+
+```json OpenCode v1
 {
   "$schema": "https://opencode.ai/config.json",
   "plugin": ["@upstash/context7-opencode"]
 }
 ```
+</CodeGroup>
 
 ### API Key
 
@@ -75,12 +96,21 @@ export CONTEXT7_API_KEY="your-api-key"
 
 The plugin picks up `CONTEXT7_API_KEY` automatically and sends it as an `Authorization` header. You can also pass it through the plugin options:
 
-```json opencode.json
+<CodeGroup>
+```json OpenCode v2
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugins": [{ "package": "@upstash/context7-opencode", "options": { "apiKey": "your-api-key" } }]
+}
+```
+
+```json OpenCode v1
 {
   "$schema": "https://opencode.ai/config.json",
   "plugin": [["@upstash/context7-opencode", { "apiKey": "your-api-key" }]]
 }
 ```
+</CodeGroup>
 
 Create or manage API keys in the [Context7 dashboard](https://context7.com/dashboard).
 
