@@ -1,5 +1,11 @@
 # @upstash/context7-tools-ai-sdk
 
+## 1.0.2
+
+### Patch Changes
+
+- Confirm compatibility with `@upstash/context7-sdk@0.5.0`. The tools package API is unchanged.
+
 ## 1.0.1
 
 ### Patch Changes

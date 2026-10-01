@@ -9,10 +9,6 @@ describe("Context7 Client", () => {
     vi.restoreAllMocks();
   });
 
-  test("creates a client with an explicit API key", () => {
-    expect(new Context7({ apiKey: "ctx7sk-config" })).toBeDefined();
-  });
-
   test("creates a client from the environment", () => {
     vi.stubEnv("CONTEXT7_API_KEY", "ctx7sk-environment");
 
@@ -167,5 +163,28 @@ describe("Context7 Client", () => {
     const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(init.cache).toBe("reload");
     expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  test("sends repeated library hints to the Search API", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ codeSnippets: [], infoSnippets: [] }), {
+        headers: { "content-type": "application/json" },
+      })
+    );
+    const client = new Context7({
+      apiKey: "ctx7sk-config",
+      fetch: fetchMock,
+      retry: false,
+    });
+
+    await client.search("How do I cache a function?", {
+      libraries: ["Next.js", "/vercel/next.js"],
+      version: "15.4.0",
+      language: "TypeScript",
+    });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "https://context7.com/api/v3/search?query=How+do+I+cache+a+function%3F&type=json&library=Next.js&library=%2Fvercel%2Fnext.js&version=15.4.0&language=TypeScript"
+    );
   });
 });
