@@ -43,7 +43,7 @@ The embedded index is local to one container, so this pairing suits a single-con
 In Postgres mode the built-in backup is off, so nothing backs up the local LanceDB vectors. Back up the data volume yourself, or plan to re-index after a loss.
 </Note>
 
-Whatever the store, the collection or table is created on first write, the vector dimension is taken from your embedding model, and search uses cosine similarity. pgvector and Milvus use an HNSW index; LanceDB searches without an index. There is no manual schema setup. Switching to an embedding model with the same dimension is a re-index rather than a migration. pgvector tables and Milvus collections keep the dimension they were created with, so a model with a different dimension cannot write to them: drop the `ee_vectors_*` tables or collections and re-index every library. AWS Bedrock embedding models use their own tables or collections for each model, so this does not apply to them.
+Whatever the store, the collection or table is created on first write and the vector dimension is taken from your embedding model. There is no manual schema setup. Switching to an embedding model with the same dimension is a re-index rather than a migration. pgvector tables and Milvus collections keep the dimension they were created with, so a model with a different dimension cannot write to them: drop the `ee_vectors_*` tables or collections and re-index every library. AWS Bedrock embedding models use their own tables or collections for each model, so this does not apply to them.
 
 ## pgvector
 
