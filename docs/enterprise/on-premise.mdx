@@ -25,7 +25,7 @@ Context7 On-Premise keeps your repositories, generated documentation, applicatio
 
 <Step title="Request a trial">
 
-Go to [context7.com/plans](https://context7.com/plans) and click **On-Premise Trial**. Fill out the request form. No credit card required. You'll receive a 30-day full-featured license key via email once approved.
+Go to [context7.com/plans](https://context7.com/plans) and click **Learn More** on the Enterprise plan, then click **Request On-Premise Trial**. Fill out the request form. No credit card required. You'll receive a 30-day full-featured license key via email once approved.
 
 </Step>
 
@@ -58,7 +58,7 @@ All configuration is stored locally in the embedded database and can be updated 
 
 <Step title="Ingest your first repository">
 
-From the dashboard, click **Add Repository** and enter a GitHub or GitLab URL. Once ingestion completes, your private docs are ready to query.
+From the dashboard, click **Parse New Repo** (or **Add Repo** on the Projects page) and enter a GitHub or GitLab URL. Once ingestion completes, your private docs are ready to query.
 
 You can also add libraries via the REST API:
 
@@ -218,7 +218,7 @@ Configured via the **Settings** page in the web UI.
 
 ### Embedding Settings
 
-By default, Context7 uses the same provider as your LLM for generating embeddings. You can configure a separate embedding provider if needed.
+By default, Context7 uses the same provider as your LLM for generating embeddings. Anthropic has no embedding models, so when the LLM provider is Anthropic, embeddings use OpenAI and need a separate OpenAI API key. You can configure a separate embedding provider if needed.
 
 | Setting | Description |
 |---|---|
@@ -242,17 +242,17 @@ You only need tokens for the platforms you use. If you only parse GitLab repos, 
 
 ## Access Control
 
-Admin credentials are set during first login (default: `admin` / `admin`). Change these immediately after setup via **Settings > Change Credentials**.
+The server creates an `admin` account with the password `admin` at first boot. Change these credentials immediately after setup from **Personal Settings > Password Sign-In**.
 
-The Settings page lets you control which operations are available without authentication, including MCP and API search access.
+**Workspace Settings > General > Authorization > Non-admin Permissions** controls which operations are available without admin access. The **MCP Authentication** card under **Authentication** controls MCP and API search access.
 
 | Permission | Default | Description |
 |---|---|---|
-| Allow anonymous parse | Off | Allow unauthenticated users to trigger parsing |
-| Allow anonymous refresh | Off | Allow unauthenticated users to refresh libraries |
-| Allow anonymous delete | Off | Allow unauthenticated users to delete libraries |
-| Allow anonymous support bundle | Off | Allow unauthenticated support bundle downloads |
-| Require MCP authentication | Off | Require a personal API key for `/mcp` and external `/api/v2` search requests |
+| Parse repos | Off | Allow unauthenticated users to trigger parsing |
+| Refresh repos | Off | Allow unauthenticated users to refresh libraries |
+| Delete repos | Off | Allow unauthenticated users to delete libraries |
+| Download support bundle | Off | Allow unauthenticated support bundle downloads |
+| MCP Authentication | Off | Require a personal API key for `/mcp` and external `/api/v2` search requests |
 
 When MCP authentication is enabled, each user creates personal keys from **Personal Settings > API Keys**. Clients send the key as `Authorization: Bearer <key>`.
 
@@ -260,7 +260,7 @@ When MCP authentication is enabled, each user creates personal keys from **Perso
 
 Policies let you control which public documentation from the Context7 cloud is accessible to your on-premise instance. They do not affect locally parsed on-premise content.
 
-Access Policies from **Settings > Policies** tab. Requires admin login and a valid `LICENSE_KEY`.
+Access Policies from **Workspace Settings > Access > Content Policies**. Requires admin login and a valid `LICENSE_KEY`.
 
 For details on source type toggles and library filters, see [Customizing What Is Retrieved](/security/data-privacy#customizing-what-is-retrieved).
 

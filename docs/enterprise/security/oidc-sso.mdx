@@ -50,7 +50,7 @@ If your provider uses a different claim name, you can change what Context7 looks
 
 <Steps>
   <Step title="Open the SSO settings card">
-    Sign in to your Context7 dashboard with the admin account. Open **Teamspace Settings**, scroll to the **Authentication** section, and click the **Single Sign-On** card. Select the **OIDC** tab.
+    Sign in to your Context7 dashboard with the admin account. Open **Workspace Settings**, scroll to the **Authentication** section, and click the **Single Sign-On** card. Select the **OIDC** tab.
 
     <Frame>
       ![Context7 Settings showing the Single Sign-On card with the OIDC tab selected](/images/enterprise/oidc-sso/02-sso-card-oidc.png)
@@ -77,14 +77,14 @@ If your provider uses a different claim name, you can change what Context7 looks
     </Frame>
 
     - **Groups claim**: the name of the claim in the token that contains the user's groups. Default is `groups`.
-    - **Admin group value**: the exact group name that maps to the Context7 admin role. Admins can open Teamspace Settings and manage other users.
+    - **Admin group value**: the exact group name that maps to the Context7 admin role. Admins can open Workspace Settings and manage other users.
     - **Member group value**: the exact group name that maps to the member role. Members can use the workspace but cannot access settings.
 
     If you leave both group values blank, every authenticated user gets the member role automatically. This is useful when your IdP does not emit a groups claim and you want to allow any user from your organization in.
   </Step>
 
   <Step title="Test the connection">
-    Click **Test connection** before saving. Context7 fetches your provider's discovery document and confirms the required endpoints are present and reachable. A green banner means everything looks good. A red error usually means the issuer URL is wrong or the provider is not accessible from the Context7 server.
+    Click **Test connection** before saving. Context7 fetches your provider's discovery document and confirms that it lists the authorization and token endpoints. The test does not check the client ID or client secret. The issuer URL must use HTTPS, except for `localhost` and `127.0.0.1`. A green banner means everything looks good. A red error usually means the issuer URL is wrong or the provider is not accessible from the Context7 server.
   </Step>
 
   <Step title="Save and apply">
@@ -120,10 +120,10 @@ Disabling password sign-in means the default admin account and any manually crea
 
 ## Managing users
 
-All users who have signed in appear in **Teamspace Settings → Users**, along with their authentication provider and last login time.
+All users who have signed in appear in **Workspace Settings → Users**, along with their authentication provider and last login time.
 
 <Frame>
-  ![Teamspace Settings Users tab showing OIDC-provisioned users](/images/enterprise/oidc-sso/05-users-tab.png)
+  ![Workspace Settings Users tab showing OIDC-provisioned users](/images/enterprise/oidc-sso/05-users-tab.png)
 </Frame>
 
 Roles are controlled by group membership in your IdP. To change someone's role, update their group assignment in your identity provider. The change takes effect on their next sign-in.

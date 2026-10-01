@@ -6,7 +6,7 @@ description: "Ingest private repositories from a self-managed Git host such as G
 
 Context7 can clone and index repositories from any self-managed Git host that isn't GitHub or GitLab, such as **Gerrit**, **Gitea**, or **self-hosted Bitbucket**, over **HTTPS** or **SSH**.
 
-Under **Settings → Integrations → Other Git**, enter the repository host, choose **HTTPS** or **SSH**, and then [add repositories](#add-a-repository) with their normal clone URL. The host is shared by both authentication methods and also selects which repositories use the review publishing settings.
+Under **Settings → Integrations → Other Git**, choose **HTTPS** or **SSH**, and then [add repositories](#add-a-repository) with their normal clone URL. The **Host** field is on the **HTTPS** tab. It selects which `https://` repositories use the stored credentials, and which repositories use the review publishing settings. The SSH key applies to all `ssh://` clones, whatever the host.
 
 If you use Gerrit, see the [Gerrit integration guide](/enterprise/integrations/gerrit) to submit generated code documentation through `refs/for/{branch}`.
 
@@ -36,7 +36,7 @@ Presenting a private or self-signed TLS certificate? Point `NODE_EXTRA_CA_CERTS`
 
 ## SSH (deploy key)
 
-When a repository is added with an `ssh://` URL, for example `ssh://<user>@gerrit.your-company.com:29418/platform/sdk`, Context7 authenticates with a deploy key. Enter the repository host, select **SSH**, and register the key's **public** half on a service account in your Git host that can read the repositories you want to index. Then give Context7 the private half one of two ways.
+When a repository is added with an `ssh://` URL, for example `ssh://<user>@gerrit.your-company.com:29418/platform/sdk`, Context7 authenticates with a deploy key. Select **SSH**, and register the key's **public** half on a service account in your Git host that can read the repositories you want to index. Then give Context7 the private half one of two ways. The key is used for every `ssh://` clone, whatever the host. If you use [review publishing](/enterprise/integrations/gerrit) over SSH, also enter the host on the **HTTPS** tab.
 
 ### Paste the key in the UI (recommended)
 
@@ -99,7 +99,7 @@ If you prefer the private key never touch the application (it is never written t
       -v /path/to/id_ed25519:/etc/git-ssh/id_ed25519:ro \
       -v /path/to/known_hosts:/etc/git-ssh/known_hosts:ro \
       -e GIT_SSH_COMMAND="ssh -i /etc/git-ssh/id_ed25519 -o UserKnownHostsFile=/etc/git-ssh/known_hosts" \
-      -e LLM_API_KEY=sk-... \
+      -e LICENSE_KEY=ctx7sk-... \
       ghcr.io/context7/enterprise
     ```
   </Tab>

@@ -67,7 +67,7 @@ The AWS credential chain does not skip credentials merely because they are inval
 
 <Steps>
   <Step title="Configure the LLM">
-    In the setup wizard or **Settings → AI & Models**, select **AWS Bedrock**. Enter the raw Bedrock model or inference-profile ID—without an `amazon-bedrock/` prefix—and select its AWS Region.
+    In the setup wizard, or in the **LLM** section of the **AI & Integrations** card under **Settings → Integrations**, select **AWS Bedrock**. Enter the raw Bedrock model or inference-profile ID—without an `amazon-bedrock/` prefix—and type its AWS Region, for example `us-east-1`, in the **AWS Region** field.
 
     Use an inference-profile prefix that matches the selected Region's geography:
 
@@ -80,7 +80,7 @@ The AWS credential chain does not skip credentials merely because they are inval
     Context7 selects region-aware defaults in v1.3.9 and later. If you enter a custom model or inference-profile ID, verify that it is invocable from the configured Region.
   </Step>
   <Step title="Configure embeddings">
-    Select **Same as LLM** to use Bedrock embeddings, or select **AWS Bedrock** separately. Use an Amazon Titan model such as `amazon.titan-embed-text-v2:0`.
+    In the setup wizard, select **Same as LLM** to use Bedrock embeddings, or select **Separate provider** and then **AWS Bedrock**. Use an Amazon Titan model such as `amazon.titan-embed-text-v2:0`. You can change the embedding provider and model only in the setup wizard; Settings shows them read-only.
 
     The LLM and embedding configurations share one AWS Region. If both use Bedrock, choose models available from the same configured region.
   </Step>
