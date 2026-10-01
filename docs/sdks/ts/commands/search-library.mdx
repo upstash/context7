@@ -107,11 +107,14 @@ const client = new Context7();
 
 try {
   const libraries = await client.searchLibrary("query", "express");
-  console.log(`Found ${libraries.length} libraries`);
-} catch (error) {
-  if (error instanceof Context7Error && error.status === 404) {
+
+  if (libraries.length === 0) {
     console.log("No libraries found");
-  } else if (error instanceof Context7Error) {
+  } else {
+    console.log(`Found ${libraries.length} libraries`);
+  }
+} catch (error) {
+  if (error instanceof Context7Error) {
     console.error("API Error:", error.message);
   } else {
     throw error;
