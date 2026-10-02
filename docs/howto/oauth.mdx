@@ -20,16 +20,17 @@ Context7 MCP server supports OAuth 2.0 authentication for MCP clients that imple
 
 ## Configuration
 
-To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client configuration:
+Use the canonical endpoint in your client configuration. It advertises OAuth when it challenges an unauthenticated request:
 
-```diff
-- "url": "https://mcp.context7.com/mcp"
-+ "url": "https://mcp.context7.com/mcp/oauth"
+```json
+{ "url": "https://mcp.context7.com/mcp" }
 ```
+
+The older `/mcp/oauth` URL remains available as a compatibility alias.
 
 ## How It Works
 
-1. Your MCP client connects to the OAuth endpoint
+1. Your MCP client connects to the MCP endpoint and receives an authentication challenge
 2. You're redirected to Context7 to sign in
 3. After signing in, you're redirected back to your client
 4. Your client automatically handles token refresh
