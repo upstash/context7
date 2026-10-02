@@ -2,8 +2,7 @@ import { Command } from "commander";
 import pc from "picocolors";
 import ora from "ora";
 import { mkdir, writeFile, readFile, unlink } from "fs/promises";
-import { join } from "path";
-import { homedir } from "os";
+import { join, resolve } from "path";
 import { spawn } from "child_process";
 import { input, select } from "@inquirer/prompts";
 
@@ -506,7 +505,9 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
     return;
   }
 
-  const targetDirs = getTargetDirs(targets);
+  // --output replaces the project as the base of project-scoped skill
+  // directories; global ones stay under the home directory.
+  const targetDirs = getTargetDirs(targets, options.output ? resolve(options.output) : undefined);
 
   const writeSpinner = ora("Writing skill files...").start();
 
@@ -514,11 +515,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
   const failedDirs: Set<string> = new Set();
 
   for (const targetDir of targetDirs) {
-    let finalDir = targetDir;
-    if (options.output && !targetDir.includes("/.config/") && !targetDir.startsWith(homedir())) {
-      finalDir = targetDir.replace(process.cwd(), options.output);
-    }
-    const skillDir = join(finalDir, skillName);
+    const skillDir = join(targetDir, skillName);
     const skillPath = join(skillDir, "SKILL.md");
 
     try {

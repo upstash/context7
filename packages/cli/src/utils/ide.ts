@@ -256,12 +256,22 @@ export async function promptForSingleTarget(
   return { ide: selectedIde, scope: selectedScope };
 }
 
-export function getTargetDirs(targets: InstallTargets): string[] {
+/**
+ * Resolve the skill directories for the selected agents and scopes.
+ *
+ * `projectDir` is the base for project-scoped directories (defaults to the
+ * current working directory); global directories always live under the home
+ * directory, wherever the project is.
+ */
+export function getTargetDirs(
+  targets: InstallTargets,
+  projectDir: string = process.cwd()
+): string[] {
   const hasUniversal = targets.ides.some((ide) => ide === "universal");
   const dirs: string[] = [];
 
   for (const scope of targets.scopes) {
-    const baseDir = scope === "global" ? homedir() : process.cwd();
+    const baseDir = scope === "global" ? homedir() : projectDir;
 
     if (hasUniversal) {
       const uniPath = scope === "global" ? UNIVERSAL_SKILLS_GLOBAL_PATH : UNIVERSAL_SKILLS_PATH;
