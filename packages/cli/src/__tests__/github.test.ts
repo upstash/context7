@@ -130,6 +130,101 @@ describe("downloadSkillFromGitHub", () => {
     expect(result.files.map((f) => f.path).sort()).toEqual(["SKILL.md", "references/guide.md"]);
   });
 
+  test.each(["SKILL.md", "references/guide.md"])(
+    "rejects an incomplete skill when %s fails to download",
+    async (failedPath) => {
+      const skillPath = "plugins/codex/context7/skills/context7-mcp";
+      const paths =
+        failedPath === "SKILL.md"
+          ? ["references/guide.md", "SKILL.md"]
+          : ["SKILL.md", "references/guide.md"];
+      const fetchMock = vi.fn((url: string) => {
+        if (url.includes("api.github.com")) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                tree: paths.map((path) => ({ type: "blob", path: `${skillPath}/${path}` })),
+              }),
+          });
+        }
+        return Promise.resolve(
+          url.endsWith(failedPath)
+            ? { ok: false, status: 503 }
+            : { ok: true, text: () => Promise.resolve("downloaded") }
+        );
+      });
+      vi.stubGlobal("fetch", fetchMock);
+
+      const result = await downloadSkillFromGitHub(SKILL);
+
+      expect(result.files).toEqual([]);
+      expect(result.error).toContain(`${failedPath}: HTTP 503`);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    }
+  );
+
+  test("rejects a tree that has supporting files but no SKILL.md", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("api.github.com")) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                tree: [
+                  {
+                    type: "blob",
+                    path: "plugins/codex/context7/skills/context7-mcp/references/guide.md",
+                  },
+                ],
+              }),
+          });
+        }
+        return Promise.resolve({ ok: true, text: () => Promise.resolve("downloaded") });
+      })
+    );
+
+    const result = await downloadSkillFromGitHub(SKILL);
+
+    expect(result.files).toEqual([]);
+    expect(result.error).toContain("SKILL.md");
+  });
+
+  test("rejects the whole skill when a supporting file request fails on the network", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string) => {
+        if (url.includes("api.github.com")) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                tree: [
+                  {
+                    type: "blob",
+                    path: "plugins/codex/context7/skills/context7-mcp/SKILL.md",
+                  },
+                  {
+                    type: "blob",
+                    path: "plugins/codex/context7/skills/context7-mcp/references/guide.md",
+                  },
+                ],
+              }),
+          });
+        }
+        if (url.endsWith("guide.md")) return Promise.reject(new TypeError("connection reset"));
+        return Promise.resolve({ ok: true, text: () => Promise.resolve("# Context7 skill") });
+      })
+    );
+
+    const result = await downloadSkillFromGitHub(SKILL);
+
+    expect(result.files).toEqual([]);
+    expect(result.error).toContain("references/guide.md: connection reset");
+  });
+
   test("falls back to the single SKILL.md when the tree API is unreachable (#2936)", async () => {
     vi.stubGlobal(
       "fetch",

@@ -259,14 +259,16 @@ async function downloadSkillTree(
   branch: string,
   skillPath: string,
   ghHeaders: Record<string, string>
-): Promise<{ files: SkillFile[]; error?: string }> {
+): Promise<
+  { status: "complete"; files: SkillFile[] } | { status: "fallback" | "failed"; error: string }
+> {
   const treeData = await fetchRepoTree(owner, repo, branch, ghHeaders);
   if ("error" in treeData) {
     const hint =
       !ghHeaders["Authorization"] && /403|429|rate/.test(treeData.error)
         ? " — run `gh auth login` or set the GITHUB_TOKEN env var to increase rate limits"
         : "";
-    return { files: [], error: `GitHub API error: ${treeData.error}${hint}` };
+    return { status: "fallback", error: `GitHub API error: ${treeData.error}${hint}` };
   }
 
   const skillFiles = treeData.tree.filter(
@@ -274,20 +276,15 @@ async function downloadSkillTree(
   );
 
   if (skillFiles.length === 0) {
-    return { files: [], error: `No files found in ${skillPath}` };
+    return { status: "fallback", error: `No files found in ${skillPath}` };
+  }
+
+  if (!skillFiles.some((item) => item.path === `${skillPath}/SKILL.md`)) {
+    return { status: "failed", error: `SKILL.md not found in ${skillPath}` };
   }
 
   const files: SkillFile[] = [];
   for (const item of skillFiles) {
-    const rawUrl = `${GITHUB_RAW}/${owner}/${repo}/${branch}/${item.path}`;
-    const fileResponse = await fetch(rawUrl, { headers: ghHeaders });
-
-    if (!fileResponse.ok) {
-      console.warn(`Failed to fetch ${item.path}: ${fileResponse.status}`);
-      continue;
-    }
-
-    const content = await fileResponse.text();
     const relativePath = item.path.slice(skillPath.length + 1);
 
     // Reject paths that attempt directory traversal
@@ -296,13 +293,23 @@ async function downloadSkillTree(
       continue;
     }
 
-    files.push({
-      path: relativePath,
-      content,
-    });
+    try {
+      const rawUrl = `${GITHUB_RAW}/${owner}/${repo}/${branch}/${item.path}`;
+      const fileResponse = await fetch(rawUrl, { headers: ghHeaders });
+      if (!fileResponse.ok) {
+        return {
+          status: "failed",
+          error: `Failed to download ${relativePath}: HTTP ${fileResponse.status}`,
+        };
+      }
+      files.push({ path: relativePath, content: await fileResponse.text() });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { status: "failed", error: `Failed to download ${relativePath}: ${message}` };
+    }
   }
 
-  return { files };
+  return { status: "complete", files };
 }
 
 async function downloadSingleSkillFile(
@@ -341,7 +348,8 @@ export async function downloadSkillFromGitHub(
   let treeError: string | undefined;
   try {
     const result = await downloadSkillTree(owner, repo, branch, skillPath, ghHeaders);
-    if (result.files.length > 0) return { files: result.files };
+    if (result.status === "complete") return { files: result.files };
+    if (result.status === "failed") return { files: [], error: result.error };
     treeError = result.error;
   } catch (err) {
     treeError = err instanceof Error ? err.message : String(err);
