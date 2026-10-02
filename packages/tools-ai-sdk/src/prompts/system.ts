@@ -61,6 +61,8 @@ Selection Process:
 - Documentation coverage (prioritize libraries with higher Code Snippet counts)
 - Source reputation (consider libraries with High or Medium reputation more authoritative)
 - Benchmark Score: Quality indicator (100 is the highest score)
+- Source type fit: some projects have separate repo and docs site entries; choose the source that best matches the user's question
+- If one source lacks the needed API reference, examples, or guide content, try the other available source before concluding the docs are missing
 
 Response Format:
 - Return the selected library ID in a clearly marked section
