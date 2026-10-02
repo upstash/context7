@@ -785,6 +785,12 @@ describe("hosted HTTP authentication", () => {
     }
   );
 
+  test("challenges a Bearer header without a token", async () => {
+    const res = await postMcp(httpUrl, { Authorization: "Bearer " });
+
+    expect(res.status).toBe(401);
+  });
+
   test("allows an opaque credential for downstream validation", async () => {
     const res = await postMcp(httpUrl, { Authorization: "Bearer ctx7sk-test" });
 

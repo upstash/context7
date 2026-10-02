@@ -399,9 +399,9 @@ async function main() {
       const header = extractHeaderValue(authHeader);
       if (!header) return undefined;
 
-      if (header.startsWith("Bearer ")) {
-        return header.substring(7).trim();
-      }
+      // Node trims header values, so "Bearer " with an unset key arrives as "Bearer".
+      const bearer = /^Bearer(?:\s+(.*))?$/i.exec(header);
+      if (bearer) return bearer[1]?.trim() || undefined;
 
       return header;
     };
