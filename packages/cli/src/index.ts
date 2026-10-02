@@ -6,6 +6,7 @@ import { registerAuthCommands } from "./commands/auth.js";
 import { registerSetupCommand } from "./commands/setup.js";
 import { registerRemoveCommand } from "./commands/remove.js";
 import { registerDocsCommands } from "./commands/docs.js";
+import { registerSearchCommand } from "./commands/search.js";
 import { maybeShowUpgradeNotice, registerUpgradeCommand } from "./commands/upgrade.js";
 import { setBaseUrl } from "./utils/api.js";
 import { VERSION } from "./constants.js";
@@ -51,6 +52,7 @@ Examples:
   ${brand.primary("npx ctx7 remove --claude --mcp")}
 
   ${brand.dim("# Query library documentation")}
+  ${brand.primary('npx ctx7 search "how to stream an OpenAI response from a Next.js route"')}
   ${brand.primary('npx ctx7 library react "how to use hooks"')}
   ${brand.primary('npx ctx7 docs /facebook/react "useEffect examples"')}
 `
@@ -62,6 +64,7 @@ registerAuthCommands(program);
 registerSetupCommand(program);
 registerRemoveCommand(program);
 registerDocsCommands(program);
+registerSearchCommand(program);
 registerUpgradeCommand(program);
 
 program.action(() => {
@@ -73,6 +76,7 @@ program.action(() => {
 
   console.log("  Quick start:");
   console.log(`    ${brand.primary("npx ctx7 setup")}`);
+  console.log(`    ${brand.primary('npx ctx7 search "how to validate a request body"')}`);
   console.log(`    ${brand.primary('npx ctx7 docs /facebook/react "useEffect examples"')}`);
   console.log("");
 

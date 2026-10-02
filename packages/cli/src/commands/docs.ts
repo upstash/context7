@@ -7,7 +7,7 @@ import { recoverLibraryId } from "../utils/library-id.js";
 import { log } from "../utils/logger.js";
 import { trackEvent } from "../utils/tracking.js";
 import { getValidAccessToken } from "../utils/auth.js";
-import type { LibrarySearchResult, ContextResponse } from "../types.js";
+import type { LibrarySearchResult } from "../types.js";
 
 const isTTY = process.stdout.isTTY;
 
@@ -151,24 +151,23 @@ async function queryCommand(
     return;
   }
 
-  const ctx = result as ContextResponse;
-
-  if (ctx.error) {
-    if (ctx.redirectUrl) {
+  if ("error" in result) {
+    if (result.redirectUrl) {
       spinner?.warn("Library has been redirected");
       if (!spinner) log.warn("Library has been redirected");
-      log.info(`New ID: ${pc.cyan(ctx.redirectUrl)}`);
-      log.info(`Run: ${pc.cyan(`ctx7 docs "${ctx.redirectUrl}" "${query}"`)}`);
+      log.info(`New ID: ${pc.cyan(result.redirectUrl)}`);
+      log.info(`Run: ${pc.cyan(`ctx7 docs "${result.redirectUrl}" "${query}"`)}`);
       process.exitCode = 1;
       return;
     }
 
-    spinner?.fail(ctx.message || ctx.error);
-    if (!spinner) log.error(ctx.message || ctx.error);
+    spinner?.fail(result.message || result.error);
+    if (!spinner) log.error(result.message || result.error);
     process.exitCode = 1;
     return;
   }
 
+  const ctx = result;
   const total = (ctx.codeSnippets?.length || 0) + (ctx.infoSnippets?.length || 0);
   if (total === 0) {
     spinner?.warn(`No documentation found for: "${query}"`);
