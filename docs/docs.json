@@ -243,7 +243,13 @@
               {
                 "group": "Resources",
                 "expanded": false,
-                "pages": ["resources/developer", "resources/troubleshooting"]
+                "pages": [
+                  "resources/developer",
+                  "resources/architecture",
+                  "resources/technical-reference",
+                  "resources/release-notes",
+                  "resources/troubleshooting"
+                ]
               }
             ]
           }
