@@ -52,6 +52,18 @@ export function createClientIpAssertion(
 }
 
 /**
+ * Recognize supported credential formats before forwarding. The REST API
+ * validates the key or token. Cursor `direct_` session tokens are not API credentials.
+ */
+export function isForwardableApiCredential(token: string): boolean {
+  const value = token.trim();
+  if (!value || value.startsWith("direct_")) return false;
+  if (value.startsWith("ctx7sk")) return true;
+  if (value.startsWith("oat_")) return true;
+  return value.split(".").length === 3;
+}
+
+/**
  * Generate headers for Context7 API requests.
  * Handles client IP encryption, authentication, and telemetry headers.
  */
@@ -68,7 +80,7 @@ export function generateHeaders(context: ClientContext): Record<string, string> 
   if (context.sessionId) {
     headers["mcp-session-id"] = context.sessionId;
   }
-  if (context.apiKey) {
+  if (context.apiKey && isForwardableApiCredential(context.apiKey)) {
     headers["Authorization"] = `Bearer ${context.apiKey}`;
   }
   if (context.clientInfo?.ide) {
