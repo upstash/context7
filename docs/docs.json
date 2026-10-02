@@ -181,7 +181,7 @@
                   "api-guide",
                   {
                     "group": "API Reference",
-                    "openapi": "openapi.json"
+                    "openapi": "https://context7.com/openapi.json"
                   }
                 ]
               },
