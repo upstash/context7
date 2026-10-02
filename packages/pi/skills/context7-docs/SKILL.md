@@ -40,6 +40,6 @@ If the user supplies a library ID in `/org/project` or `/org/project/version` fo
 
 ## Constraints
 
-- Do not call either tool more than 3 times per question.
+- Do not call either tool more than 3 times per question. This limits Context7 calls, not requested coverage: use other authorized sources for remaining concepts, or identify the unresolved coverage without claiming completion.
 - Do not pass API keys, passwords, credentials, personal data, or proprietary code as the `query` argument — it is sent to the Context7 API.
 - Authentication uses the `CONTEXT7_API_KEY` environment variable. Get a key at https://context7.com/dashboard if requests fail with an auth error.
