@@ -1,6 +1,7 @@
 import { access, readFile, writeFile, mkdir } from "fs/promises";
 import { dirname } from "path";
 import { STDIO_PACKAGE } from "./agents.js";
+import { findTomlServerSection } from "./toml-editor.js";
 
 export { patchTomlStdioApiKey } from "./toml-editor.js";
 
@@ -112,7 +113,7 @@ export async function writeJsonConfig(
 export async function readTomlServerExists(filePath: string, serverName: string): Promise<boolean> {
   try {
     const raw = await readFile(filePath, "utf-8");
-    return raw.includes(`[mcp_servers.${serverName}]`);
+    return findTomlServerSection(raw, serverName) !== undefined;
   } catch {
     return false;
   }
@@ -217,30 +218,12 @@ export async function appendTomlServer(
     existing = await readFile(filePath, "utf-8");
   } catch {}
 
-  const sectionHeader = `[mcp_servers.${serverName}]`;
-  const alreadyExists = existing.includes(sectionHeader);
+  const section = findTomlServerSection(existing, serverName);
+  const alreadyExists = section !== undefined;
 
-  if (alreadyExists) {
-    const subPrefix = `[mcp_servers.${serverName}.`;
-    const startIdx = existing.indexOf(sectionHeader);
-    const rest = existing.slice(startIdx + sectionHeader.length);
-
-    let endOffset = rest.length;
-    const re = /^\[/gm;
-    let m;
-    while ((m = re.exec(rest)) !== null) {
-      const lineEnd = rest.indexOf("\n", m.index);
-      const line = rest.slice(m.index, lineEnd === -1 ? undefined : lineEnd);
-      if (!line.startsWith(subPrefix)) {
-        endOffset = m.index;
-        break;
-      }
-    }
-
-    const rawBefore = existing.slice(0, startIdx).replace(/\n+$/, "");
-    const rawAfter = existing
-      .slice(startIdx + sectionHeader.length + endOffset)
-      .replace(/^\n+/, "");
+  if (section) {
+    const rawBefore = existing.slice(0, section.start).replace(/\n+$/, "");
+    const rawAfter = existing.slice(section.end).replace(/^\n+/, "");
     const before = rawBefore.length > 0 ? rawBefore + "\n\n" : "";
     const after = rawAfter.length > 0 ? "\n" + rawAfter : "";
     const content = before + block + after;
@@ -267,29 +250,13 @@ export async function removeTomlServer(
     return { removed: false };
   }
 
-  const sectionHeader = `[mcp_servers.${serverName}]`;
-  const startIdx = existing.indexOf(sectionHeader);
-  if (startIdx === -1) {
+  const section = findTomlServerSection(existing, serverName);
+  if (!section) {
     return { removed: false };
   }
 
-  const subPrefix = `[mcp_servers.${serverName}.`;
-  const rest = existing.slice(startIdx + sectionHeader.length);
-
-  let endOffset = rest.length;
-  const re = /^\[/gm;
-  let match: RegExpExecArray | null;
-  while ((match = re.exec(rest)) !== null) {
-    const lineEnd = rest.indexOf("\n", match.index);
-    const line = rest.slice(match.index, lineEnd === -1 ? undefined : lineEnd);
-    if (!line.startsWith(subPrefix)) {
-      endOffset = match.index;
-      break;
-    }
-  }
-
-  const rawBefore = existing.slice(0, startIdx).replace(/\n+$/, "");
-  const rawAfter = existing.slice(startIdx + sectionHeader.length + endOffset).replace(/^\n+/, "");
+  const rawBefore = existing.slice(0, section.start).replace(/\n+$/, "");
+  const rawAfter = existing.slice(section.end).replace(/^\n+/, "");
   const content = [rawBefore, rawAfter].filter(Boolean).join("\n\n");
 
   await mkdir(dirname(filePath), { recursive: true });
