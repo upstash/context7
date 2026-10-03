@@ -7,7 +7,7 @@ This guide covers the authentication mechanisms and access controls available in
 ## API Key Security
 
 - API keys use cryptographic random generation
-- Keys are stored as a SHA-256 hash, plus the last four characters for display
+- Keys are stored hashed, never in plain text
 - Keys can be rotated at any time from your dashboard
 - Rate limiting prevents abuse and unauthorized access
 
