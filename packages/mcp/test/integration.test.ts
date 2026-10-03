@@ -8,6 +8,7 @@ import { createDecipheriv } from "node:crypto";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import * as jose from "jose";
 
 // End-to-end tests: the real built binary (dist/index.js) is exercised over
 // both transports (spawned HTTP server, spawned stdio child) by both protocol
@@ -55,6 +56,8 @@ let childEnv: Record<string, string>;
 let httpChild: ChildProcess;
 let httpUrl: string;
 let metricsUrl: string;
+let emaPrivateKey: Awaited<ReturnType<typeof jose.generateKeyPair>>["privateKey"];
+let emaPublicJwk: jose.JWK;
 
 function operationCount(exported: string, method: string): number {
   return exported
@@ -83,7 +86,10 @@ function startStubApi(): Promise<string> {
     const url = new URL(req.url!, "http://stub.local");
     const apiPath = url.pathname.replace(/^\/api/, "");
     requests.push({ path: apiPath, query: url.searchParams, headers: req.headers });
-    if (apiPath === "/v2/libs/search") {
+    if (apiPath === "/oauth/ema-jwks") {
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ keys: [emaPublicJwk] }));
+    } else if (apiPath === "/v2/libs/search") {
       res.setHeader("Content-Type", "application/json");
       if (url.searchParams.get("query") === INVALID_JSON_QUERY) {
         res.end("not-json");
@@ -168,6 +174,14 @@ function startHttpChild(
 
 beforeAll(async () => {
   execSync("pnpm build", { cwd: PKG_ROOT, stdio: "pipe" });
+  const keyPair = await jose.generateKeyPair("RS256");
+  emaPrivateKey = keyPair.privateKey;
+  emaPublicJwk = {
+    ...(await jose.exportJWK(keyPair.publicKey)),
+    alg: "RS256",
+    kid: "integration-test-ema",
+    use: "sig",
+  };
   const stubUrl = await startStubApi();
   const metricsPort = await getFreePort();
   metricsUrl = `http://127.0.0.1:${metricsPort}/metrics`;
@@ -219,6 +233,17 @@ describe("OAuth discovery", () => {
     expect(await response.json()).toMatchObject({
       resource: "https://mcp.context7.com",
       authorization_servers: ["https://clerk.context7.com", "https://context7.com"],
+    });
+  });
+
+  test("advertises only the EMA authorization server when requested", async () => {
+    const metadataUrl = new URL("/.well-known/oauth-protected-resource?auth=ema", httpUrl);
+    const response = await fetch(metadataUrl);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      resource: "https://mcp.context7.com",
+      authorization_servers: ["https://context7.com"],
     });
   });
 });
@@ -744,6 +769,33 @@ describe("plugin authentication", () => {
     });
 
     expect(res.status).toBe(200);
+  });
+
+  test("requires authentication for EMA even with the plugin's empty API key fallback", async () => {
+    const res = await postMcp(`${httpUrl}?client=claude-code-plugin&auth=ema`, {
+      Authorization: "",
+    });
+
+    expect(res.status).toBe(401);
+    expect(res.wwwAuthenticate).toContain("/.well-known/oauth-protected-resource?auth=ema");
+  });
+
+  test("accepts an EMA access token on the managed connector endpoint", async () => {
+    const accessToken = await new jose.SignJWT({ email: "developer@example.com" })
+      .setProtectedHeader({ alg: "RS256", kid: "integration-test-ema" })
+      .setIssuer("https://context7.com")
+      .setAudience("https://mcp.context7.com")
+      .setSubject("ema-user")
+      .setIssuedAt()
+      .setExpirationTime("5m")
+      .sign(emaPrivateKey);
+
+    const res = await postMcp(`${httpUrl}?client=claude-code-plugin&auth=ema`, {
+      Authorization: `Bearer ${accessToken}`,
+    });
+
+    expect(res.status).toBe(200);
+    expect(requests.some((request) => request.path === "/oauth/ema-jwks")).toBe(true);
   });
 
   test("keeps the OAuth endpoint protected", async () => {
