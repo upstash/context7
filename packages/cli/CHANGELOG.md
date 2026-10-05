@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.13
+
+### Patch Changes
+
+- 9b6f702: Accept trailing commas in OpenCode JSONC config files during setup and removal.
+
 ## 0.5.12
 
 ### Patch Changes
