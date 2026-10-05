@@ -23,18 +23,16 @@ import { AsyncLocalStorage } from "async_hooks";
 import { randomUUID } from "node:crypto";
 import {
   SERVER_VERSION,
+  RESOURCE_URL,
   OAUTH_AUTH_SERVER_URL,
+  EMA_ISSUER,
   OPENAI_APPS_CHALLENGE_TOKEN,
-  canonicalMcpResourceUrl,
   mcpServerCard,
-  protectedResourceMetadataDocument,
-  protectedResourceMetadataPath,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
 import { installProcessShutdown } from "./lib/process-shutdown.js";
 import { getMaxSubscriptions, logMcpHandlerError } from "./lib/subscriptions.js";
-import { isForwardableApiCredential } from "./lib/encryption.js";
 import {
   forceFlushTelemetry,
   initializeTelemetry,
@@ -410,10 +408,11 @@ async function main() {
     };
 
     const extractApiKey = (req: express.Request): string | undefined => {
+      // Cursor sends its own `direct_` session token as the bearer. It is not a
+      // Context7 credential, so it must not reach the REST API as one.
       const bearer = extractBearerToken(req.headers.authorization);
-      if (bearer && isForwardableApiCredential(bearer)) return bearer;
-
       return (
+        (bearer?.startsWith("direct_") ? undefined : bearer) ||
         extractHeaderValue(req.headers["x-context7-api-key"]) ||
         extractHeaderValue(req.headers["context7-api-key"]) ||
         extractHeaderValue(req.headers["x-api-key"]) ||
@@ -453,10 +452,13 @@ async function main() {
       try {
         const plugin = getPluginFromRequest(req);
         const apiKey = extractApiKey(req);
-        const metadataUrl = `${new URL(canonicalMcpResourceUrl()).origin}${protectedResourceMetadataPath()}`;
+        const baseUrl = new URL(RESOURCE_URL).origin;
 
         // OAuth discovery info header, used by MCP clients to discover the authorization server
-        res.set("WWW-Authenticate", `Bearer resource_metadata="${metadataUrl}"`);
+        res.set(
+          "WWW-Authenticate",
+          `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
+        );
 
         if (requiresAuthentication(req, plugin)) {
           const authentication = await observeAuthentication<AuthenticationResult>(async () => {
@@ -532,28 +534,34 @@ async function main() {
     // OAuth-protected endpoint - requires authentication
     mcpRouter.all("/oauth", (req, res) => handleMcpRequest(req, res));
 
-    const sendServerCard = (_req: express.Request, res: express.Response) => {
-      res.setHeader("Content-Type", "application/mcp-server-card+json");
-      res.status(200).send(mcpServerCard());
-    };
     // SEP-2127 reserves `{streamable-http-url}/server-card`. Register it
     // before the /mcp router so it is not answered as MCP JSON-RPC.
-    app.get("/mcp/server-card", sendServerCard);
-
+    app.get("/mcp/server-card", (_req: express.Request, res: express.Response) => {
+      res.setHeader("Content-Type", "application/mcp-server-card+json");
+      res.status(200).send(mcpServerCard());
+    });
     app.use("/mcp", mcpRouter);
 
     app.get("/ping", (_req: express.Request, res: express.Response) => {
       res.json({ status: "ok", message: "pong" });
     });
 
-    // OAuth 2.0 Protected Resource Metadata (RFC 9728): the root document
-    // describes the origin, the path-aware one the canonical `/mcp` resource.
-    app.get("/.well-known/oauth-protected-resource", (_req, res) => {
-      res.json(protectedResourceMetadataDocument(new URL(canonicalMcpResourceUrl()).origin));
-    });
-    app.get(protectedResourceMetadataPath(), (_req, res) => {
-      res.json(protectedResourceMetadataDocument());
-    });
+    // OAuth 2.0 Protected Resource Metadata (RFC 9728)
+    // Used by MCP clients to discover the authorization server
+    app.get(
+      "/.well-known/oauth-protected-resource",
+      (_req: express.Request, res: express.Response) => {
+        res.json({
+          resource: RESOURCE_URL,
+          // Each entry is an independent authorization server. Clerk handles
+          // regular authorization-code flows; Context7 handles only the
+          // enterprise-managed id-jag exchange.
+          authorization_servers: Array.from(new Set([OAUTH_AUTH_SERVER_URL, EMA_ISSUER])),
+          scopes_supported: ["profile", "email"],
+          bearer_methods_supported: ["header"],
+        });
+      }
+    );
 
     app.get(
       "/.well-known/oauth-authorization-server",

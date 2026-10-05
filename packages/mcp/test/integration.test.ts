@@ -8,7 +8,6 @@ import { createDecipheriv } from "node:crypto";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { canonicalMcpResourceUrl } from "../src/lib/constants.js";
 
 // End-to-end tests: the real built binary (dist/index.js) is exercised over
 // both transports (spawned HTTP server, spawned stdio child) by both protocol
@@ -223,21 +222,6 @@ describe("OAuth discovery", () => {
     });
   });
 
-  test("serves the /mcp resource at the path-aware RFC 9728 URL", async () => {
-    const metadataUrl = new URL("/.well-known/oauth-protected-resource/mcp", httpUrl);
-    const response = await fetch(metadataUrl);
-
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({
-      resource: canonicalMcpResourceUrl(),
-    });
-  });
-
-  test("does not advertise metadata for an unknown resource", async () => {
-    const response = await fetch(new URL("/.well-known/oauth-protected-resource/unknown", httpUrl));
-    expect(response.status).toBe(404);
-  });
-
   test("serves the SEP-2127 server card at /mcp/server-card", async () => {
     const response = await fetch(new URL("/mcp/server-card", httpUrl));
 
@@ -247,7 +231,7 @@ describe("OAuth discovery", () => {
     expect(card).toMatchObject({
       $schema: "https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json",
       name: "io.github.upstash/context7",
-      remotes: [{ type: "streamable-http", url: canonicalMcpResourceUrl() }],
+      remotes: [{ type: "streamable-http", url: "https://mcp.context7.com/mcp" }],
     });
     expect(card.description.length).toBeLessThanOrEqual(100);
   });
@@ -824,7 +808,7 @@ describe("plugin authentication", () => {
     const res = await postMcp(`${httpUrl}?client=claude-code-plugin`);
     expect(res.status).toBe(401);
     expect(res.wwwAuthenticate).toContain("resource_metadata=");
-    expect(res.wwwAuthenticate).toContain("/.well-known/oauth-protected-resource/mcp");
+    expect(res.wwwAuthenticate).toContain("/.well-known/oauth-protected-resource");
   });
 
   test("allows the Claude Code plugin's empty API key fallback", async () => {
