@@ -11,11 +11,28 @@ Installing the plugin adds two things to OpenCode:
 
 ## Installation
 
+On OpenCode v2:
+
+```bash
+opencode plugin add @upstash/context7-opencode
+```
+
+On OpenCode v1 (1.18.29 or newer):
+
 ```bash
 opencode plugin @upstash/context7-opencode
 ```
 
-The command installs the plugin and adds it to your OpenCode config. You can also add it by hand:
+The command installs the plugin and adds it to your OpenCode config. On OpenCode v2 this is the global config. To enable the plugin for a single project only, add it to that project's `opencode.json` by hand. OpenCode v2 uses the `plugins` key:
+
+```json opencode.json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugins": ["@upstash/context7-opencode"]
+}
+```
+
+OpenCode v1 uses `plugin`:
 
 ```json opencode.json
 {
@@ -35,7 +52,16 @@ OAuth is the default and needs no configuration. If you would rather use an API 
 export CONTEXT7_API_KEY="your-api-key"
 ```
 
-The plugin picks up `CONTEXT7_API_KEY` automatically and sends it as an `Authorization` header instead of running the OAuth flow. You can also pass the key through the plugin options:
+The plugin picks up `CONTEXT7_API_KEY` automatically and sends it as an `Authorization` header instead of running the OAuth flow. You can also pass the key through the plugin options. On OpenCode v2:
+
+```json opencode.json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugins": [{ "package": "@upstash/context7-opencode", "options": { "apiKey": "your-api-key" } }]
+}
+```
+
+On OpenCode v1:
 
 ```json opencode.json
 {

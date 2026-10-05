@@ -4,6 +4,11 @@
   "name": "Context7 MCP",
   "description": "Up-to-date code docs for any prompt.",
   "poweredByDocs7": true,
+  "feedback": {
+    "thumbsRating": true,
+    "suggestEdit": true,
+    "raiseIssue": true
+  },
   "redirects": [
     {
       "source": "/enterprise/azure-apim",
@@ -33,7 +38,7 @@
               {
                 "group": "Get Started",
                 "expanded": true,
-                "pages": ["overview", "installation", "clients/cli", "plans-pricing", "library-owners", "tips"]
+                "pages": ["overview", "installation", "search-api", "clients/cli", "plans-pricing", "library-owners", "tips"]
               },
               {
                 "group": "How To",
@@ -82,7 +87,8 @@
                           "enterprise/integrations/github",
                           "enterprise/integrations/other-git",
                           "enterprise/integrations/gerrit",
-                          "enterprise/integrations/confluence"
+                          "enterprise/integrations/confluence",
+                          "enterprise/integrations/aws-bedrock"
                         ]
                       },
                       {
@@ -175,7 +181,7 @@
                   "api-guide",
                   {
                     "group": "API Reference",
-                    "openapi": "openapi.json"
+                    "openapi": "https://context7.com/openapi.json"
                   }
                 ]
               },
@@ -192,7 +198,11 @@
                       {
                         "group": "Commands",
                         "expanded": false,
-                        "pages": ["sdks/ts/commands/search-library", "sdks/ts/commands/get-context"]
+                        "pages": [
+                          "sdks/ts/commands/search",
+                          "sdks/ts/commands/search-library",
+                          "sdks/ts/commands/get-context"
+                        ]
                       }
                     ]
                   },
@@ -252,6 +262,7 @@
                   "docs7/overview",
                   "docs7/quickstart",
                   "docs7/configuration",
+                  "docs7/custom-domains",
                   "docs7/migrate-from-mintlify"
                 ]
               },
@@ -265,42 +276,37 @@
                 "expanded": false,
                 "pages": ["docs7/seo", "docs7/agent-readiness"]
               },
+              "docs7/cli",
               {
-                "group": "Reference",
+                "group": "Components",
                 "expanded": false,
                 "pages": [
-                  {
-                    "group": "Components",
-                    "expanded": false,
-                    "pages": [
-                      "docs7/components/callouts",
-                      "docs7/components/cards",
-                      "docs7/components/columns",
-                      "docs7/components/tiles",
-                      "docs7/components/tabs",
-                      "docs7/components/code-groups",
-                      "docs7/components/steps",
-                      "docs7/components/accordions",
-                      "docs7/components/frames",
-                      "docs7/components/icons",
-                      "docs7/components/badge",
-                      "docs7/components/tooltips",
-                      "docs7/components/fields",
-                      "docs7/components/expandables",
-                      "docs7/components/examples",
-                      "docs7/components/panel",
-                      "docs7/components/tree",
-                      "docs7/components/color",
-                      "docs7/components/prompt",
-                      "docs7/components/updates",
-                      "docs7/components/view",
-                      "docs7/components/visibility",
-                      "docs7/components/github",
-                      "docs7/components/mermaid",
-                      "docs7/components/latex",
-                      "docs7/components/react-components"
-                    ]
-                  }
+                  "docs7/components/callouts",
+                  "docs7/components/cards",
+                  "docs7/components/columns",
+                  "docs7/components/tiles",
+                  "docs7/components/tabs",
+                  "docs7/components/code-groups",
+                  "docs7/components/steps",
+                  "docs7/components/accordions",
+                  "docs7/components/frames",
+                  "docs7/components/icons",
+                  "docs7/components/badge",
+                  "docs7/components/tooltips",
+                  "docs7/components/fields",
+                  "docs7/components/expandables",
+                  "docs7/components/examples",
+                  "docs7/components/panel",
+                  "docs7/components/tree",
+                  "docs7/components/color",
+                  "docs7/components/prompt",
+                  "docs7/components/updates",
+                  "docs7/components/view",
+                  "docs7/components/visibility",
+                  "docs7/components/github",
+                  "docs7/components/mermaid",
+                  "docs7/components/latex",
+                  "docs7/components/react-components"
                 ]
               }
             ]

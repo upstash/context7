@@ -84,11 +84,6 @@ describe("login command", () => {
     mockGetValidAccessToken.mockResolvedValue("existing-token");
     await runCommand("login");
     expect(logOutput.some((l) => l.includes("already logged in"))).toBe(true);
-  });
-
-  test("tracks login event", async () => {
-    mockGetValidAccessToken.mockResolvedValue("existing-token");
-    await runCommand("login");
     expect(trackEvent).toHaveBeenCalledWith("command", { name: "login" });
   });
 
@@ -113,11 +108,6 @@ describe("logout command", () => {
     mockClearTokens.mockReturnValue(false);
     await runCommand("logout");
     expect(logOutput.some((l) => l.includes("You are not logged in"))).toBe(true);
-  });
-
-  test("tracks logout event", async () => {
-    mockClearTokens.mockReturnValue(false);
-    await runCommand("logout");
     expect(trackEvent).toHaveBeenCalledWith("command", { name: "logout" });
   });
 });
@@ -127,6 +117,7 @@ describe("whoami command", () => {
     mockGetValidAccessToken.mockResolvedValue(undefined);
     await runCommand("whoami");
     expect(logOutput.some((l) => l.includes("Not logged in"))).toBe(true);
+    expect(trackEvent).toHaveBeenCalledWith("command", { name: "whoami" });
   });
 
   test("fetches and displays user info when logged in", async () => {
@@ -164,24 +155,49 @@ describe("whoami command", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  test("shows session expired hint when fetch fails", async () => {
+  test("shows logout before login when the server rejects a saved session", async () => {
     mockGetValidAccessToken.mockResolvedValue("valid-token");
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
         ok: false,
+        status: 401,
         json: () => Promise.reject(new Error("fail")),
       })
     );
 
     await runCommand("whoami");
-    expect(logOutput.some((l) => l.includes("Session may be expired"))).toBe(true);
+    expect(logOutput.join("\n")).toMatch(/ctx7 logout.*ctx7 login/);
   });
 
-  test("tracks whoami event", async () => {
-    mockGetValidAccessToken.mockResolvedValue(undefined);
+  test.each([403, 500])("does not recommend logout for HTTP %i", async (status) => {
+    mockGetValidAccessToken.mockResolvedValue("valid-token");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status })));
+
     await runCommand("whoami");
-    expect(trackEvent).toHaveBeenCalledWith("command", { name: "whoami" });
+
+    expect(logOutput.join("\n")).toContain("Could not verify your session");
+    expect(logOutput.join("\n")).not.toMatch(/ctx7 logout|ctx7 login/);
+  });
+
+  test("does not recommend logout when the identity request fails", async () => {
+    mockGetValidAccessToken.mockResolvedValue("valid-token");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("fetch failed")));
+
+    await runCommand("whoami");
+
+    expect(logOutput.join("\n")).toContain("Could not verify your session");
+    expect(logOutput.join("\n")).not.toMatch(/ctx7 logout|ctx7 login/);
+  });
+
+  test("does not recommend logout for an invalid identity response", async () => {
+    mockGetValidAccessToken.mockResolvedValue("valid-token");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{")));
+
+    await runCommand("whoami");
+
+    expect(logOutput.join("\n")).toContain("Could not verify your session");
+    expect(logOutput.join("\n")).not.toMatch(/ctx7 logout|ctx7 login/);
   });
 });
 

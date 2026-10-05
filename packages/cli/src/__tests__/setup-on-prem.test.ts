@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { mkdir, readFile, rm } from "fs/promises";
+import { mkdir, readFile, rm, writeFile } from "fs/promises";
 import { tmpdir } from "os";
 import { join } from "path";
 import { Command } from "commander";
@@ -94,6 +94,40 @@ describe("on-premise setup network boundary", () => {
     expect(skill).toContain("name: context7-mcp");
     expect(skill).toContain("resolve-library-id");
     expect(await readFile(join(tempDir, "AGENTS.md"), "utf-8")).toContain("query-docs");
+  });
+
+  test("re-running setup replaces the AGENTS.md section without touching user content", async () => {
+    const agentsPath = join(tempDir, "AGENTS.md");
+    await writeFile(
+      agentsPath,
+      "# Before\n\n<!-- context7 -->\nstale rule\n<!-- context7 -->\n\n# After\n",
+      "utf-8"
+    );
+
+    const runSetup = async () => {
+      const program = new Command();
+      program.exitOverride();
+      registerSetupCommand(program);
+      await program.parseAsync([
+        "node",
+        "ctx7",
+        "setup",
+        "--mcp",
+        "--base-url",
+        "https://context7.internal.example",
+        "--codex",
+        "--project",
+        "--yes",
+      ]);
+      return readFile(agentsPath, "utf-8");
+    };
+
+    const first = await runSetup();
+    expect(first.startsWith("# Before\n\n<!-- context7 -->\n")).toBe(true);
+    expect(first.endsWith("<!-- context7 -->\n\n# After\n")).toBe(true);
+    expect(first).not.toContain("stale rule");
+    expect(first).toContain("query-docs");
+    expect(await runSetup()).toBe(first);
   });
 
   test("selects MCP mode automatically for a custom deployment", async () => {

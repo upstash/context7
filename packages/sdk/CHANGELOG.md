@@ -1,5 +1,11 @@
 # @upstash/context7-sdk
 
+## 0.5.0
+
+### Minor Changes
+
+- 2c6c8e7: Add a typed `search` method that finds relevant documentation without a separate library resolution request.
+
 ## 0.4.1
 
 ### Patch Changes

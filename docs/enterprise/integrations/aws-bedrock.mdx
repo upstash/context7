@@ -1,0 +1,112 @@
+---
+title: "AWS Bedrock"
+sidebarTitle: "AWS Bedrock"
+description: "Use Anthropic models and Amazon Titan embeddings through native AWS Bedrock APIs"
+---
+
+Context7 On-Premise can call AWS Bedrock directly for parsing, source-code documentation, reranking, and embeddings. LiteLLM and other OpenAI-compatible proxies are not required.
+
+Native AWS Bedrock support requires a Context7 Enterprise image tagged v1.3.9 or later. Updating these docs or configuration alone does not add Bedrock support to an earlier image.
+
+## Prerequisites
+
+- Enable access to the Claude and Amazon Titan models you plan to use in the selected AWS Region.
+- Allow `bedrock:InvokeModel` and `bedrock:InvokeModelWithResponseStream` for the models you use. For a [geographic cross-region inference profile](https://docs.aws.amazon.com/bedrock/latest/userguide/geographic-cross-region-inference.html), allow both the inference-profile ARN and the underlying foundation-model ARN in the source Region and every destination Region.
+- Give the Context7 container network access to the regional Bedrock Runtime endpoint.
+
+## Authenticate
+
+A workload IAM role is recommended. Context7 uses the standard AWS SDK credential chain, including environment credentials, web identity, shared profiles, and ECS or EC2 role credentials.
+
+<Tabs>
+  <Tab title="Workload role">
+    Attach an IAM role to the ECS task, EC2 instance, or Kubernetes service account that runs Context7. Leave the **API Key** field blank in Context7.
+  </Tab>
+  <Tab title="Environment credentials">
+    Pass credentials to the container:
+
+    ```yaml
+    environment:
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}
+    ```
+
+    Omit `AWS_SESSION_TOKEN` for long-lived credentials.
+  </Tab>
+  <Tab title="Shared AWS profile">
+    The container image sets `HOME=/data/home`, so mount the AWS files there and select the profile:
+
+    ```yaml
+    environment:
+      AWS_PROFILE: context7
+      AWS_REGION: us-east-1
+    volumes:
+      - ~/.aws:/data/home/.aws:ro
+    ```
+
+    A profile that uses `credential_process` also requires its helper executable inside the container image.
+
+    Ensure the mounted files are readable by the UID that runs the container, especially when using Docker `--user` or Kubernetes `runAsUser`.
+  </Tab>
+  <Tab title="Bedrock API key">
+    Paste a Bedrock API key into Context7's **API Key** field, or pass it as `AWS_BEARER_TOKEN_BEDROCK`. The value is used for both Claude and Titan when both providers are set to Bedrock.
+
+    `AWS_BEARER_TOKEN_BEDROCK` takes precedence over the standard AWS credential chain. Remove an expired or revoked value from the container environment to fall back to a workload role or shared profile.
+
+    Console-generated short-term keys expire with the session or after at most 12 hours. A key saved in Context7 stops working when it expires, so use a workload role for unattended production deployments. AWS positions long-term Bedrock API keys for exploration and development rather than production workloads.
+  </Tab>
+</Tabs>
+
+<Warning>
+The AWS credential chain does not skip credentials merely because they are invalid. `AWS_BEARER_TOKEN_BEDROCK` takes precedence over SigV4 authentication, and `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` take precedence over a shared profile. Remove stale environment credentials if a valid role or profile unexpectedly returns `The security token included in the request is invalid`.
+</Warning>
+
+## Configure Context7
+
+<Steps>
+  <Step title="Configure the LLM">
+    In the setup wizard or **Settings → AI & Models**, select **AWS Bedrock**. Enter the raw Bedrock model or inference-profile ID—without an `amazon-bedrock/` prefix—and select its AWS Region.
+
+    Use an inference-profile prefix that matches the selected Region's geography:
+
+    | AWS Region | Example inference profile |
+    |---|---|
+    | `us-east-1` | `us.anthropic.claude-haiku-4-5-20251001-v1:0` |
+    | `eu-west-1` | `eu.anthropic.claude-haiku-4-5-20251001-v1:0` |
+    | `ap-southeast-1` | `apac.anthropic.claude-haiku-4-5-20251001-v1:0` |
+
+    Context7 selects region-aware defaults in v1.3.9 and later. If you enter a custom model or inference-profile ID, verify that it is invocable from the configured Region.
+  </Step>
+  <Step title="Configure embeddings">
+    Select **Same as LLM** to use Bedrock embeddings, or select **AWS Bedrock** separately. Use an Amazon Titan model such as `amazon.titan-embed-text-v2:0`.
+
+    The LLM and embedding configurations share one AWS Region. If both use Bedrock, choose models available from the same configured region.
+  </Step>
+  <Step title="Test and verify">
+    Test both connections, save the configuration, and parse a small repository. Query the resulting library to verify that parsing and semantic search both work.
+  </Step>
+</Steps>
+
+<Warning>
+Model IDs prefixed with values such as `us.`, `eu.`, `apac.`, or `global.` are cross-region inference profiles. They can route requests among supported regions. The AWS Region field selects the Bedrock endpoint; it does not constrain a cross-region profile to that single region.
+</Warning>
+
+## Private connectivity
+
+Create the `com.amazonaws.<region>.bedrock-runtime` interface VPC endpoint for AWS PrivateLink. With private DNS enabled, leave Context7's optional **Bedrock endpoint** field blank. Without private DNS, enter the full endpoint URL, such as:
+
+```text
+https://vpce-....bedrock-runtime.us-east-1.vpce.amazonaws.com
+```
+
+The endpoint, configured AWS Region, and selected models must agree. Credential discovery may also need access to STS, container or instance metadata, or another identity endpoint, depending on the authentication method.
+
+<Note>
+An offline Context7 license removes the Context7 Cloud license check, but Bedrock still requires AWS network connectivity. Content sent for parsing, embedding, reranking, or source-code documentation is processed by the selected Bedrock models.
+</Note>
+
+## Changing embedding models
+
+Bedrock indexes are stored separately from existing OpenAI or Gemini vector indexes because their dimensions can differ. After changing the embedding provider or model, refresh the libraries that should be available under the new embedding configuration.

@@ -2,13 +2,15 @@ import type {
   Context7Config,
   GetContextOptions,
   SearchLibraryOptions,
+  SearchOptions,
   Library,
   Documentation,
+  SearchResponse,
 } from "@commands/types";
 import { Context7Error } from "@error";
 import { HttpClient } from "@http";
 import type { AuthTokenProvider } from "@http";
-import { SearchLibraryCommand, GetContextCommand } from "@commands/index";
+import { SearchLibraryCommand, GetContextCommand, SearchCommand } from "@commands/index";
 
 const DEFAULT_BASE_URL = "https://context7.com/api";
 const API_KEY_PREFIX = "ctx7sk";
@@ -137,6 +139,33 @@ export class Context7 {
     options?: GetContextOptions
   ): Promise<Documentation[] | string> {
     const command = new GetContextCommand(query, libraryId, options);
+    return command.exec(this.httpClient);
+  }
+
+  /**
+   * Search documentation as structured snippets
+   */
+  async search(query: string, options?: SearchOptions & { type?: "json" }): Promise<SearchResponse>;
+
+  /**
+   * Search documentation as plain text
+   */
+  async search(query: string, options: SearchOptions & { type: "txt" }): Promise<string>;
+
+  /**
+   * Search documentation with options whose response type is determined at runtime
+   */
+  async search(query: string, options?: SearchOptions): Promise<SearchResponse | string>;
+
+  /**
+   * Search documentation without resolving a library first
+   * @param query The user's question or task
+   * @param options Library, version, language, response format, and request options
+   * @returns SearchResponse by default, or formatted text when type is "txt"
+   * @throws Context7Error with status 404 when no documentation matches
+   */
+  async search(query: string, options?: SearchOptions): Promise<SearchResponse | string> {
+    const command = new SearchCommand(query, options);
     return command.exec(this.httpClient);
   }
 }

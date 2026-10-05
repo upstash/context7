@@ -14,7 +14,7 @@ minimumReleaseAge: 10080
 # Runtime dependencies stay pinned per package, since those ranges are part of
 # each package's published contract.
 catalog:
-  "@types/node": ^25.9.5
+  "@types/node": ^25.9.8
   "@typescript-eslint/eslint-plugin": ^8.68.0
   "@typescript-eslint/parser": ^8.68.0
   dotenv: ^17.4.2

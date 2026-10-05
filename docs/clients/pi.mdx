@@ -1,90 +1,128 @@
 ---
 title: Pi
-description: Using Context7 with the Pi coding agent
+description: Use Context7 in Pi with built-in MCP support or the official extension
 ---
 
-Context7 integrates with the [Pi coding agent](https://pi.dev) through the official [`@upstash/context7-pi`](https://github.com/upstash/context7/tree/master/packages/pi) extension. Instead of relying on training data, Pi gets current library documentation directly in your coding sessions.
+Connect the [Pi coding agent](https://pi.dev) to Context7 to get current library documentation and code examples in your coding sessions.
 
-The extension is self-contained — it registers Context7's tools natively in Pi, so there's no separate MCP server to run.
+We recommend [built-in MCP](#built-in-mcp-setup). The Context7 MCP server receives updates more frequently than the Pi extension. The [official extension](#context7-extension) remains an alternative with a documentation skill and the `/c7-docs` prompt.
 
-## Installation
+## Built-in MCP setup
 
-Install the extension with Pi's package command:
+Pi includes MCP support from [version 0.99.0](https://github.com/earendil-works/pi/releases/tag/v0.99.0). Update Pi before you start:
+
+```bash
+pi update
+```
+
+Choose one of the following connection methods. These commands save the server in `~/.pi/agent/mcp.json`. Add `--local` to `pi mcp add` to save it in your project's `.pi/mcp.json` instead. Pi loads project configuration only after you trust the project.
+
+### OAuth
+
+Add the remote server and sign in:
+
+```bash
+pi mcp add context7 --url https://mcp.context7.com/mcp/oauth --exposure direct
+pi mcp login context7
+```
+
+Approve access in your browser. Pi stores and refreshes your OAuth tokens. See [Set Up OAuth](/howto/oauth) for more details.
+
+### API key
+
+Create an API key in the [Context7 dashboard](https://context7.com/dashboard). Export it before you start Pi, then add the remote server:
+
+```bash
+export CONTEXT7_API_KEY="YOUR_API_KEY"
+pi mcp add context7 --url https://mcp.context7.com/mcp \
+  --bearer-token-env-var CONTEXT7_API_KEY --exposure direct
+```
+
+Add the export to your shell profile to make the key available in future sessions. Pi saves an environment variable reference in its configuration.
+
+To try Context7 without an API key at the anonymous rate limit, omit `--bearer-token-env-var CONTEXT7_API_KEY`.
+
+### Local server
+
+To run the Context7 MCP server locally over stdio, use this option. It requires Node.js and `npx`:
+
+```bash
+export CONTEXT7_API_KEY="YOUR_API_KEY"
+pi mcp add context7 --exposure direct \
+  --env CONTEXT7_API_KEY='${CONTEXT7_API_KEY}' \
+  -- npx -y @upstash/context7-mcp
+```
+
+The single quotes keep the environment variable reference in the configuration. Pi resolves it when it starts the server.
+
+### Check the connection
+
+Run this command to check the server connection and list its tools:
+
+```bash
+pi mcp list
+```
+
+In an open Pi session, run `/reload` to load the new configuration. Use `/mcp` to inspect the connection, sign in, or reconnect.
+
+The examples use `--exposure direct` so the model can see Context7's tools immediately. Without this option, Pi uses `codemode` by default and discovers tools through tool search. See [Pi's MCP documentation](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/mcp.md) for other options.
+
+### Use Context7
+
+Ask Pi to use Context7 in your prompt:
+
+```text
+Use Context7 to show me how to configure caching in Next.js 16.
+```
+
+Context7 provides two tools:
+
+- `resolve-library-id` finds the Context7 library ID for a package or product.
+- `query-docs` retrieves documentation and code examples for that library ID.
+
+If you know the library ID, include it in your prompt to skip the search:
+
+```text
+Use Context7 with /vercel/next.js for Cache Components documentation.
+```
+
+To request documentation lookups by default, add this instruction to your project's `AGENTS.md`:
+
+```markdown AGENTS.md
+Use Context7 for library documentation and code examples. Resolve the library ID first,
+then query its documentation. Skip resolution when the prompt includes a library ID.
+```
+
+Ask for one documentation topic at a time. Include the library version when it matters. For questions about separate topics, request a separate lookup for each topic.
+
+## Context7 extension
+
+The official [`@upstash/context7-pi`](https://github.com/upstash/context7/tree/master/packages/pi) extension registers documentation tools directly in Pi and calls the hosted Context7 HTTP API. It does not connect to the remote MCP server. Choose either the extension or the MCP setup above to avoid duplicate documentation tools.
+
+Install it with Pi's package command:
 
 ```bash
 pi install npm:@upstash/context7-pi
 ```
 
-## Authentication
+Start a new Pi session, or run `/reload` in an open session to load the extension.
 
-The extension works out of the box at IP-based rate limits — useful for trying it out. For higher quotas and access to private repositories, generate a free key at the [Context7 dashboard](https://context7.com/dashboard) and export it:
+The extension works without an API key at the anonymous rate limit. For higher limits, create a key in the [Context7 dashboard](https://context7.com/dashboard) and export it before starting Pi:
 
 ```bash
-export CONTEXT7_API_KEY=ctx7sk_...
+export CONTEXT7_API_KEY="YOUR_API_KEY"
 ```
 
-Set it in your shell profile so Pi picks it up on launch.
+Add the export to your shell profile for future sessions. The extension uses this key independently of the built-in MCP OAuth sign-in.
 
----
+The package includes the `resolve-library-id` and `query-docs` tools, the `context7-docs` skill, and the `/c7-docs` prompt template. The skill instructs Pi to look up documentation when you ask about a library. For an explicit lookup, use:
 
-## What it adds
-
-<CardGroup cols={2}>
-<Card title="resolve-library-id" icon="magnifying-glass">
-Converts a package or product name to a Context7 library ID (e.g. `Next.js` → `/vercel/next.js`). The agent calls this first.
-</Card>
-<Card title="query-docs" icon="book">
-Fetches documentation and code examples for a resolved library ID.
-</Card>
-<Card title="context7-docs skill" icon="sparkles">
-Teaches the agent to reach for these tools whenever you ask about a library, framework, SDK, API, CLI tool, or cloud service.
-</Card>
-<Card title="/c7-docs command" icon="terminal">
-Runs the resolve + query flow in one shot for manual lookups.
-</Card>
-</CardGroup>
-
----
-
-## Using Context7
-
-Once installed, the skill triggers automatically when you ask about libraries — just ask a docs question and the tools are invoked for you:
-
-```
-how do I configure caching in Next.js 16?
-use the Prisma syntax for relations
-what are the Supabase auth methods?
+```text
+/c7-docs next.js How do I enable Cache Components?
 ```
 
-For a manual lookup, use the slash command:
+You can also provide a Context7 library ID to skip the library search:
 
+```text
+/c7-docs /vercel/next.js How do I enable Cache Components?
 ```
-/c7-docs <library> <question>
-```
-
-For example:
-
-```
-/c7-docs next.js Cache Components
-/c7-docs supabase row level security
-```
-
----
-
-## Tips
-
-<AccordionGroup>
-<Accordion title="Getting Better Results">
-- Be specific about what you're trying to do, not just which library
-- Mention versions when they matter
-- If the first result isn't right, ask for a different part of the docs
-
-```
-# Good
-How do I handle file uploads with the Supabase Storage API?
-
-# Less specific
-How does Supabase storage work?
-```
-</Accordion>
-</AccordionGroup>

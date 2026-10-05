@@ -1,6 +1,6 @@
 {
   "name": "@upstash/context7-mcp",
-  "version": "4.0.7",
+  "version": "4.1.1",
   "mcpName": "io.github.upstash/context7",
   "description": "MCP server for Context7",
   "scripts": {
@@ -48,15 +48,23 @@
   "dependencies": {
     "@modelcontextprotocol/node": "2.0.0",
     "@modelcontextprotocol/server": "2.0.0",
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/exporter-prometheus": "^0.222.0",
+    "@opentelemetry/instrumentation-runtime-node": "^0.35.0",
+    "@opentelemetry/resources": "^2.11.0",
+    "@opentelemetry/sdk-metrics": "^2.11.0",
     "@types/express": "^5.0.4",
     "commander": "^13.1.0",
     "express": "^5.1.0",
-    "jose": "^6.2.10",
+    "jose": "^6.2.12",
     "undici": "^7.0.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "2.0.0",
+    "@opentelemetry/context-async-hooks": "^2.11.0",
+    "@opentelemetry/core": "^2.11.0",
+    "@opentelemetry/sdk-trace-base": "^2.11.0",
     "@types/node": "catalog:",
     "esbuild": "^0.28.2",
     "typescript": "catalog:",
