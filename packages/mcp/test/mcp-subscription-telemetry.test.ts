@@ -206,7 +206,9 @@ function createInstrumentedHttpHandler(maxSubscriptions = 4) {
     (requestContext) =>
       new InstrumentedMcpServer(
         { name: "subscription-http-test", version: "1.0.0" },
-        {},
+        // The SDK closes a listen stream that honors nothing, so the capacity
+        // test needs a capability its streams can hold open.
+        { capabilities: { tools: { listChanged: true } } },
         requestContext
       ),
     { keepAliveMs: 0, maxSubscriptions, onerror: () => undefined }
@@ -263,14 +265,14 @@ describe("MCP v2 subscription telemetry", () => {
     expect(await invalidResponse.json()).toMatchObject({ error: { code: -32602 }, id: 102 });
 
     const abort = new AbortController();
-    const accepted = modernListenRequest(103);
+    const accepted = modernListenRequest(103, { toolsListChanged: true });
     const acceptedResponse = await handler.fetch(
       modernHttpRequest("subscriptions/listen", abort.signal),
       { parsedBody: accepted }
     );
     expect(acceptedResponse.headers.get("content-type")).toContain("text/event-stream");
 
-    const rejected = modernListenRequest(104);
+    const rejected = modernListenRequest(104, { toolsListChanged: true });
     const rejectedResponse = await handler.fetch(modernHttpRequest("subscriptions/listen"), {
       parsedBody: rejected,
     });

@@ -31,7 +31,6 @@ import {
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
 import { installProcessShutdown } from "./lib/process-shutdown.js";
-import { getMaxSubscriptions } from "./lib/subscriptions.js";
 import {
   forceFlushTelemetry,
   initializeTelemetry,
@@ -432,7 +431,6 @@ async function main() {
     // go idle and the gateway reaps them at streamIdleTimeout (300s).
     const rawMcpHandler = createMcpHandler((mcpContext) => createMcpServer(mcpContext), {
       keepAliveMs: 0,
-      maxSubscriptions: getMaxSubscriptions(),
       onerror: (error) => console.error("MCP handler error:", error),
     });
     const mcpHandler = mcpInstrumentation
@@ -692,7 +690,6 @@ async function main() {
       },
       {
         transport: stdioTransport,
-        maxSubscriptions: getMaxSubscriptions(),
         onerror: (error) => console.error("MCP stdio error:", error),
       }
     );
