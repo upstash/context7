@@ -1194,7 +1194,7 @@ Open the "Settings" page of the app, navigate to "Plugins," and enter the follow
 }
 ```
 
-Once saved, enter in the chat `query-docs` followed by your Context7 documentation ID (e.g., `query-docs /nuxt/ui`). More information is available on [BoltAI's Documentation site](https://docs.boltai.com/docs/plugins/mcp-servers). For BoltAI on iOS, [see this guide](https://docs.boltai.com/docs/boltai-mobile/mcp-servers).
+Once saved, enter in the chat `query-docs` followed by your Context7 documentation ID (e.g., `query-docs /nuxt/ui how to set up a theme`). More information is available on [BoltAI's Documentation site](https://docs.boltai.com/docs/plugins/mcp-servers). For BoltAI on iOS, [see this guide](https://docs.boltai.com/docs/boltai-mobile/mcp-servers).
 
 </details>
 

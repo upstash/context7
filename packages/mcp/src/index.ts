@@ -382,7 +382,7 @@ async function main() {
       // browser clients, so those are not needed.)
       res.setHeader(
         "Access-Control-Allow-Headers",
-        "Content-Type, MCP-Session-Id, MCP-Protocol-Version, Mcp-Method, Mcp-Name, X-Context7-API-Key, Context7-API-Key, X-API-Key, Authorization"
+        "Content-Type, MCP-Session-Id, MCP-Protocol-Version, Mcp-Method, Mcp-Name, X-Context7-API-Key, Context7-API-Key, X-API-Key, Authorization, If-None-Match"
       );
       if (req.method === "OPTIONS") {
         res.sendStatus(200);
@@ -535,6 +535,9 @@ async function main() {
     // before the /mcp router so it is not answered as MCP JSON-RPC.
     app.get("/mcp/server-card", (_req: express.Request, res: express.Response) => {
       res.setHeader("Content-Type", "application/mcp-server-card+json");
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.setHeader("Access-Control-Expose-Headers", "ETag");
+      // Express adds the ETag and answers a matching If-None-Match with 304.
       res.status(200).send(mcpServerCard());
     });
     app.use("/mcp", mcpRouter);

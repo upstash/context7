@@ -234,6 +234,28 @@ describe("OAuth discovery", () => {
       remotes: [{ type: "streamable-http", url: "https://mcp.context7.com/mcp" }],
     });
     expect(card.description.length).toBeLessThanOrEqual(100);
+    expect(card.remotes[0].headers).toEqual([
+      expect.objectContaining({ name: "Authorization", isRequired: false, isSecret: true }),
+    ]);
+    expect(response.headers.get("cache-control")).toBe("public, max-age=3600");
+    expect(response.headers.get("access-control-expose-headers")).toBe("ETag");
+
+    const etag = response.headers.get("etag");
+    expect(etag).toBeTruthy();
+    // node:http, because fetch adds Cache-Control: no-cache to conditional requests.
+    const status = await new Promise<number | undefined>((resolve, reject) => {
+      http
+        .get(
+          new URL("/mcp/server-card", httpUrl),
+          { headers: { "If-None-Match": etag! } },
+          (res) => {
+            res.resume();
+            resolve(res.statusCode);
+          }
+        )
+        .on("error", reject);
+    });
+    expect(status).toBe(304);
   });
 });
 
