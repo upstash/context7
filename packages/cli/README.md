@@ -38,7 +38,7 @@ ctx7 library react
 ctx7 library nextjs "app router"
 
 # Get documentation
-ctx7 docs /facebook/react "useEffect cleanup"
+ctx7 docs /reactjs/react.dev "useEffect cleanup"
 ctx7 docs /vercel/next.js "middleware"
 ```
 
@@ -62,12 +62,12 @@ ctx7 library react --json
 Fetch documentation for a specific library using its Context7 ID.
 
 ```bash
-ctx7 docs /facebook/react "useEffect cleanup"
+ctx7 docs /reactjs/react.dev "useEffect cleanup"
 ctx7 docs /vercel/next.js "middleware authentication"
 ctx7 docs /prisma/prisma "one-to-many relations"
 
 # Output as JSON
-ctx7 docs /facebook/react "hooks" --json
+ctx7 docs /reactjs/react.dev "hooks" --json
 ```
 
 ### Setup
@@ -174,7 +174,7 @@ The CLI collects anonymous usage data to help improve the product. To disable te
 
 ```bash
 # For a single command
-CTX7_TELEMETRY_DISABLED=1 ctx7 docs /facebook/react "useEffect examples"
+CTX7_TELEMETRY_DISABLED=1 ctx7 docs /reactjs/react.dev "useEffect examples"
 
 # Or export in your shell profile (~/.bashrc, ~/.zshrc, etc.)
 export CTX7_TELEMETRY_DISABLED=1

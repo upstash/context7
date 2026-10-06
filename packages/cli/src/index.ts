@@ -52,7 +52,7 @@ Examples:
 
   ${brand.dim("# Query library documentation")}
   ${brand.primary('npx ctx7 library react "how to use hooks"')}
-  ${brand.primary('npx ctx7 docs /facebook/react "useEffect examples"')}
+  ${brand.primary('npx ctx7 docs /reactjs/react.dev "useEffect examples"')}
 `
   );
 
@@ -73,7 +73,7 @@ program.action(() => {
 
   console.log("  Quick start:");
   console.log(`    ${brand.primary("npx ctx7 setup")}`);
-  console.log(`    ${brand.primary('npx ctx7 docs /facebook/react "useEffect examples"')}`);
+  console.log(`    ${brand.primary('npx ctx7 docs /reactjs/react.dev "useEffect examples"')}`);
   console.log("");
 
   console.log(`  Run ${brand.primary("npx ctx7 --help")} for all commands and options`);

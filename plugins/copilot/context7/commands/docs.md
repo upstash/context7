@@ -38,7 +38,7 @@ Include the version in the library ID for pinned documentation:
 
 ```
 /context7:docs /vercel/next.js/v15.1.8 middleware
-/context7:docs /facebook/react/v19.0.0 use hook
+/context7:docs /react/react/v19.2.8 use hook
 ```
 
 This is useful when you're working with a specific version and want docs that match exactly.

@@ -69,7 +69,7 @@ Retrieves up-to-date documentation and code examples for the resolved library.
 You must call `ctx7 library` first to obtain the exact Context7-compatible library ID required to use this command, UNLESS the user explicitly provides a library ID in the format `/org/project` or `/org/project/version`.
 
 ```bash
-ctx7 docs /facebook/react "How to clean up useEffect with async operations"
+ctx7 docs /reactjs/react.dev "How to clean up useEffect with async operations"
 ctx7 docs /vercel/next.js "How to add authentication middleware to app router"
 ctx7 docs /prisma/prisma "How to define one-to-many relations with cascade delete"
 ```
@@ -94,10 +94,10 @@ The output contains two types of content: **code snippets** (titled, with langua
 
 ```bash
 # Output as structured JSON
-ctx7 docs /facebook/react "How to use hooks for state management" --json
+ctx7 docs /reactjs/react.dev "How to use hooks for state management" --json
 
 # Pipe to other tools — output is clean when not in a TTY (no spinners or colors)
-ctx7 docs /facebook/react "How to use hooks for state management" | head -50
+ctx7 docs /reactjs/react.dev "How to use hooks for state management" | head -50
 ctx7 docs /vercel/next.js "How to add middleware for route protection" | grep -A5 "middleware"
 ```
 

@@ -124,17 +124,17 @@ const libraries = await client.searchLibrary(
   "react"
 );
 console.log(`Found ${libraries.length} libraries`);
-console.log(libraries[0].id); // "/facebook/react"
+console.log(libraries[0].id); // "/reactjs/react.dev"
 
 // Get documentation as JSON array (default)
 const docs = await client.getContext(
   "How do I use hooks?",
-  "/facebook/react"
+  "/reactjs/react.dev"
 );
 console.log(docs[0].title, docs[0].content);
 
 // Get documentation context as plain text
-const context = await client.getContext("How do I use hooks?", "/facebook/react", {
+const context = await client.getContext("How do I use hooks?", "/reactjs/react.dev", {
   type: "txt",
   timeout: 5_000,
 });

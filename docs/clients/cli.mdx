@@ -12,7 +12,7 @@ The CLI is useful both as a standalone tool (fetching docs while you code) and a
 
 ## Installation
 
-Requires Node.js 18 or later.
+Requires Node.js 22.13 or later.
 
 <Tabs>
   <Tab title="npx (no install)">
@@ -78,7 +78,7 @@ ctx7 library react "How to use hooks for state management" --json | jq '.[0].id'
 Takes a library ID and a natural-language question, and returns relevant code snippets and explanations from the indexed documentation.
 
 ```bash
-ctx7 docs /facebook/react "How to clean up useEffect with async operations"
+ctx7 docs /reactjs/react.dev "How to clean up useEffect with async operations"
 ctx7 docs /vercel/next.js "How to add middleware that redirects unauthenticated users"
 ctx7 docs /prisma/prisma "How to define one-to-many relations with cascade delete"
 ```
@@ -94,10 +94,10 @@ The output contains two types of content: **code snippets** (titled, with langua
 
 ```bash
 # Output as structured JSON
-ctx7 docs /facebook/react "How to use hooks for state management" --json
+ctx7 docs /reactjs/react.dev "How to use hooks for state management" --json
 
 # Pipe to other tools — output is clean when not in a TTY (no spinners or colors)
-ctx7 docs /facebook/react "How to use hooks for state management" | head -50
+ctx7 docs /reactjs/react.dev "How to use hooks for state management" | head -50
 ctx7 docs /vercel/next.js "How to add middleware for route protection" | grep -A 10 "middleware"
 ```
 
@@ -259,7 +259,7 @@ The CLI collects anonymous usage data to help improve the product. To disable:
 
 ```bash
 # For a single command
-CTX7_TELEMETRY_DISABLED=1 ctx7 docs /facebook/react "useEffect examples"
+CTX7_TELEMETRY_DISABLED=1 ctx7 docs /reactjs/react.dev "useEffect examples"
 
 # Permanently — add to ~/.bashrc or ~/.zshrc
 export CTX7_TELEMETRY_DISABLED=1
