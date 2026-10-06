@@ -16,7 +16,7 @@
       "type": "string",
       "description": "A brief description of what your library does. This helps coding agents understand the purpose of your project.",
       "minLength": 10,
-      "maxLength": 200,
+      "maxLength": 500,
       "examples": [
         "Ratelimiting library based on Upstash Redis",
         "The React Framework for Production",
