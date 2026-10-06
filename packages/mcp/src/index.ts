@@ -32,7 +32,7 @@ import {
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
 import { installProcessShutdown } from "./lib/process-shutdown.js";
-import { getMaxSubscriptions, logMcpHandlerError } from "./lib/subscriptions.js";
+import { getMaxSubscriptions } from "./lib/subscriptions.js";
 import {
   forceFlushTelemetry,
   initializeTelemetry,
@@ -434,7 +434,7 @@ async function main() {
     const rawMcpHandler = createMcpHandler((mcpContext) => createMcpServer(mcpContext), {
       keepAliveMs: 0,
       maxSubscriptions: getMaxSubscriptions(),
-      onerror: (error) => logMcpHandlerError("MCP handler error:", error),
+      onerror: (error) => console.error("MCP handler error:", error),
     });
     const mcpHandler = mcpInstrumentation
       ? mcpInstrumentation.instrumentHttpHandler(rawMcpHandler)
@@ -442,7 +442,7 @@ async function main() {
     // Without onerror, request-conversion / handler.fetch throws are answered
     // with a bare 500 inside the adapter and never reach our express handler.
     const nodeHandler = toNodeHandler(mcpHandler, {
-      onerror: (error) => logMcpHandlerError("MCP node adapter error:", error),
+      onerror: (error) => console.error("MCP node adapter error:", error),
     });
 
     const handleMcpRequest = async (req: express.Request, res: express.Response) => {
@@ -701,7 +701,7 @@ async function main() {
       {
         transport: stdioTransport,
         maxSubscriptions: getMaxSubscriptions(),
-        onerror: (error) => logMcpHandlerError("MCP stdio error:", error),
+        onerror: (error) => console.error("MCP stdio error:", error),
       }
     );
     installProcessShutdown(stdioHandle, {
