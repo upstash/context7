@@ -19,7 +19,7 @@ The fastest way to add a library is through the web interface:
     Paste the public GitHub repository URL for the library you want to add.
   </Step>
   <Step title="Adjust parsing (optional)">
-    Optionally narrow what gets indexed by setting included folders and exclusions. For finer control — committed to the repository itself — add a `context7.json` file (see [Library Owners](/library-owners)).
+    The form only takes the repository URL. To narrow what gets indexed with included folders and exclusions, add a `context7.json` file to the repository (see [Library Owners](/library-owners)).
   </Step>
   <Step title="Submit">
     Submit the repository. Context7 parses and indexes the documentation, then makes it available by its [library ID](/api-guide) (format: `/org/project`).
@@ -32,11 +32,11 @@ The fastest way to add a library is through the web interface:
 
 ## What Gets Indexed
 
-Context7 parses documentation files — `.md`, `.mdx`, `.markdown`, `.rst`, `.txt`, and `.ipynb` — and extracts the code examples and explanations they contain. Raw source code files (`.py`, `.ts`, `.go`, and so on) are not indexed when documentation is present; a library's docs are expected to show the important usage examples.
+Context7 parses documentation files — `.md`, `.mdx`, `.rst`, `.txt`, `.adoc`, `.html`, `.ipynb`, and other text formats — and extracts the code examples and explanations they contain. PDF and DOCX files in a repository are converted to text and indexed too. Raw source code files (`.py`, `.ts`, `.go`, and so on) are not indexed when documentation is present; a library's docs are expected to show the important usage examples.
 
 If a repository contains little or no documentation content, Context7 falls back to generating examples from the source code itself. For public repositories this fallback is automatic — there is no setting to turn it on or off. For [private repositories](/howto/private-sources), generating docs from source code is opt-in: check **Generate docs** when adding the source, or pass the `generateDocs` flag via the [API](/api-guide).
 
-To control which folders and files are scanned, set included folders when submitting, or commit a `context7.json` file to the repository (see [Library Owners](/library-owners)).
+To control which folders and files are scanned, commit a `context7.json` file to the repository (see [Library Owners](/library-owners)).
 
 ## Maintain the Library?
 

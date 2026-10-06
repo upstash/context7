@@ -120,11 +120,11 @@ async function queryCommand(
 
   if (!libraryId.startsWith("/") || !/^\/[^/]+\/[^/]/.test(libraryId)) {
     log.error(`Invalid library ID: "${libraryId}"`);
-    log.info(`Expected format: /owner/repo or /owner/repo/version (e.g., /facebook/react)`);
+    log.info(`Expected format: /owner/repo or /owner/repo/version (e.g., /reactjs/react.dev)`);
     log.info(`Run "ctx7 library <name>" to find the correct ID`);
     if (process.platform === "win32") {
       log.info(
-        `On Git Bash, prefix the ID with an extra slash to avoid path conversion: ctx7 docs "//facebook/react" "<your question>"`
+        `On Git Bash, prefix the ID with an extra slash to avoid path conversion: ctx7 docs "//reactjs/react.dev" "<your question>"`
       );
     }
     process.exitCode = 1;
@@ -221,7 +221,7 @@ export function registerDocsCommands(program: Command): void {
 
   program
     .command("docs")
-    .argument("<libraryId>", "Context7 library ID (e.g., /facebook/react)")
+    .argument("<libraryId>", "Context7 library ID (e.g., /reactjs/react.dev)")
     .argument(
       "<query>",
       "Single-topic question to get docs for (run a separate query per distinct concept, unless asking how they interact)"

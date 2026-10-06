@@ -3,7 +3,7 @@ title: "Backup and Restore"
 sidebarTitle: "Backup & Restore"
 ---
 
-Context7 On-Premise can back up all of its data into a single archive, on a schedule or on demand. A backup contains everything needed to rebuild your deployment on a fresh machine: the SQLite database (configuration, credentials, indexed libraries), the vector index, and the encryption key that protects stored secrets.
+Context7 On-Premise can back up all of its data into a single archive, on a schedule or on demand. A backup contains everything needed to rebuild your deployment on a fresh machine: the SQLite database (configuration, credentials, indexed libraries), the vector index, and the encryption key that protects stored secrets. If you set the `ENCRYPTION_KEY` environment variable, the backup does not contain the key. Set the same `ENCRYPTION_KEY` on the machine you restore to.
 
 Backups run safely while the server is serving traffic. The database snapshot uses SQLite's online backup API, so you don't need a maintenance window.
 
@@ -80,7 +80,7 @@ All backup endpoints require an admin session and keep working even if your lice
 
 Restore a backup from the dashboard (for local backups) or with the offline CLI (for S3 backups, scripted recovery, or a fresh machine).
 
-In every case the restore never deletes your current data. It moves the existing database, vector index, and encryption key into a `pre-restore-<timestamp>` directory inside the data volume, so you can roll back. Delete that directory once you've verified the restore.
+In every case the restore never deletes your current data. It moves the existing database, vector index, and encryption key file (if there is one) into a `pre-restore-<timestamp>` directory inside the data volume, so you can roll back. Delete that directory once you've verified the restore.
 
 <Note>
 A backup created by a newer Context7 version cannot be restored into an older installation; the restore tool will refuse and tell you to upgrade first. Backups from older versions restore fine, and the database is migrated automatically the next time the server starts.
@@ -88,7 +88,7 @@ A backup created by a newer Context7 version cannot be restored into an older in
 
 ### From the dashboard
 
-Open **Settings → Backup**, find the backup in the list, and click the restore icon. Context7 validates the archive, shows what it contains (created date, libraries, schema version), and asks you to confirm. It then stages the restore and restarts to apply it, because the live database and vector index cannot be swapped while the server is running. Under Docker or Kubernetes the server comes back automatically; otherwise start it again after it stops.
+Open **Settings → Backup**, find the backup in the list, and click the restore icon. Context7 validates the archive, shows what it contains (**Created**, **Projects**, and **Schema**), and asks you to confirm. It then stages the restore and restarts to apply it, because the live database and vector index cannot be swapped while the server is running. Under Docker or Kubernetes the server comes back automatically; otherwise start it again after it stops.
 
 ### Offline with the CLI
 
@@ -148,4 +148,4 @@ The command prompts for confirmation before replacing anything. Pass `--yes` to 
 4. Run the restore as shown above.
 5. Start the server. Your configuration, credentials, users, indexed libraries, and search index are all back.
 
-Because the encryption key travels inside the archive, restored credentials work immediately on the new machine. Nothing needs to be re-entered.
+Because the encryption key travels inside the archive, restored credentials work immediately on the new machine. Nothing needs to be re-entered. The exception is a deployment that sets `ENCRYPTION_KEY` in the environment: the archive does not contain that key, so set the same `ENCRYPTION_KEY` on the new machine before you start the server.

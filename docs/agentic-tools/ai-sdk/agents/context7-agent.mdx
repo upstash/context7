@@ -26,16 +26,16 @@ console.log(text);
 ## Configuration
 
 ```typescript
-new Context7Agent(config?: Context7AgentConfig)
+new Context7Agent(config: Context7AgentConfig)
 ```
 
 ### Parameters
 
-<ParamField path="config" type="Context7AgentConfig" optional>
+<ParamField path="config" type="Context7AgentConfig" required>
   Configuration options for the agent.
 
   <Expandable title="properties">
-    <ParamField path="model" type="LanguageModel" optional>
+    <ParamField path="model" type="LanguageModel" required>
       Language model to use. Must be a LanguageModel instance from an AI SDK provider.
 
       Examples:
@@ -46,7 +46,7 @@ new Context7Agent(config?: Context7AgentConfig)
     <ParamField path="apiKey" type="string" optional>
       Context7 API key. If not provided, uses the `CONTEXT7_API_KEY` environment variable.
     </ParamField>
-    <ParamField path="system" type="string" optional>
+    <ParamField path="instructions" type="string" optional>
       Custom system prompt. Overrides the default `AGENT_PROMPT`.
     </ParamField>
     <ParamField path="stopWhen" type="StopCondition" optional default="stepCountIs(5)">
@@ -163,7 +163,7 @@ import { openai } from "@ai-sdk/openai";
 
 const agent = new Context7Agent({
   model: openai("gpt-5.2"),
-  system: `${AGENT_PROMPT}
+  instructions: `${AGENT_PROMPT}
 
 Additional instructions:
 - Always include TypeScript examples

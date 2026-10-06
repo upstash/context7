@@ -35,7 +35,7 @@ node packages/mcp/dist/index.js
 |------|-------------|---------|
 | `--transport <stdio\|http>` | Transport to use. Use `http` for remote HTTP server or `stdio` for local integration. | `stdio` |
 | `--port <number>` | Port to listen on when using `http` transport. | `3000` |
-| `--api-key <key>` | API key for authentication (or set `CONTEXT7_API_KEY` env var). | - |
+| `--api-key <key>` | API key for `stdio` transport (or set `CONTEXT7_API_KEY` env var). Not allowed with `--transport http`; send the key in the `Authorization: Bearer` header instead. | - |
 
 <Note>
   Get your API key by creating an account at [context7.com/dashboard](https://context7.com/dashboard).
@@ -57,22 +57,11 @@ node packages/mcp/dist/index.js --transport stdio --api-key YOUR_API_KEY
 
 ## Environment Variables
 
-You can use the `CONTEXT7_API_KEY` environment variable instead of passing the `--api-key` flag. This is useful for:
-
-- Storing API keys securely in `.env` files
-- Integration with MCP server setups that use dotenv
-- Tools that prefer environment variable configuration
+With `stdio` transport, you can use the `CONTEXT7_API_KEY` environment variable instead of passing the `--api-key` flag. Set it in your shell or in the `env` block of your MCP client configuration. The server does not load `.env` files.
 
 <Warning>
   The `--api-key` CLI flag takes precedence over the environment variable when both are provided.
 </Warning>
-
-### Using .env File
-
-```bash
-# .env
-CONTEXT7_API_KEY=your_api_key_here
-```
 
 ### MCP Configuration with Environment Variable
 

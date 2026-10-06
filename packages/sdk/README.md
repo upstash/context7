@@ -51,14 +51,14 @@ console.log(results.rules);
 
 // Search for libraries
 const libraries = await client.searchLibrary("I need to build a UI with components", "react");
-console.log(libraries[0].id); // "/facebook/react"
+console.log(libraries[0].id); // "/reactjs/react.dev"
 
 // Get documentation as JSON array (default)
-const docs = await client.getContext("How do I use hooks?", "/facebook/react");
+const docs = await client.getContext("How do I use hooks?", "/reactjs/react.dev");
 console.log(docs[0].title, docs[0].content);
 
 // Get documentation context as plain text
-const context = await client.getContext("How do I use hooks?", "/facebook/react", { type: "txt" });
+const context = await client.getContext("How do I use hooks?", "/reactjs/react.dev", { type: "txt" });
 console.log(context);
 ```
 
@@ -128,7 +128,7 @@ const client = new Context7({
 const controller = new AbortController();
 
 try {
-  const docs = await client.getContext("How do I use hooks?", "/facebook/react", {
+  const docs = await client.getContext("How do I use hooks?", "/reactjs/react.dev", {
     signal: controller.signal,
     timeout: 5_000,
     cache: "no-store",

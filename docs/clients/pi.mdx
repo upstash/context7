@@ -40,8 +40,6 @@ pi mcp add context7 --url https://mcp.context7.com/mcp \
 
 Add the export to your shell profile to make the key available in future sessions. Pi saves an environment variable reference in its configuration.
 
-To try Context7 without an API key at the anonymous rate limit, omit `--bearer-token-env-var CONTEXT7_API_KEY`.
-
 ### Local server
 
 To run the Context7 MCP server locally over stdio, use this option. It requires Node.js and `npx`:
@@ -107,7 +105,7 @@ pi install npm:@upstash/context7-pi
 
 Start a new Pi session, or run `/reload` in an open session to load the extension.
 
-The extension works without an API key at the anonymous rate limit. For higher limits, create a key in the [Context7 dashboard](https://context7.com/dashboard) and export it before starting Pi:
+We recommend using an API key for higher rate limits and access to private repositories. Create a key in the [Context7 dashboard](https://context7.com/dashboard) and export it before starting Pi:
 
 ```bash
 export CONTEXT7_API_KEY="YOUR_API_KEY"

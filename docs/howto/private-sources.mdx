@@ -3,7 +3,7 @@ title: Add Private Sources
 description: Add and manage private source documentation
 ---
 
-Add private sources to Context7 to make your internal documentation available to AI coding assistants. You can add sources from GitHub, GitLab, Bitbucket, other Git providers, Confluence, and OpenAPI specifications.
+Add private sources to Context7 to make your internal documentation available to AI coding assistants. You can add sources from GitHub, GitLab, Bitbucket, other Git providers, Confluence, Notion, OpenAPI specifications, and PDF or DOCX files.
 
 ![Private Sources card showing a table of added sources and source type options](/images/dashboard/private-sources-card.png)
 
@@ -13,16 +13,17 @@ Add private sources to Context7 to make your internal documentation available to
   <Step title="Open the Sources tab">
     Go to your teamspace's **Sources** tab.
   </Step>
-  <Step title="Add a source">
-    Click **Add another** to open the source type selector.
-  </Step>
   <Step title="Select a source type">
+    Pick a source type on the **Add Private Source** card:
+
     - **GitHub** — connect your GitHub account and select a repository
     - **GitLab** — connect your GitLab account and select a project
     - **Bitbucket** — connect your Bitbucket account and select a repository
     - **Other Git** — add any Git repository by URL
     - **Confluence** — connect your Confluence workspace
+    - **Notion** — connect your Notion workspace
     - **OpenAPI** — add an OpenAPI specification
+    - **File** — upload a PDF or DOCX file
   </Step>
   <Step title="Authorize access">
     Authorize Context7 to access your source (if required).
@@ -46,6 +47,8 @@ Keep your private documentation up to date:
 1. **Click the refresh icon** next to the source
 2. Context7 re-parses the source
 3. **You're only charged for changed content** — cached pages are free
+
+Uploaded files cannot be refreshed. To update one, upload the file again.
 
 **When to refresh**:
 
@@ -72,7 +75,7 @@ Keep your private documentation up to date:
 
 ## Permissions
 
-Access to private source management is restricted by role. Only Owners and Admins can add, refresh, or remove private sources. Developers can view source documentation but cannot manage sources.
+Access to private source management is restricted by role. Only Owners and Admins can add or remove private sources. All members, including Developers, can view and refresh private sources.
 
 See [Teamspace Management](/howto/teamspace#roles) for the complete permissions table.
 
@@ -80,7 +83,7 @@ See [Teamspace Management](/howto/teamspace#roles) for the complete permissions 
 
 ### Using `context7.json`
 
-Add a `context7.json` file to your repository root for better control over parsing:
+Add a `context7.json` file to your repository root for better control over parsing. Context7 reads this file only for repositories on github.com and gitlab.com:
 
 ```json
 {

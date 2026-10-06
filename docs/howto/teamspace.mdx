@@ -13,7 +13,7 @@ Add team members, assign roles, and manage access to your Context7 dashboard fro
 
 <Steps>
   <Step title="Open the teamspace menu">
-    Click **Create a teamspace** from the top-left dropdown.
+    Click **Create Teamspace** from the top-left dropdown.
   </Step>
   <Step title="Name the teamspace">
     Enter a teamspace name.
@@ -30,7 +30,8 @@ Add team members, assign roles, and manage access to your Context7 dashboard fro
 | Create API keys       | ✓     | ✓     | ✓         |
 | Manage team members   | ✓     | ✓     | ✗         |
 | Manage library access | ✓     | ✓     | ✗         |
-| Manage private sources | ✓     | ✓     | ✗         |
+| Add or remove private sources | ✓     | ✓     | ✗         |
+| Refresh private sources | ✓     | ✓     | ✓         |
 | Rename teamspace      | ✓     | ✗     | ✗         |
 | Delete teamspace      | ✓     | ✗     | ✗         |
 
@@ -44,15 +45,15 @@ Add team members, assign roles, and manage access to your Context7 dashboard fro
     Choose **Developer** or **Admin**.
   </Step>
   <Step title="Send the invite">
-    Click **Add**. The member receives an invitation email and is automatically added to the teamspace once they sign in.
+    Click **Add**. The member receives an invitation email. After they sign in, they accept the invitation from the banner at the top of their dashboard.
   </Step>
 </Steps>
 
-<Note>The invitation will remain pending until they sign in.</Note>
+<Note>The invitation remains pending until the member accepts or declines it. Pending invitations count toward the teamspace member limit.</Note>
 
 ## Teamspace Settings
 
-If you are the owner of the teamspace, you can rename or delete the teamspace under the overview tab.
+If you are the owner of the teamspace, you can rename or delete the teamspace under the settings tab.
 
 ![Teamspace management card](/images/dashboard/teamspace-management.png)
 
@@ -60,8 +61,8 @@ If you are the owner of the teamspace, you can rename or delete the teamspace un
 
 ## Limits
 
-| Plan       | Max Members       |
-| ---------- | ----------------- |
-| Free       | 1 (personal only) |
-| Pro        | 10                |
-| Enterprise | Unlimited         |
+| Plan       | Max Members per Teamspace | Max Teamspaces |
+| ---------- | ------------------------- | -------------- |
+| Free       | 1 (personal only)         | 0              |
+| Pro        | 30                        | 5              |
+| Enterprise | Unlimited                 | Unlimited      |

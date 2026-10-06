@@ -14,7 +14,7 @@ Context7 supports all MCP clients. Below are configuration examples for popular 
 <Note>
   For detailed guides including rules, skills, agents, and best practices, see
   [Cursor](/clients/cursor) for rules and Composer integration tips, and [Claude
-  Code](/clients/claude-code) for skills, agents, commands, and plugin installation.
+  Code](/clients/claude-code) for plugin installation and sign-in.
 </Note>
 
 ## OAuth Authentication
@@ -212,7 +212,7 @@ openclaw mcp add context7 \
   --transport streamable-http
 ```
 
-This works without an API key at the anonymous rate limit. For higher limits, create a key in the [Context7 dashboard](https://context7.com/dashboard) and append this option to the command:
+We recommend using an API key. Create a key in the [Context7 dashboard](https://context7.com/dashboard) and append this option to the command:
 
 ```sh
 --header "Authorization: Bearer YOUR_API_KEY"
@@ -232,7 +232,7 @@ See [OpenAI Codex MCP docs](https://developers.openai.com/codex/mcp) for more in
 
 #### Context7 Plugin
 
-You can also install Context7 as a Codex plugin. It connects to the hosted MCP server and includes a documentation lookup skill. After installation, a browser window opens so you can log in via OAuth.
+You can also install Context7 as a Codex plugin. It connects to the hosted MCP server and includes a documentation lookup skill. The first time Codex uses the plugin, a browser window opens so you can log in via OAuth.
 
 ```sh
 codex plugin marketplace add upstash/context7
@@ -542,7 +542,7 @@ Open Claude Desktop developer settings and edit your `claude_desktop_config.json
 
 <Accordion title="ChatGPT (Web)">
 
-ChatGPT supports MCP servers through remote connectors via [Developer Mode](https://developers.openai.com/api/docs/guides/developer-mode) (beta). Available for Pro, Plus, Team, Enterprise, and Edu plans.
+ChatGPT supports MCP servers through remote connectors via [Developer Mode](https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt) (beta). Available for Pro, Plus, Team, Enterprise, and Edu plans.
 
 #### 1. Enable Developer Mode
 
@@ -811,7 +811,7 @@ Use these alternatives to run the local Context7 MCP server with other runtimes.
       "command": "deno",
       "args": [
         "run",
-        "--allow-env=NO_DEPRECATION,TRACE_DEPRECATION",
+        "--allow-env",
         "--allow-net",
         "npm:@upstash/context7-mcp"
       ]
@@ -1102,7 +1102,7 @@ docker build -t context7-mcp .
 Context7 is available in the [Docker MCP Catalog](https://hub.docker.com/mcp/server/context7/overview) as a **remote** server, so you don't need to build, pull, or run a local image. The MCP Toolkit connects to the hosted endpoint for you.
 
 1. In Docker Desktop, open **MCP Toolkit → Catalog**, search for **Context7**, and enable it.
-2. (Optional) In the server's **Config** tab, set your Context7 API key (`CONTEXT7_API_KEY`) for higher rate limits. The server also works without one.
+2. In the server's **Config** tab, set your Context7 API key (`CONTEXT7_API_KEY`). We recommend using an API key.
 3. Connect your MCP client to Docker's MCP gateway. Either run `docker mcp client connect <client>` (for example `vscode`, `cursor`, or `claude-desktop`), or add the gateway to your client config manually:
 
 ```json
@@ -1426,7 +1426,7 @@ droid mcp add context7 "npx -y @upstash/context7-mcp" --env CONTEXT7_API_KEY=YOU
 
 [Emdash](https://github.com/generalaction/emdash) is an orchestration layer for running multiple coding agents in parallel.
 
-Context7 is available as a built-in entry in Emdash's MCP catalog. Enable it from the MCP view and provide your `CONTEXT7_API_KEY` (optional, for higher rate limits). Emdash adapts and writes the MCP config into your selected coding agent's config (Codex, Claude Code, Cursor, etc.) for you.
+Context7 is available as a built-in entry in Emdash's MCP catalog. Enable it from the MCP view and provide your `CONTEXT7_API_KEY`. We recommend using an API key. Emdash adapts and writes the MCP config into your selected coding agent's config (Codex, Claude Code, Cursor, etc.) for you.
 
 See the [Emdash repository](https://github.com/generalaction/emdash) for more information.
 
@@ -1434,7 +1434,7 @@ See the [Emdash repository](https://github.com/generalaction/emdash) for more in
 
 <Accordion title="Desktop Extension">
 
-Install the [context7.mcpb](https://github.com/upstash/context7/tree/master/packages/mcp/mcpb/context7.mcpb) file and add it to your client. See [MCP bundles docs](https://github.com/modelcontextprotocol/mcpb#mcp-bundles-mcpb) for more info.
+Download the `context7.mcpb` file from the latest `mcpb-v*` release on [GitHub Releases](https://github.com/upstash/context7/releases?q=mcpb) and add it to your client. See [MCP bundles docs](https://github.com/modelcontextprotocol/mcpb#mcp-bundles-mcpb) for more info.
 
 </Accordion>
 
