@@ -5,7 +5,13 @@ vi.mock("../src/lib/jwt.js", () => ({
   validateJWT: vi.fn(),
 }));
 
+vi.mock("../src/lib/oauth-token-validation.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/lib/oauth-token-validation.js")>()),
+  validateOpaqueOAuthToken: vi.fn(),
+}));
+
 import { validateJWT } from "../src/lib/jwt.js";
+import { validateOpaqueOAuthToken } from "../src/lib/oauth-token-validation.js";
 import {
   classifyAuthMethod,
   effectiveMcpAuthMode,
@@ -61,6 +67,62 @@ describe("MCP HTTP authentication policy", () => {
       method: "api_key",
       event: "credential_present",
     });
+  });
+
+  test("challenges an expired opaque OAuth token in both modes", async () => {
+    vi.mocked(validateOpaqueOAuthToken).mockResolvedValue("invalid");
+
+    for (const mode of ["observe", "required"] as const) {
+      await expect(evaluateMcpAuthentication("oat_expired", mode)).resolves.toEqual({
+        allowed: false,
+        method: "oauth",
+        error: "The access token expired or is invalid",
+        event: "credential_rejected",
+        outcome: "expired",
+      });
+    }
+    expect(validateOpaqueOAuthToken).toHaveBeenCalledWith("oat_expired");
+  });
+
+  test("passes a valid opaque OAuth token through and fails open when unchecked", async () => {
+    vi.mocked(validateOpaqueOAuthToken)
+      .mockResolvedValueOnce("valid")
+      .mockResolvedValueOnce("unavailable");
+
+    await expect(evaluateMcpAuthentication("oat_valid", "required")).resolves.toMatchObject({
+      allowed: true,
+      method: "oauth",
+      event: "credential_validated",
+      outcome: "accepted",
+    });
+    await expect(evaluateMcpAuthentication("oat_outage", "required")).resolves.toMatchObject({
+      allowed: true,
+      method: "oauth",
+      event: "credential_present",
+      outcome: "unverified",
+    });
+  });
+
+  test("skips the opaque OAuth token check when validation is switched off", async () => {
+    vi.stubEnv("MCP_OAUTH_TOKEN_VALIDATION", "off");
+
+    await expect(evaluateMcpAuthentication("oat_expired", "required")).resolves.toMatchObject({
+      allowed: true,
+      method: "oauth",
+      event: "credential_present",
+      outcome: "accepted",
+    });
+    expect(validateOpaqueOAuthToken).not.toHaveBeenCalled();
+  });
+
+  test("leaves API keys to the Context7 API", async () => {
+    await expect(evaluateMcpAuthentication("ctx7sk-invalid", "required")).resolves.toMatchObject({
+      allowed: true,
+      method: "api_key",
+      event: "credential_present",
+      outcome: "accepted",
+    });
+    expect(validateOpaqueOAuthToken).not.toHaveBeenCalled();
   });
 
   test("distinguishes validated and rejected JWTs", async () => {
