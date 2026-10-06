@@ -120,3 +120,29 @@ Set `poweredByDocs7` to `true` to add a **Built with Docs7** link to the footer.
 ```
 
 The default value is `false`. Docs7 always shows this link for sites on the Free plan.
+
+## Ask for cookie consent
+
+Set `consentBanner` to `true` to ask visitors for cookie consent before your analytics and marketing integrations load.
+
+```json docs.json
+{
+  "consentBanner": true,
+  "integrations": {
+    "ga4": { "measurementId": "G-XXXXXXXXXX" }
+  }
+}
+```
+
+New visitors see a banner with **Reject all**, **Accept all**, and **Customize**. **Customize** lets them turn each category on or off:
+
+- **Analytics**: Adobe Analytics, Google Analytics, Google Tag Manager, Heap, Microsoft Clarity, Plausible, and Segment.
+- **Marketing**: Clearbit and Koala.
+
+An integration loads only after the visitor accepts its category. The footer shows a **Cookie settings** link, so visitors can change their choice at any time.
+
+The banner shows only when your site uses at least one of these integrations. It does not show in previews.
+
+The banner does not control Intercom. The Intercom chat widget loads for every visitor, with or without the banner.
+
+The default value is `false`. Without the banner, your integrations load for every visitor.
