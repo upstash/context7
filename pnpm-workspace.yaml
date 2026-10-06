@@ -16,7 +16,7 @@ minimumReleaseAge: 10080
 catalog:
   "@types/node": ^25.9.8
   "@typescript-eslint/eslint-plugin": ^8.68.0
-  "@typescript-eslint/parser": ^8.68.0
+  "@typescript-eslint/parser": ^8.71.0
   dotenv: ^17.4.2
   eslint: ^10.9.1
   eslint-plugin-prettier: ^5.5.6
