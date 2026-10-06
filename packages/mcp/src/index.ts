@@ -408,11 +408,8 @@ async function main() {
     };
 
     const extractApiKey = (req: express.Request): string | undefined => {
-      // Cursor sends its own `direct_` session token as the bearer. It is not a
-      // Context7 credential, so it must not reach the REST API as one.
-      const bearer = extractBearerToken(req.headers.authorization);
       return (
-        (bearer?.startsWith("direct_") ? undefined : bearer) ||
+        extractBearerToken(req.headers.authorization) ||
         extractHeaderValue(req.headers["x-context7-api-key"]) ||
         extractHeaderValue(req.headers["context7-api-key"]) ||
         extractHeaderValue(req.headers["x-api-key"]) ||

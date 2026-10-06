@@ -372,65 +372,6 @@ describe("HTTP API key headers", () => {
       await client.close();
     }
   });
-
-  test.each(["direct_cursor-session", "direct_example.payload.signature"])(
-    "does not forward Cursor IDE bearer token %s to the Context7 API",
-    async (token) => {
-      const client = new Client({ name: "cursor-token-test", version: "1.0.0" });
-
-      await client.connect(
-        new StreamableHTTPClientTransport(new URL(httpUrl), {
-          requestInit: { headers: { Authorization: `Bearer ${token}` } },
-        })
-      );
-
-      try {
-        requests.length = 0;
-        await client.callTool({
-          name: "query-docs",
-          arguments: { libraryId: "/vercel/next.js", query: "app router" },
-        });
-
-        const apiCall = requests.find((request) => request.path === "/v2/context");
-        expect(apiCall).toBeDefined();
-        expect(apiCall?.headers.authorization).toBeUndefined();
-      } finally {
-        await client.close();
-      }
-    }
-  );
-
-  test.each(["direct_cursor-session", "direct_example.payload.signature"])(
-    "prefers a Context7 API key header over %s",
-    async (token) => {
-      const apiKey = "ctx7sk-alongside-cursor-token";
-      const client = new Client({ name: "mixed-auth-test", version: "1.0.0" });
-
-      await client.connect(
-        new StreamableHTTPClientTransport(new URL(httpUrl), {
-          requestInit: {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "X-Context7-API-Key": apiKey,
-            },
-          },
-        })
-      );
-
-      try {
-        requests.length = 0;
-        await client.callTool({
-          name: "query-docs",
-          arguments: { libraryId: "/vercel/next.js", query: "app router" },
-        });
-
-        const apiCall = requests.find((request) => request.path === "/v2/context");
-        expect(apiCall?.headers.authorization).toBe(`Bearer ${apiKey}`);
-      } finally {
-        await client.close();
-      }
-    }
-  );
 });
 
 describe.each([
