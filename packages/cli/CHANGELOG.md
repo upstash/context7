@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.14
+
+### Patch Changes
+
+- 16095a9: Update CLI prompt, terminal display, and browser launch dependencies. The CLI now declares Node.js 22.13 or later, which its dependencies already need. Update the MCP server JWT and OpenTelemetry dependencies.
+
 ## 0.5.13
 
 ### Patch Changes
