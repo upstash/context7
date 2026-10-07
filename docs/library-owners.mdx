@@ -59,10 +59,12 @@ Here's an example `context7.json` file with all available options:
 
 - **`projectTitle`** (string, max 100 characters): The library name shown on Context7 and given to coding agents. It replaces the generated name.
 
-- **`description`** (string, max 200 characters): A short description of what your library does, shown on Context7 and given to coding agents. It replaces the generated description.
+- **`description`** (string, max 500 characters): A short description of what your library does, shown on Context7 and given to coding agents. It replaces the generated description.
 
 <Note>
-  Context7 checks a new `projectTitle` or `description` before it uses it, and applies the change on the next refresh. Describe the library itself: text that gives instructions to AI agents is not accepted, and the current name and description stay.
+  Context7 checks a new `projectTitle` or `description` before it uses it, and applies the change on the next refresh. Describe what the library is and does: instructions to AI agents, slogans, and promotional offers are not accepted, and the current name and description stay.
+
+  If you remove `projectTitle` or `description` from `context7.json`, the last accepted value stays.
 </Note>
 
 - **`branch`** (string): The name of the git branch to parse. If not provided, the default branch will be used.
