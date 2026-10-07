@@ -5,8 +5,7 @@ import { homedir } from "os";
 export type Transport = "http" | "stdio";
 
 export type AuthOptions =
-  | { mode: "api-key"; apiKey: string }
-  | { mode: "oauth" | "none"; apiKey?: never };
+  { mode: "api-key"; apiKey: string } | { mode: "oauth" | "none"; apiKey?: never };
 export type AuthMode = AuthOptions["mode"];
 
 export const AUTH_MODE_LABELS: Record<AuthMode, string> = {

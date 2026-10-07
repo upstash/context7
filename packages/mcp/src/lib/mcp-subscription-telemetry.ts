@@ -22,11 +22,7 @@ const SUBSCRIPTION_DURATION_BUCKETS_SECONDS = [
 
 export type McpRoute = "anonymous" | "oauth" | "stdio";
 export type SubscriptionOutcome =
-  | "cancelled"
-  | "completed"
-  | "connection_closed"
-  | "replaced"
-  | "transport_error";
+  "cancelled" | "completed" | "connection_closed" | "replaced" | "transport_error";
 
 export interface SubscriptionObservation {
   abortSignal?: AbortSignal;
