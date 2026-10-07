@@ -58,7 +58,7 @@
     "express": "^5.1.0",
     "jose": "^6.2.12",
     "undici": "^7.30.0",
-    "zod": "^4.4.3"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "2.2.0",
