@@ -16,8 +16,7 @@ const DEFAULT_BASE_URL = "https://context7.com/api";
 const API_KEY_PREFIX = "ctx7sk";
 
 type Credential =
-  | { kind: "apiKey"; value: string }
-  | { kind: "authToken"; value: string | AuthTokenProvider };
+  { kind: "apiKey"; value: string } | { kind: "authToken"; value: string | AuthTokenProvider };
 
 export type * from "@commands/types";
 export type {

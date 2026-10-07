@@ -19,12 +19,7 @@ export type AuthenticationEvent =
   | "metadata_requested";
 export type AuthenticationEnforcementMode = "observe" | "required";
 export type UpstreamOutcome =
-  | "cancelled"
-  | "http_error"
-  | "network_error"
-  | "response_error"
-  | "success"
-  | "timeout";
+  "cancelled" | "http_error" | "network_error" | "response_error" | "success" | "timeout";
 
 export interface AuthenticationObservation {
   event: AuthenticationDecisionEvent;

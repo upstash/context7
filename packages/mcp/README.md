@@ -715,7 +715,7 @@ See [JetBrains AI Assistant Documentation](https://www.jetbrains.com/help/ai-ass
 </details>
 
 <details>
-  
+
 <summary><b>Install in Kiro</b></summary>
 
 See [Kiro Model Context Protocol Documentation](https://kiro.dev/docs/mcp/configuration/) for details.
@@ -1315,6 +1315,7 @@ See [Local and Remote MCPs for Perplexity](https://www.perplexity.ai/help-center
 ```
 
 7. Click `Save`.
+
 </details>
 
 <details>
