@@ -25,6 +25,7 @@ import {
   RESOURCE_URL,
   OAUTH_AUTH_SERVER_URL,
   OPENAI_APPS_CHALLENGE_TOKEN,
+  mcpServerCard,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
@@ -381,7 +382,7 @@ async function main() {
       // browser clients, so those are not needed.)
       res.setHeader(
         "Access-Control-Allow-Headers",
-        "Content-Type, MCP-Session-Id, MCP-Protocol-Version, Mcp-Method, Mcp-Name, X-Context7-API-Key, Context7-API-Key, X-API-Key, Authorization"
+        "Content-Type, MCP-Session-Id, MCP-Protocol-Version, Mcp-Method, Mcp-Name, X-Context7-API-Key, Context7-API-Key, X-API-Key, Authorization, If-None-Match"
       );
       if (req.method === "OPTIONS") {
         res.sendStatus(200);
@@ -515,6 +516,16 @@ async function main() {
     mcpRouter.all("/", (req, res) => handleMcpRequest(req, res));
     // Compatibility alias for clients already configured with /mcp/oauth.
     mcpRouter.all("/oauth", (req, res) => handleMcpRequest(req, res));
+
+    // SEP-2127 reserves `{streamable-http-url}/server-card`. Register it
+    // before the /mcp router so it is not answered as MCP JSON-RPC.
+    app.get("/mcp/server-card", (_req: express.Request, res: express.Response) => {
+      res.setHeader("Content-Type", "application/mcp-server-card+json");
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.setHeader("Access-Control-Expose-Headers", "ETag");
+      // Express adds the ETag and answers a matching If-None-Match with 304.
+      res.status(200).send(mcpServerCard());
+    });
     app.use("/mcp", mcpRouter);
 
     app.get("/ping", (_req: express.Request, res: express.Response) => {

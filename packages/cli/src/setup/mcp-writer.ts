@@ -1,46 +1,31 @@
 import { access, readFile, writeFile, mkdir } from "fs/promises";
 import { dirname } from "path";
+import { parse, printParseErrorCode, type ParseError } from "jsonc-parser";
 import { STDIO_PACKAGE } from "./agents.js";
 
 export { patchTomlStdioApiKey } from "./toml-editor.js";
-
-function stripJsonComments(text: string): string {
-  let result = "";
-  let i = 0;
-  while (i < text.length) {
-    if (text[i] === '"') {
-      const start = i++;
-      while (i < text.length && text[i] !== '"') {
-        if (text[i] === "\\") i++;
-        i++;
-      }
-      result += text.slice(start, ++i);
-    } else if (text[i] === "/" && text[i + 1] === "/") {
-      i += 2;
-      while (i < text.length && text[i] !== "\n") i++;
-    } else if (text[i] === "/" && text[i + 1] === "*") {
-      i += 2;
-      while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) i++;
-      i += 2;
-    } else {
-      result += text[i++];
-    }
-  }
-  return result;
-}
 
 export async function readJsonConfig(filePath: string): Promise<Record<string, unknown>> {
   let raw: string;
   try {
     raw = await readFile(filePath, "utf-8");
-  } catch {
-    return {};
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return {};
+    throw error;
   }
 
   raw = raw.trim();
   if (!raw) return {};
 
-  return JSON.parse(stripJsonComments(raw)) as Record<string, unknown>;
+  const errors: ParseError[] = [];
+  const config = parse(raw, errors, { allowTrailingComma: true });
+  if (errors.length > 0) {
+    const firstError = errors[0];
+    throw new SyntaxError(
+      `Invalid JSON config at offset ${firstError.offset}: ${printParseErrorCode(firstError.error)}`
+    );
+  }
+  return config as Record<string, unknown>;
 }
 
 export function mergeServerEntry(

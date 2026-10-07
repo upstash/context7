@@ -78,7 +78,7 @@ The first deployment creates a site using the required `name` in `docs.json` or 
 The CLI saves the site ID in `.docs7/project.json` inside the documentation folder. Keep this file. Later runs update that same site, even if the assigned address differs from the name. They do not create another site or use another site slot.
 
 <Note>
-  Free teamspaces can have one site across GitHub and CLI deployments. Preview deployments require
+  Free teamspaces can have three sites. Preview deployments require
   Pro. Updating an existing site does not count as adding a site.
 </Note>
 
@@ -122,6 +122,6 @@ Until you connect GitHub, use `docs7 deploy` for updates. Automatic GitHub deplo
 
 ### Downgrade to Free
 
-When you downgrade from Pro to Free, you can select your CLI site as the site to keep. It keeps its address, deployment history, and saved link in `.docs7/project.json`. Continue to update it with `docs7 deploy`.
+When you downgrade from Pro to Free, you can keep up to three sites, including your CLI sites. Each CLI site that you keep keeps its address, deployment history, and saved link in `.docs7/project.json`. Continue to update it with `docs7 deploy`.
 
 The current published build stays online. Free-plan branding applies on the next deployment. Preview deployments and sites you do not select are removed.
