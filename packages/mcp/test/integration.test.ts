@@ -221,6 +221,42 @@ describe("OAuth discovery", () => {
       authorization_servers: ["https://clerk.context7.com", "https://context7.com"],
     });
   });
+
+  test("serves the SEP-2127 server card at /mcp/server-card", async () => {
+    const response = await fetch(new URL("/mcp/server-card", httpUrl));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toMatch(/application\/mcp-server-card\+json/);
+    const card = await response.json();
+    expect(card).toMatchObject({
+      $schema: "https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json",
+      name: "io.github.upstash/context7",
+      remotes: [{ type: "streamable-http", url: "https://mcp.context7.com/mcp" }],
+    });
+    expect(card.description.length).toBeLessThanOrEqual(100);
+    expect(card.remotes[0].headers).toEqual([
+      expect.objectContaining({ name: "Authorization", isRequired: false, isSecret: true }),
+    ]);
+    expect(response.headers.get("cache-control")).toBe("public, max-age=3600");
+    expect(response.headers.get("access-control-expose-headers")).toBe("ETag");
+
+    const etag = response.headers.get("etag");
+    expect(etag).toBeTruthy();
+    // node:http, because fetch adds Cache-Control: no-cache to conditional requests.
+    const status = await new Promise<number | undefined>((resolve, reject) => {
+      http
+        .get(
+          new URL("/mcp/server-card", httpUrl),
+          { headers: { "If-None-Match": etag! } },
+          (res) => {
+            res.resume();
+            resolve(res.statusCode);
+          }
+        )
+        .on("error", reject);
+    });
+    expect(status).toBe(304);
+  });
 });
 
 // A malformed body fails inside express.json(), which calls next(err). That
