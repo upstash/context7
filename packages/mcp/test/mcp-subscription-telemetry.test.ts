@@ -224,7 +224,7 @@ describe("MCP v2 subscription telemetry", () => {
     const beforeCancelled = subscriptionDurationCount("cancelled", "anonymous");
     const handler = createInstrumentedHttpHandler();
     const abort = new AbortController();
-    const message = modernListenRequest(101);
+    const message = modernListenRequest(101, { toolsListChanged: true });
 
     const response = await handler.fetch(modernHttpRequest("subscriptions/listen", abort.signal), {
       parsedBody: message,
@@ -305,7 +305,7 @@ describe("MCP v2 subscription telemetry", () => {
     const handler = createInstrumentedHttpHandler();
 
     const response = await handler.fetch(modernHttpRequest("subscriptions/listen"), {
-      parsedBody: modernListenRequest(105),
+      parsedBody: modernListenRequest(105, { toolsListChanged: true }),
     });
     expect(response.body).not.toBeNull();
     await metricProvider.forceFlush();
@@ -315,6 +315,26 @@ describe("MCP v2 subscription telemetry", () => {
     await metricProvider.forceFlush();
     expect(activeSubscriptionCount("anonymous")).toBe(beforeActive);
     expect(subscriptionDurationCount("completed", "anonymous")).toBe(beforeCompleted + 1);
+  });
+
+  test("completes an HTTP subscription that honors nothing right after the acknowledgement", async () => {
+    await metricProvider.forceFlush();
+    const beforeActive = activeSubscriptionCount("anonymous");
+    const beforeCompleted = subscriptionDurationCount("completed", "anonymous");
+    const handler = createInstrumentedHttpHandler();
+
+    // Context7 advertises no listChanged, so production listens look like this one.
+    const response = await handler.fetch(modernHttpRequest("subscriptions/listen"), {
+      parsedBody: modernListenRequest(106, { promptsListChanged: true }),
+    });
+    const body = await response.text();
+    expect(body).toContain('"notifications":{}');
+    expect(body).toContain('"resultType":"complete"');
+
+    await metricProvider.forceFlush();
+    expect(activeSubscriptionCount("anonymous")).toBe(beforeActive);
+    expect(subscriptionDurationCount("completed", "anonymous")).toBe(beforeCompleted + 1);
+    await handler.close();
   });
 
   test("delegates ordinary HTTP operations without double counting them", async () => {

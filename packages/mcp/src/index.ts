@@ -701,6 +701,8 @@ async function main() {
       },
       {
         transport: stdioTransport,
+        // The SDK's stdio router keeps a subscription that honors nothing open.
+        maxSubscriptions: 0,
         onerror: (error) => console.error("MCP stdio error:", error),
       }
     );
