@@ -70,16 +70,21 @@ jobs:
         run: ./mcp-publisher login github-oidc
 
       - name: Publish to MCP Registry
-        # Retry to tolerate npm propagation delay when chained after a release
+        # npm can take several minutes to serve a new version after a release,
+        # and the registry rejects the publish until it does. Retry that case
+        # for up to 10 minutes; fail fast on any other error.
         run: |
-          for i in 1 2 3; do
+          for i in $(seq 1 20); do
             OUT=$(./mcp-publisher publish 2>&1) && { echo "$OUT"; exit 0; }
             echo "$OUT"
             if echo "$OUT" | grep -q "duplicate version"; then
               echo "This version is already in the registry (versions are immutable) — nothing to do."
               exit 0
             fi
-            echo "Publish failed (attempt $i), retrying in 30s..."
+            if ! echo "$OUT" | grep -q "was not found"; then
+              exit 1
+            fi
+            echo "npm does not serve this version yet (attempt $i/20), retrying in 30s..."
             sleep 30
           done
           exit 1
