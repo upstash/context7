@@ -1,5 +1,12 @@
 # @upstash/context7-mcp
 
+## 4.1.3
+
+### Patch Changes
+
+- afdd129: Over HTTP, answer `subscriptions/listen` with an acknowledgement and an immediate `complete` result instead of a "Subscription limit reached" error, and stop logging those refusals. Context7 has no change notifications, so the stream closes at once. Stdio subscriptions stay disabled. Removes the `MCP_MAX_SUBSCRIPTIONS` setting.
+- 2b7c4f0: Update the undici dependency to 7.30.
+
 ## 4.1.2
 
 ### Patch Changes
