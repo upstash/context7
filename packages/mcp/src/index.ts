@@ -383,6 +383,10 @@ async function main() {
         "Access-Control-Allow-Headers",
         "Content-Type, MCP-Session-Id, MCP-Protocol-Version, Mcp-Method, Mcp-Name, X-Context7-API-Key, Context7-API-Key, X-API-Key, Authorization, If-None-Match"
       );
+      // Browser clients can only read these response headers cross-origin when
+      // they are exposed; without WWW-Authenticate they cannot start OAuth
+      // from the 401 challenge.
+      res.setHeader("Access-Control-Expose-Headers", "WWW-Authenticate, MCP-Session-Id");
       if (req.method === "OPTIONS") {
         res.sendStatus(200);
         return;

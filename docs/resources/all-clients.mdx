@@ -19,7 +19,14 @@ Context7 supports all MCP clients. Below are configuration examples for popular 
 
 ## OAuth Authentication
 
-The canonical `https://mcp.context7.com/mcp` endpoint supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization). Connect to that URL and follow your client's authentication prompt. The older `/mcp/oauth` URL remains available as a compatibility alias.
+Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization).
+
+To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client configuration:
+
+```diff
+- "url": "https://mcp.context7.com/mcp"
++ "url": "https://mcp.context7.com/mcp/oauth"
+```
 
 OAuth is only available for remote HTTP connections. For local MCP connections using stdio transport, use API key authentication instead.
 
@@ -180,11 +187,11 @@ Add the hosted Context7 server with OpenClaw's MCP client registry. See the [Ope
 
 #### OAuth (Recommended)
 
-Register the Context7 endpoint, then sign in through your browser:
+Register the Context7 OAuth endpoint, then sign in through your browser:
 
 ```sh
 openclaw mcp add context7 \
-  --url https://mcp.context7.com/mcp \
+  --url https://mcp.context7.com/mcp/oauth \
   --transport streamable-http \
   --auth oauth
 
@@ -544,7 +551,7 @@ Fill in the following:
 | ------------------ | ------------------------------------------------------------------------------------------- |
 | **Name**           | `Context7`                                                                                  |
 | **Description**    | `Fetch up-to-date documentation and code examples for any library directly from the source` |
-| **MCP Server URL** | `https://mcp.context7.com/mcp`                                                              |
+| **MCP Server URL** | `https://mcp.context7.com/mcp/oauth`                                                        |
 
 > Accept the security notice and complete the one-time OAuth authorization.
 
@@ -576,7 +583,7 @@ Fill in the following:
 | ------------------ | ------------------------------------------------------------------------------------------- |
 | **Name**           | `Context7`                                                                                  |
 | **Description**    | `Fetch up-to-date documentation and code examples for any library directly from the source` |
-| **MCP Server URL** | `https://mcp.context7.com/mcp`                                                              |
+| **MCP Server URL** | `https://mcp.context7.com/mcp/oauth`                                                        |
 
 > Accept the security notice and complete the one-time OAuth authorization.
 
@@ -746,14 +753,14 @@ mcp_servers:
 ```yaml
 mcp_servers:
   context7:
-    url: "https://mcp.context7.com/mcp"
+    url: "https://mcp.context7.com/mcp/oauth"
     auth: oauth
 ```
 
 #### Using CLI (OAuth)
 
 ```sh
-hermes mcp add context7 --url https://mcp.context7.com/mcp --auth oauth
+hermes mcp add context7 --url https://mcp.context7.com/mcp/oauth --auth oauth
 ```
 
 #### Local Server Connection
@@ -915,7 +922,7 @@ Run this command in your terminal. See [Amp MCP docs](https://ampcode.com/manual
 #### With OAuth
 
 ```sh
-amp mcp add context7 https://mcp.context7.com/mcp
+amp mcp add context7 https://mcp.context7.com/mcp/oauth
 ```
 
 #### With API Key (Higher Rate Limits & Private Repos)

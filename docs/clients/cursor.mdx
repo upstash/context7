@@ -188,7 +188,7 @@ To verify authentication conclusively, query a private library that belongs to t
 Use Context7 to query <YOUR_PRIVATE_LIBRARY_ID>. Summarize its installation docs.
 ```
 
-If the private library can be read, the Cloud Agent is using the API key. If the server fails to connect or asks you to sign in, Context7 did not receive the key; recheck the header name and start a new run after saving the MCP server.
+If the private library can be read, the Cloud Agent is using the API key. If the private library cannot be read, Context7 did not receive the key; recheck the header name and start a new run after saving the MCP server.
 
 After the API-key header is applied, the same Cloud Agent should be able to resolve a library and return documentation:
 
@@ -210,8 +210,8 @@ See Cursor's documentation for [custom MCP servers](https://cursor.com/docs/clou
 ### Troubleshooting
 
 <AccordionGroup>
-<Accordion title="The server fails to connect or asks you to sign in">
-Context7 did not receive the API key. Confirm that the custom server URL is `https://mcp.context7.com/mcp`, the header is named `Context7-API-Key`, and the saved value is the current API key. Then enable the server and start a new Cloud Agent run.
+<Accordion title="The API key is not applied">
+Confirm that the custom server URL is `https://mcp.context7.com/mcp`, the header is named `Context7-API-Key`, and the saved value is the current API key. Then enable the server and start a new Cloud Agent run. The server can report a ready status without the key, so use the private-library check above to verify.
 </Accordion>
 
 <Accordion title="The server is ready, but private docs are unavailable">

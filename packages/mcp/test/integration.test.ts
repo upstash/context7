@@ -800,7 +800,11 @@ async function postMcp(target: string, headers: Record<string, string> = {}) {
     },
     body: JSON.stringify(INITIALIZE),
   });
-  return { status: res.status, wwwAuthenticate: res.headers.get("www-authenticate") };
+  return {
+    status: res.status,
+    wwwAuthenticate: res.headers.get("www-authenticate"),
+    exposeHeaders: res.headers.get("access-control-expose-headers"),
+  };
 }
 
 describe("hosted HTTP authentication", () => {
@@ -821,10 +825,34 @@ describe("hosted HTTP authentication", () => {
     }
   );
 
-  test("challenges a Bearer header without a token", async () => {
-    const res = await postMcp(httpUrl, { Authorization: "Bearer " });
+  // Node trims header values, so an unset `Bearer ${KEY}` arrives as the bare
+  // scheme; it must count as a missing credential, whatever its case.
+  test.each(["Bearer ", "bearer", "BEARER  "])(
+    "challenges a Bearer header without a token (%j)",
+    async (authorization) => {
+      const res = await postMcp(httpUrl, { Authorization: authorization });
 
-    expect(res.status).toBe(401);
+      expect(res.status).toBe(401);
+      expect(res.wwwAuthenticate).toContain(
+        'resource_metadata="https://mcp.context7.com/.well-known/oauth-protected-resource/mcp"'
+      );
+      expect(res.wwwAuthenticate).not.toContain("invalid_token");
+    }
+  );
+
+  test("exposes the challenge headers to browser clients", async () => {
+    const challenge = await postMcp(httpUrl);
+    expect(challenge.status).toBe(401);
+    expect(challenge.exposeHeaders).toBe("WWW-Authenticate, MCP-Session-Id");
+
+    const preflight = await fetch(httpUrl, {
+      method: "OPTIONS",
+      headers: { Origin: "https://example.test", "Access-Control-Request-Method": "POST" },
+    });
+    expect(preflight.status).toBe(200);
+    expect(preflight.headers.get("access-control-expose-headers")).toBe(
+      "WWW-Authenticate, MCP-Session-Id"
+    );
   });
 
   test("allows an opaque credential for downstream validation", async () => {
@@ -842,6 +870,13 @@ describe("hosted HTTP authentication", () => {
       const res = await postMcp(observeServer.url);
       expect(res.status).toBe(200);
       expect(res.wwwAuthenticate).toBeNull();
+
+      // A scheme-only Authorization header is a missing credential here too.
+      for (const authorization of ["Bearer ", "bearer"]) {
+        const emptyBearer = await postMcp(observeServer.url, { Authorization: authorization });
+        expect(emptyBearer.status).toBe(200);
+        expect(emptyBearer.wwwAuthenticate).toBeNull();
+      }
     } finally {
       observeServer.child.kill();
     }

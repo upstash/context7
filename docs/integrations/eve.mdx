@@ -36,10 +36,10 @@ For more details on how eve handles MCP connections, see the [eve MCP connection
     });
     ```
 
-    The hosted Context7 MCP server requires an API key. Create a free key in the [Context7 dashboard](https://context7.com/dashboard) and set `CONTEXT7_API_KEY` as described in the next step.
+    Set `CONTEXT7_API_KEY` so the hosted Context7 MCP server can identify you and apply your plan's limits. Create a free key in the [Context7 dashboard](https://context7.com/dashboard) and set it as described in the next step.
   </Step>
 
-  <Step title="Configure an API key">
+  <Step title="Configure an API key (recommended)">
     Add the key to `.env.local` for local development. Do not commit this file.
 
     ```bash
