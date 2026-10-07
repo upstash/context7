@@ -14,9 +14,7 @@ export type AuthenticationLifecycleEvent =
   | "credentialed_initialize_failed"
   | "credentialed_initialize_succeeded";
 export type AuthenticationEvent =
-  | AuthenticationDecisionEvent
-  | AuthenticationLifecycleEvent
-  | "metadata_requested";
+  AuthenticationDecisionEvent | AuthenticationLifecycleEvent | "metadata_requested";
 export type AuthenticationEnforcementMode = "observe" | "required";
 export type UpstreamOutcome =
   "cancelled" | "http_error" | "network_error" | "response_error" | "success" | "timeout";
