@@ -5,6 +5,11 @@ import { CONTEXT7_API_BASE_URL } from "./constants.js";
 import { readFileSync } from "fs";
 import tls from "tls";
 import { observeUpstreamRequest } from "./telemetry-runtime.js";
+import {
+  INVALID_OAUTH_TOKEN_ERROR_CODE,
+  isOpaqueOAuthToken,
+  rememberInvalidOpaqueOAuthToken,
+} from "./oauth-token-validation.js";
 
 /**
  * Ceiling on a single Context7 API call. Without a signal a stalled backend
@@ -14,24 +19,43 @@ import { observeUpstreamRequest } from "./telemetry-runtime.js";
  */
 const API_TIMEOUT_MS = 60_000;
 
+const EXPIRED_SIGN_IN_MESSAGE =
+  "Your Context7 sign-in expired. Retry the request so your MCP client can refresh the sign-in.";
+
 /**
  * Parses error response from the Context7 API
  * Extracts the server's error message, falling back to status-based messages if parsing fails
  * @param response The fetch Response object
- * @param apiKey Optional API key (used for fallback messages)
+ * @param context Client context (transport and credential shape pick the message)
  * @returns Error message string
  */
-async function parseErrorResponse(response: Response, apiKey?: string): Promise<string> {
+async function parseErrorResponse(response: Response, context: ClientContext): Promise<string> {
+  const { apiKey } = context;
+  let json: { error?: string; message?: string } | undefined;
   try {
-    const json = (await response.json()) as { message?: string };
-    if (json.message) {
-      return json.message;
-    }
+    json = (await response.json()) as { error?: string; message?: string };
   } catch {
     // JSON parsing failed, fall through to default
   }
 
   const status = response.status;
+  // On the hosted transport the auth gate answers the next request with an HTTP
+  // 401 so the client refreshes its sign-in; the tool text should say so rather
+  // than talk about API keys. stdio keeps the API's own message: there is no
+  // HTTP status to act on and the credential there is a configured key.
+  if (
+    status === 401 &&
+    context.transport === "http" &&
+    isOpaqueOAuthToken(apiKey) &&
+    (json?.error === INVALID_OAUTH_TOKEN_ERROR_CODE || json?.error === undefined)
+  ) {
+    rememberInvalidOpaqueOAuthToken(apiKey);
+    return EXPIRED_SIGN_IN_MESSAGE;
+  }
+  if (json?.message) {
+    return json.message;
+  }
+
   if (status === 429) {
     return apiKey
       ? "Rate limited or quota exceeded. Upgrade your plan at https://context7.com/plans for higher limits."
@@ -135,7 +159,7 @@ export async function searchLibraries(
       async (response) => {
         readPromptSignal(response, context);
         if (!response.ok) {
-          const errorMessage = await parseErrorResponse(response, context.apiKey);
+          const errorMessage = await parseErrorResponse(response, context);
           console.error(errorMessage);
           return { results: [], error: errorMessage };
         }
@@ -175,7 +199,7 @@ export async function fetchLibraryContext(
       async (response) => {
         readPromptSignal(response, context);
         if (!response.ok) {
-          const errorMessage = await parseErrorResponse(response, context.apiKey);
+          const errorMessage = await parseErrorResponse(response, context);
           console.error(errorMessage);
           return { data: errorMessage, outcome: "error" };
         }

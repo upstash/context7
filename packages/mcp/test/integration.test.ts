@@ -26,6 +26,15 @@ const NO_RESULTS_QUERY = "force-no-results";
 const UPSTREAM_ERROR_QUERY = "force-upstream-error";
 const INVALID_JSON_QUERY = "force-invalid-json";
 const CLIENT_IP_ASSERTION_KEY = "0123456789abcdef".repeat(4);
+const INVALID_OAUTH_TOKEN_BODY = {
+  error: "invalid_oauth_token",
+  message: "Invalid or expired OAuth token. Please re-authenticate to obtain a new token.",
+};
+const INVALID_API_KEY_BODY = {
+  error: "invalid_api_key",
+  message:
+    "Invalid API key. Please check your API key. API keys should start with 'ctx7sk' prefix.",
+};
 
 function decryptClientIpAssertion(value: string): string {
   const [version, timestamp, nonceHex, ciphertextAndTagHex] = value.split(":");
@@ -83,6 +92,35 @@ function startStubApi(): Promise<string> {
     const url = new URL(req.url!, "http://stub.local");
     const apiPath = url.pathname.replace(/^\/api/, "");
     requests.push({ path: apiPath, query: url.searchParams, headers: req.headers });
+    const bearer = /^Bearer (.+)$/.exec(req.headers.authorization ?? "")?.[1] ?? "";
+    if (apiPath === "/v2/auth/check") {
+      // Mirrors context7app: the middleware answers invalid_oauth_token for a
+      // rejected oat_ bearer, the handler answers 204 for an accepted one.
+      if (bearer.startsWith("oat_outage")) {
+        res.statusCode = 503;
+        res.end();
+      } else if (bearer.startsWith("oat_") && !bearer.startsWith("oat_valid")) {
+        res.statusCode = 401;
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify(INVALID_OAUTH_TOKEN_BODY));
+      } else {
+        res.statusCode = 204;
+        res.end();
+      }
+      return;
+    }
+    if (apiPath === "/v2/context" && bearer.startsWith("oat_") && !bearer.startsWith("oat_valid")) {
+      res.statusCode = 401;
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify(INVALID_OAUTH_TOKEN_BODY));
+      return;
+    }
+    if (apiPath === "/v2/context" && bearer.startsWith("ctx7sk-invalid")) {
+      res.statusCode = 401;
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify(INVALID_API_KEY_BODY));
+      return;
+    }
     if (apiPath === "/v2/libs/search") {
       res.setHeader("Content-Type", "application/json");
       if (url.searchParams.get("query") === INVALID_JSON_QUERY) {
@@ -804,7 +842,31 @@ async function postMcp(target: string, headers: Record<string, string> = {}) {
     status: res.status,
     wwwAuthenticate: res.headers.get("www-authenticate"),
     exposeHeaders: res.headers.get("access-control-expose-headers"),
+    body: await res.text(),
   };
+}
+
+async function callQueryDocs(target: string, headers: Record<string, string>): Promise<string> {
+  const client = new Client(
+    { name: "test-harness", version: "1.0.0" },
+    { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+  );
+  await client.connect(
+    new StreamableHTTPClientTransport(new URL(target), { requestInit: { headers } })
+  );
+  try {
+    const result = await client.callTool({
+      name: "query-docs",
+      arguments: { libraryId: "/vercel/next.js", query: "app router" },
+    });
+    return (result.content as { type: string; text: string }[])[0].text;
+  } finally {
+    await client.close();
+  }
+}
+
+function authChecks(): RecordedRequest[] {
+  return requests.filter((request) => request.path === "/v2/auth/check");
 }
 
 describe("hosted HTTP authentication", () => {
@@ -959,5 +1021,161 @@ describe("hosted HTTP authentication", () => {
     expect(apiCall?.headers["x-context7-client-ide"]).toBe("claude-code");
     expect(apiCall?.headers["x-context7-client-version"]).toBe("1.0.0");
     expect(apiCall?.headers["x-context7-plugin"]).toBe("claude-code-plugin");
+  });
+});
+
+// Clerk OAuth access tokens are opaque and expire after 24 hours. MCP clients
+// refresh them only on an HTTP 401 (Claude Code 2.1.286 and Cursor 3.23.12
+// refresh silently on a 401, verified 2026-10-06 with a local proxy), so the
+// gate asks the Context7 API about the token before the request reaches the
+// transport instead of letting a tool result carry the rejection.
+describe("expired OAuth access tokens", () => {
+  beforeEach(() => {
+    requests.length = 0;
+  });
+
+  const EXPIRED_CHALLENGE =
+    'Bearer error="invalid_token", error_description="The access token expired or is invalid", resource_metadata="https://mcp.context7.com/.well-known/oauth-protected-resource/mcp';
+
+  test.each([
+    ["/mcp", ""],
+    ["/mcp/oauth", "/oauth"],
+    ["the plugin route", "?client=claude-code-plugin"],
+  ])("challenges an expired token on %s", async (_label, suffix) => {
+    const res = await postMcp(`${httpUrl}${suffix}`, {
+      Authorization: `Bearer oat_expired-${suffix.length}`,
+    });
+
+    expect(res.status).toBe(401);
+    expect(res.wwwAuthenticate).toBe(
+      `${EXPIRED_CHALLENGE}${suffix.startsWith("/oauth") ? "/oauth" : ""}"`
+    );
+    expect(JSON.parse(res.body)).toEqual({
+      jsonrpc: "2.0",
+      error: { code: -32001, message: "The access token expired or is invalid" },
+      id: null,
+    });
+    expect(authChecks()).toHaveLength(1);
+    expect(authChecks()[0].headers.authorization).toBe(`Bearer oat_expired-${suffix.length}`);
+    expect(authChecks()[0].headers["x-context7-source"]).toBe("mcp-server");
+  });
+
+  test("challenges an expired token in observe mode too", async () => {
+    const observeServer = await startHttpChild({
+      environment: { ...childEnv, MCP_AUTH_ENFORCEMENT: "observe" },
+    });
+    try {
+      const res = await postMcp(observeServer.url, { Authorization: "Bearer oat_expired-observe" });
+      expect(res.status).toBe(401);
+      expect(res.wwwAuthenticate).toContain('error="invalid_token"');
+    } finally {
+      observeServer.child.kill();
+    }
+  });
+
+  test("passes a valid token through and serves the request", async () => {
+    const res = await postMcp(httpUrl, { Authorization: "Bearer oat_valid-pass" });
+
+    expect(res.status).toBe(200);
+    expect(res.wwwAuthenticate).toBeNull();
+    expect(authChecks()).toHaveLength(1);
+  });
+
+  test("checks each token at most once per cache window", async () => {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      expect((await postMcp(httpUrl, { Authorization: "Bearer oat_valid-cached" })).status).toBe(
+        200
+      );
+    }
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      expect((await postMcp(httpUrl, { Authorization: "Bearer oat_expired-cached" })).status).toBe(
+        401
+      );
+    }
+
+    expect(authChecks().map((request) => request.headers.authorization)).toEqual([
+      "Bearer oat_valid-cached",
+      "Bearer oat_expired-cached",
+    ]);
+  });
+
+  test("fails open when the check is unavailable and then trusts the API's rejection", async () => {
+    const headers = { Authorization: "Bearer oat_outage-open" };
+    const first = await postMcp(httpUrl, headers);
+    expect(first.status).toBe(200);
+    expect(first.wwwAuthenticate).toBeNull();
+
+    // The forwarded request is rejected by the API: the tool text explains the
+    // sign-in expired and the gate answers the next request with the 401.
+    const text = await callQueryDocs(httpUrl, headers);
+    expect(text).toBe(
+      "Your Context7 sign-in expired. Retry the request so your MCP client can refresh the sign-in."
+    );
+    expect(requests.filter((request) => request.path === "/v2/context")).toHaveLength(1);
+
+    const next = await postMcp(httpUrl, headers);
+    expect(next.status).toBe(401);
+    expect(next.wwwAuthenticate).toContain('error="invalid_token"');
+  });
+
+  test("leaves API keys and anonymous clients unchanged", async () => {
+    const text = await callQueryDocs(httpUrl, { Authorization: "Bearer ctx7sk-invalid-key" });
+    expect(text).toBe(INVALID_API_KEY_BODY.message);
+
+    expect((await postMcp(httpUrl)).status).toBe(401);
+    expect(authChecks()).toHaveLength(0);
+  });
+
+  test("does not check tokens when validation is switched off", async () => {
+    const offServer = await startHttpChild({
+      environment: { ...childEnv, MCP_OAUTH_TOKEN_VALIDATION: "off" },
+    });
+    try {
+      const res = await postMcp(offServer.url, { Authorization: "Bearer oat_expired-off" });
+      expect(res.status).toBe(200);
+      expect(authChecks()).toHaveLength(0);
+    } finally {
+      offServer.child.kill();
+    }
+  });
+
+  test("keeps the API's own message on stdio", async () => {
+    const client = new Client({ name: "test-harness", version: "1.0.0" });
+    await client.connect(
+      new StdioClientTransport({
+        command: process.execPath,
+        args: [DIST],
+        env: { ...childEnv, CONTEXT7_API_KEY: "oat_expired-stdio" },
+      })
+    );
+    try {
+      const result = await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/vercel/next.js", query: "app router" },
+      });
+      expect(result.content).toMatchObject([
+        { type: "text", text: INVALID_OAUTH_TOKEN_BODY.message },
+      ]);
+    } finally {
+      await client.close();
+    }
+    expect(authChecks()).toHaveLength(0);
+  });
+
+  test("counts expired tokens in the authentication metrics", async () => {
+    await postMcp(httpUrl, { Authorization: "Bearer oat_expired-metrics" });
+
+    let exported = "";
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      exported = await (await fetch(metricsUrl)).text();
+      if (exported.includes('context7_authentication_outcome="expired"')) break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    expect(exported).toMatch(
+      /context7_mcp_authentication_events_total\{[^}]*context7_authentication_event="credential_rejected"[^}]*context7_authentication_method="oauth"[^}]*context7_authentication_outcome="expired"[^}]*\} [1-9]/
+    );
+    expect(exported).toMatch(
+      /context7_mcp_upstream_requests_total\{[^}]*context7_upstream_operation="auth_check"[^}]*\} [1-9]/
+    );
   });
 });

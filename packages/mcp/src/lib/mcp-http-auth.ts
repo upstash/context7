@@ -1,6 +1,12 @@
 import type { Request, Response } from "express";
 import { EMA_ISSUER, OAUTH_AUTH_SERVER_URL, RESOURCE_URL } from "./constants.js";
 import { isJWT, validateJWT } from "./jwt.js";
+import {
+  EXPIRED_OAUTH_TOKEN_ERROR,
+  isOpaqueOAuthToken,
+  isOpaqueOAuthTokenValidationEnabled,
+  validateOpaqueOAuthToken,
+} from "./oauth-token-validation.js";
 import type { AuthenticationObservation, AuthenticationMethod } from "./telemetry-contracts.js";
 
 export type McpAuthMode = "observe" | "required";
@@ -11,7 +17,7 @@ export type McpAuthDecision = AuthenticationObservation &
 
 export function classifyAuthMethod(token: string | undefined): AuthenticationMethod {
   if (!token) return "none";
-  if (token.startsWith("oat_")) return "oauth";
+  if (isOpaqueOAuthToken(token)) return "oauth";
   if (isJWT(token)) return "jwt";
   return "api_key";
 }
@@ -41,8 +47,10 @@ export function effectiveMcpAuthMode(
 }
 
 /**
- * Decide whether the HTTP request may reach the MCP transport. JWTs can be
- * verified at this boundary. Opaque OAuth tokens and API keys are recorded as
+ * Decide whether the HTTP request may reach the MCP transport. JWTs are
+ * verified at this boundary. Opaque OAuth tokens are checked against the
+ * Context7 API (cached per token) so an expired sign-in gets the HTTP 401 that
+ * makes MCP clients refresh it; the check fails open. API keys are recorded as
  * present, then authoritatively validated by the Context7 API before data is
  * returned.
  */
@@ -61,6 +69,22 @@ export async function evaluateMcpAuthentication(
           event: "challenge_issued",
           outcome: "missing",
         };
+  }
+
+  if (isOpaqueOAuthToken(token) && isOpaqueOAuthTokenValidationEnabled()) {
+    const verdict = await validateOpaqueOAuthToken(token);
+    if (verdict === "invalid") {
+      return {
+        allowed: false,
+        method,
+        error: EXPIRED_OAUTH_TOKEN_ERROR,
+        event: "credential_rejected",
+        outcome: "expired",
+      };
+    }
+    return verdict === "valid"
+      ? { allowed: true, method, event: "credential_validated", outcome: "accepted" }
+      : { allowed: true, method, event: "credential_present", outcome: "unverified" };
   }
 
   if (!isJWT(token)) {
