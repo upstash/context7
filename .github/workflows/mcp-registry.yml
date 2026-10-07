@@ -66,15 +66,14 @@ jobs:
         run: |
           curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
 
-      - name: Login to MCP Registry
-        run: ./mcp-publisher login github-oidc
-
       - name: Publish to MCP Registry
         # npm can take several minutes to serve a new version after a release,
         # and the registry rejects the publish until it does. Retry that case
-        # for up to 10 minutes; fail fast on any other error.
+        # for up to 10 minutes; fail fast on any other error. Log in before
+        # every attempt: the registry token expires after 5 minutes.
         run: |
           for i in $(seq 1 20); do
+            ./mcp-publisher login github-oidc
             OUT=$(./mcp-publisher publish 2>&1) && { echo "$OUT"; exit 0; }
             echo "$OUT"
             if echo "$OUT" | grep -q "duplicate version"; then
@@ -84,7 +83,7 @@ jobs:
             if ! echo "$OUT" | grep -q "was not found"; then
               exit 1
             fi
-            echo "npm does not serve this version yet (attempt $i/20), retrying in 30s..."
+            echo "npm does not serve this version yet (${SECONDS}s elapsed, attempt $i/20), retrying in 30s..."
             sleep 30
           done
           exit 1
