@@ -157,10 +157,10 @@ claude mcp add --scope user --header "Authorization: Bearer YOUR_API_KEY" --tran
 
 Run this command in your terminal. See [Amp MCP docs](https://ampcode.com/manual#mcp) for more info.
 
-#### Without API Key (Basic Usage)
+#### With OAuth
 
 ```sh
-amp mcp add context7 https://mcp.context7.com/mcp
+amp mcp add context7 https://mcp.context7.com/mcp/oauth
 ```
 
 #### With API Key (Higher Rate Limits & Private Repos)
@@ -1331,12 +1331,6 @@ Run this command in your terminal:
 droid mcp add context7 https://mcp.context7.com/mcp --type http --header "Authorization: Bearer YOUR_API_KEY"
 ```
 
-Or without an API key (basic usage with rate limits):
-
-```sh
-droid mcp add context7 https://mcp.context7.com/mcp --type http
-```
-
 #### Factory Local Server Connection (Stdio)
 
 Run this command in your terminal:
@@ -1377,12 +1371,6 @@ autohand mcp add context7 npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 ```
 
 Add `--scope project` before `context7` to save the server in the current project's `.autohand` configuration instead of your user configuration.
-
-For basic usage without an API key, you can connect to the remote server instead:
-
-```sh
-autohand mcp add --transport http context7 https://mcp.context7.com/mcp
-```
 
 </details>
 
@@ -1453,6 +1441,8 @@ Example with HTTP transport and port 8080:
 ```bash
 bun run dist/index.js --transport http --port 8080
 ```
+
+HTTP transport requires a credential on every request by default. Clients send `Authorization: Bearer YOUR_API_KEY`. Set `MCP_AUTH_ENFORCEMENT=observe` to also accept requests without credentials on `/mcp`.
 
 Another example with stdio transport:
 
@@ -1547,6 +1537,9 @@ Prometheus receives these metric families:
 - `context7_mcp_subscriptions_active` and `context7_mcp_subscription_duration`
 - `context7_mcp_upstream_requests_total` and `context7_mcp_upstream_request_duration`
 - `context7_mcp_authentication_attempts_total` and `context7_mcp_authentication_duration`
+- `context7_mcp_authentication_events_total` for bounded authentication lifecycle events such as
+  credential challenges, metadata discovery, credentialed initialization, and authenticated tool
+  use
 - `context7_mcp_upstream_requests_active` and `context7_mcp_authentication_active`
 - `nodejs_eventloop_*`, `v8js_gc_duration`, `v8js_memory_heap_*`, and
   `v8js_resource_active` from the official OpenTelemetry Node runtime instrumentation
@@ -1557,12 +1550,18 @@ the separate subscription metrics track the active stream and its bounded termin
 Upstream outcomes distinguish
 HTTP, response-decoding, network, timeout, and cancellation failures and include both the bounded
 status-code class and the exact numeric HTTP status. Authentication reports accepted, missing,
-invalid, and unexpected-error outcomes. The OAuth authorization-server metadata proxy caps its
-upstream fetch at 10 seconds and returns `502` if that dependency times out.
+invalid, and unexpected-error outcomes. Authentication event series use only the bounded route,
+enforcement mode, event, method, and outcome dimensions. The OAuth authorization-server metadata
+proxy caps its upstream fetch at 10 seconds and returns `502` if that dependency times out.
 
 The labels intentionally exclude API keys, client IPs, queries, library IDs, session IDs, and raw
 error text. Expose port `9464` only to your Prometheus scraper or `ServiceMonitor`, not through the
-public MCP ingress.
+public MCP ingress. For continuity with existing MCP series, the route label uses `anonymous` for
+the standard `/mcp` path and `oauth` for the `/mcp/oauth` compatibility alias; the `anonymous` value
+identifies the route and does not imply that the request bypassed authentication. The enforcement
+label reports the mode applied to each request: `/mcp/oauth` and Claude Code plugin requests report
+`required` while the server runs in `observe` mode, because those clients always receive the
+challenge.
 
 #### Signal ownership with an Envoy gateway
 

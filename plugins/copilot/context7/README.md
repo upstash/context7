@@ -22,7 +22,7 @@ copilot plugin install context7@context7-marketplace
 
 ## API Key (Recommended)
 
-Without an API key, the plugin connects anonymously and shares the anonymous rate limits. To use your own plan, create an API key in the [Context7 dashboard](https://context7.com/dashboard) and export it as an environment variable before launching Copilot CLI:
+Use an API key so the hosted Context7 server can identify you and apply your plan's limits. Create a free API key in the [Context7 dashboard](https://context7.com/dashboard) and export it as an environment variable before launching Copilot CLI:
 
 ```bash
 # e.g. in ~/.zshrc or ~/.bashrc

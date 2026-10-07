@@ -22,7 +22,7 @@ Choose one of the following connection methods. These commands save the server i
 Add the remote server and sign in:
 
 ```bash
-pi mcp add context7 --url https://mcp.context7.com/mcp/oauth --exposure direct
+pi mcp add context7 --url https://mcp.context7.com/mcp --exposure direct
 pi mcp login context7
 ```
 
@@ -39,8 +39,6 @@ pi mcp add context7 --url https://mcp.context7.com/mcp \
 ```
 
 Add the export to your shell profile to make the key available in future sessions. Pi saves an environment variable reference in its configuration.
-
-To try Context7 without an API key at the anonymous rate limit, omit `--bearer-token-env-var CONTEXT7_API_KEY`.
 
 ### Local server
 
