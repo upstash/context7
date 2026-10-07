@@ -7,14 +7,14 @@
   "properties": {
     "projectTitle": {
       "type": "string",
-      "description": "The display name for your project in Context7. This overrides the default repository name.",
+      "description": "The library name shown on Context7 and given to coding agents. It replaces the generated name after Context7 accepts it; if it is not accepted, the current name stays.",
       "minLength": 1,
       "maxLength": 100,
       "examples": ["Upstash Ratelimit", "Next.js", "React Query"]
     },
     "description": {
       "type": "string",
-      "description": "A brief description of what your library does. This helps coding agents understand the purpose of your project.",
+      "description": "A brief description of what your library does, shown on Context7 and given to coding agents. It replaces the generated description after Context7 accepts it; if it is not accepted, the current description stays.",
       "minLength": 10,
       "maxLength": 500,
       "examples": [
