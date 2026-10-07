@@ -20,7 +20,7 @@ import {
 const API_TIMEOUT_MS = 60_000;
 
 const EXPIRED_SIGN_IN_MESSAGE =
-  "Your Context7 sign-in expired; reconnect the server to sign in again.";
+  "Your Context7 sign-in expired. Retry the request so your MCP client can refresh the sign-in.";
 
 /**
  * Parses error response from the Context7 API

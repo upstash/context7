@@ -129,8 +129,8 @@ async function requestVerdict(token: string): Promise<OpaqueOAuthTokenVerdict> {
 
 /**
  * Validate an opaque OAuth token against the Context7 API. Verdicts are cached
- * per token hash so the check runs at most about once a minute per token, and
- * concurrent requests carrying the same token share one check.
+ * token hash in process memory, so each replica checks a token at most about
+ * once a minute, and concurrent requests carrying the same token share one check.
  */
 export async function validateOpaqueOAuthToken(
   token: string,

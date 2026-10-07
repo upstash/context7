@@ -1108,7 +1108,9 @@ describe("expired OAuth access tokens", () => {
     // The forwarded request is rejected by the API: the tool text explains the
     // sign-in expired and the gate answers the next request with the 401.
     const text = await callQueryDocs(httpUrl, headers);
-    expect(text).toBe("Your Context7 sign-in expired; reconnect the server to sign in again.");
+    expect(text).toBe(
+      "Your Context7 sign-in expired. Retry the request so your MCP client can refresh the sign-in."
+    );
     expect(requests.filter((request) => request.path === "/v2/context")).toHaveLength(1);
 
     const next = await postMcp(httpUrl, headers);

@@ -51,7 +51,7 @@ node packages/mcp/dist/index.js --transport http --port 8080
 
 HTTP transport requires a credential on every request by default. Clients send `Authorization: Bearer YOUR_API_KEY`. Set `MCP_AUTH_ENFORCEMENT=observe` to also accept requests without credentials on `/mcp`.
 
-Opaque OAuth access tokens (`oat_…`) are checked against the Context7 API before each request is served (one check per token per minute). An expired or revoked token gets an HTTP 401 with a `WWW-Authenticate` challenge so MCP clients refresh it. Set `MCP_OAUTH_TOKEN_VALIDATION=off` to skip that check and forward the token unchecked.
+Opaque OAuth access tokens (`oat_…`) are checked against the Context7 API before each request is served (one check per token per minute on each replica; the cache is in memory). An expired or revoked token gets an HTTP 401 with a `WWW-Authenticate` challenge so MCP clients refresh it. Set `MCP_OAUTH_TOKEN_VALIDATION=off` to skip that check and forward the token unchecked.
 
 Stdio transport with API key:
 
