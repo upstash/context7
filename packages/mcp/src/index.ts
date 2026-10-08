@@ -540,8 +540,12 @@ async function main() {
         // closes the batch's POST stream. Consume request/cancellation pairs
         // that occur in the same batch before SDK dispatch. This applies the
         // cancellation without starting the tool and without leaving an ID in
-        // the transport's response accounting.
-        const filteredBody = filterBatchSelfCancellations(req.body);
+        // the transport's response accounting. Only POST carries messages;
+        // other methods keep the SDK's own method handling (405).
+        const filteredBody =
+          req.method === "POST"
+            ? filterBatchSelfCancellations(req.body)
+            : { body: req.body, removedSelfCancellation: false };
         if (
           filteredBody.removedSelfCancellation &&
           Array.isArray(filteredBody.body) &&

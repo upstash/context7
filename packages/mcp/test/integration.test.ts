@@ -565,6 +565,28 @@ describe("HTTP batch cancellation", () => {
     expect(await response.text()).toContain('"id":103');
     expect(requests.filter((request) => request.path === "/v2/libs/search")).toHaveLength(1);
   });
+
+  test("keeps 405 for a self-cancelling batch sent with DELETE", async () => {
+    const response = await fetch(httpUrl, {
+      method: "DELETE",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+        authorization: "Bearer ctx7sk-local-test",
+      },
+      body: JSON.stringify([
+        { jsonrpc: "2.0", id: 106, method: "tools/list" },
+        {
+          jsonrpc: "2.0",
+          method: "notifications/cancelled",
+          params: { requestId: 106, reason: "regression-test" },
+        },
+      ]),
+      signal: AbortSignal.timeout(1_000),
+    });
+
+    expect(response.status).toBe(405);
+  });
 });
 
 describe.each([
