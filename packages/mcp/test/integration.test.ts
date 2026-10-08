@@ -497,7 +497,6 @@ describe.each([
     // The z.preprocess wrapper must not break JSON Schema derivation.
     const resolve = tools.find((t) => t.name === "resolve-library-id")!;
     expect(Object.keys(resolve.inputSchema.properties ?? {}).sort()).toEqual([
-      "language",
       "libraryName",
       "query",
     ]);
@@ -563,18 +562,11 @@ describe.each([
     expect(text).toContain("/vercel/next.js");
   });
 
-  test("forwards the language hint to both endpoints", async () => {
-    await client.callTool({
-      name: "resolve-library-id",
-      arguments: { query: "send an SMS", libraryName: "Twilio", language: "Python" },
-    });
+  test("forwards the language hint to the context endpoint", async () => {
     await client.callTool({
       name: "query-docs",
       arguments: { libraryId: "/websites/twilio", query: "send an SMS", language: "Python" },
     });
-    expect(requests.find((r) => r.path === "/v2/libs/search")!.query.get("language")).toBe(
-      "Python"
-    );
     expect(requests.find((r) => r.path === "/v2/context")!.query.get("language")).toBe("Python");
   });
 
