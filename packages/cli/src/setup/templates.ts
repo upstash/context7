@@ -87,6 +87,15 @@ export function getBundledMcpSkillFiles(): Array<{ path: string; content: string
   ];
 }
 
+export function getBundledFindDocsSkillFiles(): Array<{ path: string; content: string }> {
+  return [
+    {
+      path: "SKILL.md",
+      content: `---\nname: find-docs\ndescription: Fetch current library documentation with the ctx7 CLI.\n---\n\n# Find Docs\n\n${FALLBACK_CLI}`,
+    },
+  ];
+}
+
 export function customizeSkillFilesForAgent(
   agent: SetupAgent,
   skillName: string,

@@ -25,6 +25,7 @@ import {
 import {
   customizeSkillFilesForAgent,
   fetchSetupSkillFiles,
+  getBundledFindDocsSkillFiles,
   getBundledMcpSkillFiles,
   getBundledRuleContent,
   getRuleContent,
@@ -557,13 +558,13 @@ async function setupCli(options: SetupOptions): Promise<void> {
   log.blank();
   const spinner = ora("Downloading find-docs skill...").start();
 
-  const files = await fetchSetupSkillFiles("find-docs");
-  if (!files) {
-    spinner.fail("Failed to download find-docs skill from GitHub");
-    return;
+  const downloaded = await fetchSetupSkillFiles("find-docs");
+  const files = downloaded ?? getBundledFindDocsSkillFiles();
+  if (downloaded) {
+    spinner.succeed("Downloaded find-docs skill");
+  } else {
+    spinner.warn("Could not download find-docs skill, using the bundled copy");
   }
-
-  spinner.succeed("Downloaded find-docs skill");
 
   const installSpinner = ora("Installing...").start();
   const results: Array<{
