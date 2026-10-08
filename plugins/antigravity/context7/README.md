@@ -9,7 +9,7 @@ Context7 solves a common problem with AI coding assistants: outdated training da
 
 ## Authentication
 
-After you install the plugin, open **Agent Settings → Customizations** and click **Authenticate** next to the `context7-context7` server. Sign in to Context7 in your browser to connect.
+After you install the plugin, open **Agent Settings → Customizations** and click **Authenticate** next to the `context7_context7` server. Sign in to Context7 in your browser to connect.
 
 ## Available Tools
 
