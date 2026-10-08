@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.15
+
+### Patch Changes
+
+- c1e314b: `ctx7 setup` now downloads the find-docs and context7-mcp skills directly from GitHub instead of the deprecated Skill Hub API.
+
 ## 0.5.14
 
 ### Patch Changes
