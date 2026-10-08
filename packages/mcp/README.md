@@ -1381,10 +1381,12 @@ Context7 MCP provides the following tools that LLMs can use:
 - `resolve-library-id`: Resolves a general library name into a Context7-compatible library ID.
   - `libraryName` (required): The name of the library to search for
   - `query` (required): What you need the docs for, used to rank matches
+  - `language` (optional): The programming language you write in, such as `Python` or `Go`, used to rank that language's SDK first
 
 - `query-docs`: Queries up-to-date documentation and code examples for a Context7-compatible library ID.
   - `libraryId` (required): Exact Context7-compatible library ID (e.g., `/mongodb/docs`, `/vercel/next.js`)
   - `query` (required): The concept to look up, scoped to a single topic
+  - `language` (optional): The programming language you write in, used to rank code examples in that language first
 
 `get-library-docs` was renamed to `query-docs`. Update client tool allowlists to use `query-docs`.
 

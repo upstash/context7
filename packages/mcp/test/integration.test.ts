@@ -497,11 +497,13 @@ describe.each([
     // The z.preprocess wrapper must not break JSON Schema derivation.
     const resolve = tools.find((t) => t.name === "resolve-library-id")!;
     expect(Object.keys(resolve.inputSchema.properties ?? {}).sort()).toEqual([
+      "language",
       "libraryName",
       "query",
     ]);
     const queryDocs = tools.find((t) => t.name === "query-docs")!;
     expect(Object.keys(queryDocs.inputSchema.properties ?? {}).sort()).toEqual([
+      "language",
       "libraryId",
       "query",
     ]);
@@ -559,6 +561,21 @@ describe.each([
     const text = (result.content as { type: string; text: string }[])[0].text;
     expect(text).toContain("Available Libraries");
     expect(text).toContain("/vercel/next.js");
+  });
+
+  test("forwards the language hint to both endpoints", async () => {
+    await client.callTool({
+      name: "resolve-library-id",
+      arguments: { query: "send an SMS", libraryName: "Twilio", language: "Python" },
+    });
+    await client.callTool({
+      name: "query-docs",
+      arguments: { libraryId: "/websites/twilio", query: "send an SMS", language: "Python" },
+    });
+    expect(requests.find((r) => r.path === "/v2/libs/search")!.query.get("language")).toBe(
+      "Python"
+    );
+    expect(requests.find((r) => r.path === "/v2/context")!.query.get("language")).toBe("Python");
   });
 
   test("rewrites hallucinated argument aliases before validation", async () => {

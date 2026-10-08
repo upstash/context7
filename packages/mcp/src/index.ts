@@ -180,6 +180,15 @@ function aliasArgs(aliases: AliasMap) {
   };
 }
 
+// Optional on both tools: it only steers ranking, so a guess is worse than leaving it out.
+const languageParam = z
+  .string()
+  .max(40)
+  .optional()
+  .describe(
+    "Programming language the user is writing code in, such as 'Python', 'TypeScript', 'Go', or 'C#'. Ranks that language's SDK and code examples first. Leave it out when the language is unknown or does not apply."
+  );
+
 function createMcpServer(mcpContext: McpRequestContext) {
   const serverInfo = {
     name: "Context7",
@@ -263,6 +272,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
             .describe(
               "Library name to search for and retrieve a Context7-compatible library ID. Use the official library name with proper punctuation — e.g., 'Next.js' instead of 'nextjs', 'Customer.io' instead of 'customerio', 'Three.js' instead of 'threejs'."
             ),
+          language: languageParam,
         })
       ),
       annotations: {
@@ -272,9 +282,12 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
         idempotentHint: true,
       },
     },
-    async ({ query, libraryName }: { query: string; libraryName: string }, toolCtx) => {
+    async (
+      { query, libraryName, language }: { query: string; libraryName: string; language?: string },
+      toolCtx
+    ) => {
       const ctx = getClientContext(toolCtx);
-      const searchResponse = await searchLibraries(query, libraryName, ctx);
+      const searchResponse = await searchLibraries(query, libraryName, language, ctx);
 
       if (!searchResponse.results || searchResponse.results.length === 0) {
         const text = searchResponse.error ?? "No libraries found matching the provided name.";
@@ -327,6 +340,7 @@ Do not call this tool more than 3 times per question.`,
             .describe(
               "What to look up in the library's documentation, scoped to a single concept. Be specific and include relevant details, but keep each query to one topic — if the user's question spans multiple distinct concepts, make a separate call per concept instead of combining them, unless the question is about how the concepts interact. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad (too vague): 'auth' or 'hooks'. Bad (too broad): 'routing and auth and caching in Next.js'. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
             ),
+          language: languageParam,
         })
       ),
       annotations: {
@@ -336,9 +350,12 @@ Do not call this tool more than 3 times per question.`,
         idempotentHint: true,
       },
     },
-    async ({ query, libraryId }: { query: string; libraryId: string }, toolCtx) => {
+    async (
+      { query, libraryId, language }: { query: string; libraryId: string; language?: string },
+      toolCtx
+    ) => {
       const ctx = getClientContext(toolCtx);
-      const response = await fetchLibraryContext({ query, libraryId }, ctx);
+      const response = await fetchLibraryContext({ query, libraryId, language }, ctx);
       maybeElicitAuthSignIn(server, ctx);
       recordToolCallTelemetry(ctx, response.outcome);
       return {

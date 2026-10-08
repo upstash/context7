@@ -137,18 +137,21 @@ function readPromptSignal(response: Response, context: ClientContext): void {
  * Searches for libraries matching the given query
  * @param query The user's question or task (used for LLM relevance ranking)
  * @param libraryName The library name to search for in the database
+ * @param language Programming language the user writes in, ranks that language's SDK first
  * @param context Client context including IP, API key, and client info
  * @returns Search results or error
  */
 export async function searchLibraries(
   query: string,
   libraryName: string,
+  language: string | undefined,
   context: ClientContext = {}
 ): Promise<SearchResponse> {
   try {
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/libs/search`);
     url.searchParams.set("query", query);
     url.searchParams.set("libraryName", libraryName);
+    if (language) url.searchParams.set("language", language);
 
     const headers = generateHeaders(context);
     const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);
@@ -177,7 +180,7 @@ export async function searchLibraries(
 
 /**
  * Fetches intelligent, reranked context for a natural language query
- * @param request The context request parameters (query, libraryId)
+ * @param request The context request parameters (query, libraryId, language)
  * @param context Client context including IP, API key, and client info
  * @returns Context response with data
  */
@@ -189,6 +192,7 @@ export async function fetchLibraryContext(
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/context`);
     url.searchParams.set("query", request.query);
     url.searchParams.set("libraryId", request.libraryId);
+    if (request.language) url.searchParams.set("language", request.language);
 
     const headers = generateHeaders(context);
     const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);
