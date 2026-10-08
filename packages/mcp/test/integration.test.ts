@@ -464,6 +464,7 @@ describe("HTTP batch cancellation", () => {
       headers: {
         "content-type": "application/json",
         accept: "application/json, text/event-stream",
+        authorization: "Bearer ctx7sk-local-test",
       },
       body: JSON.stringify([
         {
@@ -495,6 +496,7 @@ describe("HTTP batch cancellation", () => {
       headers: {
         "content-type": "application/json",
         accept: "application/json, text/event-stream",
+        authorization: "Bearer ctx7sk-local-test",
       },
       body: JSON.stringify([
         {
@@ -538,6 +540,7 @@ describe("HTTP batch cancellation", () => {
       headers: {
         "content-type": "application/json",
         accept: "application/json, text/event-stream",
+        authorization: "Bearer ctx7sk-local-test",
       },
       body: JSON.stringify([
         {

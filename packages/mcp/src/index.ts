@@ -488,11 +488,10 @@ async function main() {
     // millisecond vector query (p100 ~28s), so no legitimate exchange needs a
     // heartbeat to stay alive — but a hung exchange kept "alive" by heartbeats
     // can never be reaped by the gateway's stream idle timeout. A batch
-    // carrying a request plus its own notifications/cancelled produces exactly
-    // that: per spec the cancelled request gets no response, the SDK transport
-    // then never closes the stream, and with heartbeats it survived until the
-    // gateway's 1200s hard cap (the 2026-08-11 outage). Silent hangs instead
-    // go idle and the gateway reaps them at streamIdleTimeout (300s).
+    // carrying a request plus its own notifications/cancelled produced exactly
+    // that (the 2026-08-11 outage); handleMcpRequest now consumes such pairs
+    // before dispatch. Any other silent hang goes idle and the gateway reaps
+    // it at streamIdleTimeout (300s) instead of its 1200s hard cap.
     const rawMcpHandler = createMcpHandler((mcpContext) => createMcpServer(mcpContext), {
       keepAliveMs: 0,
       onerror: (error) => console.error("MCP handler error:", error),
