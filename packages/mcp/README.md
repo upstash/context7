@@ -1385,6 +1385,7 @@ Context7 MCP provides the following tools that LLMs can use:
 - `query-docs`: Queries up-to-date documentation and code examples for a Context7-compatible library ID.
   - `libraryId` (required): Exact Context7-compatible library ID (e.g., `/mongodb/docs`, `/vercel/next.js`)
   - `query` (required): The concept to look up, scoped to a single topic
+  - `language` (optional): The programming language you write in, used to rank code examples in that language first
 
 `get-library-docs` was renamed to `query-docs`. Update client tool allowlists to use `query-docs`.
 

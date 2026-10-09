@@ -153,7 +153,7 @@ The [Context7 MCP server](/resources/all-clients) exposes the same lookups as ag
 | MCP tool | Endpoint | Parameters |
 |----------|----------|------------|
 | `resolve-library-id` | [Search Library](/api-reference/search/search-for-libraries) — `GET /api/v2/libs/search` | `libraryName`, `query` |
-| `query-docs` | [Get Context](/api-reference/context/get-documentation-context) — `GET /api/v2/context` | `libraryId`, `query` |
+| `query-docs` | [Get Context](/api-reference/context/get-documentation-context) — `GET /api/v2/context` | `libraryId`, `query`, `language` |
 
 Call the REST API directly to control requests from your own code, or use the MCP tools when you want an agent to fetch documentation automatically during inference. Both use the same [API key](#authentication).
 

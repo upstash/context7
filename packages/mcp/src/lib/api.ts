@@ -178,7 +178,7 @@ export async function searchLibraries(
 
 /**
  * Fetches intelligent, reranked context for a natural language query
- * @param request The context request parameters (query, libraryId)
+ * @param request The context request parameters (query, libraryId, language)
  * @param context Client context including IP, API key, and client info
  * @returns Context response with data
  */
@@ -190,6 +190,7 @@ export async function fetchLibraryContext(
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/context`);
     url.searchParams.set("query", request.query);
     url.searchParams.set("libraryId", request.libraryId);
+    if (request.language) url.searchParams.set("language", request.language);
 
     const headers = generateHeaders(context);
     const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);

@@ -502,6 +502,7 @@ describe.each([
     ]);
     const queryDocs = tools.find((t) => t.name === "query-docs")!;
     expect(Object.keys(queryDocs.inputSchema.properties ?? {}).sort()).toEqual([
+      "language",
       "libraryId",
       "query",
     ]);
@@ -559,6 +560,24 @@ describe.each([
     const text = (result.content as { type: string; text: string }[])[0].text;
     expect(text).toContain("Available Libraries");
     expect(text).toContain("/vercel/next.js");
+  });
+
+  test("forwards the language hint to the context endpoint", async () => {
+    await client.callTool({
+      name: "query-docs",
+      arguments: { libraryId: "/websites/twilio", query: "send an SMS", language: "Python" },
+    });
+    expect(requests.find((r) => r.path === "/v2/context")!.query.get("language")).toBe("Python");
+  });
+
+  test("accepts a long language hint instead of rejecting the call", async () => {
+    const language = "TypeScript with React 19 and Next.js 16 app router";
+    const result = await client.callTool({
+      name: "query-docs",
+      arguments: { libraryId: "/vercel/next.js", query: "app router", language },
+    });
+    expect(result.isError).toBeFalsy();
+    expect(requests.find((r) => r.path === "/v2/context")!.query.get("language")).toBe(language);
   });
 
   test("rewrites hallucinated argument aliases before validation", async () => {
