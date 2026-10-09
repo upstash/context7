@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.6.0
+
+### Minor Changes
+
+- 2c0f362: Add a `--language` option to `ctx7 docs`. When you pass the programming language you write in, Context7 ranks code examples in that language first.
+
 ## 0.5.16
 
 ### Patch Changes
