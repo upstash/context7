@@ -58,6 +58,7 @@ Fetch documentation context for a library and a specific question.
 |-----------|------|-------------|
 | `libraryId` | string, required | Exact Context7-compatible library ID, e.g., `/vercel/next.js` or `/vercel/next.js/v15.1.8` |
 | `query` | string, required | What to look up, scoped to a single concept |
+| `language` | string, optional | Programming language you write in, e.g., `Python` or `Go`. Code examples in that language rank first |
 
 The tool returns the relevant documentation and code examples as text.
 
