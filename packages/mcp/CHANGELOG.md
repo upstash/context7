@@ -1,5 +1,11 @@
 # @upstash/context7-mcp
 
+## 4.3.0
+
+### Minor Changes
+
+- 2c0f362: Add an optional `language` argument to `query-docs`. When the agent knows the programming language the user writes in, Context7 ranks code examples in that language first.
+
 ## 4.2.1
 
 ### Patch Changes
