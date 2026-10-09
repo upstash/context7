@@ -158,6 +158,60 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
 
 </Accordion>
 
+<Accordion title="Pi">
+
+#### Built-in MCP
+
+We recommend built-in MCP because the Context7 MCP server receives updates more frequently than the Pi extension.
+
+Pi has built-in MCP support from version 0.99.0. Run `pi update` to update Pi, then choose one connection method below. See the [Pi guide](/clients/pi) for usage examples and [Pi's MCP documentation](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/mcp.md) for configuration details.
+
+##### OAuth
+
+```sh
+pi mcp add context7 --url https://mcp.context7.com/mcp --exposure direct
+pi mcp login context7
+```
+
+Approve access in your browser. Pi stores and refreshes the OAuth tokens.
+
+##### Remote server with an API key
+
+Create a key in the [Context7 dashboard](https://context7.com/dashboard) and export it before starting Pi:
+
+```sh
+export CONTEXT7_API_KEY="YOUR_API_KEY"
+pi mcp add context7 --url https://mcp.context7.com/mcp \
+  --bearer-token-env-var CONTEXT7_API_KEY --exposure direct
+```
+
+##### Local server connection
+
+With Node.js and `npx` installed, run:
+
+```sh
+export CONTEXT7_API_KEY="YOUR_API_KEY"
+pi mcp add context7 --exposure direct \
+  --env CONTEXT7_API_KEY='${CONTEXT7_API_KEY}' \
+  -- npx -y @upstash/context7-mcp
+```
+
+These commands save the server in `~/.pi/agent/mcp.json`. Add `--local` to `pi mcp add` to use `.pi/mcp.json` for a trusted project. The `--exposure direct` option makes Context7's tools visible to the model immediately.
+
+Run `pi mcp list` to check the connection. In an open Pi session, run `/reload`, then use `/mcp` to inspect the server. Ask Pi to use Context7 for a library documentation question.
+
+#### Context7 extension
+
+The [official Context7 extension](/clients/pi#context7-extension) is an alternative. It includes a documentation skill and the `/c7-docs` prompt. It calls the hosted Context7 HTTP API directly, without using the remote MCP server:
+
+```sh
+pi install npm:@upstash/context7-pi
+```
+
+Run `/reload` or start a new Pi session, then ask a documentation question or use `/c7-docs next.js Cache Components`. It supports anonymous access and the `CONTEXT7_API_KEY` environment variable. Choose either the extension or the MCP setup above to avoid duplicate tools.
+
+</Accordion>
+
 <Accordion title="OpenClaw">
 
 Add the hosted Context7 server with OpenClaw's MCP client registry. See the [OpenClaw MCP documentation](https://docs.openclaw.ai/tools/mcp) for more details.
@@ -177,20 +231,15 @@ openclaw mcp login context7
 
 OpenClaw also provides a code-based login fallback for headless or remote environments. See [Set Up OAuth](/howto/oauth) for more details.
 
-#### API Key or Anonymous Access
+#### API Key
 
-To connect without OAuth, register the standard endpoint:
+To connect with an API key, register the standard endpoint:
 
 ```sh
 openclaw mcp add context7 \
   --url https://mcp.context7.com/mcp \
-  --transport streamable-http
-```
-
-This works without an API key at the anonymous rate limit. For higher limits, create a key in the [Context7 dashboard](https://context7.com/dashboard) and append this option to the command:
-
-```sh
---header "Authorization: Bearer YOUR_API_KEY"
+  --transport streamable-http \
+  --header "Authorization: Bearer YOUR_API_KEY"
 ```
 
 Verify that OpenClaw can connect and discover the Context7 tools:
@@ -901,10 +950,10 @@ See [Warp Model Context Protocol Documentation](https://docs.warp.dev/knowledge-
 
 Run this command in your terminal. See [Amp MCP docs](https://ampcode.com/manual#mcp) for more info.
 
-#### Without API Key (Basic Usage)
+#### With OAuth
 
 ```sh
-amp mcp add context7 https://mcp.context7.com/mcp
+amp mcp add context7 https://mcp.context7.com/mcp/oauth
 ```
 
 #### With API Key (Higher Rate Limits & Private Repos)
@@ -1077,7 +1126,7 @@ docker build -t context7-mcp .
 Context7 is available in the [Docker MCP Catalog](https://hub.docker.com/mcp/server/context7/overview) as a **remote** server, so you don't need to build, pull, or run a local image. The MCP Toolkit connects to the hosted endpoint for you.
 
 1. In Docker Desktop, open **MCP Toolkit → Catalog**, search for **Context7**, and enable it.
-2. (Optional) In the server's **Config** tab, set your Context7 API key (`CONTEXT7_API_KEY`) for higher rate limits. The server also works without one.
+2. In the server's **Config** tab, set your free Context7 API key (`CONTEXT7_API_KEY`).
 3. Connect your MCP client to Docker's MCP gateway. Either run `docker mcp client connect <client>` (for example `vscode`, `cursor`, or `claude-desktop`), or add the gateway to your client config manually:
 
 ```json
@@ -1401,7 +1450,7 @@ droid mcp add context7 "npx -y @upstash/context7-mcp" --env CONTEXT7_API_KEY=YOU
 
 [Emdash](https://github.com/generalaction/emdash) is an orchestration layer for running multiple coding agents in parallel.
 
-Context7 is available as a built-in entry in Emdash's MCP catalog. Enable it from the MCP view and provide your `CONTEXT7_API_KEY` (optional, for higher rate limits). Emdash adapts and writes the MCP config into your selected coding agent's config (Codex, Claude Code, Cursor, etc.) for you.
+Context7 is available as a built-in entry in Emdash's MCP catalog. Enable it from the MCP view and authenticate with OAuth, or provide your `CONTEXT7_API_KEY` when the selected agent does not support OAuth. Emdash adapts and writes the MCP config into your selected coding agent's config (Codex, Claude Code, Cursor, etc.) for you.
 
 See the [Emdash repository](https://github.com/generalaction/emdash) for more information.
 
@@ -1409,7 +1458,7 @@ See the [Emdash repository](https://github.com/generalaction/emdash) for more in
 
 <Accordion title="Desktop Extension">
 
-Install the [context7.mcpb](https://github.com/upstash/context7/tree/master/packages/mcp/mcpb/context7.mcpb) file and add it to your client. See [MCP bundles docs](https://github.com/modelcontextprotocol/mcpb#mcp-bundles-mcpb) for more info.
+Install the [context7.mcpb](https://github.com/upstash/context7/releases/download/mcpb-v4.1.1/context7.mcpb) file and add it to your client. See [MCP bundles docs](https://github.com/modelcontextprotocol/mcpb#mcp-bundles-mcpb) for more info.
 
 </Accordion>
 

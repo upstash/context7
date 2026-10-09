@@ -50,7 +50,7 @@ docs7 dev
 docs7 dev ./docs --port 4000
 ```
 
-The default address is `http://localhost:3333`. The first run downloads the renderer and caches it. The server reloads pages when you edit files. Use `--host` to change the bind address. Local previews do not require login.
+The default address is `http://localhost:3000`. If that port is in use, the server uses the next free port and prints the address. If you set `--port` and the port is in use, the command stops. The first run downloads the renderer and caches it. The server reloads pages when you edit files. Use `--host` to change the bind address. Local previews do not require login.
 
 <Warning>
   A local preview executes MDX with your local user permissions. Only preview documentation sources
@@ -73,20 +73,20 @@ docs7 deploy ./docs
 
 No GitHub repository is required. The CLI uploads your local files, shows the site overview and deployment links, and waits for the build. It prints the public URL when the site is ready.
 
-The first deployment creates a site using the required `name` in `docs.json` or `mint.json`. The name must be nonempty and at most 100 characters. Docs7 assigns an available `*.docs7.io` address from the name.
+The first deployment creates a site using the required `name` in `docs.json` or `mint.json`. The name must be nonempty. Docs7 assigns an available `*.docs7.io` address from the name.
 
 The CLI saves the site ID in `.docs7/project.json` inside the documentation folder. Keep this file. Later runs update that same site, even if the assigned address differs from the name. They do not create another site or use another site slot.
 
 <Note>
-  Free teamspaces can have one site across GitHub and CLI deployments. Preview deployments require
-  Pro. Updating an existing site does not count as adding a site.
+  Free teamspaces can have three sites. Updating an existing site does not count
+  as adding a site.
 </Note>
 
 ### Deploy options
 
 | Option          | What it does                                                                               |
 | --------------- | ------------------------------------------------------------------------------------------ |
-| `--preview`     | Create a preview without replacing production. Requires Pro.                               |
+| `--preview`     | Create a preview without replacing production.                                             |
 | `--slug <slug>` | Request the site's address when you first create it. Not available for a linked directory. |
 
 To request an address for a new site, use `docs7 deploy --slug acme-docs` on its first deployment. For later updates, run `docs7 deploy` without `--slug`.
@@ -100,6 +100,8 @@ docs7 deploy --preview
 ### Files in the upload
 
 Docs7 excludes common private paths, symbolic links, and build folders such as `node_modules`, `.next`, and `dist`.
+
+It also excludes all files and folders whose names start with a dot, except `.docs7ignore`, `.mintignore`, and `.gitignore` in the documentation root.
 
 Add project-specific exclusions to `.docs7ignore` or `.mintignore` in the documentation folder:
 
@@ -118,7 +120,8 @@ After connection, GitHub becomes the source. Push to the connected production br
 
 Until you connect GitHub, use `docs7 deploy` for updates. Automatic GitHub deployments, pull request previews, and Docs7 agents are not available.
 
-<Warning>
-  If you downgrade from Pro to Free, you cannot keep a CLI-only site. The downgrade confirmation
-  lists it for removal. Deploy it again after the downgrade.
-</Warning>
+### Downgrade to Free
+
+When you downgrade from Pro to Free, you can keep up to three sites, including your CLI sites. Each CLI site that you keep keeps its address, deployment history, and saved link in `.docs7/project.json`. Continue to update it with `docs7 deploy`.
+
+The current published build stays online. Free-plan branding applies on the next deployment. Sites you do not select are removed.

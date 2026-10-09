@@ -13,7 +13,11 @@ You can skip this step if your project already has a `docs.json` or `mint.json` 
 
 ```json docs.json
 {
+  "$schema": "https://context7.com/schema/docs7.json",
   "name": "My docs",
+  "colors": {
+    "primary": "#16A34A"
+  },
   "navigation": {
     "groups": [
       {
@@ -24,6 +28,8 @@ You can skip this step if your project already has a `docs.json` or `mint.json` 
   }
 }
 ```
+
+`name`, `colors.primary`, and `navigation` are required. `theme` is optional: Docs7 renders every site with the `mint` theme. The dev server reports a missing field as `docs.json is invalid`.
 
 Then add the first page:
 
@@ -54,7 +60,7 @@ Run this from the folder that contains `docs.json`:
 docs7 dev
 ```
 
-Open [http://localhost:3333](http://localhost:3333). The page reloads when you edit a file.
+Open [http://localhost:3000](http://localhost:3000), or the address that the command prints. The page reloads when you edit a file.
 
 The first run downloads the renderer and caches it for later. You can also pass a project folder or use another port:
 

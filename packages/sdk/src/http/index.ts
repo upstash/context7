@@ -1,6 +1,7 @@
 import { Context7Error, Context7UrlError } from "@error";
 import {
   abortError,
+  awaitWithSignal,
   createAbortState,
   isContext7AbortError,
   resolveSignal,
@@ -120,9 +121,12 @@ export class HttpClient implements Requester {
     const canRetry = method === "GET";
 
     for (let attempt = 0; attempt <= this.retry.retries; attempt++) {
+      if (abortState.signal?.aborted) {
+        throw abortError(abortState.signal.reason, abortState.timedOut());
+      }
       const headers =
         typeof this.authToken === "function"
-          ? this.headersForToken(await this.authToken())
+          ? this.headersForToken(await awaitWithSignal(this.authToken(), abortState.signal))
           : this.headersForToken(this.authToken);
       if (abortState.signal?.aborted) {
         throw abortError(abortState.signal.reason, abortState.timedOut());
@@ -179,7 +183,9 @@ function buildUrl(baseUrl: string, method: "GET" | "POST", request: Context7Requ
 
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(request.query)) {
-    if (value !== undefined) query.append(key, String(value));
+    if (value === undefined) continue;
+    const values = Array.isArray(value) ? value : [value];
+    for (const item of values) query.append(key, String(item));
   }
   const queryString = query.toString();
   return queryString ? `${url}?${queryString}` : url;

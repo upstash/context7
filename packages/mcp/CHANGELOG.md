@@ -1,5 +1,29 @@
 # @upstash/context7-mcp
 
+## 4.2.0
+
+### Minor Changes
+
+- 48eb9f0: Require credentials on the HTTP `/mcp` endpoint by default. Set `MCP_AUTH_ENFORCEMENT=observe` to keep anonymous `/mcp` access and record privacy-safe authentication migration events; `/mcp/oauth` and Claude Code plugin requests keep their challenge in both modes. `/mcp/oauth` stays as a compatibility alias, each endpoint publishes its own OAuth protected-resource metadata, an empty or scheme-only `Authorization: Bearer` header counts as a missing credential, and CORS responses expose `WWW-Authenticate` and `MCP-Session-Id`.
+
+### Patch Changes
+
+- 126379b: Answer an expired or revoked OAuth access token (`oat_…`) on the hosted HTTP transport with an HTTP 401 and a `WWW-Authenticate: Bearer error="invalid_token"` challenge, so MCP clients refresh the token instead of showing a tool error. The server checks the token against the Context7 API before serving the request, caches the verdict in memory per token hash for about a minute on each replica, and fails open when the check is unavailable. Set `MCP_OAUTH_TOKEN_VALIDATION=off` to disable the check. When the Context7 API still rejects an OAuth token on a tool call, the tool text now says the sign-in expired instead of describing API keys.
+
+## 4.1.3
+
+### Patch Changes
+
+- afdd129: Over HTTP, answer `subscriptions/listen` with an acknowledgement and an immediate `complete` result instead of a "Subscription limit reached" error, and stop logging those refusals. Context7 has no change notifications, so the stream closes at once. Stdio subscriptions stay disabled. Removes the `MCP_MAX_SUBSCRIPTIONS` setting.
+- 2b7c4f0: Update the undici dependency to 7.30.
+
+## 4.1.2
+
+### Patch Changes
+
+- 16095a9: Update CLI prompt, terminal display, and browser launch dependencies. The CLI now declares Node.js 22.13 or later, which its dependencies already need. Update the MCP server JWT and OpenTelemetry dependencies.
+- 72181dd: Serve a SEP-2127 server card at `/mcp/server-card`.
+
 ## 4.1.1
 
 ### Patch Changes

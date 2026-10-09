@@ -1,0 +1,22 @@
+{
+  "name": "context7",
+  "displayName": "Context7",
+  "version": "1.0.0",
+  "description": "Up-to-date documentation lookup. Pull version-specific documentation and code examples directly from source repositories into your LLM context.",
+  "logo": "assets/logo.svg",
+  "suggestedPrompts": [
+    "How do I set up middleware in the latest Next.js?",
+    "Show me how to define relations in Prisma",
+    "What are the Supabase auth methods?"
+  ],
+  "category": "Developer Tools",
+  "keywords": ["documentation", "context", "mcp", "library-docs"],
+  "author": {
+    "name": "Upstash",
+    "email": "context7@upstash.com",
+    "url": "https://upstash.com"
+  },
+  "homepage": "https://context7.com",
+  "repository": "https://github.com/upstash/context7",
+  "license": "MIT"
+}
