@@ -570,6 +570,16 @@ describe.each([
     expect(requests.find((r) => r.path === "/v2/context")!.query.get("language")).toBe("Python");
   });
 
+  test("accepts a long language hint instead of rejecting the call", async () => {
+    const language = "TypeScript with React 19 and Next.js 16 app router";
+    const result = await client.callTool({
+      name: "query-docs",
+      arguments: { libraryId: "/vercel/next.js", query: "app router", language },
+    });
+    expect(result.isError).toBeFalsy();
+    expect(requests.find((r) => r.path === "/v2/context")!.query.get("language")).toBe(language);
+  });
+
   test("rewrites hallucinated argument aliases before validation", async () => {
     const result = await client.callTool({
       name: "query-docs",
