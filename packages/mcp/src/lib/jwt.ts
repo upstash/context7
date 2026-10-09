@@ -101,7 +101,10 @@ export async function validateJWT(token: string): Promise<JWTValidationResult> {
         audience,
         algorithms: ["RS256"],
       });
-      if (!entraKeyMayIssue(protectedHeader.kid, issuer, entraTenantId)) {
+      // Microsoft's multi-tenant rule: the signed tid must be the issuer's tenant, and the
+      // key's {tenantid} template is filled from tid, not from the issuer we just matched.
+      if (payload.tid !== entraTenantId) return { valid: false, error: "Invalid token claims" };
+      if (!entraKeyMayIssue(protectedHeader.kid, issuer, payload.tid)) {
         return { valid: false, error: "Invalid signature" };
       }
 

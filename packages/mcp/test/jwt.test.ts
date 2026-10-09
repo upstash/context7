@@ -103,7 +103,7 @@ describe("validateJWT - Entra path", () => {
   });
 
   function signEntraToken(aud: string, claims: jose.JWTPayload = {}, key = privateKey) {
-    return new jose.SignJWT(claims)
+    return new jose.SignJWT({ tid: TENANT_ID, ...claims })
       .setProtectedHeader({ alg: "RS256", kid: KID })
       .setIssuer(ENTRA_ISSUER)
       .setAudience(aud)
@@ -151,6 +151,17 @@ describe("validateJWT - Entra path", () => {
     expect(result).toEqual({ valid: true });
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(vi.mocked(fetch).mock.calls[0][0]).toContain(`/v2/entra/config/${AUDIENCE}`);
+  });
+
+  test("rejects a signed token whose tid is missing or differs from the issuer tenant", async () => {
+    mockConfig({ tenantId: TENANT_ID, requiredScope: null });
+    const { validateJWT } = await loadModule();
+
+    for (const tid of [undefined, "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"]) {
+      const result = await validateJWT(await signEntraToken(AUDIENCE, { tid }));
+      expect(result).toEqual({ valid: false, error: "Invalid token claims" });
+    }
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   test("rejects a token whose issuer tenant differs from the configured tenant", async () => {
