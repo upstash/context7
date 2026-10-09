@@ -1,5 +1,13 @@
 # @upstash/context7-mcp
 
+## 4.2.1
+
+### Patch Changes
+
+- c30f279: Verify OAuth JWT access tokens from the authorization server (Clerk) strictly on the hosted HTTP transport: signature, issuer, a `typ` of `at+jwt`, expiry with a minute of clock tolerance, and the token's `aud`. Clerk ID tokens and session JWTs, which share the issuer, now get HTTP 401. The audience is compared against the `RESOURCE_URL` origin, `/mcp` and `/mcp/oauth` (override with `MCP_OAUTH_ALLOWED_AUDIENCES`); `MCP_OAUTH_AUDIENCE_ENFORCEMENT` defaults to `observe`, which admits a mismatch and logs the OAuth client ID and audience (once per token every ten minutes), and `required` answers 401. These JWTs count as `oauth` in authentication telemetry, a token the Context7 API rejects on a tool call is challenged on the next request, and a rejected OAuth token now stays rejected in the per-replica cache for ten minutes instead of thirty seconds.
+- dd48abc: query-docs now sets `isError` on its result when the documentation request fails (invalid library ID, API or network error), so clients that branch on `isError` no longer treat the error text as documentation.
+- 6116042: Report the actual assigned HTTP port when `--port 0` requests an ephemeral port.
+
 ## 4.2.0
 
 ### Minor Changes

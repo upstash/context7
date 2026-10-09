@@ -1,5 +1,11 @@
 # @upstash/context7-sdk
 
+## 0.5.1
+
+### Patch Changes
+
+- 8861808: Honor request timeouts and cancellation while waiting for an asynchronous authentication token provider.
+
 ## 0.5.0
 
 ### Minor Changes
