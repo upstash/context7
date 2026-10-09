@@ -84,11 +84,6 @@ describe("login command", () => {
     mockGetValidAccessToken.mockResolvedValue("existing-token");
     await runCommand("login");
     expect(logOutput.some((l) => l.includes("already logged in"))).toBe(true);
-  });
-
-  test("tracks login event", async () => {
-    mockGetValidAccessToken.mockResolvedValue("existing-token");
-    await runCommand("login");
     expect(trackEvent).toHaveBeenCalledWith("command", { name: "login" });
   });
 
@@ -113,11 +108,6 @@ describe("logout command", () => {
     mockClearTokens.mockReturnValue(false);
     await runCommand("logout");
     expect(logOutput.some((l) => l.includes("You are not logged in"))).toBe(true);
-  });
-
-  test("tracks logout event", async () => {
-    mockClearTokens.mockReturnValue(false);
-    await runCommand("logout");
     expect(trackEvent).toHaveBeenCalledWith("command", { name: "logout" });
   });
 });
@@ -127,6 +117,7 @@ describe("whoami command", () => {
     mockGetValidAccessToken.mockResolvedValue(undefined);
     await runCommand("whoami");
     expect(logOutput.some((l) => l.includes("Not logged in"))).toBe(true);
+    expect(trackEvent).toHaveBeenCalledWith("command", { name: "whoami" });
   });
 
   test("fetches and displays user info when logged in", async () => {
@@ -207,12 +198,6 @@ describe("whoami command", () => {
 
     expect(logOutput.join("\n")).toContain("Could not verify your session");
     expect(logOutput.join("\n")).not.toMatch(/ctx7 logout|ctx7 login/);
-  });
-
-  test("tracks whoami event", async () => {
-    mockGetValidAccessToken.mockResolvedValue(undefined);
-    await runCommand("whoami");
-    expect(trackEvent).toHaveBeenCalledWith("command", { name: "whoami" });
   });
 });
 

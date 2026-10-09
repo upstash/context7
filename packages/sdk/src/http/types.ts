@@ -1,11 +1,5 @@
 export type CacheSetting =
-  | "default"
-  | "force-cache"
-  | "no-cache"
-  | "no-store"
-  | "only-if-cached"
-  | "reload"
-  | false;
+  "default" | "force-cache" | "no-cache" | "no-store" | "only-if-cached" | "reload" | false;
 
 export type Context7Fetch = (input: string | URL, init?: RequestInit) => Promise<Response>;
 export type AuthTokenProvider = () => string | Promise<string>;
@@ -36,7 +30,10 @@ export type Context7Request = {
   /** @default "POST" */
   method?: "GET" | "POST";
   /** Query parameters for GET requests. */
-  query?: Record<string, string | number | boolean | undefined>;
+  query?: Record<
+    string,
+    string | number | boolean | readonly (string | number | boolean)[] | undefined
+  >;
   /** Abort this request. */
   signal?: AbortSignal;
   /** Override the client timeout for this request. Set to false to disable it. */

@@ -1,6 +1,6 @@
 {
   "name": "@upstash/context7-opencode",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Official Context7 plugin for OpenCode — wires up the Context7 MCP server and a documentation skill",
   "type": "module",
   "main": "./dist/index.js",
@@ -51,9 +51,10 @@
     "access": "public"
   },
   "devDependencies": {
-    "@opencode-ai/plugin": "^1.18.11",
-    "@types/node": "^25.9.1",
-    "tsup": "^8.5.0",
-    "typescript": "^5.9.3"
+    "@opencode-ai/plugin": "^1.18.33",
+    "@opencode/plugin": "^2.0.16",
+    "@types/node": "catalog:",
+    "tsup": "catalog:",
+    "typescript": "catalog:"
   }
 }

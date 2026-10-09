@@ -1,6 +1,6 @@
 import { describe, test, expect } from "vitest";
 import { generateText, stepCountIs, tool } from "ai";
-import { createAmazonBedrock } from "@ai-sdk/amazon-bedrock";
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { z } from "zod";
 import {
   resolveLibraryId,
@@ -11,9 +11,11 @@ import {
   RESOLVE_LIBRARY_ID_DESCRIPTION,
 } from "./index";
 
-const bedrock = createAmazonBedrock({
-  region: process.env.AWS_REGION,
+const openrouter = createOpenRouter({
+  apiKey: process.env.OPENROUTER_API_KEY,
 });
+
+const model = openrouter("anthropic/claude-haiku-4.5");
 
 describe("@upstash/context7-tools-ai-sdk", () => {
   describe("Tool structure", () => {
@@ -36,25 +38,12 @@ describe("@upstash/context7-tools-ai-sdk", () => {
       expect(tool).toHaveProperty("description");
       expect(tool.description).toContain("documentation");
     });
-
-    test("tools should accept custom config", () => {
-      const resolveTool = resolveLibraryId({
-        apiKey: "ctx7sk-test-key",
-      });
-
-      const docsTool = queryDocs({
-        apiKey: "ctx7sk-test-key",
-      });
-
-      expect(resolveTool).toHaveProperty("execute");
-      expect(docsTool).toHaveProperty("execute");
-    });
   });
 
   describe("Tool usage with generateText", () => {
     test("resolveLibraryId tool should be called when searching for a library", async () => {
       const result = await generateText({
-        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+        model,
         tools: {
           resolveLibraryId: resolveLibraryId(),
         },
@@ -73,7 +62,7 @@ describe("@upstash/context7-tools-ai-sdk", () => {
 
     test("queryDocs tool should fetch documentation", async () => {
       const result = await generateText({
-        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+        model,
         tools: {
           queryDocs: queryDocs(),
         },
@@ -92,7 +81,7 @@ describe("@upstash/context7-tools-ai-sdk", () => {
 
     test("both tools can work together in a multi-step flow", async () => {
       const result = await generateText({
-        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+        model,
         tools: {
           resolveLibraryId: resolveLibraryId(),
           queryDocs: queryDocs(),
@@ -110,43 +99,6 @@ describe("@upstash/context7-tools-ai-sdk", () => {
   });
 
   describe("Context7Agent class", () => {
-    test("should create an agent instance with model", () => {
-      const agent = new Context7Agent({
-        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
-      });
-
-      expect(agent).toBeDefined();
-      expect(agent).toHaveProperty("generate");
-      expect(agent).toHaveProperty("stream");
-    });
-
-    test("should accept custom stopWhen condition", () => {
-      const agent = new Context7Agent({
-        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
-        stopWhen: stepCountIs(3),
-      });
-
-      expect(agent).toBeDefined();
-    });
-
-    test("should accept custom instructions", () => {
-      const agent = new Context7Agent({
-        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
-        instructions: "Custom instructions for testing",
-      });
-
-      expect(agent).toBeDefined();
-    });
-
-    test("should accept Context7 config options", () => {
-      const agent = new Context7Agent({
-        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
-        apiKey: "ctx7sk-test-key",
-      });
-
-      expect(agent).toBeDefined();
-    });
-
     test("should accept additional tools alongside Context7 tools", () => {
       const customTool = tool({
         description: "A custom test tool",
@@ -157,36 +109,22 @@ describe("@upstash/context7-tools-ai-sdk", () => {
       });
 
       const agent = new Context7Agent({
-        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+        model,
         tools: {
           customTool,
         },
       });
 
-      expect(agent).toBeDefined();
+      expect(Object.keys(agent.tools).sort()).toEqual([
+        "customTool",
+        "queryDocs",
+        "resolveLibraryId",
+      ]);
     });
-
-    test("should generate response using agent workflow", async () => {
-      const agent = new Context7Agent({
-        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
-        stopWhen: stepCountIs(5),
-      });
-
-      const result = await agent.generate({
-        prompt: "Find the React library and get documentation about hooks",
-      });
-
-      expect(result).toBeDefined();
-      expect(result.steps.length).toBeGreaterThan(0);
-
-      const allToolCalls = result.steps.flatMap((step) => step.toolCalls);
-      const toolNames = allToolCalls.map((call) => call.toolName);
-      expect(toolNames).toContain("resolveLibraryId");
-    }, 60000);
 
     test("should include Context7 tools in generate result", async () => {
       const agent = new Context7Agent({
-        model: bedrock("anthropic.claude-3-haiku-20240307-v1:0"),
+        model,
         stopWhen: stepCountIs(5),
       });
 

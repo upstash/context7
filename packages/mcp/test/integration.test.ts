@@ -26,6 +26,15 @@ const NO_RESULTS_QUERY = "force-no-results";
 const UPSTREAM_ERROR_QUERY = "force-upstream-error";
 const INVALID_JSON_QUERY = "force-invalid-json";
 const CLIENT_IP_ASSERTION_KEY = "0123456789abcdef".repeat(4);
+const INVALID_OAUTH_TOKEN_BODY = {
+  error: "invalid_oauth_token",
+  message: "Invalid or expired OAuth token. Please re-authenticate to obtain a new token.",
+};
+const INVALID_API_KEY_BODY = {
+  error: "invalid_api_key",
+  message:
+    "Invalid API key. Please check your API key. API keys should start with 'ctx7sk' prefix.",
+};
 
 function decryptClientIpAssertion(value: string): string {
   const [version, timestamp, nonceHex, ciphertextAndTagHex] = value.split(":");
@@ -83,6 +92,35 @@ function startStubApi(): Promise<string> {
     const url = new URL(req.url!, "http://stub.local");
     const apiPath = url.pathname.replace(/^\/api/, "");
     requests.push({ path: apiPath, query: url.searchParams, headers: req.headers });
+    const bearer = /^Bearer (.+)$/.exec(req.headers.authorization ?? "")?.[1] ?? "";
+    if (apiPath === "/v2/auth/check") {
+      // Mirrors context7app: the middleware answers invalid_oauth_token for a
+      // rejected oat_ bearer, the handler answers 204 for an accepted one.
+      if (bearer.startsWith("oat_outage")) {
+        res.statusCode = 503;
+        res.end();
+      } else if (bearer.startsWith("oat_") && !bearer.startsWith("oat_valid")) {
+        res.statusCode = 401;
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify(INVALID_OAUTH_TOKEN_BODY));
+      } else {
+        res.statusCode = 204;
+        res.end();
+      }
+      return;
+    }
+    if (apiPath === "/v2/context" && bearer.startsWith("oat_") && !bearer.startsWith("oat_valid")) {
+      res.statusCode = 401;
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify(INVALID_OAUTH_TOKEN_BODY));
+      return;
+    }
+    if (apiPath === "/v2/context" && bearer.startsWith("ctx7sk-invalid")) {
+      res.statusCode = 401;
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify(INVALID_API_KEY_BODY));
+      return;
+    }
     if (apiPath === "/v2/libs/search") {
       res.setHeader("Content-Type", "application/json");
       if (url.searchParams.get("query") === INVALID_JSON_QUERY) {
@@ -179,6 +217,7 @@ beforeAll(async () => {
     OTEL_EXPORTER_PROMETHEUS_HOST: "127.0.0.1",
     OTEL_EXPORTER_PROMETHEUS_PORT: String(metricsPort),
     MCP_CLIENT_IP_ASSERTION_KEY: CLIENT_IP_ASSERTION_KEY,
+    MCP_AUTH_ENFORCEMENT: "required",
   };
   ({ child: httpChild, url: httpUrl } = await startHttpChild());
 }, 120_000);
@@ -200,6 +239,7 @@ async function connect(transportKind: "http" | "stdio", era: "modern" | "legacy"
           // info) is observable; modern clients must beat it via the envelope.
           requestInit: {
             headers: {
+              Authorization: "Bearer ctx7sk-local-test",
               "user-agent": "ua-fallback/9.9.9",
               "x-forwarded-for": "attacker-selected-bucket, 203.0.113.77",
             },
@@ -220,6 +260,55 @@ describe("OAuth discovery", () => {
       resource: "https://mcp.context7.com",
       authorization_servers: ["https://clerk.context7.com", "https://context7.com"],
     });
+  });
+
+  test.each([
+    ["/mcp", "/.well-known/oauth-protected-resource/mcp"],
+    ["/mcp/oauth", "/.well-known/oauth-protected-resource/mcp/oauth"],
+  ])("advertises endpoint-specific metadata for %s", async (endpoint, metadataPath) => {
+    const response = await fetch(new URL(metadataPath, httpUrl));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      resource: `https://mcp.context7.com${endpoint}`,
+      authorization_servers: ["https://clerk.context7.com", "https://context7.com"],
+    });
+  });
+
+  test("serves the SEP-2127 server card at /mcp/server-card", async () => {
+    const response = await fetch(new URL("/mcp/server-card", httpUrl));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toMatch(/application\/mcp-server-card\+json/);
+    const card = await response.json();
+    expect(card).toMatchObject({
+      $schema: "https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json",
+      name: "io.github.upstash/context7",
+      remotes: [{ type: "streamable-http", url: "https://mcp.context7.com/mcp" }],
+    });
+    expect(card.description.length).toBeLessThanOrEqual(100);
+    expect(card.remotes[0].headers).toEqual([
+      expect.objectContaining({ name: "Authorization", isRequired: false, isSecret: true }),
+    ]);
+    expect(response.headers.get("cache-control")).toBe("public, max-age=3600");
+    expect(response.headers.get("access-control-expose-headers")).toBe("ETag");
+
+    const etag = response.headers.get("etag");
+    expect(etag).toBeTruthy();
+    // node:http, because fetch adds Cache-Control: no-cache to conditional requests.
+    const status = await new Promise<number | undefined>((resolve, reject) => {
+      http
+        .get(
+          new URL("/mcp/server-card", httpUrl),
+          { headers: { "If-None-Match": etag! } },
+          (res) => {
+            res.resume();
+            resolve(res.statusCode);
+          }
+        )
+        .on("error", reject);
+    });
+    expect(status).toBe(304);
   });
 });
 
@@ -325,7 +414,11 @@ describe.each([
   test("is not reported as a parse error", async () => {
     const response = await fetch(new URL("/mcp", httpUrl), {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: "Bearer ctx7sk-local-test",
+      },
       body,
     });
 
@@ -525,7 +618,11 @@ describe("OpenTelemetry metrics", () => {
     );
 
     try {
-      await client.connect(new StreamableHTTPClientTransport(new URL(disabledServer.url)));
+      await client.connect(
+        new StreamableHTTPClientTransport(new URL(disabledServer.url), {
+          requestInit: { headers: { Authorization: "Bearer ctx7sk-local-test" } },
+        })
+      );
       const result = await client.callTool({
         name: "query-docs",
         arguments: { libraryId: "/vercel/next.js", query: "disabled telemetry" },
@@ -545,6 +642,7 @@ describe("OpenTelemetry metrics", () => {
       headers: {
         accept: "application/json, text/event-stream",
         "content-type": "application/json",
+        authorization: "Bearer ctx7sk-local-test",
       },
       body: JSON.stringify([
         { jsonrpc: "2.0", id: 90_001, method: "tools/list", params: {} },
@@ -671,11 +769,30 @@ describe("OpenTelemetry metrics", () => {
         )
     ).toBe(true);
     expect(exported).toMatch(
-      /context7_mcp_authentication_attempts_total\{[^}]*context7_authentication_outcome="missing"[^}]*\} 1/
+      /context7_mcp_authentication_attempts_total\{[^}]*context7_authentication_outcome="missing"[^}]*\} [1-9][0-9]*/
     );
     expect(exported).toMatch(
-      /context7_mcp_authentication_attempts_total\{[^}]*context7_authentication_outcome="accepted"[^}]*\} 1/
+      /context7_mcp_authentication_attempts_total\{[^}]*context7_authentication_outcome="accepted"[^}]*\} [1-9][0-9]*/
     );
+    const authenticationEvents = exported
+      .split("\n")
+      .filter((line) => line.startsWith("context7_mcp_authentication_events_total{"));
+    expect(
+      authenticationEvents.some(
+        (line) =>
+          line.includes('context7_authentication_event="challenge_issued"') &&
+          line.includes('context7_authentication_method="none"') &&
+          line.includes('context7_mcp_route="oauth"')
+      )
+    ).toBe(true);
+    expect(
+      authenticationEvents.some(
+        (line) =>
+          line.includes('context7_authentication_event="credential_present"') &&
+          line.includes('context7_authentication_method="api_key"') &&
+          line.includes('context7_mcp_route="oauth"')
+      )
+    ).toBe(true);
     expect(exported).toContain("context7_mcp_authentication_duration_count");
     expect(exported).toContain("context7_mcp_authentication_active");
     expect(exported).toContain("mcp_server_operation_duration_bucket");
@@ -731,29 +848,148 @@ async function postMcp(target: string, headers: Record<string, string> = {}) {
     },
     body: JSON.stringify(INITIALIZE),
   });
-  return { status: res.status, wwwAuthenticate: res.headers.get("www-authenticate") };
+  return {
+    status: res.status,
+    wwwAuthenticate: res.headers.get("www-authenticate"),
+    exposeHeaders: res.headers.get("access-control-expose-headers"),
+    body: await res.text(),
+  };
 }
 
-describe("plugin authentication", () => {
+async function callQueryDocs(target: string, headers: Record<string, string>): Promise<string> {
+  const client = new Client(
+    { name: "test-harness", version: "1.0.0" },
+    { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+  );
+  await client.connect(
+    new StreamableHTTPClientTransport(new URL(target), { requestInit: { headers } })
+  );
+  try {
+    const result = await client.callTool({
+      name: "query-docs",
+      arguments: { libraryId: "/vercel/next.js", query: "app router" },
+    });
+    return (result.content as { type: string; text: string }[])[0].text;
+  } finally {
+    await client.close();
+  }
+}
+
+function authChecks(): RecordedRequest[] {
+  return requests.filter((request) => request.path === "/v2/auth/check");
+}
+
+describe("hosted HTTP authentication", () => {
   beforeEach(() => {
     requests.length = 0;
   });
 
-  test("only challenges the supported plugin", async () => {
-    expect((await postMcp(`${httpUrl}?client=other-plugin`)).status).toBe(200);
+  test.each([undefined, "", "other-plugin", "claude-code-plugin"])(
+    "challenges unauthenticated clients (%s)",
+    async (client) => {
+      const target = client ? `${httpUrl}?client=${client}` : httpUrl;
+      const res = await postMcp(target, client === "" ? { Authorization: "" } : undefined);
 
-    const res = await postMcp(`${httpUrl}?client=claude-code-plugin`);
-    expect(res.status).toBe(401);
-    expect(res.wwwAuthenticate).toContain("resource_metadata=");
-    expect(res.wwwAuthenticate).toContain("/.well-known/oauth-protected-resource");
+      expect(res.status).toBe(401);
+      expect(res.wwwAuthenticate).toContain(
+        'resource_metadata="https://mcp.context7.com/.well-known/oauth-protected-resource/mcp"'
+      );
+    }
+  );
+
+  // Node trims header values, so an unset `Bearer ${KEY}` arrives as the bare
+  // scheme; it must count as a missing credential, whatever its case.
+  test.each(["Bearer ", "bearer", "BEARER  "])(
+    "challenges a Bearer header without a token (%j)",
+    async (authorization) => {
+      const res = await postMcp(httpUrl, { Authorization: authorization });
+
+      expect(res.status).toBe(401);
+      expect(res.wwwAuthenticate).toContain(
+        'resource_metadata="https://mcp.context7.com/.well-known/oauth-protected-resource/mcp"'
+      );
+      expect(res.wwwAuthenticate).not.toContain("invalid_token");
+    }
+  );
+
+  test("exposes the challenge headers to browser clients", async () => {
+    const challenge = await postMcp(httpUrl);
+    expect(challenge.status).toBe(401);
+    expect(challenge.exposeHeaders).toBe("WWW-Authenticate, MCP-Session-Id");
+
+    const preflight = await fetch(httpUrl, {
+      method: "OPTIONS",
+      headers: { Origin: "https://example.test", "Access-Control-Request-Method": "POST" },
+    });
+    expect(preflight.status).toBe(200);
+    expect(preflight.headers.get("access-control-expose-headers")).toBe(
+      "WWW-Authenticate, MCP-Session-Id"
+    );
   });
 
-  test("allows the Claude Code plugin's empty API key fallback", async () => {
-    const res = await postMcp(`${httpUrl}?client=claude-code-plugin`, {
-      Authorization: "",
-    });
+  test("allows an opaque credential for downstream validation", async () => {
+    const res = await postMcp(httpUrl, { Authorization: "Bearer ctx7sk-test" });
 
     expect(res.status).toBe(200);
+    expect(res.wwwAuthenticate).toBeNull();
+  });
+
+  test("observe mode measures missing credentials without denying access", async () => {
+    const observeServer = await startHttpChild({
+      environment: { ...childEnv, MCP_AUTH_ENFORCEMENT: "observe" },
+    });
+    try {
+      const res = await postMcp(observeServer.url);
+      expect(res.status).toBe(200);
+      expect(res.wwwAuthenticate).toBeNull();
+
+      // A scheme-only Authorization header is a missing credential here too.
+      for (const authorization of ["Bearer ", "bearer"]) {
+        const emptyBearer = await postMcp(observeServer.url, { Authorization: authorization });
+        expect(emptyBearer.status).toBe(200);
+        expect(emptyBearer.wwwAuthenticate).toBeNull();
+      }
+    } finally {
+      observeServer.child.kill();
+    }
+  });
+
+  test("observe mode keeps the challenge for OAuth and plugin clients", async () => {
+    const observeServer = await startHttpChild({
+      environment: { ...childEnv, MCP_AUTH_ENFORCEMENT: "observe" },
+    });
+    try {
+      const oauthRes = await postMcp(observeServer.url.replace(/\/mcp$/, "/mcp/oauth"));
+      expect(oauthRes.status).toBe(401);
+      expect(oauthRes.wwwAuthenticate).toContain(
+        'resource_metadata="https://mcp.context7.com/.well-known/oauth-protected-resource/mcp/oauth"'
+      );
+
+      const pluginUrl = `${observeServer.url}?client=claude-code-plugin`;
+      const pluginRes = await postMcp(pluginUrl);
+      expect(pluginRes.status).toBe(401);
+      expect(pluginRes.wwwAuthenticate).toContain(
+        'resource_metadata="https://mcp.context7.com/.well-known/oauth-protected-resource/mcp"'
+      );
+      expect((await postMcp(pluginUrl, { Authorization: "" })).status).toBe(200);
+    } finally {
+      observeServer.child.kill();
+    }
+  });
+
+  test("defaults to required mode when the rollout setting is absent", async () => {
+    const environment = { ...childEnv };
+    delete environment.MCP_AUTH_ENFORCEMENT;
+    const defaultServer = await startHttpChild({ environment });
+    try {
+      const res = await postMcp(defaultServer.url);
+      expect(res.status).toBe(401);
+      expect(res.wwwAuthenticate).toContain(
+        'resource_metadata="https://mcp.context7.com/.well-known/oauth-protected-resource/mcp"'
+      );
+    } finally {
+      defaultServer.child.kill();
+    }
   });
 
   test("keeps the OAuth endpoint protected", async () => {
@@ -762,8 +998,13 @@ describe("plugin authentication", () => {
       Authorization: "",
     });
 
-    expect((await postMcp(oauthUrl)).status).toBe(401);
+    const missingCredentialRes = await postMcp(oauthUrl);
+    expect(missingCredentialRes.status).toBe(401);
+    expect(missingCredentialRes.wwwAuthenticate).toContain(
+      'resource_metadata="https://mcp.context7.com/.well-known/oauth-protected-resource/mcp/oauth"'
+    );
     expect(emptyHeaderRes.status).toBe(401);
+    expect((await postMcp(oauthUrl, { Authorization: "Bearer ctx7sk-test" })).status).toBe(200);
   });
 
   test("tracks authenticated plugin requests separately", async () => {
@@ -790,5 +1031,161 @@ describe("plugin authentication", () => {
     expect(apiCall?.headers["x-context7-client-ide"]).toBe("claude-code");
     expect(apiCall?.headers["x-context7-client-version"]).toBe("1.0.0");
     expect(apiCall?.headers["x-context7-plugin"]).toBe("claude-code-plugin");
+  });
+});
+
+// Clerk OAuth access tokens are opaque and expire after 24 hours. MCP clients
+// refresh them only on an HTTP 401 (Claude Code 2.1.286 and Cursor 3.23.12
+// refresh silently on a 401, verified 2026-10-06 with a local proxy), so the
+// gate asks the Context7 API about the token before the request reaches the
+// transport instead of letting a tool result carry the rejection.
+describe("expired OAuth access tokens", () => {
+  beforeEach(() => {
+    requests.length = 0;
+  });
+
+  const EXPIRED_CHALLENGE =
+    'Bearer error="invalid_token", error_description="The access token expired or is invalid", resource_metadata="https://mcp.context7.com/.well-known/oauth-protected-resource/mcp';
+
+  test.each([
+    ["/mcp", ""],
+    ["/mcp/oauth", "/oauth"],
+    ["the plugin route", "?client=claude-code-plugin"],
+  ])("challenges an expired token on %s", async (_label, suffix) => {
+    const res = await postMcp(`${httpUrl}${suffix}`, {
+      Authorization: `Bearer oat_expired-${suffix.length}`,
+    });
+
+    expect(res.status).toBe(401);
+    expect(res.wwwAuthenticate).toBe(
+      `${EXPIRED_CHALLENGE}${suffix.startsWith("/oauth") ? "/oauth" : ""}"`
+    );
+    expect(JSON.parse(res.body)).toEqual({
+      jsonrpc: "2.0",
+      error: { code: -32001, message: "The access token expired or is invalid" },
+      id: null,
+    });
+    expect(authChecks()).toHaveLength(1);
+    expect(authChecks()[0].headers.authorization).toBe(`Bearer oat_expired-${suffix.length}`);
+    expect(authChecks()[0].headers["x-context7-source"]).toBe("mcp-server");
+  });
+
+  test("challenges an expired token in observe mode too", async () => {
+    const observeServer = await startHttpChild({
+      environment: { ...childEnv, MCP_AUTH_ENFORCEMENT: "observe" },
+    });
+    try {
+      const res = await postMcp(observeServer.url, { Authorization: "Bearer oat_expired-observe" });
+      expect(res.status).toBe(401);
+      expect(res.wwwAuthenticate).toContain('error="invalid_token"');
+    } finally {
+      observeServer.child.kill();
+    }
+  });
+
+  test("passes a valid token through and serves the request", async () => {
+    const res = await postMcp(httpUrl, { Authorization: "Bearer oat_valid-pass" });
+
+    expect(res.status).toBe(200);
+    expect(res.wwwAuthenticate).toBeNull();
+    expect(authChecks()).toHaveLength(1);
+  });
+
+  test("checks each token at most once per cache window", async () => {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      expect((await postMcp(httpUrl, { Authorization: "Bearer oat_valid-cached" })).status).toBe(
+        200
+      );
+    }
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      expect((await postMcp(httpUrl, { Authorization: "Bearer oat_expired-cached" })).status).toBe(
+        401
+      );
+    }
+
+    expect(authChecks().map((request) => request.headers.authorization)).toEqual([
+      "Bearer oat_valid-cached",
+      "Bearer oat_expired-cached",
+    ]);
+  });
+
+  test("fails open when the check is unavailable and then trusts the API's rejection", async () => {
+    const headers = { Authorization: "Bearer oat_outage-open" };
+    const first = await postMcp(httpUrl, headers);
+    expect(first.status).toBe(200);
+    expect(first.wwwAuthenticate).toBeNull();
+
+    // The forwarded request is rejected by the API: the tool text explains the
+    // sign-in expired and the gate answers the next request with the 401.
+    const text = await callQueryDocs(httpUrl, headers);
+    expect(text).toBe(
+      "Your Context7 sign-in expired. Retry the request so your MCP client can refresh the sign-in."
+    );
+    expect(requests.filter((request) => request.path === "/v2/context")).toHaveLength(1);
+
+    const next = await postMcp(httpUrl, headers);
+    expect(next.status).toBe(401);
+    expect(next.wwwAuthenticate).toContain('error="invalid_token"');
+  });
+
+  test("leaves API keys and anonymous clients unchanged", async () => {
+    const text = await callQueryDocs(httpUrl, { Authorization: "Bearer ctx7sk-invalid-key" });
+    expect(text).toBe(INVALID_API_KEY_BODY.message);
+
+    expect((await postMcp(httpUrl)).status).toBe(401);
+    expect(authChecks()).toHaveLength(0);
+  });
+
+  test("does not check tokens when validation is switched off", async () => {
+    const offServer = await startHttpChild({
+      environment: { ...childEnv, MCP_OAUTH_TOKEN_VALIDATION: "off" },
+    });
+    try {
+      const res = await postMcp(offServer.url, { Authorization: "Bearer oat_expired-off" });
+      expect(res.status).toBe(200);
+      expect(authChecks()).toHaveLength(0);
+    } finally {
+      offServer.child.kill();
+    }
+  });
+
+  test("keeps the API's own message on stdio", async () => {
+    const client = new Client({ name: "test-harness", version: "1.0.0" });
+    await client.connect(
+      new StdioClientTransport({
+        command: process.execPath,
+        args: [DIST],
+        env: { ...childEnv, CONTEXT7_API_KEY: "oat_expired-stdio" },
+      })
+    );
+    try {
+      const result = await client.callTool({
+        name: "query-docs",
+        arguments: { libraryId: "/vercel/next.js", query: "app router" },
+      });
+      expect(result.content).toMatchObject([
+        { type: "text", text: INVALID_OAUTH_TOKEN_BODY.message },
+      ]);
+    } finally {
+      await client.close();
+    }
+    expect(authChecks()).toHaveLength(0);
+  });
+
+  test("counts expired tokens in the authentication metrics", async () => {
+    await postMcp(httpUrl, { Authorization: "Bearer oat_expired-metrics" });
+
+    let exported = "";
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      exported = await (await fetch(metricsUrl)).text();
+      if (exported.includes('context7_authentication_outcome="expired"')) break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    expect(exported).toMatch(
+      /context7_mcp_authentication_events_total\{[^}]*context7_authentication_event="credential_rejected"[^}]*context7_authentication_method="oauth"[^}]*context7_authentication_outcome="expired"[^}]*\} [1-9]/
+    );
+    expect(exported).toMatch(
+      /context7_mcp_upstream_requests_total\{[^}]*context7_upstream_operation="auth_check"[^}]*\} [1-9]/
+    );
   });
 });

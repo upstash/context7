@@ -1,6 +1,6 @@
 {
   "name": "@upstash/context7-sdk",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "JavaScript/TypeScript SDK for Context7",
   "scripts": {
     "build": "tsup",
@@ -48,10 +48,10 @@
     "access": "public"
   },
   "devDependencies": {
-    "@types/node": "^25.0.3",
-    "dotenv": "^17.4.2",
-    "tsup": "^8.5.1",
-    "typescript": "^5.8.2",
-    "vitest": "^4.1.9"
+    "@types/node": "catalog:",
+    "dotenv": "catalog:",
+    "tsup": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

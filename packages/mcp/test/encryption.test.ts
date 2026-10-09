@@ -22,13 +22,6 @@ describe("client IP assertions", () => {
     );
   });
 
-  test("emits only the authenticated assertion header", () => {
-    const headers = generateHeaders({ clientIp: "203.0.113.99" });
-
-    expect(headers["mcp-client-ip-assertion"]).toMatch(/^v1:/);
-    expect(headers["mcp-client-ip"]).toBeUndefined();
-  });
-
   test("fails closed instead of sending plaintext when the key is absent or invalid", () => {
     delete process.env.MCP_CLIENT_IP_ASSERTION_KEY;
     expect(

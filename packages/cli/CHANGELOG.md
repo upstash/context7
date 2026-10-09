@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.5.15
+
+### Patch Changes
+
+- c1e314b: `ctx7 setup` now downloads the find-docs and context7-mcp skills directly from GitHub instead of the deprecated Skill Hub API.
+
+## 0.5.14
+
+### Patch Changes
+
+- 16095a9: Update CLI prompt, terminal display, and browser launch dependencies. The CLI now declares Node.js 22.13 or later, which its dependencies already need. Update the MCP server JWT and OpenTelemetry dependencies.
+
+## 0.5.13
+
+### Patch Changes
+
+- 9b6f702: Accept trailing commas in OpenCode JSONC config files during setup and removal.
+
+## 0.5.12
+
+### Patch Changes
+
+- 4416fb8: Use the shared API URL for login and explain how to sign in again when the server rejects a saved session.
+
+  Recommend logout and login only when the server returns HTTP 401. Report other identity-check failures without asking users to discard saved credentials.
+
 ## 0.5.11
 
 ### Patch Changes
