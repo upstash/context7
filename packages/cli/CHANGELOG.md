@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.16
+
+### Patch Changes
+
+- 61cf806: Keep the rest of AGENTS.md / GEMINI.md untouched when `ctx7 remove` deletes the Context7 rule section; only the seam left by the removed section is normalized.
+
 ## 0.5.15
 
 ### Patch Changes
