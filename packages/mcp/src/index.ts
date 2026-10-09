@@ -313,7 +313,9 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
 
 You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
-Do not call this tool more than 3 times per question.`,
+Do not call this tool more than 3 times per question.
+
+If you know the programming language the user is working in, pass it as \`language\` so the results match their setup.`,
       inputSchema: z.preprocess(
         aliasArgs({ ...GLOBAL_ALIASES, ...QUERY_DOCS_ALIASES }),
         z.object({
