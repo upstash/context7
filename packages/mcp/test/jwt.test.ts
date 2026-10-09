@@ -35,11 +35,21 @@ function makeFetchResponse(init: Partial<Response> & { jsonData?: unknown }): Re
   } as Response;
 }
 
-function makeEntraToken(payload: jose.JWTPayload): string {
-  const header = Buffer.from(JSON.stringify({ alg: "RS256", typ: "JWT" })).toString("base64url");
+function makeEntraToken(payload: jose.JWTPayload, typ = "JWT"): string {
+  const header = Buffer.from(JSON.stringify({ alg: "RS256", typ })).toString("base64url");
   const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
   return `${header}.${body}.signature`;
 }
+
+function makeClerkToken(payload: jose.JWTPayload, typ = "at+jwt"): string {
+  return makeEntraToken({ aud: "https://mcp.context7.com/mcp", ...payload }, typ);
+}
+
+const CLERK_VERIFY_OPTIONS = {
+  issuer: "https://clerk.context7.com",
+  typ: "at+jwt",
+  clockTolerance: 60,
+};
 
 beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn());
@@ -183,17 +193,19 @@ describe("validateJWT - Entra path", () => {
 });
 
 describe("validateJWT - Clerk path", () => {
-  test("verifies against Clerk JWKS for non-Entra issuers", async () => {
+  test("verifies a Clerk access token against the Clerk JWKS without any fetch", async () => {
     vi.mocked(jose.jwtVerify).mockResolvedValue({
-      payload: {},
-      protectedHeader: { alg: "RS256" },
+      payload: { aud: "https://mcp.context7.com/mcp" },
+      protectedHeader: { alg: "RS256", typ: "at+jwt" },
     } as unknown as Awaited<ReturnType<typeof jose.jwtVerify>>);
 
     const { validateJWT } = await loadModule();
-    const result = await validateJWT(makeEntraToken({ iss: "https://clerk.context7.com" }));
+    const token = makeClerkToken({ iss: "https://clerk.context7.com" });
+    const result = await validateJWT(token);
 
-    expect(result.valid).toBe(true);
+    expect(result).toEqual({ valid: true });
     expect(fetch).not.toHaveBeenCalled();
+    expect(jose.jwtVerify).toHaveBeenCalledWith(token, "fake-jwks", CLERK_VERIFY_OPTIONS);
   });
 
   test("returns 'Token expired' when jwtVerify throws JWTExpired", async () => {
@@ -202,29 +214,54 @@ describe("validateJWT - Clerk path", () => {
     );
 
     const { validateJWT } = await loadModule();
-    const result = await validateJWT(makeEntraToken({ iss: "https://clerk.context7.com" }));
+    const result = await validateJWT(makeClerkToken({ iss: "https://clerk.context7.com" }));
 
     expect(result.valid).toBe(false);
     expect(result.error).toBe("Token expired");
   });
 
+  test("rejects Clerk ID tokens and session JWTs before any key lookup", async () => {
+    const { validateJWT } = await loadModule();
+
+    for (const typ of ["JWT", "jwt", undefined]) {
+      const result = await validateJWT(makeEntraToken({ iss: "https://clerk.context7.com" }, typ));
+      expect(result).toEqual({ valid: false, error: "Not an OAuth access token" });
+    }
+    expect(jose.jwtVerify).not.toHaveBeenCalled();
+  });
+
+  test("rejects JWTs from an untrusted issuer without a key lookup", async () => {
+    const { validateJWT } = await loadModule();
+
+    await expect(validateJWT(makeClerkToken({ iss: "https://evil.example" }))).resolves.toEqual({
+      valid: false,
+      error: "Untrusted issuer",
+    });
+    await expect(validateJWT(makeClerkToken({}))).resolves.toEqual({
+      valid: false,
+      error: "Untrusted issuer",
+    });
+    expect(jose.jwtVerify).not.toHaveBeenCalled();
+  });
+
   test("uses the configured OAuth issuer and its JWKS for verification", async () => {
     process.env.OAUTH_AUTH_SERVER_URL = "https://supreme-foal-19.clerk.accounts.dev/";
     vi.mocked(jose.jwtVerify).mockResolvedValue({
-      payload: {},
-      protectedHeader: { alg: "RS256" },
+      payload: { aud: "https://mcp.context7.com/mcp" },
+      protectedHeader: { alg: "RS256", typ: "at+jwt" },
     } as unknown as Awaited<ReturnType<typeof jose.jwtVerify>>);
 
     const { validateJWT } = await loadModule();
     const result = await validateJWT(
-      makeEntraToken({ iss: "https://supreme-foal-19.clerk.accounts.dev" })
+      makeClerkToken({ iss: "https://supreme-foal-19.clerk.accounts.dev" })
     );
 
-    expect(result.valid).toBe(true);
+    expect(result).toEqual({ valid: true });
     expect(jose.createRemoteJWKSet).toHaveBeenCalledWith(
       new URL("https://supreme-foal-19.clerk.accounts.dev/.well-known/jwks.json")
     );
     expect(jose.jwtVerify).toHaveBeenCalledWith(expect.any(String), "fake-jwks", {
+      ...CLERK_VERIFY_OPTIONS,
       issuer: "https://supreme-foal-19.clerk.accounts.dev",
     });
   });
@@ -268,20 +305,16 @@ describe("validateJWT - Vercel Marketplace OIDC path", () => {
   });
 
   test("does not trust lookalike Vercel hosts", async () => {
-    vi.mocked(jose.jwtVerify).mockResolvedValue({
-      payload: {},
-      protectedHeader: { alg: "RS256" },
-    } as unknown as Awaited<ReturnType<typeof jose.jwtVerify>>);
-
     const { validateJWT } = await loadModule();
     const token = makeEntraToken({
       iss: "https://integrations.vercel.com.attacker.test/oac_123456789",
     });
 
-    await validateJWT(token);
-    expect(jose.jwtVerify).toHaveBeenCalledWith(token, "fake-jwks", {
-      issuer: "https://clerk.context7.com",
+    await expect(validateJWT(token)).resolves.toEqual({
+      valid: false,
+      error: "Untrusted issuer",
     });
+    expect(jose.jwtVerify).not.toHaveBeenCalled();
   });
 
   test("rejects tokens from another Vercel integration", async () => {
