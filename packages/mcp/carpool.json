@@ -1,0 +1,17 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grollat/carpool/main/schema/carpool.schema.json",
+  "specVersion": "1",
+  "isolation": "shared",
+  "reason": "Stateless documentation lookups. The API key and URL are process-wide, so sessions only share a process when they use the same key; the optional sign-in elicitation is skipped for clients that do not advertise elicitation.",
+  "partition": {
+    "env": [
+      "CONTEXT7_API_KEY",
+      "CONTEXT7_API_URL"
+    ],
+    "cwd": false
+  },
+  "scaling": {
+    "maxConcurrentRequests": 8,
+    "maxInstances": 4
+  }
+}
