@@ -8,8 +8,9 @@ import { observeUpstreamRequest } from "./telemetry-runtime.js";
 import {
   INVALID_OAUTH_TOKEN_ERROR_CODE,
   isOpaqueOAuthToken,
-  rememberInvalidOpaqueOAuthToken,
+  rememberInvalidOAuthToken,
 } from "./oauth-token-validation.js";
+import { isClerkOAuthJwt } from "./jwt.js";
 
 /**
  * Ceiling on a single Context7 API call. Without a signal a stalled backend
@@ -46,10 +47,10 @@ async function parseErrorResponse(response: Response, context: ClientContext): P
   if (
     status === 401 &&
     context.transport === "http" &&
-    isOpaqueOAuthToken(apiKey) &&
+    (isOpaqueOAuthToken(apiKey) || isClerkOAuthJwt(apiKey)) &&
     (json?.error === INVALID_OAUTH_TOKEN_ERROR_CODE || json?.error === undefined)
   ) {
-    rememberInvalidOpaqueOAuthToken(apiKey);
+    rememberInvalidOAuthToken(apiKey);
     return EXPIRED_SIGN_IN_MESSAGE;
   }
   if (json?.message) {

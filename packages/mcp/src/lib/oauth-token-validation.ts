@@ -9,6 +9,10 @@ import { observeUpstreamRequest } from "./telemetry-runtime.js";
  * leaves a signed-in client stuck with text errors. The hosted server therefore
  * asks the Context7 API whether the token is still accepted before the request
  * reaches the MCP transport, and answers 401 when it is not.
+ *
+ * The verdict cache also records Clerk OAuth JWTs the Context7 API rejected on
+ * a data request (for example after the member was removed). Those tokens
+ * verify locally, so the cache is the only way the next request gets a 401.
  */
 
 export type OpaqueOAuthTokenVerdict = "valid" | "invalid" | "unavailable";
@@ -21,7 +25,10 @@ export const INVALID_OAUTH_TOKEN_ERROR_CODE = "invalid_oauth_token";
 const AUTH_CHECK_PATH = "/v2/auth/check";
 const AUTH_CHECK_TIMEOUT_MS = 5_000;
 const VALID_TTL_MS = 60_000;
-const INVALID_TTL_MS = 30_000;
+// A rejected token never becomes valid again (Clerk mints a new one on
+// refresh), so a long negative TTL only cuts repeated checks from clients
+// that keep retrying with the same token.
+export const INVALID_TTL_MS = 10 * 60_000;
 // A short negative cache keeps an outage from adding the check's latency to
 // every request while still retrying soon after the API recovers.
 const UNAVAILABLE_TTL_MS = 10_000;
@@ -158,12 +165,18 @@ export async function validateOpaqueOAuthToken(
 }
 
 /**
- * The Context7 API rejected the token on a data request. Remember that so the
- * next MCP request gets the 401 immediately instead of waiting for the cached
- * positive verdict to expire.
+ * The Context7 API rejected the token (opaque `oat_` or Clerk OAuth JWT) on a
+ * data request. Remember that so the next MCP request gets the 401 immediately
+ * instead of waiting for the cached positive verdict to expire, or, for a JWT
+ * that still verifies locally, at all.
  */
-export function rememberInvalidOpaqueOAuthToken(token: string, now = Date.now()): void {
+export function rememberInvalidOAuthToken(token: string, now = Date.now()): void {
   remember(cacheKey(token), "invalid", now);
+}
+
+/** Whether a data request rejected this token within the last `INVALID_TTL_MS`. */
+export function isOAuthTokenRememberedInvalid(token: string, now = Date.now()): boolean {
+  return recall(cacheKey(token), now) === "invalid";
 }
 
 /** Test hook: drop every cached verdict and in-flight check. */

@@ -52,6 +52,7 @@ import {
   setBearerChallenge,
 } from "./lib/mcp-http-auth.js";
 import { mcpRouteFromUrl } from "./lib/mcp-route.js";
+import { parseOAuthAudienceEnforcement } from "./lib/oauth-audience.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -452,6 +453,8 @@ async function main() {
       onerror: (error) => console.error("MCP node adapter error:", error),
     });
     const authMode = parseMcpAuthMode();
+    // Read again per token; parsed here so a typo fails startup, not requests.
+    parseOAuthAudienceEnforcement();
 
     const handleMcpRequest = async (req: express.Request, res: express.Response) => {
       try {

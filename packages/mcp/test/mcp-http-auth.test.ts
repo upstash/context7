@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("../src/lib/jwt.js", () => ({
   isJWT: (token: string) => token.split(".").length === 3,
+  isClerkOAuthJwt: (token: string | undefined) => token?.startsWith("clerk.") ?? false,
   validateJWT: vi.fn(),
 }));
 
@@ -11,7 +12,11 @@ vi.mock("../src/lib/oauth-token-validation.js", async (importOriginal) => ({
 }));
 
 import { validateJWT } from "../src/lib/jwt.js";
-import { validateOpaqueOAuthToken } from "../src/lib/oauth-token-validation.js";
+import {
+  rememberInvalidOAuthToken,
+  resetOpaqueOAuthTokenValidation,
+  validateOpaqueOAuthToken,
+} from "../src/lib/oauth-token-validation.js";
 import {
   classifyAuthMethod,
   effectiveMcpAuthMode,
@@ -20,8 +25,10 @@ import {
 } from "../src/lib/mcp-http-auth.js";
 
 afterEach(() => {
+  resetOpaqueOAuthTokenValidation();
   vi.unstubAllEnvs();
   vi.clearAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe("MCP HTTP authentication policy", () => {
@@ -29,6 +36,7 @@ describe("MCP HTTP authentication policy", () => {
     expect(classifyAuthMethod(undefined)).toBe("none");
     expect(classifyAuthMethod("oat_example")).toBe("oauth");
     expect(classifyAuthMethod("header.payload.signature")).toBe("jwt");
+    expect(classifyAuthMethod("clerk.payload.signature")).toBe("oauth");
     expect(classifyAuthMethod("ctx7sk_example")).toBe("api_key");
   });
 
@@ -143,6 +151,60 @@ describe("MCP HTTP authentication policy", () => {
       allowed: false,
       error: "Token expired",
       event: "credential_rejected",
+      outcome: "invalid",
     });
+  });
+
+  test("reports an expired Clerk OAuth JWT like an expired opaque token", async () => {
+    vi.mocked(validateJWT).mockResolvedValueOnce({ valid: false, error: "Token expired" });
+
+    await expect(evaluateMcpAuthentication("clerk.payload.signature", "observe")).resolves.toEqual({
+      allowed: false,
+      method: "oauth",
+      error: "Token expired",
+      event: "credential_rejected",
+      outcome: "expired",
+    });
+    expect(validateOpaqueOAuthToken).not.toHaveBeenCalled();
+  });
+
+  test("logs a validation warning without the token and still admits the request", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(validateJWT).mockResolvedValueOnce({
+      valid: true,
+      warning: "audienceMismatch clientId=client_1 aud=https://other.example enforcement=observe",
+    });
+
+    await expect(evaluateMcpAuthentication("clerk.payload.signature", "required")).resolves.toEqual(
+      {
+        allowed: true,
+        method: "oauth",
+        event: "credential_validated",
+        outcome: "accepted",
+      }
+    );
+    const logged = consoleError.mock.calls.flat().map(String).join("\n");
+    expect(logged).toContain("audienceMismatch clientId=client_1 aud=https://other.example");
+    expect(logged).not.toContain("clerk.payload.signature");
+  });
+
+  test("challenges a Clerk OAuth JWT the Context7 API rejected earlier", async () => {
+    rememberInvalidOAuthToken("clerk.payload.signature");
+
+    await expect(evaluateMcpAuthentication("clerk.payload.signature", "observe")).resolves.toEqual({
+      allowed: false,
+      method: "oauth",
+      error: "The access token expired or is invalid",
+      event: "credential_rejected",
+      outcome: "expired",
+    });
+    expect(validateJWT).not.toHaveBeenCalled();
+
+    // Other JWTs are never looked up in the OAuth verdict cache.
+    rememberInvalidOAuthToken("header.payload.signature");
+    vi.mocked(validateJWT).mockResolvedValueOnce({ valid: true });
+    await expect(
+      evaluateMcpAuthentication("header.payload.signature", "observe")
+    ).resolves.toMatchObject({ allowed: true, method: "jwt" });
   });
 });

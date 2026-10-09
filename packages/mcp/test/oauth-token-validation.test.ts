@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
+  INVALID_TTL_MS,
+  isOAuthTokenRememberedInvalid,
   isOpaqueOAuthToken,
   isOpaqueOAuthTokenValidationEnabled,
-  rememberInvalidOpaqueOAuthToken,
+  rememberInvalidOAuthToken,
   resetOpaqueOAuthTokenValidation,
   validateOpaqueOAuthToken,
 } from "../src/lib/oauth-token-validation.js";
@@ -95,7 +97,8 @@ describe("opaque OAuth token validation", () => {
     expect(logged).not.toContain("oat_");
   });
 
-  test("caches a valid verdict for a minute and an invalid one for 30 seconds", async () => {
+  test("caches a valid verdict for a minute and an invalid one for ten minutes", async () => {
+    expect(INVALID_TTL_MS).toBe(10 * 60_000);
     const start = 1_000_000;
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
     await expect(validateOpaqueOAuthToken("oat_valid", start)).resolves.toBe("valid");
@@ -104,12 +107,16 @@ describe("opaque OAuth token validation", () => {
 
     fetchMock.mockResolvedValueOnce(rejected());
     await expect(validateOpaqueOAuthToken("oat_expired", start)).resolves.toBe("invalid");
-    await expect(validateOpaqueOAuthToken("oat_expired", start + 29_000)).resolves.toBe("invalid");
+    await expect(validateOpaqueOAuthToken("oat_expired", start + 9 * 60_000)).resolves.toBe(
+      "invalid"
+    );
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
     // Each verdict is re-checked once its own TTL lapses.
     fetchMock.mockResolvedValueOnce(rejected());
-    await expect(validateOpaqueOAuthToken("oat_expired", start + 31_000)).resolves.toBe("invalid");
+    await expect(validateOpaqueOAuthToken("oat_expired", start + 11 * 60_000)).resolves.toBe(
+      "invalid"
+    );
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
     await expect(validateOpaqueOAuthToken("oat_valid", start + 61_000)).resolves.toBe("valid");
     expect(fetchMock).toHaveBeenCalledTimes(4);
@@ -146,10 +153,22 @@ describe("opaque OAuth token validation", () => {
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
     await expect(validateOpaqueOAuthToken("oat_revoked", start)).resolves.toBe("valid");
 
-    rememberInvalidOpaqueOAuthToken("oat_revoked", start + 1_000);
+    rememberInvalidOAuthToken("oat_revoked", start + 1_000);
 
     await expect(validateOpaqueOAuthToken("oat_revoked", start + 2_000)).resolves.toBe("invalid");
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  test("remembers a rejected JWT by hash for the invalid TTL", () => {
+    const start = 5_000_000;
+    const jwt = "eyJhbGciOiJSUzI1NiIsInR5cCI6ImF0K2p3dCJ9.eyJpc3MiOiJ4In0.signature";
+    expect(isOAuthTokenRememberedInvalid(jwt, start)).toBe(false);
+
+    rememberInvalidOAuthToken(jwt, start);
+
+    expect(isOAuthTokenRememberedInvalid(jwt, start + INVALID_TTL_MS - 1)).toBe(true);
+    expect(isOAuthTokenRememberedInvalid(jwt, start + INVALID_TTL_MS)).toBe(false);
+    expect(isOAuthTokenRememberedInvalid("other.jwt.signature", start)).toBe(false);
   });
 
   test("bounds the cache size", async () => {
