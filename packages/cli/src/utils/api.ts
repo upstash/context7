@@ -18,6 +18,22 @@ export const DEFAULT_CONTEXT7_BASE_URL = "https://context7.com";
 
 let baseUrl = DEFAULT_CONTEXT7_BASE_URL;
 
+// Library metadata and docs are crowdsourced. Strip terminal control characters
+// (C0 except \t\n, DEL, C1) so a malicious entry cannot inject escape sequences.
+
+const CONTROL_CHARS = /[\x00-\x08\x0B-\x1F\x7F-\x9F]/g;
+
+export function stripControlChars<T>(value: T): T {
+  if (typeof value === "string") return value.replace(CONTROL_CHARS, "") as T;
+  if (Array.isArray(value)) return value.map(stripControlChars) as T;
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([k, v]) => [k, stripControlChars(v)])
+    ) as T;
+  }
+  return value;
+}
+
 export function getBaseUrl(): string {
   return baseUrl;
 }
@@ -115,7 +131,7 @@ export async function searchLibraries(
     headers["Authorization"] = `Bearer ${accessToken}`;
   }
   const response = await fetch(`${baseUrl}/api/v2/libs/search?${params}`, { headers });
-  return (await response.json()) as LibrarySearchResponse;
+  return stripControlChars((await response.json()) as LibrarySearchResponse);
 }
 
 export async function getSkillQuota(accessToken: string): Promise<SkillQuotaResponse> {
@@ -308,7 +324,7 @@ export async function resolveLibrary(
     };
   }
 
-  return (await response.json()) as LibrarySearchResponse;
+  return stripControlChars((await response.json()) as LibrarySearchResponse);
 }
 
 export interface GetContextOptions {
@@ -356,8 +372,8 @@ export async function getLibraryContext(
   }
 
   if (options?.type === "txt") {
-    return await response.text();
+    return stripControlChars(await response.text());
   }
 
-  return (await response.json()) as ContextResponse;
+  return stripControlChars((await response.json()) as ContextResponse);
 }
