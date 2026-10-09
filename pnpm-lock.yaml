@@ -124,6 +124,12 @@ importers:
       '@typescript-eslint/parser':
         specifier: 'catalog:'
         version: 8.71.0(eslint@10.11.0(jiti@2.7.0))(typescript@6.0.3)
+      ajv:
+        specifier: ^8.17.1
+        version: 8.17.1
+      ajv-formats:
+        specifier: ^3.0.1
+        version: 3.0.1(ajv@8.17.1)
       eslint:
         specifier: 'catalog:'
         version: 10.11.0(jiti@2.7.0)
@@ -5812,7 +5818,6 @@ snapshots:
   ajv-formats@3.0.1(ajv@8.17.1):
     optionalDependencies:
       ajv: 8.17.1
-    optional: true
 
   ajv@6.15.0:
     dependencies:
@@ -5827,7 +5832,6 @@ snapshots:
       fast-uri: 3.1.0
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
-    optional: true
 
   ansi-regex@6.2.2: {}
 
@@ -6364,8 +6368,7 @@ snapshots:
     dependencies:
       fast-string-truncated-width: 3.0.3
 
-  fast-uri@3.1.0:
-    optional: true
+  fast-uri@3.1.0: {}
 
   fast-wrap-ansi@0.2.2:
     dependencies:
@@ -6669,8 +6672,7 @@ snapshots:
 
   json-schema-traverse@0.4.1: {}
 
-  json-schema-traverse@1.0.0:
-    optional: true
+  json-schema-traverse@1.0.0: {}
 
   json-schema-typed@8.0.2:
     optional: true
@@ -7166,8 +7168,7 @@ snapshots:
       - '@node-rs/xxhash'
       - '@opentelemetry/api'
 
-  require-from-string@2.0.2:
-    optional: true
+  require-from-string@2.0.2: {}
 
   require-in-the-middle@8.0.1:
     dependencies:

@@ -1,0 +1,112 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cursor.com/schemas/cursor-plugin/marketplace.json",
+  "title": "Cursor Plugin Marketplace",
+  "description": "Schema for .cursor-plugin/marketplace.json — defines a marketplace that indexes one or more Cursor plugins.",
+  "type": "object",
+  "required": ["name", "plugins"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique identifier for the marketplace."
+    },
+    "owner": {
+      "$ref": "#/$defs/owner",
+      "description": "The marketplace owner or organisation."
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Short description of the marketplace."
+        }
+      },
+      "description": "Arbitrary metadata about the marketplace."
+    },
+    "plugins": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/pluginEntry" },
+      "description": "List of plugins available in the marketplace."
+    }
+  },
+  "$defs": {
+    "owner": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Owner or organisation name."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Contact email address."
+        }
+      }
+    },
+    "pluginEntry": {
+      "type": "object",
+      "required": ["name", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$",
+          "description": "Plugin identifier matching the plugin's name in its plugin.json."
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Path to the plugin directory (relative to the marketplace root) or a remote URL."
+        },
+        "description": {
+          "type": "string",
+          "description": "Short description of the plugin."
+        },
+        "minClientVersions": {
+          "$ref": "#/$defs/minClientVersions",
+          "description": "Minimum client versions required to install the plugin, keyed by client identifier."
+        }
+      }
+    },
+    "minClientVersions": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "cursor": {
+          "$ref": "#/$defs/clientVersionRequirement",
+          "description": "Minimum Cursor version required to install the plugin (e.g. \"3.13.0\"), or \"never\" to hide it from Cursor entirely."
+        },
+        "grokbot": {
+          "$ref": "#/$defs/clientVersionRequirement",
+          "description": "Minimum Grok Bot version required to install the plugin (e.g. \"0.49.0\"), or \"never\" to hide it from Grok Bot entirely."
+        },
+        "sand": {
+          "$ref": "#/$defs/clientVersionRequirement",
+          "description": "Deprecated client id for Grok Bot. Same meaning as grokbot."
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/clientVersionRequirement",
+        "description": "Minimum version required for another client identifier, or \"never\" to hide the plugin from that client."
+      }
+    },
+    "clientVersionRequirement": {
+      "description": "A minimum semantic version, or the literal \"never\" when that client must not list or install the plugin.",
+      "oneOf": [{ "$ref": "#/$defs/semver" }, { "const": "never" }]
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?$",
+      "description": "Strict semantic version \"X.Y.Z\" with an optional prerelease suffix."
+    }
+  }
+}

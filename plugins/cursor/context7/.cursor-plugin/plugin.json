@@ -1,0 +1,21 @@
+{
+  "name": "context7",
+  "displayName": "Context7",
+  "version": "1.1.0",
+  "description": "Upstash Context7 MCP server for up-to-date documentation lookup. Pull version-specific documentation and code examples directly from source repositories into your LLM context.",
+  "author": {
+    "name": "Upstash",
+    "email": "context7@upstash.com"
+  },
+  "homepage": "https://context7.com",
+  "repository": "https://github.com/upstash/context7",
+  "license": "MIT",
+  "logo": "assets/logo.svg",
+  "keywords": ["documentation", "mcp", "context7", "libraries", "frameworks"],
+  "category": "developer-tools",
+  "tags": ["documentation", "mcp", "context7"],
+  "skills": "./skills/",
+  "rules": "./rules/",
+  "agents": "./agents/",
+  "mcpServers": "./mcp.json"
+}

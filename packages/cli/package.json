@@ -37,6 +37,8 @@
     "@types/node": "catalog:",
     "@typescript-eslint/eslint-plugin": "catalog:",
     "@typescript-eslint/parser": "catalog:",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "eslint": "catalog:",
     "eslint-plugin-prettier": "catalog:",
     "prettier": "catalog:",
