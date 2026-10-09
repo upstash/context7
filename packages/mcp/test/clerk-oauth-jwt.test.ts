@@ -34,6 +34,7 @@ import { isClerkOAuthJwt, validateJWT } from "../src/lib/jwt.js";
 import {
   classifyAuthMethod,
   evaluateMcpAuthentication,
+  resetJwtWarningLog,
   setBearerChallenge,
 } from "../src/lib/mcp-http-auth.js";
 import {
@@ -110,6 +111,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   resetOpaqueOAuthTokenValidation();
+  resetJwtWarningLog();
   fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
   vi.spyOn(console, "error").mockImplementation(() => {});
@@ -253,6 +255,27 @@ describe("audience enforcement", () => {
     );
     expect(logged).not.toContain(token);
     expect(logged).not.toContain(token.split(".")[2]);
+  });
+
+  test("logs the same mismatched token once, and each other token once", async () => {
+    const missing = await sign({ aud: null });
+    const other = await sign({ aud: null, claims: { client_id: CLIENT_ID, jti: "jti_other" } });
+
+    for (let i = 0; i < 3; i += 1) {
+      await expect(evaluateMcpAuthentication(missing, "required")).resolves.toMatchObject({
+        allowed: true,
+        outcome: "accepted",
+      });
+    }
+    await expect(evaluateMcpAuthentication(other, "required")).resolves.toMatchObject({
+      allowed: true,
+    });
+
+    const lines = vi.mocked(console.error).mock.calls.map((call) => String(call[0]));
+    expect(lines).toEqual([
+      `[Context7] audienceMismatch clientId=${CLIENT_ID} aud=missing enforcement=observe suppressedSincePrevious=0`,
+      `[Context7] audienceMismatch clientId=${CLIENT_ID} aud=missing enforcement=observe suppressedSincePrevious=0`,
+    ]);
   });
 
   test("observe logs a missing audience as such", async () => {

@@ -17,6 +17,7 @@ import {
   resetOpaqueOAuthTokenValidation,
   validateOpaqueOAuthToken,
 } from "../src/lib/oauth-token-validation.js";
+import { resetJwtWarningLog } from "../src/lib/mcp-http-auth.js";
 import {
   classifyAuthMethod,
   effectiveMcpAuthMode,
@@ -26,6 +27,7 @@ import {
 
 afterEach(() => {
   resetOpaqueOAuthTokenValidation();
+  resetJwtWarningLog();
   vi.unstubAllEnvs();
   vi.clearAllMocks();
   vi.restoreAllMocks();
@@ -186,6 +188,37 @@ describe("MCP HTTP authentication policy", () => {
     const logged = consoleError.mock.calls.flat().map(String).join("\n");
     expect(logged).toContain("audienceMismatch clientId=client_1 aud=https://other.example");
     expect(logged).not.toContain("clerk.payload.signature");
+  });
+
+  test("logs a repeated warning once per token and keeps rejecting in required mode", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warning = (aud: string) => ({
+      valid: false,
+      error: "Token audience not accepted",
+      warning: `audienceMismatch clientId=client_1 aud=${aud} enforcement=required`,
+    });
+    vi.mocked(validateJWT)
+      .mockResolvedValueOnce(warning("missing"))
+      .mockResolvedValueOnce(warning("missing"))
+      .mockResolvedValueOnce(warning("missing"))
+      .mockResolvedValueOnce(warning("https://other.example"));
+
+    for (let i = 0; i < 3; i += 1) {
+      await expect(
+        evaluateMcpAuthentication("clerk.first.signature", "observe")
+      ).resolves.toMatchObject({ allowed: false, error: "Token audience not accepted" });
+    }
+    await expect(
+      evaluateMcpAuthentication("clerk.second.signature", "observe")
+    ).resolves.toMatchObject({ allowed: false });
+
+    expect(consoleError).toHaveBeenCalledTimes(2);
+    expect(consoleError.mock.calls[0][0]).toBe(
+      "[Context7] audienceMismatch clientId=client_1 aud=missing enforcement=required suppressedSincePrevious=0"
+    );
+    expect(consoleError.mock.calls[1][0]).toBe(
+      "[Context7] audienceMismatch clientId=client_1 aud=https://other.example enforcement=required suppressedSincePrevious=0"
+    );
   });
 
   test("challenges a Clerk OAuth JWT the Context7 API rejected earlier", async () => {

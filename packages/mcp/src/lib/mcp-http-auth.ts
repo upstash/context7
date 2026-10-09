@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { EMA_ISSUER, OAUTH_AUTH_SERVER_URL, RESOURCE_URL } from "./constants.js";
 import { isClerkOAuthJwt, isJWT, validateJWT } from "./jwt.js";
+import { createPerTokenLogWindow } from "./log-throttle.js";
 import {
   EXPIRED_OAUTH_TOKEN_ERROR,
   isOAuthTokenRememberedInvalid,
@@ -15,6 +16,18 @@ export type McpEndpoint = "/mcp" | "/mcp/oauth";
 
 export type McpAuthDecision = AuthenticationObservation &
   ({ allowed: true } | { allowed: false; error: string });
+
+// A JWT from a grant authorized before Clerk's "Include Audience" setting was
+// on has no `aud` on every refresh, so its warning would repeat on every MCP
+// request (millions of lines a day). One line per token per window is enough
+// to collect the (clientId, aud) pairs before enforcement.
+const JWT_WARNING_WINDOW_MS = 10 * 60_000;
+const jwtWarningLog = createPerTokenLogWindow(JWT_WARNING_WINDOW_MS);
+
+/** Test hook: forget which tokens have had their warning logged. */
+export function resetJwtWarningLog(): void {
+  jwtWarningLog.reset();
+}
 
 /**
  * A Clerk OAuth JWT counts as `oauth` like the opaque `oat_` token it replaces,
@@ -116,8 +129,12 @@ export async function evaluateMcpAuthentication(
 
   const validation = await validateJWT(token);
   if (validation.warning) {
-    // Names the OAuth client and the audience, never the token.
-    console.error(`[Context7] ${validation.warning}`);
+    // Names the OAuth client and the audience, never the token. The verdict
+    // below is still applied on every request; only the line is deduplicated.
+    const suppressed = jwtWarningLog.admit(token);
+    if (suppressed !== undefined) {
+      console.error(`[Context7] ${validation.warning} suppressedSincePrevious=${suppressed}`);
+    }
   }
   if (!validation.valid) {
     return {
