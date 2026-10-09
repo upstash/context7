@@ -1,12 +1,22 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import * as jose from "jose";
 
+const ENTRA_KEYS_URL = "https://login.microsoftonline.com/common/discovery/v2.0/keys";
+// Stands in for Microsoft's common key set; filled with a local key pair per test.
+const entraKeys = vi.hoisted(() => ({ set: { keys: [] as (jose.JWK & { issuer?: string })[] } }));
+
 vi.mock("jose", async () => {
   const actual = await vi.importActual<typeof jose>("jose");
   return {
     ...actual,
-    createRemoteJWKSet: vi.fn(
-      () => "fake-jwks" as unknown as ReturnType<typeof jose.createRemoteJWKSet>
+    createRemoteJWKSet: vi.fn((url: URL) =>
+      url.href === ENTRA_KEYS_URL
+        ? Object.assign(
+            (header: jose.JWSHeaderParameters, token: jose.FlattenedJWSInput) =>
+              actual.createLocalJWKSet(entraKeys.set)(header, token),
+            { jwks: () => entraKeys.set }
+          )
+        : ("fake-jwks" as unknown as ReturnType<typeof jose.createRemoteJWKSet>)
     ),
     jwtVerify: vi.fn(),
   };
@@ -78,53 +88,107 @@ describe("isJWT", () => {
 });
 
 describe("validateJWT - Entra path", () => {
-  test("validates token after fetching tenant config", async () => {
-    const fetchMock = vi.mocked(fetch);
-    fetchMock.mockResolvedValueOnce(
-      makeFetchResponse({
-        jsonData: { teamspaceId: "team-1", tenantId: TENANT_ID, requiredScope: "mcp.access" },
-      })
+  const KID = "entra-test-key";
+  let privateKey: CryptoKey;
+
+  beforeEach(async () => {
+    const actual = await vi.importActual<typeof jose>("jose");
+    vi.mocked(jose.jwtVerify).mockImplementation(actual.jwtVerify);
+    const pair = await jose.generateKeyPair("RS256");
+    privateKey = pair.privateKey;
+    const jwk = await jose.exportJWK(pair.publicKey);
+    entraKeys.set = {
+      keys: [{ ...jwk, kid: KID, issuer: "https://login.microsoftonline.com/{tenantid}/v2.0" }],
+    };
+  });
+
+  function signEntraToken(aud: string, claims: jose.JWTPayload = {}, key = privateKey) {
+    return new jose.SignJWT({ tid: TENANT_ID, ...claims })
+      .setProtectedHeader({ alg: "RS256", kid: KID })
+      .setIssuer(ENTRA_ISSUER)
+      .setAudience(aud)
+      .setExpirationTime("5m")
+      .sign(key);
+  }
+
+  function mockConfig(config: { tenantId: string; requiredScope: string | null }) {
+    vi.mocked(fetch).mockResolvedValue(
+      makeFetchResponse({ jsonData: { teamspaceId: "team-1", ...config } })
     );
-    vi.mocked(jose.jwtVerify).mockResolvedValue({
-      payload: { oid: "user-oid", scp: "mcp.access" },
-      protectedHeader: { alg: "RS256" },
-    } as unknown as Awaited<ReturnType<typeof jose.jwtVerify>>);
+  }
 
+  test("rejects forged tokens before any config lookup", async () => {
+    const { privateKey: attackerKey } = await jose.generateKeyPair("RS256");
     const { validateJWT } = await loadModule();
-    const result = await validateJWT(makeEntraToken({ iss: ENTRA_ISSUER, aud: AUDIENCE }));
 
-    expect(result.valid).toBe(true);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0][0]).toContain(`/v2/entra/config/${AUDIENCE}`);
+    for (const token of [
+      makeEntraToken({ iss: ENTRA_ISSUER, aud: AUDIENCE }),
+      new jose.UnsecuredJWT({ iss: ENTRA_ISSUER, aud: AUDIENCE }).encode(),
+      await signEntraToken(AUDIENCE, {}, attackerKey),
+    ]) {
+      expect((await validateJWT(token)).valid).toBe(false);
+    }
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test("rejects a key that Microsoft scopes to another issuer", async () => {
+    entraKeys.set.keys[0].issuer =
+      "https://login.microsoftonline.com/9188040d-6c67-4c5b-b112-36a304b66dad/v2.0";
+    const { validateJWT } = await loadModule();
+
+    const result = await validateJWT(await signEntraToken(AUDIENCE));
+
+    expect(result).toEqual({ valid: false, error: "Invalid signature" });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test("accepts a signed token after fetching the audience config", async () => {
+    mockConfig({ tenantId: TENANT_ID, requiredScope: "mcp.access" });
+    const { validateJWT } = await loadModule();
+
+    const result = await validateJWT(await signEntraToken(AUDIENCE, { scp: "mcp.access" }));
+
+    expect(result).toEqual({ valid: true });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(fetch).mock.calls[0][0]).toContain(`/v2/entra/config/${AUDIENCE}`);
+  });
+
+  test("rejects a signed token whose tid is missing or differs from the issuer tenant", async () => {
+    mockConfig({ tenantId: TENANT_ID, requiredScope: null });
+    const { validateJWT } = await loadModule();
+
+    for (const tid of [undefined, "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"]) {
+      const result = await validateJWT(await signEntraToken(AUDIENCE, { tid }));
+      expect(result).toEqual({ valid: false, error: "Invalid token claims" });
+    }
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  test("rejects a token whose issuer tenant differs from the configured tenant", async () => {
+    mockConfig({ tenantId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", requiredScope: null });
+    const { validateJWT } = await loadModule();
+
+    const result = await validateJWT(await signEntraToken(AUDIENCE));
+
+    expect(result).toEqual({ valid: false, error: "Invalid token claims" });
   });
 
   test("returns 'Unknown audience' when config endpoint returns 404", async () => {
     vi.mocked(fetch).mockResolvedValue(makeFetchResponse({ ok: false, status: 404 }));
-
     const { validateJWT } = await loadModule();
-    const result = await validateJWT(makeEntraToken({ iss: ENTRA_ISSUER, aud: "unknown-aud" }));
 
-    expect(result.valid).toBe(false);
-    expect(result.error).toBe("Unknown audience");
-    expect(jose.jwtVerify).not.toHaveBeenCalled();
+    const result = await validateJWT(await signEntraToken("unknown-aud"));
+
+    expect(result).toEqual({ valid: false, error: "Unknown audience" });
   });
 
   test("returns 'Missing required scope' when scp claim lacks the configured scope", async () => {
-    vi.mocked(fetch).mockResolvedValue(
-      makeFetchResponse({
-        jsonData: { teamspaceId: "team-1", tenantId: TENANT_ID, requiredScope: "mcp.access" },
-      })
-    );
-    vi.mocked(jose.jwtVerify).mockResolvedValue({
-      payload: { scp: "other.scope" },
-      protectedHeader: { alg: "RS256" },
-    } as unknown as Awaited<ReturnType<typeof jose.jwtVerify>>);
-
+    mockConfig({ tenantId: TENANT_ID, requiredScope: "mcp.access" });
     const { validateJWT } = await loadModule();
-    const result = await validateJWT(makeEntraToken({ iss: ENTRA_ISSUER, aud: AUDIENCE }));
 
-    expect(result.valid).toBe(false);
-    expect(result.error).toBe("Missing required scope");
+    const result = await validateJWT(await signEntraToken(AUDIENCE, { scp: "other.scope" }));
+
+    expect(result).toEqual({ valid: false, error: "Missing required scope" });
   });
 
   test("returns 'Missing audience' for Entra issuer with no aud claim", async () => {
@@ -137,23 +201,26 @@ describe("validateJWT - Entra path", () => {
   });
 
   test("caches config across repeated audiences", async () => {
-    const fetchMock = vi.mocked(fetch);
-    fetchMock.mockResolvedValue(
-      makeFetchResponse({
-        jsonData: { teamspaceId: "team-1", tenantId: TENANT_ID, requiredScope: null },
-      })
-    );
-    vi.mocked(jose.jwtVerify).mockResolvedValue({
-      payload: { oid: "u" },
-      protectedHeader: { alg: "RS256" },
-    } as unknown as Awaited<ReturnType<typeof jose.jwtVerify>>);
-
+    mockConfig({ tenantId: TENANT_ID, requiredScope: null });
     const { validateJWT } = await loadModule();
-    const token = makeEntraToken({ iss: ENTRA_ISSUER, aud: AUDIENCE });
+    const token = await signEntraToken(AUDIENCE);
     await validateJWT(token);
     await validateJWT(token);
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test("caps the config cache and evicts the oldest audience", async () => {
+    vi.mocked(fetch).mockResolvedValue(makeFetchResponse({ ok: false, status: 404 }));
+    const { validateJWT } = await loadModule();
+
+    for (let i = 0; i <= 1000; i++) await validateJWT(await signEntraToken(`aud-${i}`));
+    expect(fetch).toHaveBeenCalledTimes(1001);
+
+    await validateJWT(await signEntraToken("aud-1000"));
+    expect(fetch).toHaveBeenCalledTimes(1001);
+    await validateJWT(await signEntraToken("aud-0"));
+    expect(fetch).toHaveBeenCalledTimes(1002);
   });
 
   test("does not cache transient 500 errors — next request retries", async () => {
@@ -164,13 +231,8 @@ describe("validateJWT - Entra path", () => {
         jsonData: { teamspaceId: "team-1", tenantId: TENANT_ID, requiredScope: null },
       })
     );
-    vi.mocked(jose.jwtVerify).mockResolvedValue({
-      payload: { oid: "u" },
-      protectedHeader: { alg: "RS256" },
-    } as unknown as Awaited<ReturnType<typeof jose.jwtVerify>>);
-
     const { validateJWT } = await loadModule();
-    const token = makeEntraToken({ iss: ENTRA_ISSUER, aud: AUDIENCE });
+    const token = await signEntraToken(AUDIENCE);
 
     const first = await validateJWT(token);
     expect(first.valid).toBe(false);
