@@ -55,6 +55,8 @@ Opaque OAuth access tokens (`oat_…`) are checked against the Context7 API befo
 
 OAuth JWT access tokens from the authorization server (`OAUTH_AUTH_SERVER_URL`) are verified locally: signature against its JWKS, issuer, a `typ` of `at+jwt`, and expiry with a minute of clock tolerance. Clerk ID tokens and session JWTs share that issuer but are not access tokens, so they are always rejected. The token's `aud` must name this server (`RESOURCE_URL` origin, `/mcp`, or `/mcp/oauth`; override with a comma-separated `MCP_OAUTH_ALLOWED_AUDIENCES`). `MCP_OAUTH_AUDIENCE_ENFORCEMENT=observe` (default) admits a token with a missing or foreign audience and logs the OAuth client ID and audience, once per token every ten minutes; `required` answers HTTP 401.
 
+The HTTP server is stateless — it creates a fresh server instance per request and keeps no session state. Session operations therefore have nothing to attach to: a `GET` or `DELETE` on `/mcp` is answered with `405 Method Not Allowed` rather than opening a standalone Server-Sent Events stream. Server-Sent Events are used only to stream responses to `POST` requests, and keepalive heartbeats are disabled.
+
 Stdio transport with API key:
 
 ```bash
