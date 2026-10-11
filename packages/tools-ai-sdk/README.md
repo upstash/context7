@@ -68,6 +68,11 @@ console.log(text);
 
 ## Configuration
 
+### Adding web search
+
+For a runnable example that combines `Context7Agent` with free web search and
+page fetching, see [Context7 with Parallel Search MCP](./examples/parallel-search).
+
 ### Environment Variables
 
 Set your API key via environment variable:
