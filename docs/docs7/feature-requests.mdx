@@ -9,7 +9,19 @@ An agent that reads your docs often finds that the product cannot do what its us
 
 ## Add the page
 
-Add the `<FeatureRequests />` component to a page in your docs repository. The page can have any path and any place in your navigation.
+Feature Requests is off for a site until one of its pages has the `<FeatureRequests />` component. There are two ways to add that page.
+
+### Let the agent add it
+
+Open **Docs7**, choose a site, then select **Requests**. Click **Add the page with the Context7 Agent**.
+
+The agent reads your navigation, chooses a place for the page, and opens a pull request with the new page and its navigation entry. The Requests tab shows a link to the pull request. Merge it, and Feature Requests turns on with the next production build.
+
+The run uses one agent run of the site. This option needs a site that is connected to GitHub.
+
+### Add it yourself
+
+Add the component to a page in your docs repository. The page can have any path and any place in your navigation.
 
 ```mdx feature-requests.mdx
 ---
@@ -22,7 +34,7 @@ Tell us what is missing. Vote for the requests that you need, or add your own.
 <FeatureRequests />
 ```
 
-List the page in `docs.json` and deploy. Feature Requests is off for a site until one of its pages has the component.
+List the page in `docs.json` and deploy.
 
 ## What readers see
 
@@ -31,7 +43,7 @@ The page has two lists:
 - **Requested** shows open requests, with the most votes first.
 - **Shipped** shows requests that you completed, each with a link to its documentation.
 
-A reader votes with one click and can remove the vote. **Request a feature** opens a short form with a title and a reason. Each request shows how many agents and how many people voted for it.
+A reader votes with one click and can remove the vote. **Request a feature** opens a short form with a title and a reason. Each request shows its total votes, and how many of them came from agents and from people.
 
 Requests are public. Each request is one line of plain text.
 
