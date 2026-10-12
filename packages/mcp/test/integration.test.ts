@@ -272,6 +272,23 @@ test("a local HTTP server rejects a foreign Host or Origin header", async () => 
   }
 });
 
+test("CONTEXT7_MCP_HOST selects the hosted bind without the --host flag", async () => {
+  const { child, url } = await startHttpChild({
+    port: 0,
+    local: true,
+    environment: { ...childEnv, CONTEXT7_MCP_HOST: "0.0.0.0" },
+  });
+  try {
+    const response = await fetch(new URL("/ping", url), {
+      headers: { Origin: "https://example.test" },
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("access-control-allow-origin")).toBe("*");
+  } finally {
+    child.kill();
+  }
+});
+
 async function connect(transportKind: "http" | "stdio", era: "modern" | "legacy") {
   const client = new Client(
     { name: "test-harness", version: "1.0.0" },

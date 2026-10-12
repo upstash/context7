@@ -402,7 +402,7 @@ async function main() {
     // through DNS rebinding, so only loopback Host and Origin values pass. Other
     // binds (the hosted deployment) keep wildcard CORS for browser MCP clients;
     // authentication there is header-only, so no ambient credential is exposed.
-    if (["127.0.0.1", "localhost", "::1"].includes(cliOptions.host)) {
+    if (/^(localhost|::1|127(\.\d+){3})$/i.test(cliOptions.host)) {
       const validateHost = localhostHostValidation();
       const validateOrigin = localhostOriginValidation();
       app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
