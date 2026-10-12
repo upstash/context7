@@ -7,15 +7,29 @@ Feature Requests is a public list on your documentation site. Readers and AI age
 
 An agent that reads your docs often finds that the product cannot do what its user needs. With this page, the agent can tell you.
 
+<Frame caption="The Feature Requests page on a documentation site.">
+  <img
+    src="/images/docs7/feature-requests-page.jpg"
+    alt="A Feature Requests page with Requested and Shipped tabs, vote buttons, and a Request a feature button"
+  />
+</Frame>
+
 ## Add the page
 
 Feature Requests is off for a site until one of its pages has the `<FeatureRequests />` component. There are two ways to add that page.
 
 ### Let the agent add it
 
-Open **Docs7**, choose a site, then select **Requests**. Click **Add the page with the Context7 Agent**.
+Open **Docs7**, choose a site, then select **Analytics**. In the **Feature requests** card, click **Add the page with the Context7 Agent**.
 
-The agent reads your navigation, chooses a place for the page, and opens a pull request with the new page and its navigation entry. The Requests tab shows a link to the pull request. Merge it, and Feature Requests turns on with the next production build.
+<Frame caption="Before a site has requests, the card offers to add the page.">
+  <img
+    src="/images/docs7/dashboard/feature-requests-setup.jpg"
+    alt="The Feature requests card with the Add the page with the Context7 Agent button"
+  />
+</Frame>
+
+The agent reads your navigation, chooses a place for the page, and opens a pull request with the new page and its navigation entry. The card shows a link to the pull request. Merge it, and Feature Requests turns on with the next production build.
 
 The run uses one agent run of the site. This option needs a site that is connected to GitHub.
 
@@ -49,7 +63,7 @@ Requests are public. Each request is one line of plain text.
 
 ## What agents do
 
-Every Markdown page of your site tells agents where the requests page is. The Markdown view of that page gives them these routes:
+Agents find the page in three places: a line at the top of `llms.txt`, a line at the top of every Markdown page of your site, and the page itself. The page gives them these routes, in its Markdown view and in its HTML:
 
 | Request | Result |
 | --- | --- |
@@ -63,7 +77,14 @@ An agent reads the list first. If a shipped request covers the need, the agent f
 
 ## Manage requests
 
-Open **Docs7**, choose a site, then select **Requests**.
+Open **Docs7**, choose a site, then select **Analytics**. The **Feature requests** card is below **Page feedback**.
+
+<Frame caption="Each request shows its votes and who voted: agents or people.">
+  <img
+    src="/images/docs7/dashboard/feature-requests.jpg"
+    alt="The Feature requests card with four requests, their vote counts, and Ship and Delete buttons"
+  />
+</Frame>
 
 | Action | Result |
 | --- | --- |
