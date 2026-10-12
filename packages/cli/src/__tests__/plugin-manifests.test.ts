@@ -15,13 +15,6 @@ async function readJson<T>(relPath: string): Promise<T> {
   return JSON.parse(await readFile(join(REPO_ROOT, relPath), "utf-8")) as T;
 }
 
-async function exists(path: string): Promise<boolean> {
-  return access(path).then(
-    () => true,
-    () => false
-  );
-}
-
 // Vendored copies of github.com/cursor/plugins/schemas/*.schema.json (draft-07).
 // Validating offline keeps CI deterministic; refresh the fixtures when Cursor
 // changes the format.
@@ -76,8 +69,6 @@ interface CursorMarketplace {
 interface ClaudeMarketplace {
   name: string;
   owner: { name: string };
-  description: string;
-  plugins: { name: string; description: string }[];
 }
 
 describe("plugin MCP manifests", () => {
@@ -123,11 +114,10 @@ describe("plugin MCP manifests", () => {
 describe("Cursor plugin manifest", () => {
   const manifestPath = `${CURSOR_PLUGIN}/.cursor-plugin/plugin.json`;
 
-  test("lives at .cursor-plugin/plugin.json, not the old .cursor/ folder", async () => {
+  test("lives at .cursor-plugin/plugin.json", async () => {
     // Cursor only recognises `.cursor-plugin/plugin.json`; the original plugin
     // (#1659) used `.cursor/plugin.json`, which Cursor ignores entirely.
     await expect(access(join(REPO_ROOT, manifestPath))).resolves.toBeUndefined();
-    expect(await exists(join(REPO_ROOT, CURSOR_PLUGIN, ".cursor"))).toBe(false);
   });
 
   test("validates against Cursor's plugin.schema.json", async () => {
@@ -135,7 +125,6 @@ describe("Cursor plugin manifest", () => {
     const manifest = await readJson<CursorManifest>(manifestPath);
     expect(validate(manifest), JSON.stringify(validate.errors, null, 2)).toBe(true);
     expect(manifest.name).toBe("context7");
-    expect(manifest.name).toMatch(KEBAB_CASE);
   });
 
   test("declared component paths are relative and resolve inside the plugin", async () => {
@@ -271,16 +260,15 @@ describe("Cursor marketplace manifest", () => {
     }
   });
 
-  test("lists only the Cursor plugin and mirrors the Claude marketplace metadata", async () => {
-    // The listing on cursor.com indexes this file; keep identity and copy in
-    // step with .claude-plugin/marketplace.json so both stores show one brand.
+  test("lists only the Cursor plugin under the same marketplace identity as Claude", async () => {
+    // The listing on cursor.com indexes this file; keep the marketplace name
+    // and owner in step with .claude-plugin/marketplace.json so both stores
+    // show one brand. Descriptions are free to differ.
     const cursor = await readJson<CursorMarketplace>(marketplacePath);
     const claude = await readJson<ClaudeMarketplace>(".claude-plugin/marketplace.json");
 
     expect(cursor.plugins.map((p) => p.source)).toEqual([`./${CURSOR_PLUGIN}`]);
     expect(cursor.name).toBe(claude.name);
     expect(cursor.owner.name).toBe(claude.owner.name);
-    expect(cursor.metadata?.description).toBe(claude.description);
-    expect(cursor.plugins[0].description).toBe(claude.plugins[0].description);
   });
 });

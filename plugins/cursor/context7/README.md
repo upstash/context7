@@ -17,7 +17,9 @@ This plugin provides:
 
 1. Open **Customize** in the Cursor sidebar and search for **Context7**, or open the listing at [cursor.com/marketplace](https://cursor.com/marketplace).
 2. Select **Install** and choose a user or project scope.
-3. When the `context7` MCP server shows **Needs authentication**, click it and complete the sign-in in your browser. You only need to do this once per Cursor account.
+3. When the `context7` MCP server shows **Needs authentication**, click it and complete the sign-in in your browser.
+
+Or run `/add-plugin context7` in chat.
 
 After installation, **Customize** lists the `context7` MCP server, the `use-context7` rule, the `context7-mcp` skill, and the `docs-researcher` agent.
 
@@ -26,15 +28,15 @@ After installation, **Customize** lists the `context7` MCP server, the `use-cont
 Cursor loads plugins from `~/.cursor/plugins/local`. Copy this directory there (symlinks that point outside the folder are ignored):
 
 ```bash
-mkdir -p ~/.cursor/plugins/local
-cp -R plugins/cursor/context7 ~/.cursor/plugins/local/context7
+mkdir -p ~/.cursor/plugins/local/context7
+cp -R plugins/cursor/context7/. ~/.cursor/plugins/local/context7
 ```
 
 Then restart Cursor or run **Developer: Reload Window** and check **Customize** for the plugin's components.
 
 If the marketplace plugin with the same name is already installed, that install takes precedence over the local copy. Uninstall it first to test local changes.
 
-On Teams and Enterprise plans, an admin must enable **Allow Local Plugin Imports** under **Dashboard → Settings → Security & Identity → Marketplace and Plugins**.
+On Teams and Enterprise plans, admins control this with **Allow Local Plugin Imports** under **Dashboard → Settings → Security & Identity → Marketplace and Plugins** (off by default on Enterprise).
 
 ## Available Tools
 
@@ -97,4 +99,4 @@ plugins/cursor/context7/
 └── README.md
 ```
 
-The repository root carries `.cursor-plugin/marketplace.json`, which lists this plugin for the Cursor Marketplace. The manifest and marketplace file are validated against Cursor's published schemas in `packages/cli/src/__tests__/plugin-manifests.test.ts`.
+The repository root carries `.cursor-plugin/marketplace.json`, which lists this plugin for the Cursor Marketplace.

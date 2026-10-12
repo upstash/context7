@@ -13,6 +13,7 @@
   "logo": "assets/logo.svg",
   "keywords": ["documentation", "mcp", "context7", "libraries", "frameworks", "library-docs"],
   "category": "developer-tools",
+  "tags": ["documentation", "mcp"],
   "skills": "./skills/",
   "rules": "./rules/",
   "agents": "./agents/",
