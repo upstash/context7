@@ -93,6 +93,9 @@ Describe what to look up in the library's documentation in the query when possib
 The output contains two types of content: **code snippets** (titled, with language-tagged blocks) and **info snippets** (prose explanations with breadcrumb context).
 
 ```bash
+# Rank code examples in the language you write in first
+ctx7 docs /websites/twilio "How to send an SMS" --language Ruby
+
 # Output as structured JSON
 ctx7 docs /facebook/react "How to use hooks for state management" --json
 

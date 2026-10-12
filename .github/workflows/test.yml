@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - "packages/**"
+      - "plugins/**"
+      - "skills/**"
+      - "rules/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"

@@ -15,4 +15,4 @@ You don't need to use Context7 for:
 - Well-established language features (e.g., JavaScript array methods, Python builtins)
 - Conversations where the user has already provided the relevant code or docs
 
-See the `context7-docs-lookup` skill for detailed instructions on how to resolve libraries and fetch documentation.
+See the `context7-mcp` skill for detailed instructions on how to resolve libraries and fetch documentation.

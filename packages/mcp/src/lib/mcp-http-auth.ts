@@ -1,8 +1,10 @@
 import type { Request, Response } from "express";
 import { EMA_ISSUER, OAUTH_AUTH_SERVER_URL, RESOURCE_URL } from "./constants.js";
-import { isJWT, validateJWT } from "./jwt.js";
+import { isClerkOAuthJwt, isJWT, validateJWT } from "./jwt.js";
+import { createPerTokenLogWindow } from "./log-throttle.js";
 import {
   EXPIRED_OAUTH_TOKEN_ERROR,
+  isOAuthTokenRememberedInvalid,
   isOpaqueOAuthToken,
   isOpaqueOAuthTokenValidationEnabled,
   validateOpaqueOAuthToken,
@@ -15,9 +17,26 @@ export type McpEndpoint = "/mcp" | "/mcp/oauth";
 export type McpAuthDecision = AuthenticationObservation &
   ({ allowed: true } | { allowed: false; error: string });
 
+// A JWT from a grant authorized before Clerk's "Include Audience" setting was
+// on has no `aud` on every refresh, so its warning would repeat on every MCP
+// request (millions of lines a day). One line per token per window is enough
+// to collect the (clientId, aud) pairs before enforcement.
+const JWT_WARNING_WINDOW_MS = 10 * 60_000;
+const jwtWarningLog = createPerTokenLogWindow(JWT_WARNING_WINDOW_MS);
+
+/** Test hook: forget which tokens have had their warning logged. */
+export function resetJwtWarningLog(): void {
+  jwtWarningLog.reset();
+}
+
+/**
+ * A Clerk OAuth JWT counts as `oauth` like the opaque `oat_` token it replaces,
+ * so OAuth telemetry stays continuous across the switch to JWT access tokens.
+ * `jwt` is left for Entra, EMA, Vercel Marketplace and unrecognised JWTs.
+ */
 export function classifyAuthMethod(token: string | undefined): AuthenticationMethod {
   if (!token) return "none";
-  if (isOpaqueOAuthToken(token)) return "oauth";
+  if (isOpaqueOAuthToken(token) || isClerkOAuthJwt(token)) return "oauth";
   if (isJWT(token)) return "jwt";
   return "api_key";
 }
@@ -50,9 +69,11 @@ export function effectiveMcpAuthMode(
  * Decide whether the HTTP request may reach the MCP transport. JWTs are
  * verified at this boundary. Opaque OAuth tokens are checked against the
  * Context7 API (cached per token) so an expired sign-in gets the HTTP 401 that
- * makes MCP clients refresh it; the check fails open. API keys are recorded as
- * present, then authoritatively validated by the Context7 API before data is
- * returned.
+ * makes MCP clients refresh it; the check fails open. A Clerk OAuth JWT is
+ * verified locally (signature, issuer, type, audience) with no API call, and
+ * only a rejection the Context7 API returned on an earlier data request can
+ * still turn it away. API keys are recorded as present, then authoritatively
+ * validated by the Context7 API before data is returned.
  */
 export async function evaluateMcpAuthentication(
   token: string | undefined,
@@ -96,14 +117,34 @@ export async function evaluateMcpAuthentication(
     };
   }
 
+  if (isClerkOAuthJwt(token) && isOAuthTokenRememberedInvalid(token)) {
+    return {
+      allowed: false,
+      method,
+      error: EXPIRED_OAUTH_TOKEN_ERROR,
+      event: "credential_rejected",
+      outcome: "expired",
+    };
+  }
+
   const validation = await validateJWT(token);
+  if (validation.warning) {
+    // Names the OAuth client and the audience, never the token. The verdict
+    // below is still applied on every request; only the line is deduplicated.
+    const suppressed = jwtWarningLog.admit(token);
+    if (suppressed !== undefined) {
+      console.error(`[Context7] ${validation.warning} suppressedSincePrevious=${suppressed}`);
+    }
+  }
   if (!validation.valid) {
     return {
       allowed: false,
       method,
       error: validation.error || "Invalid token. Please re-authenticate.",
       event: "credential_rejected",
-      outcome: "invalid",
+      // An expired Clerk access token is the JWT form of an expired `oat_`:
+      // the client refreshes it after this 401.
+      outcome: method === "oauth" && validation.error === "Token expired" ? "expired" : "invalid",
     };
   }
 

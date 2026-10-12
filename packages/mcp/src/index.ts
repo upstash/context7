@@ -52,6 +52,7 @@ import {
   setBearerChallenge,
 } from "./lib/mcp-http-auth.js";
 import { mcpRouteFromUrl } from "./lib/mcp-route.js";
+import { parseOAuthAudienceEnforcement } from "./lib/oauth-audience.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -313,7 +314,9 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
 
 You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
-Do not call this tool more than 3 times per question.`,
+Do not call this tool more than 3 times per question.
+
+If you know the programming language the user is working in, pass it as \`language\` so the results match their setup.`,
       inputSchema: z.preprocess(
         aliasArgs({ ...GLOBAL_ALIASES, ...QUERY_DOCS_ALIASES }),
         z.object({
@@ -327,6 +330,13 @@ Do not call this tool more than 3 times per question.`,
             .describe(
               "What to look up in the library's documentation, scoped to a single concept. Be specific and include relevant details, but keep each query to one topic — if the user's question spans multiple distinct concepts, make a separate call per concept instead of combining them, unless the question is about how the concepts interact. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad (too vague): 'auth' or 'hooks'. Bad (too broad): 'routing and auth and caching in Next.js'. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
             ),
+          // No length limit here: the API trims long values instead of rejecting the call.
+          language: z
+            .string()
+            .optional()
+            .describe(
+              "Programming language the user is writing code in, such as 'Python', 'TypeScript', 'Go', or 'C#'. Ranks code examples in that language first. Leave it out when the language is unknown or does not apply."
+            ),
         })
       ),
       annotations: {
@@ -336,9 +346,12 @@ Do not call this tool more than 3 times per question.`,
         idempotentHint: true,
       },
     },
-    async ({ query, libraryId }: { query: string; libraryId: string }, toolCtx) => {
+    async (
+      { query, libraryId, language }: { query: string; libraryId: string; language?: string },
+      toolCtx
+    ) => {
       const ctx = getClientContext(toolCtx);
-      const response = await fetchLibraryContext({ query, libraryId }, ctx);
+      const response = await fetchLibraryContext({ query, libraryId, language }, ctx);
       maybeElicitAuthSignIn(server, ctx);
       recordToolCallTelemetry(ctx, response.outcome);
       return {
@@ -348,6 +361,11 @@ Do not call this tool more than 3 times per question.`,
             text: response.data,
           },
         ],
+        // Flag failures at the protocol level. Without this an unset `isError`
+        // defaults to success, so a caller that branches on `isError` treats an
+        // error message (invalid ID, upstream failure) as documentation.
+        // "No documentation found" is a valid answer, not an error.
+        ...(response.outcome === "error" ? { isError: true } : {}),
       };
     }
   );
@@ -447,6 +465,8 @@ async function main() {
       onerror: (error) => console.error("MCP node adapter error:", error),
     });
     const authMode = parseMcpAuthMode();
+    // Read again per token; parsed here so a typo fails startup, not requests.
+    parseOAuthAudienceEnforcement();
 
     const handleMcpRequest = async (req: express.Request, res: express.Response) => {
       try {
@@ -670,8 +690,13 @@ async function main() {
       });
 
       httpServer.once("listening", () => {
+        const address = httpServer.address();
+        if (!address || typeof address === "string") {
+          console.error("Failed to determine the bound HTTP port");
+          process.exit(1);
+        }
         console.error(
-          `Context7 Documentation MCP Server v${SERVER_VERSION} running on HTTP at http://localhost:${port}/mcp`
+          `Context7 Documentation MCP Server v${SERVER_VERSION} running on HTTP at http://localhost:${address.port}/mcp`
         );
       });
     };

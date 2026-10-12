@@ -28,6 +28,7 @@ export type DocumentState = "initial" | "finalized" | "error" | "delete";
 export type ContextRequest = {
   query: string;
   libraryId: string;
+  language?: string;
 };
 
 export type ContextResponse = {

@@ -2,9 +2,10 @@ import type { McpHttpRoute } from "./mcp-route.js";
 
 export type UpstreamOperation =
   "auth_check" | "fetch_context" | "oauth_metadata" | "search_libraries";
-// `expired`: the Context7 API rejected an opaque OAuth token, so the client was
-// challenged to refresh. `unverified`: the token check was unavailable and the
-// request was forwarded unchecked (fail open).
+// `expired`: an OAuth token was rejected (the Context7 API refused an opaque
+// token, or a Clerk OAuth JWT had expired), so the client was challenged to
+// refresh. `unverified`: the token check was unavailable and the request was
+// forwarded unchecked (fail open).
 export type AuthenticationOutcome =
   "accepted" | "error" | "expired" | "invalid" | "missing" | "unverified";
 export type AuthenticationMethod = "api_key" | "jwt" | "none" | "oauth";

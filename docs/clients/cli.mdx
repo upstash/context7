@@ -93,6 +93,9 @@ Queries work best when they're specific. Describe what you're trying to accompli
 The output contains two types of content: **code snippets** (titled, with language-tagged blocks) and **info snippets** (prose explanations with breadcrumb context). Both are formatted for readability in the terminal.
 
 ```bash
+# Rank code examples in the language you write in first
+ctx7 docs /websites/twilio "How to send an SMS" --language Ruby
+
 # Output as structured JSON
 ctx7 docs /facebook/react "How to use hooks for state management" --json
 

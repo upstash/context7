@@ -111,6 +111,7 @@ Always use Context7 when I need library/API documentation, code generation, setu
 - `query-docs`: Retrieves documentation for a library using a Context7-compatible library ID.
   - `libraryId` (required): Exact Context7-compatible library ID (e.g., `/mongodb/docs`, `/vercel/next.js`)
   - `query` (required): The question or task to get relevant documentation for
+  - `language` (optional): The programming language you write in, used to rank code examples in that language first
 
 ## More Documentation
 

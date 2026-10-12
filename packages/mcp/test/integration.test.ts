@@ -227,6 +227,19 @@ afterAll(() => {
   stubServer?.close();
 });
 
+test("reports the bound port when port zero requests an ephemeral port", async () => {
+  const { child, url } = await startHttpChild({ port: 0 });
+  try {
+    expect(new URL(url).port).not.toBe("0");
+
+    const response = await fetch(new URL("/ping", url));
+    expect(response.ok).toBe(true);
+    await expect(response.json()).resolves.toMatchObject({ status: "ok" });
+  } finally {
+    child.kill();
+  }
+});
+
 async function connect(transportKind: "http" | "stdio", era: "modern" | "legacy") {
   const client = new Client(
     { name: "test-harness", version: "1.0.0" },
@@ -489,6 +502,7 @@ describe.each([
     ]);
     const queryDocs = tools.find((t) => t.name === "query-docs")!;
     expect(Object.keys(queryDocs.inputSchema.properties ?? {}).sort()).toEqual([
+      "language",
       "libraryId",
       "query",
     ]);
@@ -527,6 +541,16 @@ describe.each([
     }
   });
 
+  test("flags a failed query-docs lookup as an error result", async () => {
+    const result = await client.callTool({
+      name: "query-docs",
+      arguments: { libraryId: "/vercel/next.js", query: UPSTREAM_ERROR_QUERY },
+    });
+    expect(result.isError).toBe(true);
+    const text = (result.content as { type: string; text: string }[])[0].text;
+    expect(text).toContain("stub upstream failure");
+  });
+
   test("calls resolve-library-id end to end", async () => {
     const result = await client.callTool({
       name: "resolve-library-id",
@@ -536,6 +560,24 @@ describe.each([
     const text = (result.content as { type: string; text: string }[])[0].text;
     expect(text).toContain("Available Libraries");
     expect(text).toContain("/vercel/next.js");
+  });
+
+  test("forwards the language hint to the context endpoint", async () => {
+    await client.callTool({
+      name: "query-docs",
+      arguments: { libraryId: "/websites/twilio", query: "send an SMS", language: "Python" },
+    });
+    expect(requests.find((r) => r.path === "/v2/context")!.query.get("language")).toBe("Python");
+  });
+
+  test("accepts a long language hint instead of rejecting the call", async () => {
+    const language = "TypeScript with React 19 and Next.js 16 app router";
+    const result = await client.callTool({
+      name: "query-docs",
+      arguments: { libraryId: "/vercel/next.js", query: "app router", language },
+    });
+    expect(result.isError).toBeFalsy();
+    expect(requests.find((r) => r.path === "/v2/context")!.query.get("language")).toBe(language);
   });
 
   test("rewrites hallucinated argument aliases before validation", async () => {
