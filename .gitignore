@@ -172,7 +172,6 @@ dist
 .idea
 
 .cursor
-!plugins/cursor/context7/.cursor
 .opencode
 .claude
 

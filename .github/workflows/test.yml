@@ -5,6 +5,8 @@ on:
     paths:
       - "packages/**"
       - "plugins/**"
+      - ".cursor-plugin/**"
+      - ".claude-plugin/**"
       - "skills/**"
       - "rules/**"
       - "package.json"
