@@ -74,7 +74,12 @@ const program = new Command()
   .version(SERVER_VERSION, "-v, --version", "output the current version")
   .option("--transport <stdio|http>", "transport type", "stdio")
   .option("--port <number>", "port for HTTP transport", DEFAULT_PORT.toString())
-  .option("--host <host>", "interface to bind for HTTP transport", "127.0.0.1")
+  // The env var lets a deployment set the bind before its image knows --host.
+  .option(
+    "--host <host>",
+    "interface to bind for HTTP transport (or set CONTEXT7_MCP_HOST env var)",
+    process.env.CONTEXT7_MCP_HOST || "127.0.0.1"
+  )
   .option("--api-key <key>", "API key for authentication (or set CONTEXT7_API_KEY env var)")
   .allowUnknownOption() // let MCP Inspector / other wrappers pass through extra flags
   .parse(process.argv);
