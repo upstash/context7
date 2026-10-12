@@ -27,4 +27,4 @@ COPY --from=builder /app/packages/mcp/dist ./packages/mcp/dist
 WORKDIR /app/packages/mcp
 ENV OTEL_EXPORTER_PROMETHEUS_HOST=0.0.0.0
 EXPOSE 8080 9464
-CMD ["node", "dist/index.js", "--transport", "http", "--port", "8080"]
+CMD ["node", "dist/index.js", "--transport", "http", "--port", "8080", "--host", "0.0.0.0"]

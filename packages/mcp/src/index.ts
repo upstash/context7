@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 
-import { toNodeHandler } from "@modelcontextprotocol/node";
+import {
+  localhostHostValidation,
+  localhostOriginValidation,
+  toNodeHandler,
+} from "@modelcontextprotocol/node";
 import { StdioServerTransport, serveStdio } from "@modelcontextprotocol/server/stdio";
 import {
   McpServer,
@@ -70,6 +74,7 @@ const program = new Command()
   .version(SERVER_VERSION, "-v, --version", "output the current version")
   .option("--transport <stdio|http>", "transport type", "stdio")
   .option("--port <number>", "port for HTTP transport", DEFAULT_PORT.toString())
+  .option("--host <host>", "interface to bind for HTTP transport", "127.0.0.1")
   .option("--api-key <key>", "API key for authentication (or set CONTEXT7_API_KEY env var)")
   .allowUnknownOption() // let MCP Inspector / other wrappers pass through extra flags
   .parse(process.argv);
@@ -77,6 +82,7 @@ const program = new Command()
 const cliOptions = program.opts<{
   transport: string;
   port: string;
+  host: string;
   apiKey?: string;
 }>();
 
@@ -387,6 +393,18 @@ async function main() {
     // then walks the chain right-to-left and ignores attacker-added prefixes.
     app.set("trust proxy", ["loopback", "linklocal", "uniquelocal", "100.64.0.0/10"]);
 
+    // A server bound to loopback is a local one: a web page can still reach it
+    // through DNS rebinding, so only loopback Host and Origin values pass. Other
+    // binds (the hosted deployment) keep wildcard CORS for browser MCP clients;
+    // authentication there is header-only, so no ambient credential is exposed.
+    if (["127.0.0.1", "localhost", "::1"].includes(cliOptions.host)) {
+      const validateHost = localhostHostValidation();
+      const validateOrigin = localhostOriginValidation();
+      app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+        if (validateHost(req, res) && validateOrigin(req, res)) next();
+      });
+    }
+
     // Registered ahead of the MCP router so its error responses carry the CORS
     // headers too; browser clients would otherwise see a CORS failure instead
     // of the status.
@@ -676,7 +694,7 @@ async function main() {
     );
 
     const startServer = (port: number, maxAttempts = 10) => {
-      const httpServer = app.listen(port);
+      const httpServer = app.listen(port, cliOptions.host);
       activeHttpServer = httpServer;
 
       httpServer.once("error", (err: NodeJS.ErrnoException) => {

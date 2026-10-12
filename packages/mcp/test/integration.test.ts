@@ -179,6 +179,8 @@ interface HttpChildOptions {
   environment?: Record<string, string>;
   nodeArgs?: string[];
   port?: number;
+  /** Omit `--host`, so the server binds loopback and validates Host and Origin. */
+  local?: boolean;
 }
 
 function startHttpChild(
@@ -188,7 +190,16 @@ function startHttpChild(
     const port = options.port ?? BASE_PORT;
     const child = spawn(
       process.execPath,
-      [...(options.nodeArgs ?? []), DIST, "--transport", "http", "--port", String(port)],
+      [
+        ...(options.nodeArgs ?? []),
+        DIST,
+        "--transport",
+        "http",
+        "--port",
+        String(port),
+        // The suite exercises the hosted deployment unless a test asks for the local default.
+        ...(options.local ? [] : ["--host", "0.0.0.0"]),
+      ],
       { env: options.environment ?? childEnv, stdio: ["ignore", "ignore", "pipe"] }
     );
     let stderr = "";
@@ -235,6 +246,27 @@ test("reports the bound port when port zero requests an ephemeral port", async (
     const response = await fetch(new URL("/ping", url));
     expect(response.ok).toBe(true);
     await expect(response.json()).resolves.toMatchObject({ status: "ok" });
+  } finally {
+    child.kill();
+  }
+});
+
+test("a local HTTP server rejects a foreign Host or Origin header", async () => {
+  const { child, url } = await startHttpChild({ port: 0, local: true });
+  const pingStatus = (headers: Record<string, string>) =>
+    new Promise<number>((resolve, reject) => {
+      http
+        .get({ host: "127.0.0.1", port: new URL(url).port, path: "/ping", headers }, (res) => {
+          res.resume();
+          resolve(res.statusCode!);
+        })
+        .once("error", reject);
+    });
+  try {
+    expect(await pingStatus({})).toBe(200);
+    expect(await pingStatus({ Origin: "http://localhost:5173" })).toBe(200);
+    expect(await pingStatus({ Host: "rebind.example.test" })).toBe(403);
+    expect(await pingStatus({ Origin: "https://example.test" })).toBe(403);
   } finally {
     child.kill();
   }
@@ -954,6 +986,7 @@ describe("hosted HTTP authentication", () => {
       headers: { Origin: "https://example.test", "Access-Control-Request-Method": "POST" },
     });
     expect(preflight.status).toBe(200);
+    expect(preflight.headers.get("access-control-allow-origin")).toBe("*");
     expect(preflight.headers.get("access-control-expose-headers")).toBe(
       "WWW-Authenticate, MCP-Session-Id"
     );
