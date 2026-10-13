@@ -4,6 +4,7 @@ import { toNodeHandler } from "@modelcontextprotocol/node";
 import { StdioServerTransport, serveStdio } from "@modelcontextprotocol/server/stdio";
 import {
   McpServer,
+  PROTOCOL_VERSION_META_KEY,
   createMcpHandler,
   type McpRequestContext,
   type ServerContext,
@@ -192,11 +193,23 @@ function cancellationRequestId(message: unknown): JsonRpcId | undefined {
   if (typeof requestId === "string" || typeof requestId === "number") return requestId;
 }
 
+/** True for a 2026-07-28 message: its `params._meta` names a protocol version. */
+function hasProtocolVersionClaim(message: unknown): boolean {
+  if (!message || typeof message !== "object") return false;
+  const params = (message as Record<string, unknown>).params;
+  if (!params || typeof params !== "object") return false;
+  const meta = (params as Record<string, unknown>)._meta;
+  return !!meta && typeof meta === "object" && PROTOCOL_VERSION_META_KEY in meta;
+}
+
 function filterBatchSelfCancellations(body: unknown): {
   body: unknown;
   removedSelfCancellation: boolean;
 } {
   if (!Array.isArray(body)) return { body, removedSelfCancellation: false };
+  // The SDK answers 400 to a batch with a 2026-07-28 element. Leave such a
+  // batch whole, so removing a pair cannot hide that element from the SDK.
+  if (body.some(hasProtocolVersionClaim)) return { body, removedSelfCancellation: false };
 
   const requestIds = new Set(body.map(jsonRpcRequestId).filter((id) => id !== undefined));
   const selfCancelledIds = new Set(
@@ -561,7 +574,8 @@ async function main() {
         // that occur in the same batch before SDK dispatch. This applies the
         // cancellation without starting the tool and without leaving an ID in
         // the transport's response accounting. Only POST carries messages;
-        // other methods keep the SDK's own method handling (405).
+        // other methods keep the SDK's own method handling (405). A batch that
+        // is fully consumed is answered here, before the SDK's Accept check.
         const filteredBody =
           req.method === "POST"
             ? filterBatchSelfCancellations(req.body)

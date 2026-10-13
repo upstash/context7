@@ -579,6 +579,39 @@ describe("HTTP batch cancellation", () => {
     expect(requests.filter((request) => request.path === "/v2/libs/search")).toHaveLength(1);
   });
 
+  test("leaves a batch with a 2026-07-28 element to the SDK, which rejects it", async () => {
+    const modernParams = { _meta: { "io.modelcontextprotocol/protocolVersion": "2026-07-28" } };
+    const response = await fetch(httpUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+        authorization: "Bearer ctx7sk-local-test",
+      },
+      body: JSON.stringify([
+        { jsonrpc: "2.0", id: 107, method: "tools/list", params: modernParams },
+        {
+          jsonrpc: "2.0",
+          method: "notifications/cancelled",
+          params: { requestId: 107, reason: "regression-test" },
+        },
+        {
+          jsonrpc: "2.0",
+          id: 108,
+          method: "tools/call",
+          params: {
+            name: "resolve-library-id",
+            arguments: { query: "framework documentation", libraryName: "Next.js" },
+          },
+        },
+      ]),
+      signal: AbortSignal.timeout(1_000),
+    });
+
+    expect(response.status).toBe(400);
+    expect(requests).toHaveLength(0);
+  });
+
   test("keeps 405 for a self-cancelling batch sent with DELETE", async () => {
     const response = await fetch(httpUrl, {
       method: "DELETE",
