@@ -1,5 +1,11 @@
 # @upstash/context7-mcp
 
+## 4.4.1
+
+### Patch Changes
+
+- 7cbd5fd: Consume request/cancellation pairs contained in the same JSON-RPC batch before dispatch. This prevents the legacy stateless HTTP transport from leaving the response stream open when cancellation suppresses the terminal protocol response.
+
 ## 4.4.0
 
 ### Minor Changes
