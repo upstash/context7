@@ -21,7 +21,7 @@ LLMs rely on outdated or generic information about the libraries you use. You ge
 Context7 pulls up-to-date, version-specific documentation and code examples straight from the source — and places them directly into your prompt.
 
 ```txt
-Create a Next.js middleware that checks for a valid JWT in cookies
+Create a Next.js proxy that checks for a valid JWT in cookies
 and redirects unauthenticated users to `/login`. use context7
 ```
 
@@ -46,7 +46,7 @@ Works in two modes:
 > [!NOTE]
 > **API Key Recommended**: Get a free API key at [context7.com/dashboard](https://context7.com/dashboard) for higher rate limits.
 
-Set up Context7 for your coding agents with a single command. The `ctx7` CLI requires Node.js 18 or newer.
+Set up Context7 for your coding agents with a single command. The `ctx7` CLI requires Node.js 22.13 or newer.
 
 ```bash
 npx ctx7 setup
@@ -77,7 +77,7 @@ The slash syntax tells Context7 exactly which library to load docs for.
 To get documentation for a specific library version, just mention the version in your prompt:
 
 ```txt
-How do I set up Next.js 14 middleware? use context7
+How do I set up a Next.js 16 proxy? use context7
 ```
 
 Context7 will automatically match the appropriate version.

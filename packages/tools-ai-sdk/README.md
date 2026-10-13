@@ -35,7 +35,7 @@ import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { text } = await generateText({
-  model: openai("gpt-4o"),
+  model: openai("gpt-6-astra"),
   prompt: "How do I use React Server Components?",
   tools: {
     resolveLibrary: resolveLibrary(),
@@ -56,7 +56,7 @@ import { Context7Agent } from "@upstash/context7-tools-ai-sdk";
 import { anthropic } from "@ai-sdk/anthropic";
 
 const agent = new Context7Agent({
-  model: anthropic("claude-sonnet-4-20250514"),
+  model: anthropic("claude-sonnet-5-5"),
 });
 
 const { text } = await agent.generate({

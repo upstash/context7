@@ -46,7 +46,7 @@ Searches for libraries and returns Context7-compatible identifiers.
 
 ```
 Input: "next.js"
-Output: { id: "/vercel/next.js", name: "Next.js", versions: ["v15.1.8", "v14.2.0", ...] }
+Output: { id: "/vercel/next.js", name: "Next.js", versions: ["v16.2.9", "v15.1.8", ...] }
 ```
 
 ### query-docs
@@ -54,7 +54,7 @@ Output: { id: "/vercel/next.js", name: "Next.js", versions: ["v15.1.8", "v14.2.0
 Fetches documentation for a specific library, ranked by relevance to your question.
 
 ```
-Input: { libraryId: "/vercel/next.js", query: "app router middleware" }
+Input: { libraryId: "/vercel/next.js", query: "app router proxy" }
 Output: Relevant documentation snippets with code examples
 ```
 
@@ -62,7 +62,7 @@ Output: Relevant documentation snippets with code examples
 
 The plugin works automatically when you ask about libraries:
 
-- "How do I set up authentication in Next.js 15?"
+- "How do I set up authentication in Next.js 16?"
 - "Show me React Server Components examples"
 - "What's the Prisma syntax for relations?"
 
@@ -73,7 +73,7 @@ Or use the docs-researcher agent when you want to keep your main context clean.
 To get documentation for a specific version, include the version in the library ID:
 
 ```
-/vercel/next.js/v15.1.8
+/vercel/next.js/v16.2.9
 /supabase/supabase/v2.45.0
 ```
 

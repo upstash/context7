@@ -4,7 +4,7 @@ sidebarTitle: "Getting Started"
 description: "Add Context7 documentation tools to your Vercel AI SDK applications"
 ---
 
-`@upstash/context7-tools-ai-sdk` provides [Vercel AI SDK](https://sdk.vercel.ai/) compatible tools and agents that give your AI applications access to up-to-date library documentation.
+`@upstash/context7-tools-ai-sdk` provides [Vercel AI SDK](https://ai-sdk.dev/) compatible tools and agents that give your AI applications access to up-to-date library documentation.
 
 When building AI-powered applications with the Vercel AI SDK, your models often need accurate information about libraries and frameworks. Instead of relying on potentially outdated training data, Context7 tools let your AI fetch current documentation on-demand, ensuring responses include correct API usage, current best practices, and working code examples.
 
@@ -65,7 +65,7 @@ import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { text } = await generateText({
-  model: openai("gpt-5.2"),
+  model: openai("gpt-6-astra"),
   prompt: "How do I create a server action in Next.js?",
   tools: {
     resolveLibraryId: resolveLibraryId(),
@@ -86,7 +86,7 @@ import { Context7Agent } from "@upstash/context7-tools-ai-sdk";
 import { anthropic } from "@ai-sdk/anthropic";
 
 const agent = new Context7Agent({
-  model: anthropic("claude-sonnet-4-20250514"),
+  model: anthropic("claude-sonnet-5-5"),
 });
 
 const { text } = await agent.generate({
@@ -106,7 +106,7 @@ import { streamText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { textStream } = streamText({
-  model: openai("gpt-5.2"),
+  model: openai("gpt-6-astra"),
   prompt: "Explain how to use Tanstack Query for data fetching",
   tools: {
     resolveLibraryId: resolveLibraryId(),

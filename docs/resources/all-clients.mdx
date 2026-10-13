@@ -19,7 +19,7 @@ Context7 supports all MCP clients. Below are configuration examples for popular 
 
 ## OAuth Authentication
 
-Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization).
+Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/latest/basic/authorization).
 
 To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client configuration:
 
@@ -56,7 +56,7 @@ Fetch documentation context for a library and a specific question.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `libraryId` | string, required | Exact Context7-compatible library ID, e.g., `/vercel/next.js` or `/vercel/next.js/v15.1.8` |
+| `libraryId` | string, required | Exact Context7-compatible library ID, e.g., `/vercel/next.js` or `/vercel/next.js/v16.2.9` |
 | `query` | string, required | What to look up, scoped to a single concept |
 | `language` | string, optional | Programming language you write in, e.g., `Python` or `Go`. Code examples in that language rank first |
 
@@ -1459,7 +1459,7 @@ See the [Emdash repository](https://github.com/generalaction/emdash) for more in
 
 <Accordion title="Desktop Extension">
 
-Install the [context7.mcpb](https://github.com/upstash/context7/releases/download/mcpb-v4.1.1/context7.mcpb) file and add it to your client. See [MCP bundles docs](https://github.com/modelcontextprotocol/mcpb#mcp-bundles-mcpb) for more info.
+Install the [context7.mcpb](https://github.com/upstash/context7/releases/download/mcpb-v4.3.0/context7.mcpb) file and add it to your client. See [MCP bundles docs](https://github.com/modelcontextprotocol/mcpb#mcp-bundles-mcpb) for more info.
 
 </Accordion>
 
