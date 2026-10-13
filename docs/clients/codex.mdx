@@ -126,4 +126,8 @@ How does Supabase storage work?
 <Accordion title="Startup timed out or program not found">
 If you see a startup "request timed out" or "not found program" error, increase `startup_timeout_ms` to `40_000` and retry. On Windows, point `command` at the absolute `npx.cmd` path and set `SystemRoot` and `APPDATA` explicitly — `npx` requires them, but some Codex MCP clients don't set them by default.
 </Accordion>
+
+<Accordion title="Setup fails on an existing config.toml entry">
+Running `ctx7 setup --codex --mcp --stdio` updates the `args` of an existing `[mcp_servers.context7]` table in `~/.codex/config.toml` instead of replacing it, so a pinned or customized `@upstash/context7-mcp` version is preserved. If that table exists but its `args` never invoke `@upstash/context7-mcp`, setup cannot tell it is the Context7 server and stops with `Existing MCP args do not invoke @upstash/context7-mcp`, leaving the file unchanged. Point `args` at the package (for example `args = ["-y", "@upstash/context7-mcp"]`), or remove the `[mcp_servers.context7]` table and run setup again.
+</Accordion>
 </AccordionGroup>
