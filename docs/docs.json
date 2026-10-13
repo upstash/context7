@@ -243,7 +243,7 @@
               {
                 "group": "Resources",
                 "expanded": false,
-                "pages": ["resources/developer", "resources/troubleshooting"]
+                "pages": ["resources/developer", "resources/troubleshooting", "resources/feature-requests"]
               }
             ]
           }
