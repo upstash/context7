@@ -1503,4 +1503,35 @@ AnythingLLM supports MCP Servers through GUI.
 
 </Accordion>
 
+<Accordion title="ALEPH (source client)">
+
+[ALEPH](https://github.com/josuecuguy1307/Aleph) includes a reproducible source-client
+probe that initializes Context7 over Streamable HTTP, discovers its tools,
+resolves the Ollama library and runs a documentation query.
+
+Clone the source example at the tested revision and run it in a separate environment:
+
+```sh
+git clone --filter=blob:none --no-checkout https://github.com/josuecuguy1307/Aleph.git
+cd Aleph
+git fetch origin fb1861d102817c1be91c159b72272b65ad8ccf96
+git checkout --detach fb1861d102817c1be91c159b72272b65ad8ccf96
+python3 -m venv .venv-context7-example
+.venv-context7-example/bin/python -m pip install mcp==2.0.0
+.venv-context7-example/bin/python examples/mcp-compat/context7.py --output /tmp/aleph-context7.json
+```
+
+Choose a new output file for each run. The script uses
+`https://mcp.context7.com/mcp` and sends fixed public documentation queries without
+credentials or user files. Its evidence records server/protocol versions,
+library resolution and a length/hash of returned documentation. The tested
+source workflow used MCP SDK 2.0.0 and Context7 4.4.1. An unauthenticated request
+may be rate-limited; Context7 recommends an API key for higher limits.
+
+See the [pinned source walkthrough](https://github.com/josuecuguy1307/Aleph/blob/fb1861d102817c1be91c159b72272b65ad8ccf96/examples/mcp-compat/README.md)
+for scope and evidence checks. This recipe covers the source HTTP client;
+desktop configuration, packaged-app behavior and OAuth remain unverified.
+
+</Accordion>
+
 </AccordionGroup>
