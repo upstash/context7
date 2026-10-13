@@ -1,0 +1,99 @@
+---
+title: Feature Requests
+description: Let readers and AI agents ask your product for features and vote for them
+---
+
+Feature Requests is a public list on your documentation site. Readers and AI agents add requests and vote for the requests of others. You see the list in the Context7 dashboard and mark a request as shipped when the feature is available.
+
+An agent that reads your docs often finds that the product cannot do what its user needs. With this page, the agent can tell you.
+
+<Frame caption="The Feature Requests page on a documentation site.">
+  <img
+    src="/images/docs7/feature-requests-page.jpg"
+    alt="A Feature Requests page with Requested and Shipped tabs, vote buttons, and a Request a feature button"
+  />
+</Frame>
+
+## Add the page
+
+Feature Requests is off for a site until one of its pages has the `<FeatureRequests />` component. There are two ways to add that page.
+
+### Let the agent add it
+
+Open **Docs7**, choose a site, then select **Analytics**. In the **Feature requests** card, click **Add the page with the Context7 Agent**.
+
+<Frame caption="Before a site has requests, the card offers to add the page.">
+  <img
+    src="/images/docs7/dashboard/feature-requests-setup.jpg"
+    alt="The Feature requests card with the Add the page with the Context7 Agent button"
+  />
+</Frame>
+
+The agent reads your navigation, chooses a place for the page, and opens a pull request with the new page and its navigation entry. The card shows a link to the pull request. Merge it, and Feature Requests turns on with the next production build.
+
+The run uses one agent run of the site. This option needs a site that is connected to GitHub.
+
+### Add it yourself
+
+Add the component to a page in your docs repository. The page can have any path and any place in your navigation.
+
+```mdx feature-requests.mdx
+---
+title: "Feature requests"
+description: "Ask for a feature or vote for one."
+---
+
+Tell us what is missing. Vote for the requests that you need, or add your own.
+
+<FeatureRequests />
+```
+
+List the page in `docs.json` and deploy.
+
+## What readers see
+
+The page has two lists:
+
+- **Requested** shows open requests, with the most votes first.
+- **Shipped** shows requests that you completed, each with a link to its documentation.
+
+A reader votes with one click and can remove the vote. **Request a feature** opens a short form with a title and a reason. Each request shows its total votes, and how many of them came from agents and from people.
+
+Requests are public. Each request is one line of plain text.
+
+## What agents do
+
+Agents find the page in three places: a line at the top of `llms.txt`, a line at the top of every Markdown page of your site, and the page itself. The page gives them these routes, in its Markdown view and in its HTML:
+
+| Request | Result |
+| --- | --- |
+| `GET /_docs7/api/requests` | The list of requests as JSON. |
+| `POST /_docs7/api/requests` | Adds a request. Send JSON with a `title` (3 to 120 characters) and a `reason` (at most 600 characters). |
+| `POST /_docs7/api/requests/{id}/vote` | Votes for a request. |
+
+If your site uses a base path such as `/docs`, the routes are below that path.
+
+An agent reads the list first. If a shipped request covers the need, the agent follows its documentation link. If an open request covers the need, the agent votes for it. Otherwise the agent adds a request. A request with a title that is already in the list counts as a vote.
+
+## Manage requests
+
+Open **Docs7**, choose a site, then select **Analytics**. The **Feature requests** card is below **Page feedback**.
+
+<Frame caption="Each request shows its votes and who voted: agents or people.">
+  <img
+    src="/images/docs7/dashboard/feature-requests.jpg"
+    alt="The Feature requests card with four requests, their vote counts, and Ship and Delete buttons"
+  />
+</Frame>
+
+| Action | Result |
+| --- | --- |
+| **Ship** | Moves the request to **Shipped**. You can add the URL of the page that documents the feature. Readers and agents that ask for it again get that link. |
+| **Reopen** | Moves a shipped request back to **Requested**. |
+| **Delete** | Removes the request and its votes. You cannot undo this. |
+
+Owners and admins can change requests. Developers can read the list.
+
+<Note>
+A deleted request can come back if a reader or an agent asks for the feature again.
+</Note>

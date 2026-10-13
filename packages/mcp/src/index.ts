@@ -8,6 +8,7 @@ import {
 import { StdioServerTransport, serveStdio } from "@modelcontextprotocol/server/stdio";
 import {
   McpServer,
+  PROTOCOL_VERSION_META_KEY,
   createMcpHandler,
   type McpRequestContext,
   type ServerContext,
@@ -40,6 +41,7 @@ import {
   observeAuthentication,
   observeUpstreamRequest,
   recordAuthenticationEvent,
+  recordSelfCancellingBatch,
 } from "./lib/telemetry-runtime.js";
 import { mcpBodyErrorHandler } from "./lib/mcp-body-error-handler.js";
 import {
@@ -169,6 +171,77 @@ const GLOBAL_ALIASES: AliasMap = {
 const QUERY_DOCS_ALIASES: AliasMap = {
   libraryId: ["context7CompatibleLibraryID", "libraryID", "libraryName"],
 };
+
+type JsonRpcId = string | number;
+
+function jsonRpcRequestId(message: unknown): JsonRpcId | undefined {
+  if (!message || typeof message !== "object") return undefined;
+
+  const candidate = message as Record<string, unknown>;
+  if (
+    candidate.jsonrpc === "2.0" &&
+    typeof candidate.method === "string" &&
+    (typeof candidate.id === "string" || typeof candidate.id === "number")
+  ) {
+    return candidate.id;
+  }
+}
+
+function cancellationRequestId(message: unknown): JsonRpcId | undefined {
+  if (!message || typeof message !== "object") return undefined;
+
+  const candidate = message as Record<string, unknown>;
+  if (
+    candidate.jsonrpc !== "2.0" ||
+    candidate.method !== "notifications/cancelled" ||
+    "id" in candidate ||
+    !candidate.params ||
+    typeof candidate.params !== "object"
+  ) {
+    return undefined;
+  }
+
+  const requestId = (candidate.params as Record<string, unknown>).requestId;
+  if (typeof requestId === "string" || typeof requestId === "number") return requestId;
+}
+
+/** True for a 2026-07-28 message: its `params._meta` names a protocol version. */
+function hasProtocolVersionClaim(message: unknown): boolean {
+  if (!message || typeof message !== "object") return false;
+  const params = (message as Record<string, unknown>).params;
+  if (!params || typeof params !== "object") return false;
+  const meta = (params as Record<string, unknown>)._meta;
+  return !!meta && typeof meta === "object" && PROTOCOL_VERSION_META_KEY in meta;
+}
+
+function filterBatchSelfCancellations(body: unknown): {
+  body: unknown;
+  removedSelfCancellation: boolean;
+} {
+  if (!Array.isArray(body)) return { body, removedSelfCancellation: false };
+  // The SDK answers 400 to a batch with a 2026-07-28 element. Leave such a
+  // batch whole, so removing a pair cannot hide that element from the SDK.
+  if (body.some(hasProtocolVersionClaim)) return { body, removedSelfCancellation: false };
+
+  const requestIds = new Set(body.map(jsonRpcRequestId).filter((id) => id !== undefined));
+  const selfCancelledIds = new Set(
+    body
+      .map(cancellationRequestId)
+      .filter((id): id is JsonRpcId => id !== undefined && requestIds.has(id))
+  );
+  if (selfCancelledIds.size === 0) return { body, removedSelfCancellation: false };
+
+  return {
+    body: body.filter((message) => {
+      const requestId = jsonRpcRequestId(message);
+      if (requestId !== undefined && selfCancelledIds.has(requestId)) return false;
+
+      const cancelledId = cancellationRequestId(message);
+      return cancelledId === undefined || !selfCancelledIds.has(cancelledId);
+    }),
+    removedSelfCancellation: true,
+  };
+}
 
 // z.preprocess step that rewrites aliased arg names before validation. Living
 // in the schema keeps aliasing transport-agnostic: the SDK parses the wire
@@ -334,7 +407,7 @@ If you know the programming language the user is working in, pass it as \`langua
           libraryId: z
             .string()
             .describe(
-              "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
+              "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v16.2.9') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
             ),
           query: z
             .string()
@@ -470,11 +543,10 @@ async function main() {
     // millisecond vector query (p100 ~28s), so no legitimate exchange needs a
     // heartbeat to stay alive — but a hung exchange kept "alive" by heartbeats
     // can never be reaped by the gateway's stream idle timeout. A batch
-    // carrying a request plus its own notifications/cancelled produces exactly
-    // that: per spec the cancelled request gets no response, the SDK transport
-    // then never closes the stream, and with heartbeats it survived until the
-    // gateway's 1200s hard cap (the 2026-08-11 outage). Silent hangs instead
-    // go idle and the gateway reaps them at streamIdleTimeout (300s).
+    // carrying a request plus its own notifications/cancelled produced exactly
+    // that (the 2026-08-11 outage); handleMcpRequest now consumes such pairs
+    // before dispatch. Any other silent hang goes idle and the gateway reaps
+    // it at streamIdleTimeout (300s) instead of its 1200s hard cap.
     const rawMcpHandler = createMcpHandler((mcpContext) => createMcpServer(mcpContext), {
       keepAliveMs: 0,
       onerror: (error) => console.error("MCP handler error:", error),
@@ -520,6 +592,29 @@ async function main() {
           return;
         }
 
+        // A cancelled request deliberately produces no protocol response, but
+        // the SDK's legacy stateless transport still waits for one before it
+        // closes the batch's POST stream. Consume request/cancellation pairs
+        // that occur in the same batch before SDK dispatch. This applies the
+        // cancellation without starting the tool and without leaving an ID in
+        // the transport's response accounting. Only POST carries messages;
+        // other methods keep the SDK's own method handling (405). A batch that
+        // is fully consumed is answered here, before the SDK's Accept check.
+        const filteredBody =
+          req.method === "POST"
+            ? filterBatchSelfCancellations(req.body)
+            : { body: req.body, removedSelfCancellation: false };
+        if (filteredBody.removedSelfCancellation) {
+          recordSelfCancellingBatch(req.headers["user-agent"]);
+        }
+        if (
+          filteredBody.removedSelfCancellation &&
+          Array.isArray(filteredBody.body) &&
+          filteredBody.body.length === 0
+        ) {
+          return res.status(202).end();
+        }
+
         const context: ClientContext = {
           clientIp: req.ip,
           apiKey,
@@ -538,7 +633,7 @@ async function main() {
         });
 
         await requestContext.run(context, async () => {
-          await nodeHandler(req, res, req.body);
+          await nodeHandler(req, res, filteredBody.body);
         });
       } catch (error) {
         console.error("Error handling MCP request:", error);

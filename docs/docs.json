@@ -243,7 +243,7 @@
               {
                 "group": "Resources",
                 "expanded": false,
-                "pages": ["resources/developer", "resources/troubleshooting"]
+                "pages": ["resources/developer", "resources/troubleshooting", "resources/feature-requests"]
               }
             ]
           }
@@ -269,7 +269,13 @@
               {
                 "group": "Product",
                 "expanded": false,
-                "pages": ["docs7/builds", "docs7/ai-visibility", "docs7/analytics", "docs7/agent"]
+                "pages": [
+                  "docs7/builds",
+                  "docs7/ai-visibility",
+                  "docs7/analytics",
+                  "docs7/agent",
+                  "docs7/feature-requests"
+                ]
               },
               {
                 "group": "SEO and agent readiness",

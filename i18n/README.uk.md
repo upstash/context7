@@ -17,7 +17,7 @@ Context7 MCP отримує актуальну, специфічну для ве
 Додайте `use context7` до вашого запиту в Cursor:
 
 ```txt
-Create a Next.js middleware that checks for a valid JWT in cookies and redirects unauthenticated users to `/login`. use context7
+Create a Next.js proxy that checks for a valid JWT in cookies and redirects unauthenticated users to `/login`. use context7
 ```
 
 ```txt
@@ -39,7 +39,7 @@ Context7 завантажує свіжі приклади коду й докум
 
 ### Системні вимоги
 
-- Node.js ≥ v18.0.0
+- Node.js ≥ v20.18.1
 - Cursor, Devin Desktop, Claude Desktop або інший MCP-клієнт
 <details>
 <summary><b>Встановлення через Smithery</b></summary>
@@ -767,7 +767,7 @@ npx -y @modelcontextprotocol/inspector npx @upstash/context7-mcp
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
+      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp"]
     }
   }
 }
@@ -796,7 +796,7 @@ npx -y @modelcontextprotocol/inspector npx @upstash/context7-mcp
 1. Спробуйте додати `@latest` до назви пакунка
 2. Використовуйте `bunx` як альтернативу до `npx`
 3. Розгляньте використання `deno` як іншу альтернативу
-4. Переконайтеся, що ви використовуєте Node.js v18 або вище для підтримки нативного fetch
+4. Переконайтеся, що ви використовуєте Node.js v20 або вище для підтримки нативного fetch
 </details>
 
 ## ⚠️ Застереження

@@ -17,7 +17,7 @@ Context7 MCP lấy tài liệu và ví dụ code cập nhật, dành cho phiên 
 Thêm `use context7` vào prompt của bạn trong Cursor:
 
 ```txt
-Tạo một Next.js middleware kiểm tra JWT hợp lệ trong cookies và chuyển hướng người dùng chưa xác thực đến `/login`. use context7
+Tạo một Next.js proxy kiểm tra JWT hợp lệ trong cookies và chuyển hướng người dùng chưa xác thực đến `/login`. use context7
 ```
 
 ```txt
@@ -39,7 +39,7 @@ Xem [hướng dẫn thêm dự án](https://context7.com/docs/adding-libraries) 
 
 ### Yêu Cầu
 
-- Node.js >= v18.0.0
+- Node.js >= v20.18.1
 - Cursor, Devin Desktop, Claude Desktop hoặc MCP Client khác
 <details>
 <summary><b>Cài đặt qua Smithery</b></summary>
@@ -851,7 +851,7 @@ Nếu bạn gặp `ERR_MODULE_NOT_FOUND`, thử sử dụng `bunx` thay vì `npx
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
+      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp"]
     }
   }
 }
@@ -880,7 +880,7 @@ Sử dụng flag `--experimental-fetch` để vượt qua các vấn đề liên
 1. Thử thêm `@latest` vào tên package
 2. Sử dụng `bunx` như một thay thế cho `npx`
 3. Cân nhắc sử dụng `deno` như một thay thế khác
-4. Đảm bảo bạn đang sử dụng Node.js v18 trở lên để hỗ trợ native fetch
+4. Đảm bảo bạn đang sử dụng Node.js v20 trở lên để hỗ trợ native fetch
 </details>
 
 ## ⚠️ Tuyên Bố Miễn Trừ Trách Nhiệm

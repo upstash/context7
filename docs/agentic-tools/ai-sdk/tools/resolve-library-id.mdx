@@ -14,7 +14,7 @@ import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { text } = await generateText({
-  model: openai("gpt-5.2"),
+  model: openai("gpt-6-astra"),
   prompt: "Find documentation for React hooks",
   tools: {
     resolveLibraryId: resolveLibraryId(),
@@ -108,7 +108,7 @@ import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { text, toolCalls } = await generateText({
-  model: openai("gpt-5.2"),
+  model: openai("gpt-6-astra"),
   prompt: "What libraries are available for React?",
   tools: {
     resolveLibraryId: resolveLibraryId(),
@@ -139,7 +139,7 @@ import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { toolCalls, toolResults } = await generateText({
-  model: openai("gpt-5.2"),
+  model: openai("gpt-6-astra"),
   prompt: "Find the official Next.js documentation",
   tools: {
     resolveLibraryId: resolveLibraryId(),
