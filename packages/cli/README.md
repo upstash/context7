@@ -36,11 +36,8 @@ ctx7 setup --copilot
 # Search documentation in one request
 ctx7 search "how to stream an OpenAI response from a Next.js route"
 
-# Add optional hints when the task spans products or needs a specific version
-ctx7 search "how to stream a response" \
-  --library Next.js \
-  --library OpenAI \
-  --language TypeScript
+# Narrow the search to libraries you already know
+ctx7 search "how to stream a response" --library Next.js --library OpenAI
 
 # Find a library
 ctx7 library react
@@ -55,23 +52,21 @@ ctx7 docs /vercel/next.js "proxy"
 
 ### Search documentation
 
-Search documentation without resolving a library first. Context7 selects relevant libraries and ranks the best snippets together.
+Ask a question and get the best snippets from all libraries in one step. No library ID is needed.
 
 ```bash
 ctx7 search "how do I validate a request body with a schema?"
 
-# Prefer one or more libraries. Names do not need to be exact.
-ctx7 search "how do I stream a response?" \
-  --library Next.js \
-  --library OpenAI
+# Search specific libraries: a name or a library ID, repeat for up to four
+ctx7 search "how do I stream a response?" --library Next.js --library /openai/openai-node
 
-# Prefer a version and programming language
-ctx7 search "how do I cache a server function?" \
-  --library Next.js \
-  --version 15.4.0 \
-  --language TypeScript
+# Search a specific version
+ctx7 search "how do I cache a server function?" --library Next.js --library-version 15.4.0
 
-# Output structured snippets with their library IDs and any configured rules
+# Prefer results in the language you write in
+ctx7 search "how do I send an SMS?" --library Twilio --language Ruby
+
+# Output as JSON
 ctx7 search "how do I use hooks?" --library React --json
 ```
 

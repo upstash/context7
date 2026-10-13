@@ -246,7 +246,12 @@ export interface InfoSnippet {
 export interface ContextResponse {
   codeSnippets: CodeSnippet[];
   infoSnippets: InfoSnippet[];
+  error?: string;
+  message?: string;
+  redirectUrl?: string;
 }
+
+export type DocumentationVersionStatus = "verified" | "prerelease" | "unverified";
 
 export interface DocumentationSearchResponse {
   codeSnippets: (CodeSnippet & { libraryId: string })[];
@@ -259,10 +264,14 @@ export interface DocumentationSearchResponse {
       libraryTeam: string[];
     }[];
   };
-}
-
-export interface DocumentationError {
-  error: string;
-  message?: string;
-  redirectUrl?: string;
+  version?: {
+    requested?: string;
+    status: DocumentationVersionStatus;
+    libraries: {
+      libraryId: string;
+      requested: string;
+      served: string | null;
+      status: DocumentationVersionStatus;
+    }[];
+  };
 }

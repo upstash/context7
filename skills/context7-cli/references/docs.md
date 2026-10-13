@@ -4,6 +4,8 @@ Retrieves and queries up-to-date documentation and code examples from Context7 f
 
 If the user already provided a library ID in `/org/project` or `/org/project/version` format, pass it directly to `ctx7 docs`.
 
+To search all libraries with one command and no library ID, use [`ctx7 search`](#search-all-libraries).
+
 ## Step 1: Resolve a Library
 
 Resolves a package/product name to a Context7-compatible library ID and returns matching libraries.
@@ -102,6 +104,33 @@ ctx7 docs /facebook/react "How to use hooks for state management" --json
 # Pipe to other tools — output is clean when not in a TTY (no spinners or colors)
 ctx7 docs /facebook/react "How to use hooks for state management" | head -50
 ctx7 docs /vercel/next.js "How to add a proxy for route protection" | grep -A5 "proxy"
+```
+
+## Search All Libraries
+
+Searches the documentation of all libraries in one step. Context7 picks the libraries, so no library ID is needed.
+
+```bash
+ctx7 search "How to stream an OpenAI response from a Next.js route"
+ctx7 search "How to validate a request body with a schema"
+```
+
+Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query.
+
+If the library, version, or language is known, add them to narrow the results:
+
+```bash
+# Search specific libraries — a name or a library ID, repeat for up to four
+ctx7 search "How to stream a response" --library Next.js --library /openai/openai-node
+
+# Search a specific version
+ctx7 search "How to cache a server function" --library Next.js --library-version 15.4.0
+
+# Prefer results in the language you write in
+ctx7 search "How to send an SMS" --library Twilio --language Ruby
+
+# Output as structured JSON
+ctx7 search "How to use hooks for state management" --library React --json
 ```
 
 ## Authentication

@@ -10,86 +10,58 @@ import { trackEvent } from "../utils/tracking.js";
 const isTTY = process.stdout.isTTY;
 
 interface SearchCommandOptions {
-  library: string[];
-  version?: string;
+  library?: string[];
+  libraryVersion?: string;
   language?: string;
   json?: boolean;
-}
-
-function collectLibrary(value: string, libraries: string[]): string[] {
-  return [...libraries, value];
 }
 
 async function searchCommand(query: string, options: SearchCommandOptions): Promise<void> {
   trackEvent("command", { name: "search" });
 
-  if (options.library.length > 4) {
-    log.error("Search accepts at most four library hints");
-    process.exitCode = 1;
-    return;
-  }
-  if (options.version && options.library.length === 0) {
-    log.error("--version requires at least one --library hint");
-    process.exitCode = 1;
-    return;
-  }
-
   const spinner = isTTY ? ora("Searching documentation...").start() : null;
   const accessToken = await getValidAccessToken();
-  const libraries = options.library.map(recoverLibraryId);
 
   let result;
   try {
     result = await searchDocumentation(
       query,
       {
-        libraries: libraries.length ? libraries : undefined,
-        version: options.version,
-        language: options.language,
         type: options.json ? "json" : "txt",
+        // Git Bash on Windows rewrites "/owner/repo" into a Windows path; recover it.
+        libraries: options.library?.map(recoverLibraryId),
+        version: options.libraryVersion,
+        language: options.language,
       },
       accessToken
     );
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    spinner?.fail(`Error: ${message}`);
-    if (!spinner) log.error(message);
-    process.exitCode = 1;
-    return;
-  }
-
-  if (typeof result === "string") {
-    spinner?.stop();
-    console.log(result);
-    return;
-  }
-
-  if ("error" in result) {
-    const message = result.message || result.error;
-    spinner?.fail(message);
-    if (!spinner) log.error(message);
+  } catch (err) {
+    spinner?.fail(err instanceof Error ? err.message : String(err));
+    if (!spinner) log.error(err instanceof Error ? err.message : String(err));
     process.exitCode = 1;
     return;
   }
 
   spinner?.stop();
-  console.log(JSON.stringify(result, null, 2));
+  console.log(typeof result === "string" ? result : JSON.stringify(result, null, 2));
 }
 
 export function registerSearchCommand(program: Command): void {
   program
     .command("search")
-    .argument("<query>", "Question or task to search for")
+    .argument("<query>", "Question or task to search documentation for")
     .option(
-      "-l, --library <library>",
-      "Prefer a library name or Context7 ID. Repeat up to four times",
-      collectLibrary,
-      []
+      "--library <name>",
+      "Library name or Context7 library ID to search (e.g., Next.js, /vercel/next.js); repeat for up to four libraries",
+      (name: string, names: string[] = []) => [...names, name]
     )
-    .option("--version <version>", "Prefer a library version")
-    .option("--language <language>", "Prefer snippets in a programming language")
+    .option("--library-version <version>", "Library version to search (e.g., 15.4.0)")
+    .option(
+      "--language <name>",
+      "Programming language you write in (e.g., Python, Go); prefers results in that language"
+    )
     .option("--json", "Output as JSON")
-    .description("Search documentation without resolving a library first")
+    .description("Search documentation across all libraries in one step")
     .action(async (query: string, options: SearchCommandOptions) => {
       await searchCommand(query, options);
     });
