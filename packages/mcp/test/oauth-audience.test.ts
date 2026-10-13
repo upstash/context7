@@ -65,6 +65,12 @@ describe("allowed audiences", () => {
     );
   });
 
+  test("drops the query string of a configured entry, so it can still match a token", () => {
+    expect(getAllowedOAuthAudiences("https://a.example/mcp?a=1, urn:example:mcp?x")).toEqual(
+      new Set(["https://a.example/mcp", "urn:example:mcp?x"])
+    );
+  });
+
   test("lists the hosts of the allowed http(s) audiences", () => {
     expect(getAllowedOAuthAudienceHosts()).toEqual(new Set(["mcp.context7.com"]));
     expect(
@@ -212,7 +218,13 @@ describe("checkOAuthAudience", () => {
 
   test("the override list also decides which hosts drop their query string", () => {
     vi.stubEnv("MCP_OAUTH_AUDIENCE_ENFORCEMENT", "foreign");
-    vi.stubEnv("MCP_OAUTH_ALLOWED_AUDIENCES", "http://localhost:8787/mcp");
+    vi.stubEnv("MCP_OAUTH_ALLOWED_AUDIENCES", "http://localhost:8787/mcp?a=1");
+
+    expect(checkOAuthAudience("http://localhost:8787/mcp")).toMatchObject({
+      allowed: true,
+      aud: "http://localhost:8787/mcp",
+      outcome: "accepted",
+    });
 
     expect(checkOAuthAudience("http://localhost:8787/mcp?client=codex")).toMatchObject({
       allowed: true,

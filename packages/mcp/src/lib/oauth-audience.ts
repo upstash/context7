@@ -95,13 +95,16 @@ export function getAllowedOAuthAudiences(
   raw = process.env.MCP_OAUTH_ALLOWED_AUDIENCES
 ): Set<string> {
   const configured = raw?.trim();
-  const values = configured ? configured.split(",") : defaultOAuthAllowedAudiences();
-  return new Set(
-    values
-      .map((value) => value.trim())
-      .filter(Boolean)
-      .map((value) => normalizeAudience(value))
+  const values = (configured ? configured.split(",") : defaultOAuthAllowedAudiences())
+    .map((value) => value.trim())
+    .filter(Boolean);
+  // A token's audience on an allowed host loses its query string before the
+  // comparison, so a configured entry drops its own too; otherwise
+  // `https://x.example/mcp?a=1` in the list could never match.
+  const queryIgnoredHosts = getAllowedOAuthAudienceHosts(
+    new Set(values.map((value) => normalizeAudience(value)))
   );
+  return new Set(values.map((value) => normalizeAudience(value, { queryIgnoredHosts })));
 }
 
 /** The hosts of the allowed http(s) audiences, as `URL.host` spells them. */
