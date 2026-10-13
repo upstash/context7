@@ -37,6 +37,7 @@ import {
   observeAuthentication,
   observeUpstreamRequest,
   recordAuthenticationEvent,
+  recordSelfCancellingBatch,
 } from "./lib/telemetry-runtime.js";
 import { mcpBodyErrorHandler } from "./lib/mcp-body-error-handler.js";
 import {
@@ -580,6 +581,9 @@ async function main() {
           req.method === "POST"
             ? filterBatchSelfCancellations(req.body)
             : { body: req.body, removedSelfCancellation: false };
+        if (filteredBody.removedSelfCancellation) {
+          recordSelfCancellingBatch(req.headers["user-agent"]);
+        }
         if (
           filteredBody.removedSelfCancellation &&
           Array.isArray(filteredBody.body) &&
