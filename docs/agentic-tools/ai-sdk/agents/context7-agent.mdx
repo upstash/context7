@@ -13,7 +13,7 @@ import { Context7Agent } from "@upstash/context7-tools-ai-sdk";
 import { anthropic } from "@ai-sdk/anthropic";
 
 const agent = new Context7Agent({
-  model: anthropic("claude-sonnet-4-20250514"),
+  model: anthropic("claude-sonnet-5-5"),
 });
 
 const { text } = await agent.generate({
@@ -39,9 +39,9 @@ new Context7Agent(config?: Context7AgentConfig)
       Language model to use. Must be a LanguageModel instance from an AI SDK provider.
 
       Examples:
-      - `anthropic('claude-sonnet-4-20250514')`
-      - `openai('gpt-5.2')`
-      - `google('gemini-1.5-pro')`
+      - `anthropic('claude-sonnet-5-5')`
+      - `openai('gpt-6-astra')`
+      - `google('gemini-3.8-flash')`
     </ParamField>
     <ParamField path="apiKey" type="string" optional>
       Context7 API key. If not provided, uses the `CONTEXT7_API_KEY` environment variable.
@@ -58,7 +58,7 @@ new Context7Agent(config?: Context7AgentConfig)
 
 ### Returns
 
-`Context7Agent` extends the AI SDK `Agent` class and provides `generate()` and `stream()` methods.
+`Context7Agent` extends the AI SDK `ToolLoopAgent` class and provides `generate()` and `stream()` methods.
 
 ## Agent Workflow
 
@@ -97,7 +97,7 @@ import { Context7Agent } from "@upstash/context7-tools-ai-sdk";
 import { anthropic } from "@ai-sdk/anthropic";
 
 const agent = new Context7Agent({
-  model: anthropic("claude-sonnet-4-20250514"),
+  model: anthropic("claude-sonnet-5-5"),
 });
 
 const { text } = await agent.generate({
@@ -114,7 +114,7 @@ import { Context7Agent } from "@upstash/context7-tools-ai-sdk";
 import { openai } from "@ai-sdk/openai";
 
 const agent = new Context7Agent({
-  model: openai("gpt-5.2"),
+  model: openai("gpt-6-astra"),
 });
 
 const { text } = await agent.generate({
@@ -129,7 +129,7 @@ import { Context7Agent } from "@upstash/context7-tools-ai-sdk";
 import { anthropic } from "@ai-sdk/anthropic";
 
 const agent = new Context7Agent({
-  model: anthropic("claude-sonnet-4-20250514"),
+  model: anthropic("claude-sonnet-5-5"),
 });
 
 const { textStream } = await agent.stream({
@@ -149,7 +149,7 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { stepCountIs } from "ai";
 
 const agent = new Context7Agent({
-  model: anthropic("claude-sonnet-4-20250514"),
+  model: anthropic("claude-sonnet-5-5"),
   apiKey: process.env.CONTEXT7_API_KEY,
   stopWhen: stepCountIs(8), // Allow more steps for complex queries
 });
@@ -162,7 +162,7 @@ import { Context7Agent, AGENT_PROMPT } from "@upstash/context7-tools-ai-sdk";
 import { openai } from "@ai-sdk/openai";
 
 const agent = new Context7Agent({
-  model: openai("gpt-5.2"),
+  model: openai("gpt-6-astra"),
   system: `${AGENT_PROMPT}
 
 Additional instructions:

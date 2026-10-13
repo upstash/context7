@@ -23,7 +23,7 @@ Context7 MCP pulls up-to-date, version-specific documentation and code examples 
 Add `use context7` to your prompt (or [set up a rule](#️-installation) to auto-invoke):
 
 ```txt
-Create a Next.js middleware that checks for a valid JWT in cookies
+Create a Next.js proxy that checks for a valid JWT in cookies
 and redirects unauthenticated users to `/login`. use context7
 ```
 
@@ -1642,7 +1642,7 @@ Prometheus Operator instead, configure the equivalent per-pod endpoint with a `P
 
 ### OAuth Authentication
 
-Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization).
+Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/latest/basic/authorization).
 
 To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client configuration:
 
@@ -1694,7 +1694,7 @@ For errors like `Error: Cannot find module 'uriTemplate.js'`, try the `--experim
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
+      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp"]
     }
   }
 }

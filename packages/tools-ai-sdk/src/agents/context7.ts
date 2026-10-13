@@ -26,7 +26,7 @@ export interface Context7AgentConfig extends ToolLoopAgentSettings<never, ToolSe
  * import { anthropic } from '@ai-sdk/anthropic';
  *
  * const agent = new Context7Agent({
- *   model: anthropic('claude-sonnet-4-20250514'),
+ *   model: anthropic('claude-sonnet-5-5'),
  *   apiKey: 'your-context7-api-key',
  * });
  *

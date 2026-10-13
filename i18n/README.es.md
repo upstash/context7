@@ -34,7 +34,7 @@ Context7 obtiene ejemplos de código y documentación actualizados directamente 
 
 ### Requisitos
 
-- Node.js >= v18.0.0
+- Node.js >= v20.18.1
 - Cursor, Devin Desktop, Claude Desktop u otro Cliente MCP
 
 ### Instalando vía Smithery

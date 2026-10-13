@@ -1,11 +1,11 @@
 {
   "name": "context7",
   "displayName": "Context7",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Up-to-date documentation lookup. Pull version-specific documentation and code examples directly from source repositories into your LLM context.",
   "logo": "assets/logo.svg",
   "suggestedPrompts": [
-    "How do I set up middleware in the latest Next.js?",
+    "How do I set up a proxy in the latest Next.js?",
     "Show me how to define relations in Prisma",
     "What are the Supabase auth methods?"
   ],
