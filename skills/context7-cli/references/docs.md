@@ -10,7 +10,7 @@ Resolves a package/product name to a Context7-compatible library ID and returns 
 
 ```bash
 ctx7 library react "How to clean up useEffect with async operations"
-ctx7 library nextjs "How to set up app router with middleware"
+ctx7 library nextjs "How to set up app router with a proxy"
 ctx7 library prisma "How to define one-to-many relations with cascade delete"
 ```
 
@@ -52,7 +52,7 @@ If the user mentions a specific version, use a version-specific library ID:
 ctx7 docs /vercel/next.js "How to set up app router"
 
 # Version-specific
-ctx7 docs /vercel/next.js/v14.3.0-canary.87 "How to set up app router"
+ctx7 docs /vercel/next.js/v16.2.9 "How to set up app router"
 ```
 
 The available versions are listed in the `ctx7 library` output. Use the closest match to what the user specified.
@@ -70,7 +70,7 @@ You must call `ctx7 library` first to obtain the exact Context7-compatible libra
 
 ```bash
 ctx7 docs /facebook/react "How to clean up useEffect with async operations"
-ctx7 docs /vercel/next.js "How to add authentication middleware to app router"
+ctx7 docs /vercel/next.js "How to add an authentication proxy to app router"
 ctx7 docs /prisma/prisma "How to define one-to-many relations with cascade delete"
 ```
 
@@ -80,13 +80,13 @@ IMPORTANT: Do not call `ctx7 docs` more than 3 times per question. If you cannot
 
 The query directly affects the quality of results. Be specific and include relevant details, but keep each query to one topic — if the question spans multiple distinct concepts, run a separate `ctx7 docs` command per concept instead of combining them, unless the question is about how the concepts interact. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query.
 
-| Quality | Example |
-|---------|---------|
-| Good | `"How to set up authentication with JWT in Express.js"` |
-| Good | `"React useEffect cleanup function with async operations"` |
-| Bad (too vague) | `"auth"` |
-| Bad (too vague) | `"hooks"` |
-| Bad (too broad) | `"routing and auth and caching in Next.js"` |
+| Quality         | Example                                                    |
+| --------------- | ---------------------------------------------------------- |
+| Good            | `"How to set up authentication with JWT in Express.js"`    |
+| Good            | `"React useEffect cleanup function with async operations"` |
+| Bad (too vague) | `"auth"`                                                   |
+| Bad (too vague) | `"hooks"`                                                  |
+| Bad (too broad) | `"routing and auth and caching in Next.js"`                |
 
 Describe what to look up in the library's documentation in the query when possible — vague one-word queries return generic results, and multi-topic queries dilute ranking and return shallow results for each topic.
 
@@ -101,7 +101,7 @@ ctx7 docs /facebook/react "How to use hooks for state management" --json
 
 # Pipe to other tools — output is clean when not in a TTY (no spinners or colors)
 ctx7 docs /facebook/react "How to use hooks for state management" | head -50
-ctx7 docs /vercel/next.js "How to add middleware for route protection" | grep -A5 "middleware"
+ctx7 docs /vercel/next.js "How to add a proxy for route protection" | grep -A5 "proxy"
 ```
 
 ## Authentication
