@@ -1435,7 +1435,7 @@ bun run dist/index.js
 
 - `--transport <stdio|http>` – Transport to use (`stdio` by default). Use `http` for remote HTTP server or `stdio` for local integration.
 - `--port <number>` – Port to listen on when using `http` transport (default `3000`).
-- `--host <host>` – Interface to bind when using `http` transport (default `127.0.0.1`). On a loopback interface the server only accepts requests whose `Host` and `Origin` headers are loopback. Set `0.0.0.0` to accept connections from other machines, for example in a container.
+- `--host <host>` – Interface to bind when using `http` transport (default `127.0.0.1`). When the value is `127.0.0.1`, `localhost` or `::1`, the server only accepts requests whose `Host` and `Origin` headers are loopback. Set `0.0.0.0` to accept connections from other machines, for example in a container.
 - `--api-key <key>` – API key for authentication (or set `CONTEXT7_API_KEY` env var). You can get your API key by creating an account at [context7.com/dashboard](https://context7.com/dashboard).
 
 Example with HTTP transport and port 8080:

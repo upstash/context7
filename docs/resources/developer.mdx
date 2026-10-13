@@ -35,7 +35,7 @@ node packages/mcp/dist/index.js
 | --------------------------- | ------------------------------------------------------------------------------------- | ------- |
 | `--transport <stdio\|http>` | Transport to use. Use `http` for remote HTTP server or `stdio` for local integration. | `stdio` |
 | `--port <number>`           | Port to listen on when using `http` transport.                                        | `3000`  |
-| `--host <host>`             | Interface to bind when using `http` transport. On a loopback interface the server only accepts requests whose `Host` and `Origin` headers are loopback. Set `0.0.0.0` to accept connections from other machines, for example in a container. | `127.0.0.1` |
+| `--host <host>`             | Interface to bind when using `http` transport. When the value is `127.0.0.1`, `localhost` or `::1`, the server only accepts requests whose `Host` and `Origin` headers are loopback. Set `0.0.0.0` to accept connections from other machines, for example in a container. | `127.0.0.1` |
 | `--api-key <key>`           | API key for authentication (or set `CONTEXT7_API_KEY` env var).                       | -       |
 
 <Note>
