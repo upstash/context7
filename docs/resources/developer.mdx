@@ -31,14 +31,15 @@ node packages/mcp/dist/index.js
 
 `context7-mcp` accepts the following CLI flags:
 
-| Flag | Description | Default |
-|------|-------------|---------|
+| Flag                        | Description                                                                           | Default |
+| --------------------------- | ------------------------------------------------------------------------------------- | ------- |
 | `--transport <stdio\|http>` | Transport to use. Use `http` for remote HTTP server or `stdio` for local integration. | `stdio` |
-| `--port <number>` | Port to listen on when using `http` transport. | `3000` |
-| `--api-key <key>` | API key for authentication (or set `CONTEXT7_API_KEY` env var). | - |
+| `--port <number>`           | Port to listen on when using `http` transport.                                        | `3000`  |
+| `--api-key <key>`           | API key for authentication (or set `CONTEXT7_API_KEY` env var).                       | -       |
 
 <Note>
-  Get your API key by creating an account at [context7.com/dashboard](https://context7.com/dashboard).
+  Get your API key by creating an account at
+  [context7.com/dashboard](https://context7.com/dashboard).
 </Note>
 
 ### Examples
@@ -53,7 +54,7 @@ HTTP transport requires a credential on every request by default. Clients send `
 
 Opaque OAuth access tokens (`oat_…`) are checked against the Context7 API before each request is served (one check per token per minute on each replica; the cache is in memory, and a rejected token stays rejected for ten minutes). An expired or revoked token gets an HTTP 401 with a `WWW-Authenticate` challenge so MCP clients refresh it. Set `MCP_OAUTH_TOKEN_VALIDATION=off` to skip that check and forward the token unchecked.
 
-OAuth JWT access tokens from the authorization server (`OAUTH_AUTH_SERVER_URL`) are verified locally: signature against its JWKS, issuer, a `typ` of `at+jwt`, and expiry with a minute of clock tolerance. Clerk ID tokens and session JWTs share that issuer but are not access tokens, so they are always rejected. The token's `aud` must name this server (`RESOURCE_URL` origin, `/mcp`, or `/mcp/oauth`; override with a comma-separated `MCP_OAUTH_ALLOWED_AUDIENCES`). `MCP_OAUTH_AUDIENCE_ENFORCEMENT=observe` (default) admits a token with a missing or foreign audience and logs the OAuth client ID and audience, once per token every ten minutes; `required` answers HTTP 401.
+OAuth JWT access tokens from the authorization server (`OAUTH_AUTH_SERVER_URL`) are verified locally: signature against its JWKS, issuer, a `typ` of `at+jwt`, and expiry with a minute of clock tolerance. Clerk ID tokens and session JWTs share that issuer but are not access tokens, so they are always rejected. The token's `aud` must name this server (`RESOURCE_URL` origin, `/mcp`, or `/mcp/oauth`; override with a comma-separated `MCP_OAUTH_ALLOWED_AUDIENCES`). The query string of an audience on an allowed host is ignored. `MCP_OAUTH_AUDIENCE_ENFORCEMENT` sets what a mismatch does: `observe` (default) admits a token with a missing or foreign audience; `foreign` answers HTTP 401 to a token issued for another server and still admits one with no `aud`; `required` answers 401 to both. Every mismatch is logged with the OAuth client ID, the audience and the outcome, once per token per hour on each replica.
 
 Stdio transport with API key:
 
@@ -105,7 +106,12 @@ When developing locally, use this configuration to run from source:
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["tsx", "/path/to/folder/context7/packages/mcp/src/index.ts", "--api-key", "YOUR_API_KEY"]
+      "args": [
+        "tsx",
+        "/path/to/folder/context7/packages/mcp/src/index.ts",
+        "--api-key",
+        "YOUR_API_KEY"
+      ]
     }
   }
 }

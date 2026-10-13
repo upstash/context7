@@ -34,9 +34,11 @@ import { isClerkOAuthJwt, validateJWT } from "../src/lib/jwt.js";
 import {
   classifyAuthMethod,
   evaluateMcpAuthentication,
+  JWT_WARNING_WINDOW_MS,
   resetJwtWarningLog,
   setBearerChallenge,
 } from "../src/lib/mcp-http-auth.js";
+import { FOREIGN_OAUTH_AUDIENCE_MESSAGE } from "../src/lib/oauth-audience.js";
 import {
   rememberInvalidOAuthToken,
   resetOpaqueOAuthTokenValidation,
@@ -45,7 +47,10 @@ import { searchLibraries } from "../src/lib/api.js";
 
 const ISSUER = "https://clerk.context7.com";
 const AUDIENCE = "https://mcp.context7.com/mcp";
+const FOREIGN_AUDIENCE = "https://mcp.joom.it/context7";
 const CLIENT_ID = "client_2abcDEF";
+const RESOURCE_METADATA =
+  'resource_metadata="https://mcp.context7.com/.well-known/oauth-protected-resource/mcp"';
 const KID = "ins_test_key";
 
 let privateKey: jose.CryptoKey;
@@ -208,7 +213,7 @@ describe("an expired Clerk OAuth JWT", () => {
 
 describe("Clerk ID tokens and session JWTs", () => {
   test("are rejected with 401 whatever the audience enforcement", async () => {
-    for (const enforcement of ["observe", "required"]) {
+    for (const enforcement of ["observe", "foreign", "required"]) {
       vi.stubEnv("MCP_OAUTH_AUDIENCE_ENFORCEMENT", enforcement);
       for (const token of [await idToken(), await sessionJwt()]) {
         expect(classifyAuthMethod(token)).toBe("jwt");
@@ -231,51 +236,68 @@ describe("Clerk ID tokens and session JWTs", () => {
     const relabelled = await sign({ aud: CLIENT_ID });
     await expect(validateJWT(relabelled)).resolves.toMatchObject({
       valid: false,
-      error: "Token audience not accepted",
+      error: FOREIGN_OAUTH_AUDIENCE_MESSAGE,
     });
   });
 });
 
 describe("audience enforcement", () => {
-  const foreign = () => sign({ aud: "https://other-mcp.example/mcp" });
+  const foreign = () => sign({ aud: FOREIGN_AUDIENCE });
+  const missing = () => sign({ aud: null });
 
-  test("observe (default) admits a foreign audience and logs the client and audience", async () => {
+  const accepted = {
+    allowed: true,
+    method: "oauth",
+    event: "credential_validated",
+    outcome: "accepted",
+  };
+  const rejected = {
+    allowed: false,
+    method: "oauth",
+    error: FOREIGN_OAUTH_AUDIENCE_MESSAGE,
+    event: "credential_rejected",
+    outcome: "invalid",
+  };
+
+  test.each([
+    ["observe", accepted, accepted],
+    ["foreign", accepted, rejected],
+    ["required", rejected, rejected],
+  ] as const)(
+    "%s: allowed accepted, missing %o, foreign %o",
+    async (mode, onMissing, onForeign) => {
+      vi.stubEnv("MCP_OAUTH_AUDIENCE_ENFORCEMENT", mode);
+
+      await expect(evaluateMcpAuthentication(await sign(), "required")).resolves.toEqual(accepted);
+      await expect(evaluateMcpAuthentication(await missing(), "required")).resolves.toEqual(
+        onMissing
+      );
+      await expect(evaluateMcpAuthentication(await foreign(), "required")).resolves.toEqual(
+        onForeign
+      );
+
+      const logged = loggedLines();
+      expect(logged).toContain(
+        `audienceMismatch clientId=${CLIENT_ID} aud=missing enforcement=${mode} outcome=${onMissing.outcome === "accepted" ? "accepted" : "rejected"}`
+      );
+      expect(logged).toContain(
+        `audienceMismatch clientId=${CLIENT_ID} aud=${FOREIGN_AUDIENCE} enforcement=${mode} outcome=${onForeign.outcome === "accepted" ? "accepted" : "rejected"}`
+      );
+      expect(fetchMock).not.toHaveBeenCalled();
+    }
+  );
+
+  test("observe (default) admits a foreign audience and logs the client and audience, never the token", async () => {
     const token = await foreign();
 
-    await expect(evaluateMcpAuthentication(token, "required")).resolves.toMatchObject({
-      allowed: true,
-      method: "oauth",
-      event: "credential_validated",
-      outcome: "accepted",
-    });
+    await expect(evaluateMcpAuthentication(token, "required")).resolves.toMatchObject(accepted);
 
     const logged = loggedLines();
     expect(logged).toContain(
-      `audienceMismatch clientId=${CLIENT_ID} aud=https://other-mcp.example/mcp enforcement=observe`
+      `audienceMismatch clientId=${CLIENT_ID} aud=${FOREIGN_AUDIENCE} enforcement=observe outcome=accepted`
     );
     expect(logged).not.toContain(token);
     expect(logged).not.toContain(token.split(".")[2]);
-  });
-
-  test("logs the same mismatched token once, and each other token once", async () => {
-    const missing = await sign({ aud: null });
-    const other = await sign({ aud: null, claims: { client_id: CLIENT_ID, jti: "jti_other" } });
-
-    for (let i = 0; i < 3; i += 1) {
-      await expect(evaluateMcpAuthentication(missing, "required")).resolves.toMatchObject({
-        allowed: true,
-        outcome: "accepted",
-      });
-    }
-    await expect(evaluateMcpAuthentication(other, "required")).resolves.toMatchObject({
-      allowed: true,
-    });
-
-    const lines = vi.mocked(console.error).mock.calls.map((call) => String(call[0]));
-    expect(lines).toEqual([
-      `[Context7] audienceMismatch clientId=${CLIENT_ID} aud=missing enforcement=observe suppressedSincePrevious=0`,
-      `[Context7] audienceMismatch clientId=${CLIENT_ID} aud=missing enforcement=observe suppressedSincePrevious=0`,
-    ]);
   });
 
   test("observe logs a missing audience as such", async () => {
@@ -283,40 +305,131 @@ describe("audience enforcement", () => {
 
     await expect(validateJWT(token)).resolves.toEqual({
       valid: true,
-      warning: "audienceMismatch clientId=unknown aud=missing enforcement=observe",
+      warning: "audienceMismatch clientId=unknown aud=missing enforcement=observe outcome=accepted",
     });
+  });
+
+  test("foreign answers a token issued for another server with the gateway message", async () => {
+    vi.stubEnv("MCP_OAUTH_AUDIENCE_ENFORCEMENT", "foreign");
+
+    const decision = await evaluateMcpAuthentication(await foreign(), "observe");
+    expect(decision).toEqual(rejected);
+    expect(challenge(decision.allowed ? undefined : decision.error)).toBe(
+      `Bearer error="invalid_token", error_description="${FOREIGN_OAUTH_AUDIENCE_MESSAGE}", ${RESOURCE_METADATA}`
+    );
+  });
+
+  test("foreign keeps today's message for an expired token", async () => {
+    vi.stubEnv("MCP_OAUTH_AUDIENCE_ENFORCEMENT", "foreign");
+
+    const decision = await evaluateMcpAuthentication(
+      await sign({ aud: FOREIGN_AUDIENCE, expiresIn: -600 }),
+      "observe"
+    );
+    expect(decision).toMatchObject({ allowed: false, error: "Token expired", outcome: "expired" });
+    expect(challenge(decision.allowed ? undefined : decision.error)).toBe(
+      `Bearer error="invalid_token", error_description="Token expired", ${RESOURCE_METADATA}`
+    );
+    expect(loggedLines()).toBe("");
+  });
+
+  test("foreign accepts our own audience with Cursor's query string, on either endpoint", async () => {
+    vi.stubEnv("MCP_OAUTH_AUDIENCE_ENFORCEMENT", "foreign");
+
+    for (const aud of [
+      "https://mcp.context7.com/mcp?client=claude-code-plugin",
+      "https://mcp.context7.com/mcp?client=codex",
+      "https://mcp.context7.com/mcp/oauth?client=codex",
+      "https://MCP.context7.com/?client=codex",
+    ]) {
+      await expect(evaluateMcpAuthentication(await sign({ aud }), "required")).resolves.toEqual(
+        accepted
+      );
+    }
+    expect(loggedLines()).toBe("");
+  });
+
+  test("foreign still rejects a foreign host that carries a query string, logged as sent", async () => {
+    vi.stubEnv("MCP_OAUTH_AUDIENCE_ENFORCEMENT", "foreign");
+
+    for (const aud of [
+      `${FOREIGN_AUDIENCE}?client=codex`,
+      "https://spivak-apim.azure-api.net/context7/mcp?client=claude-code-plugin",
+    ]) {
+      await expect(evaluateMcpAuthentication(await sign({ aud }), "observe")).resolves.toEqual(
+        rejected
+      );
+      expect(loggedLines()).toContain(`aud=${aud} enforcement=foreign outcome=rejected`);
+    }
   });
 
   test("required rejects a foreign or missing audience with 401 and still logs it", async () => {
     vi.stubEnv("MCP_OAUTH_AUDIENCE_ENFORCEMENT", "required");
 
-    for (const token of [await foreign(), await sign({ aud: null })]) {
-      await expect(evaluateMcpAuthentication(token, "observe")).resolves.toEqual({
-        allowed: false,
-        method: "oauth",
-        error: "Token audience not accepted",
-        event: "credential_rejected",
-        outcome: "invalid",
-      });
+    for (const token of [await foreign(), await missing()]) {
+      await expect(evaluateMcpAuthentication(token, "observe")).resolves.toEqual(rejected);
     }
     expect(loggedLines()).toContain(
-      `audienceMismatch clientId=${CLIENT_ID} aud=https://other-mcp.example/mcp enforcement=required`
+      `audienceMismatch clientId=${CLIENT_ID} aud=${FOREIGN_AUDIENCE} enforcement=required outcome=rejected`
     );
-    expect(loggedLines()).toContain("aud=missing enforcement=required");
+    expect(loggedLines()).toContain("aud=missing enforcement=required outcome=rejected");
 
     await expect(evaluateMcpAuthentication(await sign(), "required")).resolves.toMatchObject({
       allowed: true,
     });
   });
 
+  test("logs the same mismatched token once an hour, and each other token once", async () => {
+    const first = await missing();
+    const other = await sign({ aud: null, claims: { client_id: CLIENT_ID, jti: "jti_other" } });
+    const start = Date.now();
+
+    for (let i = 0; i < 3; i += 1) {
+      await expect(evaluateMcpAuthentication(first, "required", start + i)).resolves.toMatchObject({
+        allowed: true,
+        outcome: "accepted",
+      });
+    }
+    await expect(evaluateMcpAuthentication(other, "required", start + 3)).resolves.toMatchObject({
+      allowed: true,
+    });
+    // Just inside the window: still suppressed. On the hour: logged again,
+    // carrying the lines suppressed since the previous one.
+    await evaluateMcpAuthentication(first, "required", start + JWT_WARNING_WINDOW_MS - 1);
+    await evaluateMcpAuthentication(first, "required", start + JWT_WARNING_WINDOW_MS);
+
+    const line = `[Context7] audienceMismatch clientId=${CLIENT_ID} aud=missing enforcement=observe outcome=accepted`;
+    const lines = vi.mocked(console.error).mock.calls.map((call) => String(call[0]));
+    expect(JWT_WARNING_WINDOW_MS).toBe(60 * 60_000);
+    expect(lines).toEqual([
+      `${line} suppressedSincePrevious=0`,
+      `${line} suppressedSincePrevious=0`,
+      `${line} suppressedSincePrevious=3`,
+    ]);
+  });
+
   test("MCP_OAUTH_ALLOWED_AUDIENCES replaces the default list", async () => {
-    vi.stubEnv("MCP_OAUTH_AUDIENCE_ENFORCEMENT", "required");
+    vi.stubEnv("MCP_OAUTH_AUDIENCE_ENFORCEMENT", "foreign");
     vi.stubEnv("MCP_OAUTH_ALLOWED_AUDIENCES", "http://localhost:8787/mcp/");
 
     await expect(validateJWT(await sign({ aud: "http://localhost:8787/mcp" }))).resolves.toEqual({
       valid: true,
     });
-    await expect(validateJWT(await sign())).resolves.toMatchObject({ valid: false });
+    await expect(
+      validateJWT(await sign({ aud: "http://localhost:8787/mcp?client=codex" }))
+    ).resolves.toEqual({ valid: true });
+    // The default audience is now foreign, query string and all.
+    await expect(validateJWT(await sign())).resolves.toMatchObject({
+      valid: false,
+      error: FOREIGN_OAUTH_AUDIENCE_MESSAGE,
+      warning: `audienceMismatch clientId=${CLIENT_ID} aud=${AUDIENCE} enforcement=foreign outcome=rejected`,
+    });
+    await expect(
+      validateJWT(await sign({ aud: `${AUDIENCE}?client=codex` }))
+    ).resolves.toMatchObject({
+      valid: false,
+      warning: expect.stringContaining(`aud=${AUDIENCE}?client=codex`),
+    });
   });
 });
 

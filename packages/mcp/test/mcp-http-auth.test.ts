@@ -17,7 +17,7 @@ import {
   resetOpaqueOAuthTokenValidation,
   validateOpaqueOAuthToken,
 } from "../src/lib/oauth-token-validation.js";
-import { resetJwtWarningLog } from "../src/lib/mcp-http-auth.js";
+import { JWT_WARNING_WINDOW_MS, resetJwtWarningLog } from "../src/lib/mcp-http-auth.js";
 import {
   classifyAuthMethod,
   effectiveMcpAuthMode,
@@ -174,7 +174,8 @@ describe("MCP HTTP authentication policy", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(validateJWT).mockResolvedValueOnce({
       valid: true,
-      warning: "audienceMismatch clientId=client_1 aud=https://other.example enforcement=observe",
+      warning:
+        "audienceMismatch clientId=client_1 aud=https://other.example enforcement=observe outcome=accepted",
     });
 
     await expect(evaluateMcpAuthentication("clerk.payload.signature", "required")).resolves.toEqual(
@@ -190,34 +191,46 @@ describe("MCP HTTP authentication policy", () => {
     expect(logged).not.toContain("clerk.payload.signature");
   });
 
-  test("logs a repeated warning once per token and keeps rejecting in required mode", async () => {
+  test("logs a repeated warning once per token per hour and keeps rejecting in required mode", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     const warning = (aud: string) => ({
       valid: false,
-      error: "Token audience not accepted",
-      warning: `audienceMismatch clientId=client_1 aud=${aud} enforcement=required`,
+      error: "This token was issued for another server.",
+      warning: `audienceMismatch clientId=client_1 aud=${aud} enforcement=required outcome=rejected`,
     });
     vi.mocked(validateJWT)
       .mockResolvedValueOnce(warning("missing"))
       .mockResolvedValueOnce(warning("missing"))
       .mockResolvedValueOnce(warning("missing"))
-      .mockResolvedValueOnce(warning("https://other.example"));
+      .mockResolvedValueOnce(warning("https://other.example"))
+      .mockResolvedValueOnce(warning("missing"));
+    const start = 1_000_000;
 
     for (let i = 0; i < 3; i += 1) {
       await expect(
-        evaluateMcpAuthentication("clerk.first.signature", "observe")
-      ).resolves.toMatchObject({ allowed: false, error: "Token audience not accepted" });
+        evaluateMcpAuthentication("clerk.first.signature", "observe", start + i)
+      ).resolves.toMatchObject({
+        allowed: false,
+        error: "This token was issued for another server.",
+      });
     }
     await expect(
-      evaluateMcpAuthentication("clerk.second.signature", "observe")
+      evaluateMcpAuthentication("clerk.second.signature", "observe", start + 3)
+    ).resolves.toMatchObject({ allowed: false });
+    await expect(
+      evaluateMcpAuthentication("clerk.first.signature", "observe", start + JWT_WARNING_WINDOW_MS)
     ).resolves.toMatchObject({ allowed: false });
 
-    expect(consoleError).toHaveBeenCalledTimes(2);
+    expect(JWT_WARNING_WINDOW_MS).toBe(60 * 60_000);
+    expect(consoleError).toHaveBeenCalledTimes(3);
     expect(consoleError.mock.calls[0][0]).toBe(
-      "[Context7] audienceMismatch clientId=client_1 aud=missing enforcement=required suppressedSincePrevious=0"
+      "[Context7] audienceMismatch clientId=client_1 aud=missing enforcement=required outcome=rejected suppressedSincePrevious=0"
     );
     expect(consoleError.mock.calls[1][0]).toBe(
-      "[Context7] audienceMismatch clientId=client_1 aud=https://other.example enforcement=required suppressedSincePrevious=0"
+      "[Context7] audienceMismatch clientId=client_1 aud=https://other.example enforcement=required outcome=rejected suppressedSincePrevious=0"
+    );
+    expect(consoleError.mock.calls[2][0]).toBe(
+      "[Context7] audienceMismatch clientId=client_1 aud=missing enforcement=required outcome=rejected suppressedSincePrevious=2"
     );
   });
 
