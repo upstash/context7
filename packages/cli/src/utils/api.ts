@@ -10,7 +10,6 @@ import type {
   GenerateStreamEvent,
   SkillQuotaResponse,
   ContextResponse,
-  DocumentationSearchResponse,
 } from "../types.js";
 import { downloadSkillFromGitHub, getSkillFromGitHub } from "./github.js";
 import { VERSION } from "../constants.js";
@@ -378,7 +377,7 @@ export async function searchDocumentation(
   query: string,
   options: SearchDocumentationOptions,
   accessToken?: string
-): Promise<DocumentationSearchResponse | string> {
+): Promise<unknown> {
   const params = new URLSearchParams({ query, type: options.type });
   for (const library of options.libraries ?? []) {
     params.append("library", library);
@@ -402,9 +401,5 @@ export async function searchDocumentation(
     throw new Error(errorData.message || errorData.error || `HTTP error ${response.status}`);
   }
 
-  if (options.type === "txt") {
-    return await response.text();
-  }
-
-  return (await response.json()) as DocumentationSearchResponse;
+  return options.type === "txt" ? response.text() : response.json();
 }

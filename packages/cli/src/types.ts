@@ -250,28 +250,3 @@ export interface ContextResponse {
   message?: string;
   redirectUrl?: string;
 }
-
-export type DocumentationVersionStatus = "verified" | "prerelease" | "unverified";
-
-export interface DocumentationSearchResponse {
-  codeSnippets: (CodeSnippet & { libraryId: string })[];
-  infoSnippets: (InfoSnippet & { libraryId: string })[];
-  rules?: {
-    global: string[];
-    libraries: {
-      libraryId: string;
-      libraryOwn: string[];
-      libraryTeam: string[];
-    }[];
-  };
-  version?: {
-    requested?: string;
-    status: DocumentationVersionStatus;
-    libraries: {
-      libraryId: string;
-      requested: string;
-      served: string | null;
-      status: DocumentationVersionStatus;
-    }[];
-  };
-}

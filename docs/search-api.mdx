@@ -76,7 +76,7 @@ curl -G "https://context7.com/api/v3/search" \
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `query`    | The question or task. Required.                                                                                                                                 |
 | `library`  | A library name (`next.js`) or Context7 ID (`/vercel/next.js`). Repeat for up to four hints.                                                                     |
-| `version`  | A version such as `15.4.0`. It applies to one library, or to a question about one product. With several libraries, it is a preference.                          |
+| `version`  | A version such as `15.4.0`. Requires at least one `library`. Strict with one library, a preference with several.                                                |
 | `language` | A programming language to prefer, such as `TypeScript`. It is a preference, so language-neutral documentation can still appear.                                 |
 | `type`     | `txt` (default) or `json`.                                                                                                                                      |
 
