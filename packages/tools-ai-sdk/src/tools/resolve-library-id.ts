@@ -20,7 +20,7 @@ import type { Context7ToolsConfig } from "./types";
  * import { openai } from '@ai-sdk/openai';
  *
  * const { text } = await generateText({
- *   model: openai('gpt-4o'),
+ *   model: openai('gpt-6-astra'),
  *   prompt: 'Find React documentation about hooks',
  *   tools: {
  *     resolveLibraryId: resolveLibraryId(),

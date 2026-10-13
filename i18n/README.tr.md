@@ -35,7 +35,7 @@ Context7, güncel kod örneklerini ve belgelerini doğrudan LLM'inizin içeriği
 
 ### Gereksinimler
 
-- Node.js >= v18.0.0
+- Node.js >= v20.18.1
 - Cursor, Devin Desktop, Claude Desktop veya başka bir MCP İstemcisi
 
 ### Smithery aracılığıyla kurulum
@@ -269,7 +269,7 @@ Bu, özellikle `npx`'in paketleri düzgün şekilde yüklemediği veya çözemed
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
+      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp"]
     }
   }
 }
@@ -279,7 +279,7 @@ Bu, özellikle `npx`'in paketleri düzgün şekilde yüklemediği veya çözemed
 1. Paket adından `@latest` ifadesini kaldırmayı deneyin.
 2. Alternatif olarak `bunx` kullanmayı deneyin.
 3. Alternatif olarak `deno` kullanmayı deneyin.
-4. `npx` ile yerel fetch desteğine sahip olmak için Node v18 veya daha yüksek bir sürüm kullandığınızdan emin olun.
+4. `npx` ile yerel fetch desteğine sahip olmak için Node v20 veya daha yüksek bir sürüm kullandığınızdan emin olun.
 
 ## Sorumluluk Reddi
 Context7 projeleri topluluk katkılıdır ve yüksek kaliteyi korumaya çalışsak da, tüm kütüphane belgelerinin doğruluğunu, eksiksizliğini veya güvenliğini garanti edemeyiz. Context7'de listelenen projeler, Context7 tarafından değil, ilgili sahipleri tarafından geliştirilmekte ve sürdürülmektedir. Şüpheli, uygunsuz veya potansiyel olarak zararlı içerikle karşılaşırsanız, lütfen bizi hemen bilgilendirmek için proje sayfasındaki "Bildir" düğmesini kullanın. Tüm bildirimleri ciddiye alıyoruz ve platformumuzun bütünlüğünü ve güvenliğini korumak için işaretlenen içeriği hızla inceleyeceğiz. Context7'yi kullanarak, bunu kendi takdirinizle ve riskinizle yaptığınızı kabul etmiş olursunuz.

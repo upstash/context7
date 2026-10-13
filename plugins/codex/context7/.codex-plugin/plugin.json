@@ -24,7 +24,7 @@
     "privacyPolicyURL": "https://upstash.com/privacy",
     "termsOfServiceURL": "https://upstash.com/terms",
     "defaultPrompt": [
-      "Use Context7 for Next.js middleware docs.",
+      "Use Context7 for Next.js proxy docs.",
       "Find current Prisma relation query examples."
     ],
     "brandColor": "#059669"

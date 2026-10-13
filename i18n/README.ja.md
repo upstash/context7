@@ -39,7 +39,7 @@ Context7 は最新のコード例とドキュメントを直接 LLM のコンテ
 
 ### 必須要件
 
-- Node.js >= v18.0.0
+- Node.js >= v20.18.1
 - Cursor、Devin Desktop、Claude Desktop またはその他の MCP クライアント
 <details>
 <summary><b>Smithery 経由でのインストール</b></summary>
@@ -615,7 +615,7 @@ npx -y @modelcontextprotocol/inspector npx @upstash/context7-mcp
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
+      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp"]
     }
   }
 }
@@ -644,7 +644,7 @@ TLS 関連の問題を回避するには、`--experimental-fetch` フラグを�
 1. パッケージ名に `@latest` を追加してみる
 2. `npx` の代替として `bunx` を使用する
 3. 別の代替方法として `deno` の使用を検討する
-4. ネイティブ fetch サポートのために Node.js v18 以上を使用していることを確認する
+4. ネイティブ fetch サポートのために Node.js v20 以上を使用していることを確認する
 </details>
 
 ## ⚠️ 免責事項

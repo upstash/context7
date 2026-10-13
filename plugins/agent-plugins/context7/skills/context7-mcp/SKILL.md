@@ -1,6 +1,6 @@
 ---
 name: context7-mcp
-description: Fetches current, version-specific library documentation and code examples through the Context7 MCP server. Use whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service, including API syntax, configuration, setup instructions, version migration, CLI usage, and library-specific debugging. Use when generating code that calls a third-party library, and when the user names a version such as Next.js 15 or React 19. Use even for well-known libraries like React, Vue, Next.js, Prisma, Supabase, Express, Tailwind, Django, and Spring Boot, because training data may not reflect recent changes. Prefer this over web search for library documentation. Do not use it for refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts, or when the user has already supplied the relevant documentation.
+description: Fetches current, version-specific library documentation and code examples through the Context7 MCP server. Use whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service, including API syntax, configuration, setup instructions, version migration, CLI usage, and library-specific debugging. Use when generating code that calls a third-party library, and when the user names a version such as Next.js 16 or React 19. Use even for well-known libraries like React, Vue, Next.js, Prisma, Supabase, Express, Tailwind, Django, and Spring Boot, because training data may not reflect recent changes. Prefer this over web search for library documentation. Do not use it for refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts, or when the user has already supplied the relevant documentation.
 ---
 
 When the user asks about libraries, frameworks, or needs code examples, use Context7 to fetch current documentation instead of relying on training data.
@@ -9,7 +9,7 @@ When the user asks about libraries, frameworks, or needs code examples, use Cont
 
 Activate this skill when the user:
 
-- Asks setup or configuration questions ("How do I configure Next.js middleware?")
+- Asks setup or configuration questions ("How do I configure a Next.js proxy?")
 - Requests code involving libraries ("Write a Prisma query for...")
 - Needs API references ("What are the Supabase auth methods?")
 - Mentions specific frameworks (React, Vue, Svelte, Express, Tailwind, etc.)
@@ -52,5 +52,5 @@ Incorporate the fetched documentation into your response:
 
 - **Be specific**: Describe what to look up in the library's documentation, but keep each query to a single concept
 - **One topic per query**: Split multi-topic questions into separate `query-docs` calls. Resolve the library ID once, then query per concept, unless the question is about how the concepts interact
-- **Version awareness**: When users mention versions ("Next.js 15", "React 19"), use version-specific library IDs if available from the resolution step
+- **Version awareness**: When users mention versions ("Next.js 16", "React 19"), use version-specific library IDs if available from the resolution step
 - **Prefer official sources**: When multiple matches exist, prefer official/primary packages over community forks

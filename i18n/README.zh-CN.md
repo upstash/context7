@@ -21,7 +21,7 @@
 Context7直接从源头获取最新的、特定版本的文档和代码示例——并将它们直接放入你的提示词中。
 
 ```txt
-创建一个Next.js中间件，检查cookies中的有效JWT，
+创建一个Next.js proxy，检查cookies中的有效JWT，
 并将未认证用户重定向到 `/login`。use context7
 ```
 
@@ -77,7 +77,7 @@ npx ctx7 setup
 要获取特定库版本的文档，只需在提示词中提及版本：
 
 ```txt
-如何设置Next.js 14中间件？use context7
+如何设置Next.js 16 proxy？use context7
 ```
 
 Context7 将自动匹配适当的版本。

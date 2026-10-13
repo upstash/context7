@@ -17,7 +17,7 @@ Context7 MCP mengambil dokumentasi dan contoh kode terkini yang spesifik versi l
 Tambahkan `use context7` ke prompt Anda di Cursor:
 
 ```txt
-Buat middleware Next.js yang memeriksa JWT valid di cookie dan mengarahkan pengguna yang tidak terautentikasi ke `/login`. use context7
+Buat proxy Next.js yang memeriksa JWT valid di cookie dan mengarahkan pengguna yang tidak terautentikasi ke `/login`. use context7
 ```
 
 ```txt
@@ -39,7 +39,7 @@ Kunjungi [panduan penambahan proyek](https://context7.com/docs/adding-libraries)
 
 ### Persyaratan
 
-- Node.js >= v18.0.0
+- Node.js >= v20.18.1
 - Cursor, Devin Desktop, Claude Desktop, atau klien MCP lainnya
 <details>
 <summary><b>Menginstal melalui Smithery</b></summary>
@@ -860,7 +860,7 @@ Untuk kesalahan seperti `Error: Cannot find module 'uriTemplate.js'`, coba gunak
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
+      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp"]
     }
   }
 }
@@ -889,7 +889,7 @@ Gunakan bendera `--experimental-fetch` untuk melewati masalah terkait TLS:
 1. Coba tambahkan `@latest` ke nama paket
 2. Gunakan `bunx` sebagai alternatif `npx`
 3. Pertimbangkan menggunakan `deno` sebagai alternatif lain
-4. Pastikan Anda menggunakan Node.js v18 atau lebih tinggi untuk dukungan fetch native
+4. Pastikan Anda menggunakan Node.js v20 atau lebih tinggi untuk dukungan fetch native
 </details>
 
 ## ⚠️ Penafian

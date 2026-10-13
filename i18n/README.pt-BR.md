@@ -40,7 +40,7 @@ Confira nosso [guia de adição de projetos](https://context7.com/docs/adding-li
 
 ### Requisitos
 
-- Node.js >= v18.0.0
+- Node.js >= v20.18.1
 - Cursor, Claude Code, VSCode, Devin Desktop ou outro Cliente MCP
 <details>
 <summary><b>Instalando via Smithery</b></summary>
@@ -974,7 +974,7 @@ Para erros como `Error: Cannot find module 'uriTemplate.js'`, tente a flag `--ex
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
+      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp"]
     }
   }
 }
@@ -1003,7 +1003,7 @@ Use a flag `--experimental-fetch` para contornar problemas relacionados a TLS:
 1. Tente adicionar `@latest` ao nome do pacote
 2. Use `bunx` como alternativa ao `npx`
 3. Considere usar `deno` como outra alternativa
-4. Certifique-se de estar usando Node.js v18 ou superior para suporte nativo a fetch
+4. Certifique-se de estar usando Node.js v20 ou superior para suporte nativo a fetch
 </details>
 
 ## ⚠️ Aviso

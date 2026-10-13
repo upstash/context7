@@ -56,7 +56,7 @@ Resolves a package/product name to a Context7-compatible library ID and returns 
 
 ```bash
 npx ctx7@latest library React "How to clean up useEffect with async operations"
-npx ctx7@latest library "Next.js" "How to set up app router with middleware"
+npx ctx7@latest library "Next.js" "How to set up app router with a proxy"
 npx ctx7@latest library Prisma "How to define one-to-many relations with cascade delete"
 ```
 
@@ -98,7 +98,7 @@ If the user mentions a specific version, use a version-specific library ID:
 npx ctx7@latest docs /vercel/next.js "How to set up app router"
 
 # Version-specific
-npx ctx7@latest docs /vercel/next.js/v14.3.0-canary.87 "How to set up app router"
+npx ctx7@latest docs /vercel/next.js/v16.2.9 "How to set up app router"
 ```
 
 The available versions are listed in the `library` command output. Use the closest match to what the user specified.
@@ -109,7 +109,7 @@ Retrieves up-to-date documentation and code examples for the resolved library.
 
 ```bash
 npx ctx7@latest docs /facebook/react "How to clean up useEffect with async operations"
-npx ctx7@latest docs /vercel/next.js "How to add authentication middleware to app router"
+npx ctx7@latest docs /vercel/next.js "How to add an authentication proxy to app router"
 npx ctx7@latest docs /prisma/prisma "How to define one-to-many relations with cascade delete"
 ```
 
