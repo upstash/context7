@@ -123,13 +123,13 @@ npx ctx7@latest docs /websites/twilio "How to send an SMS" --language Ruby
 
 The query directly affects the quality of results. Be specific and include relevant details, but keep each query to one topic — if the question spans multiple distinct concepts, run a separate `docs` command per concept instead of combining them, unless the question is about how the concepts interact. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query.
 
-| Quality | Example |
-|---------|---------|
-| Good | `"How to set up authentication with JWT in Express.js"` |
-| Good | `"React useEffect cleanup function with async operations"` |
-| Bad (too vague) | `"auth"` |
-| Bad (too vague) | `"hooks"` |
-| Bad (too broad) | `"routing and auth and caching in Next.js"` |
+| Quality         | Example                                                    |
+| --------------- | ---------------------------------------------------------- |
+| Good            | `"How to set up authentication with JWT in Express.js"`    |
+| Good            | `"React useEffect cleanup function with async operations"` |
+| Bad (too vague) | `"auth"`                                                   |
+| Bad (too vague) | `"hooks"`                                                  |
+| Bad (too broad) | `"routing and auth and caching in Next.js"`                |
 
 Describe what to look up in the library's documentation, rather than the task to complete — vague one-word queries return generic results, and multi-topic queries dilute ranking and return shallow results for each topic.
 
@@ -150,6 +150,7 @@ npx ctx7@latest login
 ## Error Handling
 
 If a command fails with a quota error ("Monthly quota reached" or "quota exceeded"):
+
 1. Inform the user their Context7 quota is exhausted
 2. Suggest they authenticate for higher limits: `npx ctx7@latest login`
 3. If they cannot or choose not to authenticate, answer from training knowledge and clearly note it may be outdated
