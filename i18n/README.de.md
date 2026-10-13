@@ -34,7 +34,7 @@ Context7 holt aktuelle Codebeispiele und Dokumentationen direkt in den Kontext d
 
 ### Anforderungen
 
-- Node.js >= v18.0.0
+- Node.js >= v20.18.1
 - Cursor, Devin Desktop, Claude Desktop oder ein anderer MCP-Client
 
 ### Installation über Smithery
@@ -300,7 +300,7 @@ Wenn du einen Fehler wie `Error: Cannot find module 'uriTemplate.js'` bekommst, 
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
+      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp"]
     }
   }
 }
@@ -310,7 +310,7 @@ Wenn du einen Fehler wie `Error: Cannot find module 'uriTemplate.js'` bekommst, 
 1. Versuche, `@latest` aus dem Paketnamen zu entfernen.
 2. Versuche, `bunx` als Alternative zu verwenden.
 3. Versuche, `deno` als Alternative zu verwenden.
-4. Stelle sicher, dass du Node v18 oder höher verwendest, um native Fetch-Unterstützung mit `npx` zu haben.
+4. Stelle sicher, dass du Node v20 oder höher verwendest, um native Fetch-Unterstützung mit `npx` zu haben.
 
 ## Haftungsausschluss
 Context7-Projekte werden von der Community beigetragen, und obwohl wir uns bemühen, eine hohe Qualität aufrechtzuerhalten, können wir die Genauigkeit, Vollständigkeit oder Sicherheit aller Bibliotheksdokumentationen nicht garantieren. Die in Context7 aufgeführten Projekte werden von ihren jeweiligen Eigentümern entwickelt und gepflegt, nicht von Context7. Wenn du auf verdächtige, unangemessene oder potenziell schädliche Inhalte stößt, verwende bitte die Schaltfläche "Melden" auf der Projektseite, um uns sofort zu benachrichtigen. Wir nehmen alle Berichte ernst und werden gemeldete Inhalte umgehend überprüfen, um die Integrität und Sicherheit unserer Plattform zu gewährleisten. Durch die Nutzung von Context7 erkennst du an, dass du dies nach eigenem Ermessen und auf eigenes Risiko tust.

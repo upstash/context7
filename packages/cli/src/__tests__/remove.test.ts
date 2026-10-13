@@ -91,6 +91,36 @@ describe("remove command", () => {
     });
   });
 
+  test("removing the AGENTS.md section leaves the rest of the file untouched", async () => {
+    const agentsPath = join(tempDir, "AGENTS.md");
+    const own = "# Project rules\n\n```text\nline a\n\n\nline b\n```\n\n\n## Team notes\n\n";
+    const tail = "## Tail section\n";
+    await writeFile(
+      agentsPath,
+      `${own}<!-- context7 -->\nrule body\n<!-- context7 -->\n\n${tail}`,
+      "utf-8"
+    );
+
+    await runCommand("remove", "--codex", "--cli", "--project");
+
+    // Blank lines inside the fenced block and between the user's own sections
+    // are not ours to normalize; only the seam of the removed section is.
+    expect(await readFile(agentsPath, "utf-8")).toBe(`${own}${tail}`);
+  });
+
+  test("removing a trailing AGENTS.md section keeps the preceding content", async () => {
+    const agentsPath = join(tempDir, "AGENTS.md");
+    await writeFile(
+      agentsPath,
+      "# Before\n\nkeep   \n\n<!-- context7 -->\nrule body\n<!-- context7 -->\n",
+      "utf-8"
+    );
+
+    await runCommand("remove", "--codex", "--cli", "--project");
+
+    expect(await readFile(agentsPath, "utf-8")).toBe("# Before\n\nkeep   \n");
+  });
+
   test("removes only MCP artifacts for codex project setup", async () => {
     const agentsPath = join(tempDir, "AGENTS.md");
     const tomlPath = join(tempDir, ".codex", "config.toml");

@@ -283,7 +283,7 @@ npx -y @modelcontextprotocol/inspector npx @upstash/context7-mcp@latest
 ```json
 {
   "command": "npx",
-  "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
+  "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp"]
 }
 ```
 
@@ -292,7 +292,7 @@ npx -y @modelcontextprotocol/inspector npx @upstash/context7-mcp@latest
 1. أزل `@latest`
 2. جرّب `bunx`
 3. جرّب `deno`
-4. تأكد أنك تستخدم Node v18 أو أحدث
+4. تأكد أنك تستخدم Node v20 أو أحدث
 
 ## إخلاء مسؤولية
 

@@ -4,6 +4,11 @@ on:
   pull_request:
     paths:
       - "packages/**"
+      - "plugins/**"
+      - ".cursor-plugin/**"
+      - ".claude-plugin/**"
+      - "skills/**"
+      - "rules/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"

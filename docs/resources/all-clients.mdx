@@ -19,7 +19,7 @@ Context7 supports all MCP clients. Below are configuration examples for popular 
 
 ## OAuth Authentication
 
-Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization).
+Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/latest/basic/authorization).
 
 To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client configuration:
 
@@ -29,6 +29,38 @@ To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client con
 ```
 
 OAuth is only available for remote HTTP connections. For local MCP connections using stdio transport, use API key authentication instead.
+
+## MCP Tools
+
+The Context7 MCP server exposes two tools. Clients list them under these exact names:
+
+| Tool | Description |
+|------|-------------|
+| `resolve-library-id` | Resolve a library name to a Context7-compatible library ID |
+| `query-docs` | Fetch up-to-date documentation and code examples for a library |
+
+### `resolve-library-id`
+
+Search for a library by name and resolve it to a Context7-compatible library ID (e.g., `/vercel/next.js`). Call this tool before `query-docs` unless the user already provides a library ID in the `/owner/repo` format.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `libraryName` | string, required | Library name to search for, with the official punctuation — e.g., `Next.js`, not `nextjs` |
+| `query` | string, required | What you want to do with the library, e.g., `set up middleware` |
+
+The tool returns the matching libraries with their ID, title, description, code snippet count, source reputation, benchmark score, and available versions.
+
+### `query-docs`
+
+Fetch documentation context for a library and a specific question.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `libraryId` | string, required | Exact Context7-compatible library ID, e.g., `/vercel/next.js` or `/vercel/next.js/v16.2.9` |
+| `query` | string, required | What to look up, scoped to a single concept |
+| `language` | string, optional | Programming language you write in, e.g., `Python` or `Go`. Code examples in that language rank first |
+
+The tool returns the relevant documentation and code examples as text.
 
 <AccordionGroup>
 
@@ -1427,7 +1459,20 @@ See the [Emdash repository](https://github.com/generalaction/emdash) for more in
 
 <Accordion title="Desktop Extension">
 
-Install the [context7.mcpb](https://github.com/upstash/context7/releases/download/mcpb-v4.1.1/context7.mcpb) file and add it to your client. See [MCP bundles docs](https://github.com/modelcontextprotocol/mcpb#mcp-bundles-mcpb) for more info.
+Install the [context7.mcpb](https://github.com/upstash/context7/releases/download/mcpb-v4.3.0/context7.mcpb) file and add it to your client. See [MCP bundles docs](https://github.com/modelcontextprotocol/mcpb#mcp-bundles-mcpb) for more info.
+
+</Accordion>
+
+<Accordion title="FLUJO">
+
+[FLUJO](https://github.com/mario-andreschak/FLUJO) connects to Context7 through its remote-server setup.
+
+1. Open **Connected Apps** and select **Connect App** → **I have connection details** → **At a remote URL**.
+2. Enter `https://mcp.context7.com/mcp` as the **Server URL** and click **Connect**.
+3. Select **Continue to setup** if prompted. In **Configure & Test**, confirm that **Streamable HTTP** is selected.
+4. Under **Custom HTTP headers**, add an `Authorization` header with the value `Bearer YOUR_API_KEY` and select **Secret** to mask it. Leave the optional OAuth client credentials blank for this endpoint.
+5. Run **3) Test run** if the connection test has not started automatically. After the test passes, click **Update server** to save.
+6. Open the connected server's **Tools** tab. Select `resolve-library-id`, provide a library name and a documentation query, and click **Test tool**. Use a returned library ID with `query-docs` to retrieve documentation.
 
 </Accordion>
 

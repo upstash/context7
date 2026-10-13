@@ -111,7 +111,7 @@ async function resolveCommand(
 async function queryCommand(
   libraryId: string,
   query: string,
-  options: { json?: boolean }
+  options: { json?: boolean; language?: string }
 ): Promise<void> {
   trackEvent("command", { name: "docs" });
 
@@ -137,7 +137,12 @@ async function queryCommand(
 
   let result;
   try {
-    result = await getLibraryContext(libraryId, query, { type: outputType }, accessToken);
+    result = await getLibraryContext(
+      libraryId,
+      query,
+      { type: outputType, language: options.language },
+      accessToken
+    );
   } catch (err) {
     spinner?.fail(`Error: ${err instanceof Error ? err.message : String(err)}`);
     if (!spinner) log.error(err instanceof Error ? err.message : String(err));
@@ -227,8 +232,14 @@ export function registerDocsCommands(program: Command): void {
       "Single-topic question to get docs for (run a separate query per distinct concept, unless asking how they interact)"
     )
     .option("--json", "Output as JSON")
+    .option(
+      "--language <name>",
+      "Programming language you write in (e.g., Python, Go); ranks code examples in that language first"
+    )
     .description("Query documentation for a library")
-    .action(async (libraryId: string, query: string, options: { json?: boolean }) => {
-      await queryCommand(libraryId, query, options);
-    });
+    .action(
+      async (libraryId: string, query: string, options: { json?: boolean; language?: string }) => {
+        await queryCommand(libraryId, query, options);
+      }
+    );
 }

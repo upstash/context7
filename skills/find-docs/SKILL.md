@@ -56,7 +56,7 @@ Resolves a package/product name to a Context7-compatible library ID and returns 
 
 ```bash
 npx ctx7@latest library React "How to clean up useEffect with async operations"
-npx ctx7@latest library "Next.js" "How to set up app router with middleware"
+npx ctx7@latest library "Next.js" "How to set up app router with a proxy"
 npx ctx7@latest library Prisma "How to define one-to-many relations with cascade delete"
 ```
 
@@ -98,7 +98,7 @@ If the user mentions a specific version, use a version-specific library ID:
 npx ctx7@latest docs /vercel/next.js "How to set up app router"
 
 # Version-specific
-npx ctx7@latest docs /vercel/next.js/v14.3.0-canary.87 "How to set up app router"
+npx ctx7@latest docs /vercel/next.js/v16.2.9 "How to set up app router"
 ```
 
 The available versions are listed in the `library` command output. Use the closest match to what the user specified.
@@ -109,21 +109,27 @@ Retrieves up-to-date documentation and code examples for the resolved library.
 
 ```bash
 npx ctx7@latest docs /facebook/react "How to clean up useEffect with async operations"
-npx ctx7@latest docs /vercel/next.js "How to add authentication middleware to app router"
+npx ctx7@latest docs /vercel/next.js "How to add an authentication proxy to app router"
 npx ctx7@latest docs /prisma/prisma "How to define one-to-many relations with cascade delete"
+```
+
+If you know the programming language the user writes in, add `--language` so code examples in that language rank first:
+
+```bash
+npx ctx7@latest docs /websites/twilio "How to send an SMS" --language Ruby
 ```
 
 ### Writing good queries
 
 The query directly affects the quality of results. Be specific and include relevant details, but keep each query to one topic — if the question spans multiple distinct concepts, run a separate `docs` command per concept instead of combining them, unless the question is about how the concepts interact. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query.
 
-| Quality | Example |
-|---------|---------|
-| Good | `"How to set up authentication with JWT in Express.js"` |
-| Good | `"React useEffect cleanup function with async operations"` |
-| Bad (too vague) | `"auth"` |
-| Bad (too vague) | `"hooks"` |
-| Bad (too broad) | `"routing and auth and caching in Next.js"` |
+| Quality         | Example                                                    |
+| --------------- | ---------------------------------------------------------- |
+| Good            | `"How to set up authentication with JWT in Express.js"`    |
+| Good            | `"React useEffect cleanup function with async operations"` |
+| Bad (too vague) | `"auth"`                                                   |
+| Bad (too vague) | `"hooks"`                                                  |
+| Bad (too broad) | `"routing and auth and caching in Next.js"`                |
 
 Describe what to look up in the library's documentation, rather than the task to complete — vague one-word queries return generic results, and multi-topic queries dilute ranking and return shallow results for each topic.
 
@@ -144,6 +150,7 @@ npx ctx7@latest login
 ## Error Handling
 
 If a command fails with a quota error ("Monthly quota reached" or "quota exceeded"):
+
 1. Inform the user their Context7 quota is exhausted
 2. Suggest they authenticate for higher limits: `npx ctx7@latest login`
 3. If they cannot or choose not to authenticate, answer from training knowledge and clearly note it may be outdated

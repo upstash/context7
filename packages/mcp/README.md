@@ -23,7 +23,7 @@ Context7 MCP pulls up-to-date, version-specific documentation and code examples 
 Add `use context7` to your prompt (or [set up a rule](#️-installation) to auto-invoke):
 
 ```txt
-Create a Next.js middleware that checks for a valid JWT in cookies
+Create a Next.js proxy that checks for a valid JWT in cookies
 and redirects unauthenticated users to `/login`. use context7
 ```
 
@@ -1385,6 +1385,7 @@ Context7 MCP provides the following tools that LLMs can use:
 - `query-docs`: Queries up-to-date documentation and code examples for a Context7-compatible library ID.
   - `libraryId` (required): Exact Context7-compatible library ID (e.g., `/mongodb/docs`, `/vercel/next.js`)
   - `query` (required): The concept to look up, scoped to a single topic
+  - `language` (optional): The programming language you write in, used to rank code examples in that language first
 
 `get-library-docs` was renamed to `query-docs`. Update client tool allowlists to use `query-docs`.
 
@@ -1444,7 +1445,9 @@ bun run dist/index.js --transport http --port 8080
 
 HTTP transport requires a credential on every request by default. Clients send `Authorization: Bearer YOUR_API_KEY`. Set `MCP_AUTH_ENFORCEMENT=observe` to also accept requests without credentials on `/mcp`.
 
-Opaque OAuth access tokens (`oat_…`) are checked against the Context7 API before each request is served (one check per token per minute on each replica; the cache is in memory). An expired or revoked token gets an HTTP 401 with a `WWW-Authenticate` challenge so MCP clients refresh it. Set `MCP_OAUTH_TOKEN_VALIDATION=off` to skip that check and forward the token unchecked.
+Opaque OAuth access tokens (`oat_…`) are checked against the Context7 API before each request is served (one check per token per minute on each replica; the cache is in memory, and a rejected token stays rejected for ten minutes). An expired or revoked token gets an HTTP 401 with a `WWW-Authenticate` challenge so MCP clients refresh it. Set `MCP_OAUTH_TOKEN_VALIDATION=off` to skip that check and forward the token unchecked.
+
+OAuth JWT access tokens from the authorization server (`OAUTH_AUTH_SERVER_URL`) are verified locally: signature against its JWKS, issuer, a `typ` of `at+jwt`, and expiry with a minute of clock tolerance. Clerk ID tokens and session JWTs share that issuer but are not access tokens, so they are always rejected. The token's `aud` must name this server (`RESOURCE_URL` origin, `/mcp`, or `/mcp/oauth`; override with a comma-separated `MCP_OAUTH_ALLOWED_AUDIENCES`). `MCP_OAUTH_AUDIENCE_ENFORCEMENT=observe` (default) admits a token with a missing or foreign audience and logs the OAuth client ID and audience, once per token every ten minutes; `required` answers HTTP 401.
 
 Another example with stdio transport:
 
@@ -1639,7 +1642,7 @@ Prometheus Operator instead, configure the equivalent per-pod endpoint with a `P
 
 ### OAuth Authentication
 
-Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization).
+Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/latest/basic/authorization).
 
 To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client configuration:
 
@@ -1691,7 +1694,7 @@ For errors like `Error: Cannot find module 'uriTemplate.js'`, try the `--experim
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
+      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp"]
     }
   }
 }

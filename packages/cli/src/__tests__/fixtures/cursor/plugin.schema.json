@@ -1,0 +1,187 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cursor.com/schemas/cursor-plugin/plugin.json",
+  "title": "Cursor Plugin Manifest",
+  "description": "Schema for .cursor-plugin/plugin.json — defines a single Cursor plugin's metadata, components, and configuration.",
+  "type": "object",
+  "required": ["name"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$",
+      "description": "Unique plugin identifier in kebab-case (lowercase alphanumeric with hyphens and periods)."
+    },
+    "displayName": {
+      "type": "string",
+      "description": "Human-readable display name for the plugin."
+    },
+    "description": {
+      "type": "string",
+      "description": "Short description of what the plugin does."
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version of the plugin (e.g. \"1.2.3\")."
+    },
+    "minClientVersions": {
+      "$ref": "#/$defs/minClientVersions",
+      "description": "Minimum client versions required to install the plugin, keyed by client identifier."
+    },
+    "author": {
+      "$ref": "#/$defs/author",
+      "description": "The plugin author."
+    },
+    "publisher": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Publisher or organisation name."
+    },
+    "homepage": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to the plugin's homepage."
+    },
+    "repository": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to the plugin's source code repository."
+    },
+    "license": {
+      "type": "string",
+      "description": "SPDX license identifier (e.g. \"MIT\", \"Apache-2.0\")."
+    },
+    "logo": {
+      "type": "string",
+      "description": "Path to a logo image (relative to the plugin root) or an absolute URL."
+    },
+    "keywords": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Keywords for discovery and search."
+    },
+    "category": {
+      "type": "string",
+      "description": "Plugin category for marketplace classification."
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Tags for filtering and discovery."
+    },
+    "commands": {
+      "$ref": "#/$defs/stringOrStringArray",
+      "description": "Glob pattern(s) or path(s) to command files."
+    },
+    "agents": {
+      "$ref": "#/$defs/stringOrStringArray",
+      "description": "Glob pattern(s) or path(s) to agent definition files."
+    },
+    "skills": {
+      "$ref": "#/$defs/stringOrStringArray",
+      "description": "Glob pattern(s) or path(s) to skill files."
+    },
+    "rules": {
+      "$ref": "#/$defs/stringOrStringArray",
+      "description": "Glob pattern(s) or path(s) to rule files."
+    },
+    "hooks": {
+      "oneOf": [{ "type": "string" }, { "type": "object" }],
+      "description": "Path to a hooks configuration file, or an inline hooks object."
+    },
+    "variables": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "const": "object"
+        },
+        "properties": {
+          "type": "object"
+        },
+        "required": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        }
+      },
+      "description": "JSON Schema for user-configured plugin variables."
+    },
+    "mcpServers": {
+      "$ref": "#/$defs/mcpServers",
+      "description": "MCP server configuration — a path, an inline config object, or an array of either."
+    }
+  },
+  "$defs": {
+    "author": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Author name."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Author email address."
+        }
+      }
+    },
+    "minClientVersions": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "cursor": {
+          "$ref": "#/$defs/clientVersionRequirement",
+          "description": "Minimum Cursor version required to install the plugin (e.g. \"3.13.0\"), or \"never\" to hide it from Cursor entirely."
+        },
+        "grokbot": {
+          "$ref": "#/$defs/clientVersionRequirement",
+          "description": "Minimum Grok Bot version required to install the plugin (e.g. \"0.49.0\"), or \"never\" to hide it from Grok Bot entirely."
+        },
+        "sand": {
+          "$ref": "#/$defs/clientVersionRequirement",
+          "description": "Deprecated client id for Grok Bot. Same meaning as grokbot."
+        }
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/clientVersionRequirement",
+        "description": "Minimum version required for another client identifier, or \"never\" to hide the plugin from that client."
+      }
+    },
+    "clientVersionRequirement": {
+      "description": "A minimum semantic version, or the literal \"never\" when that client must not list or install the plugin.",
+      "oneOf": [{ "$ref": "#/$defs/semver" }, { "const": "never" }]
+    },
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?$",
+      "description": "Strict semantic version \"X.Y.Z\" with an optional prerelease suffix."
+    },
+    "stringOrStringArray": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      ]
+    },
+    "mcpServers": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "object" },
+        {
+          "type": "array",
+          "items": {
+            "oneOf": [{ "type": "string" }, { "type": "object" }]
+          }
+        }
+      ]
+    }
+  }
+}
