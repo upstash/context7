@@ -20,8 +20,9 @@ export type McpAuthDecision = AuthenticationObservation &
 // A JWT from a grant authorized before Clerk's "Include Audience" setting was
 // on has no `aud` on every refresh, so its warning would repeat on every MCP
 // request (millions of lines a day). One line per token per window is enough
-// to collect the (clientId, aud) pairs before enforcement.
-const JWT_WARNING_WINDOW_MS = 10 * 60_000;
+// to collect the (clientId, aud, outcome) triples; a Clerk access token lives
+// about an hour, so an hour's window is about one line per token per pod.
+export const JWT_WARNING_WINDOW_MS = 60 * 60_000;
 const jwtWarningLog = createPerTokenLogWindow(JWT_WARNING_WINDOW_MS);
 
 /** Test hook: forget which tokens have had their warning logged. */
@@ -77,7 +78,8 @@ export function effectiveMcpAuthMode(
  */
 export async function evaluateMcpAuthentication(
   token: string | undefined,
-  mode: McpAuthMode
+  mode: McpAuthMode,
+  now = Date.now()
 ): Promise<McpAuthDecision> {
   const method = classifyAuthMethod(token);
   if (!token) {
@@ -131,7 +133,7 @@ export async function evaluateMcpAuthentication(
   if (validation.warning) {
     // Names the OAuth client and the audience, never the token. The verdict
     // below is still applied on every request; only the line is deduplicated.
-    const suppressed = jwtWarningLog.admit(token);
+    const suppressed = jwtWarningLog.admit(token, now);
     if (suppressed !== undefined) {
       console.error(`[Context7] ${validation.warning} suppressedSincePrevious=${suppressed}`);
     }
