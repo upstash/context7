@@ -246,7 +246,23 @@ export interface InfoSnippet {
 export interface ContextResponse {
   codeSnippets: CodeSnippet[];
   infoSnippets: InfoSnippet[];
-  error?: string;
+}
+
+export interface DocumentationSearchResponse {
+  codeSnippets: (CodeSnippet & { libraryId: string })[];
+  infoSnippets: (InfoSnippet & { libraryId: string })[];
+  rules?: {
+    global: string[];
+    libraries: {
+      libraryId: string;
+      libraryOwn: string[];
+      libraryTeam: string[];
+    }[];
+  };
+}
+
+export interface DocumentationError {
+  error: string;
   message?: string;
   redirectUrl?: string;
 }
