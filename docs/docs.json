@@ -318,6 +318,21 @@
             ]
           }
         ]
+      },
+      {
+        "tab": "Ask",
+        "groups": [
+          {
+            "group": "Ask",
+            "pages": [
+              {
+                "group": "Get Started",
+                "expanded": true,
+                "pages": ["ask/overview", "ask/quickstart", "ask/dashboard"]
+              }
+            ]
+          }
+        ]
       }
     ]
   },
