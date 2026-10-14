@@ -36,9 +36,12 @@ Docs7 currently tracks:
 AI Visibility shows which product made the request. It does not show the exact model version.
 </Note>
 
-## WebMCP searches
+## Agent questions
 
-Docs7 exposes a read-only `search_docs` WebMCP tool in browsers that support WebMCP. The **WebMCP searches** table shows the most common queries sent through that tool.
+The **Agent questions** card shows the most common questions that AI agents send to your docs. It shows one source at a time:
+
+- **Ask endpoint**: a note on every page tells agents how to ask the docs with `/ask?q=<keywords or question>`.
+- **WebMCP**: Docs7 exposes a read-only `ask_docs` WebMCP tool in browsers that support WebMCP.
 
 These are separate from searches typed by people in the website search box. Human search terms appear under [Analytics](/docs7/analytics#searches).
 
