@@ -51,6 +51,11 @@
                 ]
               },
               {
+                "group": "Ask",
+                "expanded": false,
+                "pages": ["ask/overview", "ask/quickstart", "ask/dashboard"]
+              },
+              {
                 "group": "Account",
                 "expanded": false,
                 "pages": [
@@ -314,21 +319,6 @@
                   "docs7/components/latex",
                   "docs7/components/react-components"
                 ]
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "Ask",
-        "groups": [
-          {
-            "group": "Ask",
-            "pages": [
-              {
-                "group": "Get Started",
-                "expanded": true,
-                "pages": ["ask/overview", "ask/quickstart", "ask/dashboard"]
               }
             ]
           }
