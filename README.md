@@ -60,6 +60,14 @@ To configure manually, use the Context7 server URL `https://mcp.context7.com/mcp
 
 **[Manual Installation / Other Clients →](https://context7.com/docs/resources/all-clients)**
 
+### Neotask
+
+Install the Context7 plugin, which uses your Context7 connection in Neotask:
+
+```bash
+neotask construct install upstash-context7
+```
+
 ## Important Tips
 
 ### Use Library Id
