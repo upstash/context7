@@ -135,6 +135,6 @@ The planned workflow reads the entire site once a month and opens one pull reque
 
 ## Safety and scope
 
-Agent runs receive read access to the connected repository, and Code Watch runs also to the code repository of the merged pull request. The agent can inspect repository source to verify a documentation change, but trusted Docs7 code publishes the resulting files through GitHub.
+Agent runs receive read access to the connected repository, and Code Watch runs receive read access to the code repository of the merged pull request as well. The agent can inspect repository source to verify a documentation change, but trusted Docs7 code publishes the resulting files through GitHub.
 
 Changes are limited to the configured docs path. When the docs path is the repository root, Docs7 still blocks common application paths, package manifests, lockfiles, `.github`, and `.git` from agent changes.
