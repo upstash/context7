@@ -16,7 +16,7 @@ There are four workflows:
 
 - **Context7 Agent** fixes queued suggestions or build issues in a pull request.
 - **PR Review Agent** reviews documentation changes in each eligible pull request.
-- **Code Watch Agent** updates the docs when a pull request merges into your code.
+- **Code Watch Agent** updates the docs when a pull request merges in your code.
 - **Monthly Checkup** is a planned full-site review and is not available yet.
 
 ## Context7 Agent
@@ -52,7 +52,7 @@ The PR Review Agent runs after an eligible pull request preview finishes. It rev
 <Frame caption="PR Review Agent settings control its response mode and the checks applied to pull requests.">
   <img
     src="/images/docs7/dashboard/agent-pr-review.jpg"
-    alt="PR Review Agent settings with response modes and documentation checks"
+    alt="PR Review Agent with automatic review on, the Checks menu, and recent reviews"
   />
 </Frame>
 
@@ -86,6 +86,13 @@ Do not make **Docs7 PR Review** a required GitHub check. Fork pull requests do n
 ## Code Watch Agent
 
 The Code Watch Agent keeps your docs in step with your code. When a pull request merges into the default branch of a repository you chose, the agent checks whether readers of your docs need a change. If they do, Docs7 opens one docs pull request that links to the merged pull request. Most merges change nothing that readers see, and then the agent opens nothing.
+
+<Frame caption="The Code Watch Agent lists each merged pull request it checked, with the docs pull request it opened or No docs change.">
+  <img
+    src="/images/docs7/dashboard/agent-code-watch.jpg"
+    alt="Code Watch Agent with automatic updates on for two repositories and its run history"
+  />
+</Frame>
 
 ### Choose repositories
 
@@ -128,6 +135,6 @@ The planned workflow reads the entire site once a month and opens one pull reque
 
 ## Safety and scope
 
-Agent runs receive read access to the connected repository, and Code Watch runs also to the code repository of the merged pull request. The agent can inspect repository source to verify a documentation change, but trusted Docs7 code publishes the resulting files through GitHub.
+Agent runs receive read access to the connected repository, and Code Watch runs receive read access to the code repository of the merged pull request as well. The agent can inspect repository source to verify a documentation change, but trusted Docs7 code publishes the resulting files through GitHub.
 
 Changes are limited to the configured docs path. When the docs path is the repository root, Docs7 still blocks common application paths, package manifests, lockfiles, `.github`, and `.git` from agent changes.
