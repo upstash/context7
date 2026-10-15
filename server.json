@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.upstash/context7",
   "title": "Context7",
-  "description": "Up-to-date code docs for any prompt",
+  "description": "Up-to-date docs for AI agents",
   "repository": {
     "url": "https://github.com/upstash/context7",
     "source": "github"

@@ -1,6 +1,6 @@
 # Context7 Plugin for Claude Code
 
-Context7 solves a common problem with AI coding assistants: outdated training data and hallucinated APIs. Instead of relying on stale knowledge, Context7 fetches current documentation directly from source repositories.
+Context7 solves a common problem with AI coding agents: outdated training data and hallucinated APIs. Instead of relying on stale knowledge, Context7 fetches current documentation directly from source repositories.
 
 ## What's Included
 

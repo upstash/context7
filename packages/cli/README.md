@@ -156,7 +156,7 @@ ctx7 logout
 
 ## Supported Clients
 
-The CLI automatically detects which AI coding assistants you have installed and configures Context7 for them:
+The CLI automatically detects which AI coding agents you have installed and configures Context7 for them:
 
 | Client                                                              | Skills Directory  |
 | ------------------------------------------------------------------- | ----------------- |
