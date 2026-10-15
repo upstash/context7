@@ -26,6 +26,8 @@ import {
   RESOURCE_URL,
   OAUTH_AUTH_SERVER_URL,
   OPENAI_APPS_CHALLENGE_TOKEN,
+  SERVER_ICONS,
+  SERVER_TITLE,
   mcpServerCard,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
@@ -257,16 +259,12 @@ function aliasArgs(aliases: AliasMap) {
 function createMcpServer(mcpContext: McpRequestContext) {
   const serverInfo = {
     name: "Context7",
+    title: SERVER_TITLE,
     version: SERVER_VERSION,
     websiteUrl: "https://context7.com",
     description:
       "Context7 provides up-to-date documentation and code examples for libraries and frameworks.",
-    icons: [
-      {
-        src: "https://context7.com/context7-icon-green.png",
-        mimeType: "image/png",
-      },
-    ],
+    icons: SERVER_ICONS,
   };
   const serverOptions = {
     // The collections are static for the process lifetime. Explicitly disabling
@@ -384,6 +382,8 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
     {
       title: "Query Documentation",
       description: `Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
+
+Returns Markdown text: the documentation sections most relevant to the query, each with a heading, its source URL, a short explanation, and code examples where available. If no documentation is found, the result says so. An unknown library ID, a rate limit, an invalid API key, or a service failure returns an error result with a message.
 
 You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 

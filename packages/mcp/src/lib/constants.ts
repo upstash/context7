@@ -34,17 +34,32 @@ export const EMA_ISSUER =
 export const EMA_JWKS_URL = process.env.EMA_JWKS_URL || `${CONTEXT7_API_BASE_URL}/oauth/ema-jwks`;
 export const OPENAI_APPS_CHALLENGE_TOKEN = process.env.OPENAI_APPS_CHALLENGE_TOKEN;
 
+export const SERVER_TITLE = "Context7";
+// The vector icon scales to any size; the PNG is 512x512.
+export const SERVER_ICONS = [
+  {
+    src: "https://context7.com/context7-icon-green.svg",
+    mimeType: "image/svg+xml",
+    sizes: ["any"],
+  },
+  {
+    src: "https://context7.com/context7-icon-green.png",
+    mimeType: "image/png",
+    sizes: ["512x512"],
+  },
+];
+
 /** Describe the remote server using the experimental Server Card v1 schema. */
 export function mcpServerCard(resourceUrl = RESOURCE_URL) {
   return {
     $schema: "https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json",
     name: "io.github.upstash/context7",
-    title: "Context7",
+    title: SERVER_TITLE,
     description:
       "Up-to-date, version-specific documentation and code examples for software libraries.",
     version: SERVER_VERSION,
     websiteUrl: "https://context7.com",
-    icons: [{ src: "https://context7.com/context7-icon-green.png", mimeType: "image/png" }],
+    icons: SERVER_ICONS,
     remotes: [
       {
         type: "streamable-http",
