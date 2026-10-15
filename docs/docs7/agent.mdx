@@ -96,7 +96,7 @@ The Code Watch Agent keeps your docs in step with your code. When a pull request
 
 ### Choose repositories
 
-Open **Repositories** and select up to 10 code repositories from the same GitHub account as your docs. The Docs7 GitHub App must have access to each one. Private repositories need Docs7 Pro. Then turn on **Automatic Updates**.
+Open **Repositories** and select up to 50 code repositories from the same GitHub account as your docs. The Docs7 GitHub App must have access to each one. Private repositories need Docs7 Pro. Then turn on **Automatic Updates**.
 
 If your docs are in a folder of the same repository as your code, that repository is already selected. Turn on **Automatic Updates** to start.
 
@@ -117,6 +117,8 @@ Docs7 does not run the agent for:
 - pull requests opened by Docs7 itself
 
 For a pull request from a fork, the agent uses the merged code and ignores the pull request's title and description.
+
+When a merge belongs with a docs pull request the agent already opened and that is still open, for example the same commands added to your JavaScript and Python SDKs, the agent adds its change to that pull request instead of opening another one.
 
 **History** lists each merged pull request the agent checked, with the docs pull request it opened or **No docs change**. Each checked pull request counts as one run in the site's monthly agent allowance.
 
