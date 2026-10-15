@@ -84,11 +84,14 @@ curl "https://context7.com/api/v2/ask?siteKey=ask_4f9c2e81a7b3d6e05c1f8a92&query
 
 The response is plain text: the parts of your pages that answer the question, each with its URL. Your question shows up in the [Questions](/ask/dashboard) tab right away.
 
-| Status | Meaning                                                    |
-| ------ | ---------------------------------------------------------- |
-| `200`  | The answer, or a message that nothing on your site matched |
-| `202`  | Context7 is still reading your site. Try again shortly     |
-| `404`  | No site is published for that key                          |
+| Status | Meaning                                                               |
+| ------ | --------------------------------------------------------------------- |
+| `200`  | The answer, or a message that nothing on your site matched            |
+| `202`  | Context7 is still reading your site. Try again shortly                |
+| `400`  | The request has no `siteKey`, or the question is too long             |
+| `404`  | No site is published for that key                                     |
+| `429`  | Too many requests for this site. Retry after the `Retry-After` header |
+| `503`  | Context7 could not read your site                                     |
 
 ---
 
