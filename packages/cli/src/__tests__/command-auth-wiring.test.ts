@@ -12,27 +12,13 @@ vi.mock("../utils/auth.js", () => ({
 
 const mockResolveLibrary = vi.fn();
 const mockGetLibraryContext = vi.fn();
-const mockSuggestSkills = vi.fn();
 vi.mock("../utils/api.js", () => ({
   resolveLibrary: (...args: unknown[]) => mockResolveLibrary(...args),
   getLibraryContext: (...args: unknown[]) => mockGetLibraryContext(...args),
-  suggestSkills: (...args: unknown[]) => mockSuggestSkills(...args),
   getBaseUrl: () => "https://test.context7.com",
-  listProjectSkills: vi.fn(),
-  searchSkills: vi.fn(),
-  downloadSkill: vi.fn(),
-  getSkill: vi.fn(),
-  getSkillQuota: vi.fn(),
-  getSkillQuestions: vi.fn(),
-  generateSkillStructured: vi.fn(),
-  searchLibraries: vi.fn(),
 }));
 
 vi.mock("../utils/tracking.js", () => ({ trackEvent: vi.fn() }));
-
-vi.mock("../utils/deps.js", () => ({
-  detectProjectDependencies: () => ["react"],
-}));
 
 const mockSpinner = {
   start: vi.fn().mockReturnThis(),
@@ -45,7 +31,6 @@ const mockSpinner = {
 vi.mock("ora", () => ({ default: () => mockSpinner }));
 
 import { registerDocsCommands } from "../commands/docs.js";
-import { registerSkillCommands } from "../commands/skill.js";
 
 const REFRESHED = "refreshed-token";
 
@@ -91,15 +76,6 @@ describe("commands pass a refreshed token to the API", () => {
       { type: "txt" },
       REFRESHED
     );
-  });
-
-  test("ctx7 skills suggest", async () => {
-    mockSuggestSkills.mockResolvedValue({ skills: [] });
-
-    await run(registerSkillCommands, "skills", "suggest");
-
-    expect(mockGetValidAccessToken).toHaveBeenCalled();
-    expect(mockSuggestSkills).toHaveBeenCalledWith(["react"], REFRESHED);
   });
 });
 
