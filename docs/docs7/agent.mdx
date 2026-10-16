@@ -87,6 +87,8 @@ Do not make **Docs7 PR Review** a required GitHub check. Fork pull requests do n
 
 The Code Watch Agent keeps your docs in step with your code. When a pull request merges into the default branch of a repository you chose, the agent checks whether readers of your docs need a change. If they do, Docs7 opens one docs pull request that links to the merged pull request. Most merges change nothing that readers see, and then the agent opens nothing.
 
+When a merge belongs to the same feature as an open docs pull request, such as the same commands added to a JavaScript and a Python SDK, the agent adds the change to that pull request instead of opening a second one. Its description links every merged pull request it covers.
+
 <Frame caption="The Code Watch Agent lists each merged pull request it checked, with the docs pull request it opened or No docs change.">
   <img
     src="/images/docs7/dashboard/agent-code-watch.jpg"
@@ -96,7 +98,7 @@ The Code Watch Agent keeps your docs in step with your code. When a pull request
 
 ### Choose repositories
 
-Open **Repositories** and select up to 10 code repositories from the same GitHub account as your docs. The Docs7 GitHub App must have access to each one. Private repositories need Docs7 Pro. Then turn on **Automatic Updates**.
+Open **Repositories** and select up to 50 code repositories from the same GitHub account as your docs. The Docs7 GitHub App must have access to each one. Private repositories need Docs7 Pro. Then turn on **Automatic Updates**.
 
 If your docs are in a folder of the same repository as your code, that repository is already selected. Turn on **Automatic Updates** to start.
 
