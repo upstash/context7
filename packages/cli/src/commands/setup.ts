@@ -48,6 +48,7 @@ import {
   patchStdioApiKey,
   getJsonServerEntry,
 } from "../setup/mcp-writer.js";
+import { editOpenCodeServer } from "../setup/opencode-editor.js";
 
 type Scope = "global" | "project";
 type SetupMode = "mcp" | "cli";
@@ -400,7 +401,8 @@ async function setupAgent(
       mcpStatus = alreadyExists
         ? `reconfigured with ${AUTH_MODE_LABELS[auth.mode]}`
         : `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
-      await writeJsonConfig(mcpPath, config);
+      if (agentName === "opencode") await editOpenCodeServer(mcpPath, entry);
+      else await writeJsonConfig(mcpPath, config);
     }
   } catch (err) {
     mcpStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
