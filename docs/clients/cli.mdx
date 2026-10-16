@@ -237,6 +237,12 @@ ctx7 whoami
 ctx7 logout
 ```
 
+### Session expiry
+
+If your saved login can no longer be refreshed, the CLI clears it and asks whether to sign in again. Answering yes runs `ctx7 login` and continues the command with the new login. Answering no continues without an account.
+
+No prompt is shown when output is piped or `--json` is passed — the CLI prints a notice to stderr and continues without an account, so parsed output stays clean. `ctx7 login`, `ctx7 whoami`, `ctx7 setup`, and `ctx7 generate` also skip the prompt. Network, rate-limit, and server errors keep your saved login, so the next command retries.
+
 ### API Key
 
 Set an API key via environment variable to skip interactive login entirely — useful for CI or scripting:
