@@ -84,9 +84,6 @@ importers:
 
   packages/cli:
     dependencies:
-      '@inquirer/core':
-        specifier: ^12.0.3
-        version: 12.0.3(@types/node@25.9.8)
       '@inquirer/prompts':
         specifier: ^8.7.2
         version: 8.7.2(@types/node@25.9.8)

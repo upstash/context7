@@ -22,7 +22,6 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@inquirer/core": "^12.0.3",
     "@inquirer/prompts": "^8.7.2",
     "boxen": "^9.0.0",
     "commander": "^15.0.0",

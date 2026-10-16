@@ -284,6 +284,6 @@ describe("update notifications", () => {
     expect(shouldSkipUpdateNotifier(["node", "ctx7", "--base-url=https://context7.internal"])).toBe(
       true
     );
-    expect(shouldSkipUpdateNotifier(["node", "ctx7", "skills", "list"])).toBe(false);
+    expect(shouldSkipUpdateNotifier(["node", "ctx7", "docs", "/a/b", "q"])).toBe(false);
   });
 });
