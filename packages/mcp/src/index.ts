@@ -97,8 +97,8 @@ if (!allowedTransports.includes(cliOptions.transport)) {
 const TRANSPORT_TYPE = (cliOptions.transport || "stdio") as "stdio" | "http";
 
 // Disallow incompatible flags based on transport
-const passedPortFlag = process.argv.includes("--port");
-const passedApiKeyFlag = process.argv.includes("--api-key");
+const passedPortFlag = program.getOptionValueSource("port") === "cli";
+const passedApiKeyFlag = program.getOptionValueSource("apiKey") === "cli";
 
 if (TRANSPORT_TYPE === "http" && passedApiKeyFlag) {
   console.error(
