@@ -50,6 +50,8 @@ beforeEach(() => {
   vi.stubEnv("XDG_CONFIG_HOME", undefined);
   vi.stubEnv("XDG_STATE_HOME", undefined);
   vi.stubEnv("XDG_CACHE_HOME", undefined);
+  // A developer's own key would suppress the expired-session prompt.
+  vi.stubEnv("CONTEXT7_API_KEY", undefined);
   vi.stubGlobal(
     "fetch",
     vi.fn(() => {
@@ -461,12 +463,33 @@ describe("getValidAccessToken when the refresh token is rejected", () => {
       expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Continuing without an account"));
     });
 
-    test("treats a cancelled prompt as No", async () => {
+    test("exits on Ctrl-C instead of continuing anonymously", async () => {
       stubInvalidGrant();
-      mockConfirm.mockRejectedValue(new Error("User force closed the prompt"));
+      mockConfirm.mockRejectedValue(
+        Object.assign(new Error("User force closed the prompt"), { name: "ExitPromptError" })
+      );
+      vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+      const exit = vi.spyOn(process, "exit").mockImplementation((() => {
+        throw new Error("process.exit");
+      }) as never);
+
+      await expect(getValidAccessToken()).rejects.toThrow("process.exit");
+      expect(exit).toHaveBeenCalledWith(130);
+      expect(mockPerformLogin).not.toHaveBeenCalled();
+      expect(files.has(CREDENTIALS_PATH)).toBe(false);
+    });
+
+    // getAuthHeaders sends CONTEXT7_API_KEY ahead of any stored token, so the
+    // user is still authenticated: no prompt, no "continuing without an account".
+    test("clears silently without prompting when CONTEXT7_API_KEY is set", async () => {
+      vi.stubEnv("CONTEXT7_API_KEY", "ctx7sk-envkey");
+      stubInvalidGrant();
 
       expect(await getValidAccessToken()).toBeUndefined();
-      expect(mockPerformLogin).not.toHaveBeenCalled();
+      expect(files.has(CREDENTIALS_PATH)).toBe(false);
+      expect(mockConfirm).not.toHaveBeenCalled();
+      expect(logSpy).not.toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalled();
     });
 
     test("does not prompt when --json is passed", async () => {

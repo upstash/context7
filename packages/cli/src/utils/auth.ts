@@ -98,7 +98,7 @@ export function isTokenExpired(tokens: TokenData): boolean {
  * (RFC 6749 §5.2 `invalid_grant` / `invalid_client`). Retrying cannot succeed;
  * only a new login can.
  */
-export class RefreshTokenRejectedError extends Error {}
+class RefreshTokenRejectedError extends Error {}
 
 const DEFINITIVE_REFRESH_ERRORS = new Set(["invalid_grant", "invalid_client"]);
 
@@ -138,9 +138,9 @@ const SESSION_EXPIRED_NOTICE =
  * True when we may prompt: both stdin and stdout are terminals and no
  * machine-readable output was requested.
  */
-export function isInteractiveSession(argv: string[] = process.argv): boolean {
+function isInteractiveSession(): boolean {
   if (!process.stdin.isTTY || !process.stdout.isTTY) return false;
-  return !argv.includes("--json");
+  return !process.argv.includes("--json");
 }
 
 /**
@@ -160,8 +160,13 @@ async function recoverExpiredSession(): Promise<string | undefined> {
       message: "Your Context7 session has expired. Sign in again now?",
       default: true,
     });
-  } catch {
-    // Ctrl-C / closed prompt counts as "no".
+  } catch (error) {
+    // Ctrl-C aborts the command, as it does at every other ctx7 prompt and at
+    // performLogin's "Press Enter" one step later. Only "No" continues.
+    if (error instanceof Error && error.name === "ExitPromptError") {
+      process.stdout.write("\n");
+      process.exit(130);
+    }
     signIn = false;
   }
 
@@ -180,7 +185,7 @@ async function recoverExpiredSession(): Promise<string | undefined> {
   return undefined;
 }
 
-export interface GetValidAccessTokenOptions {
+interface GetValidAccessTokenOptions {
   /**
    * When the stored refresh token is rejected, offer to sign in again (or
    * print a notice when non-interactive). Commands that run their own login
@@ -230,7 +235,11 @@ export async function getValidAccessToken(
       return isTokenExpired(current) ? undefined : current.access_token;
     }
     clearTokens();
-    if (options.recoverExpiredSession === false) return undefined;
+    // CONTEXT7_API_KEY takes precedence over stored tokens in every request
+    // (getAuthHeaders), so the user is still signed in; don't claim otherwise.
+    if (options.recoverExpiredSession === false || process.env.CONTEXT7_API_KEY) {
+      return undefined;
+    }
     return recoverExpiredSession();
   }
 }
