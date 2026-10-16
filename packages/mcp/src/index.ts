@@ -62,6 +62,7 @@ import { parseOAuthAudienceEnforcement } from "./lib/oauth-audience.js";
 const DEFAULT_PORT = 3000;
 const OAUTH_METADATA_TIMEOUT_MS = 10_000;
 const CLAUDE_CODE_PLUGIN = "claude-code-plugin";
+const STATIC_LIST_CACHE_HINT = { ttlMs: 3_600_000, cacheScope: "public" } as const;
 type McpInstrumentation = NonNullable<Awaited<ReturnType<typeof initializeTelemetry>>>;
 let mcpInstrumentation: McpInstrumentation | undefined;
 
@@ -277,6 +278,15 @@ function createMcpServer(mcpContext: McpRequestContext) {
       prompts: { listChanged: false },
       resources: { listChanged: false, subscribe: false },
     },
+    // These results are the same for every caller and change only on deploy, so
+    // clients may reuse them for an hour instead of listing on every request.
+    cacheHints: {
+      "tools/list": STATIC_LIST_CACHE_HINT,
+      "prompts/list": STATIC_LIST_CACHE_HINT,
+      "resources/list": STATIC_LIST_CACHE_HINT,
+      "resources/templates/list": STATIC_LIST_CACHE_HINT,
+      "server/discover": STATIC_LIST_CACHE_HINT,
+    },
     instructions: `Use this server to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
 
 Do not use for: refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.`,
@@ -359,6 +369,8 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
               text,
             },
           ],
+          // Same rule as query-docs: an upstream failure is an error, an empty match is not.
+          ...(searchResponse.error ? { isError: true } : {}),
         };
       }
 
@@ -458,10 +470,14 @@ async function main() {
     // then walks the chain right-to-left and ignores attacker-added prefixes.
     app.set("trust proxy", ["loopback", "linklocal", "uniquelocal", "100.64.0.0/10"]);
 
+    // Node keeps serving requests on kept-alive sockets after server.close(),
+    // so during shutdown every response asks the gateway to reconnect elsewhere.
+    let shuttingDown = false;
     // Registered ahead of the MCP router so its error responses carry the CORS
     // headers too; browser clients would otherwise see a CORS failure instead
     // of the status.
     app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+      if (shuttingDown) res.setHeader("Connection", "close");
       res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS,DELETE");
       // Mcp-Method / Mcp-Name are the SEP-2243 standard headers 2026-07-28
@@ -524,7 +540,16 @@ async function main() {
     // it at streamIdleTimeout (300s) instead of its 1200s hard cap.
     const rawMcpHandler = createMcpHandler((mcpContext) => createMcpServer(mcpContext), {
       keepAliveMs: 0,
-      onerror: (error) => console.error("MCP handler error:", error),
+      // The SDK reports each 4xx answer to a malformed client request as a new
+      // Error whose stack only names SDK internals, so those log
+      // their message alone. If the SDK rewords them, the stacks come back.
+      onerror: (error) =>
+        console.error(
+          "MCP handler error:",
+          error instanceof Error && /^(Rejected |Unsupported Media Type)/.test(error.message)
+            ? error.message
+            : error
+        ),
     });
     const mcpHandler = mcpInstrumentation
       ? mcpInstrumentation.instrumentHttpHandler(rawMcpHandler)
@@ -741,25 +766,18 @@ async function main() {
     installProcessShutdown(
       {
         close: async () => {
+          shuttingDown = true;
           const server = activeHttpServer;
-          const operations: Promise<void>[] = [mcpHandler.close()];
+          // Drain HTTP before closing the MCP handler: requests that still
+          // arrive on open sockets would otherwise get a 500 from the closed
+          // handler.
           if (server) {
-            operations.unshift(
-              new Promise<void>((resolve, reject) => {
-                server.close((error) => {
-                  if (error) reject(error);
-                  else resolve();
-                });
-              })
-            );
+            await new Promise<void>((resolve, reject) => {
+              server.close((error) => (error ? reject(error) : resolve()));
+              server.closeIdleConnections();
+            });
           }
-          const results = await Promise.allSettled(operations);
-          const failures = results
-            .filter((result): result is PromiseRejectedResult => result.status === "rejected")
-            .map((result) => result.reason);
-          if (failures.length > 0) {
-            throw new AggregateError(failures, "MCP HTTP server failed to close cleanly");
-          }
+          await mcpHandler.close();
         },
       },
       {
