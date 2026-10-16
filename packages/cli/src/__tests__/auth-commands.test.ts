@@ -95,6 +95,13 @@ describe("login command", () => {
     await runCommand("login").catch(() => {});
     expect(process.exit).toHaveBeenCalledWith(1);
   });
+
+  // login runs its own sign-in flow; the expired-session prompt would ask twice.
+  test("does not offer the expired-session prompt", async () => {
+    mockGetValidAccessToken.mockResolvedValue("existing-token");
+    await runCommand("login");
+    expect(mockGetValidAccessToken).toHaveBeenCalledWith({ recoverExpiredSession: false });
+  });
 });
 
 describe("logout command", () => {
@@ -118,6 +125,12 @@ describe("whoami command", () => {
     await runCommand("whoami");
     expect(logOutput.some((l) => l.includes("Not logged in"))).toBe(true);
     expect(trackEvent).toHaveBeenCalledWith("command", { name: "whoami" });
+  });
+
+  test("does not offer the expired-session prompt", async () => {
+    mockGetValidAccessToken.mockResolvedValue(undefined);
+    await runCommand("whoami");
+    expect(mockGetValidAccessToken).toHaveBeenCalledWith({ recoverExpiredSession: false });
   });
 
   test("fetches and displays user info when logged in", async () => {

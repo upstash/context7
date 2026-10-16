@@ -7,7 +7,8 @@ import { getValidAccessToken, isContext7ApiKey } from "../utils/auth.js";
 import { log } from "../utils/logger.js";
 
 export async function resolveSetupApiKey(): Promise<string | null> {
-  const accessToken = (await getValidAccessToken()) ?? (await performLogin());
+  const accessToken =
+    (await getValidAccessToken({ recoverExpiredSession: false })) ?? (await performLogin());
 
   if (!accessToken) return null;
   if (isContext7ApiKey(accessToken)) return accessToken;

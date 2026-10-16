@@ -60,7 +60,7 @@ async function generateCommand(options: GenerateOptions): Promise<void> {
   trackEvent("command", { name: "generate" });
   log.blank();
 
-  let accessToken = await getValidAccessToken();
+  let accessToken = await getValidAccessToken({ recoverExpiredSession: false });
   if (!accessToken) {
     log.info("Authentication required. Logging in...");
     log.blank();

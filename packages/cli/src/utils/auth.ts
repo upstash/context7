@@ -1,5 +1,7 @@
 import * as fs from "fs";
 import * as os from "os";
+import pc from "picocolors";
+import { confirm } from "@inquirer/prompts";
 import { CLI_CLIENT_ID } from "../constants.js";
 import { getBaseUrl } from "./api.js";
 import {
@@ -91,16 +93,101 @@ export function isTokenExpired(tokens: TokenData): boolean {
   return Date.now() > tokens.expires_at - 60000;
 }
 
+/**
+ * The authorization server definitively rejected the stored refresh token
+ * (RFC 6749 §5.2 `invalid_grant` / `invalid_client`). Retrying cannot succeed;
+ * only a new login can.
+ */
+export class RefreshTokenRejectedError extends Error {}
+
+const DEFINITIVE_REFRESH_ERRORS = new Set(["invalid_grant", "invalid_client"]);
+
 async function refreshAccessToken(refreshToken: string): Promise<TokenData> {
-  return oauthRequest<TokenData>(
+  const response = await postForm(
     `${getBaseUrl()}/api/oauth/token`,
     new URLSearchParams({
       grant_type: "refresh_token",
       client_id: CLI_CLIENT_ID,
       refresh_token: refreshToken,
-    }),
-    "Failed to refresh token"
+    })
   );
+  if (response.ok) {
+    return (await response.json()) as TokenData;
+  }
+
+  const body = await response.text().catch(() => "");
+  // 429 and 5xx are transient even if a proxy dresses them up as an OAuth error.
+  if (response.status < 500 && response.status !== 429) {
+    try {
+      const err = JSON.parse(body) as TokenErrorResponse;
+      if (err.error && DEFINITIVE_REFRESH_ERRORS.has(err.error)) {
+        throw new RefreshTokenRejectedError(err.error_description || err.error);
+      }
+    } catch (error) {
+      if (error instanceof RefreshTokenRejectedError) throw error;
+      // Not an OAuth error object; treat as transient below.
+    }
+  }
+  throw new Error(`Failed to refresh token (HTTP ${response.status})`);
+}
+
+const SESSION_EXPIRED_NOTICE =
+  "Your Context7 session has expired. Run ctx7 login to sign in again. Continuing without an account.";
+
+/**
+ * True when we may prompt: both stdin and stdout are terminals and no
+ * machine-readable output was requested.
+ */
+export function isInteractiveSession(argv: string[] = process.argv): boolean {
+  if (!process.stdin.isTTY || !process.stdout.isTTY) return false;
+  return !argv.includes("--json");
+}
+
+/**
+ * The stored session was rejected and its credentials cleared. In a terminal,
+ * offer to sign in again; otherwise tell the user on stderr so stdout stays
+ * parseable. Returns the new access token if the user signed in.
+ */
+async function recoverExpiredSession(): Promise<string | undefined> {
+  if (!isInteractiveSession()) {
+    console.error(SESSION_EXPIRED_NOTICE);
+    return undefined;
+  }
+
+  let signIn: boolean;
+  try {
+    signIn = await confirm({
+      message: "Your Context7 session has expired. Sign in again now?",
+      default: true,
+    });
+  } catch {
+    // Ctrl-C / closed prompt counts as "no".
+    signIn = false;
+  }
+
+  if (signIn) {
+    // Imported lazily: commands/auth.ts depends on this module.
+    const { performLogin } = await import("../commands/auth.js");
+    const token = await performLogin();
+    if (token) {
+      console.log("");
+      return token;
+    }
+  }
+
+  console.log(pc.dim("Continuing without an account. Run ctx7 login to sign in later."));
+  console.log("");
+  return undefined;
+}
+
+export interface GetValidAccessTokenOptions {
+  /**
+   * When the stored refresh token is rejected, offer to sign in again (or
+   * print a notice when non-interactive). Commands that run their own login
+   * flow (login, whoami, setup, generate) turn this off so the user is not
+   * asked twice; the dead credentials are still cleared.
+   */
+  recoverExpiredSession?: boolean;
 }
 
 /**
@@ -108,8 +195,14 @@ async function refreshAccessToken(refreshToken: string): Promise<TokenData> {
  * tokens are stored or refresh fails. Pre-0.5 installs may have OAuth tokens
  * with a `refresh_token`; new installs hold long-lived API keys that never
  * expire and skip the refresh path entirely.
+ *
+ * A transient refresh failure (network, 429, 5xx) keeps the credentials so the
+ * next command retries. A definitive rejection clears them, so the user is
+ * told at most once per expired session.
  */
-export async function getValidAccessToken(): Promise<string | undefined> {
+export async function getValidAccessToken(
+  options: GetValidAccessTokenOptions = {}
+): Promise<string | undefined> {
   const tokens = loadTokens();
   if (!tokens) return undefined;
 
@@ -128,8 +221,17 @@ export async function getValidAccessToken(): Promise<string | undefined> {
     // drop it and log the user out at the next expiry.
     saveTokens({ refresh_token: tokens.refresh_token, ...newTokens });
     return newTokens.access_token;
-  } catch {
-    return undefined;
+  } catch (error) {
+    if (!(error instanceof RefreshTokenRejectedError)) return undefined;
+    // A concurrent ctx7 process may have refreshed first, rotating the token we
+    // sent. Its credentials are valid; clearing them would log the user out.
+    const current = loadTokens();
+    if (current && current.refresh_token !== tokens.refresh_token) {
+      return isTokenExpired(current) ? undefined : current.access_token;
+    }
+    clearTokens();
+    if (options.recoverExpiredSession === false) return undefined;
+    return recoverExpiredSession();
   }
 }
 
