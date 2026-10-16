@@ -215,7 +215,7 @@ async function resolveCliAuth(apiKey?: string): Promise<void> {
     return;
   }
 
-  const validToken = await getValidAccessToken();
+  const validToken = await getValidAccessToken({ recoverExpiredSession: false });
   if (validToken) {
     log.blank();
     log.plain(`${pc.green("✔")} Authenticated`);
