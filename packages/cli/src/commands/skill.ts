@@ -841,9 +841,9 @@ async function suggestCommand(options: SuggestOptions): Promise<void> {
   scanSpinner.succeed(`Found ${deps.length} dependencies`);
 
   // Step 2: Single API call to backend
-  const searchSpinner = ora("Finding matching skills...").start();
-
+  // Resolve the token before the spinner starts: an expired session may prompt.
   const accessToken = await getValidAccessToken();
+  const searchSpinner = ora("Finding matching skills...").start();
 
   let data;
   try {
