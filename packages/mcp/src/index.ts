@@ -56,6 +56,7 @@ import {
   setBearerChallenge,
 } from "./lib/mcp-http-auth.js";
 import { mcpRouteFromUrl } from "./lib/mcp-route.js";
+import { parsePortOption } from "./lib/cli-port.js";
 import { parseOAuthAudienceEnforcement } from "./lib/oauth-audience.js";
 
 /** Default HTTP server port */
@@ -113,10 +114,7 @@ if (TRANSPORT_TYPE === "stdio" && passedPortFlag) {
 }
 
 // HTTP port configuration
-const CLI_PORT = (() => {
-  const parsed = parseInt(cliOptions.port, 10);
-  return isNaN(parsed) ? undefined : parsed;
-})();
+const CLI_PORT = parsePortOption(cliOptions.port);
 
 const requestContext = new AsyncLocalStorage<ClientContext>();
 
