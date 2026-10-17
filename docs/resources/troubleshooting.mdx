@@ -162,6 +162,20 @@ On macOS, some users may encounter the same request timeout errors. Use the full
 
 ## API and Connection Issues
 
+### How tool errors are reported
+
+When `resolve-library-id` or `query-docs` fails, the error text is returned in the tool result's `content`, and the result is flagged with `isError: true` so the client can tell it apart from documentation. Context7 uses the API's own message when there is one; otherwise the server builds a short message from the status code:
+
+| Status                             | Message returned                                                                                                                                                                                                   |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 401 — remote OAuth sign-in expired | `Your Context7 sign-in expired. Retry the request so your MCP client can refresh the sign-in.`                                                                                                                       |
+| 401 — API key                      | `Invalid API key. Please check your API key. API keys should start with 'ctx7sk' prefix.`                                                                                                                           |
+| 404                                | `The library you are trying to access does not exist. Please try with a different library ID.`                                                                                                                       |
+| 429                                | `Rate limited or quota exceeded. Upgrade your plan at https://context7.com/plans for higher limits.` with a key, or `Rate limited or quota exceeded. Create a free API key at https://context7.com/dashboard for higher limits.` without one |
+| Any other                          | `Request failed with status <code>. Please try again later.`                                                                                                                                                         |
+
+A `401` from the remote OAuth endpoint clears the request on retry so the client can refresh the sign-in. The sections below cover the fixes.
+
 ### Rate Limiting
 
 If you encounter rate limit errors:
