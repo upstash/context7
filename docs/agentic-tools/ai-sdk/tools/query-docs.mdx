@@ -68,6 +68,8 @@ The tool accepts the following inputs from the AI model:
 
 ### Output Format
 
+The tool accepts no token or result-limit parameter. Context7 decides how many snippets to return for the query, so narrow the `query` to a single concept to shape the result rather than trying to cap the output.
+
 On success, the tool returns the documentation as plain text, formatted for easy consumption by the AI model:
 
 ```

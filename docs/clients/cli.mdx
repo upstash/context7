@@ -245,6 +245,21 @@ Set an API key via environment variable to skip interactive login entirely — u
 export CONTEXT7_API_KEY=your_key
 ```
 
+### Where credentials are stored
+
+`ctx7 login` writes the token it receives to `credentials.json` inside the Context7 config directory:
+
+| Platform      | Path                                          |
+| ------------- | --------------------------------------------- |
+| macOS, Linux  | `~/.config/context7/credentials.json`         |
+| Windows       | `%USERPROFILE%\.config\context7\credentials.json` |
+
+Set `XDG_CONFIG_HOME` to move this directory. The file is written with `0600` permissions. Installations that predate this layout stored the token at `~/.context7/credentials.json`; the CLI moves it to the new path on first read.
+
+An API key set through `CONTEXT7_API_KEY` is never written to this file, and it takes precedence over any stored token.
+
+`ctx7 logout` deletes the stored credentials only. It leaves the MCP server entry and every other file written by `ctx7 setup` in place — use [`ctx7 remove`](#ctx7-remove) to undo that setup.
+
 ### When is authentication required?
 
 | Feature                                                  | Required                                                                     |
