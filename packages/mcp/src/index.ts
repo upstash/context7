@@ -18,7 +18,7 @@ import {
   envelopeClientInfo,
 } from "./lib/utils.js";
 import express from "express";
-import { Command } from "commander";
+import { Command, InvalidArgumentError } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
 import { randomUUID } from "node:crypto";
 import {
@@ -54,7 +54,6 @@ import {
   setBearerChallenge,
 } from "./lib/mcp-http-auth.js";
 import { mcpRouteFromUrl } from "./lib/mcp-route.js";
-import { parsePortOption } from "./lib/cli-port.js";
 import { parseOAuthAudienceEnforcement } from "./lib/oauth-audience.js";
 
 /** Default HTTP server port */
@@ -72,14 +71,26 @@ function getPluginFromRequest(req: express.Request): typeof CLAUDE_CODE_PLUGIN |
 const program = new Command()
   .version(SERVER_VERSION, "-v, --version", "output the current version")
   .option("--transport <stdio|http>", "transport type", "stdio")
-  .option("--port <number>", "port for HTTP transport", DEFAULT_PORT.toString())
+  .option(
+    "--port <number>",
+    "port for HTTP transport",
+    (value: string) => {
+      // 0 is valid and means "let the OS pick", which #3000 made reportable.
+      // Everything else is a plain integer inside the TCP port range.
+      if (!/^\d+$/.test(value) || Number(value) > 65535) {
+        throw new InvalidArgumentError("Must be an integer 0-65535.");
+      }
+      return Number(value);
+    },
+    DEFAULT_PORT
+  )
   .option("--api-key <key>", "API key for authentication (or set CONTEXT7_API_KEY env var)")
   .allowUnknownOption() // let MCP Inspector / other wrappers pass through extra flags
   .parse(process.argv);
 
 const cliOptions = program.opts<{
   transport: string;
-  port: string;
+  port: number;
   apiKey?: string;
 }>();
 
@@ -110,9 +121,6 @@ if (TRANSPORT_TYPE === "stdio" && passedPortFlag) {
   console.error("The --port flag is not allowed when using --transport stdio.");
   process.exit(1);
 }
-
-// HTTP port configuration
-const CLI_PORT = parsePortOption(cliOptions.port);
 
 const requestContext = new AsyncLocalStorage<ClientContext>();
 
@@ -451,7 +459,8 @@ async function main() {
   });
 
   if (TRANSPORT_TYPE === "http") {
-    const initialPort = CLI_PORT ?? DEFAULT_PORT;
+    // Commander parsed and range-checked this already; 0 means ephemeral.
+    const initialPort = cliOptions.port;
 
     const app = express();
     // Only private/local infrastructure may supply forwarding headers. Express
@@ -773,7 +782,9 @@ async function main() {
       activeHttpServer = httpServer;
 
       httpServer.once("error", (err: NodeJS.ErrnoException) => {
-        if (err.code === "EADDRINUSE" && port < initialPort + maxAttempts) {
+        // Stop at the top of the TCP range: the next listen would be 65536,
+        // which throws inside this handler instead of retrying (#3387).
+        if (err.code === "EADDRINUSE" && port < 65535 && port < initialPort + maxAttempts) {
           console.warn(`Port ${port} is in use, trying port ${port + 1}...`);
           startServer(port + 1, maxAttempts);
         } else {
