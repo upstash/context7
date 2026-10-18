@@ -2,7 +2,7 @@
 
 [![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D)
 
-# Context7 Platform - Up-to-date Code Docs For Any Prompt
+# Context7 - Up-to-date Docs for AI Agents
 
 [![Website](https://img.shields.io/badge/Website-context7.com-blue)](https://context7.com) [![NPM Version](https://img.shields.io/npm/v/%40upstash%2Fcontext7-mcp?color=red)](https://www.npmjs.com/package/@upstash/context7-mcp) [![MIT licensed](https://img.shields.io/npm/l/%40upstash%2Fcontext7-mcp)](./LICENSE)
 
@@ -18,7 +18,7 @@ LLMs rely on outdated or generic information about the libraries you use. You ge
 
 ## ✅ With Context7
 
-Context7 pulls up-to-date, version-specific documentation and code examples straight from the source — and places them directly into your prompt.
+Context7 pulls up-to-date, version-specific documentation and code examples straight from the source — and gives them to your coding agent.
 
 ```txt
 Create a Next.js proxy that checks for a valid JWT in cookies
@@ -34,7 +34,7 @@ JSON API responses for five minutes. use context7
 Show me the Supabase auth API for email/password sign-up.
 ```
 
-Context7 fetches up-to-date code examples and documentation right into your LLM's context. No tab-switching, no hallucinated APIs that don't exist, no outdated code generation.
+Context7 fetches up-to-date code examples and documentation right into your coding agent's context. No tab-switching, no hallucinated APIs that don't exist, no outdated code generation.
 
 Works in two modes:
 

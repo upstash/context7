@@ -1,0 +1,85 @@
+---
+title: Context7 Ask
+sidebarTitle: Overview
+description: See what AI agents ask about your product
+---
+
+**Context7 Ask** is an endpoint you add to your website. When an AI agent needs information about your product, it asks your website a question instead of crawling through your pages, and you see every question it asked.
+
+People now ask AI agents about your product instead of reading your website. Ask shows you what those agents want to know, and which of their questions your website can't answer yet.
+
+Ask is part of Context7 and free to use.
+
+---
+
+<Frame caption="Without Ask, agents crawl your pages. With Ask, they ask your site, and you see the question.">
+  <img
+    src="/images/ask/product/why.jpg"
+    alt="Without Context7 Ask an agent is puzzled by your site; with Context7 Ask its question goes to your site and into your question log"
+  />
+</Frame>
+
+## ❌ Without Context7 Ask
+
+- ❌ AI agents crawl many pages to learn about your product
+- ❌ You don't know why AI agents are visiting your website
+- ❌ You don't know if AI agents found what they needed
+
+## ✅ With Context7 Ask
+
+- ✅ AI agents ask your site a question instead of crawling
+- ✅ See every question AI agents ask about your product
+- ✅ See which questions your website doesn't answer
+
+---
+
+## How it works
+
+You add two things to your website: a verification tag in `<head>` and a short note at the top of `<body>`. People don't see the note, but agents that read your page do. It tells them that your site has a search endpoint:
+
+```txt
+https://context7.com/api/v2/ask?siteKey=ask_4f9c2e81a7b3d6e05c1f8a92&query=How+do+I+retry+webhooks
+```
+
+From there, it's three steps:
+
+<Frame caption="Agents read your site, your site answers, and you see every question.">
+  <img
+    src="/images/ask/product/how-it-works.jpg"
+    alt="The example Ask request above three cards: agents read your site, your site answers, you see all agent questions"
+  />
+</Frame>
+
+| Step                       | What happens                                                                                      |
+| -------------------------- | ------------------------------------------------------------------------------------------------- |
+| **1. Agents read your site** | Claude, ChatGPT, Cursor and other agents find the endpoint in your page                            |
+| **2. Your site answers**     | Context7 searches your pages and returns the parts that answer the question, each with its URL   |
+| **3. You see the questions** | Every question shows up in the Ask dashboard, with the agent that asked it and the answer it got |
+
+If nothing on your site answers a question, the agent is told so. It never gets a made-up answer, and you see the question in your **Unanswered** list.
+
+Agents spend fewer tokens browsing your website, and you finally see what they're looking for.
+
+---
+
+## Plans
+
+| Plan             | Sites    |
+| ---------------- | -------- |
+| Free             | 3        |
+| Pro & Enterprise | No limit |
+
+There is no charge for questions or answers on any plan.
+
+---
+
+## Start here
+
+<Columns cols={2}>
+  <Card title="Quickstart" href="/ask/quickstart">
+    Add your site and verify it in about 2 minutes.
+  </Card>
+  <Card title="Questions and Analytics" href="/ask/dashboard">
+    See what agents ask, and which questions have no answer.
+  </Card>
+</Columns>

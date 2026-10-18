@@ -2,7 +2,7 @@
 
 [![MCP 서버 설치](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D)
 
-# Context7 MCP - 모든 프롬프트를 위한 최신 코드 문서
+# Context7 MCP - AI 에이전트를 위한 최신 문서
 
 [![Website](https://img.shields.io/badge/Website-context7.com-blue)](https://context7.com) [![NPM Version](https://img.shields.io/npm/v/%40upstash%2Fcontext7-mcp?color=red)](https://www.npmjs.com/package/@upstash/context7-mcp) [![MIT licensed](https://img.shields.io/npm/l/%40upstash%2Fcontext7-mcp)](../LICENSE)
 

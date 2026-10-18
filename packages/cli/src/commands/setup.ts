@@ -215,7 +215,7 @@ async function resolveCliAuth(apiKey?: string): Promise<void> {
     return;
   }
 
-  const validToken = await getValidAccessToken();
+  const validToken = await getValidAccessToken({ recoverExpiredSession: false });
   if (validToken) {
     log.blank();
     log.plain(`${pc.green("✔")} Authenticated`);
@@ -510,7 +510,6 @@ async function setupMcp(
   log.blank();
 
   trackEvent("setup", { agents, scope, authMode: auth.mode });
-  trackEvent("install", { skills: ["/upstash/context7/context7-mcp"], ides: agents });
 }
 
 async function setupCliAgent(
@@ -596,7 +595,6 @@ async function setupCli(options: SetupOptions): Promise<void> {
   log.blank();
 
   trackEvent("setup", { mode: "cli" });
-  trackEvent("install", { skills: ["/upstash/context7/find-docs"], ides: agents });
 }
 
 async function setupCommand(options: SetupOptions): Promise<void> {

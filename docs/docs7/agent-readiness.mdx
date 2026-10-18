@@ -16,8 +16,8 @@ The paths below are relative to the documentation root. For a site mounted at `e
 | `/llms.txt` | Lists routable pages with their Markdown URL and description. Pages in navigation come first. |
 | `/llms-full.txt` | Combines the complete Markdown content of the site into one file. |
 | `/<page>.md` | Returns the Markdown representation of one page. |
-| `/search?q=<query>` | Searches the site and returns matching pages, headings, and snippets as JSON. |
-| `/.well-known/agent-skills/index.json` | Advertises a site-specific Agent Skill with links to the docs and search. |
+| `/ask?q=<keywords or question>` | Returns the matching pages, headings, and snippets as JSON. Short keywords rank best. |
+| `/.well-known/agent-skills/index.json` | Advertises a site-specific Agent Skill with links to the docs and the ask endpoint. |
 
 An agent can also request a normal page URL with `Accept: text/markdown`. Docs7 returns Markdown when the client prefers it. HTML responses advertise the Markdown page, both `llms.txt` files, and the Agent Skills index through `Link` headers.
 

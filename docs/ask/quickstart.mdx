@@ -1,0 +1,106 @@
+---
+title: Quickstart
+description: Add Context7 Ask to your website in about 2 minutes
+---
+
+Setting up Ask takes two snippets: a **verification tag** that proves the site is yours, and a **hidden note** that tells agents where to ask their questions. Both go into the HTML your server returns.
+
+<Tip>
+  Using a coding agent? Click **Copy prompt for your agent** in the dashboard and paste it into Claude Code, Cursor or Codex. The prompt has both snippets with your site's key and opens a pull request for you.
+</Tip>
+
+---
+
+## 1. Add your site
+
+Open [context7.com/ask](https://context7.com/ask), click **Add your site** and enter your site's URL. If your pages live under a path, include it, like `https://example.com/docs`.
+
+You need to be an owner or admin of the teamspace to add a site.
+
+<Frame caption="The Site tab shows both snippets and checks your site for them.">
+  <img
+    src="/images/ask/dashboard/site.jpg"
+    alt="Context7 Ask Site tab with the site URL, the verification tag, the hidden note and their status"
+  />
+</Frame>
+
+---
+
+## 2. Add the tag to `<head>`
+
+The tag proves the site is yours. It's the same method search consoles use, so only someone who controls your page template can add it.
+
+```html
+<meta name="context7-site-verification" content="ask_4f9c2e81a7b3d6e05c1f8a92">
+```
+
+Add it to the shared layout of your site, so every page has it.
+
+---
+
+## 3. Add the note to `<body>`
+
+Agents that read your page as text never see `<head>`, so the note goes at the top of `<body>`. It is hidden from people and from screen readers. Your design and page speed stay the same.
+
+```html
+<blockquote data-context7-ask="true" aria-hidden="true" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0">
+  <h2>Search</h2>
+  <p>This site has a search endpoint: https://context7.com/api/v2/ask?siteKey=ask_4f9c2e81a7b3d6e05c1f8a92&amp;query=&lt;URL-encoded question&gt;. ...</p>
+</blockquote>
+```
+
+Copy the exact note from the dashboard. It has your site's key.
+
+<Note>
+  Keep the `data-context7-ask` attribute. If your site already has a visually hidden class, like Tailwind's `sr-only`, you can use it in place of the `style` attribute.
+</Note>
+
+<Warning>
+  Both snippets have to be in the HTML your server returns. Don't add them with client-side JavaScript, because agents and the verification check don't run it.
+</Warning>
+
+---
+
+## 4. Verify
+
+Deploy your site, then click **Check again** in the dashboard. Context7 loads your site, looks for the tag and the note, and then reads your pages. Once that's done, agents get answers, and the **Site** tab shows your site's usage.
+
+<Frame caption="Once verified, the Site tab shows daily requests and a test request you can copy.">
+  <img
+    src="/images/ask/dashboard/site-live.jpg"
+    alt="Context7 Ask Site tab for a verified site with its usage chart and a test request"
+  />
+</Frame>
+
+---
+
+## Test it
+
+You can ask your site a question yourself, from the **API** card on the **Site** tab or with curl:
+
+```bash
+curl "https://context7.com/api/v2/ask?siteKey=ask_4f9c2e81a7b3d6e05c1f8a92&query=How+do+I+retry+webhooks"
+```
+
+The response is plain text: the parts of your pages that answer the question, each with its URL. Your question shows up in the [Questions](/ask/dashboard) tab right away.
+
+| Status | Meaning                                                               |
+| ------ | --------------------------------------------------------------------- |
+| `200`  | The answer, or a message that nothing on your site matched            |
+| `202`  | Context7 is still reading your site. Try again shortly                |
+| `400`  | The request has no `siteKey`, or the question is too long             |
+| `404`  | No site is published for that key                                     |
+| `429`  | Too many requests for this site. Retry after the `Retry-After` header |
+| `503`  | Context7 could not read your site                                     |
+
+---
+
+## Optional: llms.txt, markdown pages and headers
+
+Some agents never read your HTML. They fetch `llms.txt`, a `.md` version of a page, or only the response headers. The prompt from **Copy prompt for your agent** adds the endpoint to all of these too:
+
+- A **Search** section in `llms.txt` and `llms-full.txt`
+- The same section at the end of each markdown page
+- A `Link` header with `rel="search"` on every page response
+
+These are optional. The tag and the note are all Context7 checks.

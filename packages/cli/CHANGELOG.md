@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.8.0
+
+### Minor Changes
+
+- 94cdfb1: Remove the deprecated `skills` and `generate` commands from `ctx7`; `ctx7 setup` still installs the find-docs and context7-mcp skills.
+
+## 0.7.0
+
+### Minor Changes
+
+- f54b372: Tell users when their Context7 session has expired instead of silently continuing without an account. If the server rejects the stored refresh token, the CLI clears the dead credentials. In a terminal it asks "Your Context7 session has expired. Sign in again now? (Y/n)" and, on yes, signs you in and continues the command. In scripts, agents, CI or with `--json` it never prompts; it prints a one-line notice to stderr and continues anonymously. Network errors, rate limits and server errors keep the credentials so the next command retries.
+
 ## 0.6.1
 
 ### Patch Changes

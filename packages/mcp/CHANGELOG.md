@@ -1,5 +1,11 @@
 # @upstash/context7-mcp
 
+## 4.4.2
+
+### Patch Changes
+
+- e824044: Advertise a server title and scalable icons (SVG and a 512x512 PNG) in the MCP handshake and the server card.
+
 ## 4.4.1
 
 ### Patch Changes
