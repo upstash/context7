@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.1
+
+### Patch Changes
+
+- 5a2b651: Narrow the "Do not use for" line in the server instructions and rule templates so agents use Context7 when they port code between libraries, platforms, or SQL dialects.
+- 323bda9: Keep the comments and trailing commas in an OpenCode config file when `ctx7 setup` or `ctx7 remove` edits it.
+- 7f6943d: `ctx7 setup` now removes an existing `--api-key=<value>` arg when it rewrites a stdio MCP entry, so switching to OAuth or rotating the key no longer leaves the old key in the config.
+
 ## 0.8.0
 
 ### Minor Changes
