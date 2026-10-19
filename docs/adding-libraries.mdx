@@ -36,6 +36,8 @@ Context7 parses documentation files — `.md`, `.mdx`, `.markdown`, `.rst`, `.tx
 
 If a repository contains little or no documentation content, Context7 falls back to generating examples from the source code itself. For public repositories this fallback is automatic — there is no setting to turn it on or off. For [private repositories](/howto/private-sources), generating docs from source code is opt-in: check **Generate docs** when adding the source, or pass the `generateDocs` flag via the [API](/api-guide).
 
+Context7 indexes documentation written in the library's language (English by default). Pages whose prose is mainly in another language are skipped. If most pages are skipped this way and no documentation snippets remain, the parse fails with a language mismatch error instead of publishing source-code examples.
+
 To control which folders and files are scanned, set included folders when submitting, or commit a `context7.json` file to the repository (see [Library Owners](/library-owners)).
 
 ## Maintain the Library?
