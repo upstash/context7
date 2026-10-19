@@ -1,4 +1,4 @@
-# Context7 MCP - Documentation à jour pour vos prompts
+# Context7 MCP - Documentation à jour pour les agents IA
 
 [![Site Web](https://img.shields.io/badge/Website-context7.com-blue)](https://context7.com) [<img alt="Installer dans VS Code (npx)" src="https://img.shields.io/badge/VS_Code-VS_Code?style=flat-square&label=Installer%20Context7%20MCP&color=0098FF">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22context7%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40upstash%2Fcontext7-mcp%40latest%22%5D%7D)
 
@@ -34,7 +34,7 @@ Context7 apporte des exemples de code et de la documentation à jour directement
 
 ### Prérequis
 
-- Node.js >= v18.0.0
+- Node.js >= v20.18.1
 - Cursor, Devin Desktop, Claude Desktop ou un autre client MCP
 
 ### Installation via Smithery
@@ -327,7 +327,7 @@ Si vous rencontrez une erreur comme : `Error: Cannot find module 'uriTemplate.js
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
+      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp"]
     }
   }
 }
@@ -337,7 +337,7 @@ Si vous rencontrez une erreur comme : `Error: Cannot find module 'uriTemplate.js
 1. Essayez de retirer `@latest` du nom du package.
 2. Essayez d'utiliser `bunx` comme alternative.
 3. Essayez d'utiliser `deno` comme alternative.
-4. Assurez-vous d'utiliser Node v18 ou supérieur pour avoir le support natif de fetch avec `npx`.
+4. Assurez-vous d'utiliser Node v20 ou supérieur pour avoir le support natif de fetch avec `npx`.
 
 ## Clause de non-responsabilité
 Les projets Context7 sont des contributions de la communauté, et bien que nous nous efforcions de maintenir une haute qualité, nous ne pouvons garantir l'exactitude, l'exhaustivité ou la sécurité de toute la documentation des bibliothèques. Les projets listés dans Context7 sont développés et maintenus par leurs propriétaires respectifs, et non par Context7. Si vous rencontrez un contenu suspect, inapproprié ou potentiellement nuisible, veuillez utiliser le bouton "Signaler" sur la page du projet pour nous le faire savoir immédiatement. Nous prenons tous les signalements au sérieux et examinerons rapidement les contenus signalés pour maintenir l'intégrité et la sécurité de notre plateforme. En utilisant Context7, vous reconnaissez que vous le faites à votre propre discrétion et à vos risques et périls.

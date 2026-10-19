@@ -1,6 +1,6 @@
 # Context7 Plugin for Codex
 
-Context7 solves a common problem with AI coding assistants: outdated training data and hallucinated APIs. Instead of relying on stale knowledge, Context7 fetches current documentation directly from source repositories.
+Context7 solves a common problem with AI coding agents: outdated training data and hallucinated APIs. Instead of relying on stale knowledge, Context7 fetches current documentation directly from source repositories.
 
 ## Installation
 
@@ -41,7 +41,7 @@ Searches for libraries and returns Context7-compatible identifiers.
 
 ```text
 Input: "next.js"
-Output: { id: "/vercel/next.js", name: "Next.js", versions: ["v15.1.8", "v14.2.0", ...] }
+Output: { id: "/vercel/next.js", name: "Next.js", versions: ["v16.2.9", "v15.1.8", ...] }
 ```
 
 ### query-docs
@@ -49,7 +49,7 @@ Output: { id: "/vercel/next.js", name: "Next.js", versions: ["v15.1.8", "v14.2.0
 Fetches documentation for a specific library, ranked by relevance to your question.
 
 ```text
-Input: { libraryId: "/vercel/next.js", query: "app router middleware" }
+Input: { libraryId: "/vercel/next.js", query: "app router proxy" }
 Output: Relevant documentation snippets with code examples
 ```
 
@@ -57,14 +57,14 @@ Output: Relevant documentation snippets with code examples
 
 The bundled skill works automatically when you ask about libraries:
 
-- "How do I set up authentication in Next.js 15?"
+- "How do I set up authentication in Next.js 16?"
 - "Show me React Server Components examples"
 - "What's the Prisma syntax for relations?"
 
 You can also invoke it explicitly:
 
 ```text
-use context7 for Next.js middleware docs
+use context7 for Next.js proxy docs
 use context7 for Prisma query examples with relations
 use context7 for the Supabase syntax for row-level security
 ```
@@ -72,6 +72,6 @@ use context7 for the Supabase syntax for row-level security
 To get documentation for a specific version, include the version in the library ID:
 
 ```text
-/vercel/next.js/v15.1.8
+/vercel/next.js/v16.2.9
 /supabase/supabase/v2.45.0
 ```

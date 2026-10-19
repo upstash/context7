@@ -1,9 +1,10 @@
 import pc from "picocolors";
-import { checkbox, type Separator } from "@inquirer/prompts";
+import { checkbox } from "@inquirer/prompts";
 import readline from "readline";
 
 type CheckboxConfig<T> = Parameters<typeof checkbox<T>>[0];
-type CheckboxChoice<T> = Exclude<CheckboxConfig<T>["choices"][number], Separator | string>;
+// @inquirer/checkbox does not export its Choice type, and its choices also accept bare values.
+type CheckboxChoice<T> = { value: T; disabled?: boolean | string };
 
 /**
  * Creates a clickable terminal hyperlink using OSC 8 escape sequence.

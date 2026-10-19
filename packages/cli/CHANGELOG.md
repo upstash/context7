@@ -1,5 +1,47 @@
 # Changelog
 
+## 0.8.0
+
+### Minor Changes
+
+- 94cdfb1: Remove the deprecated `skills` and `generate` commands from `ctx7`; `ctx7 setup` still installs the find-docs and context7-mcp skills.
+
+## 0.7.0
+
+### Minor Changes
+
+- f54b372: Tell users when their Context7 session has expired instead of silently continuing without an account. If the server rejects the stored refresh token, the CLI clears the dead credentials. In a terminal it asks "Your Context7 session has expired. Sign in again now? (Y/n)" and, on yes, signs you in and continues the command. In scripts, agents, CI or with `--json` it never prompts; it prints a one-line notice to stderr and continues anonymously. Network errors, rate limits and server errors keep the credentials so the next command retries.
+
+## 0.6.1
+
+### Patch Changes
+
+- 615e72b: Update the Next.js examples in the tool descriptions, the CLI rule and the bundled skill: the version example is now `/vercel/next.js/v16.2.9`, and the prompts use Next.js 16.
+
+## 0.6.0
+
+### Minor Changes
+
+- 2c0f362: Add a `--language` option to `ctx7 docs`. When you pass the programming language you write in, Context7 ranks code examples in that language first.
+
+## 0.5.16
+
+### Patch Changes
+
+- 61cf806: Keep the rest of AGENTS.md / GEMINI.md untouched when `ctx7 remove` deletes the Context7 rule section; only the seam left by the removed section is normalized.
+
+## 0.5.15
+
+### Patch Changes
+
+- c1e314b: `ctx7 setup` now downloads the find-docs and context7-mcp skills directly from GitHub instead of the deprecated Skill Hub API.
+
+## 0.5.14
+
+### Patch Changes
+
+- 16095a9: Update CLI prompt, terminal display, and browser launch dependencies. The CLI now declares Node.js 22.13 or later, which its dependencies already need. Update the MCP server JWT and OpenTelemetry dependencies.
+
 ## 0.5.13
 
 ### Patch Changes

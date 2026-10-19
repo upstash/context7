@@ -49,7 +49,7 @@ Searches the Context7 index by name and returns matching libraries. Pass a `quer
 
 ```bash
 ctx7 library react "How to clean up useEffect with async operations"
-ctx7 library nextjs "How to set up app router with middleware"
+ctx7 library nextjs "How to set up app router with a proxy"
 ctx7 library prisma "How to define one-to-many relations with cascade delete"
 ```
 
@@ -67,7 +67,7 @@ When multiple results come back, the best match is usually the one with the clos
 
 ```bash
 # Fetch docs for a specific version
-ctx7 docs /vercel/next.js/v14.3.0-canary.87 "How to set up app router"
+ctx7 docs /vercel/next.js/v16.2.9 "How to set up app router"
 
 # Output as JSON for scripting
 ctx7 library react "How to use hooks for state management" --json | jq '.[0].id'
@@ -79,7 +79,7 @@ Takes a library ID and a natural-language question, and returns relevant code sn
 
 ```bash
 ctx7 docs /reactjs/react.dev "How to clean up useEffect with async operations"
-ctx7 docs /vercel/next.js "How to add middleware that redirects unauthenticated users"
+ctx7 docs /vercel/next.js "How to add a proxy that redirects unauthenticated users"
 ctx7 docs /prisma/prisma "How to define one-to-many relations with cascade delete"
 ```
 
@@ -93,12 +93,15 @@ Queries work best when they're specific. Describe what you're trying to accompli
 The output contains two types of content: **code snippets** (titled, with language-tagged blocks) and **info snippets** (prose explanations with breadcrumb context). Both are formatted for readability in the terminal.
 
 ```bash
+# Rank code examples in the language you write in first
+ctx7 docs /websites/twilio "How to send an SMS" --language Ruby
+
 # Output as structured JSON
 ctx7 docs /reactjs/react.dev "How to use hooks for state management" --json
 
 # Pipe to other tools — output is clean when not in a TTY (no spinners or colors)
 ctx7 docs /reactjs/react.dev "How to use hooks for state management" | head -50
-ctx7 docs /vercel/next.js "How to add middleware for route protection" | grep -A 10 "middleware"
+ctx7 docs /vercel/next.js "How to add a proxy for route protection" | grep -A 10 "proxy"
 ```
 
 ---
@@ -170,7 +173,7 @@ CONTEXT7_API_KEY=ctx7op-... ctx7 setup --mcp --yes \
   --codex
 ```
 
-The CLI checks `/api/auth/mcp` before writing configuration and writes `Authorization: Bearer <personal-key>`. We recommend using an API key. When authentication is enabled and no key was provided, interactive setup requests the key with masked input. Use `--api-key` or `CONTEXT7_API_KEY` for non-interactive automation. On-premise setup uses Streamable HTTP and bundled rule/skill content, so the target does not need to serve Context7 Cloud skill endpoints.
+The CLI checks `/api/auth/mcp` before writing configuration and writes `Authorization: Bearer <personal-key>`. We recommend using an API key. When authentication is enabled and no key was provided, interactive setup requests the key with masked input. Use `--api-key` or `CONTEXT7_API_KEY` for non-interactive automation. On-premise setup uses Streamable HTTP and bundled rule/skill content.
 
 When `--base-url` targets a custom deployment, setup skips the npm update check and telemetry and does not fetch rules or skills from GitHub or Context7 Cloud. After the CLI package is installed, the only network request made by setup is to the configured deployment. In a restricted environment, mirror `ctx7` and its dependencies in an internal npm registry and run the installed `ctx7` binary instead of `npx ctx7@latest`.
 
@@ -234,6 +237,12 @@ ctx7 whoami
 # Log out
 ctx7 logout
 ```
+
+### Session expiry
+
+If your saved login can no longer be refreshed, the CLI clears it and asks whether to sign in again. Answering yes runs `ctx7 login` and continues the command with the new login. Answering no continues without an account.
+
+No prompt is shown when output is piped or `--json` is passed — the CLI prints a notice to stderr and continues without an account, so parsed output stays clean. `ctx7 login`, `ctx7 whoami`, `ctx7 setup`, and `ctx7 generate` also skip the prompt. Network, rate-limit, and server errors keep your saved login, so the next command retries.
 
 ### API Key
 

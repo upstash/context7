@@ -2,7 +2,7 @@
 
 [![安裝 MCP 伺服器](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D)
 
-# Context7 MCP - 即時更新的程式碼文件，適用於任何提示
+# Context7 MCP - 為 AI 代理提供即時更新的文件
 
 [![Website](https://img.shields.io/badge/Website-context7.com-blue)](https://context7.com) [![NPM Version](https://img.shields.io/npm/v/%40upstash%2Fcontext7-mcp?color=red)](https://www.npmjs.com/package/@upstash/context7-mcp) [![MIT licensed](https://img.shields.io/npm/l/%40upstash%2Fcontext7-mcp)](./LICENSE)
 
@@ -23,7 +23,7 @@ Context7 MCP 直接從來源取得最新的、特定版本的文件與程式碼�
 在你的提示中加入 `use context7`（或[設定規則](#新增規則)自動調用）：
 
 ```txt
-建立一個 Next.js 中介軟體，檢查 cookies 中的有效 JWT，
+建立一個 Next.js proxy，檢查 cookies 中的有效 JWT，
 並將未認證使用者重新導向至 `/login`。use context7
 ```
 
@@ -142,7 +142,7 @@ claude mcp add --scope user --header "Authorization: Bearer YOUR_API_KEY" --tran
 <details>
 <summary><b>OAuth 認證</b></summary>
 
-Context7 MCP 伺服器支援 OAuth 2.0 認證，適用於實作了 [MCP OAuth 規範](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization)的 MCP 客戶端。
+Context7 MCP 伺服器支援 OAuth 2.0 認證，適用於實作了 [MCP OAuth 規範](https://modelcontextprotocol.io/specification/latest/basic/authorization)的 MCP 客戶端。
 
 要使用 OAuth，請在客戶端設定中將端點從 `/mcp` 更改為 `/mcp/oauth`：
 
@@ -186,7 +186,7 @@ OAuth 僅適用於遠端 HTTP 連線。對於使用 stdio 傳輸的本地 MCP �
 要取得特定函式庫版本的文件，只需在提示中提及版本：
 
 ```txt
-如何設定 Next.js 14 中介軟體？use context7
+如何設定 Next.js 16 proxy？use context7
 ```
 
 Context7 將自動匹配適當的版本。

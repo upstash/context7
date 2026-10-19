@@ -1,5 +1,66 @@
 # @upstash/context7-mcp
 
+## 4.4.2
+
+### Patch Changes
+
+- e824044: Advertise a server title and scalable icons (SVG and a 512x512 PNG) in the MCP handshake and the server card.
+
+## 4.4.1
+
+### Patch Changes
+
+- 7cbd5fd: Consume request/cancellation pairs contained in the same JSON-RPC batch before dispatch. This prevents the legacy stateless HTTP transport from leaving the response stream open when cancellation suppresses the terminal protocol response.
+
+## 4.4.0
+
+### Minor Changes
+
+- 2d57b23: Add a `foreign` mode to the OAuth audience check on the hosted HTTP transport. `MCP_OAUTH_AUDIENCE_ENFORCEMENT=foreign` answers HTTP 401 (`WWW-Authenticate: Bearer error="invalid_token"`, "This token was issued for another server. If you connect through a gateway or proxy, use a Context7 API key instead.") to a Clerk OAuth JWT whose `aud` names another server, and still admits a token with no `aud`, which grants authorized before Clerk's "Include Audience" setting carry on every refresh. `observe` (the default) and `required` are unchanged. The query string of an audience on an allowed host is ignored, since Cursor writes the configured MCP URL (`https://mcp.context7.com/mcp?client=codex`) into `resource`; on any other host it is kept. The `audienceMismatch` log line now carries `outcome=accepted|rejected` and is written at most once per token per hour instead of every ten minutes.
+
+### Patch Changes
+
+- 2882596: Verify Microsoft Entra token signatures before looking up the audience, and cap the Entra config cache.
+- 615e72b: Update the Next.js examples in the tool descriptions, the CLI rule and the bundled skill: the version example is now `/vercel/next.js/v16.2.9`, and the prompts use Next.js 16.
+
+## 4.3.0
+
+### Minor Changes
+
+- 2c0f362: Add an optional `language` argument to `query-docs`. When the agent knows the programming language the user writes in, Context7 ranks code examples in that language first.
+
+## 4.2.1
+
+### Patch Changes
+
+- c30f279: Verify OAuth JWT access tokens from the authorization server (Clerk) strictly on the hosted HTTP transport: signature, issuer, a `typ` of `at+jwt`, expiry with a minute of clock tolerance, and the token's `aud`. Clerk ID tokens and session JWTs, which share the issuer, now get HTTP 401. The audience is compared against the `RESOURCE_URL` origin, `/mcp` and `/mcp/oauth` (override with `MCP_OAUTH_ALLOWED_AUDIENCES`); `MCP_OAUTH_AUDIENCE_ENFORCEMENT` defaults to `observe`, which admits a mismatch and logs the OAuth client ID and audience (once per token every ten minutes), and `required` answers 401. These JWTs count as `oauth` in authentication telemetry, a token the Context7 API rejects on a tool call is challenged on the next request, and a rejected OAuth token now stays rejected in the per-replica cache for ten minutes instead of thirty seconds.
+- dd48abc: query-docs now sets `isError` on its result when the documentation request fails (invalid library ID, API or network error), so clients that branch on `isError` no longer treat the error text as documentation.
+- 6116042: Report the actual assigned HTTP port when `--port 0` requests an ephemeral port.
+
+## 4.2.0
+
+### Minor Changes
+
+- 48eb9f0: Require credentials on the HTTP `/mcp` endpoint by default. Set `MCP_AUTH_ENFORCEMENT=observe` to keep anonymous `/mcp` access and record privacy-safe authentication migration events; `/mcp/oauth` and Claude Code plugin requests keep their challenge in both modes. `/mcp/oauth` stays as a compatibility alias, each endpoint publishes its own OAuth protected-resource metadata, an empty or scheme-only `Authorization: Bearer` header counts as a missing credential, and CORS responses expose `WWW-Authenticate` and `MCP-Session-Id`.
+
+### Patch Changes
+
+- 126379b: Answer an expired or revoked OAuth access token (`oat_…`) on the hosted HTTP transport with an HTTP 401 and a `WWW-Authenticate: Bearer error="invalid_token"` challenge, so MCP clients refresh the token instead of showing a tool error. The server checks the token against the Context7 API before serving the request, caches the verdict in memory per token hash for about a minute on each replica, and fails open when the check is unavailable. Set `MCP_OAUTH_TOKEN_VALIDATION=off` to disable the check. When the Context7 API still rejects an OAuth token on a tool call, the tool text now says the sign-in expired instead of describing API keys.
+
+## 4.1.3
+
+### Patch Changes
+
+- afdd129: Over HTTP, answer `subscriptions/listen` with an acknowledgement and an immediate `complete` result instead of a "Subscription limit reached" error, and stop logging those refusals. Context7 has no change notifications, so the stream closes at once. Stdio subscriptions stay disabled. Removes the `MCP_MAX_SUBSCRIPTIONS` setting.
+- 2b7c4f0: Update the undici dependency to 7.30.
+
+## 4.1.2
+
+### Patch Changes
+
+- 16095a9: Update CLI prompt, terminal display, and browser launch dependencies. The CLI now declares Node.js 22.13 or later, which its dependencies already need. Update the MCP server JWT and OpenTelemetry dependencies.
+- 72181dd: Serve a SEP-2127 server card at `/mcp/server-card`.
+
 ## 4.1.1
 
 ### Patch Changes

@@ -1,4 +1,4 @@
-# Context7 MCP - Tài Liệu Code Cập Nhật Cho Mọi Prompt
+# Context7 MCP - Tài Liệu Cập Nhật Cho Các AI Agent
 
 [![Website](https://img.shields.io/badge/Website-context7.com-blue)](https://context7.com) [<img alt="Install in VS Code (npx)" src="https://img.shields.io/badge/VS_Code-VS_Code?style=flat-square&label=Install%20Context7%20MCP&color=0098FF">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22context7%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40upstash%2Fcontext7-mcp%40latest%22%5D%7D)
 [![繁體中文](https://img.shields.io/badge/docs-繁體中文-yellow)](./README.zh-TW.md) [![简体中文](https://img.shields.io/badge/docs-简体中文-yellow)](./README.zh-CN.md) [![日本語](https://img.shields.io/badge/docs-日本語-b7003a)](./README.ja.md) [![한국어 문서](https://img.shields.io/badge/docs-한국어-green)](./README.ko.md) [![Documentación en Español](https://img.shields.io/badge/docs-Español-orange)](./README.es.md) [![Documentation en Français](https://img.shields.io/badge/docs-Français-blue)](./README.fr.md) [![Documentação em Português (Brasil)](<https://img.shields.io/badge/docs-Português%20(Brasil)-purple>)](./README.pt-BR.md) [![Documentazione in italiano](https://img.shields.io/badge/docs-Italian-red)](./README.it.md) [![Dokumentasi Bahasa Indonesia](https://img.shields.io/badge/docs-Bahasa%20Indonesia-pink)](./README.id-ID.md) [![Dokumentation auf Deutsch](https://img.shields.io/badge/docs-Deutsch-darkgreen)](./README.de.md) [![Документация на русском языке](https://img.shields.io/badge/docs-Русский-darkblue)](./README.ru.md) [![Українська документація](https://img.shields.io/badge/docs-Українська-lightblue)](./README.uk.md) [![Türkçe Doküman](https://img.shields.io/badge/docs-Türkçe-blue)](./README.tr.md) [![Arabic Documentation](https://img.shields.io/badge/docs-Arabic-white)](./README.ar.md) [![Tiếng Việt](https://img.shields.io/badge/docs-Tiếng%20Việt-red)](./README.vi.md)
@@ -17,7 +17,7 @@ Context7 MCP lấy tài liệu và ví dụ code cập nhật, dành cho phiên 
 Thêm `use context7` vào prompt của bạn trong Cursor:
 
 ```txt
-Tạo một Next.js middleware kiểm tra JWT hợp lệ trong cookies và chuyển hướng người dùng chưa xác thực đến `/login`. use context7
+Tạo một Next.js proxy kiểm tra JWT hợp lệ trong cookies và chuyển hướng người dùng chưa xác thực đến `/login`. use context7
 ```
 
 ```txt
@@ -39,7 +39,7 @@ Xem [hướng dẫn thêm dự án](https://context7.com/docs/adding-libraries) 
 
 ### Yêu Cầu
 
-- Node.js >= v18.0.0
+- Node.js >= v20.18.1
 - Cursor, Devin Desktop, Claude Desktop hoặc MCP Client khác
 <details>
 <summary><b>Cài đặt qua Smithery</b></summary>
@@ -851,7 +851,7 @@ Nếu bạn gặp `ERR_MODULE_NOT_FOUND`, thử sử dụng `bunx` thay vì `npx
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
+      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp"]
     }
   }
 }
@@ -880,7 +880,7 @@ Sử dụng flag `--experimental-fetch` để vượt qua các vấn đề liên
 1. Thử thêm `@latest` vào tên package
 2. Sử dụng `bunx` như một thay thế cho `npx`
 3. Cân nhắc sử dụng `deno` như một thay thế khác
-4. Đảm bảo bạn đang sử dụng Node.js v18 trở lên để hỗ trợ native fetch
+4. Đảm bảo bạn đang sử dụng Node.js v20 trở lên để hỗ trợ native fetch
 </details>
 
 ## ⚠️ Tuyên Bố Miễn Trừ Trách Nhiệm

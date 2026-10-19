@@ -8,7 +8,6 @@ import { dirname, join } from "path";
 import { log } from "../utils/logger.js";
 import { checkboxWithHover } from "../utils/prompts.js";
 import { trackEvent } from "../utils/tracking.js";
-import { downloadSkill } from "../utils/api.js";
 import { installSkillFiles } from "../utils/installer.js";
 import { performLogin } from "./auth.js";
 import { saveTokens, getValidAccessToken } from "../utils/auth.js";
@@ -25,6 +24,8 @@ import {
 } from "../setup/agents.js";
 import {
   customizeSkillFilesForAgent,
+  fetchSetupSkillFiles,
+  getBundledFindDocsSkillFiles,
   getBundledMcpSkillFiles,
   getBundledRuleContent,
   getRuleContent,
@@ -214,7 +215,7 @@ async function resolveCliAuth(apiKey?: string): Promise<void> {
     return;
   }
 
-  const validToken = await getValidAccessToken();
+  const validToken = await getValidAccessToken({ recoverExpiredSession: false });
   if (validToken) {
     log.blank();
     log.plain(`${pc.green("✔")} Authenticated`);
@@ -315,15 +316,10 @@ async function loadMcpSkillPayload(deployment: SetupDeployment): Promise<McpSkil
     return { files: bundled, status: "installed (bundled)" };
   }
 
-  try {
-    const downloadData = await downloadSkill("/upstash/context7", "context7-mcp");
-    if (downloadData.error || downloadData.files.length === 0) {
-      throw new Error(downloadData.error || "no files");
-    }
-    return { files: downloadData.files, status: "installed" };
-  } catch {
-    return { files: bundled, status: "installed (bundled fallback)" };
-  }
+  const files = await fetchSetupSkillFiles("context7-mcp");
+  return files
+    ? { files, status: "installed" }
+    : { files: bundled, status: "installed (bundled fallback)" };
 }
 
 /**
@@ -514,13 +510,12 @@ async function setupMcp(
   log.blank();
 
   trackEvent("setup", { agents, scope, authMode: auth.mode });
-  trackEvent("install", { skills: ["/upstash/context7/context7-mcp"], ides: agents });
 }
 
 async function setupCliAgent(
   agentName: SetupAgent,
   scope: Scope,
-  downloadData: { files: Array<{ path: string; content: string }> }
+  skillFiles: Array<{ path: string; content: string }>
 ): Promise<{ skillPath: string; skillStatus: string; rulePath: string; ruleStatus: string }> {
   const agent = getAgent(agentName);
 
@@ -530,7 +525,7 @@ async function setupCliAgent(
       : join(process.cwd(), agent.skill.dir("project"));
   let skillStatus: string;
   try {
-    const files = customizeSkillFilesForAgent(agentName, "find-docs", downloadData.files);
+    const files = customizeSkillFilesForAgent(agentName, "find-docs", skillFiles);
     await installSkillFiles("find-docs", files, skillDir);
     skillStatus = "installed";
   } catch (err) {
@@ -562,13 +557,13 @@ async function setupCli(options: SetupOptions): Promise<void> {
   log.blank();
   const spinner = ora("Downloading find-docs skill...").start();
 
-  const downloadData = await downloadSkill("/upstash/context7", "find-docs");
-  if (downloadData.error || downloadData.files.length === 0) {
-    spinner.fail(`Failed to download find-docs skill: ${downloadData.error || "no files"}`);
-    return;
+  const downloaded = await fetchSetupSkillFiles("find-docs");
+  const files = downloaded ?? getBundledFindDocsSkillFiles();
+  if (downloaded) {
+    spinner.succeed("Downloaded find-docs skill");
+  } else {
+    spinner.warn("Could not download find-docs skill, using the bundled copy");
   }
-
-  spinner.succeed("Downloaded find-docs skill");
 
   const installSpinner = ora("Installing...").start();
   const results: Array<{
@@ -582,7 +577,7 @@ async function setupCli(options: SetupOptions): Promise<void> {
   for (const agentName of agents) {
     const agentDef = getAgent(agentName);
     installSpinner.text = `Setting up ${agentDef.displayName}...`;
-    const r = await setupCliAgent(agentName, scope, downloadData);
+    const r = await setupCliAgent(agentName, scope, files);
     results.push({ agent: agentDef.displayName, ...r });
   }
 
@@ -600,7 +595,6 @@ async function setupCli(options: SetupOptions): Promise<void> {
   log.blank();
 
   trackEvent("setup", { mode: "cli" });
-  trackEvent("install", { skills: ["/upstash/context7/find-docs"], ides: agents });
 }
 
 async function setupCommand(options: SetupOptions): Promise<void> {

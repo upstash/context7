@@ -1,4 +1,4 @@
-# Context7 MCP - Herhangi Bir Prompt İçin Güncel Kod Belgeleri
+# Context7 MCP - Yapay Zeka Ajanları İçin Güncel Belgeler
 
 [![Website](https://img.shields.io/badge/Website-context7.com-blue)](https://context7.com) [<img alt="VS Code'da Yükle (npx)" src="https://img.shields.io/badge/VS_Code-VS_Code?style=flat-square&label=Context7%20MCP%20Y%C3%BCkle&color=0098FF">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22context7%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40upstash%2Fcontext7-mcp%40latest%22%5D%7D)
 [![中文文档](https://img.shields.io/badge/docs-中文版-yellow)](./README.zh-CN.md) [![한국어 문서](https://img.shields.io/badge/docs-한국어-green)](./README.ko.md) [![Documentación en Español](https://img.shields.io/badge/docs-Español-orange)](./README.es.md) [![Documentation en Français](https://img.shields.io/badge/docs-Français-blue)](./README.fr.md) [![Documentação em Português (Brasil)](<https://img.shields.io/badge/docs-Português%20(Brasil)-purple>)](./README.pt-BR.md) [![Documentazione in italiano](https://img.shields.io/badge/docs-Italian-red)](./README.it.md) [![Dokumentasi Bahasa Indonesia](https://img.shields.io/badge/docs-Bahasa%20Indonesia-pink)](./README.id-ID.md) [![Dokumentation auf Deutsch](https://img.shields.io/badge/docs-Deutsch-darkgreen)](./README.de.md) [![Документация на русском языке](https://img.shields.io/badge/docs-Русский-darkblue)](./README.ru.md) [![Türkçe Doküman](https://img.shields.io/badge/docs-Türkçe-blue)](./README.tr.md)
@@ -35,7 +35,7 @@ Context7, güncel kod örneklerini ve belgelerini doğrudan LLM'inizin içeriği
 
 ### Gereksinimler
 
-- Node.js >= v18.0.0
+- Node.js >= v20.18.1
 - Cursor, Devin Desktop, Claude Desktop veya başka bir MCP İstemcisi
 
 ### Smithery aracılığıyla kurulum
@@ -269,7 +269,7 @@ Bu, özellikle `npx`'in paketleri düzgün şekilde yüklemediği veya çözemed
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
+      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp"]
     }
   }
 }
@@ -279,7 +279,7 @@ Bu, özellikle `npx`'in paketleri düzgün şekilde yüklemediği veya çözemed
 1. Paket adından `@latest` ifadesini kaldırmayı deneyin.
 2. Alternatif olarak `bunx` kullanmayı deneyin.
 3. Alternatif olarak `deno` kullanmayı deneyin.
-4. `npx` ile yerel fetch desteğine sahip olmak için Node v18 veya daha yüksek bir sürüm kullandığınızdan emin olun.
+4. `npx` ile yerel fetch desteğine sahip olmak için Node v20 veya daha yüksek bir sürüm kullandığınızdan emin olun.
 
 ## Sorumluluk Reddi
 Context7 projeleri topluluk katkılıdır ve yüksek kaliteyi korumaya çalışsak da, tüm kütüphane belgelerinin doğruluğunu, eksiksizliğini veya güvenliğini garanti edemeyiz. Context7'de listelenen projeler, Context7 tarafından değil, ilgili sahipleri tarafından geliştirilmekte ve sürdürülmektedir. Şüpheli, uygunsuz veya potansiyel olarak zararlı içerikle karşılaşırsanız, lütfen bizi hemen bilgilendirmek için proje sayfasındaki "Bildir" düğmesini kullanın. Tüm bildirimleri ciddiye alıyoruz ve platformumuzun bütünlüğünü ve güvenliğini korumak için işaretlenen içeriği hızla inceleyeceğiz. Context7'yi kullanarak, bunu kendi takdirinizle ve riskinizle yaptığınızı kabul etmiş olursunuz.

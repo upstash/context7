@@ -11,13 +11,7 @@ import {
 const DEFAULT_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 export type InstallMethod =
-  | "npm-global"
-  | "pnpm-global"
-  | "bun-global"
-  | "npx"
-  | "pnpm-dlx"
-  | "bunx"
-  | "unknown";
+  "npm-global" | "pnpm-global" | "bun-global" | "npx" | "pnpm-dlx" | "bunx" | "unknown";
 
 interface UpdateState {
   latestVersion?: string;

@@ -1,8 +1,8 @@
 import type { SetupAgent } from "./agents.js";
 
 const GITHUB_RAW_URLS = [
-  "https://raw.githubusercontent.com/upstash/context7/master/rules",
-  "https://raw.githubusercontent.com/upstash/context7/main/rules",
+  "https://raw.githubusercontent.com/upstash/context7/master",
+  "https://raw.githubusercontent.com/upstash/context7/main",
 ];
 
 const FALLBACK_MCP = `Use Context7 MCP to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
@@ -30,7 +30,7 @@ Do not use for: refactoring, writing scripts from scratch, debugging business lo
 
 You MUST call \`library\` first to get a valid ID (format: \`/org/project\`) unless the user provides one directly. Be specific about what to look up in the library's documentation — specific and detailed queries return better results than vague single words, but keep each query to a single concept unless the question is about how concepts interact; combined multi-topic queries dilute ranking and return shallow results for each topic. Do not run more than 3 commands per question. Do not include sensitive information (API keys, passwords, credentials) in queries.
 
-For version-specific docs, use \`/org/project/version\` from the \`library\` output (e.g., \`/vercel/next.js/v14.3.0\`).
+For version-specific docs, use \`/org/project/version\` from the \`library\` output (e.g., \`/vercel/next.js/v16.2.9\`).
 
 If a command fails with a quota error, inform the user and suggest \`npx ctx7@latest login\` or setting \`CONTEXT7_API_KEY\` env var for higher limits. Do not silently fall back to training data.
 `;
@@ -47,23 +47,31 @@ function customizeRuleContent(mode: RuleMode, agent: SetupAgent, body: string): 
   return body;
 }
 
-async function fetchRule(filename: string, fallback: string): Promise<string> {
+async function fetchRepoFile(path: string): Promise<string | null> {
   for (const base of GITHUB_RAW_URLS) {
     try {
-      const res = await fetch(`${base}/${filename}`);
+      const res = await fetch(`${base}/${path}`);
       if (res.ok) return await res.text();
     } catch {
       continue;
     }
   }
-  return fallback;
+  return null;
 }
 
 export async function getRuleContent(mode: RuleMode, agent: SetupAgent): Promise<string> {
   const [filename, fallback] =
     mode === "mcp" ? ["context7-mcp.md", FALLBACK_MCP] : ["context7-cli.md", FALLBACK_CLI];
-  const body = await fetchRule(filename, fallback);
+  const body = (await fetchRepoFile(`rules/${filename}`)) ?? fallback;
   return customizeRuleContent(mode, agent, body);
+}
+
+// Setup skills are single SKILL.md files in this repo's `skills/` directory.
+export async function fetchSetupSkillFiles(
+  name: "find-docs" | "context7-mcp"
+): Promise<Array<{ path: string; content: string }> | null> {
+  const content = await fetchRepoFile(`skills/${name}/SKILL.md`);
+  return content ? [{ path: "SKILL.md", content }] : null;
 }
 
 export function getBundledRuleContent(mode: RuleMode, agent: SetupAgent): string {
@@ -75,6 +83,15 @@ export function getBundledMcpSkillFiles(): Array<{ path: string; content: string
     {
       path: "SKILL.md",
       content: `---\nname: context7-mcp\ndescription: Fetch current library documentation with Context7 MCP tools.\n---\n\n# Context7 MCP\n\n${FALLBACK_MCP}`,
+    },
+  ];
+}
+
+export function getBundledFindDocsSkillFiles(): Array<{ path: string; content: string }> {
+  return [
+    {
+      path: "SKILL.md",
+      content: `---\nname: find-docs\ndescription: Fetch current library documentation with the ctx7 CLI.\n---\n\n# Find Docs\n\n${FALLBACK_CLI}`,
     },
   ];
 }

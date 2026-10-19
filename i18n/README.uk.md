@@ -1,4 +1,4 @@
-# Context7 MCP — Актуальна документація з прикладами коду для будь-якого запиту
+# Context7 MCP — Актуальна документація для ШІ-агентів
 
 [![Website](https://img.shields.io/badge/Website-context7.com-blue)](https://context7.com) [<img alt="Install in VS Code (npx)" src="https://img.shields.io/badge/VS_Code-VS_Code?style=flat-square&label=Install%20Context7%20MCP&color=0098FF">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22context7%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40upstash%2Fcontext7-mcp%40latest%22%5D%7D)
 [![繁體中文](https://img.shields.io/badge/docs-繁體中文-yellow)](./README.zh-TW.md) [![简体中文](https://img.shields.io/badge/docs-简体中文-yellow)](./README.zh-CN.md) [![日本語](https://img.shields.io/badge/docs-日本語-b7003a)](./README.ja.md) [![한국어 문서](https://img.shields.io/badge/docs-한국어-green)](./README.ko.md) [![Documentación en Español](https://img.shields.io/badge/docs-Español-orange)](./README.es.md) [![Documentation en Français](https://img.shields.io/badge/docs-Français-blue)](./README.fr.md) [![Documentação em Português (Brasil)](<https://img.shields.io/badge/docs-Português%20(Brasil)-purple>)](./README.pt-BR.md) [![Documentazione in italiano](https://img.shields.io/badge/docs-Italian-red)](./README.it.md) [![Dokumentasi Bahasa Indonesia](https://img.shields.io/badge/docs-Bahasa%20Indonesia-pink)](./README.id-ID.md) [![Dokumentation auf Deutsch](https://img.shields.io/badge/docs-Deutsch-darkgreen)](./README.de.md) [![Документация на русском языке](https://img.shields.io/badge/docs-Русский-darkblue)](./README.ru.md) [![Türkçe Doküman](https://img.shields.io/badge/docs-Türkçe-blue)](./README.tr.md) [![Arabic Documentation](https://img.shields.io/badge/docs-Arabic-white)](./README.ar.md) [![Українська документація](https://img.shields.io/badge/docs-Українська-lightblue)](./README.uk.md)
@@ -17,7 +17,7 @@ Context7 MCP отримує актуальну, специфічну для ве
 Додайте `use context7` до вашого запиту в Cursor:
 
 ```txt
-Create a Next.js middleware that checks for a valid JWT in cookies and redirects unauthenticated users to `/login`. use context7
+Create a Next.js proxy that checks for a valid JWT in cookies and redirects unauthenticated users to `/login`. use context7
 ```
 
 ```txt
@@ -39,7 +39,7 @@ Context7 завантажує свіжі приклади коду й докум
 
 ### Системні вимоги
 
-- Node.js ≥ v18.0.0
+- Node.js ≥ v20.18.1
 - Cursor, Devin Desktop, Claude Desktop або інший MCP-клієнт
 <details>
 <summary><b>Встановлення через Smithery</b></summary>
@@ -767,7 +767,7 @@ npx -y @modelcontextprotocol/inspector npx @upstash/context7-mcp
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
+      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp"]
     }
   }
 }
@@ -796,7 +796,7 @@ npx -y @modelcontextprotocol/inspector npx @upstash/context7-mcp
 1. Спробуйте додати `@latest` до назви пакунка
 2. Використовуйте `bunx` як альтернативу до `npx`
 3. Розгляньте використання `deno` як іншу альтернативу
-4. Переконайтеся, що ви використовуєте Node.js v18 або вище для підтримки нативного fetch
+4. Переконайтеся, що ви використовуєте Node.js v20 або вище для підтримки нативного fetch
 </details>
 
 ## ⚠️ Застереження

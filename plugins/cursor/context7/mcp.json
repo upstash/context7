@@ -1,5 +1,8 @@
 {
-  "context7": {
-    "url": "https://mcp.context7.com/mcp/oauth"
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp/oauth"
+    }
   }
 }

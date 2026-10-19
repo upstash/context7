@@ -1,4 +1,4 @@
-# Context7 MCP - Актуальная документация для любого промпта
+# Context7 MCP - Актуальная документация для ИИ-агентов
 
 [![Website](https://img.shields.io/badge/Website-context7.com-blue)](https://context7.com) [<img alt="Install in VS Code (npx)" src="https://img.shields.io/badge/VS_Code-VS_Code?style=flat-square&label=Install%20Context7%20MCP&color=0098FF">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22context7%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40upstash%2Fcontext7-mcp%40latest%22%5D%7D)
 
@@ -34,7 +34,7 @@ Context7 MCP подгружает свежие примеры кода и док
 
 ### Требования
 
-- Node.js >= v18.0.0
+- Node.js >= v20.18.1
 - Cursor, Devin Desktop, Claude Desktop или другой MCP клиент
 
 ### Установка через Smithery
@@ -351,7 +351,7 @@ npx -y @modelcontextprotocol/inspector npx @upstash/context7-mcp
 1. Попробуйте добавить тег `@latest` в имя пакета.
 2. Попробуйте использовать `bunx` как альтернативу `npx`.
 3. Попробуйте использовать `deno` как замену `npx` или `bunx`.
-4. Убедитесь, что используете версию Node v18 или выше, чтобы `npx` поддерживал встроенный `fetch`.
+4. Убедитесь, что используете версию Node v20 или выше, чтобы `npx` поддерживал встроенный `fetch`.
 
 ## Отказ от ответственности
 Проекты Context7 создаются сообществом. Мы стремимся поддерживать высокое качество, однако не можем гарантировать точность, полноту или безопасность всей документации по библиотекам. Проекты, представленные в Context7, разрабатываются и поддерживаются их авторами, а не командой Context7.

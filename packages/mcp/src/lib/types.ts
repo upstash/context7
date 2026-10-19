@@ -28,6 +28,7 @@ export type DocumentState = "initial" | "finalized" | "error" | "delete";
 export type ContextRequest = {
   query: string;
   libraryId: string;
+  language?: string;
 };
 
 export type ContextResponse = {
@@ -43,6 +44,8 @@ export interface ClientContext {
     version?: string;
   };
   plugin?: string;
+  mcpEndpoint?: "/mcp" | "/mcp/oauth";
+  mcpAuthMode?: "observe" | "required";
   transport?: "stdio" | "http";
   sessionId?: string;
   /** Mutable: set by the upstream API layer when the backend signals the

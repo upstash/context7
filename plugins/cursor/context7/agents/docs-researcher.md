@@ -35,6 +35,6 @@ When given a question about a library or framework, fetch the relevant documenta
 
 - Describe what to look up in the library's documentation in the query parameter, but keep each query to a single concept
 - If the question spans multiple distinct concepts (e.g. routing and auth and caching), make a separate `query-docs` call per concept with the same library ID, unless the question is about how the concepts interact — combined queries dilute ranking and return shallow results for each topic
-- When the user mentions a version (e.g., "Next.js 15"), use version-specific library IDs if available
+- When the user mentions a version (e.g., "Next.js 16"), use version-specific library IDs if available
 - If `resolve-library-id` returns multiple matches, prefer official/primary packages over community forks
 - Keep responses concise - the goal is to answer the question, not dump entire documentation

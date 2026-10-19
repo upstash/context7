@@ -1,4 +1,4 @@
-# Context7 MCP - Documentação de Código Atualizada para Qualquer Prompt
+# Context7 MCP - Documentação Atualizada para Agentes de IA
 
 [![Website](https://img.shields.io/badge/Website-context7.com-blue)](https://context7.com)
 [<img alt="Instalar no Cursor" src="https://img.shields.io/badge/Instalar%20no%20CURSOR-000000?style=for-the-badge&logo=cursor&logoColor=white">](https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D) [<img alt="Instalar no VS Code (npx)" src="https://img.shields.io/badge/Instalar%20no%20VS%20Code-0098FF?style=for-the-badge&logo=visualstudiocode&logoColor=white">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22context7%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40upstash%2Fcontext7-mcp%40latest%22%5D%7D)
@@ -40,7 +40,7 @@ Confira nosso [guia de adição de projetos](https://context7.com/docs/adding-li
 
 ### Requisitos
 
-- Node.js >= v18.0.0
+- Node.js >= v20.18.1
 - Cursor, Claude Code, VSCode, Devin Desktop ou outro Cliente MCP
 <details>
 <summary><b>Instalando via Smithery</b></summary>
@@ -974,7 +974,7 @@ Para erros como `Error: Cannot find module 'uriTemplate.js'`, tente a flag `--ex
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
+      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp"]
     }
   }
 }
@@ -1003,7 +1003,7 @@ Use a flag `--experimental-fetch` para contornar problemas relacionados a TLS:
 1. Tente adicionar `@latest` ao nome do pacote
 2. Use `bunx` como alternativa ao `npx`
 3. Considere usar `deno` como outra alternativa
-4. Certifique-se de estar usando Node.js v18 ou superior para suporte nativo a fetch
+4. Certifique-se de estar usando Node.js v20 ou superior para suporte nativo a fetch
 </details>
 
 ## ⚠️ Aviso

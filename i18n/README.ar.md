@@ -1,4 +1,4 @@
-# Context7 MCP - توثيق أكواد محدث لأي أمر برمجي
+# Context7 MCP - توثيق محدث لوكلاء الذكاء الاصطناعي
 
 [![Website](https://img.shields.io/badge/Website-context7.com-blue)](https://context7.com) [<img alt="Install in VS Code (npx)" src="https://img.shields.io/badge/VS_Code-VS_Code?style=flat-square&label=Install%20Context7%20MCP&color=0098FF">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22context7%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40upstash%2Fcontext7-mcp%40latest%22%5D%7D)
 
@@ -283,7 +283,7 @@ npx -y @modelcontextprotocol/inspector npx @upstash/context7-mcp@latest
 ```json
 {
   "command": "npx",
-  "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
+  "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp"]
 }
 ```
 
@@ -292,7 +292,7 @@ npx -y @modelcontextprotocol/inspector npx @upstash/context7-mcp@latest
 1. أزل `@latest`
 2. جرّب `bunx`
 3. جرّب `deno`
-4. تأكد أنك تستخدم Node v18 أو أحدث
+4. تأكد أنك تستخدم Node v20 أو أحدث
 
 ## إخلاء مسؤولية
 

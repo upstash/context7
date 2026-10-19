@@ -2,7 +2,7 @@
 
 [![MCP 서버 설치](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D)
 
-# Context7 MCP - 모든 프롬프트를 위한 최신 코드 문서
+# Context7 MCP - AI 에이전트를 위한 최신 문서
 
 [![Website](https://img.shields.io/badge/Website-context7.com-blue)](https://context7.com) [![NPM Version](https://img.shields.io/npm/v/%40upstash%2Fcontext7-mcp?color=red)](https://www.npmjs.com/package/@upstash/context7-mcp) [![MIT licensed](https://img.shields.io/npm/l/%40upstash%2Fcontext7-mcp)](../LICENSE)
 
@@ -23,7 +23,7 @@ Context7 MCP는 소스에서 직접 최신 버전별 문서와 코드 예제를 
 프롬프트에 `use context7`을 추가하세요(또는 자동으로 호출되도록 [규칙을 설정](#규칙-추가)하세요):
 
 ```txt
-쿠키에서 유효한 JWT를 확인하고 인증되지 않은 사용자를 '/login'으로 리디렉션하는 Next.js 미들웨어를 만들어주세요. use context7
+쿠키에서 유효한 JWT를 확인하고 인증되지 않은 사용자를 '/login'으로 리디렉션하는 Next.js 프록시를 만들어주세요. use context7
 ```
 
 ```txt
@@ -168,7 +168,7 @@ Supabase로 기본 인증을 구현해줘. API와 문서는 use library /supabas
 특정 라이브러리 버전에 대한 문서를 얻으려면 프롬프트에 버전을 언급하면 됩니다:
 
 ```txt
-Next.js 14 미들웨어는 어떻게 설정하나요? use context7
+Next.js 16 프록시는 어떻게 설정하나요? use context7
 ```
 
 Context7은 적절한 버전을 자동으로 매칭합니다.

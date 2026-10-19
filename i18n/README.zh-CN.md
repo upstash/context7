@@ -2,7 +2,7 @@
 
 [![安装 MCP 服务器](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D)
 
-# Context7 平台 - 最新代码文档赋能每个提示词
+# Context7 - 为 AI 智能体提供最新文档
 
 [![Website](https://img.shields.io/badge/Website-context7.com-blue)](https://context7.com) [![NPM Version](https://img.shields.io/npm/v/%40upstash%2Fcontext7-mcp?color=red)](https://www.npmjs.com/package/@upstash/context7-mcp) [![MIT licensed](https://img.shields.io/npm/l/%40upstash%2Fcontext7-mcp)](../LICENSE)
 
@@ -21,7 +21,7 @@
 Context7直接从源头获取最新的、特定版本的文档和代码示例——并将它们直接放入你的提示词中。
 
 ```txt
-创建一个Next.js中间件，检查cookies中的有效JWT，
+创建一个Next.js proxy，检查cookies中的有效JWT，
 并将未认证用户重定向到 `/login`。use context7
 ```
 
@@ -77,7 +77,7 @@ npx ctx7 setup
 要获取特定库版本的文档，只需在提示词中提及版本：
 
 ```txt
-如何设置Next.js 14中间件？use context7
+如何设置Next.js 16 proxy？use context7
 ```
 
 Context7 将自动匹配适当的版本。

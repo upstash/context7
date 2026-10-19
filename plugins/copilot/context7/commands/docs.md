@@ -21,7 +21,7 @@ Fetches up-to-date documentation and code examples for a library.
 /context7:docs react hooks
 /context7:docs next.js authentication
 /context7:docs prisma relations
-/context7:docs /vercel/next.js/v15.1.8 app router
+/context7:docs /vercel/next.js/v16.2.9 app router
 /context7:docs /supabase/supabase row level security
 ```
 
@@ -37,7 +37,7 @@ Fetches up-to-date documentation and code examples for a library.
 Include the version in the library ID for pinned documentation:
 
 ```
-/context7:docs /vercel/next.js/v15.1.8 middleware
+/context7:docs /vercel/next.js/v16.2.9 proxy
 /context7:docs /react/react/v19.2.8 use hook
 ```
 

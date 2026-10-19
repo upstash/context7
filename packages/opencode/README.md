@@ -1,6 +1,6 @@
 # Context7 Plugin for OpenCode
 
-Context7 solves a common problem with AI coding assistants: outdated training data and hallucinated APIs. Instead of relying on stale knowledge, Context7 fetches current documentation directly from source repositories.
+Context7 solves a common problem with AI coding agents: outdated training data and hallucinated APIs. Instead of relying on stale knowledge, Context7 fetches current documentation directly from source repositories.
 
 ## What's Included
 
@@ -78,7 +78,7 @@ Both entries are additive, and an entry you configure yourself always wins. If y
 
 The skill triggers on its own when you ask about a library:
 
-- "How do I set up authentication in Next.js 15?"
+- "How do I set up authentication in Next.js 16?"
 - "Show me React Server Components examples"
 - "What's the Prisma syntax for relations?"
 
@@ -90,7 +90,7 @@ Searches for libraries and returns Context7-compatible identifiers.
 
 ```
 Input: "next.js"
-Output: { id: "/vercel/next.js", name: "Next.js", versions: ["v15.1.8", "v14.2.0", ...] }
+Output: { id: "/vercel/next.js", name: "Next.js", versions: ["v16.2.9", "v15.1.8", ...] }
 ```
 
 ### context7_query-docs
@@ -98,7 +98,7 @@ Output: { id: "/vercel/next.js", name: "Next.js", versions: ["v15.1.8", "v14.2.0
 Fetches documentation for a specific library, ranked by relevance to your question.
 
 ```
-Input: { libraryId: "/vercel/next.js", query: "app router middleware" }
+Input: { libraryId: "/vercel/next.js", query: "app router proxy" }
 Output: Relevant documentation snippets with code examples
 ```
 
@@ -107,7 +107,7 @@ Output: Relevant documentation snippets with code examples
 To get documentation for a specific version, include the version in the library ID:
 
 ```
-/vercel/next.js/v15.1.8
+/vercel/next.js/v16.2.9
 /supabase/supabase/v2.45.0
 ```
 

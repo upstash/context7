@@ -3,7 +3,7 @@
 A portable [Agent Plugin](https://agent-plugins.org) (spec 1.0.0) that gives any compatible agent
 current, version-specific library documentation through the Context7 MCP server.
 
-AI coding assistants rely on training data that goes stale and invents APIs that never existed.
+AI coding agents rely on training data that goes stale and invents APIs that never existed.
 Context7 fetches real documentation from source repositories at query time instead.
 
 ## What's Included

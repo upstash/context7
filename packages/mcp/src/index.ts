@@ -4,6 +4,7 @@ import { toNodeHandler } from "@modelcontextprotocol/node";
 import { StdioServerTransport, serveStdio } from "@modelcontextprotocol/server/stdio";
 import {
   McpServer,
+  PROTOCOL_VERSION_META_KEY,
   createMcpHandler,
   type McpRequestContext,
   type ServerContext,
@@ -16,7 +17,6 @@ import {
   extractClientInfoFromUserAgent,
   envelopeClientInfo,
 } from "./lib/utils.js";
-import { isJWT, validateJWT } from "./lib/jwt.js";
 import express from "express";
 import { Command } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
@@ -25,21 +25,38 @@ import {
   SERVER_VERSION,
   RESOURCE_URL,
   OAUTH_AUTH_SERVER_URL,
-  EMA_ISSUER,
   OPENAI_APPS_CHALLENGE_TOKEN,
+  SERVER_ICONS,
+  SERVER_TITLE,
+  mcpServerCard,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
 import { installProcessShutdown } from "./lib/process-shutdown.js";
-import { getMaxSubscriptions } from "./lib/subscriptions.js";
 import {
   forceFlushTelemetry,
   initializeTelemetry,
   observeAuthentication,
   observeUpstreamRequest,
-  recordToolCallOutcome,
+  recordAuthenticationEvent,
+  recordSelfCancellingBatch,
 } from "./lib/telemetry-runtime.js";
 import { mcpBodyErrorHandler } from "./lib/mcp-body-error-handler.js";
+import {
+  observeCredentialedInitialize,
+  recordToolCallTelemetry,
+} from "./lib/auth-lifecycle-telemetry.js";
+import {
+  canonicalMcpEndpoint,
+  effectiveMcpAuthMode,
+  evaluateMcpAuthentication,
+  parseMcpAuthMode,
+  protectedResourceMetadata,
+  protectedResourceUrl,
+  setBearerChallenge,
+} from "./lib/mcp-http-auth.js";
+import { mcpRouteFromUrl } from "./lib/mcp-route.js";
+import { parseOAuthAudienceEnforcement } from "./lib/oauth-audience.js";
 
 /** Default HTTP server port */
 const DEFAULT_PORT = 3000;
@@ -50,16 +67,6 @@ let mcpInstrumentation: McpInstrumentation | undefined;
 
 function getPluginFromRequest(req: express.Request): typeof CLAUDE_CODE_PLUGIN | undefined {
   return req.query.client === CLAUDE_CODE_PLUGIN ? CLAUDE_CODE_PLUGIN : undefined;
-}
-
-function requiresAuthentication(req: express.Request, plugin?: typeof CLAUDE_CODE_PLUGIN): boolean {
-  // The MCP routes live on a router mounted at /mcp, so req.path is relative to it.
-  const isOAuthEndpoint = `${req.baseUrl}${req.path}` === "/mcp/oauth";
-  // The current official Claude plugin expands an unset API key to an empty header.
-  const hasEmptyPluginAuthorization =
-    plugin === CLAUDE_CODE_PLUGIN && req.headers.authorization === "";
-
-  return isOAuthEndpoint || (Boolean(plugin) && !hasEmptyPluginAuthorization);
 }
 
 // Parse CLI arguments using commander
@@ -113,8 +120,6 @@ const CLI_PORT = (() => {
 
 const requestContext = new AsyncLocalStorage<ClientContext>();
 
-type AuthenticationResult = { accepted: true } | { accepted: false; error: string };
-
 // Global state for stdio mode only
 let stdioApiKey: string | undefined;
 let stdioClientInfo: { ide?: string; version?: string } | undefined;
@@ -158,6 +163,77 @@ const QUERY_DOCS_ALIASES: AliasMap = {
   libraryId: ["context7CompatibleLibraryID", "libraryID", "libraryName"],
 };
 
+type JsonRpcId = string | number;
+
+function jsonRpcRequestId(message: unknown): JsonRpcId | undefined {
+  if (!message || typeof message !== "object") return undefined;
+
+  const candidate = message as Record<string, unknown>;
+  if (
+    candidate.jsonrpc === "2.0" &&
+    typeof candidate.method === "string" &&
+    (typeof candidate.id === "string" || typeof candidate.id === "number")
+  ) {
+    return candidate.id;
+  }
+}
+
+function cancellationRequestId(message: unknown): JsonRpcId | undefined {
+  if (!message || typeof message !== "object") return undefined;
+
+  const candidate = message as Record<string, unknown>;
+  if (
+    candidate.jsonrpc !== "2.0" ||
+    candidate.method !== "notifications/cancelled" ||
+    "id" in candidate ||
+    !candidate.params ||
+    typeof candidate.params !== "object"
+  ) {
+    return undefined;
+  }
+
+  const requestId = (candidate.params as Record<string, unknown>).requestId;
+  if (typeof requestId === "string" || typeof requestId === "number") return requestId;
+}
+
+/** True for a 2026-07-28 message: its `params._meta` names a protocol version. */
+function hasProtocolVersionClaim(message: unknown): boolean {
+  if (!message || typeof message !== "object") return false;
+  const params = (message as Record<string, unknown>).params;
+  if (!params || typeof params !== "object") return false;
+  const meta = (params as Record<string, unknown>)._meta;
+  return !!meta && typeof meta === "object" && PROTOCOL_VERSION_META_KEY in meta;
+}
+
+function filterBatchSelfCancellations(body: unknown): {
+  body: unknown;
+  removedSelfCancellation: boolean;
+} {
+  if (!Array.isArray(body)) return { body, removedSelfCancellation: false };
+  // The SDK answers 400 to a batch with a 2026-07-28 element. Leave such a
+  // batch whole, so removing a pair cannot hide that element from the SDK.
+  if (body.some(hasProtocolVersionClaim)) return { body, removedSelfCancellation: false };
+
+  const requestIds = new Set(body.map(jsonRpcRequestId).filter((id) => id !== undefined));
+  const selfCancelledIds = new Set(
+    body
+      .map(cancellationRequestId)
+      .filter((id): id is JsonRpcId => id !== undefined && requestIds.has(id))
+  );
+  if (selfCancelledIds.size === 0) return { body, removedSelfCancellation: false };
+
+  return {
+    body: body.filter((message) => {
+      const requestId = jsonRpcRequestId(message);
+      if (requestId !== undefined && selfCancelledIds.has(requestId)) return false;
+
+      const cancelledId = cancellationRequestId(message);
+      return cancelledId === undefined || !selfCancelledIds.has(cancelledId);
+    }),
+    removedSelfCancellation: true,
+  };
+}
+
 // z.preprocess step that rewrites aliased arg names before validation. Living
 // in the schema keeps aliasing transport-agnostic: the SDK parses the wire
 // message (any transport, any protocol era) and runs this on validation.
@@ -183,16 +259,12 @@ function aliasArgs(aliases: AliasMap) {
 function createMcpServer(mcpContext: McpRequestContext) {
   const serverInfo = {
     name: "Context7",
+    title: SERVER_TITLE,
     version: SERVER_VERSION,
     websiteUrl: "https://context7.com",
     description:
       "Context7 provides up-to-date documentation and code examples for libraries and frameworks.",
-    icons: [
-      {
-        src: "https://context7.com/context7-icon-green.png",
-        mimeType: "image/png",
-      },
-    ],
+    icons: SERVER_ICONS,
   };
   const serverOptions = {
     // The collections are static for the process lifetime. Explicitly disabling
@@ -279,7 +351,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       if (!searchResponse.results || searchResponse.results.length === 0) {
         const text = searchResponse.error ?? "No libraries found matching the provided name.";
         maybeElicitAuthSignIn(server, ctx);
-        recordToolCallOutcome(searchResponse.error ? "error" : "not_found");
+        recordToolCallTelemetry(ctx, searchResponse.error ? "error" : "not_found");
         return {
           content: [
             {
@@ -293,7 +365,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       const resultsText = formatSearchResults(searchResponse);
       const responseText = `Available Libraries:\n\n${resultsText}`;
       maybeElicitAuthSignIn(server, ctx);
-      recordToolCallOutcome("success");
+      recordToolCallTelemetry(ctx, "success");
       return {
         content: [
           {
@@ -313,19 +385,28 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
 
 You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
 
-Do not call this tool more than 3 times per question.`,
+Do not call this tool more than 3 times per question.
+
+If you know the programming language the user is working in, pass it as \`language\` so the results match their setup.`,
       inputSchema: z.preprocess(
         aliasArgs({ ...GLOBAL_ALIASES, ...QUERY_DOCS_ALIASES }),
         z.object({
           libraryId: z
             .string()
             .describe(
-              "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
+              "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v16.2.9') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
             ),
           query: z
             .string()
             .describe(
               "What to look up in the library's documentation, scoped to a single concept. Be specific and include relevant details, but keep each query to one topic — if the user's question spans multiple distinct concepts, make a separate call per concept instead of combining them, unless the question is about how the concepts interact. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad (too vague): 'auth' or 'hooks'. Bad (too broad): 'routing and auth and caching in Next.js'. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query."
+            ),
+          // No length limit here: the API trims long values instead of rejecting the call.
+          language: z
+            .string()
+            .optional()
+            .describe(
+              "Programming language the user is writing code in, such as 'Python', 'TypeScript', 'Go', or 'C#'. Ranks code examples in that language first. Leave it out when the language is unknown or does not apply."
             ),
         })
       ),
@@ -336,11 +417,14 @@ Do not call this tool more than 3 times per question.`,
         idempotentHint: true,
       },
     },
-    async ({ query, libraryId }: { query: string; libraryId: string }, toolCtx) => {
+    async (
+      { query, libraryId, language }: { query: string; libraryId: string; language?: string },
+      toolCtx
+    ) => {
       const ctx = getClientContext(toolCtx);
-      const response = await fetchLibraryContext({ query, libraryId }, ctx);
+      const response = await fetchLibraryContext({ query, libraryId, language }, ctx);
       maybeElicitAuthSignIn(server, ctx);
-      recordToolCallOutcome(response.outcome);
+      recordToolCallTelemetry(ctx, response.outcome);
       return {
         content: [
           {
@@ -348,6 +432,11 @@ Do not call this tool more than 3 times per question.`,
             text: response.data,
           },
         ],
+        // Flag failures at the protocol level. Without this an unset `isError`
+        // defaults to success, so a caller that branches on `isError` treats an
+        // error message (invalid ID, upstream failure) as documentation.
+        // "No documentation found" is a valid answer, not an error.
+        ...(response.outcome === "error" ? { isError: true } : {}),
       };
     }
   );
@@ -381,8 +470,12 @@ async function main() {
       // browser clients, so those are not needed.)
       res.setHeader(
         "Access-Control-Allow-Headers",
-        "Content-Type, MCP-Session-Id, MCP-Protocol-Version, Mcp-Method, Mcp-Name, X-Context7-API-Key, Context7-API-Key, X-API-Key, Authorization"
+        "Content-Type, MCP-Session-Id, MCP-Protocol-Version, Mcp-Method, Mcp-Name, X-Context7-API-Key, Context7-API-Key, X-API-Key, Authorization, If-None-Match"
       );
+      // Browser clients can only read these response headers cross-origin when
+      // they are exposed; without WWW-Authenticate they cannot start OAuth
+      // from the 401 challenge.
+      res.setHeader("Access-Control-Expose-Headers", "WWW-Authenticate, MCP-Session-Id");
       if (req.method === "OPTIONS") {
         res.sendStatus(200);
         return;
@@ -399,9 +492,9 @@ async function main() {
       const header = extractHeaderValue(authHeader);
       if (!header) return undefined;
 
-      if (header.startsWith("Bearer ")) {
-        return header.substring(7).trim();
-      }
+      // Node trims header values, so "Bearer " with an unset key arrives as "Bearer".
+      const bearer = /^Bearer(?:\s+(.*))?$/i.exec(header);
+      if (bearer) return bearer[1]?.trim() || undefined;
 
       return header;
     };
@@ -425,14 +518,12 @@ async function main() {
     // millisecond vector query (p100 ~28s), so no legitimate exchange needs a
     // heartbeat to stay alive — but a hung exchange kept "alive" by heartbeats
     // can never be reaped by the gateway's stream idle timeout. A batch
-    // carrying a request plus its own notifications/cancelled produces exactly
-    // that: per spec the cancelled request gets no response, the SDK transport
-    // then never closes the stream, and with heartbeats it survived until the
-    // gateway's 1200s hard cap (the 2026-08-11 outage). Silent hangs instead
-    // go idle and the gateway reaps them at streamIdleTimeout (300s).
+    // carrying a request plus its own notifications/cancelled produced exactly
+    // that (the 2026-08-11 outage); handleMcpRequest now consumes such pairs
+    // before dispatch. Any other silent hang goes idle and the gateway reaps
+    // it at streamIdleTimeout (300s) instead of its 1200s hard cap.
     const rawMcpHandler = createMcpHandler((mcpContext) => createMcpServer(mcpContext), {
       keepAliveMs: 0,
-      maxSubscriptions: getMaxSubscriptions(),
       onerror: (error) => console.error("MCP handler error:", error),
     });
     const mcpHandler = mcpInstrumentation
@@ -443,70 +534,81 @@ async function main() {
     const nodeHandler = toNodeHandler(mcpHandler, {
       onerror: (error) => console.error("MCP node adapter error:", error),
     });
+    const authMode = parseMcpAuthMode();
+    // Read again per token; parsed here so a typo fails startup, not requests.
+    parseOAuthAudienceEnforcement();
 
     const handleMcpRequest = async (req: express.Request, res: express.Response) => {
       try {
         const plugin = getPluginFromRequest(req);
         const apiKey = extractApiKey(req);
-        const baseUrl = new URL(RESOURCE_URL).origin;
-
-        // OAuth discovery info header, used by MCP clients to discover the authorization server
-        res.set(
-          "WWW-Authenticate",
-          `Bearer resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`
+        const endpoint = canonicalMcpEndpoint(req);
+        const route = mcpRouteFromUrl(endpoint);
+        const enforcementMode = effectiveMcpAuthMode(
+          authMode,
+          endpoint,
+          plugin,
+          req.headers.authorization
+        );
+        const authentication = await observeAuthentication({ enforcementMode, route }, () =>
+          evaluateMcpAuthentication(apiKey, enforcementMode)
         );
 
-        if (requiresAuthentication(req, plugin)) {
-          const authentication = await observeAuthentication<AuthenticationResult>(async () => {
-            if (!apiKey) {
-              return {
-                outcome: "missing",
-                value: {
-                  accepted: false,
-                  error: "Authentication required. Please authenticate to use this MCP server.",
-                },
-              };
-            }
-
-            if (isJWT(apiKey)) {
-              const validationResult = await validateJWT(apiKey);
-              if (!validationResult.valid) {
-                return {
-                  outcome: "invalid",
-                  value: {
-                    accepted: false,
-                    error: validationResult.error || "Invalid token. Please re-authenticate.",
-                  },
-                };
-              }
-            }
-
-            return { outcome: "accepted", value: { accepted: true } };
+        if (!authentication.allowed) {
+          setBearerChallenge(res, endpoint, apiKey ? authentication.error : undefined);
+          res.status(401).json({
+            jsonrpc: "2.0",
+            error: {
+              code: -32001,
+              message: authentication.error,
+            },
+            id: null,
           });
+          return;
+        }
 
-          if (!authentication.accepted) {
-            res.status(401).json({
-              jsonrpc: "2.0",
-              error: {
-                code: -32001,
-                message: authentication.error,
-              },
-              id: null,
-            });
-            return;
-          }
+        // A cancelled request deliberately produces no protocol response, but
+        // the SDK's legacy stateless transport still waits for one before it
+        // closes the batch's POST stream. Consume request/cancellation pairs
+        // that occur in the same batch before SDK dispatch. This applies the
+        // cancellation without starting the tool and without leaving an ID in
+        // the transport's response accounting. Only POST carries messages;
+        // other methods keep the SDK's own method handling (405). A batch that
+        // is fully consumed is answered here, before the SDK's Accept check.
+        const filteredBody =
+          req.method === "POST"
+            ? filterBatchSelfCancellations(req.body)
+            : { body: req.body, removedSelfCancellation: false };
+        if (filteredBody.removedSelfCancellation) {
+          recordSelfCancellingBatch(req.headers["user-agent"]);
+        }
+        if (
+          filteredBody.removedSelfCancellation &&
+          Array.isArray(filteredBody.body) &&
+          filteredBody.body.length === 0
+        ) {
+          return res.status(202).end();
         }
 
         const context: ClientContext = {
           clientIp: req.ip,
           apiKey,
           clientInfo: extractClientInfoFromUserAgent(req.headers["user-agent"]),
+          mcpAuthMode: enforcementMode,
+          mcpEndpoint: endpoint,
           plugin,
           transport: "http",
         };
 
+        observeCredentialedInitialize(res, req.body, {
+          enforcementMode,
+          method: authentication.method,
+          outcome: authentication.outcome,
+          route,
+        });
+
         await requestContext.run(context, async () => {
-          await nodeHandler(req, res, req.body);
+          await nodeHandler(req, res, filteredBody.body);
         });
       } catch (error) {
         console.error("Error handling MCP request:", error);
@@ -527,8 +629,18 @@ async function main() {
     mcpRouter.use(express.json());
     mcpRouter.use(mcpBodyErrorHandler);
     mcpRouter.all("/", (req, res) => handleMcpRequest(req, res));
-    // OAuth-protected endpoint - requires authentication
+    // Compatibility alias for clients already configured with /mcp/oauth.
     mcpRouter.all("/oauth", (req, res) => handleMcpRequest(req, res));
+
+    // SEP-2127 reserves `{streamable-http-url}/server-card`. Register it
+    // before the /mcp router so it is not answered as MCP JSON-RPC.
+    app.get("/mcp/server-card", (_req: express.Request, res: express.Response) => {
+      res.setHeader("Content-Type", "application/mcp-server-card+json");
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.setHeader("Access-Control-Expose-Headers", "ETag");
+      // Express adds the ETag and answers a matching If-None-Match with 304.
+      res.status(200).send(mcpServerCard());
+    });
     app.use("/mcp", mcpRouter);
 
     app.get("/ping", (_req: express.Request, res: express.Response) => {
@@ -540,17 +652,31 @@ async function main() {
     app.get(
       "/.well-known/oauth-protected-resource",
       (_req: express.Request, res: express.Response) => {
-        res.json({
-          resource: RESOURCE_URL,
-          // Each entry is an independent authorization server. Clerk handles
-          // regular authorization-code flows; Context7 handles only the
-          // enterprise-managed id-jag exchange.
-          authorization_servers: Array.from(new Set([OAUTH_AUTH_SERVER_URL, EMA_ISSUER])),
-          scopes_supported: ["profile", "email"],
-          bearer_methods_supported: ["header"],
+        recordAuthenticationEvent({
+          enforcementMode: authMode,
+          event: "metadata_requested",
+          method: "none",
+          route: mcpRouteFromUrl(RESOURCE_URL),
         });
+        res.json(protectedResourceMetadata(RESOURCE_URL));
       }
     );
+
+    for (const endpoint of ["/mcp", "/mcp/oauth"] as const) {
+      app.get(
+        `/.well-known/oauth-protected-resource${endpoint}`,
+        (_req: express.Request, res: express.Response) => {
+          const resource = protectedResourceUrl(endpoint);
+          recordAuthenticationEvent({
+            enforcementMode: authMode,
+            event: "metadata_requested",
+            method: "none",
+            route: mcpRouteFromUrl(endpoint),
+          });
+          res.json(protectedResourceMetadata(resource));
+        }
+      );
+    }
 
     app.get(
       "/.well-known/oauth-authorization-server",
@@ -657,8 +783,13 @@ async function main() {
       });
 
       httpServer.once("listening", () => {
+        const address = httpServer.address();
+        if (!address || typeof address === "string") {
+          console.error("Failed to determine the bound HTTP port");
+          process.exit(1);
+        }
         console.error(
-          `Context7 Documentation MCP Server v${SERVER_VERSION} running on HTTP at http://localhost:${port}/mcp`
+          `Context7 Documentation MCP Server v${SERVER_VERSION} running on HTTP at http://localhost:${address.port}/mcp`
         );
       });
     };
@@ -692,7 +823,8 @@ async function main() {
       },
       {
         transport: stdioTransport,
-        maxSubscriptions: getMaxSubscriptions(),
+        // The SDK's stdio router keeps a subscription that honors nothing open.
+        maxSubscriptions: 0,
         onerror: (error) => console.error("MCP stdio error:", error),
       }
     );

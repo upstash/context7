@@ -16,15 +16,15 @@ jobs:
       pull-requests: write
     outputs:
       published: ${{ steps.changesets.outputs.published }}
-      publishedPackages: ${{ steps.changesets.outputs.publishedPackages }}
+      published-packages: ${{ steps.changesets.outputs.published-packages }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -43,19 +43,18 @@ jobs:
 
       - name: Create Release PR or Publish
         id: changesets
-        uses: changesets/action@v1
+        uses: changesets/action@v2
         with:
-          publish: pnpm release
-          commit: "chore(release): version packages"
-          title: "chore(release): version packages"
+          publish-script: pnpm release
+          commit-message: "chore(release): version packages"
+          pr-title: "chore(release): version packages"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   publish-mcpb:
     name: Upload mcpb Bundle to GitHub Release
     needs: release
-    if: needs.release.outputs.published == 'true' && contains(needs.release.outputs.publishedPackages, '"@upstash/context7-mcp"')
+    if: needs.release.outputs.published == 'true' && contains(needs.release.outputs.published-packages, '"@upstash/context7-mcp"')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -64,9 +63,9 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -111,7 +110,7 @@ jobs:
     needs: [release, publish-mcpb]
     # changesets pushes tags with GITHUB_TOKEN, which cannot trigger other
     # workflows — so the registry publish must chain off this job directly.
-    if: needs.release.outputs.published == 'true' && contains(needs.release.outputs.publishedPackages, '"@upstash/context7-mcp"')
+    if: needs.release.outputs.published == 'true' && contains(needs.release.outputs.published-packages, '"@upstash/context7-mcp"')
     permissions:
       id-token: write
       contents: read

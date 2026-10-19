@@ -4,6 +4,11 @@ on:
   pull_request:
     paths:
       - "packages/**"
+      - "plugins/**"
+      - ".cursor-plugin/**"
+      - ".claude-plugin/**"
+      - "skills/**"
+      - "rules/**"
       - "package.json"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
@@ -29,9 +34,9 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4

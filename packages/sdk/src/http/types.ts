@@ -1,11 +1,5 @@
 export type CacheSetting =
-  | "default"
-  | "force-cache"
-  | "no-cache"
-  | "no-store"
-  | "only-if-cached"
-  | "reload"
-  | false;
+  "default" | "force-cache" | "no-cache" | "no-store" | "only-if-cached" | "reload" | false;
 
 export type Context7Fetch = (input: string | URL, init?: RequestInit) => Promise<Response>;
 export type AuthTokenProvider = () => string | Promise<string>;

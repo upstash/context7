@@ -78,6 +78,28 @@ export function isContext7AbortError(error: unknown): boolean {
   );
 }
 
+/** Stop waiting on a value when cancelled, without cancelling its underlying work. */
+export async function awaitWithSignal<T>(
+  value: T | PromiseLike<T>,
+  signal?: AbortSignal
+): Promise<T> {
+  if (!signal) return value;
+
+  let onAbort!: () => void;
+  const aborted = new Promise<never>((_resolve, reject) => {
+    onAbort = () => reject(signal.reason);
+    if (signal.aborted) onAbort();
+    else signal.addEventListener("abort", onAbort, { once: true });
+  });
+
+  try {
+    // Keep a rejection handler on the provider even if cancellation wins the race.
+    return await Promise.race([value, aborted]);
+  } finally {
+    signal.removeEventListener("abort", onAbort);
+  }
+}
+
 export async function wait(milliseconds: number, signal?: AbortSignal): Promise<void> {
   if (milliseconds <= 0) return;
 

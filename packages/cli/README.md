@@ -39,7 +39,7 @@ ctx7 library nextjs "app router"
 
 # Get documentation
 ctx7 docs /reactjs/react.dev "useEffect cleanup"
-ctx7 docs /vercel/next.js "middleware"
+ctx7 docs /vercel/next.js "proxy"
 ```
 
 ## Usage
@@ -63,7 +63,7 @@ Fetch documentation for a specific library using its Context7 ID.
 
 ```bash
 ctx7 docs /reactjs/react.dev "useEffect cleanup"
-ctx7 docs /vercel/next.js "middleware authentication"
+ctx7 docs /vercel/next.js "proxy authentication"
 ctx7 docs /prisma/prisma "one-to-many relations"
 
 # Output as JSON
@@ -156,7 +156,7 @@ ctx7 logout
 
 ## Supported Clients
 
-The CLI automatically detects which AI coding assistants you have installed and configures Context7 for them:
+The CLI automatically detects which AI coding agents you have installed and configures Context7 for them:
 
 | Client                                                              | Skills Directory  |
 | ------------------------------------------------------------------- | ----------------- |
