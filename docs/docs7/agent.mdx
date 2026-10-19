@@ -25,7 +25,7 @@ The Context7 Agent has two work queues.
 
 ### Suggestions
 
-Suggestions come from Context7's analysis of the indexed documentation. Each suggestion points to the source files that support it.
+Suggestions come from questions that AI agents ask Context7 about your library. When Context7 cannot answer a question well from your docs, it records the gap as a suggestion. A library that gets few questions gets few suggestions; the queue tells you when Context7 has seen no questions yet.
 
 Select up to 10 suggestions and click **Run agent**. The agent verifies each suggestion against the repository and edits only the configured docs path. If it produces supported changes, Docs7 opens one pull request.
 
@@ -41,13 +41,13 @@ Ignoring a suggestion or build issue removes it from the queue. It does not remo
 
 New sites start with the schedule disabled. Enable it and choose **Daily** or **Weekly**.
 
-A scheduled run starts only when at least three suggestions are waiting. It handles up to 10 suggestions in one pull request. The schedule does not run the build issue queue automatically.
+A scheduled run starts when at least one suggestion is waiting and the agent's previous suggestions pull request is merged or closed. It handles up to 10 suggestions in one pull request. The schedule does not run the build issue queue automatically.
 
 You can review completed, failed, and running work under **History**.
 
 ## PR Review Agent
 
-The PR Review Agent runs after an eligible pull request preview finishes. It reviews only files inside the configured docs path and posts its findings in the pull request's Docs7 summary.
+The PR Review Agent starts five minutes after an eligible pull request preview finishes. If you push again in that time, Docs7 reviews only the newer commit. It reviews only files inside the configured docs path and posts its findings in the pull request's Docs7 summary.
 
 <Frame caption="PR Review Agent settings control its response mode and the checks applied to pull requests.">
   <img
