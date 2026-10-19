@@ -29,9 +29,10 @@ ctx7 setup --yes               # Skip confirmation prompts
 ```bash
 ctx7 setup --api-key YOUR_KEY  # Use an existing API key (both MCP and CLI + Skills mode)
 ctx7 setup --oauth             # OAuth endpoint — MCP mode only (IDE handles the auth flow)
+CONTEXT7_API_KEY=YOUR_KEY ctx7 setup  # Skip the browser login when the key is already set
 ```
 
-Without `--api-key` or `--oauth`, setup opens a browser for OAuth login. The device flow returns an API key that setup uses for authentication. `--oauth` is MCP-only.
+Without `--api-key`, `CONTEXT7_API_KEY`, or `--oauth`, setup opens a browser for OAuth login. The device flow returns an API key that setup uses for authentication. `--oauth` is MCP-only and wins over an environment key.
 
 **What gets written — MCP mode:**
 - MCP server entry in the agent's config file (`.mcp.json` for Claude, `.cursor/mcp.json` for Cursor, `.opencode.json` for OpenCode)

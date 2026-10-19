@@ -148,11 +148,14 @@ ctx7 setup --yes
 # Use an existing API key (works for both MCP and CLI + Skills mode)
 ctx7 setup --api-key YOUR_API_KEY
 
+# The same key from the environment skips the browser login (CI, containers, SSH)
+CONTEXT7_API_KEY=YOUR_API_KEY ctx7 setup --claude --yes
+
 # Use OAuth endpoint — MCP mode only (IDE handles the auth flow)
 ctx7 setup --oauth
 ```
 
-Without `--api-key` or `--oauth`, setup runs the OAuth device flow: it shows a verification link and short code that you open on any device to sign in, so it works the same locally or on a remote, headless, or SSH host. The device flow returns an API key that setup uses for authentication. `--oauth` is MCP-only — use it when an IDE handles the auth flow on your behalf.
+Without `--api-key`, `CONTEXT7_API_KEY`, or `--oauth`, setup runs the OAuth device flow: it shows a verification link and short code that you open on any device to sign in, so it works the same locally or on a remote, headless, or SSH host. The device flow returns an API key that setup uses for authentication. `--oauth` is MCP-only and wins over an environment key — use it when an IDE handles the auth flow on your behalf.
 
 ### On-premise setup
 
