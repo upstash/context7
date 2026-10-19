@@ -134,6 +134,24 @@ const mutations: MutationCase[] = [
     expectedArgs: `["${PACKAGE}"]`,
   },
   {
+    name: "replaces an inline --api-key= key",
+    args: `["${PACKAGE}", "--api-key=OLD"]`,
+    apiKey: "NEW",
+    expectedArgs: `["${PACKAGE}","--api-key","NEW"]`,
+  },
+  {
+    name: "removes an inline --api-key= key",
+    args: `["${PACKAGE}", "--api-key=OLD"]`,
+    apiKey: undefined,
+    expectedArgs: `["${PACKAGE}"]`,
+  },
+  {
+    name: "drops an inline key next to a separate one",
+    args: `["${PACKAGE}", "--api-key=A", "--api-key", "B"]`,
+    apiKey: "NEW",
+    expectedArgs: `["${PACKAGE}","--api-key","NEW"]`,
+  },
+  {
     name: "normalizes duplicate keys",
     args: `["${PACKAGE}", "--api-key", "A", "--api-key", "B"]`,
     apiKey: "NEW",
