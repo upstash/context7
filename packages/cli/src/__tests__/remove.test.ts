@@ -3,6 +3,7 @@ import { Command } from "commander";
 import { mkdir, readFile, writeFile, rm, access } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
+import { readJsonConfig } from "../setup/mcp-writer.js";
 
 const trackEvent = vi.fn();
 const mockCheckboxWithHover = vi.fn();
@@ -413,9 +414,10 @@ describe("remove command", () => {
   // keep this file functional after removing Context7
   "theme": "night",
   "mcp": {
+    // first server
     "alpha": { "type": "remote", "url": "https://alpha.com", "enabled": true },
     "context7": { "type": "remote", "url": "https://mcp.context7.com/mcp", "enabled": true },
-    "omega": { "type": "remote", "url": "https://omega.com", "enabled": false }
+    "omega": { "type": "remote", "url": "https://omega.com", "enabled": false },
   },
   "telemetry": { "enabled": true }
 }
@@ -425,7 +427,13 @@ describe("remove command", () => {
 
     await runCommand("remove", "--opencode", "--mcp", "--project");
 
-    expect(JSON.parse(await readFile(configPath, "utf-8"))).toEqual({
+    const updated = await readFile(configPath, "utf-8");
+    expect(updated).toContain("// keep this file functional after removing Context7");
+    expect(updated).toContain("// first server");
+    expect(updated).toContain(
+      '"omega": { "type": "remote", "url": "https://omega.com", "enabled": false },'
+    );
+    expect(await readJsonConfig(configPath)).toEqual({
       theme: "night",
       mcp: {
         alpha: { type: "remote", url: "https://alpha.com", enabled: true },
