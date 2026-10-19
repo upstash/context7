@@ -280,6 +280,8 @@ function createMcpServer(mcpContext: McpRequestContext) {
     },
     // These results are the same for every caller and change only on deploy, so
     // clients may reuse them for an hour instead of listing on every request.
+    // After a deploy that changes a tool schema, clients can still call with the
+    // old schema for that hour: keep old argument names accepted (aliasArgs).
     cacheHints: {
       "tools/list": STATIC_LIST_CACHE_HINT,
       "prompts/list": STATIC_LIST_CACHE_HINT,
@@ -772,6 +774,11 @@ async function main() {
           // arrive on open sockets would otherwise get a 500 from the closed
           // handler.
           if (server) {
+            // A response that began before SIGTERM has no Connection: close, so
+            // its socket then idles for keepAliveTimeout (5 s by default) and
+            // server.close() waits for it. Node reads the timeout when a socket
+            // goes idle, so this also covers responses already running.
+            server.keepAliveTimeout = 1_000;
             await new Promise<void>((resolve, reject) => {
               server.close((error) => (error ? reject(error) : resolve()));
               server.closeIdleConnections();
