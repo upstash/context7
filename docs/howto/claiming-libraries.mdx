@@ -178,6 +178,14 @@ Context7 checks a new title or description before it saves it. If the text gives
     | **Keep Hash (URL Fragments)**| Whether to treat URLs with different hash fragments as distinct pages. Disabled by default.      | Boolean                         |
     | **Keep Query Parameters**    | Whether to treat URLs with different query strings as distinct pages. Enabled by default.        | Boolean                         |
     | **Exclude URLs**             | URL patterns to exclude from crawling. Supports wildcards.                                       | Max 100 patterns                |
+
+    <Note>
+      The crawl stays under the Base URL. A Base URL without a trailing slash is a plain
+      prefix, so `https://example.com/docs/api/admin` also includes
+      `https://example.com/docs/api/admin-graphql/...`. Add a trailing slash to keep the
+      folder boundary: `https://example.com/docs/` includes `/docs` and `/docs/x` but
+      not `/docs-old`.
+    </Note>
   </Tab>
 </Tabs>
 
