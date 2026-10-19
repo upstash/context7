@@ -23,6 +23,23 @@ An agent can also request a normal page URL with `Accept: text/markdown`. Docs7 
 
 If you provide `llms.txt` or `llms-full.txt` at the docs root, your file replaces the generated version.
 
+## Feedback from agents
+
+Agents can tell you what they could not do with your docs. A hidden note at the top of every page, in HTML and in Markdown, gives them these routes:
+
+| Request | Result |
+| --- | --- |
+| `POST /feedback` | Rates one page. Send JSON with `path` (the page path, such as `/docs/quickstart`), `helpful` (`true` or `false`), and an optional `comment` (at most 500 characters). |
+| `POST /requests` | Asks for a feature. See [Feature requests](/docs7/feature-requests). |
+
+Page ratings need `"feedback": { "thumbsRating": true }` in `docs.json`. Feature requests need a page with the `<FeatureRequests />` component. A site without the setting or the page does not show the routes.
+
+The routes are below the documentation root, as the endpoints above are. A page of your own at `/feedback` or `/requests` still opens: Docs7 answers only the `POST` requests.
+
+In browsers that support WebMCP, the page also gives agents the `rate_page` and `request_feature` tools for the same actions.
+
+Ratings and requests appear on the **Agent** tab, in the **Page feedback** and **Feature requests** cards. Each card shows how many came from agents and how many from people.
+
 ## Recover from hallucinated URLs
 
 Agents often request URLs that do not exist. They guess a path from a page title, drop a segment, or reuse a URL from an older version of the docs. Instead of returning an empty 404, Docs7 responds with smart suggestions: the pages the agent was most likely looking for, with their Markdown URLs.
