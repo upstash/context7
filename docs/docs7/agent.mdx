@@ -1,6 +1,6 @@
 ---
 title: Agent
-description: Configure autonomous fixes, pull request reviews, code change updates, and scheduled checks
+description: Configure autonomous fixes, pull request reviews, code change updates, code sample checks, and scheduled checks
 ---
 
 The Docs7 Agent works from your GitHub repository and keeps every proposed change reviewable. Open **Docs7**, choose a site, then select **Agent**.
@@ -12,11 +12,12 @@ The Docs7 Agent works from your GitHub repository and keeps every proposed chang
   />
 </Frame>
 
-There are four workflows:
+There are five workflows:
 
 - **Context7 Agent** fixes queued suggestions or build issues in a pull request.
 - **PR Review Agent** reviews documentation changes in each eligible pull request.
 - **Code Watch Agent** updates the docs when a pull request merges in your code.
+- **Code Samples Agent** runs the code blocks of your docs against your services and fixes the ones that fail.
 - **Monthly Checkup** is a planned full-site review and is not available yet.
 
 ## Context7 Agent
@@ -122,6 +123,32 @@ When a merge belongs with a docs pull request the agent already opened and that 
 
 **History** lists each merged pull request the agent checked, with the docs pull request it opened or **No docs change**. Each checked pull request counts as one run in the site's monthly agent allowance.
 
+## Code Samples Agent
+
+The Code Samples Agent runs the TypeScript, JavaScript, and Python code blocks of your docs against your services. When a block fails because the block is wrong, the agent fixes it, runs it again, and adds the fix to a pull request. The Code Samples Agent is available on Docs7 Pro.
+
+### Add variables
+
+Under **Variables**, add the environment variables your code samples read, for example `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
+
+Mark each token or key as **Secret** and enter the host it is sent to. A secret never enters the sandbox where the code runs: Docs7 adds it to HTTPS requests to that host, in the header you set. The default header is `Authorization` with a `Bearer` prefix. The code in the sandbox reads a placeholder and can reach only package registries and the hosts of your variables.
+
+<Warning>
+Use test credentials. Code samples write and delete data, for example the keys in a Redis database.
+</Warning>
+
+### Run a check
+
+Turn on **Monthly check** to check every code block of the docs once a month, or select **Check now**. A check reads every page, in batches of about 100 code blocks, and all of its fixes go into one pull request.
+
+Each code block ends with one of these results:
+
+- **Passed**: the block ran and did what the page says, including the documented output and responses.
+- **Failed**: the block threw an error, or its result differs from the page. If the block has a mistake, such as a wrong method name, argument, value, expected output, import, or syntax, the agent fixes it and runs it again. If the block uses the API as documented and the SDK or service behaves differently, the agent reports this and does not change the page.
+- **Skipped**: the block needs a service with no variable, connects over TCP (for example ioredis, node-redis, or redis-py with a `redis://` URL), is not a complete program, or is a whole framework app such as a Next.js route.
+
+**History** lists each check with its counts and its pull request. Select a check to see its failed and skipped blocks. Each batch counts as one run in the site's monthly agent allowance, so docs with 1,000 code blocks use about 10 runs per check.
+
 ## Monthly Checkup
 
 <Info>
@@ -132,11 +159,10 @@ The planned workflow reads the entire site once a month and opens one pull reque
 - link checks
 - grammar and spelling
 - build health
-- pages that no longer match their source
-- and a code compilation check.
+- and pages that no longer match their source.
 
 ## Safety and scope
 
-Agent runs receive read access to the connected repository, and Code Watch runs receive read access to the code repository of the merged pull request as well. The agent can inspect repository source to verify a documentation change, but trusted Docs7 code publishes the resulting files through GitHub.
+Agent runs receive read access to the connected repository, and Code Watch runs receive read access to the code repository of the merged pull request as well. Code Samples runs receive your variables; secret values stay outside the sandbox. The agent can inspect repository source to verify a documentation change, but trusted Docs7 code publishes the resulting files through GitHub.
 
 Changes are limited to the configured docs path. When the docs path is the repository root, Docs7 still blocks common application paths, package manifests, lockfiles, `.github`, and `.git` from agent changes.
