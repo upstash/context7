@@ -1,5 +1,13 @@
 # @upstash/context7-mcp
 
+## 4.4.4
+
+### Patch Changes
+
+- 66e4771: Reject `--port=<n>` and `--api-key=<key>` with incompatible transports, matching the space-separated forms.
+- 6a54ec3: `--port` rejects values that are not an integer from 0 to 65535, and the port-in-use retry stops at 65535 instead of crashing.
+- 5a2b651: Narrow the "Do not use for" line in the server instructions and rule templates so agents use Context7 when they port code between libraries, platforms, or SQL dialects.
+
 ## 4.4.3
 
 ### Patch Changes
