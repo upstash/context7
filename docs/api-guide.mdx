@@ -5,7 +5,7 @@ description: Authentication, rate limits, best practices, and integration guides
 
 ## Authentication
 
-All API requests require authentication using an API key. Include your API key in the `Authorization` header:
+Use an API key with every request. Include your API key in the `Authorization` header:
 
 ```bash
 Authorization: Bearer CONTEXT7_API_KEY
@@ -48,8 +48,10 @@ Use `/owner/repo` for GitHub repositories, or `/<source>/<id>` for other sources
 | GitLab / Bitbucket / generic Git repo | `/<owner>/<repo>` (same shape as GitHub) |
 | Website | `/websites/uploadcare` |
 | llms.txt source | `/llmstxt/<source>` |
-| npm / package source | `/packages/<name>` or `/npm/<name>` |
-| Uploaded docs | `/docs/<name>` |
+| OpenAPI spec | `/openapi/<name>` |
+| Uploaded PDF / DOCX file | `/pdf/<name>`, `/docx/<name>` |
+| Uploaded file collection | `/files/<name>` |
+| Notion pages | `/notion-<workspace>/<id>` |
 
 You can pin a specific version with either `/owner/repo/<version>` or `/owner/repo@<version>`:
 

@@ -174,7 +174,7 @@ metadata:
   name: context7
   namespace: context7
   annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
 spec:
   ingressClassName: nginx
   tls:
@@ -256,7 +256,7 @@ Context7 requires outbound connectivity to the following:
 | Destination | Purpose |
 |---|---|
 | `ghcr.io` | Container image pulls (`imagePullPolicy: Always`) |
-| `context7.com` | License validation |
+| `context7.com` | License validation (not needed for offline `ctx7off.` license keys) |
 | Your LLM provider (for example, `api.openai.com` or the regional AWS Bedrock Runtime endpoint) | AI inference and embeddings |
 | AWS credential endpoints, when using workload credentials | Resolving EKS Pod Identity, IRSA, ECS, or EC2 role credentials for Bedrock |
 | `github.com` / `gitlab.com` | Repository cloning |
@@ -297,7 +297,7 @@ To pin a specific version:
 
 ```bash
 kubectl set image statefulset/context7 \
-  context7=ghcr.io/context7/enterprise:1.2.0 \
+  context7=ghcr.io/context7/enterprise:1.3.9 \
   -n context7
 ```
 
@@ -331,13 +331,14 @@ Example response:
 ```json
 {
   "status": "healthy",
-  "version": "1.0.0",
+  "version": "1.3.9",
   "setup": "complete",
   "license": "configured",
   "licenseInfo": {
     "valid": true,
     "teamSize": 10,
-    "expiresAt": "2026-06-01T00:00:00.000Z"
+    "expiresAt": "2026-06-01T00:00:00.000Z",
+    "offline": false
   },
   "repos_parsed": 5,
   "uptime": 3600,
@@ -347,7 +348,8 @@ Example response:
     "embedding": "configured",
     "embedding_provider": "openai",
     "github": "configured",
-    "gitlab": "not configured"
+    "github_method": "PAT",
+    "gitlab": "missing"
   }
 }
 ```
@@ -377,7 +379,7 @@ kubectl logs -n context7 context7-0
 Look for `[license]` messages in the first few lines. Common causes:
 
 - **Missing or incorrect `LICENSE_KEY`** in the `context7-config` secret
-- **No outbound connectivity** to `context7.com` for license validation
+- **No outbound connectivity** to `context7.com` for license validation (offline `ctx7off.` keys are validated locally)
 - **Expired license**: contact [context7@upstash.com](mailto:context7@upstash.com) to renew
 
 <Note>

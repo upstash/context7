@@ -39,7 +39,7 @@
             "name": "query",
             "in": "query",
             "description": "User's original question or task - used for relevance ranking",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string",
               "minLength": 1,
@@ -121,7 +121,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Relevant documentation snippets as plain text",
+            "description": "Relevant documentation snippets as plain text. When the library is not found, the response is still `200` with a plain-text message that starts with `Library not found`",
             "content": {
               "text/plain": {
                 "schema": {
@@ -132,16 +132,29 @@
             }
           },
           "400": {
-            "$ref": "#/components/responses/BadRequestError"
+            "description": "Bad Request - `libraryId` or `query` is missing",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "query and libraryId are required"
+              }
+            }
           },
           "401": {
             "$ref": "#/components/responses/UnauthorizedError"
           },
-          "404": {
-            "$ref": "#/components/responses/NotFoundError"
-          },
           "500": {
-            "$ref": "#/components/responses/InternalServerError"
+            "description": "Internal Server Error",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Context query failed"
+              }
+            }
           }
         },
         "security": [
@@ -268,7 +281,7 @@
     "/parse-openapi-upload": {
       "post": {
         "summary": "Upload an OpenAPI spec file",
-        "description": "Upload an OpenAPI specification file directly for parsing and indexing.",
+        "description": "Upload an OpenAPI specification file directly for parsing and indexing. To replace a spec that was already uploaded with the same file name, set `force` to `true`.",
         "operationId": "parseOpenApiUpload",
         "tags": ["Parse"],
         "requestBody": {
@@ -283,6 +296,19 @@
                     "type": "string",
                     "format": "binary",
                     "description": "A `.json` or `.yaml` OpenAPI specification file"
+                  },
+                  "projectTitle": {
+                    "type": "string",
+                    "description": "Display name for the project"
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Short description shown in the library list"
+                  },
+                  "force": {
+                    "type": "boolean",
+                    "description": "Re-upload and overwrite a library that already exists",
+                    "default": false
                   }
                 }
               }
@@ -402,12 +428,12 @@
                   "maxPages": {
                     "type": "integer",
                     "description": "Maximum number of pages to crawl",
-                    "default": 100
+                    "default": 500
                   },
                   "maxDepth": {
                     "type": "integer",
                     "description": "Maximum link depth from the root URL",
-                    "default": 3
+                    "default": 8
                   },
                   "excludePatterns": {
                     "type": "array",
@@ -546,16 +572,12 @@
               }
             }
           },
-          "401": {
-            "$ref": "#/components/responses/UnauthorizedError"
-          },
           "500": {
             "$ref": "#/components/responses/InternalServerError"
           }
         },
         "security": [
-          {},
-          { "bearerAuth": [] }
+          {}
         ]
       }
     }
@@ -789,7 +811,7 @@
         "properties": {
           "status": {
             "type": "string",
-            "enum": ["queued", "parsing", "finalizing"],
+            "enum": ["queued", "parsing"],
             "description": "Current job status"
           },
           "position": {
@@ -804,11 +826,11 @@
           "startedAt": {
             "type": "string",
             "format": "date-time",
-            "description": "ISO 8601 timestamp when the job began running. Only present when `status` is `parsing` or `finalizing`"
+            "description": "ISO 8601 timestamp when the job began running. Only present when `status` is `parsing`"
           },
           "duration": {
             "type": "number",
-            "description": "Elapsed seconds since the job started. Only present when `status` is `parsing` or `finalizing`"
+            "description": "Elapsed seconds since the job started. Only present when `status` is `parsing`"
           },
           "statusMessage": {
             "type": "string",

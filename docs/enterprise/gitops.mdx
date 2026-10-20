@@ -30,10 +30,10 @@ For each source in the manifest, Context7 decides what to do:
 - **Re-index** it if its manifest entry changed, for example a different branch, new folder filters, or a changed page limit, or if its last indexing run did not finish.
 - **Leave it untouched** if it already matches. Running a sync with no changes is a safe no-op.
 
-When pruning is enabled, repositories that you remove from the manifest are also deleted from the instance. Pruning only ever removes repositories that GitOps itself added; repositories you add by hand in the dashboard are never touched.
+When pruning is enabled, repositories that you remove from the manifest are also deleted from the instance. Pruning only removes repositories that GitOps manages. A repository you add by hand in the dashboard is not touched, unless the manifest also lists it. In that case the first sync adopts it: GitOps re-parses it and manages it from then on, so pruning can delete it later if you remove it from the manifest.
 
 <Note>
-GitOps is the source of truth only for the repositories listed in the manifest. You can still add other repositories manually in the dashboard, and they will be left alone during a sync.
+GitOps is the source of truth only for the repositories listed in the manifest. You can still add other repositories manually in the dashboard, and they will be left alone during a sync as long as the manifest does not list them.
 </Note>
 
 ## The manifest file
@@ -112,7 +112,7 @@ Open **Settings → Indexing → GitOps**, fill in the manifest repository, and 
 The manifest repository is cloned with the Git token from **Settings → Integrations**, so private repositories work without any extra credentials. If you have not configured a GitHub App or personal access token for the host, the sync reports a clear error.
 
 <Warning>
-Pruning permanently deletes a repository's indexed data (snippets and embeddings). It only affects repositories GitOps added, never ones you created in the dashboard, but treat the manifest as authoritative once pruning is on. Removing an entry and syncing will delete that library.
+Pruning permanently deletes a repository's indexed data (snippets and embeddings). It only affects repositories GitOps manages, including dashboard-added repositories that GitOps adopted because the manifest lists them. Treat the manifest as authoritative once pruning is on. Removing an entry and syncing will delete that library.
 </Warning>
 
 ## When syncs happen

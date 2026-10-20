@@ -3,11 +3,108 @@ title: "Changelog"
 description: "Release notes for the Context7 On-Premise image."
 ---
 
-<Update label="2026-09-16" description="v1.3.9">
+<Update label="2026-09-17" description="v1.3.9">
 
 ### Added
 
 - Added native AWS Bedrock support for Anthropic Claude inference, Amazon Titan embeddings, reranking, and source-code documentation.
+
+### Changed
+
+- The server now requires a valid `LICENSE_KEY` and exits on startup without one.
+- The setup wizard now defaults to the `gemini-3.7-flash` model.
+- Parse failures now show clearer details, including GitLab-specific messages when a token is missing.
+
+</Update>
+
+<Update label="2026-09-08" description="v1.3.8">
+
+### Added
+
+- Added on-premise setup to the Context7 CLI: `ctx7 setup --mcp --base-url` configures MCP clients for your deployment, with a guided two-step API key flow and optional client-native configuration.
+
+</Update>
+
+<Update label="2026-09-04" description="v1.3.7">
+
+### Changed
+
+- Improved documentation extraction coverage.
+
+</Update>
+
+<Update label="2026-08-28" description="v1.3.6">
+
+### Fixed
+
+- Fixed indexing of generated documentation when a custom model provider is configured.
+
+</Update>
+
+<Update label="2026-08-27" description="v1.3.5">
+
+### Fixed
+
+- Fixed source-code indexing when a custom model provider is configured.
+
+</Update>
+
+<Update label="2026-08-26" description="v1.3.4">
+
+### Added
+
+- Added automatic Git updates: Context7 checks indexed Git repositories on a schedule or on a GitHub push event, and refreshes them when they change.
+
+</Update>
+
+<Update label="2026-08-14" description="v1.3.3">
+
+### Added
+
+- Added Gerrit review publishing for generated documentation.
+
+### Changed
+
+- Snippets in responses are now ordered by relevance.
+
+</Update>
+
+<Update label="2026-08-11" description="v1.3.2">
+
+### Added
+
+- Added support for running the image as a non-root user.
+- Added a Helm chart for Kubernetes deployments.
+- Added settings for the maximum number of concurrent LLM requests and the LLM request timeout. Timed-out requests are now cancelled.
+
+### Fixed
+
+- Fixed source-code indexing on the on-premise image.
+- A parse that extracts nothing now says why.
+
+</Update>
+
+<Update label="2026-08-04" description="v1.3.1">
+
+### Added
+
+- Added the option to cancel running and queued parse jobs.
+
+### Changed
+
+- The dashboard now disables actions that your role or the workspace permissions do not allow.
+- Improved website crawler coverage.
+
+### Fixed
+
+- Fixed parsing of scp-style SSH repository URLs, such as `git@host:org/repo.git`.
+- A short database outage no longer crashes every replica.
+
+### Security
+
+- Git tokens are now redacted from logs, error messages, and support bundles.
+- Support bundle downloads are now admin-only by default.
+- The LLM, embedding, and Git connection tests now require an admin once setup is complete.
 
 </Update>
 

@@ -14,7 +14,7 @@ Context7 supports all MCP clients. Below are configuration examples for popular 
 <Note>
   For detailed guides including rules, skills, agents, and best practices, see
   [Cursor](/clients/cursor) for rules and Composer integration tips, and [Claude
-  Code](/clients/claude-code) for skills, agents, commands, and plugin installation.
+  Code](/clients/claude-code) for plugin installation and sign-in.
 </Note>
 
 ## OAuth Authentication
@@ -209,7 +209,7 @@ The [official Context7 extension](/clients/pi#context7-extension) is an alternat
 pi install npm:@upstash/context7-pi
 ```
 
-Run `/reload` or start a new Pi session, then ask a documentation question or use `/c7-docs next.js Cache Components`. It supports anonymous access and the `CONTEXT7_API_KEY` environment variable. Choose either the extension or the MCP setup above to avoid duplicate tools.
+Run `/reload` or start a new Pi session, then ask a documentation question or use `/c7-docs next.js Cache Components`. It reads your API key from the `CONTEXT7_API_KEY` environment variable. Choose either the extension or the MCP setup above to avoid duplicate tools.
 
 </Accordion>
 
@@ -257,7 +257,7 @@ See [OpenAI Codex MCP docs](https://developers.openai.com/codex/mcp) for more in
 
 #### Context7 Plugin
 
-You can also install Context7 as a Codex plugin. It connects to the hosted MCP server and includes a documentation lookup skill. After installation, a browser window opens so you can log in via OAuth.
+You can also install Context7 as a Codex plugin. It connects to the hosted MCP server and includes a documentation lookup skill. The first time Codex uses the plugin, a browser window opens so you can log in via OAuth.
 
 ```sh
 codex plugin marketplace add upstash/context7
@@ -567,7 +567,7 @@ Open Claude Desktop developer settings and edit your `claude_desktop_config.json
 
 <Accordion title="ChatGPT (Web)">
 
-ChatGPT supports MCP servers through remote connectors via [Developer Mode](https://developers.openai.com/api/docs/guides/developer-mode) (beta). Available for Pro, Plus, Team, Enterprise, and Edu plans.
+ChatGPT supports MCP servers through remote connectors via [Developer Mode](https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt) (beta). Available for Pro, Plus, Team, Enterprise, and Edu plans.
 
 #### 1. Enable Developer Mode
 
@@ -836,7 +836,7 @@ Use these alternatives to run the local Context7 MCP server with other runtimes.
       "command": "deno",
       "args": [
         "run",
-        "--allow-env=NO_DEPRECATION,TRACE_DEPRECATION",
+        "--allow-env",
         "--allow-net",
         "npm:@upstash/context7-mcp"
       ]
