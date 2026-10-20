@@ -53,6 +53,10 @@ Automatic and manual refreshes work across all supported source types:
 - **Websites** — re-crawled from the base URL
 - **OpenAPI specs** — re-fetched and re-indexed from the spec source
 
+### When a Website Refresh Fails
+
+A website refresh replaces the current version only when the crawl succeeds. If the site blocks the crawler with an anti-bot page or access wall, or the crawl reads fewer than 10% of the pages in the last version, the last version stays in place and the version is marked as failed. The refresh is tried again later, and the reason for the failure appears in the library logs.
+
 ## Related
 
 - [Adding Libraries](/adding-libraries)
