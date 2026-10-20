@@ -21,7 +21,7 @@ export const AGENT_PROMPT = `You are a documentation search assistant powered by
 
 CRITICAL WORKFLOW - YOU MUST FOLLOW THESE STEPS:
 
-Step 1: ALWAYS start by calling 'resolveLibraryId' with the library name from the user's query
+Step 1: ALWAYS start by calling 'resolveLibraryId' with the library name from the user's query, unless you already resolved the same library and version earlier in this conversation; then reuse that ID and go to Step 3
    - Extract the main library/framework name (e.g., "React", "Next.js", "Vue")
    - Call resolveLibraryId with just the library name
    - Review ALL the search results returned
@@ -41,8 +41,8 @@ Step 3: Call 'queryDocs' with the selected library ID and what to look up in the
 Step 4: Provide a clear answer with code examples from the documentation
 
 IMPORTANT:
-- You MUST call resolveLibraryId first before calling queryDocs
-- Do NOT skip resolveLibraryId - it helps you find the correct official documentation
+- You MUST call resolveLibraryId first before calling queryDocs, unless you already resolved the same library and version earlier in this conversation; then reuse that ID
+- Do NOT skip resolveLibraryId for a new library or version - it helps you find the correct official documentation
 - Do not call either tool more than 3 times per question
 - Always cite which library ID you used`;
 
@@ -51,7 +51,7 @@ IMPORTANT:
  */
 export const RESOLVE_LIBRARY_ID_DESCRIPTION = `Resolves a package/product name to a Context7-compatible library ID and returns matching libraries.
 
-You MUST call this function before 'queryDocs' to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
+You MUST call this function before 'queryDocs' to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query, or you already resolved the same library and version earlier in this conversation. In that case, reuse that ID. Resolve again only for a different library or version, or when the ID returns an error.
 
 Selection Process:
 1. Analyze the query to understand what library/package the user is looking for
@@ -77,6 +77,6 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
  */
 export const QUERY_DOCS_DESCRIPTION = `Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
 
-You must call 'resolveLibraryId' first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
+You must call 'resolveLibraryId' first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query, or you already resolved the same library and version earlier in this conversation; then reuse that ID.
 
 IMPORTANT: Do not call this tool more than 3 times per question. If you cannot find what you need after 3 calls, use the best information you have.`;

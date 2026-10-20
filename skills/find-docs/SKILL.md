@@ -46,7 +46,7 @@ npx ctx7@latest library <name> "<query>"
 npx ctx7@latest docs <libraryId> "<query>"
 ```
 
-You MUST call `library` first to obtain a valid library ID UNLESS the user explicitly provides a library ID in the format `/org/project` or `/org/project/version`.
+You MUST call `library` first to obtain a valid library ID UNLESS the user explicitly provides a library ID in the format `/org/project` or `/org/project/version`, or unless you already have the library ID for this library and version from earlier in the conversation.
 
 IMPORTANT: Do not run these commands more than 3 times per question. If you cannot find what you need after 3 attempts, use the best result you have.
 
@@ -160,7 +160,7 @@ Do not silently fall back to training data — always tell the user why Context7
 ## Common Mistakes
 
 - Library IDs require a `/` prefix — `/facebook/react` not `facebook/react`
-- Always run `npx ctx7@latest library` first — `npx ctx7@latest docs react "hooks"` will fail without a valid ID
+- Always run `npx ctx7@latest library` first, unless you already have the library ID for this library and version from earlier in the conversation — `npx ctx7@latest docs react "hooks"` will fail without a valid ID
 - Use descriptive queries, not single words — `"React useEffect cleanup function"` not `"hooks"`
 - One topic per query — split `"routing and auth and caching"` into a separate `docs` command per concept, unless the question is about how they interact
 - Do not include sensitive information (API keys, passwords, credentials) in queries

@@ -18,6 +18,8 @@ Activate this skill when the user:
 
 ### Step 1: Resolve the Library ID
 
+Skip this step when the user gave an ID or you already resolved this library and version earlier in the conversation; reuse that ID.
+
 Call `resolve-library-id` with:
 
 - `libraryName`: The library name extracted from the user's question

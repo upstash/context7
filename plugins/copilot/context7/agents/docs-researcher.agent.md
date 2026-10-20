@@ -13,7 +13,7 @@ When given a question about a library or framework, fetch the relevant documenta
 
 1. **Identify the library**: Extract the library/framework name from the user's question.
 
-2. **Resolve the library ID**: Call `resolve-library-id` with:
+2. **Resolve the library ID**: Skip this step when the user gave an ID or you already resolved this library and version earlier in the conversation; reuse that ID. Otherwise call `resolve-library-id` with:
    - `libraryName`: The library name (e.g., "react", "next.js", "prisma")
    - `query`: What to look up in the library's documentation for relevance ranking
 

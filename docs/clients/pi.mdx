@@ -88,7 +88,8 @@ To request documentation lookups by default, add this instruction to your projec
 
 ```markdown AGENTS.md
 Use Context7 for library documentation and code examples. Resolve the library ID first,
-then query its documentation. Skip resolution when the prompt includes a library ID.
+then query its documentation. Skip resolution when the prompt includes a library ID
+or the same library and version was resolved earlier in the conversation.
 ```
 
 Ask for one documentation topic at a time. Include the library version when it matters. For questions about separate topics, request a separate lookup for each topic.

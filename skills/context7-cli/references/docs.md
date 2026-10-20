@@ -66,7 +66,7 @@ ctx7 library react "How to use hooks for state management" --json | jq '.[0].id'
 
 Retrieves up-to-date documentation and code examples for the resolved library.
 
-You must call `ctx7 library` first to obtain the exact Context7-compatible library ID required to use this command, UNLESS the user explicitly provides a library ID in the format `/org/project` or `/org/project/version`.
+You must call `ctx7 library` first to obtain the exact Context7-compatible library ID required to use this command, UNLESS the user explicitly provides a library ID in the format `/org/project` or `/org/project/version`, or unless you already have the library ID for this library and version from earlier in the conversation.
 
 ```bash
 ctx7 docs /facebook/react "How to clean up useEffect with async operations"

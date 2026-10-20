@@ -36,7 +36,7 @@ Reach for these tools whenever a question involves a specific library, framework
 2. **Query the docs.** Call `query-docs` with the chosen library ID and what to look up in the library's documentation, scoped to a single concept — if the question spans multiple distinct concepts, make a separate call per concept with the same library ID, unless the question is about how the concepts interact. The tool returns documentation snippets and code examples.
 3. **Answer.** Cite the library ID you used and quote code examples verbatim when relevant.
 
-If the user supplies a library ID in `/org/project` or `/org/project/version` format directly, skip step 1 and call `query-docs` immediately.
+If the user supplies a library ID in `/org/project` or `/org/project/version` format directly, or you already resolved the same library and version earlier in the conversation, skip step 1 and call `query-docs` with that ID immediately.
 
 ## Constraints
 

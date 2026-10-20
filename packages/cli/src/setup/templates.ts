@@ -28,7 +28,7 @@ Do not use for: refactoring, debugging, or reviewing code that does not depend o
 3. Fetch docs: \`npx ctx7@latest docs <libraryId> "<what to look up>"\` — run a separate \`docs\` command per distinct concept if the question spans multiple topics, unless it's about how they interact
 4. Answer using the fetched documentation
 
-You MUST call \`library\` first to get a valid ID (format: \`/org/project\`) unless the user provides one directly. Be specific about what to look up in the library's documentation — specific and detailed queries return better results than vague single words, but keep each query to a single concept unless the question is about how concepts interact; combined multi-topic queries dilute ranking and return shallow results for each topic. Do not run more than 3 commands per question. Do not include sensitive information (API keys, passwords, credentials) in queries.
+You MUST call \`library\` first to get a valid ID (format: \`/org/project\`) unless the user provides one directly, or unless you already have the library ID for this library and version from earlier in the conversation. Be specific about what to look up in the library's documentation — specific and detailed queries return better results than vague single words, but keep each query to a single concept unless the question is about how concepts interact; combined multi-topic queries dilute ranking and return shallow results for each topic. Do not run more than 3 commands per question. Do not include sensitive information (API keys, passwords, credentials) in queries.
 
 For version-specific docs, use \`/org/project/version\` from the \`library\` output (e.g., \`/vercel/next.js/v16.2.9\`).
 

@@ -28,12 +28,14 @@ Do not use this Power for refactoring, debugging, or reviewing code that does no
 
 ### Step 1: Resolve the Library ID
 
+Skip this step when the user gave an ID or you already resolved this library and version earlier in the conversation; reuse that ID.
+
 Call `resolve-library-id` with:
 
 - `libraryName`: The library name extracted from the user's question
 - `query`: What to look up in the library's documentation (improves relevance ranking)
 
-Always start with `resolve-library-id` using the library name and what to look up in the library's documentation, unless the user provides an exact library ID in `/org/project` format
+Always start with `resolve-library-id` using the library name and what to look up in the library's documentation, unless the user provides an exact library ID in `/org/project` format or you already resolved the same library and version earlier in this conversation
 
 ### Step 2: Select the Best Match
 

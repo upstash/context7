@@ -57,4 +57,4 @@ export CONTEXT7_API_KEY=your_key
 ## Common Mistakes
 
 - Library IDs require a `/` prefix — `/facebook/react` not `facebook/react`
-- Always run `ctx7 library` first — `ctx7 docs react "hooks"` will fail without a valid ID
+- Always run `ctx7 library` first, unless you already have the library ID for this library and version from earlier in the conversation — `ctx7 docs react "hooks"` will fail without a valid ID
