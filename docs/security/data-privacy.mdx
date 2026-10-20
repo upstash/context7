@@ -37,17 +37,17 @@ The search queries formulated by the MCP client (not your original prompts) are 
 
 **Documentation Reranking**
 
-MCP-formulated queries are passed to LLMs to rerank and select the most relevant documentation for your request. Context7 uses well-known, trusted LLM providers for this purpose, and only providers whose data policies do not allow training on request data.
+Context7 sends MCP-formulated queries to LLMs, which rerank the documentation and pick the most relevant results for your request. Context7 uses only trusted LLM providers that do not train on the data it sends them.
 
 **Benchmarking and Quality Improvement**
 
-MCP-formulated queries are anonymously stored and used to benchmark retrieval accuracy and improve the documentation matching pipeline over time. Queries to teamspaces on an Enterprise plan are not stored for benchmarking.
+Context7 stores MCP-formulated queries anonymously and uses them to measure and improve retrieval accuracy. Context7 does not store queries from Enterprise teamspaces for benchmarking.
 
 ### Enterprise Controls
 
 - On-premise Enterprise plans can use their own LLM provider for code extraction and private library ranking
 - On-premise Enterprise plans can disable public documentation usage, limiting context retrieval to privately indexed documentation only
-- Enterprise plans do not store queries for benchmarking. This is part of the plan, not a setting
+- Context7 does not store queries from Enterprise teamspaces for benchmarking. This applies to every Enterprise teamspace, and there is no setting to change
 
 Contact our sales team at [context7.com/contact](https://context7.com/contact) for Enterprise and on-premise plan details.
 
@@ -108,7 +108,7 @@ Restrict which libraries are accessible to your teamspace. You can choose betwee
 - Library documentation
 - Code examples from documentation
 - Metadata about indexed libraries
-- Queries formulated by the MCP client, for benchmarking (not on Enterprise plans)
+- Queries formulated by the MCP client, for benchmarking, except queries from Enterprise teamspaces
 
 **What we don't store:**
 
