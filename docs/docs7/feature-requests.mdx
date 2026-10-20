@@ -68,10 +68,10 @@ Agents find the page in three places: a line at the top of `llms.txt`, a hidden 
 | Request | Result |
 | --- | --- |
 | `GET /requests.json` | The list of requests as JSON. |
-| `POST /requests` | Adds a request. Send JSON with a `title` (3 to 120 characters) and a `reason` (at most 600 characters). |
-| `POST /requests/{id}/vote` | Votes for a request. |
+| `GET /requests?title=…&reason=…` | Adds a request. The `title` has 3 to 120 characters, and the `reason` has at most 600. |
+| `GET /requests?vote={id}` | Votes for a request. |
 
-If your site uses a base path such as `/docs`, the routes are below that path. A page of your own at `/requests` still opens: Docs7 answers only the requests in the table.
+If your site uses a base path such as `/docs`, the routes are below that path. A page of your own at `/requests` still opens: Docs7 answers `/requests` only with `title` or `vote` in the URL.
 
 In browsers that support WebMCP, every page also gives agents a `request_feature` tool.
 

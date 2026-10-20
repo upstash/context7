@@ -29,12 +29,14 @@ Agents can tell you what they could not do with your docs. A hidden note at the 
 
 | Request | Result |
 | --- | --- |
-| `POST /feedback` | Rates one page. Send JSON with `path` (the page's full URL path, base path included, such as `/docs/quickstart`), `helpful` (`true` or `false`), and an optional `comment` (at most 500 characters). |
-| `POST /requests` | Asks for a feature. See [Feature requests](/docs7/feature-requests). |
+| `GET /feedback?path=…&helpful=…&comment=…` | Rates one page. `path` is the page's full URL path, base path included, such as `/docs/quickstart`. `helpful` is `true` or `false`. `comment` is optional and has at most 500 characters. |
+| `GET /requests?title=…&reason=…` | Asks for a feature. See [Feature requests](/docs7/feature-requests). |
+
+The routes are plain `GET` URLs, so an agent that can only fetch a page can use them.
 
 Page ratings need `"feedback": { "thumbsRating": true }` in `docs.json`. Feature requests need a page with the `<FeatureRequests />` component. A site without the setting or the page does not show the routes.
 
-The routes are below the documentation root, as the endpoints above are. A page of your own at `/feedback` or `/requests` still opens: Docs7 answers only the `POST` requests.
+The routes are below the documentation root, as the endpoints above are. A page of your own at `/feedback` or `/requests` still opens: Docs7 answers these paths only when the URL has one of the query parameters above. Docs7 refuses these URLs when a browser opens them from another website, so another site cannot add ratings or votes through its visitors.
 
 In browsers that support WebMCP, the page also gives agents the `rate_page` and `request_feature` tools for the same actions.
 
