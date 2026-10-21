@@ -1,0 +1,41 @@
+{
+  "name": "@upstash/context7-admin-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Context7 Admin: remote MCP server to manage Context7 teamspaces, libraries, Docs7 sites and Ask sites",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "pnpm exec vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:check": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/upstash/context7.git",
+    "directory": "packages/admin-mcp"
+  },
+  "author": "abdush",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/node": "2.1.1",
+    "@modelcontextprotocol/server": "2.3.1",
+    "express": "^5.1.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "2.3.1",
+    "@types/express": "^5.0.4",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">=20.18.1"
+  }
+}
