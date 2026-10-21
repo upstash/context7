@@ -25,7 +25,7 @@ The Context7 Agent has two work queues.
 
 ### Suggestions
 
-Suggestions come from Context7's analysis of the indexed documentation. Each suggestion points to the source files that support it.
+Suggestions come from the questions AI agents ask Context7 about your library. Each suggestion points to the source files that support it.
 
 Select up to 10 suggestions and click **Run agent**. The agent verifies each suggestion against the repository and edits only the configured docs path. If it produces supported changes, Docs7 opens one pull request.
 
@@ -41,7 +41,7 @@ Ignoring a suggestion or build issue removes it from the queue. It does not remo
 
 New sites start with the schedule disabled. Enable it and choose **Daily** or **Weekly**.
 
-A scheduled run starts only when at least three suggestions are waiting. It handles up to 10 suggestions in one pull request. The schedule does not run the build issue queue automatically.
+A scheduled run starts when at least one suggestion is waiting and no earlier suggestions pull request is still open. It handles up to 10 suggestions in one pull request. The schedule does not run the build issue queue automatically.
 
 You can review completed, failed, and running work under **History**.
 
