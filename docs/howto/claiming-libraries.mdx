@@ -177,6 +177,11 @@ Context7 checks a new title or description before it saves it. If the text gives
     | **Display URL**              | Optional URL shown to users instead of the base URL.                                             | Max 500 characters              |
     | **Keep Query Parameters**    | Whether to treat URLs with different query strings as distinct pages. Enabled by default.        | Boolean                         |
     | **Exclude URLs**             | URL patterns to exclude from crawling. Supports wildcards.                                       | Max 100 patterns                |
+
+    <Note>
+      Hash fragments (`#...`) are not indexed. Pages that differ only by their fragment, such as
+      hash-routed documentation sites, are crawled as a single page.
+    </Note>
   </Tab>
 </Tabs>
 
