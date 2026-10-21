@@ -40,3 +40,4 @@ Without `--api-key` or `--oauth`, setup opens a browser for OAuth login. The dev
 
 **What gets written — CLI + Skills mode:**
 - A `find-docs` skill in the chosen agent's skills directory, guiding the agent to use `ctx7 library` and `ctx7 docs` commands
+- A Context7 rule file instructing the agent to use the `ctx7` commands for library docs
