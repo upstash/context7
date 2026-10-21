@@ -4,6 +4,7 @@ import pc from "picocolors";
 import { confirm } from "@inquirer/prompts";
 import { CLI_CLIENT_ID } from "../constants.js";
 import { getBaseUrl } from "./api.js";
+import { acquireFileLock, type ReleaseLock } from "./file-lock.js";
 import {
   CREDENTIALS_FILE_NAME,
   getConfigDir,
@@ -196,10 +197,73 @@ interface GetValidAccessTokenOptions {
 }
 
 /**
+ * Lock file taken around a token refresh so concurrent ctx7 processes do not
+ * refresh with the same token. Lives next to the credentials file so it is
+ * on the same filesystem and under the same permissions.
+ */
+export function getRefreshLockPath(): string {
+  return `${getCredentialsFilePath()}.lock`;
+}
+
+/**
+ * Best-effort: resolves to `null` when the lock cannot be taken (read-only
+ * home directory, unsupported filesystem), and the caller refreshes unlocked
+ * as the CLI always has.
+ */
+async function acquireRefreshLock(): Promise<ReleaseLock | null> {
+  try {
+    ensureConfigDir();
+    return await acquireFileLock(getRefreshLockPath());
+  } catch {
+    return null;
+  }
+}
+
+/** The server definitively rejected the refresh token; credentials cleared. */
+const REFRESH_REJECTED = Symbol("refresh-rejected");
+
+/**
+ * Refreshes with `refreshToken` and stores the result. Resolves to the new
+ * access token, `undefined` after a transient failure (credentials kept so
+ * the next command retries), or REFRESH_REJECTED after a definitive rejection
+ * (credentials cleared).
+ */
+async function refreshAndStore(
+  refreshToken: string
+): Promise<string | undefined | typeof REFRESH_REJECTED> {
+  try {
+    const newTokens = await refreshAccessToken(refreshToken);
+    // RFC 6749 §6: the response MAY omit refresh_token, and the client then
+    // keeps the one it already holds. Writing the response verbatim would
+    // drop it and log the user out at the next expiry.
+    saveTokens({ refresh_token: refreshToken, ...newTokens });
+    return newTokens.access_token;
+  } catch (error) {
+    if (!(error instanceof RefreshTokenRejectedError)) return undefined;
+    // Without the lock (see acquireRefreshLock), a concurrent ctx7 process may
+    // have refreshed first, rotating the token we sent. Its credentials are
+    // valid; clearing them would log the user out.
+    const current = loadTokens();
+    if (current && current.refresh_token !== refreshToken) {
+      return isTokenExpired(current) ? undefined : current.access_token;
+    }
+    clearTokens();
+    return REFRESH_REJECTED;
+  }
+}
+
+/**
  * Returns a valid access token, refreshing if expired. Returns undefined if no
  * tokens are stored or refresh fails. Pre-0.5 installs may have OAuth tokens
  * with a `refresh_token`; new installs hold long-lived API keys that never
  * expire and skip the refresh path entirely.
+ *
+ * Agents often run several ctx7 commands at once. If two of them refresh with
+ * the same token, the authorization server sees the old refresh token used
+ * twice and revokes the whole grant, including the new token, so the user is
+ * logged out. Refreshes are therefore serialised across processes with a file
+ * lock: the first to take it refreshes and writes the credentials; the others
+ * wait, then read what it wrote and do not refresh again.
  *
  * A transient refresh failure (network, 429, 5xx) keeps the credentials so the
  * next command retries. A definitive rejection clears them, so the user is
@@ -219,29 +283,33 @@ export async function getValidAccessToken(
     return undefined;
   }
 
+  let result: string | undefined | typeof REFRESH_REJECTED;
+  const release = await acquireRefreshLock();
   try {
-    const newTokens = await refreshAccessToken(tokens.refresh_token);
-    // RFC 6749 §6: the response MAY omit refresh_token, and the client then
-    // keeps the one it already holds. Writing the response verbatim would
-    // drop it and log the user out at the next expiry.
-    saveTokens({ refresh_token: tokens.refresh_token, ...newTokens });
-    return newTokens.access_token;
-  } catch (error) {
-    if (!(error instanceof RefreshTokenRejectedError)) return undefined;
-    // A concurrent ctx7 process may have refreshed first, rotating the token we
-    // sent. Its credentials are valid; clearing them would log the user out.
-    const current = loadTokens();
-    if (current && current.refresh_token !== tokens.refresh_token) {
-      return isTokenExpired(current) ? undefined : current.access_token;
+    let refreshToken = tokens.refresh_token;
+    if (release) {
+      // Another process may have refreshed (or been rejected and cleared the
+      // credentials) while we waited for the lock. Re-read before deciding.
+      const latest = loadTokens();
+      if (!latest) return undefined;
+      if (!isTokenExpired(latest)) return latest.access_token;
+      if (!latest.refresh_token) return undefined;
+      refreshToken = latest.refresh_token;
     }
-    clearTokens();
-    // CONTEXT7_API_KEY takes precedence over stored tokens in every request
-    // (getAuthHeaders), so the user is still signed in; don't claim otherwise.
-    if (options.recoverExpiredSession === false || process.env.CONTEXT7_API_KEY) {
-      return undefined;
-    }
-    return recoverExpiredSession();
+    result = await refreshAndStore(refreshToken);
+  } finally {
+    // Released before any sign-in prompt so waiting commands never block on
+    // the user's answer.
+    release?.();
   }
+
+  if (result !== REFRESH_REJECTED) return result;
+  // CONTEXT7_API_KEY takes precedence over stored tokens in every request
+  // (getAuthHeaders), so the user is still signed in; don't claim otherwise.
+  if (options.recoverExpiredSession === false || process.env.CONTEXT7_API_KEY) {
+    return undefined;
+  }
+  return recoverExpiredSession();
 }
 
 interface TokenErrorResponse {
