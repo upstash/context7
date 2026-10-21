@@ -84,13 +84,16 @@ describe("plugin MCP manifests", () => {
     });
   });
 
-  test("Copilot passes the raw API key via Authorization", async () => {
+  test("Copilot sends the API key outside Authorization so OAuth can run", async () => {
+    // Copilot CLI expands an unset variable to "" and merges static headers
+    // over the OAuth bearer token, so a static Authorization header leaves
+    // every request after sign-in with an empty credential.
     const raw = await readFile(join(REPO_ROOT, "plugins/copilot/context7/.mcp.json"), "utf-8");
     const config = JSON.parse(raw) as {
       mcpServers: { context7: { headers: Record<string, string> } };
     };
     expect(config.mcpServers.context7.headers).toEqual({
-      Authorization: "${CONTEXT7_API_KEY:-}",
+      "Context7-API-Key": "${CONTEXT7_API_KEY:-}",
     });
   });
 

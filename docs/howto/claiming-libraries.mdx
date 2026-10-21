@@ -175,7 +175,6 @@ Context7 checks a new title or description before it saves it. If the text gives
     | ---------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------- |
     | **Base URL**                 | The root URL to crawl for documentation.                                                         | Max 100 characters              |
     | **Display URL**              | Optional URL shown to users instead of the base URL.                                             | Max 500 characters              |
-    | **Keep Hash (URL Fragments)**| Whether to treat URLs with different hash fragments as distinct pages. Disabled by default.      | Boolean                         |
     | **Keep Query Parameters**    | Whether to treat URLs with different query strings as distinct pages. Enabled by default.        | Boolean                         |
     | **Exclude URLs**             | URL patterns to exclude from crawling. Supports wildcards.                                       | Max 100 patterns                |
 
@@ -185,6 +184,9 @@ Context7 checks a new title or description before it saves it. If the text gives
       `https://example.com/docs/api/admin-graphql/...`. Add a trailing slash to keep the
       folder boundary: `https://example.com/docs/` includes `/docs` and `/docs/x` but
       not `/docs-old`.
+
+      Hash fragments (`#...`) are not indexed. Pages that differ only by their fragment, such as
+      hash-routed documentation sites, are crawled as a single page.
     </Note>
   </Tab>
 </Tabs>

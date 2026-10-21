@@ -641,7 +641,7 @@ Add the following configuration to your OpenAI Codex MCP server settings:
 [mcp_servers.context7]
 args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
 command = "npx"
-startup_timeout_ms = 20_000
+startup_timeout_sec = 20
 ```
 
 #### Remote Server Connection
@@ -654,7 +654,7 @@ http_headers = { "Authorization" = "Bearer YOUR_API_KEY" }
 
 > Optional troubleshooting — only if you see startup "request timed out" or "not found program". Most users can ignore this.
 >
-> - First try: increase `startup_timeout_ms` to `40_000` and retry.
+> - First try: increase `startup_timeout_sec` to `40` and retry.
 > - Windows quick fix (absolute `npx` path + explicit env):
 >
 > ```toml
@@ -667,7 +667,7 @@ http_headers = { "Authorization" = "Bearer YOUR_API_KEY" }
 >   "YOUR_API_KEY"
 > ]
 > env = { SystemRoot="C:\\Windows", APPDATA="C:\\Users\\yourname\\AppData\\Roaming" }
-> startup_timeout_ms = 40_000
+> startup_timeout_sec = 40
 > ```
 >
 > - macOS quick fix (use Node + installed package entry point):
