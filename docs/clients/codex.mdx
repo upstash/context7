@@ -60,7 +60,7 @@ Or add it directly to `~/.codex/config.toml` (use a project-scoped `.codex/confi
 [mcp_servers.context7]
 command = "npx"
 args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
-startup_timeout_ms = 20_000
+startup_timeout_sec = 20
 ```
 
 Prefer the hosted server? Use the remote connection instead:
@@ -124,7 +124,7 @@ How does Supabase storage work?
 </Accordion>
 
 <Accordion title="Startup timed out or program not found">
-If you see a startup "request timed out" or "not found program" error, increase `startup_timeout_ms` to `40_000` and retry. On Windows, point `command` at the absolute `npx.cmd` path and set `SystemRoot` and `APPDATA` explicitly — `npx` requires them, but some Codex MCP clients don't set them by default.
+If you see a startup "request timed out" or "not found program" error, increase `startup_timeout_sec` to `40` and retry. On Windows, point `command` at the absolute `npx.cmd` path and set `SystemRoot` and `APPDATA` explicitly — `npx` requires them, but some Codex MCP clients don't set them by default.
 </Accordion>
 
 <Accordion title="Setup fails on an existing config.toml entry">
