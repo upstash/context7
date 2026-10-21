@@ -6,7 +6,7 @@ description: The ctx7 CLI — fetch library documentation and configure Context7
 The `ctx7` CLI is the command-line interface for Context7. It does two things:
 
 - **Fetch library documentation** — resolve any library by name and query its up-to-date docs directly in your terminal, without opening a browser
-- **Configure your AI coding agent** — set up the Context7 MCP server (or a CLI-based `docs` skill) for Claude Code, Cursor, OpenCode, and more with a single command
+- **Configure your AI coding agent** — set up the Context7 MCP server (or a CLI-based `find-docs` skill) for Claude Code, Cursor, OpenCode, and more with a single command
 
 The CLI is useful both as a standalone tool (fetching docs while you code) and as a setup utility (wiring up Context7 for your AI coding agent).
 
@@ -111,7 +111,7 @@ ctx7 docs /vercel/next.js "How to add a proxy for route protection" | grep -A 10
 Configure Context7 for your AI coding agent. On first run, prompts you to choose between two modes:
 
 - **MCP server** — registers the Context7 MCP server in your agent's config so it can call `resolve-library-id` and `query-docs` tools natively
-- **CLI + Skills** — installs a `docs` skill that guides your agent to fetch up-to-date library docs using `ctx7` CLI commands (no MCP required)
+- **CLI + Skills** — installs a `find-docs` skill that guides your agent to fetch up-to-date library docs using `ctx7` CLI commands (no MCP required)
 
 ### ctx7 setup
 
