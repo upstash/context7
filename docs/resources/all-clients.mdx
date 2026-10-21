@@ -565,67 +565,30 @@ Open Claude Desktop developer settings and edit your `claude_desktop_config.json
 
 </Accordion>
 
-<Accordion title="ChatGPT (Web)">
+<Accordion title="ChatGPT">
 
-ChatGPT supports MCP servers through remote connectors via [Developer Mode](https://developers.openai.com/api/docs/guides/developer-mode) (beta). Available for Pro, Plus, Team, Enterprise, and Edu plans.
+Add Context7 to ChatGPT on the web as a custom MCP server plugin. See [Add custom MCP server](https://developers.openai.com/api/docs/guides/custom-mcp-server) in the OpenAI docs. Workspace permissions can block custom MCP servers.
 
-#### 1. Enable Developer Mode
+#### 1. Add the MCP server
 
-Go to: `Settings` → `Apps` → `Advanced settings` → Enable `Developer Mode`
-
-#### 2. Create an App
-
-Go to: `Settings` → `Apps` → `Create App`
-
-Fill in the following:
+Go to [ChatGPT Plugins](https://chatgpt.com/plugins) → select the plus button → `Add custom MCP server`, and fill in the following:
 
 | Field              | Value                                                                                       |
 | ------------------ | ------------------------------------------------------------------------------------------- |
 | **Name**           | `Context7`                                                                                  |
 | **Description**    | `Fetch up-to-date documentation and code examples for any library directly from the source` |
-| **MCP Server URL** | `https://mcp.context7.com/mcp/oauth`                                                        |
+| **Server URL**     | `https://mcp.context7.com/mcp/oauth`                                                        |
+| **Authentication** | `OAuth`                                                                                     |
 
-> Accept the security notice and complete the one-time OAuth authorization.
+Select `I understand and want to continue`, then `Create as a plugin`.
 
-#### 3. Use in a Conversation
+#### 2. Install the plugin
 
-Start a new chat → Click the plus icon → Hover over `More` → Select the `Context7` app.
+Find `Context7` in your plugins, install it, and complete the one-time OAuth authorization.
 
-Alternatively, you can say `use context7` in your prompt and ChatGPT will automatically use the `Context7` app.
+#### 3. Use in a conversation
 
-See [OpenAI MCP docs](https://developers.openai.com/api/docs/mcp) for more info.
-
-</Accordion>
-
-<Accordion title="ChatGPT (Desktop)">
-
-The ChatGPT desktop app shares apps configured on the web. Set up the app on [chatgpt.com](https://chatgpt.com) first.
-
-#### 1. Enable Developer Mode (on the Web)
-
-Go to: `Settings` → `Apps` → `Advanced settings` → Enable `Developer Mode`
-
-#### 2. Create an App (on the Web)
-
-Go to: `Settings` → `Apps` → `Create App`
-
-Fill in the following:
-
-| Field              | Value                                                                                       |
-| ------------------ | ------------------------------------------------------------------------------------------- |
-| **Name**           | `Context7`                                                                                  |
-| **Description**    | `Fetch up-to-date documentation and code examples for any library directly from the source` |
-| **MCP Server URL** | `https://mcp.context7.com/mcp/oauth`                                                        |
-
-> Accept the security notice and complete the one-time OAuth authorization.
-
-#### 3. Use in the Desktop App
-
-Open the ChatGPT desktop app → Start a new chat → ChatGPT will automatically use the `Context7` app when you ask it to.
-
-Apps configured on the web are automatically available in the desktop app.
-
-See [OpenAI MCP docs](https://developers.openai.com/api/docs/mcp) for more info.
+Start a new chat, type `@` in the prompt box, and select `Context7`.
 
 </Accordion>
 
