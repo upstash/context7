@@ -301,7 +301,12 @@ export const TOOLS: ToolDef[] = [
     args: {
       library_id: libraryId,
       version: z.string().describe("Tag or branch name."),
-      is_branch: z.boolean().optional().describe("`version` is a branch, not a tag (add)."),
+      is_branch: z
+        .boolean()
+        .optional()
+        .describe(
+          "`version` is a branch, not a tag (add). For remove, set it when a tag and a branch share the name."
+        ),
       confirm: z
         .string()
         .optional()
@@ -311,7 +316,7 @@ export const TOOLS: ToolDef[] = [
       const base = `${lib(teamspace, library_id)}/versions`;
       if (action === "add") return api.post(base, { version, isBranch: is_branch });
       confirmed(confirm, version, "the version name");
-      return api.del(`${base}/${seg(version)}`);
+      return api.del(`${base}/${seg(version)}`, { query: { isBranch: is_branch } });
     },
   }),
   tool({
