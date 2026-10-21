@@ -49,6 +49,10 @@ Create a Context7 API key in [the dashboard](https://context7.com/dashboard) wit
 
 ## Tools
 
+- `teamspace` takes an id or a name. Leave it out when you have one teamspace; with several, the error lists them.
+- Library ids take `/owner/repo`, `owner/repo` or a context7.com library URL.
+- Long jobs (library parse, Docs7 build, agent run, Ask crawl): call `get_library`, `get_deployment`, `get_agent_runs` (with `run_id`) or `get_ask_site` with `wait: true`. The server waits up to about 25 seconds for a final state.
+
 | Group     | Tools                                                                                                                                                                                                                                                                  |
 | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | account   | `list_teamspaces`, `get_teamspace`, `manage_members`                                                                                                                                                                                                                   |

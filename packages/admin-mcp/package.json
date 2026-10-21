@@ -23,7 +23,7 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/server": "2.3.1",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "2.3.1",

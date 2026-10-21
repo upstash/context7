@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { createAdminHandler } from "../src/http.js";
+import { normalizeLibraryId, poll } from "../src/tools.js";
 
 // The server under test is the web-standard handler, driven by a real MCP
 // client. Global fetch (the management API) is stubbed: no network.
@@ -73,12 +74,45 @@ describe("query parameters", () => {
     ]);
   });
 
-  test("without a pin every teamspace tool requires the argument", async () => {
-    const client = await connect();
-    const { tools } = await client.listTools();
-    const getUsage = tools.find((t) => t.name === "get_usage")!;
-    expect(getUsage.inputSchema.required).toContain("teamspace");
-    expect(tools.map((t) => t.name)).toContain("list_teamspaces");
+  describe("without a pin, `teamspace` is an id, a name, or left out", () => {
+    const ACME = "11111111-1111-4111-8111-111111111111";
+    const PERSONAL = "22222222-2222-4222-8222-222222222222";
+    const teamspaces = (list: { id: string; name: string; isPersonal?: boolean }[]) => {
+      apiReply = (call) => ({ body: call.path === "/v2/teamspaces" ? { teamspaces: list } : {} });
+    };
+
+    test("an id is used as given, with no lookup", async () => {
+      const client = await connect();
+      await client.callTool({ name: "get_usage", arguments: { teamspace: ACME } });
+      expect(apiCalls.map((c) => c.path)).toEqual([`/v2/teamspaces/${ACME}/usage`]);
+    });
+
+    test("a name or a single teamspace resolves to its id", async () => {
+      teamspaces([
+        { id: PERSONAL, name: "Personal", isPersonal: true },
+        { id: ACME, name: "Acme" },
+      ]);
+      const client = await connect();
+      await client.callTool({ name: "get_usage", arguments: { teamspace: "acme" } });
+      expect(apiCalls.at(-1)?.path).toBe(`/v2/teamspaces/${ACME}/usage`);
+
+      teamspaces([{ id: ACME, name: "Acme" }]);
+      await client.callTool({ name: "get_usage", arguments: {} });
+      expect(apiCalls.at(-1)?.path).toBe(`/v2/teamspaces/${ACME}/usage`);
+    });
+
+    test("with several teamspaces and none named, the error lists the choices", async () => {
+      teamspaces([
+        { id: PERSONAL, name: "Personal", isPersonal: true },
+        { id: ACME, name: "Acme" },
+      ]);
+      const client = await connect();
+      const result = await client.callTool({ name: "get_usage", arguments: {} });
+
+      expect(result.isError).toBe(true);
+      expect(text(result)).toContain(`Acme = ${ACME}`);
+      expect(apiCalls.map((c) => c.path)).toEqual(["/v2/teamspaces"]);
+    });
   });
 
   test("read_only hides write tools and write actions", async () => {
@@ -257,4 +291,27 @@ test("an API error body of an untrusted tool is fenced too", async () => {
   const tag = /<(untrusted-data-[0-9a-f-]{36})>/.exec(text(result))?.[1];
   expect(tag).toBeDefined();
   expect(text(result).trimEnd().endsWith(`</${tag}>`)).toBe(true);
+});
+
+test("library ids are accepted as /owner/repo, owner/repo or a context7.com URL", () => {
+  for (const value of ["/Acme/Docs", "acme/docs", "https://context7.com/acme/docs/"]) {
+    expect(normalizeLibraryId(value)).toBe("/acme/docs");
+  }
+  expect(() => normalizeLibraryId("acme")).toThrow(/not a library id/);
+});
+
+test("poll stops at a final state or at the deadline", async () => {
+  const states = ["processing", "processing", "complete"];
+  let calls = 0;
+  const done = (value: unknown) => value === "complete";
+  await expect(poll(async () => states[calls++], done, { intervalMs: 1 })).resolves.toBe(
+    "complete"
+  );
+  expect(calls).toBe(3);
+
+  calls = 0;
+  await expect(
+    poll(async () => (calls++, "processing"), done, { timeoutMs: 20, intervalMs: 5 })
+  ).resolves.toBe("processing");
+  expect(calls).toBeLessThan(6);
 });

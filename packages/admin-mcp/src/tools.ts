@@ -66,10 +66,57 @@ const ADD_URL_FIELDS: Record<string, string | undefined> = {
 
 const ts = (id: string) => `/v2/teamspaces/${seg(id)}`;
 
+/**
+ * A library id as Context7 stores it: `/owner/repo`, lowercase. Also takes
+ * `owner/repo` and a context7.com library URL, which agents often pass.
+ */
+export function normalizeLibraryId(value: string): string {
+  const path = value
+    .trim()
+    .replace(/^https?:\/\/(?:www\.)?context7\.com/i, "")
+    .replace(/\/+$/, "");
+  const id = (path.startsWith("/") ? path : `/${path}`).toLowerCase();
+  if (!/^\/[^/]+\/[^/]+$/.test(id)) {
+    throw new ToolError(
+      `"${value}" is not a library id. Use one like "/owner/repo" (from list_libraries).`
+    );
+  }
+  return id;
+}
+
 function lib(teamspace: string, libraryId: string): string {
-  const match = /^\/([^/]+)\/([^/]+)$/.exec(libraryId);
-  if (!match) throw new ToolError('Use a library id like "/owner/repo".');
-  return `${ts(teamspace)}/libraries/${seg(match[1])}/${seg(match[2])}`;
+  const [, owner, repo] = normalizeLibraryId(libraryId).split("/");
+  return `${ts(teamspace)}/libraries/${seg(owner)}/${seg(repo)}`;
+}
+
+/**
+ * Calls `fetchOnce` until `isDone` holds or about 25 seconds pass, so an agent
+ * waits for a parse, build or crawl in one tool call instead of polling.
+ * Gives the last answer either way; its state says whether the job finished.
+ */
+export async function poll(
+  fetchOnce: () => Promise<unknown>,
+  isDone: (value: unknown) => boolean,
+  { timeoutMs = 25_000, intervalMs = 3_000 }: { timeoutMs?: number; intervalMs?: number } = {}
+): Promise<unknown> {
+  const deadline = Date.now() + timeoutMs;
+  let value = await fetchOnce();
+  while (!isDone(value) && Date.now() + intervalMs < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    value = await fetchOnce();
+  }
+  return value;
+}
+
+const wait = z
+  .boolean()
+  .optional()
+  .describe("Wait up to about 25 seconds for the job to finish before answering.");
+
+/** The `state` (or `indexStatus.kind`) of a result, read through a `{ data }` envelope. */
+function stateOf(value: unknown, key: "state" | "indexStatus"): unknown {
+  const record = data(value);
+  return key === "state" ? record.state : (record.indexStatus as { kind?: unknown })?.kind;
 }
 
 const site = (teamspace: string, siteId: string) => `${ts(teamspace)}/sites/${seg(siteId)}`;
@@ -104,10 +151,25 @@ function memberEmail(body: unknown, memberId: string): string | undefined {
   return typeof email === "string" ? email : undefined;
 }
 
-const libraryId = z.string().describe('Library id, such as "/owner/repo" (from list_libraries).');
+const libraryId = z
+  .string()
+  .describe('Library id, such as "/owner/repo" (from list_libraries). "owner/repo" also works.');
 const siteId = z.string().describe("Docs7 site id (from list_sites).");
 const siteKey = z.string().describe("Ask site key, such as ask_… (from list_ask_sites).");
 const askDays = z.union([z.literal(1), z.literal(7), z.literal(30)]).optional();
+
+const SOURCE_TYPE = z.enum([
+  "public_repos",
+  "private_sources",
+  "confluence",
+  "uploaded_files",
+  "websites",
+  "llmstxt",
+]);
+const LIST_OPERATION = z.union([
+  z.object({ add: z.array(z.string()).optional(), remove: z.array(z.string()).optional() }),
+  z.object({ clear: z.literal(true) }),
+]);
 
 const SITE_REPORTS = {
   visitors: "humans",
@@ -215,61 +277,59 @@ export const TOOLS: ToolDef[] = [
     group: "libraries",
     title: "Get library",
     description:
-      "Get one library: parse state and progress (the active task), versions, token and snippet counts. Poll this after add_library, refresh_library or manage_library_versions until the parse is done.",
+      "Get one library: parse state (processing, finalizing, complete, error), the active task's progress, versions, token and snippet counts. After add_library, refresh_library or manage_library_versions, call it with `wait: true` until the state is complete or error.",
     kind: "read",
-    args: { library_id: libraryId },
-    run: ({ teamspace, library_id }, api) => api.get(lib(teamspace, library_id)),
+    args: { library_id: libraryId, wait },
+    run: ({ teamspace, library_id, wait }, api) => {
+      const path = lib(teamspace, library_id);
+      return wait
+        ? poll(
+            () => api.get(path),
+            (value) => ["complete", "error"].includes(stateOf(value, "state") as string)
+          )
+        : api.get(path);
+    },
   }),
   tool({
     name: "add_library",
     group: "libraries",
     title: "Add library",
     description:
-      "Add a library to the teamspace. The parse takes minutes: poll get_library with the returned library id. For private GitHub, GitLab, Bitbucket, Confluence or Notion sources, the user connects the account in the dashboard first.",
+      "Add a library to the teamspace from a repository, website, llms.txt or OpenAPI URL. The parse takes minutes: then call get_library with the library id from the answer and `wait: true`. A private repository needs the GitHub, GitLab or Bitbucket account connected in the dashboard. Confluence, Notion and file uploads are added in the dashboard.",
     kind: "write",
     args: {
-      source: z.enum([
-        "github",
-        "gitlab",
-        "bitbucket",
-        "git",
-        "website",
-        "llmstxt",
-        "openapi",
-        "confluence",
-        "notion",
-      ]),
-      url: z
+      source: z
+        .enum(["github", "gitlab", "bitbucket", "git", "website", "llmstxt", "openapi"])
+        .describe("`git` is any other Git host."),
+      url: z.string().describe("Repository, documentation website, llms.txt or OpenAPI spec URL."),
+      private: z
+        .boolean()
+        .optional()
+        .describe("Add a repository as a private source (owner or admin, paid plan)."),
+      website_base_url: z
         .string()
         .optional()
-        .describe(
-          "Repository, website, llms.txt or OpenAPI URL. Not used for Confluence or Notion."
-        ),
-      options: z
-        .record(z.string(), z.unknown())
+        .describe("Websites only: crawl only pages under this URL."),
+      generate_docs: z
+        .boolean()
         .optional()
-        .describe(
-          "Other fields for the source, such as `private`, `websiteBaseUrl`, or the Confluence or Notion space and page ids."
-        ),
+        .describe("Private repositories only: generate docs from the source code."),
     },
-    run: ({ teamspace, source, url, options }, api) => {
-      // A git token would pass through the model; private sources use the dashboard connection.
-      const fields = { ...options };
-      delete fields.gitToken;
-      const urlField = ADD_URL_FIELDS[source];
-      return api.post(`${ts(teamspace)}/libraries`, {
-        ...fields,
-        ...(urlField && url ? { [urlField]: url } : {}),
+    run: ({ teamspace, source, url, private: isPrivate, website_base_url, generate_docs }, api) =>
+      api.post(`${ts(teamspace)}/libraries`, {
         source,
-      });
-    },
+        [ADD_URL_FIELDS[source]!]: url,
+        private: isPrivate,
+        websiteBaseUrl: website_base_url,
+        generateDocs: generate_docs,
+      }),
   }),
   tool({
     name: "refresh_library",
     group: "libraries",
     title: "Refresh library",
     description:
-      "Start a refresh of a library (the daily refresh limit applies). Then poll get_library until the parse is done.",
+      "Start a refresh of a library (the daily refresh limit applies). Then call get_library with `wait: true`.",
     kind: "write",
     args: { library_id: libraryId },
     run: ({ teamspace, library_id }, api) => api.post(`${lib(teamspace, library_id)}/refresh`),
@@ -279,24 +339,64 @@ export const TOOLS: ToolDef[] = [
     group: "libraries",
     title: "Update library config",
     description:
-      "Change library settings: projectTitle, description, branch, folders, excludeFolders, excludeFiles, rules, baseUrl, webUrl, excludeUrls, disallow, useQueryParams, skipClaudeVersionExclusion, configSource (dashboard or context7json). Only the teamspace that owns the library can do this. Returns the saved config.",
+      "Change the settings of a library the teamspace owns. Send only the fields to change. A new title or description of a public library is reviewed before it shows. Returns the saved config. Refresh the library to apply parse settings.",
     kind: "write",
     idempotent: true,
     args: {
       library_id: libraryId,
-      changes: z
-        .record(z.string(), z.unknown())
-        .describe("Only the fields to change, with the names above."),
+      title: z.string().max(100).optional(),
+      description: z.string().max(500).optional(),
+      branch: z.string().max(100).optional().describe("Branch to parse (repositories)."),
+      folders: z.array(z.string()).max(50).optional().describe("Parse only these folders."),
+      exclude_folders: z.array(z.string()).max(50).optional(),
+      exclude_files: z.array(z.string()).max(100).optional(),
+      rules: z
+        .array(z.string().max(255))
+        .max(50)
+        .optional()
+        .describe("Rules shown to agents with this library's docs."),
+      base_url: z.string().optional().describe("Websites: the base URL to crawl."),
+      web_url: z.string().optional().describe("Link shown on the library page."),
+      exclude_urls: z
+        .array(z.string())
+        .max(100)
+        .optional()
+        .describe("Websites: URLs not to crawl."),
+      use_query_params: z.boolean().optional().describe("Websites: keep query parameters."),
+      keep_version_specific_pages: z
+        .boolean()
+        .optional()
+        .describe("Keep pages that look specific to one version."),
+      stop_indexing: z.boolean().optional().describe("Stop indexing the library."),
+      config_source: z
+        .enum(["dashboard", "context7json"])
+        .optional()
+        .describe("Read settings from these fields, or from the repository's context7.json."),
     },
-    run: ({ teamspace, library_id, changes }, api) =>
-      api.patch(lib(teamspace, library_id), changes),
+    run: ({ teamspace, library_id, ...fields }, api) =>
+      api.patch(lib(teamspace, library_id), {
+        projectTitle: fields.title,
+        description: fields.description,
+        branch: fields.branch,
+        folders: fields.folders,
+        excludeFolders: fields.exclude_folders,
+        excludeFiles: fields.exclude_files,
+        rules: fields.rules,
+        baseUrl: fields.base_url,
+        webUrl: fields.web_url,
+        excludeUrls: fields.exclude_urls,
+        useQueryParams: fields.use_query_params,
+        skipClaudeVersionExclusion: fields.keep_version_specific_pages,
+        disallow: fields.stop_indexing,
+        configSource: fields.config_source,
+      }),
   }),
   tool({
     name: "manage_library_versions",
     group: "libraries",
     title: "Manage library versions",
     description:
-      "Add or remove a version (a tag or branch) of a library. After `add`, poll get_library until the version is parsed. `remove` needs `confirm` set to the version name, after the user confirms.",
+      "Add or remove a version (a tag or branch) of a library. After `add`, call get_library with `wait: true`. `remove` needs `confirm` set to the version name, after the user confirms.",
     actions: { add: "write", remove: "destructive" },
     args: {
       library_id: libraryId,
@@ -356,7 +456,10 @@ export const TOOLS: ToolDef[] = [
       confirm: z.string().describe("The library id, after the user confirms."),
     },
     run: ({ teamspace, library_id, confirm }, api) => {
-      confirmed(confirm, library_id, "the library id");
+      const id = normalizeLibraryId(library_id);
+      // "owner/repo" and "/Owner/Repo" confirm the same library as "/owner/repo".
+      const said = confirm.trim().replace(/^\/?/, "/").toLowerCase();
+      confirmed(said, id, "the library id");
       return api.del(lib(teamspace, library_id));
     },
   }),
@@ -414,16 +517,18 @@ export const TOOLS: ToolDef[] = [
         case "create":
           return api.post(base, {
             text: need(args.text, "`text` is required."),
-            libraryId: args.library_id ?? null,
+            libraryId: args.library_id ? normalizeLibraryId(args.library_id) : null,
           });
         case "update":
           return api.patch(`${base}/${ruleId()}`, {
             text: need(args.text, "`text` is required."),
-            libraryId: args.library_id ?? null,
+            libraryId: args.library_id ? normalizeLibraryId(args.library_id) : null,
           });
         default:
           confirmed(args.confirm, need(args.rule_id, "`rule_id` is required."), "the rule id");
-          return api.del(`${base}/${ruleId()}`, { query: { libraryId: args.library_id } });
+          return api.del(`${base}/${ruleId()}`, {
+            query: { libraryId: args.library_id && normalizeLibraryId(args.library_id) },
+          });
       }
     },
   }),
@@ -441,19 +546,62 @@ export const TOOLS: ToolDef[] = [
     group: "rules",
     title: "Update policies",
     description:
-      "Change the library filters of the teamspace (owner or admin). Call get_policies first. Use `dry_run: true` to get the count of matching libraries without saving.",
+      'Change which libraries the teamspace can use (owner or admin). Send changes as operations, not the get_policies shape. Each list takes { add: [...] }, { remove: [...] } or { clear: true }; library entries are "/org/repo", "/org" or a domain. Use `dry_run: true` first to see how many libraries the change leaves.',
     kind: "write",
     idempotent: true,
     args: {
-      changes: z
-        .record(z.string(), z.unknown())
-        .describe(
-          'Operations, not the get_policies shape. `sourceTypes`: { enable?, disable? } (source type keys). `libraryFilters`: { mode?: quality|select|null, quality?: { requireVerified?, minTrustScore? (0-10|null), maxAgeDays?, blockedLibraries?, exceptedLibraries?, repoFilters?: { minStars?, allowedLicenses? }, websiteFilters?: { minBacklinks?, minReferringDomains?, minOrganicTraffic? } }, select?: { allowedLibraries? } }. Each list takes { add?: [...], remove?: [...] } or { clear: true }; library entries are "/org/repo", "/org" or a domain.'
-        ),
-      dry_run: z.boolean().optional(),
+      source_types: z
+        .object({
+          enable: z.array(SOURCE_TYPE).optional(),
+          disable: z.array(SOURCE_TYPE).optional(),
+        })
+        .optional(),
+      library_filters: z
+        .object({
+          mode: z
+            .enum(["quality", "select"])
+            .nullable()
+            .optional()
+            .describe(
+              "quality: filter by the rules below; select: only allowed libraries; null: off."
+            ),
+          quality: z
+            .object({
+              requireVerified: z.boolean().optional(),
+              minTrustScore: z.number().int().min(0).max(10).nullable().optional(),
+              maxAgeDays: z.number().int().min(1).nullable().optional(),
+              blockedLibraries: LIST_OPERATION.optional(),
+              exceptedLibraries: LIST_OPERATION.optional(),
+              repoFilters: z
+                .object({
+                  minStars: z.number().int().min(0).nullable().optional(),
+                  allowedLicenses: LIST_OPERATION.optional(),
+                })
+                .optional(),
+              websiteFilters: z
+                .object({
+                  minBacklinks: z.number().int().min(0).nullable().optional(),
+                  minReferringDomains: z.number().int().min(0).nullable().optional(),
+                  minOrganicTraffic: z.number().int().min(0).nullable().optional(),
+                })
+                .optional(),
+            })
+            .optional(),
+          select: z.object({ allowedLibraries: LIST_OPERATION.optional() }).optional(),
+        })
+        .optional(),
+      dry_run: z.boolean().optional().describe("Preview the change and its library count."),
     },
-    run: ({ teamspace, changes, dry_run }, api) =>
-      api.patch(`${ts(teamspace)}/policies`, { ...changes, dryRun: dry_run }),
+    run: ({ teamspace, source_types, library_filters, dry_run }, api) => {
+      if (!source_types && !library_filters) {
+        throw new ToolError("Send `source_types` or `library_filters`.");
+      }
+      return api.patch(`${ts(teamspace)}/policies`, {
+        sourceTypes: source_types,
+        libraryFilters: library_filters,
+        dryRun: dry_run,
+      });
+    },
   }),
   tool({
     name: "manage_library_requests",
@@ -556,7 +704,7 @@ export const TOOLS: ToolDef[] = [
     group: "docs7",
     title: "Create Docs7 site",
     description:
-      "Add a Docs7 site from a GitHub repository. The Docs7 GitHub app must be installed on the repository (the user does this in the dashboard). A repository without docs.json or mint.json becomes an agent-only site, which is not published. Gives the site and the first build's `deploymentId` (null when no build started): poll get_deployment with it.",
+      "Add a Docs7 site from a GitHub repository. The Docs7 GitHub app must be installed on the repository (the user does this in the dashboard). A repository without docs.json or mint.json becomes an agent-only site, which is not published. Gives the site and the first build's `deploymentId` (null when no build started): call get_deployment with it and `wait: true`.",
     kind: "write",
     args: {
       repo_url: z.string().describe("https://github.com/owner/repo"),
@@ -593,48 +741,75 @@ export const TOOLS: ToolDef[] = [
     group: "docs7",
     title: "Update Docs7 site",
     description:
-      'Change a Docs7 site: slug, branch, docs path, custom domain, agent schedule, PR Review, Code Watch, or publish an agent-only site with `hosting: "on"`. After a custom domain change, call check_domain.',
+      'Change a Docs7 site. Send only the fields to change. A developer can only send `hosting: "on"`, which publishes an agent-only site. After a custom domain change, call check_domain.',
     kind: "write",
     idempotent: true,
     args: {
       site_id: siteId,
-      changes: z
+      slug: z.string().optional().describe("First label of the <slug>.docs7.io hostname."),
+      branch: z.string().nullable().optional().describe("Branch to build; null: the default."),
+      docs_path: z.string().optional(),
+      custom_domain: z.string().nullable().optional().describe("null removes the domain."),
+      custom_domain_path: z.string().nullable().optional(),
+      custom_domain_routing: z.enum(["dns", "proxy"]).nullable().optional(),
+      hosting: z.literal("on").optional().describe("Publish an agent-only site. One-way."),
+      context7_index: z.boolean().optional().describe("Keep the site's library on Context7."),
+      improve_schedule: z
+        .enum(["off", "daily", "weekly"])
+        .optional()
+        .describe("How often the Context7 Agent looks for improvements."),
+      analytics_url: z
+        .string()
+        .nullable()
+        .optional()
+        .describe("Docs URL of a site not hosted here."),
+      pull_request_review: z
         .object({
-          slug: z.string(),
-          branch: z.string().nullable(),
-          docsPath: z.string(),
-          customDomain: z.string().nullable(),
-          customDomainPath: z.string().nullable(),
-          customDomainRouting: z.enum(["dns", "proxy"]).nullable(),
-          hosting: z.literal("on"),
-          context7Index: z.boolean(),
-          improveSchedule: z.enum(["off", "daily", "weekly"]),
-          analyticsUrl: z.string().nullable(),
-          pullRequestReview: z
-            .object({
-              enabled: z.boolean(),
-              checks: z.object({
-                brokenLinks: z.boolean(),
-                grammar: z.boolean(),
-                health: z.boolean(),
-                standards: z.boolean(),
-              }),
-              response: z.enum(["comment", "pull_request", "commit"]),
-            })
-            .describe("All PR Review settings. Read the current ones with get_site."),
-          codeWatch: z
-            .object({
-              enabled: z.boolean(),
-              repositories: z.array(z.string()).max(50).describe("https repository URLs."),
-            })
-            .describe("All Code Watch settings: the full list of watched repositories."),
+          enabled: z.boolean(),
+          checks: z.object({
+            broken_links: z.boolean(),
+            grammar: z.boolean(),
+            health: z.boolean(),
+            standards: z.boolean(),
+          }),
+          response: z.enum(["comment", "pull_request", "commit"]),
         })
-        .partial()
-        .describe(
-          'Only the fields to change. A developer can only send { hosting: "on" }, for an agent-only site.'
-        ),
+        .optional()
+        .describe("All PR Review settings at once. Read the current ones with get_site."),
+      code_watch: z
+        .object({
+          enabled: z.boolean(),
+          repositories: z.array(z.string()).max(50).describe("https repository URLs."),
+        })
+        .optional()
+        .describe("All Code Watch settings: the full list of watched repositories."),
     },
-    run: ({ teamspace, site_id, changes }, api) => api.patch(site(teamspace, site_id), changes),
+    run: ({ teamspace, site_id, ...fields }, api) => {
+      const review = fields.pull_request_review;
+      return api.patch(site(teamspace, site_id), {
+        slug: fields.slug,
+        branch: fields.branch,
+        docsPath: fields.docs_path,
+        customDomain: fields.custom_domain,
+        customDomainPath: fields.custom_domain_path,
+        customDomainRouting: fields.custom_domain_routing,
+        hosting: fields.hosting,
+        context7Index: fields.context7_index,
+        improveSchedule: fields.improve_schedule,
+        analyticsUrl: fields.analytics_url,
+        pullRequestReview: review && {
+          enabled: review.enabled,
+          checks: {
+            brokenLinks: review.checks.broken_links,
+            grammar: review.checks.grammar,
+            health: review.checks.health,
+            standards: review.checks.standards,
+          },
+          response: review.response,
+        },
+        codeWatch: fields.code_watch,
+      });
+    },
   }),
   tool({
     name: "check_domain",
@@ -665,19 +840,27 @@ export const TOOLS: ToolDef[] = [
     group: "docs7",
     title: "Get deployment",
     description:
-      'Get one build of a Docs7 site. Poll this after deploy_site until it finishes. For a failed build, add `include: ["health", "logs"]`.',
+      'Get one build of a Docs7 site (queued, building, succeeded, failed or canceled). After deploy_site, call it with `wait: true` until it ends. For a failed build, add `include: ["health", "logs"]`.',
     kind: "read",
     untrusted: true,
     args: {
       site_id: siteId,
       deployment_id: z.string(),
       include: z.array(z.enum(["logs", "health", "origin"])).optional(),
+      wait,
     },
-    run: async ({ teamspace, site_id, deployment_id, include: requested = [] }, api) => {
+    run: async ({ teamspace, site_id, deployment_id, include: requested = [], wait }, api) => {
       const include = [...new Set(requested)];
       const path = `${site(teamspace, site_id)}/deployments/${seg(deployment_id)}`;
+      const deployment = wait
+        ? await poll(
+            () => api.get(path),
+            (value) =>
+              ["succeeded", "failed", "canceled"].includes(stateOf(value, "state") as string)
+          )
+        : await api.get(path);
       const parts = await Promise.all([
-        api.get(path),
+        deployment,
         ...include.map((part) => api.get(`${path}/${part}`)),
       ]);
       return Object.fromEntries([
@@ -691,7 +874,7 @@ export const TOOLS: ToolDef[] = [
     group: "docs7",
     title: "Deploy Docs7 site",
     description:
-      "Deploy a Docs7 site to production, or deploy a preview of a branch. Gives a deployment id: poll get_deployment until it finishes.",
+      "Deploy a Docs7 site to production, or deploy a preview of a branch. Gives a deployment id: then call get_deployment with `wait: true`.",
     kind: "write",
     args: {
       site_id: siteId,
@@ -728,7 +911,7 @@ export const TOOLS: ToolDef[] = [
     group: "docs7",
     title: "Run Context7 Agent",
     description:
-      "Start the Context7 Agent on a Docs7 site (owner or admin). `suggestions` needs `suggestion_ids` and `health` needs `issue_ids` (from manage_site_findings). `feature_requests` adds the feature requests page; `page_feedback` turns on page ratings. Then poll get_agent_runs with the returned run id.",
+      "Start the Context7 Agent on a Docs7 site (owner or admin). `suggestions` needs `suggestion_ids` and `health` needs `issue_ids` (from manage_site_findings). `feature_requests` adds the feature requests page; `page_feedback` turns on page ratings. Then call get_agent_runs with the returned run id and `wait: true`.",
     kind: "write",
     args: {
       site_id: siteId,
@@ -751,7 +934,7 @@ export const TOOLS: ToolDef[] = [
     group: "docs7",
     title: "Get agent runs",
     description:
-      "Get the agent run history of a Docs7 site (improve, review or watch), or one run with `run_id`.",
+      "Get the agent run history of a Docs7 site (improve, review or watch), or one run with `run_id` (running, completed, failed or superseded). A run takes minutes and ends with a pull request.",
     kind: "read",
     untrusted: true,
     args: {
@@ -759,10 +942,17 @@ export const TOOLS: ToolDef[] = [
       run_id: z.string().optional(),
       history: z.enum(["improve", "review", "watch"]).optional(),
       limit: z.number().int().min(1).max(50).optional(),
+      wait: wait.describe("With `run_id`: wait up to about 25 seconds for the run to end."),
     },
-    run: ({ teamspace, site_id, run_id, history, limit }, api) => {
+    run: ({ teamspace, site_id, run_id, history, limit, wait }, api) => {
       const path = `${site(teamspace, site_id)}/agent-runs`;
-      return run_id ? api.get(`${path}/${seg(run_id)}`) : api.get(path, { history, limit });
+      if (!run_id) return api.get(path, { history, limit });
+      const once = () => api.get(`${path}/${seg(run_id)}`);
+      return wait
+        ? poll(once, (value) =>
+            ["completed", "failed", "superseded"].includes(stateOf(value, "state") as string)
+          )
+        : once();
     },
   }),
   tool({
@@ -775,7 +965,7 @@ export const TOOLS: ToolDef[] = [
       list_suggestions: "read",
       dismiss_suggestions: "destructive",
       list_build_issues: "read",
-      dismiss_build_issues: "write",
+      dismiss_build_issues: "destructive",
       list_feature_requests: "read",
       ship_feature_request: "write",
       reopen_feature_request: "write",
@@ -948,10 +1138,17 @@ export const TOOLS: ToolDef[] = [
     group: "ask",
     title: "Get Ask site",
     description:
-      "Get one Ask site: verification, index status and the snippet to embed. Poll this after verify_ask_site until the crawl is done.",
+      "Get one Ask site: verification, index status (pending, submitted, ready or failed) and the snippet to embed. After verify_ask_site, call it with `wait: true` until the index is ready or failed.",
     kind: "read",
-    args: { site_key: siteKey },
-    run: ({ teamspace, site_key }, api) => api.get(askSite(teamspace, site_key)),
+    args: { site_key: siteKey, wait },
+    run: ({ teamspace, site_key, wait }, api) => {
+      const once = () => api.get(askSite(teamspace, site_key));
+      return wait
+        ? poll(once, (value) =>
+            ["ready", "failed"].includes(stateOf(value, "indexStatus") as string)
+          )
+        : once();
+    },
   }),
   tool({
     name: "create_ask_site",
@@ -968,7 +1165,7 @@ export const TOOLS: ToolDef[] = [
     group: "ask",
     title: "Verify Ask site",
     description:
-      "Check the meta tag of an Ask site and start the crawl. Then poll get_ask_site until the crawl is done.",
+      "Check the meta tag of an Ask site and start the crawl. Then call get_ask_site with `wait: true`.",
     kind: "write",
     idempotent: true,
     args: { site_key: siteKey },

@@ -105,7 +105,8 @@ function truncate(text: string): string {
 /** Pretty JSON, cut to size, and fenced with a new random tag when it holds third-party text. */
 export function formatResult(value: unknown, untrusted: boolean): string {
   const text = truncate(
-    typeof value === "string" ? value : (JSON.stringify(value, null, 2) ?? "null")
+    // Compact JSON: indentation costs tokens and helps no model read it.
+    typeof value === "string" ? value : (JSON.stringify(value) ?? "null")
   );
   if (!untrusted) return text;
   const tag = `untrusted-data-${randomUUID()}`;
@@ -126,8 +127,38 @@ function errorText(error: unknown, untrusted: boolean): string {
 function instructions(config: ServerConfig): string {
   const scope = config.teamspace
     ? `This server is pinned to teamspace ${config.teamspace}.`
-    : "Call list_teamspaces to get the teamspaces of the user and their ids.";
-  return `Manage Context7 teamspaces. Tool groups: ${[...config.features].join(", ")}${config.readOnly ? " (read-only)" : ""}. ${scope} Remove and delete actions need the user's confirmation first. Deleting a whole Docs7 or Ask site is not in this server: send the user to the dashboard. Billing, plans, API keys and SSO are not in this server: send the user to https://context7.com/dashboard.`;
+    : "Tools take `teamspace` as an id or a name; leave it out when the user has one teamspace. list_teamspaces gives them all.";
+  return [
+    `Manage Context7 teamspaces. Tool groups: ${[...config.features].join(", ")}${config.readOnly ? " (read-only)" : ""}. ${scope}`,
+    "Long jobs (library parse, Docs7 build, agent run, Ask crawl) take minutes: call the get_ tool with `wait: true` and repeat until the state is final.",
+    "Common flows: claim a library (claim_library gives context7.json; commit it, then claim_library with verify: true). Set up Ask (create_ask_site gives a meta tag; add it to the site head, deploy, then verify_ask_site). Fix a failed docs build (get_deployment with include health and logs). Find doc gaps (get_site_analytics report queries, or get_ask_analytics).",
+    "Remove and delete actions need the user's confirmation first. Deleting a whole Docs7 or Ask site, billing, plans, API keys and SSO are not in this server: send the user to https://context7.com/dashboard.",
+  ].join("\n");
+}
+
+const TEAMSPACE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type TeamspaceSummary = { id: string; name: string; isPersonal?: boolean };
+
+/**
+ * The teamspace a tool acts on: an id as given, else the one teamspace whose
+ * name matches, else the user's only teamspace. Otherwise the error lists the
+ * choices, so the model can pick one without another call.
+ */
+async function resolveTeamspace(value: unknown, api: Api): Promise<string> {
+  if (typeof value === "string" && TEAMSPACE_ID.test(value.trim())) return value.trim();
+  const { teamspaces = [] } = (await api.get("/v2/teamspaces")) as {
+    teamspaces?: TeamspaceSummary[];
+  };
+  const name = typeof value === "string" ? value.trim().toLowerCase() : "";
+  const matches = name ? teamspaces.filter((t) => t.name.toLowerCase() === name) : teamspaces;
+  if (matches.length === 1) return matches[0].id;
+  const choices = teamspaces
+    .map((t) => `${t.name}${t.isPersonal ? " (personal)" : ""} = ${t.id}`)
+    .join("; ");
+  throw new ToolError(
+    `${name ? `No single teamspace is named "${String(value)}".` : "Which teamspace?"} Ask the user if it is not clear, then pass \`teamspace\` as one of: ${choices || "none found"}.`
+  );
 }
 
 /** A fresh server for one HTTP request, with the tools its config allows. */
@@ -162,7 +193,14 @@ export function createAdminServer(state: RequestState): McpServer {
     const inputSchema = z.object({
       ...(def.teamspace === false || config.teamspace
         ? {}
-        : { teamspace: z.string().describe("Teamspace id from list_teamspaces.") }),
+        : {
+            teamspace: z
+              .string()
+              .optional()
+              .describe(
+                "Teamspace id or name (from list_teamspaces). Leave out when the user has one teamspace."
+              ),
+          }),
       ...(actions ? { action: z.enum(actions as [string, ...string[]]) } : {}),
       ...def.args,
     });
@@ -182,9 +220,12 @@ export function createAdminServer(state: RequestState): McpServer {
         },
       },
       async (args: Record<string, unknown>): Promise<CallToolResult> => {
-        const input = { ...args, teamspace: config.teamspace ?? args.teamspace };
+        const input: Record<string, unknown> = { ...args, teamspace: config.teamspace };
         let result: CallToolResult;
         try {
+          if (def.teamspace !== false && !config.teamspace) {
+            input.teamspace = await resolveTeamspace(args.teamspace, api);
+          }
           const value = await def.run(input as Parameters<typeof def.run>[0], api);
           result = {
             content: [{ type: "text", text: formatResult(value, Boolean(def.untrusted)) }],
