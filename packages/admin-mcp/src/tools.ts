@@ -296,18 +296,22 @@ export const TOOLS: ToolDef[] = [
     group: "libraries",
     title: "Manage library versions",
     description:
-      "Add or remove a version (a tag or branch) of a library. After `add`, poll get_library until the version is parsed.",
+      "Add or remove a version (a tag or branch) of a library. After `add`, poll get_library until the version is parsed. `remove` needs `confirm` set to the version name, after the user confirms.",
     actions: { add: "write", remove: "destructive" },
     args: {
       library_id: libraryId,
       version: z.string().describe("Tag or branch name."),
       is_branch: z.boolean().optional().describe("`version` is a branch, not a tag (add)."),
+      confirm: z
+        .string()
+        .optional()
+        .describe("The version name, after the user confirms the removal (remove)."),
     },
-    run: ({ teamspace, action, library_id, version, is_branch }, api) => {
+    run: ({ teamspace, action, library_id, version, is_branch, confirm }, api) => {
       const base = `${lib(teamspace, library_id)}/versions`;
-      return action === "add"
-        ? api.post(base, { version, isBranch: is_branch })
-        : api.del(`${base}/${seg(version)}`);
+      if (action === "add") return api.post(base, { version, isBranch: is_branch });
+      confirmed(confirm, version, "the version name");
+      return api.del(`${base}/${seg(version)}`);
     },
   }),
   tool({
@@ -380,7 +384,7 @@ export const TOOLS: ToolDef[] = [
     group: "rules",
     title: "Manage rules",
     description:
-      "List, create, update or delete the rules that Context7 adds to answers, for the whole teamspace or for one library. `list` gives all rules: `global` (teamspace rules) and `libraries` (rules by library id), each keyed by rule id. Changes need a paid plan.",
+      "List, create, update or delete the rules that Context7 adds to answers, for the whole teamspace or for one library. `list` gives all rules: `global` (teamspace rules) and `libraries` (rules by library id), each keyed by rule id. Changes need a paid plan. `delete` needs `confirm` set to the rule id, after the user confirms.",
     actions: { list: "read", create: "write", update: "write", delete: "destructive" },
     args: {
       rule_id: z.string().optional().describe("Rule id from list (update, delete)."),
@@ -391,6 +395,10 @@ export const TOOLS: ToolDef[] = [
         .describe(
           "Library id of a library rule (create, update, delete). Leave out for a teamspace rule."
         ),
+      confirm: z
+        .string()
+        .optional()
+        .describe("The rule id, after the user confirms the deletion (delete)."),
     },
     run: (args, api) => {
       const base = `${ts(args.teamspace)}/rules`;
@@ -409,6 +417,7 @@ export const TOOLS: ToolDef[] = [
             libraryId: args.library_id ?? null,
           });
         default:
+          confirmed(args.confirm, need(args.rule_id, "`rule_id` is required."), "the rule id");
           return api.del(`${base}/${ruleId()}`, { query: { libraryId: args.library_id } });
       }
     },
@@ -713,11 +722,18 @@ export const TOOLS: ToolDef[] = [
     name: "remove_preview",
     group: "docs7",
     title: "Remove preview",
-    description: "Remove the preview of a branch from a Docs7 site.",
+    description:
+      "Remove the preview of a branch from a Docs7 site. Ask the user to confirm first, then set `confirm` to the branch name.",
     kind: "destructive",
-    args: { site_id: siteId, branch: z.string() },
-    run: ({ teamspace, site_id, branch }, api) =>
-      api.del(`${site(teamspace, site_id)}/previews`, { query: { branch } }),
+    args: {
+      site_id: siteId,
+      branch: z.string(),
+      confirm: z.string().describe("The branch name, after the user confirms."),
+    },
+    run: ({ teamspace, site_id, branch, confirm }, api) => {
+      confirmed(confirm, branch, "the branch name");
+      return api.del(`${site(teamspace, site_id)}/previews`, { query: { branch } });
+    },
   }),
   tool({
     name: "run_site_agent",

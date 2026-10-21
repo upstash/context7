@@ -1,4 +1,5 @@
 import { createMcpHandler } from "@modelcontextprotocol/server";
+import { filterBatchSelfCancellations } from "./batch.js";
 import { createAdminServer, parseServerConfig, type RequestState } from "./server.js";
 
 const ORIGIN = new URL(process.env.RESOURCE_URL || "https://admin.mcp.context7.com").origin;
@@ -57,9 +58,12 @@ export function createAdminHandler() {
 
   return {
     close: () => mcp.close(),
-    fetch: async (request: Request): Promise<Response> => {
-      const authorization = request.headers.get("authorization") ?? "";
+    fetch: async (incoming: Request): Promise<Response> => {
+      const authorization = incoming.headers.get("authorization") ?? "";
       if (!/^Bearer\s+\S/i.test(authorization)) return challenge();
+
+      const request = await withoutSelfCancellations(incoming);
+      if (!request) return new Response(null, { status: 202 });
 
       let config;
       try {
@@ -137,4 +141,32 @@ export async function authorizationServerMetadata(): Promise<Response> {
       { status: 502 }
     );
   }
+}
+
+/**
+ * The request with legacy request/cancellation pairs removed from its batch,
+ * or null when nothing is left to dispatch (answered 202). Only POST carries
+ * messages; other methods keep the SDK's own handling.
+ */
+async function withoutSelfCancellations(request: Request): Promise<Request | null> {
+  if (request.method !== "POST") return request;
+  const text = await request.text();
+  let message: unknown;
+  try {
+    message = JSON.parse(text);
+  } catch {
+    message = undefined;
+  }
+  const filtered = filterBatchSelfCancellations(message);
+  if (filtered.removedSelfCancellation && Array.isArray(filtered.body) && !filtered.body.length) {
+    return null;
+  }
+  const headers = new Headers(request.headers);
+  headers.delete("content-length");
+  return new Request(request.url, {
+    method: "POST",
+    headers,
+    body: filtered.removedSelfCancellation ? JSON.stringify(filtered.body) : text,
+    signal: request.signal,
+  });
 }

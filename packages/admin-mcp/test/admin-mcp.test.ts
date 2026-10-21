@@ -191,6 +191,28 @@ describe("authentication", () => {
     }
   );
 
+  // The SDK would wait for an answer to the cancelled request and hold the
+  // stream (and the Vercel invocation) open until timeout.
+  test("a legacy batch that cancels its own request is answered 202 at once", async () => {
+    const response = await handler.fetch(
+      new Request("https://admin.mcp.context7.com/mcp", {
+        method: "POST",
+        headers: {
+          authorization: "Bearer ctx7sk-test",
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream",
+        },
+        body: JSON.stringify([
+          { jsonrpc: "2.0", id: 7, method: "tools/call", params: { name: "list_teamspaces" } },
+          { jsonrpc: "2.0", method: "notifications/cancelled", params: { requestId: 7 } },
+        ]),
+      })
+    );
+
+    expect(response.status).toBe(202);
+    expect(apiCalls).toHaveLength(0);
+  });
+
   test("an API 503 is a tool error, not a 401", async () => {
     const client = await connect("?teamspace=ts-1");
     apiReply = () => ({ status: 503, body: { error: "unavailable" } });
