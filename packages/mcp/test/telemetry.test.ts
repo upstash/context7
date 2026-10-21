@@ -1,6 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { Client } from "@modelcontextprotocol/client";
-import { InMemoryTransport, type JSONRPCMessage } from "@modelcontextprotocol/server";
+import {
+  CLIENT_INFO_META_KEY,
+  InMemoryTransport,
+  type JSONRPCMessage,
+} from "@modelcontextprotocol/server";
 import {
   ROOT_CONTEXT,
   SpanKind,
@@ -21,6 +25,7 @@ import {
   InstrumentedMcpServer,
   mcpRouteFromUrl,
   mcpTraceCarrier,
+  normalizeMcpClientName,
   normalizeMcpMethodName,
   normalizeMcpToolName,
 } from "../src/lib/mcp-telemetry.js";
@@ -62,6 +67,27 @@ describe("MCP telemetry cardinality", () => {
     expect(normalizeMcpToolName("query-docs")).toBe("query-docs");
     expect(normalizeMcpToolName("resolve-library-id")).toBe("resolve-library-id");
     expect(normalizeMcpToolName("attacker-controlled-tool")).toBe("unknown");
+  });
+
+  test("labels clients from clientInfo, else the User-Agent, within an allowlist", () => {
+    const ping: JSONRPCMessage = { jsonrpc: "2.0", id: 1, method: "ping" };
+    const initialize: JSONRPCMessage = {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "initialize",
+      params: { clientInfo: { name: "cursor-vscode", version: "1.0.0" } },
+    };
+    const modernPing: JSONRPCMessage = {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "ping",
+      params: { _meta: { [CLIENT_INFO_META_KEY]: { name: "Claude Code", version: "2.0.0" } } },
+    };
+    expect(normalizeMcpClientName(initialize, "node")).toBe("cursor");
+    expect(normalizeMcpClientName(modernPing, "node")).toBe("claude-code");
+    expect(normalizeMcpClientName(ping, "fleet-router/1.0 (+rize.bm)")).toBe("fleet-router");
+    expect(normalizeMcpClientName(ping, "attacker-controlled/1.0")).toBe("other");
+    expect(normalizeMcpClientName(ping, undefined)).toBe("unknown");
   });
 
   test("labels both protected Express route spellings as OAuth", () => {

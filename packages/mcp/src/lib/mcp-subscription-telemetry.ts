@@ -30,6 +30,7 @@ export interface SubscriptionObservation {
   networkTransport: "pipe" | "tcp";
   protocolVersion?: string;
   route: McpRoute;
+  userAgent?: string;
 }
 
 export interface SubscriptionEntryOperation {
@@ -529,6 +530,7 @@ export function instrumentMcpHttpHandler(
         networkTransport: "tcp",
         protocolVersion: listen.protocolVersion,
         route: mcpRouteFromUrl(request.url),
+        userAgent: request.headers.get("user-agent") ?? undefined,
       };
       const operation = startOperation(listen.message, observation);
       const abortOperation = (): void => operation.fail("cancelled");

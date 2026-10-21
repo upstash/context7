@@ -1,5 +1,6 @@
 import {
   BAGGAGE_META_KEY,
+  CLIENT_INFO_META_KEY,
   McpServer,
   PROTOCOL_VERSION_META_KEY,
   SUPPORTED_PROTOCOL_VERSIONS,
@@ -87,6 +88,57 @@ const KNOWN_MCP_METHODS = new Set([
   "tools/list",
 ]);
 const KNOWN_TOOLS: ReadonlySet<string> = new Set(MCP_TOOL_NAMES);
+// Lower-cased clientInfo names and User-Agent product tokens, mapped to one
+// label per client. Everything else is "other", so callers cannot add series.
+const KNOWN_MCP_CLIENTS = new Map<string, string>([
+  ["claude-code", "claude-code"],
+  ["claude code", "claude-code"],
+  ["claude-ai", "claude-ai"],
+  ["cursor", "cursor"],
+  ["cursor-vscode", "cursor"],
+  ["visual studio code", "vscode"],
+  ["visual-studio-code", "vscode"],
+  ["visual-studio-code-insiders", "vscode"],
+  ["vscode", "vscode"],
+  ["codex", "codex"],
+  ["codex-mcp-client", "codex"],
+  ["codex_cli_rs", "codex"],
+  ["gemini-cli", "gemini-cli"],
+  ["gemini-cli-mcp-client", "gemini-cli"],
+  ["github-copilot-developer", "copilot"],
+  ["githubcopilot", "copilot"],
+  ["windsurf", "windsurf"],
+  ["windsurf-client", "windsurf"],
+  ["antigravity", "antigravity"],
+  ["antigravity-client", "antigravity"],
+  ["opencode", "opencode"],
+  ["cline", "cline"],
+  ["roo-code", "roo-code"],
+  ["roo code", "roo-code"],
+  ["kilo-code", "kilo-code"],
+  ["kilo code", "kilo-code"],
+  ["kiro", "kiro"],
+  ["kiro-mcp-client", "kiro"],
+  ["zed", "zed"],
+  ["junie", "junie"],
+  ["junie-client", "junie"],
+  ["q-dev-cli", "amazon-q"],
+  ["augment-mcp-client", "augment"],
+  ["jetbrains-ai-assistant-client", "jetbrains"],
+  ["trae", "trae"],
+  ["cherry-studio", "cherry-studio"],
+  ["ai-sdk-mcp-client", "ai-sdk"],
+  ["mcp-remote", "mcp-remote"],
+  ["fleet-router", "fleet-router"],
+  // Generic HTTP stacks: SDK clients that send no product User-Agent.
+  ["node", "node"],
+  ["bun", "bun"],
+  ["python-httpx", "python-httpx"],
+  ["go-http-client", "go-http-client"],
+  ["java-http-client", "java-http-client"],
+  ["okhttp", "okhttp"],
+  ["curl", "curl"],
+]);
 export const MODERN_MCP_PROTOCOL_VERSION = "2026-07-28";
 const KNOWN_PROTOCOL_VERSIONS = new Set([
   ...SUPPORTED_PROTOCOL_VERSIONS,
@@ -133,6 +185,11 @@ function getInstruments() {
       unit: "s",
       advice: { explicitBucketBoundaries: MCP_DURATION_BUCKETS_SECONDS },
     }),
+    clientOperations: meter.createCounter("context7.mcp.client.operations", {
+      description:
+        "MCP requests and notifications received, by client. Kept apart from the duration histogram so the client label does not multiply its buckets",
+      unit: "{operation}",
+    }),
     activeOperations: meter.createUpDownCounter("context7.mcp.operations.active", {
       description: "Number of MCP requests and notifications currently being handled",
       unit: "{operation}",
@@ -170,6 +227,38 @@ function normalizedTool(message: JSONRPCMessage): string | undefined {
 
 function normalizedProtocolVersion(value: unknown): string | undefined {
   return typeof value === "string" && KNOWN_PROTOCOL_VERSIONS.has(value) ? value : undefined;
+}
+
+function mcpClientLabel(name: string | undefined): string | undefined {
+  if (!name) return undefined;
+  return KNOWN_MCP_CLIENTS.get(name.trim().toLowerCase()) ?? "other";
+}
+
+/**
+ * Bounded client label: the protocol clientInfo name (the modern per-request
+ * `_meta` envelope or a legacy initialize), else the User-Agent product token.
+ * Legacy requests after initialize carry no clientInfo, so they fall back to
+ * the User-Agent.
+ */
+export function normalizeMcpClientName(
+  message: JSONRPCMessage,
+  userAgent: string | undefined
+): string {
+  const params =
+    isJSONRPCRequest(message) || isJSONRPCNotification(message)
+      ? asRecord(message.params)
+      : undefined;
+  const clientInfo =
+    asRecord(asRecord(params?._meta)?.[CLIENT_INFO_META_KEY]) ??
+    (isJSONRPCRequest(message) && message.method === "initialize"
+      ? asRecord(params?.clientInfo)
+      : undefined);
+  const clientInfoName = typeof clientInfo?.name === "string" ? clientInfo.name : undefined;
+  return (
+    mcpClientLabel(clientInfoName) ??
+    mcpClientLabel(/^[^/\s]+/.exec(userAgent ?? "")?.[0]) ??
+    "unknown"
+  );
 }
 
 function messageProtocolVersion(message: JSONRPCMessage): string | undefined {
@@ -267,7 +356,12 @@ function startOperation(
     startedAt: performance.now(),
   } satisfies McpOperation;
   operation.context = trace.setSpan(parentContext, span);
-  mcpInstruments().activeOperations.add(1, activeAttributes);
+  const { activeOperations, clientOperations } = mcpInstruments();
+  activeOperations.add(1, activeAttributes);
+  clientOperations.add(1, {
+    "context7.mcp.client.name": normalizeMcpClientName(message, config.userAgent),
+    "mcp.method.name": method,
+  });
   return operation;
 }
 
@@ -376,6 +470,7 @@ function configFromRequestContext(requestContext: McpRequestContext): McpObserva
     protocolVersion:
       normalizedProtocolVersion(request.headers.get("mcp-protocol-version")) ??
       (requestContext.era === "modern" ? MODERN_MCP_PROTOCOL_VERSION : undefined),
+    userAgent: request.headers.get("user-agent") ?? undefined,
   };
 }
 
