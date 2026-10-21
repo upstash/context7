@@ -21,7 +21,7 @@ The SDK returns structured JSON by default, consistent with its other methods. S
       Up to four library names or Context7 library IDs. These hints narrow the search when you already know which products are relevant.
     </ParamField>
     <ParamField path="version" type="string">
-      A version to search. Provide at least one library hint. With one library hint, the version is strict and Search returns 404 if no matching tag exists. With multiple libraries, it is a contextual preference.
+      A version to search. Provide at least one library hint. With one library hint, Search serves the requested version; if no indexed tag matches it, Search serves the newest stable release of the same line or the current documentation. With multiple libraries, it is a contextual preference.
     </ParamField>
     <ParamField path="language" type="string">
       A programming language to prefer when ranking snippets, such as `TypeScript` or `Python`. This is a preference, so Context7 can still return product documentation when a language-specific snippet is unavailable.

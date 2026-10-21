@@ -179,6 +179,11 @@ Context7 checks a new title or description before it saves it. If the text gives
     | **Exclude URLs**             | URL patterns to exclude from crawling. Supports wildcards.                                       | Max 100 patterns                |
     | **Page Content Selectors**   | CSS selectors of the page content, such as `article.doc`. Use if the crawl reads only the menu.  | Max 20, 200 characters each     |
     | **Frames**                   | Read text inside iframes. Turn on when each page loads into an iframe. Disabled by default.      | Boolean                         |
+
+    <Note>
+      Hash fragments (`#...`) are not indexed. Pages that differ only by their fragment, such as
+      hash-routed documentation sites, are crawled as a single page.
+    </Note>
   </Tab>
 </Tabs>
 
