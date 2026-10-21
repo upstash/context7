@@ -55,7 +55,7 @@ Automatic and manual refreshes work across all supported source types:
 
 ### When a Website Refresh Fails
 
-A website refresh replaces the current version only when the crawl succeeds. If the site blocks the crawler with an anti-bot page or access wall, or the crawl reads fewer than 10% of the pages in the last version, the last version stays in place and the version is marked as failed. The refresh is tried again later, and the reason for the failure appears in the library logs.
+A website refresh replaces the current version only when the crawl succeeds. If the crawl reads fewer than 10% of the pages in the last version, for example because the site now blocks the crawler, the last version stays in place. The reason appears in the library logs, and the refresh is tried again later. If the site really became smaller, change its crawl settings: the first refresh after a settings change skips this check.
 
 ## Related
 
