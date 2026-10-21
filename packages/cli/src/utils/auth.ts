@@ -286,17 +286,14 @@ export async function getValidAccessToken(
   let result: string | undefined | typeof REFRESH_REJECTED;
   const release = await acquireRefreshLock();
   try {
-    let refreshToken = tokens.refresh_token;
-    if (release) {
-      // Another process may have refreshed (or been rejected and cleared the
-      // credentials) while we waited for the lock. Re-read before deciding.
-      const latest = loadTokens();
-      if (!latest) return undefined;
-      if (!isTokenExpired(latest)) return latest.access_token;
-      if (!latest.refresh_token) return undefined;
-      refreshToken = latest.refresh_token;
-    }
-    result = await refreshAndStore(refreshToken);
+    // Another process may have refreshed (or been rejected and cleared the
+    // credentials) in the meantime, whether or not we got the lock. Re-read
+    // before deciding, so we never send a refresh token that is already used.
+    const latest = loadTokens();
+    if (!latest) return undefined;
+    if (!isTokenExpired(latest)) return latest.access_token;
+    if (!latest.refresh_token) return undefined;
+    result = await refreshAndStore(latest.refresh_token);
   } finally {
     // Released before any sign-in prompt so waiting commands never block on
     // the user's answer.

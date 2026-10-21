@@ -12,6 +12,7 @@ vi.mock("fs", () => {
     openSync: vi.fn(),
     closeSync: vi.fn(),
     statSync: vi.fn(),
+    utimesSync: vi.fn(),
   };
   return { ...fns, default: fns };
 });

@@ -5,8 +5,9 @@ export type ReleaseLock = () => void;
 
 export interface FileLockOptions {
   /**
-   * A lock file older than this is treated as left behind by a process that
-   * died without releasing it, and is removed so no command hangs on it.
+   * A lock file not touched for this long is treated as left behind by a
+   * process that died without releasing it, and is removed so no command
+   * hangs on it. A live holder touches its lock well within this window.
    */
   staleMs?: number;
   /** Delay between attempts while another process holds the lock. */
@@ -32,10 +33,16 @@ function sleep(ms: number): Promise<void> {
  * the descriptor is closed right away so the holder's death leaves nothing
  * open and the stale check can clean up after it.
  *
+ * While held, the lock's mtime is touched every `staleMs / 3` so that only a
+ * dead holder's lock ever looks stale. A holder that is merely slow (a token
+ * request through a proxy, a cold server) keeps the lock, and waiters keep
+ * waiting; breaking it would let them repeat the work the holder is in the
+ * middle of. The wait is therefore bounded by the holder's lifetime plus
+ * `staleMs`, never by a fixed deadline.
+ *
  * Resolves to a release function once the lock is held, or to `null` when the
- * lock cannot be taken at all (read-only directory, unsupported filesystem,
- * or a lock that stays held past `staleMs` even after being broken). Callers
- * fall back to running unlocked rather than failing.
+ * lock cannot be taken at all (read-only directory, unsupported filesystem).
+ * Callers fall back to running unlocked rather than failing.
  */
 export async function acquireFileLock(
   lockPath: string,
@@ -43,21 +50,11 @@ export async function acquireFileLock(
 ): Promise<ReleaseLock | null> {
   const staleMs = options.staleMs ?? DEFAULT_LOCK_STALE_MS;
   const pollMs = options.pollMs ?? DEFAULT_LOCK_POLL_MS;
-  // A live holder releases well within staleMs, and a dead one's lock is
-  // broken once it is that old. Doubling it leaves room for lock churn while
-  // still bounding the wait for callers.
-  const deadline = Date.now() + staleMs * 2;
 
   for (;;) {
     try {
       fs.closeSync(fs.openSync(lockPath, "wx", 0o600));
-      return () => {
-        try {
-          fs.unlinkSync(lockPath);
-        } catch {
-          // Already removed (e.g. broken as stale by a waiter); nothing to do.
-        }
-      };
+      return holdLock(lockPath, staleMs);
     } catch (error) {
       if (errorCode(error) !== "EEXIST") return null;
     }
@@ -80,7 +77,32 @@ export async function acquireFileLock(
       continue;
     }
 
-    if (Date.now() >= deadline) return null;
     await sleep(pollMs);
   }
+}
+
+function holdLock(lockPath: string, staleMs: number): ReleaseLock {
+  const heartbeat = setInterval(
+    () => {
+      try {
+        const now = new Date();
+        fs.utimesSync(lockPath, now, now);
+      } catch {
+        // The lock is gone (broken as stale on a frozen machine, or the
+        // directory was removed). Nothing to keep fresh; release copes.
+      }
+    },
+    Math.max(1, Math.floor(staleMs / 3))
+  );
+  // Never keep the process alive just to touch the lock.
+  heartbeat.unref();
+
+  return () => {
+    clearInterval(heartbeat);
+    try {
+      fs.unlinkSync(lockPath);
+    } catch {
+      // Already removed; nothing to do.
+    }
+  };
 }
