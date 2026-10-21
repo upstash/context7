@@ -25,7 +25,7 @@ Clients that support MCP OAuth sign in on the first request. The server answers 
 
 ### API key (CI and scripts)
 
-Send a Context7 API key from [the dashboard](https://context7.com/dashboard) as a bearer. An API key reaches only its own teamspace.
+Create a Context7 API key in [the dashboard](https://context7.com/dashboard) with **Management access** turned on, and send it as a bearer. A key without management access gets 403, and a key reaches only its own teamspace.
 
 ```json
 {
@@ -49,16 +49,17 @@ Send a Context7 API key from [the dashboard](https://context7.com/dashboard) as 
 
 ## Tools
 
-| Group     | Tools                                                                                                                                                                                                                                                                                 |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| account   | `list_teamspaces`, `get_teamspace`, `manage_members`                                                                                                                                                                                                                                  |
-| libraries | `list_libraries`, `get_library`, `add_library`, `refresh_library`, `update_library_config`, `manage_library_versions`, `claim_library`, `remove_library`, `get_library_analytics`                                                                                                     |
-| rules     | `manage_rules`, `get_policies`, `update_policies`, `manage_library_requests`                                                                                                                                                                                                          |
-| usage     | `get_usage`, `set_spending_limit`                                                                                                                                                                                                                                                     |
-| docs7     | `list_sites`, `get_site`, `create_site`, `update_site`, `check_domain`, `delete_site`, `list_deployments`, `get_deployment`, `deploy_site`, `remove_preview`, `run_site_agent`, `get_agent_runs`, `manage_site_findings`, `get_site_analytics`, `query_site_logs`, `get_conversation` |
-| ask       | `list_ask_sites`, `get_ask_site`, `create_ask_site`, `verify_ask_site`, `get_ask_analytics`, `list_ask_questions`, `delete_ask_site`                                                                                                                                                  |
+| Group     | Tools                                                                                                                                                                                                                                                                  |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| account   | `list_teamspaces`, `get_teamspace`, `manage_members`                                                                                                                                                                                                                   |
+| libraries | `list_libraries`, `get_library`, `add_library`, `refresh_library`, `update_library_config`, `manage_library_versions`, `claim_library`, `remove_library`, `get_library_analytics`                                                                                      |
+| rules     | `manage_rules`, `get_policies`, `update_policies`, `manage_library_requests`                                                                                                                                                                                           |
+| usage     | `get_usage`, `set_spending_limit`                                                                                                                                                                                                                                      |
+| docs7     | `list_sites`, `get_site`, `create_site`, `update_site`, `check_domain`, `list_deployments`, `get_deployment`, `deploy_site`, `remove_preview`, `run_site_agent`, `get_agent_runs`, `manage_site_findings`, `get_site_analytics`, `query_site_logs`, `get_conversation` |
+| ask       | `list_ask_sites`, `get_ask_site`, `create_ask_site`, `verify_ask_site`, `get_ask_analytics`, `list_ask_questions`                                                                                                                                                      |
 
-- `delete_site`, `delete_ask_site`, `remove_library` and `manage_members` `remove` need `confirm` set to the site slug, the site URL, the library id or the member's email. The agent must ask you first.
+- `remove_library`, `manage_members` `remove`, `manage_library_versions` `remove`, `manage_rules` `delete` and `remove_preview` need `confirm` set to the library id, the member's email, the version name, the rule id or the branch name. The agent must ask you first.
+- Deleting a whole Docs7 site or Ask site cannot be undone, so it is not in this server. Do it in [the dashboard](https://context7.com/dashboard).
 - Results that hold third-party text (questions, searches, feedback, build logs, agent runs) are fenced in `<untrusted-data-…>` tags.
 - Results above about 20,000 tokens are cut, with a note on how to narrow the request.
 

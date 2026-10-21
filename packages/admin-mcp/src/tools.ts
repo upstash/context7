@@ -648,24 +648,6 @@ export const TOOLS: ToolDef[] = [
     run: ({ teamspace, site_id }, api) => api.post(`${site(teamspace, site_id)}/domain/refresh`),
   }),
   tool({
-    name: "delete_site",
-    group: "docs7",
-    title: "Delete Docs7 site",
-    description:
-      "Delete a Docs7 site and stop serving it. Ask the user to confirm first, then set `confirm` to the site slug (the first label of its docs7.io hostname).",
-    kind: "destructive",
-    args: {
-      site_id: siteId,
-      confirm: z.string().describe("The site slug, after the user confirms."),
-    },
-    run: async ({ teamspace, site_id, confirm }, api) => {
-      const path = site(teamspace, site_id);
-      const hostname = data(await api.get(path)).platformHostname;
-      confirmed(confirm, typeof hostname === "string" ? hostname.split(".")[0] : "", "the slug");
-      return api.del(path);
-    },
-  }),
-  tool({
     name: "list_deployments",
     group: "docs7",
     title: "List deployments",
@@ -1042,24 +1024,6 @@ export const TOOLS: ToolDef[] = [
       if (question_id) return api.get(`${path}/${seg(question_id)}`);
       const { page, client, days, search, answer } = query;
       return api.get(path, { page, client, days, search, answer });
-    },
-  }),
-  tool({
-    name: "delete_ask_site",
-    group: "ask",
-    title: "Delete Ask site",
-    description:
-      "Delete an Ask site, its questions and its index. Ask the user to confirm first, then set `confirm` to the site URL exactly as get_ask_site gives it.",
-    kind: "destructive",
-    args: {
-      site_key: siteKey,
-      confirm: z.string().describe("The site URL, after the user confirms."),
-    },
-    run: async ({ teamspace, site_key, confirm }, api) => {
-      const path = askSite(teamspace, site_key);
-      const url = data(await api.get(path)).url;
-      confirmed(confirm, typeof url === "string" ? url : "", "the site URL");
-      return api.del(path);
     },
   }),
 ];

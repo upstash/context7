@@ -127,7 +127,7 @@ function instructions(config: ServerConfig): string {
   const scope = config.teamspace
     ? `This server is pinned to teamspace ${config.teamspace}.`
     : "Call list_teamspaces to get the teamspaces of the user and their ids.";
-  return `Manage Context7 teamspaces. Tool groups: ${[...config.features].join(", ")}${config.readOnly ? " (read-only)" : ""}. ${scope} Delete and remove tools need the user's confirmation first. Billing, plans, API keys and SSO are not in this server: send the user to https://context7.com/dashboard.`;
+  return `Manage Context7 teamspaces. Tool groups: ${[...config.features].join(", ")}${config.readOnly ? " (read-only)" : ""}. ${scope} Remove and delete actions need the user's confirmation first. Deleting a whole Docs7 or Ask site is not in this server: send the user to the dashboard. Billing, plans, API keys and SSO are not in this server: send the user to https://context7.com/dashboard.`;
 }
 
 /** A fresh server for one HTTP request, with the tools its config allows. */

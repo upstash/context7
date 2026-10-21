@@ -87,7 +87,7 @@ describe("query parameters", () => {
     const names = tools.map((t) => t.name);
 
     expect(tools.every((t) => t.annotations?.readOnlyHint === true)).toBe(true);
-    expect(names).not.toContain("delete_site");
+    expect(names).not.toContain("remove_library");
     expect(names).not.toContain("manage_library_versions");
     expect(names).toContain("list_sites");
     const members = tools.find((t) => t.name === "manage_members")!;
@@ -106,27 +106,33 @@ describe("query parameters", () => {
 });
 
 describe("destructive tools", () => {
-  test("delete_site refuses a confirm that is not the slug, and deletes on a match", async () => {
-    apiReply = () => ({ body: { data: { platformHostname: "acme-docs.docs7.io" } } });
+  test("remove_library refuses a confirm that is not the library id, and removes on a match", async () => {
     const client = await connect("?teamspace=ts-1");
 
     const refused = await client.callTool({
-      name: "delete_site",
-      arguments: { site_id: "site-1", confirm: "site-1" },
+      name: "remove_library",
+      arguments: { library_id: "/acme/docs", confirm: "acme" },
     });
     expect(refused.isError).toBe(true);
     expect(text(refused)).toMatch(/Refused.*Ask the user/);
     expect(apiCalls.some((c) => c.method === "DELETE")).toBe(false);
 
-    const deleted = await client.callTool({
-      name: "delete_site",
-      arguments: { site_id: "site-1", confirm: "acme-docs" },
+    const removed = await client.callTool({
+      name: "remove_library",
+      arguments: { library_id: "/acme/docs", confirm: "/acme/docs" },
     });
-    expect(deleted.isError).toBeFalsy();
+    expect(removed.isError).toBeFalsy();
     expect(apiCalls.at(-1)).toMatchObject({
       method: "DELETE",
-      path: "/v2/teamspaces/ts-1/sites/site-1",
+      path: "/v2/teamspaces/ts-1/libraries/acme/docs",
     });
+  });
+
+  // Deleting a whole site cannot be undone, so it stays in the dashboard.
+  test("there is no tool that deletes a Docs7 or Ask site", async () => {
+    const names = (await (await connect()).listTools()).tools.map((t) => t.name);
+    expect(names).not.toContain("delete_site");
+    expect(names).not.toContain("delete_ask_site");
   });
 
   test("get_site skips agent usage for a CLI site, which has no agent", async () => {
