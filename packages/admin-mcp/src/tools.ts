@@ -691,7 +691,8 @@ export const TOOLS: ToolDef[] = [
       deployment_id: z.string(),
       include: z.array(z.enum(["logs", "health", "origin"])).optional(),
     },
-    run: async ({ teamspace, site_id, deployment_id, include = [] }, api) => {
+    run: async ({ teamspace, site_id, deployment_id, include: requested = [] }, api) => {
+      const include = [...new Set(requested)];
       const path = `${site(teamspace, site_id)}/deployments/${seg(deployment_id)}`;
       const parts = await Promise.all([
         api.get(path),
