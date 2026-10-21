@@ -98,8 +98,6 @@ for info in docs["infoSnippets"]:
     print(f"Content: {info['content'][:200]}...")
 ```
 
-Each snippet carries `rank`, its 1-based position in the shared rerank order across `codeSnippets` and `infoSnippets`. Sort both lists together by `rank` to reproduce the order the text response uses.
-
 Library hints are optional and do not need to be exact. You can provide up to four names or exact Context7 library IDs. Use `version` with at least one library hint, and use `language` when you want language-specific examples to rank higher.
 
 ### Choose a library yourself
