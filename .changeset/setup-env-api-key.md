@@ -2,4 +2,4 @@
 "ctx7": patch
 ---
 
-`ctx7 setup` uses `CONTEXT7_API_KEY` for hosted Context7, including CLI setup, so an environment key skips the browser login.
+`ctx7 setup` skips the browser login when `CONTEXT7_API_KEY` is set, in both MCP and CLI mode.

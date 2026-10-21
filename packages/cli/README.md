@@ -115,8 +115,6 @@ ctx7 setup --project
 ctx7 setup --yes
 ```
 
-On hosted Context7, `--api-key` and `CONTEXT7_API_KEY` both skip the browser login. `--oauth` still selects the OAuth endpoint. CLI setup uses an environment key for that run and does not save it to the credentials file.
-
 For a custom `--base-url`, setup discovers whether MCP authentication is enabled and writes either an anonymous HTTP entry or an `Authorization: Bearer` header. Interactive setup requests the personal key with masked input, keeping it out of shell history; `--api-key` and `CONTEXT7_API_KEY` remain available for automation. Setup uses bundled rule and skill content and skips the npm update check and telemetry, so after `ctx7` is installed it contacts only the configured deployment. Enterprise environments can mirror `ctx7` and its dependencies in an internal npm registry. Custom deployments support MCP HTTP setup; hosted OAuth, stdio, and CLI-query mode are not supported for on-premise targets.
 
 ### Uninstall setup

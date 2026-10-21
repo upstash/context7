@@ -96,7 +96,7 @@ export function registerSetupCommand(program: Command): void {
     .option("--cli", "Set up CLI + Skills mode (no MCP server)")
     .option("-p, --project", "Configure for current project instead of globally")
     .option("-y, --yes", "Skip confirmation prompts")
-    .option("--api-key <key>", "Use API key authentication (or set CONTEXT7_API_KEY)")
+    .option("--api-key <key>", "Use API key authentication")
     .option("--oauth", "Use OAuth endpoint (IDE handles auth flow)")
     .option("--stdio", "Configure the MCP server as a local stdio process (default: HTTP)")
     // The root option handles shared API configuration; this local declaration also
@@ -120,16 +120,6 @@ async function promptForOnPremApiKey(deployment: CustomSetupDeployment): Promise
   }
 }
 
-function apiKeyFromEnv(): string | undefined {
-  const apiKey = process.env.CONTEXT7_API_KEY?.trim();
-  return apiKey || undefined;
-}
-
-function markAuthenticated(): void {
-  log.blank();
-  log.plain(`${pc.green("✔")} Authenticated`);
-}
-
 async function resolveAuth(
   options: SetupOptions,
   deployment: SetupDeployment
@@ -147,7 +137,7 @@ async function resolveAuth(
       return null;
     }
 
-    const apiKey = explicitApiKey || apiKeyFromEnv();
+    const apiKey = explicitApiKey || process.env.CONTEXT7_API_KEY?.trim();
     if (apiKey) return { mode: "api-key", apiKey };
 
     if (!options.yes) {
@@ -162,11 +152,9 @@ async function resolveAuth(
     return null;
   }
 
-  // --api-key and --oauth are choices for this run. The env key is what lets
-  // CI, containers, and SSH finish setup without a browser.
   if (explicitApiKey) return { mode: "api-key", apiKey: explicitApiKey };
   if (options.oauth) return { mode: "oauth" };
-  const envApiKey = apiKeyFromEnv();
+  const envApiKey = process.env.CONTEXT7_API_KEY?.trim();
   if (envApiKey) return { mode: "api-key", apiKey: envApiKey };
 
   const resolvedApiKey = await resolveSetupApiKey();
@@ -223,22 +211,20 @@ async function resolveMode(options: SetupOptions): Promise<SetupMode> {
 }
 
 async function resolveCliAuth(apiKey?: string): Promise<void> {
-  const explicitApiKey = apiKey?.trim();
-  if (explicitApiKey) {
-    saveTokens({ access_token: explicitApiKey, token_type: "bearer" });
-    markAuthenticated();
+  if (apiKey) {
+    saveTokens({ access_token: apiKey, token_type: "bearer" });
+    log.blank();
+    log.plain(`${pc.green("✔")} Authenticated`);
     return;
   }
 
-  // Later commands already send this key. Don't copy it into the credentials file.
-  if (apiKeyFromEnv()) {
-    markAuthenticated();
-    return;
-  }
-
-  const validToken = await getValidAccessToken({ recoverExpiredSession: false });
-  if (validToken) {
-    markAuthenticated();
+  // Every request already sends CONTEXT7_API_KEY; do not save it.
+  if (
+    process.env.CONTEXT7_API_KEY?.trim() ||
+    (await getValidAccessToken({ recoverExpiredSession: false }))
+  ) {
+    log.blank();
+    log.plain(`${pc.green("✔")} Authenticated`);
     return;
   }
 
