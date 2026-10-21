@@ -993,6 +993,22 @@ describe("agent config integration", () => {
       expect(patched.args).toEqual(["-y", "@upstash/context7-mcp"]);
     });
 
+    test("replaces an inline --api-key=<value> arg", () => {
+      const patched = patchStdioApiKey(
+        { command: "npx", args: ["-y", "@upstash/context7-mcp", "--api-key=OLD"] },
+        "NEW"
+      );
+      expect(patched.args).toEqual(["-y", "@upstash/context7-mcp", "--api-key", "NEW"]);
+    });
+
+    test("removes an inline --api-key=<value> arg when new key is undefined (oauth)", () => {
+      const patched = patchStdioApiKey(
+        { command: "npx", args: ["-y", "@upstash/context7-mcp", "--api-key=OLD"] },
+        undefined
+      );
+      expect(patched.args).toEqual(["-y", "@upstash/context7-mcp"]);
+    });
+
     test("preserves other args (e.g. --debug) untouched", () => {
       const patched = patchStdioApiKey(
         {

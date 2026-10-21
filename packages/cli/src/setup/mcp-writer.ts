@@ -145,6 +145,7 @@ function stripApiKeyPair(args: string[]): string[] {
       i++; // skip the value too
       continue;
     }
+    if (args[i].startsWith("--api-key=")) continue;
     result.push(args[i]);
   }
   return result;
