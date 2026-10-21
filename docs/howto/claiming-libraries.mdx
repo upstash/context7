@@ -178,6 +178,8 @@ Context7 checks a new title or description before it saves it. If the text gives
     | **Keep Hash (URL Fragments)**| Whether to treat URLs with different hash fragments as distinct pages. Disabled by default.      | Boolean                         |
     | **Keep Query Parameters**    | Whether to treat URLs with different query strings as distinct pages. Enabled by default.        | Boolean                         |
     | **Exclude URLs**             | URL patterns to exclude from crawling. Supports wildcards.                                       | Max 100 patterns                |
+    | **Page Content Selectors**   | CSS selectors of the page content to keep. The crawl reads only these elements.                  | Max 20 selectors                |
+    | **Frames**                   | Whether to read text inside iframes on each page. Disabled by default.                           | Boolean                         |
   </Tab>
 </Tabs>
 
