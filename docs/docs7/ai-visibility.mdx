@@ -36,9 +36,12 @@ Docs7 currently tracks:
 AI Visibility shows which product made the request. It does not show the exact model version.
 </Note>
 
-## WebMCP searches
+## Agent questions
 
-Docs7 exposes a read-only `search_docs` WebMCP tool in browsers that support WebMCP. The **WebMCP searches** table shows the most common queries sent through that tool.
+The **Agent questions** card shows the most common questions that AI agents send to your docs. It shows one source at a time:
+
+- **Ask endpoint**: a note on every page tells agents how to ask the docs with `/ask?q=<keywords or question>`.
+- **WebMCP**: Docs7 exposes a read-only `ask_docs` WebMCP tool in browsers that support WebMCP.
 
 These are separate from searches typed by people in the website search box. Human search terms appear under [Analytics](/docs7/analytics#searches).
 
@@ -58,3 +61,7 @@ The recent request table shows:
 - the request time
 
 Use this view to confirm that a crawler reaches the expected URL or to investigate a change in provider activity.
+
+## Feature requests and page feedback
+
+The last two cards show what agents and readers told your site. **Feature requests** lists the features they asked for, with their votes. **Page feedback** shows the page ratings and comments. Each card shows how many came from agents and how many from people. See [Feature requests](/docs7/feature-requests) and [Feedback from agents](/docs7/agent-readiness#feedback-from-agents).

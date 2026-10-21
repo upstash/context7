@@ -50,8 +50,9 @@ async function resolveCommand(
 ): Promise<void> {
   trackEvent("command", { name: "library" });
 
-  const spinner = isTTY ? ora(`Searching for "${library}"...`).start() : null;
+  // Resolve the token before the spinner starts: an expired session may prompt.
   const accessToken = await getValidAccessToken();
+  const spinner = isTTY ? ora(`Searching for "${library}"...`).start() : null;
 
   let data;
   try {
@@ -131,8 +132,9 @@ async function queryCommand(
     return;
   }
 
-  const spinner = isTTY ? ora(`Fetching docs for "${libraryId}"...`).start() : null;
+  // Resolve the token before the spinner starts: an expired session may prompt.
   const accessToken = await getValidAccessToken();
+  const spinner = isTTY ? ora(`Fetching docs for "${libraryId}"...`).start() : null;
   const outputType = options.json ? "json" : "txt";
 
   let result;

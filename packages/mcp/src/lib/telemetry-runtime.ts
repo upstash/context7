@@ -106,6 +106,10 @@ export function recordAuthenticationEvent(observation: AuthenticationEventObserv
   implementation?.recordAuthenticationEvent(observation);
 }
 
+export function recordSelfCancellingBatch(userAgent: string | undefined): void {
+  implementation?.recordSelfCancellingBatch(userAgent);
+}
+
 export async function observeUpstreamRequest<T>(
   operationName: UpstreamOperation,
   request: () => Promise<Response>,

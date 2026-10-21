@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.8.1
+
+### Patch Changes
+
+- 5a2b651: Narrow the "Do not use for" line in the server instructions and rule templates so agents use Context7 when they port code between libraries, platforms, or SQL dialects.
+- 323bda9: Keep the comments and trailing commas in an OpenCode config file when `ctx7 setup` or `ctx7 remove` edits it.
+- 7f6943d: `ctx7 setup` now removes an existing `--api-key=<value>` arg when it rewrites a stdio MCP entry, so switching to OAuth or rotating the key no longer leaves the old key in the config.
+
+## 0.8.0
+
+### Minor Changes
+
+- 94cdfb1: Remove the deprecated `skills` and `generate` commands from `ctx7`; `ctx7 setup` still installs the find-docs and context7-mcp skills.
+
+## 0.7.0
+
+### Minor Changes
+
+- f54b372: Tell users when their Context7 session has expired instead of silently continuing without an account. If the server rejects the stored refresh token, the CLI clears the dead credentials. In a terminal it asks "Your Context7 session has expired. Sign in again now? (Y/n)" and, on yes, signs you in and continues the command. In scripts, agents, CI or with `--json` it never prompts; it prints a one-line notice to stderr and continues anonymously. Network errors, rate limits and server errors keep the credentials so the next command retries.
+
+## 0.6.1
+
+### Patch Changes
+
+- 615e72b: Update the Next.js examples in the tool descriptions, the CLI rule and the bundled skill: the version example is now `/vercel/next.js/v16.2.9`, and the prompts use Next.js 16.
+
 ## 0.6.0
 
 ### Minor Changes
