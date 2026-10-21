@@ -1,8 +1,8 @@
 import { createMcpHandler } from "@modelcontextprotocol/server";
 import { createAdminServer, parseServerConfig, type RequestState } from "./server.js";
 
-const ORIGIN = new URL(process.env.RESOURCE_URL || "https://mcp.context7.com").origin;
-export const MCP_PATH = "/admin";
+const ORIGIN = new URL(process.env.RESOURCE_URL || "https://admin.mcp.context7.com").origin;
+export const MCP_PATH = "/mcp";
 export const RESOURCE_URL = `${ORIGIN}${MCP_PATH}`;
 export const METADATA_PATH = `/.well-known/oauth-protected-resource${MCP_PATH}`;
 // Same Clerk issuer as packages/mcp.
@@ -87,4 +87,54 @@ export function createAdminHandler() {
       });
     },
   };
+}
+
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET,POST,OPTIONS,DELETE",
+  "Access-Control-Allow-Headers":
+    "Content-Type, MCP-Session-Id, MCP-Protocol-Version, Mcp-Method, Mcp-Name, Authorization",
+  // Browser clients need WWW-Authenticate to start OAuth from the 401.
+  "Access-Control-Expose-Headers": "WWW-Authenticate, MCP-Session-Id",
+};
+
+/** Answers a CORS preflight, or adds the CORS headers to the route's answer. */
+export async function withCors(
+  request: Request,
+  route: (request: Request) => Response | Promise<Response>
+): Promise<Response> {
+  if (request.method === "OPTIONS") return new Response(null, { headers: CORS_HEADERS });
+  const response = await route(request);
+  const headers = new Headers(response.headers);
+  for (const [name, value] of Object.entries(CORS_HEADERS)) headers.set(name, value);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+/** Clerk's metadata, for clients that only read the resource origin. */
+export async function authorizationServerMetadata(): Promise<Response> {
+  try {
+    const upstream = await fetch(
+      `${OAUTH_AUTH_SERVER_URL}/.well-known/oauth-authorization-server`,
+      {
+        signal: AbortSignal.timeout(10_000),
+      }
+    );
+    if (!upstream.ok) {
+      return Response.json(
+        { error: "upstream_error", message: "Failed to fetch authorization server metadata" },
+        { status: upstream.status }
+      );
+    }
+    return Response.json(await upstream.json());
+  } catch (error) {
+    console.error("[OAuth] Error fetching OAuth metadata:", error);
+    return Response.json(
+      { error: "proxy_error", message: "Failed to proxy authorization server metadata" },
+      { status: 502 }
+    );
+  }
 }

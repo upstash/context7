@@ -84,15 +84,9 @@ importers:
 
   packages/admin-mcp:
     dependencies:
-      '@modelcontextprotocol/node':
-        specifier: 2.1.1
-        version: 2.1.1(@modelcontextprotocol/server@2.3.1)
       '@modelcontextprotocol/server':
         specifier: 2.3.1
         version: 2.3.1
-      express:
-        specifier: ^5.1.0
-        version: 5.2.1
       zod:
         specifier: ^4.6.5
         version: 4.6.5
@@ -100,9 +94,6 @@ importers:
       '@modelcontextprotocol/client':
         specifier: 2.3.1
         version: 2.3.1
-      '@types/express':
-        specifier: ^5.0.4
-        version: 5.0.5
       '@types/node':
         specifier: 'catalog:'
         version: 25.9.8
@@ -5907,6 +5898,7 @@ snapshots:
       type-is: 2.0.1
     transitivePeerDependencies:
       - supports-color
+    optional: true
 
   bowser@2.14.1: {}
 
@@ -6368,6 +6360,7 @@ snapshots:
       vary: 1.1.2
     transitivePeerDependencies:
       - supports-color
+    optional: true
 
   extend@3.0.2: {}
 

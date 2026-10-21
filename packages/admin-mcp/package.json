@@ -12,8 +12,7 @@
     "lint:check": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "dev": "tsc --watch",
-    "start": "node dist/index.js"
+    "dev": "vercel dev"
   },
   "repository": {
     "type": "git",
@@ -23,14 +22,11 @@
   "author": "abdush",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/node": "2.1.1",
     "@modelcontextprotocol/server": "2.3.1",
-    "express": "^5.1.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "2.3.1",
-    "@types/express": "^5.0.4",
     "@types/node": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

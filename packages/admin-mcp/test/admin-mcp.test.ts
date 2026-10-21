@@ -43,7 +43,7 @@ async function connect(query = "", era: "modern" | "legacy" = "modern") {
     era === "modern" ? { versionNegotiation: { mode: { pin: "2026-07-28" } } } : undefined
   );
   await client.connect(
-    new StreamableHTTPClientTransport(new URL(`https://mcp.context7.com/admin${query}`), {
+    new StreamableHTTPClientTransport(new URL(`https://admin.mcp.context7.com/mcp${query}`), {
       requestInit: { headers: { Authorization: "Bearer ctx7sk-test" } },
       fetch: async (input, init) => {
         lastResponse = await handler.fetch(new Request(input, init));
@@ -169,11 +169,11 @@ describe("destructive tools", () => {
 describe("authentication", () => {
   test("a request without a bearer gets the OAuth challenge", async () => {
     const response = await handler.fetch(
-      new Request("https://mcp.context7.com/admin", { method: "POST", body: "{}" })
+      new Request("https://admin.mcp.context7.com/mcp", { method: "POST", body: "{}" })
     );
     expect(response.status).toBe(401);
     expect(response.headers.get("WWW-Authenticate")).toBe(
-      'Bearer resource_metadata="https://mcp.context7.com/.well-known/oauth-protected-resource/admin"'
+      'Bearer resource_metadata="https://admin.mcp.context7.com/.well-known/oauth-protected-resource/mcp"'
     );
   });
 
@@ -186,7 +186,7 @@ describe("authentication", () => {
       await expect(client.callTool({ name: "get_usage", arguments: {} })).rejects.toThrow();
       expect(lastResponse?.status).toBe(401);
       expect(lastResponse?.headers.get("WWW-Authenticate")).toContain(
-        'resource_metadata="https://mcp.context7.com/.well-known/oauth-protected-resource/admin"'
+        'resource_metadata="https://admin.mcp.context7.com/.well-known/oauth-protected-resource/mcp"'
       );
     }
   );
