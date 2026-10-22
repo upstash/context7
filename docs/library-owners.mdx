@@ -77,6 +77,12 @@ Here's an example `context7.json` file with all available options:
 
 - **`rules`** (array): Best practices or important guidelines that coding agents should follow when using your library. These appear as recommendations in the documentation context provided to coding agents.
 
+<Note>
+  Context7 checks a new rule set before it uses it, and applies the change on the next refresh. Rules that turn the AI agent against the user — reading credentials or secrets, sending data to an external destination, or running downloaded scripts — are not accepted.
+
+  If any rule is rejected, none of the rules are applied and the library's existing rules are removed. If the check can't run, the new rules are not applied and the library keeps its current rules.
+</Note>
+
 - **`previousVersions`** (array): Information about previous versions of your library that should also be available in Context7.
   - **`tag`**: The Git tag or version identifier
 
