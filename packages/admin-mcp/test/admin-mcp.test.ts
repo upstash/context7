@@ -327,3 +327,17 @@ test("suggestions are read per library, and no tool starts an agent run", async 
     path: `/v2/teamspaces/${TS}/libraries/acme/docs/suggestions`,
   });
 });
+
+// Without scopes_supported, clients ask Clerk for every scope it lists, and
+// Clerk answers invalid_scope for `openid`: the sign-in fails.
+test("the protected resource metadata names the scopes clients may ask for", async () => {
+  const { default: route } = await import("../api/oauth-protected-resource.js");
+  const response = await route.fetch(
+    new Request("https://admin.mcp.context7.com/.well-known/oauth-protected-resource/mcp")
+  );
+  expect(await response.json()).toMatchObject({
+    resource: "https://admin.mcp.context7.com/mcp",
+    authorization_servers: ["https://clerk.context7.com"],
+    scopes_supported: ["profile", "email"],
+  });
+});
