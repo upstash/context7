@@ -73,7 +73,7 @@ Billing, plans, API keys, SSO and teamspace create or delete are not in this ser
 
 ## Deploy
 
-The server runs on Vercel as Web-standard functions (`api/`, routes in `vercel.json`): it keeps no session, so every request stands alone. Create a Vercel project with Root Directory `packages/admin-mcp` and the domain `admin.mcp.context7.com`. Vercel compiles `api/` and `src/` itself; `vercel.json` sets an empty build command, so the project serves functions only.
+The server runs on Vercel as Web-standard functions (`api/`, routes in `vercel.json`): it keeps no session, so every request stands alone. Create a Vercel project with Root Directory `packages/admin-mcp` and the domain `admin.mcp.context7.com`. Vercel compiles `api/` and `src/` itself (`vercel.json` sets an empty build command) and serves only `public/` as static files: the landing page at `/`.
 
 ## Development
 

@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Context7 Admin MCP</title>
+    <meta
+      name="description"
+      content="A remote MCP server to manage Context7 teamspaces, libraries, Docs7 sites and Ask sites from your coding agent."
+    />
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #ffffff;
+        --fg: #111827;
+        --muted: #4b5563;
+        --panel: #f3f4f6;
+        --border: #e5e7eb;
+        --accent: #047857;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0b0f0e;
+          --fg: #f3f4f6;
+          --muted: #9ca3af;
+          --panel: #151a19;
+          --border: #262c2b;
+          --accent: #34d399;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          16px/1.6 ui-sans-serif,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+      }
+      main {
+        max-width: 680px;
+        margin: 0 auto;
+        padding: 64px 16px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+        line-height: 1.2;
+      }
+      h2 {
+        margin: 40px 0 8px;
+        font-size: 17px;
+      }
+      p {
+        margin: 8px 0;
+        color: var(--muted);
+      }
+      pre,
+      code {
+        font:
+          14px/1.5 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+      }
+      pre {
+        margin: 8px 0;
+        padding: 12px 14px;
+        overflow-x: auto;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--fg);
+      }
+      a {
+        color: var(--accent);
+        text-underline-offset: 3px;
+      }
+      a:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+        border-radius: 2px;
+      }
+      ul {
+        margin: 8px 0;
+        padding-left: 20px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Context7 Admin MCP</h1>
+      <p>
+        A remote MCP server to manage Context7 from Claude Code, Cursor, VS Code and other MCP
+        clients: teamspace members, libraries, rules and policies, usage, Docs7 sites and Ask sites.
+      </p>
+
+      <h2>Endpoint</h2>
+      <pre><code>https://admin.mcp.context7.com/mcp</code></pre>
+
+      <h2>Add it to Claude Code</h2>
+      <pre><code>claude mcp add --scope user --transport http context7-admin https://admin.mcp.context7.com/mcp</code></pre>
+      <p>Then run <code>/mcp</code> and sign in with your Context7 account.</p>
+
+      <h2>Other clients</h2>
+      <pre><code>{
+  "mcpServers": {
+    "context7-admin": {
+      "type": "http",
+      "url": "https://admin.mcp.context7.com/mcp"
+    }
+  }
+}</code></pre>
+
+      <h2>API key (CI and scripts)</h2>
+      <p>
+        Send <code>Authorization: Bearer ctx7sk-…</code> with a key created in the
+        <a href="https://context7.com/dashboard">dashboard</a> with
+        <strong>Management access</strong> turned on. A key works on its own teamspace only.
+      </p>
+
+      <h2>Good to know</h2>
+      <ul>
+        <li>One sign-in reaches every teamspace you are a member of, with your role in each.</li>
+        <li>
+          Remove and delete actions are marked destructive, so your client asks you first. Turn
+          tools off or make them ask in your client's settings.
+        </li>
+        <li>
+          Billing, plans, API keys and SSO stay in the
+          <a href="https://context7.com/dashboard">dashboard</a>.
+        </li>
+        <li>
+          For documentation lookup, use the
+          <a href="https://context7.com/docs/resources/all-clients">Context7 MCP server</a>.
+        </li>
+      </ul>
+
+      <p>
+        <a href="https://github.com/upstash/context7/tree/master/packages/admin-mcp"
+          >Documentation and tool list</a
+        >
+      </p>
+    </main>
+  </body>
+</html>

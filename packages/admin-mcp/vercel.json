@@ -29,5 +29,6 @@
     "api/mcp.ts": {
       "maxDuration": 120
     }
-  }
+  },
+  "outputDirectory": "public"
 }
