@@ -159,7 +159,7 @@ Call the REST API directly to control requests from your own code, or use the MC
 
 ### Result limits
 
-Neither MCP tool accepts a `maxTokens` or result-limit parameter, and neither returns pagination controls. Context7 decides how many snippets to return for a query; that count and the response size are not configurable from the MCP client or the REST request. To shape the response, narrow the `query` to a single concept rather than trying to cap the output. The MCP server aborts a documentation lookup that the API has not answered within 60 seconds.
+Neither MCP tool accepts a `maxTokens` or result-limit parameter, and neither returns pagination controls. Context7 decides how many snippets to return for a query; that count and the response size are not configurable from the MCP client. To shape the response, narrow the `query` to a single concept rather than trying to cap the output. The MCP server aborts a documentation lookup that the API has not answered within 60 seconds.
 
 ## Rate Limits
 

@@ -172,9 +172,10 @@ When `resolve-library-id` or `query-docs` fails, the error text is returned in t
 | 401 — API key                      | `Invalid API key. Please check your API key. API keys should start with 'ctx7sk' prefix.`                                                                                                                           |
 | 404                                | `The library you are trying to access does not exist. Please try with a different library ID.`                                                                                                                       |
 | 429                                | `Rate limited or quota exceeded. Upgrade your plan at https://context7.com/plans for higher limits.` with a key, or `Rate limited or quota exceeded. Create a free API key at https://context7.com/dashboard for higher limits.` without one |
+| No response (network error or timeout) | `Error fetching library context. Please try again later. <error>` from `query-docs`, or `Error searching libraries: <error>` from `resolve-library-id` |
 | Any other                          | `Request failed with status <code>. Please try again later.`                                                                                                                                                         |
 
-A `401` from the remote OAuth endpoint clears the request on retry so the client can refresh the sign-in. The sections below cover the fixes.
+The sections below cover the fixes.
 
 ### Rate Limiting
 
