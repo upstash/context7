@@ -64,7 +64,7 @@ One OAuth connection reaches every teamspace you are a member of, with your role
 | docs7     | `docs7_list_sites`, `docs7_get_site`, `docs7_create_site`, `docs7_update_site`, `docs7_check_domain`, `docs7_list_deployments`, `docs7_get_deployment`, `docs7_deploy`, `docs7_remove_preview`, `docs7_get_agent_runs`, `docs7_manage_feature_requests`, `docs7_get_analytics`, `docs7_query_logs`, `docs7_get_conversation` |
 | ask       | `ask_list_sites`, `ask_get_site`, `ask_create_site`, `ask_verify_site`, `ask_get_analytics`, `ask_list_questions`                                                                                                                                                                                                            |
 
-- Remove and delete actions (`remove_library`, `manage_members` `remove`, `manage_library_versions` `remove`, `manage_rules` `delete`, `docs7_remove_preview`) are marked destructive, so your client asks you before it runs them. That approval is the guard. They also take `confirm`, which makes the agent state the exact target (library id, email, version, rule id or branch); it stops a model that skips asking, not one that is told to repeat the value.
+- Remove and delete actions (`remove_library`, `manage_members` `remove`, `manage_library_versions` `remove`, `manage_rules` `delete`, `docs7_remove_preview`) are marked destructive. Clients ask you before they run them unless they are set to approve tools automatically, so check your client's permission settings: that approval is the guard. They also take `confirm`, which makes the agent state the exact target (library id, email, version, rule id or branch); it stops a model that skips asking, not one that is told to repeat the value.
 - Deleting a whole Docs7 site or Ask site cannot be undone, so it is not in this server. Do it in [the dashboard](https://context7.com/dashboard).
 - Results that hold third-party text (questions, searches, feedback, build logs, agent runs) are fenced in `<untrusted-data-…>` tags.
 - Results above about 20,000 tokens are cut, with a note on how to narrow the request.
@@ -73,7 +73,7 @@ Billing, plans, API keys, SSO and teamspace create or delete are not in this ser
 
 ## Deploy
 
-The server runs on Vercel as Web-standard functions (`api/`, routes in `vercel.json`): it keeps no session, so every request stands alone. Create a Vercel project with Root Directory `packages/admin-mcp` and the domain `admin.mcp.context7.com`. Vercel compiles `api/` and `src/` itself; `vercel.json` sets an empty build command, so the project serves functions only.
+The server runs on Vercel as Web-standard functions (`api/`, routes in `vercel.json`): it keeps no session, so every request stands alone. Create a Vercel project with Root Directory `packages/admin-mcp` and the domain `admin.mcp.context7.com`. Vercel compiles `api/` and `src/` itself (`vercel.json` sets an empty build command) and serves only `public/` as static files: the landing page at `/`.
 
 ## Development
 
