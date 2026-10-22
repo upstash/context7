@@ -113,6 +113,11 @@ const wait = z
   .optional()
   .describe("Wait up to about 25 seconds for the job to finish before answering.");
 
+/** A Docs7 site deployed from the CLI (`source: "local"`), which has its own build routes. */
+async function isCliSite(api: Api, sitePath: string): Promise<boolean> {
+  return data(await api.get(sitePath)).source === "local";
+}
+
 /** The `state` (or `indexStatus.kind`) of a result, read through a `{ data }` envelope. */
 function stateOf(value: unknown, key: "state" | "indexStatus"): unknown {
   const record = data(value);
@@ -154,8 +159,8 @@ function memberEmail(body: unknown, memberId: string): string | undefined {
 const libraryId = z
   .string()
   .describe('Library id, such as "/owner/repo" (from list_libraries). "owner/repo" also works.');
-const siteId = z.string().describe("Docs7 site id (from list_sites).");
-const siteKey = z.string().describe("Ask site key, such as ask_… (from list_ask_sites).");
+const siteId = z.string().describe("Docs7 site id (from docs7_list_sites).");
+const siteKey = z.string().describe("Ask site key, such as ask_… (from ask_list_sites).");
 const askDays = z.union([z.literal(1), z.literal(7), z.literal(30)]).optional();
 
 const SOURCE_TYPE = z.enum([
@@ -533,7 +538,7 @@ export const TOOLS: ToolDef[] = [
     },
   }),
   tool({
-    name: "get_policies",
+    name: "get_library_policies",
     group: "rules",
     title: "Get policies",
     description: "Get the library filters (policies) of the teamspace.",
@@ -542,11 +547,11 @@ export const TOOLS: ToolDef[] = [
     run: ({ teamspace }, api) => api.get(`${ts(teamspace)}/policies`),
   }),
   tool({
-    name: "update_policies",
+    name: "update_library_policies",
     group: "rules",
     title: "Update policies",
     description:
-      'Change which libraries the teamspace can use (owner or admin). Send changes as operations, not the get_policies shape. Each list takes { add: [...] }, { remove: [...] } or { clear: true }; library entries are "/org/repo", "/org" or a domain. Use `dry_run: true` first to see how many libraries the change leaves.',
+      'Change which libraries the teamspace can use (owner or admin). Send changes as operations, not the get_library_policies shape. Each list takes { add: [...] }, { remove: [...] } or { clear: true }; library entries are "/org/repo", "/org" or a domain. Use `dry_run: true` first to see how many libraries the change leaves.',
     kind: "write",
     idempotent: true,
     args: {
@@ -644,7 +649,7 @@ export const TOOLS: ToolDef[] = [
 
   // ---------- usage ----------
   tool({
-    name: "get_usage",
+    name: "get_teamspace_usage",
     group: "usage",
     title: "Get usage",
     description: "Get daily usage and cost, the quota and the credit of the teamspace.",
@@ -674,7 +679,7 @@ export const TOOLS: ToolDef[] = [
 
   // ---------- docs7 ----------
   tool({
-    name: "list_sites",
+    name: "docs7_list_sites",
     group: "docs7",
     title: "List Docs7 sites",
     description:
@@ -684,7 +689,7 @@ export const TOOLS: ToolDef[] = [
     run: ({ teamspace }, api) => api.get(`${ts(teamspace)}/sites`),
   }),
   tool({
-    name: "get_site",
+    name: "docs7_get_site",
     group: "docs7",
     title: "Get Docs7 site",
     description:
@@ -700,11 +705,11 @@ export const TOOLS: ToolDef[] = [
     },
   }),
   tool({
-    name: "create_site",
+    name: "docs7_create_site",
     group: "docs7",
     title: "Create Docs7 site",
     description:
-      "Add a Docs7 site from a GitHub repository. The Docs7 GitHub app must be installed on the repository (the user does this in the dashboard). A repository without docs.json or mint.json becomes an agent-only site, which is not published. Gives the site and the first build's `deploymentId` (null when no build started): call get_deployment with it and `wait: true`.",
+      "Add a Docs7 site from a GitHub repository. The Docs7 GitHub app must be installed on the repository (the user does this in the dashboard). A repository without docs.json or mint.json becomes an agent-only site, which is not published. Gives the site and the first build's `deploymentId` (null when no build started): call docs7_get_deployment with it and `wait: true`.",
     kind: "write",
     args: {
       repo_url: z.string().describe("https://github.com/owner/repo"),
@@ -737,11 +742,11 @@ export const TOOLS: ToolDef[] = [
       }),
   }),
   tool({
-    name: "update_site",
+    name: "docs7_update_site",
     group: "docs7",
     title: "Update Docs7 site",
     description:
-      'Change a Docs7 site. Send only the fields to change. A developer can only send `hosting: "on"`, which publishes an agent-only site. After a custom domain change, call check_domain.',
+      'Change a Docs7 site. Send only the fields to change. A developer can only send `hosting: "on"`, which publishes an agent-only site. After a custom domain change, call docs7_check_domain.',
     kind: "write",
     idempotent: true,
     args: {
@@ -775,7 +780,7 @@ export const TOOLS: ToolDef[] = [
           response: z.enum(["comment", "pull_request", "commit"]),
         })
         .optional()
-        .describe("All PR Review settings at once. Read the current ones with get_site."),
+        .describe("All PR Review settings at once. Read the current ones with docs7_get_site."),
       code_watch: z
         .object({
           enabled: z.boolean(),
@@ -812,7 +817,7 @@ export const TOOLS: ToolDef[] = [
     },
   }),
   tool({
-    name: "check_domain",
+    name: "docs7_check_domain",
     group: "docs7",
     title: "Check custom domain",
     description:
@@ -823,24 +828,35 @@ export const TOOLS: ToolDef[] = [
     run: ({ teamspace, site_id }, api) => api.post(`${site(teamspace, site_id)}/domain/refresh`),
   }),
   tool({
-    name: "list_deployments",
+    name: "docs7_list_deployments",
     group: "docs7",
     title: "List deployments",
-    description: "List the builds of a Docs7 site, newest first, and its preview targets.",
+    description:
+      "List the builds of a Docs7 site, newest first, and its preview targets. Works for GitHub and CLI sites.",
     kind: "read",
+    untrusted: true,
     args: {
       site_id: siteId,
-      page: z.number().int().min(0).optional().describe("Zero-based page. Default 0."),
+      page: z
+        .number()
+        .int()
+        .min(0)
+        .optional()
+        .describe("Zero-based page (GitHub sites). Default 0."),
     },
-    run: ({ teamspace, site_id, page }, api) =>
-      api.get(`${site(teamspace, site_id)}/deployments`, { page }),
+    run: async ({ teamspace, site_id, page }, api) => {
+      const path = site(teamspace, site_id);
+      // A CLI site keeps its builds apart; its /deployments route answers 404.
+      if (await isCliSite(api, path)) return api.get(`${path}/local-deployments`);
+      return api.get(`${path}/deployments`, { page });
+    },
   }),
   tool({
-    name: "get_deployment",
+    name: "docs7_get_deployment",
     group: "docs7",
     title: "Get deployment",
     description:
-      'Get one build of a Docs7 site (queued, building, succeeded, failed or canceled). After deploy_site, call it with `wait: true` until it ends. For a failed build, add `include: ["health", "logs"]`.',
+      'Get one build of a Docs7 site (queued, building, succeeded, failed or canceled). After docs7_deploy, call it with `wait: true` until it ends. For a failed build, add `include: ["health", "logs"]` (CLI sites have logs only).',
     kind: "read",
     untrusted: true,
     args: {
@@ -851,30 +867,41 @@ export const TOOLS: ToolDef[] = [
     },
     run: async ({ teamspace, site_id, deployment_id, include: requested = [], wait }, api) => {
       const include = [...new Set(requested)];
-      const path = `${site(teamspace, site_id)}/deployments/${seg(deployment_id)}`;
+      const sitePath = site(teamspace, site_id);
+      const path = `${sitePath}/deployments/${seg(deployment_id)}`;
+      const cli = await isCliSite(api, sitePath);
+      if (cli && include.some((part) => part !== "logs")) {
+        throw new ToolError('A CLI site has build logs only. Use `include: ["logs"]`.');
+      }
+      const once = cli
+        ? async () => {
+            const { deployments = [] } = data(await api.get(`${sitePath}/local-deployments`)) as {
+              deployments?: { id?: unknown }[];
+            };
+            const found = deployments.find((deployment) => deployment.id === deployment_id);
+            if (!found)
+              throw new ToolError(`No build "${deployment_id}". Call docs7_list_deployments.`);
+            return { data: found };
+          }
+        : () => api.get(path);
       const deployment = wait
-        ? await poll(
-            () => api.get(path),
-            (value) =>
-              ["succeeded", "failed", "canceled"].includes(stateOf(value, "state") as string)
+        ? await poll(once, (value) =>
+            ["succeeded", "failed", "canceled"].includes(stateOf(value, "state") as string)
           )
-        : await api.get(path);
-      const parts = await Promise.all([
-        deployment,
-        ...include.map((part) => api.get(`${path}/${part}`)),
-      ]);
+        : await once();
+      const parts = await Promise.all(include.map((part) => api.get(`${path}/${part}`)));
       return Object.fromEntries([
-        ["deployment", parts[0]],
-        ...include.map((part, index) => [part, parts[index + 1]]),
+        ["deployment", deployment],
+        ...include.map((part, index) => [part, parts[index]]),
       ]);
     },
   }),
   tool({
-    name: "deploy_site",
+    name: "docs7_deploy",
     group: "docs7",
     title: "Deploy Docs7 site",
     description:
-      "Deploy a Docs7 site to production, or deploy a preview of a branch. Gives a deployment id: then call get_deployment with `wait: true`.",
+      "Deploy a Docs7 site to production, or deploy a preview of a branch. Gives a deployment id: then call docs7_get_deployment with `wait: true`.",
     kind: "write",
     args: {
       site_id: siteId,
@@ -890,7 +917,7 @@ export const TOOLS: ToolDef[] = [
       ),
   }),
   tool({
-    name: "remove_preview",
+    name: "docs7_remove_preview",
     group: "docs7",
     title: "Remove preview",
     description:
@@ -907,11 +934,11 @@ export const TOOLS: ToolDef[] = [
     },
   }),
   tool({
-    name: "run_site_agent",
+    name: "docs7_run_agent",
     group: "docs7",
     title: "Run Context7 Agent",
     description:
-      "Start the Context7 Agent on a Docs7 site (owner or admin). `suggestions` needs `suggestion_ids` and `health` needs `issue_ids` (from manage_site_findings). `feature_requests` adds the feature requests page; `page_feedback` turns on page ratings. Then call get_agent_runs with the returned run id and `wait: true`.",
+      "Start the Context7 Agent on a Docs7 site (owner or admin). `suggestions` needs `suggestion_ids` and `health` needs `issue_ids` (from docs7_manage_findings). `feature_requests` adds the feature requests page; `page_feedback` turns on page ratings. Then call docs7_get_agent_runs with the returned run id and `wait: true`.",
     kind: "write",
     args: {
       site_id: siteId,
@@ -930,7 +957,7 @@ export const TOOLS: ToolDef[] = [
       ),
   }),
   tool({
-    name: "get_agent_runs",
+    name: "docs7_get_agent_runs",
     group: "docs7",
     title: "Get agent runs",
     description:
@@ -956,11 +983,11 @@ export const TOOLS: ToolDef[] = [
     },
   }),
   tool({
-    name: "manage_site_findings",
+    name: "docs7_manage_findings",
     group: "docs7",
     title: "Manage site findings",
     description:
-      "List or dismiss the suggestions and build issues of a Docs7 site, and list, ship or reopen its feature requests. Pass ids to run_site_agent to fix them.",
+      "List or dismiss the suggestions and build issues of a Docs7 site, and list, ship or reopen its feature requests. Pass ids to docs7_run_agent to fix them.",
     actions: {
       list_suggestions: "read",
       dismiss_suggestions: "destructive",
@@ -1012,7 +1039,7 @@ export const TOOLS: ToolDef[] = [
     },
   }),
   tool({
-    name: "get_site_analytics",
+    name: "docs7_get_analytics",
     group: "docs7",
     title: "Get site analytics",
     description:
@@ -1040,7 +1067,7 @@ export const TOOLS: ToolDef[] = [
       }),
   }),
   tool({
-    name: "query_site_logs",
+    name: "docs7_query_logs",
     group: "docs7",
     title: "Query site logs",
     description:
@@ -1104,11 +1131,11 @@ export const TOOLS: ToolDef[] = [
     },
   }),
   tool({
-    name: "get_conversation",
+    name: "docs7_get_conversation",
     group: "docs7",
     title: "Get conversation",
     description:
-      "Get one recorded assistant conversation of a Docs7 site (`conversationId` of a `questions` row from query_site_logs).",
+      "Get one recorded assistant conversation of a Docs7 site (`conversationId` of a `questions` row from docs7_query_logs).",
     kind: "read",
     untrusted: true,
     args: {
@@ -1125,7 +1152,7 @@ export const TOOLS: ToolDef[] = [
 
   // ---------- ask ----------
   tool({
-    name: "list_ask_sites",
+    name: "ask_list_sites",
     group: "ask",
     title: "List Ask sites",
     description: "List the Ask sites of the teamspace, with index status and limits.",
@@ -1134,11 +1161,11 @@ export const TOOLS: ToolDef[] = [
     run: ({ teamspace }, api) => api.get(`${ts(teamspace)}/ask-sites`),
   }),
   tool({
-    name: "get_ask_site",
+    name: "ask_get_site",
     group: "ask",
     title: "Get Ask site",
     description:
-      "Get one Ask site: verification, index status (pending, submitted, ready or failed) and the snippet to embed. After verify_ask_site, call it with `wait: true` until the index is ready or failed.",
+      "Get one Ask site: verification, index status (pending, submitted, ready or failed) and the snippet to embed. After ask_verify_site, call it with `wait: true` until the index is ready or failed.",
     kind: "read",
     args: { site_key: siteKey, wait },
     run: ({ teamspace, site_key, wait }, api) => {
@@ -1151,28 +1178,28 @@ export const TOOLS: ToolDef[] = [
     },
   }),
   tool({
-    name: "create_ask_site",
+    name: "ask_create_site",
     group: "ask",
     title: "Create Ask site",
     description:
-      "Add an Ask site. Gives the meta tag (verificationTag) to put in the page <head>. Deploy the page with the tag, then call verify_ask_site.",
+      "Add an Ask site. Gives the meta tag (verificationTag) to put in the page <head>. Deploy the page with the tag, then call ask_verify_site.",
     kind: "write",
     args: { url: z.string().describe("Public https:// or http:// URL of the site.") },
     run: ({ teamspace, url }, api) => api.post(`${ts(teamspace)}/ask-sites`, { url }),
   }),
   tool({
-    name: "verify_ask_site",
+    name: "ask_verify_site",
     group: "ask",
     title: "Verify Ask site",
     description:
-      "Check the meta tag of an Ask site and start the crawl. Then call get_ask_site with `wait: true`.",
+      "Check the meta tag of an Ask site and start the crawl. Then call ask_get_site with `wait: true`.",
     kind: "write",
     idempotent: true,
     args: { site_key: siteKey },
     run: ({ teamspace, site_key }, api) => api.post(`${askSite(teamspace, site_key)}/verify`),
   }),
   tool({
-    name: "get_ask_analytics",
+    name: "ask_get_analytics",
     group: "ask",
     title: "Get Ask analytics",
     description:
@@ -1187,7 +1214,7 @@ export const TOOLS: ToolDef[] = [
       api.get(`${askSite(teamspace, site_key)}/analytics`, { days }),
   }),
   tool({
-    name: "list_ask_questions",
+    name: "ask_list_questions",
     group: "ask",
     title: "List Ask questions",
     description: "List the question log of an Ask site, or get one answer with `question_id`.",
