@@ -309,7 +309,7 @@ Do not use for: refactoring, debugging, or reviewing code that does not depend o
       title: "Resolve Context7 Library ID",
       description: `Resolves a package/product name to a Context7-compatible library ID and returns matching libraries.
 
-You MUST call this function before 'Query Documentation' tool to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
+Call this function before 'Query Documentation' to obtain a valid Context7-compatible library ID unless the user provides an ID in the format '/org/project' or '/org/project/version', or you resolved an ID earlier in the current task that still matches the same library and requested version. Resolve it again if the library or version changes, the ID is uncertain, or a query indicates that it is no longer valid.
 
 Each result includes:
 - Library ID: Context7-compatible identifier (format: /org/project)
@@ -403,7 +403,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       title: "Query Documentation",
       description: `Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
 
-You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
+Call 'Resolve Context7 Library ID' first to obtain the exact Context7-compatible library ID required to use this tool, unless the user provides an ID in the format '/org/project' or '/org/project/version', or you resolved an ID earlier in the current task that still matches the same library and requested version. Resolve it again if the library or version changes, the ID is uncertain, or a query indicates that it is no longer valid.
 
 Do not call this tool more than 3 times per question.
 

@@ -765,6 +765,9 @@ describe.each([
       "libraryId",
       "query",
     ]);
+    expect(queryDocs.description).toContain("resolved an ID earlier in the current task");
+    expect(queryDocs.description).toContain("if the library or version changes");
+    expect(resolve.description).toContain("resolved an ID earlier in the current task");
   });
 
   // The declared `capabilities: { prompts: {}, resources: {} }` replaced three
