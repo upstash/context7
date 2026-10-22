@@ -149,9 +149,12 @@ function siteDetails(site: Record<string, unknown>): Record<string, unknown> {
     context7Index: site.context7Index,
     analyticsUrl: site.analyticsUrl,
     pullRequestReview: site.pullRequestReview,
-    codeWatchRepositories: watch?.enabled
-      ? watch.repositories?.map((repository) => repository.repoUrl)
-      : undefined,
+    // docs7_update_site takes `enabled` and the full list, so both stay, also while it is off.
+    codeWatchRepositories: undefined,
+    codeWatch: watch && {
+      enabled: watch.enabled,
+      repositories: watch.repositories?.map((repository) => repository.repoUrl),
+    },
     createdAt: site.createdAt,
     updatedAt: site.updatedAt,
   };
@@ -1031,7 +1034,15 @@ export const TOOLS: ToolDef[] = [
         ? await api.get(`${path}/local-deployments`)
         : await api.get(`${path}/deployments`, { page });
       const { data: rows, ...rest } = without(body, DEPLOYMENT_NOISE) as { data?: unknown };
-      return { data: Array.isArray(rows) ? rows.map(deploymentView) : rows, ...rest };
+      // A GitHub site answers { data: [...] }, a CLI site { data: { deployments, targets } }.
+      if (Array.isArray(rows)) return { data: rows.map(deploymentView), ...rest };
+      const cli = rows as { deployments?: unknown[] } | undefined;
+      return {
+        data: cli?.deployments
+          ? { ...cli, deployments: cli.deployments.map(deploymentView) }
+          : rows,
+        ...rest,
+      };
     },
   }),
   tool({

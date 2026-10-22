@@ -291,15 +291,24 @@ test("poll stops at a final state or at the deadline", async () => {
 test("deployment tools read a CLI site's builds from local-deployments", async () => {
   apiReply = (call) => ({
     body: call.path.endsWith("/local-deployments")
-      ? { data: { deployments: [{ id: "d-1", state: "succeeded" }], targets: [] } }
+      ? {
+          data: {
+            deployments: [
+              { id: "d-1", state: "succeeded", commitSha: "abc", requestedCommitSha: "abc" },
+            ],
+            targets: [],
+          },
+        }
       : { data: { id: "site-1", source: "local" } },
   });
   const client = await connect();
 
-  await client.callTool({
+  const list = await client.callTool({
     name: "docs7_list_deployments",
     arguments: { teamspace: TS, site_id: "site-1" },
   });
+  expect(text(list)).toContain('"deployments":[{"id":"d-1"');
+  expect(text(list)).not.toContain("requestedCommitSha");
   const one = await client.callTool({
     name: "docs7_get_deployment",
     arguments: { teamspace: TS, site_id: "site-1", deployment_id: "d-1" },
