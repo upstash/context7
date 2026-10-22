@@ -147,6 +147,9 @@ function siteDetails(site: Record<string, unknown>): Record<string, unknown> {
   return {
     ...siteSummary(site),
     source: site.source === "local" ? "cli" : "github",
+    // As docs7_update_site takes them: null branch follows the repository default.
+    branch: site.branch ?? null,
+    defaultBranch: site.defaultBranch,
     // Two fields, as docs7_update_site takes them; the list joins them.
     customDomain: site.customDomain,
     customDomainPath: site.customDomain ? site.customDomainPath : undefined,
