@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { createAdminHandler } from "../src/http.js";
-import { normalizeLibraryId, poll } from "../src/tools.js";
+import { agentActivity, normalizeLibraryId, poll } from "../src/tools.js";
 
 // The server under test is the web-standard handler, driven by a real MCP
 // client. Global fetch (the management API) is stubbed: no network.
@@ -403,4 +403,80 @@ test("the server card and serverInfo carry the Context7 icon", async () => {
   expect(client.getServerVersion()?.icons?.[0]?.src).toBe(
     "https://context7.com/context7-icon-green.svg"
   );
+});
+
+test("agent usage counts this UTC month's runs by agent, without superseded runs", () => {
+  const now = new Date("2026-10-22T12:00:00Z");
+  const usage = agentActivity(
+    [
+      [
+        { state: "completed", createdAt: "2026-10-02T00:00:00Z", pullRequest: { state: "merged" } },
+        { state: "failed", createdAt: "2026-10-03T00:00:00Z", input: { kind: "health" } },
+        { state: "completed", createdAt: "2026-09-30T23:59:59Z", pullRequest: { state: "open" } },
+      ],
+      [{ state: "superseded", createdAt: "2026-10-05T00:00:00Z", input: { kind: "review" } }],
+      [
+        {
+          state: "completed",
+          createdAt: "2026-10-21T00:00:00Z",
+          input: { kind: "code_change" },
+          pullRequest: { state: "open" },
+        },
+      ],
+    ],
+    now
+  );
+  expect(usage).toEqual({
+    month: "2026-10",
+    runs: { context7: 1, buildFix: 1, codeWatch: 1 },
+    failedRuns: { buildFix: 1 },
+    pullRequests: { merged: 1, open: 1 },
+  });
+});
+
+test("docs7_get_agent_runs turns the summary's result blocks into fields", async () => {
+  apiReply = () => ({
+    body: {
+      data: [
+        {
+          id: "r-1",
+          boxId: "box",
+          summary:
+            '<!-- docs7-suggestion-results\n[{"suggestion":1,"status":"fixed"}]\n-->\n<!-- docs7-pr-title\ndocs: fix it\n-->\n- **One** — done',
+        },
+      ],
+    },
+  });
+  const result = await (
+    await connect()
+  ).callTool({ name: "docs7_get_agent_runs", arguments: { teamspace: TS, site_id: "s-1" } });
+  const body = JSON.parse(text(result).split("\n").slice(2, -1).join("\n"));
+  expect(body.data[0]).toEqual({
+    id: "r-1",
+    prTitle: "docs: fix it",
+    suggestionResults: [{ suggestion: 1, status: "fixed" }],
+    summary: "- **One** — done",
+  });
+});
+
+test("get_library_benchmarks gives the lowest scores first", async () => {
+  apiReply = () => ({
+    body: {
+      stats: { count: 3 },
+      benchmarks: [
+        { score: 80, query: "a" },
+        { score: 20, query: "b" },
+        { score: 50, query: "c" },
+      ],
+    },
+  });
+  const result = await (
+    await connect()
+  ).callTool({
+    name: "get_library_benchmarks",
+    arguments: { teamspace: TS, library_id: "/acme/docs", limit: 2 },
+  });
+  const body = JSON.parse(text(result).split("\n").slice(2, -1).join("\n"));
+  expect(body.benchmarks.map((b: { query: string }) => b.query)).toEqual(["b", "c"]);
+  expect(apiCalls[0].path).toBe(`/v2/teamspaces/${TS}/libraries/acme/docs/benchmarks`);
 });
