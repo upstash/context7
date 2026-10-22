@@ -143,6 +143,20 @@ const INSTRUCTIONS = [
   "Remove and delete actions need the user's confirmation first. Deleting a whole Docs7 or Ask site, billing, plans, API keys and SSO are not in this server: send the user to https://context7.com/dashboard.",
 ].join("\n");
 
+/** The Context7 icon, as the docs MCP server uses it. The vector icon scales; the PNG is 512x512. */
+export const SERVER_ICONS = [
+  {
+    src: "https://context7.com/context7-icon-green.svg",
+    mimeType: "image/svg+xml",
+    sizes: ["any"],
+  },
+  {
+    src: "https://context7.com/context7-icon-green.png",
+    mimeType: "image/png",
+    sizes: ["512x512"],
+  },
+];
+
 /** What `mcp-handler` needs to build the server for each request. */
 export const SERVER_OPTIONS = {
   serverInfo: {
@@ -151,6 +165,7 @@ export const SERVER_OPTIONS = {
     version: SERVER_VERSION,
     websiteUrl: "https://context7.com",
     description: "Manage Context7 teamspaces, libraries, Docs7 sites and Ask sites.",
+    icons: SERVER_ICONS,
   },
   capabilities: { tools: { listChanged: false } },
   instructions: INSTRUCTIONS,

@@ -341,3 +341,66 @@ test("the protected resource metadata names the scopes clients may ask for", asy
     scopes_supported: ["profile", "email"],
   });
 });
+
+test("docs7_list_sites keeps what an agent needs and drops internal ids", async () => {
+  apiReply = () => ({
+    body: {
+      data: [
+        {
+          id: "s-1",
+          repoUrl: "https://github.com/acme/docs",
+          defaultBranch: "main",
+          docsPath: "docs",
+          hosting: "on",
+          platformHostname: "acme-docs.docs7.io",
+          customDomain: "acme.com",
+          customDomainPath: "/docs",
+          customDomainStatus: "active",
+          context7LibraryName: "/acme/docs",
+          workerName: "s-abc",
+          installationId: 1,
+          createdBy: "user_1",
+          codeWatch: { enabled: true, repositories: [{ repoUrl: "x" }, { repoUrl: "y" }] },
+        },
+      ],
+      localSites: [
+        { id: "c-1", name: "CLI docs", hosting: "on", platformHostname: "cli.docs7.io" },
+      ],
+    },
+  });
+  const client = await connect();
+  const result = JSON.parse(
+    text(await client.callTool({ name: "docs7_list_sites", arguments: { teamspace: TS } }))
+  );
+
+  expect(result.sites[0]).toEqual({
+    id: "s-1",
+    repoUrl: "https://github.com/acme/docs",
+    branch: "main",
+    docsPath: "docs",
+    hosting: "on",
+    url: "https://acme-docs.docs7.io",
+    customDomain: "acme.com/docs",
+    customDomainStatus: "active",
+    libraryId: "/acme/docs",
+    codeWatchRepositories: 2,
+  });
+  expect(result.cliSites[0]).toMatchObject({ id: "c-1", name: "CLI docs" });
+});
+
+test("the server card and serverInfo carry the Context7 icon", async () => {
+  const { default: card } = await import("../api/server-card.js");
+  const body = await (
+    await card.fetch(new Request("https://admin.mcp.context7.com/mcp/server-card"))
+  ).json();
+  expect(body).toMatchObject({
+    name: "io.github.upstash/context7-admin",
+    remotes: [{ type: "streamable-http", url: "https://admin.mcp.context7.com/mcp" }],
+  });
+  expect(body.icons[0].src).toBe("https://context7.com/context7-icon-green.svg");
+
+  const client = await connect();
+  expect(client.getServerVersion()?.icons?.[0]?.src).toBe(
+    "https://context7.com/context7-icon-green.svg"
+  );
+});

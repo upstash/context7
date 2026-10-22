@@ -109,6 +109,34 @@ const wait = z
   .optional()
   .describe("Wait up to about 25 seconds for the job to finish before answering.");
 
+/**
+ * What an agent needs from a Docs7 site in a list: what it is, where it is
+ * served, and how its agents are set. Internal ids (worker, installation,
+ * repository, creator) stay out; docs7_get_site has every field.
+ */
+function siteSummary(site: Record<string, unknown>): Record<string, unknown> {
+  const review = site.pullRequestReview as { enabled?: unknown } | undefined;
+  const watch = site.codeWatch as { enabled?: unknown; repositories?: unknown[] } | undefined;
+  return {
+    id: site.id,
+    name: site.name,
+    repoUrl: site.repoUrl,
+    branch: site.branch ?? site.defaultBranch,
+    docsPath: site.docsPath,
+    hosting: site.hosting,
+    url: site.platformHostname ? `https://${site.platformHostname}` : undefined,
+    customDomain: site.customDomain
+      ? `${site.customDomain}${site.customDomainPath ?? ""}`
+      : undefined,
+    customDomainStatus: site.customDomain ? site.customDomainStatus : undefined,
+    libraryId: site.context7LibraryName,
+    improveSchedule: site.improveSchedule,
+    buildFixSchedule: site.buildFixSchedule,
+    pullRequestReview: review?.enabled,
+    codeWatchRepositories: watch?.enabled ? watch.repositories?.length : undefined,
+  };
+}
+
 /** A Docs7 site deployed from the CLI (`source: "local"`), which has its own build routes. */
 async function isCliSite(api: Api, sitePath: string): Promise<boolean> {
   return data(await api.get(sitePath)).source === "local";
@@ -670,10 +698,19 @@ export const TOOLS: ToolDef[] = [
     name: "docs7_list_sites",
     title: "List Docs7 sites",
     description:
-      "List the Docs7 sites of the teamspace: GitHub sites in `data`, sites deployed from the CLI in `localSites`.",
+      "List the Docs7 sites of the teamspace: GitHub sites in `sites`, sites deployed from the CLI in `cliSites`, with their address and agent settings. docs7_get_site gives every setting of one site.",
     kind: "read",
     args: {},
-    run: ({ teamspace }, api) => api.get(`${ts(teamspace)}/sites`),
+    run: async ({ teamspace }, api) => {
+      const body = (await api.get(`${ts(teamspace)}/sites`)) as {
+        data?: Record<string, unknown>[];
+        localSites?: Record<string, unknown>[];
+      };
+      return {
+        sites: (body.data ?? []).map(siteSummary),
+        cliSites: (body.localSites ?? []).map(siteSummary),
+      };
+    },
   }),
   tool({
     name: "docs7_get_site",
