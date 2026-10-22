@@ -5,25 +5,32 @@ description: Configure autonomous fixes, pull request reviews, code change updat
 
 The Docs7 Agent works from your GitHub repository and keeps every proposed change reviewable. Open **Docs7**, choose a site, then select **Agent**.
 
-<Frame caption="The Agent tab keeps every agent's settings and its run activity in one place.">
+<Frame caption="Select Edit on the Agents card to turn each agent on or off and choose its setting. Every change saves at once.">
   <img
     src="/images/docs7/dashboard/agent.jpg"
-    alt="Docs7 Agent dashboard with the Agents card and the Activity table"
+    alt="Agents card in edit mode with a row for each agent: its setting, its last run and an on/off switch"
   />
 </Frame>
 
 There are four agents:
 
-- **Context7 Agent** turns reader suggestions into docs fixes.
+- **Context7 Agent** turns the questions that AI agents ask Context7 about your docs into docs fixes.
 - **Build Fix Agent** fixes the errors and warnings that a build finds in your docs.
 - **PR Review Agent** reviews documentation changes in each eligible pull request.
 - **Code Watch Agent** updates the docs when a pull request merges in your code.
 
-The **Agents** card holds each agent's settings, and the **Activity** card below it lists every run of every agent, newest first. The planned **Compatibility Check Agent** is not available yet.
+The **Agents** card holds each agent's settings, and the **Activity** card below it lists every run of every agent, newest first. Select a run to open its pull request on GitHub. The planned **Compatibility Check Agent** is not available yet.
+
+<Frame caption="Activity lists every run, with filters for agent and state.">
+  <img
+    src="/images/docs7/dashboard/agent-activity.jpg"
+    alt="Activity table with runs of the Build Fix, PR Review and Code Watch agents and their states"
+  />
+</Frame>
 
 ## Context7 Agent
 
-The Context7 Agent works from reader suggestions. Suggestions come from Context7's analysis of the indexed documentation, and each one points to the source files that support it. When its schedule comes around, the agent picks up the pending suggestions on its own.
+The Context7 Agent works from suggestions. Suggestions come from the questions that AI agents ask Context7 about your docs. When its schedule comes around, the agent picks up the pending suggestions on its own.
 
 A run verifies each suggestion against the repository and edits only the configured docs path. Up to 10 suggestions go into one pull request. A run waits while its last pull request is still open, so unreviewed pull requests do not stack up.
 
@@ -45,16 +52,9 @@ An after-build run starts once a production build finishes. A daily or weekly ru
 
 ## PR Review Agent
 
-The PR Review Agent runs after an eligible pull request preview finishes. It reviews only files inside the configured docs path and posts its findings in the pull request's Docs7 summary.
+The PR Review Agent starts 5 minutes after an eligible pull request preview finishes, so a quick follow-up push replaces the review before it uses a run. It reviews only files inside the configured docs path and posts its findings in the pull request's Docs7 summary.
 
-<Frame caption="PR Review Agent settings control its response mode.">
-  <img
-    src="/images/docs7/dashboard/agent-pr-review.jpg"
-    alt="PR Review Agent with automatic review on and its Response menu"
-  />
-</Frame>
-
-New sites start with PR reviews disabled and **Comment only** selected. The only setting beside on/off is the response mode.
+New sites start with PR reviews disabled and **Comment only** selected.
 
 ### Checks
 
@@ -85,16 +85,9 @@ Do not make **Docs7 PR Review** a required GitHub check. Fork pull requests do n
 
 The Code Watch Agent keeps your docs in step with your code. When a pull request merges into the default branch of a repository you chose, the agent checks whether readers of your docs need a change. If they do, Docs7 opens one docs pull request that links to the merged pull request. Most merges change nothing that readers see, and then the agent opens nothing.
 
-<Frame caption="The Code Watch Agent watches the repositories you choose; its runs appear in Activity.">
-  <img
-    src="/images/docs7/dashboard/agent-code-watch.jpg"
-    alt="Code Watch Agent with automatic updates on for two repositories and its run activity"
-  />
-</Frame>
-
 ### Choose repositories
 
-Open the Agent tab, select **Edit**, and use the Code Watch Agent's repository list to pick up to 50 code repositories from the same GitHub account as your docs. The Docs7 GitHub App must have access to each one. Private repositories need Docs7 Pro. Then turn the agent on.
+Select **Edit**, then use the repository list in the Code Watch Agent row to pick up to 50 code repositories from the same GitHub account as your docs. The Docs7 GitHub App must have access to each one. Private repositories need Docs7 Pro. Then turn the agent on.
 
 If your docs are in a folder of the same repository as your code, that repository is already selected.
 
@@ -118,7 +111,7 @@ For a pull request from a fork, the agent uses the merged code and ignores the p
 
 When a merge belongs with a docs pull request the agent already opened and that is still open, for example the same commands added to your JavaScript and Python SDKs, the agent adds its change to that pull request instead of opening another one.
 
-The **Activity** card lists each merged pull request the agent checked, with the docs pull request it opened or **No docs change**. Each checked pull request counts as one run in the site's monthly agent allowance.
+The **Activity** card lists each merged pull request the agent checked, with the docs pull request it opened or **No change**. Each checked pull request counts as one run in the site's monthly agent allowance.
 
 ## Compatibility Check Agent
 
