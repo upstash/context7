@@ -68,6 +68,10 @@ One OAuth connection reaches every teamspace you are a member of, with your role
 | docs7     | `docs7_list_sites`, `docs7_get_site`, `docs7_create_site`, `docs7_update_site`, `docs7_check_domain`, `docs7_list_deployments`, `docs7_get_deployment`, `docs7_deploy`, `docs7_remove_preview`, `docs7_get_agent_runs`, `docs7_manage_feature_requests`, `docs7_get_analytics`, `docs7_query_logs`, `docs7_get_conversation`            |
 | ask       | `ask_list_sites`, `ask_get_site`, `ask_create_site`, `ask_verify_site`, `ask_get_analytics`, `ask_list_questions`                                                                                                                                                                                                                       |
 
+## Management API
+
+The same operations are available over the REST API at `/api/v2/teamspaces/{teamspaceId}`, so a script can use them without an MCP client. It takes the same credentials as this server: an API key with **Management access**, which reaches only its own teamspace, or an OAuth token issued for this server. See the [API reference](/api-reference/teamspaces/list-teamspaces) for the routes.
+
 ## Safety and limits
 
 - Remove and delete actions (`remove_library`, `manage_members` `remove`, `manage_library_versions` `remove`, `manage_rules` `delete`, `docs7_remove_preview`) are marked destructive, so your client asks you before it runs them. They also take `confirm`, set to the exact target — the library id, email, version, rule id or branch.
