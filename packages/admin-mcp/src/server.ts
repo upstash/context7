@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { McpServer, type CallToolResult } from "@modelcontextprotocol/server";
+import type { CallToolResult, McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
-import { GROUPS, TOOLS, ToolError, type Api, type Group, type Kind } from "./tools.js";
+import { TOOLS, ToolError, type Api, type Kind } from "./tools.js";
 
 export const SERVER_VERSION: string = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf-8")
@@ -15,33 +15,10 @@ const API_TIMEOUT_MS = 60_000;
 /** About 20,000 tokens at four characters a token. */
 export const MAX_RESULT_CHARS = 80_000;
 
-/** What the query parameters of the MCP URL select. */
-export interface ServerConfig {
-  teamspace?: string;
-  readOnly: boolean;
-  features: ReadonlySet<Group>;
-}
-
-/** One HTTP request: its credential, its config, and whether the API rejected the credential. */
+/** One HTTP request: its credential, and whether the API rejected it during a tool call. */
 export interface RequestState {
   authorization: string;
-  config: ServerConfig;
   authRejected: boolean;
-}
-
-export function parseServerConfig(params: URLSearchParams): ServerConfig {
-  const features = params.get("features");
-  const groups = features ? features.split(",").map((name) => name.trim()) : [...GROUPS];
-  const unknown = groups.filter((name) => !(GROUPS as readonly string[]).includes(name));
-  if (unknown.length > 0) {
-    throw new Error(`Unknown features: ${unknown.join(", ")}. Use: ${GROUPS.join(", ")}.`);
-  }
-  return {
-    teamspace: params.get("teamspace") || undefined,
-    readOnly: ["true", "1"].includes(params.get("read_only") ?? ""),
-    // The account group holds list_teamspaces, which every other group needs.
-    features: new Set<Group>(["account", ...(groups as Group[])]),
-  };
 }
 
 export class ApiError extends Error {
@@ -159,17 +136,27 @@ function errorText(error: unknown, untrusted: boolean): string {
   return `The request to the Context7 API failed: ${reason}`;
 }
 
-function instructions(config: ServerConfig): string {
-  const scope = config.teamspace
-    ? `This server is pinned to teamspace ${config.teamspace}.`
-    : "Tools take `teamspace` as an id or a name; leave it out when the user has one teamspace. list_teamspaces gives them all.";
-  return [
-    `Manage Context7 teamspaces. Tool groups: ${[...config.features].join(", ")}${config.readOnly ? " (read-only)" : ""}. ${scope}`,
-    "Long jobs (library parse, Docs7 build, agent run, Ask crawl) take minutes: call the get_ tool with `wait: true` and repeat until the state is final.",
-    "Common flows: claim a library (claim_library gives context7.json; commit it, then claim_library with verify: true). Set up Ask (ask_create_site gives a meta tag; add it to the site head, deploy, then ask_verify_site). Fix a failed docs build (docs7_get_deployment with include health and logs). Find doc gaps (docs7_get_analytics report queries, or ask_get_analytics).",
-    "Remove and delete actions need the user's confirmation first. Deleting a whole Docs7 or Ask site, billing, plans, API keys and SSO are not in this server: send the user to https://context7.com/dashboard.",
-  ].join("\n");
-}
+const INSTRUCTIONS = [
+  "Manage Context7 teamspaces, libraries, Docs7 sites and Ask sites. Tools take `teamspace` as an id or a name; leave it out when the user has one teamspace. list_teamspaces gives them all.",
+  "Long jobs (library parse, Docs7 build, Ask crawl) take minutes: call the get_ tool with `wait: true` and repeat until the state is final. The Docs7 agents run on their schedules (docs7_update_site); this server does not start them.",
+  "Common flows: claim a library (claim_library gives context7.json; commit it, then claim_library with verify: true). Set up Ask (ask_create_site gives a meta tag; add it to the site head, deploy, then ask_verify_site). Fix a failed docs build (docs7_get_deployment with include health and logs). Find doc gaps (get_library_suggestions, docs7_get_analytics report queries, or ask_get_analytics) and fix them in the repository.",
+  "Remove and delete actions need the user's confirmation first. Deleting a whole Docs7 or Ask site, billing, plans, API keys and SSO are not in this server: send the user to https://context7.com/dashboard.",
+].join("\n");
+
+/** What `mcp-handler` needs to build the server for each request. */
+export const SERVER_OPTIONS = {
+  serverInfo: {
+    name: "Context7 Admin",
+    title: "Context7 Admin",
+    version: SERVER_VERSION,
+    websiteUrl: "https://context7.com",
+    description: "Manage Context7 teamspaces, libraries, Docs7 sites and Ask sites.",
+  },
+  capabilities: { tools: { listChanged: false } },
+  instructions: INSTRUCTIONS,
+  // No subscriptions: every exchange is one finite answer.
+  maxSubscriptions: 0,
+};
 
 const TEAMSPACE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -196,37 +183,18 @@ async function resolveTeamspace(value: unknown, api: Api): Promise<string> {
   );
 }
 
-/** A fresh server for one HTTP request, with the tools its config allows. */
-export function createAdminServer(state: RequestState): McpServer {
-  const { config } = state;
-  const server = new McpServer(
-    {
-      name: "Context7 Admin",
-      title: "Context7 Admin",
-      version: SERVER_VERSION,
-      websiteUrl: "https://context7.com",
-      description: "Manage Context7 teamspaces, libraries, Docs7 sites and Ask sites.",
-    },
-    {
-      capabilities: { tools: { listChanged: false } },
-      instructions: instructions(config),
-    }
-  );
-  const api = createApi(state);
-
+/**
+ * Registers every tool. Each call reads the caller's credential from the
+ * request (`ctx.http.authInfo`, set by `withMcpAuth`) and forwards it to the
+ * management API, which decides what the caller may do.
+ */
+export function registerAdminTools(server: McpServer): void {
   for (const def of TOOLS) {
-    if (!config.features.has(def.group)) continue;
-    // A pinned server has one teamspace, so the tool that lists them goes.
-    if (def.teamspace === false && config.teamspace) continue;
-    const actions = def.actions
-      ? Object.keys(def.actions).filter((a) => !config.readOnly || def.actions![a] === "read")
-      : undefined;
+    const actions = def.actions ? Object.keys(def.actions) : undefined;
     const kinds: Kind[] = actions ? actions.map((a) => def.actions![a]) : [def.kind!];
-    if (kinds.length === 0 || (config.readOnly && kinds.some((kind) => kind !== "read"))) continue;
-
     const readOnly = kinds.every((kind) => kind === "read");
     const inputSchema = z.object({
-      ...(def.teamspace === false || config.teamspace
+      ...(def.teamspace === false
         ? {}
         : {
             teamspace: z
@@ -254,11 +222,12 @@ export function createAdminServer(state: RequestState): McpServer {
           openWorldHint: false,
         },
       },
-      async (args: Record<string, unknown>): Promise<CallToolResult> => {
-        const input: Record<string, unknown> = { ...args, teamspace: config.teamspace };
+      async (args: Record<string, unknown>, ctx): Promise<CallToolResult> => {
+        const api = createApi(ctx.http?.authInfo?.extra?.state as RequestState);
+        const input: Record<string, unknown> = { ...args };
         let result: CallToolResult;
         try {
-          if (def.teamspace !== false && !config.teamspace) {
+          if (def.teamspace !== false) {
             input.teamspace = await resolveTeamspace(args.teamspace, api);
           }
           const value = await def.run(input as Parameters<typeof def.run>[0], api);
@@ -284,5 +253,4 @@ export function createAdminServer(state: RequestState): McpServer {
       }
     );
   }
-  return server;
 }

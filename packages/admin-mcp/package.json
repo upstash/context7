@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "test": "pnpm exec vitest run",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit -p tsconfig.test.json",
     "lint": "eslint .",
     "lint:check": "eslint .",
     "format": "prettier --write .",
@@ -23,6 +23,7 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/server": "2.3.1",
+    "mcp-handler": "2.3.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {

@@ -1,8 +1,5 @@
 import { z } from "zod";
 
-export const GROUPS = ["account", "libraries", "rules", "usage", "docs7", "ask"] as const;
-export type Group = (typeof GROUPS)[number];
-
 /** `read` changes nothing; `destructive` deletes data that cannot be restored. */
 export type Kind = "read" | "write" | "destructive";
 
@@ -27,7 +24,6 @@ type Args<S extends z.ZodRawShape> = z.infer<z.ZodObject<S>> & {
 
 export interface ToolDef<S extends z.ZodRawShape = z.ZodRawShape> {
   name: string;
-  group: Group;
   title: string;
   description: string;
   /** A plain tool has one kind; an action tool has one kind per `action` value. */
@@ -189,7 +185,6 @@ export const TOOLS: ToolDef[] = [
   // ---------- account ----------
   tool({
     name: "list_teamspaces",
-    group: "account",
     title: "List teamspaces",
     description:
       "List the teamspaces of the user, with role and plan. Call this first to get the `teamspace` id that the other tools take.",
@@ -200,7 +195,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "get_teamspace",
-    group: "account",
     title: "Get teamspace",
     description:
       "Get one teamspace: name, your role, owner plan, billing model, Docs7 Pro, and the monthly spending cap with this month's spend.",
@@ -216,7 +210,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "manage_members",
-    group: "account",
     title: "Manage members",
     description:
       "List members and pending invitations, invite a member, change a role, remove a member, or cancel an invitation. Only an owner or admin can make changes. `remove` needs `confirm` set to the member's email, after the user confirms.",
@@ -270,7 +263,6 @@ export const TOOLS: ToolDef[] = [
   // ---------- libraries ----------
   tool({
     name: "list_libraries",
-    group: "libraries",
     title: "List libraries",
     description: "List the private and owned libraries of the teamspace, with their parse state.",
     kind: "read",
@@ -279,7 +271,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "get_library",
-    group: "libraries",
     title: "Get library",
     description:
       "Get one library: parse state (processing, finalizing, complete, error), the active task's progress, versions, token and snippet counts. After add_library, refresh_library or manage_library_versions, call it with `wait: true` until the state is complete or error.",
@@ -297,7 +288,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "add_library",
-    group: "libraries",
     title: "Add library",
     description:
       "Add a library to the teamspace from a repository, website, llms.txt or OpenAPI URL. The parse takes minutes: then call get_library with the library id from the answer and `wait: true`. A private repository needs the GitHub, GitLab or Bitbucket account connected in the dashboard. Confluence, Notion and file uploads are added in the dashboard.",
@@ -331,7 +321,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "refresh_library",
-    group: "libraries",
     title: "Refresh library",
     description:
       "Start a refresh of a library (the daily refresh limit applies). Then call get_library with `wait: true`.",
@@ -341,7 +330,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "update_library_config",
-    group: "libraries",
     title: "Update library config",
     description:
       "Change the settings of a library the teamspace owns. Send only the fields to change. A new title or description of a public library is reviewed before it shows. Returns the saved config. Refresh the library to apply parse settings.",
@@ -398,7 +386,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "manage_library_versions",
-    group: "libraries",
     title: "Manage library versions",
     description:
       "Add or remove a version (a tag or branch) of a library. After `add`, call get_library with `wait: true`. `remove` needs `confirm` set to the version name, after the user confirms.",
@@ -426,7 +413,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "claim_library",
-    group: "libraries",
     title: "Claim library",
     description:
       "Claim ownership of a library for the teamspace. Without `verify`, get the context7.json content and where it goes: for a repository, commit it to the repository root on the default branch and push; for a website, llms.txt or OpenAPI library, host it under the returned `hostUnder` URL. Then call again with `verify: true`.",
@@ -451,7 +437,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "remove_library",
-    group: "libraries",
     title: "Remove library",
     description:
       "Remove a private library, or give up ownership of a claimed library. Ask the user to confirm first, then set `confirm` to the library id.",
@@ -470,7 +455,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "get_library_analytics",
-    group: "libraries",
     title: "Get library analytics",
     description:
       "Get usage analytics of a library the teamspace owns: calls, topics, countries or clients.",
@@ -490,11 +474,20 @@ export const TOOLS: ToolDef[] = [
     run: ({ teamspace, library_id, report, days }, api) =>
       api.get(`${lib(teamspace, library_id)}/analytics`, { report, days }),
   }),
+  tool({
+    name: "get_library_suggestions",
+    title: "Get library suggestions",
+    description:
+      "Get the suggestions for a library the teamspace owns: questions its docs answered badly in Context7's benchmark, with what to add and the doc files to change. Use them to improve the docs in the repository. For a Docs7 site, its library id is in docs7_get_site.",
+    kind: "read",
+    untrusted: true,
+    args: { library_id: libraryId },
+    run: ({ teamspace, library_id }, api) => api.get(`${lib(teamspace, library_id)}/suggestions`),
+  }),
 
   // ---------- rules and policies ----------
   tool({
     name: "manage_rules",
-    group: "rules",
     title: "Manage rules",
     description:
       "List, create, update or delete the rules that Context7 adds to answers, for the whole teamspace or for one library. `list` gives all rules: `global` (teamspace rules) and `libraries` (rules by library id), each keyed by rule id. Changes need a paid plan. `delete` needs `confirm` set to the rule id, after the user confirms.",
@@ -539,7 +532,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "get_library_policies",
-    group: "rules",
     title: "Get policies",
     description: "Get the library filters (policies) of the teamspace.",
     kind: "read",
@@ -548,7 +540,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "update_library_policies",
-    group: "rules",
     title: "Update policies",
     description:
       'Change which libraries the teamspace can use (owner or admin). Send changes as operations, not the get_library_policies shape. Each list takes { add: [...] }, { remove: [...] } or { clear: true }; library entries are "/org/repo", "/org" or a domain. Use `dry_run: true` first to see how many libraries the change leaves.',
@@ -610,7 +601,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "manage_library_requests",
-    group: "rules",
     title: "Manage library requests",
     description:
       "List, create, approve or dismiss requests from members to allow or block a library.",
@@ -650,7 +640,6 @@ export const TOOLS: ToolDef[] = [
   // ---------- usage ----------
   tool({
     name: "get_teamspace_usage",
-    group: "usage",
     title: "Get usage",
     description: "Get daily usage and cost, the quota and the credit of the teamspace.",
     kind: "read",
@@ -659,7 +648,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "set_spending_limit",
-    group: "usage",
     title: "Set spending limit",
     description: "Set or remove the monthly spending cap (owner or admin).",
     kind: "write",
@@ -680,7 +668,6 @@ export const TOOLS: ToolDef[] = [
   // ---------- docs7 ----------
   tool({
     name: "docs7_list_sites",
-    group: "docs7",
     title: "List Docs7 sites",
     description:
       "List the Docs7 sites of the teamspace: GitHub sites in `data`, sites deployed from the CLI in `localSites`.",
@@ -690,7 +677,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "docs7_get_site",
-    group: "docs7",
     title: "Get Docs7 site",
     description:
       "Get one Docs7 site: settings, custom domain status, agent settings and, for a GitHub site, agent usage.",
@@ -706,7 +692,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "docs7_create_site",
-    group: "docs7",
     title: "Create Docs7 site",
     description:
       "Add a Docs7 site from a GitHub repository. The Docs7 GitHub app must be installed on the repository (the user does this in the dashboard). A repository without docs.json or mint.json becomes an agent-only site, which is not published. Gives the site and the first build's `deploymentId` (null when no build started): call docs7_get_deployment with it and `wait: true`.",
@@ -743,7 +728,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "docs7_update_site",
-    group: "docs7",
     title: "Update Docs7 site",
     description:
       'Change a Docs7 site. Send only the fields to change. A developer can only send `hosting: "on"`, which publishes an agent-only site. After a custom domain change, call docs7_check_domain.',
@@ -762,7 +746,11 @@ export const TOOLS: ToolDef[] = [
       improve_schedule: z
         .enum(["off", "daily", "weekly"])
         .optional()
-        .describe("How often the Context7 Agent looks for improvements."),
+        .describe("How often the Context7 Agent turns reader suggestions into a pull request."),
+      build_fix_schedule: z
+        .enum(["off", "after_build", "daily", "weekly"])
+        .optional()
+        .describe("When the Build Fix Agent fixes the issues of the latest production build."),
       analytics_url: z
         .string()
         .nullable()
@@ -771,16 +759,12 @@ export const TOOLS: ToolDef[] = [
       pull_request_review: z
         .object({
           enabled: z.boolean(),
-          checks: z.object({
-            broken_links: z.boolean(),
-            grammar: z.boolean(),
-            health: z.boolean(),
-            standards: z.boolean(),
-          }),
-          response: z.enum(["comment", "pull_request", "commit"]),
+          response: z
+            .enum(["comment", "pull_request", "commit"])
+            .describe("What to do with fixes; the findings comment is always posted."),
         })
         .optional()
-        .describe("All PR Review settings at once. Read the current ones with docs7_get_site."),
+        .describe("PR Review Agent settings. Every check always runs."),
       code_watch: z
         .object({
           enabled: z.boolean(),
@@ -790,7 +774,6 @@ export const TOOLS: ToolDef[] = [
         .describe("All Code Watch settings: the full list of watched repositories."),
     },
     run: ({ teamspace, site_id, ...fields }, api) => {
-      const review = fields.pull_request_review;
       return api.patch(site(teamspace, site_id), {
         slug: fields.slug,
         branch: fields.branch,
@@ -801,24 +784,15 @@ export const TOOLS: ToolDef[] = [
         hosting: fields.hosting,
         context7Index: fields.context7_index,
         improveSchedule: fields.improve_schedule,
+        buildFixSchedule: fields.build_fix_schedule,
         analyticsUrl: fields.analytics_url,
-        pullRequestReview: review && {
-          enabled: review.enabled,
-          checks: {
-            brokenLinks: review.checks.broken_links,
-            grammar: review.checks.grammar,
-            health: review.checks.health,
-            standards: review.checks.standards,
-          },
-          response: review.response,
-        },
+        pullRequestReview: fields.pull_request_review,
         codeWatch: fields.code_watch,
       });
     },
   }),
   tool({
     name: "docs7_check_domain",
-    group: "docs7",
     title: "Check custom domain",
     description:
       "Check the custom domain of a Docs7 site again. Gives its status and the DNS records to add.",
@@ -829,7 +803,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "docs7_list_deployments",
-    group: "docs7",
     title: "List deployments",
     description:
       "List the builds of a Docs7 site, newest first, and its preview targets. Works for GitHub and CLI sites.",
@@ -853,7 +826,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "docs7_get_deployment",
-    group: "docs7",
     title: "Get deployment",
     description:
       'Get one build of a Docs7 site (queued, building, succeeded, failed or canceled). After docs7_deploy, call it with `wait: true` until it ends. For a failed build, add `include: ["health", "logs"]` (CLI sites have logs only).',
@@ -898,7 +870,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "docs7_deploy",
-    group: "docs7",
     title: "Deploy Docs7 site",
     description:
       "Deploy a Docs7 site to production, or deploy a preview of a branch. Gives a deployment id: then call docs7_get_deployment with `wait: true`.",
@@ -918,7 +889,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "docs7_remove_preview",
-    group: "docs7",
     title: "Remove preview",
     description:
       "Remove the preview of a branch from a Docs7 site. Ask the user to confirm first, then set `confirm` to the branch name.",
@@ -934,113 +904,43 @@ export const TOOLS: ToolDef[] = [
     },
   }),
   tool({
-    name: "docs7_run_agent",
-    group: "docs7",
-    title: "Run Context7 Agent",
-    description:
-      "Start the Context7 Agent on a Docs7 site (owner or admin). `suggestions` needs `suggestion_ids` and `health` needs `issue_ids` (from docs7_manage_findings). `feature_requests` adds the feature requests page; `page_feedback` turns on page ratings. Then call docs7_get_agent_runs with the returned run id and `wait: true`.",
-    kind: "write",
-    args: {
-      site_id: siteId,
-      kind: z.enum(["suggestions", "health", "feature_requests", "page_feedback"]),
-      suggestion_ids: z.array(z.string()).min(1).max(10).optional().describe("suggestions only."),
-      issue_ids: z.array(z.string()).min(1).max(20).optional().describe("health only."),
-    },
-    run: ({ teamspace, site_id, kind, suggestion_ids, issue_ids }, api) =>
-      api.post(
-        `${site(teamspace, site_id)}/agent-runs`,
-        kind === "suggestions"
-          ? { kind, suggestionIds: need(suggestion_ids, "`suggestion_ids` is required.") }
-          : kind === "health"
-            ? { kind, issueIds: need(issue_ids, "`issue_ids` is required.") }
-            : { kind }
-      ),
-  }),
-  tool({
     name: "docs7_get_agent_runs",
-    group: "docs7",
     title: "Get agent runs",
     description:
-      "Get the agent run history of a Docs7 site (improve, review or watch), or one run with `run_id` (running, completed, failed or superseded). A run takes minutes and ends with a pull request.",
+      "Get the agent run history of a Docs7 site, newest first: `improve` (Context7 Agent and Build Fix Agent), `review` (PR Review Agent) or `watch` (Code Watch Agent). Each run has its state (running, completed, failed or superseded) and its pull request. The agents run on their schedules (docs7_update_site); this server does not start them.",
     kind: "read",
     untrusted: true,
     args: {
       site_id: siteId,
-      run_id: z.string().optional(),
-      history: z.enum(["improve", "review", "watch"]).optional(),
-      limit: z.number().int().min(1).max(50).optional(),
-      wait: wait.describe("With `run_id`: wait up to about 25 seconds for the run to end."),
+      history: z.enum(["improve", "review", "watch"]).optional().describe("Default improve."),
+      limit: z.number().int().min(1).max(50).optional().describe("Newest n runs."),
     },
-    run: ({ teamspace, site_id, run_id, history, limit, wait }, api) => {
-      const path = `${site(teamspace, site_id)}/agent-runs`;
-      if (!run_id) return api.get(path, { history, limit });
-      const once = () => api.get(`${path}/${seg(run_id)}`);
-      return wait
-        ? poll(once, (value) =>
-            ["completed", "failed", "superseded"].includes(stateOf(value, "state") as string)
-          )
-        : once();
-    },
+    run: ({ teamspace, site_id, history, limit }, api) =>
+      api.get(`${site(teamspace, site_id)}/agent-runs`, { history, limit }),
   }),
   tool({
-    name: "docs7_manage_findings",
-    group: "docs7",
-    title: "Manage site findings",
+    name: "docs7_manage_feature_requests",
+    title: "Manage feature requests",
     description:
-      "List or dismiss the suggestions and build issues of a Docs7 site, and list, ship or reopen its feature requests. Pass ids to docs7_run_agent to fix them.",
-    actions: {
-      list_suggestions: "read",
-      dismiss_suggestions: "destructive",
-      list_build_issues: "read",
-      dismiss_build_issues: "destructive",
-      list_feature_requests: "read",
-      ship_feature_request: "write",
-      reopen_feature_request: "write",
-    },
+      "List the feature requests readers and agents left on a Docs7 site, mark one shipped (with the page that answers it), or reopen it.",
+    actions: { list: "read", ship: "write", reopen: "write" },
     untrusted: true,
     args: {
       site_id: siteId,
-      ids: z
-        .array(z.string())
-        .max(100)
-        .optional()
-        .describe("Suggestion or build issue ids (dismiss)."),
       feature_request_id: z.string().optional().describe("Feature request id (ship, reopen)."),
-      docs_url: z.string().optional().describe("Page that answers the request (ship)."),
+      docs_url: z.string().optional().describe("https page that answers the request (ship)."),
     },
     run: (args, api) => {
-      const base = site(args.teamspace, args.site_id);
-      const ids = () => need(args.ids?.length ? args.ids : undefined, "`ids` is required.");
-      const featureRequestId = () =>
-        need(args.feature_request_id, "`feature_request_id` is required.");
-      switch (args.action) {
-        case "list_suggestions":
-          return api.get(`${base}/suggestions`);
-        case "dismiss_suggestions":
-          return api.del(`${base}/suggestions`, { body: { suggestionIds: ids() } });
-        case "list_build_issues":
-          return api.get(`${base}/build-issues`);
-        case "dismiss_build_issues":
-          return api.del(`${base}/build-issues`, { body: { issueIds: ids() } });
-        case "list_feature_requests":
-          return api.get(`${base}/feature-requests`);
-        case "ship_feature_request":
-          return api.patch(`${base}/feature-requests`, {
-            id: featureRequestId(),
-            status: "shipped",
-            docsUrl: args.docs_url ?? null,
-          });
-        default:
-          return api.patch(`${base}/feature-requests`, {
-            id: featureRequestId(),
-            status: "requested",
-          });
-      }
+      const base = `${site(args.teamspace, args.site_id)}/feature-requests`;
+      if (args.action === "list") return api.get(base);
+      const id = need(args.feature_request_id, "`feature_request_id` is required.");
+      return args.action === "ship"
+        ? api.patch(base, { id, status: "shipped", docsUrl: args.docs_url ?? null })
+        : api.patch(base, { id, status: "requested" });
     },
   }),
   tool({
     name: "docs7_get_analytics",
-    group: "docs7",
     title: "Get site analytics",
     description:
       "Get one analytics report of a Docs7 site. `queries` and `feedback` show what readers searched for and asked, so you can find doc gaps.",
@@ -1068,7 +968,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "docs7_query_logs",
-    group: "docs7",
     title: "Query site logs",
     description:
       "Search the records of a Docs7 site: reader searches, assistant questions, AI requests or page views.",
@@ -1132,7 +1031,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "docs7_get_conversation",
-    group: "docs7",
     title: "Get conversation",
     description:
       "Get one recorded assistant conversation of a Docs7 site (`conversationId` of a `questions` row from docs7_query_logs).",
@@ -1153,7 +1051,6 @@ export const TOOLS: ToolDef[] = [
   // ---------- ask ----------
   tool({
     name: "ask_list_sites",
-    group: "ask",
     title: "List Ask sites",
     description: "List the Ask sites of the teamspace, with index status and limits.",
     kind: "read",
@@ -1162,7 +1059,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "ask_get_site",
-    group: "ask",
     title: "Get Ask site",
     description:
       "Get one Ask site: verification, index status (pending, submitted, ready or failed) and the snippet to embed. After ask_verify_site, call it with `wait: true` until the index is ready or failed.",
@@ -1179,7 +1075,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "ask_create_site",
-    group: "ask",
     title: "Create Ask site",
     description:
       "Add an Ask site. Gives the meta tag (verificationTag) to put in the page <head>. Deploy the page with the tag, then call ask_verify_site.",
@@ -1189,7 +1084,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "ask_verify_site",
-    group: "ask",
     title: "Verify Ask site",
     description:
       "Check the meta tag of an Ask site and start the crawl. Then call ask_get_site with `wait: true`.",
@@ -1200,7 +1094,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "ask_get_analytics",
-    group: "ask",
     title: "Get Ask analytics",
     description:
       "Get the analytics of an Ask site: questions over time, clients, unanswered questions (gaps) and top questions.",
@@ -1215,7 +1108,6 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "ask_list_questions",
-    group: "ask",
     title: "List Ask questions",
     description: "List the question log of an Ask site, or get one answer with `question_id`.",
     kind: "read",

@@ -32,7 +32,7 @@ Create a Context7 API key in [the dashboard](https://context7.com/dashboard) wit
   "mcpServers": {
     "context7-admin": {
       "type": "http",
-      "url": "https://admin.mcp.context7.com/mcp?teamspace=YOUR_TEAMSPACE_ID",
+      "url": "https://admin.mcp.context7.com/mcp",
       "headers": { "Authorization": "Bearer ctx7sk-..." }
     }
   }
@@ -45,31 +45,24 @@ One OAuth connection reaches every teamspace you are a member of, with your role
 
 - Each tool takes `teamspace`: an id or a name. Leave it out when you have one teamspace. With several, the agent can work on many in one session by passing a different `teamspace` on each call.
 - Docs7 and Ask sites belong to a teamspace. `docs7_list_sites` and `ask_list_sites` give their ids; every site tool takes `site_id` (Docs7) or `site_key` (Ask).
-- To keep a connection on one teamspace, add `?teamspace=<id>` to the URL. You can add the server more than once, one entry per teamspace.
-- An API key belongs to one teamspace. Use one key (and one server entry) per teamspace.
-
-## Query parameters
-
-| Parameter        | Effect                                                                                                                      |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `teamspace=<id>` | Pins the server to one teamspace. Tools do not take a `teamspace` argument, and `list_teamspaces` is hidden.                |
-| `read_only=true` | Hides every tool and `action` that changes data.                                                                            |
-| `features=a,b`   | Turns on only these groups: `account`, `libraries`, `rules`, `usage`, `docs7`, `ask`. Default: all. `account` is always on. |
+- An API key belongs to one teamspace: the API refuses the others. Use one key (and one server entry) per teamspace.
+- To limit what an agent can do (read only, some tools only), use your client's tool settings: Claude connectors and Claude Code permissions can turn each tool off or make it ask first.
 
 ## Tools
 
 - `teamspace` takes an id or a name. Leave it out when you have one teamspace; with several, the error lists them.
 - Library ids take `/owner/repo`, `owner/repo` or a context7.com library URL.
-- Long jobs (library parse, Docs7 build, agent run, Ask crawl): call `get_library`, `docs7_get_deployment`, `docs7_get_agent_runs` (with `run_id`) or `ask_get_site` with `wait: true`. The server waits up to about 25 seconds for a final state.
+- Long jobs (library parse, Docs7 build, Ask crawl): call `get_library`, `docs7_get_deployment` or `ask_get_site` with `wait: true`. The server waits up to about 25 seconds for a final state.
+- The Docs7 agents run on their schedules, which `docs7_update_site` sets. This server reads their runs and does not start them.
 
-| Group     | Tools                                                                                                                                                                                                                                                                                                                                   |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| account   | `list_teamspaces`, `get_teamspace`, `manage_members`                                                                                                                                                                                                                                                                                    |
-| libraries | `list_libraries`, `get_library`, `add_library`, `refresh_library`, `update_library_config`, `manage_library_versions`, `claim_library`, `remove_library`, `get_library_analytics`                                                                                                                                                       |
-| rules     | `manage_rules`, `get_library_policies`, `update_library_policies`, `manage_library_requests`                                                                                                                                                                                                                                            |
-| usage     | `get_teamspace_usage`, `set_spending_limit`                                                                                                                                                                                                                                                                                             |
-| docs7     | `docs7_list_sites`, `docs7_get_site`, `docs7_create_site`, `docs7_update_site`, `docs7_check_domain`, `docs7_list_deployments`, `docs7_get_deployment`, `docs7_deploy`, `docs7_remove_preview`, `docs7_run_agent`, `docs7_get_agent_runs`, `docs7_manage_findings`, `docs7_get_analytics`, `docs7_query_logs`, `docs7_get_conversation` |
-| ask       | `ask_list_sites`, `ask_get_site`, `ask_create_site`, `ask_verify_site`, `ask_get_analytics`, `ask_list_questions`                                                                                                                                                                                                                       |
+| Group     | Tools                                                                                                                                                                                                                                                                                                                        |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| account   | `list_teamspaces`, `get_teamspace`, `manage_members`                                                                                                                                                                                                                                                                         |
+| libraries | `list_libraries`, `get_library`, `add_library`, `refresh_library`, `update_library_config`, `manage_library_versions`, `claim_library`, `remove_library`, `get_library_analytics`, `get_library_suggestions`                                                                                                                 |
+| rules     | `manage_rules`, `get_library_policies`, `update_library_policies`, `manage_library_requests`                                                                                                                                                                                                                                 |
+| usage     | `get_teamspace_usage`, `set_spending_limit`                                                                                                                                                                                                                                                                                  |
+| docs7     | `docs7_list_sites`, `docs7_get_site`, `docs7_create_site`, `docs7_update_site`, `docs7_check_domain`, `docs7_list_deployments`, `docs7_get_deployment`, `docs7_deploy`, `docs7_remove_preview`, `docs7_get_agent_runs`, `docs7_manage_feature_requests`, `docs7_get_analytics`, `docs7_query_logs`, `docs7_get_conversation` |
+| ask       | `ask_list_sites`, `ask_get_site`, `ask_create_site`, `ask_verify_site`, `ask_get_analytics`, `ask_list_questions`                                                                                                                                                                                                            |
 
 - Remove and delete actions (`remove_library`, `manage_members` `remove`, `manage_library_versions` `remove`, `manage_rules` `delete`, `docs7_remove_preview`) are marked destructive, so your client asks you before it runs them. That approval is the guard. They also take `confirm`, which makes the agent state the exact target (library id, email, version, rule id or branch); it stops a model that skips asking, not one that is told to repeat the value.
 - Deleting a whole Docs7 site or Ask site cannot be undone, so it is not in this server. Do it in [the dashboard](https://context7.com/dashboard).
@@ -80,7 +73,7 @@ Billing, plans, API keys, SSO and teamspace create or delete are not in this ser
 
 ## Deploy
 
-The server runs on Vercel as Web-standard functions (`api/`, routes in `vercel.json`): it keeps no session, so every request stands alone. Create a Vercel project with Root Directory `packages/admin-mcp` and the domain `admin.mcp.context7.com`. `pnpm build` compiles `src/` to `dist/`, which the functions import.
+The server runs on Vercel as Web-standard functions (`api/`, routes in `vercel.json`): it keeps no session, so every request stands alone. Create a Vercel project with Root Directory `packages/admin-mcp` and the domain `admin.mcp.context7.com`. Vercel compiles `api/` and `src/` itself; `vercel.json` sets an empty build command, so the project serves functions only.
 
 ## Development
 
