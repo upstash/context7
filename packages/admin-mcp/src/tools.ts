@@ -147,6 +147,9 @@ function siteDetails(site: Record<string, unknown>): Record<string, unknown> {
   return {
     ...siteSummary(site),
     source: site.source === "local" ? "cli" : "github",
+    // Two fields, as docs7_update_site takes them; the list joins them.
+    customDomain: site.customDomain,
+    customDomainPath: site.customDomain ? site.customDomainPath : undefined,
     customDomainRouting: site.customDomain ? site.customDomainRouting : undefined,
     customDomainRecords: records?.length ? records : undefined,
     context7Index: site.context7Index,
@@ -1005,9 +1008,8 @@ export const TOOLS: ToolDef[] = [
     run: async ({ teamspace, site_id }, api) => {
       const checked = data(await api.post(`${site(teamspace, site_id)}/domain/refresh`));
       return {
-        customDomain: checked.customDomain
-          ? `${checked.customDomain}${checked.customDomainPath ?? ""}`
-          : undefined,
+        customDomain: checked.customDomain,
+        customDomainPath: checked.customDomain ? checked.customDomainPath : undefined,
         routing: checked.customDomainRouting,
         status: checked.customDomainStatus,
         records: checked.customDomainRecords,
