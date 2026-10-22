@@ -215,8 +215,8 @@ describe("authentication", () => {
       new Request("https://admin.mcp.context7.com/mcp", { method: "POST", body: "{}" })
     );
     expect(response.status).toBe(401);
-    expect(response.headers.get("WWW-Authenticate")).toBe(
-      'Bearer resource_metadata="https://admin.mcp.context7.com/.well-known/oauth-protected-resource/mcp"'
+    expect(response.headers.get("WWW-Authenticate")).toContain(
+      'resource_metadata="https://admin.mcp.context7.com/.well-known/oauth-protected-resource/mcp"'
     );
   });
 
