@@ -5,7 +5,7 @@ description: The ctx7 CLI — fetch library documentation and configure Context7
 
 The `ctx7` CLI is the command-line interface for Context7. It does two things:
 
-- **Fetch library documentation** — resolve any library by name and query its up-to-date docs directly in your terminal, without opening a browser
+- **Fetch library documentation** — search all libraries with one question, or resolve any library by name and query its up-to-date docs directly in your terminal, without opening a browser
 - **Configure your AI coding agent** — set up the Context7 MCP server (or a CLI-based `docs` skill) for Claude Code, Cursor, OpenCode, and more with a single command
 
 The CLI is useful both as a standalone tool (fetching docs while you code) and as a setup utility (wiring up Context7 for your AI coding agent).
@@ -39,9 +39,38 @@ Requires Node.js 22.13 or later.
 
 ---
 
+## Search Documentation
+
+### ctx7 search
+
+Takes a natural-language question and returns relevant code snippets and explanations in one step. Context7 picks the libraries for you, so no library ID is needed.
+
+```bash
+ctx7 search "How to stream an OpenAI response from a Next.js route"
+ctx7 search "How to validate a request body with a schema"
+```
+
+If you know the library, version, or language, add them to narrow the results:
+
+```bash
+# Search specific libraries — a name or a library ID, repeat for up to four
+ctx7 search "How to stream a response" --library Next.js --library /openai/openai-node
+
+# Search a specific version
+ctx7 search "How to cache a server function" --library Next.js --library-version 15.4.0
+
+# Prefer results in the language you write in
+ctx7 search "How to send an SMS" --library Twilio --language Ruby
+
+# Output as structured JSON
+ctx7 search "How to use hooks for state management" --library React --json
+```
+
+---
+
 ## Query Library Documentation
 
-Fetching docs is a two-step process: first resolve the library name to get its Context7 ID, then use that ID to query documentation.
+To query one library directly, fetching docs is a two-step process: first resolve the library name to get its Context7 ID, then use that ID to query documentation.
 
 ### Step 1 — ctx7 library
 
@@ -256,7 +285,7 @@ export CONTEXT7_API_KEY=your_key
 
 | Feature                                                  | Required                                                                     |
 | -------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `ctx7 library` / `ctx7 docs`                             | No — login gives higher rate limits                                          |
+| `ctx7 search` / `ctx7 library` / `ctx7 docs`             | No — login gives higher rate limits                                          |
 | Hosted `ctx7 setup`                                      | Yes — unless `--api-key` is passed (`--oauth` also skips login for MCP mode) |
 | On-premise `ctx7 setup --mcp --base-url ...`             | Only when MCP authentication is enabled on the deployment                    |
 
