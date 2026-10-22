@@ -243,7 +243,7 @@ curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js@v16.2.9&quer
   -H "Authorization: Bearer CONTEXT7_API_KEY"
 ```
 
-If that version is not indexed, the request still succeeds and serves the closest documentation Context7 has: a tag matching the requested numbers, the newest indexed release of the requested line, or the library's current documentation. The response says which version it served — a `version` object in JSON, and a version note at the start of the text response. A branch or channel name that is not indexed, such as `/vercel/next.js/canary`, still returns `404 version_not_found`.
+If that version is not indexed, the request still succeeds and serves the closest documentation Context7 has: a tag matching the requested numbers, a newer release of the same line, or the library's current documentation. JSON responses include a `version` object that says which version was served. A text response starts with a version note when it serves another release or the current documentation. A branch or channel name that is not indexed, such as `/vercel/next.js/canary`, still returns `404 version_not_found`.
 
 ## Error Handling
 
