@@ -139,9 +139,23 @@ function errorText(error: unknown, untrusted: boolean): string {
 const INSTRUCTIONS = [
   "Manage Context7 teamspaces, libraries, Docs7 sites and Ask sites. Tools take `teamspace` as an id or a name; leave it out when the user has one teamspace. list_teamspaces gives them all.",
   "Long jobs (library parse, Docs7 build, Ask crawl) take minutes: call the get_ tool with `wait: true` and repeat until the state is final. The Docs7 agents run on their schedules (docs7_update_site); this server does not start them.",
-  "Common flows: claim a library (claim_library gives context7.json; commit it, then claim_library with verify: true). Set up Ask (ask_create_site gives a meta tag; add it to the site head, deploy, then ask_verify_site). Fix a failed docs build (docs7_get_deployment with include health and logs). Find doc gaps (get_library_suggestions, docs7_get_analytics report queries, or ask_get_analytics) and fix them in the repository.",
+  "Common flows: claim a library (claim_library gives context7.json; commit it, then claim_library with verify: true). Set up Ask (ask_create_site gives a meta tag; add it to the site head, deploy, then ask_verify_site). Fix a failed docs build (docs7_get_deployment with include health and logs). Find doc gaps (get_library_benchmarks for the questions the docs fail, get_library_suggestions, docs7_get_analytics report queries, or ask_get_analytics) and fix them in the repository.",
   "Remove and delete actions need the user's confirmation first. Deleting a whole Docs7 or Ask site, billing, plans, API keys and SSO are not in this server: send the user to https://context7.com/dashboard.",
 ].join("\n");
+
+/** The Context7 icon, as the docs MCP server uses it. The vector icon scales; the PNG is 512x512. */
+export const SERVER_ICONS = [
+  {
+    src: "https://context7.com/context7-icon-green.svg",
+    mimeType: "image/svg+xml",
+    sizes: ["any"],
+  },
+  {
+    src: "https://context7.com/context7-icon-green.png",
+    mimeType: "image/png",
+    sizes: ["512x512"],
+  },
+];
 
 /** What `mcp-handler` needs to build the server for each request. */
 export const SERVER_OPTIONS = {
@@ -151,6 +165,7 @@ export const SERVER_OPTIONS = {
     version: SERVER_VERSION,
     websiteUrl: "https://context7.com",
     description: "Manage Context7 teamspaces, libraries, Docs7 sites and Ask sites.",
+    icons: SERVER_ICONS,
   },
   capabilities: { tools: { listChanged: false } },
   instructions: INSTRUCTIONS,

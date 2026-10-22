@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { createAdminHandler } from "../src/http.js";
-import { normalizeLibraryId, poll } from "../src/tools.js";
+import { agentActivity, normalizeLibraryId, poll } from "../src/tools.js";
 
 // The server under test is the web-standard handler, driven by a real MCP
 // client. Global fetch (the management API) is stubbed: no network.
@@ -291,15 +291,24 @@ test("poll stops at a final state or at the deadline", async () => {
 test("deployment tools read a CLI site's builds from local-deployments", async () => {
   apiReply = (call) => ({
     body: call.path.endsWith("/local-deployments")
-      ? { data: { deployments: [{ id: "d-1", state: "succeeded" }], targets: [] } }
+      ? {
+          data: {
+            deployments: [
+              { id: "d-1", state: "succeeded", commitSha: "abc", requestedCommitSha: "abc" },
+            ],
+            targets: [],
+          },
+        }
       : { data: { id: "site-1", source: "local" } },
   });
   const client = await connect();
 
-  await client.callTool({
+  const list = await client.callTool({
     name: "docs7_list_deployments",
     arguments: { teamspace: TS, site_id: "site-1" },
   });
+  expect(text(list)).toContain('"deployments":[{"id":"d-1"');
+  expect(text(list)).not.toContain("requestedCommitSha");
   const one = await client.callTool({
     name: "docs7_get_deployment",
     arguments: { teamspace: TS, site_id: "site-1", deployment_id: "d-1" },
@@ -340,4 +349,145 @@ test("the protected resource metadata names the scopes clients may ask for", asy
     authorization_servers: ["https://clerk.context7.com"],
     scopes_supported: ["profile", "email"],
   });
+});
+
+test("docs7_list_sites keeps what an agent needs and drops internal ids", async () => {
+  apiReply = () => ({
+    body: {
+      data: [
+        {
+          id: "s-1",
+          repoUrl: "https://github.com/acme/docs",
+          defaultBranch: "main",
+          docsPath: "docs",
+          hosting: "on",
+          platformHostname: "acme-docs.docs7.io",
+          customDomain: "acme.com",
+          customDomainPath: "/docs",
+          customDomainRouting: "proxy",
+          customDomainStatus: "active",
+          context7LibraryName: "/acme/docs",
+          workerName: "s-abc",
+          installationId: 1,
+          createdBy: "user_1",
+          codeWatch: { enabled: true, repositories: [{ repoUrl: "x" }, { repoUrl: "y" }] },
+        },
+      ],
+      localSites: [
+        { id: "c-1", name: "CLI docs", hosting: "on", platformHostname: "cli.docs7.io" },
+      ],
+    },
+  });
+  const client = await connect();
+  const result = JSON.parse(
+    text(await client.callTool({ name: "docs7_list_sites", arguments: { teamspace: TS } }))
+  );
+
+  expect(result.sites[0]).toEqual({
+    id: "s-1",
+    repoUrl: "https://github.com/acme/docs",
+    branch: "main",
+    docsPath: "docs",
+    hosting: "on",
+    url: "https://acme-docs.docs7.io/docs",
+    customDomain: "acme.com/docs",
+    customDomainStatus: "active",
+    libraryId: "/acme/docs",
+    codeWatchRepositories: 2,
+  });
+  expect(result.cliSites[0]).toMatchObject({ id: "c-1", name: "CLI docs" });
+});
+
+test("the server card and serverInfo carry the Context7 icon", async () => {
+  const { default: card } = await import("../api/server-card.js");
+  const body = await (
+    await card.fetch(new Request("https://admin.mcp.context7.com/mcp/server-card"))
+  ).json();
+  expect(body).toMatchObject({
+    name: "io.github.upstash/context7-admin",
+    remotes: [{ type: "streamable-http", url: "https://admin.mcp.context7.com/mcp" }],
+  });
+  expect(body.icons[0].src).toBe("https://context7.com/context7-icon-green.svg");
+
+  const client = await connect();
+  expect(client.getServerVersion()?.icons?.[0]?.src).toBe(
+    "https://context7.com/context7-icon-green.svg"
+  );
+});
+
+test("agent usage counts this UTC month's runs by agent, without superseded runs", () => {
+  const now = new Date("2026-10-22T12:00:00Z");
+  const usage = agentActivity(
+    [
+      [
+        { state: "completed", createdAt: "2026-10-02T00:00:00Z", pullRequest: { state: "merged" } },
+        { state: "completed", createdAt: "2026-10-04T00:00:00Z", pullRequest: { state: "open" } },
+        { state: "failed", createdAt: "2026-10-03T00:00:00Z", input: { kind: "health" } },
+        { state: "completed", createdAt: "2026-09-30T23:59:59Z", pullRequest: { state: "open" } },
+      ],
+      [{ state: "superseded", createdAt: "2026-10-05T00:00:00Z", input: { kind: "review" } }],
+      [
+        {
+          state: "completed",
+          createdAt: "2026-10-21T00:00:00Z",
+          input: { kind: "code_change" },
+          pullRequest: { state: "open" },
+        },
+      ],
+    ],
+    now
+  );
+  expect(usage).toEqual({
+    month: "2026-10",
+    runs: { context7: 2, buildFix: 1, codeWatch: 1 },
+    failedRuns: { buildFix: 1 },
+    pullRequests: { context7: { merged: 1, open: 1 }, codeWatch: { open: 1 } },
+  });
+});
+
+test("docs7_get_agent_runs turns the summary's result blocks into fields", async () => {
+  apiReply = () => ({
+    body: {
+      data: [
+        {
+          id: "r-1",
+          boxId: "box",
+          summary:
+            '<!-- docs7-suggestion-results\n[{"suggestion":1,"status":"fixed"}]\n-->\n<!-- docs7-pr-title\ndocs: fix it\n-->\n- **One** — done',
+        },
+      ],
+    },
+  });
+  const result = await (
+    await connect()
+  ).callTool({ name: "docs7_get_agent_runs", arguments: { teamspace: TS, site_id: "s-1" } });
+  const body = JSON.parse(text(result).split("\n").slice(2, -1).join("\n"));
+  expect(body.data[0]).toEqual({
+    id: "r-1",
+    prTitle: "docs: fix it",
+    suggestionResults: [{ suggestion: 1, status: "fixed" }],
+    summary: "- **One** — done",
+  });
+});
+
+test("get_library_benchmarks gives the lowest scores first", async () => {
+  apiReply = () => ({
+    body: {
+      stats: { count: 3 },
+      benchmarks: [
+        { score: 80, query: "a" },
+        { score: 20, query: "b" },
+        { score: 50, query: "c" },
+      ],
+    },
+  });
+  const result = await (
+    await connect()
+  ).callTool({
+    name: "get_library_benchmarks",
+    arguments: { teamspace: TS, library_id: "/acme/docs", limit: 2 },
+  });
+  const body = JSON.parse(text(result).split("\n").slice(2, -1).join("\n"));
+  expect(body.benchmarks.map((b: { query: string }) => b.query)).toEqual(["b", "c"]);
+  expect(apiCalls[0].path).toBe(`/v2/teamspaces/${TS}/libraries/acme/docs/benchmarks`);
 });

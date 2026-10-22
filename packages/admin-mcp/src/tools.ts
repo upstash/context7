@@ -109,6 +109,159 @@ const wait = z
   .optional()
   .describe("Wait up to about 25 seconds for the job to finish before answering.");
 
+/**
+ * What an agent needs from a Docs7 site in a list: what it is, where it is
+ * served, and how its agents are set. Internal ids (worker, installation,
+ * repository, creator) stay out; docs7_get_site has every field.
+ */
+function siteSummary(site: Record<string, unknown>): Record<string, unknown> {
+  const review = site.pullRequestReview as { enabled?: unknown } | undefined;
+  const watch = site.codeWatch as { enabled?: unknown; repositories?: unknown[] } | undefined;
+  return {
+    id: site.id,
+    name: site.name,
+    repoUrl: site.repoUrl,
+    branch: site.branch ?? site.defaultBranch,
+    docsPath: site.docsPath,
+    hosting: site.hosting,
+    // A proxy-routed site is built under its custom domain path, on docs7.io too.
+    url: site.platformHostname
+      ? `https://${site.platformHostname}${site.customDomainRouting === "proxy" ? (site.customDomainPath ?? "") : ""}`
+      : undefined,
+    customDomain: site.customDomain
+      ? `${site.customDomain}${site.customDomainPath ?? ""}`
+      : undefined,
+    customDomainStatus: site.customDomain ? site.customDomainStatus : undefined,
+    libraryId: site.context7LibraryName,
+    improveSchedule: site.improveSchedule,
+    buildFixSchedule: site.buildFixSchedule,
+    pullRequestReview: review?.enabled,
+    codeWatchRepositories: watch?.enabled ? watch.repositories?.length : undefined,
+  };
+}
+
+/** One site with every setting an agent can act on; internal ids stay out. */
+function siteDetails(site: Record<string, unknown>): Record<string, unknown> {
+  const watch = site.codeWatch as { enabled?: unknown; repositories?: { repoUrl?: unknown }[] };
+  const records = site.customDomainRecords as unknown[] | undefined;
+  return {
+    ...siteSummary(site),
+    source: site.source === "local" ? "cli" : "github",
+    // As docs7_update_site takes them: null branch follows the repository default.
+    branch: site.branch ?? null,
+    defaultBranch: site.defaultBranch,
+    // Two fields, as docs7_update_site takes them; the list joins them.
+    customDomain: site.customDomain,
+    customDomainPath: site.customDomain ? site.customDomainPath : undefined,
+    customDomainRouting: site.customDomain ? site.customDomainRouting : undefined,
+    customDomainRecords: records?.length ? records : undefined,
+    context7Index: site.context7Index,
+    analyticsUrl: site.analyticsUrl,
+    pullRequestReview: site.pullRequestReview,
+    // docs7_update_site takes `enabled` and the full list, so both stay, also while it is off.
+    codeWatchRepositories: undefined,
+    codeWatch: watch && {
+      enabled: watch.enabled,
+      repositories: watch.repositories?.map((repository) => repository.repoUrl),
+    },
+    createdAt: site.createdAt,
+    updatedAt: site.updatedAt,
+  };
+}
+
+/** The agent of a run, as the dashboard names it, from the run's input kind. */
+function runAgent(run: { input?: { kind?: unknown } }): string {
+  switch (run.input?.kind) {
+    case "review":
+      return "prReview";
+    case "code_change":
+      return "codeWatch";
+    case "health":
+      return "buildFix";
+    default:
+      return "context7";
+  }
+}
+
+type AgentRun = {
+  state?: unknown;
+  createdAt?: unknown;
+  input?: { kind?: unknown };
+  pullRequest?: { state?: unknown };
+};
+
+/**
+ * This UTC month's runs of each agent and the states of their pull requests,
+ * read from the newest 50 runs of each history, as the dashboard's Agents card
+ * counts them. Superseded runs are left out, as there.
+ */
+export function agentActivity(histories: AgentRun[][], now = new Date()): Record<string, unknown> {
+  const monthStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1);
+  const runs: Record<string, number> = {};
+  const failedRuns: Record<string, number> = {};
+  const pullRequests: Record<string, Record<string, number>> = {};
+  for (const run of histories.flat()) {
+    if (run.state === "superseded") continue;
+    if (typeof run.createdAt !== "string" || Date.parse(run.createdAt) < monthStart) continue;
+    const agent = runAgent(run);
+    runs[agent] = (runs[agent] ?? 0) + 1;
+    if (run.state === "failed") failedRuns[agent] = (failedRuns[agent] ?? 0) + 1;
+    const state = run.pullRequest?.state;
+    if (typeof state === "string") {
+      const counts = (pullRequests[agent] ??= {});
+      counts[state] = (counts[state] ?? 0) + 1;
+    }
+  }
+  return { month: new Date(monthStart).toISOString().slice(0, 7), runs, failedRuns, pullRequests };
+}
+
+const RUN_NOISE = new Set(["boxId", "siteId"]);
+
+/**
+ * A run with the machine-readable blocks of its summary as fields: per
+ * suggestion results and the pull request title. Box and site ids stay out.
+ */
+function runView(run: Record<string, unknown>): Record<string, unknown> {
+  const { summary, ...rest } = without(run, RUN_NOISE) as Record<string, unknown>;
+  if (typeof summary !== "string") return rest;
+  const block = (name: string) => summary.match(new RegExp(`<!-- ${name}\\n([\\s\\S]*?)\\n-->`));
+  const results = block("docs7-suggestion-results");
+  const title = block("docs7-pr-title");
+  let parsed: unknown;
+  try {
+    parsed = results ? JSON.parse(results[1]) : undefined;
+  } catch {
+    parsed = undefined;
+  }
+  return {
+    ...rest,
+    prTitle: title?.[1].trim(),
+    suggestionResults: parsed,
+    summary: summary.replace(/<!-- docs7-[\s\S]*?-->\n?/g, "").trim() || undefined,
+  };
+}
+
+/** The value with these keys removed at every depth. */
+function without(value: unknown, keys: Set<string>): unknown {
+  if (Array.isArray(value)) return value.map((item) => without(item, keys));
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([key]) => !keys.has(key))
+      .map(([key, item]) => [key, without(item, keys)])
+  );
+}
+
+/** Deployment fields an agent never needs: the site it asked for, Worker names. */
+const DEPLOYMENT_NOISE = new Set(["siteId", "workerName", "attributionRequired"]);
+
+/** A build without its noise; `requestedCommitSha` only when the build ran another commit. */
+function deploymentView(deployment: unknown): unknown {
+  const view = without(deployment, DEPLOYMENT_NOISE) as Record<string, unknown>;
+  if (view && view.requestedCommitSha === view.commitSha) delete view.requestedCommitSha;
+  return view;
+}
+
 /** A Docs7 site deployed from the CLI (`source: "local"`), which has its own build routes. */
 async function isCliSite(api: Api, sitePath: string): Promise<boolean> {
   return data(await api.get(sitePath)).source === "local";
@@ -157,12 +310,14 @@ const libraryId = z
   .describe('Library id, such as "/owner/repo" (from list_libraries). "owner/repo" also works.');
 const siteId = z.string().describe("Docs7 site id (from docs7_list_sites).");
 const siteKey = z.string().describe("Ask site key, such as ask_… (from ask_list_sites).");
+const ASK_TOP = 20;
 const askDays = z.union([z.literal(1), z.literal(7), z.literal(30)]).optional();
 
 const SOURCE_TYPE = z.enum([
   "public_repos",
   "private_sources",
   "confluence",
+  "notion",
   "uploaded_files",
   "websites",
   "llmstxt",
@@ -273,7 +428,7 @@ export const TOOLS: ToolDef[] = [
     name: "get_library",
     title: "Get library",
     description:
-      "Get one library: parse state (processing, finalizing, complete, error), the active task's progress, versions, token and snippet counts. After add_library, refresh_library or manage_library_versions, call it with `wait: true` until the state is complete or error.",
+      "Get one library: parse state (processing, finalizing, complete, error), the active task's progress, versions, token and snippet counts, and its benchmark score (0 to 100). After add_library, refresh_library or manage_library_versions, call it with `wait: true` until the state is complete or error.",
     kind: "read",
     args: { library_id: libraryId, wait },
     run: ({ teamspace, library_id, wait }, api) => {
@@ -484,6 +639,33 @@ export const TOOLS: ToolDef[] = [
     args: { library_id: libraryId },
     run: ({ teamspace, library_id }, api) => api.get(`${lib(teamspace, library_id)}/suggestions`),
   }),
+  tool({
+    name: "get_library_benchmarks",
+    title: "Get library benchmarks",
+    description:
+      "Get the benchmark of a library the teamspace owns: score statistics and the graded questions (real questions asked about the library, each with the score its docs earned and the grader's explanation). Lowest scores first by default: these are the questions the docs fail. get_library_suggestions gives the fixes Context7 proposes for them.",
+    kind: "read",
+    untrusted: true,
+    args: {
+      library_id: libraryId,
+      order: z.enum(["lowest", "newest"]).optional().describe("Default lowest."),
+      limit: z
+        .number()
+        .int()
+        .min(1)
+        .max(100)
+        .optional()
+        .describe("Questions to return. Default 20."),
+    },
+    run: async ({ teamspace, library_id, order = "lowest", limit = 20 }, api) => {
+      const { stats, benchmarks = [] } = (await api.get(
+        `${lib(teamspace, library_id)}/benchmarks`
+      )) as { stats?: unknown; benchmarks?: { score: number }[] };
+      const sorted =
+        order === "lowest" ? [...benchmarks].sort((a, b) => a.score - b.score) : benchmarks;
+      return { stats, benchmarks: sorted.slice(0, limit) };
+    },
+  }),
 
   // ---------- rules and policies ----------
   tool({
@@ -506,27 +688,34 @@ export const TOOLS: ToolDef[] = [
         .optional()
         .describe("The rule id, after the user confirms the deletion (delete)."),
     },
-    run: (args, api) => {
+    // The rules routes answer { success, data }; the other tools answer the data itself.
+    run: async (args, api) => {
       const base = `${ts(args.teamspace)}/rules`;
       const ruleId = () => seg(need(args.rule_id, "`rule_id` is required."));
       switch (args.action) {
         case "list":
-          return api.get(base);
+          return data(await api.get(base));
         case "create":
-          return api.post(base, {
-            text: need(args.text, "`text` is required."),
-            libraryId: args.library_id ? normalizeLibraryId(args.library_id) : null,
-          });
+          return data(
+            await api.post(base, {
+              text: need(args.text, "`text` is required."),
+              libraryId: args.library_id ? normalizeLibraryId(args.library_id) : null,
+            })
+          );
         case "update":
-          return api.patch(`${base}/${ruleId()}`, {
-            text: need(args.text, "`text` is required."),
-            libraryId: args.library_id ? normalizeLibraryId(args.library_id) : null,
-          });
+          return data(
+            await api.patch(`${base}/${ruleId()}`, {
+              text: need(args.text, "`text` is required."),
+              libraryId: args.library_id ? normalizeLibraryId(args.library_id) : null,
+            })
+          );
         default:
           confirmed(args.confirm, need(args.rule_id, "`rule_id` is required."), "the rule id");
-          return api.del(`${base}/${ruleId()}`, {
-            query: { libraryId: args.library_id && normalizeLibraryId(args.library_id) },
-          });
+          return data(
+            await api.del(`${base}/${ruleId()}`, {
+              query: { libraryId: args.library_id && normalizeLibraryId(args.library_id) },
+            })
+          );
       }
     },
   }),
@@ -588,15 +777,22 @@ export const TOOLS: ToolDef[] = [
         .optional(),
       dry_run: z.boolean().optional().describe("Preview the change and its library count."),
     },
-    run: ({ teamspace, source_types, library_filters, dry_run }, api) => {
+    run: async ({ teamspace, source_types, library_filters, dry_run }, api) => {
       if (!source_types && !library_filters) {
         throw new ToolError("Send `source_types` or `library_filters`.");
       }
-      return api.patch(`${ts(teamspace)}/policies`, {
+      const result = (await api.patch(`${ts(teamspace)}/policies`, {
         sourceTypes: source_types,
         libraryFilters: library_filters,
         dryRun: dry_run,
-      });
+      })) as { libraryFilters?: { mode?: unknown } } | null;
+      if ((library_filters?.quality || library_filters?.select) && !result?.libraryFilters?.mode) {
+        return {
+          ...result,
+          note: 'Library filters are off (mode is null), so these rules change nothing. Set `library_filters.mode` to "quality" or "select" to apply them.',
+        };
+      }
+      return result;
     },
   }),
   tool({
@@ -670,24 +866,40 @@ export const TOOLS: ToolDef[] = [
     name: "docs7_list_sites",
     title: "List Docs7 sites",
     description:
-      "List the Docs7 sites of the teamspace: GitHub sites in `data`, sites deployed from the CLI in `localSites`.",
+      "List the Docs7 sites of the teamspace: GitHub sites in `sites`, sites deployed from the CLI in `cliSites`, with their address and agent settings. docs7_get_site gives every setting of one site.",
     kind: "read",
     args: {},
-    run: ({ teamspace }, api) => api.get(`${ts(teamspace)}/sites`),
+    run: async ({ teamspace }, api) => {
+      const body = (await api.get(`${ts(teamspace)}/sites`)) as {
+        data?: Record<string, unknown>[];
+        localSites?: Record<string, unknown>[];
+      };
+      return {
+        sites: (body.data ?? []).map(siteSummary),
+        cliSites: (body.localSites ?? []).map(siteSummary),
+      };
+    },
   }),
   tool({
     name: "docs7_get_site",
     title: "Get Docs7 site",
     description:
-      "Get one Docs7 site: settings, custom domain status, agent settings and, for a GitHub site, agent usage.",
+      "Get one Docs7 site: settings, custom domain, agent settings and, for a GitHub site, agent usage: the plan, whether this month's agent runs are used up, and this UTC month's runs, failed runs and pull request states by agent.",
     kind: "read",
     args: { site_id: siteId },
     run: async ({ teamspace, site_id }, api) => {
       const path = site(teamspace, site_id);
-      const details = await api.get(path);
+      const details = data(await api.get(path));
       // A CLI site has no agent, and its agent-usage route answers 404.
-      if (data(details).source === "local") return { site: details };
-      return { site: details, agentUsage: await api.get(`${path}/agent-usage`) };
+      if (details.source === "local") return { site: siteDetails(details) };
+      const [usage, ...histories] = await Promise.all([
+        api.get(`${path}/agent-usage`),
+        ...["improve", "review", "watch"].map((history) =>
+          api.get(`${path}/agent-runs`, { history, limit: 50 })
+        ),
+      ]);
+      const runs = histories.map((body) => (body as { data?: AgentRun[] })?.data ?? []);
+      return { site: siteDetails(details), agentUsage: { ...data(usage), ...agentActivity(runs) } };
     },
   }),
   tool({
@@ -799,7 +1011,16 @@ export const TOOLS: ToolDef[] = [
     kind: "write",
     idempotent: true,
     args: { site_id: siteId },
-    run: ({ teamspace, site_id }, api) => api.post(`${site(teamspace, site_id)}/domain/refresh`),
+    run: async ({ teamspace, site_id }, api) => {
+      const checked = data(await api.post(`${site(teamspace, site_id)}/domain/refresh`));
+      return {
+        customDomain: checked.customDomain,
+        customDomainPath: checked.customDomain ? checked.customDomainPath : undefined,
+        routing: checked.customDomainRouting,
+        status: checked.customDomainStatus,
+        records: checked.customDomainRecords,
+      };
+    },
   }),
   tool({
     name: "docs7_list_deployments",
@@ -820,8 +1041,19 @@ export const TOOLS: ToolDef[] = [
     run: async ({ teamspace, site_id, page }, api) => {
       const path = site(teamspace, site_id);
       // A CLI site keeps its builds apart; its /deployments route answers 404.
-      if (await isCliSite(api, path)) return api.get(`${path}/local-deployments`);
-      return api.get(`${path}/deployments`, { page });
+      const body = (await isCliSite(api, path))
+        ? await api.get(`${path}/local-deployments`)
+        : await api.get(`${path}/deployments`, { page });
+      const { data: rows, ...rest } = without(body, DEPLOYMENT_NOISE) as { data?: unknown };
+      // A GitHub site answers { data: [...] }, a CLI site { data: { deployments, targets } }.
+      if (Array.isArray(rows)) return { data: rows.map(deploymentView), ...rest };
+      const cli = rows as { deployments?: unknown[] } | undefined;
+      return {
+        data: cli?.deployments
+          ? { ...cli, deployments: cli.deployments.map(deploymentView) }
+          : rows,
+        ...rest,
+      };
     },
   }),
   tool({
@@ -863,7 +1095,7 @@ export const TOOLS: ToolDef[] = [
         : await once();
       const parts = await Promise.all(include.map((part) => api.get(`${path}/${part}`)));
       return Object.fromEntries([
-        ["deployment", deployment],
+        ["deployment", deploymentView(data(deployment))],
         ...include.map((part, index) => [part, parts[index]]),
       ]);
     },
@@ -915,8 +1147,15 @@ export const TOOLS: ToolDef[] = [
       history: z.enum(["improve", "review", "watch"]).optional().describe("Default improve."),
       limit: z.number().int().min(1).max(50).optional().describe("Newest n runs."),
     },
-    run: ({ teamspace, site_id, history, limit }, api) =>
-      api.get(`${site(teamspace, site_id)}/agent-runs`, { history, limit }),
+    run: async ({ teamspace, site_id, history, limit }, api) => {
+      const body = (await api.get(`${site(teamspace, site_id)}/agent-runs`, {
+        history,
+        limit,
+      })) as {
+        data?: Record<string, unknown>[];
+      };
+      return { data: (body?.data ?? []).map(runView) };
+    },
   }),
   tool({
     name: "docs7_manage_feature_requests",
@@ -1011,10 +1250,10 @@ export const TOOLS: ToolDef[] = [
       page: z.number().int().min(1).optional(),
       previews: z.boolean().optional(),
     },
-    run: (args, api) => {
+    run: async (args, api) => {
       const to = new Date();
       const from = new Date(to.getTime() - (args.days ?? 7) * 86_400_000);
-      return api.post(`${site(args.teamspace, args.site_id)}/analytics/explore`, {
+      const body = (await api.post(`${site(args.teamspace, args.site_id)}/analytics/explore`, {
         previews: args.previews ?? false,
         query: {
           dataset: args.dataset,
@@ -1026,7 +1265,12 @@ export const TOOLS: ToolDef[] = [
           order: args.order ?? "newest",
           page: args.page ?? 1,
         },
-      });
+      })) as { data?: { series?: { group?: string | null }[] } };
+      // A grouped series charts the top groups; its null group sums all the others.
+      if (args.group_by) {
+        for (const point of body?.data?.series ?? []) point.group ??= "other";
+      }
+      return body;
     },
   }),
   tool({
@@ -1103,8 +1347,17 @@ export const TOOLS: ToolDef[] = [
       site_key: siteKey,
       days: askDays.describe("Window in days. Default 30."),
     },
-    run: ({ teamspace, site_key, days }, api) =>
-      api.get(`${askSite(teamspace, site_key)}/analytics`, { days }),
+    run: async ({ teamspace, site_key, days }, api) => {
+      const body = (await api.get(`${askSite(teamspace, site_key)}/analytics`, { days })) as {
+        data?: Record<string, unknown>;
+      };
+      // Both lists hold every distinct question; the first ASK_TOP carry the signal.
+      const report = body?.data ?? {};
+      const top = (list: unknown) => (Array.isArray(list) ? list.slice(0, ASK_TOP) : list);
+      return {
+        data: { ...report, gaps: top(report.gaps), topQuestions: top(report.topQuestions) },
+      };
+    },
   }),
   tool({
     name: "ask_list_questions",

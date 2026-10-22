@@ -7,6 +7,10 @@
       "destination": "/api/mcp"
     },
     {
+      "source": "/mcp/server-card",
+      "destination": "/api/server-card"
+    },
+    {
       "source": "/.well-known/oauth-protected-resource",
       "destination": "/api/oauth-protected-resource"
     },
