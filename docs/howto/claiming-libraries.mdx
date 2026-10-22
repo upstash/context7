@@ -177,8 +177,6 @@ Context7 checks a new title or description before it saves it. If the text gives
     | **Display URL**              | Optional URL shown to users instead of the base URL.                                             | Max 500 characters              |
     | **Keep Query Parameters**    | Whether to treat URLs with different query strings as distinct pages. Enabled by default.        | Boolean                         |
     | **Exclude URLs**             | URL patterns to exclude from crawling. Supports wildcards.                                       | Max 100 patterns                |
-    | **Page Content Selectors**   | CSS selectors of the page content, such as `article.doc`. Use if the crawl reads only the menu.  | Max 20, 200 characters each     |
-    | **Frames**                   | Read text inside iframes. Turn on when each page loads into an iframe. Disabled by default.      | Boolean                         |
 
     <Note>
       The crawl stays under the Base URL. A Base URL without a trailing slash is a plain
