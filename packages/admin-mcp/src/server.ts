@@ -165,8 +165,8 @@ function instructions(config: ServerConfig): string {
     : "Tools take `teamspace` as an id or a name; leave it out when the user has one teamspace. list_teamspaces gives them all.";
   return [
     `Manage Context7 teamspaces. Tool groups: ${[...config.features].join(", ")}${config.readOnly ? " (read-only)" : ""}. ${scope}`,
-    "Long jobs (library parse, Docs7 build, agent run, Ask crawl) take minutes: call the get_ tool with `wait: true` and repeat until the state is final.",
-    "Common flows: claim a library (claim_library gives context7.json; commit it, then claim_library with verify: true). Set up Ask (ask_create_site gives a meta tag; add it to the site head, deploy, then ask_verify_site). Fix a failed docs build (docs7_get_deployment with include health and logs). Find doc gaps (docs7_get_analytics report queries, or ask_get_analytics).",
+    "Long jobs (library parse, Docs7 build, Ask crawl) take minutes: call the get_ tool with `wait: true` and repeat until the state is final. The Docs7 agents run on their schedules (docs7_update_site); this server does not start them.",
+    "Common flows: claim a library (claim_library gives context7.json; commit it, then claim_library with verify: true). Set up Ask (ask_create_site gives a meta tag; add it to the site head, deploy, then ask_verify_site). Fix a failed docs build (docs7_get_deployment with include health and logs). Find doc gaps (get_library_suggestions, docs7_get_analytics report queries, or ask_get_analytics) and fix them in the repository.",
     "Remove and delete actions need the user's confirmation first. Deleting a whole Docs7 or Ask site, billing, plans, API keys and SSO are not in this server: send the user to https://context7.com/dashboard.",
   ].join("\n");
 }

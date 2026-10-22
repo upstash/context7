@@ -342,3 +342,19 @@ test("deployment tools read a CLI site's builds from local-deployments", async (
     "/v2/teamspaces/ts-1/sites/site-1/deployments/d-1"
   );
 });
+
+// Docs7 agents run on their schedules only; the server reads suggestions, it starts no Box run.
+test("suggestions are read per library, and no tool starts an agent run", async () => {
+  const client = await connect("?teamspace=ts-1");
+  const names = (await client.listTools()).tools.map((t) => t.name);
+  expect(names).not.toContain("docs7_run_agent");
+
+  await client.callTool({
+    name: "get_library_suggestions",
+    arguments: { library_id: "acme/docs" },
+  });
+  expect(apiCalls.at(-1)).toMatchObject({
+    method: "GET",
+    path: "/v2/teamspaces/ts-1/libraries/acme/docs/suggestions",
+  });
+});

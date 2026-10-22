@@ -490,6 +490,17 @@ export const TOOLS: ToolDef[] = [
     run: ({ teamspace, library_id, report, days }, api) =>
       api.get(`${lib(teamspace, library_id)}/analytics`, { report, days }),
   }),
+  tool({
+    name: "get_library_suggestions",
+    group: "libraries",
+    title: "Get library suggestions",
+    description:
+      "Get the suggestions for a library the teamspace owns: questions its docs answered badly in Context7's benchmark, with what to add and the doc files to change. Use them to improve the docs in the repository. For a Docs7 site, its library id is in docs7_get_site.",
+    kind: "read",
+    untrusted: true,
+    args: { library_id: libraryId },
+    run: ({ teamspace, library_id }, api) => api.get(`${lib(teamspace, library_id)}/suggestions`),
+  }),
 
   // ---------- rules and policies ----------
   tool({
@@ -762,7 +773,11 @@ export const TOOLS: ToolDef[] = [
       improve_schedule: z
         .enum(["off", "daily", "weekly"])
         .optional()
-        .describe("How often the Context7 Agent looks for improvements."),
+        .describe("How often the Context7 Agent turns reader suggestions into a pull request."),
+      build_fix_schedule: z
+        .enum(["off", "after_build", "daily", "weekly"])
+        .optional()
+        .describe("When the Build Fix Agent fixes the issues of the latest production build."),
       analytics_url: z
         .string()
         .nullable()
@@ -771,16 +786,12 @@ export const TOOLS: ToolDef[] = [
       pull_request_review: z
         .object({
           enabled: z.boolean(),
-          checks: z.object({
-            broken_links: z.boolean(),
-            grammar: z.boolean(),
-            health: z.boolean(),
-            standards: z.boolean(),
-          }),
-          response: z.enum(["comment", "pull_request", "commit"]),
+          response: z
+            .enum(["comment", "pull_request", "commit"])
+            .describe("What to do with fixes; the findings comment is always posted."),
         })
         .optional()
-        .describe("All PR Review settings at once. Read the current ones with docs7_get_site."),
+        .describe("PR Review Agent settings. Every check always runs."),
       code_watch: z
         .object({
           enabled: z.boolean(),
@@ -790,7 +801,6 @@ export const TOOLS: ToolDef[] = [
         .describe("All Code Watch settings: the full list of watched repositories."),
     },
     run: ({ teamspace, site_id, ...fields }, api) => {
-      const review = fields.pull_request_review;
       return api.patch(site(teamspace, site_id), {
         slug: fields.slug,
         branch: fields.branch,
@@ -801,17 +811,9 @@ export const TOOLS: ToolDef[] = [
         hosting: fields.hosting,
         context7Index: fields.context7_index,
         improveSchedule: fields.improve_schedule,
+        buildFixSchedule: fields.build_fix_schedule,
         analyticsUrl: fields.analytics_url,
-        pullRequestReview: review && {
-          enabled: review.enabled,
-          checks: {
-            brokenLinks: review.checks.broken_links,
-            grammar: review.checks.grammar,
-            health: review.checks.health,
-            standards: review.checks.standards,
-          },
-          response: review.response,
-        },
+        pullRequestReview: fields.pull_request_review,
         codeWatch: fields.code_watch,
       });
     },
@@ -934,108 +936,41 @@ export const TOOLS: ToolDef[] = [
     },
   }),
   tool({
-    name: "docs7_run_agent",
-    group: "docs7",
-    title: "Run Context7 Agent",
-    description:
-      "Start the Context7 Agent on a Docs7 site (owner or admin). `suggestions` needs `suggestion_ids` and `health` needs `issue_ids` (from docs7_manage_findings). `feature_requests` adds the feature requests page; `page_feedback` turns on page ratings. Then call docs7_get_agent_runs with the returned run id and `wait: true`.",
-    kind: "write",
-    args: {
-      site_id: siteId,
-      kind: z.enum(["suggestions", "health", "feature_requests", "page_feedback"]),
-      suggestion_ids: z.array(z.string()).min(1).max(10).optional().describe("suggestions only."),
-      issue_ids: z.array(z.string()).min(1).max(20).optional().describe("health only."),
-    },
-    run: ({ teamspace, site_id, kind, suggestion_ids, issue_ids }, api) =>
-      api.post(
-        `${site(teamspace, site_id)}/agent-runs`,
-        kind === "suggestions"
-          ? { kind, suggestionIds: need(suggestion_ids, "`suggestion_ids` is required.") }
-          : kind === "health"
-            ? { kind, issueIds: need(issue_ids, "`issue_ids` is required.") }
-            : { kind }
-      ),
-  }),
-  tool({
     name: "docs7_get_agent_runs",
     group: "docs7",
     title: "Get agent runs",
     description:
-      "Get the agent run history of a Docs7 site (improve, review or watch), or one run with `run_id` (running, completed, failed or superseded). A run takes minutes and ends with a pull request.",
+      "Get the agent run history of a Docs7 site, newest first: `improve` (Context7 Agent and Build Fix Agent), `review` (PR Review Agent) or `watch` (Code Watch Agent). Each run has its state (running, completed, failed or superseded) and its pull request. The agents run on their schedules (docs7_update_site); this server does not start them.",
     kind: "read",
     untrusted: true,
     args: {
       site_id: siteId,
-      run_id: z.string().optional(),
-      history: z.enum(["improve", "review", "watch"]).optional(),
-      limit: z.number().int().min(1).max(50).optional(),
-      wait: wait.describe("With `run_id`: wait up to about 25 seconds for the run to end."),
+      history: z.enum(["improve", "review", "watch"]).optional().describe("Default improve."),
+      limit: z.number().int().min(1).max(50).optional().describe("Newest n runs."),
     },
-    run: ({ teamspace, site_id, run_id, history, limit, wait }, api) => {
-      const path = `${site(teamspace, site_id)}/agent-runs`;
-      if (!run_id) return api.get(path, { history, limit });
-      const once = () => api.get(`${path}/${seg(run_id)}`);
-      return wait
-        ? poll(once, (value) =>
-            ["completed", "failed", "superseded"].includes(stateOf(value, "state") as string)
-          )
-        : once();
-    },
+    run: ({ teamspace, site_id, history, limit }, api) =>
+      api.get(`${site(teamspace, site_id)}/agent-runs`, { history, limit }),
   }),
   tool({
-    name: "docs7_manage_findings",
+    name: "docs7_manage_feature_requests",
     group: "docs7",
-    title: "Manage site findings",
+    title: "Manage feature requests",
     description:
-      "List or dismiss the suggestions and build issues of a Docs7 site, and list, ship or reopen its feature requests. Pass ids to docs7_run_agent to fix them.",
-    actions: {
-      list_suggestions: "read",
-      dismiss_suggestions: "destructive",
-      list_build_issues: "read",
-      dismiss_build_issues: "destructive",
-      list_feature_requests: "read",
-      ship_feature_request: "write",
-      reopen_feature_request: "write",
-    },
+      "List the feature requests readers and agents left on a Docs7 site, mark one shipped (with the page that answers it), or reopen it.",
+    actions: { list: "read", ship: "write", reopen: "write" },
     untrusted: true,
     args: {
       site_id: siteId,
-      ids: z
-        .array(z.string())
-        .max(100)
-        .optional()
-        .describe("Suggestion or build issue ids (dismiss)."),
       feature_request_id: z.string().optional().describe("Feature request id (ship, reopen)."),
-      docs_url: z.string().optional().describe("Page that answers the request (ship)."),
+      docs_url: z.string().optional().describe("https page that answers the request (ship)."),
     },
     run: (args, api) => {
-      const base = site(args.teamspace, args.site_id);
-      const ids = () => need(args.ids?.length ? args.ids : undefined, "`ids` is required.");
-      const featureRequestId = () =>
-        need(args.feature_request_id, "`feature_request_id` is required.");
-      switch (args.action) {
-        case "list_suggestions":
-          return api.get(`${base}/suggestions`);
-        case "dismiss_suggestions":
-          return api.del(`${base}/suggestions`, { body: { suggestionIds: ids() } });
-        case "list_build_issues":
-          return api.get(`${base}/build-issues`);
-        case "dismiss_build_issues":
-          return api.del(`${base}/build-issues`, { body: { issueIds: ids() } });
-        case "list_feature_requests":
-          return api.get(`${base}/feature-requests`);
-        case "ship_feature_request":
-          return api.patch(`${base}/feature-requests`, {
-            id: featureRequestId(),
-            status: "shipped",
-            docsUrl: args.docs_url ?? null,
-          });
-        default:
-          return api.patch(`${base}/feature-requests`, {
-            id: featureRequestId(),
-            status: "requested",
-          });
-      }
+      const base = `${site(args.teamspace, args.site_id)}/feature-requests`;
+      if (args.action === "list") return api.get(base);
+      const id = need(args.feature_request_id, "`feature_request_id` is required.");
+      return args.action === "ship"
+        ? api.patch(base, { id, status: "shipped", docsUrl: args.docs_url ?? null })
+        : api.patch(base, { id, status: "requested" });
     },
   }),
   tool({
