@@ -3,7 +3,7 @@ title: Context7 Admin MCP
 description: Manage teamspaces, libraries, Docs7 sites and Ask sites from an agent
 ---
 
-The Context7 Admin MCP server is a remote [MCP](https://modelcontextprotocol.io) server that lets an agent manage your Context7 account: teamspace members, libraries, rules and policies, usage, Docs7 sites and Ask sites. Each tool calls the Context7 management API with your credential.
+The Context7 Admin MCP server is a remote [MCP](https://modelcontextprotocol.io) server that lets an agent manage your Context7 account: teamspace members, libraries, rules and policies, usage, Docs7 sites and Ask sites.
 
 For documentation lookup, use the [Context7 MCP server](/resources/all-clients) (`https://mcp.context7.com/mcp`) instead.
 
@@ -26,7 +26,7 @@ Server URL: `https://admin.mcp.context7.com/mcp`
 
 ### OAuth
 
-Clients that support MCP OAuth sign in on the first request. The server answers `401` with `WWW-Authenticate: Bearer resource_metadata="https://admin.mcp.context7.com/.well-known/oauth-protected-resource/mcp"`, and the client signs in with your Context7 account. When the token expires or the API rejects it, the server answers `401` again and the client signs in again.
+Clients that support MCP OAuth ask you to sign in with your Context7 account on the first request, and sign in again when the token expires.
 
 ### API key
 
@@ -48,14 +48,13 @@ Create a Context7 API key in [the dashboard](https://context7.com/dashboard) wit
 
 One OAuth connection reaches every teamspace you are a member of, with your role in each.
 
-- Each tool takes `teamspace`: an id or a name. Leave it out when you have one teamspace. With several, pass a different `teamspace` on each call to work on more than one in a session.
+- Each tool takes `teamspace`: an id or a name. Leave it out when you have one teamspace. With several, the error lists them, and you can pass a different `teamspace` on each call to work on more than one in a session.
 - Docs7 and Ask sites belong to a teamspace. `docs7_list_sites` and `ask_list_sites` give their ids; every site tool takes `site_id` (Docs7) or `site_key` (Ask).
 - An API key belongs to one teamspace. Use one key (and one server entry) per teamspace.
 - To limit what an agent can do (read only, some tools only), use your client's tool settings: Claude connectors and Claude Code permissions can turn each tool off or make it ask first.
 
 ## Tools
 
-- `teamspace` takes an id or a name. Leave it out when you have one teamspace; with several, the error lists them.
 - Library ids take `/owner/repo`, `owner/repo`, or a `context7.com` library URL.
 - Long jobs (library parse, Docs7 build, Ask crawl): call `get_library`, `docs7_get_deployment` or `ask_get_site` with `wait: true`. The server waits up to about 25 seconds for a final state.
 - The Docs7 agents run on their schedules, which `docs7_update_site` sets. This server reads their runs and does not start them.
