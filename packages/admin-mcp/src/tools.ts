@@ -124,7 +124,10 @@ function siteSummary(site: Record<string, unknown>): Record<string, unknown> {
     branch: site.branch ?? site.defaultBranch,
     docsPath: site.docsPath,
     hosting: site.hosting,
-    url: site.platformHostname ? `https://${site.platformHostname}` : undefined,
+    // A proxy-routed site is built under its custom domain path, on docs7.io too.
+    url: site.platformHostname
+      ? `https://${site.platformHostname}${site.customDomainRouting === "proxy" ? (site.customDomainPath ?? "") : ""}`
+      : undefined,
     customDomain: site.customDomain
       ? `${site.customDomain}${site.customDomainPath ?? ""}`
       : undefined,
