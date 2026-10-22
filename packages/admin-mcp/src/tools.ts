@@ -196,7 +196,7 @@ export function agentActivity(histories: AgentRun[][], now = new Date()): Record
   const monthStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1);
   const runs: Record<string, number> = {};
   const failedRuns: Record<string, number> = {};
-  const pullRequests: Record<string, number> = {};
+  const pullRequests: Record<string, Record<string, number>> = {};
   for (const run of histories.flat()) {
     if (run.state === "superseded") continue;
     if (typeof run.createdAt !== "string" || Date.parse(run.createdAt) < monthStart) continue;
@@ -204,7 +204,10 @@ export function agentActivity(histories: AgentRun[][], now = new Date()): Record
     runs[agent] = (runs[agent] ?? 0) + 1;
     if (run.state === "failed") failedRuns[agent] = (failedRuns[agent] ?? 0) + 1;
     const state = run.pullRequest?.state;
-    if (typeof state === "string") pullRequests[state] = (pullRequests[state] ?? 0) + 1;
+    if (typeof state === "string") {
+      const counts = (pullRequests[agent] ??= {});
+      counts[state] = (counts[state] ?? 0) + 1;
+    }
   }
   return { month: new Date(monthStart).toISOString().slice(0, 7), runs, failedRuns, pullRequests };
 }

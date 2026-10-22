@@ -421,6 +421,7 @@ test("agent usage counts this UTC month's runs by agent, without superseded runs
     [
       [
         { state: "completed", createdAt: "2026-10-02T00:00:00Z", pullRequest: { state: "merged" } },
+        { state: "completed", createdAt: "2026-10-04T00:00:00Z", pullRequest: { state: "open" } },
         { state: "failed", createdAt: "2026-10-03T00:00:00Z", input: { kind: "health" } },
         { state: "completed", createdAt: "2026-09-30T23:59:59Z", pullRequest: { state: "open" } },
       ],
@@ -438,9 +439,9 @@ test("agent usage counts this UTC month's runs by agent, without superseded runs
   );
   expect(usage).toEqual({
     month: "2026-10",
-    runs: { context7: 1, buildFix: 1, codeWatch: 1 },
+    runs: { context7: 2, buildFix: 1, codeWatch: 1 },
     failedRuns: { buildFix: 1 },
-    pullRequests: { merged: 1, open: 1 },
+    pullRequests: { context7: { merged: 1, open: 1 }, codeWatch: { open: 1 } },
   });
 });
 
