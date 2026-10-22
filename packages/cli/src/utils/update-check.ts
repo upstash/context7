@@ -80,23 +80,76 @@ async function writeUpdateState(state: UpdateState, stateFile?: string): Promise
   await writeFile(path, JSON.stringify(state, null, 2) + "\n", "utf-8");
 }
 
-export function compareVersions(a: string, b: string): number {
-  const normalize = (version: string): number[] =>
-    version
-      .split("-", 1)[0]
-      .split(".")
-      .map((part) => Number.parseInt(part, 10) || 0);
+interface ParsedVersion {
+  /** Numeric core, e.g. `0.9.0` -> `[0, 9, 0]`. */
+  core: number[];
+  /** Dot-separated prerelease identifiers, empty for a release. */
+  prerelease: string[];
+}
 
-  const left = normalize(a);
-  const right = normalize(b);
-  const max = Math.max(left.length, right.length);
+function parseVersion(version: string): ParsedVersion {
+  // Build metadata (`+sha`) carries no precedence, so drop it first.
+  const withoutBuild = version.split("+", 1)[0];
+  const prereleaseStart = withoutBuild.indexOf("-");
+  const core = (prereleaseStart === -1 ? withoutBuild : withoutBuild.slice(0, prereleaseStart))
+    .split(".")
+    .map((part) => Number.parseInt(part, 10) || 0);
+  const prerelease =
+    prereleaseStart === -1
+      ? []
+      : withoutBuild
+          .slice(prereleaseStart + 1)
+          .split(".")
+          .filter((identifier) => identifier.length > 0);
 
-  for (let i = 0; i < max; i++) {
-    const diff = (left[i] ?? 0) - (right[i] ?? 0);
+  return { core, prerelease };
+}
+
+function comparePrereleaseIdentifiers(left: string, right: string): number {
+  const leftIsNumber = /^\d+$/.test(left);
+  const rightIsNumber = /^\d+$/.test(right);
+
+  // Numeric identifiers always sort below alphanumeric ones.
+  if (leftIsNumber && rightIsNumber) return Number(left) - Number(right);
+  if (leftIsNumber) return -1;
+  if (rightIsNumber) return 1;
+
+  if (left === right) return 0;
+  return left < right ? -1 : 1;
+}
+
+function comparePrerelease(left: string[], right: string[]): number {
+  // A release outranks any prerelease of the same core.
+  if (left.length === 0 && right.length === 0) return 0;
+  if (left.length === 0) return 1;
+  if (right.length === 0) return -1;
+
+  for (let i = 0; i < Math.max(left.length, right.length); i++) {
+    const leftIdentifier = left[i];
+    const rightIdentifier = right[i];
+
+    // The shorter set of otherwise equal identifiers has lower precedence.
+    if (leftIdentifier === undefined) return -1;
+    if (rightIdentifier === undefined) return 1;
+
+    const diff = comparePrereleaseIdentifiers(leftIdentifier, rightIdentifier);
     if (diff !== 0) return diff;
   }
 
   return 0;
+}
+
+export function compareVersions(a: string, b: string): number {
+  const left = parseVersion(a);
+  const right = parseVersion(b);
+  const max = Math.max(left.core.length, right.core.length);
+
+  for (let i = 0; i < max; i++) {
+    const diff = (left.core[i] ?? 0) - (right.core[i] ?? 0);
+    if (diff !== 0) return diff;
+  }
+
+  return comparePrerelease(left.prerelease, right.prerelease);
 }
 
 export function detectInstallMethod(env: NodeJS.ProcessEnv = process.env): InstallMethod {
