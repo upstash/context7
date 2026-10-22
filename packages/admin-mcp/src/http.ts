@@ -1,13 +1,11 @@
 import {
   bearerAuthChallengeResponse,
-  createMcpHandler,
   OAuthError,
   OAuthErrorCode,
-  type AuthInfo,
 } from "@modelcontextprotocol/server";
-import { withMcpAuth } from "mcp-handler";
+import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { filterBatchSelfCancellations } from "./batch.js";
-import { createAdminServer, parseServerConfig, type RequestState } from "./server.js";
+import { registerAdminTools, SERVER_OPTIONS, type RequestState } from "./server.js";
 
 const ORIGIN = new URL(process.env.RESOURCE_URL || "https://admin.mcp.context7.com").origin;
 export const MCP_PATH = "/mcp";
@@ -21,56 +19,39 @@ export const OAUTH_AUTH_SERVER_URL = (
 const RESOURCE_METADATA_URL = `${ORIGIN}${METADATA_PATH}`;
 
 /**
- * Any bearer passes this step: an OAuth token or a `ctx7sk-` API key goes on
- * unchanged to the management API, which is the only judge of it (audience,
- * expiry, management access). A request without one gets the OAuth challenge.
- */
-async function acceptBearer(_request: Request, token?: string): Promise<AuthInfo | undefined> {
-  return token ? { token, clientId: "", scopes: [] } : undefined;
-}
-
-/**
- * The MCP endpoint as a web-standard handler. Every request needs a bearer (an
- * OAuth token or a `ctx7sk-` API key), which the tools forward unchanged to
- * the management API. The API is the only judge of the credential: when it
- * answers 401 during a tool call, this request is answered with HTTP 401, so
- * the client signs in again. `withMcpAuth` (Vercel's mcp-handler) answers a
- * request without a bearer with the challenge that starts OAuth.
+ * The MCP endpoint as a web-standard handler, built with Vercel's mcp-handler.
+ *
+ * - `withMcpAuth` answers a request without a bearer with the challenge that
+ *   starts OAuth. Any bearer passes it: an OAuth token or a `ctx7sk-` API key
+ *   goes on unchanged to the management API, which is its only judge.
+ * - When the API rejects the credential during a tool call, this request is
+ *   answered with HTTP 401 as well, so the client signs in again.
  */
 export function createAdminHandler() {
-  const mcp = createMcpHandler(
-    (ctx) => createAdminServer(ctx.authInfo!.extra!.state as RequestState),
-    {
-      // No subscriptions and no streaming: every exchange is one finite answer.
-      keepAliveMs: 0,
-      maxSubscriptions: 0,
-      responseMode: "json",
-      onerror: (error) => console.error("MCP handler error:", error.message),
-    }
-  );
+  const mcp = createMcpHandler(registerAdminTools, {
+    ...SERVER_OPTIONS,
+    onEvent: (event) => {
+      if (event.type === "ERROR") console.error("MCP handler error:", event.error);
+    },
+  });
 
-  const handle = async (incoming: Request): Promise<Response> => {
-    const authorization = incoming.headers.get("authorization") ?? "";
+  return async (incoming: Request): Promise<Response> => {
     const request = await withoutSelfCancellations(incoming);
     if (!request) return new Response(null, { status: 202 });
 
-    let config;
-    try {
-      config = parseServerConfig(new URL(request.url).searchParams);
-    } catch (error) {
-      return Response.json(
-        { jsonrpc: "2.0", error: { code: -32600, message: (error as Error).message }, id: null },
-        { status: 400 }
-      );
-    }
-
-    const state: RequestState = { authorization, config, authRejected: false };
-    const response = await mcp.fetch(request, {
-      authInfo: { token: authorization, clientId: "", scopes: [], extra: { state } },
-    });
+    const state: RequestState = {
+      authorization: request.headers.get("authorization") ?? "",
+      authRejected: false,
+    };
+    const authed = withMcpAuth(
+      mcp,
+      async (_request, token) =>
+        token ? { token, clientId: "", scopes: [], extra: { state } } : undefined,
+      { required: true, resourceUrl: ORIGIN, resourceMetadataPath: METADATA_PATH }
+    );
+    const response = await authed(request);
     // Read the whole answer before sending any of it: a tool call can still
     // learn that the credential is rejected, and then the status must be 401.
-    // The legacy (2025) transport answers over SSE; its stream ends with the answer.
     const body = await response.arrayBuffer();
     if (state.authRejected) {
       return bearerAuthChallengeResponse(
@@ -83,15 +64,6 @@ export function createAdminHandler() {
       statusText: response.statusText,
       headers: response.headers,
     });
-  };
-
-  return {
-    close: () => mcp.close(),
-    fetch: withMcpAuth(handle, acceptBearer, {
-      required: true,
-      resourceUrl: ORIGIN,
-      resourceMetadataPath: METADATA_PATH,
-    }),
   };
 }
 

@@ -4,5 +4,5 @@ import { createAdminHandler, withCors } from "../src/http.js";
 const handler = createAdminHandler();
 
 export default {
-  fetch: (request: Request) => withCors(request, handler.fetch),
+  fetch: (request: Request) => withCors(request, handler),
 };

@@ -32,7 +32,7 @@ Create a Context7 API key in [the dashboard](https://context7.com/dashboard) wit
   "mcpServers": {
     "context7-admin": {
       "type": "http",
-      "url": "https://admin.mcp.context7.com/mcp?teamspace=YOUR_TEAMSPACE_ID",
+      "url": "https://admin.mcp.context7.com/mcp",
       "headers": { "Authorization": "Bearer ctx7sk-..." }
     }
   }
@@ -45,16 +45,8 @@ One OAuth connection reaches every teamspace you are a member of, with your role
 
 - Each tool takes `teamspace`: an id or a name. Leave it out when you have one teamspace. With several, the agent can work on many in one session by passing a different `teamspace` on each call.
 - Docs7 and Ask sites belong to a teamspace. `docs7_list_sites` and `ask_list_sites` give their ids; every site tool takes `site_id` (Docs7) or `site_key` (Ask).
-- To keep a connection on one teamspace, add `?teamspace=<id>` to the URL. You can add the server more than once, one entry per teamspace.
-- An API key belongs to one teamspace. Use one key (and one server entry) per teamspace.
-
-## Query parameters
-
-| Parameter        | Effect                                                                                                                      |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `teamspace=<id>` | Pins the server to one teamspace. Tools do not take a `teamspace` argument, and `list_teamspaces` is hidden.                |
-| `read_only=true` | Hides every tool and `action` that changes data.                                                                            |
-| `features=a,b`   | Turns on only these groups: `account`, `libraries`, `rules`, `usage`, `docs7`, `ask`. Default: all. `account` is always on. |
+- An API key belongs to one teamspace: the API refuses the others. Use one key (and one server entry) per teamspace.
+- To limit what an agent can do (read only, some tools only), use your client's tool settings: Claude connectors and Claude Code permissions can turn each tool off or make it ask first.
 
 ## Tools
 
