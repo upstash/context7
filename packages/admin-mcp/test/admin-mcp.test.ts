@@ -587,3 +587,14 @@ test("a 401 whose body cannot be read still stops the approval", async () => {
   ).rejects.toThrow(/invalid_token/);
   expect(apiCalls.some((call) => call.path.endsWith("/approve"))).toBe(false);
 });
+
+test("an API error leads with its status, code and message, then what to do", async () => {
+  apiReply = () => ({ status: 404, body: { error: "not_found", message: "Rule not found" } });
+  const result = await (
+    await connect()
+  ).callTool({ name: "get_teamspace_usage", arguments: { teamspace: TS } });
+  expect(text(result)).toMatch(
+    /^The Context7 API answered HTTP 404 not_found: Rule not found\. Check the id .*another teamspace/
+  );
+  expect(text(result)).not.toContain("untrusted-data");
+});
