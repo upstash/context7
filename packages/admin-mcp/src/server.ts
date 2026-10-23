@@ -123,21 +123,41 @@ function nextStep(status: number, body: unknown): string | undefined {
   if (typeof code === "string" && NEXT_STEP[code]) return NEXT_STEP[code];
   if (status === 403)
     return "The user's role or plan does not allow this. Owner or admin may be needed.";
-  if (status === 404) return "Check the id with the matching list tool.";
+  if (status === 404)
+    return "Check the id with the matching list tool. An id of another teamspace also answers 404: check `teamspace` (list_teamspaces).";
   if (status === 429) return "Rate limited. Wait before you try again.";
+  if (status >= 500)
+    return "A temporary failure on the Context7 side. Try again in a minute; if it repeats, tell the user.";
   return undefined;
 }
 
+/**
+ * The API's own error first: status, code and message on one line, then what
+ * to do. For a tool with third-party data the message may repeat that data,
+ * so there the whole body stays inside the fence and only the code leads.
+ */
 function errorText(error: unknown, untrusted: boolean): string {
   if (error instanceof ToolError) return error.message;
   if (error instanceof ApiError) {
     if (error.status === 401) return "The credential was rejected. Sign in again.";
-    // The body is cut and fenced inside formatResult, so the closing tag survives.
     const hint = nextStep(error.status, error.body);
-    return `${error.message}${hint ? ` ${hint}` : ""}\n${formatResult(error.body, untrusted)}`;
+    const body =
+      error.body && typeof error.body === "object" ? (error.body as Record<string, unknown>) : {};
+    const { error: code, message, ...rest } = body;
+    const codeText = typeof code === "string" && /^[a-z0-9_]+$/.test(code) ? ` ${code}` : "";
+    const head = `The Context7 API answered HTTP ${error.status}${codeText}`;
+    if (untrusted) {
+      // The body is cut and fenced inside formatResult, so the closing tag survives.
+      return `${head}.${hint ? ` ${hint}` : ""}\n${formatResult(error.body, true)}`;
+    }
+    const said =
+      typeof message === "string" ? `: ${message}${/[.!?]$/.test(message) ? "" : "."}` : ".";
+    const extra =
+      typeof error.body === "string" ? error.body : Object.keys(rest).length ? rest : null;
+    return `${head}${said}${hint ? ` ${hint}` : ""}${extra ? `\n${formatResult(extra, false)}` : ""}`;
   }
   const reason = error instanceof Error ? error.message : String(error);
-  return `The request to the Context7 API failed: ${reason}`;
+  return `The request to the Context7 API failed: ${reason}. If this call changes something, read the state with the matching get_ or list_ tool before you try it again: the change may be saved.`;
 }
 
 const INSTRUCTIONS = [
