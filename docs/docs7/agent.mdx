@@ -1,81 +1,67 @@
 ---
 title: Agent
-description: Configure autonomous fixes, pull request reviews, code change updates, and scheduled checks
+description: Turn on the Docs7 agents that fix your docs, review pull requests, follow code changes, and check code examples
 ---
 
-The Docs7 Agent works from your GitHub repository and keeps every proposed change reviewable. Open **Docs7**, choose a site, then select **Agent**.
+The Docs7 agents work from your GitHub repository and open pull requests for you to review. Open **Docs7**, choose a site, then select **Agent**.
 
-<Frame caption="The Context7 Agent keeps suggestions, build issues, its schedule, and run history in one place.">
+The Agent tab has two cards:
+
+- **Agents** shows each agent with its setting. Select **Edit** to turn agents on or off and change their settings. Every change saves at once; **Save** closes the rows.
+- **Activity** lists every run of every agent, newest first. Filter by agent or state, and select a row to open its pull request on GitHub.
+
+<Frame caption="Select Edit to turn each agent on or off and choose its setting.">
   <img
     src="/images/docs7/dashboard/agent.jpg"
-    alt="Docs7 Agent dashboard showing suggestions, build issues, scheduling, and history"
+    alt="Agents card in edit mode with the Context7, Build Fix, PR Review, Code Watch, and Example Check agents"
   />
 </Frame>
 
-There are four workflows:
+There are five agents:
 
-- **Context7 Agent** fixes queued suggestions or build issues in a pull request.
-- **PR Review Agent** reviews documentation changes in each eligible pull request.
-- **Code Watch Agent** updates the docs when a pull request merges in your code.
-- **Monthly Checkup** is a planned full-site review and is not available yet.
+- **Context7 Agent** turns reader questions and page feedback into docs fixes.
+- **Build Fix Agent** fixes the errors and warnings that a build finds in your docs.
+- **PR Review Agent** checks links, grammar, spelling, build health, and style in each docs pull request.
+- **Code Watch Agent** updates the docs when a pull request merges in your code repositories.
+- **Example Check Agent** runs the code examples in your docs against your services and fixes the ones that fail.
+
+New sites start with every agent off. Each run counts toward the site's monthly agent allowance.
 
 ## Context7 Agent
 
-The Context7 Agent has two work queues.
+The Context7 Agent works from suggestions that come from Context7's analysis of your indexed documentation. Choose **Daily** or **Weekly**.
 
-### Suggestions
+Each run takes up to 10 waiting suggestions, checks each one against your repository, and edits only the configured docs path. If it makes changes, Docs7 opens one pull request. The agent does not start a new run while its last pull request is still open, and it does not take the same suggestion twice in a row.
 
-Suggestions come from Context7's analysis of the indexed documentation. Each suggestion points to the source files that support it.
+## Build Fix Agent
 
-Select up to 10 suggestions and click **Run agent**. The agent verifies each suggestion against the repository and edits only the configured docs path. If it produces supported changes, Docs7 opens one pull request.
+The Build Fix Agent fixes the issues in your latest production build: page errors, broken internal links, unknown components, and source warnings. It needs Docs7 hosting.
 
-### Build issues
+Choose when it runs:
 
-Build issues come from the latest live production build. The queue includes fixable page errors, broken internal links, unknown components, and source warnings.
+- **After each build** runs after every production build.
+- **Daily** or **Weekly** runs on a schedule.
 
-Select up to 20 issues and run the agent. It checks each issue against the repository. If it produces supported fixes, Docs7 opens one pull request.
-
-Ignoring a suggestion or build issue removes it from the queue. It does not remove the issue from an older build's Health report.
-
-### Schedule
-
-New sites start with the schedule disabled. Enable it and choose **Daily** or **Weekly**.
-
-A scheduled run starts only when at least three suggestions are waiting. It handles up to 10 suggestions in one pull request. The schedule does not run the build issue queue automatically.
-
-You can review completed, failed, and running work under **History**.
+Each run takes up to 20 issues and opens one pull request. The agent does not start a new run while its last pull request is still open, and it skips the issues its last run already took.
 
 ## PR Review Agent
 
-The PR Review Agent runs after an eligible pull request preview finishes. It reviews only files inside the configured docs path and posts its findings in the pull request's Docs7 summary.
+The PR Review Agent reviews each pull request that changes your docs path. It starts 5 minutes after the pull request's preview build finishes, so a quick follow-up push is reviewed only once. It posts its findings in the pull request's Docs7 summary, with inline comments on the changed lines.
 
-<Frame caption="PR Review Agent settings control its response mode and the checks applied to pull requests.">
-  <img
-    src="/images/docs7/dashboard/agent-pr-review.jpg"
-    alt="PR Review Agent with automatic review on, the Checks menu, and recent reviews"
-  />
-</Frame>
+Every review runs these checks:
 
-New sites start with PR reviews disabled and **Comment only** selected.
+| Check | What it reviews |
+| --- | --- |
+| **Broken links** | Broken internal links, dead external links, and links to missing headings in changed docs files. |
+| **Build health issues** | New fixable issues introduced by the preview compared with production. Needs Docs7 hosting. |
+| **Grammar and spelling** | Mistakes in text added or changed by the pull request. |
+| **Docs conventions** | Changed pages against repository instructions and nearby documentation patterns. |
 
-### Checks
-
-| Check | What it reviews | Default |
-| --- | --- | --- |
-| **Broken links** | Broken internal links, dead external links, and links to missing headings in changed docs files. | On |
-| **Build health issues** | New fixable issues introduced by the preview compared with production. | On |
-| **Grammar and spelling** | Mistakes in text added or changed by the pull request. | On |
-| **Docs conventions** | Changed pages against repository instructions and nearby documentation patterns. | Off |
-
-Build health requires a hosted Docs7 site. The other checks can also run for a repository connected only for the agent.
-
-### Response modes
-
-The findings comment is always posted. The response mode controls what happens to fixes:
+Choose what happens to the fixes:
 
 - **Comment only** reports findings and does not change files.
-- **Pull request** opens a separate pull request with supported fixes.
-- **Commit** pushes supported fixes to the pull request branch. If the branch refuses the push, Docs7 opens a pull request against it instead.
+- **Open a fix PR** opens a separate pull request with supported fixes.
+- **Commit to branch** pushes supported fixes to the pull request branch. If the branch refuses the push, Docs7 opens a pull request against it instead.
 
 Docs7 skips pull requests from forks and pull requests that do not change the configured docs path. It also skips commits created by the agent, which prevents review loops.
 
@@ -87,18 +73,11 @@ Do not make **Docs7 PR Review** a required GitHub check. Fork pull requests do n
 
 The Code Watch Agent keeps your docs in step with your code. When a pull request merges into the default branch of a repository you chose, the agent checks whether readers of your docs need a change. If they do, Docs7 opens one docs pull request that links to the merged pull request. Most merges change nothing that readers see, and then the agent opens nothing.
 
-<Frame caption="The Code Watch Agent lists each merged pull request it checked, with the docs pull request it opened or No docs change.">
-  <img
-    src="/images/docs7/dashboard/agent-code-watch.jpg"
-    alt="Code Watch Agent with automatic updates on for two repositories and its run history"
-  />
-</Frame>
-
 ### Choose repositories
 
-Open **Repositories** and select up to 50 code repositories from the same GitHub account as your docs. The Docs7 GitHub App must have access to each one. Private repositories need Docs7 Pro. Then turn on **Automatic Updates**.
+In the agent's row, open the repository menu and select up to 50 code repositories from the same GitHub account as your docs. The Docs7 GitHub App must have access to each one. Private repositories need Docs7 Pro. Then turn the agent on.
 
-If your docs are in a folder of the same repository as your code, that repository is already selected. Turn on **Automatic Updates** to start.
+If your docs are in a folder of the same repository as your code, that repository is already selected and is first in the list.
 
 ### What the agent checks
 
@@ -120,23 +99,54 @@ For a pull request from a fork, the agent uses the merged code and ignores the p
 
 When a merge belongs with a docs pull request the agent already opened and that is still open, for example the same commands added to your JavaScript and Python SDKs, the agent adds its change to that pull request instead of opening another one.
 
-**History** lists each merged pull request the agent checked, with the docs pull request it opened or **No docs change**. Each checked pull request counts as one run in the site's monthly agent allowance.
+Each checked pull request counts as one run.
 
-## Monthly Checkup
+## Example Check Agent
 
-<Info>
-Monthly Checkup is **coming soon**.
-</Info>
+The Example Check Agent runs the TypeScript, JavaScript, and Python code examples of your docs against your services. When an example fails because the example is wrong, the agent fixes it, runs it again, and adds the fix to a pull request. It needs Docs7 Pro.
 
-The planned workflow reads the entire site once a month and opens one pull request with 
-- link checks
-- grammar and spelling
-- build health
-- pages that no longer match their source
-- and a code compilation check.
+<Frame caption="The agent's dialog holds the variables your code examples read and the result of the last check.">
+  <img
+    src="/images/docs7/dashboard/agent-example-check.jpg"
+    alt="Example Check Agent dialog with two variables, one of them secret, and the failed and skipped examples of the last check"
+  />
+</Frame>
+
+### Add variables
+
+In the agent's row, open the variables menu and add the environment variables your code examples read, for example `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
+
+Mark each token or key as **Secret** and enter the host it is sent to. A secret never enters the sandbox where the code runs: Docs7 adds it to HTTPS requests to that host, in the header you set. The default header is `Authorization` with a `Bearer` prefix. The code in the sandbox reads a placeholder and can reach only package registries and the hosts of your variables.
+
+<Warning>
+Use test credentials. Code examples write and delete data, for example the keys in a Redis database.
+</Warning>
+
+### Run a check
+
+Turn the agent on to check every code example of the docs once a month, or select **Check now** in its dialog. A check reads every page, in batches of about 100 code examples, and all of its fixes go into one pull request.
+
+Each code example ends with one of these results:
+
+- **Passed**: the example ran and did what the page says, including the documented output and responses.
+- **Failed**: the example threw an error, or its result differs from the page. If the example has a mistake, such as a wrong method name, argument, value, expected output, import, or syntax, the agent fixes it and runs it again. If the example uses the API as documented and the SDK or service behaves differently, the agent reports this and does not change the page.
+- **Skipped**: the example needs a service with no variable, connects over TCP (for example ioredis, node-redis, or redis-py with a `redis://` URL), is not a complete program, or is a whole framework app such as a Next.js route.
+
+The dialog shows the last check's failed and skipped examples. Activity shows each check as one row. Each batch counts as one run, so docs with 1,000 code examples use about 10 runs per check.
+
+## Activity
+
+<Frame caption="Activity lists every agent run with the pull request it opened, reviewed, or followed.">
+  <img
+    src="/images/docs7/dashboard/agent-activity.jpg"
+    alt="Activity card with runs of the Build Fix, PR Review, Code Watch, Example Check, and Context7 agents"
+  />
+</Frame>
+
+Each row shows the run's pull request and its state: **Running**, **Open**, **Merged**, **Closed**, **Passed**, **Commented**, **Committed**, **Failed**, or **No change**. A review row opens the pull request it reviewed, and a Code Watch row opens the merged pull request when the agent made no docs change.
 
 ## Safety and scope
 
-Agent runs receive read access to the connected repository, and Code Watch runs receive read access to the code repository of the merged pull request as well. The agent can inspect repository source to verify a documentation change, but trusted Docs7 code publishes the resulting files through GitHub.
+Agent runs receive read access to the connected repository, and Code Watch runs receive read access to the code repository of the merged pull request as well. Example Check runs receive your variables; secret values stay outside the sandbox. The agent can inspect repository source to verify a documentation change, but trusted Docs7 code publishes the resulting files through GitHub.
 
 Changes are limited to the configured docs path. When the docs path is the repository root, Docs7 still blocks common application paths, package manifests, lockfiles, `.github`, and `.git` from agent changes.
