@@ -266,6 +266,7 @@
                 "pages": [
                   "docs7/overview",
                   "docs7/quickstart",
+                  "docs7/plans",
                   "docs7/configuration",
                   "docs7/custom-domains",
                   "docs7/migrate-from-mintlify"
