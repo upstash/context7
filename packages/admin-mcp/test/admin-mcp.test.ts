@@ -550,3 +550,19 @@ test("agent usage names the agents whose history may hold more runs this month",
     minimumCounts: ["context7", "buildFix", "prReview"],
   });
 });
+
+test("approve reads the policies first, so a rejected credential writes nothing", async () => {
+  apiReply = (call) =>
+    call.path.endsWith("/policies")
+      ? { status: 401, body: { error: "invalid_api_key" } }
+      : { body: {} };
+  const client = await connect();
+  await expect(
+    client.callTool({
+      name: "manage_library_requests",
+      arguments: { teamspace: TS, action: "approve", request_id: "block:/vercel/next.js" },
+    })
+  ).rejects.toThrow(/invalid_token/);
+  expect(apiCalls.some((call) => call.path.endsWith("/approve"))).toBe(false);
+  expect(lastResponse?.status).toBe(401);
+});

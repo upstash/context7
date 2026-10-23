@@ -879,14 +879,18 @@ export const TOOLS: ToolDef[] = [
             requestType: need(args.request_type, "`request_type` is required."),
           });
         case "approve": {
-          const approved = await api.post(`${base}/${requestId()}/approve`);
-          // Approval edits the list only; the list applies only in its own filter mode.
-          const mode = requestMode(data(approved).requestType);
-          // Advisory only: the approval is done, so a failed read must not look like a failure.
+          // Approval edits a list, never the mode, so the mode is read first: a
+          // rejected credential then stops the call before anything is written.
           const policies = (await api
             .get(`${ts(args.teamspace)}/policies`)
             .then(data)
-            .catch(() => null)) as { libraryFilters?: { mode?: unknown } } | null;
+            .catch((error: unknown) => {
+              if (error instanceof Error && "status" in error && error.status === 401) throw error;
+              return null;
+            })) as { libraryFilters?: { mode?: unknown } } | null;
+          const approved = await api.post(`${base}/${requestId()}/approve`);
+          // The list applies only in its own filter mode.
+          const mode = requestMode(data(approved).requestType);
           if (policies?.libraryFilters?.mode === mode) return approved;
           if (!policies) {
             return {
