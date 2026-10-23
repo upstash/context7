@@ -977,8 +977,8 @@ export const TOOLS: ToolDef[] = [
       custom_domain_routing: z.enum(["dns", "proxy"]).optional(),
       context7_index: z.boolean().optional().describe("Also index the site in Context7."),
     },
-    run: (args, api) =>
-      api.post(`${ts(args.teamspace)}/sites`, {
+    run: async (args, api) => {
+      const created = (await api.post(`${ts(args.teamspace)}/sites`, {
         repoUrl: args.repo_url,
         docsPath: args.docs_path,
         branch: args.branch,
@@ -987,7 +987,9 @@ export const TOOLS: ToolDef[] = [
         customDomainPath: args.custom_domain_path,
         customDomainRouting: args.custom_domain_routing,
         context7Index: args.context7_index,
-      }),
+      })) as { data?: Record<string, unknown>; deploymentId?: unknown };
+      return { site: siteDetails(data(created)), deploymentId: created?.deploymentId ?? null };
+    },
   }),
   tool({
     name: "docs7_update_site",
@@ -1036,8 +1038,8 @@ export const TOOLS: ToolDef[] = [
         .optional()
         .describe("All Code Watch settings: the full list of watched repositories."),
     },
-    run: ({ teamspace, site_id, ...fields }, api) => {
-      return api.patch(site(teamspace, site_id), {
+    run: async ({ teamspace, site_id, ...fields }, api) => {
+      const updated = await api.patch(site(teamspace, site_id), {
         slug: fields.slug,
         branch: fields.branch,
         docsPath: fields.docs_path,
@@ -1052,6 +1054,7 @@ export const TOOLS: ToolDef[] = [
         pullRequestReview: fields.pull_request_review,
         codeWatch: fields.code_watch,
       });
+      return { site: siteDetails(data(updated)) };
     },
   }),
   tool({
