@@ -30,14 +30,24 @@ export class SearchLibraryCommand extends Command<Library[] | string> {
   }
 
   public override async exec(client: Requester): Promise<Library[] | string> {
-    const result = await this.requestResult<ApiSearchResponse>(client);
-
-    const libraries = result.results.map(formatLibrary);
+    const libraries = await this.findLibraries(client);
 
     if (this.responseType === "txt") {
       return formatLibrariesAsText(libraries);
     }
 
     return libraries;
+  }
+
+  private async findLibraries(client: Requester): Promise<Library[]> {
+    try {
+      const result = await this.requestResult<ApiSearchResponse>(client);
+      return result.results.map(formatLibrary);
+    } catch (error) {
+      // The API answers 404 when nothing matches. A search with no hits is an
+      // empty result, not a failure.
+      if (error instanceof Context7Error && error.status === 404) return [];
+      throw error;
+    }
   }
 }
