@@ -58,6 +58,8 @@ The REST endpoint returns plain text by default, ready to add to a prompt. Set `
 
 Every snippet includes the library it came from and a link to the source page.
 
+JSON results split the snippets into `codeSnippets` and `infoSnippets`. Each snippet carries `rank`, its 1-based position across both lists. Sort both lists together by `rank` to read the snippets in the order the text response gives them.
+
 ## Add hints
 
 A query is all you need. If you know the library, version, or language, add them to narrow the results:
