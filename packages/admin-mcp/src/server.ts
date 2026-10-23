@@ -55,8 +55,9 @@ function createApi(state: RequestState): Api {
     // (expired, revoked, or issued for another resource). Set before the body
     // is read, so a failed read still ends in the OAuth challenge.
     if (response.status === 401) state.authRejected = true;
-    // A broken body must not hide the status, which decides the outcome.
-    const text = await response.text().catch(() => "");
+    // A broken error body must not hide the status, which decides the outcome;
+    // a broken success body is a failure of its own.
+    const text = response.ok ? await response.text() : await response.text().catch(() => "");
     let parsed: unknown = text;
     try {
       parsed = text ? JSON.parse(text) : null;
