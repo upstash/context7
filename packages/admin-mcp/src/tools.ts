@@ -190,19 +190,31 @@ type AgentRun = {
   pullRequest?: { state?: unknown };
 };
 
+/** The most runs the agent-runs route gives per history. */
+export const AGENT_HISTORY_LIMIT = 50;
+
 /**
  * This UTC month's runs of each agent and the states of their pull requests,
  * read from the newest 50 runs of each history, as the dashboard's Agents card
- * counts them. Superseded runs are left out, as there.
+ * counts them. Superseded runs are left out, as there. When a full history
+ * starts inside the month, older runs of the month are not read: its agents
+ * are named in `minimumCounts`.
  */
 export function agentActivity(histories: AgentRun[][], now = new Date()): Record<string, unknown> {
   const monthStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1);
+  const inMonth = (run: AgentRun) =>
+    typeof run.createdAt === "string" && Date.parse(run.createdAt) >= monthStart;
+  const minimumCounts = new Set<string>();
+  for (const history of histories) {
+    if (history.length >= AGENT_HISTORY_LIMIT && history.every(inMonth)) {
+      for (const run of history) minimumCounts.add(runAgent(run));
+    }
+  }
   const runs: Record<string, number> = {};
   const failedRuns: Record<string, number> = {};
   const pullRequests: Record<string, Record<string, number>> = {};
   for (const run of histories.flat()) {
-    if (run.state === "superseded") continue;
-    if (typeof run.createdAt !== "string" || Date.parse(run.createdAt) < monthStart) continue;
+    if (run.state === "superseded" || !inMonth(run)) continue;
     const agent = runAgent(run);
     runs[agent] = (runs[agent] ?? 0) + 1;
     if (run.state === "failed") failedRuns[agent] = (failedRuns[agent] ?? 0) + 1;
@@ -212,7 +224,13 @@ export function agentActivity(histories: AgentRun[][], now = new Date()): Record
       counts[state] = (counts[state] ?? 0) + 1;
     }
   }
-  return { month: new Date(monthStart).toISOString().slice(0, 7), runs, failedRuns, pullRequests };
+  return {
+    month: new Date(monthStart).toISOString().slice(0, 7),
+    runs,
+    failedRuns,
+    pullRequests,
+    minimumCounts: minimumCounts.size ? [...minimumCounts] : undefined,
+  };
 }
 
 const RUN_NOISE = new Set(["boxId", "siteId"]);
@@ -296,6 +314,28 @@ function data(body: unknown): Record<string, unknown> {
   const value =
     body && typeof body === "object" && "data" in body ? (body as { data: unknown }).data : body;
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
+
+/**
+ * The library a rule belongs to, or null for a teamspace rule: as given, else
+ * looked up in the rule list, since the API finds a library rule only by both ids.
+ */
+async function ruleLibrary(
+  api: Api,
+  base: string,
+  ruleId: string,
+  given: string | undefined
+): Promise<string | null> {
+  if (given) return normalizeLibraryId(given);
+  const { libraries = {} } = data(await api.get(base)) as {
+    libraries?: Record<string, Record<string, unknown>>;
+  };
+  return Object.keys(libraries).find((library) => ruleId in libraries[library]) ?? null;
+}
+
+/** The filter mode a library request's list works in: allow lists are `select`, the rest `quality`. */
+function requestMode(requestType: unknown): "select" | "quality" {
+  return requestType === "allow" || requestType === "unallow" ? "select" : "quality";
 }
 
 /** The email of the member with this id, from `GET /members` (`{ members, invitations }`). */
@@ -681,7 +721,7 @@ export const TOOLS: ToolDef[] = [
         .string()
         .optional()
         .describe(
-          "Library id of a library rule (create, update, delete). Leave out for a teamspace rule."
+          "Library id of a library rule (create). Leave out for a teamspace rule. Update and delete find the rule's library from `rule_id`."
         ),
       confirm: z
         .string()
@@ -706,16 +746,16 @@ export const TOOLS: ToolDef[] = [
           return data(
             await api.patch(`${base}/${ruleId()}`, {
               text: need(args.text, "`text` is required."),
-              libraryId: args.library_id ? normalizeLibraryId(args.library_id) : null,
+              libraryId: await ruleLibrary(api, base, args.rule_id!, args.library_id),
             })
           );
-        default:
+        default: {
           confirmed(args.confirm, need(args.rule_id, "`rule_id` is required."), "the rule id");
+          const libraryId = await ruleLibrary(api, base, args.rule_id!, args.library_id);
           return data(
-            await api.del(`${base}/${ruleId()}`, {
-              query: { libraryId: args.library_id && normalizeLibraryId(args.library_id) },
-            })
+            await api.del(`${base}/${ruleId()}`, { query: { libraryId: libraryId ?? undefined } })
           );
+        }
       }
     },
   }),
@@ -789,7 +829,7 @@ export const TOOLS: ToolDef[] = [
       if ((library_filters?.quality || library_filters?.select) && !result?.libraryFilters?.mode) {
         return {
           ...result,
-          note: 'Library filters are off (mode is null), so these rules change nothing. Set `library_filters.mode` to "quality" or "select" to apply them.',
+          note: 'Library filters are off (mode is null): the saved rules have no effect until `library_filters.mode` is "quality" or "select".',
         };
       }
       return result;
@@ -814,7 +854,7 @@ export const TOOLS: ToolDef[] = [
         .describe("What to request (request)."),
       request_id: z.string().optional().describe("Request id from list (approve, dismiss)."),
     },
-    run: (args, api) => {
+    run: async (args, api) => {
       const base = `${ts(args.teamspace)}/library-requests`;
       const requestId = () => seg(need(args.request_id, "`request_id` is required."));
       switch (args.action) {
@@ -825,8 +865,19 @@ export const TOOLS: ToolDef[] = [
             libraryIdentifier: need(args.library, "`library` is required."),
             requestType: need(args.request_type, "`request_type` is required."),
           });
-        case "approve":
-          return api.post(`${base}/${requestId()}/approve`);
+        case "approve": {
+          const approved = await api.post(`${base}/${requestId()}/approve`);
+          // Approval edits the list only; the list applies only in its own filter mode.
+          const mode = requestMode(data(approved).requestType);
+          const policies = data(await api.get(`${ts(args.teamspace)}/policies`)) as {
+            libraryFilters?: { mode?: unknown };
+          };
+          if (policies.libraryFilters?.mode === mode) return approved;
+          return {
+            ...data(approved),
+            note: `Saved in the policy list, but library filters are not in "${mode}" mode, so it has no effect yet. Ask the user before you call update_library_policies with \`library_filters.mode: "${mode}"\`: that mode changes which libraries the whole teamspace can use (try \`dry_run: true\` first).`,
+          };
+        }
         default:
           return api.del(`${base}/${requestId()}`);
       }
@@ -895,7 +946,7 @@ export const TOOLS: ToolDef[] = [
       const [usage, ...histories] = await Promise.all([
         api.get(`${path}/agent-usage`),
         ...["improve", "review", "watch"].map((history) =>
-          api.get(`${path}/agent-runs`, { history, limit: 50 })
+          api.get(`${path}/agent-runs`, { history, limit: AGENT_HISTORY_LIMIT })
         ),
       ]);
       const runs = histories.map((body) => (body as { data?: AgentRun[] })?.data ?? []);

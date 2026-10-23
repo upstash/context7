@@ -491,3 +491,49 @@ test("get_library_benchmarks gives the lowest scores first", async () => {
   expect(body.benchmarks.map((b: { query: string }) => b.query)).toEqual(["b", "c"]);
   expect(apiCalls[0].path).toBe(`/v2/teamspaces/${TS}/libraries/acme/docs/benchmarks`);
 });
+
+// The API finds a library rule only with its library id, which agents leave out.
+test("manage_rules delete finds the library of a library rule", async () => {
+  apiReply = (call) => ({
+    body:
+      call.method === "GET"
+        ? { success: true, data: { global: {}, libraries: { "/vercel/next.js": { r1: {} } } } }
+        : { success: true },
+  });
+  const result = await (
+    await connect()
+  ).callTool({
+    name: "manage_rules",
+    arguments: { teamspace: TS, action: "delete", rule_id: "r1", confirm: "r1" },
+  });
+  expect(result.isError).toBeFalsy();
+  expect(apiCalls.at(-1)).toMatchObject({
+    method: "DELETE",
+    path: `/v2/teamspaces/${TS}/rules/r1?libraryId=%2Fvercel%2Fnext.js`,
+  });
+});
+
+test("approving a request says when its filter mode is off", async () => {
+  apiReply = (call) => ({
+    body: call.path.endsWith("/approve")
+      ? { data: { id: "block:/vercel/next.js", requestType: "block" } }
+      : { libraryFilters: { quality: { blockedLibraries: ["/vercel/next.js"] } } },
+  });
+  const result = await (
+    await connect()
+  ).callTool({
+    name: "manage_library_requests",
+    arguments: { teamspace: TS, action: "approve", request_id: "block:/vercel/next.js" },
+  });
+  expect(text(result)).toContain('not in \\"quality\\" mode');
+});
+
+test("agent usage names the agents whose history may hold more runs this month", () => {
+  const full = Array.from({ length: 50 }, () => ({
+    state: "completed",
+    createdAt: "2026-10-20T00:00:00Z",
+    input: { kind: "review" },
+  }));
+  const usage = agentActivity([[], full, []], new Date("2026-10-22T00:00:00Z"));
+  expect(usage).toMatchObject({ runs: { prReview: 50 }, minimumCounts: ["prReview"] });
+});
