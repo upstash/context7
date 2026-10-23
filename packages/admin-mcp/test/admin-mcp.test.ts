@@ -418,15 +418,17 @@ test("the server card and serverInfo carry the Context7 icon", async () => {
 test("agent usage counts this UTC month's runs by agent, without superseded runs", () => {
   const now = new Date("2026-10-22T12:00:00Z");
   const usage = agentActivity(
-    [
-      [
+    {
+      improve: [
         { state: "completed", createdAt: "2026-10-02T00:00:00Z", pullRequest: { state: "merged" } },
         { state: "completed", createdAt: "2026-10-04T00:00:00Z", pullRequest: { state: "open" } },
         { state: "failed", createdAt: "2026-10-03T00:00:00Z", input: { kind: "health" } },
         { state: "completed", createdAt: "2026-09-30T23:59:59Z", pullRequest: { state: "open" } },
       ],
-      [{ state: "superseded", createdAt: "2026-10-05T00:00:00Z", input: { kind: "review" } }],
-      [
+      review: [
+        { state: "superseded", createdAt: "2026-10-05T00:00:00Z", input: { kind: "review" } },
+      ],
+      watch: [
         {
           state: "completed",
           createdAt: "2026-10-21T00:00:00Z",
@@ -434,7 +436,7 @@ test("agent usage counts this UTC month's runs by agent, without superseded runs
           pullRequest: { state: "open" },
         },
       ],
-    ],
+    },
     now
   );
   expect(usage).toEqual({
@@ -490,4 +492,98 @@ test("get_library_benchmarks gives the lowest scores first", async () => {
   const body = JSON.parse(text(result).split("\n").slice(2, -1).join("\n"));
   expect(body.benchmarks.map((b: { query: string }) => b.query)).toEqual(["b", "c"]);
   expect(apiCalls[0].path).toBe(`/v2/teamspaces/${TS}/libraries/acme/docs/benchmarks`);
+});
+
+// The API finds a library rule only with its library id, which agents leave out.
+test("manage_rules delete finds the library of a library rule", async () => {
+  apiReply = (call) => ({
+    body:
+      call.method === "GET"
+        ? { success: true, data: { global: {}, libraries: { "/vercel/next.js": { r1: {} } } } }
+        : { success: true },
+  });
+  const result = await (
+    await connect()
+  ).callTool({
+    name: "manage_rules",
+    arguments: { teamspace: TS, action: "delete", rule_id: "r1", confirm: "r1" },
+  });
+  expect(result.isError).toBeFalsy();
+  expect(apiCalls.at(-1)).toMatchObject({
+    method: "DELETE",
+    path: `/v2/teamspaces/${TS}/rules/r1?libraryId=%2Fvercel%2Fnext.js`,
+  });
+});
+
+test("approving a request says when its filter mode is off", async () => {
+  apiReply = (call) => ({
+    body: call.path.endsWith("/approve")
+      ? { data: { id: "block:/vercel/next.js", requestType: "block" } }
+      : { libraryFilters: { quality: { blockedLibraries: ["/vercel/next.js"] } } },
+  });
+  const result = await (
+    await connect()
+  ).callTool({
+    name: "manage_library_requests",
+    arguments: { teamspace: TS, action: "approve", request_id: "block:/vercel/next.js" },
+  });
+  expect(text(result)).toContain('not in \\"quality\\" mode');
+});
+
+test("agent usage names the agents whose history may hold more runs this month", () => {
+  const full = Array.from({ length: 50 }, () => ({
+    state: "completed",
+    createdAt: "2026-10-20T00:00:00Z",
+    input: { kind: "review" },
+  }));
+  const usage = agentActivity(
+    {
+      improve: full.map((run) => ({ ...run, input: { kind: "suggestions" } })),
+      review: full,
+      watch: [],
+    },
+    new Date("2026-10-22T00:00:00Z")
+  );
+  // Build Fix shares the improve history: not in the window, still possibly undercounted.
+  expect(usage).toMatchObject({
+    runs: { context7: 50, prReview: 50 },
+    minimumCounts: ["context7", "buildFix", "prReview"],
+  });
+});
+
+test("approve reads the policies first, so a rejected credential writes nothing", async () => {
+  apiReply = (call) =>
+    call.path.endsWith("/policies")
+      ? { status: 401, body: { error: "invalid_api_key" } }
+      : { body: {} };
+  const client = await connect();
+  await expect(
+    client.callTool({
+      name: "manage_library_requests",
+      arguments: { teamspace: TS, action: "approve", request_id: "block:/vercel/next.js" },
+    })
+  ).rejects.toThrow(/invalid_token/);
+  expect(apiCalls.some((call) => call.path.endsWith("/approve"))).toBe(false);
+  expect(lastResponse?.status).toBe(401);
+});
+
+test("a 401 whose body cannot be read still stops the approval", async () => {
+  vi.stubGlobal("fetch", async (input: URL | string, init?: RequestInit) => {
+    const path = new URL(input).pathname;
+    apiCalls.push({ method: init?.method ?? "GET", path, body: undefined });
+    const broken = new ReadableStream({
+      start: (controller) => controller.error(new Error("reset")),
+    });
+    return path.endsWith("/policies")
+      ? new Response(broken, { status: 401 })
+      : Response.json({ data: {} });
+  });
+  const client = await connect();
+  await expect(
+    client.callTool({
+      name: "manage_library_requests",
+      arguments: { teamspace: TS, action: "approve", request_id: "block:/vercel/next.js" },
+    })
+  ).rejects.toThrow(/invalid_token/);
+  expect(apiCalls.some((call) => call.path.endsWith("/approve"))).toBe(false);
 });

@@ -55,7 +55,9 @@ function createApi(state: RequestState): Api {
     // (expired, revoked, or issued for another resource). Set before the body
     // is read, so a failed read still ends in the OAuth challenge.
     if (response.status === 401) state.authRejected = true;
-    const text = await response.text();
+    // A broken error body must not hide the status, which decides the outcome;
+    // a broken success body is a failure of its own.
+    const text = response.ok ? await response.text() : await response.text().catch(() => "");
     let parsed: unknown = text;
     try {
       parsed = text ? JSON.parse(text) : null;
@@ -112,6 +114,8 @@ const NEXT_STEP: Record<string, string> = {
   run_in_progress: "A run is already in progress. Wait for it with docs7_get_agent_runs.",
   project_busy: "The teamspace is changing. Try again in a few seconds.",
   ambiguous_version: "Set is_branch to true or false.",
+  library_not_found:
+    "The teamspace has no such library. Suggestions, benchmarks, analytics and config need a library the teamspace owns (list_libraries); claim_library claims a public one.",
 };
 
 function nextStep(status: number, body: unknown): string | undefined {
