@@ -418,15 +418,17 @@ test("the server card and serverInfo carry the Context7 icon", async () => {
 test("agent usage counts this UTC month's runs by agent, without superseded runs", () => {
   const now = new Date("2026-10-22T12:00:00Z");
   const usage = agentActivity(
-    [
-      [
+    {
+      improve: [
         { state: "completed", createdAt: "2026-10-02T00:00:00Z", pullRequest: { state: "merged" } },
         { state: "completed", createdAt: "2026-10-04T00:00:00Z", pullRequest: { state: "open" } },
         { state: "failed", createdAt: "2026-10-03T00:00:00Z", input: { kind: "health" } },
         { state: "completed", createdAt: "2026-09-30T23:59:59Z", pullRequest: { state: "open" } },
       ],
-      [{ state: "superseded", createdAt: "2026-10-05T00:00:00Z", input: { kind: "review" } }],
-      [
+      review: [
+        { state: "superseded", createdAt: "2026-10-05T00:00:00Z", input: { kind: "review" } },
+      ],
+      watch: [
         {
           state: "completed",
           createdAt: "2026-10-21T00:00:00Z",
@@ -434,7 +436,7 @@ test("agent usage counts this UTC month's runs by agent, without superseded runs
           pullRequest: { state: "open" },
         },
       ],
-    ],
+    },
     now
   );
   expect(usage).toEqual({
@@ -534,6 +536,17 @@ test("agent usage names the agents whose history may hold more runs this month",
     createdAt: "2026-10-20T00:00:00Z",
     input: { kind: "review" },
   }));
-  const usage = agentActivity([[], full, []], new Date("2026-10-22T00:00:00Z"));
-  expect(usage).toMatchObject({ runs: { prReview: 50 }, minimumCounts: ["prReview"] });
+  const usage = agentActivity(
+    {
+      improve: full.map((run) => ({ ...run, input: { kind: "suggestions" } })),
+      review: full,
+      watch: [],
+    },
+    new Date("2026-10-22T00:00:00Z")
+  );
+  // Build Fix shares the improve history: not in the window, still possibly undercounted.
+  expect(usage).toMatchObject({
+    runs: { context7: 50, prReview: 50 },
+    minimumCounts: ["context7", "buildFix", "prReview"],
+  });
 });

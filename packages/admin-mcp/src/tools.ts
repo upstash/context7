@@ -190,6 +190,14 @@ type AgentRun = {
   pullRequest?: { state?: unknown };
 };
 
+/** The agents whose runs each agent-runs history holds. */
+const HISTORY_AGENTS = {
+  improve: ["context7", "buildFix"],
+  review: ["prReview"],
+  watch: ["codeWatch"],
+} as const;
+type AgentHistory = keyof typeof HISTORY_AGENTS;
+
 /** The most runs the agent-runs route gives per history. */
 export const AGENT_HISTORY_LIMIT = 50;
 
@@ -200,20 +208,25 @@ export const AGENT_HISTORY_LIMIT = 50;
  * starts inside the month, older runs of the month are not read: its agents
  * are named in `minimumCounts`.
  */
-export function agentActivity(histories: AgentRun[][], now = new Date()): Record<string, unknown> {
+export function agentActivity(
+  histories: Record<AgentHistory, AgentRun[]>,
+  now = new Date()
+): Record<string, unknown> {
   const monthStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1);
   const inMonth = (run: AgentRun) =>
     typeof run.createdAt === "string" && Date.parse(run.createdAt) >= monthStart;
   const minimumCounts = new Set<string>();
-  for (const history of histories) {
-    if (history.length >= AGENT_HISTORY_LIMIT && history.every(inMonth)) {
-      for (const run of history) minimumCounts.add(runAgent(run));
+  for (const history of Object.keys(HISTORY_AGENTS) as AgentHistory[]) {
+    const list = histories[history];
+    if (list.length >= AGENT_HISTORY_LIMIT && list.every(inMonth)) {
+      // An agent can be missing from the window and still have older runs this month.
+      for (const agent of HISTORY_AGENTS[history]) minimumCounts.add(agent);
     }
   }
   const runs: Record<string, number> = {};
   const failedRuns: Record<string, number> = {};
   const pullRequests: Record<string, Record<string, number>> = {};
-  for (const run of histories.flat()) {
+  for (const run of Object.values(histories).flat()) {
     if (run.state === "superseded" || !inMonth(run)) continue;
     const agent = runAgent(run);
     runs[agent] = (runs[agent] ?? 0) + 1;
@@ -869,10 +882,18 @@ export const TOOLS: ToolDef[] = [
           const approved = await api.post(`${base}/${requestId()}/approve`);
           // Approval edits the list only; the list applies only in its own filter mode.
           const mode = requestMode(data(approved).requestType);
-          const policies = data(await api.get(`${ts(args.teamspace)}/policies`)) as {
-            libraryFilters?: { mode?: unknown };
-          };
-          if (policies.libraryFilters?.mode === mode) return approved;
+          // Advisory only: the approval is done, so a failed read must not look like a failure.
+          const policies = (await api
+            .get(`${ts(args.teamspace)}/policies`)
+            .then(data)
+            .catch(() => null)) as { libraryFilters?: { mode?: unknown } } | null;
+          if (policies?.libraryFilters?.mode === mode) return approved;
+          if (!policies) {
+            return {
+              ...data(approved),
+              note: `Approved. Could not read the policies to check that library filters are in "${mode}" mode; the list has no effect in another mode. Check with get_library_policies, and ask the user before you change the mode.`,
+            };
+          }
           return {
             ...data(approved),
             note: `Saved in the policy list, but library filters are not in "${mode}" mode, so it has no effect yet. Ask the user before you call update_library_policies with \`library_filters.mode: "${mode}"\`: that mode changes which libraries the whole teamspace can use (try \`dry_run: true\` first).`,
@@ -943,14 +964,20 @@ export const TOOLS: ToolDef[] = [
       const details = data(await api.get(path));
       // A CLI site has no agent, and its agent-usage route answers 404.
       if (details.source === "local") return { site: siteDetails(details) };
-      const [usage, ...histories] = await Promise.all([
+      const readHistory = async (history: AgentHistory) =>
+        (
+          (await api.get(`${path}/agent-runs`, { history, limit: AGENT_HISTORY_LIMIT })) as {
+            data?: AgentRun[];
+          }
+        )?.data ?? [];
+      const [usage, improve, review, watch] = await Promise.all([
         api.get(`${path}/agent-usage`),
-        ...["improve", "review", "watch"].map((history) =>
-          api.get(`${path}/agent-runs`, { history, limit: AGENT_HISTORY_LIMIT })
-        ),
+        readHistory("improve"),
+        readHistory("review"),
+        readHistory("watch"),
       ]);
-      const runs = histories.map((body) => (body as { data?: AgentRun[] })?.data ?? []);
-      return { site: siteDetails(details), agentUsage: { ...data(usage), ...agentActivity(runs) } };
+      const activity = agentActivity({ improve, review, watch });
+      return { site: siteDetails(details), agentUsage: { ...data(usage), ...activity } };
     },
   }),
   tool({
