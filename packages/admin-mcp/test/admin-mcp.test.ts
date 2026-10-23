@@ -566,3 +566,24 @@ test("approve reads the policies first, so a rejected credential writes nothing"
   expect(apiCalls.some((call) => call.path.endsWith("/approve"))).toBe(false);
   expect(lastResponse?.status).toBe(401);
 });
+
+test("a 401 whose body cannot be read still stops the approval", async () => {
+  vi.stubGlobal("fetch", async (input: URL | string, init?: RequestInit) => {
+    const path = new URL(input).pathname;
+    apiCalls.push({ method: init?.method ?? "GET", path, body: undefined });
+    const broken = new ReadableStream({
+      start: (controller) => controller.error(new Error("reset")),
+    });
+    return path.endsWith("/policies")
+      ? new Response(broken, { status: 401 })
+      : Response.json({ data: {} });
+  });
+  const client = await connect();
+  await expect(
+    client.callTool({
+      name: "manage_library_requests",
+      arguments: { teamspace: TS, action: "approve", request_id: "block:/vercel/next.js" },
+    })
+  ).rejects.toThrow(/invalid_token/);
+  expect(apiCalls.some((call) => call.path.endsWith("/approve"))).toBe(false);
+});
