@@ -13,7 +13,7 @@ The Agent tab has two cards:
 <Frame caption="Select Edit to turn each agent on or off and choose its setting.">
   <img
     src="/images/docs7/dashboard/agent.jpg"
-    alt="Agents card in edit mode with the Context7, Build Fix, PR Review, Code Watch, and Compatibility Check agents"
+    alt="Agents card in edit mode with the Context7, Build Fix, PR Review, Code Watch, and Example Check agents"
   />
 </Frame>
 
@@ -23,7 +23,7 @@ There are five agents:
 - **Build Fix Agent** fixes the errors and warnings that a build finds in your docs.
 - **PR Review Agent** checks links, grammar, spelling, build health, and style in each docs pull request.
 - **Code Watch Agent** updates the docs when a pull request merges in your code repositories.
-- **Compatibility Check Agent** runs the code examples in your docs against your services and fixes the ones that fail.
+- **Example Check Agent** runs the code examples in your docs against your services and fixes the ones that fail.
 
 New sites start with every agent off. Each run counts toward the site's monthly agent allowance.
 
@@ -101,14 +101,14 @@ When a merge belongs with a docs pull request the agent already opened and that 
 
 Each checked pull request counts as one run.
 
-## Compatibility Check Agent
+## Example Check Agent
 
-The Compatibility Check Agent runs the TypeScript, JavaScript, and Python code examples of your docs against your services. When an example fails because the example is wrong, the agent fixes it, runs it again, and adds the fix to a pull request. It needs Docs7 Pro.
+The Example Check Agent runs the TypeScript, JavaScript, and Python code examples of your docs against your services. When an example fails because the example is wrong, the agent fixes it, runs it again, and adds the fix to a pull request. It needs Docs7 Pro.
 
 <Frame caption="The agent's dialog holds the variables your code examples read and the result of the last check.">
   <img
-    src="/images/docs7/dashboard/agent-compatibility-check.jpg"
-    alt="Compatibility Check Agent dialog with two variables, one of them secret, and the failed and skipped examples of the last check"
+    src="/images/docs7/dashboard/agent-example-check.jpg"
+    alt="Example Check Agent dialog with two variables, one of them secret, and the failed and skipped examples of the last check"
   />
 </Frame>
 
@@ -139,7 +139,7 @@ The dialog shows the last check's failed and skipped examples. Activity shows ea
 <Frame caption="Activity lists every agent run with the pull request it opened, reviewed, or followed.">
   <img
     src="/images/docs7/dashboard/agent-activity.jpg"
-    alt="Activity card with runs of the Build Fix, PR Review, Code Watch, Compatibility Check, and Context7 agents"
+    alt="Activity card with runs of the Build Fix, PR Review, Code Watch, Example Check, and Context7 agents"
   />
 </Frame>
 
@@ -147,6 +147,6 @@ Each row shows the run's pull request and its state: **Running**, **Open**, **Me
 
 ## Safety and scope
 
-Agent runs receive read access to the connected repository, and Code Watch runs receive read access to the code repository of the merged pull request as well. Compatibility Check runs receive your variables; secret values stay outside the sandbox. The agent can inspect repository source to verify a documentation change, but trusted Docs7 code publishes the resulting files through GitHub.
+Agent runs receive read access to the connected repository, and Code Watch runs receive read access to the code repository of the merged pull request as well. Example Check runs receive your variables; secret values stay outside the sandbox. The agent can inspect repository source to verify a documentation change, but trusted Docs7 code publishes the resulting files through GitHub.
 
 Changes are limited to the configured docs path. When the docs path is the repository root, Docs7 still blocks common application paths, package manifests, lockfiles, `.github`, and `.git` from agent changes.
