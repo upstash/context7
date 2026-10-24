@@ -41,6 +41,7 @@ import {
   readJsonConfig,
   mergeServerEntry,
   writeJsonConfig,
+  patchJsonConfig,
   resolveMcpPath,
   appendTomlServer,
   patchTomlStdioApiKey,
@@ -402,7 +403,9 @@ async function setupAgent(
         ? `reconfigured with ${AUTH_MODE_LABELS[auth.mode]}`
         : `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
       if (agentName === "opencode") await editOpenCodeServer(mcpPath, entry);
-      else await writeJsonConfig(mcpPath, config);
+      else if (!(await patchJsonConfig(mcpPath, [agent.mcp.configKey, "context7"], entry))) {
+        await writeJsonConfig(mcpPath, config);
+      }
     }
   } catch (err) {
     mcpStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;

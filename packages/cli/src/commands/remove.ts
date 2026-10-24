@@ -10,6 +10,7 @@ import {
   readTomlServerExists,
   removeServerEntry,
   writeJsonConfig,
+  patchJsonConfig,
   resolveMcpPath,
   removeTomlServer,
 } from "../setup/mcp-writer.js";
@@ -333,7 +334,16 @@ async function uninstallMcp(agentName: SetupAgent, scope: Scope): Promise<Cleanu
     const { config, removed } = removeServerEntry(existing, agent.mcp.configKey, "context7");
     if (removed) {
       if (agentName === "opencode") await editOpenCodeServer(mcpPath);
-      else await writeJsonConfig(mcpPath, config);
+      else {
+        // Removing the last server drops the now-empty section, the same shape
+        // `removeServerEntry` produces, but through an in-place edit so the rest
+        // of the user's JSONC file (comments, layout) survives untouched.
+        const sectionEmptied = !(agent.mcp.configKey in config);
+        const path = sectionEmptied ? [agent.mcp.configKey] : [agent.mcp.configKey, "context7"];
+        if (!(await patchJsonConfig(mcpPath, path, undefined))) {
+          await writeJsonConfig(mcpPath, config);
+        }
+      }
     }
     return { status: removed ? "removed" : "not found", path: mcpPath };
   } catch (err) {
