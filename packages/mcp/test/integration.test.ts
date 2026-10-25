@@ -23,6 +23,7 @@ const BASE_PORT = 43117;
 const STUB_DOCS = "stub docs text";
 const EMPTY_CONTEXT_QUERY = "force-empty-context";
 const NO_RESULTS_QUERY = "force-no-results";
+const FILTERED_NO_RESULTS_QUERY = "force-filtered-no-results";
 const UPSTREAM_ERROR_QUERY = "force-upstream-error";
 const SLOW_CONTEXT_QUERY = "force-slow-context";
 const INVALID_JSON_QUERY = "force-invalid-json";
@@ -130,6 +131,10 @@ function startStubApi(): Promise<string> {
       }
       if (url.searchParams.get("query") === NO_RESULTS_QUERY) {
         res.end(JSON.stringify({ results: [] }));
+        return;
+      }
+      if (url.searchParams.get("query") === FILTERED_NO_RESULTS_QUERY) {
+        res.end(JSON.stringify({ results: [], searchFilterApplied: true }));
         return;
       }
       res.end(
@@ -822,6 +827,23 @@ describe.each([
       arguments: { libraryName: "does-not-exist", query: NO_RESULTS_QUERY },
     });
     expect(empty.isError).toBeFalsy();
+  });
+
+  test("keeps the filter notice when no libraries match", async () => {
+    const result = await client.callTool({
+      name: "resolve-library-id",
+      arguments: { libraryName: "Next.js", query: FILTERED_NO_RESULTS_QUERY },
+    });
+    expect(result.isError).toBeFalsy();
+    expect(result.content).toEqual([
+      {
+        type: "text",
+        text: expect.stringContaining("teamspace's library filters"),
+      },
+    ]);
+    const text = (result.content as { type: string; text: string }[])[0].text;
+    expect(text).toContain("https://context7.com/dashboard?tab=policies");
+    expect(text).toContain("No documentation libraries found matching your query.");
   });
 
   test("calls resolve-library-id end to end", async () => {

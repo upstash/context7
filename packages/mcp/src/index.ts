@@ -367,7 +367,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       const searchResponse = await searchLibraries(query, libraryName, ctx);
 
       if (!searchResponse.results || searchResponse.results.length === 0) {
-        const text = searchResponse.error ?? "No libraries found matching the provided name.";
+        const text = searchResponse.error ?? formatSearchResults(searchResponse);
         maybeElicitAuthSignIn(server, ctx);
         recordToolCallTelemetry(ctx, searchResponse.error ? "error" : "not_found");
         return {
