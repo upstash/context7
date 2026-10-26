@@ -130,7 +130,7 @@ Each code example ends with one of these results:
 
 - **Passed**: the example ran and did what the page says, including the documented output and responses.
 - **Failed**: the example threw an error, or its result differs from the page. If the example has a mistake, such as a wrong method name, argument, value, expected output, import, or syntax, the agent fixes it and runs it again. If the example uses the API as documented and the SDK or service behaves differently, the agent reports this and does not change the page.
-- **Skipped**: the example needs a service with no variable, connects over TCP (for example ioredis, node-redis, or redis-py with a `redis://` URL), is not a complete program, or is a whole framework app such as a Next.js route.
+- **Skipped**: the example needs a service with no variable, connects over TCP (for example ioredis, node-redis, or redis-py with a `redis://` URL), is not a complete program, or is part of a whole framework app such as a Next.js route.
 
 All fixes of a check go into one pull request. Its description lists every failed example of the check: the ones the agent fixed, and the ones it did not fix. A check with no fix opens no pull request. Activity shows each check as one row with its counts. Each batch counts as one run, so docs with 1,000 code examples use about 10 runs per check.
 
