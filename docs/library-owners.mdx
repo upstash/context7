@@ -69,7 +69,7 @@ Here's an example `context7.json` file with all available options:
 
 - **`branch`** (string): The name of the git branch to parse. If not provided, the default branch will be used.
 
-- **`folders`** (array): Specific folder paths to include when parsing. If empty, Context7 scans the entire repository. Root-level markdown files are always included.
+- **`folders`** (array): Specific folder paths to include when parsing. If empty, Context7 scans the entire repository. Root-level markdown files are always included. A folder path that points outside the repository (for example `"../.."`) is ignored.
 
 - **`excludeFolders`** (array): Patterns to exclude from documentation parsing. Supports simple names, paths, and glob patterns (see Exclusion Patterns below).
 
