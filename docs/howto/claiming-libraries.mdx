@@ -187,6 +187,10 @@ Context7 checks a new title or description before it saves it. If the text gives
 
       Hash fragments (`#...`) are not indexed. Pages that differ only by their fragment, such as
       hash-routed documentation sites, are crawled as a single page.
+
+      Exclude URL patterns apply to the current version's crawl and to each version's crawl,
+      except a pattern that also matches a version's own URL. Such a pattern still leaves the
+      old releases out of the current version, and the version's pages are crawled.
     </Note>
   </Tab>
 </Tabs>
