@@ -213,6 +213,8 @@ Available for Git repositories and websites.
 | **Redirect URL**      | Redirect users to a different library. Leave empty to disable.                                              | Max 500 characters |
 | **Disallow Indexing** | Opt-out from Context7. When enabled, documentation content is removed and the library becomes inaccessible. | Boolean            |
 
+Context7 refuses a redirect to the library itself, a redirect that would form a loop, and a chain longer than three redirects, counting libraries that already redirect to yours. Readers follow up to three redirects. Point the redirect at the library the chain ends at.
+
 ## Managing Versions
 
 The Versions tab lets you configure previous versions of your library that should be available in Context7.
