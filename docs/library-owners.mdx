@@ -120,6 +120,7 @@ Examples:
 - `"./build"` - Excludes the build folder only at root (not `src/build`)
 - `"app-sdk/v2.3"` - Excludes the app-sdk/v2.3 path and all its contents
 - `"*.test"` - Excludes folders ending with .test
+- `"v*/"` - Excludes folders matching the pattern and everything under them (`docs/v2/a.md`), but not files whose names start the same way (`validation.md`). A plain name like `"latest/"` behaves the same as `"latest"`
 - `"docs/**/internal"` - Excludes any "internal" folder under docs
 - `"**/temp"` - Excludes any folder named "temp" anywhere
 
