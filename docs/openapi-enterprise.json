@@ -418,6 +418,10 @@
                     "type": "boolean",
                     "description": "Re-crawl even if already indexed",
                     "default": false
+                  },
+                  "project": {
+                    "type": "string",
+                    "description": "Existing website library to add this URL to as a version. Fails with `version-not-in-library` if the URL is not another release of that library"
                   }
                 }
               },
