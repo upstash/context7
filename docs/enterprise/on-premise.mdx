@@ -237,11 +237,11 @@ Configured via the **Settings** page in the web UI.
 |---|---|
 | GitHub Token | GitHub Personal Access Token. Required for GitHub repositories |
 | GitLab Token | GitLab token. Required for GitLab repositories |
-| GitLab Self-hosted | Your self-hosted GitLab host, without `https://`, such as `gitlab.your-company.com`. Enter it under the GitLab section's **Self-hosted** option |
+| GitLab **Server URL** | Your self-hosted GitLab host, such as `gitlab.your-company.com`. In the GitLab section, select **Self-hosted**, then enter it in **Server URL** |
 
 You only need tokens for the platforms you use. If you only parse GitLab repos, you don't need a GitHub token, and vice versa. Create tokens with `repo` scope (GitHub) or `read_repository` scope (GitLab) for private repository access.
 
-The GitLab token is sent only to `gitlab.com` and the self-hosted host you enter in **GitLab Self-hosted**. A repository on any other host is treated as having no GitLab token, even when its name contains "gitlab"; register the host in Settings to use the token there.
+The GitLab token is sent only to `gitlab.com` and the host in **Server URL**. To use the token with a self-hosted GitLab, enter its host there.
 
 ## Access Control
 
