@@ -3,11 +3,11 @@ title: Installation
 description: Add Context7 to your coding agent. It gives the agent current docs for the libraries you use.
 ---
 
-import { ClaudeIcon, CursorIcon, OpenAIIcon, VSCodeIcon } from "/snippets/agent-icons.jsx";
+import { ClaudeIcon, CursorIcon, OpenAIIcon, StoreButton, VSCodeIcon } from "/snippets/agents.jsx";
 
 <Tabs>
   <Tab title="Claude" icon={<ClaudeIcon />}>
-    <Card title="Add to Claude" icon={<ClaudeIcon />} href="https://claude.ai/directory/37153cd7-b17c-470e-8b46-007e2859e0f3" horizontal />
+    <StoreButton href="https://claude.ai/directory/37153cd7-b17c-470e-8b46-007e2859e0f3" icon={<ClaudeIcon />}>Add to Claude</StoreButton>
 
     <Steps>
       <Step title="Add">
@@ -21,7 +21,7 @@ import { ClaudeIcon, CursorIcon, OpenAIIcon, VSCodeIcon } from "/snippets/agent-
     The connector also works in Claude Code when you sign in with the same Claude account. To use the Claude Code plugin instead, run `/plugin install context7@claude-plugins-official`.
   </Tab>
   <Tab title="ChatGPT" icon={<OpenAIIcon />}>
-    <Card title="Add to ChatGPT" icon={<OpenAIIcon />} href="https://chatgpt.com/plugins/plugin_asdk_app_69ef18c674308191a2f952431f91ea61" horizontal />
+    <StoreButton href="https://chatgpt.com/plugins/plugin_asdk_app_69ef18c674308191a2f952431f91ea61" icon={<OpenAIIcon />}>Add to ChatGPT</StoreButton>
 
     <Steps>
       <Step title="Install">
@@ -46,7 +46,7 @@ import { ClaudeIcon, CursorIcon, OpenAIIcon, VSCodeIcon } from "/snippets/agent-
     </Steps>
   </Tab>
   <Tab title="Cursor" icon={<CursorIcon />}>
-    <Card title="Add to Cursor" icon={<CursorIcon />} href="https://cursor.com/marketplace/upstash/context7" horizontal />
+    <StoreButton href="https://cursor.com/marketplace/upstash/context7" icon={<CursorIcon />}>Add to Cursor</StoreButton>
 
     <Steps>
       <Step title="Install">
@@ -58,7 +58,7 @@ import { ClaudeIcon, CursorIcon, OpenAIIcon, VSCodeIcon } from "/snippets/agent-
     </Steps>
   </Tab>
   <Tab title="VS Code" icon={<VSCodeIcon />}>
-    <Card title="Add to VS Code" icon={<VSCodeIcon />} href="https://marketplace.visualstudio.com/items?itemName=Upstash.context7-mcp" horizontal />
+    <StoreButton href="https://marketplace.visualstudio.com/items?itemName=Upstash.context7-mcp" icon={<VSCodeIcon />}>Add to VS Code</StoreButton>
 
     <Steps>
       <Step title="Install">
