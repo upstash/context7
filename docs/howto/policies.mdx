@@ -59,6 +59,6 @@ Ignore the quality bar entirely and grant access only to a hand-picked list of l
 The same configuration is available over the REST API using a teamspace API key:
 
 - [Get Policies](/api-reference/policies/get-teamspace-policies) — `GET /api/v2/policies` returns the current configuration and accessible library count.
-- [Update Policies](/api-reference/policies/update-teamspace-policies) — `PATCH /api/v2/policies` applies an incremental update; only the fields you include are changed.
+- [Update Policies](/api-reference/policies/update-teamspace-policies) — `PATCH /api/v2/policies` applies an incremental update; only the fields you include are changed. Add `dryRun: true` to get the policies and library count the update would produce, without saving.
 
 See the [API Guide](/api-guide) for request and response details.
