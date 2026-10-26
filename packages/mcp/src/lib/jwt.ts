@@ -7,7 +7,7 @@ import {
   OAUTH_JWKS_URL,
   RESOURCE_URL,
 } from "./constants.js";
-import { checkOAuthAudience } from "./oauth-audience.js";
+import { checkOAuthAudience, FOREIGN_OAUTH_AUDIENCE_MESSAGE } from "./oauth-audience.js";
 import { isVercelMarketplaceIssuer, validateVercelMarketplaceJwt } from "./vercelMarketplaceJwt.js";
 
 const oauthJwks = jose.createRemoteJWKSet(new URL(OAUTH_JWKS_URL));
@@ -126,8 +126,8 @@ export function isClerkOAuthJwt(token: string | undefined): token is string {
  * resource server: an ID token is addressed to the OAuth client, and a session
  * JWT carries the user's whole browser session, which the user never granted
  * to an MCP client and which names no audience at all. Both are rejected with
- * 401 in every audience-enforcement mode; `observe` only relaxes the `aud`
- * comparison of a genuine access token.
+ * 401 in every audience-enforcement mode; `observe` and `foreign` only relax
+ * the `aud` comparison of a genuine access token.
  */
 async function validateClerkOAuthJwt(token: string): Promise<JWTValidationResult> {
   if (!isClerkOAuthJwt(token)) {
@@ -143,11 +143,17 @@ async function validateClerkOAuthJwt(token: string): Promise<JWTValidationResult
   const audience = checkOAuthAudience(payload.aud);
   if (audience.allowed) return { valid: true };
 
+  // The token is genuine; is it ours? A token issued for another resource
+  // (or for none) is a foreign MCP server's token until the audience check
+  // says otherwise. Whether that rejects it is the enforcement mode's call.
   const clientId =
     typeof payload.client_id === "string" && payload.client_id ? payload.client_id : "unknown";
-  const warning = `audienceMismatch clientId=${clientId} aud=${audience.aud} enforcement=${audience.enforcement}`;
-  if (audience.enforcement === "required") {
-    return { valid: false, error: "Token audience not accepted", warning };
+  const warning = `audienceMismatch clientId=${clientId} aud=${audience.aud} enforcement=${audience.enforcement} outcome=${audience.outcome}`;
+  if (audience.outcome === "rejected") {
+    // A new token from the same client would be rejected the same way, so
+    // "re-authenticate" would only send it in a loop; the message names the
+    // way out instead.
+    return { valid: false, error: FOREIGN_OAUTH_AUDIENCE_MESSAGE, warning };
   }
   return { valid: true, warning };
 }

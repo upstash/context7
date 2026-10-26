@@ -24,6 +24,7 @@ const STUB_DOCS = "stub docs text";
 const EMPTY_CONTEXT_QUERY = "force-empty-context";
 const NO_RESULTS_QUERY = "force-no-results";
 const UPSTREAM_ERROR_QUERY = "force-upstream-error";
+const SLOW_CONTEXT_QUERY = "force-slow-context";
 const INVALID_JSON_QUERY = "force-invalid-json";
 const CLIENT_IP_ASSERTION_KEY = "0123456789abcdef".repeat(4);
 const INVALID_OAUTH_TOKEN_BODY = {
@@ -155,6 +156,10 @@ function startStubApi(): Promise<string> {
         return;
       }
       res.setHeader("Content-Type", "text/plain");
+      if (url.searchParams.get("query") === SLOW_CONTEXT_QUERY) {
+        setTimeout(() => res.end(STUB_DOCS), 500);
+        return;
+      }
       res.end(url.searchParams.get("query") === EMPTY_CONTEXT_QUERY ? "" : STUB_DOCS);
     } else {
       res.statusCode = 404;
@@ -238,6 +243,91 @@ test("reports the bound port when port zero requests an ephemeral port", async (
   } finally {
     child.kill();
   }
+});
+
+// A modern query-docs call over a caller-chosen agent, so tests control socket reuse.
+function callQueryDocsOver(url: string, agent: http.Agent, query: string) {
+  return new Promise<{ status: number; connection: string | undefined }>((resolve, reject) => {
+    const req = http.request(
+      url,
+      {
+        method: "POST",
+        agent,
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream",
+          authorization: "Bearer ctx7sk-local-test",
+          "mcp-protocol-version": "2026-07-28",
+          "mcp-method": "tools/call",
+          "mcp-name": "query-docs",
+        },
+      },
+      (res) => {
+        res.resume();
+        res.on("end", () =>
+          resolve({ status: res.statusCode!, connection: res.headers.connection })
+        );
+      }
+    );
+    req.on("error", reject);
+    req.end(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/call",
+        params: {
+          name: "query-docs",
+          arguments: { libraryId: "/vercel/next.js", query },
+          _meta: {
+            "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+            "io.modelcontextprotocol/clientCapabilities": {},
+          },
+        },
+      })
+    );
+  });
+}
+
+describe("HTTP shutdown", () => {
+  test("serves requests that arrive on a kept-alive socket during shutdown", async () => {
+    const { child, url } = await startHttpChild({ port: 0 });
+    const exited = new Promise<number | null>((resolve) => child.once("exit", resolve));
+    // One socket, so the second request reuses the connection of the first.
+    const agent = new http.Agent({ keepAlive: true, maxSockets: 1 });
+    try {
+      const inFlight = callQueryDocsOver(url, agent, SLOW_CONTEXT_QUERY);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      child.kill("SIGTERM");
+      // Queued behind the in-flight call, so it reaches the server after SIGTERM.
+      const afterSignal = callQueryDocsOver(url, agent, "app router");
+
+      expect((await inFlight).status).toBe(200);
+      expect(await afterSignal).toEqual({ status: 200, connection: "close" });
+      expect(await exited).toBe(0);
+    } finally {
+      agent.destroy();
+      child.kill();
+    }
+  });
+
+  test("exits cleanly when a request in flight at SIGTERM leaves its socket open", async () => {
+    const { child, url } = await startHttpChild({ port: 0 });
+    const exited = new Promise<number | null>((resolve) => child.once("exit", resolve));
+    const agent = new http.Agent({ keepAlive: true });
+    try {
+      const inFlight = callQueryDocsOver(url, agent, SLOW_CONTEXT_QUERY);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      child.kill("SIGTERM");
+
+      // The response began before SIGTERM, so it keeps the socket alive and the
+      // client sends nothing more; shutdown must still finish inside its limit.
+      expect(await inFlight).toEqual({ status: 200, connection: "keep-alive" });
+      expect(await exited).toBe(0);
+    } finally {
+      agent.destroy();
+      child.kill();
+    }
+  });
 });
 
 async function connect(transportKind: "http" | "stdio", era: "modern" | "legacy") {
@@ -466,6 +556,175 @@ describe("HTTP API key headers", () => {
   });
 });
 
+describe("HTTP batch cancellation", () => {
+  beforeEach(() => {
+    requests.length = 0;
+  });
+
+  test("consumes a request cancelled by the same batch and closes promptly", async () => {
+    const response = await fetch(httpUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+        authorization: "Bearer ctx7sk-local-test",
+      },
+      body: JSON.stringify([
+        {
+          jsonrpc: "2.0",
+          id: 102,
+          method: "tools/call",
+          params: {
+            name: "resolve-library-id",
+            arguments: { query: "framework documentation", libraryName: "Next.js" },
+          },
+        },
+        {
+          jsonrpc: "2.0",
+          method: "notifications/cancelled",
+          params: { requestId: 102, reason: "regression-test" },
+        },
+      ]),
+      signal: AbortSignal.timeout(1_000),
+    });
+
+    expect(response.status).toBe(202);
+    expect(await response.text()).toBe("");
+    expect(requests).toHaveLength(0);
+  });
+
+  test("returns responses for the uncancelled requests in a mixed batch", async () => {
+    const response = await fetch(httpUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+        authorization: "Bearer ctx7sk-local-test",
+      },
+      body: JSON.stringify([
+        {
+          jsonrpc: "2.0",
+          id: 104,
+          method: "tools/call",
+          params: {
+            name: "resolve-library-id",
+            arguments: { query: "cancelled", libraryName: "Cancelled.js" },
+          },
+        },
+        {
+          jsonrpc: "2.0",
+          id: 105,
+          method: "tools/call",
+          params: {
+            name: "resolve-library-id",
+            arguments: { query: "framework documentation", libraryName: "Next.js" },
+          },
+        },
+        {
+          jsonrpc: "2.0",
+          method: "notifications/cancelled",
+          params: { requestId: 104, reason: "regression-test" },
+        },
+      ]),
+      signal: AbortSignal.timeout(1_000),
+    });
+
+    expect(response.status).toBe(200);
+    const responseText = await response.text();
+    expect(responseText).not.toContain('"id":104');
+    expect(responseText).toContain('"id":105');
+    expect(requests.filter((request) => request.path === "/v2/libs/search")).toHaveLength(1);
+    expect(requests[0].query.get("libraryName")).toBe("Next.js");
+  });
+
+  test("allows a cancellation for an ID outside the batch", async () => {
+    const response = await fetch(httpUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+        authorization: "Bearer ctx7sk-local-test",
+      },
+      body: JSON.stringify([
+        {
+          jsonrpc: "2.0",
+          id: 103,
+          method: "tools/call",
+          params: {
+            name: "resolve-library-id",
+            arguments: { query: "framework documentation", libraryName: "Next.js" },
+          },
+        },
+        {
+          jsonrpc: "2.0",
+          method: "notifications/cancelled",
+          params: { requestId: 999, reason: "different-request" },
+        },
+      ]),
+      signal: AbortSignal.timeout(1_000),
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('"id":103');
+    expect(requests.filter((request) => request.path === "/v2/libs/search")).toHaveLength(1);
+  });
+
+  test("leaves a batch with a 2026-07-28 element to the SDK, which rejects it", async () => {
+    const modernParams = { _meta: { "io.modelcontextprotocol/protocolVersion": "2026-07-28" } };
+    const response = await fetch(httpUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+        authorization: "Bearer ctx7sk-local-test",
+      },
+      body: JSON.stringify([
+        { jsonrpc: "2.0", id: 107, method: "tools/list", params: modernParams },
+        {
+          jsonrpc: "2.0",
+          method: "notifications/cancelled",
+          params: { requestId: 107, reason: "regression-test" },
+        },
+        {
+          jsonrpc: "2.0",
+          id: 108,
+          method: "tools/call",
+          params: {
+            name: "resolve-library-id",
+            arguments: { query: "framework documentation", libraryName: "Next.js" },
+          },
+        },
+      ]),
+      signal: AbortSignal.timeout(1_000),
+    });
+
+    expect(response.status).toBe(400);
+    expect(requests).toHaveLength(0);
+  });
+
+  test("keeps 405 for a self-cancelling batch sent with DELETE", async () => {
+    const response = await fetch(httpUrl, {
+      method: "DELETE",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+        authorization: "Bearer ctx7sk-local-test",
+      },
+      body: JSON.stringify([
+        { jsonrpc: "2.0", id: 106, method: "tools/list" },
+        {
+          jsonrpc: "2.0",
+          method: "notifications/cancelled",
+          params: { requestId: 106, reason: "regression-test" },
+        },
+      ]),
+      signal: AbortSignal.timeout(1_000),
+    });
+
+    expect(response.status).toBe(405);
+  });
+});
+
 describe.each([
   ["http", "modern"],
   ["http", "legacy"],
@@ -549,6 +808,20 @@ describe.each([
     expect(result.isError).toBe(true);
     const text = (result.content as { type: string; text: string }[])[0].text;
     expect(text).toContain("stub upstream failure");
+  });
+
+  test("flags a failed resolve-library-id search as an error, not an empty match", async () => {
+    const failed = await client.callTool({
+      name: "resolve-library-id",
+      arguments: { libraryName: "Next.js", query: INVALID_JSON_QUERY },
+    });
+    expect(failed.isError).toBe(true);
+
+    const empty = await client.callTool({
+      name: "resolve-library-id",
+      arguments: { libraryName: "does-not-exist", query: NO_RESULTS_QUERY },
+    });
+    expect(empty.isError).toBeFalsy();
   });
 
   test("calls resolve-library-id end to end", async () => {

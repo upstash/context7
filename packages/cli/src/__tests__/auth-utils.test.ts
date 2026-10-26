@@ -9,12 +9,24 @@ vi.mock("fs", () => {
     unlinkSync: vi.fn(),
     renameSync: vi.fn(),
     chmodSync: vi.fn(),
+    openSync: vi.fn(),
+    closeSync: vi.fn(),
+    statSync: vi.fn(),
+    utimesSync: vi.fn(),
   };
   return { ...fns, default: fns };
 });
 
 vi.mock("../constants.js", () => ({ CLI_CLIENT_ID: "test-client-id" }));
 vi.mock("../utils/api.js", () => ({ getBaseUrl: () => "https://test.context7.com" }));
+
+const mockConfirm = vi.fn();
+vi.mock("@inquirer/prompts", () => ({ confirm: (...args: unknown[]) => mockConfirm(...args) }));
+
+const mockPerformLogin = vi.fn();
+vi.mock("../commands/auth.js", () => ({
+  performLogin: (...args: unknown[]) => mockPerformLogin(...args),
+}));
 
 import * as fs from "fs";
 import {
@@ -23,6 +35,7 @@ import {
   clearTokens,
   isTokenExpired,
   getValidAccessToken,
+  getRefreshLockPath,
   startDeviceAuthorization,
   pollDeviceToken,
   type TokenData,
@@ -32,6 +45,7 @@ const mfs = vi.mocked(fs);
 const CREDENTIALS_PATH = "/fake-home/.config/context7/credentials.json";
 const LEGACY_CREDENTIALS_PATH = "/fake-home/.context7/credentials.json";
 const CONFIG_DIR_PATH = "/fake-home/.config/context7";
+const REFRESH_LOCK_PATH = "/fake-home/.config/context7/credentials.json.lock";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -42,6 +56,8 @@ beforeEach(() => {
   vi.stubEnv("XDG_CONFIG_HOME", undefined);
   vi.stubEnv("XDG_STATE_HOME", undefined);
   vi.stubEnv("XDG_CACHE_HOME", undefined);
+  // A developer's own key would suppress the expired-session prompt.
+  vi.stubEnv("CONTEXT7_API_KEY", undefined);
   vi.stubGlobal(
     "fetch",
     vi.fn(() => {
@@ -175,6 +191,13 @@ describe("clearTokens", () => {
     mfs.existsSync.mockReturnValue(true);
     expect(clearTokens()).toBe(true);
     expect(mfs.unlinkSync).toHaveBeenCalledWith(CREDENTIALS_PATH);
+  });
+
+  test("also deletes the legacy ~/.context7 credentials file", () => {
+    mfs.existsSync.mockReturnValue(true);
+    expect(clearTokens()).toBe(true);
+    expect(mfs.unlinkSync).toHaveBeenCalledWith(CREDENTIALS_PATH);
+    expect(mfs.unlinkSync).toHaveBeenCalledWith(LEGACY_CREDENTIALS_PATH);
   });
 
   test("returns false when file does not exist", () => {
@@ -326,52 +349,436 @@ describe("getValidAccessToken", () => {
     const written = JSON.parse(mfs.writeFileSync.mock.calls[0][1] as string);
     expect(written.refresh_token).toBe("rotated-tok");
   });
+});
 
-  test("returns undefined when refresh fails", async () => {
-    const tokens: TokenData = {
-      access_token: "expired-tok",
-      token_type: "bearer",
-      expires_at: Date.now() - 1000,
-      refresh_token: "refresh-tok",
-    };
+describe("getValidAccessToken when the refresh token is rejected", () => {
+  const EXPIRED: TokenData = {
+    access_token: "expired-tok",
+    token_type: "bearer",
+    // A fixed past instant: earlier tests leave Date.now mocked.
+    expires_at: 1,
+    refresh_token: "refresh-tok",
+  };
 
-    mfs.existsSync.mockReturnValue(true);
-    mfs.readFileSync.mockReturnValue(JSON.stringify(tokens));
+  let files: Map<string, string>;
+  let stdinTTY: PropertyDescriptor | undefined;
+  let stdoutTTY: PropertyDescriptor | undefined;
+
+  function setTTY(value: boolean): void {
+    Object.defineProperty(process.stdin, "isTTY", { value, configurable: true });
+    Object.defineProperty(process.stdout, "isTTY", { value, configurable: true });
+  }
+
+  function restoreTTY(target: NodeJS.ReadStream | NodeJS.WriteStream, d?: PropertyDescriptor) {
+    if (d) Object.defineProperty(target, "isTTY", d);
+    else delete (target as { isTTY?: boolean }).isTTY;
+  }
+
+  function stubRefreshResponse(status: number, body: unknown): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: status < 400,
+        status,
+        url: "https://test.context7.com/api/oauth/token",
+        json: () => Promise.resolve(body),
+        text: () => Promise.resolve(JSON.stringify(body)),
+      })
+    );
+  }
+
+  function stubInvalidGrant(): void {
+    stubRefreshResponse(400, {
+      error: "invalid_grant",
+      error_description: "The refresh token is malformed or not valid",
+    });
+  }
+
+  let logSpy: ReturnType<typeof vi.spyOn>;
+  let errorSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    // In-memory credentials so clearing them is visible to the next command.
+    files = new Map([[CREDENTIALS_PATH, JSON.stringify(EXPIRED)]]);
+    mfs.existsSync.mockImplementation((p) => files.has(String(p)) || p === CONFIG_DIR_PATH);
+    mfs.readFileSync.mockImplementation((p) => files.get(String(p)) ?? "");
+    mfs.writeFileSync.mockImplementation((p, data) => void files.set(String(p), String(data)));
+    mfs.unlinkSync.mockImplementation((p) => void files.delete(String(p)));
+
+    stdinTTY = Object.getOwnPropertyDescriptor(process.stdin, "isTTY");
+    stdoutTTY = Object.getOwnPropertyDescriptor(process.stdout, "isTTY");
+    logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    restoreTTY(process.stdin, stdinTTY);
+    restoreTTY(process.stdout, stdoutTTY);
+    vi.restoreAllMocks();
+  });
+
+  describe("in an interactive terminal", () => {
+    beforeEach(() => setTTY(true));
+
+    test("prompts once and returns the new token when the user signs in", async () => {
+      stubInvalidGrant();
+      mockConfirm.mockResolvedValue(true);
+      mockPerformLogin.mockImplementation(async () => {
+        files.set(CREDENTIALS_PATH, JSON.stringify({ access_token: "ctx7sk-new" }));
+        return "ctx7sk-new";
+      });
+
+      expect(await getValidAccessToken()).toBe("ctx7sk-new");
+      expect(mockConfirm).toHaveBeenCalledTimes(1);
+      expect(mockConfirm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: "Your Context7 session has expired. Sign in again now?",
+          default: true,
+        })
+      );
+      expect(mockPerformLogin).toHaveBeenCalledTimes(1);
+
+      // The next command uses the new credentials without refreshing.
+      expect(await getValidAccessToken()).toBe("ctx7sk-new");
+      expect(mockConfirm).toHaveBeenCalledTimes(1);
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
+    test("continues anonymously on No and does not prompt on the next command", async () => {
+      stubInvalidGrant();
+      mockConfirm.mockResolvedValue(false);
+
+      expect(await getValidAccessToken()).toBeUndefined();
+      expect(mockPerformLogin).not.toHaveBeenCalled();
+      expect(files.has(CREDENTIALS_PATH)).toBe(false);
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Continuing without an account. Run ctx7 login to sign in later.")
+      );
+
+      expect(await getValidAccessToken()).toBeUndefined();
+      expect(mockConfirm).toHaveBeenCalledTimes(1);
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
+    test("continues anonymously when the login fails", async () => {
+      stubInvalidGrant();
+      mockConfirm.mockResolvedValue(true);
+      mockPerformLogin.mockResolvedValue(null);
+
+      expect(await getValidAccessToken()).toBeUndefined();
+      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Continuing without an account"));
+    });
+
+    test("exits on Ctrl-C instead of continuing anonymously", async () => {
+      stubInvalidGrant();
+      mockConfirm.mockRejectedValue(
+        Object.assign(new Error("User force closed the prompt"), { name: "ExitPromptError" })
+      );
+      vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+      const exit = vi.spyOn(process, "exit").mockImplementation((() => {
+        throw new Error("process.exit");
+      }) as never);
+
+      await expect(getValidAccessToken()).rejects.toThrow("process.exit");
+      expect(exit).toHaveBeenCalledWith(130);
+      expect(mockPerformLogin).not.toHaveBeenCalled();
+      expect(files.has(CREDENTIALS_PATH)).toBe(false);
+    });
+
+    // getAuthHeaders sends CONTEXT7_API_KEY ahead of any stored token, so the
+    // user is still authenticated: no prompt, no "continuing without an account".
+    test("clears silently without prompting when CONTEXT7_API_KEY is set", async () => {
+      vi.stubEnv("CONTEXT7_API_KEY", "ctx7sk-envkey");
+      stubInvalidGrant();
+
+      expect(await getValidAccessToken()).toBeUndefined();
+      expect(files.has(CREDENTIALS_PATH)).toBe(false);
+      expect(mockConfirm).not.toHaveBeenCalled();
+      expect(logSpy).not.toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalled();
+    });
+
+    test("does not prompt when --json is passed", async () => {
+      const argv = process.argv;
+      process.argv = [...argv, "--json"];
+      try {
+        stubInvalidGrant();
+        expect(await getValidAccessToken()).toBeUndefined();
+      } finally {
+        process.argv = argv;
+      }
+      expect(mockConfirm).not.toHaveBeenCalled();
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+    });
+
+    test("clears silently without prompting when recovery is disabled", async () => {
+      stubInvalidGrant();
+
+      expect(await getValidAccessToken({ recoverExpiredSession: false })).toBeUndefined();
+      expect(mockConfirm).not.toHaveBeenCalled();
+      expect(files.has(CREDENTIALS_PATH)).toBe(false);
+      expect(logSpy).not.toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalled();
+    });
+
+    // Parallel commands (common with agents) race on a rotating refresh token:
+    // the loser's "already used" rejection must not delete the winner's tokens.
+    test("keeps credentials another process rotated in the meantime", async () => {
+      const rotated = {
+        access_token: "rotated-access",
+        token_type: "bearer",
+        refresh_token: "rotated-refresh",
+        expires_at: 8_000_000_000_000,
+      };
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockImplementation(async () => {
+          files.set(CREDENTIALS_PATH, JSON.stringify(rotated));
+          return {
+            ok: false,
+            status: 400,
+            url: "https://test.context7.com/api/oauth/token",
+            text: () => Promise.resolve(JSON.stringify({ error: "invalid_grant" })),
+          };
+        })
+      );
+
+      expect(await getValidAccessToken()).toBe("rotated-access");
+      expect(files.get(CREDENTIALS_PATH)).toBe(JSON.stringify(rotated));
+      expect(mockConfirm).not.toHaveBeenCalled();
+    });
+
+    test("treats invalid_client as a definitive rejection", async () => {
+      stubRefreshResponse(401, { error: "invalid_client" });
+      mockConfirm.mockResolvedValue(false);
+
+      expect(await getValidAccessToken()).toBeUndefined();
+      expect(mockConfirm).toHaveBeenCalledTimes(1);
+      expect(files.has(CREDENTIALS_PATH)).toBe(false);
+    });
+  });
+
+  describe("without a TTY", () => {
+    beforeEach(() => setTTY(false));
+
+    test("never prompts, clears the credentials and writes to stderr only", async () => {
+      files.set(LEGACY_CREDENTIALS_PATH, JSON.stringify(EXPIRED));
+      stubInvalidGrant();
+      const stdoutWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+      expect(await getValidAccessToken()).toBeUndefined();
+
+      expect(mockConfirm).not.toHaveBeenCalled();
+      expect(mockPerformLogin).not.toHaveBeenCalled();
+      expect(files.has(CREDENTIALS_PATH)).toBe(false);
+      expect(files.has(LEGACY_CREDENTIALS_PATH)).toBe(false);
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("Run ctx7 login"));
+      expect(logSpy).not.toHaveBeenCalled();
+      expect(stdoutWrite).not.toHaveBeenCalled();
+
+      // Credentials are gone, so the next command neither refreshes nor warns.
+      expect(await getValidAccessToken()).toBeUndefined();
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("transient failures keep the credentials and never prompt", () => {
+    beforeEach(() => setTTY(true));
+
+    test.each([
+      [503, { error: "server_error" }],
+      [429, { error: "invalid_grant" }],
+      [400, "<html>Bad gateway</html>"],
+    ])("HTTP %s", async (status, body) => {
+      stubRefreshResponse(status, body);
+
+      expect(await getValidAccessToken()).toBeUndefined();
+      expect(files.get(CREDENTIALS_PATH)).toBe(JSON.stringify(EXPIRED));
+      expect(mfs.unlinkSync).not.toHaveBeenCalledWith(CREDENTIALS_PATH);
+      expect(mockConfirm).not.toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalled();
+    });
+
+    test("network error", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi
+          .fn()
+          .mockRejectedValue(
+            Object.assign(new TypeError("fetch failed"), { cause: { code: "ENOTFOUND" } })
+          )
+      );
+
+      expect(await getValidAccessToken()).toBeUndefined();
+      expect(files.get(CREDENTIALS_PATH)).toBe(JSON.stringify(EXPIRED));
+      expect(mockConfirm).not.toHaveBeenCalled();
+      expect(errorSpy).not.toHaveBeenCalled();
+    });
+  });
+});
+
+// Agents run several ctx7 commands at once. Two refreshes with the same token
+// make the authorization server revoke the whole grant, so refreshes are
+// serialised across processes with a lock file next to the credentials.
+describe("getValidAccessToken refresh lock", () => {
+  const EXPIRED: TokenData = {
+    access_token: "expired-tok",
+    token_type: "bearer",
+    expires_at: 1,
+    refresh_token: "refresh-tok",
+  };
+  const REFRESHED = { access_token: "new-tok", token_type: "bearer", expires_in: 3600 };
+
+  let files: Map<string, string>;
+  let mtimes: Map<string, number>;
+
+  function fsError(code: string): NodeJS.ErrnoException {
+    return Object.assign(new Error(code), { code });
+  }
+
+  function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /** A refresh that takes long enough for the other commands to contend. */
+  function stubSlowRefresh(ms: number): ReturnType<typeof vi.fn> {
+    const fetchMock = vi.fn(async () => {
+      await sleep(ms);
+      return { ok: true, json: () => Promise.resolve(REFRESHED) };
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  function placeLock(ageMs: number): void {
+    files.set(REFRESH_LOCK_PATH, "");
+    mtimes.set(REFRESH_LOCK_PATH, Date.now() - ageMs);
+  }
+
+  beforeEach(() => {
+    // Earlier tests may leave Date.now pinned; lock ages need a real clock.
+    vi.restoreAllMocks();
+    files = new Map([[CREDENTIALS_PATH, JSON.stringify(EXPIRED)]]);
+    mtimes = new Map();
+
+    mfs.existsSync.mockImplementation((p) => files.has(String(p)) || p === CONFIG_DIR_PATH);
+    mfs.readFileSync.mockImplementation((p) => files.get(String(p)) ?? "");
+    mfs.writeFileSync.mockImplementation((p, data) => void files.set(String(p), String(data)));
+    mfs.unlinkSync.mockImplementation((p) => {
+      if (!files.delete(String(p))) throw fsError("ENOENT");
+    });
+    // O_EXCL semantics: creating an existing file fails.
+    mfs.openSync.mockImplementation((p, flags) => {
+      if (String(flags).includes("x") && files.has(String(p))) throw fsError("EEXIST");
+      files.set(String(p), "");
+      mtimes.set(String(p), Date.now());
+      return 3;
+    });
+    mfs.statSync.mockImplementation((p) => {
+      if (!files.has(String(p))) throw fsError("ENOENT");
+      return { mtimeMs: mtimes.get(String(p)) ?? Date.now() } as fs.Stats;
+    });
+  });
+
+  test("lock file lives next to the credentials file", () => {
+    expect(getRefreshLockPath()).toBe(REFRESH_LOCK_PATH);
+  });
+
+  test("5 parallel commands on an expired token make 1 refresh request and all sign in", async () => {
+    const fetchMock = stubSlowRefresh(30);
+
+    const results = await Promise.all(Array.from({ length: 5 }, () => getValidAccessToken()));
+
+    expect(results).toEqual(Array(5).fill("new-tok"));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(files.get(CREDENTIALS_PATH)!).access_token).toBe("new-tok");
+    expect(files.has(REFRESH_LOCK_PATH)).toBe(false);
+  });
+
+  test("waits for another process's lock, then uses the credentials it wrote", async () => {
+    const fetchMock = stubSlowRefresh(0);
+    placeLock(0);
+    // The holder finishes shortly: it writes fresh credentials and releases.
+    setTimeout(() => {
+      files.set(
+        CREDENTIALS_PATH,
+        JSON.stringify({ ...REFRESHED, expires_at: Date.now() + 3_600_000, refresh_token: "r2" })
+      );
+      files.delete(REFRESH_LOCK_PATH);
+    }, 40);
+
+    expect(await getValidAccessToken()).toBe("new-tok");
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(files.has(REFRESH_LOCK_PATH)).toBe(false);
+  });
+
+  test("a stale lock from a crashed process does not block the next command", async () => {
+    const fetchMock = stubSlowRefresh(0);
+    placeLock(60_000);
+
+    const started = Date.now();
+    expect(await getValidAccessToken()).toBe("new-tok");
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(files.has(REFRESH_LOCK_PATH)).toBe(false);
+    expect(Date.now() - started).toBeLessThan(1_000);
+  });
+
+  test.each(["EACCES", "EROFS", "EPERM", "ENOSYS"])(
+    "refreshes as before when the lock cannot be taken (%s)",
+    async (code) => {
+      const fetchMock = stubSlowRefresh(0);
+      mfs.openSync.mockImplementation(() => {
+        throw fsError(code);
+      });
+
+      expect(await getValidAccessToken()).toBe("new-tok");
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(JSON.parse(files.get(CREDENTIALS_PATH)!).access_token).toBe("new-tok");
+    }
+  );
+
+  test("releases the lock when the refresh fails", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
         ok: false,
-        status: 400,
+        status: 503,
         url: "https://test.context7.com/api/oauth/token",
-        text: () => Promise.resolve(JSON.stringify({ error: "invalid_grant" })),
+        text: () => Promise.resolve(""),
       })
     );
 
     expect(await getValidAccessToken()).toBeUndefined();
+    expect(files.has(REFRESH_LOCK_PATH)).toBe(false);
+    // Transient: credentials kept for the next command.
+    expect(files.has(CREDENTIALS_PATH)).toBe(true);
   });
 
-  // An expired refresh token is indistinguishable from being logged out, so the
-  // caller reports "not logged in" rather than surfacing a network error here.
-  test("returns undefined when the refresh connection fails", async () => {
-    const tokens: TokenData = {
-      access_token: "expired-tok",
-      token_type: "bearer",
-      expires_at: Date.now() - 1000,
-      refresh_token: "refresh-tok",
-    };
+  test("a waiter does not prompt again after the holder's token was rejected", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    Object.defineProperty(process.stdin, "isTTY", { value: false, configurable: true });
+    const fetchMock = vi.fn(async () => {
+      await sleep(30);
+      return {
+        ok: false,
+        status: 400,
+        url: "https://test.context7.com/api/oauth/token",
+        text: () => Promise.resolve(JSON.stringify({ error: "invalid_grant" })),
+      };
+    });
+    vi.stubGlobal("fetch", fetchMock);
 
-    mfs.existsSync.mockReturnValue(true);
-    mfs.readFileSync.mockReturnValue(JSON.stringify(tokens));
-    vi.stubGlobal(
-      "fetch",
-      vi
-        .fn()
-        .mockRejectedValue(
-          Object.assign(new TypeError("fetch failed"), { cause: { code: "ENOTFOUND" } })
-        )
-    );
+    const results = await Promise.all([getValidAccessToken(), getValidAccessToken()]);
 
-    expect(await getValidAccessToken()).toBeUndefined();
+    expect(results).toEqual([undefined, undefined]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(files.has(CREDENTIALS_PATH)).toBe(false);
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    expect(mockConfirm).not.toHaveBeenCalled();
   });
 });
 

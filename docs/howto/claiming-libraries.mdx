@@ -175,9 +175,19 @@ Context7 checks a new title or description before it saves it. If the text gives
     | ---------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------- |
     | **Base URL**                 | The root URL to crawl for documentation.                                                         | Max 100 characters              |
     | **Display URL**              | Optional URL shown to users instead of the base URL.                                             | Max 500 characters              |
-    | **Keep Hash (URL Fragments)**| Whether to treat URLs with different hash fragments as distinct pages. Disabled by default.      | Boolean                         |
     | **Keep Query Parameters**    | Whether to treat URLs with different query strings as distinct pages. Enabled by default.        | Boolean                         |
     | **Exclude URLs**             | URL patterns to exclude from crawling. Supports wildcards.                                       | Max 100 patterns                |
+
+    <Note>
+      The crawl stays under the Base URL. A Base URL without a trailing slash is a plain
+      prefix, so `https://example.com/docs/api/admin` also includes
+      `https://example.com/docs/api/admin-graphql/...`. Add a trailing slash to keep the
+      folder boundary: `https://example.com/docs/` includes `/docs` and `/docs/x` but
+      not `/docs-old`.
+
+      Hash fragments (`#...`) are not indexed. Pages that differ only by their fragment, such as
+      hash-routed documentation sites, are crawled as a single page.
+    </Note>
   </Tab>
 </Tabs>
 
@@ -202,6 +212,8 @@ Available for Git repositories and websites.
 | **Skip Automatic Version Detection** | By default, outdated library versions are automatically detected and excluded from indexing. Enable to include all versions regardless of age. | Boolean |
 | **Redirect URL**      | Redirect users to a different library. Leave empty to disable.                                              | Max 500 characters |
 | **Disallow Indexing** | Opt-out from Context7. When enabled, documentation content is removed and the library becomes inaccessible. | Boolean            |
+
+Context7 refuses a redirect to the library itself, a redirect that would form a loop, and a chain longer than three redirects, counting libraries that already redirect to yours. Readers follow up to three redirects. Point the redirect at the library the chain ends at.
 
 ## Managing Versions
 

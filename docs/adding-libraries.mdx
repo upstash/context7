@@ -1,6 +1,6 @@
 ---
 title: Adding Libraries
-description: Add a public library to Context7 so AI coding assistants get up-to-date docs for it
+description: Add a public library to Context7 so AI coding agents get up-to-date docs for it
 ---
 
 Context7 indexes public libraries from their source repositories so developers get current, version-specific documentation inside their coding tools. Anyone can add a public library — you don't need to own it.
@@ -35,6 +35,8 @@ The fastest way to add a library is through the web interface:
 Context7 parses documentation files — `.md`, `.mdx`, `.markdown`, `.rst`, `.txt`, and `.ipynb` — and extracts the code examples and explanations they contain. Raw source code files (`.py`, `.ts`, `.go`, and so on) are not indexed when documentation is present; a library's docs are expected to show the important usage examples.
 
 If a repository contains little or no documentation content, Context7 falls back to generating examples from the source code itself. For public repositories this fallback is automatic — there is no setting to turn it on or off. For [private repositories](/howto/private-sources), generating docs from source code is opt-in: check **Generate docs** when adding the source, or pass the `generateDocs` flag via the [API](/api-guide).
+
+Context7 indexes documentation written in English. Pages whose prose is mainly in another language are skipped. If most of the documentation is skipped this way and nothing remains, the parse fails with a language mismatch error.
 
 To control which folders and files are scanned, set included folders when submitting, or commit a `context7.json` file to the repository (see [Library Owners](/library-owners)).
 

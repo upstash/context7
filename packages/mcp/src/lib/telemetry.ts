@@ -61,6 +61,10 @@ function createInstruments() {
       description: "Number of hosted MCP authentication lifecycle events",
       unit: "{event}",
     }),
+    selfCancellingBatches: meter.createCounter("context7.mcp.batches.self_cancelling", {
+      description: "JSON-RPC batches in which a request was cancelled by the same batch",
+      unit: "{batch}",
+    }),
     authenticationDuration: meter.createHistogram("context7.mcp.authentication.duration", {
       description: "Duration of hosted MCP authentication decisions",
       unit: "s",
@@ -254,6 +258,23 @@ export async function observeAuthentication<T extends AuthenticationObservation>
     authenticationAttempts.add(1, attributes);
     authenticationDuration.record(elapsedSeconds(startedAt), attributes);
   }
+}
+
+const MAX_BATCH_CLIENT_NAMES = 50;
+const batchClientNames = new Set<string>();
+
+/**
+ * Counts a batch that cancelled its own request, by the product token of the
+ * caller's User-Agent. The header is caller-controlled, so the label set is
+ * capped per process; later names are counted as "other".
+ */
+export function recordSelfCancellingBatch(userAgent: string | undefined): void {
+  let client = /^[\w.-]{1,40}/.exec(userAgent ?? "")?.[0].toLowerCase() ?? "unknown";
+  if (!batchClientNames.has(client)) {
+    if (batchClientNames.size >= MAX_BATCH_CLIENT_NAMES) client = "other";
+    else batchClientNames.add(client);
+  }
+  getInstruments().selfCancellingBatches.add(1, { "user_agent.name": client });
 }
 
 export function recordAuthenticationEvent(observation: AuthenticationEventObservation): void {

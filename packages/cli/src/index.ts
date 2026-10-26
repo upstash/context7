@@ -1,7 +1,6 @@
 import { Command } from "commander";
 import pc from "picocolors";
 import figlet from "figlet";
-import { registerSkillCommands, registerSkillAliases } from "./commands/skill.js";
 import { registerAuthCommands } from "./commands/auth.js";
 import { registerSetupCommand } from "./commands/setup.js";
 import { registerRemoveCommand } from "./commands/remove.js";
@@ -58,8 +57,6 @@ Examples:
 `
   );
 
-registerSkillCommands(program);
-registerSkillAliases(program);
 registerAuthCommands(program);
 registerSetupCommand(program);
 registerRemoveCommand(program);

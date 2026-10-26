@@ -1,5 +1,11 @@
 # @upstash/context7-tools-ai-sdk
 
+## 1.0.3
+
+### Patch Changes
+
+- 615e72b: Update the Next.js examples in the tool descriptions, the CLI rule and the bundled skill: the version example is now `/vercel/next.js/v16.2.9`, and the prompts use Next.js 16.
+
 ## 1.0.2
 
 ### Patch Changes

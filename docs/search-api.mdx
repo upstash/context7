@@ -58,6 +58,8 @@ The REST endpoint returns plain text by default, ready to add to a prompt. Set `
 
 Every snippet includes the library it came from and a link to the source page.
 
+JSON results split the snippets into `codeSnippets` and `infoSnippets`. Each snippet carries `rank`, its 1-based position across both lists. Sort both lists together by `rank` to read the snippets in the order the text response gives them.
+
 ## Add hints
 
 A query is all you need. If you know the library, version, or language, add them to narrow the results:
@@ -76,9 +78,11 @@ curl -G "https://context7.com/api/v3/search" \
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `query`    | The question or task. Required.                                                                                                                                 |
 | `library`  | A library name (`next.js`) or Context7 ID (`/vercel/next.js`). Repeat for up to four hints.                                                                     |
-| `version`  | A version such as `15.4.0`. Requires at least one `library`. Strict with one library, a preference with several.                                                |
+| `version`  | A version such as `15.4.0`. Requires at least one `library`. With one library, the nearest release if it is missing (below); with several, a preference.        |
 | `language` | A programming language to prefer, such as `TypeScript`. It is a preference, so language-neutral documentation can still appear.                                 |
 | `type`     | `txt` (default) or `json`.                                                                                                                                      |
+
+With one `library`, Search serves the requested version. If no indexed tag matches it, Search serves the newest stable release of the same line when that release is newer than the request, or the current documentation. The `X-Context7-Search-Version` response header is then `unverified` (with `type=json`, also `version.status`).
 
 If nothing matches, the API returns `404 no_documentation_found`. Treat it as an empty result.
 

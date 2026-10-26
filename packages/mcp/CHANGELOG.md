@@ -1,5 +1,44 @@
 # @upstash/context7-mcp
 
+## 4.4.4
+
+### Patch Changes
+
+- 66e4771: Reject `--port=<n>` and `--api-key=<key>` with incompatible transports, matching the space-separated forms.
+- 6a54ec3: `--port` rejects values that are not an integer from 0 to 65535, and the port-in-use retry stops at 65535 instead of crashing.
+- 5a2b651: Narrow the "Do not use for" line in the server instructions and rule templates so agents use Context7 when they port code between libraries, platforms, or SQL dialects.
+
+## 4.4.3
+
+### Patch Changes
+
+- 1b00727: Update the MCP SDK to `@modelcontextprotocol/server` 2.3.1 and `@modelcontextprotocol/node` 2.1.1, which converts tool schemas lazily, so each per-request server costs less to build. On the 2026-07-28 protocol, `tools/list`, `prompts/list`, `resources/list`, `resources/templates/list` and `server/discover` now return `ttlMs: 3600000` and `cacheScope: "public"`, so clients can reuse them for an hour instead of listing on every request. `resolve-library-id` now sets `isError: true` when the library search fails; a search with no matches is still a normal result.
+
+  On SIGTERM the HTTP server now finishes the requests on open connections before it closes the MCP handler, and answers them with `Connection: close`. Before, those requests got HTTP 499 or 500 from the closed handler, and the shutdown hit its 5 s limit and exited with code 1. The SDK's rejections of malformed client requests are now logged as one line without a stack trace.
+
+## 4.4.2
+
+### Patch Changes
+
+- e824044: Advertise a server title and scalable icons (SVG and a 512x512 PNG) in the MCP handshake and the server card.
+
+## 4.4.1
+
+### Patch Changes
+
+- 7cbd5fd: Consume request/cancellation pairs contained in the same JSON-RPC batch before dispatch. This prevents the legacy stateless HTTP transport from leaving the response stream open when cancellation suppresses the terminal protocol response.
+
+## 4.4.0
+
+### Minor Changes
+
+- 2d57b23: Add a `foreign` mode to the OAuth audience check on the hosted HTTP transport. `MCP_OAUTH_AUDIENCE_ENFORCEMENT=foreign` answers HTTP 401 (`WWW-Authenticate: Bearer error="invalid_token"`, "This token was issued for another server. If you connect through a gateway or proxy, use a Context7 API key instead.") to a Clerk OAuth JWT whose `aud` names another server, and still admits a token with no `aud`, which grants authorized before Clerk's "Include Audience" setting carry on every refresh. `observe` (the default) and `required` are unchanged. The query string of an audience on an allowed host is ignored, since Cursor writes the configured MCP URL (`https://mcp.context7.com/mcp?client=codex`) into `resource`; on any other host it is kept. The `audienceMismatch` log line now carries `outcome=accepted|rejected` and is written at most once per token per hour instead of every ten minutes.
+
+### Patch Changes
+
+- 2882596: Verify Microsoft Entra token signatures before looking up the audience, and cap the Entra config cache.
+- 615e72b: Update the Next.js examples in the tool descriptions, the CLI rule and the bundled skill: the version example is now `/vercel/next.js/v16.2.9`, and the prompts use Next.js 16.
+
 ## 4.3.0
 
 ### Minor Changes

@@ -6,7 +6,7 @@ description: The ctx7 CLI — fetch library documentation and configure Context7
 The `ctx7` CLI is the command-line interface for Context7. It does two things:
 
 - **Fetch library documentation** — search all libraries with one question, or resolve any library by name and query its up-to-date docs directly in your terminal, without opening a browser
-- **Configure your AI coding agent** — set up the Context7 MCP server (or a CLI-based `docs` skill) for Claude Code, Cursor, OpenCode, and more with a single command
+- **Configure your AI coding agent** — set up the Context7 MCP server (or a CLI-based `find-docs` skill) for Claude Code, Cursor, OpenCode, and more with a single command
 
 The CLI is useful both as a standalone tool (fetching docs while you code) and as a setup utility (wiring up Context7 for your AI coding agent).
 
@@ -140,7 +140,7 @@ ctx7 docs /vercel/next.js "How to add a proxy for route protection" | grep -A 10
 Configure Context7 for your AI coding agent. On first run, prompts you to choose between two modes:
 
 - **MCP server** — registers the Context7 MCP server in your agent's config so it can call `resolve-library-id` and `query-docs` tools natively
-- **CLI + Skills** — installs a `docs` skill that guides your agent to fetch up-to-date library docs using `ctx7` CLI commands (no MCP required)
+- **CLI + Skills** — installs a `find-docs` skill that guides your agent to fetch up-to-date library docs using `ctx7` CLI commands (no MCP required)
 
 ### ctx7 setup
 
@@ -202,7 +202,7 @@ CONTEXT7_API_KEY=ctx7op-... ctx7 setup --mcp --yes \
   --codex
 ```
 
-The CLI checks `/api/auth/mcp` before writing configuration. It either configures anonymous access or writes `Authorization: Bearer <personal-key>`. When authentication is enabled and no key was provided, interactive setup requests the key with masked input. Use `--api-key` or `CONTEXT7_API_KEY` for non-interactive automation. On-premise setup uses Streamable HTTP and bundled rule/skill content, so the target does not need to serve Context7 Cloud skill endpoints.
+The CLI checks `/api/auth/mcp` before writing configuration. It either configures anonymous access or writes `Authorization: Bearer <personal-key>`. When authentication is enabled and no key was provided, interactive setup requests the key with masked input. Use `--api-key` or `CONTEXT7_API_KEY` for non-interactive automation. On-premise setup uses Streamable HTTP and bundled rule/skill content.
 
 When `--base-url` targets a custom deployment, setup skips the npm update check and telemetry and does not fetch rules or skills from GitHub or Context7 Cloud. After the CLI package is installed, the only network request made by setup is to the configured deployment. In a restricted environment, mirror `ctx7` and its dependencies in an internal npm registry and run the installed `ctx7` binary instead of `npx ctx7@latest`.
 
@@ -218,9 +218,10 @@ When `--base-url` targets a custom deployment, setup skips the npm update check 
 
 **What gets written — CLI + Skills mode:**
 
-| File                   | Purpose                                                                        |
-| ---------------------- | ------------------------------------------------------------------------------ |
-| Agent skills directory | `docs` skill — guides the agent to use `ctx7 library` and `ctx7 docs` commands |
+| File                   | Purpose                                                                             |
+| ---------------------- | ----------------------------------------------------------------------------------- |
+| Agent skills directory | `find-docs` skill — guides the agent to use `ctx7 library` and `ctx7 docs` commands |
+| Agent rules directory  | Rule file — instructs the agent to use the `ctx7` commands for library docs         |
 
 ### ctx7 remove
 
@@ -265,6 +266,12 @@ ctx7 whoami
 # Log out
 ctx7 logout
 ```
+
+### Session expiry
+
+If your saved login can no longer be refreshed, the CLI clears it and asks whether to sign in again. Answering yes runs `ctx7 login` and continues the command with the new login. Answering no continues without an account.
+
+No prompt is shown when output is piped or `--json` is passed — the CLI prints a notice to stderr and continues without an account, so parsed output stays clean. `ctx7 login`, `ctx7 whoami`, `ctx7 setup`, and `ctx7 generate` also skip the prompt. Network, rate-limit, and server errors keep your saved login, so the next command retries.
 
 ### API Key
 

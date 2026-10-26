@@ -2,7 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "Context7 MCP",
-  "description": "Up-to-date code docs for any prompt.",
+  "description": "Up-to-date docs for AI agents.",
   "poweredByDocs7": true,
   "feedback": {
     "thumbsRating": true,
@@ -51,6 +51,11 @@
                 ]
               },
               {
+                "group": "Ask",
+                "expanded": false,
+                "pages": ["ask/overview", "ask/quickstart", "ask/dashboard"]
+              },
+              {
                 "group": "Account",
                 "expanded": false,
                 "pages": [
@@ -61,7 +66,8 @@
                   },
                   "howto/usage",
                   "howto/teamspace",
-                  "howto/policies"
+                  "howto/policies",
+                  "howto/admin-mcp"
                 ]
               },
               {
@@ -261,6 +267,7 @@
                 "pages": [
                   "docs7/overview",
                   "docs7/quickstart",
+                  "docs7/plans",
                   "docs7/configuration",
                   "docs7/custom-domains",
                   "docs7/migrate-from-mintlify"
@@ -269,7 +276,13 @@
               {
                 "group": "Product",
                 "expanded": false,
-                "pages": ["docs7/builds", "docs7/ai-visibility", "docs7/analytics", "docs7/agent"]
+                "pages": [
+                  "docs7/builds",
+                  "docs7/ai-visibility",
+                  "docs7/analytics",
+                  "docs7/agent",
+                  "docs7/feature-requests"
+                ]
               },
               {
                 "group": "SEO and agent readiness",
