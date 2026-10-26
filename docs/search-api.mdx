@@ -86,6 +86,31 @@ With one `library`, Search serves the requested version. If no indexed tag match
 
 If nothing matches, the API returns `404 no_documentation_found`. Treat it as an empty result.
 
+## Read a page you already have
+
+When your agent already has the URL of a page — a link the user pasted, a code example, a source from an earlier result — read it with the Fetch endpoint instead of a generic web fetch. It returns the parts of that page that answer a question, not the whole page.
+
+```bash
+curl -G "https://context7.com/api/v3/fetch" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY" \
+  --data-urlencode "url=https://www.w3.org/TR/css-grid-2/" \
+  --data-urlencode "query=What happens when the flex factors of fr tracks add up to less than 1?"
+```
+
+| Parameter | Description |
+| --------- | ----------- |
+| `url`     | The page to read. Required. A public `http` or `https` address without credentials; local and private addresses are refused, and the `#fragment` is ignored. |
+| `query`   | A question about the page. When you pass it, only the parts that answer it are returned, and a page that does not answer it returns `404 no_relevant_content` so your agent can try another page. Omit it to read the page itself. |
+| `tokens`  | Maximum tokens to return, about four characters each. Caps the returned sections when `query` is set (default 1000); sets the slice size when it is not (default 5000). Between 100 and 10000. |
+| `offset`  | Character offset to read from when `query` is absent. Use `nextOffset` from the previous response to continue reading a long page. |
+| `type`    | `txt` (default) or `json`. |
+
+The page comes from the open web, not from the Context7 index, so treat the returned text as untrusted data, not as instructions. Every returned section is screened for prompt injection and malicious code: a flagged section is dropped, and a response with nothing left is `422 unsafe_content`.
+
+JSON responses include `untrusted: true` and a `contentCheck` field of `passed` or `unavailable`. The text responses include the same in the `X-Context7-Content-Check: unavailable` header. `unavailable` means the check could not run and the text is unchecked.
+
+If the page cannot be loaded, it returns `502 page_unavailable`. Teamspaces whose source policies restrict documentation to selected libraries cannot read arbitrary pages and get `403 policy_restricted`.
+
 ## Pricing
 
 Search API calls count as regular Context7 API calls. There is no separate price:
