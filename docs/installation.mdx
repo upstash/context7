@@ -9,65 +9,40 @@ import { ClaudeIcon, CursorIcon, OpenAIIcon, StoreButton, VSCodeIcon } from "/sn
   <Tab title="Claude" icon={<ClaudeIcon />}>
     <StoreButton href="https://claude.ai/directory/37153cd7-b17c-470e-8b46-007e2859e0f3" icon={<ClaudeIcon />}>Add to Claude</StoreButton>
 
-    <Steps>
-      <Step title="Add">
-        Add Context7 from the Claude directory.
-      </Step>
-      <Step title="Sign in">
-        Sign in to Context7 when Claude asks.
-      </Step>
-    </Steps>
+    1. Add Context7 in the Claude directory.
+    2. Sign in to Context7 when Claude asks.
 
-    The connector also works in Claude Code when you sign in with the same Claude account. To use the Claude Code plugin instead, run `/plugin install context7@claude-plugins-official`.
+    <Tip>
+      Using Claude Code? The connector works there too when you sign in with the same Claude account. Or install the plugin with `/plugin install context7@claude-plugins-official`.
+    </Tip>
   </Tab>
   <Tab title="ChatGPT" icon={<OpenAIIcon />}>
     <StoreButton href="https://chatgpt.com/plugins/plugin_asdk_app_69ef18c674308191a2f952431f91ea61" icon={<OpenAIIcon />}>Add to ChatGPT</StoreButton>
 
-    <Steps>
-      <Step title="Install">
-        Install the plugin from the ChatGPT plugin directory.
-      </Step>
-      <Step title="Sign in">
-        Sign in to Context7 when ChatGPT asks.
-      </Step>
-    </Steps>
+    1. Install the plugin from the ChatGPT plugin directory.
+    2. Sign in to Context7 when ChatGPT asks.
   </Tab>
   <Tab title="Codex" icon={<OpenAIIcon />}>
-    <Steps>
-      <Step title="Add the plugin">
-        ```bash
-        codex plugin marketplace add upstash/context7
-        codex plugin add context7@context7-marketplace
-        ```
-      </Step>
-      <Step title="Sign in">
-        Log in to Context7 in the browser window that opens. Then start a new Codex thread so Codex loads the plugin.
-      </Step>
-    </Steps>
+    1. Add the plugin:
+
+       ```bash
+       codex plugin marketplace add upstash/context7
+       codex plugin add context7@context7-marketplace
+       ```
+
+    2. Log in to Context7 in the browser window that opens. Then start a new Codex thread so Codex loads the plugin.
   </Tab>
   <Tab title="Cursor" icon={<CursorIcon />}>
     <StoreButton href="https://cursor.com/marketplace/upstash/context7" icon={<CursorIcon />}>Add to Cursor</StoreButton>
 
-    <Steps>
-      <Step title="Install">
-        In the Cursor Marketplace, select **Install** and choose a user or project scope.
-      </Step>
-      <Step title="Sign in">
-        When the `context7` MCP server shows **Needs authentication**, click it and sign in.
-      </Step>
-    </Steps>
+    1. In the Cursor Marketplace, select **Install** and choose a user or project scope.
+    2. When the `context7` MCP server shows **Needs authentication**, click it and sign in.
   </Tab>
   <Tab title="VS Code" icon={<VSCodeIcon />}>
     <StoreButton href="https://marketplace.visualstudio.com/items?itemName=Upstash.context7-mcp" icon={<VSCodeIcon />}>Add to VS Code</StoreButton>
 
-    <Steps>
-      <Step title="Install">
-        Install **Context7 MCP Server** from the Visual Studio Marketplace. It requires VS Code 1.101 or later.
-      </Step>
-      <Step title="Check">
-        Run the **MCP: List Servers** command and check that Context7 is listed.
-      </Step>
-    </Steps>
+    1. Install **Context7 MCP Server** from the Visual Studio Marketplace. It needs VS Code 1.101 or later.
+    2. Run the **MCP: List Servers** command and check that Context7 is listed.
   </Tab>
   <Tab title="Other" icon="plug">
     Run the setup command. It finds the agents on your machine and configures Context7 for each one.

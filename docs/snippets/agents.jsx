@@ -34,18 +34,20 @@ export const StoreButton = ({ href, icon, children }) => (
     style={{
       display: "inline-flex",
       alignItems: "center",
-      gap: "10px",
-      padding: "10px 18px",
-      borderRadius: "10px",
+      gap: "8px",
+      marginTop: "8px",
+      padding: "8px 14px",
+      borderRadius: "8px",
       background: "var(--text-primary)",
       color: "var(--surface-raised)",
-      fontSize: "15px",
+      fontSize: "14px",
+      lineHeight: "20px",
       fontWeight: 600,
       textDecoration: "none",
       border: "none",
     }}
   >
-    <span style={{ display: "inline-flex", width: "18px", height: "18px" }}>{icon}</span>
+    <span style={{ display: "inline-flex", width: "16px", height: "16px" }}>{icon}</span>
     {children}
     <span aria-hidden="true" style={{ opacity: 0.6 }}>↗</span>
   </a>
