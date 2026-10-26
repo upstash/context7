@@ -102,7 +102,7 @@ The agent reads the merged change and looks for what readers can notice: added, 
 
 The agent edits only the configured docs path. The docs pull request goes through your normal review.
 
-If the merged change is in a package readers install from a registry such as npm or PyPI, the agent documents the published release that first contains it, for example "From 1.40.0". If no release contains the change yet, the agent makes no change for it.
+If the merged change is in a package readers install from a registry such as npm or PyPI, the agent documents the published release that first contains it, for example "From 1.40.0". If no release contains the change yet, the agent makes no change for it, and it does not check the change again when the release ships, so update those docs yourself.
 
 Docs7 does not run the agent for:
 
@@ -110,7 +110,7 @@ Docs7 does not run the agent for:
 - pull requests that change only tests, CI files, lockfiles, changesets, or changelogs
 - pull requests that change only the docs, when the docs and code share a repository
 - pull requests opened by Docs7 itself
-- merges that a person's docs pull request already covers, open or merged in the last 14 days
+- merges that a person's docs pull request already covers: a pull request that is open or merged in the last 14 days, changes the docs path, and links the merged pull request, is linked from it, or has the same ticket key (for example `DX-3137`) in its title or branch
 
 For a pull request from a fork, the agent uses the merged code and ignores the pull request's title and description.
 
