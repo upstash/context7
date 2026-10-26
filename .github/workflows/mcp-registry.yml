@@ -7,12 +7,23 @@ on:
         description: "Version to publish (defaults to packages/mcp/package.json version)"
         required: false
         type: string
+      mcpb-sha256:
+        description: "sha256 of context7.mcpb on release mcpb-v<version> (leave empty to publish without the mcpb package)"
+        required: false
+        type: string
   workflow_call:
+    inputs:
+      mcpb-sha256:
+        description: "sha256 of the context7.mcpb that release.yml built"
+        required: true
+        type: string
 
 jobs:
   publish-mcp:
     name: Publish to MCP Registry
     runs-on: ubuntu-latest
+    # Callers of a reusable workflow cannot set environment:, so it is set here.
+    environment: release
     permissions:
       id-token: write # Required for OIDC authentication with MCP Registry
       contents: read
@@ -26,24 +37,32 @@ jobs:
           node-version: lts/*
 
       - name: Set version in server.json
+        env:
+          VERSION: ${{ inputs.version }}
         run: |
-          VERSION="${{ inputs.version }}"
           VERSION="${VERSION#v}"
           if [ -z "$VERSION" ]; then
             VERSION=$(node -p "require('./packages/mcp/package.json').version")
+          fi
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::version must be semver, for example 2.1.0"
+            exit 1
           fi
           echo "Publishing version: $VERSION"
           jq --arg v "$VERSION" '.version = $v | .packages[].version = $v' server.json > server.tmp && mv server.tmp server.json
 
       - name: Add mcpb package to server.json
         env:
-          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ inputs.mcpb-sha256 }}
         run: |
           VERSION=$(jq -r .version server.json)
           # Slash-free tag: the registry rejects mcpb URLs whose tag contains '/'
           TAG="mcpb-v$VERSION"
-          if gh release download "$TAG" --pattern context7.mcpb --output context7.mcpb -R ${{ github.repository }}; then
-            SHA=$(sha256sum context7.mcpb | cut -d' ' -f1)
+          if [ -n "$SHA" ]; then
+            if ! [[ "$SHA" =~ ^[0-9a-f]{64}$ ]]; then
+              echo "::error::mcpb-sha256 must be 64 lowercase hex characters"
+              exit 1
+            fi
             URL="https://github.com/${{ github.repository }}/releases/download/$TAG/context7.mcpb"
             jq --arg url "$URL" --arg sha "$SHA" --arg v "$VERSION" '.packages += [{
               "registryType": "mcpb",
@@ -59,7 +78,7 @@ jobs:
               }]
             }]' server.json > server.tmp && mv server.tmp server.json
           else
-            echo "::warning::No context7.mcpb asset on release $TAG — publishing without mcpb package"
+            echo "::warning::No mcpb-sha256 input — publishing without mcpb package"
           fi
 
       - name: Install MCP Publisher
