@@ -103,28 +103,28 @@ Each checked pull request counts as one run.
 
 ## Example Check Agent
 
-The Example Check Agent runs the TypeScript, JavaScript, and Python code examples of your docs against your services. When an example fails because the example is wrong, the agent fixes it, runs it again, and adds the fix to a pull request. It needs Docs7 Pro.
+The Example Check Agent runs the TypeScript, JavaScript, and Python code examples of your docs against your services once a month. When an example fails because the example is wrong, the agent fixes it, runs it again, and adds the fix to a pull request. It needs Docs7 Pro.
 
-<Frame caption="The agent's dialog holds the variables your code examples read and the result of the last check.">
+<Frame caption="The agent's environment variables. Saved values are never shown again.">
   <img
     src="/images/docs7/dashboard/agent-example-check.jpg"
-    alt="Example Check Agent dialog with two variables, one of them secret, and the failed and skipped examples of the last check"
+    alt="Environment variables dialog with UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN saved and an empty row for a new variable"
   />
 </Frame>
 
 ### Add variables
 
-In the agent's row, open the variables menu and add the environment variables your code examples read, for example `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
+In the agent's row, open the variables menu and add the environment variables your code examples read, for example `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. To add many at once, paste the contents of a `.env` file into any field: each line becomes one variable.
 
-Mark each token or key as **Secret** and enter the host it is sent to. A secret never enters the sandbox where the code runs: Docs7 adds it to HTTPS requests to that host, in the header you set. The default header is `Authorization` with a `Bearer` prefix. The code in the sandbox reads a placeholder and can reach only package registries and the hosts of your variables.
+Docs7 encrypts every value and never shows it again. A URL goes into the sandbox where the code runs. Any other value is a secret and never enters the sandbox: Docs7 sends it as `Authorization: Bearer <value>` only in HTTPS requests to the host of the URL variable with the same prefix. For example, `UPSTASH_REDIS_REST_TOKEN` is sent to the host of `UPSTASH_REDIS_REST_URL`. The code in the sandbox reads a placeholder and can reach only package registries and the hosts of your URL variables.
 
 <Warning>
 Use test credentials. Code examples write and delete data, for example the keys in a Redis database.
 </Warning>
 
-### Run a check
+### Checks
 
-Turn the agent on to check every code example of the docs once a month, or select **Check now** in its dialog. A check reads every page, in batches of about 100 code examples, and all of its fixes go into one pull request.
+Turn the agent on. The first check starts within a day, and the next ones once a month. A check reads every page, in batches of about 100 code examples.
 
 Each code example ends with one of these results:
 
@@ -132,7 +132,7 @@ Each code example ends with one of these results:
 - **Failed**: the example threw an error, or its result differs from the page. If the example has a mistake, such as a wrong method name, argument, value, expected output, import, or syntax, the agent fixes it and runs it again. If the example uses the API as documented and the SDK or service behaves differently, the agent reports this and does not change the page.
 - **Skipped**: the example needs a service with no variable, connects over TCP (for example ioredis, node-redis, or redis-py with a `redis://` URL), is not a complete program, or is a whole framework app such as a Next.js route.
 
-The dialog shows the last check's failed and skipped examples. Activity shows each check as one row. Each batch counts as one run, so docs with 1,000 code examples use about 10 runs per check.
+All fixes of a check go into one pull request. Its description lists every failed example of the check: the ones the agent fixed, and the ones it did not fix. A check with no fix opens no pull request. Activity shows each check as one row with its counts. Each batch counts as one run, so docs with 1,000 code examples use about 10 runs per check.
 
 ## Activity
 
