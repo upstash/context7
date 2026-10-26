@@ -13,7 +13,7 @@ import { ClaudeIcon, CursorIcon, OpenAIIcon, StoreButton, VSCodeIcon } from "/sn
     2. Sign in to Context7 when Claude asks.
 
     <Tip>
-      Using Claude Code? The connector works there too when you sign in with the same Claude account. Or install the plugin with `/plugin install context7@claude-plugins-official`.
+      Using Claude Code? The connector works there too when you sign in with the same Claude account. Or install the plugin with `/plugin install context7@claude-plugins-official`. See the [Claude Code guide](/clients/claude-code).
     </Tip>
   </Tab>
   <Tab title="ChatGPT" icon={<OpenAIIcon />}>
@@ -31,18 +31,24 @@ import { ClaudeIcon, CursorIcon, OpenAIIcon, StoreButton, VSCodeIcon } from "/sn
        ```
 
     2. Log in to Context7 in the browser window that opens. Then start a new Codex thread so Codex loads the plugin.
+
+    For an API key, rules and Codex surfaces, see the [Codex guide](/clients/codex).
   </Tab>
   <Tab title="Cursor" icon={<CursorIcon />}>
     <StoreButton href="https://cursor.com/marketplace/upstash/context7" icon={<CursorIcon />}>Add to Cursor</StoreButton>
 
     1. In the Cursor Marketplace, select **Install** and choose a user or project scope.
     2. When the `context7` MCP server shows **Needs authentication**, click it and sign in.
+
+    For rules, Cloud Agents and troubleshooting, see the [Cursor guide](/clients/cursor).
   </Tab>
   <Tab title="VS Code" icon={<VSCodeIcon />}>
     <StoreButton href="https://marketplace.visualstudio.com/items?itemName=Upstash.context7-mcp" icon={<VSCodeIcon />}>Add to VS Code</StoreButton>
 
     1. Install **Context7 MCP Server** from the Visual Studio Marketplace. It needs VS Code 1.101 or later.
     2. Run the **MCP: List Servers** command and check that Context7 is listed.
+
+    To set an API key, see the [VS Code guide](/clients/vscode).
   </Tab>
   <Tab title="Other" icon="plug">
     Run the setup command. It finds the agents on your machine and configures Context7 for each one.
@@ -56,5 +62,7 @@ import { ClaudeIcon, CursorIcon, OpenAIIcon, StoreButton, VSCodeIcon } from "/sn
     ```txt
     https://mcp.context7.com/mcp
     ```
+
+    Guides for more agents: [OpenCode](/clients/opencode), [GitHub Copilot CLI](/clients/copilot-cli), [Pi](/clients/pi) and the [ctx7 CLI](/clients/cli).
   </Tab>
 </Tabs>
