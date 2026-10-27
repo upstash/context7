@@ -19,8 +19,9 @@ interface SearchCommandOptions {
 async function searchCommand(query: string, options: SearchCommandOptions): Promise<void> {
   trackEvent("command", { name: "search" });
 
-  const spinner = isTTY ? ora("Searching documentation...").start() : null;
+  // Resolve the token before the spinner starts: an expired session may prompt.
   const accessToken = await getValidAccessToken();
+  const spinner = isTTY ? ora("Searching documentation...").start() : null;
 
   let result;
   try {
