@@ -97,6 +97,8 @@ You can import Server Components into Client Components...
 No documentation found for library "/invalid/library". This might have happened because you used an invalid Context7-compatible library ID. Use 'resolveLibraryId' to get a valid ID.
 ```
 
+This message covers two cases: the library ID does not exist, or the library exists but has no snippet relevant to the query. If `resolveLibraryId` returned the ID and listed versions, the library is indexed — rephrase the query or pass a listed version as `/org/project/version` before assuming the library is missing.
+
 ## Examples
 
 ### Basic Usage with Both Tools

@@ -98,6 +98,18 @@ On failure:
 No libraries found matching "unknown-lib". Try a different search term or check the library name.
 ```
 
+To read the results:
+
+- **Context7-compatible library ID** — the value to pass as `libraryId` to `queryDocs` or the Get Context endpoint. The base ID is `/org/project`; a versioned ID is `/org/project/version`.
+- **Code Snippets** — how many snippets are indexed for the library. A low count or a missing line means little or no documentation is available yet.
+- **Source Reputation** — `High`, `Medium`, `Low`, or `Unknown`, derived from the source's trust score. `Unknown` covers libraries that have not been scored.
+- **Benchmark Score** — a quality score from `0` to `100`. It is omitted when no score exists.
+- **Versions** — the versions available for the library, if any. When a version is listed, pass it as `/org/project/version` to `queryDocs`.
+
+"No libraries found" means no library matched the name at all. That is different from a successful lookup whose [`queryDocs`](/agentic-tools/ai-sdk/tools/query-docs) call finds no relevant snippet. Use the snippet count and `queryDocs` output to tell the two apart.
+
+Libraries are indexed over time. If a library is missing or a version you need is not listed, submit or refresh it on [context7.com](https://context7.com); see [Adding Libraries](/adding-libraries).
+
 ## Examples
 
 ### Basic Usage
