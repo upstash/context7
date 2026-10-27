@@ -12,19 +12,20 @@ The Docs7 Agent works from your GitHub repository and keeps every proposed chang
   />
 </Frame>
 
-There are four agents:
+There are five agents:
 
 - **Context7 Agent** turns the questions that AI agents ask Context7 about your docs into docs fixes.
 - **Build Fix Agent** fixes the errors and warnings that a build finds in your docs.
 - **PR Review Agent** reviews documentation changes in each eligible pull request.
 - **Code Watch Agent** updates the docs when a pull request merges in your code.
+- **Example Check Agent** runs the code examples in your docs against your services and fixes the ones that fail.
 
-The **Agents** card holds each agent's settings, and the **Activity** card below it lists every run of every agent, newest first. Select a run to open its pull request on GitHub. The planned **Compatibility Check Agent** is not available yet.
+The **Agents** card holds each agent's settings, and the **Activity** card below it lists every run of every agent, newest first. Select a run to open its pull request on GitHub.
 
 <Frame caption="Activity lists every run, with filters for agent and state.">
   <img
     src="/images/docs7/dashboard/agent-activity.jpg"
-    alt="Activity table with runs of the Build Fix, PR Review and Code Watch agents and their states"
+    alt="Activity table with runs of the Build Fix, PR Review, Code Watch, Example Check and Context7 agents and their states"
   />
 </Frame>
 
@@ -118,16 +119,43 @@ When a merge belongs with a docs pull request the agent already opened and that 
 
 The **Activity** card lists each merged pull request the agent checked, with the docs pull request it opened or **No change**. Each checked pull request counts as one run in the site's monthly agent allowance.
 
-## Compatibility Check Agent
+## Example Check Agent
 
-<Info>
-Compatibility Check Agent is **coming soon**.
-</Info>
+The Example Check Agent runs the TypeScript, JavaScript, and Python code examples of your docs against your services once a month. When an example fails because the example is wrong, the agent fixes it, runs it again, and adds the fix to a pull request. It needs Docs7 Pro.
 
-The planned agent checks that the code examples in your docs still compile.
+<Frame caption="The environment variables your code examples read. Saved values are never shown again.">
+  <img
+    src="/images/docs7/dashboard/agent-example-check.jpg"
+    alt="Environment variables dialog with UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN saved and an empty row for a new variable"
+  />
+</Frame>
+
+### Add variables
+
+Select **Edit**, then open the variables in the Example Check Agent row and add the environment variables your code examples read, for example `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. To add many at once, paste the contents of a `.env` file into any field: each line becomes one variable.
+
+Docs7 encrypts every value and never shows it again. A URL goes into the sandbox where the code runs. Any other value is a secret and never enters the sandbox: Docs7 sends it as `Authorization: Bearer <value>` only in HTTPS requests to the host of the variable with the same name up to the last `_`, followed by `URL`. For example, `UPSTASH_REDIS_REST_TOKEN` is sent to the host of `UPSTASH_REDIS_REST_URL`. If you change that URL to another host, enter the secret again. The code in the sandbox reads a placeholder and can reach only package registries and the hosts of your URL variables.
+
+<Warning>
+Use test credentials. Code examples write and delete data, for example the keys in a Redis database. The agent deletes what its tests create.
+</Warning>
+
+### Checks
+
+Turn the agent on. The first check starts within a day, then one check runs each month. A check reads every page of the docs path, in batches of about 100 code examples, and counts as one run. A large site can take up to a day.
+
+Each code example ends with one of these results:
+
+- **Passed**: the example ran and did what the page says, including the documented output and responses.
+- **Failed**: the example threw an error, or its result differs from the page. If the example has a mistake, such as a wrong method name, argument, value, expected output, import, or syntax, the agent fixes it and runs it again. If the page documents the API correctly but the released SDK or the service does not support it yet, the agent removes the example from the page and comments on it in the pull request, so you can restore it after that release.
+- **Skipped**: the example needs a service with no variable, connects over TCP (for example ioredis, node-redis, or redis-py with a `redis://` URL), is not a complete program, or is a whole framework app such as a Next.js route.
+
+When examples are skipped because a variable is missing, the variables dialog lists the variables they need and how many examples wait for each. Add them, and Docs7 checks those examples again right away, without waiting for the next month.
+
+All changes of a check go into one pull request. Its description lists every failed example of the check: the ones the agent fixed, the ones it removed, and the ones it could not fix. A check with no change opens no pull request. The next check waits until this pull request is merged or closed. The **Activity** card shows each check as one row.
 
 ## Safety and scope
 
-Agent runs receive read access to the connected repository, and Code Watch runs receive read access to the code repository of the merged pull request as well. The agent can inspect repository source to verify a documentation change, but trusted Docs7 code publishes the resulting files through GitHub.
+Agent runs receive read access to the connected repository, and Code Watch runs receive read access to the code repository of the merged pull request as well. Example Check runs receive your variables; secret values stay outside the sandbox. The agent can inspect repository source to verify a documentation change, but trusted Docs7 code publishes the resulting files through GitHub.
 
 Changes are limited to the configured docs path. When the docs path is the repository root, Docs7 still blocks common application paths, package manifests, lockfiles, `.github`, and `.git` from agent changes.
