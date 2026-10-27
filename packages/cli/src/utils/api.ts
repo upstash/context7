@@ -112,3 +112,41 @@ export async function getLibraryContext(
 
   return (await response.json()) as ContextResponse;
 }
+
+export interface SearchDocumentationOptions {
+  type: "json" | "txt";
+  libraries?: string[];
+  version?: string;
+  language?: string;
+}
+
+export async function searchDocumentation(
+  query: string,
+  options: SearchDocumentationOptions,
+  accessToken?: string
+): Promise<unknown> {
+  const params = new URLSearchParams({ query, type: options.type });
+  for (const library of options.libraries ?? []) {
+    params.append("library", library);
+  }
+  if (options.version) {
+    params.set("version", options.version);
+  }
+  if (options.language) {
+    params.set("language", options.language);
+  }
+
+  const response = await fetch(`${baseUrl}/api/v3/search?${params}`, {
+    headers: getAuthHeaders(accessToken),
+  });
+
+  if (!response.ok) {
+    const errorData = (await response.json().catch(() => ({}))) as {
+      error?: string;
+      message?: string;
+    };
+    throw new Error(errorData.message || errorData.error || `HTTP error ${response.status}`);
+  }
+
+  return options.type === "txt" ? response.text() : response.json();
+}
