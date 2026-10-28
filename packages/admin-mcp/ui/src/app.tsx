@@ -32,8 +32,11 @@ type Page = {
   label: string;
   icon: Icon;
   Summary: (props: { teamspace: string }) => ReactNode;
-  Full: (props: { teamspace: string; name: string }) => ReactNode;
-  /** The inline card's request to the model. */
+  Full: (props: { teamspace: string }) => ReactNode;
+  /**
+   * The inline card's request to the model, sent as the user. It names the teamspace by id only:
+   * a display name is chosen by its admins and could carry instructions.
+   */
   ask: (teamspace: string) => { label: string; prompt: string };
 };
 
@@ -45,7 +48,7 @@ const PAGES: Record<View, Page> = {
     Full: UsagePage,
     ask: (t) => ({
       label: "Explain my spend",
-      prompt: `Explain the Context7 spend and usage of teamspace "${t}" this month and what drives it.`,
+      prompt: `Explain the Context7 spend and usage of teamspace ${t} this month and what drives it.`,
     }),
   },
   libraries: {
@@ -55,7 +58,7 @@ const PAGES: Record<View, Page> = {
     Full: LibrariesPage,
     ask: (t) => ({
       label: "Fix the lowest",
-      prompt: `Find the library of teamspace "${t}" with the lowest benchmark score and fix its docs for the questions it fails.`,
+      prompt: `Find the library of teamspace ${t} with the lowest benchmark score and fix its docs for the questions it fails.`,
     }),
   },
   docs7: {
@@ -65,7 +68,7 @@ const PAGES: Record<View, Page> = {
     Full: Docs7Page,
     ask: (t) => ({
       label: "Find doc gaps",
-      prompt: `Find the doc gaps of the Docs7 sites of teamspace "${t}" from reader searches and feedback, and fix them in the repository.`,
+      prompt: `Find the doc gaps of the Docs7 sites of teamspace ${t} from reader searches and feedback, and fix them in the repository.`,
     }),
   },
   ask: {
@@ -75,20 +78,24 @@ const PAGES: Record<View, Page> = {
     Full: AskPage,
     ask: (t) => ({
       label: "Fill gaps",
-      prompt: `Add answers to the docs for the unanswered questions of the Ask sites of teamspace "${t}".`,
+      prompt: `Add answers to the docs for the unanswered questions of the Ask sites of teamspace ${t}.`,
     }),
   },
 };
 const VIEWS = Object.keys(PAGES) as View[];
 
-/** The teamspace the model asked for, by id or name, else the first non-personal one. */
+/**
+ * The teamspace the model asked for: its id, or the one teamspace with that name (as the server
+ * resolves it). With no request, the first non-personal one. A request that matches none gives
+ * undefined, never another teamspace's numbers.
+ */
 function pickTeamspace(teamspaces: Teamspace[], wanted?: string) {
-  const want = wanted?.trim().toLowerCase();
-  return (
-    teamspaces.find((t) => t.id === wanted || t.name.toLowerCase() === want) ??
-    teamspaces.find((t) => !t.isPersonal) ??
-    teamspaces[0]
+  const want = wanted?.trim();
+  if (!want) return teamspaces.find((t) => !t.isPersonal) ?? teamspaces[0];
+  const matches = teamspaces.filter(
+    (t) => t.id === want || t.name.toLowerCase() === want.toLowerCase()
   );
+  return matches.length === 1 ? matches[0] : undefined;
 }
 
 export function App() {
@@ -118,9 +125,9 @@ export function App() {
   );
   const teamspaces = host.opened.teamspaces ?? listed.data?.teamspaces;
 
-  // A new open_console call moves the page to the view it names.
+  // Each open_console call moves the page to the view it names, Usage when it names none.
   useEffect(() => {
-    if (open?.view) setView(open.view);
+    if (open) setView(open.view && VIEWS.includes(open.view) ? open.view : "usage");
   }, [open]);
 
   const teamspace = teamspaces
@@ -129,6 +136,13 @@ export function App() {
     : undefined;
   const full = host.fullscreen || !host.canFullscreen;
 
+  // The model has the same error and can call again; the page only says why it is empty.
+  if (host.opened.error)
+    return (
+      <div className="p-4">
+        <ErrorNote message={host.opened.error} />
+      </div>
+    );
   if (listed.error && !teamspaces)
     return (
       <div className="p-4">
@@ -136,7 +150,14 @@ export function App() {
       </div>
     );
   if (!ready || !teamspaces) return <Loading full={full} />;
-  if (!teamspace) return <p className="p-4 text-sm text-fg-3">No teamspace for this sign-in.</p>;
+  if (!teamspace)
+    return (
+      <p className="p-4 text-sm text-fg-3">
+        {open?.teamspace
+          ? "No single teamspace matches the one asked for."
+          : "No teamspace for this sign-in."}
+      </p>
+    );
 
   return full ? (
     <Console
@@ -153,12 +174,12 @@ export function App() {
 
 function InlineCard({ view, teamspace }: { view: View; teamspace: Teamspace }) {
   const page = PAGES[view];
-  const ask = page.ask(teamspace.name);
+  const ask = page.ask(teamspace.id);
   useEffect(() => {
     host.setModelContext(
-      `The Context7 console shows the user a ${page.label} summary of teamspace "${teamspace.name}" (${teamspace.id}).`
+      `The Context7 console shows the user a ${page.label} summary of teamspace ${teamspace.id}.`
     );
-  }, [page, teamspace]);
+  }, [page, teamspace.id]);
   return (
     <div className="@container grid gap-6 p-6">
       <header className="flex items-center justify-between gap-3">
@@ -341,7 +362,7 @@ function Console({
       </header>
       <main className="@container min-h-0 grow overflow-y-auto">
         <div className="mx-auto grid w-full max-w-[1060px] gap-8 px-4 py-6 @2xl:px-8 @2xl:py-10">
-          <page.Full key={teamspace.id} teamspace={teamspace.id} name={teamspace.name} />
+          <page.Full key={teamspace.id} teamspace={teamspace.id} />
         </div>
       </main>
     </div>

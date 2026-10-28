@@ -500,11 +500,21 @@ export function callTool(name: string, args: Args): string {
       return JSON.stringify({ data: [], siteLimit: 1, limitReached: [] });
   }
   switch (name) {
-    case "open_console":
+    case "open_console": {
+      // As the tool does: a named teamspace must match exactly one.
+      const wanted = (args.teamspace as string | undefined)?.trim();
+      const matches = wanted
+        ? TEAMSPACES.filter((t) => t.id === wanted || t.name.toLowerCase() === wanted.toLowerCase())
+        : [];
+      if (wanted && matches.length !== 1)
+        throw new Error(
+          `No single teamspace is named "${wanted}". Pass \`teamspace\` as one of: ${TEAMSPACES.map((t) => `${t.name} = ${t.id}`).join("; ")}.`
+        );
       return JSON.stringify({
         teamspaces: TEAMSPACES,
-        open: { view: args.view, teamspace: args.teamspace },
+        open: { view: args.view, teamspace: matches[0]?.id },
       });
+    }
     case "list_teamspaces":
       return JSON.stringify({ teamspaces: TEAMSPACES });
     case "get_teamspace":

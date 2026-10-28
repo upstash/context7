@@ -19,6 +19,8 @@ import type {
 export type ConsoleOpen = {
   teamspaces?: Teamspace[];
   open?: { view?: View; teamspace?: string };
+  /** The call failed (an unknown teamspace, the API): the page shows this instead. */
+  error?: string;
 };
 export type View = "usage" | "libraries" | "docs7" | "ask";
 export type Teamspace = {
@@ -100,13 +102,17 @@ export class Host {
         break;
       case "ui/notifications/tool-input": {
         const args = (message.params as { arguments?: ConsoleOpen["open"] })?.arguments;
-        this.opened = { ...this.opened, open: args ?? {} };
+        this.opened = { teamspaces: this.opened.teamspaces, open: args ?? {} };
         this.changed();
         break;
       }
       case "ui/notifications/tool-result": {
         const result = message.params as ToolResult;
-        if (!result.isError && result.structuredContent) {
+        if (result.isError) {
+          const text = result.content?.find((block) => block.type === "text")?.text;
+          this.opened = { ...this.opened, error: text || "The console could not open." };
+          this.changed();
+        } else if (result.structuredContent) {
           this.opened = result.structuredContent as ConsoleOpen;
           this.changed();
         }

@@ -15,6 +15,8 @@ const displayParam = params.get("display") ?? "inline";
 const canFullscreen = displayParam !== "inline-only";
 let display: "inline" | "fullscreen" = displayParam === "fullscreen" ? "fullscreen" : "inline";
 const view = params.get("view") ?? "";
+// ?teamspace= plays the model naming one, by id or name; an unknown name plays the tool's error.
+const teamspace = params.get("teamspace") ?? "";
 const width = params.get("width") ?? "";
 const tokens = params.get("tokens") ?? "claude";
 document.documentElement.dataset.theme = theme;
@@ -151,14 +153,21 @@ bridge.onopenlink = async (request) => {
 };
 // Plays the model calling open_console: its arguments, then its result.
 bridge.oninitialized = () => {
-  const args = view ? { view } : {};
+  const args = { ...(view && { view }), ...(teamspace && { teamspace }) };
   record("model called", `open_console ${JSON.stringify(args)}`);
   bridge.sendToolInput({ arguments: args });
-  const result = JSON.parse(callTool("open_console", args));
-  bridge.sendToolResult({
-    content: [{ type: "text", text: JSON.stringify(result) }],
-    structuredContent: result,
-  });
+  try {
+    const result = JSON.parse(callTool("open_console", args));
+    bridge.sendToolResult({
+      content: [{ type: "text", text: JSON.stringify(result) }],
+      structuredContent: result,
+    });
+  } catch (error) {
+    bridge.sendToolResult({
+      isError: true,
+      content: [{ type: "text", text: (error as Error).message }],
+    });
+  }
 };
 await bridge.connect(new PostMessageTransport(iframe.contentWindow!, iframe.contentWindow!));
 iframe.srcdoc = await (await fetch("console.html")).text();

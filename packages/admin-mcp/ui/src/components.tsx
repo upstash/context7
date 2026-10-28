@@ -126,15 +126,14 @@ export function Segmented<T extends string | number>({
 }) {
   return (
     <div
-      role="radiogroup"
+      role="group"
       aria-label={label}
       className="inline-flex h-9 shrink-0 items-center rounded-lg bg-surface p-1 text-fg-3 coarse:h-11"
     >
       {options.map((option) => (
         <button
           key={String(option.value)}
-          role="radio"
-          aria-checked={option.value === value}
+          aria-pressed={option.value === value}
           onClick={() => onChange(option.value)}
           className={cx(
             "h-full rounded-md px-3 text-sm tabular-nums transition-colors",
@@ -161,12 +160,11 @@ export function Chips({
   label: string;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex flex-wrap gap-1.5">
+    <div role="group" aria-label={label} className="flex flex-wrap gap-1.5">
       {options.map((option) => (
         <button
           key={option.value}
-          role="radio"
-          aria-checked={option.value === value}
+          aria-pressed={option.value === value}
           onClick={() => onChange(option.value)}
           className={cx(
             "h-8 max-w-64 truncate rounded-lg border px-3 text-sm coarse:h-11",

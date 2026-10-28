@@ -78,7 +78,7 @@ export function AskSummary({ teamspace }: { teamspace: string }) {
   );
 }
 
-export function AskPage({ teamspace, name }: { teamspace: string; name: string }) {
+export function AskPage({ teamspace }: { teamspace: string }) {
   const sites = useTool<{ data: AskSite[] }>("ask_list_sites", { teamspace });
   const [siteKey, setSiteKey] = useState<string>();
   const [days, setDays] = useState<Days>(30);
@@ -92,9 +92,9 @@ export function AskPage({ teamspace, name }: { teamspace: string; name: string }
   useEffect(() => {
     if (site)
       host.setModelContext(
-        `The user is looking at Ask site ${site.hostname} (site_key ${site.siteKey}) of teamspace "${name}" (${teamspace}), last ${days === 1 ? "24 hours" : `${days} days`}, in the Context7 console.`
+        `The user is looking at Ask site ${site.hostname} (site_key ${site.siteKey}) of teamspace ${teamspace}, last ${days === 1 ? "24 hours" : `${days} days`}, in the Context7 console.`
       );
-  }, [teamspace, name, site, days]);
+  }, [teamspace, site, days]);
 
   if (sites.error) return <ErrorNote message={sites.error} onRetry={sites.reload} />;
   if (!sites.data)

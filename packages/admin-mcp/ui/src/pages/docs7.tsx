@@ -53,9 +53,12 @@ export function Docs7Summary({ teamspace }: { teamspace: string }) {
   const site = sites.data ? allSites(sites.data)[0] : undefined;
   const { humans, crawlers, queries } = useSiteReports(teamspace, site, 7);
   if (sites.data && !site) return <Empty>No Docs7 sites in this teamspace.</Empty>;
-  // A report that fails (for example analytics not set up) shows "–", not an endless skeleton.
+  // A report that fails (for example analytics not set up) shows "–" and its error with Retry;
+  // the other reports keep their numbers.
   const value = <T,>(result: { data?: T; error?: string }, read: (data: T) => string) =>
     result.data ? read(result.data) : result.error ? "–" : <Skeleton className="h-6 w-14" />;
+  const reports = { visitors: humans, "AI crawlers": crawlers, searches: queries };
+  const failed = Object.entries(reports).filter(([, r]) => r.error);
   return (
     <Loaded result={sites} skeleton={<MetricsSkeleton chart={false} />}>
       {() => (
@@ -85,13 +88,16 @@ export function Docs7Summary({ teamspace }: { teamspace: string }) {
               hint="of searches"
             />
           </Metrics>
+          {failed.map(([report, r]) => (
+            <ErrorNote key={report} message={r.error!} onRetry={r.reload} />
+          ))}
         </div>
       )}
     </Loaded>
   );
 }
 
-export function Docs7Page({ teamspace, name }: { teamspace: string; name: string }) {
+export function Docs7Page({ teamspace }: { teamspace: string }) {
   const sites = useTool<Sites>("docs7_list_sites", { teamspace });
   const [picked, setPicked] = useState<Site>();
   const [days, setDays] = useState(7);
@@ -104,9 +110,9 @@ export function Docs7Page({ teamspace, name }: { teamspace: string; name: string
   useEffect(() => {
     if (site)
       host.setModelContext(
-        `The user is looking at Docs7 site ${siteName(site)} (site_id ${site.id}) of teamspace "${name}" (${teamspace}), last ${days} days, in the Context7 console.`
+        `The user is looking at Docs7 site_id ${site.id} of teamspace ${teamspace}, last ${days} days, in the Context7 console.`
       );
-  }, [teamspace, name, site, days]);
+  }, [teamspace, site, days]);
 
   if (sites.error) return <ErrorNote message={sites.error} onRetry={sites.reload} />;
   if (!sites.data)
@@ -131,7 +137,9 @@ export function Docs7Page({ teamspace, name }: { teamspace: string; name: string
             <Button
               variant="ghost"
               onClick={() =>
-                host.openLink(site.customDomain ? `https://${site.customDomain}` : site.url!)
+                host.openLink(
+                  site.customDomainStatus === "active" ? `https://${site.customDomain}` : site.url!
+                )
               }
             >
               <IconExternalLink aria-hidden />
@@ -220,7 +228,7 @@ export function Docs7Page({ teamspace, name }: { teamspace: string; name: string
           title="Reader searches"
           action={
             <ChatButton
-              prompt={`Find the doc gaps of Docs7 site ${siteName(site)} (site_id ${site.id}) from its searches with no result, and fix them in the repository.`}
+              prompt={`Find the doc gaps of Docs7 site_id ${site.id} (teamspace ${teamspace}) from its searches with no result, and fix them in the repository.`}
             >
               Fix gaps
             </ChatButton>
@@ -280,7 +288,7 @@ export function Docs7Page({ teamspace, name }: { teamspace: string; name: string
                       {d.state === "failed" && (
                         <span className="ml-auto">
                           <ChatButton
-                            prompt={`The Docs7 build ${d.id} of site ${siteName(site)} (site_id ${site.id}) failed. Read it with docs7_get_deployment including health and logs, then fix the repository.`}
+                            prompt={`The Docs7 build ${d.id} of site_id ${site.id} (teamspace ${teamspace}) failed. Read it with docs7_get_deployment including health and logs, then fix the repository.`}
                           >
                             Fix
                           </ChatButton>

@@ -433,18 +433,19 @@ export const TOOLS: ToolDef[] = [
       const { teamspaces = [] } = (await api.get("/v2/teamspaces")) as {
         teamspaces?: { id: string; name: string; isPersonal?: boolean }[];
       };
-      // A named teamspace must exist: opening another one would show the user the wrong numbers.
-      const wanted = teamspace?.trim().toLowerCase();
-      const match = wanted
-        ? teamspaces.find((t) => t.id === teamspace?.trim() || t.name.toLowerCase() === wanted)
-        : undefined;
-      if (wanted && !match) {
+      // A named teamspace must match exactly one (as resolveTeamspace in server.ts): opening
+      // another one would show the user the wrong numbers.
+      const wanted = teamspace?.trim();
+      const matches = wanted
+        ? teamspaces.filter((t) => t.id === wanted || t.name.toLowerCase() === wanted.toLowerCase())
+        : [];
+      if (wanted && matches.length !== 1) {
         const choices = teamspaces.map((t) => `${t.name} = ${t.id}`).join("; ");
         throw new ToolError(
-          `No teamspace "${teamspace}". Pass \`teamspace\` as one of: ${choices || "none found"}.`
+          `No single teamspace is named "${teamspace}". Pass \`teamspace\` as one of: ${choices || "none found"}.`
         );
       }
-      return { teamspaces, open: { view, teamspace: match?.id } };
+      return { teamspaces, open: { view, teamspace: matches[0]?.id } };
     },
   }),
   tool({

@@ -696,8 +696,17 @@ test.each(["modern", "legacy"] as const)(
   }
 );
 
-test("open_console resolves the teamspace by name and refuses an unknown one", async () => {
-  apiReply = () => ({ body: { teamspaces: [{ id: TS, name: "Acme" }] } });
+test("open_console resolves the teamspace by name and refuses an unknown or shared one", async () => {
+  const other = "22222222-2222-4222-8222-222222222222";
+  apiReply = () => ({
+    body: {
+      teamspaces: [
+        { id: TS, name: "Acme" },
+        { id: other, name: "Docs" },
+        { id: `${other.slice(0, -1)}3`, name: "docs" },
+      ],
+    },
+  });
   const client = await connect();
   const open = (teamspace: string) =>
     client.callTool({ name: "open_console", arguments: { view: "docs7", teamspace } });
@@ -709,4 +718,8 @@ test("open_console resolves the teamspace by name and refuses an unknown one", a
   const missing = await open("Globex");
   expect(missing.isError).toBe(true);
   expect(text(missing)).toContain(`Acme = ${TS}`);
+
+  const shared = await open("Docs");
+  expect(shared.isError).toBe(true);
+  expect((await open(other)).structuredContent).toMatchObject({ open: { teamspace: other } });
 });

@@ -4,8 +4,9 @@ import { host } from "./host";
 /*
  * Reads through this server's read tools (the same ones the model calls), in
  * the shapes they answer: src/tools.ts over the management API in context7app.
- * Answers are kept for the page's life, so going back to a page is instant;
- * `reload` asks again.
+ * A page shows the answer it had at once and asks again in the background, so
+ * going back to a page is instant and still picks up a finished build or a
+ * change made in the chat. `reload` asks again after an error.
  */
 
 const cache = new Map<string, unknown>();
@@ -21,29 +22,25 @@ export function useTool<T>(name: string | undefined, args: object = {}): ToolSta
   const [nonce, setNonce] = useState(0);
   useEffect(() => {
     if (!name) return;
-    if (cache.has(key)) {
-      setState({ key, data: cache.get(key) as T });
-      return;
-    }
     let live = true;
-    setState((s) => ({ key, data: s.key === key ? s.data : undefined }));
+    setState((s) => ({ key, data: s.key === key ? s.data : (cache.get(key) as T | undefined) }));
     host
       .callTool<T>(name, args)
       .then((data) => {
         cache.set(key, data);
         if (live) setState({ key, data });
       })
-      .catch((error: Error) => live && setState({ key, error: error.message }));
+      // A failed refresh keeps the answer on screen; with none, the error shows with Retry.
+      .catch(
+        (error: Error) =>
+          live && setState((s) => (s.key === key && s.data ? s : { key, error: error.message }))
+      );
     return () => {
       live = false;
     };
     // `key` covers name and args.
   }, [key, nonce]);
-  // A reload forgets this one answer, so other keys keep using the cache.
-  const reload = useCallback(() => {
-    cache.delete(key);
-    setNonce((n) => n + 1);
-  }, [key]);
+  const reload = useCallback(() => setNonce((n) => n + 1), []);
   const current = state.key === key;
   return {
     data: current ? state.data : undefined,
@@ -108,6 +105,8 @@ export type Site = {
   repoUrl?: string;
   url?: string;
   customDomain?: string;
+  /** "active" once the domain serves the site; before that, readers use `url`. */
+  customDomainStatus?: string;
 };
 
 export type Humans = {

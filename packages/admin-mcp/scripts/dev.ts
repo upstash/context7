@@ -25,6 +25,7 @@ for (const { source, destination } of rewrites) {
 serve(
   {
     port,
+    hostname: "127.0.0.1",
     fetch: (request) =>
       routes.get(new URL(request.url).pathname)?.fetch(request) ??
       new Response("Not found", { status: 404 }),

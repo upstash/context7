@@ -1,5 +1,5 @@
 import { IconArrowLeft, IconChevronRight } from "@tabler/icons-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ScoreHistogram } from "../charts";
 import {
   Button,
@@ -79,7 +79,7 @@ function ScoreBar({ score }: { score: number }) {
   );
 }
 
-export function LibrariesPage({ teamspace, name }: { teamspace: string; name: string }) {
+export function LibrariesPage({ teamspace }: { teamspace: string }) {
   const result = useTool<{ libraries: Library[] }>("list_libraries", { teamspace });
   const [selected, setSelected] = useState<string>();
   const [sort, setSort] = useState<"score" | "name">("score");
@@ -88,9 +88,9 @@ export function LibrariesPage({ teamspace, name }: { teamspace: string; name: st
   useEffect(() => {
     if (!selected)
       host.setModelContext(
-        `The user is looking at the libraries of teamspace "${name}" (${teamspace}) in the Context7 console.`
+        `The user is looking at the libraries of teamspace ${teamspace} in the Context7 console.`
       );
-  }, [teamspace, name, selected]);
+  }, [teamspace, selected]);
 
   return (
     <Loaded
@@ -209,10 +209,13 @@ function LibraryDetail({ teamspace, library }: { teamspace: string; library: Lib
     order: "newest",
     limit: 60,
   });
-  const lowest = useMemo(
-    () => [...(result.data?.benchmarks ?? [])].sort((a, b) => a.score - b.score).slice(0, 10),
-    [result.data]
-  );
+  // The lowest 10 of all questions, not of the newest 60: an old failing one still shows.
+  const lowest = useTool<Benchmarks>(library.owned ? "get_library_benchmarks" : undefined, {
+    teamspace,
+    library_id: library.id,
+    order: "lowest",
+    limit: 10,
+  });
 
   return (
     <Card
@@ -266,31 +269,35 @@ function LibraryDetail({ teamspace, library }: { teamspace: string; library: Lib
                 <ScoreHistogram scores={benchmarks.map((b) => b.score)} />
                 <div>
                   <h3 className="mb-1 text-xs font-medium text-fg-3">Lowest scores</h3>
-                  <ul className="grid">
-                    {lowest.map((row, i) => (
-                      <li key={i} className="border-t border-line first:border-0">
-                        <details className="group">
-                          <summary className="flex list-none gap-3 py-3 [&::-webkit-details-marker]:hidden">
-                            <span
-                              className={`w-6 shrink-0 text-sm font-semibold tabular-nums ${scoreTone(row.score)}`}
-                            >
-                              {Math.round(row.score)}
-                            </span>
-                            <span className="min-w-0 flex-1 text-sm">{row.query}</span>
-                            <IconChevronRight
-                              className="mt-0.5 size-4 shrink-0 text-fg-3 transition-transform group-open:rotate-90"
-                              aria-hidden
-                            />
-                          </summary>
-                          {row.explanation && (
-                            <p className="pb-3 pl-9 text-sm whitespace-pre-wrap text-fg-2">
-                              {row.explanation}
-                            </p>
-                          )}
-                        </details>
-                      </li>
-                    ))}
-                  </ul>
+                  <Loaded result={lowest} skeleton={<RowsSkeleton rows={4} />}>
+                    {(low) => (
+                      <ul className="grid">
+                        {low.benchmarks.map((row, i) => (
+                          <li key={i} className="border-t border-line first:border-0">
+                            <details className="group">
+                              <summary className="flex list-none gap-3 py-3 [&::-webkit-details-marker]:hidden">
+                                <span
+                                  className={`w-6 shrink-0 text-sm font-semibold tabular-nums ${scoreTone(row.score)}`}
+                                >
+                                  {Math.round(row.score)}
+                                </span>
+                                <span className="min-w-0 flex-1 text-sm">{row.query}</span>
+                                <IconChevronRight
+                                  className="mt-0.5 size-4 shrink-0 text-fg-3 transition-transform group-open:rotate-90"
+                                  aria-hidden
+                                />
+                              </summary>
+                              {row.explanation && (
+                                <p className="pb-3 pl-9 text-sm whitespace-pre-wrap text-fg-2">
+                                  {row.explanation}
+                                </p>
+                              )}
+                            </details>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </Loaded>
                 </div>
               </div>
             )

@@ -77,6 +77,7 @@ export function DailyBars({
     <div>
       <div
         aria-live="polite"
+        aria-atomic="true"
         className="mb-2 flex min-h-5 flex-wrap items-baseline gap-x-4 gap-y-1 text-xs text-fg-3"
       >
         <span className="font-medium text-fg-2 tabular-nums">

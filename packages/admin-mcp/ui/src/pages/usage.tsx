@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { DailyBars, SERIES, Sparkline } from "../charts";
 import {
   Card,
+  ErrorNote,
   Loaded,
   Meter,
   Metric,
@@ -21,14 +22,18 @@ import { host } from "../host";
  */
 function summarize(usage: Usage, details: { data?: TeamspaceDetails; error?: string }) {
   const payg = usage.billingModel === "payg";
-  const days = fillDays(usage.dailyStats, (date) => ({
-    date,
-    searchRequests: 0,
-    fetchDocsRequests: 0,
-    parseTokensCost: 0,
-    memberCost: 0,
-    apiUsageCost: 0,
-  }));
+  const days = fillDays(
+    usage.dailyStats,
+    (date) => ({
+      date,
+      searchRequests: 0,
+      fetchDocsRequests: 0,
+      parseTokensCost: 0,
+      memberCost: 0,
+      apiUsageCost: 0,
+    }),
+    30
+  );
   return {
     payg,
     requests: payg ? (usage.billedRequests ?? 0) : (usage.userRequests ?? 0),
@@ -89,6 +94,7 @@ export function UsageSummary({ teamspace }: { teamspace: string }) {
               <Metric label="Credit" value={usd(u.creditBalance)} />
               <Metric label="Plan" value={planName(u)} hint={billing(u)} />
             </Metrics>
+            {details.error && <ErrorNote message={details.error} onRetry={details.reload} />}
             {spend?.limitCents ? (
               <Meter
                 value={spend.currentSpendCents}
@@ -105,14 +111,14 @@ export function UsageSummary({ teamspace }: { teamspace: string }) {
   );
 }
 
-export function UsagePage({ teamspace, name }: { teamspace: string; name: string }) {
+export function UsagePage({ teamspace }: { teamspace: string }) {
   const { usage, details } = useUsage(teamspace);
   const [metric, setMetric] = useState<"requests" | "cost">("requests");
   useEffect(() => {
     host.setModelContext(
-      `The user is looking at usage and spend of teamspace "${name}" (${teamspace}) in the Context7 console.`
+      `The user is looking at usage and spend of teamspace ${teamspace} in the Context7 console.`
     );
-  }, [teamspace, name]);
+  }, [teamspace]);
 
   return (
     <Loaded result={usage} skeleton={<MetricsSkeleton />}>
@@ -138,6 +144,11 @@ export function UsagePage({ teamspace, name }: { teamspace: string; name: string
                 <Metric label="Credit" value={usd(u.creditBalance)} />
                 <Metric label="Plan" value={planName(u)} hint={billing(u)} />
               </Metrics>
+              {details.error && (
+                <div className="mt-8">
+                  <ErrorNote message={details.error} onRetry={details.reload} />
+                </div>
+              )}
               {(cap || quota > 0) && (
                 <div className="mt-8 grid gap-8 @lg:grid-cols-2">
                   {cap ? (

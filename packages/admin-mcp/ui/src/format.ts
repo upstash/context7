@@ -23,19 +23,21 @@ export const ago = (iso: string) => {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 };
 
-/** Every day from the first to the last date, with the rows the API sent (it leaves out empty days). */
-export function fillDays<T extends { date: string }>(rows: T[], empty: (date: string) => T): T[] {
-  if (rows.length === 0) return [];
+/**
+ * The last `days` UTC days up to today, with the rows the API sent; it leaves out empty days, so
+ * the rest are zero (context7app's dateRangeLastNDays window).
+ */
+export function fillDays<T extends { date: string }>(
+  rows: T[],
+  empty: (date: string) => T,
+  days: number
+): T[] {
   const byDate = new Map(rows.map((row) => [row.date.slice(0, 10), row]));
-  const sorted = [...byDate.keys()].sort();
-  const out: T[] = [];
-  for (
-    let day = new Date(`${sorted[0]}T00:00:00Z`);
-    day <= new Date(`${sorted[sorted.length - 1]}T00:00:00Z`);
-    day.setUTCDate(day.getUTCDate() + 1)
-  ) {
+  const day = new Date();
+  day.setUTCDate(day.getUTCDate() - days + 1);
+  return Array.from({ length: days }, () => {
     const date = day.toISOString().slice(0, 10);
-    out.push(byDate.get(date) ?? empty(date));
-  }
-  return out;
+    day.setUTCDate(day.getUTCDate() + 1);
+    return byDate.get(date) ?? empty(date);
+  });
 }
