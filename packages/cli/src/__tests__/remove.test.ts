@@ -122,6 +122,19 @@ describe("remove command", () => {
     expect(await readFile(agentsPath, "utf-8")).toBe("# Before\n\nkeep   \n");
   });
 
+  test("removes the AGENTS.md section from a file with CRLF line endings", async () => {
+    const agentsPath = join(tempDir, "AGENTS.md");
+    await writeFile(
+      agentsPath,
+      "# Before\r\n\r\n<!-- context7 -->\r\nrule body\r\n<!-- context7 -->\r\n\r\n# After\r\n",
+      "utf-8"
+    );
+
+    await runCommand("remove", "--codex", "--cli", "--project");
+
+    expect(await readFile(agentsPath, "utf-8")).toBe("# Before\r\n\r\n# After\r\n");
+  });
+
   test("removes only MCP artifacts for codex project setup", async () => {
     const agentsPath = join(tempDir, "AGENTS.md");
     const tomlPath = join(tempDir, ".codex", "config.toml");
