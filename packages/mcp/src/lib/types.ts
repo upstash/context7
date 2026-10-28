@@ -44,6 +44,8 @@ export interface ClientContext {
     version?: string;
   };
   plugin?: string;
+  /** Set by `?research_preview=1` on the MCP URL. */
+  researchPreview?: boolean;
   mcpEndpoint?: "/mcp" | "/mcp/oauth";
   mcpAuthMode?: "observe" | "required";
   transport?: "stdio" | "http";
