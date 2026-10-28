@@ -144,6 +144,8 @@ Use test credentials. Code examples write and delete data, for example the keys 
 
 Turn the agent on. The first check starts within a day, then one check runs each month. A check reads every page of the docs path, in batches of about 100 code examples, and counts as one run. A large site can take up to a day.
 
+A check that fails before it checks any example does not count as the month's run, and the next attempt starts on the following day.
+
 Each code example ends with one of these results:
 
 - **Passed**: the example ran and did what the page says, including the documented output and responses.
