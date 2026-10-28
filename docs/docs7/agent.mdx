@@ -152,7 +152,7 @@ Each code example ends with one of these results:
 
 When examples are skipped because a variable is missing, the variables dialog lists the variables they need and how many examples wait for them. Variables on one line are needed together: those examples run only when all of them are set. Add them, and Docs7 checks those examples again right away, without waiting for the next month.
 
-All changes of a check go into one pull request. Its description lists every failed example of the check: the ones the agent fixed, the ones it removed, and the ones it could not fix. A check with no change opens no pull request. The next check waits until this pull request is merged or closed. The **Activity** card shows each check as one row.
+All changes of a check go into one pull request. Its description lists every failed example of the check with its error: the ones the agent fixed, the ones it removed, and the ones it could not fix. It also lists the skipped examples: the variables each group needs, and the reason for each example that cannot run in the check. If part of the check did not run, the description gives the reason. A check with no change opens no pull request. The next check waits until this pull request is merged or closed. The **Activity** card shows each check as one row.
 
 ## Safety and scope
 
