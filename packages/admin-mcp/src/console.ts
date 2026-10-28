@@ -7,10 +7,11 @@ import { CONSOLE_HTML } from "./ui/console-html.js";
  * iframe when the model calls `open_console`.
  *
  * The page holds no credential and makes no network request of its own. It
- * reads through the read tools of this server, which the host calls for it
- * with the user's own bearer, so the API's checks apply to the page exactly
- * as they do to the model. That is also why its CSP allows nothing. Write
- * tools are hidden from the page (`visibility: ["model"]` in server.ts).
+ * reads through `console_data`, an app-only tool that runs one of
+ * `CONSOLE_READS`, which the host calls for it with the user's own bearer, so
+ * the API's checks apply to the page exactly as they do to the model. That is
+ * also why its CSP allows nothing. Every other tool is hidden from the page
+ * (`visibility: ["model"]` in server.ts).
  *
  * The page is built from ui/ by `pnpm build:ui` into src/ui/console-html.ts,
  * which is committed: Vercel compiles api/ and src/ and runs no UI build.
@@ -23,6 +24,20 @@ import { CONSOLE_HTML } from "./ui/console-html.js";
  */
 
 export const CONSOLE_URI = "ui://context7/console";
+
+/** The read tools the page uses, through the app-only `console_data` tool (server.ts). */
+export const CONSOLE_READS = [
+  "list_teamspaces",
+  "get_teamspace",
+  "get_teamspace_usage",
+  "list_libraries",
+  "get_library_benchmarks",
+  "docs7_list_sites",
+  "docs7_get_analytics",
+  "docs7_list_deployments",
+  "ask_list_sites",
+  "ask_get_analytics",
+] as const;
 
 /** MCP Apps' MIME type for an app's HTML (`RESOURCE_MIME_TYPE` in ext-apps). */
 const MCP_APP_MIME_TYPE = "text/html;profile=mcp-app";

@@ -7,8 +7,8 @@ import {
   type ServerContext,
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
-import { CONSOLE_TOOL_META, registerConsole } from "./console.js";
-import { TOOLS, ToolError, type Api, type Kind } from "./tools.js";
+import { CONSOLE_READS, CONSOLE_TOOL_META, registerConsole } from "./console.js";
+import { TOOLS, ToolError, type Api, type Kind, type ToolDef } from "./tools.js";
 
 export const SERVER_VERSION: string = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf-8")
@@ -250,6 +250,42 @@ async function resolveTeamspace(value: unknown, api: Api): Promise<string> {
   );
 }
 
+type Outcome = { ok: true; value: unknown } | { ok: false; error: unknown };
+/** Runs one tool for the caller: resolves the teamspace, calls the API, writes the audit line. */
+async function runTool(
+  def: ToolDef,
+  args: Record<string, unknown>,
+  ctx: ServerContext,
+  page = false
+): Promise<Outcome> {
+  // The header names the tool that ran, also for the console page's console_data reads.
+  const api = createApi(
+    ctx.http?.authInfo?.extra?.state as RequestState,
+    telemetryHeaders(def.name, ctx)
+  );
+  const input: Record<string, unknown> = { ...args };
+  let outcome: Outcome;
+  try {
+    if (def.teamspace !== false) {
+      input.teamspace = await resolveTeamspace(args.teamspace, api);
+    }
+    outcome = { ok: true, value: await def.run(input as Parameters<typeof def.run>[0], api) };
+  } catch (error) {
+    outcome = { ok: false, error };
+  }
+  // Audit line: no credential, no arguments beyond the teamspace.
+  console.log(
+    JSON.stringify({
+      event: "tool_call",
+      tool: def.name,
+      ...(page ? { from: "console" } : {}),
+      teamspace: input.teamspace,
+      outcome: outcome.ok ? "ok" : "error",
+    })
+  );
+  return outcome;
+}
+
 /**
  * Registers every tool. Each call reads the caller's credential from the
  * request (`ctx.http.authInfo`, set by `withMcpAuth`) and forwards it to the
@@ -257,6 +293,7 @@ async function resolveTeamspace(value: unknown, api: Api): Promise<string> {
  */
 export function registerAdminTools(server: McpServer): void {
   registerConsole(server);
+  const inputSchemas = new Map<string, z.ZodObject<z.ZodRawShape>>();
   for (const def of TOOLS) {
     const actions = def.actions ? Object.keys(def.actions) : undefined;
     const kinds: Kind[] = actions ? actions.map((a) => def.actions![a]) : [def.kind!];
@@ -275,6 +312,7 @@ export function registerAdminTools(server: McpServer): void {
       ...(actions ? { action: z.enum(actions as [string, ...string[]]) } : {}),
       ...def.args,
     });
+    inputSchemas.set(def.name, inputSchema);
 
     server.registerTool(
       def.name,
@@ -291,46 +329,79 @@ export function registerAdminTools(server: McpServer): void {
         },
         // ChatGPT shows the console's entrypoints in its app sidebar with this icon.
         ...(def.console ? { icons: SERVER_ICONS } : {}),
-        // The console page calls read tools only: a host refuses its calls to the others.
-        _meta: def.console
-          ? CONSOLE_TOOL_META
-          : readOnly
-            ? undefined
-            : { ui: { visibility: ["model"] } },
+        // The console page reads through console_data only: a host refuses its calls to the others.
+        _meta: def.console ? CONSOLE_TOOL_META : { ui: { visibility: ["model"] } },
       },
       async (args: Record<string, unknown>, ctx): Promise<CallToolResult> => {
-        const api = createApi(
-          ctx.http?.authInfo?.extra?.state as RequestState,
-          telemetryHeaders(def.name, ctx)
-        );
-        const input: Record<string, unknown> = { ...args };
-        let result: CallToolResult;
-        try {
-          if (def.teamspace !== false) {
-            input.teamspace = await resolveTeamspace(args.teamspace, api);
-          }
-          const value = await def.run(input as Parameters<typeof def.run>[0], api);
-          result = {
-            content: [{ type: "text", text: formatResult(value, Boolean(def.untrusted)) }],
-            ...(def.console ? { structuredContent: value as Record<string, unknown> } : {}),
-          };
-        } catch (error) {
-          result = {
-            isError: true,
-            content: [{ type: "text", text: errorText(error, Boolean(def.untrusted)) }],
-          };
-        }
-        // Audit line: no credential, no arguments beyond the teamspace.
-        console.log(
-          JSON.stringify({
-            event: "tool_call",
-            tool: def.name,
-            teamspace: input.teamspace,
-            outcome: result.isError ? "error" : "ok",
-          })
-        );
-        return result;
+        const outcome = await runTool(def, args, ctx);
+        const untrusted = Boolean(def.untrusted);
+        return outcome.ok
+          ? {
+              content: [{ type: "text", text: formatResult(outcome.value, untrusted) }],
+              ...(def.console
+                ? { structuredContent: outcome.value as Record<string, unknown> }
+                : {}),
+            }
+          : {
+              isError: true,
+              content: [{ type: "text", text: errorText(outcome.error, untrusted) }],
+            };
       }
     );
   }
+  registerConsoleData(server, inputSchemas);
+}
+
+/**
+ * The console page's reads. ChatGPT gives a page's `tools/call` only the result's
+ * `structuredContent` (`content` is for the model), so the page cannot read the
+ * read tools' text. This app-only tool (`visibility: ["app"]`, hidden from the
+ * model) runs one of them and returns its data as `structuredContent`. Third-party
+ * text stays out of the model's context, where the read tools fence it.
+ */
+function registerConsoleData(
+  server: McpServer,
+  inputSchemas: Map<string, z.ZodObject<z.ZodRawShape>>
+): void {
+  server.registerTool(
+    "console_data",
+    {
+      title: "Console data",
+      description: "The Context7 console page's reads. For the page only.",
+      inputSchema: z.object({
+        tool: z.enum(CONSOLE_READS),
+        arguments: z.record(z.string(), z.unknown()).optional(),
+      }),
+      annotations: {
+        title: "Console data",
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+      _meta: { ui: { visibility: ["app"] } },
+    },
+    async ({ tool, arguments: args = {} }, ctx): Promise<CallToolResult> => {
+      const def = TOOLS.find((d) => d.name === tool)!;
+      const parsed = inputSchemas.get(tool)!.safeParse(args);
+      const outcome: Outcome = parsed.success
+        ? await runTool(def, parsed.data, ctx, true)
+        : {
+            ok: false,
+            error: new ToolError(`Invalid arguments for ${tool}: ${parsed.error.message}`),
+          };
+      if (!outcome.ok) {
+        const text = errorText(outcome.error, false);
+        return {
+          isError: true,
+          content: [{ type: "text", text }],
+          structuredContent: { error: text },
+        };
+      }
+      return {
+        content: [{ type: "text", text: `${tool} data for the Context7 console.` }],
+        structuredContent: withoutNulls(outcome.value) as Record<string, unknown>,
+      };
+    }
+  );
 }

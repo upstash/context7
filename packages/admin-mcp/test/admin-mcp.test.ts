@@ -194,6 +194,15 @@ describe("telemetry", () => {
     });
     expect(headers["x-context7-server-version"]).toMatch(/^\d+\.\d+\.\d+/);
   });
+
+  test("a console page read is counted for the tool it runs, not console_data", async () => {
+    const client = await connect();
+    await client.callTool({
+      name: "console_data",
+      arguments: { tool: "get_teamspace_usage", arguments: { teamspace: TS } },
+    });
+    expect(apiCalls[0].headers.get("x-context7-tool")).toBe("get_teamspace_usage");
+  });
 });
 
 describe("authentication", () => {
@@ -736,9 +745,9 @@ test("docs7_get_site of a site without hosting adds its migration stage, best ef
 });
 
 // The console MCP App: declared on every protocol era (a stateless legacy
-// request never sees the client's capabilities), and kept to read tools.
+// request never sees the client's capabilities). The page sees console_data only.
 test.each(["modern", "legacy"] as const)(
-  "open_console links the console page, and the page can call read tools only (%s)",
+  "open_console links the console page, and the page can call console_data only (%s)",
   async (era) => {
     const client = await connect(era);
     const { tools } = await client.listTools();
@@ -746,14 +755,44 @@ test.each(["modern", "legacy"] as const)(
       tool._meta?.ui as { resourceUri?: string; visibility?: string[] } | undefined;
 
     for (const tool of tools) {
-      if (tool.annotations?.readOnlyHint) expect(ui(tool)?.visibility, tool.name).toBeUndefined();
-      else expect(ui(tool)?.visibility, tool.name).toEqual(["model"]);
+      const expected =
+        tool.name === "console_data"
+          ? ["app"]
+          : tool.name === "open_console"
+            ? undefined
+            : ["model"];
+      expect(ui(tool)?.visibility, tool.name).toEqual(expected);
     }
     const uri = ui(tools.find((tool) => tool.name === "open_console")!)?.resourceUri;
     const { contents } = await client.readResource({ uri: uri! });
     expect(contents[0]).toMatchObject({ uri, mimeType: "text/html;profile=mcp-app" });
   }
 );
+
+test("console_data answers a read tool's data as structuredContent, and only for console reads", async () => {
+  apiReply = (call) => ({
+    body: call.path.endsWith("/spending-limit")
+      ? { limitCents: null, currentSpendCents: 1200 }
+      : { id: TS, name: "Acme" },
+  });
+  const client = await connect();
+  const read = (args: Record<string, unknown>) =>
+    client.callTool({ name: "console_data", arguments: args });
+
+  const result = await read({ tool: "get_teamspace", arguments: { teamspace: TS } });
+  expect(result.isError).toBeFalsy();
+  // Null fields are dropped, as in the text the model reads.
+  expect(result.structuredContent).toEqual({
+    teamspace: { id: TS, name: "Acme" },
+    spendingLimit: { currentSpendCents: 1200 },
+  });
+
+  const invalid = await read({ tool: "get_library_benchmarks", arguments: { library_id: 7 } });
+  expect(invalid.isError).toBe(true);
+  expect(invalid.structuredContent).toMatchObject({ error: expect.stringContaining("Invalid") });
+
+  expect((await read({ tool: "remove_library", arguments: {} })).isError).toBe(true);
+});
 
 test("open_console resolves the teamspace by name and refuses an unknown or shared one", async () => {
   const other = "22222222-2222-4222-8222-222222222222";
