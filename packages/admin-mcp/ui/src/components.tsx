@@ -62,7 +62,11 @@ export function Card({
 }) {
   return (
     <section
-      className={cx("rounded-3xl border border-line bg-bg p-6 shadow-sm @2xl:p-8", className)}
+      className={cx(
+        // Its own container, so a half-width card lays out for its width, not the page's.
+        "@container rounded-3xl border border-line bg-bg p-6 shadow-sm @2xl:p-8",
+        className
+      )}
     >
       {(title || action) && (
         <header className="mb-6 flex min-h-9 items-center justify-between gap-4">
