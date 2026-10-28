@@ -398,6 +398,74 @@ test("docs7_list_sites keeps what an agent needs and drops internal ids", async 
   expect(result.cliSites[0]).toMatchObject({ id: "c-1", name: "CLI docs" });
 });
 
+// A teamspace can hold hundreds of sites: the whole list would pass the result cap and be cut.
+test("docs7_list_sites pages and searches across GitHub and CLI sites", async () => {
+  const github = Array.from({ length: 60 }, (_, i) => ({
+    id: `s-${i}`,
+    repoUrl: `https://github.com/acme/docs-${i}`,
+  }));
+  apiReply = () => ({
+    body: { data: github, localSites: [{ id: "c-1", name: "Payments CLI docs" }] },
+  });
+  const client = await connect();
+  const list = async (args: Record<string, unknown>) =>
+    JSON.parse(
+      text(
+        await client.callTool({ name: "docs7_list_sites", arguments: { teamspace: TS, ...args } })
+      )
+    );
+
+  const first = await list({});
+  expect(first).toMatchObject({ total: 61, page: 1, pages: 2 });
+  expect(first.sites).toHaveLength(50);
+  expect(first.cliSites).toEqual([]);
+
+  const second = await list({ page: 2 });
+  expect(second.sites.map((site: { id: string }) => site.id)).toEqual(
+    github.slice(50).map((site) => site.id)
+  );
+  expect(second.cliSites).toEqual([{ id: "c-1", name: "Payments CLI docs" }]);
+
+  const found = await list({ search: "PAYMENTS" });
+  expect(found).toMatchObject({ total: 1, sites: [], cliSites: [{ id: "c-1" }] });
+
+  const past = await client.callTool({
+    name: "docs7_list_sites",
+    arguments: { teamspace: TS, page: 3 },
+  });
+  expect(past.isError).toBe(true);
+});
+
+test("list_libraries pages, searches and orders by lowest score", async () => {
+  const libraries = Array.from({ length: 55 }, (_, i) => ({
+    id: `/acme/lib-${String(i).padStart(2, "0")}`,
+    state: i === 3 ? "error" : i === 4 ? "processing" : "complete",
+    benchmarkScore: i % 2 ? 90 - i : undefined,
+  }));
+  apiReply = () => ({ body: { libraries } });
+  const client = await connect();
+  const list = async (args: Record<string, unknown>) =>
+    JSON.parse(
+      text(await client.callTool({ name: "list_libraries", arguments: { teamspace: TS, ...args } }))
+    );
+
+  const first = await list({});
+  expect(first).toMatchObject({ total: 55, page: 1, pages: 2, parsing: 1, failed: 1 });
+  expect(first.libraries).toHaveLength(50);
+  expect(first.libraries[0].id).toBe("/acme/lib-00");
+
+  const lowest = await list({ order: "lowest" });
+  expect(lowest.libraries.slice(0, 2).map((l: { id: string }) => l.id)).toEqual([
+    "/acme/lib-53",
+    "/acme/lib-51",
+  ]);
+  expect((await list({ order: "lowest", page: 2 })).libraries.at(-1).benchmarkScore).toBe(
+    undefined
+  );
+
+  expect(await list({ search: "LIB-4" })).toMatchObject({ total: 10, pages: 1 });
+});
+
 test("the server card and serverInfo carry the Context7 icon", async () => {
   const { default: card } = await import("../api/server-card.js");
   const body = await (
@@ -636,4 +704,52 @@ test("docs7_get_site of a site without hosting adds its migration stage, best ef
   expect(result.isError).toBeFalsy();
   expect(text(result)).toContain('"migration":{"stage":"migrate"}');
   expect(text(result)).not.toContain("analyticsScript");
+});
+
+// The console MCP App: declared on every protocol era (a stateless legacy
+// request never sees the client's capabilities), and kept to read tools.
+test.each(["modern", "legacy"] as const)(
+  "open_console links the console page, and the page can call read tools only (%s)",
+  async (era) => {
+    const client = await connect(era);
+    const { tools } = await client.listTools();
+    const ui = (tool: (typeof tools)[number]) =>
+      tool._meta?.ui as { resourceUri?: string; visibility?: string[] } | undefined;
+
+    for (const tool of tools) {
+      if (tool.annotations?.readOnlyHint) expect(ui(tool)?.visibility, tool.name).toBeUndefined();
+      else expect(ui(tool)?.visibility, tool.name).toEqual(["model"]);
+    }
+    const uri = ui(tools.find((tool) => tool.name === "open_console")!)?.resourceUri;
+    const { contents } = await client.readResource({ uri: uri! });
+    expect(contents[0]).toMatchObject({ uri, mimeType: "text/html;profile=mcp-app" });
+  }
+);
+
+test("open_console resolves the teamspace by name and refuses an unknown or shared one", async () => {
+  const other = "22222222-2222-4222-8222-222222222222";
+  apiReply = () => ({
+    body: {
+      teamspaces: [
+        { id: TS, name: "Acme" },
+        { id: other, name: "Docs" },
+        { id: `${other.slice(0, -1)}3`, name: "docs" },
+      ],
+    },
+  });
+  const client = await connect();
+  const open = (teamspace: string) =>
+    client.callTool({ name: "open_console", arguments: { view: "docs7", teamspace } });
+
+  const found = await open("acme");
+  expect(found.structuredContent).toMatchObject({ open: { view: "docs7", teamspace: TS } });
+  expect(JSON.parse(text(found))).toEqual(found.structuredContent);
+
+  const missing = await open("Globex");
+  expect(missing.isError).toBe(true);
+  expect(text(missing)).toContain(`Acme = ${TS}`);
+
+  const shared = await open("Docs");
+  expect(shared.isError).toBe(true);
+  expect((await open(other)).structuredContent).toMatchObject({ open: { teamspace: other } });
 });

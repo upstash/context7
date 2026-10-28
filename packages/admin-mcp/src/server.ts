@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import type { CallToolResult, McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
+import { CONSOLE_TOOL_META, registerConsole } from "./console.js";
 import { TOOLS, ToolError, type Api, type Kind } from "./tools.js";
 
 export const SERVER_VERSION: string = JSON.parse(
@@ -228,6 +229,7 @@ async function resolveTeamspace(value: unknown, api: Api): Promise<string> {
  * management API, which decides what the caller may do.
  */
 export function registerAdminTools(server: McpServer): void {
+  registerConsole(server);
   for (const def of TOOLS) {
     const actions = def.actions ? Object.keys(def.actions) : undefined;
     const kinds: Kind[] = actions ? actions.map((a) => def.actions![a]) : [def.kind!];
@@ -260,6 +262,14 @@ export function registerAdminTools(server: McpServer): void {
           idempotentHint: readOnly || Boolean(def.idempotent),
           openWorldHint: false,
         },
+        // ChatGPT shows the console's entrypoints in its app sidebar with this icon.
+        ...(def.console ? { icons: SERVER_ICONS } : {}),
+        // The console page calls read tools only: a host refuses its calls to the others.
+        _meta: def.console
+          ? CONSOLE_TOOL_META
+          : readOnly
+            ? undefined
+            : { ui: { visibility: ["model"] } },
       },
       async (args: Record<string, unknown>, ctx): Promise<CallToolResult> => {
         const api = createApi(ctx.http?.authInfo?.extra?.state as RequestState);
@@ -272,6 +282,7 @@ export function registerAdminTools(server: McpServer): void {
           const value = await def.run(input as Parameters<typeof def.run>[0], api);
           result = {
             content: [{ type: "text", text: formatResult(value, Boolean(def.untrusted)) }],
+            ...(def.console ? { structuredContent: value as Record<string, unknown> } : {}),
           };
         } catch (error) {
           result = {
