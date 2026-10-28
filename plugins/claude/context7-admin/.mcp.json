@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "context7-admin": {
-      "type": "http",
-      "url": "https://admin.mcp.context7.com/mcp"
-    }
-  }
-}

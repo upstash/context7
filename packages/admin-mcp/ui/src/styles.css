@@ -127,6 +127,14 @@
   * {
     border-color: var(--c7-line);
   }
+  /*
+   * A grid with no column size gets an implicit auto column, which grows to the longest
+   * unbreakable line (a truncated question, path or site name) and pushes it out of its card.
+   * Size it to the container instead; grid-cols-* utilities (a later layer) still win.
+   */
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
   ::selection {
     background: var(--c7-accent-soft-hover);
   }

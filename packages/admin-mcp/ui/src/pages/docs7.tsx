@@ -257,29 +257,36 @@ export function Docs7Page({ teamspace, name }: { teamspace: string; name: string
             return (
               <ul className="-my-2 grid">
                 {rows.map((d) => (
+                  // The message gets its own line, so a phone-width row does not squeeze it.
                   <li
                     key={d.id}
-                    className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line py-2.5 first:border-0"
+                    className="grid gap-2 border-t border-line py-4 first:border-0 first:pt-0"
                   >
-                    <span className="w-20 shrink-0">
-                      <StateLabel state={d.state} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm">{d.commitMessage ?? d.id}</span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium">
+                        {d.commitMessage ?? d.id}
+                      </span>
                       {d.failure && (
-                        <span className="block truncate text-xs text-bad">{d.failure.message}</span>
+                        <span className="mt-0.5 block truncate text-xs text-bad">
+                          {d.failure.message}
+                        </span>
                       )}
                     </span>
-                    <span className="shrink-0 text-xs text-fg-3">
-                      {d.target === "preview" ? d.branch : "Production"} · {ago(d.createdAt)}
+                    <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+                      <StateLabel state={d.state} />
+                      <span className="min-w-0 truncate text-xs text-fg-3">
+                        {d.target === "preview" ? d.branch : "Production"} · {ago(d.createdAt)}
+                      </span>
+                      {d.state === "failed" && (
+                        <span className="ml-auto">
+                          <ChatButton
+                            prompt={`The Docs7 build ${d.id} of site ${siteName(site)} (site_id ${site.id}) failed. Read it with docs7_get_deployment including health and logs, then fix the repository.`}
+                          >
+                            Fix
+                          </ChatButton>
+                        </span>
+                      )}
                     </span>
-                    {d.state === "failed" && (
-                      <ChatButton
-                        prompt={`The Docs7 build ${d.id} of site ${siteName(site)} (site_id ${site.id}) failed. Read it with docs7_get_deployment including health and logs, then fix the repository.`}
-                      >
-                        Fix
-                      </ChatButton>
-                    )}
                   </li>
                 ))}
               </ul>
