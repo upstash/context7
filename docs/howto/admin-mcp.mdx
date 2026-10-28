@@ -30,7 +30,9 @@ Clients that support MCP OAuth ask you to sign in with your Context7 account on 
 
 ### API key
 
-Create a Context7 API key in [the dashboard](https://context7.com/dashboard) with **Management access** turned on, and send it as a bearer token. A key without management access gets `403`, and a key reaches only its own teamspace.
+Create a Context7 API key in [the dashboard](https://context7.com/dashboard) with **Management access** ticked, and send it as a bearer token. A key without it gets `403` `management_access_required`, and a key reaches only its own teamspace. See [Management access](/howto/api-keys#management-access).
+
+![Create New API Key dialog with Management access ticked](/images/dashboard/api-key-management-access.png)
 
 ```json
 {
