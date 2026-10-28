@@ -267,17 +267,7 @@ ctx7 whoami
 ctx7 logout
 ```
 
-`ctx7 whoami` prints `Logged in` followed by your name, email, and teamspace when your saved login is an OAuth session. With an API key it prints only `Logged in`. When there is no saved login it prints `Not logged in.` and the command to run; it exits with code `0` in both cases, so check `ctx7 whoami | grep -q "Not logged in"` rather than the exit code.
-
-Authentication is resolved in this order:
-
-| Source                                   | Scope                                | Notes                                                                    |
-| ---------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------ |
-| `CONTEXT7_API_KEY` environment variable  | Every request                        | Overrides the saved login, even when one exists                          |
-| `--api-key` passed to `ctx7 setup`       | Saved as the CLI login by that setup | Stored like an OAuth login; `ctx7 logout` removes it                     |
-| Saved OAuth login from `ctx7 login`      | Commands that need authentication    | Used when `CONTEXT7_API_KEY` is unset                                    |
-
-Because the environment variable wins over the saved login, `ctx7 whoami` still reports `Logged in` when it is set, but the saved OAuth identity is not shown.
+`ctx7 whoami` prints `Logged in` followed by your name, email, and teamspace when your saved login is an OAuth session. With an API key it prints only `Logged in`. When there is no saved login it prints `Not logged in.` and the command to run; it exits with code `0` in both cases, so check `ctx7 whoami | grep -q "Not logged in"` rather than the exit code. `ctx7 whoami` checks only the saved login, not `CONTEXT7_API_KEY`.
 
 ### Session expiry
 

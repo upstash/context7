@@ -138,43 +138,6 @@ for info in docs["infoSnippets"]:
     print(f"Content: {info['content'][:200]}...")
 ```
 
-With `type=json`, `GET /api/v2/context` returns an object like this:
-
-```json
-{
-  "codeSnippets": [
-    {
-      "codeTitle": "Calling useState",
-      "codeDescription": "Declare a state variable and its setter.",
-      "codeLanguage": "tsx",
-      "codeTokens": 42,
-      "codeId": "use-state-1",
-      "pageTitle": "useState",
-      "codeList": [{ "language": "tsx", "code": "const [count, setCount] = useState(0);" }]
-    }
-  ],
-  "infoSnippets": [
-    {
-      "pageId": "use-state",
-      "breadcrumb": "Hooks > useState",
-      "content": "useState returns a stateful value and a function to update it.",
-      "contentTokens": 18
-    }
-  ]
-}
-```
-
-| Field            | Location        | Description                                                       |
-| ---------------- | --------------- | ----------------------------------------------------------------- |
-| `codeSnippets`   | Root            | Code examples relevant to the query                               |
-| `infoSnippets`   | Root            | Explanatory text without code, such as prose from the page        |
-| `pageTitle`      | Code snippet    | Title of the documentation page the snippet came from             |
-| `codeTitle`      | Code snippet    | Short title of the example                                        |
-| `codeDescription`| Code snippet    | One-line description of what the example does                     |
-| `codeList`       | Code snippet    | The example in each language it is available in                   |
-
-`codeList` entries have a `language` and the `code` string. `infoSnippets` entries have `content` and, where available, the source `pageId` and `breadcrumb`. If the library or query cannot be resolved, the response includes an `error` and `message` field instead.
-
 <Info>
   Each Search API call counts as one request. The two-step flow makes two API calls when it searches for a library and then retrieves its documentation.
 </Info>
