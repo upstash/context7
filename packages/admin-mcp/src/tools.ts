@@ -322,6 +322,17 @@ function confirmed(confirm: string | undefined, expected: string, what: string):
   }
 }
 
+/**
+ * A read that only adds detail: its failure leaves the detail out, except a
+ * rejected credential, which must still end the call.
+ */
+function bestEffort(read: Promise<unknown>): Promise<unknown> {
+  return read.catch((error: unknown) => {
+    if (error instanceof Error && "status" in error && error.status === 401) throw error;
+    return undefined;
+  });
+}
+
 /** `data` of a `{ data }` envelope, else the body itself. */
 function data(body: unknown): Record<string, unknown> {
   const value =
@@ -420,19 +431,30 @@ export const TOOLS: ToolDef[] = [
     name: "manage_members",
     title: "Manage members",
     description:
-      "List members and pending invitations, invite a member, change a role, remove a member, or cancel an invitation. Only an owner or admin can make changes. `remove` needs `confirm` set to the member's email, after the user confirms.",
+      "List members and pending invitations, invite a member, change a member's or an invitation's role, remove a member, cancel an invitation, or manage the teamspace invite link (anyone with the link can join: get, create, reset to a new link, disable). Only an owner or admin can make changes. `remove` needs `confirm` set to the member's email, after the user confirms.",
     actions: {
       list: "read",
       invite: "write",
       update_role: "write",
+      update_invitation_role: "write",
       remove: "destructive",
       cancel_invitation: "write",
+      get_invite_link: "read",
+      create_invite_link: "write",
+      reset_invite_link: "write",
+      disable_invite_link: "write",
     },
     args: {
       email: z.string().optional().describe("Email to invite (invite)."),
-      role: z.enum(["admin", "developer"]).optional().describe("Role (invite, update_role)."),
+      role: z
+        .enum(["admin", "developer"])
+        .optional()
+        .describe("Role (invite, update_role, update_invitation_role)."),
       member_id: z.string().optional().describe("Member id from list (update_role, remove)."),
-      invitation_id: z.string().optional().describe("Invitation id from list (cancel_invitation)."),
+      invitation_id: z
+        .string()
+        .optional()
+        .describe("Invitation id from list (update_invitation_role, cancel_invitation)."),
       confirm: z
         .string()
         .optional()
@@ -453,6 +475,19 @@ export const TOOLS: ToolDef[] = [
             `${base}/members/${seg(need(args.member_id, "`member_id` is required."))}`,
             { role: need(args.role, "`role` is required.") }
           );
+        case "update_invitation_role":
+          return api.patch(
+            `${base}/invitations/${seg(need(args.invitation_id, "`invitation_id` is required."))}`,
+            { role: need(args.role, "`role` is required.") }
+          );
+        case "get_invite_link":
+          return api.get(`${base}/invite-link`);
+        case "create_invite_link":
+          return api.post(`${base}/invite-link`);
+        case "reset_invite_link":
+          return api.put(`${base}/invite-link`, {});
+        case "disable_invite_link":
+          return api.del(`${base}/invite-link`);
         case "remove": {
           const id = need(args.member_id, "`member_id` is required.");
           const email = memberEmail(await api.get(`${base}/members`), id);
@@ -481,7 +516,7 @@ export const TOOLS: ToolDef[] = [
     name: "get_library",
     title: "Get library",
     description:
-      "Get one library: parse state (processing, finalizing, complete, error), the active task's progress, versions, token and snippet counts, and its benchmark score (0 to 100). After add_library, refresh_library or manage_library_versions, call it with `wait: true` until the state is complete or error.",
+      "Get one library: parse state (processing, finalizing, complete, error), the active task's progress, versions, token and snippet counts, its benchmark score (0 to 100) and, for a library the teamspace owns, its current owner settings (`config`, what update_library_config changes). After add_library, refresh_library or manage_library_versions, call it with `wait: true` until the state is complete or error.",
     kind: "read",
     args: { library_id: libraryId, wait },
     run: ({ teamspace, library_id, wait }, api) => {
@@ -569,6 +604,10 @@ export const TOOLS: ToolDef[] = [
         .optional()
         .describe("Keep pages that look specific to one version."),
       stop_indexing: z.boolean().optional().describe("Stop indexing the library."),
+      generate_docs: z
+        .boolean()
+        .optional()
+        .describe("Private repositories: generate docs from the source code."),
       config_source: z
         .enum(["dashboard", "context7json"])
         .optional()
@@ -589,6 +628,7 @@ export const TOOLS: ToolDef[] = [
         useQueryParams: fields.use_query_params,
         skipClaudeVersionExclusion: fields.keep_version_specific_pages,
         disallow: fields.stop_indexing,
+        generateDocs: fields.generate_docs,
         configSource: fields.config_source,
       }),
   }),
@@ -717,6 +757,115 @@ export const TOOLS: ToolDef[] = [
       const sorted =
         order === "lowest" ? [...benchmarks].sort((a, b) => a.score - b.score) : benchmarks;
       return { stats, benchmarks: sorted.slice(0, limit) };
+    },
+  }),
+  tool({
+    name: "manage_owned_library",
+    title: "Manage owned library",
+    description:
+      "Owner settings of a library the teamspace owns, as on its admin page: make it public or private, redirect its readers to another library, the chat widget (on or off, sites allowed to embed it), the verified badge (check, then apply), block it (stops indexing and deletes its parsed docs; cannot be undone) or transfer it to another teamspace of the user. Title, branch, folders and rules are in update_library_config. `block` and `transfer` need `confirm` set to the library id, after the user confirms.",
+    actions: {
+      set_visibility: "write",
+      set_redirect: "write",
+      remove_redirect: "write",
+      get_widget: "read",
+      update_widget: "write",
+      check_verification: "read",
+      apply_verification: "write",
+      block: "destructive",
+      transfer: "destructive",
+    },
+    args: {
+      library_id: libraryId,
+      public: z.boolean().optional().describe("true: public, false: private (set_visibility)."),
+      redirect_to: z
+        .string()
+        .optional()
+        .describe('Target library id, such as "/owner/repo" (set_redirect).'),
+      widget_enabled: z
+        .boolean()
+        .optional()
+        .describe("Turn the chat widget on or off (update_widget)."),
+      widget_domains: z
+        .array(z.string())
+        .max(20)
+        .optional()
+        .describe("Domains allowed to embed the widget, the whole list (update_widget)."),
+      description: z
+        .string()
+        .max(5000)
+        .optional()
+        .describe("What the library is and who uses it (apply_verification)."),
+      benefits: z
+        .string()
+        .max(5000)
+        .optional()
+        .describe("Why users rely on it (apply_verification)."),
+      website_urls: z
+        .array(z.string())
+        .max(10)
+        .optional()
+        .describe("Official sites (apply_verification)."),
+      destination_teamspace: z
+        .string()
+        .optional()
+        .describe(
+          "Teamspace id to move the library to (transfer). OAuth sign-in only: an API key reaches one teamspace."
+        ),
+      confirm: z
+        .string()
+        .optional()
+        .describe("The library id, after the user confirms (block, transfer)."),
+    },
+    run: async (args, api) => {
+      const base = lib(args.teamspace, args.library_id);
+      const sure = () =>
+        confirmed(
+          args.confirm?.trim().replace(/^\/?/, "/").toLowerCase(),
+          normalizeLibraryId(args.library_id),
+          "the library id"
+        );
+      switch (args.action) {
+        case "set_visibility":
+          return api.post(`${base}/visibility`, {
+            makePublic: need(args.public, "`public` is required."),
+          });
+        case "set_redirect":
+          return api.post(`${base}/redirect`, {
+            redirectTo: normalizeLibraryId(need(args.redirect_to, "`redirect_to` is required.")),
+          });
+        case "remove_redirect":
+          return api.del(`${base}/redirect`);
+        case "get_widget":
+          return api.get(`${base}/widget`);
+        case "update_widget":
+          if (args.widget_enabled === undefined && !args.widget_domains) {
+            throw new ToolError("Send `widget_enabled` or `widget_domains`.");
+          }
+          return api.put(`${base}/widget`, {
+            enabled: args.widget_enabled,
+            allowedDomains: args.widget_domains,
+          });
+        case "check_verification":
+          return api.get(`${base}/verification`);
+        case "apply_verification":
+          return api.post(`${base}/verification`, {
+            description: need(args.description, "`description` is required."),
+            benefits: args.benefits,
+            websiteUrls: args.website_urls,
+          });
+        case "block":
+          sure();
+          return api.post(`${base}/block`);
+        default:
+          sure();
+          return api.post(`${base}/transfer`, {
+            destinationTeamspaceId: need(
+              args.destination_teamspace,
+              "`destination_teamspace` is required (an id from list_teamspaces)."
+            ),
+          });
+      }
     },
   }),
 
@@ -960,28 +1109,45 @@ export const TOOLS: ToolDef[] = [
     name: "docs7_get_site",
     title: "Get Docs7 site",
     description:
-      "Get one Docs7 site: settings, custom domain, agent settings and, for a GitHub site, agent usage: the plan, whether this month's agent runs are used up, and this UTC month's runs, failed runs and pull request states by agent.",
+      "Get one Docs7 site: settings, custom domain and agent settings. For a GitHub site also: whether the Docs7 GitHub App still has the access builds and agents need (`githubAccess`), and agent usage (the plan, whether this month's agent runs are used up, this UTC month's runs, failed runs and pull request states by agent). For a site without hosting: its stage on the way to hosting (`migration`) and, with an analytics URL, whether that page serves the analytics script (`analyticsScript`).",
     kind: "read",
     args: { site_id: siteId },
     run: async ({ teamspace, site_id }, api) => {
       const path = site(teamspace, site_id);
       const details = data(await api.get(path));
-      // A CLI site has no agent, and its agent-usage route answers 404.
-      if (details.source === "local") return { site: siteDetails(details) };
+      const hostedElsewhere = details.hosting === "off";
+      const [migration, analyticsScript] = await Promise.all([
+        hostedElsewhere ? bestEffort(api.get(`${path}/migration`)) : undefined,
+        hostedElsewhere && details.analyticsUrl
+          ? bestEffort(api.get(`${path}/analytics-script`))
+          : undefined,
+      ]);
+      const extra = {
+        migration: migration && data(migration),
+        analyticsScript: analyticsScript && data(analyticsScript),
+      };
+      // A CLI site has no repository or agent; its agent-usage route answers 404.
+      if (details.source === "local") return { site: siteDetails(details), ...extra };
       const readHistory = async (history: AgentHistory) =>
         (
           (await api.get(`${path}/agent-runs`, { history, limit: AGENT_HISTORY_LIMIT })) as {
             data?: AgentRun[];
           }
         )?.data ?? [];
-      const [usage, improve, review, watch] = await Promise.all([
+      const [usage, improve, review, watch, github] = await Promise.all([
         api.get(`${path}/agent-usage`),
         readHistory("improve"),
         readHistory("review"),
         readHistory("watch"),
+        bestEffort(api.get(`${path}/github`)),
       ]);
       const activity = agentActivity({ improve, review, watch });
-      return { site: siteDetails(details), agentUsage: { ...data(usage), ...activity } };
+      return {
+        site: siteDetails(details),
+        githubAccess: github && data(github),
+        ...extra,
+        agentUsage: { ...data(usage), ...activity },
+      };
     },
   }),
   tool({
@@ -1047,6 +1213,12 @@ export const TOOLS: ToolDef[] = [
         .enum(["off", "after_build", "daily", "weekly"])
         .optional()
         .describe("When the Build Fix Agent fixes the issues of the latest production build."),
+      example_check_schedule: z
+        .enum(["off", "monthly"])
+        .optional()
+        .describe(
+          "Example Check Agent (Docs7 Pro): run and fix the docs' code examples monthly. Its variables are in docs7_manage_example_check."
+        ),
       analytics_url: z
         .string()
         .nullable()
@@ -1081,6 +1253,7 @@ export const TOOLS: ToolDef[] = [
         context7Index: fields.context7_index,
         improveSchedule: fields.improve_schedule,
         buildFixSchedule: fields.build_fix_schedule,
+        snippetSchedule: fields.example_check_schedule,
         analyticsUrl: fields.analytics_url,
         pullRequestReview: fields.pull_request_review,
         codeWatch: fields.code_watch,
@@ -1243,21 +1416,95 @@ export const TOOLS: ToolDef[] = [
     },
   }),
   tool({
-    name: "docs7_manage_feature_requests",
-    title: "Manage feature requests",
+    name: "docs7_list_pull_requests",
+    title: "List pull requests",
     description:
-      "List the feature requests readers and agents left on a Docs7 site, mark one shipped (with the page that answers it), or reopen it.",
-    actions: { list: "read", ship: "write", reopen: "write" },
+      "List pull requests of a Docs7 site's repository: `open` gives every open pull request (each head branch gets a preview), `agent` gives every pull request the Docs7 agents opened, all time, with open, merged and closed counts.",
+    kind: "read",
     untrusted: true,
     args: {
       site_id: siteId,
-      feature_request_id: z.string().optional().describe("Feature request id (ship, reopen)."),
+      kind: z.enum(["open", "agent"]).optional().describe("Default open."),
+    },
+    run: ({ teamspace, site_id, kind = "open" }, api) =>
+      api.get(
+        `${site(teamspace, site_id)}/${kind === "agent" ? "agent-pull-requests" : "pull-requests"}`
+      ),
+  }),
+  tool({
+    name: "docs7_connect_repository",
+    title: "Connect repository",
+    description:
+      "Connect a Docs7 site deployed from the CLI to a GitHub repository, keeping its id and address: from then on it builds from the repository and gets the agents. The Docs7 GitHub app must be installed on the repository (the user does this in the dashboard).",
+    kind: "write",
+    args: {
+      site_id: siteId,
+      repo_url: z.string().describe("https://github.com/owner/repo"),
+      branch: z.string().describe("Branch to build."),
+      docs_path: z
+        .string()
+        .describe('Relative path of the docs folder, such as "docs", or "." for the root.'),
+      context7_index: z
+        .boolean()
+        .optional()
+        .describe("Also keep the docs on Context7. Default true."),
+    },
+    run: ({ teamspace, site_id, repo_url, branch, docs_path, context7_index = true }, api) =>
+      api.post(`${site(teamspace, site_id)}/connect`, {
+        repoUrl: repo_url,
+        branch,
+        docsPath: docs_path,
+        context7Index: context7_index,
+      }),
+  }),
+  tool({
+    name: "docs7_manage_example_check",
+    title: "Manage Example Check",
+    description:
+      "The Example Check Agent (Docs7 Pro) runs the TypeScript, JavaScript and Python code examples of the docs against the user's services and fixes the wrong ones in a pull request; it runs monthly when `docs7_update_site` turns it on. `get_variables` gives the variable names it has (never values) and the variables pages still wait for; `set_variables` replaces the whole list (a variable sent without `value` keeps its stored value; an https URL is passed to the agent, any other value is a secret sent only as a bearer header to the host of its `<NAME>_URL` variable); `list_checks` gives its checks, newest first.",
+    actions: { get_variables: "read", set_variables: "write", list_checks: "read" },
+    untrusted: true,
+    args: {
+      site_id: siteId,
+      variables: z
+        .array(z.object({ name: z.string(), value: z.string().optional() }))
+        .max(50)
+        .optional()
+        .describe("The whole variable list (set_variables)."),
+    },
+    run: (args, api) => {
+      const base = `${site(args.teamspace, args.site_id)}/example-check`;
+      if (args.action === "get_variables") return api.get(`${base}/settings`);
+      if (args.action === "list_checks") return api.get(`${base}/checks`);
+      return api.put(`${base}/settings`, {
+        variables: need(args.variables, "`variables` is required: the whole list."),
+      });
+    },
+  }),
+  tool({
+    name: "docs7_manage_feature_requests",
+    title: "Manage feature requests",
+    description:
+      "List the feature requests readers and agents left on a Docs7 site, mark one shipped (with the page that answers it), reopen it, or delete it with its votes (`confirm` set to its id, after the user confirms).",
+    actions: { list: "read", ship: "write", reopen: "write", delete: "destructive" },
+    untrusted: true,
+    args: {
+      site_id: siteId,
+      feature_request_id: z
+        .string()
+        .optional()
+        .describe("Feature request id (ship, reopen, delete)."),
       docs_url: z.string().optional().describe("https page that answers the request (ship)."),
+      confirm: z.string().optional().describe("The request id, after the user confirms (delete)."),
     },
     run: (args, api) => {
       const base = `${site(args.teamspace, args.site_id)}/feature-requests`;
       if (args.action === "list") return api.get(base);
       const id = need(args.feature_request_id, "`feature_request_id` is required.");
+      if (args.action === "delete") {
+        confirmed(args.confirm, id, "the request id");
+        return api.del(base, { body: { id } });
+      }
       return args.action === "ship"
         ? api.patch(base, { id, status: "shipped", docsUrl: args.docs_url ?? null })
         : api.patch(base, { id, status: "requested" });
@@ -1267,7 +1514,7 @@ export const TOOLS: ToolDef[] = [
     name: "docs7_get_analytics",
     title: "Get site analytics",
     description:
-      "Get one analytics report of a Docs7 site. `queries` and `feedback` show what readers searched for and asked, so you can find doc gaps.",
+      'Get one analytics report of a Docs7 site: totals, a daily series and short top lists (top 5 pages or paths, the newest 10 AI requests). `queries` and `feedback` show what readers searched for and asked, so you can find doc gaps. For one page, every page, or more rows, use docs7_query_logs: dataset `page-views` (visitors) or `ai-requests` (AI crawlers and assistants), `group_by: "path"` for counts per page, or `filters: [{ field: "path", operator: "eq", value: "/docs/page" }]` for one page.',
     kind: "read",
     untrusted: true,
     args: {
@@ -1294,7 +1541,7 @@ export const TOOLS: ToolDef[] = [
     name: "docs7_query_logs",
     title: "Query site logs",
     description:
-      "Search the records of a Docs7 site: reader searches, assistant questions, AI requests or page views.",
+      'Search and count the records of a Docs7 site: reader searches, assistant questions, AI requests or page views. With `group_by`, rows are counts per value, most first (20 a page, `totalRows` groups in all): for example traffic per page is dataset `page-views` or `ai-requests` with `group_by: "path"`, and AI requests per provider is `group_by: "company"`. `filters` narrows to one page, provider, country or host. Without `group_by`, rows are single records, newest first.',
     kind: "read",
     untrusted: true,
     args: {

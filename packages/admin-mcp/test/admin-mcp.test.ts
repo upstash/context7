@@ -598,3 +598,42 @@ test("an API error leads with its status, code and message, then what to do", as
   );
   expect(text(result)).not.toContain("untrusted-data");
 });
+
+test("manage_owned_library block needs the library id as confirm", async () => {
+  const client = await connect();
+  const call = (confirm: string) =>
+    client.callTool({
+      name: "manage_owned_library",
+      arguments: { teamspace: TS, action: "block", library_id: "/acme/docs", confirm },
+    });
+
+  expect((await call("/acme/other")).isError).toBe(true);
+  expect(apiCalls.some((c) => c.path.endsWith("/block"))).toBe(false);
+
+  expect((await call("Acme/Docs")).isError).toBeFalsy();
+  expect(apiCalls.at(-1)).toMatchObject({
+    method: "POST",
+    path: `/v2/teamspaces/${TS}/libraries/acme/docs/block`,
+  });
+});
+
+// The extra reads only add detail: one failing must not fail the site.
+test("docs7_get_site of a site without hosting adds its migration stage, best effort", async () => {
+  apiReply = (call) => {
+    if (call.path.endsWith("/migration")) return { body: { data: { stage: "migrate" } } };
+    if (call.path.endsWith("/analytics-script"))
+      return { status: 500, body: { error: "internal_error" } };
+    return {
+      body: {
+        data: { id: "s-1", source: "local", hosting: "off", analyticsUrl: "https://acme.com/docs" },
+      },
+    };
+  };
+  const result = await (
+    await connect()
+  ).callTool({ name: "docs7_get_site", arguments: { teamspace: TS, site_id: "s-1" } });
+
+  expect(result.isError).toBeFalsy();
+  expect(text(result)).toContain('"migration":{"stage":"migrate"}');
+  expect(text(result)).not.toContain("analyticsScript");
+});
