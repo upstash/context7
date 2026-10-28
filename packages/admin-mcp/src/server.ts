@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
-import type { CallToolResult, McpServer } from "@modelcontextprotocol/server";
+import {
+  CLIENT_INFO_META_KEY,
+  type CallToolResult,
+  type McpServer,
+  type ServerContext,
+} from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { TOOLS, ToolError, type Api, type Kind } from "./tools.js";
 
@@ -30,7 +35,28 @@ export class ApiError extends Error {
   }
 }
 
-function createApi(state: RequestState): Api {
+/**
+ * Telemetry headers for one tool call: the tool and the MCP client. Modern
+ * clients name themselves on every request (`_meta`); legacy ones only in
+ * `initialize`, which this stateless server does not keep, so the
+ * User-Agent stands in (as in packages/mcp). A value not known is not sent.
+ */
+function telemetryHeaders(tool: string, ctx: ServerContext): Record<string, string> {
+  const envelope = ctx.mcpReq.envelope as
+    Record<string, { name?: string; version?: string } | undefined> | undefined;
+  let { name, version } = envelope?.[CLIENT_INFO_META_KEY] ?? {};
+  if (!name) {
+    const match = ctx.http?.req?.headers.get("user-agent")?.match(/^([^/\s]+)\/([^\s(]+)/);
+    [name, version] = [match?.[1], match?.[2]];
+  }
+  return {
+    "X-Context7-Tool": tool,
+    ...(name ? { "X-Context7-Client-IDE": name } : {}),
+    ...(version ? { "X-Context7-Client-Version": version } : {}),
+  };
+}
+
+function createApi(state: RequestState, telemetry: Record<string, string>): Api {
   const request = async (
     method: string,
     path: string,
@@ -46,6 +72,7 @@ function createApi(state: RequestState): Api {
         Authorization: state.authorization,
         "X-Context7-Source": "admin-mcp",
         "X-Context7-Server-Version": SERVER_VERSION,
+        ...telemetry,
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -262,7 +289,10 @@ export function registerAdminTools(server: McpServer): void {
         },
       },
       async (args: Record<string, unknown>, ctx): Promise<CallToolResult> => {
-        const api = createApi(ctx.http?.authInfo?.extra?.state as RequestState);
+        const api = createApi(
+          ctx.http?.authInfo?.extra?.state as RequestState,
+          telemetryHeaders(def.name, ctx)
+        );
         const input: Record<string, unknown> = { ...args };
         let result: CallToolResult;
         try {
