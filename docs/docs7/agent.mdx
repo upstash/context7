@@ -150,7 +150,7 @@ Each code example ends with one of these results:
 - **Failed**: the example threw an error, or its result differs from the page. If the example has a mistake, such as a wrong method name, argument, value, expected output, import, or syntax, the agent fixes it and runs it again. If the page documents the API correctly but the released SDK or the service does not support it yet, the agent removes the example from the page and comments on it in the pull request, so you can restore it after that release.
 - **Skipped**: the example needs a service with no variable, connects over TCP (for example ioredis, node-redis, or redis-py with a `redis://` URL), is not a complete program, or is a whole framework app such as a Next.js route.
 
-When examples are skipped because a variable is missing, the Example Check Agent row shows a count of the missing variables next to the variables button, and the variables dialog lists each one and how many examples wait for it. Add them, and Docs7 checks those examples again right away, without waiting for the next month.
+When examples are skipped because a variable is missing, the variables button in the Example Check Agent row turns orange and shows how many variables are missing, and the variables dialog lists each one and how many examples wait for it. Add them, and Docs7 checks those examples again right away, without waiting for the next month.
 
 All changes of a check go into one pull request. Its description lists every failed example of the check: the ones the agent fixed, the ones it removed, and the ones it could not fix. A check with no change opens no pull request. The next check waits until this pull request is merged or closed. The **Activity** card shows each check as one row.
 
