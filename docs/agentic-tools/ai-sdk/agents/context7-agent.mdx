@@ -31,11 +31,11 @@ new Context7Agent(config: Context7AgentConfig)
 
 ### Parameters
 
-<ParamField path="config" type="Context7AgentConfig" optional>
+<ParamField path="config" type="Context7AgentConfig" required>
   Configuration options for the agent.
 
   <Expandable title="properties">
-    <ParamField path="model" type="LanguageModel" optional>
+    <ParamField path="model" type="LanguageModel" required>
       Language model to use. Must be a LanguageModel instance from an AI SDK provider.
 
       Examples:
