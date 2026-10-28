@@ -149,6 +149,40 @@ const LIBRARIES = [
   },
 ];
 
+// Agency's 75 client libraries: more than one list_libraries page.
+const AGENCY_LIBRARIES = Array.from({ length: 75 }, (_, i) => ({
+  id: `/northwind/client-${i}`,
+  title: `Client ${i} docs`,
+  private: i % 5 === 0,
+  owned: true,
+  state: i === 7 ? "error" : "complete",
+  totalSnippets: 200 + ((i * 137) % 3000),
+  benchmarkScore: i % 4 === 3 ? undefined : 30 + ((i * 37) % 70),
+}));
+
+/** As list_libraries does: search, sort (name or lowest score), then 50 a page. */
+type DemoLibrary = { id: string; title?: string; state: string; benchmarkScore?: number };
+function listLibraries(libraries: DemoLibrary[], args: Args) {
+  const needle = typeof args.search === "string" ? args.search.toLowerCase() : "";
+  const page = (args.page as number | undefined) ?? 1;
+  const name = (l: DemoLibrary) => l.title ?? l.id;
+  const all = libraries
+    .filter((l) => !needle || `${l.id} ${l.title ?? ""}`.toLowerCase().includes(needle))
+    .sort((a, b) =>
+      args.order === "lowest"
+        ? (a.benchmarkScore ?? 101) - (b.benchmarkScore ?? 101) || name(a).localeCompare(name(b))
+        : name(a).localeCompare(name(b))
+    );
+  return {
+    total: all.length,
+    page,
+    pages: Math.max(1, Math.ceil(all.length / 50)),
+    parsing: all.filter((l) => l.state === "processing" || l.state === "finalizing").length,
+    failed: all.filter((l) => l.state === "error").length,
+    libraries: all.slice((page - 1) * 50, page * 50),
+  };
+}
+
 const QUESTIONS = [
   [
     "How do I retry a failed webhook delivery?",
@@ -493,7 +527,7 @@ export function callTool(name: string, args: Args): string {
   const teamspace = args.teamspace as string | undefined;
   if (teamspace === TEAMSPACES[1]!.id && name !== "open_console" && name !== "list_teamspaces") {
     // The personal teamspace is empty, to show the empty states.
-    if (name === "list_libraries") return JSON.stringify({ libraries: [] });
+    if (name === "list_libraries") return JSON.stringify(listLibraries([], args));
     if (name === "docs7_list_sites")
       return JSON.stringify(listSites({ sites: [], cliSites: [] }, args));
     if (name === "ask_list_sites")
@@ -529,7 +563,9 @@ export function callTool(name: string, args: Args): string {
     case "get_teamspace_usage":
       return JSON.stringify(usage());
     case "list_libraries":
-      return JSON.stringify({ libraries: LIBRARIES });
+      return JSON.stringify(
+        listLibraries(teamspace === TEAMSPACES[2]!.id ? AGENCY_LIBRARIES : LIBRARIES, args)
+      );
     case "get_library_benchmarks": {
       // As the tool does: lowest first unless order is newest, then the first `limit`.
       const { stats, benchmarks: rows } = benchmarks(args.library_id as string);

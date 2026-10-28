@@ -1,4 +1,4 @@
-import { IconArrowLeft, IconChevronRight } from "@tabler/icons-react";
+import { IconArrowLeft, IconChevronLeft, IconChevronRight, IconSearch } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 import { ScoreHistogram } from "../charts";
 import {
@@ -16,31 +16,24 @@ import {
   scoreTone,
   useWide,
 } from "../components";
-import { useTool, type Benchmarks, type Library } from "../data";
+import { useTool, type Benchmarks, type Library, type LibraryList } from "../data";
 import { ago, num } from "../format";
 import { host } from "../host";
 
 const libraryName = (library: Library) => library.title ?? library.id;
 
-/** Lowest benchmark score first; libraries without a score after them. */
-const byScore = (a: Library, b: Library) => (a.benchmarkScore ?? 101) - (b.benchmarkScore ?? 101);
-
 export function LibrariesSummary({ teamspace }: { teamspace: string }) {
-  const result = useTool<{ libraries: Library[] }>("list_libraries", { teamspace });
+  const result = useTool<LibraryList>("list_libraries", { teamspace, order: "lowest" });
   return (
     <Loaded result={result} skeleton={<RowsSkeleton rows={4} />}>
-      {({ libraries }) => {
-        if (libraries.length === 0) return <Empty>No private or claimed libraries yet.</Empty>;
-        const scored = libraries.filter((l) => l.benchmarkScore !== undefined).sort(byScore);
-        const busy = libraries.filter(
-          (l) => l.state === "processing" || l.state === "finalizing"
-        ).length;
-        const failed = libraries.filter((l) => l.state === "error").length;
+      {({ total, parsing, failed, libraries }) => {
+        if (total === 0) return <Empty>No private or claimed libraries yet.</Empty>;
+        const scored = libraries.filter((l) => l.benchmarkScore !== undefined);
         return (
           <div className="grid gap-4">
             <p className="text-sm text-fg-2">
-              {libraries.length} libraries
-              {busy > 0 && ` · ${busy} parsing`}
+              {num(total)} libraries
+              {parsing > 0 && ` · ${parsing} parsing`}
               {failed > 0 && <span className="text-bad"> · {failed} failed</span>}
             </p>
             {scored.length > 0 && (
@@ -80,118 +73,186 @@ function ScoreBar({ score }: { score: number }) {
 }
 
 export function LibrariesPage({ teamspace }: { teamspace: string }) {
-  const result = useTool<{ libraries: Library[] }>("list_libraries", { teamspace });
-  const [selected, setSelected] = useState<string>();
   const [sort, setSort] = useState<"score" | "name">("score");
+  const [page, setPage] = useState(1);
+  const [typed, setTyped] = useState("");
+  const [search, setSearch] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(typed.trim());
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [typed]);
+  // list_libraries sorts and pages (50 a page), so a large teamspace stays under the result cap.
+  const result = useTool<LibraryList>("list_libraries", {
+    teamspace,
+    order: sort === "score" ? "lowest" : "name",
+    page,
+    ...(search && { search }),
+  });
+  // Kept as the row, so the detail stays open on another page or search.
+  const [current, setCurrent] = useState<Library>();
   // Wide: list and detail side by side. Narrow: the detail replaces the list, with Back.
   const wide = useWide(896);
+  const searchable = Boolean(search) || (result.data?.pages ?? 1) > 1;
   useEffect(() => {
-    if (!selected)
+    if (!current)
       host.setModelContext(
         `The user is looking at the libraries of teamspace ${teamspace} in the Context7 console.`
       );
-  }, [teamspace, selected]);
+  }, [teamspace, current]);
 
-  return (
-    <Loaded
-      result={result}
-      skeleton={
-        <Card>
-          <RowsSkeleton rows={6} />
-        </Card>
+  const list = (
+    <Card
+      title={
+        result.data
+          ? search
+            ? `${num(result.data.total)} matches`
+            : `${num(result.data.total)} libraries`
+          : "Libraries"
       }
+      action={
+        <Segmented
+          label="Sort"
+          value={sort}
+          onChange={(value) => {
+            setSort(value);
+            setPage(1);
+          }}
+          options={[
+            { value: "score", label: "Lowest score" },
+            { value: "name", label: "Name" },
+          ]}
+        />
+      }
+      className="min-w-0"
     >
-      {({ libraries }) => {
-        if (libraries.length === 0)
-          return (
-            <Card>
+      <div className="grid gap-4">
+        {searchable && (
+          <label className="flex h-9 items-center gap-2 rounded-lg border border-line px-3 coarse:h-11">
+            <IconSearch className="size-4 shrink-0 text-fg-3" aria-hidden />
+            <input
+              value={typed}
+              onChange={(event) => setTyped(event.target.value)}
+              placeholder="Search by id, title or source"
+              aria-label="Search libraries"
+              className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-fg-3"
+            />
+          </label>
+        )}
+        <Loaded result={result} skeleton={<RowsSkeleton rows={6} />}>
+          {({ libraries, pages }) =>
+            libraries.length === 0 ? (
               <Empty>
-                No private or claimed libraries yet. Add one with add_library or claim one with
-                claim_library.
+                {search
+                  ? "No library matches."
+                  : "No private or claimed libraries yet. Add one with add_library or claim one with claim_library."}
               </Empty>
-            </Card>
-          );
-        const current = libraries.find((l) => l.id === selected);
-        const sorted = [...libraries].sort(
-          sort === "score" ? byScore : (a, b) => libraryName(a).localeCompare(libraryName(b))
-        );
-        const list = (
-          <Card
-            title={`${libraries.length} libraries`}
-            action={
-              <Segmented
-                label="Sort"
-                value={sort}
-                onChange={setSort}
-                options={[
-                  { value: "score", label: "Lowest score" },
-                  { value: "name", label: "Name" },
-                ]}
-              />
-            }
-            className="min-w-0"
-          >
-            <ul className="-mx-2 grid">
-              {sorted.map((library) => (
-                <li key={library.id}>
-                  <button
-                    onClick={() => setSelected(library.id)}
-                    aria-current={library.id === selected}
-                    className="flex w-full items-center gap-4 rounded-lg px-3 py-3 text-left hover:bg-surface aria-[current=true]:bg-surface coarse:py-3"
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">
-                        {libraryName(library)}
-                      </span>
-                      <span className="flex items-center gap-2 truncate text-xs text-fg-3">
-                        <span className="truncate">{library.id}</span>
-                        {library.private && <span>· private</span>}
-                        {library.state !== "complete" && <StateLabel state={library.state} />}
-                      </span>
+            ) : (
+              <div className="grid gap-4">
+                <ul className="-mx-2 grid">
+                  {libraries.map((library) => (
+                    <li key={library.id}>
+                      <LibraryRow
+                        library={library}
+                        current={library.id === current?.id}
+                        onOpen={() => setCurrent(library)}
+                      />
+                    </li>
+                  ))}
+                </ul>
+                {pages > 1 && (
+                  <div className="flex items-center justify-between gap-3 text-xs text-fg-3">
+                    <Button
+                      variant="ghost"
+                      disabled={page <= 1}
+                      onClick={() => setPage((p) => p - 1)}
+                    >
+                      <IconChevronLeft aria-hidden />
+                      Previous
+                    </Button>
+                    <span className="tabular-nums">
+                      Page {page} of {pages}
                     </span>
-                    <span className="hidden w-28 text-right text-xs whitespace-nowrap text-fg-3 tabular-nums @md:block">
-                      {library.totalSnippets !== undefined &&
-                        `${num(library.totalSnippets)} snippets`}
-                    </span>
-                    {library.benchmarkScore !== undefined ? (
-                      <ScoreBar score={library.benchmarkScore} />
-                    ) : (
-                      <span className="w-28 text-right text-xs text-fg-3">No score</span>
-                    )}
-                    <IconChevronRight className="size-4 shrink-0 text-fg-3" aria-hidden />
-                  </button>
-                </li>
-              ))}
-            </ul>
+                    <Button
+                      variant="ghost"
+                      disabled={page >= pages}
+                      onClick={() => setPage((p) => p + 1)}
+                    >
+                      Next
+                      <IconChevronRight aria-hidden />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )
+          }
+        </Loaded>
+      </div>
+    </Card>
+  );
+
+  if (wide)
+    return (
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-8">
+        {list}
+        {current ? (
+          <LibraryDetail teamspace={teamspace} library={current} />
+        ) : (
+          <Card>
+            <Empty>Pick a library to see the questions its docs answer badly.</Empty>
           </Card>
-        );
-        if (wide)
-          return (
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-8">
-              {list}
-              {current ? (
-                <LibraryDetail teamspace={teamspace} library={current} />
-              ) : (
-                <Card>
-                  <Empty>Pick a library to see the questions its docs answer badly.</Empty>
-                </Card>
-              )}
-            </div>
-          );
-        if (!current) return list;
-        return (
-          <div className="grid gap-4">
-            <div>
-              <Button variant="ghost" className="-ml-2" onClick={() => setSelected(undefined)}>
-                <IconArrowLeft aria-hidden />
-                Libraries
-              </Button>
-            </div>
-            <LibraryDetail teamspace={teamspace} library={current} />
-          </div>
-        );
-      }}
-    </Loaded>
+        )}
+      </div>
+    );
+  if (!current) return list;
+  return (
+    <div className="grid gap-4">
+      <div>
+        <Button variant="ghost" className="-ml-2" onClick={() => setCurrent(undefined)}>
+          <IconArrowLeft aria-hidden />
+          Libraries
+        </Button>
+      </div>
+      <LibraryDetail teamspace={teamspace} library={current} />
+    </div>
+  );
+}
+
+function LibraryRow({
+  library,
+  current,
+  onOpen,
+}: {
+  library: Library;
+  current: boolean;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      onClick={onOpen}
+      aria-current={current}
+      className="flex w-full items-center gap-4 rounded-lg px-3 py-3 text-left hover:bg-surface aria-[current=true]:bg-surface coarse:py-3"
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium">{libraryName(library)}</span>
+        <span className="flex items-center gap-2 truncate text-xs text-fg-3">
+          <span className="truncate">{library.id}</span>
+          {library.private && <span>· private</span>}
+          {library.state !== "complete" && <StateLabel state={library.state} />}
+        </span>
+      </span>
+      <span className="hidden w-28 text-right text-xs whitespace-nowrap text-fg-3 tabular-nums @md:block">
+        {library.totalSnippets !== undefined && `${num(library.totalSnippets)} snippets`}
+      </span>
+      {library.benchmarkScore !== undefined ? (
+        <ScoreBar score={library.benchmarkScore} />
+      ) : (
+        <span className="w-28 text-right text-xs text-fg-3">No score</span>
+      )}
+      <IconChevronRight className="size-4 shrink-0 text-fg-3" aria-hidden />
+    </button>
   );
 }
 

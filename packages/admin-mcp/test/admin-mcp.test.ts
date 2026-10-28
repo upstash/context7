@@ -436,6 +436,36 @@ test("docs7_list_sites pages and searches across GitHub and CLI sites", async ()
   expect(past.isError).toBe(true);
 });
 
+test("list_libraries pages, searches and orders by lowest score", async () => {
+  const libraries = Array.from({ length: 55 }, (_, i) => ({
+    id: `/acme/lib-${String(i).padStart(2, "0")}`,
+    state: i === 3 ? "error" : i === 4 ? "processing" : "complete",
+    benchmarkScore: i % 2 ? 90 - i : undefined,
+  }));
+  apiReply = () => ({ body: { libraries } });
+  const client = await connect();
+  const list = async (args: Record<string, unknown>) =>
+    JSON.parse(
+      text(await client.callTool({ name: "list_libraries", arguments: { teamspace: TS, ...args } }))
+    );
+
+  const first = await list({});
+  expect(first).toMatchObject({ total: 55, page: 1, pages: 2, parsing: 1, failed: 1 });
+  expect(first.libraries).toHaveLength(50);
+  expect(first.libraries[0].id).toBe("/acme/lib-00");
+
+  const lowest = await list({ order: "lowest" });
+  expect(lowest.libraries.slice(0, 2).map((l: { id: string }) => l.id)).toEqual([
+    "/acme/lib-53",
+    "/acme/lib-51",
+  ]);
+  expect((await list({ order: "lowest", page: 2 })).libraries.at(-1).benchmarkScore).toBe(
+    undefined
+  );
+
+  expect(await list({ search: "LIB-4" })).toMatchObject({ total: 10, pages: 1 });
+});
+
 test("the server card and serverInfo carry the Context7 icon", async () => {
   const { default: card } = await import("../api/server-card.js");
   const body = await (

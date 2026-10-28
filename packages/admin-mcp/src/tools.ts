@@ -118,6 +118,15 @@ const wait = z
  */
 /** Sites per docs7_list_sites page: one site is ~300 characters, so 50 stay far below the result cap. */
 const SITES_PAGE = 50;
+/** Libraries per list_libraries page: one is up to ~1,000 characters with its description. */
+const LIBRARIES_PAGE = 50;
+
+/** One page of a list, and how many items and pages there are in all. */
+function pageOf<T>(all: T[], page: number, size: number) {
+  const pages = Math.max(1, Math.ceil(all.length / size));
+  if (page > pages) throw new ToolError(`Page ${page} is past the last page (${pages}).`);
+  return { total: all.length, page, pages, items: all.slice((page - 1) * size, page * size) };
+}
 
 function siteSummary(site: Record<string, unknown>): Record<string, unknown> {
   const review = site.pullRequestReview as { enabled?: unknown } | undefined;
@@ -543,10 +552,54 @@ export const TOOLS: ToolDef[] = [
   tool({
     name: "list_libraries",
     title: "List libraries",
-    description: "List the private and owned libraries of the teamspace, with their parse state.",
+    description: `List the private and owned libraries of the teamspace, ${LIBRARIES_PAGE} per page, with their parse state and benchmark score. \`total\` counts every match and \`parsing\` and \`failed\` count their states; pass \`page\` for the next ones, \`search\` to find a library by id, title or source URL, and \`order: "lowest"\` for the lowest benchmark scores first.`,
     kind: "read",
-    args: {},
-    run: ({ teamspace }, api) => api.get(`${ts(teamspace)}/libraries`),
+    args: {
+      search: z
+        .string()
+        .max(200)
+        .optional()
+        .describe("Part of the library's id, title or source URL."),
+      order: z
+        .enum(["name", "lowest"])
+        .optional()
+        .describe("Default name. lowest: lowest benchmark score first, unscored last."),
+      page: z.number().int().min(1).optional().describe("Default 1."),
+    },
+    run: async ({ teamspace, search, order = "name", page = 1 }, api) => {
+      const { libraries = [] } = (await api.get(`${ts(teamspace)}/libraries`)) as {
+        libraries?: {
+          id: string;
+          title?: string;
+          sourceUrl?: string;
+          state?: string;
+          benchmarkScore?: number;
+        }[];
+      };
+      const needle = search?.trim().toLowerCase();
+      const name = (library: (typeof libraries)[number]) => library.title ?? library.id;
+      const all = libraries
+        .filter(
+          (library) =>
+            !needle ||
+            [library.id, library.title, library.sourceUrl].some((value) =>
+              value?.toLowerCase().includes(needle)
+            )
+        )
+        .sort((a, b) =>
+          order === "lowest"
+            ? (a.benchmarkScore ?? 101) - (b.benchmarkScore ?? 101) ||
+              name(a).localeCompare(name(b))
+            : name(a).localeCompare(name(b))
+        );
+      const { items, ...paging } = pageOf(all, page, LIBRARIES_PAGE);
+      return {
+        ...paging,
+        parsing: all.filter((l) => l.state === "processing" || l.state === "finalizing").length,
+        failed: all.filter((l) => l.state === "error").length,
+        libraries: items,
+      };
+    },
   }),
   tool({
     name: "get_library",
@@ -1153,15 +1206,11 @@ export const TOOLS: ToolDef[] = [
             (value) => typeof value === "string" && value.toLowerCase().includes(needle)
           )
       );
-      const pages = Math.max(1, Math.ceil(all.length / SITES_PAGE));
-      if (page > pages) throw new ToolError(`Page ${page} is past the last page (${pages}).`);
-      const shown = all.slice((page - 1) * SITES_PAGE, page * SITES_PAGE);
+      const { items, ...paging } = pageOf(all, page, SITES_PAGE);
       return {
-        total: all.length,
-        page,
-        pages,
-        sites: shown.filter((entry) => !entry.cli).map((entry) => entry.site),
-        cliSites: shown.filter((entry) => entry.cli).map((entry) => entry.site),
+        ...paging,
+        sites: items.filter((entry) => !entry.cli).map((entry) => entry.site),
+        cliSites: items.filter((entry) => entry.cli).map((entry) => entry.site),
       };
     },
   }),

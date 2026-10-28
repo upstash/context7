@@ -87,6 +87,16 @@ export type Library = {
   benchmarkScore?: number;
 };
 
+/** list_libraries: one page (50), sorted; the counts cover every match. */
+export type LibraryList = {
+  total: number;
+  page: number;
+  pages: number;
+  parsing: number;
+  failed: number;
+  libraries: Library[];
+};
+
 export type Benchmarks = {
   stats: {
     count: number;
