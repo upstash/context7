@@ -1,0 +1,10 @@
+interface:
+  display_name: "Set up Context7 Admin"
+  short_description: "Sign in, pick a teamspace, see what is there"
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "context7-admin"
+      description: "Context7 Admin MCP server"
+      transport: "streamable_http"
+      url: "https://admin.mcp.context7.com/mcp"

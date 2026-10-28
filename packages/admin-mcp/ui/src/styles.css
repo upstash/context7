@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+/* The host sets data-theme (MCP Apps hostContext.theme); dark: follows it. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+/* Touch screens get 44px targets (Claude's minimum); pointers keep the compact size. */
+@custom-variant coarse (@media (pointer: coarse));
+
+/*
+ * Context7's dashboard look on the host's theme (Claude and OpenAI app design
+ * guidelines): backgrounds, text, borders, radii and the font come from the
+ * host's MCP Apps style variables, and Context7's own values (context7app
+ * globals.css: stone grays) are only the fallback for hosts that send none.
+ * Emerald stays as the brand accent: primary buttons, the active tab, charts.
+ */
+:root {
+  color-scheme: light;
+  --c7-page: var(--color-background-tertiary, #fafaf9);
+  --c7-bg: var(--color-background-primary, #ffffff);
+  --c7-surface: var(--color-background-secondary, #f5f5f4);
+  --c7-inverse: var(--color-background-inverse, #1c1917);
+  --c7-on-inverse: var(--color-text-inverse, #fafaf9);
+  --c7-fg: var(--color-text-primary, #292524);
+  --c7-fg-2: var(--color-text-secondary, #57534e);
+  --c7-fg-3: var(--color-text-tertiary, #78716c);
+  /* The lighter host borders first: a primary border is strong ink in some hosts (Claude: 40%). */
+  --c7-line: var(--color-border-tertiary, var(--color-border-secondary, #e7e5e4));
+  --c7-divider: var(--c7-line);
+  --c7-good: var(--color-text-success, #047857);
+  --c7-bad: var(--color-text-danger, #b91c1c);
+  --c7-warn: var(--color-text-warning, #b45309);
+  --c7-accent: #059669; /* emerald-600: primary buttons */
+  --c7-accent-text: #047857; /* emerald-700: active tab, links */
+  --c7-accent-soft: #ecfdf5;
+  --c7-accent-soft-hover: #d1fae5;
+  --c7-accent-line: #a7f3d0;
+  --c7-series-1: #10b981;
+  --c7-series-2: #6ee7b7;
+  --c7-score-good: #10b981;
+  --c7-score-warn: #f59e0b;
+  --c7-score-bad: #ef4444;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --c7-page: var(--color-background-tertiary, #0c0a09);
+  --c7-bg: var(--color-background-primary, #1c1917);
+  --c7-surface: var(--color-background-secondary, #292524);
+  --c7-inverse: var(--color-background-inverse, #f5f5f4);
+  --c7-on-inverse: var(--color-text-inverse, #1c1917);
+  --c7-fg: var(--color-text-primary, #e7e5e4);
+  --c7-fg-2: var(--color-text-secondary, #d6d3d1);
+  --c7-fg-3: var(--color-text-tertiary, #a8a29e);
+  --c7-line: var(--color-border-tertiary, var(--color-border-secondary, #292524));
+  --c7-good: var(--color-text-success, #34d399);
+  --c7-bad: var(--color-text-danger, #f87171);
+  --c7-warn: var(--color-text-warning, #f59e0b);
+  --c7-accent: #059669;
+  --c7-accent-text: #34d399;
+  --c7-accent-soft: #022c22;
+  --c7-accent-soft-hover: #064e3b;
+  --c7-accent-line: #065f46;
+  --c7-series-1: #10b981;
+  --c7-series-2: #047857;
+  --c7-score-good: #10b981;
+  --c7-score-warn: #f59e0b;
+  --c7-score-bad: #ef4444;
+}
+
+@theme inline {
+  --color-page: var(--c7-page);
+  --color-bg: var(--c7-bg);
+  --color-surface: var(--c7-surface);
+  --color-inverse: var(--c7-inverse);
+  --color-on-inverse: var(--c7-on-inverse);
+  --color-fg: var(--c7-fg);
+  --color-fg-2: var(--c7-fg-2);
+  --color-fg-3: var(--c7-fg-3);
+  --color-line: var(--c7-line);
+  --color-divider: var(--c7-divider);
+  --color-good: var(--c7-good);
+  --color-bad: var(--c7-bad);
+  --color-warn: var(--c7-warn);
+  --color-accent: var(--c7-accent);
+  --color-accent-text: var(--c7-accent-text);
+  --color-accent-soft: var(--c7-accent-soft);
+  --color-accent-soft-hover: var(--c7-accent-soft-hover);
+  --color-accent-line: var(--c7-accent-line);
+  --color-series-1: var(--c7-series-1);
+  --color-series-2: var(--c7-series-2);
+  --color-score-good: var(--c7-score-good);
+  --color-score-warn: var(--c7-score-warn);
+  --color-score-bad: var(--c7-score-bad);
+  /* The host's radii, else the dashboard's (--radius 0.5rem; cards rounded-3xl). */
+  --radius-sm: var(--border-radius-sm, 4px);
+  --radius-md: var(--border-radius-md, 6px);
+  --radius-lg: var(--border-radius-lg, 8px);
+  --radius-xl: var(--border-radius-xl, 12px);
+  --radius-3xl: var(--border-radius-xl, 24px);
+}
+
+@layer base {
+  html {
+    /* Inter as on context7.com where it is installed, else the system font (no web fonts in an app). */
+    font-family:
+      Inter,
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      "Segoe UI",
+      sans-serif;
+    font-feature-settings:
+      "liga" 1,
+      "calt" 1;
+    font-size: 14px;
+    line-height: 1.45;
+    background: var(--c7-page);
+    color: var(--c7-fg);
+    -webkit-font-smoothing: antialiased;
+    text-size-adjust: 100%;
+  }
+  /* Inline the frame follows the content and never scrolls inside; fullscreen fills the host. */
+  html[data-display="inline"],
+  html[data-display="inline"] body {
+    overflow: hidden;
+    background: var(--c7-bg);
+  }
+  html[data-display="full"],
+  html[data-display="full"] body,
+  html[data-display="full"] #root {
+    height: 100%;
+  }
+  body {
+    /* hostContext.safeAreaInsets, set by host.ts: nothing interactive flush against an edge. */
+    padding: var(--safe-top, 0) var(--safe-right, 0) var(--safe-bottom, 0) var(--safe-left, 0);
+  }
+  * {
+    border-color: var(--c7-line);
+  }
+  ::selection {
+    background: var(--c7-accent-soft-hover);
+  }
+  /* ChatGPT Desktop's "default" or "pointer" cursor setting for controls, else a hand. */
+  button:not(:disabled),
+  [role="tab"],
+  [role="radio"],
+  summary {
+    cursor: var(--cursor-interaction, pointer);
+  }
+  :focus-visible {
+    outline: 2px solid var(--c7-accent-text);
+    outline-offset: 2px;
+  }
+}
+
+@utility hairline {
+  border-width: 1px;
+}
+
+@utility skeleton {
+  border-radius: 6px;
+  background: var(--c7-surface);
+  animation: pulse 1.6s ease-in-out infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}

@@ -1,0 +1,10 @@
+interface:
+  display_name: "Improve docs from Context7"
+  short_description: "Fix doc gaps from benchmarks, searches and Ask"
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "context7-admin"
+      description: "Context7 Admin MCP server"
+      transport: "streamable_http"
+      url: "https://admin.mcp.context7.com/mcp"

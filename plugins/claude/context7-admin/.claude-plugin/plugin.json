@@ -1,0 +1,14 @@
+{
+  "name": "context7-admin",
+  "version": "0.1.0",
+  "description": "Manage Context7 from Claude: teamspace usage and spend, libraries and their benchmark scores, Docs7 sites and their builds, and Ask sites, with a console view in clients that show MCP Apps.",
+  "author": {
+    "name": "Upstash",
+    "email": "context7@upstash.com",
+    "url": "https://upstash.com"
+  },
+  "homepage": "https://admin.mcp.context7.com",
+  "repository": "https://github.com/upstash/context7",
+  "license": "MIT",
+  "keywords": ["context7", "docs7", "documentation", "mcp", "admin"]
+}

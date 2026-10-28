@@ -10,3 +10,8 @@ dist
 # Environment files
 .env
 .env.*
+
+# Generated UI build
+ui/dist
+ui/demo/dist
+src/ui/console-html.ts

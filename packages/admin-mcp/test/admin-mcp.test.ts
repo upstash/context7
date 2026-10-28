@@ -398,6 +398,38 @@ test("docs7_list_sites keeps what an agent needs and drops internal ids", async 
   expect(result.cliSites[0]).toMatchObject({ id: "c-1", name: "CLI docs" });
 });
 
+// A teamspace can hold hundreds of sites: the whole list would pass the result cap and be cut.
+test("docs7_list_sites pages and searches across GitHub and CLI sites", async () => {
+  const github = Array.from({ length: 60 }, (_, i) => ({
+    id: `s-${i}`,
+    repoUrl: `https://github.com/acme/docs-${i}`,
+  }));
+  apiReply = () => ({
+    body: { data: github, localSites: [{ id: "c-1", name: "Payments CLI docs" }] },
+  });
+  const client = await connect();
+  const list = async (args: Record<string, unknown>) =>
+    JSON.parse(
+      text(
+        await client.callTool({ name: "docs7_list_sites", arguments: { teamspace: TS, ...args } })
+      )
+    );
+
+  const first = await list({});
+  expect(first).toMatchObject({ total: 61, page: 1, pages: 2 });
+  expect(first.sites).toHaveLength(50);
+  expect(first.cliSites).toEqual([]);
+
+  const second = await list({ page: 2 });
+  expect(second.sites.map((site: { id: string }) => site.id)).toEqual(
+    github.slice(50).map((site) => site.id)
+  );
+  expect(second.cliSites).toEqual([{ id: "c-1", name: "Payments CLI docs" }]);
+
+  const found = await list({ search: "PAYMENTS" });
+  expect(found).toMatchObject({ total: 1, sites: [], cliSites: [{ id: "c-1" }] });
+});
+
 test("the server card and serverInfo carry the Context7 icon", async () => {
   const { default: card } = await import("../api/server-card.js");
   const body = await (
@@ -637,3 +669,30 @@ test("docs7_get_site of a site without hosting adds its migration stage, best ef
   expect(text(result)).toContain('"migration":{"stage":"migrate"}');
   expect(text(result)).not.toContain("analyticsScript");
 });
+
+// The console MCP App: declared on every protocol era (a stateless legacy
+// request never sees the client's capabilities), and kept to read tools.
+test.each(["modern", "legacy"] as const)(
+  "open_console links the console page and the page can call read tools only (%s)",
+  async (era) => {
+    const client = await connect(era);
+    const { tools } = await client.listTools();
+    const meta = (name: string) =>
+      tools.find((t) => t.name === name)?._meta as
+        { ui?: { resourceUri?: string; visibility?: string[] } } | undefined;
+
+    const uri = meta("open_console")?.ui?.resourceUri;
+    expect(uri).toBe("ui://context7/console");
+    expect(tools.find((t) => t.name === "open_console")?._meta?.["openai/ui"]).toMatchObject({
+      entrypoints: [{ type: "global" }, { type: "thread" }],
+    });
+    expect(meta("get_teamspace_usage")?.ui?.visibility).toBeUndefined();
+    for (const name of ["manage_members", "remove_library", "set_spending_limit", "docs7_deploy"]) {
+      expect(meta(name)?.ui?.visibility).toEqual(["model"]);
+    }
+
+    const { contents } = await client.readResource({ uri: uri! });
+    expect(contents[0]).toMatchObject({ uri, mimeType: "text/html;profile=mcp-app" });
+    expect((contents[0] as { text: string }).text).toContain("<html");
+  }
+);

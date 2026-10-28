@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Context7 console · demo host</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #faf9f5;
+        --fg: #141413;
+        --muted: #73726c;
+        --panel: #fff;
+        --border: #e5e3da;
+      }
+      :root[data-theme="dark"] {
+        color-scheme: dark;
+        --bg: #1f1e1d;
+        --fg: #faf9f5;
+        --muted: #9c9a92;
+        --panel: #30302e;
+        --border: #3d3d3a;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          13px/1.45 system-ui,
+          sans-serif;
+      }
+      header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 14px;
+        border-bottom: 1px solid var(--border);
+      }
+      header b {
+        font-weight: 600;
+      }
+      header span {
+        color: var(--muted);
+      }
+      header label {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        color: var(--muted);
+      }
+      header label:first-of-type {
+        margin-left: auto;
+      }
+      select {
+        font: inherit;
+        color: inherit;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 2px 6px;
+      }
+      main {
+        flex: 1;
+        display: flex;
+        min-height: 0;
+        gap: 12px;
+        padding: 12px;
+      }
+      .frame {
+        flex: 1;
+        min-width: 0;
+        overflow: auto;
+        display: flex;
+        justify-content: center;
+      }
+      .chat {
+        width: 100%;
+        max-width: var(--chat-width, 100%);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .bubble {
+        align-self: flex-end;
+        max-width: 80%;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 8px 12px;
+      }
+      .reply {
+        color: var(--muted);
+        padding: 0 4px;
+      }
+      iframe {
+        width: 100%;
+        border: 0;
+        display: block;
+        background: transparent;
+      }
+      body[data-display="fullscreen"] .bubble,
+      body[data-display="fullscreen"] .reply {
+        display: none;
+      }
+      body[data-display="fullscreen"] .chat {
+        height: 100%;
+      }
+      body[data-display="fullscreen"] iframe {
+        height: 100%;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+      }
+      body[data-display="inline"] .frame {
+        padding: 16px 4px;
+      }
+      body[data-display="inline"] iframe {
+        height: 120px;
+        border: 0.5px solid var(--border);
+        border-radius: 14px;
+        overflow: hidden;
+        flex-shrink: 0;
+      }
+      aside {
+        width: 300px;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: var(--panel);
+        overflow: hidden;
+      }
+      aside h2 {
+        margin: 0;
+        padding: 10px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        border-bottom: 1px solid var(--border);
+      }
+      #log {
+        flex: 1;
+        overflow: auto;
+      }
+      .entry {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border);
+        font-size: 12px;
+        word-break: break-word;
+      }
+      .kind {
+        color: var(--muted);
+        font-size: 11px;
+        margin-bottom: 2px;
+      }
+      @media (max-width: 900px) {
+        aside {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <b>Context7 console</b><span>demo host · fake data, nothing leaves this page</span>
+      <label
+        >Theme
+        <select id="theme">
+          <option value="light">light</option>
+          <option value="dark">dark</option>
+        </select></label
+      >
+      <label
+        >Display
+        <select id="display">
+          <option value="inline">inline (chat)</option>
+          <option value="fullscreen">fullscreen</option>
+          <option value="inline-only">inline, no fullscreen</option>
+        </select></label
+      >
+      <label
+        >Width
+        <select id="width">
+          <option value="">full</option>
+          <option value="760">chat 760</option>
+          <option value="380">phone 380</option>
+        </select></label
+      >
+      <label
+        >Host tokens
+        <select id="tokens">
+          <option value="claude">Claude</option>
+          <option value="none">none</option>
+        </select></label
+      >
+      <label
+        >Opened on
+        <select id="view">
+          <option value="">(no view)</option>
+          <option value="usage">usage</option>
+          <option value="libraries">libraries</option>
+          <option value="docs7">docs7</option>
+          <option value="ask">ask</option>
+        </select></label
+      >
+    </header>
+    <main>
+      <div class="frame">
+        <div class="chat">
+          <div class="bubble">Show my Context7 console</div>
+          <iframe id="app" sandbox="allow-scripts allow-popups" title="Context7 console"></iframe>
+          <div class="reply">
+            Here is your teamspace at a glance. Open the console for the details.
+          </div>
+        </div>
+      </div>
+      <aside>
+        <h2>Tool calls, model context and chat messages</h2>
+        <div id="log"></div>
+      </aside>
+    </main>
+    <script type="module" src="./host.ts"></script>
+  </body>
+</html>
