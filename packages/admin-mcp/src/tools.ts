@@ -516,7 +516,7 @@ export const TOOLS: ToolDef[] = [
     name: "get_library",
     title: "Get library",
     description:
-      "Get one library: parse state (processing, finalizing, complete, error), the active task's progress, versions, token and snippet counts, and its benchmark score (0 to 100). After add_library, refresh_library or manage_library_versions, call it with `wait: true` until the state is complete or error.",
+      "Get one library: parse state (processing, finalizing, complete, error), the active task's progress, versions, token and snippet counts, its benchmark score (0 to 100) and, for a library the teamspace owns, its current owner settings (`config`, what update_library_config changes). After add_library, refresh_library or manage_library_versions, call it with `wait: true` until the state is complete or error.",
     kind: "read",
     args: { library_id: libraryId, wait },
     run: ({ teamspace, library_id, wait }, api) => {
@@ -604,6 +604,10 @@ export const TOOLS: ToolDef[] = [
         .optional()
         .describe("Keep pages that look specific to one version."),
       stop_indexing: z.boolean().optional().describe("Stop indexing the library."),
+      generate_docs: z
+        .boolean()
+        .optional()
+        .describe("Private repositories: generate docs from the source code."),
       config_source: z
         .enum(["dashboard", "context7json"])
         .optional()
@@ -624,6 +628,7 @@ export const TOOLS: ToolDef[] = [
         useQueryParams: fields.use_query_params,
         skipClaudeVersionExclusion: fields.keep_version_specific_pages,
         disallow: fields.stop_indexing,
+        generateDocs: fields.generate_docs,
         configSource: fields.config_source,
       }),
   }),
