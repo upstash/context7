@@ -134,7 +134,7 @@ The Example Check Agent runs the TypeScript, JavaScript, and Python code example
 
 Select **Edit**, then open the variables in the Example Check Agent row and add the environment variables your code examples read, for example `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. To add many at once, paste the contents of a `.env` file into any field: each line becomes one variable.
 
-Docs7 encrypts every value and never shows it again. A URL goes into the sandbox where the code runs. Any other value is a secret and never enters the sandbox: Docs7 sends it as `Authorization: Bearer <value>` only in HTTPS requests to the host of the variable with the same name up to the last `_`, followed by `URL`. For example, `UPSTASH_REDIS_REST_TOKEN` is sent to the host of `UPSTASH_REDIS_REST_URL`. If you change that URL to another host, enter the secret again. The code in the sandbox reads a placeholder and can reach only package registries and the hosts of your URL variables.
+Docs7 encrypts every value and never shows it again. A URL goes into the sandbox where the code runs. Any other value is a secret and never enters the sandbox: Docs7 sends it as `Authorization: Bearer <value>` only in HTTPS requests to the host in its **Sent to** field. For a secret such as `UPSTASH_REDIS_REST_TOKEN`, the dialog suggests the host of `UPSTASH_REDIS_REST_URL`. A key that your SDK sends to a fixed address needs only that host, for example `context7.com` for `CONTEXT7_API_KEY`. If you change the host of a saved secret, enter the secret again. The code in the sandbox reads a placeholder and can reach only package registries and the hosts of your variables.
 
 <Warning>
 Use test credentials. Code examples write and delete data, for example the keys in a Redis database. The agent deletes what its tests create.
@@ -150,7 +150,7 @@ Each code example ends with one of these results:
 - **Failed**: the example threw an error, or its result differs from the page. If the example has a mistake, such as a wrong method name, argument, value, expected output, import, or syntax, the agent fixes it and runs it again. If the page documents the API correctly but the released SDK or the service does not support it yet, the agent removes the example from the page and comments on it in the pull request, so you can restore it after that release.
 - **Skipped**: the example needs a service with no variable, connects over TCP (for example ioredis, node-redis, or redis-py with a `redis://` URL), is not a complete program, or is a whole framework app such as a Next.js route.
 
-When examples are skipped because a variable is missing, the variables dialog lists the variables they need and how many examples wait for each. Add them, and Docs7 checks those examples again right away, without waiting for the next month.
+When examples are skipped because a variable is missing, the variables dialog lists the variables they need and how many examples wait for them. Variables on one line are needed together: those examples run only when all of them are set. Add them, and Docs7 checks those examples again right away, without waiting for the next month.
 
 All changes of a check go into one pull request. Its description lists every failed example of the check: the ones the agent fixed, the ones it removed, and the ones it could not fix. A check with no change opens no pull request. The next check waits until this pull request is merged or closed. The **Activity** card shows each check as one row.
 
