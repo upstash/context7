@@ -75,9 +75,12 @@ export function DailyBars({
 
   return (
     <div>
-      <div className="mb-2 flex min-h-5 flex-wrap items-baseline gap-x-4 gap-y-1 text-xs text-fg-3">
+      <div
+        aria-live="polite"
+        className="mb-2 flex min-h-5 flex-wrap items-baseline gap-x-4 gap-y-1 text-xs text-fg-3"
+      >
         <span className="font-medium text-fg-2 tabular-nums">
-          {point ? dayLabel(point.date) : `${n} days`}
+          {point ? dayLabel(point.date) : `${n} ${points[0]?.date.length > 10 ? "hours" : "days"}`}
         </span>
         {series.map((s, i) => (
           <span key={s.name} className="flex items-center gap-1.5">

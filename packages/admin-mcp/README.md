@@ -88,7 +88,7 @@ The server runs on Vercel as Web-standard functions (`api/`, routes in `vercel.j
 ```bash
 pnpm --filter @upstash/context7-admin-mcp build
 pnpm --filter @upstash/context7-admin-mcp test
-cd packages/admin-mcp && pnpm dev   # http://localhost:3100/mcp, no Vercel needed
+cd packages/admin-mcp && CONTEXT7_API_URL=http://localhost:3000/api pnpm dev   # http://localhost:3100/mcp; without CONTEXT7_API_URL it calls the production API
 ```
 
 `pnpm dev` serves the `vercel.json` routes from `api/`, and its OAuth metadata names `http://localhost:3100/mcp`. An OAuth token for it works only against a management API that accepts that audience (a local context7app with `ADMIN_OAUTH_ALLOWED_AUDIENCES`, reached through `CONTEXT7_API_URL`); otherwise send `Authorization: Bearer ctx7sk-…` with a key that has Management access.

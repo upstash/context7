@@ -21,7 +21,7 @@ export function useTool<T>(name: string | undefined, args: object = {}): ToolSta
   const [nonce, setNonce] = useState(0);
   useEffect(() => {
     if (!name) return;
-    if (nonce === 0 && cache.has(key)) {
+    if (cache.has(key)) {
       setState({ key, data: cache.get(key) as T });
       return;
     }
@@ -39,7 +39,11 @@ export function useTool<T>(name: string | undefined, args: object = {}): ToolSta
     };
     // `key` covers name and args.
   }, [key, nonce]);
-  const reload = useCallback(() => setNonce((n) => n + 1), []);
+  // A reload forgets this one answer, so other keys keep using the cache.
+  const reload = useCallback(() => {
+    cache.delete(key);
+    setNonce((n) => n + 1);
+  }, [key]);
   const current = state.key === key;
   return {
     data: current ? state.data : undefined,
@@ -60,29 +64,30 @@ export type Usage = {
     memberCost: number;
     apiUsageCost: number;
   }[];
+  /** The calling user's monthly allowance, in requests. */
   quotaLimit: number;
   ownerPlan: string;
   billingModel: "seat" | "payg";
-  billsUsage: boolean;
+  /** The calling user's requests this UTC month. */
+  userRequests?: number;
+  /** Requests billed this month on pay as you go. */
+  billedRequests?: number;
   creditBalance: number;
 };
 
 export type TeamspaceDetails = {
-  teamspace: { name: string; role: string; ownerPlan: string | null; docs7ProEnabled: boolean };
-  spendingLimit: { limitCents: number | null; currentSpendCents: number; canEdit: boolean };
+  /** In cents; no `limitCents` when there is no cap. */
+  spendingLimit: { limitCents?: number; currentSpendCents: number };
 };
 
 export type Library = {
   id: string;
   title?: string;
-  description?: string;
   private: boolean;
   owned: boolean;
   state: "processing" | "finalizing" | "complete" | "error";
   totalSnippets?: number;
-  totalTokens?: number;
   benchmarkScore?: number;
-  lastUpdateDate?: string;
 };
 
 export type Benchmarks = {

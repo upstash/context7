@@ -49,7 +49,7 @@ type ToolResult = {
  * fence it for the model (`formatResult` in src/server.ts):
  * a warning line, then the JSON between random `<untrusted-data-…>` tags.
  */
-export function parseToolText(text: string): unknown {
+function parseToolText(text: string): unknown {
   const fenced = /<(untrusted-data-[0-9a-f-]+)>\n([\s\S]*)\n<\/\1>/.exec(text);
   return JSON.parse(fenced ? fenced[2] : text);
 }

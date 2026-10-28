@@ -14,12 +14,13 @@ import { useTool, type TeamspaceDetails, type Usage } from "../data";
 import { fillDays, num, pct, usd } from "../format";
 import { host } from "../host";
 
-/** This UTC month's requests, every day of the window, and the spend against the cap. */
-function summarize(usage: Usage, details?: TeamspaceDetails) {
-  const month = new Date().toISOString().slice(0, 7);
-  const requests = usage.dailyStats
-    .filter((d) => d.date.startsWith(month))
-    .reduce((n, d) => n + d.searchRequests + d.fetchDocsRequests, 0);
+/**
+ * The month's numbers as the dashboard counts them (context7app StatsCard): requests are the
+ * calling user's against their monthly quota, or the billed requests on pay as you go, which has
+ * no quota. A teamspace without a spending cap has no `limitCents` (results carry no nulls).
+ */
+function summarize(usage: Usage, details: { data?: TeamspaceDetails; error?: string }) {
+  const payg = usage.billingModel === "payg";
   const days = fillDays(usage.dailyStats, (date) => ({
     date,
     searchRequests: 0,
@@ -28,7 +29,14 @@ function summarize(usage: Usage, details?: TeamspaceDetails) {
     memberCost: 0,
     apiUsageCost: 0,
   }));
-  return { requests, days, spend: details?.spendingLimit };
+  return {
+    payg,
+    requests: payg ? (usage.billedRequests ?? 0) : (usage.userRequests ?? 0),
+    quota: payg ? 0 : usage.quotaLimit,
+    spend: details.data?.spendingLimit,
+    spendFailed: Boolean(details.error),
+    days,
+  };
 }
 
 function useUsage(teamspace: string) {
@@ -47,33 +55,41 @@ export function UsageSummary({ teamspace }: { teamspace: string }) {
   return (
     <Loaded result={usage} skeleton={<MetricsSkeleton chart={false} />}>
       {(u) => {
-        const { requests, days, spend } = summarize(u, details.data);
+        const { payg, requests, quota, spend, spendFailed, days } = summarize(u, details);
         return (
           <div className="grid gap-8">
             <Metrics>
               <Metric
                 label="Spend"
                 value={
-                  spend ? usd(spend.currentSpendCents / 100) : <Skeleton className="h-6 w-16" />
+                  spend ? (
+                    usd(spend.currentSpendCents / 100)
+                  ) : spendFailed ? (
+                    "–"
+                  ) : (
+                    <Skeleton className="h-6 w-16" />
+                  )
                 }
                 hint={
                   spend &&
-                  (spend.limitCents === null ? "No cap" : `of ${usd(spend.limitCents / 100)} cap`)
+                  (spend.limitCents == null ? "No cap" : `of ${usd(spend.limitCents / 100)} cap`)
                 }
               />
               <Metric
                 label="Requests"
                 value={num(requests)}
                 hint={
-                  u.quotaLimit
-                    ? `${pct(requests, u.quotaLimit)} of ${num(u.quotaLimit)}`
-                    : undefined
+                  quota
+                    ? `Yours, ${pct(requests, quota)} of ${num(quota)}`
+                    : payg
+                      ? "Billed"
+                      : undefined
                 }
               />
               <Metric label="Credit" value={usd(u.creditBalance)} />
               <Metric label="Plan" value={planName(u)} hint={billing(u)} />
             </Metrics>
-            {spend && spend.limitCents ? (
+            {spend?.limitCents ? (
               <Meter
                 value={spend.currentSpendCents}
                 max={spend.limitCents}
@@ -101,7 +117,8 @@ export function UsagePage({ teamspace, name }: { teamspace: string; name: string
   return (
     <Loaded result={usage} skeleton={<MetricsSkeleton />}>
       {(u) => {
-        const { requests, days, spend } = summarize(u, details.data);
+        const { payg, requests, quota, spend, days } = summarize(u, details);
+        const cap = spend?.limitCents;
         return (
           <div className="grid gap-8">
             <Card title="This month">
@@ -109,51 +126,42 @@ export function UsagePage({ teamspace, name }: { teamspace: string; name: string
                 <Metric
                   label="Spend"
                   value={spend ? usd(spend.currentSpendCents / 100) : "–"}
-                  hint={
-                    spend &&
-                    (spend.limitCents === null
-                      ? "No spending cap"
-                      : `Cap ${usd(spend.limitCents / 100)}`)
-                  }
+                  hint={spend && (cap == null ? "No spending cap" : `Cap ${usd(cap / 100)}`)}
                 />
                 <Metric
                   label="Requests"
                   value={num(requests)}
                   hint={
-                    u.quotaLimit
-                      ? `Quota ${num(u.quotaLimit)}`
-                      : u.billsUsage
-                        ? "Every request billed"
-                        : undefined
+                    quota ? `Yours, quota ${num(quota)}` : payg ? "Billed, no quota" : undefined
                   }
                 />
                 <Metric label="Credit" value={usd(u.creditBalance)} />
                 <Metric label="Plan" value={planName(u)} hint={billing(u)} />
               </Metrics>
-              {(spend?.limitCents || u.quotaLimit > 0) && (
+              {(cap || quota > 0) && (
                 <div className="mt-8 grid gap-8 @lg:grid-cols-2">
-                  {spend?.limitCents ? (
+                  {cap ? (
                     <MeterRow
                       label="Spending cap"
-                      value={`${usd(spend.currentSpendCents / 100)} of ${usd(spend.limitCents / 100)}`}
+                      value={`${usd(spend!.currentSpendCents / 100)} of ${usd(cap / 100)}`}
                       meter={
                         <Meter
-                          value={spend.currentSpendCents}
-                          max={spend.limitCents}
+                          value={spend!.currentSpendCents}
+                          max={cap}
                           label="Spend against the cap"
                         />
                       }
                     />
                   ) : null}
-                  {u.quotaLimit > 0 && (
+                  {quota > 0 && (
                     <MeterRow
-                      label="Monthly quota"
-                      value={`${num(requests)} of ${num(u.quotaLimit)}`}
+                      label="Your monthly quota"
+                      value={`${num(requests)} of ${num(quota)}`}
                       meter={
                         <Meter
                           value={requests}
-                          max={u.quotaLimit}
-                          label="Requests against the quota"
+                          max={quota}
+                          label="Your requests against the quota"
                         />
                       }
                     />

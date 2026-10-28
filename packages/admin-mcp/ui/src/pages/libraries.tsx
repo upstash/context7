@@ -48,7 +48,7 @@ export function LibrariesSummary({ teamspace }: { teamspace: string }) {
                 {scored.slice(0, 4).map((library) => (
                   <li
                     key={library.id}
-                    className="flex items-center gap-3 border-t border-divider py-3 first:border-0"
+                    className="flex items-center gap-3 border-t border-line py-3 first:border-0"
                   >
                     <span className="min-w-0 flex-1 truncate text-sm">{libraryName(library)}</span>
                     <ScoreBar score={library.benchmarkScore!} />
@@ -268,7 +268,7 @@ function LibraryDetail({ teamspace, library }: { teamspace: string; library: Lib
                   <h3 className="mb-1 text-xs font-medium text-fg-3">Lowest scores</h3>
                   <ul className="grid">
                     {lowest.map((row, i) => (
-                      <li key={i} className="border-t border-divider first:border-0">
+                      <li key={i} className="border-t border-line first:border-0">
                         <details className="group">
                           <summary className="flex list-none gap-3 py-3 [&::-webkit-details-marker]:hidden">
                             <span

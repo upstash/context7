@@ -5,6 +5,7 @@ import {
   ChatButton,
   Chips,
   Empty,
+  ErrorNote,
   Loaded,
   Metric,
   Metrics,
@@ -47,6 +48,7 @@ export function AskSummary({ teamspace }: { teamspace: string }) {
     site_key: site?.siteKey,
     days: 30,
   });
+  if (sites.error) return <ErrorNote message={sites.error} onRetry={sites.reload} />;
   if (sites.data && !site) return <Empty>No Ask sites in this teamspace.</Empty>;
   return (
     <Loaded result={analytics} skeleton={<MetricsSkeleton chart={false} />}>
@@ -62,11 +64,12 @@ export function AskSummary({ teamspace }: { teamspace: string }) {
               <Metric label="Questions" value={num(total)} />
               <Metric
                 label="Unanswered"
-                value={pct(unanswered, total)}
+                value={num(unanswered)}
+                hint={total ? `${pct(unanswered, total)} of questions` : undefined}
                 tone={unanswered / Math.max(1, total) > 0.2 ? "bad" : undefined}
               />
               <Metric label="Top client" value={clientName(a.clients[0]?.client)} />
-              <Metric label="Gaps" value={num(a.gaps.length)} hint="unanswered questions" />
+              <Metric label="Clients" value={num(a.clients.length)} />
             </Metrics>
           </div>
         );
@@ -93,18 +96,12 @@ export function AskPage({ teamspace, name }: { teamspace: string; name: string }
       );
   }, [teamspace, name, site, days]);
 
-  if (sites.error || !sites.data)
+  if (sites.error) return <ErrorNote message={sites.error} onRetry={sites.reload} />;
+  if (!sites.data)
     return (
-      <Loaded
-        result={sites}
-        skeleton={
-          <Card>
-            <MetricsSkeleton />
-          </Card>
-        }
-      >
-        {() => null}
-      </Loaded>
+      <Card>
+        <MetricsSkeleton />
+      </Card>
     );
   if (!site)
     return (

@@ -39,18 +39,10 @@ export function Button({
  * language or a reply goes through the chat, not through the page (Claude and
  * OpenAI guidelines). Hidden when the host takes no messages.
  */
-export function ChatButton({
-  prompt,
-  children,
-  variant = "ghostPrimary",
-}: {
-  prompt: string;
-  children: ReactNode;
-  variant?: ButtonVariant;
-}) {
+export function ChatButton({ prompt, children }: { prompt: string; children: ReactNode }) {
   if (!host.canMessage) return null;
   return (
-    <Button variant={variant} onClick={() => void host.sendMessage(prompt)}>
+    <Button variant="ghostPrimary" onClick={() => host.sendMessage(prompt).catch(() => {})}>
       <IconMessage aria-hidden />
       {children}
     </Button>
@@ -74,7 +66,7 @@ export function Card({
     >
       {(title || action) && (
         <header className="mb-6 flex min-h-9 items-center justify-between gap-4">
-          <h2 className="text-lg font-semibold">{title}</h2>
+          <h2 className="min-w-0 text-lg font-semibold">{title}</h2>
           {action}
         </header>
       )}

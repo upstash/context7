@@ -17,14 +17,11 @@
   --c7-page: var(--color-background-tertiary, #fafaf9);
   --c7-bg: var(--color-background-primary, #ffffff);
   --c7-surface: var(--color-background-secondary, #f5f5f4);
-  --c7-inverse: var(--color-background-inverse, #1c1917);
-  --c7-on-inverse: var(--color-text-inverse, #fafaf9);
   --c7-fg: var(--color-text-primary, #292524);
   --c7-fg-2: var(--color-text-secondary, #57534e);
   --c7-fg-3: var(--color-text-tertiary, #78716c);
   /* The lighter host borders first: a primary border is strong ink in some hosts (Claude: 40%). */
   --c7-line: var(--color-border-tertiary, var(--color-border-secondary, #e7e5e4));
-  --c7-divider: var(--c7-line);
   --c7-good: var(--color-text-success, #047857);
   --c7-bad: var(--color-text-danger, #b91c1c);
   --c7-warn: var(--color-text-warning, #b45309);
@@ -44,8 +41,6 @@
   --c7-page: var(--color-background-tertiary, #0c0a09);
   --c7-bg: var(--color-background-primary, #1c1917);
   --c7-surface: var(--color-background-secondary, #292524);
-  --c7-inverse: var(--color-background-inverse, #f5f5f4);
-  --c7-on-inverse: var(--color-text-inverse, #1c1917);
   --c7-fg: var(--color-text-primary, #e7e5e4);
   --c7-fg-2: var(--color-text-secondary, #d6d3d1);
   --c7-fg-3: var(--color-text-tertiary, #a8a29e);
@@ -69,13 +64,10 @@
   --color-page: var(--c7-page);
   --color-bg: var(--c7-bg);
   --color-surface: var(--c7-surface);
-  --color-inverse: var(--c7-inverse);
-  --color-on-inverse: var(--c7-on-inverse);
   --color-fg: var(--c7-fg);
   --color-fg-2: var(--c7-fg-2);
   --color-fg-3: var(--c7-fg-3);
   --color-line: var(--c7-line);
-  --color-divider: var(--c7-divider);
   --color-good: var(--c7-good);
   --color-bad: var(--c7-bad);
   --color-warn: var(--c7-warn);
@@ -149,10 +141,6 @@
     outline: 2px solid var(--c7-accent-text);
     outline-offset: 2px;
   }
-}
-
-@utility hairline {
-  border-width: 1px;
 }
 
 @utility skeleton {

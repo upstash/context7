@@ -69,6 +69,10 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # The Admin MCP console page is committed as a built module (Vercel runs no UI build).
+      - name: Admin MCP console bundle is up to date
+        run: pnpm --filter @upstash/context7-admin-mcp build:ui && git diff --exit-code packages/admin-mcp/src/ui/console-html.ts
+
       - name: Typecheck
         run: pnpm typecheck
 

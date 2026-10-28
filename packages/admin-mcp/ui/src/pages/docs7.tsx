@@ -7,6 +7,7 @@ import {
   ChatButton,
   Chips,
   Empty,
+  ErrorNote,
   Loaded,
   Metric,
   Metrics,
@@ -29,7 +30,7 @@ import { ago, num, pct } from "../format";
 import { host } from "../host";
 
 /** docs7_list_sites: one page of sites (50), and how many match in all. */
-type Sites = { total: number; page: number; pages: number; sites: Site[]; cliSites: Site[] };
+type Sites = { total: number; sites: Site[]; cliSites: Site[] };
 
 /** Up to this many sites the page shows them all as chips; above it, a search list. */
 const CHIP_LIMIT = 6;
@@ -52,8 +53,9 @@ export function Docs7Summary({ teamspace }: { teamspace: string }) {
   const site = sites.data ? allSites(sites.data)[0] : undefined;
   const { humans, crawlers, queries } = useSiteReports(teamspace, site, 7);
   if (sites.data && !site) return <Empty>No Docs7 sites in this teamspace.</Empty>;
-  const value = <T,>(result: { data?: T }, read: (data: T) => string) =>
-    result.data ? read(result.data) : <Skeleton className="h-6 w-14" />;
+  // A report that fails (for example analytics not set up) shows "–", not an endless skeleton.
+  const value = <T,>(result: { data?: T; error?: string }, read: (data: T) => string) =>
+    result.data ? read(result.data) : result.error ? "–" : <Skeleton className="h-6 w-14" />;
   return (
     <Loaded result={sites} skeleton={<MetricsSkeleton chart={false} />}>
       {() => (
@@ -106,18 +108,12 @@ export function Docs7Page({ teamspace, name }: { teamspace: string; name: string
       );
   }, [teamspace, name, site, days]);
 
-  if (sites.error || !sites.data)
+  if (sites.error) return <ErrorNote message={sites.error} onRetry={sites.reload} />;
+  if (!sites.data)
     return (
-      <Loaded
-        result={sites}
-        skeleton={
-          <Card>
-            <MetricsSkeleton />
-          </Card>
-        }
-      >
-        {() => null}
-      </Loaded>
+      <Card>
+        <MetricsSkeleton />
+      </Card>
     );
   if (!site)
     return (
@@ -263,7 +259,7 @@ export function Docs7Page({ teamspace, name }: { teamspace: string; name: string
                 {rows.map((d) => (
                   <li
                     key={d.id}
-                    className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-divider py-2.5 first:border-0"
+                    className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line py-2.5 first:border-0"
                   >
                     <span className="w-20 shrink-0">
                       <StateLabel state={d.state} />
@@ -360,8 +356,8 @@ function SitePicker({
         </Button>
       </div>
       {open && (
-        <div className="hairline grid gap-2 rounded-lg border-line bg-bg p-2">
-          <label className="hairline flex h-8 items-center gap-2 rounded-md border-line px-2.5 coarse:h-11">
+        <div className="grid border gap-2 rounded-lg border-line bg-bg p-2">
+          <label className="flex border h-8 items-center gap-2 rounded-md border-line px-2.5 coarse:h-11">
             <IconSearch className="size-4 shrink-0 text-fg-3" aria-hidden />
             <input
               autoFocus

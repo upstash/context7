@@ -492,7 +492,11 @@ export function callTool(name: string, args: Args): string {
     case "get_teamspace":
       return JSON.stringify({
         teamspace: TEAMSPACES.find((t) => t.id === teamspace) ?? TEAMSPACES[0],
-        spendingLimit: { limitCents: 20_000, currentSpendCents: 14_620, canEdit: true },
+        // The server drops null fields: a teamspace with no cap (Agency) has no limitCents.
+        spendingLimit:
+          teamspace === TEAMSPACES[2]!.id
+            ? { currentSpendCents: 0, canEdit: true }
+            : { limitCents: 20_000, currentSpendCents: 14_620, canEdit: true },
       });
     case "get_teamspace_usage":
       return JSON.stringify(usage());

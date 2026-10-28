@@ -430,8 +430,21 @@ export const TOOLS: ToolDef[] = [
       teamspace: z.string().optional().describe("Teamspace id or name to open on."),
     },
     run: async ({ view, teamspace }, api) => {
-      const { teamspaces = [] } = (await api.get("/v2/teamspaces")) as { teamspaces?: unknown[] };
-      return { teamspaces, open: { view, teamspace } };
+      const { teamspaces = [] } = (await api.get("/v2/teamspaces")) as {
+        teamspaces?: { id: string; name: string; isPersonal?: boolean }[];
+      };
+      // A named teamspace must exist: opening another one would show the user the wrong numbers.
+      const wanted = teamspace?.trim().toLowerCase();
+      const match = wanted
+        ? teamspaces.find((t) => t.id === teamspace?.trim() || t.name.toLowerCase() === wanted)
+        : undefined;
+      if (wanted && !match) {
+        const choices = teamspaces.map((t) => `${t.name} = ${t.id}`).join("; ");
+        throw new ToolError(
+          `No teamspace "${teamspace}". Pass \`teamspace\` as one of: ${choices || "none found"}.`
+        );
+      }
+      return { teamspaces, open: { view, teamspace: match?.id } };
     },
   }),
   tool({
@@ -1139,11 +1152,13 @@ export const TOOLS: ToolDef[] = [
             (value) => typeof value === "string" && value.toLowerCase().includes(needle)
           )
       );
+      const pages = Math.max(1, Math.ceil(all.length / SITES_PAGE));
+      if (page > pages) throw new ToolError(`Page ${page} is past the last page (${pages}).`);
       const shown = all.slice((page - 1) * SITES_PAGE, page * SITES_PAGE);
       return {
         total: all.length,
         page,
-        pages: Math.max(1, Math.ceil(all.length / SITES_PAGE)),
+        pages,
         sites: shown.filter((entry) => !entry.cli).map((entry) => entry.site),
         cliSites: shown.filter((entry) => entry.cli).map((entry) => entry.site),
       };

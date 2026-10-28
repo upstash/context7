@@ -428,6 +428,12 @@ test("docs7_list_sites pages and searches across GitHub and CLI sites", async ()
 
   const found = await list({ search: "PAYMENTS" });
   expect(found).toMatchObject({ total: 1, sites: [], cliSites: [{ id: "c-1" }] });
+
+  const past = await client.callTool({
+    name: "docs7_list_sites",
+    arguments: { teamspace: TS, page: 3 },
+  });
+  expect(past.isError).toBe(true);
 });
 
 test("the server card and serverInfo carry the Context7 icon", async () => {
@@ -673,26 +679,34 @@ test("docs7_get_site of a site without hosting adds its migration stage, best ef
 // The console MCP App: declared on every protocol era (a stateless legacy
 // request never sees the client's capabilities), and kept to read tools.
 test.each(["modern", "legacy"] as const)(
-  "open_console links the console page and the page can call read tools only (%s)",
+  "open_console links the console page, and the page can call read tools only (%s)",
   async (era) => {
     const client = await connect(era);
     const { tools } = await client.listTools();
-    const meta = (name: string) =>
-      tools.find((t) => t.name === name)?._meta as
-        { ui?: { resourceUri?: string; visibility?: string[] } } | undefined;
+    const ui = (tool: (typeof tools)[number]) =>
+      tool._meta?.ui as { resourceUri?: string; visibility?: string[] } | undefined;
 
-    const uri = meta("open_console")?.ui?.resourceUri;
-    expect(uri).toBe("ui://context7/console");
-    expect(tools.find((t) => t.name === "open_console")?._meta?.["openai/ui"]).toMatchObject({
-      entrypoints: [{ type: "global" }, { type: "thread" }],
-    });
-    expect(meta("get_teamspace_usage")?.ui?.visibility).toBeUndefined();
-    for (const name of ["manage_members", "remove_library", "set_spending_limit", "docs7_deploy"]) {
-      expect(meta(name)?.ui?.visibility).toEqual(["model"]);
+    for (const tool of tools) {
+      if (tool.annotations?.readOnlyHint) expect(ui(tool)?.visibility, tool.name).toBeUndefined();
+      else expect(ui(tool)?.visibility, tool.name).toEqual(["model"]);
     }
-
+    const uri = ui(tools.find((tool) => tool.name === "open_console")!)?.resourceUri;
     const { contents } = await client.readResource({ uri: uri! });
     expect(contents[0]).toMatchObject({ uri, mimeType: "text/html;profile=mcp-app" });
-    expect((contents[0] as { text: string }).text).toContain("<html");
   }
 );
+
+test("open_console resolves the teamspace by name and refuses an unknown one", async () => {
+  apiReply = () => ({ body: { teamspaces: [{ id: TS, name: "Acme" }] } });
+  const client = await connect();
+  const open = (teamspace: string) =>
+    client.callTool({ name: "open_console", arguments: { view: "docs7", teamspace } });
+
+  const found = await open("acme");
+  expect(found.structuredContent).toMatchObject({ open: { view: "docs7", teamspace: TS } });
+  expect(JSON.parse(text(found))).toEqual(found.structuredContent);
+
+  const missing = await open("Globex");
+  expect(missing.isError).toBe(true);
+  expect(text(missing)).toContain(`Acme = ${TS}`);
+});

@@ -97,28 +97,36 @@ export function App() {
   useSyncExternalStore(host.subscribe, () => host.context);
   const [ready, setReady] = useState(false);
   const [view, setView] = useState<View>("usage");
-  const [teamspaceId, setTeamspaceId] = useState<string>();
+  // The user's pick, kept with the open_console call it was made under: a new call resets it.
+  const [picked, setPicked] = useState<{ id: string; under?: object }>();
+  const [noCall, setNoCall] = useState(false);
   const { open } = host.opened;
 
   useEffect(() => {
     void host.connect().then(() => setReady(true));
   }, []);
 
-  // ChatGPT's sidebar and side-panel entrypoints open the page with no call first.
+  // ChatGPT's sidebar and side-panel entrypoints open the page with no call first. After a call,
+  // its input arrives right after the handshake; list the teamspaces only when none came.
+  useEffect(() => {
+    if (!ready) return;
+    const timer = setTimeout(() => setNoCall(!host.opened.open && !host.opened.teamspaces), 800);
+    return () => clearTimeout(timer);
+  }, [ready]);
   const listed = useTool<{ teamspaces: Teamspace[] }>(
-    ready && !host.opened.teamspaces ? "list_teamspaces" : undefined
+    noCall && !host.opened.teamspaces ? "list_teamspaces" : undefined
   );
   const teamspaces = host.opened.teamspaces ?? listed.data?.teamspaces;
 
-  // A new open_console call moves the page to the view and teamspace it names.
+  // A new open_console call moves the page to the view it names.
   useEffect(() => {
     if (open?.view) setView(open.view);
   }, [open]);
-  useEffect(() => {
-    if (teamspaces) setTeamspaceId(pickTeamspace(teamspaces, open?.teamspace)?.id);
-  }, [teamspaces, open]);
 
-  const teamspace = teamspaces?.find((t) => t.id === teamspaceId);
+  const teamspace = teamspaces
+    ? ((picked?.under === open ? teamspaces.find((t) => t.id === picked?.id) : undefined) ??
+      pickTeamspace(teamspaces, open?.teamspace))
+    : undefined;
   const full = host.fullscreen || !host.canFullscreen;
 
   if (listed.error && !teamspaces)
@@ -136,7 +144,7 @@ export function App() {
       onView={setView}
       teamspace={teamspace}
       teamspaces={teamspaces}
-      onTeamspace={setTeamspaceId}
+      onTeamspace={(id) => setPicked({ id, under: open })}
     />
   ) : (
     <InlineCard view={view} teamspace={teamspace} />
@@ -165,7 +173,10 @@ function InlineCard({ view, teamspace }: { view: View; teamspace: Teamspace }) {
       </header>
       <page.Summary teamspace={teamspace.id} />
       <footer className="flex flex-wrap gap-2">
-        <Button variant="primary" onClick={() => void host.requestDisplayMode("fullscreen")}>
+        <Button
+          variant="primary"
+          onClick={() => host.requestDisplayMode("fullscreen").catch(() => {})}
+        >
           <IconMaximize aria-hidden />
           Open console
         </Button>
@@ -211,10 +222,15 @@ function TeamspaceMenu({
     "flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-base font-medium text-fg coarse:py-3";
 
   return (
-    <div className="relative">
+    <div
+      className="relative"
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
+      }}
+    >
       <button
         ref={trigger}
-        aria-haspopup="menu"
+        aria-label={`Teamspace: ${teamspace.name}`}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className="flex h-10 min-w-0 items-center gap-2 rounded-lg border border-line px-3 text-base font-medium text-fg hover:border-stone-400 dark:hover:border-stone-500 @2xl:min-w-[196px]"
@@ -226,15 +242,14 @@ function TeamspaceMenu({
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} aria-hidden />
           <div
-            role="menu"
+            role="group"
             aria-label="Teamspaces"
             className="absolute left-0 z-50 mt-2 max-h-[min(420px,70vh)] w-[280px] overflow-y-auto rounded-xl border border-line bg-bg p-2 shadow-xl"
           >
             {ordered.map((t) => (
               <button
                 key={t.id}
-                role="menuitemradio"
-                aria-checked={t.id === teamspace.id}
+                aria-pressed={t.id === teamspace.id}
                 onClick={() => {
                   onTeamspace(t.id);
                   setOpen(false);
@@ -249,7 +264,6 @@ function TeamspaceMenu({
               <div className="border-b border-line" />
             </div>
             <button
-              role="menuitem"
               onClick={() => {
                 setOpen(false);
                 host.openLink("https://context7.com/dashboard");
