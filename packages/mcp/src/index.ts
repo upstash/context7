@@ -31,7 +31,14 @@ import {
   mcpServerCard,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
-import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
+import {
+  QUERY_DOCS_TOOL,
+  READ_LIBRARY_FILE_TOOL,
+  RESOLVE_LIBRARY_ID_TOOL,
+  SEARCH_LIBRARY_CODE_TOOL,
+} from "./lib/tool-names.js";
+import { codeSearchConfigFromEnv } from "./lib/code-search/checkout.js";
+import { readLibrarySourceFile, searchLibraryCode } from "./lib/code-search/tools.js";
 import { installProcessShutdown } from "./lib/process-shutdown.js";
 import {
   forceFlushTelemetry,
@@ -88,6 +95,10 @@ const program = new Command()
     DEFAULT_PORT
   )
   .option("--api-key <key>", "API key for authentication (or set CONTEXT7_API_KEY env var)")
+  .option(
+    "--code-search",
+    "enable library source code search tools (or set CONTEXT7_CODE_SEARCH=1)"
+  )
   .allowUnknownOption() // let MCP Inspector / other wrappers pass through extra flags
   .parse(process.argv);
 
@@ -95,7 +106,13 @@ const cliOptions = program.opts<{
   transport: string;
   port: number;
   apiKey?: string;
+  codeSearch?: boolean;
 }>();
+
+// Source search clones library repos to local disk, so it is opt-in.
+const CODE_SEARCH_ENABLED =
+  cliOptions.codeSearch === true || /^(1|true|yes)$/i.test(process.env.CONTEXT7_CODE_SEARCH ?? "");
+const codeSearchConfig = codeSearchConfigFromEnv();
 
 // Validate transport option
 const allowedTransports = ["stdio", "http"];
@@ -461,7 +478,121 @@ If you know the programming language the user is working in, pass it as \`langua
     }
   );
 
+  if (CODE_SEARCH_ENABLED) registerCodeSearchTools(server);
+
   return server;
+}
+
+const LIBRARY_ID_FOR_CODE = z
+  .string()
+  .describe(
+    "Context7 library ID of a library backed by a Git repository, e.g. '/vercel/next.js' or '/fasterxml/jackson-databind/2.14'. A version suffix pins the search to that release."
+  );
+const VERSION_FOR_CODE = z
+  .string()
+  .optional()
+  .describe(
+    "Library version to search, e.g. '2.19' or 'v5.7.284'. Matches the highest release tag with that prefix. Omit to use the default branch. Overrides a version in libraryId."
+  );
+
+function registerCodeSearchTools(server: ReturnType<typeof createMcpServer>) {
+  server.registerTool(
+    SEARCH_LIBRARY_CODE_TOOL,
+    {
+      title: "Search Library Source Code",
+      description: `Searches a library's source code at a specific version. Use it when documentation does not answer an exact question: a function signature or type, a default value, an option name, where an error message comes from, or how something behaves internally.
+
+Modes:
+- literal (default): exact text, e.g. 'withObject(' or 'Request failed'. All-lowercase patterns match case-insensitively.
+- regex: extended regular expression, e.g. 'def (get|set)_timeout'.
+- symbol: definitions of a function, class, type or constant by name, e.g. 'useQuery' or 'Client.send'.
+
+Results show file paths and line numbers. Use 'read-library-file' to read the surrounding code. Get the library ID from 'resolve-library-id' first unless the user gave one.`,
+      inputSchema: z.preprocess(
+        aliasArgs({ ...QUERY_DOCS_ALIASES, pattern: ["query", "search", "symbol"] }),
+        z.object({
+          libraryId: LIBRARY_ID_FOR_CODE,
+          pattern: z.string().describe("Text, regular expression or symbol name to search for."),
+          mode: z
+            .enum(["literal", "regex", "symbol"])
+            .optional()
+            .describe("Search mode. Default: literal."),
+          version: VERSION_FOR_CODE,
+          path: z
+            .string()
+            .optional()
+            .describe(
+              "Limit the search to a directory or glob, e.g. 'src/server' or '*.py'. Not used in symbol mode."
+            ),
+          maxResults: z
+            .number()
+            .int()
+            .optional()
+            .describe("Maximum results to return (1-50). Default: 20."),
+        })
+      ),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: true,
+        idempotentHint: true,
+      },
+    },
+    async (args, toolCtx) => {
+      const ctx = getClientContext(toolCtx);
+      const result = await searchLibraryCode(codeSearchConfig, args);
+      recordToolCallTelemetry(ctx, result.outcome);
+      return {
+        content: [{ type: "text" as const, text: result.text }],
+        ...(result.outcome === "error" ? { isError: true } : {}),
+      };
+    }
+  );
+
+  server.registerTool(
+    READ_LIBRARY_FILE_TOOL,
+    {
+      title: "Read Library Source File",
+      description: `Reads a file from a library's source code at a specific version, with line numbers. Use it after 'search-library-code' to read the code around a match. Pass a directory path to list its contents. Returns at most 400 lines per call.`,
+      inputSchema: z.preprocess(
+        aliasArgs({ ...QUERY_DOCS_ALIASES, path: ["file", "filePath", "filename"] }),
+        z.object({
+          libraryId: LIBRARY_ID_FOR_CODE,
+          path: z
+            .string()
+            .describe(
+              "File or directory path relative to the repository root, e.g. 'src/index.ts'."
+            ),
+          version: VERSION_FOR_CODE,
+          startLine: z
+            .number()
+            .int()
+            .optional()
+            .describe("First line to read (1-based). Default: 1."),
+          endLine: z
+            .number()
+            .int()
+            .optional()
+            .describe("Last line to read. Default: startLine + 199."),
+        })
+      ),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        openWorldHint: true,
+        idempotentHint: true,
+      },
+    },
+    async (args, toolCtx) => {
+      const ctx = getClientContext(toolCtx);
+      const result = await readLibrarySourceFile(codeSearchConfig, args);
+      recordToolCallTelemetry(ctx, result.outcome);
+      return {
+        content: [{ type: "text" as const, text: result.text }],
+        ...(result.outcome === "error" ? { isError: true } : {}),
+      };
+    }
+  );
 }
 
 async function main() {

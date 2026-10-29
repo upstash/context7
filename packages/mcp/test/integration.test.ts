@@ -8,6 +8,7 @@ import { createDecipheriv } from "node:crypto";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { createCodeSearchFixture, type CodeSearchFixture } from "./fixtures/code-search-repo.js";
 
 // End-to-end tests: the real built binary (dist/index.js) is exercised over
 // both transports (spawned HTTP server, spawned stdio child) by both protocol
@@ -1492,5 +1493,194 @@ describe("expired OAuth access tokens", () => {
     expect(exported).toMatch(
       /context7_mcp_upstream_requests_total\{[^}]*context7_upstream_operation="auth_check"[^}]*\} [1-9]/
     );
+  });
+});
+
+describe("library source code search tools", () => {
+  let fixture: CodeSearchFixture;
+  let codeEnv: Record<string, string>;
+  let codeHttp: { child: ChildProcess; url: string } | undefined;
+
+  beforeAll(async () => {
+    fixture = createCodeSearchFixture();
+    codeEnv = {
+      ...childEnv,
+      CONTEXT7_CODE_SEARCH: "1",
+      CONTEXT7_CODE_GIT_BASE: fixture.gitBase,
+      CONTEXT7_CODE_CACHE_DIR: fixture.cacheDir,
+    };
+    codeHttp = await startHttpChild({ port: 0, environment: codeEnv });
+  }, 60_000);
+
+  afterAll(() => {
+    codeHttp?.child.kill();
+    fixture?.cleanup();
+  });
+
+  async function connectWithCodeSearch(kind: "stdio" | "http", args: string[] = []) {
+    const client = new Client(
+      { name: "code-search-harness", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+    const transport =
+      kind === "http"
+        ? new StreamableHTTPClientTransport(new URL(codeHttp!.url), {
+            requestInit: { headers: { Authorization: "Bearer ctx7sk-local-test" } },
+          })
+        : new StdioClientTransport({
+            command: process.execPath,
+            args: [DIST, ...args],
+            env: codeEnv,
+          });
+    await client.connect(transport);
+    return client;
+  }
+
+  function textOf(result: Awaited<ReturnType<Client["callTool"]>>): string {
+    return (result.content as { type: string; text: string }[]).map((c) => c.text).join("\n");
+  }
+
+  test("tools are off unless enabled", async () => {
+    const client = new Client(
+      { name: "code-search-harness", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+    await client.connect(
+      new StdioClientTransport({
+        command: process.execPath,
+        args: [DIST],
+        env: { ...childEnv, CONTEXT7_CODE_GIT_BASE: fixture.gitBase },
+      })
+    );
+    try {
+      const { tools } = await client.listTools();
+      expect(tools.map((t) => t.name).sort()).toEqual(["query-docs", "resolve-library-id"]);
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("the --code-search flag enables the tools", async () => {
+    const envWithoutFlag = Object.fromEntries(
+      Object.entries(codeEnv).filter(([key]) => key !== "CONTEXT7_CODE_SEARCH")
+    );
+    const client = new Client(
+      { name: "code-search-harness", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+    await client.connect(
+      new StdioClientTransport({
+        command: process.execPath,
+        args: [DIST, "--code-search"],
+        env: envWithoutFlag,
+      })
+    );
+    try {
+      const { tools } = await client.listTools();
+      expect(tools.map((t) => t.name)).toContain("search-library-code");
+    } finally {
+      await client.close();
+    }
+  });
+
+  describe.each(["stdio", "http"] as const)("over %s", (kind) => {
+    let client: Client;
+
+    beforeAll(async () => {
+      client = await connectWithCodeSearch(kind);
+    });
+
+    afterAll(async () => {
+      await client?.close();
+    });
+
+    test("lists the code tools with their input schemas", async () => {
+      const { tools } = await client.listTools();
+      expect(tools.map((t) => t.name).sort()).toEqual([
+        "query-docs",
+        "read-library-file",
+        "resolve-library-id",
+        "search-library-code",
+      ]);
+      const search = tools.find((t) => t.name === "search-library-code")!;
+      expect(Object.keys(search.inputSchema.properties ?? {}).sort()).toEqual([
+        "libraryId",
+        "maxResults",
+        "mode",
+        "path",
+        "pattern",
+        "version",
+      ]);
+      expect(search.annotations?.readOnlyHint).toBe(true);
+      const read = tools.find((t) => t.name === "read-library-file")!;
+      expect(Object.keys(read.inputSchema.properties ?? {}).sort()).toEqual([
+        "endLine",
+        "libraryId",
+        "path",
+        "startLine",
+        "version",
+      ]);
+    });
+
+    test("searches then reads source at a pinned version", async () => {
+      const search = await client.callTool({
+        name: "search-library-code",
+        arguments: { libraryId: "/acme/widgets/1.0", pattern: "DEFAULT_TIMEOUT", mode: "symbol" },
+      });
+      expect(search.isError).toBeFalsy();
+      const text = textOf(search);
+      expect(text).toContain("acme/widgets at tag v1.0.0");
+      expect(text).toContain("src/client.ts:5 [constant] DEFAULT_TIMEOUT");
+
+      const read = await client.callTool({
+        name: "read-library-file",
+        arguments: {
+          libraryId: "/acme/widgets",
+          version: "1.0",
+          path: "src/client.ts",
+          startLine: 5,
+          endLine: 5,
+        },
+      });
+      expect(read.isError).toBeFalsy();
+      expect(textOf(read)).toContain("    5  export const DEFAULT_TIMEOUT = 30_000;");
+    });
+
+    test("accepts common argument aliases", async () => {
+      const result = await client.callTool({
+        name: "search-library-code",
+        arguments: { libraryID: "/acme/widgets", version: "1.1", query: "60_000" },
+      });
+      expect(result.isError).toBeFalsy();
+      expect(textOf(result)).toContain("export const DEFAULT_TIMEOUT = 60_000;");
+
+      const file = await client.callTool({
+        name: "read-library-file",
+        arguments: { libraryId: "/acme/widgets", version: "1.1", filePath: "widgets/core.py" },
+      });
+      expect(textOf(file)).toContain("def get_timeout(self):");
+    });
+
+    test("flags failures as tool errors", async () => {
+      const website = await client.callTool({
+        name: "search-library-code",
+        arguments: { libraryId: "/websites/acme", pattern: "x" },
+      });
+      expect(website.isError).toBe(true);
+      expect(textOf(website)).toContain("documentation website");
+
+      const escape = await client.callTool({
+        name: "read-library-file",
+        arguments: { libraryId: "/acme/widgets", version: "1.0", path: "../../../../etc/passwd" },
+      });
+      expect(escape.isError).toBe(true);
+
+      const empty = await client.callTool({
+        name: "search-library-code",
+        arguments: { libraryId: "/acme/widgets", version: "1.0", pattern: "notInThisRepoAtAll" },
+      });
+      expect(empty.isError).toBeFalsy();
+      expect(textOf(empty)).toContain("No matches");
+    });
   });
 });

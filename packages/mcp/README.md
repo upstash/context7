@@ -1389,6 +1389,33 @@ Context7 MCP provides the following tools that LLMs can use:
 
 `get-library-docs` was renamed to `query-docs`. Update client tool allowlists to use `query-docs`.
 
+### Library source code search (opt-in)
+
+Two more tools let agents read a library's source code at the version they use. Use them when the docs do not answer an exact question, such as a signature, a default value or where an error comes from. Start the server with `--code-search`, or set `CONTEXT7_CODE_SEARCH=1`:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp", "--code-search"]
+    }
+  }
+}
+```
+
+- `search-library-code`: Searches a library repository at a version.
+  - `libraryId` (required): Library ID of a library backed by a Git repository, e.g. `/vercel/next.js`
+  - `pattern` (required): Text, regular expression or symbol name
+  - `mode` (optional): `literal` (default), `regex` or `symbol`
+  - `version` (optional): Version such as `2.19`. Uses the highest matching release tag. Without it, the default branch is used.
+  - `path` (optional): Directory or glob filter, e.g. `src` or `*.py`
+  - `maxResults` (optional): 1 to 50, default 20
+- `read-library-file`: Reads a file (or lists a directory) from the same checkout with line numbers, at most 400 lines per call.
+  - `libraryId`, `path` (required), `version`, `startLine`, `endLine` (optional)
+
+The server makes a shallow clone of the repository at the resolved tag. It does not run any code from the repository. Checkouts and symbol indexes are cached in `~/.cache/context7/code`, or in `CONTEXT7_CODE_CACHE_DIR`. Libraries that Context7 builds from documentation websites (`/websites/...`) have no source to search.
+
 ## 🛟 Tips
 
 ### Add a Rule
