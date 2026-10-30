@@ -1389,7 +1389,7 @@ Context7 MCP provides the following tools that LLMs can use:
 
 - `query-code` (opt-in): Searches and reads a library's source code at the version its docs describe, like ripgrep and go-to-definition on a checkout of that version. Enable it with `--query-code` or `CONTEXT7_QUERY_CODE=1`.
   - `libraryId` (required): Context7 library ID, optionally with a version (e.g., `/vercel/next.js/v15.5.0`)
-  - `operation` (optional): `grep` (default), `search` (find code by meaning from a plain-language question), `definition`, `references`, `outline`, `read` or `list`
+  - `operation` (optional): `grep` (default), `search` (find code by meaning from a plain-language question), `definition`, `references` (resolved with SCIP where indexed), `outline`, `read` or `list`
   - `pattern`: a regex for `grep` (ripgrep syntax), or a symbol for `definition`, `references` and `read`
   - `fixed_strings`, `ignore_case`, `glob`, `context`, `output_mode` (`content`, `files_with_matches`, `count`), `head_limit`, `offset`: as in ripgrep
   - `path` (optional): a folder or file to search in; for `read`, a file with a range such as `src/client.ts#L40-L80`
