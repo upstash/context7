@@ -31,6 +31,15 @@ export type ContextRequest = {
   language?: string;
 };
 
+export type DocsFeedback = {
+  libraryId: string;
+  query?: string;
+  helpful: boolean;
+  issue?: "missing" | "outdated" | "incorrect" | "irrelevant" | "other";
+  comment?: string;
+  author: "agent" | "user";
+};
+
 export type ContextResponse = {
   data: string;
   outcome: ToolCallOutcome;

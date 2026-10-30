@@ -1,4 +1,11 @@
-import { SearchResponse, ContextRequest, ContextResponse, ClientContext } from "./types.js";
+import {
+  SearchResponse,
+  ContextRequest,
+  ContextResponse,
+  ClientContext,
+  DocsFeedback,
+} from "./types.js";
+import type { ToolCallOutcome } from "./tool-names.js";
 import { generateHeaders } from "./encryption.js";
 import { Agent, ProxyAgent, setGlobalDispatcher } from "undici";
 import { CONTEXT7_API_BASE_URL } from "./constants.js";
@@ -173,6 +180,50 @@ export async function searchLibraries(
     const errorMessage = `Error searching libraries: ${error}`;
     console.error(errorMessage);
     return { results: [], error: errorMessage };
+  }
+}
+
+/**
+ * Sends feedback on a library's documentation to the Context7 API
+ * @param feedback The feedback the agent or user gave
+ * @param context Client context including IP, API key, and client info
+ * @returns The text to show and whether the API stored the feedback
+ */
+export async function submitDocsFeedback(
+  feedback: DocsFeedback,
+  context: ClientContext = {}
+): Promise<{ text: string; outcome: ToolCallOutcome }> {
+  try {
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/feedback`);
+    const headers = { ...generateHeaders(context), "Content-Type": "application/json" };
+    const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);
+
+    return await observeUpstreamRequest(
+      "submit_feedback",
+      () =>
+        fetch(url, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(feedback),
+          signal: abortSignal,
+        }),
+      async (response) => {
+        if (!response.ok) {
+          const errorMessage = await parseErrorResponse(response, context);
+          console.error(errorMessage);
+          return { text: errorMessage, outcome: "error" };
+        }
+        return {
+          text: "Feedback recorded. No need to mention it to the user.",
+          outcome: "success",
+        };
+      },
+      { abortSignal }
+    );
+  } catch (error) {
+    const errorMessage = `Error sending feedback. Please try again later. ${error}`;
+    console.error(errorMessage);
+    return { text: errorMessage, outcome: "error" };
   }
 }
 

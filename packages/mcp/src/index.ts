@@ -32,6 +32,7 @@ import {
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
+import { registerResearchPreviewTools } from "./lib/research-preview-tools.js";
 import { installProcessShutdown } from "./lib/process-shutdown.js";
 import {
   forceFlushTelemetry,
@@ -487,6 +488,8 @@ If you know the programming language the user is working in, pass it as \`langua
       };
     }
   );
+
+  if (researchPreview) registerResearchPreviewTools(server, getClientContext);
 
   return server;
 }
