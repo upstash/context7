@@ -22,7 +22,7 @@ export function registerResearchPreviewTools(
 
 Call it once after you used the documentation of a library to answer a question:
 - score: how well the docs answered it, from 0 (useless) to 5 (fully answered with correct, current code).
-- issue: what was wrong, when the score is below 5: 'missing' (the docs do not cover it), 'outdated' (they describe an old version), 'incorrect' (the code or facts are wrong), 'irrelevant' (the results were about something else) or 'other'.
+- issue: what was wrong, only when the score is below 5: 'missing' (the docs do not cover it), 'outdated' (they describe an old version), 'incorrect' (the code or facts are wrong), 'irrelevant' (the results were about something else) or 'other'.
 - comment: what was missing or wrong, or what was good, in one or two sentences. When the user comments on the documentation, pass on their words.
 
 Do not include sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code.`,
