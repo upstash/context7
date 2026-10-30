@@ -131,12 +131,28 @@ bridge.onrequestdisplaymode = async ({ mode }) => {
   bridge.setHostContext(context());
   return { mode: display };
 };
+// As ChatGPT does: the page may call only app-visible tools (console_data), and it gets the
+// result's structuredContent.
 bridge.oncalltool = async (request) => {
-  record("tool call from the page", `${request.name} ${JSON.stringify(request.arguments ?? {})}`);
+  const { tool, arguments: args = {} } = (request.arguments ?? {}) as {
+    tool?: string;
+    arguments?: Record<string, unknown>;
+  };
+  record("tool call from the page", `${tool} ${JSON.stringify(args)}`);
+  if (request.name !== "console_data") {
+    return {
+      isError: true,
+      content: [{ type: "text", text: `${request.name} is not visible to the app.` }],
+    };
+  }
   try {
-    return { content: [{ type: "text", text: callTool(request.name, request.arguments ?? {}) }] };
+    return {
+      content: [{ type: "text", text: `${tool} data for the Context7 console.` }],
+      structuredContent: callTool(tool!, args) as Record<string, unknown>,
+    };
   } catch (error) {
-    return { isError: true, content: [{ type: "text", text: (error as Error).message }] };
+    const text = (error as Error).message;
+    return { isError: true, content: [{ type: "text", text }], structuredContent: { error: text } };
   }
 };
 bridge.onupdatemodelcontext = async (request) => {
@@ -157,7 +173,7 @@ bridge.oninitialized = () => {
   record("model called", `open_console ${JSON.stringify(args)}`);
   bridge.sendToolInput({ arguments: args });
   try {
-    const result = JSON.parse(callTool("open_console", args));
+    const result = callTool("open_console", args) as Record<string, unknown>;
     bridge.sendToolResult({
       content: [{ type: "text", text: JSON.stringify(result) }],
       structuredContent: result,

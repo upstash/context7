@@ -35,14 +35,23 @@ export interface ToolDef<S extends z.ZodRawShape = z.ZodRawShape> {
   untrusted?: boolean;
   /** `false` for the tools that work across teamspaces. */
   teamspace?: false;
-  /** Opens the console MCP App (console.ts); its result is also the page's `structuredContent`. */
-  console?: true;
+  /**
+   * The tool's part in the console MCP App (console.ts): `open` opens it, and its
+   * result is also the page's `structuredContent`; `read` is a read the page makes
+   * through `console_data` (server.ts).
+   */
+  console?: "open" | "read";
   args: S;
   run(args: Args<S>, api: Api): Promise<unknown>;
 }
 
-function tool<S extends z.ZodRawShape>(def: ToolDef<S>): ToolDef {
-  return def as unknown as ToolDef;
+/** Keeps `name` and `console` as literal types, so `ConsoleRead` is checked by the compiler. */
+function tool<
+  const N extends string,
+  S extends z.ZodRawShape,
+  C extends ToolDef["console"] = undefined,
+>(def: ToolDef<S> & { name: N; console?: C }): ToolDef & { name: N; console: C } {
+  return def as unknown as ToolDef & { name: N; console: C };
 }
 
 /** One URL path segment. Rejects dot segments, which the URL parser would resolve. */
@@ -414,10 +423,11 @@ const SITE_REPORTS = {
   feedback: "feedback",
 } as const;
 
-export const TOOLS: ToolDef[] = [
+export const TOOLS = [
   // ---------- account ----------
   tool({
     name: "list_teamspaces",
+    console: "read",
     title: "List teamspaces",
     description:
       "List the teamspaces of the user, with role and plan. Call this first to get the `teamspace` id that the other tools take.",
@@ -433,7 +443,7 @@ export const TOOLS: ToolDef[] = [
       "Show the Context7 console in the chat: a summary card of a teamspace's usage and spend, libraries and benchmark scores, Docs7 sites (readers, AI crawlers, searches, builds) or Ask sites, which the user can expand to the full console. Call it when the user asks to see, browse or open these, not for one answer (use the get_ tools then). `view` picks the card (default usage); `teamspace` takes an id or name. Where the card shows, it already has the numbers: reply with a next step, not a repeat of them. Clients without MCP Apps get only the teamspace list.",
     kind: "read",
     teamspace: false,
-    console: true,
+    console: "open",
     args: {
       view: z.enum(["usage", "libraries", "docs7", "ask"]).optional(),
       teamspace: z.string().optional().describe("Teamspace id or name to open on."),
@@ -459,6 +469,7 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "get_teamspace",
+    console: "read",
     title: "Get teamspace",
     description:
       "Get one teamspace: name, your role, owner plan, billing model, Docs7 Pro, and the monthly spending cap with this month's spend.",
@@ -551,6 +562,7 @@ export const TOOLS: ToolDef[] = [
   // ---------- libraries ----------
   tool({
     name: "list_libraries",
+    console: "read",
     title: "List libraries",
     description: `List the private and owned libraries of the teamspace, ${LIBRARIES_PAGE} per page, with their parse state and benchmark score. \`total\` counts every match and \`parsing\` and \`failed\` count their states; pass \`page\` for the next ones, \`search\` to find a library by id, title or source URL, and \`order: "lowest"\` for the lowest benchmark scores first.`,
     kind: "read",
@@ -823,6 +835,7 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "get_library_benchmarks",
+    console: "read",
     title: "Get library benchmarks",
     description:
       "Get the benchmark of a library the teamspace owns: score statistics and the graded questions (real questions asked about the library, each with the score its docs earned and the grader's explanation). Lowest scores first by default: these are the questions the docs fail. get_library_suggestions gives the fixes Context7 proposes for them.",
@@ -1150,6 +1163,7 @@ export const TOOLS: ToolDef[] = [
   // ---------- usage ----------
   tool({
     name: "get_teamspace_usage",
+    console: "read",
     title: "Get usage",
     description: "Get daily usage and cost, the quota and the credit of the teamspace.",
     kind: "read",
@@ -1178,6 +1192,7 @@ export const TOOLS: ToolDef[] = [
   // ---------- docs7 ----------
   tool({
     name: "docs7_list_sites",
+    console: "read",
     title: "List Docs7 sites",
     description: `List the Docs7 sites of the teamspace, ${SITES_PAGE} per page: GitHub sites in \`sites\`, sites deployed from the CLI in \`cliSites\`, with their address and agent settings. \`total\` counts every match; pass \`page\` for the next ones, or \`search\` to find a site by name, repository, address or library id. docs7_get_site gives every setting of one site.`,
     kind: "read",
@@ -1391,6 +1406,7 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "docs7_list_deployments",
+    console: "read",
     title: "List deployments",
     description:
       "List the builds of a Docs7 site, newest first, and its preview targets. Works for GitHub and CLI sites.",
@@ -1621,6 +1637,7 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "docs7_get_analytics",
+    console: "read",
     title: "Get site analytics",
     description:
       'Get one analytics report of a Docs7 site: totals, a daily series and short top lists (top 5 pages or paths, the newest 10 AI requests). `queries` and `feedback` show what readers searched for and asked, so you can find doc gaps. For one page, every page, or more rows, use docs7_query_logs: dataset `page-views` (visitors) or `ai-requests` (AI crawlers and assistants), `group_by: "path"` for counts per page, or `filters: [{ field: "path", operator: "eq", value: "/docs/page" }]` for one page.',
@@ -1736,6 +1753,7 @@ export const TOOLS: ToolDef[] = [
   // ---------- ask ----------
   tool({
     name: "ask_list_sites",
+    console: "read",
     title: "List Ask sites",
     description: "List the Ask sites of the teamspace, with index status and limits.",
     kind: "read",
@@ -1779,6 +1797,7 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "ask_get_analytics",
+    console: "read",
     title: "Get Ask analytics",
     description:
       "Get the analytics of an Ask site: questions over time, clients, unanswered questions (gaps) and top questions.",
@@ -1837,3 +1856,6 @@ export const TOOLS: ToolDef[] = [
     },
   }),
 ];
+
+/** The read tools the console page may run through `console_data`. */
+export type ConsoleRead = Extract<(typeof TOOLS)[number], { console: "read" }>["name"];

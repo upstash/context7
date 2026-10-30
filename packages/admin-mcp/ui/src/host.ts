@@ -3,6 +3,7 @@ import type {
   McpUiHostContext,
   McpUiInitializeResult,
 } from "@modelcontextprotocol/ext-apps";
+import type { ConsoleRead } from "../../src/tools";
 
 /**
  * The MCP Apps bridge (ext-apps spec 2026-01-26): JSON-RPC over postMessage
@@ -45,16 +46,6 @@ type ToolResult = {
   structuredContent?: unknown;
   isError?: boolean;
 };
-
-/**
- * The JSON inside a tool's text result. Tools that return third-party text
- * fence it for the model (`formatResult` in src/server.ts):
- * a warning line, then the JSON between random `<untrusted-data-…>` tags.
- */
-function parseToolText(text: string): unknown {
-  const fenced = /<(untrusted-data-[0-9a-f-]+)>\n([\s\S]*)\n<\/\1>/.exec(text);
-  return JSON.parse(fenced ? fenced[2] : text);
-}
 
 export class Host {
   private nextId = 1;
@@ -205,21 +196,22 @@ export class Host {
     new ResizeObserver(report).observe(document.documentElement);
   }
 
-  /** Calls a tool of this server through the host and returns the JSON it answered. */
-  async callTool<T>(name: string, args: object = {}): Promise<T> {
-    const result = await this.request<ToolResult>("tools/call", { name, arguments: args });
-    const text = (result.content ?? [])
-      .filter((block) => block.type === "text")
-      .map((block) => block.text ?? "")
-      .join("\n");
-    if (result.isError) throw new Error(text || `${name} failed`);
-    if (result.structuredContent !== undefined) return result.structuredContent as T;
-    try {
-      return parseToolText(text) as T;
-    } catch {
-      // A result over the server's size cap ends in a note instead of closing JSON.
-      throw new Error(`${name} answered more data than the console can read.`);
+  /**
+   * Runs one of the console's read tools through `console_data`, the app-only tool that answers
+   * in `structuredContent`: ChatGPT gives a page only that part of a result.
+   */
+  async read<T>(name: ConsoleRead, args: object = {}): Promise<T> {
+    const result = await this.request<ToolResult>("tools/call", {
+      name: "console_data",
+      arguments: { tool: name, arguments: args },
+    });
+    const data = result.structuredContent as { error?: string } | undefined;
+    if (result.isError) {
+      const text = result.content?.find((block) => block.type === "text")?.text;
+      throw new Error(data?.error ?? text ?? `${name} failed`);
     }
+    if (!data) throw new Error(`${name} answered no data.`);
+    return data as T;
   }
 
   /** Tells the model what the user is looking at, so "why is this low?" has a referent. */

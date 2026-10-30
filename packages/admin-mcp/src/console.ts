@@ -7,10 +7,11 @@ import { CONSOLE_HTML } from "./ui/console-html.js";
  * iframe when the model calls `open_console`.
  *
  * The page holds no credential and makes no network request of its own. It
- * reads through the read tools of this server, which the host calls for it
- * with the user's own bearer, so the API's checks apply to the page exactly
- * as they do to the model. That is also why its CSP allows nothing. Write
- * tools are hidden from the page (`visibility: ["model"]` in server.ts).
+ * reads through `console_data`, an app-only tool that runs one of the tools
+ * marked `console: "read"` (tools.ts). The host calls it for the page with the
+ * user's own bearer, so the API's checks apply to the page exactly as they do
+ * to the model. That is also why its CSP allows nothing. Every other tool is hidden from the page
+ * (`visibility: ["model"]` in server.ts).
  *
  * The page is built from ui/ by `pnpm build:ui` into src/ui/console-html.ts,
  * which is committed: Vercel compiles api/ and src/ and runs no UI build.
