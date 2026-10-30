@@ -556,6 +556,45 @@ describe("HTTP API key headers", () => {
   });
 });
 
+describe("research preview", () => {
+  // The preview tool list differs per caller, so a shared cache must not serve it to others.
+  async function toolsListCacheScope(
+    transport: StreamableHTTPClientTransport | StdioClientTransport
+  ) {
+    const client = new Client(
+      { name: "research-preview-test", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+    await client.connect(transport);
+    try {
+      return ((await client.listTools()) as { cacheScope?: string }).cacheScope;
+    } finally {
+      await client.close();
+    }
+  }
+
+  const httpTransport = (url: string) =>
+    new StreamableHTTPClientTransport(new URL(url), {
+      requestInit: { headers: { Authorization: "Bearer ctx7sk-local-test" } },
+    });
+  const stdioTransport = (env: Record<string, string>) =>
+    new StdioClientTransport({ command: process.execPath, args: [DIST], env });
+
+  test("marks tools/list private over HTTP only with ?research_preview=1", async () => {
+    expect(await toolsListCacheScope(httpTransport(httpUrl))).toBe("public");
+    expect(await toolsListCacheScope(httpTransport(`${httpUrl}?research_preview=1`))).toBe(
+      "private"
+    );
+  });
+
+  test("marks tools/list private over stdio only with CONTEXT7_RESEARCH_PREVIEW=1", async () => {
+    expect(await toolsListCacheScope(stdioTransport(childEnv))).toBe("public");
+    expect(
+      await toolsListCacheScope(stdioTransport({ ...childEnv, CONTEXT7_RESEARCH_PREVIEW: "1" }))
+    ).toBe("private");
+  });
+});
+
 describe("HTTP batch cancellation", () => {
   beforeEach(() => {
     requests.length = 0;
