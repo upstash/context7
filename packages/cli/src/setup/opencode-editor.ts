@@ -13,7 +13,7 @@ export async function editOpenCodeServer(
   filePath: string,
   entry?: Record<string, unknown>
 ): Promise<void> {
-  const servers = Object.keys(((await readJsonConfig(filePath)).mcp ?? {}) as object);
+  const servers = Object.keys(((await readJsonConfig(filePath)).mcp?.servers ?? {}) as object);
   const raw = await readFile(filePath, "utf-8").catch(() => "");
   const source = raw.trim() ? raw : "{}\n";
   // modify() leaves `{ , }` when it deletes the only property of an object that
@@ -21,7 +21,7 @@ export async function editOpenCodeServer(
   const edits =
     !entry && servers.join() === "context7"
       ? modify(source, ["mcp"], {}, options)
-      : modify(source, ["mcp", "context7"], entry, options);
+      : modify(source, ["mcp", "servers", "context7"], entry, options);
   await mkdir(dirname(filePath), { recursive: true });
   await writeFile(filePath, applyEdits(source, edits), "utf-8");
 }
