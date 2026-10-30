@@ -381,6 +381,8 @@ After saving the tenant configuration, scroll down to the **Microsoft Entra ID u
 
 Context7 creates a Clerk user record for the developer, adds them as a `developer` member of the teamspace, and inserts a `(tenant, oid, teamspace)` mapping. The same email can be added to multiple teamspaces; the Clerk user is reused and a separate mapping row is created per teamspace.
 
+Clicking **Remove** on a user in the **Microsoft Entra ID users** card removes their mapping. A `developer` also leaves the teamspace and loses their API keys. Owners and admins keep their role. If they are still in the synced group, the next sync adds them back without API keys. While a group sync or another Entra user change is running for the teamspace, Add and Remove answer "An Entra group sync or another Entra user change is running. Try again in a few minutes." (status 409).
+
 <Note>
 Clicking **Remove** on the Microsoft Entra ID card removes both the tenant configuration **and** all provisioned users for the teamspace in a single step. If you only need to revoke a single user, remove them from the Microsoft Entra ID users card instead.
 </Note>
