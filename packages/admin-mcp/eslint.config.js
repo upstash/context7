@@ -5,7 +5,16 @@ import eslintPluginPrettier from "eslint-plugin-prettier";
 export default defineConfig(
   {
     // Base ESLint configuration
-    ignores: ["node_modules/**", "build/**", "dist/**", ".git/**", ".github/**"],
+    ignores: [
+      "node_modules/**",
+      "build/**",
+      "dist/**",
+      "ui/dist/**",
+      "ui/demo/dist/**",
+      "src/ui/console-html.ts",
+      ".git/**",
+      ".github/**",
+    ],
   },
   {
     files: ["**/*.ts", "**/*.tsx"],
@@ -14,7 +23,7 @@ export default defineConfig(
       sourceType: "module",
       parser: tseslint.parser,
       parserOptions: {
-        project: ["./tsconfig.json", "./tsconfig.test.json"],
+        project: ["./tsconfig.json", "./tsconfig.test.json", "./ui/tsconfig.json"],
         tsconfigRootDir: import.meta.dirname,
       },
       globals: {

@@ -54,6 +54,7 @@ import {
   protectedResourceMetadata,
   protectedResourceUrl,
   setBearerChallenge,
+  usableApiKey,
 } from "./lib/mcp-http-auth.js";
 import { mcpRouteFromUrl } from "./lib/mcp-route.js";
 import { parseOAuthAudienceEnforcement } from "./lib/oauth-audience.js";
@@ -860,7 +861,13 @@ async function main() {
 
     startServer(initialPort);
   } else {
-    stdioApiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
+    const keySources = [cliOptions.apiKey, process.env.CONTEXT7_API_KEY];
+    stdioApiKey = keySources.map(usableApiKey).find((key) => key !== undefined);
+    if (!stdioApiKey && keySources.some((value) => value?.trim())) {
+      console.error(
+        "The API key is an unset variable placeholder such as ${CONTEXT7_API_KEY}. Running without an API key."
+      );
+    }
     const researchPreview =
       cliOptions.researchPreview === true ||
       isResearchPreviewValue(process.env.CONTEXT7_RESEARCH_PREVIEW);

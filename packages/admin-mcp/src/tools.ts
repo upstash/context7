@@ -33,14 +33,25 @@ export interface ToolDef<S extends z.ZodRawShape = z.ZodRawShape> {
   idempotent?: boolean;
   /** The result holds third-party text (questions, queries, feedback, logs, PR text). */
   untrusted?: boolean;
-  /** `false` for the one tool that works across teamspaces. */
+  /** `false` for the tools that work across teamspaces. */
   teamspace?: false;
+  /**
+   * The tool's part in the console MCP App (console.ts): `open` opens it, and its
+   * result is also the page's `structuredContent`; `read` is a read the page makes
+   * through `console_data` (server.ts).
+   */
+  console?: "open" | "read";
   args: S;
   run(args: Args<S>, api: Api): Promise<unknown>;
 }
 
-function tool<S extends z.ZodRawShape>(def: ToolDef<S>): ToolDef {
-  return def as unknown as ToolDef;
+/** Keeps `name` and `console` as literal types, so `ConsoleRead` is checked by the compiler. */
+function tool<
+  const N extends string,
+  S extends z.ZodRawShape,
+  C extends ToolDef["console"] = undefined,
+>(def: ToolDef<S> & { name: N; console?: C }): ToolDef & { name: N; console: C } {
+  return def as unknown as ToolDef & { name: N; console: C };
 }
 
 /** One URL path segment. Rejects dot segments, which the URL parser would resolve. */
@@ -114,6 +125,18 @@ const wait = z
  * served, and how its agents are set. Internal ids (worker, installation,
  * repository, creator) stay out; docs7_get_site has every field.
  */
+/** Sites per docs7_list_sites page: one site is ~300 characters, so 50 stay far below the result cap. */
+const SITES_PAGE = 50;
+/** Libraries per list_libraries page: one is up to ~1,000 characters with its description. */
+const LIBRARIES_PAGE = 50;
+
+/** One page of a list, and how many items and pages there are in all. */
+function pageOf<T>(all: T[], page: number, size: number) {
+  const pages = Math.max(1, Math.ceil(all.length / size));
+  if (page > pages) throw new ToolError(`Page ${page} is past the last page (${pages}).`);
+  return { total: all.length, page, pages, items: all.slice((page - 1) * size, page * size) };
+}
+
 function siteSummary(site: Record<string, unknown>): Record<string, unknown> {
   const review = site.pullRequestReview as { enabled?: unknown } | undefined;
   const watch = site.codeWatch as { enabled?: unknown; repositories?: unknown[] } | undefined;
@@ -400,10 +423,11 @@ const SITE_REPORTS = {
   feedback: "feedback",
 } as const;
 
-export const TOOLS: ToolDef[] = [
+export const TOOLS = [
   // ---------- account ----------
   tool({
     name: "list_teamspaces",
+    console: "read",
     title: "List teamspaces",
     description:
       "List the teamspaces of the user, with role and plan. Call this first to get the `teamspace` id that the other tools take.",
@@ -413,7 +437,39 @@ export const TOOLS: ToolDef[] = [
     run: (_args, api) => api.get("/v2/teamspaces"),
   }),
   tool({
+    name: "open_console",
+    title: "Open Context7 console",
+    description:
+      "Show the Context7 console in the chat: a summary card of a teamspace's usage and spend, libraries and benchmark scores, Docs7 sites (readers, AI crawlers, searches, builds) or Ask sites, which the user can expand to the full console. Call it when the user asks to see, browse or open these, not for one answer (use the get_ tools then). `view` picks the card (default usage); `teamspace` takes an id or name. Where the card shows, it already has the numbers: reply with a next step, not a repeat of them. Clients without MCP Apps get only the teamspace list.",
+    kind: "read",
+    teamspace: false,
+    console: "open",
+    args: {
+      view: z.enum(["usage", "libraries", "docs7", "ask"]).optional(),
+      teamspace: z.string().optional().describe("Teamspace id or name to open on."),
+    },
+    run: async ({ view, teamspace }, api) => {
+      const { teamspaces = [] } = (await api.get("/v2/teamspaces")) as {
+        teamspaces?: { id: string; name: string; isPersonal?: boolean }[];
+      };
+      // A named teamspace must match exactly one (as resolveTeamspace in server.ts): opening
+      // another one would show the user the wrong numbers.
+      const wanted = teamspace?.trim();
+      const matches = wanted
+        ? teamspaces.filter((t) => t.id === wanted || t.name.toLowerCase() === wanted.toLowerCase())
+        : [];
+      if (wanted && matches.length !== 1) {
+        const choices = teamspaces.map((t) => `${t.name} = ${t.id}`).join("; ");
+        throw new ToolError(
+          `No single teamspace is named "${teamspace}". Pass \`teamspace\` as one of: ${choices || "none found"}.`
+        );
+      }
+      return { teamspaces, open: { view, teamspace: matches[0]?.id } };
+    },
+  }),
+  tool({
     name: "get_teamspace",
+    console: "read",
     title: "Get teamspace",
     description:
       "Get one teamspace: name, your role, owner plan, billing model, Docs7 Pro, and the monthly spending cap with this month's spend.",
@@ -506,11 +562,56 @@ export const TOOLS: ToolDef[] = [
   // ---------- libraries ----------
   tool({
     name: "list_libraries",
+    console: "read",
     title: "List libraries",
-    description: "List the private and owned libraries of the teamspace, with their parse state.",
+    description: `List the private and owned libraries of the teamspace, ${LIBRARIES_PAGE} per page, with their parse state and benchmark score. \`total\` counts every match and \`parsing\` and \`failed\` count their states; pass \`page\` for the next ones, \`search\` to find a library by id, title or source URL, and \`order: "lowest"\` for the lowest benchmark scores first.`,
     kind: "read",
-    args: {},
-    run: ({ teamspace }, api) => api.get(`${ts(teamspace)}/libraries`),
+    args: {
+      search: z
+        .string()
+        .max(200)
+        .optional()
+        .describe("Part of the library's id, title or source URL."),
+      order: z
+        .enum(["name", "lowest"])
+        .optional()
+        .describe("Default name. lowest: lowest benchmark score first, unscored last."),
+      page: z.number().int().min(1).optional().describe("Default 1."),
+    },
+    run: async ({ teamspace, search, order = "name", page = 1 }, api) => {
+      const { libraries = [] } = (await api.get(`${ts(teamspace)}/libraries`)) as {
+        libraries?: {
+          id: string;
+          title?: string;
+          sourceUrl?: string;
+          state?: string;
+          benchmarkScore?: number;
+        }[];
+      };
+      const needle = search?.trim().toLowerCase();
+      const name = (library: (typeof libraries)[number]) => library.title ?? library.id;
+      const all = libraries
+        .filter(
+          (library) =>
+            !needle ||
+            [library.id, library.title, library.sourceUrl].some((value) =>
+              value?.toLowerCase().includes(needle)
+            )
+        )
+        .sort((a, b) =>
+          order === "lowest"
+            ? (a.benchmarkScore ?? 101) - (b.benchmarkScore ?? 101) ||
+              name(a).localeCompare(name(b))
+            : name(a).localeCompare(name(b))
+        );
+      const { items, ...paging } = pageOf(all, page, LIBRARIES_PAGE);
+      return {
+        ...paging,
+        parsing: all.filter((l) => l.state === "processing" || l.state === "finalizing").length,
+        failed: all.filter((l) => l.state === "error").length,
+        libraries: items,
+      };
+    },
   }),
   tool({
     name: "get_library",
@@ -734,6 +835,7 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "get_library_benchmarks",
+    console: "read",
     title: "Get library benchmarks",
     description:
       "Get the benchmark of a library the teamspace owns: score statistics and the graded questions (real questions asked about the library, each with the score its docs earned and the grader's explanation). Lowest scores first by default: these are the questions the docs fail. get_library_suggestions gives the fixes Context7 proposes for them.",
@@ -1061,6 +1163,7 @@ export const TOOLS: ToolDef[] = [
   // ---------- usage ----------
   tool({
     name: "get_teamspace_usage",
+    console: "read",
     title: "Get usage",
     description: "Get daily usage and cost, the quota and the credit of the teamspace.",
     kind: "read",
@@ -1089,19 +1192,40 @@ export const TOOLS: ToolDef[] = [
   // ---------- docs7 ----------
   tool({
     name: "docs7_list_sites",
+    console: "read",
     title: "List Docs7 sites",
-    description:
-      "List the Docs7 sites of the teamspace: GitHub sites in `sites`, sites deployed from the CLI in `cliSites`, with their address and agent settings. docs7_get_site gives every setting of one site.",
+    description: `List the Docs7 sites of the teamspace, ${SITES_PAGE} per page: GitHub sites in \`sites\`, sites deployed from the CLI in \`cliSites\`, with their address and agent settings. \`total\` counts every match; pass \`page\` for the next ones, or \`search\` to find a site by name, repository, address or library id. docs7_get_site gives every setting of one site.`,
     kind: "read",
-    args: {},
-    run: async ({ teamspace }, api) => {
+    args: {
+      search: z
+        .string()
+        .max(200)
+        .optional()
+        .describe("Part of the site's name, repository, address or library id."),
+      page: z.number().int().min(1).optional().describe("Default 1."),
+    },
+    run: async ({ teamspace, search, page = 1 }, api) => {
       const body = (await api.get(`${ts(teamspace)}/sites`)) as {
         data?: Record<string, unknown>[];
         localSites?: Record<string, unknown>[];
       };
+      // One list, GitHub sites first, so a page can hold both kinds.
+      const needle = search?.trim().toLowerCase();
+      const all = [
+        ...(body.data ?? []).map((site) => ({ cli: false, site: siteSummary(site) })),
+        ...(body.localSites ?? []).map((site) => ({ cli: true, site: siteSummary(site) })),
+      ].filter(
+        ({ site }) =>
+          !needle ||
+          [site.name, site.repoUrl, site.url, site.customDomain, site.libraryId].some(
+            (value) => typeof value === "string" && value.toLowerCase().includes(needle)
+          )
+      );
+      const { items, ...paging } = pageOf(all, page, SITES_PAGE);
       return {
-        sites: (body.data ?? []).map(siteSummary),
-        cliSites: (body.localSites ?? []).map(siteSummary),
+        ...paging,
+        sites: items.filter((entry) => !entry.cli).map((entry) => entry.site),
+        cliSites: items.filter((entry) => entry.cli).map((entry) => entry.site),
       };
     },
   }),
@@ -1282,6 +1406,7 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "docs7_list_deployments",
+    console: "read",
     title: "List deployments",
     description:
       "List the builds of a Docs7 site, newest first, and its preview targets. Works for GitHub and CLI sites.",
@@ -1512,6 +1637,7 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "docs7_get_analytics",
+    console: "read",
     title: "Get site analytics",
     description:
       'Get one analytics report of a Docs7 site: totals, a daily series and short top lists (top 5 pages or paths, the newest 10 AI requests). `queries` and `feedback` show what readers searched for and asked, so you can find doc gaps. For one page, every page, or more rows, use docs7_query_logs: dataset `page-views` (visitors) or `ai-requests` (AI crawlers and assistants), `group_by: "path"` for counts per page, or `filters: [{ field: "path", operator: "eq", value: "/docs/page" }]` for one page.',
@@ -1627,6 +1753,7 @@ export const TOOLS: ToolDef[] = [
   // ---------- ask ----------
   tool({
     name: "ask_list_sites",
+    console: "read",
     title: "List Ask sites",
     description: "List the Ask sites of the teamspace, with index status and limits.",
     kind: "read",
@@ -1670,6 +1797,7 @@ export const TOOLS: ToolDef[] = [
   }),
   tool({
     name: "ask_get_analytics",
+    console: "read",
     title: "Get Ask analytics",
     description:
       "Get the analytics of an Ask site: questions over time, clients, unanswered questions (gaps) and top questions.",
@@ -1728,3 +1856,6 @@ export const TOOLS: ToolDef[] = [
     },
   }),
 ];
+
+/** The read tools the console page may run through `console_data`. */
+export type ConsoleRead = Extract<(typeof TOOLS)[number], { console: "read" }>["name"];

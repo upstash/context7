@@ -57,7 +57,7 @@ One OAuth connection reaches every teamspace you are a member of, with your role
 
 | Group     | Tools                                                                                                                                                                                                                                                                                                                                                                                                              |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| account   | `list_teamspaces`, `get_teamspace`, `manage_members`                                                                                                                                                                                                                                                                                                                                                               |
+| account   | `list_teamspaces`, `open_console`, `get_teamspace`, `manage_members`                                                                                                                                                                                                                                                                                                                                               |
 | libraries | `list_libraries`, `get_library`, `add_library`, `refresh_library`, `update_library_config`, `manage_library_versions`, `claim_library`, `remove_library`, `get_library_analytics`, `get_library_suggestions`, `get_library_benchmarks`, `manage_owned_library`                                                                                                                                                     |
 | rules     | `manage_rules`, `get_library_policies`, `update_library_policies`, `manage_library_requests`                                                                                                                                                                                                                                                                                                                       |
 | usage     | `get_teamspace_usage`, `set_spending_limit`                                                                                                                                                                                                                                                                                                                                                                        |
@@ -68,6 +68,14 @@ One OAuth connection reaches every teamspace you are a member of, with your role
 - Deleting a whole Docs7 site or Ask site cannot be undone, so it is not in this server. Do it in [the dashboard](https://context7.com/dashboard).
 - Results that hold third-party text (questions, searches, feedback, build logs, agent runs) are fenced in `<untrusted-data-…>` tags.
 - Results above about 20,000 tokens are cut, with a note on how to narrow the request.
+
+## Console
+
+In clients that support [MCP Apps](https://github.com/modelcontextprotocol/ext-apps) (Claude, ChatGPT, VS Code, Cursor), `open_console` shows a summary card in the chat (usage and spend, libraries and benchmark scores, Docs7 site traffic and searches, or Ask questions and gaps) with "Open console", which expands it to the full console. In ChatGPT the console also opens from the app sidebar and beside a chat. Ask something like "open my Context7 console" or "show my Docs7 analytics in the console". Other clients get the teamspace list as text.
+
+The page follows the Claude and OpenAI app design guidelines: inline it fits its content (no inner scroll, no menus, two actions at most), charts and navigation are in fullscreen, and colors, fonts and borders come from the host's theme. Requests that need the model ("Fix the lowest", "Find doc gaps") go to the chat as your next message.
+
+The page holds no credential: it reads through `console_data`, an app-only tool (`_meta.ui.visibility: ["app"]`, hidden from the model) that runs one of the console's read tools and answers in `structuredContent`, the part of a result ChatGPT gives a page. The client calls it for the page with your sign-in. Every other tool is hidden from the page (`["model"]`). The host enforces that, not this server: a page's `tools/call` reaches the server like the model's, so a host that ignores visibility could let a page call write tools with your sign-in. Its buttons only put a prompt in the chat, and prompts and model context name teamspaces and sites by id, never by a display name someone else chose.
 
 Billing, plans, API keys, SSO and teamspace create or delete are not in this server. Use [the dashboard](https://context7.com/dashboard).
 
@@ -80,7 +88,11 @@ The server runs on Vercel as Web-standard functions (`api/`, routes in `vercel.j
 ```bash
 pnpm --filter @upstash/context7-admin-mcp build
 pnpm --filter @upstash/context7-admin-mcp test
-cd packages/admin-mcp && CONTEXT7_API_URL=http://localhost:3000/api npx vercel dev
+cd packages/admin-mcp && CONTEXT7_API_URL=http://localhost:3000/api pnpm dev   # http://localhost:3100/mcp; without CONTEXT7_API_URL it calls the production API
 ```
+
+`pnpm dev` serves the `vercel.json` routes from `api/`, and its OAuth metadata names `http://localhost:3100/mcp`. An OAuth token for it works only against a management API that accepts that audience (a local context7app with `ADMIN_OAUTH_ALLOWED_AUDIENCES`, reached through `CONTEXT7_API_URL`); otherwise send `Authorization: Bearer ctx7sk-…` with a key that has Management access.
+
+The console page is a React app in `ui/` (Vite, Tailwind), built into one HTML file: `pnpm build:ui` writes `src/ui/console-html.ts`, which is committed because Vercel runs no UI build. Run it after any change under `ui/`. `pnpm demo:ui` serves the page at http://localhost:4174 inside a demo host (ext-apps' `AppBridge` and a fake backend) with theme, display mode (inline, fullscreen, or a host without fullscreen), width, Claude's theme tokens and "opened on" switches, and a log of the page's tool calls and messages.
 
 Environment: `CONTEXT7_API_URL` (default `https://context7.com/api`), `RESOURCE_URL` (origin of the public URL, default `https://admin.mcp.context7.com`), `OAUTH_AUTH_SERVER_URL` (default `https://clerk.context7.com`).

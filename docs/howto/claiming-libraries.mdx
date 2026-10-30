@@ -187,6 +187,9 @@ Context7 checks a new title or description before it saves it. If the text gives
 
       Hash fragments (`#...`) are not indexed. Pages that differ only by their fragment, such as
       hash-routed documentation sites, are crawled as a single page.
+
+      An Exclude URLs pattern that leaves out old releases does not stop a version at that URL
+      from being crawled.
     </Note>
   </Tab>
 </Tabs>
@@ -210,6 +213,7 @@ Available for Git repositories and websites.
 | Field                                | Description                                                                                                                                    | Limits  |
 | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
 | **Skip Automatic Version Detection** | By default, outdated library versions are automatically detected and excluded from indexing. Enable to include all versions regardless of age. | Boolean |
+| **Generate docs** | Private repositories only. An AI agent writes documentation from the source code on each refresh with new commits, and each run is billed as parsing. When disabled, the next refresh removes the generated pages. | Boolean |
 | **Redirect URL**      | Redirect users to a different library. Leave empty to disable.                                              | Max 500 characters |
 | **Disallow Indexing** | Opt-out from Context7. When enabled, documentation content is removed and the library becomes inaccessible. | Boolean            |
 
@@ -227,6 +231,7 @@ You can add versions using either:
 
 - **Git tags**: Reference a specific release tag (e.g., `v1.2.0`)
 - **Git branches**: Reference a branch for version-specific documentation (e.g., `release-1.x`)
+- **Website versions**: For a website library, enter the **Version URL** of the documentation for that version (e.g., `https://docs.example.com/2.0/`). The URL must belong to the same library. A URL without a version replaces the latest version.
 
 | Limit            | Value             |
 | ---------------- | ----------------- |

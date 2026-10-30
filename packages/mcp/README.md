@@ -532,7 +532,7 @@ If the `mcpServers` object does not exist, create it.
 <details>
 <summary><b>Install in Qwen Coder</b></summary>
 
-See [Qwen Coder MCP Configuration](https://qwenlm.github.io/qwen-code-docs/en/tools/mcp-server/#how-to-set-up-your-mcp-server) for details.
+See [Qwen Coder MCP Configuration](https://qwenlm.github.io/qwen-code-docs/en/developers/tools/mcp-server/#how-to-set-up-your-mcp-server) for details.
 
 1.  Open the Qwen Coder settings file. The location is `~/.qwen/settings.json` (where `~` is your home directory).
 2.  Add the following to the `mcpServers` object in your `settings.json` file:

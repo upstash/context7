@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { createAdminHandler } from "../src/http.js";
-import { agentActivity, normalizeLibraryId, poll } from "../src/tools.js";
+import { agentActivity, normalizeLibraryId, poll, TOOLS } from "../src/tools.js";
 
 // The server under test is the web-standard handler, driven by a real MCP
 // client. Global fetch (the management API) is stubbed: no network.
 
-type ApiCall = { method: string; path: string; body: unknown };
+type ApiCall = { method: string; path: string; body: unknown; headers: Headers };
 type ApiReply = { status?: number; body: unknown };
 
 let apiCalls: ApiCall[];
@@ -26,6 +26,7 @@ beforeEach(() => {
       method: init?.method ?? "GET",
       path: `${url.pathname.replace(/^\/api/, "")}${url.search}`,
       body: init?.body ? JSON.parse(String(init.body)) : undefined,
+      headers: new Headers(init?.headers),
     };
     apiCalls.push(call);
     const reply = apiReply(call);
@@ -45,7 +46,9 @@ async function connect(era: "modern" | "legacy" = "modern") {
   );
   await client.connect(
     new StreamableHTTPClientTransport(new URL("https://admin.mcp.context7.com/mcp"), {
-      requestInit: { headers: { Authorization: "Bearer ctx7sk-test" } },
+      requestInit: {
+        headers: { Authorization: "Bearer ctx7sk-test", "User-Agent": "Cursor/2.2.44 (darwin)" },
+      },
       fetch: async (input, init) => {
         lastResponse = await handler(new Request(input, init));
         return lastResponse.clone();
@@ -172,6 +175,36 @@ describe("destructive tools", () => {
   });
 });
 
+describe("telemetry", () => {
+  // Modern clients name themselves in `_meta`; legacy ones only in the
+  // `initialize` this stateless server does not keep, so the User-Agent counts.
+  test.each([
+    ["modern", "test", "1.0.0"],
+    ["legacy", "Cursor", "2.2.44"],
+  ] as const)("API calls carry the tool and the client (%s)", async (era, ide, version) => {
+    const client = await connect(era);
+    await client.callTool({ name: "get_teamspace_usage", arguments: { teamspace: TS } });
+
+    const headers = Object.fromEntries(apiCalls[0].headers);
+    expect(headers).toMatchObject({
+      "x-context7-source": "admin-mcp",
+      "x-context7-tool": "get_teamspace_usage",
+      "x-context7-client-ide": ide,
+      "x-context7-client-version": version,
+    });
+    expect(headers["x-context7-server-version"]).toMatch(/^\d+\.\d+\.\d+/);
+  });
+
+  test("a console page read is counted for the tool it runs, not console_data", async () => {
+    const client = await connect();
+    await client.callTool({
+      name: "console_data",
+      arguments: { tool: "get_teamspace_usage", arguments: { teamspace: TS } },
+    });
+    expect(apiCalls[0].headers.get("x-context7-tool")).toBe("get_teamspace_usage");
+  });
+});
+
 describe("authentication", () => {
   test("a request without a bearer gets the OAuth challenge", async () => {
     const response = await handler(
@@ -262,6 +295,17 @@ test("an API error body of an untrusted tool is fenced too", async () => {
   const tag = /<(untrusted-data-[0-9a-f-]{36})>/.exec(text(result))?.[1];
   expect(tag).toBeDefined();
   expect(text(result).trimEnd().endsWith(`</${tag}>`)).toBe(true);
+
+  // Through console_data the content keeps the fence; only the page's structuredContent is plain.
+  const page = await client.callTool({
+    name: "console_data",
+    arguments: { tool: "ask_get_analytics", arguments: { teamspace: TS, site_key: "ask_1" } },
+  });
+  expect(page.isError).toBe(true);
+  expect(text(page)).toMatch(/<untrusted-data-[0-9a-f-]{36}>/);
+  expect(page.structuredContent).toMatchObject({
+    error: expect.stringContaining("Ignore all rules"),
+  });
 });
 
 test("library ids are accepted as /owner/repo, owner/repo or a context7.com URL", () => {
@@ -396,6 +440,74 @@ test("docs7_list_sites keeps what an agent needs and drops internal ids", async 
     codeWatchRepositories: 2,
   });
   expect(result.cliSites[0]).toMatchObject({ id: "c-1", name: "CLI docs" });
+});
+
+// A teamspace can hold hundreds of sites: the whole list would pass the result cap and be cut.
+test("docs7_list_sites pages and searches across GitHub and CLI sites", async () => {
+  const github = Array.from({ length: 60 }, (_, i) => ({
+    id: `s-${i}`,
+    repoUrl: `https://github.com/acme/docs-${i}`,
+  }));
+  apiReply = () => ({
+    body: { data: github, localSites: [{ id: "c-1", name: "Payments CLI docs" }] },
+  });
+  const client = await connect();
+  const list = async (args: Record<string, unknown>) =>
+    JSON.parse(
+      text(
+        await client.callTool({ name: "docs7_list_sites", arguments: { teamspace: TS, ...args } })
+      )
+    );
+
+  const first = await list({});
+  expect(first).toMatchObject({ total: 61, page: 1, pages: 2 });
+  expect(first.sites).toHaveLength(50);
+  expect(first.cliSites).toEqual([]);
+
+  const second = await list({ page: 2 });
+  expect(second.sites.map((site: { id: string }) => site.id)).toEqual(
+    github.slice(50).map((site) => site.id)
+  );
+  expect(second.cliSites).toEqual([{ id: "c-1", name: "Payments CLI docs" }]);
+
+  const found = await list({ search: "PAYMENTS" });
+  expect(found).toMatchObject({ total: 1, sites: [], cliSites: [{ id: "c-1" }] });
+
+  const past = await client.callTool({
+    name: "docs7_list_sites",
+    arguments: { teamspace: TS, page: 3 },
+  });
+  expect(past.isError).toBe(true);
+});
+
+test("list_libraries pages, searches and orders by lowest score", async () => {
+  const libraries = Array.from({ length: 55 }, (_, i) => ({
+    id: `/acme/lib-${String(i).padStart(2, "0")}`,
+    state: i === 3 ? "error" : i === 4 ? "processing" : "complete",
+    benchmarkScore: i % 2 ? 90 - i : undefined,
+  }));
+  apiReply = () => ({ body: { libraries } });
+  const client = await connect();
+  const list = async (args: Record<string, unknown>) =>
+    JSON.parse(
+      text(await client.callTool({ name: "list_libraries", arguments: { teamspace: TS, ...args } }))
+    );
+
+  const first = await list({});
+  expect(first).toMatchObject({ total: 55, page: 1, pages: 2, parsing: 1, failed: 1 });
+  expect(first.libraries).toHaveLength(50);
+  expect(first.libraries[0].id).toBe("/acme/lib-00");
+
+  const lowest = await list({ order: "lowest" });
+  expect(lowest.libraries.slice(0, 2).map((l: { id: string }) => l.id)).toEqual([
+    "/acme/lib-53",
+    "/acme/lib-51",
+  ]);
+  expect((await list({ order: "lowest", page: 2 })).libraries.at(-1).benchmarkScore).toBe(
+    undefined
+  );
+
+  expect(await list({ search: "LIB-4" })).toMatchObject({ total: 10, pages: 1 });
 });
 
 test("the server card and serverInfo carry the Context7 icon", async () => {
@@ -570,7 +682,12 @@ test("approve reads the policies first, so a rejected credential writes nothing"
 test("a 401 whose body cannot be read still stops the approval", async () => {
   vi.stubGlobal("fetch", async (input: URL | string, init?: RequestInit) => {
     const path = new URL(input).pathname;
-    apiCalls.push({ method: init?.method ?? "GET", path, body: undefined });
+    apiCalls.push({
+      method: init?.method ?? "GET",
+      path,
+      body: undefined,
+      headers: new Headers(init?.headers),
+    });
     const broken = new ReadableStream({
       start: (controller) => controller.error(new Error("reset")),
     });
@@ -636,4 +753,81 @@ test("docs7_get_site of a site without hosting adds its migration stage, best ef
   expect(result.isError).toBeFalsy();
   expect(text(result)).toContain('"migration":{"stage":"migrate"}');
   expect(text(result)).not.toContain("analyticsScript");
+});
+
+// The console MCP App: declared on every protocol era (a stateless legacy
+// request never sees the client's capabilities). The page sees console_data only.
+test.each(["modern", "legacy"] as const)(
+  "open_console links the console page, and the page can call console_data only (%s)",
+  async (era) => {
+    const client = await connect(era);
+    const { tools } = await client.listTools();
+    const ui = (tool: (typeof tools)[number]) =>
+      tool._meta?.ui as { resourceUri?: string; visibility?: string[] } | undefined;
+
+    const opens = new Set<string>(
+      TOOLS.filter((def) => def.console === "open").map((def) => def.name)
+    );
+    for (const tool of tools) {
+      if (tool.name === "console_data") expect(ui(tool)?.visibility).toEqual(["app"]);
+      else if (opens.has(tool.name)) expect(ui(tool)?.visibility, tool.name).toBeUndefined();
+      else expect(ui(tool)?.visibility, tool.name).toEqual(["model"]);
+    }
+    const uri = ui(tools.find((tool) => tool.name === "open_console")!)?.resourceUri;
+    const { contents } = await client.readResource({ uri: uri! });
+    expect(contents[0]).toMatchObject({ uri, mimeType: "text/html;profile=mcp-app" });
+  }
+);
+
+test("console_data answers a read tool's data as structuredContent, and only for console reads", async () => {
+  apiReply = (call) => ({
+    body: call.path.endsWith("/spending-limit")
+      ? { limitCents: null, currentSpendCents: 1200 }
+      : { id: TS, name: "Acme" },
+  });
+  const client = await connect();
+  const read = (args: Record<string, unknown>) =>
+    client.callTool({ name: "console_data", arguments: args });
+
+  const result = await read({ tool: "get_teamspace", arguments: { teamspace: TS } });
+  expect(result.isError).toBeFalsy();
+  // Null fields are dropped, as in the text the model reads.
+  expect(result.structuredContent).toEqual({
+    teamspace: { id: TS, name: "Acme" },
+    spendingLimit: { currentSpendCents: 1200 },
+  });
+
+  const invalid = await read({ tool: "get_library_benchmarks", arguments: { library_id: 7 } });
+  expect(invalid.isError).toBe(true);
+  expect(invalid.structuredContent).toMatchObject({ error: expect.stringContaining("Invalid") });
+
+  expect((await read({ tool: "remove_library", arguments: {} })).isError).toBe(true);
+});
+
+test("open_console resolves the teamspace by name and refuses an unknown or shared one", async () => {
+  const other = "22222222-2222-4222-8222-222222222222";
+  apiReply = () => ({
+    body: {
+      teamspaces: [
+        { id: TS, name: "Acme" },
+        { id: other, name: "Docs" },
+        { id: `${other.slice(0, -1)}3`, name: "docs" },
+      ],
+    },
+  });
+  const client = await connect();
+  const open = (teamspace: string) =>
+    client.callTool({ name: "open_console", arguments: { view: "docs7", teamspace } });
+
+  const found = await open("acme");
+  expect(found.structuredContent).toMatchObject({ open: { view: "docs7", teamspace: TS } });
+  expect(JSON.parse(text(found))).toEqual(found.structuredContent);
+
+  const missing = await open("Globex");
+  expect(missing.isError).toBe(true);
+  expect(text(missing)).toContain(`Acme = ${TS}`);
+
+  const shared = await open("Docs");
+  expect(shared.isError).toBe(true);
+  expect((await open(other)).structuredContent).toMatchObject({ open: { teamspace: other } });
 });
