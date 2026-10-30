@@ -36,6 +36,23 @@ export type ContextResponse = {
   outcome: ToolCallOutcome;
 };
 
+export const CODE_QUERY_TYPES = ["definition", "references", "outline", "text", "source"] as const;
+export type CodeQueryType = (typeof CODE_QUERY_TYPES)[number];
+
+export type CodeRequest = {
+  libraryId: string;
+  query: string;
+  type?: CodeQueryType;
+  path?: string;
+  version?: string;
+  limit?: number;
+};
+
+export type CodeResponse = ContextResponse & {
+  /** The source is still being indexed: not an error, the caller should retry. */
+  retryable?: boolean;
+};
+
 export interface ClientContext {
   clientIp?: string;
   apiKey?: string;

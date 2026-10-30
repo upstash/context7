@@ -63,6 +63,60 @@ export interface GetContextOptions {
   language?: string;
 }
 
+export const CODE_QUERY_TYPES = ["definition", "references", "outline", "text", "source"] as const;
+export type CodeQueryType = (typeof CODE_QUERY_TYPES)[number];
+
+export interface CodeQueryOptions {
+  type?: CodeQueryType;
+  path?: string;
+  version?: string;
+  limit?: number;
+  json?: boolean;
+}
+
+export type CodeQueryResult =
+  | { kind: "result"; body: string }
+  | { kind: "indexing"; message: string; retryAfter: number }
+  | { kind: "error"; error: string; message?: string };
+
+/** Queries a library's source code through /api/v2/code. */
+export async function getLibraryCode(
+  libraryId: string,
+  query: string,
+  options: CodeQueryOptions = {},
+  accessToken?: string
+): Promise<CodeQueryResult> {
+  const params = new URLSearchParams({ libraryId, query });
+  if (options.type) params.set("type", options.type);
+  if (options.path) params.set("path", options.path);
+  if (options.version) params.set("version", options.version);
+  if (options.limit) params.set("limit", String(options.limit));
+  if (options.json) params.set("format", "json");
+  const response = await fetch(`${baseUrl}/api/v2/code?${params}`, {
+    headers: getAuthHeaders(accessToken),
+  });
+  if (response.status === 202) {
+    const body = (await response.json().catch(() => ({}))) as {
+      message?: string;
+      retryAfter?: number;
+    };
+    return {
+      kind: "indexing",
+      message: body.message ?? "The library source is being indexed.",
+      retryAfter: body.retryAfter ?? Number(response.headers.get("Retry-After") ?? 30),
+    };
+  }
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
+    return {
+      kind: "error",
+      error: body.error || `HTTP error ${response.status}`,
+      message: body.message,
+    };
+  }
+  return { kind: "result", body: await response.text() };
+}
+
 export async function getLibraryContext(
   libraryId: string,
   query: string,

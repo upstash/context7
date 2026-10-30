@@ -1,4 +1,11 @@
-import { SearchResponse, ContextRequest, ContextResponse, ClientContext } from "./types.js";
+import {
+  SearchResponse,
+  ContextRequest,
+  ContextResponse,
+  ClientContext,
+  CodeRequest,
+  CodeResponse,
+} from "./types.js";
 import { generateHeaders } from "./encryption.js";
 import { Agent, ProxyAgent, setGlobalDispatcher } from "undici";
 import { CONTEXT7_API_BASE_URL } from "./constants.js";
@@ -182,6 +189,63 @@ export async function searchLibraries(
  * @param context Client context including IP, API key, and client info
  * @returns Context response with data
  */
+/**
+ * Queries a library's source code at the version its docs were built from.
+ * A 202 means the source is still being indexed: that is a normal answer
+ * telling the agent to call again, not an error.
+ */
+export async function fetchLibraryCode(
+  request: CodeRequest,
+  context: ClientContext = {}
+): Promise<CodeResponse> {
+  try {
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/code`);
+    url.searchParams.set("libraryId", request.libraryId);
+    url.searchParams.set("query", request.query);
+    if (request.type) url.searchParams.set("type", request.type);
+    if (request.path) url.searchParams.set("path", request.path);
+    if (request.version) url.searchParams.set("version", request.version);
+    if (request.limit) url.searchParams.set("limit", String(request.limit));
+
+    const headers = generateHeaders(context);
+    const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);
+
+    return await observeUpstreamRequest(
+      "fetch_code",
+      () => fetch(url, { headers, signal: abortSignal }),
+      async (response) => {
+        readPromptSignal(response, context);
+        if (response.status === 202) {
+          const body = (await response.json().catch(() => ({}))) as {
+            message?: string;
+            retryAfter?: number;
+          };
+          const wait = body.retryAfter ?? Number(response.headers.get("Retry-After") ?? 30);
+          return {
+            data: `${body.message ?? "The library source is being indexed."} This is not an error. Call query-code again with the same arguments in about ${wait} seconds, or use query-docs meanwhile.`,
+            outcome: "not_found",
+            retryable: true,
+          };
+        }
+        if (!response.ok) {
+          const errorMessage = await parseErrorResponse(response, context);
+          console.error(errorMessage);
+          return { data: errorMessage, outcome: "error" };
+        }
+        const text = await response.text();
+        if (!text) return { data: "No source results for this query.", outcome: "not_found" };
+        const empty = /^No definition named /m.test(text) && /No text matches either\./.test(text);
+        return { data: text, outcome: empty ? "not_found" : "success" };
+      },
+      { abortSignal }
+    );
+  } catch (error) {
+    const errorMessage = `Error querying library source code. Please try again later. ${error}`;
+    console.error(errorMessage);
+    return { data: errorMessage, outcome: "error" };
+  }
+}
+
 export async function fetchLibraryContext(
   request: ContextRequest,
   context: ClientContext = {}

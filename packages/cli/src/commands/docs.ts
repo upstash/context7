@@ -2,7 +2,13 @@ import { Command } from "commander";
 import pc from "picocolors";
 import ora from "ora";
 
-import { resolveLibrary, getLibraryContext } from "../utils/api.js";
+import {
+  resolveLibrary,
+  getLibraryContext,
+  getLibraryCode,
+  CODE_QUERY_TYPES,
+  type CodeQueryType,
+} from "../utils/api.js";
 import { recoverLibraryId } from "../utils/library-id.js";
 import { log } from "../utils/logger.js";
 import { trackEvent } from "../utils/tracking.js";
@@ -215,6 +221,80 @@ async function queryCommand(
   }
 }
 
+interface CodeCommandOptions {
+  type?: string;
+  path?: string;
+  version?: string;
+  limit?: string;
+  json?: boolean;
+}
+
+async function codeCommand(
+  libraryId: string,
+  query: string,
+  options: CodeCommandOptions
+): Promise<void> {
+  trackEvent("command", { name: "code" });
+  libraryId = recoverLibraryId(libraryId);
+  if (!/^\/[^/]+\/[^/]/.test(libraryId)) {
+    log.error(`Invalid library ID: "${libraryId}"`);
+    log.info(
+      `Expected format: /owner/repo or /owner/repo/version. Run "ctx7 library <name>" to find it.`
+    );
+    process.exitCode = 1;
+    return;
+  }
+  if (options.type && !CODE_QUERY_TYPES.includes(options.type as CodeQueryType)) {
+    log.error(`Invalid --type "${options.type}". Use one of: ${CODE_QUERY_TYPES.join(", ")}.`);
+    process.exitCode = 1;
+    return;
+  }
+  const limit = options.limit ? Number(options.limit) : undefined;
+  if (limit !== undefined && (!Number.isInteger(limit) || limit < 1 || limit > 50)) {
+    log.error("--limit must be a whole number from 1 to 50.");
+    process.exitCode = 1;
+    return;
+  }
+
+  const accessToken = await getValidAccessToken();
+  const spinner = isTTY ? ora(`Searching the source of "${libraryId}"...`).start() : null;
+  let result;
+  try {
+    result = await getLibraryCode(
+      libraryId,
+      query,
+      {
+        type: options.type as CodeQueryType | undefined,
+        path: options.path,
+        version: options.version,
+        limit,
+        json: options.json,
+      },
+      accessToken
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    spinner?.fail(`Error: ${message}`);
+    if (!spinner) log.error(message);
+    process.exitCode = 1;
+    return;
+  }
+  spinner?.stop();
+
+  if (result.kind === "indexing") {
+    log.warn(result.message);
+    log.info(`Run the same command again in about ${result.retryAfter} seconds.`);
+    process.exitCode = 75; // EX_TEMPFAIL: try again later
+    return;
+  }
+  if (result.kind === "error") {
+    log.error(result.message || result.error);
+    process.exitCode = 1;
+    return;
+  }
+  console.log(result.body);
+}
+
 export function registerDocsCommands(program: Command): void {
   program
     .command("library")
@@ -244,4 +324,24 @@ export function registerDocsCommands(program: Command): void {
         await queryCommand(libraryId, query, options);
       }
     );
+
+  program
+    .command("code")
+    .argument(
+      "<libraryId>",
+      "Context7 library ID (e.g., /vercel/next.js or /vercel/next.js/v15.5.0)"
+    )
+    .argument("<query>", "Symbol name (e.g., createClient), qualified name, or text to find")
+    .option("--type <type>", `What to find: ${CODE_QUERY_TYPES.join(", ")} (default: definition)`)
+    .option(
+      "--path <path>",
+      "Limit to a directory or file; for --type source, a file with #L10-L40"
+    )
+    .option("--version <version>", "Library version, e.g. v15.5.0")
+    .option("--limit <n>", "Maximum results, 1 to 50 (default: 10)")
+    .option("--json", "Output as JSON")
+    .description("Find definitions, references and text in a library's source code at a version")
+    .action(async (libraryId: string, query: string, options: CodeCommandOptions) => {
+      await codeCommand(libraryId, query, options);
+    });
 }
