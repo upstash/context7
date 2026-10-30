@@ -63,7 +63,6 @@ const DEFAULT_PORT = 3000;
 const OAUTH_METADATA_TIMEOUT_MS = 10_000;
 const CLAUDE_CODE_PLUGIN = "claude-code-plugin";
 const STATIC_LIST_CACHE_HINT = { ttlMs: 3_600_000, cacheScope: "public" } as const;
-// The research preview tool list differs per caller, so no shared cache may reuse it.
 const PREVIEW_LIST_CACHE_HINT = { ttlMs: 3_600_000, cacheScope: "private" } as const;
 type McpInstrumentation = NonNullable<Awaited<ReturnType<typeof initializeTelemetry>>>;
 let mcpInstrumentation: McpInstrumentation | undefined;
@@ -74,6 +73,13 @@ function getPluginFromRequest(req: express.Request): typeof CLAUDE_CODE_PLUGIN |
 
 function isResearchPreviewValue(value: unknown): boolean {
   return value === "1" || value === "true";
+}
+
+function researchPreviewFromRequest(request: Request | undefined): boolean {
+  return (
+    request !== undefined &&
+    isResearchPreviewValue(new URL(request.url).searchParams.get("research_preview"))
+  );
 }
 
 // Parse CLI arguments using commander
@@ -96,7 +102,7 @@ const program = new Command()
   .option("--api-key <key>", "API key for authentication (or set CONTEXT7_API_KEY env var)")
   .option(
     "--research-preview",
-    "show experimental tools (or set CONTEXT7_RESEARCH_PREVIEW=1 env var)"
+    "show experimental tools, stdio only (or set CONTEXT7_RESEARCH_PREVIEW=1 env var)"
   )
   .allowUnknownOption() // let MCP Inspector / other wrappers pass through extra flags
   .parse(process.argv);
@@ -147,7 +153,6 @@ const requestContext = new AsyncLocalStorage<ClientContext>();
 
 // Global state for stdio mode only
 let stdioApiKey: string | undefined;
-let stdioResearchPreview = false;
 let stdioClientInfo: { ide?: string; version?: string } | undefined;
 // One session ID per stdio process.
 let stdioSessionId: string | undefined;
@@ -303,8 +308,10 @@ function createMcpServer(mcpContext: McpRequestContext, researchPreview: boolean
       prompts: { listChanged: false },
       resources: { listChanged: false, subscribe: false },
     },
-    // These results are the same for every caller and change only on deploy, so
-    // clients may reuse them for an hour instead of listing on every request.
+    // These results change only on deploy, so clients may reuse them for an
+    // hour instead of listing on every request. They are the same for every
+    // caller, except tools/list with research preview on: that one is private,
+    // so no shared cache gives the preview tools to other callers.
     // After a deploy that changes a tool schema, clients can still call with the
     // old schema for that hour: keep old argument names accepted (aliasArgs).
     cacheHints: {
@@ -480,10 +487,6 @@ If you know the programming language the user is working in, pass it as \`langua
     }
   );
 
-  if (researchPreview) {
-    // Experimental tools register here. Add each name to MCP_TOOL_NAMES too.
-  }
-
   return server;
 }
 
@@ -572,7 +575,7 @@ async function main() {
     // it at streamIdleTimeout (300s) instead of its 1200s hard cap.
     const rawMcpHandler = createMcpHandler(
       (mcpContext) =>
-        createMcpServer(mcpContext, requestContext.getStore()?.researchPreview === true),
+        createMcpServer(mcpContext, researchPreviewFromRequest(mcpContext.requestInfo)),
       {
         keepAliveMs: 0,
         // The SDK reports each 4xx answer to a malformed client request as a new
@@ -658,7 +661,6 @@ async function main() {
           mcpAuthMode: enforcementMode,
           mcpEndpoint: endpoint,
           plugin,
-          researchPreview: isResearchPreviewValue(req.query.research_preview),
           transport: "http",
         };
 
@@ -859,7 +861,7 @@ async function main() {
     startServer(initialPort);
   } else {
     stdioApiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
-    stdioResearchPreview =
+    const researchPreview =
       cliOptions.researchPreview === true ||
       isResearchPreviewValue(process.env.CONTEXT7_RESEARCH_PREVIEW);
     stdioSessionId = randomUUID();
@@ -870,7 +872,7 @@ async function main() {
 
     const stdioHandle = serveStdio(
       (mcpContext) => {
-        const server = createMcpServer(mcpContext, stdioResearchPreview);
+        const server = createMcpServer(mcpContext, researchPreview);
 
         // Capture client info from MCP initialize handshake (stdio only — HTTP
         // mode plumbs client info through requestContext per request).
