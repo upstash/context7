@@ -42,6 +42,19 @@ export function classifyAuthMethod(token: string | undefined): AuthenticationMet
   return "api_key";
 }
 
+const UNRESOLVED_PLACEHOLDER = /^\$(\{[^}]*\}|[A-Za-z_]\w*)$/;
+
+/**
+ * The trimmed key, or undefined for an empty value or an unexpanded `${VAR}` /
+ * `$VAR`. Gemini CLI passes `${CONTEXT7_API_KEY}` through unchanged when the
+ * user skips the extension's API key prompt; sent as a key, it gets a 401 on
+ * every call.
+ */
+export function usableApiKey(value: string | undefined): string | undefined {
+  const key = value?.trim();
+  return key && !UNRESOLVED_PLACEHOLDER.test(key) ? key : undefined;
+}
+
 export function parseMcpAuthMode(raw = process.env.MCP_AUTH_ENFORCEMENT): McpAuthMode {
   const value = raw?.trim().toLowerCase();
   if (!value) return "required";
