@@ -1387,13 +1387,12 @@ Context7 MCP provides the following tools that LLMs can use:
   - `query` (required): The concept to look up, scoped to a single topic
   - `language` (optional): The programming language you write in, used to rank code examples in that language first
 
-- `query-code` (opt-in): Finds exact locations in a library's source code at the version its docs describe. Enable it with `--query-code` or `CONTEXT7_QUERY_CODE=1`.
+- `query-code` (opt-in): Searches and reads a library's source code at the version its docs describe, like ripgrep and go-to-definition on a checkout of that version. Enable it with `--query-code` or `CONTEXT7_QUERY_CODE=1`.
   - `libraryId` (required): Context7 library ID, optionally with a version (e.g., `/vercel/next.js/v15.5.0`)
-  - `query` (required): A symbol name, qualified name, or text
-  - `type` (optional): `definition` (default), `references`, `outline`, `text` or `source`
-  - `path` (optional): A directory or file; for `source`, a file with a line range such as `src/client.ts#L40-L80`
-  - `version` (optional): A version that overrides the one in `libraryId`
-  - `limit` (optional): 1 to 50 results, default 10
+  - `operation` (optional): `grep` (default), `definition`, `references`, `outline`, `read` or `list`
+  - `pattern`: a regex for `grep` (ripgrep syntax), or a symbol for `definition`, `references` and `read`
+  - `fixed_strings`, `ignore_case`, `glob`, `context`, `output_mode` (`content`, `files_with_matches`, `count`), `head_limit`, `offset`: as in ripgrep
+  - `path` (optional): a folder or file to search in; for `read`, a file with a range such as `src/client.ts#L40-L80`
 
 `get-library-docs` was renamed to `query-docs`. Update client tool allowlists to use `query-docs`.
 

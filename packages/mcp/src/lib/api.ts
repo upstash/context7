@@ -201,11 +201,17 @@ export async function fetchLibraryCode(
   try {
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/code`);
     url.searchParams.set("libraryId", request.libraryId);
-    url.searchParams.set("query", request.query);
-    if (request.type) url.searchParams.set("type", request.type);
+    if (request.operation) url.searchParams.set("operation", request.operation);
+    if (request.pattern !== undefined) url.searchParams.set("pattern", request.pattern);
+    if (request.fixed_strings) url.searchParams.set("fixed_strings", "true");
+    if (request.ignore_case) url.searchParams.set("ignore_case", "true");
+    for (const glob of [request.glob ?? []].flat()) url.searchParams.append("glob", glob);
     if (request.path) url.searchParams.set("path", request.path);
-    if (request.version) url.searchParams.set("version", request.version);
-    if (request.limit) url.searchParams.set("limit", String(request.limit));
+    if (request.context !== undefined) url.searchParams.set("context", String(request.context));
+    if (request.output_mode) url.searchParams.set("output_mode", request.output_mode);
+    if (request.head_limit !== undefined)
+      url.searchParams.set("head_limit", String(request.head_limit));
+    if (request.offset) url.searchParams.set("offset", String(request.offset));
 
     const headers = generateHeaders(context);
     const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);
@@ -234,7 +240,7 @@ export async function fetchLibraryCode(
         }
         const text = await response.text();
         if (!text) return { data: "No source results for this query.", outcome: "not_found" };
-        const empty = /^No definition named /m.test(text) && /No text matches either\./.test(text);
+        const empty = /^0 matching lines in 0 files/m.test(text) || /^0 entries in /m.test(text);
         return { data: text, outcome: empty ? "not_found" : "success" };
       },
       { abortSignal }

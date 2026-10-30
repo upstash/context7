@@ -6,8 +6,8 @@ import {
   resolveLibrary,
   getLibraryContext,
   getLibraryCode,
-  CODE_QUERY_TYPES,
-  type CodeQueryType,
+  CODE_OPERATIONS,
+  type CodeOperation,
 } from "../utils/api.js";
 import { recoverLibraryId } from "../utils/library-id.js";
 import { log } from "../utils/logger.js";
@@ -222,16 +222,49 @@ async function queryCommand(
 }
 
 interface CodeCommandOptions {
-  type?: string;
+  op?: string;
+  fixedStrings?: boolean;
+  ignoreCase?: boolean;
+  glob?: string[];
+  context?: string;
+  filesWithMatches?: boolean;
+  count?: boolean;
   path?: string;
-  version?: string;
-  limit?: string;
+  headLimit?: string;
+  offset?: string;
   json?: boolean;
+  // The first version's flags.
+  type?: string;
+  limit?: string;
+  version?: string;
+}
+
+const LEGACY_TYPES: Record<string, { op: CodeOperation; fixedStrings?: boolean }> = {
+  text: { op: "grep", fixedStrings: true },
+  source: { op: "read" },
+  definition: { op: "definition" },
+  references: { op: "references" },
+  outline: { op: "outline" },
+};
+
+function wholeNumber(
+  value: string | undefined,
+  name: string,
+  max: number
+): number | undefined | null {
+  if (value === undefined) return undefined;
+  const n = Number(value);
+  if (!Number.isInteger(n) || n < 0 || n > max) {
+    log.error(`${name} must be a whole number from 0 to ${max}.`);
+    process.exitCode = 1;
+    return null;
+  }
+  return n;
 }
 
 async function codeCommand(
   libraryId: string,
-  query: string,
+  pattern: string | undefined,
   options: CodeCommandOptions
 ): Promise<void> {
   trackEvent("command", { name: "code" });
@@ -244,17 +277,26 @@ async function codeCommand(
     process.exitCode = 1;
     return;
   }
-  if (options.type && !CODE_QUERY_TYPES.includes(options.type as CodeQueryType)) {
-    log.error(`Invalid --type "${options.type}". Use one of: ${CODE_QUERY_TYPES.join(", ")}.`);
+  const legacy = options.type ? LEGACY_TYPES[options.type] : undefined;
+  if (options.type && !legacy) {
+    log.error(
+      `Invalid --type "${options.type}". Use --op with one of: ${CODE_OPERATIONS.join(", ")}.`
+    );
     process.exitCode = 1;
     return;
   }
-  const limit = options.limit ? Number(options.limit) : undefined;
-  if (limit !== undefined && (!Number.isInteger(limit) || limit < 1 || limit > 50)) {
-    log.error("--limit must be a whole number from 1 to 50.");
+  const op = options.op ?? legacy?.op;
+  if (op && !CODE_OPERATIONS.includes(op as CodeOperation)) {
+    log.error(`Invalid --op "${op}". Use one of: ${CODE_OPERATIONS.join(", ")}.`);
     process.exitCode = 1;
     return;
   }
+  const context = wholeNumber(options.context, "--context", 10);
+  const headLimit = wholeNumber(options.headLimit ?? options.limit, "--head-limit", 500);
+  const offset = wholeNumber(options.offset, "--offset", 10_000);
+  if (context === null || headLimit === null || offset === null) return;
+  if (options.version && libraryId.split("/").filter(Boolean).length === 2)
+    libraryId = `${libraryId}/${options.version}`;
 
   const accessToken = await getValidAccessToken();
   const spinner = isTTY ? ora(`Searching the source of "${libraryId}"...`).start() : null;
@@ -262,12 +304,21 @@ async function codeCommand(
   try {
     result = await getLibraryCode(
       libraryId,
-      query,
+      pattern,
       {
-        type: options.type as CodeQueryType | undefined,
+        operation: op as CodeOperation | undefined,
+        fixedStrings: options.fixedStrings || legacy?.fixedStrings,
+        ignoreCase: options.ignoreCase,
+        glob: options.glob,
         path: options.path,
-        version: options.version,
-        limit,
+        context,
+        outputMode: options.count
+          ? "count"
+          : options.filesWithMatches
+            ? "files_with_matches"
+            : undefined,
+        headLimit: headLimit || undefined,
+        offset: offset || undefined,
         json: options.json,
       },
       accessToken
@@ -331,17 +382,23 @@ export function registerDocsCommands(program: Command): void {
       "<libraryId>",
       "Context7 library ID (e.g., /vercel/next.js or /vercel/next.js/v15.5.0)"
     )
-    .argument("<query>", "Symbol name (e.g., createClient), qualified name, or text to find")
-    .option("--type <type>", `What to find: ${CODE_QUERY_TYPES.join(", ")} (default: definition)`)
-    .option(
-      "--path <path>",
-      "Limit to a directory or file; for --type source, a file with #L10-L40"
-    )
-    .option("--version <version>", "Library version, e.g. v15.5.0")
-    .option("--limit <n>", "Maximum results, 1 to 50 (default: 10)")
+    .argument("[pattern]", "A regex to grep for, or a symbol for --op definition/references/read")
+    .option("--op <operation>", `grep (default), definition, references, outline, read or list`)
+    .option("-F, --fixed-strings", "Treat the pattern as plain text")
+    .option("-i, --ignore-case", "Case-insensitive search")
+    .option("-g, --glob <glob...>", "Only files matching a glob; start with ! to exclude")
+    .option("-C, --context <n>", "Lines of context around each match (0 to 10)")
+    .option("-l, --files-with-matches", "Print only the paths of matching files")
+    .option("-c, --count", "Print the number of matches per file")
+    .option("--path <path>", "A folder or file; for --op read, a file with #L10-L40")
+    .option("--head-limit <n>", "Maximum results (default: 20)")
+    .option("--offset <n>", "Skip this many results")
     .option("--json", "Output as JSON")
-    .description("Find definitions, references and text in a library's source code at a version")
-    .action(async (libraryId: string, query: string, options: CodeCommandOptions) => {
-      await codeCommand(libraryId, query, options);
+    .option("--type <type>", "Deprecated: use --op")
+    .option("--limit <n>", "Deprecated: use --head-limit")
+    .option("--version <version>", "Deprecated: add the version to the library ID")
+    .description("Search and read a library's source code at a version, like ripgrep")
+    .action(async (libraryId: string, pattern: string | undefined, options: CodeCommandOptions) => {
+      await codeCommand(libraryId, pattern, options);
     });
 }

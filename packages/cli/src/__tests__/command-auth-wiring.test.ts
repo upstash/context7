@@ -17,7 +17,7 @@ vi.mock("../utils/api.js", () => ({
   resolveLibrary: (...args: unknown[]) => mockResolveLibrary(...args),
   getLibraryContext: (...args: unknown[]) => mockGetLibraryContext(...args),
   getLibraryCode: (...args: unknown[]) => mockGetLibraryCode(...args),
-  CODE_QUERY_TYPES: ["definition", "references", "outline", "text", "source"],
+  CODE_OPERATIONS: ["grep", "definition", "references", "outline", "read", "list"],
   getBaseUrl: () => "https://test.context7.com",
 }));
 
@@ -83,28 +83,60 @@ describe("commands pass a refreshed token to the API", () => {
 });
 
 describe("ctx7 code", () => {
-  test("passes the refreshed token and options to the API", async () => {
-    mockGetLibraryCode.mockResolvedValue({ kind: "result", body: "1 definitions" });
+  test("passes the refreshed token and ripgrep-style flags to the API", async () => {
+    mockGetLibraryCode.mockResolvedValue({ kind: "result", body: "lib/a.ts:1:x" });
 
     await run(
       registerDocsCommands,
       "code",
       "/a/b",
-      "createClient",
-      "--type",
-      "definition",
-      "--limit",
-      "5"
+      "use(Router|Params)",
+      "-i",
+      "-g",
+      "*.ts",
+      "!**/test/**",
+      "-C",
+      "2",
+      "-c"
     );
 
     expect(mockGetLibraryCode).toHaveBeenCalledWith(
       "/a/b",
-      "createClient",
-      { type: "definition", path: undefined, version: undefined, limit: 5, json: undefined },
+      "use(Router|Params)",
+      expect.objectContaining({
+        ignoreCase: true,
+        glob: ["*.ts", "!**/test/**"],
+        context: 2,
+        outputMode: "count",
+      }),
       REFRESHED
     );
-    expect(console.log).toHaveBeenCalledWith("1 definitions");
+    expect(console.log).toHaveBeenCalledWith("lib/a.ts:1:x");
     expect(process.exitCode).toBeUndefined();
+  });
+
+  test("maps the first version's flags", async () => {
+    mockGetLibraryCode.mockResolvedValue({ kind: "result", body: "ok" });
+
+    await run(
+      registerDocsCommands,
+      "code",
+      "/a/b",
+      "Request failed",
+      "--type",
+      "text",
+      "--limit",
+      "5",
+      "--version",
+      "v2"
+    );
+
+    expect(mockGetLibraryCode).toHaveBeenCalledWith(
+      "/a/b/v2",
+      "Request failed",
+      expect.objectContaining({ operation: "grep", fixedStrings: true, headLimit: 5 }),
+      REFRESHED
+    );
   });
 
   test("asks to retry while the source is being indexed", async () => {
@@ -119,8 +151,8 @@ describe("ctx7 code", () => {
     expect(process.exitCode).toBe(75);
   });
 
-  test("rejects an unknown type without calling the API", async () => {
-    await run(registerDocsCommands, "code", "/a/b", "x", "--type", "symbols");
+  test("rejects an unknown operation without calling the API", async () => {
+    await run(registerDocsCommands, "code", "/a/b", "x", "--op", "graph");
 
     expect(mockGetLibraryCode).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(1);

@@ -63,14 +63,27 @@ export interface GetContextOptions {
   language?: string;
 }
 
-export const CODE_QUERY_TYPES = ["definition", "references", "outline", "text", "source"] as const;
-export type CodeQueryType = (typeof CODE_QUERY_TYPES)[number];
+export const CODE_OPERATIONS = [
+  "grep",
+  "definition",
+  "references",
+  "outline",
+  "read",
+  "list",
+] as const;
+export type CodeOperation = (typeof CODE_OPERATIONS)[number];
 
+/** ripgrep-style search options plus LSP-style operations, as sent to /api/v2/code. */
 export interface CodeQueryOptions {
-  type?: CodeQueryType;
+  operation?: CodeOperation;
+  fixedStrings?: boolean;
+  ignoreCase?: boolean;
+  glob?: string[];
   path?: string;
-  version?: string;
-  limit?: number;
+  context?: number;
+  outputMode?: "content" | "files_with_matches" | "count";
+  headLimit?: number;
+  offset?: number;
   json?: boolean;
 }
 
@@ -82,15 +95,21 @@ export type CodeQueryResult =
 /** Queries a library's source code through /api/v2/code. */
 export async function getLibraryCode(
   libraryId: string,
-  query: string,
+  pattern: string | undefined,
   options: CodeQueryOptions = {},
   accessToken?: string
 ): Promise<CodeQueryResult> {
-  const params = new URLSearchParams({ libraryId, query });
-  if (options.type) params.set("type", options.type);
+  const params = new URLSearchParams({ libraryId });
+  if (pattern) params.set("pattern", pattern);
+  if (options.operation) params.set("operation", options.operation);
+  if (options.fixedStrings) params.set("fixed_strings", "true");
+  if (options.ignoreCase) params.set("ignore_case", "true");
+  for (const glob of options.glob ?? []) params.append("glob", glob);
   if (options.path) params.set("path", options.path);
-  if (options.version) params.set("version", options.version);
-  if (options.limit) params.set("limit", String(options.limit));
+  if (options.context !== undefined) params.set("context", String(options.context));
+  if (options.outputMode) params.set("output_mode", options.outputMode);
+  if (options.headLimit) params.set("head_limit", String(options.headLimit));
+  if (options.offset) params.set("offset", String(options.offset));
   if (options.json) params.set("format", "json");
   const response = await fetch(`${baseUrl}/api/v2/code?${params}`, {
     headers: getAuthHeaders(accessToken),

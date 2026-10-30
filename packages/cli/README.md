@@ -98,16 +98,18 @@ ctx7 docs /facebook/react "hooks" --json
 
 ### Query source code
 
-Find definitions, references and exact text in a library's source code, at the version its docs describe.
+Search and read a library's source code at the version its docs describe. Search works like ripgrep.
 
 ```bash
-ctx7 code /vercel/next.js useRouter
-ctx7 code /colinhacks/zod "Invalid input" --type text
-ctx7 code /colinhacks/zod ZodEffects --type source
-ctx7 code /vercel/next.js/v15.5.0 NextRequest --type outline --path packages/next/src/server/web/spec-extension/request.ts
+ctx7 code /tanstack/query "invalidateQueries\\(" -g "packages/query-core/**"
+ctx7 code /pydantic/pydantic "Input should be a valid integer" -F
+ctx7 code /tokio-rs/tokio JoinHandle -c
+ctx7 code /colinhacks/zod/v3.24.2 ZodEffects --op definition
+ctx7 code /tokio-rs/tokio spawn --op read
+ctx7 code /tanstack/query --op list --path packages/query-core/src
 ```
 
-The first query for a library version can answer that the source is still being indexed. Run the command again after the time it gives.
+`--op` is `grep` (default), `definition`, `references`, `outline`, `read` or `list`. The search flags are `-F`, `-i`, `-g`, `-C`, `-l`, `-c`, `--head-limit` and `--offset`. The first query for a library version can answer that the source is still being indexed. Run the command again after the time it gives.
 
 ### Setup
 

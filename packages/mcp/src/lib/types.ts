@@ -36,16 +36,30 @@ export type ContextResponse = {
   outcome: ToolCallOutcome;
 };
 
-export const CODE_QUERY_TYPES = ["definition", "references", "outline", "text", "source"] as const;
-export type CodeQueryType = (typeof CODE_QUERY_TYPES)[number];
+export const CODE_OPERATIONS = [
+  "grep",
+  "definition",
+  "references",
+  "outline",
+  "read",
+  "list",
+] as const;
+export type CodeOperation = (typeof CODE_OPERATIONS)[number];
+export const CODE_OUTPUT_MODES = ["content", "files_with_matches", "count"] as const;
 
+/** Fields of the query-code tool. Search fields follow ripgrep; operations follow LSP. */
 export type CodeRequest = {
   libraryId: string;
-  query: string;
-  type?: CodeQueryType;
+  operation?: CodeOperation;
+  pattern?: string;
+  fixed_strings?: boolean;
+  ignore_case?: boolean;
+  glob?: string | string[];
   path?: string;
-  version?: string;
-  limit?: number;
+  context?: number;
+  output_mode?: (typeof CODE_OUTPUT_MODES)[number];
+  head_limit?: number;
+  offset?: number;
 };
 
 export type CodeResponse = ContextResponse & {

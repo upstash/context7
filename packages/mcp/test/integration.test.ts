@@ -165,7 +165,7 @@ function startStubApi(): Promise<string> {
       }
       res.end(url.searchParams.get("query") === EMPTY_CONTEXT_QUERY ? "" : STUB_DOCS);
     } else if (apiPath === "/v2/code") {
-      const query = url.searchParams.get("query");
+      const query = url.searchParams.get("pattern");
       if (query === CODE_INDEXING_QUERY) {
         res.statusCode = 202;
         res.setHeader("Content-Type", "application/json");
@@ -1551,12 +1551,17 @@ describe("query-code tool", () => {
       const { tools } = await client.listTools();
       const tool = tools.find((candidate) => candidate.name === "query-code");
       expect(Object.keys(tool?.inputSchema.properties ?? {}).sort()).toEqual([
+        "context",
+        "fixed_strings",
+        "glob",
+        "head_limit",
+        "ignore_case",
         "libraryId",
-        "limit",
+        "offset",
+        "operation",
+        "output_mode",
         "path",
-        "query",
-        "type",
-        "version",
+        "pattern",
       ]);
       expect(tool?.annotations?.readOnlyHint).toBe(true);
 
@@ -1566,16 +1571,53 @@ describe("query-code tool", () => {
         arguments: {
           libraryId: "/vercel/next.js",
           pattern: "useRouter",
-          type: "definition",
+          operation: "definition",
           file: "packages/next",
         },
       });
       expect(result.isError).toBeFalsy();
       expect(result.content).toMatchObject([{ type: "text", text: STUB_CODE }]);
       const sent = requests.slice(before).find((request) => request.path === "/v2/code");
-      expect(sent?.query.get("query")).toBe("useRouter");
+      expect(sent?.query.get("pattern")).toBe("useRouter");
       expect(sent?.query.get("path")).toBe("packages/next");
-      expect(sent?.query.get("type")).toBe("definition");
+      expect(sent?.query.get("operation")).toBe("definition");
+
+      // ripgrep-style fields reach the API; the first version's names still work.
+      const grepCall = requests.length;
+      await client.callTool({
+        name: "query-code",
+        arguments: {
+          libraryId: "/vercel/next.js",
+          pattern: "use(Router|Params)",
+          ignore_case: true,
+          glob: ["*.ts", "!**/test/**"],
+          context: 2,
+          output_mode: "count",
+        },
+      });
+      const grepSent = requests.slice(grepCall).find((request) => request.path === "/v2/code");
+      expect(grepSent?.query.get("ignore_case")).toBe("true");
+      expect(grepSent?.query.getAll("glob")).toEqual(["*.ts", "!**/test/**"]);
+      expect(grepSent?.query.get("context")).toBe("2");
+      expect(grepSent?.query.get("output_mode")).toBe("count");
+
+      const legacyCall = requests.length;
+      await client.callTool({
+        name: "query-code",
+        arguments: {
+          libraryId: "/vercel/next.js",
+          query: "Request failed",
+          type: "text",
+          version: "v15.5.0",
+          limit: 5,
+        },
+      });
+      const legacySent = requests.slice(legacyCall).find((request) => request.path === "/v2/code");
+      expect(legacySent?.query.get("libraryId")).toBe("/vercel/next.js/v15.5.0");
+      expect(legacySent?.query.get("pattern")).toBe("Request failed");
+      expect(legacySent?.query.get("operation")).toBe("grep");
+      expect(legacySent?.query.get("fixed_strings")).toBe("true");
+      expect(legacySent?.query.get("head_limit")).toBe("5");
     } finally {
       await client.close();
     }
@@ -1586,7 +1628,7 @@ describe("query-code tool", () => {
     try {
       const indexing = await client.callTool({
         name: "query-code",
-        arguments: { libraryId: "/vercel/next.js", query: CODE_INDEXING_QUERY },
+        arguments: { libraryId: "/vercel/next.js", pattern: CODE_INDEXING_QUERY },
       });
       expect(indexing.isError).toBeFalsy();
       expect((indexing.content as { text: string }[])[0].text).toMatch(
@@ -1595,7 +1637,7 @@ describe("query-code tool", () => {
 
       const noSource = await client.callTool({
         name: "query-code",
-        arguments: { libraryId: "/websites/x", query: CODE_NO_SOURCE_QUERY },
+        arguments: { libraryId: "/websites/x", pattern: CODE_NO_SOURCE_QUERY },
       });
       expect(noSource.isError).toBe(true);
       expect((noSource.content as { text: string }[])[0].text).toContain("not available");
