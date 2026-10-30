@@ -131,10 +131,16 @@ describe("ctx7 code", () => {
       "v2"
     );
 
+    // --version is its own field, sent next to the library ID.
     expect(mockGetLibraryCode).toHaveBeenCalledWith(
-      "/a/b/v2",
+      "/a/b",
       "Request failed",
-      expect.objectContaining({ operation: "grep", fixedStrings: true, headLimit: 5 }),
+      expect.objectContaining({
+        version: "v2",
+        operation: "grep",
+        fixedStrings: true,
+        headLimit: 5,
+      }),
       REFRESHED
     );
   });

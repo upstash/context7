@@ -201,6 +201,7 @@ export async function fetchLibraryCode(
   try {
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/code`);
     url.searchParams.set("libraryId", request.libraryId);
+    if (request.version) url.searchParams.set("version", request.version);
     if (request.operation) url.searchParams.set("operation", request.operation);
     if (request.pattern !== undefined) url.searchParams.set("pattern", request.pattern);
     if (request.fixed_strings) url.searchParams.set("fixed_strings", "true");

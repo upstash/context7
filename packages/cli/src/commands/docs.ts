@@ -295,17 +295,16 @@ async function codeCommand(
   const headLimit = wholeNumber(options.headLimit ?? options.limit, "--head-limit", 500);
   const offset = wholeNumber(options.offset, "--offset", 10_000);
   if (context === null || headLimit === null || offset === null) return;
-  if (options.version && libraryId.split("/").filter(Boolean).length === 2)
-    libraryId = `${libraryId}/${options.version}`;
-
   const accessToken = await getValidAccessToken();
-  const spinner = isTTY ? ora(`Searching the source of "${libraryId}"...`).start() : null;
+  const target = options.version ? `${libraryId} ${options.version}` : libraryId;
+  const spinner = isTTY ? ora(`Searching the source of "${target}"...`).start() : null;
   let result;
   try {
     result = await getLibraryCode(
       libraryId,
       pattern,
       {
+        version: options.version,
         operation: op as CodeOperation | undefined,
         fixedStrings: options.fixedStrings || legacy?.fixedStrings,
         ignoreCase: options.ignoreCase,
@@ -380,7 +379,7 @@ export function registerDocsCommands(program: Command): void {
     .command("code")
     .argument(
       "<libraryId>",
-      "Context7 library ID (e.g., /vercel/next.js or /vercel/next.js/v15.5.0)"
+      "Context7 library ID (e.g., /vercel/next.js); set the version with --version"
     )
     .argument(
       "[pattern]",
@@ -405,7 +404,10 @@ export function registerDocsCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .option("--type <type>", "Deprecated: use --op")
     .option("--limit <n>", "Deprecated: use --head-limit")
-    .option("--version <version>", "Deprecated: add the version to the library ID")
+    .option(
+      "--version <version>",
+      "Library version, e.g. v15.5.0 (default: the latest docs version)"
+    )
     .description("Search and read a library's source code at a version, like ripgrep")
     .action(async (libraryId: string, pattern: string | undefined, options: CodeCommandOptions) => {
       await codeCommand(libraryId, pattern, options);

@@ -104,7 +104,7 @@ Search and read a library's source code at the version its docs describe. Search
 ctx7 code /tanstack/query "invalidateQueries\\(" -g "packages/query-core/**"
 ctx7 code /pydantic/pydantic "Input should be a valid integer" -F
 ctx7 code /tokio-rs/tokio JoinHandle -c
-ctx7 code /colinhacks/zod/v3.24.2 ZodEffects --op definition
+ctx7 code /colinhacks/zod ZodEffects --op definition --version v3.24.2
 ctx7 code /tokio-rs/tokio spawn --op read
 ctx7 code /gin-gonic/gin "recover from a panic and return 500" --op search
 ctx7 code /tanstack/query --op list --path packages/query-core/src

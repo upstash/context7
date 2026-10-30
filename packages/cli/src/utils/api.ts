@@ -76,6 +76,8 @@ export type CodeOperation = (typeof CODE_OPERATIONS)[number];
 
 /** ripgrep-style search options plus LSP-style operations, as sent to /api/v2/code. */
 export interface CodeQueryOptions {
+  /** A version listed by `ctx7 library`. A version suffix on the library ID also works. */
+  version?: string;
   operation?: CodeOperation;
   fixedStrings?: boolean;
   ignoreCase?: boolean;
@@ -101,6 +103,7 @@ export async function getLibraryCode(
   accessToken?: string
 ): Promise<CodeQueryResult> {
   const params = new URLSearchParams({ libraryId });
+  if (options.version) params.set("version", options.version);
   if (pattern) params.set("pattern", pattern);
   if (options.operation) params.set("operation", options.operation);
   if (options.fixedStrings) params.set("fixed_strings", "true");

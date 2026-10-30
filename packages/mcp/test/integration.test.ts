@@ -1562,6 +1562,7 @@ describe("query-code tool", () => {
         "output_mode",
         "path",
         "pattern",
+        "version",
       ]);
       expect(tool?.annotations?.readOnlyHint).toBe(true);
 
@@ -1626,7 +1627,9 @@ describe("query-code tool", () => {
         },
       });
       const legacySent = requests.slice(legacyCall).find((request) => request.path === "/v2/code");
-      expect(legacySent?.query.get("libraryId")).toBe("/vercel/next.js/v15.5.0");
+      // version is its own field now; it is no longer folded into libraryId.
+      expect(legacySent?.query.get("libraryId")).toBe("/vercel/next.js");
+      expect(legacySent?.query.get("version")).toBe("v15.5.0");
       expect(legacySent?.query.get("pattern")).toBe("Request failed");
       expect(legacySent?.query.get("operation")).toBe("grep");
       expect(legacySent?.query.get("fixed_strings")).toBe("true");

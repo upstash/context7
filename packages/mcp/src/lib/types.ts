@@ -51,6 +51,8 @@ export const CODE_OUTPUT_MODES = ["content", "files_with_matches", "count"] as c
 /** Fields of the query-code tool. Search fields follow ripgrep; operations follow LSP. */
 export type CodeRequest = {
   libraryId: string;
+  /** A version listed by resolve-library-id. A version suffix on libraryId also works. */
+  version?: string;
   operation?: CodeOperation;
   pattern?: string;
   fixed_strings?: boolean;
