@@ -3,6 +3,7 @@ import type {
   McpUiHostContext,
   McpUiInitializeResult,
 } from "@modelcontextprotocol/ext-apps";
+import type { ConsoleRead } from "../../src/tools";
 
 /**
  * The MCP Apps bridge (ext-apps spec 2026-01-26): JSON-RPC over postMessage
@@ -196,10 +197,10 @@ export class Host {
   }
 
   /**
-   * Reads one of the server's read tools through `console_data`, the app-only tool that answers
+   * Runs one of the console's read tools through `console_data`, the app-only tool that answers
    * in `structuredContent`: ChatGPT gives a page only that part of a result.
    */
-  async callTool<T>(name: string, args: object = {}): Promise<T> {
+  async read<T>(name: ConsoleRead, args: object = {}): Promise<T> {
     const result = await this.request<ToolResult>("tools/call", {
       name: "console_data",
       arguments: { tool: name, arguments: args },

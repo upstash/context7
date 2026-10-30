@@ -7,8 +7,8 @@ import {
   type ServerContext,
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
-import { CONSOLE_READS, CONSOLE_TOOL_META, registerConsole } from "./console.js";
-import { TOOLS, ToolError, type Api, type Kind, type ToolDef } from "./tools.js";
+import { CONSOLE_TOOL_META, registerConsole } from "./console.js";
+import { TOOLS, ToolError, type Api, type ConsoleRead, type Kind, type ToolDef } from "./tools.js";
 
 export const SERVER_VERSION: string = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf-8")
@@ -251,23 +251,57 @@ async function resolveTeamspace(value: unknown, api: Api): Promise<string> {
 }
 
 type Outcome = { ok: true; value: unknown } | { ok: false; error: unknown };
-/** Runs one tool for the caller: resolves the teamspace, calls the API, writes the audit line. */
+type Source = "model" | "console";
+
+/** The tool's input: its args, plus `teamspace` and `action` where they apply. */
+function inputSchemaOf(def: ToolDef): z.ZodObject<z.ZodRawShape> {
+  const actions = def.actions ? Object.keys(def.actions) : undefined;
+  return z.object({
+    ...(def.teamspace === false
+      ? {}
+      : {
+          teamspace: z
+            .string()
+            .optional()
+            .describe(
+              "Teamspace id or name (from list_teamspaces). Leave out when the user has one teamspace."
+            ),
+        }),
+    ...(actions ? { action: z.enum(actions as [string, ...string[]]) } : {}),
+    ...def.args,
+  });
+}
+
+/** What the page gets: the value without null fields, as in the text the model reads. */
+const structured = (value: unknown) => withoutNulls(value) as Record<string, unknown>;
+
+/**
+ * Runs one tool for the caller: checks a console call's arguments (the SDK
+ * checks the model's), resolves the teamspace, calls the API and writes the
+ * audit line.
+ */
 async function runTool(
   def: ToolDef,
   args: Record<string, unknown>,
   ctx: ServerContext,
-  page = false
+  source: Source
 ): Promise<Outcome> {
   // The header names the tool that ran, also for the console page's console_data reads.
   const api = createApi(
     ctx.http?.authInfo?.extra?.state as RequestState,
     telemetryHeaders(def.name, ctx)
   );
-  const input: Record<string, unknown> = { ...args };
+  let input: Record<string, unknown> = { ...args };
   let outcome: Outcome;
   try {
+    if (source === "console") {
+      const parsed = inputSchemaOf(def).safeParse(args);
+      if (!parsed.success)
+        throw new ToolError(`Invalid arguments for ${def.name}: ${parsed.error.message}`);
+      input = parsed.data;
+    }
     if (def.teamspace !== false) {
-      input.teamspace = await resolveTeamspace(args.teamspace, api);
+      input.teamspace = await resolveTeamspace(input.teamspace, api);
     }
     outcome = { ok: true, value: await def.run(input as Parameters<typeof def.run>[0], api) };
   } catch (error) {
@@ -278,7 +312,7 @@ async function runTool(
     JSON.stringify({
       event: "tool_call",
       tool: def.name,
-      ...(page ? { from: "console" } : {}),
+      ...(source === "console" ? { from: "console" } : {}),
       teamspace: input.teamspace,
       outcome: outcome.ok ? "ok" : "error",
     })
@@ -293,33 +327,16 @@ async function runTool(
  */
 export function registerAdminTools(server: McpServer): void {
   registerConsole(server);
-  const inputSchemas = new Map<string, z.ZodObject<z.ZodRawShape>>();
   for (const def of TOOLS) {
-    const actions = def.actions ? Object.keys(def.actions) : undefined;
-    const kinds: Kind[] = actions ? actions.map((a) => def.actions![a]) : [def.kind!];
+    const kinds: Kind[] = def.actions ? Object.values(def.actions) : [def.kind!];
     const readOnly = kinds.every((kind) => kind === "read");
-    const inputSchema = z.object({
-      ...(def.teamspace === false
-        ? {}
-        : {
-            teamspace: z
-              .string()
-              .optional()
-              .describe(
-                "Teamspace id or name (from list_teamspaces). Leave out when the user has one teamspace."
-              ),
-          }),
-      ...(actions ? { action: z.enum(actions as [string, ...string[]]) } : {}),
-      ...def.args,
-    });
-    inputSchemas.set(def.name, inputSchema);
 
     server.registerTool(
       def.name,
       {
         title: def.title,
         description: def.description,
-        inputSchema,
+        inputSchema: inputSchemaOf(def),
         annotations: {
           title: def.title,
           readOnlyHint: readOnly,
@@ -328,19 +345,17 @@ export function registerAdminTools(server: McpServer): void {
           openWorldHint: false,
         },
         // ChatGPT shows the console's entrypoints in its app sidebar with this icon.
-        ...(def.console ? { icons: SERVER_ICONS } : {}),
+        ...(def.console === "open" ? { icons: SERVER_ICONS } : {}),
         // The console page reads through console_data only: a host refuses its calls to the others.
-        _meta: def.console ? CONSOLE_TOOL_META : { ui: { visibility: ["model"] } },
+        _meta: def.console === "open" ? CONSOLE_TOOL_META : { ui: { visibility: ["model"] } },
       },
       async (args: Record<string, unknown>, ctx): Promise<CallToolResult> => {
-        const outcome = await runTool(def, args, ctx);
+        const outcome = await runTool(def, args, ctx, "model");
         const untrusted = Boolean(def.untrusted);
         return outcome.ok
           ? {
               content: [{ type: "text", text: formatResult(outcome.value, untrusted) }],
-              ...(def.console
-                ? { structuredContent: outcome.value as Record<string, unknown> }
-                : {}),
+              ...(def.console === "open" ? { structuredContent: structured(outcome.value) } : {}),
             }
           : {
               isError: true,
@@ -349,7 +364,7 @@ export function registerAdminTools(server: McpServer): void {
       }
     );
   }
-  registerConsoleData(server, inputSchemas);
+  registerConsoleData(server);
 }
 
 /**
@@ -359,17 +374,17 @@ export function registerAdminTools(server: McpServer): void {
  * model) runs one of them and returns its data as `structuredContent`. Third-party
  * text stays out of the model's context, where the read tools fence it.
  */
-function registerConsoleData(
-  server: McpServer,
-  inputSchemas: Map<string, z.ZodObject<z.ZodRawShape>>
-): void {
+function registerConsoleData(server: McpServer): void {
+  const reads = new Map(
+    TOOLS.filter((def) => def.console === "read").map((def) => [def.name, def])
+  );
   server.registerTool(
     "console_data",
     {
       title: "Console data",
       description: "The Context7 console page's reads. For the page only.",
       inputSchema: z.object({
-        tool: z.enum(CONSOLE_READS),
+        tool: z.enum([...reads.keys()] as [ConsoleRead, ...ConsoleRead[]]),
         arguments: z.record(z.string(), z.unknown()).optional(),
       }),
       annotations: {
@@ -382,14 +397,9 @@ function registerConsoleData(
       _meta: { ui: { visibility: ["app"] } },
     },
     async ({ tool, arguments: args = {} }, ctx): Promise<CallToolResult> => {
-      const def = TOOLS.find((d) => d.name === tool)!;
-      const parsed = inputSchemas.get(tool)!.safeParse(args);
-      const outcome: Outcome = parsed.success
-        ? await runTool(def, parsed.data, ctx, true)
-        : {
-            ok: false,
-            error: new ToolError(`Invalid arguments for ${tool}: ${parsed.error.message}`),
-          };
+      // `tool` passed the enum of this map's keys.
+      const def = reads.get(tool)!;
+      const outcome = await runTool(def, args, ctx, "console");
       if (!outcome.ok) {
         // content can reach the model, so it keeps the read tool's fence; the page reads the plain error.
         return {
@@ -400,7 +410,7 @@ function registerConsoleData(
       }
       return {
         content: [{ type: "text", text: `${tool} data for the Context7 console.` }],
-        structuredContent: withoutNulls(outcome.value) as Record<string, unknown>,
+        structuredContent: structured(outcome.value),
       };
     }
   );

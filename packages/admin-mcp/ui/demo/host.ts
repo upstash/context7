@@ -132,8 +132,7 @@ bridge.onrequestdisplaymode = async ({ mode }) => {
   return { mode: display };
 };
 // As ChatGPT does: the page may call only app-visible tools (console_data), and it gets the
-// result's structuredContent. The backend answers text like the server's tools; for the page,
-// console_data turns it back into data.
+// result's structuredContent.
 bridge.oncalltool = async (request) => {
   const { tool, arguments: args = {} } = (request.arguments ?? {}) as {
     tool?: string;
@@ -147,11 +146,9 @@ bridge.oncalltool = async (request) => {
     };
   }
   try {
-    const text = callTool(tool!, args);
-    const fenced = /<(untrusted-data-[0-9a-f-]+)>\n([\s\S]*)\n<\/\1>/.exec(text);
     return {
       content: [{ type: "text", text: `${tool} data for the Context7 console.` }],
-      structuredContent: JSON.parse(fenced ? fenced[2]! : text),
+      structuredContent: callTool(tool!, args) as Record<string, unknown>,
     };
   } catch (error) {
     const text = (error as Error).message;
@@ -176,7 +173,7 @@ bridge.oninitialized = () => {
   record("model called", `open_console ${JSON.stringify(args)}`);
   bridge.sendToolInput({ arguments: args });
   try {
-    const result = JSON.parse(callTool("open_console", args));
+    const result = callTool("open_console", args) as Record<string, unknown>;
     bridge.sendToolResult({
       content: [{ type: "text", text: JSON.stringify(result) }],
       structuredContent: result,

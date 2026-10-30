@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
+import type { ConsoleRead } from "../../src/tools";
 import { host } from "./host";
 
 /*
- * Reads through this server's read tools (the same ones the model calls), in
- * the shapes they answer: src/tools.ts over the management API in context7app.
+ * Reads through `console_data`, which runs one of the server's read tools for
+ * the page and answers in their shapes: src/tools.ts over the management API
+ * in context7app.
  * A page shows the answer it had at once and asks again in the background, so
  * going back to a page is instant and still picks up a finished build or a
  * change made in the chat. `reload` asks again after an error.
@@ -13,7 +15,7 @@ const cache = new Map<string, unknown>();
 
 type ToolState<T> = { data?: T; error?: string; loading: boolean; reload: () => void };
 
-export function useTool<T>(name: string | undefined, args: object = {}): ToolState<T> {
+export function useTool<T>(name: ConsoleRead | undefined, args: object = {}): ToolState<T> {
   const key = name ? JSON.stringify([name, args]) : "";
   const [state, setState] = useState<{ key: string; data?: T; error?: string }>(() => ({
     key,
@@ -25,7 +27,7 @@ export function useTool<T>(name: string | undefined, args: object = {}): ToolSta
     let live = true;
     setState((s) => ({ key, data: s.key === key ? s.data : (cache.get(key) as T | undefined) }));
     host
-      .callTool<T>(name, args)
+      .read<T>(name, args)
       .then((data) => {
         cache.set(key, data);
         if (live) setState({ key, data });

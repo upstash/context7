@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { createAdminHandler } from "../src/http.js";
-import { agentActivity, normalizeLibraryId, poll } from "../src/tools.js";
+import { agentActivity, normalizeLibraryId, poll, TOOLS } from "../src/tools.js";
 
 // The server under test is the web-standard handler, driven by a real MCP
 // client. Global fetch (the management API) is stubbed: no network.
@@ -765,14 +765,13 @@ test.each(["modern", "legacy"] as const)(
     const ui = (tool: (typeof tools)[number]) =>
       tool._meta?.ui as { resourceUri?: string; visibility?: string[] } | undefined;
 
+    const opens = new Set<string>(
+      TOOLS.filter((def) => def.console === "open").map((def) => def.name)
+    );
     for (const tool of tools) {
-      const expected =
-        tool.name === "console_data"
-          ? ["app"]
-          : tool.name === "open_console"
-            ? undefined
-            : ["model"];
-      expect(ui(tool)?.visibility, tool.name).toEqual(expected);
+      if (tool.name === "console_data") expect(ui(tool)?.visibility).toEqual(["app"]);
+      else if (opens.has(tool.name)) expect(ui(tool)?.visibility, tool.name).toBeUndefined();
+      else expect(ui(tool)?.visibility, tool.name).toEqual(["model"]);
     }
     const uri = ui(tools.find((tool) => tool.name === "open_console")!)?.resourceUri;
     const { contents } = await client.readResource({ uri: uri! });
