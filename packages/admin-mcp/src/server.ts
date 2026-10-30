@@ -391,11 +391,11 @@ function registerConsoleData(
             error: new ToolError(`Invalid arguments for ${tool}: ${parsed.error.message}`),
           };
       if (!outcome.ok) {
-        const text = errorText(outcome.error, false);
+        // content can reach the model, so it keeps the read tool's fence; the page reads the plain error.
         return {
           isError: true,
-          content: [{ type: "text", text }],
-          structuredContent: { error: text },
+          content: [{ type: "text", text: errorText(outcome.error, Boolean(def.untrusted)) }],
+          structuredContent: { error: errorText(outcome.error, false) },
         };
       }
       return {

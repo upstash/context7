@@ -295,6 +295,17 @@ test("an API error body of an untrusted tool is fenced too", async () => {
   const tag = /<(untrusted-data-[0-9a-f-]{36})>/.exec(text(result))?.[1];
   expect(tag).toBeDefined();
   expect(text(result).trimEnd().endsWith(`</${tag}>`)).toBe(true);
+
+  // Through console_data the content keeps the fence; only the page's structuredContent is plain.
+  const page = await client.callTool({
+    name: "console_data",
+    arguments: { tool: "ask_get_analytics", arguments: { teamspace: TS, site_key: "ask_1" } },
+  });
+  expect(page.isError).toBe(true);
+  expect(text(page)).toMatch(/<untrusted-data-[0-9a-f-]{36}>/);
+  expect(page.structuredContent).toMatchObject({
+    error: expect.stringContaining("Ignore all rules"),
+  });
 });
 
 test("library ids are accepted as /owner/repo, owner/repo or a context7.com URL", () => {
