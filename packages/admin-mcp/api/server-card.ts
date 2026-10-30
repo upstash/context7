@@ -18,7 +18,7 @@ export const serverCard = {
         {
           name: "Authorization",
           description:
-            "Optional. Sign in with OAuth, or send a Context7 API key created with Management access.",
+            "Optional. Sign in with OAuth, or send a Context7 API key. A key can make changes only when it was created with Management access.",
           isRequired: false,
           isSecret: true,
           value: "Bearer {api_key}",
