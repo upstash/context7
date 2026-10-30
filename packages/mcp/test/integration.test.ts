@@ -627,10 +627,9 @@ describe("research preview", () => {
       const feedback = {
         libraryId: "/vercel/next.js",
         query: "app router caching",
-        helpful: false,
+        score: 2,
         issue: "outdated",
         comment: "Shows the Next.js 14 cache defaults.",
-        author: "agent",
       };
       const result = await client.callTool({ name: "submit-docs-feedback", arguments: feedback });
 

@@ -34,10 +34,9 @@ export type ContextRequest = {
 export type DocsFeedback = {
   libraryId: string;
   query?: string;
-  helpful: boolean;
+  score: number;
   issue?: "missing" | "outdated" | "incorrect" | "irrelevant" | "other";
-  comment?: string;
-  author: "agent" | "user";
+  comment: string;
 };
 
 export type ContextResponse = {
