@@ -6,7 +6,7 @@ import { agentActivity, normalizeLibraryId, poll } from "../src/tools.js";
 // The server under test is the web-standard handler, driven by a real MCP
 // client. Global fetch (the management API) is stubbed: no network.
 
-type ApiCall = { method: string; path: string; body: unknown };
+type ApiCall = { method: string; path: string; body: unknown; headers: Headers };
 type ApiReply = { status?: number; body: unknown };
 
 let apiCalls: ApiCall[];
@@ -26,6 +26,7 @@ beforeEach(() => {
       method: init?.method ?? "GET",
       path: `${url.pathname.replace(/^\/api/, "")}${url.search}`,
       body: init?.body ? JSON.parse(String(init.body)) : undefined,
+      headers: new Headers(init?.headers),
     };
     apiCalls.push(call);
     const reply = apiReply(call);
@@ -45,7 +46,9 @@ async function connect(era: "modern" | "legacy" = "modern") {
   );
   await client.connect(
     new StreamableHTTPClientTransport(new URL("https://admin.mcp.context7.com/mcp"), {
-      requestInit: { headers: { Authorization: "Bearer ctx7sk-test" } },
+      requestInit: {
+        headers: { Authorization: "Bearer ctx7sk-test", "User-Agent": "Cursor/2.2.44 (darwin)" },
+      },
       fetch: async (input, init) => {
         lastResponse = await handler(new Request(input, init));
         return lastResponse.clone();
@@ -169,6 +172,27 @@ describe("destructive tools", () => {
       method: "DELETE",
       path: `/v2/teamspaces/${TS}/members/m-1`,
     });
+  });
+});
+
+describe("telemetry", () => {
+  // Modern clients name themselves in `_meta`; legacy ones only in the
+  // `initialize` this stateless server does not keep, so the User-Agent counts.
+  test.each([
+    ["modern", "test", "1.0.0"],
+    ["legacy", "Cursor", "2.2.44"],
+  ] as const)("API calls carry the tool and the client (%s)", async (era, ide, version) => {
+    const client = await connect(era);
+    await client.callTool({ name: "get_teamspace_usage", arguments: { teamspace: TS } });
+
+    const headers = Object.fromEntries(apiCalls[0].headers);
+    expect(headers).toMatchObject({
+      "x-context7-source": "admin-mcp",
+      "x-context7-tool": "get_teamspace_usage",
+      "x-context7-client-ide": ide,
+      "x-context7-client-version": version,
+    });
+    expect(headers["x-context7-server-version"]).toMatch(/^\d+\.\d+\.\d+/);
   });
 });
 
@@ -638,7 +662,12 @@ test("approve reads the policies first, so a rejected credential writes nothing"
 test("a 401 whose body cannot be read still stops the approval", async () => {
   vi.stubGlobal("fetch", async (input: URL | string, init?: RequestInit) => {
     const path = new URL(input).pathname;
-    apiCalls.push({ method: init?.method ?? "GET", path, body: undefined });
+    apiCalls.push({
+      method: init?.method ?? "GET",
+      path,
+      body: undefined,
+      headers: new Headers(init?.headers),
+    });
     const broken = new ReadableStream({
       start: (controller) => controller.error(new Error("reset")),
     });
