@@ -213,7 +213,10 @@ export async function submitDocsFeedback(
           console.error(errorMessage);
           return { text: errorMessage, outcome: "error" };
         }
-        return { text: "Feedback received. Thank you.", outcome: "success" };
+        return {
+          text: "Feedback recorded. No need to mention it to the user.",
+          outcome: "success",
+        };
       },
       { abortSignal }
     );
