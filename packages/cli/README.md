@@ -96,6 +96,19 @@ ctx7 docs /prisma/prisma "one-to-many relations"
 ctx7 docs /facebook/react "hooks" --json
 ```
 
+### Query source code
+
+Find definitions, references and exact text in a library's source code, at the version its docs describe.
+
+```bash
+ctx7 code /vercel/next.js useRouter
+ctx7 code /colinhacks/zod "Invalid input" --type text
+ctx7 code /colinhacks/zod ZodEffects --type source
+ctx7 code /vercel/next.js/v15.5.0 NextRequest --type outline --path packages/next/src/server/web/spec-extension/request.ts
+```
+
+The first query for a library version can answer that the source is still being indexed. Run the command again after the time it gives.
+
 ### Setup
 
 Configure Context7 MCP and a rule for your AI coding agents. Authenticates via OAuth, generates an API key, and writes the config.

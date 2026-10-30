@@ -26,6 +26,9 @@ const NO_RESULTS_QUERY = "force-no-results";
 const UPSTREAM_ERROR_QUERY = "force-upstream-error";
 const SLOW_CONTEXT_QUERY = "force-slow-context";
 const INVALID_JSON_QUERY = "force-invalid-json";
+const STUB_CODE = "stub code text";
+const CODE_INDEXING_QUERY = "force-code-indexing";
+const CODE_NO_SOURCE_QUERY = "force-code-no-source";
 const CLIENT_IP_ASSERTION_KEY = "0123456789abcdef".repeat(4);
 const INVALID_OAUTH_TOKEN_BODY = {
   error: "invalid_oauth_token",
@@ -161,6 +164,34 @@ function startStubApi(): Promise<string> {
         return;
       }
       res.end(url.searchParams.get("query") === EMPTY_CONTEXT_QUERY ? "" : STUB_DOCS);
+    } else if (apiPath === "/v2/code") {
+      const query = url.searchParams.get("query");
+      if (query === CODE_INDEXING_QUERY) {
+        res.statusCode = 202;
+        res.setHeader("Content-Type", "application/json");
+        res.setHeader("Retry-After", "30");
+        res.end(
+          JSON.stringify({
+            error: "indexing",
+            message: "The source of /vercel/next.js at v15.5.0 is being indexed.",
+            retryAfter: 30,
+          })
+        );
+        return;
+      }
+      if (query === CODE_NO_SOURCE_QUERY) {
+        res.statusCode = 422;
+        res.setHeader("Content-Type", "application/json");
+        res.end(
+          JSON.stringify({
+            error: "no_source",
+            message: "Source code search is not available for /websites/x.",
+          })
+        );
+        return;
+      }
+      res.setHeader("Content-Type", "text/plain");
+      res.end(STUB_CODE);
     } else {
       res.statusCode = 404;
       res.end();
@@ -1492,5 +1523,84 @@ describe("expired OAuth access tokens", () => {
     expect(exported).toMatch(
       /context7_mcp_upstream_requests_total\{[^}]*context7_upstream_operation="auth_check"[^}]*\} [1-9]/
     );
+  });
+});
+
+describe("query-code tool", () => {
+  async function stdioClient(environment: Record<string, string>) {
+    const client = new Client({ name: "query-code-test", version: "1.0.0" });
+    await client.connect(
+      new StdioClientTransport({ command: process.execPath, args: [DIST], env: environment })
+    );
+    return client;
+  }
+
+  test("is not listed without the flag", async () => {
+    const client = await stdioClient(childEnv);
+    try {
+      const { tools } = await client.listTools();
+      expect(tools.map((tool) => tool.name)).not.toContain("query-code");
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("is listed with the flag and sends its arguments to /v2/code", async () => {
+    const client = await stdioClient({ ...childEnv, CONTEXT7_QUERY_CODE: "1" });
+    try {
+      const { tools } = await client.listTools();
+      const tool = tools.find((candidate) => candidate.name === "query-code");
+      expect(Object.keys(tool?.inputSchema.properties ?? {}).sort()).toEqual([
+        "libraryId",
+        "limit",
+        "path",
+        "query",
+        "type",
+        "version",
+      ]);
+      expect(tool?.annotations?.readOnlyHint).toBe(true);
+
+      const before = requests.length;
+      const result = await client.callTool({
+        name: "query-code",
+        arguments: {
+          libraryId: "/vercel/next.js",
+          pattern: "useRouter",
+          type: "definition",
+          file: "packages/next",
+        },
+      });
+      expect(result.isError).toBeFalsy();
+      expect(result.content).toMatchObject([{ type: "text", text: STUB_CODE }]);
+      const sent = requests.slice(before).find((request) => request.path === "/v2/code");
+      expect(sent?.query.get("query")).toBe("useRouter");
+      expect(sent?.query.get("path")).toBe("packages/next");
+      expect(sent?.query.get("type")).toBe("definition");
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("answers 'still indexing' as a normal result and an API error as an error", async () => {
+    const client = await stdioClient({ ...childEnv, CONTEXT7_QUERY_CODE: "1" });
+    try {
+      const indexing = await client.callTool({
+        name: "query-code",
+        arguments: { libraryId: "/vercel/next.js", query: CODE_INDEXING_QUERY },
+      });
+      expect(indexing.isError).toBeFalsy();
+      expect((indexing.content as { text: string }[])[0].text).toMatch(
+        /being indexed.*Call query-code again.*30 seconds/s
+      );
+
+      const noSource = await client.callTool({
+        name: "query-code",
+        arguments: { libraryId: "/websites/x", query: CODE_NO_SOURCE_QUERY },
+      });
+      expect(noSource.isError).toBe(true);
+      expect((noSource.content as { text: string }[])[0].text).toContain("not available");
+    } finally {
+      await client.close();
+    }
   });
 });
