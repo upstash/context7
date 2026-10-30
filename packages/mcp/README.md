@@ -1411,10 +1411,22 @@ Two more tools let agents read a library's source code at the version they use. 
   - `version` (optional): Version such as `2.19`. Uses the highest matching release tag. Without it, the default branch is used.
   - `path` (optional): Directory or glob filter, e.g. `src` or `*.py`
   - `maxResults` (optional): 1 to 50, default 20
+  - `output` (optional): `content` (default) for matching lines, `files` for files with match counts, or `count` for totals only
+  - `offset` (optional): Skips that many ranked results, to get the next page
 - `read-library-file`: Reads a file (or lists a directory) from the same checkout with line numbers, at most 400 lines per call.
   - `libraryId`, `path` (required), `version`, `startLine`, `endLine` (optional)
 
-The server makes a shallow clone of the repository at the resolved tag. It does not run any code from the repository. Checkouts and symbol indexes are cached in `~/.cache/context7/code`, or in `CONTEXT7_CODE_CACHE_DIR`. Libraries that Context7 builds from documentation websites (`/websites/...`) have no source to search.
+The server makes a shallow clone of the repository at the resolved tag. It needs `git` on `PATH`. If `git` is missing, the server does not register the two tools. The clone does not run code from the repository: hooks, submodules and fsmonitor are off, and symlinks become plain files.
+
+Every response gives the repository URL, the full commit, the detected license and how the version matched a tag. The server makes hidden Unicode characters visible, redacts strings that look like credentials and skips agent instruction files such as `AGENTS.md`. Source content is marked as third-party data.
+
+| Variable                     | Default                  | Purpose                                                                                                              |
+| ---------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `CONTEXT7_CODE_CACHE_DIR`    | `~/.cache/context7/code` | Where checkouts and symbol indexes are stored                                                                        |
+| `CONTEXT7_CODE_CACHE_MAX_MB` | `5120`                   | Cache size limit. The least recently used checkouts are deleted first. `0` means no limit.                           |
+| `CONTEXT7_CODE_WAIT_SECONDS` | `45`                     | How long a tool call waits for a clone. After that, the tool asks the agent to call again while the clone continues. |
+
+Libraries that Context7 builds from documentation websites (`/websites/...`) have no source to search.
 
 ## 🛟 Tips
 

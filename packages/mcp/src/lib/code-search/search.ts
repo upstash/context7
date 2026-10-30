@@ -3,8 +3,17 @@ import { lstat, readFile, readdir, realpath } from "node:fs/promises";
 import path from "node:path";
 import { CodeSearchError, type Checkout } from "./checkout.js";
 import type { CodeIndex, SymbolEntry } from "./indexer.js";
+import {
+  AGENT_FILE_EXCLUDES,
+  describeLicense,
+  sanitizeSource,
+  UNTRUSTED_NOTE,
+  wrapUntrusted,
+} from "./safety.js";
 
 export type SearchMode = "literal" | "regex" | "symbol";
+/** `content` shows matching lines, `files` lists files with match counts, `count` gives totals. */
+export type OutputMode = "content" | "files" | "count";
 
 export interface SearchOptions {
   pattern: string;
@@ -12,6 +21,13 @@ export interface SearchOptions {
   /** Git pathspec glob that limits the search, e.g. `src/**` or `*.py`. */
   path?: string;
   maxResults: number;
+  /** Number of ranked results to skip, for paging. */
+  offset?: number;
+}
+
+export interface FileCount {
+  path: string;
+  count: number;
 }
 
 export interface CodeMatch {
@@ -25,6 +41,8 @@ const MAX_LINE_CHARS = 240;
 const MAX_READ_LINES = 400;
 const MAX_READ_CHARS = 40_000;
 const DEFAULT_READ_LINES = 200;
+/** Ranked results are collected up to this many, which also bounds paging. */
+const MAX_COLLECT = 2_000;
 
 const GREP_EXCLUDES = [
   ":(exclude)*.min.js",
@@ -34,6 +52,7 @@ const GREP_EXCLUDES = [
   ":(exclude)*-lock.json",
   ":(exclude)*-lock.yaml",
   ":(exclude)*.snap",
+  ...AGENT_FILE_EXCLUDES,
 ];
 
 /** Lower is better: library code first, then tests, then docs and examples. */
@@ -57,19 +76,17 @@ function toPathspec(filter: string): string {
   return `:(glob)${cleaned.includes("/") ? cleaned : `**/${cleaned}`}`;
 }
 
-/** Runs `git grep` and stops reading once enough matches arrive. */
-function gitGrep(root: string, options: SearchOptions): Promise<CodeMatch[]> {
+function grepArgs(root: string, options: SearchOptions, countOnly: boolean): string[] {
   const caseInsensitive = options.pattern === options.pattern.toLowerCase();
-  const args = [
+  return [
     "-C",
     root,
     "grep",
-    "-n",
+    countOnly ? "-c" : "-n",
     "-I",
     "--no-color",
     "--full-name",
-    "--max-count",
-    "20",
+    ...(countOnly ? [] : ["--max-count", "20"]),
     options.mode === "regex" ? "-E" : "-F",
     ...(caseInsensitive ? ["-i"] : []),
     "-e",
@@ -78,15 +95,23 @@ function gitGrep(root: string, options: SearchOptions): Promise<CodeMatch[]> {
     ...(options.path ? [toPathspec(options.path)] : ["."]),
     ...GREP_EXCLUDES,
   ];
-  // Collect more than we show, so ranking can move library code to the top.
-  const collectLimit = Math.max(options.maxResults * 10, 200);
+}
 
+/**
+ * Runs `git grep` and parses each output line with `parse`. Stops reading once
+ * `limit` lines arrive.
+ */
+function runGrep<T>(
+  args: string[],
+  limit: number,
+  parse: (line: string) => T | undefined
+): Promise<T[]> {
   return new Promise((resolve, reject) => {
     const child = spawn("git", args, {
       env: { ...process.env, GIT_CONFIG_NOSYSTEM: "1" },
       stdio: ["ignore", "pipe", "pipe"],
     });
-    const matches: CodeMatch[] = [];
+    const matches: T[] = [];
     let buffered = "";
     let stderr = "";
     let stopped = false;
@@ -102,10 +127,10 @@ function gitGrep(root: string, options: SearchOptions): Promise<CodeMatch[]> {
       const lines = buffered.split("\n");
       buffered = lines.pop() ?? "";
       for (const line of lines) {
-        const match = line.match(/^(.*?):(\d+):(.*)$/);
-        if (!match) continue;
-        matches.push({ path: match[1], line: Number(match[2]), text: match[3] });
-        if (matches.length >= collectLimit) {
+        const parsed = parse(line);
+        if (parsed === undefined) continue;
+        matches.push(parsed);
+        if (matches.length >= limit) {
           stopped = true;
           child.kill();
           break;
@@ -133,13 +158,47 @@ function gitGrep(root: string, options: SearchOptions): Promise<CodeMatch[]> {
   });
 }
 
-export async function grepCode(checkout: Checkout, options: SearchOptions): Promise<CodeMatch[]> {
-  const matches = await gitGrep(checkout.root, options);
-  return matches
+export interface GrepPage {
+  matches: CodeMatch[];
+  /** Index of the first returned match in the ranked list. */
+  offset: number;
+  /** True when more ranked matches exist after this page. */
+  more: boolean;
+}
+
+/** Returns one page of matching lines, with library code ranked before tests and docs. */
+export async function grepCode(checkout: Checkout, options: SearchOptions): Promise<GrepPage> {
+  const offset = Math.max(0, Math.floor(options.offset ?? 0));
+  // Collect more than we show, so ranking can move library code to the top.
+  const limit = Math.min(
+    MAX_COLLECT,
+    Math.max(options.maxResults * 10, 200, offset + options.maxResults + 1)
+  );
+  const matches = await runGrep(grepArgs(checkout.root, options, false), limit, (line) => {
+    const match = line.match(/^(.*?):(\d+):(.*)$/);
+    return match ? { path: match[1], line: Number(match[2]), text: match[3] } : undefined;
+  });
+  const ranked = matches
     .map((match, order) => ({ match, order }))
     .sort((a, b) => pathRank(a.match.path) - pathRank(b.match.path) || a.order - b.order)
-    .slice(0, options.maxResults)
     .map(({ match }) => match);
+  return {
+    matches: ranked.slice(offset, offset + options.maxResults),
+    offset,
+    more: ranked.length > offset + options.maxResults,
+  };
+}
+
+/** Counts matching lines per file, without a per-file cap. */
+export async function countMatches(
+  checkout: Checkout,
+  options: SearchOptions
+): Promise<FileCount[]> {
+  const counts = await runGrep(grepArgs(checkout.root, options, true), MAX_COLLECT, (line) => {
+    const match = line.match(/^(.*):(\d+)$/);
+    return match ? { path: match[1], count: Number(match[2]) } : undefined;
+  });
+  return counts.sort((a, b) => pathRank(a.path) - pathRank(b.path) || b.count - a.count);
 }
 
 /** Finds symbol definitions: exact name, then case-insensitive, then substring. */
@@ -165,18 +224,37 @@ export function findSymbols(index: CodeIndex, query: string, maxResults: number)
 }
 
 function truncate(text: string): string {
-  const trimmed = text.replace(/\s+$/, "");
+  const trimmed = sanitizeSource(text).replace(/\s+$/, "");
   return trimmed.length > MAX_LINE_CHARS ? `${trimmed.slice(0, MAX_LINE_CHARS)}…` : trimmed;
 }
 
+/** Header with provenance: repository, ref, commit, license and how the version matched. */
 export function describeCheckout(checkout: Checkout): string {
   const ref = checkout.ref === "HEAD" ? "default branch" : `tag ${checkout.ref}`;
-  return `Repository: ${checkout.org}/${checkout.repo} at ${ref} (commit ${checkout.commit.slice(0, 12)})`;
+  const lines = [
+    `Repository: ${checkout.org}/${checkout.repo} at ${ref} (commit ${checkout.commit.slice(0, 12)})`,
+    `Source: ${checkout.url} @ ${checkout.commit} | ${describeLicense(checkout.license)}`,
+  ];
+  if (checkout.ref === "HEAD") {
+    lines.push("Version: none given, so this is the default branch, not a release.");
+  } else if (checkout.approximateVersion) {
+    lines.push(
+      `Version: '${checkout.approximateVersion}' matched tag ${checkout.ref} by version prefix. Check that this tag is the release you expect.`
+    );
+  }
+  return lines.join("\n");
 }
 
-export function formatMatches(checkout: Checkout, pattern: string, matches: CodeMatch[]): string {
+function withBody(header: string, summary: string, body: string): string {
+  return `${header}\n${summary}\n${UNTRUSTED_NOTE}\n\n${wrapUntrusted(body)}`;
+}
+
+export function formatMatches(checkout: Checkout, pattern: string, page: GrepPage): string {
   const header = describeCheckout(checkout);
+  const { matches } = page;
   if (matches.length === 0) {
+    if (page.offset > 0)
+      return `${header}\n\nNo more matches for '${pattern}' after offset ${page.offset}.`;
     return `${header}\n\nNo matches for '${pattern}'. Try a shorter pattern, mode 'symbol', or a different path filter.`;
   }
   const groups = new Map<string, CodeMatch[]>();
@@ -190,7 +268,38 @@ export function formatMatches(checkout: Checkout, pattern: string, matches: Code
       ([file, list]) => `${file}\n${list.map((m) => `  ${m.line}: ${truncate(m.text)}`).join("\n")}`
     )
     .join("\n\n");
-  return `${header}\n${matches.length} matches in ${groups.size} files. Use 'read-library-file' with a path and line range to see more.\n\n${body}`;
+  const first = page.offset + 1;
+  const last = page.offset + matches.length;
+  const paging = page.more ? ` More matches exist: call again with offset ${last}.` : "";
+  const summary =
+    `${matches.length} matches in ${groups.size} files (results ${first}-${last}).${paging}` +
+    " Use 'read-library-file' with a path and line range to see more.";
+  return withBody(header, summary, body);
+}
+
+export function formatCounts(
+  checkout: Checkout,
+  pattern: string,
+  counts: FileCount[],
+  output: "files" | "count",
+  maxResults: number,
+  offsetInput = 0
+): string {
+  const header = describeCheckout(checkout);
+  const total = counts.reduce((sum, file) => sum + file.count, 0);
+  if (counts.length === 0) return `${header}\n\nNo matches for '${pattern}'.`;
+  const capped = counts.length >= MAX_COLLECT ? " (stopped counting at the file limit)" : "";
+  const summary = `${total} matching lines in ${counts.length} files${capped}.`;
+  if (output === "count") return `${header}\n${summary}`;
+
+  const offset = Math.max(0, Math.floor(offsetInput));
+  const shown = counts.slice(offset, offset + maxResults);
+  const more =
+    counts.length > offset + shown.length
+      ? ` Showing files ${offset + 1}-${offset + shown.length}: call again with offset ${offset + shown.length} for more.`
+      : "";
+  const body = shown.map((file) => `${file.path} (${file.count})`).join("\n");
+  return withBody(header, summary + more, body);
 }
 
 export function formatSymbols(checkout: Checkout, query: string, symbols: SymbolEntry[]): string {
@@ -201,7 +310,7 @@ export function formatSymbols(checkout: Checkout, query: string, symbols: Symbol
   const body = symbols
     .map((s) => `${s.path}:${s.line} [${s.kind}] ${s.name}\n  ${truncate(s.signature)}`)
     .join("\n");
-  return `${header}\n${symbols.length} definitions for '${query}':\n\n${body}`;
+  return withBody(header, `${symbols.length} definitions for '${query}':`, body);
 }
 
 /** Normalizes a repo-relative path and rejects anything that leaves the checkout. */
@@ -266,12 +375,12 @@ export async function readLibraryFile(
       .sort();
     const shown = entries.slice(0, 200);
     const more = entries.length > shown.length ? `\n… ${entries.length - shown.length} more` : "";
-    return `${header}\nDirectory: ${relative || "."}\n\n${shown.join("\n")}${more}`;
+    return `${header}\nDirectory: ${relative || "."}\n\n${sanitizeSource(shown.join("\n"))}${more}`;
   }
 
   const buffer = await readFile(target);
   if (buffer.includes(0)) throw new CodeSearchError(`'${relative}' is a binary file.`);
-  const lines = buffer.toString("utf8").split("\n");
+  const lines = sanitizeSource(buffer.toString("utf8")).split("\n");
   const first = Math.max(1, Math.floor(startLine ?? 1));
   if (first > lines.length) {
     throw new CodeSearchError(`'${relative}' has only ${lines.length} lines.`);
@@ -291,5 +400,9 @@ export async function readLibraryFile(
     last < lines.length
       ? `\nShowing lines ${first}-${last} of ${lines.length}. Call again with startLine ${last + 1} to continue.`
       : "";
-  return `${header}\nFile: ${relative} (lines ${first}-${last} of ${lines.length})\n\n${out.trimEnd()}${rest}`;
+  return withBody(
+    header,
+    `File: ${relative} (lines ${first}-${last} of ${lines.length})${rest}`,
+    out.trimEnd()
+  );
 }

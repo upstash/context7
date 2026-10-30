@@ -13,6 +13,8 @@ RUN pnpm --filter @upstash/context7-mcp build
 
 # ----- Production Stage -----
 FROM node:lts-alpine
+# git is needed by the opt-in source code search tools (--code-search).
+RUN apk add --no-cache git
 RUN corepack enable pnpm
 WORKDIR /app
 

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
   CodeSearchError,
@@ -9,6 +9,7 @@ import {
   type CodeSearchConfig,
 } from "../src/lib/code-search/checkout.js";
 import { extractSymbols } from "../src/lib/code-search/indexer.js";
+import { describeLicense, sanitizeSource } from "../src/lib/code-search/safety.js";
 import { readLibrarySourceFile, searchLibraryCode } from "../src/lib/code-search/tools.js";
 import { createCodeSearchFixture, type CodeSearchFixture } from "./fixtures/code-search-repo.js";
 
@@ -59,6 +60,12 @@ describe("resolveVersionTag", () => {
     expect(resolveVersionTag(version, tags)).toBe(expected);
   });
 
+  test("prefers plain tags, then tags named after the repository, in a monorepo", () => {
+    const monorepo = ["react-dom@18.3.1", "react@18.3.1", "react-is@19.0.0", "scheduler@0.23.0"];
+    expect(resolveVersionTag("18", monorepo, "react")).toBe("react@18.3.1");
+    expect(resolveVersionTag("1", ["v1.2.0", "core@1.3.0"], "widgets")).toBe("v1.2.0");
+  });
+
   test("does not pick a pre-release for a stable request, or a missing version", () => {
     expect(resolveVersionTag("2", ["v1.0.0", "v2.0.0-beta.1", "v2.0.0-rc.2"])).toBeUndefined();
     expect(resolveVersionTag("3.0", tags)).toBeUndefined();
@@ -97,6 +104,21 @@ describe("extractSymbols", () => {
       names("a.rs", "pub async fn fetch() {}\npub struct Conn;\npub(crate) trait Io {}\n")
     ).toEqual(["function:fetch", "struct:Conn", "trait:Io"]);
     expect(names("a.txt", "function nope() {}")).toEqual([]);
+  });
+});
+
+describe("output safety", () => {
+  test("shows hidden characters and redacts credentials", () => {
+    expect(sanitizeSource("a\u200Bb\u202Ec")).toBe("a[U+200B]b[U+202E]c");
+    expect(sanitizeSource('key = "AKIAABCDEFGHIJKLMNOP"')).toBe('key = "[REDACTED SECRET]"');
+    const pem = "x\n-----BEGIN RSA PRIVATE KEY-----\nabc\ndef\n-----END RSA PRIVATE KEY-----\ny";
+    // Line count stays the same, so line numbers in file reads stay correct.
+    expect(sanitizeSource(pem)).toBe("x\n[REDACTED SECRET]\n\n\n\ny");
+  });
+
+  test("describes a missing license as all rights reserved", () => {
+    expect(describeLicense({})).toContain("all rights reserved");
+    expect(describeLicense({ spdx: "MIT", file: "LICENSE" })).toBe("License: MIT (LICENSE)");
   });
 });
 
@@ -258,6 +280,91 @@ describe("code search against a local repository", () => {
     expect(existsSync(path.join(first.dir, "index.json"))).toBe(true);
   });
 
+  test("reports provenance, license and how the version matched", async () => {
+    const approximate = await searchLibraryCode(config, {
+      libraryId: LIB,
+      pattern: "DEFAULT_TIMEOUT",
+      version: "1.0",
+    });
+    expect(approximate.text).toMatch(/Source: file:\/\/\S+\/acme\/widgets @ [0-9a-f]{40}/);
+    expect(approximate.text).toContain("License: MIT (LICENSE)");
+    expect(approximate.text).toContain("'1.0' matched tag v1.0.0 by version prefix");
+    expect(approximate.text).toContain("<library-source>");
+    expect(approximate.text).toMatch(/\[~\d+ tokens\]$/);
+
+    const exact = await searchLibraryCode(config, {
+      libraryId: LIB,
+      pattern: "DEFAULT_TIMEOUT",
+      version: "1.0.0",
+    });
+    expect(exact.text).not.toContain("by version prefix");
+  });
+
+  test("hides agent instruction files and cleans returned source", async () => {
+    const hidden = await searchLibraryCode(config, {
+      libraryId: LIB,
+      version: "1.0.0",
+      pattern: "ignore previous",
+    });
+    expect(hidden.text).toContain("[U+200B]");
+    expect(hidden.text).not.toContain("\u200B");
+
+    const file = await readLibrarySourceFile(config, {
+      libraryId: LIB,
+      version: "1.0.0",
+      path: "src/hidden.ts",
+    });
+    expect(file.text).toContain("[REDACTED SECRET]");
+    expect(file.text).not.toContain("AKIAABCDEFGHIJKLMNOP");
+
+    const agents = await searchLibraryCode(config, {
+      libraryId: LIB,
+      version: "1.0.0",
+      pattern: "debug mode",
+    });
+    expect(agents.outcome).toBe("not_found");
+  });
+
+  test("counts matches, lists files and pages through results", async () => {
+    const count = await searchLibraryCode(config, {
+      libraryId: LIB,
+      version: "1.0.0",
+      pattern: "timeout",
+      output: "count",
+    });
+    expect(count.text).toMatch(/\d+ matching lines in \d+ files\./);
+    expect(count.text).not.toContain("<library-source>");
+
+    const files = await searchLibraryCode(config, {
+      libraryId: LIB,
+      version: "1.0.0",
+      pattern: "timeout",
+      output: "files",
+    });
+    expect(files.text).toMatch(/^src\/client\.ts \(\d+\)$/m);
+
+    const first = await searchLibraryCode(config, {
+      libraryId: LIB,
+      version: "1.0.0",
+      pattern: "// line",
+      path: "src/long.ts",
+      maxResults: 5,
+    });
+    expect(first.text).toContain("results 1-5");
+    expect(first.text).toContain("call again with offset 5");
+
+    const second = await searchLibraryCode(config, {
+      libraryId: LIB,
+      version: "1.0.0",
+      pattern: "// line",
+      path: "src/long.ts",
+      maxResults: 5,
+      offset: 5,
+    });
+    expect(second.text).toContain("results 6-10");
+    expect(second.text).toContain("// line 6");
+  });
+
   test("reads line ranges, lists directories and suggests paths", async () => {
     const range = await readLibrarySourceFile(config, {
       libraryId: LIB,
@@ -306,6 +413,16 @@ describe("code search against a local repository", () => {
     expect(typo.text).toContain("Did you mean: src/client.ts");
   });
 
+  test("checks out symlinks as plain files", async () => {
+    const result = await readLibrarySourceFile(config, {
+      libraryId: LIB,
+      version: "1.0.0",
+      path: "escape",
+    });
+    expect(result.outcome).toBe("success");
+    expect(result.text).toContain("1  /etc");
+  });
+
   test("never reads outside the checkout", async () => {
     for (const target of ["../../../../etc/hosts", "escape/hosts", ".git/config", "/etc/hosts"]) {
       const result = await readLibrarySourceFile(config, {
@@ -318,5 +435,52 @@ describe("code search against a local repository", () => {
         /outside the repository|not a source file|does not exist/
       );
     }
+  });
+});
+
+describe("cache limits and slow clones", () => {
+  let fixture: CodeSearchFixture;
+
+  beforeAll(() => {
+    fixture = createCodeSearchFixture();
+  });
+
+  afterAll(() => fixture?.cleanup());
+
+  test("evicts the least recently used checkout above the size limit", async () => {
+    const config: CodeSearchConfig = {
+      cacheDir: path.join(fixture.cacheDir, "small"),
+      gitBaseUrl: fixture.gitBase,
+      maxCacheBytes: 1,
+    };
+    const older = await ensureCheckout(config, LIB, "1.0.0");
+    const meta = JSON.parse(readFileSync(path.join(older.dir, "meta.json"), "utf8"));
+    expect(meta.bytes).toBeGreaterThan(0);
+
+    const newer = await ensureCheckout(config, LIB, "1.1.0");
+    expect(existsSync(older.dir)).toBe(false);
+    expect(existsSync(newer.root)).toBe(true);
+  });
+
+  test("asks the agent to retry while a clone is still running", async () => {
+    const config: CodeSearchConfig = {
+      cacheDir: path.join(fixture.cacheDir, "slow"),
+      gitBaseUrl: fixture.gitBase,
+      cloneWaitMs: 1,
+    };
+    const pending = await searchLibraryCode(config, {
+      libraryId: LIB,
+      version: "1.0.0",
+      pattern: "createClient",
+    });
+    expect(pending.retryable).toBe(true);
+    expect(pending.text).toContain("still downloading");
+
+    // The clone continues in the background; a call without a wait limit reuses it.
+    const ready = await searchLibraryCode(
+      { ...config, cloneWaitMs: 0 },
+      { libraryId: LIB, version: "1.0.0", pattern: "createClient" }
+    );
+    expect(ready.outcome).toBe("success");
   });
 });

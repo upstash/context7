@@ -1,8 +1,9 @@
-import { execFile } from "node:child_process";
-import { mkdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { execFile, execFileSync } from "node:child_process";
+import { lstat, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
+import { detectLicense, type LicenseInfo } from "./safety.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -17,11 +18,35 @@ const LS_REMOTE_TIMEOUT_MS = 60 * 1000;
 
 export class CodeSearchError extends Error {}
 
+/** True when a `git` binary is on PATH. */
+export function isGitAvailable(): boolean {
+  try {
+    execFileSync("git", ["--version"], { stdio: "ignore", timeout: 5_000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export interface CodeSearchConfig {
   /** Directory that holds checkouts and indexes. */
   cacheDir: string;
   /** Base URL that `<org>/<repo>` is appended to. */
   gitBaseUrl: string;
+  /** Least recently used checkouts are deleted above this size. 0 means no limit. */
+  maxCacheBytes?: number;
+  /** A tool call waits this long for a clone, then asks the agent to retry. */
+  cloneWaitMs?: number;
+}
+
+const DEFAULT_CACHE_MB = 5 * 1024;
+const DEFAULT_CLONE_WAIT_SECONDS = 45;
+
+function numberFromEnv(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  return value !== undefined && value !== "" && Number.isFinite(parsed) && parsed >= 0
+    ? parsed
+    : fallback;
 }
 
 export function codeSearchConfigFromEnv(env: NodeJS.ProcessEnv = process.env): CodeSearchConfig {
@@ -29,6 +54,8 @@ export function codeSearchConfigFromEnv(env: NodeJS.ProcessEnv = process.env): C
   return {
     cacheDir: env.CONTEXT7_CODE_CACHE_DIR || path.join(xdgCache, "context7", "code"),
     gitBaseUrl: (env.CONTEXT7_CODE_GIT_BASE || "https://github.com").replace(/\/+$/, ""),
+    maxCacheBytes: numberFromEnv(env.CONTEXT7_CODE_CACHE_MAX_MB, DEFAULT_CACHE_MB) * 1024 * 1024,
+    cloneWaitMs: numberFromEnv(env.CONTEXT7_CODE_WAIT_SECONDS, DEFAULT_CLONE_WAIT_SECONDS) * 1000,
   };
 }
 
@@ -88,11 +115,23 @@ function compareParts(left: number[], right: number[]): number {
   return 0;
 }
 
+/** The part of a tag before its version, e.g. `@tanstack/query-core@` or `v`. */
+function tagPrefix(tag: string): string {
+  const match = tag.match(/^(.*?)\d+(?:\.\d+)*(?:[-.+]?[A-Za-z][\w.-]*)?$/);
+  return (match?.[1] ?? tag).toLowerCase();
+}
+
 /**
  * Picks the tag for a requested version. `2.19` matches the highest stable `2.19.x` tag.
  * An exact tag name always wins. Pre-releases match only when the request names one.
+ * In a monorepo with per-package tags, plain tags (`v1.2.3`) win, then tags that
+ * contain the repository name.
  */
-export function resolveVersionTag(version: string, tags: string[]): string | undefined {
+export function resolveVersionTag(
+  version: string,
+  tags: string[],
+  repo?: string
+): string | undefined {
   const wanted = version.trim();
   const bare = wanted.replace(/^v/i, "");
   for (const candidate of [wanted, `v${bare}`, bare]) {
@@ -104,16 +143,51 @@ export function resolveVersionTag(version: string, tags: string[]): string | und
   // A pre-release request must match that exact pre-release, e.g. `pkg@2.0.0-rc.1`.
   if (requested.prerelease) return tags.find((tag) => tag.endsWith(bare));
 
-  let best: { tag: string; parsed: ParsedVersion } | undefined;
+  const bestByPrefix = new Map<string, { tag: string; parsed: ParsedVersion }>();
   for (const tag of tags) {
     const parsed = parseTagVersion(tag);
     if (!parsed || parsed.prerelease) continue;
     const prefix = parsed.parts.slice(0, requested.parts.length);
     if (compareParts(prefix, requested.parts) !== 0) continue;
-    if (!best || compareParts(parsed.parts, best.parsed.parts) > 0) best = { tag, parsed };
+    const key = tagPrefix(tag);
+    const best = bestByPrefix.get(key);
+    if (!best || compareParts(parsed.parts, best.parsed.parts) > 0) {
+      bestByPrefix.set(key, { tag, parsed });
+    }
   }
-  return best?.tag;
+  if (bestByPrefix.size === 0) return undefined;
+
+  const repoName = repo?.toLowerCase().replace(/\.js$/, "");
+  const preferred =
+    bestByPrefix.get("v") ??
+    bestByPrefix.get("") ??
+    [...bestByPrefix.entries()].find(
+      ([prefix]) => repoName && prefix.replace(/[@/_-]+$/, "").endsWith(repoName)
+    )?.[1];
+  if (preferred) return preferred.tag;
+  return [...bestByPrefix.values()].sort((a, b) => compareParts(b.parsed.parts, a.parsed.parts))[0]
+    .tag;
 }
+
+/** True when a tag names the requested version itself, not only a version prefix of it. */
+function isExactVersionTag(version: string, tag: string): boolean {
+  const bare = version.trim().replace(/^v/i, "").toLowerCase();
+  return tag.toLowerCase().slice(tagPrefix(tag).length) === bare;
+}
+
+/**
+ * Settings for every clone. A clone must never run repository code: no hooks, no
+ * submodules, no fsmonitor, and symlinks become plain files (CVE-2024-32002,
+ * CVE-2025-48384).
+ */
+const SAFE_GIT_CONFIG = [
+  "core.hooksPath=/dev/null",
+  "core.symlinks=false",
+  "core.fsmonitor=false",
+  "submodule.recurse=false",
+  "protocol.ext.allow=never",
+  "advice.detachedHead=false",
+].flatMap((setting) => ["-c", setting]);
 
 function gitEnv(): NodeJS.ProcessEnv {
   return {
@@ -146,6 +220,11 @@ export interface Checkout {
   /** Tag name, or `HEAD` for the default branch. */
   ref: string;
   commit: string;
+  /** Repository URL the checkout came from. */
+  url: string;
+  /** The requested version, when the tag was picked by a version prefix match. */
+  approximateVersion?: string;
+  license?: LicenseInfo;
   /** Absolute path of the working tree. */
   root: string;
   /** Directory that holds the working tree and its index. */
@@ -156,9 +235,16 @@ interface CheckoutMeta {
   ref: string;
   commit: string;
   fetchedAt: number;
+  /** Last time a tool call used this checkout. Eviction removes the oldest first. */
+  usedAt?: number;
+  /** Disk size of the checkout directory. */
+  bytes?: number;
+  license?: LicenseInfo;
 }
 
 const inFlight = new Map<string, Promise<Checkout>>();
+/** Checkout directories that a running clone writes to. Eviction skips them. */
+const activeDirs = new Set<string>();
 
 /** Tag lists are reused for an hour so repeated calls skip `git ls-remote`. */
 const TAGS_TTL_MS = 60 * 60 * 1000;
@@ -183,9 +269,10 @@ export async function ensureCheckout(
   const url = `${config.gitBaseUrl}/${lib.org}/${lib.repo}`;
 
   let ref = "HEAD";
+  let approximateVersion: string | undefined;
   if (version && version.toLowerCase() !== "latest") {
     const tags = await cachedTags(url);
-    const tag = resolveVersionTag(version, tags);
+    const tag = resolveVersionTag(version, tags, lib.repo);
     if (!tag) {
       const recent = tags
         .filter((t) => parseTagVersion(t) && !parseTagVersion(t)!.prerelease)
@@ -199,6 +286,7 @@ export async function ensureCheckout(
       );
     }
     ref = tag;
+    if (!isExactVersionTag(version, tag)) approximateVersion = version;
   }
 
   const key = `${lib.org}/${lib.repo}@${ref}`.toLowerCase();
@@ -207,7 +295,8 @@ export async function ensureCheckout(
     pending = cloneOrReuse(config, lib, url, ref).finally(() => inFlight.delete(key));
     inFlight.set(key, pending);
   }
-  return pending;
+  const checkout = await pending;
+  return approximateVersion ? { ...checkout, approximateVersion } : checkout;
 }
 
 function safeSegment(value: string): string {
@@ -231,25 +320,40 @@ async function cloneOrReuse(
   const existing = await readMeta(metaPath);
   const fresh = existing && (ref !== "HEAD" || Date.now() - existing.fetchedAt < HEAD_TTL_MS);
   if (existing && fresh && (await isDirectory(root))) {
-    return { org: lib.org, repo: lib.repo, ref, commit: existing.commit, root, dir };
+    const meta = { ...existing };
+    if (!meta.license) meta.license = await detectLicense(root);
+    // Write the use time at most once a minute, to keep repeated calls cheap.
+    if (!existing.license || Date.now() - (existing.usedAt ?? 0) > 60_000) {
+      meta.usedAt = Date.now();
+      await writeFile(metaPath, JSON.stringify(meta)).catch(() => {});
+    }
+    return {
+      org: lib.org,
+      repo: lib.repo,
+      ref,
+      commit: meta.commit,
+      url,
+      root,
+      dir,
+      license: meta.license,
+    };
   }
 
   await mkdir(dir, { recursive: true });
+  activeDirs.add(dir);
   const tmp = path.join(dir, `src.tmp-${process.pid}-${Date.now()}`);
   const args = [
-    "-c",
-    "core.hooksPath=/dev/null",
-    "-c",
-    "advice.detachedHead=false",
+    ...SAFE_GIT_CONFIG,
     "clone",
     "--quiet",
     "--depth",
     "1",
     "--single-branch",
     "--no-tags",
+    "--no-recurse-submodules",
   ];
   if (ref !== "HEAD") args.push("--branch", ref);
-  args.push(url, tmp);
+  args.push("--", url, tmp);
 
   try {
     await execFileAsync("git", args, { env: gitEnv(), timeout: CLONE_TIMEOUT_MS });
@@ -259,13 +363,85 @@ async function cloneOrReuse(
     await rm(root, { recursive: true, force: true });
     await rm(path.join(dir, "index.json"), { force: true });
     await rename(tmp, root);
-    const meta: CheckoutMeta = { ref, commit: stdout.trim(), fetchedAt: Date.now() };
+    const now = Date.now();
+    const meta: CheckoutMeta = {
+      ref,
+      commit: stdout.trim(),
+      fetchedAt: now,
+      usedAt: now,
+      bytes: await directorySize(root),
+      license: await detectLicense(root),
+    };
     await writeFile(metaPath, JSON.stringify(meta));
-    return { org: lib.org, repo: lib.repo, ref, commit: meta.commit, root, dir };
+    await enforceCacheLimit(config, dir);
+    return {
+      org: lib.org,
+      repo: lib.repo,
+      ref,
+      commit: meta.commit,
+      url,
+      root,
+      dir,
+      license: meta.license,
+    };
   } catch (error) {
     await rm(tmp, { recursive: true, force: true });
     if (error instanceof CodeSearchError) throw error;
     throw new CodeSearchError(`Could not clone ${lib.org}/${lib.repo} at ${ref}.`);
+  } finally {
+    activeDirs.delete(dir);
+  }
+}
+
+async function directorySize(target: string): Promise<number> {
+  let total = 0;
+  const pending = [target];
+  while (pending.length) {
+    const current = pending.pop()!;
+    let entries;
+    try {
+      entries = await readdir(current, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const full = path.join(current, entry.name);
+      if (entry.isDirectory()) pending.push(full);
+      else
+        total += await lstat(full).then(
+          (info) => info.size,
+          () => 0
+        );
+    }
+  }
+  return total;
+}
+
+/**
+ * Deletes the least recently used checkouts until the cache fits its limit.
+ * The checkout in `keepDir` and any checkout a clone is writing stay.
+ */
+export async function enforceCacheLimit(config: CodeSearchConfig, keepDir: string): Promise<void> {
+  const limit = config.maxCacheBytes ?? 0;
+  if (limit <= 0) return;
+
+  const entries: { dir: string; bytes: number; usedAt: number }[] = [];
+  for (const repoDir of await readdir(config.cacheDir).catch(() => [] as string[])) {
+    const repoPath = path.join(config.cacheDir, repoDir);
+    for (const refDir of await readdir(repoPath).catch(() => [] as string[])) {
+      const dir = path.join(repoPath, refDir);
+      const meta = await readMeta(path.join(dir, "meta.json"));
+      if (!meta) continue;
+      entries.push({ dir, bytes: meta.bytes ?? 0, usedAt: meta.usedAt ?? meta.fetchedAt });
+    }
+  }
+
+  let total = entries.reduce((sum, entry) => sum + entry.bytes, 0);
+  for (const entry of entries.sort((a, b) => a.usedAt - b.usedAt)) {
+    if (total <= limit) break;
+    if (entry.dir === keepDir || activeDirs.has(entry.dir)) continue;
+    await rm(entry.dir, { recursive: true, force: true });
+    total -= entry.bytes;
   }
 }
 

@@ -1607,6 +1607,8 @@ describe("library source code search tools", () => {
         "libraryId",
         "maxResults",
         "mode",
+        "offset",
+        "output",
         "path",
         "pattern",
         "version",
