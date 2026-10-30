@@ -115,3 +115,32 @@ export function extractClientInfoFromUserAgent(
   }
   return undefined;
 }
+
+/**
+ * Matches a variable reference the host did not fill in, such as `${CONTEXT7_API_KEY}`
+ * or `$CONTEXT7_API_KEY`. Gemini CLI passes `${CONTEXT7_API_KEY}` through unchanged when
+ * the user skips the extension's API key prompt.
+ */
+const UNRESOLVED_PLACEHOLDER = /^\$(\{[^}]*\}|[A-Za-z_][A-Za-z0-9_]*)$/;
+
+/**
+ * Returns the stdio API key: the `--api-key` value, else `CONTEXT7_API_KEY`.
+ * An empty value or an unresolved placeholder counts as no key, so the server
+ * runs without one instead of sending the placeholder and getting a 401 on every call.
+ */
+export function resolveStdioApiKey(
+  flagValue: string | undefined,
+  envValue: string | undefined
+): { apiKey?: string; ignoredPlaceholders: string[] } {
+  const ignoredPlaceholders: string[] = [];
+  for (const value of [flagValue, envValue]) {
+    const key = value?.trim();
+    if (!key) continue;
+    if (UNRESOLVED_PLACEHOLDER.test(key)) {
+      ignoredPlaceholders.push(key);
+      continue;
+    }
+    return { apiKey: key, ignoredPlaceholders };
+  }
+  return { ignoredPlaceholders };
+}

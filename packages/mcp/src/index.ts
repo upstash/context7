@@ -16,6 +16,7 @@ import {
   formatSearchResults,
   extractClientInfoFromUserAgent,
   envelopeClientInfo,
+  resolveStdioApiKey,
 } from "./lib/utils.js";
 import express from "express";
 import { Command, InvalidArgumentError } from "commander";
@@ -830,7 +831,16 @@ async function main() {
 
     startServer(initialPort);
   } else {
-    stdioApiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
+    const { apiKey, ignoredPlaceholders } = resolveStdioApiKey(
+      cliOptions.apiKey,
+      process.env.CONTEXT7_API_KEY
+    );
+    for (const placeholder of ignoredPlaceholders) {
+      console.error(
+        `Ignoring API key "${placeholder}": it is an unset variable, not a key. Running without an API key.`
+      );
+    }
+    stdioApiKey = apiKey;
     stdioSessionId = randomUUID();
     const rawStdioTransport = new StdioServerTransport();
     const stdioTransport = mcpInstrumentation
