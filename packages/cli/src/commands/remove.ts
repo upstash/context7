@@ -370,25 +370,29 @@ async function uninstallRule(agentName: SetupAgent, scope: Scope): Promise<Clean
     }
 
     const escapedMarker = CONTEXT7_SECTION_MARKER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const section = new RegExp(`${escapedMarker}\\n[\\s\\S]*?${escapedMarker}`).exec(existing);
+    // The file may have CRLF line endings (e.g. checked out by Git for Windows).
+    const section = new RegExp(`${escapedMarker}(\\r?\\n)[\\s\\S]*?${escapedMarker}`).exec(
+      existing
+    );
     if (!section) {
       return { status: "not found", path: filePath };
     }
+    const eol = section[1];
 
     // Only the seam left by the removed section is normalized; everything else in
     // the file is the user's own content and must stay byte-for-byte identical
     // (blank lines inside fenced code blocks, spacing between their sections).
-    const before = existing.slice(0, section.index).replace(/\n+$/, "");
-    const after = existing.slice(section.index + section[0].length).replace(/^\n+/, "");
-    const updated = (before && after ? `${before}\n\n${after}` : before || after).replace(
-      /\n*$/,
+    const before = existing.slice(0, section.index).replace(/(?:\r?\n)+$/, "");
+    const after = existing.slice(section.index + section[0].length).replace(/^(?:\r?\n)+/, "");
+    const updated = (before && after ? `${before}${eol}${eol}${after}` : before || after).replace(
+      /(?:\r?\n)*$/,
       ""
     );
 
     if (updated.length === 0) {
       await rm(filePath);
     } else {
-      await writeFile(filePath, `${updated}\n`, "utf-8");
+      await writeFile(filePath, `${updated}${eol}`, "utf-8");
     }
 
     return { status: "removed", path: filePath };
