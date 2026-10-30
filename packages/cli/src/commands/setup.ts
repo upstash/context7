@@ -48,7 +48,7 @@ import {
   patchStdioApiKey,
   getJsonServerEntry,
 } from "../setup/mcp-writer.js";
-import { editOpenCodeServer } from "../setup/opencode-editor.js";
+import { editOpenCodeServer, openCodeServerConfig } from "../setup/opencode-editor.js";
 
 type Scope = "global" | "project";
 type SetupMode = "mcp" | "cli";
@@ -386,7 +386,8 @@ async function setupAgent(
         ? `reconfigured with ${AUTH_MODE_LABELS[auth.mode]}`
         : `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
     } else {
-      const existing = await readJsonConfig(mcpPath);
+      const parsed = await readJsonConfig(mcpPath);
+      const existing = agentName === "opencode" ? openCodeServerConfig(parsed) : parsed;
       const existingJsonEntry =
         transport === "stdio"
           ? getJsonServerEntry(existing, agent.mcp.configKey, "context7")

@@ -13,7 +13,7 @@ import {
   resolveMcpPath,
   removeTomlServer,
 } from "../setup/mcp-writer.js";
-import { editOpenCodeServer } from "../setup/opencode-editor.js";
+import { editOpenCodeServer, openCodeServerConfig } from "../setup/opencode-editor.js";
 import { join } from "path";
 import { access, readFile, rm, writeFile } from "fs/promises";
 
@@ -202,6 +202,7 @@ async function hasMcpConfig(agentName: SetupAgent, scope: Scope): Promise<boolea
     );
     return false;
   }
+  if (agentName === "opencode") existing = openCodeServerConfig(existing);
   const section = existing[agent.mcp.configKey];
   return (
     !!section && typeof section === "object" && !Array.isArray(section) && "context7" in section
@@ -329,7 +330,8 @@ async function uninstallMcp(agentName: SetupAgent, scope: Scope): Promise<Cleanu
       return { status: removed ? "removed" : "not found", path: mcpPath };
     }
 
-    const existing = await readJsonConfig(mcpPath);
+    const parsed = await readJsonConfig(mcpPath);
+    const existing = agentName === "opencode" ? openCodeServerConfig(parsed) : parsed;
     const { config, removed } = removeServerEntry(existing, agent.mcp.configKey, "context7");
     if (removed) {
       if (agentName === "opencode") await editOpenCodeServer(mcpPath);
