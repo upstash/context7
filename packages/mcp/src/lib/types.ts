@@ -38,6 +38,7 @@ export type ContextResponse = {
 
 export const CODE_OPERATIONS = [
   "grep",
+  "search",
   "definition",
   "references",
   "outline",

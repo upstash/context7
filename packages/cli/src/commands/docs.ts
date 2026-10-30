@@ -382,8 +382,14 @@ export function registerDocsCommands(program: Command): void {
       "<libraryId>",
       "Context7 library ID (e.g., /vercel/next.js or /vercel/next.js/v15.5.0)"
     )
-    .argument("[pattern]", "A regex to grep for, or a symbol for --op definition/references/read")
-    .option("--op <operation>", `grep (default), definition, references, outline, read or list`)
+    .argument(
+      "[pattern]",
+      "A regex to grep for, a question for --op search, or a symbol for --op definition/references/read"
+    )
+    .option(
+      "--op <operation>",
+      `grep (default), search, definition, references, outline, read or list`
+    )
     .option("-F, --fixed-strings", "Treat the pattern as plain text")
     .option("-i, --ignore-case", "Case-insensitive search")
     .option("-g, --glob <glob...>", "Only files matching a glob; start with ! to exclude")

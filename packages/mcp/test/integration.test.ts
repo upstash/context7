@@ -1601,6 +1601,19 @@ describe("query-code tool", () => {
       expect(grepSent?.query.get("context")).toBe("2");
       expect(grepSent?.query.get("output_mode")).toBe("count");
 
+      const searchCall = requests.length;
+      await client.callTool({
+        name: "query-code",
+        arguments: {
+          libraryId: "/vercel/next.js",
+          operation: "search",
+          pattern: "where is the router cache invalidated",
+        },
+      });
+      const searchSent = requests.slice(searchCall).find((request) => request.path === "/v2/code");
+      expect(searchSent?.query.get("operation")).toBe("search");
+      expect(searchSent?.query.get("pattern")).toBe("where is the router cache invalidated");
+
       const legacyCall = requests.length;
       await client.callTool({
         name: "query-code",
