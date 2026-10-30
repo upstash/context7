@@ -2,23 +2,18 @@ name: Canary Release
 
 on:
   workflow_dispatch:
-    inputs:
-      branch:
-        description: "Branch to release from (defaults to current branch)"
-        required: false
-        type: string
 
 jobs:
   canary-release:
     name: Canary Release
     runs-on: ubuntu-latest
+    # The release environment deploys only from master and holds NPM_TOKEN.
+    environment: release
     permissions:
       contents: read
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v7
-        with:
-          ref: ${{ inputs.branch || github.ref }}
 
       - name: Setup Node
         uses: actions/setup-node@v7
