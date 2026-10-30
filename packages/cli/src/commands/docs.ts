@@ -396,7 +396,10 @@ export function registerDocsCommands(program: Command): void {
     .option("-C, --context <n>", "Lines of context around each match (0 to 10)")
     .option("-l, --files-with-matches", "Print only the paths of matching files")
     .option("-c, --count", "Print the number of matches per file")
-    .option("--path <path>", "A folder or file; for --op read, a file with #L10-L40")
+    .option(
+      "--path <path>",
+      "A folder or file; for --op read, a file with #L10-L40; for --op definition, the file that uses the symbol"
+    )
     .option("--head-limit <n>", "Maximum results (default: 20)")
     .option("--offset <n>", "Skip this many results")
     .option("--json", "Output as JSON")
