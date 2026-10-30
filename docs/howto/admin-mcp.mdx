@@ -32,6 +32,8 @@ Clients that support MCP OAuth ask you to sign in with your Context7 account on 
 
 Create a Context7 API key in [the dashboard](https://context7.com/dashboard) and send it as a bearer token. Every key can use the read tools. To make changes, tick **Write access** when you create the key; a key without it gets `403` `write_access_required` on changes. A key reaches only its own teamspace. See [Write access](/howto/api-keys#write-access).
 
+![Create New API Key dialog with Write access ticked](/images/dashboard/api-key-write-access.png)
+
 ```json
 {
   "mcpServers": {

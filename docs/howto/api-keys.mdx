@@ -40,6 +40,8 @@ API keys authenticate your requests to Context7's documentation services. You ca
 
 The [Context7 Admin MCP](/howto/admin-mcp) and the [management API](/api-reference/teamspaces/list-teamspaces) (`/api/v2/teamspaces/*`) accept every API key, but a key is read-only there unless **Write access** was ticked when the key was created. A read-only key can list and read the teamspace with your role. A key with write access can also change it: its members, libraries, rules and policies, usage, and Docs7 and Ask sites. A key reaches only its own teamspace.
 
+![Create New API Key dialog with Write access ticked](/images/dashboard/api-key-write-access.png)
+
 A read-only key gets `403` with the error `write_access_required` when it tries to make a change. The teamspace invite link also needs write access, because the link lets anyone join. You cannot add write access to an existing key: create a new key with the box ticked. With the Admin MCP you can also sign in with OAuth and use no key.
 
 ### Revoking Keys
