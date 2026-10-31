@@ -43,6 +43,28 @@ describe("compareVersions", () => {
     expect(compareVersions("0.3.13", "0.3.13")).toBe(0);
     expect(compareVersions("0.3.13", "0.3.14")).toBeLessThan(0);
   });
+
+  test("ranks a release above every prerelease of the same core", () => {
+    // Someone installed from the `canary` dist-tag would otherwise never be told
+    // that the release the snapshot was cut from is now the published version.
+    expect(compareVersions("0.9.0", "0.9.0-canary-20261006104237")).toBeGreaterThan(0);
+    expect(compareVersions("0.9.0-canary-20261006104237", "0.9.0")).toBeLessThan(0);
+    expect(compareVersions("0.9.0-canary-20261006104237", "0.9.0-canary-20261006104237")).toBe(0);
+  });
+
+  test("orders prerelease identifiers the way semver does", () => {
+    expect(compareVersions("0.9.0-rc.2", "0.9.0-rc.1")).toBeGreaterThan(0);
+    expect(compareVersions("0.9.0-rc.10", "0.9.0-rc.9")).toBeGreaterThan(0);
+    expect(compareVersions("0.9.0-rc.1", "0.9.0-rc.1.1")).toBeLessThan(0);
+    // Numeric identifiers sort below alphanumeric ones.
+    expect(compareVersions("0.9.0-1", "0.9.0-alpha")).toBeLessThan(0);
+    expect(compareVersions("0.9.0-alpha", "0.9.0-beta")).toBeLessThan(0);
+  });
+
+  test("ignores build metadata", () => {
+    expect(compareVersions("0.9.0+sha.5f2c1d", "0.9.0")).toBe(0);
+    expect(compareVersions("0.9.0-rc.1+build.2", "0.9.0-rc.1")).toBe(0);
+  });
 });
 
 describe("detectInstallMethod", () => {
