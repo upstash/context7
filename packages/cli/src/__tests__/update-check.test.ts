@@ -43,6 +43,11 @@ describe("compareVersions", () => {
     expect(compareVersions("0.3.13", "0.3.13")).toBe(0);
     expect(compareVersions("0.3.13", "0.3.14")).toBeLessThan(0);
   });
+
+  test("orders a prerelease before its release", () => {
+    expect(compareVersions("0.3.14", "0.3.14-canary-20250101000000")).toBeGreaterThan(0);
+    expect(compareVersions("0.3.14-canary-20250101000000", "0.3.14")).toBeLessThan(0);
+  });
 });
 
 describe("detectInstallMethod", () => {
