@@ -333,6 +333,10 @@ Do not use for: refactoring, debugging, or reviewing code that does not depend o
   const server = mcpInstrumentation
     ? mcpInstrumentation.createServer(serverInfo, serverOptions, mcpContext)
     : new McpServer(serverInfo, serverOptions);
+  const toolClientContext = (toolCtx: ServerContext): ClientContext => ({
+    ...getClientContext(toolCtx),
+    ...(researchPreview ? { researchPreview: true } : {}),
+  });
 
   server.registerTool(
     RESOLVE_LIBRARY_ID_TOOL,
@@ -394,7 +398,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       },
     },
     async ({ query, libraryName }: { query: string; libraryName: string }, toolCtx) => {
-      const ctx = getClientContext(toolCtx);
+      const ctx = toolClientContext(toolCtx);
       const searchResponse = await searchLibraries(query, libraryName, ctx);
 
       if (!searchResponse.results || searchResponse.results.length === 0) {
@@ -472,7 +476,7 @@ If you know the programming language the user is working in, pass it as \`langua
       { query, libraryId, language }: { query: string; libraryId: string; language?: string },
       toolCtx
     ) => {
-      const ctx = getClientContext(toolCtx);
+      const ctx = toolClientContext(toolCtx);
       const response = await fetchLibraryContext({ query, libraryId, language }, ctx);
       maybeElicitAuthSignIn(server, ctx);
       recordToolCallTelemetry(ctx, response.outcome);
@@ -492,7 +496,7 @@ If you know the programming language the user is working in, pass it as \`langua
     }
   );
 
-  if (researchPreview) registerResearchPreviewTools(server, getClientContext);
+  if (researchPreview) registerResearchPreviewTools(server, toolClientContext);
 
   return server;
 }

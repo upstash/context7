@@ -638,6 +638,7 @@ describe("research preview", () => {
       const apiCall = requests.find((request) => request.path === "/v2/feedback");
       expect(apiCall?.headers.authorization).toBe("Bearer ctx7sk-local-test");
       expect(apiCall?.headers["x-context7-source"]).toBe("mcp-server");
+      expect(apiCall?.headers["x-context7-research-preview"]).toBe("1");
     } finally {
       await client.close();
     }
@@ -877,6 +878,7 @@ describe.each([
     expect(apiCalls[0].query.get("libraryId")).toBe("/vercel/next.js");
     expect(apiCalls[0].query.get("query")).toBe("app router");
     expect(apiCalls[0].headers["x-context7-transport"]).toBe(transportKind);
+    expect(apiCalls[0].headers["x-context7-research-preview"]).toBeUndefined();
     if (transportKind === "http") {
       expect(apiCalls[0].headers["mcp-client-ip-assertion"]).toMatch(/^v1:/);
       expect(
