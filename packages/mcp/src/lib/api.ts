@@ -201,7 +201,11 @@ export async function fetchLibraryCode(
   try {
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/code`);
     url.searchParams.set("libraryId", request.libraryId);
-    if (request.version) url.searchParams.set("version", request.version);
+    // An agent may copy a full versioned ID ("/vercel/next.js/v15.1.8") into version.
+    const version = request.version?.startsWith(`${request.libraryId}/`)
+      ? request.version.slice(request.libraryId.length + 1)
+      : request.version;
+    if (version) url.searchParams.set("version", version);
     if (request.operation) url.searchParams.set("operation", request.operation);
     if (request.pattern !== undefined) url.searchParams.set("pattern", request.pattern);
     if (request.fixed_strings) url.searchParams.set("fixed_strings", "true");
@@ -228,30 +232,32 @@ export async function fetchLibraryCode(
             retryAfter?: number;
           };
           const wait = body.retryAfter ?? Number(response.headers.get("Retry-After") ?? 30);
-          const message = (body.message ?? "The library source is being indexed.").replace(
-            /\s*Call again in about \d+ seconds\.?/,
-            ""
-          );
+          const message = body.message ?? "The library source is being indexed.";
           return {
             data: `${message} This is not an error. Call query-code again with the same arguments in about ${wait} seconds, at most twice. Meanwhile, or if it is still indexing, answer from query-docs.`,
             outcome: "not_found",
-            retryable: true,
           };
         }
         if (!response.ok) {
           const errorMessage = await parseErrorResponse(response, context);
           console.error(errorMessage);
-          return { data: errorMessage, outcome: "error" };
+          // Server-side failures are not fixed by an immediate retry.
+          const fallback =
+            response.status >= 500 ? " Do not retry now: answer from query-docs." : "";
+          return { data: errorMessage + fallback, outcome: "error" };
         }
         const text = await response.text();
         if (!text) return { data: "No source results for this query.", outcome: "not_found" };
-        const empty = /^0 matching lines in 0 files/m.test(text) || /^0 entries in /m.test(text);
+        const empty =
+          /^(at least )?0 (matching lines|references|reference|matching line) in /m.test(text) ||
+          /^0 entries in /m.test(text) ||
+          /^Symbols in .* \(0 of 0\)/m.test(text);
         return { data: text, outcome: empty ? "not_found" : "success" };
       },
       { abortSignal }
     );
   } catch (error) {
-    const errorMessage = `Error querying library source code. Please try again later. ${error}`;
+    const errorMessage = `Error querying library source code: ${error}. Do not retry now: answer from query-docs.`;
     console.error(errorMessage);
     return { data: errorMessage, outcome: "error" };
   }

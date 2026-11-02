@@ -64,10 +64,7 @@ export type CodeRequest = {
   offset?: number;
 };
 
-export type CodeResponse = ContextResponse & {
-  /** The source is still being indexed: not an error, the caller should retry. */
-  retryable?: boolean;
-};
+export type CodeResponse = ContextResponse;
 
 export interface ClientContext {
   clientIp?: string;

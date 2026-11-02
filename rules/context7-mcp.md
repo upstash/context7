@@ -16,5 +16,6 @@ If the `query-code` tool is available, use it when the docs do not answer an exa
 - Use a library ID that `resolve-library-id` marks with "Source code", usually the GitHub repository (e.g. `/colinhacks/zod`). `/websites/...` and `/llmstxt/...` IDs have no source
 - Start with `grep` (set `fixed_strings` for error messages) or `definition` for a symbol, then `read` the file range in the result's "Next:" line
 - For a version, pass its git tag in `version` (e.g. `v3.24.2`)
+- Most questions need 1 to 4 `query-code` calls; stop at 6
 - If it answers "being indexed", retry at most twice, then answer from `query-docs`
 - Cite the file and line of the source you used

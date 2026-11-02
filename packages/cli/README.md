@@ -104,13 +104,12 @@ Search and read a library's source code at the version its docs describe. Search
 ctx7 code /tanstack/query "invalidateQueries\\(" -g "packages/query-core/**"
 ctx7 code /pydantic/pydantic "Input should be a valid integer" -F
 ctx7 code /tokio-rs/tokio JoinHandle -c
-ctx7 code /colinhacks/zod ZodEffects --op definition --version v3.24.2
+ctx7 code /colinhacks/zod/v3.24.2 ZodEffects --op definition
 ctx7 code /tokio-rs/tokio spawn --op read
-ctx7 code /gin-gonic/gin "recover from a panic and return 500" --op search
 ctx7 code /tanstack/query --op list --path packages/query-core/src
 ```
 
-`--op` is `grep` (default), `definition`, `references`, `outline`, `read` or `list`. The search flags are `-F`, `-i`, `-g`, `-C`, `-l`, `-c`, `--head-limit` and `--offset`. The first query for a library version can answer that the source is still being indexed. Run the command again after the time it gives.
+`--op` is `grep` (default), `definition`, `references`, `outline`, `read` or `list`. The search flags are `-F`, `-i`, `-g` (repeat it for more globs), `-C`, `-l`, `-c`, `--head-limit` and `--offset`. Add a git tag to the library ID (`/colinhacks/zod/v3.24.2`) or pass `--tag` for a version. The first query for a library version can answer that the source is still being indexed. Run the command again after the time it gives.
 
 ### Setup
 

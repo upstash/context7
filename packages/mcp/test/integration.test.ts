@@ -1615,25 +1615,26 @@ describe("query-code tool", () => {
       expect(searchResult.isError).toBe(true);
       expect(requests.slice(searchCall).some((request) => request.path === "/v2/code")).toBe(false);
 
-      const legacyCall = requests.length;
+      // Aliases agents send by habit, a full versioned ID in version, and clamped numbers.
+      const aliasCall = requests.length;
       await client.callTool({
         name: "query-code",
         arguments: {
           libraryId: "/vercel/next.js",
           query: "Request failed",
-          type: "text",
-          version: "v15.5.0",
-          limit: 5,
+          fixedStrings: true,
+          version: "/vercel/next.js/v15.5.0",
+          limit: 900,
+          context: 25,
         },
       });
-      const legacySent = requests.slice(legacyCall).find((request) => request.path === "/v2/code");
-      // version is its own field now; it is no longer folded into libraryId.
-      expect(legacySent?.query.get("libraryId")).toBe("/vercel/next.js");
-      expect(legacySent?.query.get("version")).toBe("v15.5.0");
-      expect(legacySent?.query.get("pattern")).toBe("Request failed");
-      expect(legacySent?.query.get("operation")).toBe("grep");
-      expect(legacySent?.query.get("fixed_strings")).toBe("true");
-      expect(legacySent?.query.get("head_limit")).toBe("5");
+      const aliasSent = requests.slice(aliasCall).find((request) => request.path === "/v2/code");
+      expect(aliasSent?.query.get("libraryId")).toBe("/vercel/next.js");
+      expect(aliasSent?.query.get("version")).toBe("v15.5.0");
+      expect(aliasSent?.query.get("pattern")).toBe("Request failed");
+      expect(aliasSent?.query.get("fixed_strings")).toBe("true");
+      expect(aliasSent?.query.get("head_limit")).toBe("500");
+      expect(aliasSent?.query.get("context")).toBe("10");
     } finally {
       await client.close();
     }

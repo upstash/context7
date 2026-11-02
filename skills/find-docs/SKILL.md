@@ -144,13 +144,13 @@ npx ctx7@latest code /colinhacks/zod "Invalid input" -F                 # grep p
 npx ctx7@latest code /pallets/flask "def (get|post)\(" -g "src/**"      # grep a regex in a folder
 npx ctx7@latest code /psf/requests Session.mount --op definition        # where a symbol is defined
 npx ctx7@latest code /psf/requests --op read --path src/requests/sessions.py#L780-L800
-npx ctx7@latest code /colinhacks/zod ZodString.min --op definition --version v3.24.2
+npx ctx7@latest code /colinhacks/zod/v3.24.2 ZodString.min --op definition
 ```
 
 - Use an ID that `library` marks with "Source code", usually the GitHub repository. `/websites/...` and `/llmstxt/...` IDs have no source.
 - Other operations: `--op references` (uses of a symbol), `--op outline` (symbols of a file or the exported API), `--op list` (files in `--path` or matching `-g`). `-l` and `-c` print file names or counts.
-- Follow the `Next:` line of the output for the read, page (`--offset`) or count call to make next.
-- `--version` takes a git tag. An unknown version prints the tags you can use.
+- Follow the `Next:` line of the output. Its fields map to flags: `offset` is `--offset`, `output_mode "count"` is `-c`, `fixed_strings` is `-F`, `ignore_case` is `-i`, and `read: <file>#L..` is `--op read --path <file>#L..`. Most questions need 1 to 4 `code` commands; stop at 6.
+- For a version, add its git tag to the library ID (`/colinhacks/zod/v3.24.2`). An unknown version prints the tags you can use.
 - Exit code 75 means the source is being indexed: retry at most twice, then answer from `docs`.
 - Cite the file and line of the source you used.
 

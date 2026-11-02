@@ -51,7 +51,8 @@ afterEach(() => {
 });
 
 async function run(register: (p: Command) => void, ...args: string[]): Promise<void> {
-  const program = new Command();
+  // Like src/index.ts: the root program owns -v/--version.
+  const program = new Command().version("0.0.0-test", "-v, --version");
   program.exitOverride();
   register(program);
   await program.parseAsync(["node", "test", ...args]);
@@ -94,6 +95,7 @@ describe("ctx7 code", () => {
       "-i",
       "-g",
       "*.ts",
+      "-g",
       "!**/test/**",
       "-C",
       "2",
@@ -115,34 +117,40 @@ describe("ctx7 code", () => {
     expect(process.exitCode).toBeUndefined();
   });
 
-  test("maps the first version's flags", async () => {
+  test("takes the tag with --tag and the pattern after a repeated -g", async () => {
     mockGetLibraryCode.mockResolvedValue({ kind: "result", body: "ok" });
 
     await run(
       registerDocsCommands,
       "code",
       "/a/b",
+      "-g",
+      "*.ts",
+      "-g",
+      "!**/test/**",
       "Request failed",
-      "--type",
-      "text",
-      "--limit",
-      "5",
-      "--version",
-      "v2"
+      "--tag",
+      "v2",
+      "-F"
     );
 
-    // --version is its own field, sent next to the library ID.
     expect(mockGetLibraryCode).toHaveBeenCalledWith(
       "/a/b",
       "Request failed",
-      expect.objectContaining({
-        version: "v2",
-        operation: "grep",
-        fixedStrings: true,
-        headLimit: 5,
-      }),
+      expect.objectContaining({ version: "v2", glob: ["*.ts", "!**/test/**"], fixedStrings: true }),
       REFRESHED
     );
+  });
+
+  test("prints JSON for errors with --json", async () => {
+    mockGetLibraryCode.mockResolvedValue({ kind: "error", error: "not_indexed", message: "No." });
+
+    await run(registerDocsCommands, "code", "/a/b", "x", "--json");
+
+    expect(console.log).toHaveBeenCalledWith(
+      JSON.stringify({ error: "not_indexed", message: "No." })
+    );
+    expect(process.exitCode).toBe(1);
   });
 
   test("asks to retry while the source is being indexed", async () => {

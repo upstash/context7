@@ -237,29 +237,20 @@ interface CodeCommandOptions {
   headLimit?: string;
   offset?: string;
   json?: boolean;
-  // The first version's flags.
-  type?: string;
-  limit?: string;
-  version?: string;
+  /** A git tag. `--version` is the CLI's own flag, so the tag has its own name. */
+  tag?: string;
 }
-
-const LEGACY_TYPES: Record<string, { op: CodeOperation; fixedStrings?: boolean }> = {
-  text: { op: "grep", fixedStrings: true },
-  source: { op: "read" },
-  definition: { op: "definition" },
-  references: { op: "references" },
-  outline: { op: "outline" },
-};
 
 function wholeNumber(
   value: string | undefined,
   name: string,
-  max: number
+  max: number,
+  min = 0
 ): number | undefined | null {
   if (value === undefined) return undefined;
   const n = Number(value);
-  if (!Number.isInteger(n) || n < 0 || n > max) {
-    log.error(`${name} must be a whole number from 0 to ${max}.`);
+  if (!Number.isInteger(n) || n < min || n > max) {
+    log.error(`${name} must be a whole number from ${min} to ${max}.`);
     process.exitCode = 1;
     return null;
   }
@@ -281,26 +272,18 @@ async function codeCommand(
     process.exitCode = 1;
     return;
   }
-  const legacy = options.type ? LEGACY_TYPES[options.type] : undefined;
-  if (options.type && !legacy) {
-    log.error(
-      `Invalid --type "${options.type}". Use --op with one of: ${CODE_OPERATIONS.join(", ")}.`
-    );
-    process.exitCode = 1;
-    return;
-  }
-  const op = options.op ?? legacy?.op;
+  const op = options.op;
   if (op && !CODE_OPERATIONS.includes(op as CodeOperation)) {
     log.error(`Invalid --op "${op}". Use one of: ${CODE_OPERATIONS.join(", ")}.`);
     process.exitCode = 1;
     return;
   }
   const context = wholeNumber(options.context, "--context", 10);
-  const headLimit = wholeNumber(options.headLimit ?? options.limit, "--head-limit", 500);
+  const headLimit = wholeNumber(options.headLimit, "--head-limit", 500, 1);
   const offset = wholeNumber(options.offset, "--offset", 10_000);
   if (context === null || headLimit === null || offset === null) return;
   const accessToken = await getValidAccessToken();
-  const target = options.version ? `${libraryId} ${options.version}` : libraryId;
+  const target = options.tag ? `${libraryId} ${options.tag}` : libraryId;
   const spinner = isTTY ? ora(`Searching the source of "${target}"...`).start() : null;
   let result;
   try {
@@ -308,9 +291,9 @@ async function codeCommand(
       libraryId,
       pattern,
       {
-        version: options.version,
+        version: options.tag,
         operation: op as CodeOperation | undefined,
-        fixedStrings: options.fixedStrings || legacy?.fixedStrings,
+        fixedStrings: options.fixedStrings,
         ignoreCase: options.ignoreCase,
         glob: options.glob,
         path: options.path,
@@ -336,13 +319,27 @@ async function codeCommand(
   spinner?.stop();
 
   if (result.kind === "indexing") {
-    log.warn(result.message);
-    log.info(`Run the same command again in about ${result.retryAfter} seconds.`);
+    if (options.json) {
+      console.log(
+        JSON.stringify({
+          error: "indexing",
+          message: result.message,
+          retryAfter: result.retryAfter,
+        })
+      );
+    } else {
+      log.warn(result.message);
+      log.info(
+        `Run the same command again in about ${result.retryAfter} seconds, at most twice. Meanwhile, use "ctx7 docs".`
+      );
+    }
     process.exitCode = 75; // EX_TEMPFAIL: try again later
     return;
   }
   if (result.kind === "error") {
-    log.error(result.message || result.error);
+    if (options.json)
+      console.log(JSON.stringify({ error: result.error, message: result.message || result.error }));
+    else log.error(result.message || result.error);
     process.exitCode = 1;
     return;
   }
@@ -383,29 +380,31 @@ export function registerDocsCommands(program: Command): void {
     .command("code")
     .argument(
       "<libraryId>",
-      "Context7 library ID of a Git repository (e.g., /vercel/next.js); set the version with --version"
+      "Context7 library ID of a Git repository, with an optional tag (e.g., /vercel/next.js or /colinhacks/zod/v3.24.2)"
     )
     .argument("[pattern]", "A regex to grep for, or a symbol for --op definition/references/read")
     .option("--op <operation>", `grep (default), definition, references, outline, read or list`)
     .option("-F, --fixed-strings", "Treat the pattern as plain text")
     .option("-i, --ignore-case", "Case-insensitive search")
-    .option("-g, --glob <glob...>", "Only files matching a glob; start with ! to exclude")
+    .option(
+      "-g, --glob <glob>",
+      "Only files matching a glob; start with ! to exclude. Repeat for more",
+      (value: string, previous: string[] = []) => [...previous, value]
+    )
     .option("-C, --context <n>", "Lines of context around each match (0 to 10)")
     .option("-l, --files-with-matches", "Print only the paths of matching files")
     .option("-c, --count", "Print the number of matches per file")
     .option(
       "--path <path>",
-      "A folder or file; for --op read, a file with #L10-L40; for --op definition, the file that uses the symbol"
+      "A folder or file of the library; for --op read, a file with #L10-L40; for --op definition, a library file that uses the symbol"
     )
-    .option("--head-limit <n>", "Maximum results (default: 20)")
+    .option(
+      "--head-limit <n>",
+      "Maximum results (default: 20; definition 10, outline 50, list 100)"
+    )
     .option("--offset <n>", "Skip this many results")
     .option("--json", "Output as JSON")
-    .option("--type <type>", "Deprecated: use --op")
-    .option("--limit <n>", "Deprecated: use --head-limit")
-    .option(
-      "--version <version>",
-      "A git tag of the library, e.g. v3.24.2 (default: the commit the latest docs describe)"
-    )
+    .option("--tag <tag>", "A git tag of the library, e.g. v3.24.2 (default: the docs commit)")
     .description("Search and read a library's source code at a version, like ripgrep")
     .action(async (libraryId: string, pattern: string | undefined, options: CodeCommandOptions) => {
       await codeCommand(libraryId, pattern, options);
