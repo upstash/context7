@@ -1,0 +1,36 @@
+{
+  "name": "context7-docs-agent",
+  "version": "0.0.0",
+  "private": true,
+  "description": "An eve agent that answers library and API questions from up-to-date, official documentation with Context7 Search.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/upstash/context7.git",
+    "directory": "examples/eve-docs-agent"
+  },
+  "license": "MIT",
+  "type": "module",
+  "imports": {
+    "#*": "./agent/*"
+  },
+  "scripts": {
+    "build": "eve build",
+    "dev": "eve dev",
+    "start": "eve start",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@upstash/context7-sdk": "^0.6.0",
+    "ai": "^7.0.150",
+    "eve": "^0.83.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "typescript": "7.0.2"
+  },
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": "24.x"
+  }
+}

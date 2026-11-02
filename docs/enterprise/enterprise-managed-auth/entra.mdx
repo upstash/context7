@@ -381,6 +381,8 @@ After saving the tenant configuration, scroll down to the **Microsoft Entra ID u
 
 Context7 creates a Clerk user record for the developer, adds them as a `developer` member of the teamspace, and inserts a `(tenant, oid, teamspace)` mapping. The same email can be added to multiple teamspaces; the Clerk user is reused and a separate mapping row is created per teamspace.
 
+Clicking **Remove** on a user in the **Microsoft Entra ID users** card removes their mapping. A `developer` also leaves the teamspace and loses their API keys. Owners and admins keep their role. If they are still in the synced group, the next sync adds them back without API keys. While a group sync or another Entra user change is running for the teamspace, Add and Remove answer "An Entra group sync or another Entra user change is running. Try again in a few minutes." (status 409).
+
 <Note>
 Clicking **Remove** on the Microsoft Entra ID card removes both the tenant configuration **and** all provisioned users for the teamspace in a single step. If you only need to revoke a single user, remove them from the Microsoft Entra ID users card instead.
 </Note>
@@ -435,14 +437,18 @@ The integration uses Microsoft Graph with **Workload Identity Federation** (WIF)
 
    - **Sync app client ID**: the app you set up in step 1 (the MCP API app's client ID if you reused it).
    - **Group object ID**: from step 3.
-   - Leave **Revoke access when a user is removed from the group** and **Run sync on schedule** ticked.
+   - Leave **Revoke access when a user is removed from the group** and **Run sync on schedule** ticked. With revoke access on, a developer who leaves the group is removed from the teamspace and their API keys are deleted. Owners and admins keep their access. A developer invited to the teamspace before they joined the group is also removed when they leave it.
    - Click **Test connection**. Expected response: *"Connected. Group has N members."*
    - **Save**.
 
 5. **Click "Sync now"** to provision the current group members immediately. Each appears in the **Microsoft Entra ID users** list with a **Synced** badge. Subsequent syncs run every 30 minutes.
 
 <Note>
-Manually-added users (Step 2) and synced users (Step 3) coexist on the same teamspace. The sync reconciler only touches rows whose provisioning source is `graph_group_sync`, so removing someone from the Entra group never revokes a manually-added user.
+**Held removals.** A sync that would remove more than half of the synced users removes nobody. The card shows an amber **Removals held** status with a warning and a **Confirm removals** button. Check the group first: a wrong group or an incomplete Graph answer looks the same as a large departure. **Confirm removals** runs the sync and applies the removals. Scheduled syncs never apply held removals. The hold stays until you confirm it or the removals are no longer needed. A small group can hit the guard with a single departure, for example 1 of 1 synced users leaving.
+</Note>
+
+<Note>
+Manually-added users (Step 2) and synced users (Step 3) coexist on the same teamspace. The sync reconciler only touches rows whose provisioning source is `graph_group_sync`, so removing someone from the Entra group never revokes a manually-added user who was never in the group. A developer invited to the teamspace before they joined the group is a synced user, and revoke access applies to them.
 </Note>
 
 <Note>

@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { EMA_ISSUER, OAUTH_AUTH_SERVER_URL, RESOURCE_URL } from "./constants.js";
-import { isClerkOAuthJwt, isJWT, validateJWT } from "./jwt.js";
+import { isClerkOAuthJwt, isJWT, oauthClientId, validateJWT } from "./jwt.js";
 import { createPerTokenLogWindow } from "./log-throttle.js";
 import {
   EXPIRED_OAUTH_TOKEN_ERROR,
@@ -9,7 +9,11 @@ import {
   isOpaqueOAuthTokenValidationEnabled,
   validateOpaqueOAuthToken,
 } from "./oauth-token-validation.js";
-import type { AuthenticationObservation, AuthenticationMethod } from "./telemetry-contracts.js";
+import type {
+  AuthenticationObservation,
+  AuthenticationMethod,
+  OAuthClientRegistration,
+} from "./telemetry-contracts.js";
 
 export type McpAuthMode = "observe" | "required";
 export type McpEndpoint = "/mcp" | "/mcp/oauth";
@@ -40,6 +44,35 @@ export function classifyAuthMethod(token: string | undefined): AuthenticationMet
   if (isOpaqueOAuthToken(token) || isClerkOAuthJwt(token)) return "oauth";
   if (isJWT(token)) return "jwt";
   return "api_key";
+}
+
+/**
+ * How an OAuth client registered, read from the unverified `client_id` claim
+ * of a Clerk OAuth JWT. Telemetry only: it tracks the move from Dynamic Client
+ * Registration to Client ID Metadata Documents. Undefined for non-OAuth tokens.
+ */
+export function classifyOAuthClientRegistration(
+  token: string | undefined
+): OAuthClientRegistration | undefined {
+  if (!token) return undefined;
+  if (isOpaqueOAuthToken(token)) return "unknown";
+  if (!isClerkOAuthJwt(token)) return undefined;
+  const clientId = oauthClientId(token);
+  if (!clientId) return "unknown";
+  return clientId.startsWith("https://") ? "cimd" : "registered";
+}
+
+const UNRESOLVED_PLACEHOLDER = /^\$(\{[^}]*\}|[A-Za-z_]\w*)$/;
+
+/**
+ * The trimmed key, or undefined for an empty value or an unexpanded `${VAR}` /
+ * `$VAR`. Gemini CLI passes `${CONTEXT7_API_KEY}` through unchanged when the
+ * user skips the extension's API key prompt; sent as a key, it gets a 401 on
+ * every call.
+ */
+export function usableApiKey(value: string | undefined): string | undefined {
+  const key = value?.trim();
+  return key && !UNRESOLVED_PLACEHOLDER.test(key) ? key : undefined;
 }
 
 export function parseMcpAuthMode(raw = process.env.MCP_AUTH_ENFORCEMENT): McpAuthMode {

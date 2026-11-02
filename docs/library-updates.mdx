@@ -57,6 +57,10 @@ Automatic and manual refreshes work across all supported source types:
 
 A website refresh replaces the current version only when the crawl succeeds. If the crawl reads fewer than 10% of the pages in the last version, for example because the site now blocks the crawler, the last version stays in place. The reason appears in the library logs, and the refresh is tried again later. If the site really became smaller, change its crawl settings: the first refresh after a settings change skips this check.
 
+### When a Source Repository Is Gone
+
+If a library's Git repository is deleted or no longer accessible, the last indexed version keeps being served. Once a refresh at least a day later confirms the repository is still unreachable, the library page and its admin page show a notice that the source repository could not be reached since the date it was first found gone. A successful refresh clears the notice. To clear it, make the repository reachable again, or [redirect the library](/howto/claiming-libraries) to the library that replaces it.
+
 ## Related
 
 - [Adding Libraries](/adding-libraries)

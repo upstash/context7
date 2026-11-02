@@ -19,6 +19,7 @@ Get your API key at [context7.com/dashboard](https://context7.com/dashboard). Le
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | [Search Documentation](/api-reference/search/search-documentation-in-one-request) | `GET /api/v3/search` | Find relevant documentation without resolving a library first |
+| [Fetch Page](/api-reference/search/read-one-web-page-optionally-narrowed-to-a-question) | `GET /api/v3/fetch` | Read one web page by URL, optionally narrowed to a question |
 | [Search Library](/api-reference/search/search-for-libraries) | `GET /api/v2/libs/search` | Find libraries by name |
 | [Get Context](/api-reference/context/get-documentation-context) | `GET /api/v2/context` | Retrieve documentation snippets for a library |
 | [Refresh Library](/api-reference/refresh/refresh-a-library) | `POST /api/v1/refresh` | Refresh a library's documentation |
@@ -242,6 +243,8 @@ curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js/v16.2.9&quer
 curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js@v16.2.9&query=app%20router" \
   -H "Authorization: Bearer CONTEXT7_API_KEY"
 ```
+
+If that version is not indexed, the request still succeeds and serves the closest documentation Context7 has: a tag matching the requested numbers, a newer release of the same line, or the library's current documentation. JSON responses include a `version` object that says which version was served. A text response starts with a version note when it serves another release or the current documentation. A branch or channel name that is not indexed, such as `/vercel/next.js/canary`, still returns `404 version_not_found`.
 
 ## Error Handling
 

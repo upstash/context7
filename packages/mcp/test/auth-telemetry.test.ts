@@ -92,4 +92,24 @@ describe("MCP authentication OpenTelemetry", () => {
       })
     );
   });
+
+  test("records the OAuth client registration when present", async () => {
+    recordAuthenticationEvent({
+      enforcementMode: "required",
+      event: "authenticated_tool_call",
+      method: "oauth",
+      oauthClientRegistration: "cimd",
+      outcome: "accepted",
+      route: "anonymous",
+    });
+    await forceFlushTelemetry();
+
+    expect(authenticationEvents()).toContainEqual(
+      expect.objectContaining({
+        attributes: expect.objectContaining({
+          "context7.authentication.oauth_client_registration": "cimd",
+        }),
+      })
+    );
+  });
 });

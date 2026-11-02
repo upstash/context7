@@ -32,6 +32,10 @@ import {
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
+import {
+  DOCS_FEEDBACK_INSTRUCTIONS,
+  registerResearchPreviewTools,
+} from "./lib/research-preview-tools.js";
 import { installProcessShutdown } from "./lib/process-shutdown.js";
 import {
   forceFlushTelemetry,
@@ -48,12 +52,14 @@ import {
 } from "./lib/auth-lifecycle-telemetry.js";
 import {
   canonicalMcpEndpoint,
+  classifyOAuthClientRegistration,
   effectiveMcpAuthMode,
   evaluateMcpAuthentication,
   parseMcpAuthMode,
   protectedResourceMetadata,
   protectedResourceUrl,
   setBearerChallenge,
+  usableApiKey,
 } from "./lib/mcp-http-auth.js";
 import { mcpRouteFromUrl } from "./lib/mcp-route.js";
 import { parseOAuthAudienceEnforcement } from "./lib/oauth-audience.js";
@@ -63,11 +69,23 @@ const DEFAULT_PORT = 3000;
 const OAUTH_METADATA_TIMEOUT_MS = 10_000;
 const CLAUDE_CODE_PLUGIN = "claude-code-plugin";
 const STATIC_LIST_CACHE_HINT = { ttlMs: 3_600_000, cacheScope: "public" } as const;
+const PREVIEW_LIST_CACHE_HINT = { ttlMs: 3_600_000, cacheScope: "private" } as const;
 type McpInstrumentation = NonNullable<Awaited<ReturnType<typeof initializeTelemetry>>>;
 let mcpInstrumentation: McpInstrumentation | undefined;
 
 function getPluginFromRequest(req: express.Request): typeof CLAUDE_CODE_PLUGIN | undefined {
   return req.query.client === CLAUDE_CODE_PLUGIN ? CLAUDE_CODE_PLUGIN : undefined;
+}
+
+function isResearchPreviewValue(value: unknown): boolean {
+  return value === "1" || value === "true";
+}
+
+function researchPreviewFromRequest(request: Request | undefined): boolean {
+  return (
+    request !== undefined &&
+    isResearchPreviewValue(new URL(request.url).searchParams.get("research_preview"))
+  );
 }
 
 // Parse CLI arguments using commander
@@ -88,6 +106,10 @@ const program = new Command()
     DEFAULT_PORT
   )
   .option("--api-key <key>", "API key for authentication (or set CONTEXT7_API_KEY env var)")
+  .option(
+    "--research-preview",
+    "show experimental tools, stdio only (or set CONTEXT7_RESEARCH_PREVIEW=1 env var)"
+  )
   .allowUnknownOption() // let MCP Inspector / other wrappers pass through extra flags
   .parse(process.argv);
 
@@ -95,6 +117,7 @@ const cliOptions = program.opts<{
   transport: string;
   port: number;
   apiKey?: string;
+  researchPreview?: boolean;
 }>();
 
 // Validate transport option
@@ -120,6 +143,13 @@ if (TRANSPORT_TYPE === "http" && passedApiKeyFlag) {
   process.exit(1);
 }
 
+if (TRANSPORT_TYPE === "http" && cliOptions.researchPreview) {
+  console.error(
+    "The --research-preview flag is not allowed when using --transport http. Clients add ?research_preview=1 to the MCP URL instead."
+  );
+  process.exit(1);
+}
+
 if (TRANSPORT_TYPE === "stdio" && passedPortFlag) {
   console.error("The --port flag is not allowed when using --transport stdio.");
   process.exit(1);
@@ -132,6 +162,7 @@ let stdioApiKey: string | undefined;
 let stdioClientInfo: { ide?: string; version?: string } | undefined;
 // One session ID per stdio process.
 let stdioSessionId: string | undefined;
+let stdioResearchPreview = false;
 
 /**
  * Get the effective client context
@@ -151,6 +182,7 @@ function getClientContext(toolCtx: ServerContext): ClientContext {
     clientInfo: requestClientInfo ?? stdioClientInfo,
     transport: "stdio",
     sessionId: stdioSessionId,
+    researchPreview: stdioResearchPreview,
   };
 }
 
@@ -263,7 +295,7 @@ function aliasArgs(aliases: AliasMap) {
   };
 }
 
-function createMcpServer(mcpContext: McpRequestContext) {
+function createMcpServer(mcpContext: McpRequestContext, researchPreview: boolean) {
   const serverInfo = {
     name: "Context7",
     title: SERVER_TITLE,
@@ -284,12 +316,14 @@ function createMcpServer(mcpContext: McpRequestContext) {
       prompts: { listChanged: false },
       resources: { listChanged: false, subscribe: false },
     },
-    // These results are the same for every caller and change only on deploy, so
-    // clients may reuse them for an hour instead of listing on every request.
+    // These results change only on deploy, so clients may reuse them for an
+    // hour instead of listing on every request. They are the same for every
+    // caller, except tools/list with research preview on: that one is private,
+    // so no shared cache gives the preview tools to other callers.
     // After a deploy that changes a tool schema, clients can still call with the
     // old schema for that hour: keep old argument names accepted (aliasArgs).
     cacheHints: {
-      "tools/list": STATIC_LIST_CACHE_HINT,
+      "tools/list": researchPreview ? PREVIEW_LIST_CACHE_HINT : STATIC_LIST_CACHE_HINT,
       "prompts/list": STATIC_LIST_CACHE_HINT,
       "resources/list": STATIC_LIST_CACHE_HINT,
       "resources/templates/list": STATIC_LIST_CACHE_HINT,
@@ -297,7 +331,7 @@ function createMcpServer(mcpContext: McpRequestContext) {
     },
     instructions: `Use this server to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, porting code between libraries, platforms, or SQL dialects, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
 
-Do not use for: refactoring, debugging, or reviewing code that does not depend on a library or platform API, or general programming concepts.`,
+Do not use for: refactoring, debugging, or reviewing code that does not depend on a library or platform API, or general programming concepts.${researchPreview ? `\n\n${DOCS_FEEDBACK_INSTRUCTIONS}` : ""}`,
   };
   const server = mcpInstrumentation
     ? mcpInstrumentation.createServer(serverInfo, serverOptions, mcpContext)
@@ -461,6 +495,8 @@ If you know the programming language the user is working in, pass it as \`langua
     }
   );
 
+  if (researchPreview) registerResearchPreviewTools(server, getClientContext);
+
   return server;
 }
 
@@ -547,19 +583,23 @@ async function main() {
     // that (the 2026-08-11 outage); handleMcpRequest now consumes such pairs
     // before dispatch. Any other silent hang goes idle and the gateway reaps
     // it at streamIdleTimeout (300s) instead of its 1200s hard cap.
-    const rawMcpHandler = createMcpHandler((mcpContext) => createMcpServer(mcpContext), {
-      keepAliveMs: 0,
-      // The SDK reports each 4xx answer to a malformed client request as a new
-      // Error whose stack only names SDK internals, so those log
-      // their message alone. If the SDK rewords them, the stacks come back.
-      onerror: (error) =>
-        console.error(
-          "MCP handler error:",
-          error instanceof Error && /^(Rejected |Unsupported Media Type)/.test(error.message)
-            ? error.message
-            : error
-        ),
-    });
+    const rawMcpHandler = createMcpHandler(
+      (mcpContext) =>
+        createMcpServer(mcpContext, researchPreviewFromRequest(mcpContext.requestInfo)),
+      {
+        keepAliveMs: 0,
+        // The SDK reports each 4xx answer to a malformed client request as a new
+        // Error whose stack only names SDK internals, so those log
+        // their message alone. If the SDK rewords them, the stacks come back.
+        onerror: (error) =>
+          console.error(
+            "MCP handler error:",
+            error instanceof Error && /^(Rejected |Unsupported Media Type)/.test(error.message)
+              ? error.message
+              : error
+          ),
+      }
+    );
     const mcpHandler = mcpInstrumentation
       ? mcpInstrumentation.instrumentHttpHandler(rawMcpHandler)
       : rawMcpHandler;
@@ -631,12 +671,15 @@ async function main() {
           mcpAuthMode: enforcementMode,
           mcpEndpoint: endpoint,
           plugin,
+          researchPreview: isResearchPreviewValue(req.query.research_preview),
           transport: "http",
         };
 
+        const oauthClientRegistration = classifyOAuthClientRegistration(apiKey);
         observeCredentialedInitialize(res, req.body, {
           enforcementMode,
           method: authentication.method,
+          ...(oauthClientRegistration && { oauthClientRegistration }),
           outcome: authentication.outcome,
           route,
         });
@@ -830,7 +873,16 @@ async function main() {
 
     startServer(initialPort);
   } else {
-    stdioApiKey = cliOptions.apiKey || process.env.CONTEXT7_API_KEY;
+    const keySources = [cliOptions.apiKey, process.env.CONTEXT7_API_KEY];
+    stdioApiKey = keySources.map(usableApiKey).find((key) => key !== undefined);
+    if (!stdioApiKey && keySources.some((value) => value?.trim())) {
+      console.error(
+        "The API key is an unset variable placeholder such as ${CONTEXT7_API_KEY}. Running without an API key."
+      );
+    }
+    stdioResearchPreview =
+      cliOptions.researchPreview === true ||
+      isResearchPreviewValue(process.env.CONTEXT7_RESEARCH_PREVIEW);
     stdioSessionId = randomUUID();
     const rawStdioTransport = new StdioServerTransport();
     const stdioTransport = mcpInstrumentation
@@ -839,7 +891,7 @@ async function main() {
 
     const stdioHandle = serveStdio(
       (mcpContext) => {
-        const server = createMcpServer(mcpContext);
+        const server = createMcpServer(mcpContext, stdioResearchPreview);
 
         // Capture client info from MCP initialize handshake (stdio only — HTTP
         // mode plumbs client info through requestContext per request).

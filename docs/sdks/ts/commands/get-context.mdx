@@ -74,7 +74,7 @@ const client = new Context7();
 
 const docs = await client.getContext(
   "How do I use hooks?",
-  "/facebook/react"
+  "/react/react"
 );
 
 docs.forEach((doc) => {
@@ -91,7 +91,7 @@ const client = new Context7();
 
 const context = await client.getContext(
   "How do I use hooks?",
-  "/facebook/react",
+  "/react/react",
   { type: "txt" }
 );
 
@@ -139,7 +139,7 @@ User question: ${question}
 `;
 }
 
-const prompt = await getDocsForPrompt("/facebook/react", "How do I use useEffect?");
+const prompt = await getDocsForPrompt("/react/react", "How do I use useEffect?");
 ```
 
 ### Processing Individual Snippets
@@ -151,7 +151,7 @@ const client = new Context7();
 
 const docs = await client.getContext(
   "How to create components?",
-  "/facebook/react",
+  "/react/react",
   { type: "json" }
 );
 

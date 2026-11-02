@@ -13,7 +13,11 @@ export async function readJsonConfig(filePath: string): Promise<Record<string, u
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return {};
     throw error;
   }
+  return parseJsonConfig(raw);
+}
 
+/** Parses JSON or JSONC config text. Blank text is an empty config; invalid text throws. */
+export function parseJsonConfig(raw: string): Record<string, unknown> {
   raw = raw.trim();
   if (!raw) return {};
 

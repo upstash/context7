@@ -50,6 +50,19 @@ Add team members, assign roles, and manage access to your Context7 dashboard fro
 
 <Note>The invitation will remain pending until they sign in.</Note>
 
+## Inviting Members with a Prompt
+
+Owners and admins can also invite members with a link and a ready-to-send prompt. In the members tab, click **Invite prompt** next to **Invite link**.
+
+The modal shows the **Shareable invite link** and a **Prompt** card. If no link is active, click **Create and copy link** first. Then send the link, or click **Copy prompt** to copy the whole message.
+
+The prompt includes the invite link, the teamspace to select at sign-in, and the setup steps for each kind of tool:
+
+- **Coding agents** — run `npx ctx7@latest setup` in a terminal. Anyone who used Context7 before must run `npx ctx7@latest logout` first, because `setup` keeps an earlier login and does not show the teamspace picker.
+- **claude.ai, the Claude app or ChatGPT** — add a custom connector with the URL `https://mcp.context7.com/mcp/oauth`.
+
+<Note>Every sign-in asks which teamspace to use. If a member selects the personal teamspace, they get none of the teamspace's private libraries and see no error.</Note>
+
 ## Teamspace Settings
 
 If you are the owner of the teamspace, you can rename or delete the teamspace under the overview tab.

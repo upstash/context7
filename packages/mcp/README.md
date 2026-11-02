@@ -532,7 +532,7 @@ If the `mcpServers` object does not exist, create it.
 <details>
 <summary><b>Install in Qwen Coder</b></summary>
 
-See [Qwen Coder MCP Configuration](https://qwenlm.github.io/qwen-code-docs/en/tools/mcp-server/#how-to-set-up-your-mcp-server) for details.
+See [Qwen Coder MCP Configuration](https://qwenlm.github.io/qwen-code-docs/en/developers/tools/mcp-server/#how-to-set-up-your-mcp-server) for details.
 
 1.  Open the Qwen Coder settings file. The location is `~/.qwen/settings.json` (where `~` is your home directory).
 2.  Add the following to the `mcpServers` object in your `settings.json` file:
@@ -593,29 +593,71 @@ Open Claude Desktop developer settings and edit your `claude_desktop_config.json
 </details>
 
 <details>
-<summary><b>Install in Opencode</b></summary>
+<summary><b>Install in OpenCode</b></summary>
 
-Add this to your Opencode configuration file. See [Opencode MCP docs](https://opencode.ai/docs/mcp-servers) for more info.
+Add this to your `opencode.json` file. The shape depends on your OpenCode version. Run `opencode --version` to check it.
 
-#### Opencode Remote Server Connection
+- **OpenCode 2.x** keeps servers in `mcp.servers` and connects to each one unless you set `"disabled": true`. It also accepts the 1.x shape. See the [OpenCode 2.x MCP docs](https://opencode.ai/v2/docs/mcp-servers).
+- **OpenCode 1.x** reads servers directly from `mcp` and uses `"enabled": true`. It rejects a config that contains `mcp.servers`. See the [OpenCode 1.x MCP docs](https://opencode.ai/docs/mcp-servers).
+
+#### OpenCode 2.x Remote Server Connection
 
 ```json
-"mcp": {
-  "context7": {
-    "type": "remote",
-    "url": "https://mcp.context7.com/mcp",
-    "headers": {
-      "Authorization": "Bearer YOUR_API_KEY"
-    },
-    "enabled": true
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "context7": {
+        "type": "remote",
+        "url": "https://mcp.context7.com/mcp",
+        "headers": {
+          "Authorization": "Bearer YOUR_API_KEY"
+        }
+      }
+    }
   }
 }
 ```
 
-#### Opencode Local Server Connection
+#### OpenCode 1.x Remote Server Connection
 
 ```json
 {
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      },
+      "enabled": true
+    }
+  }
+}
+```
+
+#### OpenCode 2.x Local Server Connection
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "context7": {
+        "type": "local",
+        "command": ["npx", "-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+      }
+    }
+  }
+}
+```
+
+#### OpenCode 1.x Local Server Connection
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
   "mcp": {
     "context7": {
       "type": "local",
