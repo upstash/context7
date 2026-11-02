@@ -597,8 +597,8 @@ Open Claude Desktop developer settings and edit your `claude_desktop_config.json
 
 Add this to your `opencode.json` file. The shape depends on your OpenCode version. Run `opencode --version` to check it.
 
-- **OpenCode 2.x** reads servers from `mcp.servers`. It connects to each server unless you set `"disabled": true`. See the [OpenCode 2.x MCP docs](https://opencode.ai/v2/docs/mcp-servers).
-- **OpenCode 1.x** reads servers directly from `mcp` and uses `"enabled": true`. See the [OpenCode 1.x MCP docs](https://opencode.ai/docs/mcp-servers).
+- **OpenCode 2.x** keeps servers in `mcp.servers` and connects to each one unless you set `"disabled": true`. It also accepts the 1.x shape. See the [OpenCode 2.x MCP docs](https://opencode.ai/v2/docs/mcp-servers).
+- **OpenCode 1.x** reads servers directly from `mcp` and uses `"enabled": true`. It rejects a config that contains `mcp.servers`. See the [OpenCode 1.x MCP docs](https://opencode.ai/docs/mcp-servers).
 
 #### OpenCode 2.x Remote Server Connection
 
