@@ -443,6 +443,34 @@ describe("remove command", () => {
     });
   });
 
+  test("detects and removes context7 from an opencode 2.x mcp.servers map", async () => {
+    const configPath = join(tempDir, "opencode.jsonc");
+
+    await writeFile(
+      configPath,
+      `{
+  // keep
+  "mcp": {
+    "servers": {
+      "alpha": { "type": "remote", "url": "https://alpha.com" },
+      "context7": { "type": "remote", "url": "https://mcp.context7.com/mcp" },
+    },
+  },
+}
+`,
+      "utf-8"
+    );
+    mockCheckboxWithHover.mockResolvedValueOnce(["opencode"]);
+
+    await runCommand("remove", "--mcp", "--project");
+
+    expect(logOutput.some((line) => line.includes("Detected: OpenCode"))).toBe(true);
+    expect(await readFile(configPath, "utf-8")).toContain("// keep");
+    expect(await readJsonConfig(configPath)).toEqual({
+      mcp: { servers: { alpha: { type: "remote", url: "https://alpha.com" } } },
+    });
+  });
+
   test("detects only agents with Context7 artifacts, not just agent folders", async () => {
     const rulePath = join(tempDir, ".cursor", "rules", "context7.mdc");
     const cliSkillPath = join(tempDir, ".cursor", "skills", "find-docs", "SKILL.md");

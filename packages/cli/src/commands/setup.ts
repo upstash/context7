@@ -48,7 +48,12 @@ import {
   patchStdioApiKey,
   getJsonServerEntry,
 } from "../setup/mcp-writer.js";
-import { editOpenCodeServer } from "../setup/opencode-editor.js";
+import {
+  getOpenCodeServerEntry,
+  resolveOpenCodeLayout,
+  toOpenCodeEntry,
+  writeOpenCodeServer,
+} from "../setup/opencode-editor.js";
 
 type Scope = "global" | "project";
 type SetupMode = "mcp" | "cli";
@@ -385,6 +390,18 @@ async function setupAgent(
       mcpStatus = alreadyExists
         ? `reconfigured with ${AUTH_MODE_LABELS[auth.mode]}`
         : `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
+    } else if (agentName === "opencode") {
+      const existing = await readJsonConfig(mcpPath);
+      const layout = await resolveOpenCodeLayout(existing);
+      const existingEntry = transport === "stdio" ? getOpenCodeServerEntry(existing) : undefined;
+      const entry = toOpenCodeEntry(
+        resolveEntryToWrite(agent, auth, transport, existingEntry, mcpUrl),
+        layout
+      );
+      const alreadyExists = await writeOpenCodeServer(mcpPath, entry, layout);
+      mcpStatus = alreadyExists
+        ? `reconfigured with ${AUTH_MODE_LABELS[auth.mode]}`
+        : `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
     } else {
       const existing = await readJsonConfig(mcpPath);
       const existingJsonEntry =
@@ -401,8 +418,7 @@ async function setupAgent(
       mcpStatus = alreadyExists
         ? `reconfigured with ${AUTH_MODE_LABELS[auth.mode]}`
         : `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
-      if (agentName === "opencode") await editOpenCodeServer(mcpPath, entry);
-      else await writeJsonConfig(mcpPath, config);
+      await writeJsonConfig(mcpPath, config);
     }
   } catch (err) {
     mcpStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
