@@ -289,7 +289,9 @@ export async function fetchLibraryCode(
           console.error(errorMessage);
           // Server-side failures are not fixed by an immediate retry.
           const fallback =
-            response.status >= 500 ? " Do not retry now: answer from query-docs." : "";
+            response.status >= 500 && !/query-docs/.test(errorMessage)
+              ? " Do not retry now: answer from query-docs."
+              : "";
           return { data: errorMessage + fallback, outcome: "error" };
         }
         const text = await response.text();
