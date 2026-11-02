@@ -161,6 +161,7 @@ let stdioApiKey: string | undefined;
 let stdioClientInfo: { ide?: string; version?: string } | undefined;
 // One session ID per stdio process.
 let stdioSessionId: string | undefined;
+let stdioResearchPreview = false;
 
 /**
  * Get the effective client context
@@ -180,6 +181,7 @@ function getClientContext(toolCtx: ServerContext): ClientContext {
     clientInfo: requestClientInfo ?? stdioClientInfo,
     transport: "stdio",
     sessionId: stdioSessionId,
+    researchPreview: stdioResearchPreview,
   };
 }
 
@@ -333,10 +335,6 @@ Do not use for: refactoring, debugging, or reviewing code that does not depend o
   const server = mcpInstrumentation
     ? mcpInstrumentation.createServer(serverInfo, serverOptions, mcpContext)
     : new McpServer(serverInfo, serverOptions);
-  const toolClientContext = (toolCtx: ServerContext): ClientContext => ({
-    ...getClientContext(toolCtx),
-    ...(researchPreview ? { researchPreview: true } : {}),
-  });
 
   server.registerTool(
     RESOLVE_LIBRARY_ID_TOOL,
@@ -398,7 +396,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       },
     },
     async ({ query, libraryName }: { query: string; libraryName: string }, toolCtx) => {
-      const ctx = toolClientContext(toolCtx);
+      const ctx = getClientContext(toolCtx);
       const searchResponse = await searchLibraries(query, libraryName, ctx);
 
       if (!searchResponse.results || searchResponse.results.length === 0) {
@@ -476,7 +474,7 @@ If you know the programming language the user is working in, pass it as \`langua
       { query, libraryId, language }: { query: string; libraryId: string; language?: string },
       toolCtx
     ) => {
-      const ctx = toolClientContext(toolCtx);
+      const ctx = getClientContext(toolCtx);
       const response = await fetchLibraryContext({ query, libraryId, language }, ctx);
       maybeElicitAuthSignIn(server, ctx);
       recordToolCallTelemetry(ctx, response.outcome);
@@ -496,7 +494,7 @@ If you know the programming language the user is working in, pass it as \`langua
     }
   );
 
-  if (researchPreview) registerResearchPreviewTools(server, toolClientContext);
+  if (researchPreview) registerResearchPreviewTools(server, getClientContext);
 
   return server;
 }
@@ -672,6 +670,7 @@ async function main() {
           mcpAuthMode: enforcementMode,
           mcpEndpoint: endpoint,
           plugin,
+          researchPreview: isResearchPreviewValue(req.query.research_preview),
           transport: "http",
         };
 
@@ -878,7 +877,7 @@ async function main() {
         "The API key is an unset variable placeholder such as ${CONTEXT7_API_KEY}. Running without an API key."
       );
     }
-    const researchPreview =
+    stdioResearchPreview =
       cliOptions.researchPreview === true ||
       isResearchPreviewValue(process.env.CONTEXT7_RESEARCH_PREVIEW);
     stdioSessionId = randomUUID();
@@ -889,7 +888,7 @@ async function main() {
 
     const stdioHandle = serveStdio(
       (mcpContext) => {
-        const server = createMcpServer(mcpContext, researchPreview);
+        const server = createMcpServer(mcpContext, stdioResearchPreview);
 
         // Capture client info from MCP initialize handshake (stdio only — HTTP
         // mode plumbs client info through requestContext per request).

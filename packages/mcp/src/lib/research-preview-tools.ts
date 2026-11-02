@@ -2,11 +2,38 @@ import type { McpServer, ServerContext } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { submitDocsFeedback } from "./api.js";
 import { recordToolCallTelemetry } from "./auth-lifecycle-telemetry.js";
-import { SUBMIT_DOCS_FEEDBACK_TOOL } from "./tool-names.js";
-import type { ClientContext, DocsFeedback } from "./types.js";
+import { QUERY_DOCS_TOOL, SUBMIT_DOCS_FEEDBACK_TOOL } from "./tool-names.js";
+import type { ClientContext } from "./types.js";
 
 /** Added to the server instructions with research preview on, so agents remember the feedback tool. */
-export const DOCS_FEEDBACK_INSTRUCTIONS = `After you answer a question with documentation from 'query-docs', call '${SUBMIT_DOCS_FEEDBACK_TOOL}' once for that library with a score from 0 to 5 and a short comment on the docs. The user turned on this research preview to collect this feedback.`;
+export const DOCS_FEEDBACK_INSTRUCTIONS = `After you answer a question with documentation from '${QUERY_DOCS_TOOL}', call '${SUBMIT_DOCS_FEEDBACK_TOOL}' once for that library with a score from 0 to 5 and a short comment on the docs. The user turned on this research preview to collect this feedback.`;
+
+const docsFeedbackSchema = z.object({
+  libraryId: z
+    .string()
+    .describe(
+      "The Context7-compatible library ID the feedback is about, as passed to 'query-docs' (e.g., '/vercel/next.js')."
+    ),
+  query: z.string().optional().describe("The 'query-docs' query the feedback is about."),
+  score: z
+    .number()
+    .int()
+    .min(0)
+    .max(5)
+    .describe("How well the docs answered the question, from 0 (useless) to 5 (fully)."),
+  issue: z
+    .enum(["missing", "outdated", "incorrect", "irrelevant", "other"])
+    .optional()
+    .describe("What was wrong. Only when the score is below 5."),
+  comment: z
+    .string()
+    .trim()
+    .min(1)
+    .max(1000)
+    .describe("What was missing, wrong or good, in one or two sentences. Up to 1000 characters."),
+});
+
+export type DocsFeedback = z.infer<typeof docsFeedbackSchema>;
 
 /**
  * Experimental tools, registered only with research preview on
@@ -29,30 +56,7 @@ Call it once after you used the documentation of a library to answer a question:
 - comment: what was missing or wrong, or what was good, in one or two sentences. When the user comments on the documentation, pass on their words.
 
 Do not include sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code.`,
-      inputSchema: z.object({
-        libraryId: z
-          .string()
-          .describe(
-            "The Context7-compatible library ID the feedback is about, as passed to 'query-docs' (e.g., '/vercel/next.js')."
-          ),
-        query: z.string().optional().describe("The 'query-docs' query the feedback is about."),
-        score: z
-          .number()
-          .int()
-          .min(0)
-          .max(5)
-          .describe("How well the docs answered the question, from 0 (useless) to 5 (fully)."),
-        issue: z
-          .enum(["missing", "outdated", "incorrect", "irrelevant", "other"])
-          .optional()
-          .describe("What was wrong. Only when the score is below 5."),
-        comment: z
-          .string()
-          .min(1)
-          .describe(
-            "What was missing, wrong or good, in one or two sentences. Up to 1000 characters."
-          ),
-      }),
+      inputSchema: docsFeedbackSchema,
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,

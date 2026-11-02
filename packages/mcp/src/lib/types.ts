@@ -31,14 +31,6 @@ export type ContextRequest = {
   language?: string;
 };
 
-export type DocsFeedback = {
-  libraryId: string;
-  query?: string;
-  score: number;
-  issue?: "missing" | "outdated" | "incorrect" | "irrelevant" | "other";
-  comment: string;
-};
-
 export type ContextResponse = {
   data: string;
   outcome: ToolCallOutcome;
