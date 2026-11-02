@@ -6,8 +6,8 @@ export function getContext7(): Context7 {
   if (!client) {
     if (!process.env.CONTEXT7_API_KEY) {
       throw new Error(
-        "CONTEXT7_API_KEY is not set. Install the Context7 integration from the Vercel " +
-          "Marketplace, or run `vercel env pull` for local development."
+        "CONTEXT7_API_KEY is not set. Create a key at https://context7.com/dashboard and add " +
+          "it to your Vercel project, or to .env.local for local runs."
       );
     }
     client = new Context7();

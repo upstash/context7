@@ -5,7 +5,7 @@ their current, official documentation. It searches with [Context7 Search](https:
 through [`@upstash/context7-sdk`](https://www.npmjs.com/package/@upstash/context7-sdk) and cites
 the sources it used.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fupstash%2Fcontext7%2Ftree%2Fmaster%2Fexamples%2Feve-docs-agent&project-name=context7-docs-agent&repository-name=context7-docs-agent&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22context7%22%2C%22productSlug%22%3A%22context7-search-api%22%7D%5D&demo-title=Context7%20Docs%20Agent&demo-description=An%20eve%20agent%20that%20answers%20library%20questions%20from%20up-to-date%20documentation%20with%20Context7%20Search.)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fupstash%2Fcontext7%2Ftree%2Fmaster%2Fexamples%2Feve-docs-agent&project-name=context7-docs-agent&repository-name=context7-docs-agent&env=CONTEXT7_API_KEY&envDescription=Your%20Context7%20API%20key&envLink=https%3A%2F%2Fcontext7.com%2Fdashboard&demo-title=Context7%20Docs%20Agent&demo-description=An%20eve%20agent%20that%20answers%20library%20questions%20from%20up-to-date%20documentation%20with%20Context7%20Search.)
 
 ## Features
 
@@ -16,10 +16,10 @@ the sources it used.
 
 ## Deploy
 
-1. Select **Deploy**. Vercel creates the project and installs the Context7 integration, which adds
-   `CONTEXT7_API_KEY` to the project.
-2. Clone the new repository and link it: `vercel link`.
-3. Chat with the deployment from your terminal:
+1. Create an API key in the [Context7 dashboard](https://context7.com/dashboard).
+2. Select **Deploy** and paste the key when Vercel asks for `CONTEXT7_API_KEY`.
+3. Clone the new repository and link it: `vercel link`.
+4. Chat with the deployment from your terminal:
 
    ```bash
    npx eve remote connect --url https://<your-deployment>.vercel.app
@@ -40,8 +40,7 @@ channel such as Slack.
 - `agent/instructions.md` tells the agent to search first, prefer the documented code, and cite
   its sources.
 
-Each search is one Context7 request. The Free plan includes 1,000 requests a month; Pay as you go
-costs $5 per 1,000 requests, billed on your Vercel invoice.
+Each search is one Context7 request and counts against your Context7 plan.
 
 ## Project structure
 
@@ -66,8 +65,8 @@ pnpm dev
 ```
 
 `vercel env pull` writes `CONTEXT7_API_KEY` and the AI Gateway credentials to `.env.local`. To run
-without Vercel, copy `.env.example` to `.env.local` and fill in a key from the
-[Context7 dashboard](https://context7.com/dashboard) and an AI Gateway API key.
+without Vercel, copy `.env.example` to `.env.local` and fill in your Context7 API key and an AI
+Gateway API key.
 
 Edit `agent/instructions.md` to change how the agent answers, and add tools under
 `agent/tools/`. eve's guides are in `node_modules/eve/docs/` after install.
