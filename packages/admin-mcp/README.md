@@ -25,7 +25,7 @@ Clients that support MCP OAuth sign in on the first request. The server answers 
 
 ### API key (CI and scripts)
 
-Create a Context7 API key in [the dashboard](https://context7.com/dashboard) with **Management access** turned on, and send it as a bearer. A key without management access gets 403, and a key reaches only its own teamspace.
+Create a Context7 API key in [the dashboard](https://context7.com/dashboard) and send it as a bearer. Every key can read; turn on **Write access** when you create the key to also make changes (a key without it gets 403 on changes). A key reaches only its own teamspace.
 
 ```json
 {
@@ -91,7 +91,7 @@ pnpm --filter @upstash/context7-admin-mcp test
 cd packages/admin-mcp && CONTEXT7_API_URL=http://localhost:3000/api pnpm dev   # http://localhost:3100/mcp; without CONTEXT7_API_URL it calls the production API
 ```
 
-`pnpm dev` serves the `vercel.json` routes from `api/`, and its OAuth metadata names `http://localhost:3100/mcp`. An OAuth token for it works only against a management API that accepts that audience (a local context7app with `ADMIN_OAUTH_ALLOWED_AUDIENCES`, reached through `CONTEXT7_API_URL`); otherwise send `Authorization: Bearer ctx7sk-…` with a key that has Management access.
+`pnpm dev` serves the `vercel.json` routes from `api/`, and its OAuth metadata names `http://localhost:3100/mcp`. An OAuth token for it works only against a management API that accepts that audience (a local context7app with `ADMIN_OAUTH_ALLOWED_AUDIENCES`, reached through `CONTEXT7_API_URL`); otherwise send `Authorization: Bearer ctx7sk-…` with a key (with Write access for changes).
 
 The console page is a React app in `ui/` (Vite, Tailwind), built into one HTML file: `pnpm build:ui` writes `src/ui/console-html.ts`, which is committed because Vercel runs no UI build. Run it after any change under `ui/`. `pnpm demo:ui` serves the page at http://localhost:4174 inside a demo host (ext-apps' `AppBridge` and a fake backend) with theme, display mode (inline, fullscreen, or a host without fullscreen), width, Claude's theme tokens and "opened on" switches, and a log of the page's tool calls and messages.
 
