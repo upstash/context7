@@ -22,7 +22,12 @@ function getSourceReputationLabel(
  * @param result The SearchResult object to format
  * @returns A formatted string with library information
  */
-export function formatSearchResult(result: SearchResult): string {
+/** Libraries built from a Git repository have source that query-code can search. */
+export function hasSourceCode(result: Pick<SearchResult, "id" | "branch">): boolean {
+  return !/^\/(websites|llmstxt)\//.test(result.id) && !result.branch?.startsWith("_");
+}
+
+export function formatSearchResult(result: SearchResult, options: FormatOptions = {}): string {
   // Always include these basic details
   const formattedResult = [
     `- Title: ${result.title}`,
@@ -53,6 +58,10 @@ export function formatSearchResult(result: SearchResult): string {
     formattedResult.push(`- Source: ${result.source}`);
   }
 
+  if (options.sourceCode && hasSourceCode(result)) {
+    formattedResult.push(`- Source code: searchable with query-code`);
+  }
+
   // Join all parts with newlines
   return formattedResult.join("\n");
 }
@@ -64,7 +73,15 @@ export function formatSearchResult(result: SearchResult): string {
  * @param searchResponse The SearchResponse object to format
  * @returns A formatted string with search results
  */
-export function formatSearchResults(searchResponse: SearchResponse): string {
+export interface FormatOptions {
+  /** Mark the results whose source code query-code can search. */
+  sourceCode?: boolean;
+}
+
+export function formatSearchResults(
+  searchResponse: SearchResponse,
+  options: FormatOptions = {}
+): string {
   if (!searchResponse.results || searchResponse.results.length === 0) {
     return "No documentation libraries found matching your query.";
   }
@@ -77,7 +94,9 @@ export function formatSearchResults(searchResponse: SearchResponse): string {
     );
   }
 
-  const formattedResults = searchResponse.results.map(formatSearchResult);
+  const formattedResults = searchResponse.results.map((result) =>
+    formatSearchResult(result, options)
+  );
   parts.push(formattedResults.join("\n----------\n"));
 
   return parts.join("\n\n");

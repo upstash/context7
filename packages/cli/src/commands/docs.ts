@@ -45,6 +45,10 @@ function formatLibraryResult(lib: LibrarySearchResult, index: number): string {
   if (lib.versions && lib.versions.length > 0) {
     lines.push(`   ${pc.dim(`Versions: ${lib.versions.join(", ")}`)}`);
   }
+  // Only libraries built from a Git repository have source for `ctx7 code`.
+  if (!/^\/(websites|llmstxt)\//.test(lib.id) && !lib.branch?.startsWith("_")) {
+    lines.push(`   ${pc.dim("Source code: searchable with ctx7 code")}`);
+  }
 
   return lines.join("\n");
 }
@@ -379,16 +383,10 @@ export function registerDocsCommands(program: Command): void {
     .command("code")
     .argument(
       "<libraryId>",
-      "Context7 library ID (e.g., /vercel/next.js); set the version with --version"
+      "Context7 library ID of a Git repository (e.g., /vercel/next.js); set the version with --version"
     )
-    .argument(
-      "[pattern]",
-      "A regex to grep for, a question for --op search, or a symbol for --op definition/references/read"
-    )
-    .option(
-      "--op <operation>",
-      `grep (default), search, definition, references, outline, read or list`
-    )
+    .argument("[pattern]", "A regex to grep for, or a symbol for --op definition/references/read")
+    .option("--op <operation>", `grep (default), definition, references, outline, read or list`)
     .option("-F, --fixed-strings", "Treat the pattern as plain text")
     .option("-i, --ignore-case", "Case-insensitive search")
     .option("-g, --glob <glob...>", "Only files matching a glob; start with ! to exclude")
@@ -406,7 +404,7 @@ export function registerDocsCommands(program: Command): void {
     .option("--limit <n>", "Deprecated: use --head-limit")
     .option(
       "--version <version>",
-      "Library version, e.g. v15.5.0 (default: the latest docs version)"
+      "A git tag of the library, e.g. v3.24.2 (default: the commit the latest docs describe)"
     )
     .description("Search and read a library's source code at a version, like ripgrep")
     .action(async (libraryId: string, pattern: string | undefined, options: CodeCommandOptions) => {

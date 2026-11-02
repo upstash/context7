@@ -228,8 +228,12 @@ export async function fetchLibraryCode(
             retryAfter?: number;
           };
           const wait = body.retryAfter ?? Number(response.headers.get("Retry-After") ?? 30);
+          const message = (body.message ?? "The library source is being indexed.").replace(
+            /\s*Call again in about \d+ seconds\.?/,
+            ""
+          );
           return {
-            data: `${body.message ?? "The library source is being indexed."} This is not an error. Call query-code again with the same arguments in about ${wait} seconds, or use query-docs meanwhile.`,
+            data: `${message} This is not an error. Call query-code again with the same arguments in about ${wait} seconds, at most twice. Meanwhile, or if it is still indexing, answer from query-docs.`,
             outcome: "not_found",
             retryable: true,
           };

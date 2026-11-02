@@ -1602,8 +1602,9 @@ describe("query-code tool", () => {
       expect(grepSent?.query.get("context")).toBe("2");
       expect(grepSent?.query.get("output_mode")).toBe("count");
 
+      // Semantic search is not part of this release, so the tool refuses it.
       const searchCall = requests.length;
-      await client.callTool({
+      const searchResult = await client.callTool({
         name: "query-code",
         arguments: {
           libraryId: "/vercel/next.js",
@@ -1611,9 +1612,8 @@ describe("query-code tool", () => {
           pattern: "where is the router cache invalidated",
         },
       });
-      const searchSent = requests.slice(searchCall).find((request) => request.path === "/v2/code");
-      expect(searchSent?.query.get("operation")).toBe("search");
-      expect(searchSent?.query.get("pattern")).toBe("where is the router cache invalidated");
+      expect(searchResult.isError).toBe(true);
+      expect(requests.slice(searchCall).some((request) => request.path === "/v2/code")).toBe(false);
 
       const legacyCall = requests.length;
       await client.callTool({

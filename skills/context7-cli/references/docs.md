@@ -106,6 +106,25 @@ ctx7 docs /facebook/react "How to use hooks for state management" | head -50
 ctx7 docs /vercel/next.js "How to add a proxy for route protection" | grep -A5 "proxy"
 ```
 
+## Step 3: Search the Source (when docs are not exact)
+
+When the docs do not answer an exact question (a signature or type, a default value, an option name, where an error message comes from, or how something works inside), search the library's source at the commit its docs describe:
+
+```bash
+npx ctx7@latest code /colinhacks/zod "Invalid input" -F                 # grep plain text
+npx ctx7@latest code /pallets/flask "def (get|post)\(" -g "src/**"      # grep a regex in a folder
+npx ctx7@latest code /psf/requests Session.mount --op definition        # where a symbol is defined
+npx ctx7@latest code /psf/requests --op read --path src/requests/sessions.py#L780-L800
+npx ctx7@latest code /colinhacks/zod ZodString.min --op definition --version v3.24.2
+```
+
+- Use an ID that `library` marks with "Source code", usually the GitHub repository. `/websites/...` and `/llmstxt/...` IDs have no source.
+- Other operations: `--op references` (uses of a symbol), `--op outline` (symbols of a file or the exported API), `--op list` (files in `--path` or matching `-g`). `-l` and `-c` print file names or counts.
+- Follow the `Next:` line of the output for the read, page (`--offset`) or count call to make next.
+- `--version` takes a git tag. An unknown version prints the tags you can use.
+- Exit code 75 means the source is being indexed: retry at most twice, then answer from `docs`.
+- Cite the file and line of the source you used.
+
 ## Search All Libraries
 
 Searches the documentation of all libraries in one step. Context7 picks the libraries, so no library ID is needed.

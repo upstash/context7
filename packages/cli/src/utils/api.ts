@@ -65,7 +65,6 @@ export interface GetContextOptions {
 
 export const CODE_OPERATIONS = [
   "grep",
-  "search",
   "definition",
   "references",
   "outline",
