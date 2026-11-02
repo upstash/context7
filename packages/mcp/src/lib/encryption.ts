@@ -83,6 +83,9 @@ export function generateHeaders(context: ClientContext): Record<string, string> 
   if (context.transport) {
     headers["X-Context7-Transport"] = context.transport;
   }
+  if (context.researchPreview) {
+    headers["X-Context7-Research-Preview"] = "1";
+  }
 
   return headers;
 }

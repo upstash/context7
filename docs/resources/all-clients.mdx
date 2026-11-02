@@ -124,29 +124,73 @@ Since Cursor 1.0, you can click the install button below for instant one-click i
 
 </Accordion>
 
-<Accordion title="Opencode">
+<Accordion title="OpenCode">
 
-Add this to your Opencode configuration file. See [Opencode MCP docs](https://opencode.ai/docs/mcp-servers) for more info.
+Add this to your `opencode.json` file. The shape depends on your OpenCode version. Run `opencode --version` to check it.
+
+- **OpenCode 2.x** keeps servers in `mcp.servers` and connects to each one unless you set `"disabled": true`. It also accepts the 1.x shape. See the [OpenCode 2.x MCP docs](https://opencode.ai/v2/docs/mcp-servers).
+- **OpenCode 1.x** reads servers directly from `mcp` and uses `"enabled": true`. It rejects a config that contains `mcp.servers`. See the [OpenCode 1.x MCP docs](https://opencode.ai/docs/mcp-servers).
 
 #### Remote Server Connection
 
-```json
-"mcp": {
-  "context7": {
-    "type": "remote",
-    "url": "https://mcp.context7.com/mcp",
-    "headers": {
-      "Authorization": "Bearer YOUR_API_KEY"
-    },
-    "enabled": true
+<CodeGroup>
+
+```json OpenCode v2
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "context7": {
+        "type": "remote",
+        "url": "https://mcp.context7.com/mcp",
+        "headers": {
+          "Authorization": "Bearer YOUR_API_KEY"
+        }
+      }
+    }
   }
 }
 ```
 
+```json OpenCode v1
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      },
+      "enabled": true
+    }
+  }
+}
+```
+
+</CodeGroup>
+
 #### Local Server Connection
 
-```json
+<CodeGroup>
+
+```json OpenCode v2
 {
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "context7": {
+        "type": "local",
+        "command": ["npx", "-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+      }
+    }
+  }
+}
+```
+
+```json OpenCode v1
+{
+  "$schema": "https://opencode.ai/config.json",
   "mcp": {
     "context7": {
       "type": "local",
@@ -156,6 +200,8 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
   }
 }
 ```
+
+</CodeGroup>
 
 </Accordion>
 
