@@ -1,12 +1,12 @@
+import { Context7 } from "@upstash/context7-sdk";
 import { getVercelOidcToken } from "@vercel/oidc";
 
-const SEARCH_URL = "https://context7.com/api/v3/search";
 const MINT_URL = "https://api.vercel.com/v1/integrations/marketplace/resources";
 const REFRESH_MARGIN_MS = 30_000;
 
 let cached: { token: string; expiresAt: number } | null = null;
 
-export async function getContext7Token(): Promise<string> {
+async function getResourceToken(): Promise<string> {
   if (cached && cached.expiresAt - Date.now() > REFRESH_MARGIN_MS) return cached.token;
 
   const storeId = process.env.CONTEXT7_STORE_ID;
@@ -25,24 +25,4 @@ export async function getContext7Token(): Promise<string> {
   return token;
 }
 
-export interface SearchDocsInput {
-  query: string;
-  library?: string;
-  version?: string;
-}
-
-export async function searchDocs(input: SearchDocsInput, signal?: AbortSignal): Promise<string> {
-  const url = new URL(SEARCH_URL);
-  url.searchParams.set("query", input.query);
-  if (input.library) url.searchParams.set("library", input.library);
-  if (input.version) url.searchParams.set("version", input.version);
-
-  const response = await fetch(url, {
-    headers: { Authorization: `Bearer ${await getContext7Token()}` },
-    signal,
-  });
-  const text = await response.text();
-  if (response.status === 401) cached = null;
-  if (!response.ok) throw new Error(`Context7 Search failed (HTTP ${response.status}): ${text}`);
-  return text;
-}
+export const context7 = new Context7({ authToken: getResourceToken });

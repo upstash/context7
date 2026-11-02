@@ -18,13 +18,12 @@ there is no API key to store.
 ## How it works
 
 - `agent/tools/search_docs.ts` is the only tool. The model calls it before it answers a library
-  question.
-- `agent/lib/context7.ts` asks Vercel for a Context7 token
+  question, and it calls `search` from [`@upstash/context7-sdk`](https://www.npmjs.com/package/@upstash/context7-sdk),
+  which returns ranked documentation snippets with their source URLs.
+- `agent/lib/context7.ts` creates the SDK client. Its `authToken` asks Vercel for a Context7 token
   (`POST https://api.vercel.com/v1/integrations/marketplace/resources/{CONTEXT7_STORE_ID}/token`,
-  authorized by the deployment's own OIDC token). The token lives 300 seconds, and the helper
+  authorized by the deployment's own OIDC token). The token lives 300 seconds, and the client
   reuses it until shortly before it expires.
-- The tool sends the question to `https://context7.com/api/v3/search` with that token and returns
-  ranked documentation snippets with their source URLs.
 - `agent/instructions.md` tells the agent to search first, prefer the documented code, and cite
   its sources.
 

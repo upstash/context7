@@ -13,6 +13,7 @@
     "typecheck": "tsc"
   },
   "dependencies": {
+    "@upstash/context7-sdk": "^0.6.0",
     "@vercel/connect": "^2.4.0",
     "@vercel/oidc": "^4.0.0",
     "ai": "7.0.128",

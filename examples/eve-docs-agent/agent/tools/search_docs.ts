@@ -1,6 +1,6 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
-import { searchDocs } from "../lib/context7.js";
+import { context7 } from "../lib/context7.js";
 
 export default defineTool({
   description:
@@ -18,7 +18,12 @@ export default defineTool({
     start: ({ query, library }) =>
       library ? `Search ${library} docs: ${query}` : `Search docs: ${query}`,
   },
-  async execute(input, ctx) {
-    return searchDocs(input, ctx.abortSignal);
+  async execute({ query, library, version }, ctx) {
+    return context7.search(query, {
+      libraries: library ? [library] : undefined,
+      version: library ? version : undefined,
+      type: "txt",
+      signal: ctx.abortSignal,
+    });
   },
 });
