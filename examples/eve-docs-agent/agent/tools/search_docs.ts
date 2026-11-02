@@ -2,7 +2,6 @@ import { defineTool } from "eve/tools";
 import { z } from "zod";
 import { searchDocs } from "../lib/context7.js";
 
-// The model sees this tool as `search_docs`, from the filename.
 export default defineTool({
   description:
     "Search official, up-to-date documentation for libraries, frameworks, and APIs. " +
