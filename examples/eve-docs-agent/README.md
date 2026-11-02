@@ -1,34 +1,58 @@
 # Context7 Docs Agent
 
-A Slack agent built on [eve](https://eve.dev) that answers questions about libraries, frameworks,
-and APIs from their current, official documentation. It searches with
-[Context7 Search](https://context7.com) and authenticates with a short-lived Vercel OIDC token, so
-there is no API key to store.
+An [eve](https://eve.dev) agent that answers questions about libraries, frameworks, and APIs from
+their current, official documentation. It searches with [Context7 Search](https://context7.com)
+through [`@upstash/context7-sdk`](https://www.npmjs.com/package/@upstash/context7-sdk) and cites
+the sources it used.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fupstash%2Fcontext7%2Ftree%2Fmaster%2Fexamples%2Feve-docs-agent&project-name=context7-docs-agent&repository-name=context7-docs-agent&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22context7%22%2C%22productSlug%22%3A%22context7-search-api%22%7D%5D&connect=%5B%7B%22type%22%3A%22slack%22%2C%22env%22%3A%22SLACK_CONNECTOR%22%2C%22triggers%22%3Atrue%2C%22triggerPath%22%3A%22%2Feve%2Fv1%2Fslack%22%7D%5D&demo-title=Context7%20Docs%20Agent&demo-description=A%20Slack%20agent%20on%20eve%20that%20answers%20library%20questions%20from%20up-to-date%20documentation%20with%20Context7%20Search.)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fupstash%2Fcontext7%2Ftree%2Fmaster%2Fexamples%2Feve-docs-agent&project-name=context7-docs-agent&repository-name=context7-docs-agent&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22context7%22%2C%22productSlug%22%3A%22context7-search-api%22%7D%5D&demo-title=Context7%20Docs%20Agent&demo-description=An%20eve%20agent%20that%20answers%20library%20questions%20from%20up-to-date%20documentation%20with%20Context7%20Search.)
+
+## Features
+
+- Searches up-to-date documentation for thousands of libraries before it answers.
+- Accepts an optional library and version, for example `/vercel/next.js` at `15.4.0`.
+- Cites the source URL of each snippet it uses.
+- Runs on eve's built-in chat channel, so you can talk to it from the terminal right away.
 
 ## Deploy
 
-1. Select **Deploy**. Vercel creates the project, adds a Context7 Search resource, and connects
-   Slack.
-2. In the Vercel dashboard, open the Context7 resource and copy its ID. Add it to the project as
-   the `CONTEXT7_STORE_ID` environment variable, then redeploy.
-3. Mention the agent in Slack: "How do I stream a response from a Next.js route handler?"
+1. Select **Deploy**. Vercel creates the project and installs the Context7 integration, which adds
+   `CONTEXT7_API_KEY` to the project.
+2. Clone the new repository and link it: `vercel link`.
+3. Chat with the deployment from your terminal:
+
+   ```bash
+   npx eve remote connect --url https://<your-deployment>.vercel.app
+   ```
+
+   Ask, for example: "How do I stream a response from a Next.js route handler?"
+
+The chat channel accepts your team's Vercel OIDC token in production. To expose the agent to other
+users, replace `placeholderAuth()` in `agent/channels/eve.ts` with your own auth, or add another
+channel such as Slack.
 
 ## How it works
 
 - `agent/tools/search_docs.ts` is the only tool. The model calls it before it answers a library
-  question, and it calls `search` from [`@upstash/context7-sdk`](https://www.npmjs.com/package/@upstash/context7-sdk),
-  which returns ranked documentation snippets with their source URLs.
-- `agent/lib/context7.ts` creates the SDK client. Its `authToken` asks Vercel for a Context7 token
-  (`POST https://api.vercel.com/v1/integrations/marketplace/resources/{CONTEXT7_STORE_ID}/token`,
-  authorized by the deployment's own OIDC token). The token lives 300 seconds, and the client
-  reuses it until shortly before it expires.
+  question, and it calls `search`, which returns ranked documentation snippets with their source
+  URLs.
+- `agent/lib/context7.ts` creates the SDK client, which reads `CONTEXT7_API_KEY`.
 - `agent/instructions.md` tells the agent to search first, prefer the documented code, and cite
   its sources.
 
 Each search is one Context7 request. The Free plan includes 1,000 requests a month; Pay as you go
 costs $5 per 1,000 requests, billed on your Vercel invoice.
+
+## Project structure
+
+```
+agent/
+  agent.ts            Model and agent definition
+  instructions.md     System instructions
+  channels/eve.ts     Chat channel and its auth
+  lib/context7.ts     Context7 SDK client
+  tools/search_docs.ts
+```
 
 ## Develop locally
 
@@ -41,9 +65,9 @@ vercel env pull
 pnpm dev
 ```
 
-`vercel env pull` writes the project's environment, including `CONTEXT7_STORE_ID` and a
-development OIDC token. To run without Vercel, set `CONTEXT7_API_KEY` to a key from the
-[Context7 dashboard](https://context7.com/dashboard) instead; the agent uses it when it is set.
+`vercel env pull` writes `CONTEXT7_API_KEY` and the AI Gateway credentials to `.env.local`. To run
+without Vercel, copy `.env.example` to `.env.local` and fill in a key from the
+[Context7 dashboard](https://context7.com/dashboard) and an AI Gateway API key.
 
 Edit `agent/instructions.md` to change how the agent answers, and add tools under
 `agent/tools/`. eve's guides are in `node_modules/eve/docs/` after install.
@@ -52,6 +76,7 @@ Edit `agent/instructions.md` to change how the agent answers, and add tools unde
 
 - [Context7 Search API](https://context7.com/docs/api-guide)
 - [eve documentation](https://eve.dev/docs)
-- [Vercel Connect](https://vercel.com/docs/connect) manages the Slack credentials.
 
-Based on the `eve-slack-agent` template from [vercel/eve](https://github.com/vercel/eve) (Apache-2.0).
+## License
+
+MIT. Based on the templates in [vercel/eve](https://github.com/vercel/eve) (Apache-2.0).
