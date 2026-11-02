@@ -404,7 +404,10 @@ export function registerDocsCommands(program: Command): void {
     )
     .option("--offset <n>", "Skip this many results")
     .option("--json", "Output as JSON")
-    .option("--tag <tag>", "A git tag of the library, e.g. v3.24.2 (default: the docs commit)")
+    .option(
+      "--tag <tag>",
+      "A git tag or commit of the library, e.g. v3.24.2 (default: the docs commit)"
+    )
     .description("Search and read a library's source code at a version, like ripgrep")
     .action(async (libraryId: string, pattern: string | undefined, options: CodeCommandOptions) => {
       await codeCommand(libraryId, pattern, options);
