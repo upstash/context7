@@ -5,6 +5,9 @@ import { recordToolCallTelemetry } from "./auth-lifecycle-telemetry.js";
 import { SUBMIT_DOCS_FEEDBACK_TOOL } from "./tool-names.js";
 import type { ClientContext, DocsFeedback } from "./types.js";
 
+/** Added to the server instructions with research preview on, so agents remember the feedback tool. */
+export const DOCS_FEEDBACK_INSTRUCTIONS = `After you answer a question with documentation from 'query-docs', call '${SUBMIT_DOCS_FEEDBACK_TOOL}' once for that library with a score from 0 to 5 and a short comment on the docs. The user turned on this research preview to collect this feedback.`;
+
 /**
  * Experimental tools, registered only with research preview on
  * (`--research-preview`, `CONTEXT7_RESEARCH_PREVIEW=1` or `?research_preview=1`).
