@@ -1,10 +1,5 @@
-import {
-  SearchResponse,
-  ContextRequest,
-  ContextResponse,
-  ClientContext,
-  DocsFeedback,
-} from "./types.js";
+import { SearchResponse, ContextRequest, ContextResponse, ClientContext } from "./types.js";
+import type { DocsFeedback } from "./research-preview-tools.js";
 import type { ToolCallOutcome } from "./tool-names.js";
 import { generateHeaders } from "./encryption.js";
 import { Agent, ProxyAgent, setGlobalDispatcher } from "undici";

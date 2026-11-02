@@ -32,7 +32,10 @@ import {
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
-import { registerResearchPreviewTools } from "./lib/research-preview-tools.js";
+import {
+  DOCS_FEEDBACK_INSTRUCTIONS,
+  registerResearchPreviewTools,
+} from "./lib/research-preview-tools.js";
 import { installProcessShutdown } from "./lib/process-shutdown.js";
 import {
   forceFlushTelemetry,
@@ -159,6 +162,7 @@ let stdioApiKey: string | undefined;
 let stdioClientInfo: { ide?: string; version?: string } | undefined;
 // One session ID per stdio process.
 let stdioSessionId: string | undefined;
+let stdioResearchPreview = false;
 
 /**
  * Get the effective client context
@@ -178,6 +182,7 @@ function getClientContext(toolCtx: ServerContext): ClientContext {
     clientInfo: requestClientInfo ?? stdioClientInfo,
     transport: "stdio",
     sessionId: stdioSessionId,
+    researchPreview: stdioResearchPreview,
   };
 }
 
@@ -326,7 +331,7 @@ function createMcpServer(mcpContext: McpRequestContext, researchPreview: boolean
     },
     instructions: `Use this server to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, porting code between libraries, platforms, or SQL dialects, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
 
-Do not use for: refactoring, debugging, or reviewing code that does not depend on a library or platform API, or general programming concepts.`,
+Do not use for: refactoring, debugging, or reviewing code that does not depend on a library or platform API, or general programming concepts.${researchPreview ? `\n\n${DOCS_FEEDBACK_INSTRUCTIONS}` : ""}`,
   };
   const server = mcpInstrumentation
     ? mcpInstrumentation.createServer(serverInfo, serverOptions, mcpContext)
@@ -666,6 +671,7 @@ async function main() {
           mcpAuthMode: enforcementMode,
           mcpEndpoint: endpoint,
           plugin,
+          researchPreview: isResearchPreviewValue(req.query.research_preview),
           transport: "http",
         };
 
@@ -874,7 +880,7 @@ async function main() {
         "The API key is an unset variable placeholder such as ${CONTEXT7_API_KEY}. Running without an API key."
       );
     }
-    const researchPreview =
+    stdioResearchPreview =
       cliOptions.researchPreview === true ||
       isResearchPreviewValue(process.env.CONTEXT7_RESEARCH_PREVIEW);
     stdioSessionId = randomUUID();
@@ -885,7 +891,7 @@ async function main() {
 
     const stdioHandle = serveStdio(
       (mcpContext) => {
-        const server = createMcpServer(mcpContext, researchPreview);
+        const server = createMcpServer(mcpContext, stdioResearchPreview);
 
         // Capture client info from MCP initialize handshake (stdio only — HTTP
         // mode plumbs client info through requestContext per request).

@@ -31,15 +31,6 @@ export type ContextRequest = {
   language?: string;
 };
 
-export type DocsFeedback = {
-  libraryId: string;
-  query?: string;
-  helpful: boolean;
-  issue?: "missing" | "outdated" | "incorrect" | "irrelevant" | "other";
-  comment?: string;
-  author: "agent" | "user";
-};
-
 export type ContextResponse = {
   data: string;
   outcome: ToolCallOutcome;
@@ -57,6 +48,8 @@ export interface ClientContext {
   mcpAuthMode?: "observe" | "required";
   transport?: "stdio" | "http";
   sessionId?: string;
+  /** Research preview is on; sent as `X-Context7-Research-Preview: 1` so the app counts preview use. */
+  researchPreview?: boolean;
   /** Mutable: set by the upstream API layer when the backend signals the
    *  client should be prompted to sign in. Read by the auth-prompt wrapper. */
   shouldPrompt?: boolean;
