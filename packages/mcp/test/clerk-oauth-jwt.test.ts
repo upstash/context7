@@ -33,6 +33,7 @@ vi.mock("jose", async () => {
 import { isClerkOAuthJwt, validateJWT } from "../src/lib/jwt.js";
 import {
   classifyAuthMethod,
+  classifyOAuthClientRegistration,
   evaluateMcpAuthentication,
   JWT_WARNING_WINDOW_MS,
   resetJwtWarningLog,
@@ -131,6 +132,24 @@ afterEach(() => {
 function loggedLines(): string {
   return vi.mocked(console.error).mock.calls.flat().map(String).join("\n");
 }
+
+describe("classifyOAuthClientRegistration", () => {
+  test("tells metadata document clients from registered ones", async () => {
+    const cimd = await sign({
+      claims: { client_id: "https://claude.ai/oauth/claude-code-client-metadata" },
+    });
+    expect(classifyOAuthClientRegistration(cimd)).toBe("cimd");
+    expect(classifyOAuthClientRegistration(await sign())).toBe("registered");
+    expect(classifyOAuthClientRegistration(await sign({ claims: {} }))).toBe("unknown");
+    expect(classifyOAuthClientRegistration("oat_example")).toBe("unknown");
+  });
+
+  test("ignores credentials that are not OAuth tokens", async () => {
+    expect(classifyOAuthClientRegistration(undefined)).toBeUndefined();
+    expect(classifyOAuthClientRegistration("ctx7sk-example")).toBeUndefined();
+    expect(classifyOAuthClientRegistration(await sessionJwt())).toBeUndefined();
+  });
+});
 
 describe("isClerkOAuthJwt", () => {
   test("recognises only at+jwt tokens from the configured issuer", async () => {

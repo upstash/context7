@@ -24,7 +24,7 @@ flowchart LR
         C["Upload<br/>and import"] --> D["Re-embed<br/>locally"] --> E["Searchable<br/>library"]
     end
 
-    B -. "transfer<br/>across airgap" .-> C
+    cloud -. "transfer<br/>across airgap" .-> onprem
 
     classDef cloud fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a;
     classDef step fill:#ede9fe,stroke:#8b5cf6,color:#5b21b6;

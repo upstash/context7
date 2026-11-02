@@ -133,8 +133,8 @@ function withoutNulls(value: unknown): unknown {
 
 /** What the model can do about the usual API refusals. */
 const NEXT_STEP: Record<string, string> = {
-  management_access_required:
-    "The API key has no management access. Ask the user to create a key with Management access in https://context7.com/dashboard, or to sign in with OAuth.",
+  write_access_required:
+    "The API key can only read. To make this change, ask the user to create a key with Write access in https://context7.com/dashboard, or to sign in with OAuth.",
   docs7_pro_required:
     "This needs Docs7 Pro. The owner can enable it at https://context7.com/docs7.",
   paid_plan_required: "This needs a paid plan: https://context7.com/plans.",
@@ -195,15 +195,20 @@ const INSTRUCTIONS = [
   "Remove and delete actions need the user's confirmation first. Deleting a whole Docs7 or Ask site, billing, plans, API keys and SSO are not in this server: send the user to https://context7.com/dashboard.",
 ].join("\n");
 
-/** The Context7 icon, as the docs MCP server uses it. The vector icon scales; the PNG is 512x512. */
+/**
+ * The Context7 icon with the marks cut out of the green square, served from
+ * this deployment's `public/`. Codex draws tool icons as a one-color shape, so
+ * the docs server's icon (white marks on green) showed as a plain square there.
+ * The vector icon scales; the PNG is 512x512.
+ */
 export const SERVER_ICONS = [
   {
-    src: "https://context7.com/context7-icon-green.svg",
+    src: "https://admin.mcp.context7.com/context7-icon.svg",
     mimeType: "image/svg+xml",
     sizes: ["any"],
   },
   {
-    src: "https://context7.com/context7-icon-green.png",
+    src: "https://admin.mcp.context7.com/context7-icon.png",
     mimeType: "image/png",
     sizes: ["512x512"],
   },

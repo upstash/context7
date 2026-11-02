@@ -63,6 +63,7 @@ interface RecordedRequest {
 }
 
 const requests: RecordedRequest[] = [];
+const feedbackBodies: unknown[] = [];
 let stubServer: http.Server;
 let childEnv: Record<string, string>;
 let httpChild: ChildProcess;
@@ -97,6 +98,17 @@ function startStubApi(): Promise<string> {
     const apiPath = url.pathname.replace(/^\/api/, "");
     requests.push({ path: apiPath, query: url.searchParams, headers: req.headers });
     const bearer = /^Bearer (.+)$/.exec(req.headers.authorization ?? "")?.[1] ?? "";
+    if (apiPath === "/v2/feedback") {
+      let body = "";
+      req.on("data", (chunk: Buffer) => (body += chunk.toString()));
+      req.on("end", () => {
+        feedbackBodies.push(JSON.parse(body));
+        res.statusCode = 201;
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ id: "stub-feedback" }));
+      });
+      return;
+    }
     if (apiPath === "/v2/auth/check") {
       // Mirrors context7app: the middleware answers invalid_oauth_token for a
       // rejected oat_ bearer, the handler answers 204 for an accepted one.
@@ -581,6 +593,83 @@ describe("HTTP API key headers", () => {
 
       const apiCall = requests.find((request) => request.path === "/v2/context");
       expect(apiCall?.headers.authorization).toBe(`Bearer ${apiKey}`);
+    } finally {
+      await client.close();
+    }
+  });
+});
+
+describe("research preview", () => {
+  // The preview tool list differs per caller, so a shared cache must not serve it to others.
+  async function toolsListCacheScope(
+    transport: StreamableHTTPClientTransport | StdioClientTransport
+  ) {
+    const client = new Client(
+      { name: "research-preview-test", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+    await client.connect(transport);
+    try {
+      return ((await client.listTools()) as { cacheScope?: string }).cacheScope;
+    } finally {
+      await client.close();
+    }
+  }
+
+  const httpTransport = (url: string) =>
+    new StreamableHTTPClientTransport(new URL(url), {
+      requestInit: { headers: { Authorization: "Bearer ctx7sk-local-test" } },
+    });
+  const stdioTransport = (env: Record<string, string>) =>
+    new StdioClientTransport({ command: process.execPath, args: [DIST], env });
+
+  test("marks tools/list private over HTTP only with ?research_preview=1", async () => {
+    expect(await toolsListCacheScope(httpTransport(httpUrl))).toBe("public");
+    expect(await toolsListCacheScope(httpTransport(`${httpUrl}?research_preview=1`))).toBe(
+      "private"
+    );
+  });
+
+  test("marks tools/list private over stdio only with CONTEXT7_RESEARCH_PREVIEW=1", async () => {
+    expect(await toolsListCacheScope(stdioTransport(childEnv))).toBe("public");
+    expect(
+      await toolsListCacheScope(stdioTransport({ ...childEnv, CONTEXT7_RESEARCH_PREVIEW: "1" }))
+    ).toBe("private");
+  });
+
+  test("lists submit-docs-feedback only with research preview and sends it to the API", async () => {
+    const toolNames = async (url: string) => {
+      const client = new Client({ name: "research-preview-test", version: "1.0.0" });
+      await client.connect(httpTransport(url));
+      try {
+        return (await client.listTools()).tools.map((tool) => tool.name);
+      } finally {
+        await client.close();
+      }
+    };
+    expect(await toolNames(httpUrl)).not.toContain("submit-docs-feedback");
+    expect(await toolNames(`${httpUrl}?research_preview=1`)).toContain("submit-docs-feedback");
+
+    const client = new Client({ name: "research-preview-test", version: "1.0.0" });
+    await client.connect(httpTransport(`${httpUrl}?research_preview=1`));
+    try {
+      feedbackBodies.length = 0;
+      requests.length = 0;
+      const feedback = {
+        libraryId: "/vercel/next.js",
+        query: "app router caching",
+        helpful: false,
+        issue: "outdated",
+        comment: "Shows the Next.js 14 cache defaults.",
+        author: "agent",
+      };
+      const result = await client.callTool({ name: "submit-docs-feedback", arguments: feedback });
+
+      expect(result.isError).toBeFalsy();
+      expect(feedbackBodies).toEqual([feedback]);
+      const apiCall = requests.find((request) => request.path === "/v2/feedback");
+      expect(apiCall?.headers.authorization).toBe("Bearer ctx7sk-local-test");
+      expect(apiCall?.headers["x-context7-source"]).toBe("mcp-server");
     } finally {
       await client.close();
     }
@@ -1546,7 +1635,7 @@ describe("query-code tool", () => {
   });
 
   test("is listed with the flag and sends its arguments to /v2/code", async () => {
-    const client = await stdioClient({ ...childEnv, CONTEXT7_QUERY_CODE: "1" });
+    const client = await stdioClient({ ...childEnv, CONTEXT7_RESEARCH_PREVIEW: "1" });
     try {
       const { tools } = await client.listTools();
       const tool = tools.find((candidate) => candidate.name === "query-code");
@@ -1641,7 +1730,7 @@ describe("query-code tool", () => {
   });
 
   test("answers 'still indexing' as a normal result and an API error as an error", async () => {
-    const client = await stdioClient({ ...childEnv, CONTEXT7_QUERY_CODE: "1" });
+    const client = await stdioClient({ ...childEnv, CONTEXT7_RESEARCH_PREVIEW: "1" });
     try {
       const indexing = await client.callTool({
         name: "query-code",

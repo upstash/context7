@@ -96,7 +96,8 @@ export function compareVersions(a: string, b: string): number {
     if (diff !== 0) return diff;
   }
 
-  return 0;
+  // A prerelease (e.g. a canary build) sorts before its release.
+  return Number(b.includes("-")) - Number(a.includes("-"));
 }
 
 export function detectInstallMethod(env: NodeJS.ProcessEnv = process.env): InstallMethod {
