@@ -1,10 +1,11 @@
 import type { Response } from "express";
-import { classifyAuthMethod } from "./mcp-http-auth.js";
+import { classifyAuthMethod, classifyOAuthClientRegistration } from "./mcp-http-auth.js";
 import { mcpRouteFromUrl, type McpHttpRoute } from "./mcp-route.js";
 import type {
   AuthenticationEnforcementMode,
   AuthenticationMethod,
   AuthenticationOutcome,
+  OAuthClientRegistration,
 } from "./telemetry-contracts.js";
 import { recordAuthenticationEvent, recordToolCallOutcome } from "./telemetry-runtime.js";
 import type { ToolCallOutcome } from "./tool-names.js";
@@ -13,6 +14,7 @@ import type { ClientContext } from "./types.js";
 interface AuthEventContext {
   enforcementMode: AuthenticationEnforcementMode;
   method: AuthenticationMethod;
+  oauthClientRegistration?: OAuthClientRegistration;
   outcome: AuthenticationOutcome;
   route: McpHttpRoute;
 }
@@ -58,10 +60,12 @@ export function recordToolCallTelemetry(ctx: ClientContext, outcome: ToolCallOut
     return;
   }
 
+  const oauthClientRegistration = classifyOAuthClientRegistration(ctx.apiKey);
   recordAuthenticationEvent({
     enforcementMode: ctx.mcpAuthMode,
     event: "authenticated_tool_call",
     method: classifyAuthMethod(ctx.apiKey),
+    ...(oauthClientRegistration && { oauthClientRegistration }),
     outcome: "accepted",
     route: mcpRouteFromUrl(ctx.mcpEndpoint),
   });

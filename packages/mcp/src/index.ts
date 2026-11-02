@@ -49,6 +49,7 @@ import {
 } from "./lib/auth-lifecycle-telemetry.js";
 import {
   canonicalMcpEndpoint,
+  classifyOAuthClientRegistration,
   effectiveMcpAuthMode,
   evaluateMcpAuthentication,
   parseMcpAuthMode,
@@ -668,9 +669,11 @@ async function main() {
           transport: "http",
         };
 
+        const oauthClientRegistration = classifyOAuthClientRegistration(apiKey);
         observeCredentialedInitialize(res, req.body, {
           enforcementMode,
           method: authentication.method,
+          ...(oauthClientRegistration && { oauthClientRegistration }),
           outcome: authentication.outcome,
           route,
         });

@@ -94,8 +94,47 @@ describe("MCP authentication lifecycle telemetry", () => {
       enforcementMode: "required",
       event: "authenticated_tool_call",
       method: "oauth",
+      oauthClientRegistration: "unknown",
       outcome: "accepted",
       route: "anonymous",
     });
+  });
+
+  test("passes the OAuth client registration through on initialize", () => {
+    const response = new EventEmitter() as EventEmitter & { statusCode: number };
+    response.statusCode = 200;
+
+    observeCredentialedInitialize(
+      response,
+      { jsonrpc: "2.0", method: "initialize", id: 1 },
+      {
+        enforcementMode: "required",
+        method: "oauth",
+        oauthClientRegistration: "cimd",
+        outcome: "accepted",
+        route: "anonymous",
+      }
+    );
+    response.emit("finish");
+
+    expect(telemetry.recordAuthenticationEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ oauthClientRegistration: "cimd" })
+    );
+  });
+
+  test("leaves the OAuth client registration off API key tool calls", () => {
+    recordToolCallTelemetry(
+      {
+        apiKey: "ctx7sk-example",
+        transport: "http",
+        mcpAuthMode: "required",
+        mcpEndpoint: "/mcp",
+      },
+      "success"
+    );
+
+    expect(telemetry.recordAuthenticationEvent).toHaveBeenCalledWith(
+      expect.not.objectContaining({ oauthClientRegistration: expect.anything() })
+    );
   });
 });
