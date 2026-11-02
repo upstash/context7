@@ -7,12 +7,6 @@ import { DEFAULT_CONTEXT7_BASE_URL, setBaseUrl } from "../utils/api.js";
 import { readJsonConfig } from "../setup/mcp-writer.js";
 
 const BASE_URL = "https://context7.internal.example";
-const execFileMock = vi.hoisted(() => vi.fn());
-
-vi.mock("child_process", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("child_process")>()),
-  execFile: execFileMock,
-}));
 vi.mock("@inquirer/prompts", () => ({ password: vi.fn(), select: vi.fn() }));
 
 import { registerSetupCommand } from "../commands/setup.js";
@@ -20,14 +14,6 @@ import { registerSetupCommand } from "../commands/setup.js";
 let originalCwd: string;
 let tempDir: string;
 let configPath: string;
-
-/** Makes `opencode --version` print `version`, or fail when it is undefined. */
-function mockOpenCodeVersion(version: string | undefined): void {
-  execFileMock.mockImplementation((_file, _args, _options, callback) => {
-    if (version === undefined) callback(new Error("spawn opencode ENOENT"), "", "");
-    else callback(null, `${version}\n`, "");
-  });
-}
 
 async function runSetup(): Promise<void> {
   const program = new Command();
@@ -53,7 +39,6 @@ beforeEach(async () => {
   await mkdir(tempDir, { recursive: true });
   process.chdir(tempDir);
   configPath = join(tempDir, "opencode.json");
-  execFileMock.mockReset();
   vi.stubEnv("CTX7_TELEMETRY_DISABLED", "");
   vi.stubEnv("CONTEXT7_API_KEY", "");
   setBaseUrl(BASE_URL);
@@ -93,7 +78,6 @@ describe("ctx7 setup --opencode", () => {
     expect(await readJsonConfig(configPath)).toEqual({
       mcp: { servers: { firecrawl, context7: v2Entry } },
     });
-    expect(execFileMock).not.toHaveBeenCalled();
   });
 
   test("repairs an entry that an earlier version wrote beside mcp.servers", async () => {
@@ -121,23 +105,7 @@ describe("ctx7 setup --opencode", () => {
     });
   });
 
-  test("uses the 2.x shape for a new config when OpenCode 2.x is installed", async () => {
-    mockOpenCodeVersion("2.1.0");
-
-    await runSetup();
-
-    expect(await readJsonConfig(configPath)).toEqual({ mcp: { servers: { context7: v2Entry } } });
-    expect(execFileMock).toHaveBeenCalledWith(
-      "opencode",
-      ["--version"],
-      expect.objectContaining({ timeout: 3000 }),
-      expect.any(Function)
-    );
-  });
-
-  test("uses the 1.x shape for a new config when OpenCode is not found", async () => {
-    mockOpenCodeVersion(undefined);
-
+  test("uses the 1.x shape for a new config, which OpenCode 1.x and 2.x both read", async () => {
     await runSetup();
 
     expect(await readJsonConfig(configPath)).toEqual({

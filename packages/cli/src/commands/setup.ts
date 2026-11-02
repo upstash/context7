@@ -48,12 +48,7 @@ import {
   patchStdioApiKey,
   getJsonServerEntry,
 } from "../setup/mcp-writer.js";
-import {
-  getOpenCodeServerEntry,
-  resolveOpenCodeLayout,
-  toOpenCodeEntry,
-  writeOpenCodeServer,
-} from "../setup/opencode-editor.js";
+import { writeOpenCodeServer } from "../setup/opencode-editor.js";
 
 type Scope = "global" | "project";
 type SetupMode = "mcp" | "cli";
@@ -376,32 +371,24 @@ async function setupAgent(
 
   let mcpStatus: string;
   try {
+    let alreadyExists: boolean;
     if (mcpPath.endsWith(".toml")) {
       const apiKey = auth.mode === "api-key" ? auth.apiKey : undefined;
       const patched =
         transport === "stdio" ? await patchTomlStdioApiKey(mcpPath, "context7", apiKey) : false;
-      const { alreadyExists } = patched
-        ? { alreadyExists: true }
-        : await appendTomlServer(
+      alreadyExists =
+        patched ||
+        (
+          await appendTomlServer(
             mcpPath,
             "context7",
             resolveEntryToWrite(agent, auth, transport, undefined, mcpUrl)
-          );
-      mcpStatus = alreadyExists
-        ? `reconfigured with ${AUTH_MODE_LABELS[auth.mode]}`
-        : `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
+          )
+        ).alreadyExists;
     } else if (agentName === "opencode") {
-      const existing = await readJsonConfig(mcpPath);
-      const layout = await resolveOpenCodeLayout(existing);
-      const existingEntry = transport === "stdio" ? getOpenCodeServerEntry(existing) : undefined;
-      const entry = toOpenCodeEntry(
-        resolveEntryToWrite(agent, auth, transport, existingEntry, mcpUrl),
-        layout
+      alreadyExists = await writeOpenCodeServer(mcpPath, (existing) =>
+        resolveEntryToWrite(agent, auth, transport, existing, mcpUrl)
       );
-      const alreadyExists = await writeOpenCodeServer(mcpPath, entry, layout);
-      mcpStatus = alreadyExists
-        ? `reconfigured with ${AUTH_MODE_LABELS[auth.mode]}`
-        : `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
     } else {
       const existing = await readJsonConfig(mcpPath);
       const existingJsonEntry =
@@ -409,17 +396,11 @@ async function setupAgent(
           ? getJsonServerEntry(existing, agent.mcp.configKey, "context7")
           : undefined;
       const entry = resolveEntryToWrite(agent, auth, transport, existingJsonEntry, mcpUrl);
-      const { config, alreadyExists } = mergeServerEntry(
-        existing,
-        agent.mcp.configKey,
-        "context7",
-        entry
-      );
-      mcpStatus = alreadyExists
-        ? `reconfigured with ${AUTH_MODE_LABELS[auth.mode]}`
-        : `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
-      await writeJsonConfig(mcpPath, config);
+      const merged = mergeServerEntry(existing, agent.mcp.configKey, "context7", entry);
+      await writeJsonConfig(mcpPath, merged.config);
+      alreadyExists = merged.alreadyExists;
     }
+    mcpStatus = `${alreadyExists ? "reconfigured" : "configured"} with ${AUTH_MODE_LABELS[auth.mode]}`;
   } catch (err) {
     mcpStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
   }

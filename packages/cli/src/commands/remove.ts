@@ -331,8 +331,6 @@ async function uninstallMcp(agentName: SetupAgent, scope: Scope): Promise<Cleanu
     }
 
     if (agentName === "opencode") {
-      // Parse first so an invalid file is reported instead of edited.
-      await readJsonConfig(mcpPath);
       const removed = await removeOpenCodeServer(mcpPath);
       return { status: removed ? "removed" : "not found", path: mcpPath };
     }

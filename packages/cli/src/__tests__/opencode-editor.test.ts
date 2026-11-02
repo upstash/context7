@@ -2,13 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { mkdtemp, readFile, rm, writeFile } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
-import {
-  detectOpenCodeLayout,
-  removeOpenCodeServer,
-  resolveOpenCodeLayout,
-  toOpenCodeEntry,
-  writeOpenCodeServer,
-} from "../setup/opencode-editor.js";
+import { removeOpenCodeServer, writeOpenCodeServer } from "../setup/opencode-editor.js";
 import { readJsonConfig } from "../setup/mcp-writer.js";
 
 let path: string;
@@ -22,6 +16,13 @@ afterEach(async () => {
 });
 
 const entry = { type: "remote", url: "https://mcp.context7.com/mcp", enabled: true };
+const v2Entry = { type: "remote", url: "https://mcp.context7.com/mcp" };
+const firecrawl = { type: "remote", url: "https://mcp.firecrawl.dev/v2/mcp-oauth" };
+
+/** Writes `entry` (a 1.x entry) the way setup does. */
+function write(newEntry: Record<string, unknown> = entry): Promise<boolean> {
+  return writeOpenCodeServer(path, () => newEntry);
+}
 
 describe("writeOpenCodeServer (1.x layout)", () => {
   test("replaces the entry and keeps comments and trailing commas outside it", async () => {
@@ -39,7 +40,7 @@ describe("writeOpenCodeServer (1.x layout)", () => {
 `
     );
 
-    await writeOpenCodeServer(path, entry, "v1");
+    expect(await write()).toBe(true);
 
     const updated = await readFile(path, "utf-8");
     expect(updated).toContain("// personal configuration");
@@ -55,7 +56,7 @@ describe("writeOpenCodeServer (1.x layout)", () => {
   test("adds an indented entry to a file without an mcp section", async () => {
     await writeFile(path, '{\n  // keep\n  "theme": "night",\n}\n');
 
-    await writeOpenCodeServer(path, entry, "v1");
+    expect(await write()).toBe(false);
 
     const updated = await readFile(path, "utf-8");
     expect(updated).toContain("// keep");
@@ -66,11 +67,11 @@ describe("writeOpenCodeServer (1.x layout)", () => {
   test.each([
     ["a missing file", undefined],
     ["an empty file", ""],
-    ["a file with only a byte order mark", "\uFEFF\r\n"],
+    ["a file with only a byte order mark", "﻿\r\n"],
   ])("writes a new formatted config to %s", async (_name, source) => {
     if (source !== undefined) await writeFile(path, source);
 
-    await writeOpenCodeServer(path, entry, "v1");
+    await write();
 
     expect(await readFile(path, "utf-8")).toBe(
       JSON.stringify({ mcp: { context7: entry } }, null, 2) + "\n"
@@ -78,71 +79,25 @@ describe("writeOpenCodeServer (1.x layout)", () => {
   });
 
   test("edits a file that starts with a byte order mark", async () => {
-    await writeFile(path, '\uFEFF{\n  "theme": "night",\n}\n');
+    await writeFile(path, '﻿{\n  "theme": "night",\n}\n');
 
-    await writeOpenCodeServer(path, entry, "v1");
+    await write();
 
     expect(await readJsonConfig(path)).toEqual({ theme: "night", mcp: { context7: entry } });
   });
 
-  test("removes the only entry before a trailing comma and leaves valid JSONC", async () => {
-    await writeFile(
-      path,
-      '{\n  // keep\n  "mcp": {\n    "context7": { "enabled": true },\n  },\n}\n'
-    );
-
-    await removeOpenCodeServer(path);
-
-    expect(await readFile(path, "utf-8")).toContain("// keep");
-    expect(await readJsonConfig(path)).toEqual({ mcp: {} });
-  });
-});
-
-const v2Entry = { type: "remote", url: "https://mcp.context7.com/mcp" };
-const firecrawl = { type: "remote", url: "https://mcp.firecrawl.dev/v2/mcp-oauth" };
-
-describe("detectOpenCodeLayout", () => {
   test.each([
-    ["no mcp section", {}, undefined],
-    ["an empty mcp section", { mcp: {} }, undefined],
-    ["only global mcp options", { mcp: { timeout: { startup: 1000 } } }, undefined],
-    ["a 2.x servers map", { mcp: { servers: { firecrawl } } }, "v2"],
-    ["an empty 2.x servers map", { mcp: { servers: {} } }, "v2"],
-    ["a 2.x map next to a stale 1.x entry", { mcp: { servers: {}, context7: entry } }, "v2"],
-    ["1.x servers", { mcp: { firecrawl } }, "v1"],
-    ["a 1.x server named servers", { mcp: { servers: firecrawl } }, "v1"],
-  ])("reads %s", (_name, config, expected) => {
-    expect(detectOpenCodeLayout(config as Record<string, unknown>)).toBe(expected);
-  });
-});
+    ["only global mcp options", { mcp: { timeout: { startup: 1000 } } }],
+    ["1.x servers", { mcp: { firecrawl } }],
+    ["a 1.x server named servers", { mcp: { servers: firecrawl } }],
+  ])("keeps the 1.x layout for %s", async (_name, config) => {
+    await writeFile(path, JSON.stringify(config));
 
-describe("resolveOpenCodeLayout", () => {
-  test("prefers the config shape over the installed version", async () => {
-    const getMajor = vi.fn(async () => 2);
-    expect(await resolveOpenCodeLayout({ mcp: { firecrawl } }, getMajor)).toBe("v1");
-    expect(getMajor).not.toHaveBeenCalled();
-  });
+    await write();
 
-  test.each([
-    [2, "v2"],
-    [3, "v2"],
-    [1, "v1"],
-    [undefined, "v1"],
-  ])("uses installed major %s for a config without servers", async (major, expected) => {
-    expect(await resolveOpenCodeLayout({}, async () => major)).toBe(expected);
-  });
-});
-
-describe("toOpenCodeEntry", () => {
-  test("keeps 1.x entries unchanged", () => {
-    expect(toOpenCodeEntry(entry, "v1")).toEqual(entry);
-  });
-
-  test("drops enabled for 2.x and maps enabled: false to disabled", () => {
-    expect(toOpenCodeEntry(entry, "v2")).toEqual(v2Entry);
-    expect(toOpenCodeEntry({ ...entry, enabled: false }, "v2")).toEqual({
-      ...v2Entry,
-      disabled: true,
+    expect(await readJsonConfig(path)).toEqual({
+      ...config,
+      mcp: { ...config.mcp, context7: entry },
     });
   });
 });
@@ -162,12 +117,20 @@ describe("writeOpenCodeServer (2.x layout)", () => {
 `
     );
 
-    expect(await writeOpenCodeServer(path, v2Entry, "v2")).toBe(false);
+    expect(await write()).toBe(false);
 
     expect(await readFile(path, "utf-8")).toContain("// keep");
     expect(await readJsonConfig(path)).toEqual({
       mcp: { servers: { firecrawl, context7: v2Entry } },
     });
+  });
+
+  test("uses an empty mcp.servers map", async () => {
+    await writeFile(path, JSON.stringify({ mcp: { servers: {} } }));
+
+    await write();
+
+    expect(await readJsonConfig(path)).toEqual({ mcp: { servers: { context7: v2Entry } } });
   });
 
   test("moves a stale mcp.context7 entry into mcp.servers", async () => {
@@ -176,21 +139,77 @@ describe("writeOpenCodeServer (2.x layout)", () => {
       JSON.stringify({ mcp: { servers: { firecrawl }, context7: entry } }, null, 2)
     );
 
-    expect(await writeOpenCodeServer(path, v2Entry, "v2")).toBe(true);
+    expect(await write()).toBe(true);
 
     expect(await readJsonConfig(path)).toEqual({
       mcp: { servers: { firecrawl, context7: v2Entry } },
     });
   });
 
-  test("writes a new 2.x config to a missing file", async () => {
-    await writeOpenCodeServer(path, v2Entry, "v2");
+  test("maps enabled: false to disabled: true", async () => {
+    await writeFile(path, JSON.stringify({ mcp: { servers: {} } }));
 
-    expect(await readJsonConfig(path)).toEqual({ mcp: { servers: { context7: v2Entry } } });
+    await write({ ...entry, enabled: false });
+
+    expect(await readJsonConfig(path)).toEqual({
+      mcp: { servers: { context7: { ...v2Entry, disabled: true } } },
+    });
+  });
+});
+
+describe("writeOpenCodeServer existing entry", () => {
+  test.each([
+    ["missing", {}, undefined],
+    ["in the 1.x layout", { mcp: { context7: entry } }, entry],
+    ["in the 2.x layout", { mcp: { servers: { context7: v2Entry } } }, v2Entry],
+    [
+      "in both layouts, 2.x first",
+      { mcp: { servers: { context7: v2Entry }, context7: entry } },
+      v2Entry,
+    ],
+  ])("passes the entry to buildEntry when %s", async (_name, config, expected) => {
+    await writeFile(path, JSON.stringify(config));
+    const buildEntry = vi.fn(() => entry);
+
+    await writeOpenCodeServer(path, buildEntry);
+
+    expect(buildEntry).toHaveBeenCalledWith(expected);
+  });
+});
+
+describe("invalid JSON", () => {
+  const source = '{ "mcp": { "servers": {';
+
+  test("writeOpenCodeServer throws and leaves the file unchanged", async () => {
+    await writeFile(path, source);
+
+    await expect(write()).rejects.toThrow(/Invalid JSON config/);
+
+    expect(await readFile(path, "utf-8")).toBe(source);
+  });
+
+  test("removeOpenCodeServer throws and leaves the file unchanged", async () => {
+    await writeFile(path, source);
+
+    await expect(removeOpenCodeServer(path)).rejects.toThrow(/Invalid JSON config/);
+
+    expect(await readFile(path, "utf-8")).toBe(source);
   });
 });
 
 describe("removeOpenCodeServer", () => {
+  test("removes the only 1.x entry before a trailing comma and leaves valid JSONC", async () => {
+    await writeFile(
+      path,
+      '{\n  // keep\n  "mcp": {\n    "context7": { "enabled": true },\n  },\n}\n'
+    );
+
+    expect(await removeOpenCodeServer(path)).toBe(true);
+
+    expect(await readFile(path, "utf-8")).toContain("// keep");
+    expect(await readJsonConfig(path)).toEqual({ mcp: {} });
+  });
+
   test("removes the 2.x entry and keeps other servers", async () => {
     await writeFile(
       path,
@@ -214,12 +233,15 @@ describe("removeOpenCodeServer", () => {
     expect(await readJsonConfig(path)).toEqual({ mcp: { servers: {} } });
   });
 
-  test("leaves the file unchanged when there is no entry", async () => {
-    const source = '{\n  // keep\n  "mcp": { "servers": { "firecrawl": {} } },\n}\n';
-    await writeFile(path, source);
+  test.each([
+    ["a missing file", undefined],
+    ["a file without an entry", '{\n  // keep\n  "mcp": { "servers": { "firecrawl": {} } },\n}\n'],
+  ])("leaves %s unchanged", async (_name, source) => {
+    if (source !== undefined) await writeFile(path, source);
 
     expect(await removeOpenCodeServer(path)).toBe(false);
 
-    expect(await readFile(path, "utf-8")).toBe(source);
+    if (source === undefined) await expect(readFile(path, "utf-8")).rejects.toThrow(/ENOENT/);
+    else expect(await readFile(path, "utf-8")).toBe(source);
   });
 });
