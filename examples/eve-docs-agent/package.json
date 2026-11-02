@@ -1,0 +1,27 @@
+{
+  "name": "context7-docs-agent",
+  "version": "0.0.0",
+  "type": "module",
+  "imports": {
+    "#*": "./agent/*",
+    "#evals/*": "./evals/*"
+  },
+  "scripts": {
+    "build": "eve build",
+    "dev": "eve dev",
+    "start": "eve start",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@vercel/connect": "^2.4.0",
+    "@vercel/oidc": "^4.0.0",
+    "ai": "7.0.128",
+    "eve": "^0.73.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "typescript": "7.0.2"
+  },
+  "packageManager": "pnpm@11.25.0"
+}
