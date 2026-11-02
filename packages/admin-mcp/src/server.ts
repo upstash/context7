@@ -195,15 +195,20 @@ const INSTRUCTIONS = [
   "Remove and delete actions need the user's confirmation first. Deleting a whole Docs7 or Ask site, billing, plans, API keys and SSO are not in this server: send the user to https://context7.com/dashboard.",
 ].join("\n");
 
-/** The Context7 icon, as the docs MCP server uses it. The vector icon scales; the PNG is 512x512. */
+/**
+ * The Context7 icon with the marks cut out of the green square, served from
+ * this deployment's `public/`. Codex draws tool icons as a one-color shape, so
+ * the docs server's icon (white marks on green) showed as a plain square there.
+ * The vector icon scales; the PNG is 512x512.
+ */
 export const SERVER_ICONS = [
   {
-    src: "https://context7.com/context7-icon-green.svg",
+    src: "https://admin.mcp.context7.com/context7-icon.svg",
     mimeType: "image/svg+xml",
     sizes: ["any"],
   },
   {
-    src: "https://context7.com/context7-icon-green.png",
+    src: "https://admin.mcp.context7.com/context7-icon.png",
     mimeType: "image/png",
     sizes: ["512x512"],
   },

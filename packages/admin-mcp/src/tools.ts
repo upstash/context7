@@ -1341,7 +1341,7 @@ export const TOOLS = [
         .enum(["off", "monthly"])
         .optional()
         .describe(
-          "Example Check Agent (Docs7 Pro): run and fix the docs' code examples monthly. Its variables are in docs7_manage_example_check."
+          "Example Check Agent (Docs7 Pro): run and fix the docs' code examples monthly. Turning it on starts the first check at once. Its variables are in docs7_manage_example_check."
         ),
       analytics_url: z
         .string()
@@ -1586,13 +1586,23 @@ export const TOOLS = [
     name: "docs7_manage_example_check",
     title: "Manage Example Check",
     description:
-      "The Example Check Agent (Docs7 Pro) runs the TypeScript, JavaScript and Python code examples of the docs against the user's services and fixes the wrong ones in a pull request; it runs monthly when `docs7_update_site` turns it on. `get_variables` gives the variable names it has (never values) and the variables pages still wait for; `set_variables` replaces the whole list (a variable sent without `value` keeps its stored value; an https URL is passed to the agent, any other value is a secret sent only as a bearer header to the host of its `<NAME>_URL` variable); `list_checks` gives its checks, newest first.",
+      "The Example Check Agent (Docs7 Pro) runs the TypeScript, JavaScript and Python code examples of the docs against the user's services and fixes the wrong ones in a pull request; it runs monthly once `docs7_update_site` turns it on, and turning it on starts the first check at once. `get_variables` gives the variables it has (names, hosts and headers, never values), the variables pages still wait for, and `sends`: the host and header each waiting key's SDK uses, as the agent reported them. `set_variables` replaces the whole list. An https URL is passed to the agent; any other value is a secret that stays outside the agent's sandbox and is sent only to its `host`, as `Authorization: Bearer <value>` or as the value of `header` (for example `x-api-key`). A new secret needs a `host`: a host from `sends` is the agent's report, so confirm it with the user before you send it. A variable sent without `value` keeps its stored value; a kept secret cannot change its host. `list_checks` gives its checks, newest first.",
     actions: { get_variables: "read", set_variables: "write", list_checks: "read" },
     untrusted: true,
     args: {
       site_id: siteId,
       variables: z
-        .array(z.object({ name: z.string(), value: z.string().optional() }))
+        .array(
+          z.object({
+            name: z.string(),
+            value: z.string().optional(),
+            host: z.string().optional().describe("Secret: the host it is sent to."),
+            header: z
+              .string()
+              .optional()
+              .describe("Secret: the header it goes in; default authorization (Bearer)."),
+          })
+        )
         .max(50)
         .optional()
         .describe("The whole variable list (set_variables)."),

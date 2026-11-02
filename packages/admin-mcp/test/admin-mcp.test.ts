@@ -519,11 +519,11 @@ test("the server card and serverInfo carry the Context7 icon", async () => {
     name: "io.github.upstash/context7-admin",
     remotes: [{ type: "streamable-http", url: "https://admin.mcp.context7.com/mcp" }],
   });
-  expect(body.icons[0].src).toBe("https://context7.com/context7-icon-green.svg");
+  expect(body.icons[0].src).toBe("https://admin.mcp.context7.com/context7-icon.svg");
 
   const client = await connect();
   expect(client.getServerVersion()?.icons?.[0]?.src).toBe(
-    "https://context7.com/context7-icon-green.svg"
+    "https://admin.mcp.context7.com/context7-icon.svg"
   );
 });
 
