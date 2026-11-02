@@ -24,5 +24,8 @@
     "@types/node": "^25.9.3",
     "typescript": "7.0.2"
   },
-  "packageManager": "pnpm@11.25.0"
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": "24.x"
+  }
 }

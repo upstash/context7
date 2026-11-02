@@ -6,4 +6,5 @@ This project uses the eve framework. Before writing code, read the relevant guid
 - The agent answers library questions with the `search_docs` tool (`agent/tools/search_docs.ts`).
 - `agent/lib/context7.ts` creates the `@upstash/context7-sdk` client. Its `authToken` mints a
   short-lived Context7 token from the deployment's Vercel OIDC token for the resource in
-  `CONTEXT7_STORE_ID`. Never add a long-lived Context7 API key.
+  `CONTEXT7_STORE_ID`. `CONTEXT7_API_KEY`, when set, replaces the token for local runs; never
+  commit one.

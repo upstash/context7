@@ -32,6 +32,8 @@ costs $5 per 1,000 requests, billed on your Vercel invoice.
 
 ## Develop locally
 
+Requires Node.js 24.
+
 ```bash
 pnpm install
 vercel link
@@ -40,8 +42,11 @@ pnpm dev
 ```
 
 `vercel env pull` writes the project's environment, including `CONTEXT7_STORE_ID` and a
-development OIDC token. Edit `agent/instructions.md` to change how the agent answers, and add tools
-under `agent/tools/`. eve's guides are in `node_modules/eve/docs/` after install.
+development OIDC token. To run without Vercel, set `CONTEXT7_API_KEY` to a key from the
+[Context7 dashboard](https://context7.com/dashboard) instead; the agent uses it when it is set.
+
+Edit `agent/instructions.md` to change how the agent answers, and add tools under
+`agent/tools/`. eve's guides are in `node_modules/eve/docs/` after install.
 
 ## Learn more
 

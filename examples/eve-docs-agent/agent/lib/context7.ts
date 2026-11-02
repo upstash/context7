@@ -25,4 +25,6 @@ async function getResourceToken(): Promise<string> {
   return token;
 }
 
-export const context7 = new Context7({ authToken: getResourceToken });
+const apiKey = process.env.CONTEXT7_API_KEY;
+
+export const context7 = new Context7(apiKey ? { apiKey } : { authToken: getResourceToken });
