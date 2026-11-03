@@ -1,0 +1,80 @@
+---
+title: Research Preview
+description: Turn on experimental Context7 MCP tools, such as documentation feedback
+---
+
+The research preview gives your agent experimental tools from the Context7 MCP server. It is off by default. Tools in the preview can change or be removed without notice.
+
+The research preview currently adds one tool: [documentation feedback](#documentation-feedback).
+
+## Turn it on
+
+### Remote server
+
+Add `research_preview=1` to the server URL:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp?research_preview=1",
+      "headers": { "Authorization": "Bearer YOUR_API_KEY" }
+    }
+  }
+}
+```
+
+With Claude Code:
+
+```bash
+claude mcp add --scope user --header "Authorization: Bearer YOUR_API_KEY" --transport http context7 "https://mcp.context7.com/mcp?research_preview=1"
+```
+
+The OAuth endpoint takes the same parameter: `https://mcp.context7.com/mcp/oauth?research_preview=1`.
+
+### Local server
+
+Pass `--research-preview`, or set `CONTEXT7_RESEARCH_PREVIEW=1`. This needs `@upstash/context7-mcp` 4.5.0 or later.
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest", "--api-key", "YOUR_API_KEY", "--research-preview"]
+    }
+  }
+}
+```
+
+Start a new session after you change the configuration, so that your client loads the new tools.
+
+To turn the research preview off, remove the parameter, the flag or the variable.
+
+## Documentation feedback
+
+With the research preview on, the server lists a `submit-docs-feedback` tool, and its instructions ask the agent to call it once for each library after it answers with `query-docs`. The agent rates how well the documentation answered the question:
+
+| Field | Description |
+| --- | --- |
+| `libraryId` | The library the feedback is about, such as `/vercel/next.js` |
+| `query` | The `query-docs` query, optional |
+| `score` | `0` (useless) to `5` (fully answered with correct, current code) |
+| `issue` | What was wrong, only below 5: `missing`, `outdated`, `incorrect`, `irrelevant` or `other` |
+| `comment` | What was missing, wrong or good, in one or two sentences |
+
+You can also ask your agent to send your own comment, for example: "tell Context7 that the Next.js docs have no example for this". We use the feedback to find and fix gaps in library documentation.
+
+### What is sent
+
+The fields above, the name and version of your MCP client, and your account when you use an API key or OAuth. The tool does not send your code or files. For private libraries and for Enterprise teamspaces, Context7 does not store the query or the comment. Feedback about a library that your account cannot access is rejected.
+
+### Codex
+
+Codex asks for approval before each call to a tool that can send data, so it asks every time the agent sends feedback. In `codex exec` with `approval_policy = "never"`, the call fails. To allow only this tool, add it to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.context7.tools.submit-docs-feedback]
+approval_mode = "approve"
+```
