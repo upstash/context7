@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.0
+
+### Minor Changes
+
+- 60e59f9: Add `ctx7 search <query>` to search documentation across all libraries in one step, without a library ID. Optional `--library`, `--library-version` and `--language` narrow the results, and `--json` returns structured output.
+
+### Patch Changes
+
+- ceaf5f9: Write the OpenCode MCP entry inside `mcp.servers` when the config already uses the OpenCode 2.x layout, without the 1.x `enabled` field. `ctx7 setup` also moves an entry that an earlier version wrote next to `mcp.servers`. Other configs keep the 1.x layout, which OpenCode 1.x and 2.x both read. `ctx7 remove` finds Context7 in either layout.
+- 35bd973: Show the update notice to canary users once the matching stable version is released.
+
 ## 0.8.2
 
 ### Patch Changes
