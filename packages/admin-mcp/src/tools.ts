@@ -48,8 +48,25 @@ export interface ToolDef<S extends z.ZodRawShape = z.ZodRawShape> {
    */
   console?: "open" | "read";
   args: S;
-  run(args: Args<S>, api: Api): Promise<unknown>;
+  run(args: Args<S>, api: Api, confirmWithUser: ConfirmWithUser): Promise<unknown>;
 }
+
+/**
+ * Holds a destructive change back until the user confirms it (confirm.ts):
+ * returns to go ahead, throws otherwise. The user types `expected`, or the
+ * agent sends it as `confirm` where the client cannot show a form.
+ */
+export type ConfirmWithUser = (check: {
+  /** The change, as the user sees it in the form: "Remove the library /acme/docs". */
+  action: string;
+  /** What the user types, as a phrase: "the library id". */
+  what: string;
+  expected: string;
+  /** The agent's `confirm` argument. */
+  given?: string;
+  /** Puts an answer in the form of `expected`. */
+  normalize?: (answer: string) => string;
+}) => void;
 
 /** Keeps `name` and `console` as literal types, so `ConsoleRead` is checked by the compiler. */
 function tool<
@@ -342,14 +359,17 @@ function need<T>(value: T | undefined | null, message: string): T {
   return value;
 }
 
-function confirmed(confirm: string | undefined, expected: string, what: string): void {
-  if (!expected) throw new ToolError(`Could not read ${what} from the API. Nothing was deleted.`);
-  if (confirm !== expected) {
-    throw new ToolError(
-      `Refused: \`confirm\` does not match ${what}. Ask the user to confirm this deletion. Then call again with \`confirm\` set to ${what}.`
+/** The `confirm` argument of a destructive action. */
+const confirmArg = (what: string) =>
+  z
+    .string()
+    .optional()
+    .describe(
+      `${what}, after the user confirms. Ask the user first; never fill it in on your own. Not needed when the client shows the user a confirmation form.`
     );
-  }
-}
+
+/** "owner/repo" and "/Owner/Repo" confirm the same library as "/owner/repo". */
+const asLibraryId = (answer: string) => answer.replace(/^\/?/, "/").toLowerCase();
 
 /**
  * A read that only adds detail: its failure leaves the detail out, except a
@@ -517,12 +537,9 @@ export const TOOLS = [
         .string()
         .optional()
         .describe("Invitation id from list (update_invitation_role, cancel_invitation)."),
-      confirm: z
-        .string()
-        .optional()
-        .describe("The member's email, after the user confirms the removal (remove)."),
+      confirm: confirmArg("The member's email (remove)"),
     },
-    run: async (args, api) => {
+    run: async (args, api, confirmWithUser) => {
       const base = ts(args.teamspace);
       switch (args.action) {
         case "list":
@@ -554,7 +571,12 @@ export const TOOLS = [
           const id = need(args.member_id, "`member_id` is required.");
           const email = memberEmail(await api.get(`${base}/members`), id);
           if (!email) throw new ToolError(`No member with id "${id}". Call action list first.`);
-          confirmed(args.confirm, email, "the member's email");
+          confirmWithUser({
+            action: `Remove ${email} from the teamspace`,
+            what: "the member's email",
+            expected: email,
+            given: args.confirm,
+          });
           return api.del(`${base}/members/${seg(id)}`);
         }
         default:
@@ -758,15 +780,17 @@ export const TOOLS = [
         .describe(
           "`version` is a branch, not a tag (add). For remove, set it when a tag and a branch share the name."
         ),
-      confirm: z
-        .string()
-        .optional()
-        .describe("The version name, after the user confirms the removal (remove)."),
+      confirm: confirmArg("The version name (remove)"),
     },
-    run: ({ teamspace, action, library_id, version, is_branch, confirm }, api) => {
+    run: ({ teamspace, action, library_id, version, is_branch, confirm }, api, confirmWithUser) => {
       const base = `${lib(teamspace, library_id)}/versions`;
       if (action === "add") return api.post(base, { version, isBranch: is_branch });
-      confirmed(confirm, version, "the version name");
+      confirmWithUser({
+        action: `Remove the version ${version} of ${normalizeLibraryId(library_id)}`,
+        what: "the version name",
+        expected: version,
+        given: confirm,
+      });
       return api.del(`${base}/${seg(version)}`, { query: { isBranch: is_branch } });
     },
   }),
@@ -802,13 +826,17 @@ export const TOOLS = [
     kind: "destructive",
     args: {
       library_id: libraryId,
-      confirm: z.string().describe("The library id, after the user confirms."),
+      confirm: confirmArg("The library id"),
     },
-    run: ({ teamspace, library_id, confirm }, api) => {
+    run: ({ teamspace, library_id, confirm }, api, confirmWithUser) => {
       const id = normalizeLibraryId(library_id);
-      // "owner/repo" and "/Owner/Repo" confirm the same library as "/owner/repo".
-      const said = confirm.trim().replace(/^\/?/, "/").toLowerCase();
-      confirmed(said, id, "the library id");
+      confirmWithUser({
+        action: `Remove the library ${id} from the teamspace`,
+        what: "the library id",
+        expected: id,
+        given: confirm,
+        normalize: asLibraryId,
+      });
       return api.del(lib(teamspace, library_id));
     },
   }),
@@ -924,19 +952,19 @@ export const TOOLS = [
         .describe(
           "Teamspace id to move the library to (transfer). OAuth sign-in only: an API key reaches one teamspace."
         ),
-      confirm: z
-        .string()
-        .optional()
-        .describe("The library id, after the user confirms (block, transfer)."),
+      confirm: confirmArg("The library id (block, transfer)"),
     },
-    run: async (args, api) => {
+    run: async (args, api, confirmWithUser) => {
       const base = lib(args.teamspace, args.library_id);
-      const sure = () =>
-        confirmed(
-          args.confirm?.trim().replace(/^\/?/, "/").toLowerCase(),
-          normalizeLibraryId(args.library_id),
-          "the library id"
-        );
+      const id = normalizeLibraryId(args.library_id);
+      const sure = (action: string) =>
+        confirmWithUser({
+          action,
+          what: "the library id",
+          expected: id,
+          given: args.confirm,
+          normalize: asLibraryId,
+        });
       switch (args.action) {
         case "set_visibility":
           return api.post(`${base}/visibility`, {
@@ -967,10 +995,10 @@ export const TOOLS = [
             websiteUrls: args.website_urls,
           });
         case "block":
-          sure();
+          sure(`Block ${id}: stop indexing it and delete its parsed docs`);
           return api.post(`${base}/block`);
         default:
-          sure();
+          sure(`Transfer ${id} to another teamspace`);
           return api.post(`${base}/transfer`, {
             destinationTeamspaceId: need(
               args.destination_teamspace,
@@ -997,13 +1025,10 @@ export const TOOLS = [
         .describe(
           "Library id of a library rule (create). Leave out for a teamspace rule. Update and delete find the rule's library from `rule_id`."
         ),
-      confirm: z
-        .string()
-        .optional()
-        .describe("The rule id, after the user confirms the deletion (delete)."),
+      confirm: confirmArg("The rule id (delete)"),
     },
     // The rules routes answer { success, data }; the other tools answer the data itself.
-    run: async (args, api) => {
+    run: async (args, api, confirmWithUser) => {
       const base = `${ts(args.teamspace)}/rules`;
       const ruleId = () => seg(need(args.rule_id, "`rule_id` is required."));
       switch (args.action) {
@@ -1024,7 +1049,13 @@ export const TOOLS = [
             })
           );
         default: {
-          confirmed(args.confirm, need(args.rule_id, "`rule_id` is required."), "the rule id");
+          const id = need(args.rule_id, "`rule_id` is required.");
+          confirmWithUser({
+            action: `Delete the rule ${id}`,
+            what: "the rule id",
+            expected: id,
+            given: args.confirm,
+          });
           const libraryId = await ruleLibrary(api, base, args.rule_id!, args.library_id);
           return data(
             await api.del(`${base}/${ruleId()}`, { query: { libraryId: libraryId ?? undefined } })
@@ -1533,10 +1564,15 @@ export const TOOLS = [
     args: {
       site_id: siteId,
       branch: z.string(),
-      confirm: z.string().describe("The branch name, after the user confirms."),
+      confirm: confirmArg("The branch name"),
     },
-    run: ({ teamspace, site_id, branch, confirm }, api) => {
-      confirmed(confirm, branch, "the branch name");
+    run: ({ teamspace, site_id, branch, confirm }, api, confirmWithUser) => {
+      confirmWithUser({
+        action: `Remove the preview of the branch ${branch}`,
+        what: "the branch name",
+        expected: branch,
+        given: confirm,
+      });
       return api.del(`${site(teamspace, site_id)}/previews`, { query: { branch } });
     },
   }),
@@ -1652,14 +1688,19 @@ export const TOOLS = [
         .optional()
         .describe("Feature request id (ship, reopen, delete)."),
       docs_url: z.string().optional().describe("https page that answers the request (ship)."),
-      confirm: z.string().optional().describe("The request id, after the user confirms (delete)."),
+      confirm: confirmArg("The request id (delete)"),
     },
-    run: (args, api) => {
+    run: (args, api, confirmWithUser) => {
       const base = `${site(args.teamspace, args.site_id)}/feature-requests`;
       if (args.action === "list") return api.get(base);
       const id = need(args.feature_request_id, "`feature_request_id` is required.");
       if (args.action === "delete") {
-        confirmed(args.confirm, id, "the request id");
+        confirmWithUser({
+          action: `Delete the feature request ${id} and its votes`,
+          what: "the request id",
+          expected: id,
+          given: args.confirm,
+        });
         return api.del(base, { body: { id } });
       }
       return args.action === "ship"
