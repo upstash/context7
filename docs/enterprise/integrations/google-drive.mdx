@@ -1,15 +1,15 @@
 ---
 title: "Google Drive Integration"
 sidebarTitle: "Google Drive"
-description: "Sync Google Docs from Drive folders, Shared Drives and single files, and keep them current every day"
+description: "Sync Google Docs and Google Slides from Drive folders, Shared Drives and single files, and keep them current every day"
 ---
 
-Context7 can sync Google Docs from Google Drive and serve them like any other library. Google Drive stays the source of truth: a daily sync picks up edits, and documents that are removed or no longer shared leave the results.
+Context7 can sync Google Docs and Google Slides from Google Drive and serve them like any other library. Google Drive stays the source of truth: a daily sync picks up edits, and documents that are removed or no longer shared leave the results.
 
 An admin connects a Google service account once under **Settings → Integrations**. Then an admin chooses which folders, Shared Drives and Docs to sync from **Add → Google Drive**. Only the selected items, and the Docs under selected folders, are indexed.
 
 <Note>
-Google Docs are supported. Spreadsheets, PDFs and other file types in a selected folder are skipped. The picker marks them as not supported.
+Google Docs and Google Slides are supported. Spreadsheets, PDFs and other file types in a selected folder are skipped. The picker marks them as not supported.
 </Note>
 
 ## Set up Google Cloud
@@ -18,16 +18,16 @@ Context7 reads Drive with a service account and one read-only scope:
 
 | Scope | Why |
 | ----- | --- |
-| `https://www.googleapis.com/auth/drive.readonly` | List the selected folders and export Google Docs. Context7 never writes to Drive. |
+| `https://www.googleapis.com/auth/drive.readonly` | List the selected folders, export Google Docs and read Google Slides. Context7 never writes to Drive. |
 
 The **Set up Google Cloud** panel in the **Google Drive** card (**Settings → Integrations**) shows these steps. Enter your project ID there, and the panel fills it into the commands.
 
 <Steps>
   <Step title="Create the service account">
-    Run these commands in [Cloud Shell](https://shell.cloud.google.com/) or with the gcloud CLI. Replace `PROJECT_ID` with your project ID. The service account needs no IAM roles in the project.
+    Run these commands in [Cloud Shell](https://shell.cloud.google.com/) or with the gcloud CLI. Replace `PROJECT_ID` with your project ID. The first command enables the Google Drive API and the Google Slides API. The service account needs no IAM roles in the project.
 
     ```bash
-    gcloud services enable drive.googleapis.com --project=PROJECT_ID
+    gcloud services enable drive.googleapis.com slides.googleapis.com --project=PROJECT_ID
     gcloud iam service-accounts create context7-drive \
       --display-name="Context7 Drive sync" --project=PROJECT_ID
     ```
@@ -110,6 +110,12 @@ Select folders, Shared Drives or single Docs, enter a title, and click **Start S
 
 Each document is indexed under its Google URL, for example `https://docs.google.com/document/d/<id>/edit`. That link is the `Source:` of every result, so an agent can point people to the original document.
 
+### Google Slides
+
+Each slide of a presentation is indexed as its own page, with a link that opens that slide: `https://docs.google.com/presentation/d/<id>/edit#slide=id.<slide id>`. The slide's title becomes its heading, and its text, lists, links, tables and speaker notes follow. Hidden (skipped) slides are not indexed.
+
+When a presentation changes, it is read again and every slide is checked. A deleted slide leaves the results. If one slide fails to index, its last indexed version stays.
+
 ## How syncing works
 
 Every sync lists the selected folders again and compares each Doc with the last sync:
@@ -177,8 +183,9 @@ The server talks only to Google:
 | `sts.googleapis.com` | Access tokens for workload identity federation |
 | `iamcredentials.googleapis.com` | Access tokens for workload identity federation with service account impersonation |
 | `www.googleapis.com` | The Drive API |
+| `slides.googleapis.com` | The Slides API, for presentations |
 
-Set `GOOGLE_DRIVE_API_URL` to send Drive API calls through another endpoint, such as a Private Google Access address or a proxy. The value must include the API path, for example `https://www.googleapis.com/drive/v3`.
+Set `GOOGLE_DRIVE_API_URL` and `GOOGLE_SLIDES_API_URL` to send Drive and Slides API calls through another endpoint, such as a Private Google Access address or a proxy. Each value must include the API path, for example `https://www.googleapis.com/drive/v3` and `https://slides.googleapis.com/v1`.
 
 ## Troubleshooting
 
@@ -188,6 +195,7 @@ Set `GOOGLE_DRIVE_API_URL` to send Drive API calls through another endpoint, suc
 | "Nothing is shared with … yet" | The credentials work, but no folder or Shared Drive is shared with the service account. Share one with **Viewer** access, then test again. |
 | "Google rejected the credentials" | Check the key. With delegation, check that the client ID is allowed the `drive.readonly` scope in the Admin console. |
 | "Google denied access … Check that the Drive API is enabled" | Enable the Google Drive API in the service account's project. |
+| A presentation fails with "Google Drive export failed (403 …)" | Enable the Google Slides API in the service account's project. |
 | "No longer available to the Google connector: folder …" | The folder was deleted, trashed or unshared, and its Docs were removed. Share it with the service account again, then click **Refresh**. |
 | "Google refused access to the selected folder …" | Check that the Drive API is enabled and that the connector can read the folder. Live content is kept until this is fixed. |
 | "The document is larger than the 10 MB Google Drive export limit" | Split the document. Its last indexed version stays available. |
