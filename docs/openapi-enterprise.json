@@ -90,7 +90,7 @@
     "/v2/context": {
       "get": {
         "summary": "Get documentation context",
-        "description": "Retrieve documentation snippets for a library ranked by relevance to your query, formatted as plain text ready to inject into an LLM prompt. This is the endpoint MCP tools call internally.\n\nEvery snippet has a `Source:` line with its link. When an admin has assigned [authority labels](/enterprise/authority-labels), a labeled snippet also has an `Authority:` line, and the response starts with a legend that defines each class that appears. Excluded content never appears.",
+        "description": "Retrieve documentation snippets for a library ranked by relevance to your query, formatted as plain text ready to inject into an LLM prompt. This is the endpoint MCP tools call internally.\n\nEach snippet that has a source URL has a `Source:` line with that link. When an admin has assigned [authority labels](/enterprise/authority-labels), a labeled snippet also has an `Authority:` line, and the response starts with a legend that defines each class that appears. Excluded content never appears.",
         "operationId": "getContext",
         "tags": ["Context"],
         "parameters": [
@@ -127,7 +127,7 @@
                 "schema": {
                   "type": "string"
                 },
-                "example": "Authority classes in these results:\n- standard: A mandatory QA requirement. Every release must follow it.\n\n--------------------------------\n\n### useRouter()\n\nAuthority: standard\nSource: https://github.com/vercel/next.js/...\n\nThe `useRouter` hook allows you to programmatically change routes inside Client Components.\n\n--------------------------------\n\n### Routing > Layouts\n\nSource: https://github.com/vercel/next.js/...\n\nA layout is UI that is shared between multiple routes."
+                "example": "Authority classes in these results:\n- standard: An approved standard or requirement. Follow it unless a newer standard replaces it.\n\n--------------------------------\n\n### useRouter()\n\nAuthority: standard\nSource: https://github.com/vercel/next.js/...\n\nThe `useRouter` hook allows you to programmatically change routes inside Client Components.\n\n--------------------------------\n\n### app/layout.tsx\n\n```tsx\nexport default function Layout({ children }) {\n  return <html><body>{children}</body></html>\n}\n```"
               }
             }
           },

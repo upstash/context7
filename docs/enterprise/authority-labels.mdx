@@ -3,9 +3,9 @@ title: "Authority Labels"
 description: "Label library content as a standard, a guideline, or an example, so AI agents can tell authoritative content from informal content. Exclude content that must not appear in results."
 ---
 
-AI agents that read your documentation cannot tell an approved standard from an old draft or an informal note. Authority labels let your team say which is which. You define a short list of classes, such as `standard`, `guideline`, and `example`, and you write a definition for each one. Then you assign classes to libraries, or to paths inside a library. Every result that Context7 returns shows its class, and the response defines each class that appears.
+AI agents that read your documentation cannot tell an approved standard from an old draft or an informal note. Authority labels let your team say which is which. You define a short list of classes, such as `standard`, `guideline`, and `example`, and you write a definition for each one. Then you assign classes to libraries, or to paths inside a library. Each result with a class shows that class, and the response defines each class that appears.
 
-Only people set classes. No model sets, changes, or reads a class as an instruction, and authority never grants access to a library.
+Only admins set classes. No model assigns or changes a class, and the reranking model never sees classes. Agents see the class names and definitions in results. Authority never grants access to a library.
 
 ## Define the classes
 
@@ -28,7 +28,7 @@ Open the library, click **Settings**, and find the **Authority** section.
 - **Library default**: the class for all content in the library, or **Excluded** to hide the whole library.
 - **Path rules**: a class for part of the library, or an exclusion. A rule is a **Prefix** or a **Glob**.
 
-Click **Preview** to see which pages a rule matches before you add it. Click **Save changes** to apply the rules.
+Click **Preview** to see which pages a rule matches before you add it. To add a path rule, click **Add**, then click **Save changes**. Context7 saves the whole set of rules together in one request, so a new or changed rule applies only after you click **Save changes**.
 
 ### What a rule matches
 
@@ -38,6 +38,9 @@ A pattern that starts with `https://` or `http://` matches the page URL, the sam
 | --- | --- |
 | Git repository | The path inside the repository, for example `/docs/standards/release.md` |
 | Website, Confluence, llms.txt, OpenAPI | The path of the page URL, for example `/wiki/spaces/QA/pages/123` |
+| Google Drive | The Drive folder path of the file, for example `/QA/Standards/Release sign-off`. A slide uses the path of its presentation. |
+
+The path of a page URL includes its query string, if it has one.
 
 A path pattern without a leading `/` gets one, so `standards/` and `/standards/` are the same rule.
 
@@ -48,7 +51,7 @@ In a glob, `*` matches any characters inside one folder, `**` matches any charac
 When more than one rule matches a page, Context7 applies them in this order:
 
 1. **An exclusion always wins.** If any exclusion matches the page, including a library exclusion, the page is excluded.
-2. **The most specific class rule wins.** Specificity is the number of literal characters in the pattern. A longer prefix is more specific than a shorter one. For a glob, `*` and `?` do not count. If two rules have the same specificity, a prefix wins over a glob, and then the older rule wins.
+2. **The most specific class rule wins.** Specificity is the number of literal characters in the pattern. A longer prefix is more specific than a shorter one. For a glob, `*` and `?` do not count. Specificity counts the whole pattern, so a URL pattern, which includes the host, usually beats a path pattern. If two rules have the same specificity, a prefix wins over a glob, and then the older rule wins.
 3. **The library default applies** when no path rule matches.
 4. **The page has no class** when no rule matches and the library has no default.
 
@@ -77,13 +80,15 @@ Context7 resolves classes when it answers a query, not when it indexes content. 
 Authority only reorders results that are already relevant to the query. It never adds a result, and it never moves a weakly related result above a clearly more relevant one.
 
 - **With reranking on**, Context7 reorders only the results that the reranking model selected as relevant. The other results stay below them.
-- **With reranking off**, a result can move ahead of another only when their relevance scores differ by at most 0.02. In tests on `text-embedding-3-small`, this lets authority swap near-ties but does not move a result past a clear drop in relevance.
+- **With reranking off**, a result can move ahead of another only when their relevance scores differ by at most 0.02. The same rule applies when reranking fails or has too few candidates.
+
+The 0.02 band is fixed. It was measured on `text-embedding-3-small`, where it lets authority swap near-ties but does not move a result past a clear drop in relevance.
 
 Within those limits, a more authoritative class comes first, and content without a class comes after all classes. Results with the same class keep their original order. When no rules exist, the order does not change.
 
 ## What agents receive
 
-The response from `query-docs` and from [`GET /v2/context`](/enterprise/api/context/get-documentation-context) starts with a legend that defines each class that appears in the results. Each labeled result has an `Authority:` line, and every result has a `Source:` line with its link.
+The response from `query-docs` and from [`GET /v2/context`](/enterprise/api/context/get-documentation-context) starts with a legend that defines each class that appears in the results. Each labeled result has an `Authority:` line, and each result that has a source URL has a `Source:` line with that link.
 
 ```text
 Authority classes in these results:
@@ -111,7 +116,7 @@ Run a 30-minute exploratory session for each new feature.
 
 A result without a class has no `Authority:` line. The legend lists only the classes that appear, so definitions are not repeated for each result.
 
-The library search in the dashboard (`GET /api/projects/{library}/search`) returns the same information as JSON. Each result has a `sourceUrl` and an `authority` field:
+The snippet search in the dashboard (`GET /api/projects/{library}/search`) returns the same information as JSON. Each result in `codeSnippets` and `infoSnippets` has a `sourceUrl` and an `authority` field. The example shows one entry of `codeSnippets`, with some fields left out. It is not a full response:
 
 ```json
 {
@@ -128,11 +133,11 @@ The library search in the dashboard (`GET /api/projects/{library}/search`) retur
 }
 ```
 
-`authority` is `null` for a result without a class.
+`authority` is `null` for a result without a class. For an excluded library, the response has `excluded: true` and empty `codeSnippets` and `infoSnippets` lists.
 
 ## Audit log
 
-Every change to a class, the class order, or a rule is written to the access audit log with the admin who made it. Open the **Audit Log** section of the **Access** tab to review them, and filter by **Authority class**, **Class order**, or **Authority rule**.
+Every change to a class, the class order, or a rule is written to the access audit log with the admin who made it. Open the **Audit Log** section of the **Access** tab to review them, and filter by **Authority class**, **Class removed**, **Class order**, **Authority rule**, or **Authority rule removed**.
 
 ## Who can change labels
 
