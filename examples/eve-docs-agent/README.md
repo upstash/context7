@@ -5,7 +5,7 @@ their current, official documentation. It searches with [Context7 Search](https:
 through [`@upstash/context7-sdk`](https://www.npmjs.com/package/@upstash/context7-sdk) and cites
 the sources it used.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fupstash%2Fcontext7%2Ftree%2Fmaster%2Fexamples%2Feve-docs-agent&project-name=context7-docs-agent&repository-name=context7-docs-agent&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22context7%22%2C%22productSlug%22%3A%22context7-search-api%22%7D%5D&demo-title=Context7%20Docs%20Agent&demo-description=An%20eve%20agent%20that%20answers%20library%20questions%20from%20up-to-date%20documentation%20with%20Context7%20Search.)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fupstash%2Fcontext7%2Ftree%2Fmaster%2Fexamples%2Feve-docs-agent&project-name=context7-docs-agent&repository-name=context7-docs-agent&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22context7%22%2C%22productSlug%22%3A%22context7-search-api%22%7D%5D&env=CONTEXT7_API_KEY&envDescription=A%20Context7%20API%20key%2C%20used%20until%20Vercel%20Marketplace%20tokens%20are%20available&envLink=https%3A%2F%2Fcontext7.com%2Fdashboard&demo-title=Context7%20Docs%20Agent&demo-description=An%20eve%20agent%20that%20answers%20library%20questions%20from%20up-to-date%20documentation%20with%20Context7%20Search.)
 
 ## Features
 
@@ -16,11 +16,10 @@ the sources it used.
 
 ## Deploy
 
-1. Select **Deploy**. Vercel clones this repository and installs the
-   [Context7 integration](https://vercel.com/marketplace/context7), which connects a Context7
-   resource to the new project. The Free plan includes 1,000 requests a month.
-2. Copy the resource's store ID from the project's **Storage** tab, add it as the environment
-   variable `CONTEXT7_STORE_ID`, and redeploy.
+1. Create an API key in the [Context7 dashboard](https://context7.com/dashboard).
+2. Select **Deploy**. Vercel clones this repository, installs the
+   [Context7 integration](https://vercel.com/marketplace/context7) with a Context7 resource for
+   the new project, and asks for `CONTEXT7_API_KEY`. Paste your key.
 3. Clone the new repository and link it: `vercel link`.
 4. Chat with the deployment from your terminal:
 
@@ -30,9 +29,13 @@ the sources it used.
 
    Ask, for example: "How do I stream a response from a Next.js route handler?"
 
-The agent stores no Context7 secret. On each search, Vercel mints a short-lived Context7 token for
-the deployment from its OIDC token. To use a Context7 API key instead, set `CONTEXT7_API_KEY` to a
-key from the [Context7 dashboard](https://context7.com/dashboard); a key takes precedence.
+### Without an API key
+
+Remove `CONTEXT7_API_KEY` from the project, and the agent authenticates through the Context7
+integration: on each search, `getIntegrationToken("context7")` from
+[`@vercel/integrations`](https://www.npmjs.com/package/@vercel/integrations) has Vercel mint a
+short-lived Context7 token from the deployment's OIDC token, so no secret is stored. Vercel is
+still rolling out these tokens; until they are available for Context7, keep the key.
 
 The chat channel accepts your team's Vercel OIDC token in production. To expose the agent to other
 users, replace `placeholderAuth()` in `agent/channels/eve.ts` with your own auth, or add another
@@ -44,7 +47,7 @@ channel such as Slack.
   question, and it calls `search`, which returns ranked documentation snippets with their source
   URLs.
 - `agent/lib/context7.ts` creates the SDK client. It uses `CONTEXT7_API_KEY` when it is set, and
-  otherwise a token that Vercel mints for the resource in `CONTEXT7_STORE_ID`.
+  otherwise a short-lived token from the Context7 integration.
 - `agent/instructions.md` tells the agent to search first, prefer the documented code, and cite
   its sources.
 
@@ -72,10 +75,9 @@ vercel env pull
 pnpm dev
 ```
 
-`vercel env pull` writes `CONTEXT7_STORE_ID`, the project's OIDC token, and the AI Gateway
-credentials to `.env.local`. Run `vercel env pull` again when the OIDC token expires (12 hours).
-To run without Vercel, copy `.env.example` to `.env.local` and fill in a Context7 API key and an AI
-Gateway API key.
+`vercel env pull` writes `CONTEXT7_API_KEY`, the project's OIDC token, and the AI Gateway
+credentials to `.env.local`. To run without Vercel, copy `.env.example` to `.env.local` and fill in
+a Context7 API key and an AI Gateway API key.
 
 Edit `agent/instructions.md` to change how the agent answers, and add tools under
 `agent/tools/`. eve's guides are in `node_modules/eve/docs/` after install.
