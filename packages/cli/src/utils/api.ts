@@ -1,4 +1,4 @@
-import type { LibrarySearchResponse, ContextResponse } from "../types.js";
+import type { LibrarySearchResponse, LibrarySearchResult, ContextResponse } from "../types.js";
 import { VERSION } from "../constants.js";
 
 export const DEFAULT_CONTEXT7_BASE_URL = "https://context7.com";
@@ -73,9 +73,42 @@ export const CODE_OPERATIONS = [
 ] as const;
 export type CodeOperation = (typeof CODE_OPERATIONS)[number];
 
+/**
+ * Ranges of the numeric `ctx7 code` flags. The server rejects a number out of
+ * its range with a 400, so the command clamps numbers into these ranges first.
+ */
+export const CODE_LIMITS = {
+  context: { min: 0, max: 10 },
+  headLimit: { min: 1, max: 500 },
+  offset: { min: 0, max: 10_000 },
+} as const;
+
+/**
+ * Libraries built from a Git repository have source that `ctx7 code` can search.
+ * This is a client-side guess from the ID and the branch: the server decides
+ * with sourceRepo() in its /api/v2/code route and answers 422 "no_source".
+ * Keep the rule the same as hasSourceCode in packages/mcp/src/lib/utils.ts.
+ */
+export function hasSourceCode(result: Pick<LibrarySearchResult, "id" | "branch">): boolean {
+  return !/^\/(websites|llmstxt)\//.test(result.id) && !result.branch?.startsWith("_");
+}
+
+/** Seconds to wait from a 202 body or a Retry-After header (seconds or an HTTP date). */
+export function retryAfterSeconds(bodyValue: unknown, header: string | null): number {
+  if (typeof bodyValue === "number" && Number.isFinite(bodyValue) && bodyValue >= 0)
+    return Math.ceil(bodyValue);
+  if (header) {
+    const seconds = Number(header);
+    if (Number.isFinite(seconds) && seconds >= 0) return Math.ceil(seconds);
+    const date = Date.parse(header);
+    if (Number.isFinite(date)) return Math.max(1, Math.ceil((date - Date.now()) / 1000));
+  }
+  return 30;
+}
+
 /** ripgrep-style search options plus LSP-style operations, as sent to /api/v2/code. */
 export interface CodeQueryOptions {
-  /** A version listed by `ctx7 library`. A version suffix on the library ID also works. */
+  /** A git tag, or a commit from a result header. A version suffix on the library ID also works. */
   version?: string;
   operation?: CodeOperation;
   fixedStrings?: boolean;
@@ -125,7 +158,7 @@ export async function getLibraryCode(
     return {
       kind: "indexing",
       message: body.message ?? "The library source is being indexed.",
-      retryAfter: body.retryAfter ?? Number(response.headers.get("Retry-After") ?? 30),
+      retryAfter: retryAfterSeconds(body.retryAfter, response.headers.get("Retry-After")),
     };
   }
   if (!response.ok) {

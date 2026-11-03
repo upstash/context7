@@ -13,13 +13,18 @@ vi.mock("../utils/auth.js", () => ({
 const mockResolveLibrary = vi.fn();
 const mockGetLibraryContext = vi.fn();
 const mockGetLibraryCode = vi.fn();
-vi.mock("../utils/api.js", () => ({
-  resolveLibrary: (...args: unknown[]) => mockResolveLibrary(...args),
-  getLibraryContext: (...args: unknown[]) => mockGetLibraryContext(...args),
-  getLibraryCode: (...args: unknown[]) => mockGetLibraryCode(...args),
-  CODE_OPERATIONS: ["grep", "definition", "references", "outline", "read", "list"],
-  getBaseUrl: () => "https://test.context7.com",
-}));
+vi.mock("../utils/api.js", async () => {
+  const actual = await vi.importActual<typeof import("../utils/api.js")>("../utils/api.js");
+  return {
+    CODE_OPERATIONS: actual.CODE_OPERATIONS,
+    CODE_LIMITS: actual.CODE_LIMITS,
+    hasSourceCode: actual.hasSourceCode,
+    resolveLibrary: (...args: unknown[]) => mockResolveLibrary(...args),
+    getLibraryContext: (...args: unknown[]) => mockGetLibraryContext(...args),
+    getLibraryCode: (...args: unknown[]) => mockGetLibraryCode(...args),
+    getBaseUrl: () => "https://test.context7.com",
+  };
+});
 
 vi.mock("../utils/tracking.js", () => ({ trackEvent: vi.fn() }));
 
@@ -163,6 +168,26 @@ describe("ctx7 code", () => {
     await run(registerDocsCommands, "code", "/a/b", "x");
 
     expect(process.exitCode).toBe(75);
+  });
+
+  test("clamps out-of-range numbers like the MCP tool", async () => {
+    mockGetLibraryCode.mockResolvedValue({ kind: "result", body: "ok" });
+
+    await run(registerDocsCommands, "code", "/a/b", "x", "-C", "25", "--head-limit", "900");
+
+    expect(mockGetLibraryCode).toHaveBeenCalledWith(
+      "/a/b",
+      "x",
+      expect.objectContaining({ context: 10, headLimit: 500 }),
+      REFRESHED
+    );
+  });
+
+  test("rejects a flag that is not a number without calling the API", async () => {
+    await run(registerDocsCommands, "code", "/a/b", "x", "--offset", "next");
+
+    expect(mockGetLibraryCode).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
   });
 
   test("rejects an unknown operation without calling the API", async () => {

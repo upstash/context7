@@ -6,6 +6,8 @@ import {
   resolveLibrary,
   getLibraryContext,
   getLibraryCode,
+  hasSourceCode,
+  CODE_LIMITS,
   CODE_OPERATIONS,
   type CodeOperation,
 } from "../utils/api.js";
@@ -45,8 +47,7 @@ function formatLibraryResult(lib: LibrarySearchResult, index: number): string {
   if (lib.versions && lib.versions.length > 0) {
     lines.push(`   ${pc.dim(`Versions: ${lib.versions.join(", ")}`)}`);
   }
-  // Only libraries built from a Git repository have source for `ctx7 code`.
-  if (!/^\/(websites|llmstxt)\//.test(lib.id) && !lib.branch?.startsWith("_")) {
+  if (hasSourceCode(lib)) {
     lines.push(`   ${pc.dim("Source code: searchable with ctx7 code")}`);
   }
 
@@ -241,20 +242,20 @@ interface CodeCommandOptions {
   tag?: string;
 }
 
+/** Parses a numeric flag and clamps it into its range, like the MCP query-code tool. */
 function wholeNumber(
   value: string | undefined,
   name: string,
-  max: number,
-  min = 0
+  limits: { min: number; max: number }
 ): number | undefined | null {
   if (value === undefined) return undefined;
-  const n = Number(value);
-  if (!Number.isInteger(n) || n < min || n > max) {
-    log.error(`${name} must be a whole number from ${min} to ${max}.`);
+  const n = value.trim() === "" ? NaN : Number(value);
+  if (!Number.isFinite(n)) {
+    log.error(`${name} must be a number.`);
     process.exitCode = 1;
     return null;
   }
-  return n;
+  return Math.min(limits.max, Math.max(limits.min, Math.trunc(n)));
 }
 
 async function codeCommand(
@@ -278,9 +279,9 @@ async function codeCommand(
     process.exitCode = 1;
     return;
   }
-  const context = wholeNumber(options.context, "--context", 10);
-  const headLimit = wholeNumber(options.headLimit, "--head-limit", 500, 1);
-  const offset = wholeNumber(options.offset, "--offset", 10_000);
+  const context = wholeNumber(options.context, "--context", CODE_LIMITS.context);
+  const headLimit = wholeNumber(options.headLimit, "--head-limit", CODE_LIMITS.headLimit);
+  const offset = wholeNumber(options.offset, "--offset", CODE_LIMITS.offset);
   if (context === null || headLimit === null || offset === null) return;
   const accessToken = await getValidAccessToken();
   const target = options.tag ? `${libraryId} ${options.tag}` : libraryId;
@@ -400,9 +401,9 @@ export function registerDocsCommands(program: Command): void {
     )
     .option(
       "--head-limit <n>",
-      "Maximum results (default: 20; definition 10, outline 50, list 100)"
+      "Maximum results, 1 to 500 (default: 20; definition 10, outline 50, list 100)"
     )
-    .option("--offset <n>", "Skip this many results")
+    .option("--offset <n>", "Skip this many results (0 to 10000)")
     .option("--json", "Output as JSON")
     .option(
       "--tag <tag>",
