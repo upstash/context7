@@ -11,6 +11,9 @@ importers:
       '@upstash/context7-sdk':
         specifier: ^0.6.0
         version: 0.6.0
+      '@vercel/oidc':
+        specifier: ^3.2.0
+        version: 3.2.0
       ai:
         specifier: ^7.0.150
         version: 7.0.159(zod@4.6.7)
