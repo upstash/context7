@@ -74,8 +74,6 @@ export type CodeRequest = {
   offset?: number;
 };
 
-export type CodeResponse = ContextResponse;
-
 export interface ClientContext {
   clientIp?: string;
   apiKey?: string;

@@ -29,6 +29,8 @@ const INVALID_JSON_QUERY = "force-invalid-json";
 const STUB_CODE = "stub code text";
 const CODE_INDEXING_QUERY = "force-code-indexing";
 const CODE_NO_SOURCE_QUERY = "force-code-no-source";
+const CODE_GATEWAY_QUERY = "force-code-gateway";
+const CODE_BAD_TAG_QUERY = "force-code-bad-tag";
 const CLIENT_IP_ASSERTION_KEY = "0123456789abcdef".repeat(4);
 const INVALID_OAUTH_TOKEN_BODY = {
   error: "invalid_oauth_token",
@@ -198,6 +200,24 @@ function startStubApi(): Promise<string> {
           JSON.stringify({
             error: "no_source",
             message: "Source code search is not available for /websites/x.",
+          })
+        );
+        return;
+      }
+      if (query === CODE_GATEWAY_QUERY) {
+        res.statusCode = 502;
+        res.setHeader("Content-Type", "text/html");
+        res.end("<html>Bad Gateway</html>");
+        return;
+      }
+      if (query === CODE_BAD_TAG_QUERY) {
+        res.statusCode = 503;
+        res.setHeader("Content-Type", "application/json");
+        res.end(
+          JSON.stringify({
+            error: "index_failed",
+            message:
+              'Git tag "v0" of /vercel/next.js could not be indexed; the tag may not exist. Docs versions: v15.5.0.',
           })
         );
         return;
@@ -1673,7 +1693,7 @@ describe("query-code tool", () => {
       expect(sent?.query.get("path")).toBe("packages/next");
       expect(sent?.query.get("operation")).toBe("definition");
 
-      // ripgrep-style fields reach the API; the first version's names still work.
+      // ripgrep-style fields reach the API.
       const grepCall = requests.length;
       await client.callTool({
         name: "query-code",
@@ -1716,6 +1736,7 @@ describe("query-code tool", () => {
           version: "/vercel/next.js/v15.5.0",
           limit: 900,
           context: 25,
+          offset: "20",
         },
       });
       const aliasSent = requests.slice(aliasCall).find((request) => request.path === "/v2/code");
@@ -1725,6 +1746,7 @@ describe("query-code tool", () => {
       expect(aliasSent?.query.get("fixed_strings")).toBe("true");
       expect(aliasSent?.query.get("head_limit")).toBe("500");
       expect(aliasSent?.query.get("context")).toBe("10");
+      expect(aliasSent?.query.get("offset")).toBe("20");
     } finally {
       await client.close();
     }
@@ -1748,6 +1770,26 @@ describe("query-code tool", () => {
       });
       expect(noSource.isError).toBe(true);
       expect((noSource.content as { text: string }[])[0].text).toContain("not available");
+
+      const gateway = await client.callTool({
+        name: "query-code",
+        arguments: { libraryId: "/vercel/next.js", pattern: CODE_GATEWAY_QUERY },
+      });
+      expect(gateway.isError).toBe(true);
+      const gatewayText = (gateway.content as { text: string }[])[0].text;
+      expect(gatewayText).toContain("HTTP 502");
+      expect(gatewayText).toContain("answer from query-docs");
+      expect(gatewayText).not.toContain("try again later");
+
+      const badTag = await client.callTool({
+        name: "query-code",
+        arguments: { libraryId: "/vercel/next.js", version: "v0", pattern: CODE_BAD_TAG_QUERY },
+      });
+      expect(badTag.isError).toBe(true);
+      const badTagText = (badTag.content as { text: string }[])[0].text;
+      expect(badTagText).toContain("Docs versions: v15.5.0.");
+      expect(badTagText).toContain("one of the docs versions");
+      expect(badTagText).not.toContain("Do not retry");
     } finally {
       await client.close();
     }
