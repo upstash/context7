@@ -38,7 +38,17 @@ API keys authenticate your requests to Context7's documentation services. You ca
 
 ### Write access
 
-The [Context7 Admin MCP](/howto/admin-mcp) and the [management API](/api-reference/teamspaces/list-teamspaces) (`/api/v2/teamspaces/*`) accept every API key, but a key is read-only there unless **Write access** was ticked when the key was created. A read-only key can list and read the teamspace with your role: its libraries, rules and policies, usage, and Docs7 and Ask site settings, builds and traffic totals. It cannot read personal data: members and invitations, library requests, Ask questions, Docs7 reader searches, assistant questions and conversations, page feedback, feature requests, or the GitHub account behind a build. A key with write access can read all of it and also change the teamspace: its members, libraries, rules and policies, spending limit, and Docs7 and Ask sites. A key reaches only its own teamspace.
+The [Context7 Admin MCP](/howto/admin-mcp) and the [management API](/api-reference/teamspaces/list-teamspaces) (`/api/v2/teamspaces/*`) accept every API key, but a key is read-only there unless **Write access** was ticked when the key was created. A key reaches only its own teamspace.
+
+A read-only key can read, with your role:
+
+- the teamspace's libraries, rules and policies, and usage
+- Docs7 and Ask site settings, builds and traffic totals
+
+A key needs **Write access** to:
+
+- read personal data: members and invitations, library requests, Ask questions, Docs7 reader searches, assistant questions and conversations, page feedback, feature requests, and the GitHub account behind a build
+- change the teamspace: its members, libraries, rules and policies, spending limit, and Docs7 and Ask sites
 
 ![Create New API Key dialog with Write access ticked](/images/dashboard/api-key-write-access.png)
 

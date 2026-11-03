@@ -134,7 +134,7 @@ function withoutNulls(value: unknown): unknown {
 /** What the model can do about the usual API refusals. */
 const NEXT_STEP: Record<string, string> = {
   write_access_required:
-    "The API key can only read. To make this change, ask the user to create a key with Write access in https://context7.com/dashboard, or to sign in with OAuth.",
+    "The API key can only read settings, libraries and usage. Changes and personal data (members, visitor questions, feedback) need a key with Write access: ask the user to create one in https://context7.com/dashboard, or to sign in with OAuth.",
   docs7_pro_required:
     "This needs Docs7 Pro. The owner can enable it at https://context7.com/docs7.",
   paid_plan_required: "This needs a paid plan: https://context7.com/plans.",
