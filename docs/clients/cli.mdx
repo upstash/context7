@@ -216,12 +216,22 @@ When `--base-url` targets a custom deployment, setup skips the npm update check 
 | Agent rules directory                               | Rule file — instructs the agent to use Context7 for library docs |
 | Agent skills directory                              | `context7-mcp` skill                                             |
 
+The rule file is the contents of [`rules/context7-mcp.md`](https://github.com/upstash/context7/blob/master/rules/context7-mcp.md) and the skill is [`skills/context7-mcp/SKILL.md`](https://github.com/upstash/context7/blob/master/skills/context7-mcp/SKILL.md). For Claude Code, `ctx7 setup --claude` writes:
+
+| File                                        | Purpose                                                          |
+| ------------------------------------------- | ---------------------------------------------------------------- |
+| `~/.claude.json` (or `.mcp.json` with `--project`) | MCP server entry named `context7`                        |
+| `~/.claude/rules/context7.md`               | Rule file — instructs the agent to use Context7 for library docs |
+| `~/.claude/skills/context7-mcp/SKILL.md`    | `context7-mcp` skill                                             |
+
 **What gets written — CLI + Skills mode:**
 
 | File                   | Purpose                                                                             |
 | ---------------------- | ----------------------------------------------------------------------------------- |
 | Agent skills directory | `find-docs` skill — guides the agent to use `ctx7 library` and `ctx7 docs` commands |
 | Agent rules directory  | Rule file — instructs the agent to use the `ctx7` commands for library docs         |
+
+The rule file is the contents of [`rules/context7-cli.md`](https://github.com/upstash/context7/blob/master/rules/context7-cli.md) and the skill is [`skills/find-docs/SKILL.md`](https://github.com/upstash/context7/blob/master/skills/find-docs/SKILL.md). For Claude Code, `ctx7 setup --cli --claude` writes `~/.claude/skills/find-docs/SKILL.md` and `~/.claude/rules/context7.md`.
 
 ### ctx7 remove
 

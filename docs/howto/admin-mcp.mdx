@@ -72,6 +72,22 @@ One OAuth connection reaches every teamspace you are a member of, with your role
 
 `list_libraries` and `docs7_list_sites` return 50 items per page with `total`, `page` and `pages`. `list_libraries` also takes `search` (part of a library's id, title or source URL) and `order: "lowest"` (lowest benchmark score first); `docs7_list_sites` takes `search` (part of a site's name, repository, address or library id). A `page` past the last one is an error.
 
+### Adding and indexing a library
+
+`add_library` takes a `source` — `github`, `gitlab`, `bitbucket`, `git` (any other Git host), `website`, `llmstxt` or `openapi` — and a `url`. The `url` is the repository, documentation website, `llms.txt` or OpenAPI spec URL, depending on the source; for GitHub, GitLab and Bitbucket it is the repository URL. The parse takes minutes, so call `get_library` with the returned library id and `wait: true` until the state is `complete` or `error`.
+
+Optional inputs:
+
+- `private: true` adds a repository as a private source (owner or admin, paid plan). The GitHub, GitLab or Bitbucket account must be connected in the dashboard first.
+- `generate_docs: true` generates docs from the source of a private repository.
+- `website_base_url` limits a website crawl to pages under that URL.
+
+Confluence, Notion and file uploads are not in this server; add them in the dashboard. To change how a library is parsed, call `update_library_config` with only the fields to change, then `refresh_library` to apply them. `update_library_config` takes `branch`, `folders`, `exclude_folders`, `exclude_files`, `rules`, `base_url`, `web_url`, `exclude_urls`, `use_query_params` and `keep_version_specific_pages`, among others. `refresh_library` starts a parse and is subject to the daily refresh limit.
+
+### Versions
+
+`get_library` returns the library's indexed versions, and `manage_library_versions` adds or removes one. A version is a tag or branch name; pass `is_branch: true` for a branch. After `add`, call `get_library` with `wait: true`. `remove` needs `confirm` set to the version name. Version coverage is whatever has been indexed — the default branch plus any versions added this way — not every tag or release a repository publishes.
+
 ## Console
 
 In clients that support [MCP Apps](https://github.com/modelcontextprotocol/ext-apps) (Claude, ChatGPT, VS Code, Cursor), `open_console` shows a summary card in the chat — a teamspace's usage and spend, libraries and benchmark scores, Docs7 sites, or Ask sites — with an **Open console** action that expands it to the full console. `view` picks the card (`usage`, `libraries`, `docs7` or `ask`; default `usage`) and `teamspace` takes an id or name. In other clients `open_console` returns the teamspace list as text.
