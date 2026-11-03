@@ -17,6 +17,12 @@ export interface Api {
 /** A refusal or bad argument: shown to the model as a tool error. */
 export class ToolError extends Error {}
 
+/** An API refusal of a read-only key (`ApiError` with that code; read by shape, as server.ts imports this file). */
+function writeAccessRequired(error: unknown): boolean {
+  const body = (error as { body?: unknown } | null)?.body;
+  return (body as { error?: unknown } | null)?.error === "write_access_required";
+}
+
 type Args<S extends z.ZodRawShape> = z.infer<z.ZodObject<S>> & {
   teamspace: string;
   action: string;
@@ -1480,7 +1486,19 @@ export const TOOLS = [
             ["succeeded", "failed", "canceled"].includes(stateOf(value, "state") as string)
           )
         : await once();
-      const parts = await Promise.all(include.map((part) => api.get(`${path}/${part}`)));
+      // `origin` names a GitHub account, so a read-only key is refused it: the build and the
+      // other parts still come back.
+      const parts = await Promise.all(
+        include.map((part) =>
+          api.get(`${path}/${part}`).catch((error: unknown) => {
+            if (!writeAccessRequired(error)) throw error;
+            return {
+              error: "write_access_required",
+              message: `The API key cannot read ${part}: it is personal data and needs a key with Write access.`,
+            };
+          })
+        )
+      );
       return Object.fromEntries([
         ["deployment", deploymentView(data(deployment))],
         ...include.map((part, index) => [part, parts[index]]),

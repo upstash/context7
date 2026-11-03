@@ -365,6 +365,30 @@ test("deployment tools read a CLI site's builds from local-deployments", async (
   );
 });
 
+test("a read-only key gets the build without its origin, not an error", async () => {
+  apiReply = (call) =>
+    call.path.endsWith("/origin")
+      ? { status: 403, body: { error: "write_access_required", message: "Write access needed" } }
+      : call.path.endsWith("/sites/site-1")
+        ? { body: { data: { id: "site-1", source: "github" } } }
+        : { body: { data: { id: "d-1", state: "failed" } } };
+  const client = await connect();
+
+  const result = await client.callTool({
+    name: "docs7_get_deployment",
+    arguments: {
+      teamspace: TS,
+      site_id: "site-1",
+      deployment_id: "d-1",
+      include: ["logs", "origin"],
+    },
+  });
+
+  expect(result.isError).toBeFalsy();
+  expect(text(result)).toContain('"state":"failed"');
+  expect(text(result)).toContain('"origin":{"error":"write_access_required"');
+});
+
 // Docs7 agents run on their schedules only; the server reads suggestions, it starts no Box run.
 test("suggestions are read per library, and no tool starts an agent run", async () => {
   const client = await connect();
