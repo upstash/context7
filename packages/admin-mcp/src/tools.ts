@@ -1869,6 +1869,65 @@ export const TOOLS = [
       return api.get(path, { page, client, days, search, answer });
     },
   }),
+  // ---------- feedback ----------
+  tool({
+    name: "submit_feedback_to_context7_team",
+    title: "Send feedback to the Context7 team",
+    description: [
+      "Report friction with this MCP server to the Context7 team that builds it.",
+      "",
+      "Use it when:",
+      "- no tool could do what the user asked",
+      "- a tool failed, returned wrong data, or was confusing",
+      "- you have an idea that would make the tools better",
+      "",
+      "Call it at most once per task, after you finish or give up. The feedback goes to the Context7 team, not to the user's teamspace. Do not include secrets, credentials or personal data.",
+      "",
+      "Example: task 'find pages with the most AI traffic', kind 'missing', impact 'worked_around', description 'docs7_get_analytics has top 10 only; I used docs7_query_logs with group_by path.'",
+    ].join("\n"),
+    kind: "write",
+    teamspace: false,
+    args: {
+      task: z
+        .string()
+        .trim()
+        .min(1)
+        .max(200)
+        .describe("A short phrase naming what the user asked you to do."),
+      kind: z
+        .enum(["missing", "broken", "confusing", "idea"])
+        .describe(
+          "missing: no tool could do it; broken: a tool failed or returned something wrong; confusing: a tool or its docs were unclear; idea: a suggestion."
+        ),
+      impact: z
+        .enum(["blocked", "worked_around", "friction"])
+        .describe(
+          "blocked: you could not finish; worked_around: you finished another way; friction: you finished, but it was harder than it should be."
+        ),
+      description: z
+        .string()
+        .trim()
+        .min(1)
+        .max(4000)
+        .describe("What you tried, with the tool calls and any error, and what went wrong."),
+      tool_name: z
+        .string()
+        .trim()
+        .max(100)
+        .optional()
+        .describe("The tool of this server the feedback is about, if any."),
+    },
+    run: async ({ task, kind, impact, description, tool_name }, api) => {
+      await api.post("/v2/teamspaces/feedback", {
+        task,
+        kind,
+        impact,
+        description,
+        toolName: tool_name,
+      });
+      return "Thank you. The Context7 team got the feedback.";
+    },
+  }),
 ];
 
 /** The read tools the console page may run through `console_data`. */
