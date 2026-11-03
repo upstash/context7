@@ -855,3 +855,32 @@ test("open_console resolves the teamspace by name and refuses an unknown or shar
   expect(shared.isError).toBe(true);
   expect((await open(other)).structuredContent).toMatchObject({ open: { teamspace: other } });
 });
+
+test("feedback needs no teamspace and posts one record", async () => {
+  const client = await connect();
+  const result = await client.callTool({
+    name: "submit_feedback_to_context7_team",
+    arguments: {
+      task: "find slow pages",
+      kind: "missing",
+      impact: "blocked",
+      description: "No tool returns page load times.",
+      tool_name: "docs7_get_analytics",
+    },
+  });
+
+  expect(result.isError).toBeFalsy();
+  expect(apiCalls).toHaveLength(1);
+  expect(apiCalls[0]).toMatchObject({
+    method: "POST",
+    path: "/v2/teamspaces/feedback",
+    body: {
+      task: "find slow pages",
+      kind: "missing",
+      impact: "blocked",
+      description: "No tool returns page load times.",
+      toolName: "docs7_get_analytics",
+    },
+  });
+  expect(apiCalls[0].headers.get("X-Context7-Tool")).toBe("submit_feedback_to_context7_team");
+});
