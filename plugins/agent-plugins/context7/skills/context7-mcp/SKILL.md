@@ -48,7 +48,7 @@ If the `query-code` tool is available, use it for exact facts the docs may not s
 - `libraryId`: an ID that `resolve-library-id` marks with "Source code", usually the GitHub repository (e.g. `/colinhacks/zod`). `/websites/...` and `/llmstxt/...` IDs have no source
 - Start with `grep` (`fixed_strings: true` for error messages) or `definition` for a symbol, then `read` the file range the result gives. `references`, `outline` and `list` also exist
 - Follow the result's "Next:" line for the read, page or count call to make next. Most questions need 1 to 4 calls; stop at 6
-- `version` takes a git tag, e.g. `v3.24.2`. An unknown version answers with the tags you can use
+- `version` takes a git tag, e.g. `v3.24.2`. A tag that is not a docs version is indexed first ("being indexed"). If indexing fails, the answer lists the docs versions you can use
 - If it answers "being indexed", retry at most twice, then answer from `query-docs`
 - Cite the file and line of the source you used
 
