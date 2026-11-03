@@ -126,6 +126,7 @@ Rules from the manifest work together with rules made in the dashboard:
 - Rules you make in the dashboard are left alone. If a manifest rule has the same match and pattern as a dashboard rule, the manifest takes that rule over.
 - Remove the `authority` block, and the next sync deletes the rules the manifest owned for that library.
 - Remove the whole entry with pruning off, and the library keeps its rules, but you can edit them in the dashboard again.
+- Remove the whole entry with pruning on, and the sync deletes the library together with all of its rules.
 
 Rule changes apply on the next query. They do not re-index the library. Every change appears in the audit log with the actor `gitops`.
 
