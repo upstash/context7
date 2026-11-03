@@ -16,17 +16,28 @@ function getSourceReputationLabel(
 }
 
 /**
+ * Libraries built from a Git repository have source that query-code can search.
+ * This is a client-side guess from the ID and the branch: the server decides
+ * with sourceRepo() in its /api/v2/code route and answers 422 "no_source".
+ * Keep the rule the same as hasSourceCode in packages/cli/src/utils/api.ts.
+ */
+export function hasSourceCode(result: Pick<SearchResult, "id" | "branch">): boolean {
+  return !/^\/(websites|llmstxt)\//.test(result.id) && !result.branch?.startsWith("_");
+}
+
+/** Options for formatSearchResult and formatSearchResults. */
+export interface FormatOptions {
+  /** Mark the results whose source code query-code can search. */
+  sourceCode?: boolean;
+}
+
+/**
  * Formats a search result into a human-readable string representation.
  * Only shows code snippet count and GitHub stars when available (not equal to -1).
  *
  * @param result The SearchResult object to format
  * @returns A formatted string with library information
  */
-/** Libraries built from a Git repository have source that query-code can search. */
-export function hasSourceCode(result: Pick<SearchResult, "id" | "branch">): boolean {
-  return !/^\/(websites|llmstxt)\//.test(result.id) && !result.branch?.startsWith("_");
-}
-
 export function formatSearchResult(result: SearchResult, options: FormatOptions = {}): string {
   // Always include these basic details
   const formattedResult = [
@@ -73,11 +84,6 @@ export function formatSearchResult(result: SearchResult, options: FormatOptions 
  * @param searchResponse The SearchResponse object to format
  * @returns A formatted string with search results
  */
-export interface FormatOptions {
-  /** Mark the results whose source code query-code can search. */
-  sourceCode?: boolean;
-}
-
 export function formatSearchResults(
   searchResponse: SearchResponse,
   options: FormatOptions = {}
