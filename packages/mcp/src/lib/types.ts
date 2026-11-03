@@ -47,10 +47,20 @@ export const CODE_OPERATIONS = [
 export type CodeOperation = (typeof CODE_OPERATIONS)[number];
 export const CODE_OUTPUT_MODES = ["content", "files_with_matches", "count"] as const;
 
+/**
+ * Ranges of the numeric query-code fields. The server rejects a number out of
+ * its range with a 400, so the tool clamps numbers into these ranges first.
+ */
+export const CODE_LIMITS = {
+  context: { min: 0, max: 10 },
+  head_limit: { min: 1, max: 500 },
+  offset: { min: 0, max: 10_000 },
+} as const;
+
 /** Fields of the query-code tool. Search fields follow ripgrep; operations follow LSP. */
 export type CodeRequest = {
   libraryId: string;
-  /** A version listed by resolve-library-id. A version suffix on libraryId also works. */
+  /** A git tag, or a commit from a result header. A version suffix on libraryId also works. */
   version?: string;
   operation?: CodeOperation;
   pattern?: string;
