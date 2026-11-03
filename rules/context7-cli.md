@@ -11,12 +11,12 @@ Do not use for: refactoring, debugging, or reviewing code that does not depend o
 
 ## Library source code
 
-When the docs do not answer an exact question (a signature or type, a default value, an option name, where an error message comes from, or how something works inside), search the library's source at the docs version:
+When the docs do not answer an exact question (a signature or type, a default value, an option name, where an error message comes from, or how something works inside), search the library's source at the docs version. This needs a `ctx7` release with the `code` command. If `code` fails with "unknown command", answer from `docs`.
 
 - Grep: `npx ctx7@latest code <libraryId> "<regex>"`. Add `-F` for plain text such as error messages
 - Definition: `npx ctx7@latest code <libraryId> <symbol> --op definition`. Read code: `npx ctx7@latest code <libraryId> --op read --path <file>#L10-L40`. `--op references`, `--op outline` and `--op list` also exist
 - Use an ID that `library` marks with "Source code", usually the GitHub repository. `/websites/...` and `/llmstxt/...` IDs have no source
-- For a version, add the git tag to the library ID (e.g. `/colinhacks/zod/v3.24.2`)
+- For a version, add the git tag to the library ID (e.g. `/colinhacks/zod/v3.24.2`). A tag that is not a docs version is indexed first (exit code 75). If indexing fails, the output lists the docs versions you can use
 - Follow the `Next:` line of the output. Its fields map to flags: `offset` is `--offset`, `output_mode "count"` is `-c`, `fixed_strings` is `-F`, `ignore_case` is `-i`, and `read: <file>#L..` is `--op read --path <file>#L..`
 - Exit code 75 means the source is being indexed: retry at most twice, then answer from `docs`
 - Cite the file and line of the source you used

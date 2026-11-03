@@ -29,6 +29,7 @@ Each result includes:
 - **Source Reputation** — Authority indicator (High, Medium, Low, or Unknown)
 - **Benchmark Score** — Quality indicator (100 is the highest score)
 - **Versions** — List of versions if available. Use one of those versions if the user provides a version in their query. The format is `/org/project/version`.
+- **Source code**: present when `ctx7 code` can usually search the library's source. `/websites/...` and `/llmstxt/...` IDs have docs only.
 
 ### Selection process
 
@@ -108,7 +109,7 @@ ctx7 docs /vercel/next.js "How to add a proxy for route protection" | grep -A5 "
 
 ## Step 3: Search the Source (when docs are not exact)
 
-When the docs do not answer an exact question (a signature or type, a default value, an option name, where an error message comes from, or how something works inside), search the library's source at the commit its docs describe:
+When the docs do not answer an exact question (a signature or type, a default value, an option name, where an error message comes from, or how something works inside), search the library's source at the commit its docs describe. This needs a `ctx7` release with the `code` command. If `code` fails with "unknown command", answer from `docs`.
 
 ```bash
 npx ctx7@latest code /colinhacks/zod "Invalid input" -F                 # grep plain text
@@ -121,7 +122,7 @@ npx ctx7@latest code /colinhacks/zod/v3.24.2 ZodString.min --op definition
 - Use an ID that `library` marks with "Source code", usually the GitHub repository. `/websites/...` and `/llmstxt/...` IDs have no source.
 - Other operations: `--op references` (uses of a symbol), `--op outline` (symbols of a file or the exported API), `--op list` (files in `--path` or matching `-g`). `-l` and `-c` print file names or counts.
 - Follow the `Next:` line of the output. Its fields map to flags: `offset` is `--offset`, `output_mode "count"` is `-c`, `fixed_strings` is `-F`, `ignore_case` is `-i`, and `read: <file>#L..` is `--op read --path <file>#L..`. Most questions need 1 to 4 `code` commands; stop at 6.
-- For a version, add its git tag to the library ID (`/colinhacks/zod/v3.24.2`). An unknown version prints the tags you can use.
+- For a version, add its git tag to the library ID (`/colinhacks/zod/v3.24.2`). A tag that is not a docs version is indexed first (exit code 75). If indexing fails, the output lists the docs versions you can use.
 - Exit code 75 means the source is being indexed: retry at most twice, then answer from `docs`.
 - Cite the file and line of the source you used.
 
