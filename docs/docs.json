@@ -120,6 +120,7 @@
                           "enterprise/library-import",
                           "enterprise/automatic-repository-updates",
                           "enterprise/gitops",
+                          "enterprise/authority-labels",
                           "enterprise/backup-restore"
                         ]
                       },
