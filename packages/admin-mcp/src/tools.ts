@@ -737,11 +737,15 @@ export const TOOLS = [
     name: "manage_library_versions",
     title: "Manage library versions",
     description:
-      "Add or remove a version (a tag or branch) of a library. After `add`, call get_library with `wait: true`. `remove` needs `confirm` set to the version name, after the user confirms.",
+      "Add or remove a version of a library: a tag or branch of a repository, or a docs URL of a website. Any public library takes new versions; only the owning teamspace removes them. After `add`, call get_library with `wait: true`. `remove` needs `confirm` set to the version name, after the user confirms.",
     actions: { add: "write", remove: "destructive" },
     args: {
       library_id: libraryId,
-      version: z.string().describe("Tag or branch name."),
+      version: z
+        .string()
+        .describe(
+          "Tag or branch name. For a website, the docs URL of the version to add (such as https://docs.gitlab.com/18.4/), and the version name from get_library to remove."
+        ),
       is_branch: z
         .boolean()
         .optional()
