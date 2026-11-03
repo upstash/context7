@@ -1,0 +1,155 @@
+---
+title: "SAML 2.0 (SSO)"
+sidebarTitle: "SAML SSO"
+description: "Let your team sign in with any SAML 2.0 identity provider instead of shared passwords."
+---
+
+Context7 On-Premise supports single sign-on with any identity provider that implements SAML 2.0: Microsoft Entra ID, Okta, ADFS, Keycloak, Ping Identity, Shibboleth, and many others. Once you connect your provider, team members are redirected to your identity provider to authenticate, and Context7 creates or updates their user record automatically on each sign-in.
+
+Context7 acts as the SAML 2.0 service provider. It signs its authentication requests, adopts the Web Browser SSO profile, and accepts encrypted assertions.
+
+## Before you start
+
+You will need:
+
+- Admin access to your identity provider so you can register a new application.
+- A running Context7 On-Premise instance that you can reach in your browser.
+- The Context7 admin password. On a fresh install it is `admin` / `admin` until you change it.
+
+<Note>
+Only one SSO provider can be active at a time. If you already have Microsoft Entra ID or OIDC configured, enabling SAML will automatically disable the others, and vice versa.
+</Note>
+
+## Part 1: Register Context7 in your identity provider
+
+The exact steps depend on your provider, but the end result is the same: the IdP needs the Context7 service provider URLs and the Context7 signing certificate.
+
+### What to configure in your IdP
+
+The **Service provider** section at the bottom of the SAML tab shows these values, each with a copy button, and a **Download metadata** link:
+
+- **SP entity ID (Audience)**: `<your-context7-host>/api/auth/saml/metadata` by default. You can override it with the **SP entity ID override** under **Advanced**.
+- **Assertion Consumer Service URL (HTTP-POST)**: `<your-context7-host>/api/auth/saml/acs`. Set the reply, ACS, or callback URL to this. Context7 accepts the assertion through the HTTP-POST binding only.
+- **Single Logout URL (HTTP-Redirect and HTTP-POST)**: `<your-context7-host>/api/auth/saml/slo`.
+- **SP metadata URL**: `<your-context7-host>/api/auth/saml/metadata`. Most providers can import this URL directly, which fills in all of the above and the certificate at once.
+
+Context7 signs requests and decrypts encrypted assertions with its service provider certificate. The certificate is shown in the card; after you regenerate it or upload your own, update your IdP with the new metadata.
+
+### Group claims (for role mapping)
+
+Context7 maps a SAML attribute in the assertion to admin or member roles. Leave the groups attribute blank and Context7 detects common names automatically: `groups`, `memberOf`, `isMemberOf`, the `urn:oid:1.3.6.1.4.1.5923.1.5.1.1` name, and the Microsoft group and role claim URIs. If your provider uses a different attribute name, set it in the **Groups attribute** field.
+
+## Part 2: Configure Context7
+
+<Steps>
+  <Step title="Open the SSO settings card">
+    Sign in to your Context7 dashboard with the admin account. Open **Teamspace Settings**, scroll to the **Authentication** section, and select the **SAML 2.0** tab in the **Single Sign-On** card. Turn on **Enable SAML 2.0**.
+  </Step>
+
+  <Step title="Import your IdP metadata">
+    In the **Identity provider** section, paste your IdP's metadata URL into **IdP metadata URL** and click **Import**. Context7 reads the metadata and fills in the IdP entity ID, single sign-on URL and binding, single logout URL, and signing certificates. If your IdP does not publish a metadata URL, switch to **IdP metadata XML**, paste the XML, and click **Import** instead. You can also enter every field by hand.
+  </Step>
+
+  <Step title="Fill in the remaining fields">
+    - **Button label**: the text shown on the sign-in button on the login page. Defaults to `SAML Single Sign-On`.
+    - **IdP entity ID (Issuer)**: your IdP's issuer, imported from the metadata.
+    - **Single sign-on URL**: the IdP endpoint Context7 sends authentication requests to.
+    - **Single sign-on binding**: **Redirect** (the default) or **POST**. Context7 detects the binding from the metadata; change it only if your IdP requires the other one.
+    - **Single logout URL**: optional. Leave it blank if you do not want single logout, and signing out of Context7 stays local.
+    - **IdP signing certificates**: one or more PEM certificates. Add several to roll over without downtime. A certificate that has expired is flagged.
+    - **Requested NameID format**: what Context7 asks the IdP to use for the NameID. The default is **Let the IdP decide**.
+
+    The **User attributes** section is optional. Context7 reads email, display name, and username from common attribute names (`email`, `mail`, `displayName`, `givenName`, `sn`, the `urn:oid:` names, and the ADFS and Entra claim URIs) unless you name an attribute explicitly:
+
+    - **User ID attribute**: which attribute identifies the user. Required only if your IdP sends a transient NameID; leave it blank to key users by the NameID.
+    - **Email attribute**, **Display name attribute**, **Username attribute**: override the auto-detected attribute for each field.
+  </Step>
+
+  <Step title="Configure group mapping">
+    The **Group mapping** section controls which users get which role in Context7.
+
+    - **Admin group value**: the exact group value that maps to the Context7 admin role. Admins can open Teamspace Settings and manage other users.
+    - **Member group value**: the exact group value that maps to the member role. Members can use the workspace but cannot access settings.
+
+    If you leave both blank, every authenticated user gets the member role automatically.
+  </Step>
+
+  <Step title="Set the advanced options">
+    Under **Advanced**:
+
+    - **Sign authentication requests** is on by default. Turn it off only if your IdP rejects signed requests; logout messages are always signed.
+    - **Allow IdP-initiated sign-in** is off by default. Turn it on if users start from an IdP app portal instead of the Context7 login page. Unsolicited responses are open to login CSRF, so leave it off unless you need it.
+    - **SP entity ID override**: set this only if your IdP expects an entity ID other than the metadata URL.
+  </Step>
+
+  <Step title="Test the connection">
+    Click **Test connection** before saving. Context7 checks the issuer, endpoints, and certificates and reports anything missing. A green banner means everything looks good. A warning tells you when an IdP signing certificate has expired or is about to. Click **Save & Apply** when the test passes. The status pill in the card header shows **Live**.
+
+    <Frame>
+      ![Context7 Settings showing the Single Sign-On card with the SAML 2.0 tab selected](/images/enterprise/saml-sso/01-sso-card-saml.png)
+    </Frame>
+  </Step>
+</Steps>
+
+## Part 3: Sign in
+
+Open `/login` in a new browser window. You will see a **Continue with [your button label]** button at the top of the sign-in card.
+
+Click it. You are redirected to your identity provider's login page. After authenticating there, your provider posts the assertion back to Context7, which validates the signature and claims and either creates a new user or updates the existing one. On the first sign-in, Context7 creates a user record using the name, email, and role from the assertion; on later sign-ins those fields are refreshed, so changes in your IdP take effect on the next login.
+
+## Single logout
+
+Single logout works in both directions and requires a **Single logout URL** on the IdP. Signing out of Context7 sends a signed LogoutRequest to the IdP and ends the IdP session. A signed LogoutRequest from the IdP ends all of that user's Context7 sessions. Unsigned logout requests are rejected. A user's Context7 session also ends no later than the IdP's `SessionNotOnOrAfter` value.
+
+## Managing the SP certificate
+
+Context7 generates its service provider key pair on first use and stores the private key encrypted. The **Service provider** section offers two ways to replace it:
+
+- **Use your own certificate**: paste a **Certificate (PEM)** and the matching **RSA private key (PEM)**, then click **Save certificate**.
+- **Regenerate certificate**: Context7 creates a new self-signed key pair.
+
+After either change, update your IdP with the new Context7 metadata. SAML sign-in fails until the IdP has the new certificate.
+
+## Disabling password sign-in
+
+Once SAML is live, you can turn off password-based sign-in entirely so that all users must authenticate through your IdP.
+
+Open the **Password sign-in** card below the SSO card and toggle it off.
+
+<Warning>
+Disabling password sign-in means the default admin account and any manually created password users will no longer be able to sign in via the login form. Make sure at least one admin is mapped through SAML before turning it off, so you do not lock yourself out. If you turn SSO off later, Context7 automatically re-enables password sign-in as a safety measure.
+</Warning>
+
+## Running behind a reverse proxy
+
+Context7 builds the entity ID, ACS, and single logout URLs from the address the request arrived at. Behind a reverse proxy, the proxy must forward `X-Forwarded-Proto` and `X-Forwarded-Host` with the public scheme and host. Otherwise the metadata advertises internal URLs, and the IdP's responses fail the Destination and Recipient checks.
+
+## Troubleshooting
+
+### "SAML SSO is not configured"
+
+The toggle is on but a required field is missing or the config was not saved. Open the SAML tab and check that the IdP entity ID, single sign-on URL, and at least one signing certificate are present, then click **Save & Apply**.
+
+### "The SAML response signature could not be verified"
+
+The assertion is not signed by a certificate Context7 trusts. Make sure the IdP signs the response or the assertion, and that the certificate in **IdP signing certificates** matches the one the IdP signs with. Import the metadata again if you rotated the IdP certificate.
+
+### "The SAML assertion has expired or is not yet valid"
+
+The assertion's validity window does not include the current time on the Context7 server. Context7 allows 60 seconds of clock skew; check that the Context7 and IdP clocks are in sync.
+
+### "Sign-in must start from Context7"
+
+The response arrived without a matching in-progress sign-in request. Start again from the sign-in button on the Context7 login page, or turn on **Allow IdP-initiated sign-in** if your users start from an IdP app portal.
+
+### "This sign-in response was already used"
+
+Each assertion can be used only once. Have the user sign in again to get a fresh assertion.
+
+### SAML responses do not reach the ACS
+
+The assertion is posted to the ACS URL over a cross-site request. Context7 accepts it even though its session cookie is `SameSite=Lax`, but you should serve Context7 over HTTPS in production so the browser sends the request cleanly.
+
+---
+
+For anything not covered here, contact [context7@upstash.com](mailto:context7@upstash.com).
