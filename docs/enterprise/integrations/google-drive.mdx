@@ -30,7 +30,7 @@ Context7 reads Drive with a service account and one read-only scope:
   <Step title="Create a key, or use workload identity">
     To use a key, open the service account, go to **Keys → Add key → Create new key**, and download the JSON key.
 
-    To avoid a stored key, use [server credentials](#server-credentials) instead.
+    To avoid a stored key, choose **Server credentials** when you [connect Google Drive](#connect-google-drive).
   </Step>
   <Step title="Share the content">
     In Google Drive, share each folder you want to sync with the service account's email address, with **Viewer** access. For a Shared Drive, add the service account as a member with the **Viewer** role.
@@ -61,8 +61,6 @@ Open **Settings → Integrations → Google Drive** and choose how Context7 auth
     Context7 checks the key with Google before it saves it, stores it encrypted, and never returns it from any API. The settings page shows only the service account's email and the last characters of the key ID. To rotate the key, paste the new key and save.
   </Tab>
   <Tab title="Server credentials">
-    <a id="server-credentials" />
-
     Context7 uses the server's Application Default Credentials, so no key is stored in Context7:
 
     - `GOOGLE_APPLICATION_CREDENTIALS` pointing at a key file or a [workload identity federation](https://cloud.google.com/iam/docs/workload-identity-federation) configuration, for example for AWS or an OIDC provider.
@@ -117,7 +115,7 @@ Google Drive libraries sync every day at 03:00 server time by default. In **Sett
 - change the schedule with a cron expression, for example `0 */6 * * *` for every six hours,
 - click **Sync all now** to queue every Google Drive library at once.
 
-When a scheduled sync fails, Context7 retries that library after 15 minutes, 1 hour and 6 hours. To sync one library by hand, click **Refresh** on its page. **Re-index all files** re-exports and re-indexes every document instead of skipping unchanged ones.
+When a sync fails, scheduled or manual, Context7 retries that library after 15 minutes, 1 hour and 6 hours. Each delay counts from the previous attempt. To sync one library by hand, click **Refresh** on its page. **Re-index all files** re-exports and re-indexes every document instead of skipping unchanged ones.
 
 ## Authority labels
 
@@ -134,9 +132,10 @@ The server talks only to Google:
 | --- | --- |
 | `oauth2.googleapis.com` | Access tokens for a service account key |
 | `sts.googleapis.com` | Access tokens for workload identity federation |
+| `iamcredentials.googleapis.com` | Access tokens for workload identity federation with service account impersonation |
 | `www.googleapis.com` | The Drive API |
 
-Set `GOOGLE_DRIVE_API_URL` to send Drive API calls through another endpoint, such as a Private Google Access address or a proxy.
+Set `GOOGLE_DRIVE_API_URL` to send Drive API calls through another endpoint, such as a Private Google Access address or a proxy. The value must include the API path, for example `https://www.googleapis.com/drive/v3`.
 
 ## Troubleshooting
 
