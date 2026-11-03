@@ -5,7 +5,7 @@ their current, official documentation. It searches with [Context7 Search](https:
 through [`@upstash/context7-sdk`](https://www.npmjs.com/package/@upstash/context7-sdk) and cites
 the sources it used.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fupstash%2Fcontext7%2Ftree%2Fmaster%2Fexamples%2Feve-docs-agent&project-name=context7-docs-agent&repository-name=context7-docs-agent&integration-ids=oac_dK3Gd8ngAzQB3rHuZhEEEBKl&demo-title=Context7%20Docs%20Agent&demo-description=An%20eve%20agent%20that%20answers%20library%20questions%20from%20up-to-date%20documentation%20with%20Context7%20Search.)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fupstash%2Fcontext7%2Ftree%2Fmaster%2Fexamples%2Feve-docs-agent&project-name=context7-docs-agent&repository-name=context7-docs-agent&stores=%5B%7B%22type%22%3A%22integration%22%2C%22integrationSlug%22%3A%22context7%22%2C%22productSlug%22%3A%22context7-search-api%22%7D%5D&demo-title=Context7%20Docs%20Agent&demo-description=An%20eve%20agent%20that%20answers%20library%20questions%20from%20up-to-date%20documentation%20with%20Context7%20Search.)
 
 ## Features
 
