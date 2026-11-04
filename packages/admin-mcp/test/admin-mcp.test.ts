@@ -144,11 +144,10 @@ describe("destructive tools", () => {
     });
   });
 
-  // Deleting a whole site cannot be undone, so it stays in the dashboard.
-  test("there is no tool that deletes a Docs7 or Ask site", async () => {
+  // Deleting a whole Docs7 site cannot be undone, so it stays in the dashboard.
+  test("there is no tool that deletes a Docs7 site", async () => {
     const names = (await (await connect()).listTools()).tools.map((t) => t.name);
     expect(names).not.toContain("docs7_delete_site");
-    expect(names).not.toContain("ask_delete_site");
   });
 
   test("docs7_get_site skips agent usage for a CLI site, which has no agent", async () => {
@@ -234,6 +233,7 @@ describe("a client that can show forms asks the user, not the model", () => {
     "manage_rules delete": { rule_id: "r1" },
     docs7_remove_preview: { site_id: "s1", branch: "fix" },
     "docs7_manage_feature_requests delete": { site_id: "s1", feature_request_id: "f1" },
+    ask_delete_site: { site_key: "ask_1" },
   };
 
   test("the list covers every destructive action", () => {
@@ -250,7 +250,12 @@ describe("a client that can show forms asks the user, not the model", () => {
   });
 
   test.each(Object.entries(DESTRUCTIVE))("%s asks first", async (key, args) => {
-    apiReply = () => ({ body: { members: [{ id: "m-1", email: "ana@example.com" }] } });
+    apiReply = () => ({
+      body: {
+        members: [{ id: "m-1", email: "ana@example.com" }],
+        data: { hostname: "docs.acme.com" },
+      },
+    });
     const [name, action] = key.split(" ");
     const call = async (answer: (expected: string) => ElicitAnswer) => {
       const client = await connect("modern", (message) => answer(message.split(": ").at(-1)!));

@@ -1840,6 +1840,29 @@ export const TOOLS = [
     run: ({ teamspace, site_key }, api) => api.post(`${askSite(teamspace, site_key)}/verify`),
   }),
   tool({
+    name: "ask_delete_site",
+    title: "Delete Ask site",
+    description:
+      "Delete an Ask site with its index, question log and analytics. It cannot be undone. Ask the user to confirm first, then set `confirm` to the site's hostname.",
+    kind: "destructive",
+    args: { site_key: siteKey },
+    confirm: async ({ teamspace, site_key }, api) => {
+      const { hostname } = data(await api.get(askSite(teamspace, site_key)));
+      if (typeof hostname !== "string") throw new ToolError(`No Ask site "${site_key}".`);
+      return {
+        action: `Delete the Ask site of ${hostname}, with its questions and analytics`,
+        what: "the site's hostname",
+        expected: hostname,
+        normalize: (answer) =>
+          answer
+            .toLowerCase()
+            .replace(/^https?:\/\//, "")
+            .replace(/\/.*$/, ""),
+      };
+    },
+    run: ({ teamspace, site_key }, api) => api.del(askSite(teamspace, site_key)),
+  }),
+  tool({
     name: "ask_get_analytics",
     console: "read",
     title: "Get Ask analytics",
