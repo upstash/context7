@@ -84,7 +84,7 @@ The same operations are available over the REST API at `/api/v2/teamspaces/{team
 
 ## Safety and limits
 
-- Remove and delete actions (`remove_library`, `manage_members` `remove`, `manage_library_versions` `remove`, `manage_rules` `delete`, `manage_owned_library` `block` and `transfer`, `docs7_manage_feature_requests` `delete`, `docs7_remove_preview`) are marked destructive, so your client asks you before it runs them. They also take `confirm`, set to the exact target — the library id, email, version, rule id, request id or branch.
+- Remove and delete actions (`remove_library`, `manage_members` `remove`, `manage_library_versions` `remove`, `manage_rules` `delete`, `manage_owned_library` `block` and `transfer`, `docs7_manage_feature_requests` `delete`, `docs7_remove_preview`) are marked destructive, so your client asks you before it runs them. When the client supports MCP elicitation, the server also shows you a form where you type the exact target — the library id, email, version, rule id, request id or branch — and the agent cannot answer it for you. In other clients the agent passes the target as `confirm`: ask it to wait for your yes instead of letting it fill the value in itself.
 - Deleting a whole Docs7 site or Ask site cannot be undone, so it is not in this server. Do it in [the dashboard](https://context7.com/dashboard).
 - Results that hold third-party text (questions, searches, feedback, build logs, agent runs, library suggestions and benchmark questions) are fenced in `<untrusted-data-…>` tags.
 - Results above about 20,000 tokens are cut, with a note on how to narrow the request.
