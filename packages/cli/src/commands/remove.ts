@@ -4,7 +4,14 @@ import ora from "ora";
 import { checkboxWithHover } from "../utils/prompts.js";
 import { log } from "../utils/logger.js";
 import { trackEvent } from "../utils/tracking.js";
-import { ALL_AGENT_NAMES, getAgent, type SetupAgent } from "../setup/agents.js";
+import {
+  ALL_AGENT_NAMES,
+  appendRuleCandidates,
+  defaultAppendRuleFile,
+  getAgent,
+  type AppendRule,
+  type SetupAgent,
+} from "../setup/agents.js";
 import {
   readJsonConfig,
   readTomlServerExists,
@@ -209,6 +216,18 @@ async function hasMcpConfig(agentName: SetupAgent, scope: Scope): Promise<boolea
   );
 }
 
+/** The first file, in the agent's lookup order, that holds the Context7 rule section. */
+async function findAppendRuleFile(rule: AppendRule, scope: Scope): Promise<string | undefined> {
+  for (const candidate of appendRuleCandidates(rule, scope)) {
+    try {
+      if ((await readFile(candidate, "utf-8")).includes(CONTEXT7_SECTION_MARKER)) return candidate;
+    } catch {
+      // Missing or unreadable; try the next file.
+    }
+  }
+  return undefined;
+}
+
 async function hasRule(agentName: SetupAgent, scope: Scope): Promise<boolean> {
   const agent = getAgent(agentName);
   const rule = agent.rule;
@@ -219,15 +238,7 @@ async function hasRule(agentName: SetupAgent, scope: Scope): Promise<boolean> {
     return pathExists(join(ruleDir, rule.filename));
   }
 
-  const filePath =
-    scope === "global" ? rule.file("global") : join(process.cwd(), rule.file("project"));
-
-  try {
-    const existing = await readFile(filePath, "utf-8");
-    return existing.includes(CONTEXT7_SECTION_MARKER);
-  } catch {
-    return false;
-  }
+  return (await findAppendRuleFile(rule, scope)) !== undefined;
 }
 
 async function hasSkill(agentName: SetupAgent, scope: Scope, skillName: string): Promise<boolean> {
@@ -363,8 +374,7 @@ async function uninstallRule(agentName: SetupAgent, scope: Scope): Promise<Clean
     }
   }
 
-  const filePath =
-    scope === "global" ? rule.file("global") : join(process.cwd(), rule.file("project"));
+  const filePath = (await findAppendRuleFile(rule, scope)) ?? defaultAppendRuleFile(rule, scope);
 
   try {
     const existing = await readFile(filePath, "utf-8");
