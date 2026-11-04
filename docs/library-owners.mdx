@@ -86,7 +86,7 @@ Here's an example `context7.json` file with all available options:
   If any rule is rejected, none of the rules are applied and the library's existing rules are removed. The library logs show that the rules were rejected. Change or remove the rule, then refresh the library.
 </Note>
 
-- **`previousVersions`** (array): Information about previous versions of your library that should also be available in Context7.
+- **`previousVersions`** (array): Private libraries only. Information about previous versions of your library that should also be available in Context7. Context7 chooses the versions of public libraries itself and ignores this field for them.
   - **`tag`**: The Git tag or version identifier
 
 - **`branchVersions`** (array): Information about previous versions (branch-based) of your library that should also

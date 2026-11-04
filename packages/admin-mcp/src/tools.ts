@@ -755,7 +755,7 @@ export const TOOLS = [
     name: "manage_library_versions",
     title: "Manage library versions",
     description:
-      "Add or remove a version of a library: a tag or branch of a repository, or a docs URL of a website. Any public library takes new versions; only the owning teamspace removes them. After `add`, call get_library with `wait: true`. `remove` needs `confirm` set to the version name, after the user confirms.",
+      "Add or remove a version of a library: a tag or branch of a repository, or a docs URL of a website. Only the teamspace's private libraries take new versions: Context7 adds the versions of public libraries itself. Only the owning teamspace removes a version. After `add`, call get_library with `wait: true`. `remove` needs `confirm` set to the version name, after the user confirms.",
     actions: { add: "write", remove: "destructive" },
     args: {
       library_id: libraryId,
