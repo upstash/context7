@@ -1,6 +1,6 @@
 ---
 name: context7-mcp
-description: Fetches current library documentation and code examples through the Context7 MCP server. Use before you write any answer that contains code, configuration, commands, or API details for a library, framework, SDK, runtime, platform API, CLI tool, or cloud service, even for short questions, well-known libraries, and answers you think you know. This includes CLI commands and flags, cloud service setup, version upgrades and migrations, errors from a library or tool, porting code to another library or SQL dialect, choosing between libraries, and defaults, limits, or feature support. Do not use it for the user's own code, general programming concepts, core language syntax, standard shell utilities, everyday git commands, or documentation that the user pasted or that was already fetched for the same concept.
+description: Fetches current library documentation and code examples through the Context7 MCP server. Use before you write any answer that contains code, configuration, commands, or API details for a library, framework, SDK, runtime, platform API, CLI tool, or cloud service, even for short questions, well-known libraries, and answers you think you know. This includes CLI commands and flags, cloud service setup, version upgrades and migrations, errors from a library or tool, porting code to another library or SQL dialect, choosing between libraries, and defaults, limits, or feature support. Do not use it to fix, refactor, test, or explain the user's code when the answer adds no new library API, even when the code imports a library. Also skip it for general programming concepts, core language syntax, standard shell utilities, everyday git commands, the project's own install, build, and test commands, and documentation that the user pasted or that was already fetched for the same concept.
 ---
 
 You MUST call Context7 BEFORE you write ANY answer that contains code, configuration, commands, or API details that use a library, framework, SDK, runtime, platform API, CLI tool, or cloud service. This applies EVEN when the question is short or simple, EVEN for popular and well-known libraries, and EVEN when you are confident that you know the answer. Your training data can be out of date: function names, options, flags, and config keys change between versions.
@@ -25,9 +25,9 @@ If you are not sure that an API, option, or flag is current, call Context7.
 
 Do not call Context7 for:
 
-- Work that only uses the user's own code, general programming concepts, core language syntax, standard shell utilities, or everyday git commands.
-- Edits that add no new library API, option, or flag.
-- Commands that you run to inspect, build, or test the project, such as listing files, running tests, or git status.
+- Fixing, refactoring, renaming, testing, or explaining the user's code when the answer adds no library API, option, or flag that the code does not already use. This applies EVEN when the code imports a library.
+- General programming concepts, design patterns, architecture trade-offs, and core language syntax.
+- Standard shell utilities such as tar, find, grep, or lsof, everyday git commands, and the commands that install, build, run, or test this project.
 - Documentation that the user pasted, or that you already fetched in this conversation for the same concept. Reuse it, also when the user asks for more of the same pattern. For a new concept, call `query-docs` again with the same ID.
 
 If another connected tool gives official documentation for the same product, you can use it instead.

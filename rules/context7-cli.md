@@ -18,9 +18,9 @@ If you are not sure that an API, option, or flag is current, run `ctx7`.
 
 Do not run `ctx7` for:
 
-- Work that only uses the user's own code, general programming concepts, core language syntax, standard shell utilities, or everyday git commands.
-- Edits that add no new library API, option, or flag.
-- Commands that you run to inspect, build, or test the project, such as listing files, running tests, or git status.
+- Fixing, refactoring, renaming, testing, or explaining the user's code when the answer adds no library API, option, or flag that the code does not already use. This applies EVEN when the code imports a library.
+- General programming concepts, design patterns, architecture trade-offs, and core language syntax.
+- Standard shell utilities such as tar, find, grep, or lsof, everyday git commands, and the commands that install, build, run, or test this project.
 - Documentation that the user pasted, or that you already fetched in this conversation for the same concept. Reuse it, also when the user asks for more of the same pattern. For a new concept, run `ctx7 docs` again with the same ID.
 
 If another connected tool gives official documentation for the same product, you can use it instead.
