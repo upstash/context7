@@ -606,6 +606,44 @@ describe("research preview", () => {
     ).toBe("private");
   });
 
+  test("returns the same server instructions over HTTP and stdio, with the feedback request only under research preview", async () => {
+    const instructions = async (
+      transport: StreamableHTTPClientTransport | StdioClientTransport
+    ) => {
+      const client = new Client({ name: "research-preview-test", version: "1.0.0" });
+      await client.connect(transport);
+      try {
+        return client.getInstructions() ?? "";
+      } finally {
+        await client.close();
+      }
+    };
+    const httpText = await instructions(httpTransport(httpUrl));
+    expect(httpText).toContain("resolve-library-id");
+    expect(httpText).toContain("query-docs");
+    expect(httpText).not.toContain("${");
+    expect(httpText).not.toContain("submit-docs-feedback");
+    expect(await instructions(stdioTransport(childEnv))).toBe(httpText);
+
+    const preview = await instructions(httpTransport(`${httpUrl}?research_preview=1`));
+    expect(preview.startsWith(`${httpText}\n\n`)).toBe(true);
+    expect(preview).toContain("submit-docs-feedback");
+  });
+
+  test("asks clients to load resolve-library-id and query-docs up front", async () => {
+    const client = new Client({ name: "research-preview-test", version: "1.0.0" });
+    await client.connect(httpTransport(httpUrl));
+    try {
+      const { tools } = await client.listTools();
+      for (const name of ["resolve-library-id", "query-docs"]) {
+        const tool = tools.find((t) => t.name === name);
+        expect(tool?._meta?.["anthropic/alwaysLoad"]).toBe(true);
+      }
+    } finally {
+      await client.close();
+    }
+  });
+
   test("lists submit-docs-feedback only with research preview and sends it to the API", async () => {
     const toolNames = async (url: string) => {
       const client = new Client({ name: "research-preview-test", version: "1.0.0" });
