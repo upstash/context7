@@ -365,7 +365,7 @@ const confirmArg = (what: string) =>
     .string()
     .optional()
     .describe(
-      `${what}, after the user confirms. Ask the user first; never fill it in on your own. Not needed when the client shows the user a confirmation form.`
+      `${what}, after the user confirms. The user's request is not a confirmation: ask a yes/no question and wait for the answer. Never fill it in on your own. Not needed when the client shows the user a confirmation form.`
     );
 
 /** "owner/repo" and "/Owner/Repo" confirm the same library as "/owner/repo". */
