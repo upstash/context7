@@ -6,10 +6,10 @@ description: "Sync Google Docs from Drive folders, Shared Drives and single file
 
 Context7 can sync Google Docs from Google Drive and serve them like any other library. Google Drive stays the source of truth: a daily sync picks up edits, and documents that are removed or no longer shared leave the results.
 
-An admin connects a Google service account once under **Settings → Integrations**. Then an admin chooses which folders, Shared Drives and Docs to sync from **Add → Google Drive**. Only the selected items, and the Docs under selected folders, are indexed.
+An admin connects a Google service account once under **Settings → Indexing → Google Drive**. Then an admin chooses which folders, Shared Drives and Docs to sync from **Add → Google Drive**. Only the selected items, and the Docs under selected folders, are indexed.
 
 <Note>
-Google Docs are supported. Spreadsheets, PDFs and other file types in a selected folder are skipped, and the library page shows how many were skipped.
+Google Docs are supported. Spreadsheets, PDFs and other file types in a selected folder are skipped. The picker marks them as not supported.
 </Note>
 
 ## Set up Google Cloud
@@ -52,7 +52,7 @@ Without delegation, the service account can read only what is explicitly shared 
 
 ## Connect Google Drive
 
-Open **Settings → Integrations → Google Drive** and choose how Context7 authenticates.
+Open **Settings → Indexing → Google Drive** and choose how Context7 authenticates in the **Connection** card.
 
 <Tabs>
   <Tab title="Service account key">
@@ -90,7 +90,7 @@ Every sync lists the selected folders again and compares each Doc with the last 
 | A Doc was edited, renamed or moved inside the selection | It is exported and indexed again. |
 | A Doc did not change | Its indexed content is kept as it is. No LLM or embedding calls are made for it. |
 | A Doc was deleted, trashed, moved out of the selection, or unshared | It leaves the results. |
-| A selected folder or Shared Drive was deleted, trashed, or unshared | All its Docs leave the results, and the library page shows a warning. Share it again to restore them. |
+| A selected folder or Shared Drive was deleted, trashed, or unshared | All its Docs leave the results, and the library page and the **Libraries** card in Settings show a warning. Share it again to restore them. |
 | A Doc was emptied, or has nothing to index | It leaves the results. It is checked again when it changes. |
 | A new Doc appeared in a selected folder | It is indexed. |
 
@@ -98,7 +98,7 @@ A sync builds the new index next to the live one and swaps it in only when it fi
 
 ### Failures keep valid content
 
-- **One document fails** (for example it is larger than Drive's 10 MB export limit, or the LLM times out while extracting it): the last indexed version of that document stays in the results. The library page lists the file and the reason under **Google Drive sync**, and the next sync tries it again.
+- **One document fails** (for example it is larger than Drive's 10 MB export limit, or the LLM times out while extracting it): the last indexed version of that document stays in the results. The library page shows a warning, its logs list the file and the reason, the **Libraries** card in Settings lists the failed files, and the next sync tries it again.
 - **The whole sync fails** (for example Google refuses access because the Drive API is disabled, or Google cannot be reached): all live content stays as it was, and the error is shown in the library's logs.
 
 <Warning>
@@ -109,13 +109,27 @@ Context7 retries Google API quota errors with exponential backoff and limits how
 
 ## Scheduled sync
 
-Google Drive libraries sync every day at 03:00 server time by default. In **Settings → Integrations → Google Drive**, you can:
+Google Drive libraries sync every day at 03:00 server time by default. In the **Scheduled sync** card under **Settings → Indexing → Google Drive**, you can:
 
 - turn the scheduled sync off,
-- change the schedule with a cron expression, for example `0 */6 * * *` for every six hours,
+- change the schedule: pick a preset such as **Every 6 hours**, or enter a cron expression such as `0 */6 * * *`,
 - click **Sync all now** to queue every Google Drive library at once.
 
-When a sync fails, scheduled or manual, Context7 retries that library after 15 minutes, 1 hour and 6 hours. Each delay counts from the previous attempt. To sync one library by hand, click **Refresh** on its page. **Re-index all files** re-exports and re-indexes every document instead of skipping unchanged ones.
+When a sync fails, scheduled or manual, Context7 retries that library after 15 minutes, 1 hour and 6 hours. Each delay counts from the previous attempt. To sync one library by hand, click **Refresh** on its page, or **Sync now** next to it in the **Libraries** card. To re-export and re-index every document instead of skipping unchanged ones, select **Re-index all files** in the Refresh dialog, or in the library's menu in the **Libraries** card.
+
+## Monitor libraries
+
+The **Libraries** card under **Settings → Indexing → Google Drive** lists every Google Drive library with its selection, its last sync, and a status:
+
+| Status | Meaning |
+| --- | --- |
+| Synced | The last sync finished with no failed files. |
+| Syncing or Queued | A sync is running or waiting in the parse queue. |
+| N files failed | Some files could not be refreshed. Expand the row to see each file and the reason; their last indexed version is still served. |
+| Folder unavailable | A selected folder or Shared Drive is no longer shared with the connector, and its files were removed. |
+| Sync failed | The whole sync failed, so the library still serves its previous content. Expand the row for the error. |
+
+Expanding a row shows the most common failure reasons and up to 50 failed files, each linked to Drive. **Download CSV** exports every failed file. Problem libraries sort to the top, and **Needs attention** filters the list to them.
 
 ## Authority labels
 
@@ -146,4 +160,5 @@ Set `GOOGLE_DRIVE_API_URL` to send Drive API calls through another endpoint, suc
 | "No longer available to the Google connector: folder …" | The folder was deleted, trashed or unshared, and its Docs were removed. Share it with the service account again, then click **Refresh**. |
 | "Google refused access to the selected folder …" | Check that the Drive API is enabled and that the connector can read the folder. Live content is kept until this is fixed. |
 | "The document is larger than the 10 MB Google Drive export limit" | Split the document. Its last indexed version stays available. |
+| "The selection has more than 10000 documents" | A library holds at most 10,000 Docs. Split the selection into several libraries, or raise the limit with the `GOOGLE_DRIVE_MAX_FILES` environment variable. |
 | "The Google connector was replaced by a different account" | The library was added with another service account or delegated user. Add the library again with the current connector. |
