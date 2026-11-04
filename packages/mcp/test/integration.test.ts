@@ -872,7 +872,9 @@ describe.each([
     expect(listing.invalid).toEqual([]);
     expect(listing.skills.map((s) => s.uri)).toEqual(["skill://context7-mcp/SKILL.md"]);
     const file = await skills.read(listing.skills[0]);
-    expect(file.text).toBe(await readFile(path.join(PKG_ROOT, "../../skills/context7-mcp/SKILL.md"), "utf8"));
+    expect(file.text).toBe(
+      await readFile(path.join(PKG_ROOT, "../../skills/context7-mcp/SKILL.md"), "utf8")
+    );
   });
 
   test("calls query-docs end to end", async () => {
