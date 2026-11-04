@@ -90,7 +90,7 @@ Every sync lists the selected folders again and compares each Doc with the last 
 | A Doc was edited, renamed or moved inside the selection | It is exported and indexed again. |
 | A Doc did not change | Its indexed content is kept as it is. No LLM or embedding calls are made for it. |
 | A Doc was deleted, trashed, moved out of the selection, or unshared | It leaves the results. |
-| A selected folder or Shared Drive was deleted, trashed, or unshared | All its Docs leave the results, and the library page and the **Google Drive libraries** card in Settings show a warning. Share it again to restore them. |
+| A selected folder or Shared Drive was deleted, trashed, or unshared | All its Docs leave the results, and the library page and the **Libraries** list in Settings show a warning. Share it again to restore them. |
 | A Doc was emptied, or has nothing to index | It leaves the results. It is checked again when it changes. |
 | A new Doc appeared in a selected folder | It is indexed. |
 
@@ -98,7 +98,7 @@ A sync builds the new index next to the live one and swaps it in only when it fi
 
 ### Failures keep valid content
 
-- **One document fails** (for example it is larger than Drive's 10 MB export limit, or the LLM times out while extracting it): the last indexed version of that document stays in the results. The library page shows a warning, its logs list the file and the reason, the **Google Drive libraries** card in Settings lists the failed files, and the next sync tries it again.
+- **One document fails** (for example it is larger than Drive's 10 MB export limit, or the LLM times out while extracting it): the last indexed version of that document stays in the results. The library page shows a warning, its logs list the file and the reason, the **Libraries** list in Settings shows the failed files, and the next sync tries it again.
 - **The whole sync fails** (for example Google refuses access because the Drive API is disabled, or Google cannot be reached): all live content stays as it was, and the error is shown in the library's logs.
 
 <Warning>
@@ -109,17 +109,17 @@ Context7 retries Google API quota errors with exponential backoff and limits how
 
 ## Scheduled sync
 
-Google Drive libraries sync every day at 03:00 server time by default. In the **Google Drive sync schedule** card under **Settings → Integrations**, you can:
+Google Drive libraries sync every day at 03:00 server time by default. Under **Sync schedule** in the **Google Drive** card (**Settings → Integrations**), you can:
 
 - turn the scheduled sync off,
 - change the schedule: pick a preset such as **Every 6 hours**, or enter a cron expression such as `0 */6 * * *`,
 - click **Sync all now** to queue every Google Drive library at once.
 
-When a sync fails, scheduled or manual, Context7 retries that library after 15 minutes, 1 hour and 6 hours. Each delay counts from the previous attempt. To sync one library by hand, click **Refresh** on its page, or **Sync now** next to it in the **Google Drive libraries** card. To re-export and re-index every document instead of skipping unchanged ones, select **Re-index all files** in the Refresh dialog, or in the library's menu in the **Google Drive libraries** card.
+When a sync fails, scheduled or manual, Context7 retries that library after 15 minutes, 1 hour and 6 hours. Each delay counts from the previous attempt. To sync one library by hand, click **Refresh** on its page, or **Sync now** next to it in the **Libraries** list. To re-export and re-index every document instead of skipping unchanged ones, select **Re-index all files** in the Refresh dialog, or in the library's menu in the **Libraries** list.
 
 ## Monitor libraries
 
-The **Google Drive libraries** card under **Settings → Integrations** lists every Google Drive library with its selection, its last sync, and a status:
+The **Libraries** list in the **Google Drive** card (**Settings → Integrations**) shows every Google Drive library with its selection, its last sync, and a status:
 
 | Status | Meaning |
 | --- | --- |
