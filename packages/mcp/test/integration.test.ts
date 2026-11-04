@@ -628,6 +628,8 @@ describe("research preview", () => {
     const preview = await instructions(httpTransport(`${httpUrl}?research_preview=1`));
     expect(preview.startsWith(`${httpText}\n\n`)).toBe(true);
     expect(preview).toContain("submit-docs-feedback");
+    // Claude Code cuts server instructions after 4096 characters.
+    expect(preview.length).toBeLessThanOrEqual(4096);
   });
 
   test("asks clients to load resolve-library-id and query-docs up front", async () => {
