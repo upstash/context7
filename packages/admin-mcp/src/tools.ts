@@ -941,7 +941,10 @@ export const TOOLS = [
       const action =
         args.action === "block"
           ? `Block ${id}: stop indexing it and delete its parsed docs`
-          : `Transfer ${id} to another teamspace`;
+          : `Transfer ${id} to the teamspace ${need(
+              args.destination_teamspace,
+              "`destination_teamspace` is required (an id from list_teamspaces)."
+            )}`;
       return { action, what: "the library id", expected: id, normalize: asLibraryId };
     },
     run: async (args, api) => {
@@ -979,10 +982,7 @@ export const TOOLS = [
           return api.post(`${base}/block`);
         default:
           return api.post(`${base}/transfer`, {
-            destinationTeamspaceId: need(
-              args.destination_teamspace,
-              "`destination_teamspace` is required (an id from list_teamspaces)."
-            ),
+            destinationTeamspaceId: args.destination_teamspace,
           });
       }
     },
