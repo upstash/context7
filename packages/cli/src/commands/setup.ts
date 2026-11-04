@@ -371,7 +371,7 @@ async function setupAgent(
   const mcpPath = await resolveMcpPath(mcpCandidates);
 
   let mcpStatus: string;
-  let mcpConfigured = false;
+  let signInCommand: string | undefined;
   try {
     let alreadyExists: boolean;
     if (mcpPath.endsWith(".toml")) {
@@ -403,7 +403,7 @@ async function setupAgent(
       alreadyExists = merged.alreadyExists;
     }
     mcpStatus = `${alreadyExists ? "reconfigured" : "configured"} with ${AUTH_MODE_LABELS[auth.mode]}`;
-    mcpConfigured = true;
+    if (auth.mode === "oauth") signInCommand = agent.mcp.oauthSignInCommand;
   } catch (err) {
     mcpStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
   }
@@ -445,8 +445,7 @@ async function setupAgent(
     rulePath,
     skillStatus,
     skillPath,
-    signInCommand:
-      mcpConfigured && auth.mode === "oauth" ? agent.mcp.oauthSignInCommand : undefined,
+    signInCommand,
   };
 }
 

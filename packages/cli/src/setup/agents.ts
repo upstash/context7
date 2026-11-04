@@ -1,4 +1,4 @@
-import { access, stat } from "fs/promises";
+import { access, readFile, stat } from "fs/promises";
 import { dirname, join } from "path";
 import { homedir } from "os";
 
@@ -72,9 +72,9 @@ export function resolveDevinConfigDir(
  * `~/.pi/agent`, with a leading `~` expanded to the home directory.
  */
 export function resolvePiAgentDir(
+  platform: NodeJS.Platform = process.platform,
   home: string = homedir(),
-  env: { PI_CODING_AGENT_DIR?: string } = { PI_CODING_AGENT_DIR: process.env.PI_CODING_AGENT_DIR },
-  platform: NodeJS.Platform = process.platform
+  env: { PI_CODING_AGENT_DIR?: string } = { PI_CODING_AGENT_DIR: process.env.PI_CODING_AGENT_DIR }
 ): string {
   const override = env.PI_CODING_AGENT_DIR;
   if (!override) return join(home, ".pi", "agent");
@@ -106,19 +106,18 @@ export interface AppendRule {
   contextFileOrder?: string[];
 }
 
-/** The rule file an agent reads when none of its other context files exist. */
-export function defaultAppendRuleFile(rule: AppendRule, scope: "project" | "global"): string {
+function defaultAppendRuleFile(rule: AppendRule, scope: "project" | "global"): string {
   return scope === "global" ? rule.file("global") : join(process.cwd(), rule.file("project"));
 }
 
 /** Every file that may hold an append rule, in the agent's lookup order. */
-export function appendRuleCandidates(rule: AppendRule, scope: "project" | "global"): string[] {
+function appendRuleCandidates(rule: AppendRule, scope: "project" | "global"): string[] {
   const defaultFile = defaultAppendRuleFile(rule, scope);
   if (!rule.contextFileOrder) return [defaultFile];
   return rule.contextFileOrder.map((name) => join(dirname(defaultFile), name));
 }
 
-/** The file that setup writes an append rule into. */
+/** The file setup writes an append rule into: the first context file the agent loads. */
 export async function resolveAppendRuleFile(
   rule: AppendRule,
   scope: "project" | "global"
@@ -131,6 +130,21 @@ export async function resolveAppendRuleFile(
     }
   }
   return defaultAppendRuleFile(rule, scope);
+}
+
+/** The first file, in the agent's lookup order, that holds the rule's section. */
+export async function findAppendRuleFile(
+  rule: AppendRule,
+  scope: "project" | "global"
+): Promise<string | undefined> {
+  for (const candidate of appendRuleCandidates(rule, scope)) {
+    try {
+      if ((await readFile(candidate, "utf-8")).includes(rule.sectionMarker)) return candidate;
+    } catch {
+      // Missing or unreadable; try the next file.
+    }
+  }
+  return undefined;
 }
 
 export interface AgentConfig {

@@ -19,6 +19,7 @@ vi.mock("ora", () => ({
 
 import { registerSetupCommand } from "../commands/setup.js";
 import { registerRemoveCommand } from "../commands/remove.js";
+import { getAgent, resolvePiAgentDir, type AuthOptions } from "../setup/agents.js";
 
 let originalCwd: string;
 let tempDir: string;
@@ -72,6 +73,42 @@ afterEach(async () => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
+});
+
+describe("pi agent config", () => {
+  const agent = getAgent("pi");
+  const apiKeyAuth: AuthOptions = { mode: "api-key", apiKey: "sk-test-123" };
+  const oauthAuth: AuthOptions = { mode: "oauth" };
+
+  test("HTTP entries use url, an optional bearer header, and direct exposure", () => {
+    expect(agent.mcp.buildEntry(apiKeyAuth, "http", "https://mcp.context7.com/mcp")).toEqual({
+      url: "https://mcp.context7.com/mcp",
+      headers: { Authorization: "Bearer sk-test-123" },
+      exposure: "direct",
+    });
+    expect(agent.mcp.buildEntry(oauthAuth, "http", "https://mcp.context7.com/mcp/oauth")).toEqual({
+      url: "https://mcp.context7.com/mcp/oauth",
+      exposure: "direct",
+    });
+  });
+
+  test("stdio entries use npx and direct exposure", () => {
+    expect(agent.mcp.buildEntry(apiKeyAuth, "stdio", "")).toEqual({
+      command: "npx",
+      args: ["-y", "@upstash/context7-mcp", "--api-key", "sk-test-123"],
+      exposure: "direct",
+    });
+  });
+
+  test.each([
+    [{}, "/home/test/.pi/agent"],
+    [{ PI_CODING_AGENT_DIR: "" }, "/home/test/.pi/agent"],
+    [{ PI_CODING_AGENT_DIR: "/opt/pi" }, "/opt/pi"],
+    [{ PI_CODING_AGENT_DIR: "~" }, "/home/test"],
+    [{ PI_CODING_AGENT_DIR: "~/pi-config" }, "/home/test/pi-config"],
+  ] as const)("resolves the agent directory for %o", (env, expected) => {
+    expect(resolvePiAgentDir("linux", "/home/test", env)).toBe(expected);
+  });
 });
 
 describe("ctx7 setup --pi", () => {

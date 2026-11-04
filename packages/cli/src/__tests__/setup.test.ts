@@ -45,7 +45,6 @@ import {
   ALL_AGENT_NAMES,
   resolveVscodeUserDir,
   resolveDevinConfigDir,
-  resolvePiAgentDir,
   type AuthOptions,
   type Transport,
 } from "../setup/agents.js";
@@ -831,53 +830,6 @@ describe("agent config integration", () => {
         httpUrl: "https://mcp.context7.com/mcp",
         headers: { Authorization: "Bearer sk-test-123" },
       });
-    });
-  });
-
-  describe("pi", () => {
-    const agent = getAgent("pi");
-
-    test("buildEntry with api-key uses url, a bearer header, and direct exposure", () => {
-      expect(buildEntry(agent, apiKeyAuth, "http")).toEqual({
-        url: "https://mcp.context7.com/mcp",
-        headers: { Authorization: "Bearer sk-test-123" },
-        exposure: "direct",
-      });
-    });
-
-    test("buildEntry with oauth omits headers and names the sign-in command", () => {
-      expect(buildEntry(agent, oauthAuth, "http")).toEqual({
-        url: "https://mcp.context7.com/mcp/oauth",
-        exposure: "direct",
-      });
-      expect(agent.mcp.oauthSignInCommand).toBe("pi mcp login context7");
-    });
-
-    test("buildEntry with stdio uses npx and direct exposure", () => {
-      expect(buildEntry(agent, apiKeyAuth, "stdio")).toEqual({
-        command: "npx",
-        args: ["-y", "@upstash/context7-mcp", "--api-key", "sk-test-123"],
-        exposure: "direct",
-      });
-    });
-
-    test("uses pi's project MCP config, project AGENTS.md, and shared Agent Skills", () => {
-      expect(agent.mcp.projectPaths).toEqual([join(".pi", "mcp.json")]);
-      expect(agent.rule).toMatchObject({ kind: "append", sectionMarker: "<!-- context7 -->" });
-      if (agent.rule.kind === "append") {
-        expect(agent.rule.file("project")).toBe("AGENTS.md");
-      }
-      expect(agent.skill.dir("project")).toBe(join(".agents", "skills"));
-    });
-
-    test.each([
-      [{}, "/home/test/.pi/agent"],
-      [{ PI_CODING_AGENT_DIR: "" }, "/home/test/.pi/agent"],
-      [{ PI_CODING_AGENT_DIR: "/opt/pi" }, "/opt/pi"],
-      [{ PI_CODING_AGENT_DIR: "~" }, "/home/test"],
-      [{ PI_CODING_AGENT_DIR: "~/pi-config" }, "/home/test/pi-config"],
-    ] as const)("resolves the pi agent directory for %o", (env, expected) => {
-      expect(resolvePiAgentDir("/home/test", env, "linux")).toBe(expected);
     });
   });
 
