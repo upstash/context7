@@ -233,7 +233,7 @@ export async function fetchUpgradeGuide(
   context: ClientContext = {}
 ): Promise<{ text: string; outcome: ToolCallOutcome }> {
   try {
-    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/upgrade-guide`);
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/version-upgrade-guide`);
     url.searchParams.set("libraryId", request.libraryId);
     url.searchParams.set("fromVersion", request.fromVersion);
     if (request.toVersion) url.searchParams.set("toVersion", request.toVersion);

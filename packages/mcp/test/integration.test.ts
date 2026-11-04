@@ -109,7 +109,7 @@ function startStubApi(): Promise<string> {
       });
       return;
     }
-    if (apiPath === "/v2/upgrade-guide") {
+    if (apiPath === "/v2/version-upgrade-guide") {
       const fromVersion = url.searchParams.get("fromVersion");
       if (fromVersion === PREPARING_FROM_VERSION) {
         res.statusCode = 202;
@@ -714,7 +714,7 @@ describe("research preview: get-upgrade-guide", () => {
 
     expect(result.isError).toBeFalsy();
     expect(resultText(result)).toBe(STUB_UPGRADE_GUIDE);
-    const apiCall = requests.find((request) => request.path === "/v2/upgrade-guide");
+    const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
     expect(Object.fromEntries(apiCall!.query)).toEqual({
       libraryId: "/vercel/next.js",
       fromVersion: "14.2.35",
@@ -728,7 +728,7 @@ describe("research preview: get-upgrade-guide", () => {
   test("omits toVersion when not given", async () => {
     await callGuide({ fromVersion: "14" });
 
-    const apiCall = requests.find((request) => request.path === "/v2/upgrade-guide");
+    const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
     expect(apiCall?.query.has("toVersion")).toBe(false);
   });
 
