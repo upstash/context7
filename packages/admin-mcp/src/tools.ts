@@ -447,7 +447,7 @@ export const TOOLS = [
     console: "read",
     title: "List teamspaces",
     description:
-      "List the teamspaces of the user, with role and plan. Call this first to get the `teamspace` id that the other tools take.",
+      "List the teamspaces of the user, with role and plan. Only needed when the user has more than one teamspace: with one, the other tools take no `teamspace`.",
     kind: "read",
     teamspace: false,
     args: {},
@@ -1833,7 +1833,7 @@ export const TOOLS = [
     name: "ask_verify_site",
     title: "Verify Ask site",
     description:
-      "Check the meta tag of an Ask site and start the crawl. Then call ask_get_site with `wait: true`.",
+      "Check the meta tag of an Ask site and start the crawl. Call it only after the user says the page with the meta tag is live. Then call ask_get_site with `wait: true`.",
     kind: "write",
     idempotent: true,
     args: { site_key: siteKey },
