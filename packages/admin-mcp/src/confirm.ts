@@ -3,11 +3,12 @@ import {
   acceptedContent,
   inputRequired,
   inputResponse,
+  type ClientCapabilities,
   type InputRequiredResult,
   type ServerContext,
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
-import { ToolError, type ConfirmWithUser } from "./tools.js";
+import { ToolError, type Confirmation } from "./tools.js";
 
 /**
  * Confirmation of a destructive change, asked of the user rather than the model.
@@ -28,67 +29,74 @@ import { ToolError, type ConfirmWithUser } from "./tools.js";
 const KEY = "confirm";
 const typed = z.object({ answer: z.string() });
 
-/** Thrown to hold the change back; server.ts returns `ask` as the tool's result. */
-export class InputNeeded extends Error {
-  constructor(readonly ask: InputRequiredResult) {
-    super("The user must confirm this change.");
-  }
-}
+/** The `confirm` argument of every tool with a destructive action (server.ts adds it). */
+export const confirmArg = z
+  .string()
+  .optional()
+  .describe(
+    "Only for remove and delete actions: the exact target the error asks for, after the user confirms. The user's request is not a confirmation: ask a yes/no question and wait for the answer. Never fill it in on your own."
+  );
 
 /** Whether this request's client declared form elicitation (2026-07-28 per-request envelope). */
 function canElicit(ctx: ServerContext): boolean {
-  const capabilities = (ctx.mcpReq.envelope as Record<string, unknown> | undefined)?.[
-    CLIENT_CAPABILITIES_META_KEY
-  ] as { elicitation?: { form?: unknown; url?: unknown } } | undefined;
-  const elicitation = capabilities?.elicitation;
+  const envelope = ctx.mcpReq.envelope as
+    Record<string, ClientCapabilities | undefined> | undefined;
+  const elicitation = envelope?.[CLIENT_CAPABILITIES_META_KEY]?.elicitation;
   // An empty `elicitation: {}` means form mode (the spec's back-compat rule).
   return (
-    Boolean(elicitation) && (elicitation!.form !== undefined || elicitation!.url === undefined)
+    elicitation !== undefined && (elicitation.form !== undefined || elicitation.url === undefined)
   );
 }
 
-export function confirmWithUser(ctx: ServerContext): ConfirmWithUser {
-  return ({ action, what, expected, given, normalize = (value) => value }) => {
-    if (!expected) throw new ToolError(`Could not read ${what} from the API. Nothing was changed.`);
-    const matches = (answer: string | undefined) =>
-      answer !== undefined && normalize(answer.trim()) === expected;
-    const askAgain = `Ask the user whether they still want this; if they do, call again so they can confirm.`;
+/**
+ * Returns the form to show the user, or nothing when the change may go ahead.
+ * Throws a ToolError when it may not. `given` is the agent's `confirm` argument.
+ */
+export function confirmWithUser(
+  ctx: ServerContext,
+  { action, what, expected, normalize = (value) => value }: Confirmation,
+  given: string | undefined
+): InputRequiredResult | undefined {
+  if (!expected) throw new ToolError(`Nothing was changed: ${what} is empty.`);
+  const matches = (answer: string | undefined) =>
+    answer !== undefined && normalize(answer.trim()) === expected;
+  const askAgain = `Ask the user whether they still want this; if they do, call again so they can confirm.`;
 
-    if (!canElicit(ctx)) {
-      if (matches(given)) return;
-      throw new ToolError(
-        `Not done: ${given === undefined ? "this change needs the user's confirmation" : `\`confirm\` does not match ${what}`}. Ask the user to confirm. Only after they agree, call again with \`confirm\` set to ${what}.`
-      );
-    }
+  if (!canElicit(ctx)) {
+    if (matches(given)) return undefined;
+    const problem =
+      given === undefined
+        ? "this change needs the user's confirmation"
+        : `\`confirm\` does not match ${what}`;
+    const next = `Ask the user to confirm. Only after they agree, call again with \`confirm\` set to ${what}.`;
+    throw new ToolError(`Not done: ${problem}. ${next}`);
+  }
 
-    const responses = ctx.mcpReq.inputResponses;
-    const answer = inputResponse(responses, KEY);
-    if (answer.kind === "missing") {
-      throw new InputNeeded(
-        inputRequired({
-          inputRequests: {
-            [KEY]: inputRequired.elicit({
-              message: `${action}? Type ${what} to confirm: ${expected}`,
-              requestedSchema: {
-                type: "object",
-                properties: { answer: { type: "string", title: what, description: expected } },
-                required: ["answer"],
-              },
-            }),
+  const responses = ctx.mcpReq.inputResponses;
+  const answer = inputResponse(responses, KEY);
+  if (answer.kind === "missing") {
+    return inputRequired({
+      inputRequests: {
+        [KEY]: inputRequired.elicit({
+          message: `${action}? Type ${what} to confirm: ${expected}`,
+          requestedSchema: {
+            type: "object",
+            properties: { answer: { type: "string", title: what, description: expected } },
+            required: ["answer"],
           },
-        })
-      );
-    }
-    if (matches(acceptedContent(responses, KEY, typed)?.answer)) return;
-    if (answer.kind === "elicit" && answer.action === "decline") {
-      throw new ToolError("Not done: the user declined.");
-    }
-    if (answer.kind === "elicit" && answer.action === "accept") {
-      throw new ToolError(`Not done: what the user typed is not ${what}. ${askAgain}`);
-    }
-    // A client that cannot show the form (a headless run) also cancels: the user never saw it.
-    throw new ToolError(
-      `Not done: the confirmation was cancelled. The user closed it, or the client could not show it, so the user has not agreed. ${askAgain}`
-    );
-  };
+        }),
+      },
+    });
+  }
+  if (matches(acceptedContent(responses, KEY, typed)?.answer)) return undefined;
+  if (answer.kind === "elicit" && answer.action === "decline") {
+    throw new ToolError("Not done: the user declined.");
+  }
+  if (answer.kind === "elicit" && answer.action === "accept") {
+    throw new ToolError(`Not done: what the user typed is not ${what}. ${askAgain}`);
+  }
+  // A client that cannot show the form (a headless run) also cancels: the user never saw it.
+  throw new ToolError(
+    `Not done: the confirmation was cancelled. The user closed it, or the client could not show it, so the user has not agreed. ${askAgain}`
+  );
 }

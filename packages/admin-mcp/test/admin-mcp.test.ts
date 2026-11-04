@@ -223,6 +223,48 @@ describe("a client that can show forms asks the user, not the model", () => {
     expect(text(result)).toMatch(reason);
     expect(deleted()).toBe(false);
   });
+
+  // One call per destructive action, keyed "tool action" (or "tool" for a plain tool).
+  const DESTRUCTIVE: Record<string, Record<string, unknown>> = {
+    "manage_members remove": { member_id: "m-1" },
+    "manage_library_versions remove": { library_id: "/acme/docs", version: "v1" },
+    remove_library: { library_id: "/acme/docs" },
+    "manage_owned_library block": { library_id: "/acme/docs" },
+    "manage_owned_library transfer": { library_id: "/acme/docs", destination_teamspace: TS },
+    "manage_rules delete": { rule_id: "r1" },
+    docs7_remove_preview: { site_id: "s1", branch: "fix" },
+    "docs7_manage_feature_requests delete": { site_id: "s1", feature_request_id: "f1" },
+  };
+
+  test("the list covers every destructive action", () => {
+    const actions = TOOLS.flatMap((def) =>
+      def.actions
+        ? Object.entries(def.actions)
+            .filter(([, kind]) => kind === "destructive")
+            .map(([action]) => `${def.name} ${action}`)
+        : def.kind === "destructive"
+          ? [def.name]
+          : []
+    );
+    expect(Object.keys(DESTRUCTIVE).sort()).toEqual(actions.sort());
+  });
+
+  test.each(Object.entries(DESTRUCTIVE))("%s asks first", async (key, args) => {
+    apiReply = () => ({ body: { members: [{ id: "m-1", email: "ana@example.com" }] } });
+    const [name, action] = key.split(" ");
+    const call = async (answer: (expected: string) => ElicitAnswer) => {
+      const client = await connect("modern", (message) => answer(message.split(": ").at(-1)!));
+      return client.callTool({ name, arguments: { teamspace: TS, action, ...args } });
+    };
+    const changed = () => apiCalls.some((c) => c.method !== "GET");
+
+    expect((await call(() => ({ action: "decline" }))).isError).toBe(true);
+    expect(changed()).toBe(false);
+
+    const done = await call((expected) => ({ action: "accept", content: { answer: expected } }));
+    expect(done.isError).toBeFalsy();
+    expect(changed()).toBe(true);
+  });
 });
 
 describe("telemetry", () => {

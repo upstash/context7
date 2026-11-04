@@ -8,7 +8,7 @@ import {
   type ServerContext,
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
-import { confirmWithUser, InputNeeded } from "./confirm.js";
+import { confirmArg, confirmWithUser } from "./confirm.js";
 import { CONSOLE_TOOL_META, registerConsole } from "./console.js";
 import { TOOLS, ToolError, type Api, type ConsoleRead, type Kind, type ToolDef } from "./tools.js";
 
@@ -258,7 +258,11 @@ async function resolveTeamspace(value: unknown, api: Api): Promise<string> {
   );
 }
 
-type Outcome = { ok: true; value: unknown } | { ok: false; error: unknown };
+/** `input`: the change waits for the user's confirmation, and `ask` is the form. */
+type Outcome =
+  | { ok: true; value: unknown }
+  | { ok: false; error: unknown }
+  | { ok: "input"; ask: InputRequiredResult };
 type Source = "model" | "console";
 
 /** The tool's input: its args, plus `teamspace` and `action` where they apply. */
@@ -277,6 +281,7 @@ function inputSchemaOf(def: ToolDef): z.ZodObject<z.ZodRawShape> {
         }),
     ...(actions ? { action: z.enum(actions as [string, ...string[]]) } : {}),
     ...def.args,
+    ...(def.confirm ? { confirm: confirmArg } : {}),
   });
 }
 
@@ -311,10 +316,17 @@ async function runTool(
     if (def.teamspace !== false) {
       input.teamspace = await resolveTeamspace(input.teamspace, api);
     }
-    outcome = {
-      ok: true,
-      value: await def.run(input as Parameters<typeof def.run>[0], api, confirmWithUser(ctx)),
-    };
+    const toolArgs = input as Parameters<typeof def.run>[0];
+    const kind = def.actions ? def.actions[toolArgs.action] : def.kind;
+    const ask =
+      kind === "destructive"
+        ? confirmWithUser(
+            ctx,
+            await def.confirm!(toolArgs, api),
+            input.confirm as string | undefined
+          )
+        : undefined;
+    outcome = ask ? { ok: "input", ask } : { ok: true, value: await def.run(toolArgs, api) };
   } catch (error) {
     outcome = { ok: false, error };
   }
@@ -325,7 +337,7 @@ async function runTool(
       tool: def.name,
       ...(source === "console" ? { from: "console" } : {}),
       teamspace: input.teamspace,
-      outcome: outcome.ok ? "ok" : outcome.error instanceof InputNeeded ? "confirm" : "error",
+      outcome: outcome.ok === "input" ? "confirm" : outcome.ok ? "ok" : "error",
     })
   );
   return outcome;
@@ -340,6 +352,9 @@ export function registerAdminTools(server: McpServer): void {
   registerConsole(server);
   for (const def of TOOLS) {
     const kinds: Kind[] = def.actions ? Object.values(def.actions) : [def.kind!];
+    if (kinds.includes("destructive") && !def.confirm) {
+      throw new Error(`${def.name} has a destructive action but no confirm.`);
+    }
     const readOnly = kinds.every((kind) => kind === "read");
 
     server.registerTool(
@@ -362,7 +377,7 @@ export function registerAdminTools(server: McpServer): void {
       },
       async (args: Record<string, unknown>, ctx): Promise<CallToolResult | InputRequiredResult> => {
         const outcome = await runTool(def, args, ctx, "model");
-        if (!outcome.ok && outcome.error instanceof InputNeeded) return outcome.error.ask;
+        if (outcome.ok === "input") return outcome.ask;
         const untrusted = Boolean(def.untrusted);
         return outcome.ok
           ? {
@@ -412,6 +427,7 @@ function registerConsoleData(server: McpServer): void {
       // `tool` passed the enum of this map's keys.
       const def = reads.get(tool)!;
       const outcome = await runTool(def, args, ctx, "console");
+      if (outcome.ok === "input") throw new Error("A console read never waits for a confirmation.");
       if (!outcome.ok) {
         // content can reach the model, so it keeps the read tool's fence; the page reads the plain error.
         return {
