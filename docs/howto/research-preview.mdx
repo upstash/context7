@@ -1,11 +1,11 @@
 ---
 title: Research Preview
-description: Turn on experimental Context7 MCP tools, such as documentation feedback
+description: Turn on experimental Context7 MCP tools, such as documentation feedback and upgrade guides
 ---
 
 The research preview gives your agent experimental tools from the Context7 MCP server. It is off by default. Tools in the preview can change or be removed without notice.
 
-The research preview currently adds one tool: [documentation feedback](#documentation-feedback).
+The research preview currently adds two tools: [documentation feedback](#documentation-feedback) and [upgrade guides](#upgrade-guides).
 
 ## Turn it on
 
@@ -78,3 +78,15 @@ Codex asks for approval before each call to a tool that can send data, so it ask
 [mcp_servers.context7.tools.submit-docs-feedback]
 approval_mode = "approve"
 ```
+
+## Upgrade guides
+
+With the research preview on, the server also lists a `get-upgrade-guide` tool. The agent calls it when you upgrade a library, or ask what changed between two versions. It returns one guide with the prerequisites, codemods, breaking changes, deprecations, and behavior and config changes from the release notes, changelogs and migration guides of every release in between, each with its source. It adds the public API changes found in the source code of both versions, including those no note mentions.
+
+| Field | Description |
+| --- | --- |
+| `libraryId` | The library, such as `/vercel/next.js` |
+| `fromVersion` | The version you use now, such as `14.2.35` or `14`. A bare major means the oldest release of that line |
+| `toVersion` | The version to upgrade to, such as `16`, optional. A bare major means the newest release of that line; without it, the latest major |
+
+The first request for a pair of versions can take a minute or more while Context7 prepares it. The tool then tells the agent when to call again.
