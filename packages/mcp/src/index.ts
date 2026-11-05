@@ -352,7 +352,8 @@ Each result includes:
 - Code Snippets: Number of available code examples
 - Source Reputation: Authority indicator (High, Medium, Low, or Unknown)
 - Benchmark Score: Quality indicator (100 is the highest score)
-- Versions: Indexed versions, if any. When the user's project or query names a version, pass that exact version as /org/project/version (e.g. /vercel/next.js/v15.4.3), even when it is not listed: Context7 serves the indexed version that covers it. Without a version, pass /org/project for the latest docs.
+
+When the user's project or query names a version of the library, add it to the library ID as /org/project/version (e.g. /vercel/next.js/v15.4.3). Context7 serves the documentation of that version, or of the closest version it has. Without a version, /org/project serves the latest documentation.
 
 For best results, select libraries based on name match, source reputation, snippet coverage, benchmark score, and relevance to your use case.
 
@@ -448,7 +449,7 @@ If you know the programming language the user is working in, pass it as \`langua
           libraryId: z
             .string()
             .describe(
-              "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v16.2.9') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
+              "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'. When the user's project or query names a version, add it as '/org/project/version' (e.g., '/vercel/next.js/v15.4.3'): Context7 serves that version or the closest one it has."
             ),
           query: z
             .string()

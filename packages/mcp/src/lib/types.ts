@@ -12,7 +12,6 @@ export interface SearchResult {
   stars?: number;
   trustScore?: number;
   benchmarkScore?: number;
-  versions?: string[];
   source?: string;
 }
 
