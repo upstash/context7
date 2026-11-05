@@ -94,6 +94,7 @@
                           "enterprise/integrations/other-git",
                           "enterprise/integrations/gerrit",
                           "enterprise/integrations/confluence",
+                          "enterprise/integrations/google-drive",
                           "enterprise/integrations/aws-bedrock"
                         ]
                       },
