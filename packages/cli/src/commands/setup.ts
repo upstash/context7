@@ -41,6 +41,7 @@ import {
   readJsonConfig,
   mergeServerEntry,
   writeJsonConfig,
+  patchJsonConfig,
   resolveMcpPath,
   appendTomlServer,
   patchTomlStdioApiKey,
@@ -402,7 +403,12 @@ async function setupAgent(
           : undefined;
       const entry = resolveEntryToWrite(agent, auth, transport, existingJsonEntry, mcpUrl);
       const merged = mergeServerEntry(existing, agent.mcp.configKey, "context7", entry);
-      await writeJsonConfig(mcpPath, merged.config);
+      // Prefer an in-place edit so the user's JSONC comments, key order and
+      // layout survive; fall back to a full rewrite when the file cannot be
+      // edited as JSONC (missing, empty or unparseable).
+      if (!(await patchJsonConfig(mcpPath, [agent.mcp.configKey, "context7"], entry))) {
+        await writeJsonConfig(mcpPath, merged.config);
+      }
       alreadyExists = merged.alreadyExists;
     }
     mcpStatus = `${alreadyExists ? "reconfigured" : "configured"} with ${AUTH_MODE_LABELS[auth.mode]}`;
