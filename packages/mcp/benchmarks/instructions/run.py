@@ -17,7 +17,7 @@ CLAUDE_TOOLS = {f"mcp__context7__{name}": kind for name, kind in TOOLS.items()}
 
 def parse(events, agent):
     calls, answer, session, complete, failed = [], "", None, False, False
-    tool_errors = 0
+    tool_errors = web_searches = 0
     claude_call_ids = set()
     for event in events:
         kind = event.get("type")
@@ -31,6 +31,8 @@ def parse(events, agent):
             if kind != "item.completed":
                 continue
             item = event["item"]
+            if item["type"] == "web_search":
+                web_searches += 1
             if item["type"] == "agent_message":
                 answer = item["text"]
             if item["type"] == "mcp_tool_call" and item["server"] == "context7":
@@ -58,7 +60,7 @@ def parse(events, agent):
                 for block in event["message"].get("content", []):
                     if isinstance(block, dict) and block.get("tool_use_id") in claude_call_ids:
                         tool_errors += bool(block.get("is_error"))
-    return calls, answer, session, complete and not failed, tool_errors
+    return calls, answer, session, complete and not failed, tool_errors, web_searches
 
 
 def checks(case, calls, answer):
@@ -103,27 +105,29 @@ def run_turn(args, env, config, prompt, session=None, followup=False):
         proc = subprocess.run(cmd, cwd=args.project, env=env, stdin=subprocess.DEVNULL,
                               capture_output=True, text=True, timeout=args.timeout)
     except subprocess.TimeoutExpired:
-        return [], "", None, "timeout", 0
+        return [], "", None, "timeout", 0, 0
     events = []
     for line in proc.stdout.splitlines():
         try:
             events.append(json.loads(line))
         except json.JSONDecodeError:
             continue
-    calls, answer, thread, complete, tool_errors = parse(events, args.agent)
+    calls, answer, thread, complete, tool_errors, web_searches = parse(events, args.agent)
     error = f"exit {proc.returncode}" if proc.returncode else None if complete else "incomplete turn"
-    return calls, answer, thread, error, tool_errors
+    return calls, answer, thread, error, tool_errors, web_searches
 
 
 def run_case(args, env, config, case):
     followup = case.get("followup")
     session = str(uuid.uuid4()) if followup else None
-    calls, answer, thread, error, tool_errors = run_turn(args, env, config, case["query"], session)
+    calls, answer, thread, error, tool_errors, web_searches = run_turn(
+        args, env, config, case["query"], session
+    )
     first_calls = None
     if followup and not error:
         first_calls = [name for name, _ in calls]
         if thread:
-            calls, answer, _, error, followup_errors = run_turn(
+            calls, answer, _, error, followup_errors, web_searches = run_turn(
                 args, env, config, followup, thread, followup=True
             )
             tool_errors += followup_errors
@@ -137,6 +141,7 @@ def run_case(args, env, config, case):
         "first_calls": first_calls,
         "checks_failed": checks(case, calls, answer) if not error else [],
         "tool_errors": tool_errors,
+        "web_searches": web_searches if args.agent == "codex" else None,
         "error": error,
     }
 
@@ -166,8 +171,12 @@ def configure(args, scratch):
     env.update(HOME=str(home), CODEX_HOME=str(codex_home), XDG_CONFIG_HOME=str(home),
                XDG_DATA_HOME=str(home), XDG_CACHE_HOME=str(home))
     config = codex_home / "config.toml"
+    web_search = (
+        f'web_search = {json.dumps(args.codex_web_search)}\n' if args.codex_web_search else ""
+    )
     config.write_text(
-        'approval_policy = "never"\nsandbox_mode = "read-only"\n'
+        web_search
+        + 'approval_policy = "never"\nsandbox_mode = "read-only"\n'
         f'model_reasoning_effort = {json.dumps(args.reasoning_effort)}\n'
         f'[projects.{json.dumps(str(args.project))}]\ntrust_level = "trusted"\n'
         f'[mcp_servers.context7]\nurl = {json.dumps(args.url)}\nrequired = true\n'
@@ -184,6 +193,8 @@ def main():
     parser.add_argument("--binary", help="Client binary path, defaults to the agent name")
     parser.add_argument("--model", required=True)
     parser.add_argument("--reasoning-effort", default="low", help="Codex reasoning effort")
+    parser.add_argument("--codex-web-search", choices=["cached", "live", "disabled"],
+                        help="Override Codex web search mode for a separate diagnostic run")
     parser.add_argument("--project", required=True, type=Path, help="Neutral fixture directory")
     parser.add_argument("--url", required=True, help="Context7 HTTP MCP endpoint")
     parser.add_argument("--eval", required=True, type=Path, action="append")
@@ -191,6 +202,8 @@ def main():
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--timeout", type=int, default=240, help="Seconds per turn")
     args = parser.parse_args()
+    if args.codex_web_search and args.agent != "codex":
+        parser.error("--codex-web-search requires --agent codex")
     args.binary = args.binary or args.agent
     args.project = args.project.resolve(strict=True)
     cases = []
@@ -226,9 +239,12 @@ def main():
             ),
             "client_errors": len(rows) - len(valid),
         }
+        if args.agent == "codex":
+            summary[name]["cases_with_web_search"] = sum(bool(row["web_searches"]) for row in valid)
     args.output.write_text(json.dumps({
         "agent": args.agent, "version": version, "model": args.model,
         "reasoning_effort": args.reasoning_effort if args.agent == "codex" else None,
+        "codex_web_search": (args.codex_web_search or "default") if args.agent == "codex" else None,
         "summary": summary, "results": results,
     }, indent=2) + "\n")
     print(json.dumps(summary, indent=2))

@@ -51,6 +51,11 @@ effort by default, and a read-only sandbox. Claude Code uses its existing sign-i
 loads project settings only, and allows the two Context7 tools. Claude Code writes
 local session records for the cases that need to resume.
 
+Leave Codex web search at its default for the main comparison. Run the same
+commands with `--codex-web-search disabled` to measure tool selection when web
+search is unavailable. Keep those results separate from the main comparison.
+The Codex report counts cases that used web search.
+
 ## Scoring
 
 Recall counts cases labeled for lookup that attempt at least one Context7 tool
