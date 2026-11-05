@@ -21,6 +21,7 @@ import {
   ALL_AGENT_NAMES,
   getAgent,
   detectAgents,
+  resolveAppendRuleFile,
 } from "../setup/agents.js";
 import {
   customizeSkillFilesForAgent,
@@ -286,8 +287,7 @@ async function installRule(
     return { status: "installed", path: rulePath };
   }
 
-  const filePath =
-    scope === "global" ? rule.file("global") : join(process.cwd(), rule.file("project"));
+  const filePath = await resolveAppendRuleFile(rule, scope);
   const escapedMarker = rule.sectionMarker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const section = `${rule.sectionMarker}\n${content}${rule.sectionMarker}`;
 
@@ -366,6 +366,7 @@ async function setupAgent(
   rulePath: string;
   skillStatus: string;
   skillPath: string;
+  signInCommand?: string;
 }> {
   const agent = getAgent(agentName);
 
@@ -376,6 +377,7 @@ async function setupAgent(
   const mcpPath = await resolveMcpPath(mcpCandidates);
 
   let mcpStatus: string;
+  let signInCommand: string | undefined;
   try {
     let alreadyExists: boolean;
     if (mcpPath.endsWith(".toml")) {
@@ -412,6 +414,7 @@ async function setupAgent(
       alreadyExists = merged.alreadyExists;
     }
     mcpStatus = `${alreadyExists ? "reconfigured" : "configured"} with ${AUTH_MODE_LABELS[auth.mode]}`;
+    if (auth.mode === "oauth") signInCommand = agent.mcp.oauthSignInCommand;
   } catch (err) {
     mcpStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
   }
@@ -453,6 +456,7 @@ async function setupAgent(
     rulePath,
     skillStatus,
     skillPath,
+    signInCommand,
   };
 }
 
@@ -512,6 +516,9 @@ async function setupMcp(
         : pc.dim("~");
     log.plain(`    ${mcpIcon} MCP server ${r.mcpStatus}`);
     log.plain(`      ${pc.dim(r.mcpPath)}`);
+    if (r.signInCommand) {
+      log.plain(`      ${pc.yellow("next:")} sign in with ${pc.cyan(r.signInCommand)}`);
+    }
     const ruleIcon = r.ruleStatus === "installed" ? pc.green("+") : pc.dim("~");
     log.plain(`    ${ruleIcon} Rule ${r.ruleStatus}`);
     log.plain(`      ${pc.dim(r.rulePath)}`);
