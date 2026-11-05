@@ -11,6 +11,8 @@ never called `query-docs`.
 | `trigger-eval-aspects.json` |    49 | Routine work, repository edits, follow-ups, supplied IDs, synthetic secrets, and failure handling |
 | `trigger-eval-many.json`    |    24 | Prompts that can exceed the intended call budget                                                  |
 
+See [the normal-install benchmark](INSTALLED.md) for answer correctness and lookup results after setup.
+
 ## Run
 
 Use Python 3.9 or later and signed-in client binaries that support the model you

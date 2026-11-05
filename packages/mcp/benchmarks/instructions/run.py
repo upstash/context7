@@ -80,7 +80,7 @@ def checks(case, calls, answer):
     return issues
 
 
-def run_turn(args, env, config, prompt, session=None, followup=False):
+def run_turn(args, env, config, prompt, session=None, followup=False, *, max_turns=10, extra_tools=()):
     if args.agent == "codex":
         cmd = [args.binary, "exec"]
         if followup:
@@ -91,9 +91,9 @@ def run_turn(args, env, config, prompt, session=None, followup=False):
         cmd += ["--", prompt]
     else:
         cmd = [args.binary, "-p", "--output-format", "stream-json", "--verbose",
-               "--max-turns", "10", "--model", args.model, "--setting-sources", "project",
+               "--max-turns", str(max_turns), "--model", args.model, "--setting-sources", "project",
                "--strict-mcp-config", "--mcp-config", str(config),
-               "--allowedTools", ",".join(CLAUDE_TOOLS)]
+               "--allowedTools", ",".join((*CLAUDE_TOOLS, *extra_tools))]
         if followup:
             cmd += ["--resume", session]
         elif session:
