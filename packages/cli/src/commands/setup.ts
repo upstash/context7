@@ -298,8 +298,13 @@ async function installRule(
   }
 
   if (existing.includes(rule.sectionMarker)) {
-    const regex = new RegExp(`${escapedMarker}\\n[\\s\\S]*?${escapedMarker}`);
-    const updated = existing.replace(regex, section);
+    // AGENTS.md is often checked out with CRLF line endings (Git for Windows
+    // defaults to core.autocrlf=true). Match either ending and write the new
+    // section with the one the file already uses.
+    const regex = new RegExp(`${escapedMarker}(\\r?\\n)[\\s\\S]*?${escapedMarker}`);
+    const updated = existing.replace(regex, (_match, eol: string) =>
+      section.replace(/\r?\n/g, eol)
+    );
     await writeFile(filePath, updated, "utf-8");
     return { status: "updated", path: filePath };
   }
