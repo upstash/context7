@@ -2,6 +2,7 @@ import type { McpServer, ServerContext } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { submitDocsFeedback } from "./api.js";
 import { recordToolCallTelemetry } from "./auth-lifecycle-telemetry.js";
+import { registerQueryCodeTool } from "./query-code-tool.js";
 import { QUERY_DOCS_TOOL, SUBMIT_DOCS_FEEDBACK_TOOL } from "./tool-names.js";
 import type { ClientContext } from "./types.js";
 
@@ -74,4 +75,6 @@ Do not include sensitive or confidential information such as API keys, passwords
       };
     }
   );
+
+  registerQueryCodeTool(server, getClientContext);
 }

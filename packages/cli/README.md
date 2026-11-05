@@ -96,6 +96,21 @@ ctx7 docs /prisma/prisma "one-to-many relations"
 ctx7 docs /facebook/react "hooks" --json
 ```
 
+### Query source code
+
+Search and read a library's source code at the version its docs describe. Search works like ripgrep.
+
+```bash
+ctx7 code /tanstack/query "invalidateQueries\\(" -g "packages/query-core/**"
+ctx7 code /pydantic/pydantic "Input should be a valid integer" -F
+ctx7 code /tokio-rs/tokio JoinHandle -c
+ctx7 code /colinhacks/zod/v3.24.2 ZodEffects --op definition
+ctx7 code /tokio-rs/tokio spawn --op read
+ctx7 code /tanstack/query --op list --path packages/query-core/src
+```
+
+`--op` is `grep` (default), `definition`, `references`, `outline`, `read` or `list`. The search flags are `-F`, `-i`, `-g` (repeat it for more globs), `-C`, `-l`, `-c`, `--head-limit` and `--offset`. Add a git tag to the library ID (`/colinhacks/zod/v3.24.2`) or pass `--tag` for a version. The first query for a library version can answer that the source is still being indexed. Run the command again after the time it gives.
+
 ### Setup
 
 Configure Context7 MCP and a rule for your AI coding agents. Authenticates via OAuth, generates an API key, and writes the config.
