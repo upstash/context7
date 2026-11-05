@@ -95,6 +95,7 @@
                           "enterprise/integrations/gerrit",
                           "enterprise/integrations/confluence",
                           "enterprise/integrations/google-drive",
+                          "enterprise/integrations/notion",
                           "enterprise/integrations/aws-bedrock"
                         ]
                       },
