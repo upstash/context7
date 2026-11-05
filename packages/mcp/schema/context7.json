@@ -86,7 +86,7 @@
     },
     "previousVersions": {
       "type": "array",
-      "description": "Private libraries only: previous versions of your library that should also be available in Context7. Context7 chooses the versions of public libraries and ignores this field for them.",
+      "description": "Previous versions of your library that should also be available in Context7. Context7 chooses the versions of the 1,000 most popular public libraries and ignores this field for them.",
       "items": {
         "type": "object",
         "properties": {
