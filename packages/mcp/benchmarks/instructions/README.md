@@ -13,6 +13,8 @@ never called `query-docs`.
 
 See [the normal-install benchmark](INSTALLED.md) for answer correctness and lookup results after setup.
 
+See [the recorded results](RESULTS.md) for the other benchmark configurations.
+
 ## Run
 
 Use Python 3.9 or later and signed-in client binaries that support the model you
