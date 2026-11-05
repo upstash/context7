@@ -16,7 +16,7 @@ Each result includes:
 - Code Snippets: Number of available code examples
 - Source Reputation: Authority indicator (High, Medium, Low, or Unknown)
 - Benchmark Score: Quality indicator (100 is the highest score)
-- Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.
+- Versions: Indexed versions, if any. When the user's project or query names a version, pass that exact version as /org/project/version (e.g. /vercel/next.js/v15.4.3), even when it is not listed: Context7 serves the indexed version that covers it.
 
 For best results, select libraries based on name match, source reputation, snippet coverage, benchmark score, and relevance to your use case.
 
