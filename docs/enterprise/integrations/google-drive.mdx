@@ -20,20 +20,30 @@ Context7 reads Drive with a service account and one read-only scope:
 | ----- | --- |
 | `https://www.googleapis.com/auth/drive.readonly` | List the selected folders and export Google Docs. Context7 never writes to Drive. |
 
+The **Set up Google Cloud** panel in the **Google Drive** card (**Settings → Integrations**) shows these steps. Enter your project ID there, and the panel fills it into the commands.
+
 <Steps>
-  <Step title="Enable the Drive API">
-    In the [Google Cloud console](https://console.cloud.google.com/), select or create a project, open **APIs & Services → Library**, and enable the **Google Drive API**.
-  </Step>
-  <Step title="Create a service account">
-    Open **IAM & Admin → Service Accounts** and create a service account, for example `context7-sync`. It needs no IAM roles in the project.
+  <Step title="Create the service account">
+    Run these commands in [Cloud Shell](https://shell.cloud.google.com/) or with the gcloud CLI. Replace `PROJECT_ID` with your project ID. The service account needs no IAM roles in the project.
+
+    ```bash
+    gcloud services enable drive.googleapis.com --project=PROJECT_ID
+    gcloud iam service-accounts create context7-drive \
+      --display-name="Context7 Drive sync" --project=PROJECT_ID
+    ```
   </Step>
   <Step title="Create a key, or use workload identity">
-    To use a key, open the service account, go to **Keys → Add key → Create new key**, and download the JSON key.
+    To use a key, download one:
 
-    To avoid a stored key, choose **Server credentials** when you [connect Google Drive](#connect-google-drive).
+    ```bash
+    gcloud iam service-accounts keys create context7-drive-key.json \
+      --iam-account=context7-drive@PROJECT_ID.iam.gserviceaccount.com
+    ```
+
+    Organizations created on or after May 3, 2024 block service account keys by default. If Google refuses to create the key, ask an organization admin to [allow keys for this project](https://cloud.google.com/resource-manager/docs/secure-by-default-organizations), or use **Server credentials** without a key (see [Connect Google Drive](#connect-google-drive)).
   </Step>
   <Step title="Share the content">
-    In Google Drive, share each folder you want to sync with the service account's email address, with **Viewer** access. For a Shared Drive, add the service account as a member with the **Viewer** role.
+    In Google Drive, share each folder you want to sync with the service account's email address, with **Viewer** access. For a Shared Drive, add the service account as a member with the **Viewer** role. If Drive does not allow sharing outside your organization, ask a Workspace admin to allow it for the service account, or use domain-wide delegation.
   </Step>
 </Steps>
 
@@ -41,7 +51,7 @@ Context7 reads Drive with a service account and one read-only scope:
 
 If sharing with the service account is not practical, the service account can act as one Workspace user and see what that user sees.
 
-1. In the Google Cloud console, copy the service account's **Unique ID** (its OAuth client ID).
+1. Copy the service account's client ID. It is `client_id` in the JSON key, and the **Set up Google Cloud** panel shows it after you paste the key.
 2. In the Google Workspace Admin console, open **Security → Access and data control → API controls → Manage Domain Wide Delegation**.
 3. Add a new client with that ID and the scope `https://www.googleapis.com/auth/drive.readonly`.
 4. In Context7, enter the user's email address in **Act as user**.
@@ -56,7 +66,7 @@ Open **Settings → Integrations** and choose how Context7 authenticates in the 
 
 <Tabs>
   <Tab title="Service account key">
-    Paste the JSON key, and optionally the user for domain-wide delegation. Use **Test connection** to check the credentials, then click **Connect**.
+    Paste the JSON key, and optionally the user for domain-wide delegation. Click **Test connection**, then click **Connect**.
 
     Context7 checks the key with Google before it saves it, stores it encrypted, and never returns it from any API. The settings page shows only the service account's email and the last characters of the key ID. To rotate the key, paste the new key and save.
   </Tab>
@@ -66,9 +76,28 @@ Open **Settings → Integrations** and choose how Context7 authenticates in the 
     - `GOOGLE_APPLICATION_CREDENTIALS` pointing at a key file or a [workload identity federation](https://cloud.google.com/iam/docs/workload-identity-federation) configuration, for example for AWS or an OIDC provider.
     - [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity) when the server runs on GKE.
 
+    For workload identity federation, let your workload identity pool act as the service account, and write the credential file. Replace the uppercase values with your pool, provider, subject and token file. On AWS or Azure, use `--aws` or `--azure` instead of `--credential-source-file`:
+
+    ```bash
+    gcloud services enable sts.googleapis.com iamcredentials.googleapis.com --project=PROJECT_ID
+    SA=context7-drive@PROJECT_ID.iam.gserviceaccount.com
+    POOL=projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID
+    gcloud iam service-accounts add-iam-policy-binding "$SA" \
+      --role=roles/iam.workloadIdentityUser \
+      --member="principal://iam.googleapis.com/$POOL/subject/SUBJECT"
+    gcloud iam workload-identity-pools create-cred-config "$POOL/providers/PROVIDER_ID" \
+      --service-account="$SA" \
+      --credential-source-file=TOKEN_FILE \
+      --output-file=google-credentials.json
+    ```
+
+    Set `GOOGLE_APPLICATION_CREDENTIALS` to the path of `google-credentials.json` on the Context7 server, and restart it. Then click **Test connection**, and click **Connect**.
+
     Domain-wide delegation is not available in this mode.
   </Tab>
 </Tabs>
+
+**Test connection** checks the credentials with Google and lists the first folders, files and Shared Drives that the identity can see. If the list is empty, share a folder with the service account, then test again. After you connect, the card shows the service account's email with a copy button.
 
 ## Add a Google Drive library
 
@@ -155,6 +184,8 @@ Set `GOOGLE_DRIVE_API_URL` to send Drive API calls through another endpoint, suc
 
 | Message | Fix |
 | --- | --- |
+| "The private_key in the JSON key is damaged" | The key was cut or changed when it was copied. Paste the whole JSON file again, or create a new key. |
+| "Nothing is shared with … yet" | The credentials work, but no folder or Shared Drive is shared with the service account. Share one with **Viewer** access, then test again. |
 | "Google rejected the credentials" | Check the key. With delegation, check that the client ID is allowed the `drive.readonly` scope in the Admin console. |
 | "Google denied access … Check that the Drive API is enabled" | Enable the Google Drive API in the service account's project. |
 | "No longer available to the Google connector: folder …" | The folder was deleted, trashed or unshared, and its Docs were removed. Share it with the service account again, then click **Refresh**. |
