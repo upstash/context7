@@ -619,8 +619,7 @@ describe("research preview", () => {
       }
     };
     const httpText = await instructions(httpTransport(httpUrl));
-    expect(httpText).toContain("resolve-library-id");
-    expect(httpText).toContain("query-docs");
+    expect(httpText).toContain("Context7");
     expect(httpText).not.toContain("${");
     expect(httpText).not.toContain("submit-docs-feedback");
     expect(await instructions(stdioTransport(childEnv))).toBe(httpText);
@@ -628,8 +627,9 @@ describe("research preview", () => {
     const preview = await instructions(httpTransport(`${httpUrl}?research_preview=1`));
     expect(preview.startsWith(`${httpText}\n\n`)).toBe(true);
     expect(preview).toContain("submit-docs-feedback");
-    // Claude Code cuts server instructions after 4096 characters.
-    expect(preview.length).toBeLessThanOrEqual(4096);
+    // Claude Code cuts server instructions after 2048 characters
+    // (CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH), so the whole text must fit, preview included.
+    expect(preview.length).toBeLessThanOrEqual(2048);
   });
 
   test("asks clients to load resolve-library-id and query-docs up front", async () => {
