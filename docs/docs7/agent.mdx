@@ -148,7 +148,7 @@ Each code example ends with one of these results:
 
 - **Passed**: the example ran and did what the page says, including the documented output and responses.
 - **Failed**: the example threw an error, or its result differs from the page. If the example has a mistake, such as a wrong method name, argument, value, expected output, import, or syntax, the agent fixes it and runs it again. If the page documents the API correctly but the released SDK or the service does not support it yet, the agent removes the example from the page and comments on it in the pull request, so you can restore it after that release.
-- **Skipped**: the example needs a service with no variable, connects over TCP (for example ioredis, node-redis, or redis-py with a `redis://` URL), is not a complete program, or is a whole framework app such as a Next.js route.
+- **Skipped**: the example needs a service with no variable, connects over TCP (for example ioredis, node-redis, or redis-py with a `redis://` URL), is not a complete program, or is a whole framework app such as a Next.js route. The agent never runs an example against a stand-in service, such as a mock, a stub, or a patched client. An example that cannot reach the service it needs is skipped, not passed.
 
 When examples are skipped because a variable is missing, the variables dialog lists the variables they need and how many examples wait for each. Add them, and Docs7 checks those examples again right away, without waiting for the next month.
 
