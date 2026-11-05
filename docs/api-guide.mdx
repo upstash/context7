@@ -158,6 +158,33 @@ The [Context7 MCP server](/resources/all-clients) exposes the same lookups as ag
 
 Call the REST API directly to control requests from your own code, or use the MCP tools when you want an agent to fetch documentation automatically during inference. Both use the same [API key](#authentication).
 
+## Compare two versions of a library
+
+`GET /api/v2/code/diff` reports what changed in a library's source between two indexed versions. Pass `libraryId` and `base` (the older version); `version` defaults to the library's release tag. The diff keeps the order you give it, so `added` means a symbol appears only in `version`.
+
+The `view` chooses what the diff shows:
+
+| View | What it shows |
+|------|---------------|
+| `api` | Changed public symbols, possibly breaking ones first (the default) |
+| `name-status` | Changed files with their status, like `git diff --name-status` |
+| `stat` | Changed files with line counts, like `git diff --stat` |
+| `patch` | Unified hunks, like `git diff` |
+
+```bash
+curl -G "https://context7.com/api/v2/code/diff" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY" \
+  --data-urlencode "libraryId=/vercel/next.js" \
+  --data-urlencode "base=v15.0.0" \
+  --data-urlencode "version=v16.0.0"
+```
+
+In the `api` view, each entry has a `change` (`added`, `removed`, `signature`, `visibility`, `body`, `moved`, `renamed`, `deprecated` or `kind`) and a `breaking` flag. "Possibly breaking" is based on signatures only; it does not prove compatibility. Add `symbol` to keep one symbol and its members, `only_breaking` to keep the breaking entries, or `include_private` to include symbols that are not exported.
+
+Other parameters: `grep` searches the changed lines (with `side` `added`, `removed` or `both`), `fixed_strings`, `ignore_case`, `path`, `glob`, `scope` (`package` by default, or `repo`), `context`, `head_limit`, `offset`, `max_patch_bytes`, and `format=json` for a structured body. The response is plain text by default.
+
+The same `202 indexing`, `429` budget, `422 no_source` and `413 too_many_files` answers apply as for `GET /api/v2/code`.
+
 ## Rate Limits
 
 - **Without API key**: Low rate limits and no custom configuration
