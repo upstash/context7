@@ -174,12 +174,14 @@ def configure(args, scratch):
     web_search = (
         f'web_search = {json.dumps(args.codex_web_search)}\n' if args.codex_web_search else ""
     )
+    mcp_exposure = 'omit_tools_from = ["deferred", "code_mode"]\n' if args.codex_mcp_direct else ""
     config.write_text(
         web_search
         + 'approval_policy = "never"\nsandbox_mode = "read-only"\n'
         f'model_reasoning_effort = {json.dumps(args.reasoning_effort)}\n'
         f'[projects.{json.dumps(str(args.project))}]\ntrust_level = "trusted"\n'
         f'[mcp_servers.context7]\nurl = {json.dumps(args.url)}\nrequired = true\n'
+        + mcp_exposure
         + ('[mcp_servers.context7.http_headers]\n'
            f'"X-Context7-API-Key" = {json.dumps(key)}\n' if key else "")
         + '[features]\napps = false\nplugins = false\nmemories = false\n'
@@ -195,6 +197,8 @@ def main():
     parser.add_argument("--reasoning-effort", default="low", help="Codex reasoning effort")
     parser.add_argument("--codex-web-search", choices=["cached", "live", "disabled"],
                         help="Override Codex web search mode for a separate diagnostic run")
+    parser.add_argument("--codex-mcp-direct", action="store_true",
+                        help="Expose Context7 in Codex's initial tool list")
     parser.add_argument("--project", required=True, type=Path, help="Neutral fixture directory")
     parser.add_argument("--url", required=True, help="Context7 HTTP MCP endpoint")
     parser.add_argument("--eval", required=True, type=Path, action="append")
@@ -204,6 +208,8 @@ def main():
     args = parser.parse_args()
     if args.codex_web_search and args.agent != "codex":
         parser.error("--codex-web-search requires --agent codex")
+    if args.codex_mcp_direct and args.agent != "codex":
+        parser.error("--codex-mcp-direct requires --agent codex")
     args.binary = args.binary or args.agent
     args.project = args.project.resolve(strict=True)
     cases = []
@@ -245,6 +251,7 @@ def main():
         "agent": args.agent, "version": version, "model": args.model,
         "reasoning_effort": args.reasoning_effort if args.agent == "codex" else None,
         "codex_web_search": (args.codex_web_search or "default") if args.agent == "codex" else None,
+        "codex_mcp_direct": args.codex_mcp_direct if args.agent == "codex" else None,
         "summary": summary, "results": results,
     }, indent=2) + "\n")
     print(json.dumps(summary, indent=2))

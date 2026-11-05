@@ -56,6 +56,14 @@ commands with `--codex-web-search disabled` to measure tool selection when web
 search is unavailable. Keep those results separate from the main comparison.
 The Codex report counts cases that used web search.
 
+To compare server instructions with Context7 in Codex's initial tool list, run
+both server variants with `--codex-mcp-direct`, default web search, and no
+project rule. The flag sets `omit_tools_from = ["deferred", "code_mode"]` for
+Context7. Keep this comparison separate from default discovery. Confirm the
+initial tool list when changing Codex versions or model settings, since runtime
+policies can override the server's exposure setting.
+[Codex configuration reference](https://learn.chatgpt.com/docs/config-file/config-reference).
+
 ## Scoring
 
 Recall counts cases labeled for lookup that attempt at least one Context7 tool
