@@ -372,15 +372,14 @@ async function connect(transportKind: "http" | "stdio", era: "modern" | "legacy"
 
 describe("MCP setup page", () => {
   test("serves setup instructions to browsers", async () => {
-    const response = await fetch(httpUrl, { headers: { Accept: "text/html" } });
+    const response = await fetch(new URL("/", httpUrl));
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("text/html");
-    expect(response.headers.get("vary")).toContain("Accept");
     expect(await response.text()).toContain("https://mcp.context7.com/mcp");
   });
 
-  test.each(["*/*", "text/event-stream"])("preserves protocol GET for %s", async (accept) => {
+  test.each(["text/html", "text/event-stream"])("preserves protocol GET for %s", async (accept) => {
     const response = await fetch(httpUrl, { headers: { Accept: accept } });
 
     expect(response.status).toBe(401);

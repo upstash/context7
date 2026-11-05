@@ -21,6 +21,7 @@ import express from "express";
 import { Command, InvalidArgumentError } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
 import { randomUUID } from "node:crypto";
+import { fileURLToPath } from "node:url";
 import {
   SERVER_VERSION,
   RESOURCE_URL,
@@ -705,31 +706,6 @@ async function main() {
     const mcpRouter = express.Router();
     mcpRouter.use(express.json());
     mcpRouter.use(mcpBodyErrorHandler);
-    mcpRouter.get("/", (req, res, next) => {
-      res.vary("Accept");
-      if (req.accepts(["text/event-stream", "text/html"]) !== "text/html") {
-        return next();
-      }
-
-      res.type("html").send(`<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Connect to Context7 MCP</title>
-</head>
-<body>
-  <main>
-    <h1>Connect to Context7 MCP</h1>
-    <p>In your MCP client, add a remote server named Context7 using Streamable HTTP.</p>
-    <p>Server URL: <code>https://mcp.context7.com/mcp</code></p>
-    <p>Follow your client's sign-in prompt if shown, or use a Context7 API key in the
-      <code>Authorization: Bearer YOUR_API_KEY</code> header.</p>
-    <p><a href="https://context7.com/install">View setup instructions for your client</a></p>
-  </main>
-</body>
-</html>`);
-    });
     mcpRouter.all("/", (req, res) => handleMcpRequest(req, res));
     // Compatibility alias for clients already configured with /mcp/oauth.
     mcpRouter.all("/oauth", (req, res) => handleMcpRequest(req, res));
@@ -744,6 +720,10 @@ async function main() {
       res.status(200).send(mcpServerCard());
     });
     app.use("/mcp", mcpRouter);
+
+    app.get("/", (_req, res) => {
+      res.sendFile("index.html", { root: fileURLToPath(new URL("../public/", import.meta.url)) });
+    });
 
     app.get("/ping", (_req: express.Request, res: express.Response) => {
       res.json({ status: "ok", message: "pong" });
