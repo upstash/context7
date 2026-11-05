@@ -67,6 +67,30 @@ afterEach(async () => {
 });
 
 describe("remove command", () => {
+  test("--t3 removes both provider MCP entries and preserves unrelated servers", async () => {
+    await mkdir(join(tempDir, ".codex"), { recursive: true });
+    await writeFile(
+      join(tempDir, ".mcp.json"),
+      JSON.stringify({
+        mcpServers: {
+          context7: { url: "https://mcp.context7.com/mcp" },
+          other: { command: "other" },
+        },
+      })
+    );
+    await writeFile(
+      join(tempDir, ".codex", "config.toml"),
+      '[mcp_servers.context7]\nurl = "https://mcp.context7.com/mcp"\n\n[mcp_servers.other]\ncommand = "other"\n'
+    );
+    await runCommand("remove", "--t3", "--codex", "--project", "--mcp", "--yes");
+    const json = JSON.parse(await readFile(join(tempDir, ".mcp.json"), "utf-8"));
+    expect(json.mcpServers.context7).toBeUndefined();
+    expect(json.mcpServers.other).toEqual({ command: "other" });
+    const toml = await readFile(join(tempDir, ".codex", "config.toml"), "utf-8");
+    expect(toml).not.toContain("mcp_servers.context7");
+    expect(toml).toContain("mcp_servers.other");
+  });
+
   test("removes only CLI artifacts for cursor project setup", async () => {
     const rulePath = join(tempDir, ".cursor", "rules", "context7.mdc");
     const cliSkillPath = join(tempDir, ".cursor", "skills", "find-docs", "SKILL.md");
