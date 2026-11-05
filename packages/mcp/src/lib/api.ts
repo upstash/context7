@@ -222,6 +222,9 @@ export async function submitDocsFeedback(
   }
 }
 
+/** The endpoint's 404 codes: answers about the library or version, not failures. */
+const UPGRADE_GUIDE_MISSES = new Set(["library_not_prepared", "version_not_found"]);
+
 /**
  * Fetches the upgrade guide for a library between two versions
  * @param request The library ID and the versions to upgrade from and to
@@ -258,11 +261,24 @@ export async function fetchUpgradeGuide(
           const note = `The upgrade guide is being prepared. Call '${GET_UPGRADE_GUIDE_TOOL}' again with the same arguments after ${retryAfter} seconds.`;
           return { text: json?.message ? `${note}\n\n${json.message}` : note, outcome: "success" };
         }
+        if (response.status === 404) {
+          let json: { error?: string; message?: string } | undefined;
+          try {
+            json = (await response.json()) as { error?: string; message?: string };
+          } catch {
+            // Not the endpoint's JSON answer
+          }
+          // A library without a guide or an unknown version is an answer, not a failure.
+          if (json?.error && UPGRADE_GUIDE_MISSES.has(json.error))
+            return { text: json.message ?? json.error, outcome: "not_found" };
+          // Any other 404 (for example a deployment without the endpoint) is an upstream error.
+          const text = `The upgrade guide service is not available (HTTP 404). Please try again later.`;
+          console.error(text);
+          return { text, outcome: "error" };
+        }
         if (!response.ok) {
           const errorMessage = await parseErrorResponse(response, context);
           console.error(errorMessage);
-          // An unknown library or version is an answer, not a failure.
-          if (response.status === 404) return { text: errorMessage, outcome: "not_found" };
           return { text: errorMessage, outcome: "error" };
         }
         const text = await response.text();

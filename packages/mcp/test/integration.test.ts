@@ -29,6 +29,8 @@ const INVALID_JSON_QUERY = "force-invalid-json";
 const STUB_UPGRADE_GUIDE = "# Upgrading Next.js from 14 to 16";
 const PREPARING_FROM_VERSION = "13";
 const UNKNOWN_FROM_VERSION = "99";
+/** A deployment without the endpoint answers a plain 404. */
+const MISSING_ENDPOINT_FROM_VERSION = "98";
 const CLIENT_IP_ASSERTION_KEY = "0123456789abcdef".repeat(4);
 const INVALID_OAUTH_TOKEN_BODY = {
   error: "invalid_oauth_token",
@@ -121,6 +123,10 @@ function startStubApi(): Promise<string> {
             message: "Indexing the source of next.js 13.0.0.",
           })
         );
+      } else if (fromVersion === MISSING_ENDPOINT_FROM_VERSION) {
+        res.statusCode = 404;
+        res.setHeader("Content-Type", "text/html");
+        res.end("<html>Not Found</html>");
       } else if (fromVersion === UNKNOWN_FROM_VERSION) {
         res.statusCode = 404;
         res.setHeader("Content-Type", "application/json");
@@ -746,6 +752,13 @@ describe("research preview: get-upgrade-guide", () => {
 
     expect(result.isError).toBeFalsy();
     expect(resultText(result)).toBe("No release 99 of next.js.");
+  });
+
+  test("reports a 404 that is not the endpoint's answer as an upstream error", async () => {
+    const result = await callGuide({ fromVersion: MISSING_ENDPOINT_FROM_VERSION });
+
+    expect(resultText(result)).toContain("not available");
+    expect(resultText(result)).not.toContain("library");
   });
 });
 
