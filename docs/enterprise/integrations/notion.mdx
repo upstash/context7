@@ -4,7 +4,7 @@ sidebarTitle: "Notion"
 description: "Sync approved Notion pages and database rows with Context7 Enterprise"
 ---
 
-An admin connects a Notion workspace under **Settings → Integrations** and chooses content from **Add → Notion**. A selected page includes its accessible child pages and the rows of nested databases. A selected data source includes its rows, each indexed as a separate page.
+An admin connects a Notion workspace under **Settings → Notion** and chooses content from **Add → Notion**. A selected page includes its accessible child pages and the rows of nested databases. A selected data source includes its rows, each indexed as a separate page.
 
 ## Set up the connection
 
@@ -16,7 +16,7 @@ An admin connects a Notion workspace under **Settings → Integrations** and cho
     In Notion, open each approved page or database and use **••• → Connections** to add the connection. You can also grant access from the connection's **Content access** tab.
   </Step>
   <Step title="Connect Context7">
-    Open **Settings → Integrations → Notion**. Paste the token, choose **Test connection**, then **Connect**. The test shows the bot, workspace when available, and up to 10 accessible items. Context7 stores the token encrypted and displays only its last four characters.
+    Open **Settings → Notion**. Paste the token, choose **Test connection**, then **Connect**. The test shows the bot, workspace when available, and up to 10 accessible items. Context7 stores the token encrypted and displays only its last four characters.
   </Step>
 </Steps>
 
@@ -30,7 +30,7 @@ The default limit is 10,000 pages per library. Set `NOTION_MAX_PAGES` on the Ent
 
 ## Sync and monitor libraries
 
-The default schedule is daily at 03:00 in the server timezone. Change or disable it under **Settings → Integrations → Notion**, or choose **Sync all now**. From a library, choose **Refresh** to sync it alone, or **Re-index all pages** to rebuild it.
+The default schedule is daily at 03:00 in the server timezone. Change or disable it under **Settings → Notion**, or choose **Sync all now**. From a library, choose **Refresh** to sync it alone, or **Re-index all pages** to rebuild it.
 
 Context7 lists the selected content each time. It checks page and block edit timestamps to skip Markdown retrieval, extraction, and embedding for unchanged pages. It still reads the block tree to find child pages and databases, since Notion search can omit accessible items. Deleted, trashed, or unshared content leaves the index after a successful listing. If a page fails to load or extract, its last indexed version remains available where possible. A failed listing leaves the live library in place. When the whole sync job fails, Context7 retries after 15 minutes, 1 hour, and 6 hours. Individual page failures retry on the next sync.
 
