@@ -130,7 +130,7 @@ At a minimum, assign yourself the **Context7 Admin** role so you can test the fl
 
 ### Step 1: Open the Entra SSO card
 
-Sign in to your Context7 dashboard with the password admin account. Open **Workspace Settings**, and under **Authentication** you'll find a card titled **Microsoft Entra SSO**.
+Sign in to your Context7 dashboard with the password admin account. Open **Settings → Authentication**, and you'll find a card titled **Microsoft Entra SSO**.
 
 <Frame>
   ![Context7 Workspace Settings with the Microsoft Entra SSO card highlighted](/images/enterprise/entra-sso/07-context7-settings-card.png)
@@ -183,11 +183,11 @@ The first time each person signs in, Context7 creates a user record with the dis
 Role assignments live entirely in Entra. To change someone's access in Context7:
 
 - **Promote a member to admin**: in Entra, go to Enterprise applications → Context7 → Users and groups, remove their Member role, add the Admin role, and ask them to sign out and back in.
-- **Revoke access**: remove the user from Users and groups in Entra. Existing Context7 sessions stay valid until they expire, after at most 7 days, or until the user signs out.
-- **Audit who signed in recently**: **Workspace Settings → Users** shows every Context7 user with their auth provider and last-login timestamp.
+- **Revoke access**: remove the user from Users and groups in Entra. Existing Context7 sessions stay valid until they expire, after at most 7 days, or until the user signs out. To end them right away, select **Disable sign-in** in the **Members** tab; an Entra member cannot be removed there, because their next sign-in would create the account again.
+- **Audit who signed in recently**: the **Members** tab shows every Context7 user with their sign-in method and last sign-in time.
 
 <Frame>
-  ![Workspace Settings Users tab showing password and Entra users side by side](/images/enterprise/entra-sso/11-users-tab.png)
+  ![Members tab showing password and Entra users side by side](/images/enterprise/entra-sso/11-users-tab.png)
 </Frame>
 
 ## Troubleshooting

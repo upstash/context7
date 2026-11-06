@@ -24,7 +24,7 @@ Context7 builds its SAML URLs from the address it is reached at. Behind a revers
 
 ## Part 1: Register Context7 in your identity provider
 
-In Context7, sign in as an admin, open **Workspace Settings**, and go to the **Authentication** section on the **General** tab. In the **Single Sign-On** card, select the **SAML 2.0** tab. The **Service provider** section at the bottom of the tab lists what your IdP needs, with copy buttons.
+In Context7, sign in as an admin and open **Settings → Authentication**. In the **Single Sign-On** card, select the **SAML 2.0** tab. The **Service provider** section at the bottom of the tab lists what your IdP needs, with copy buttons.
 
 <Frame>
   ![Service provider section with the SP entity ID, ACS URL, Single Logout URL, metadata URL and SP certificate](/images/enterprise/saml-sso/04-service-provider.png)
@@ -167,13 +167,13 @@ After this, the default admin account and other password users cannot sign in wi
 
 ## Managing users
 
-Users who have signed in appear in **Workspace Settings → Users**, with `saml` as their sign-in method.
+Users who have signed in appear in the **Members** tab, with `saml` as their sign-in method.
 
 <Frame>
-  ![Users tab listing a SAML-provisioned admin next to the password admin](/images/enterprise/saml-sso/05-users-tab.png)
+  ![Members tab listing a SAML-provisioned admin next to the password admin](/images/enterprise/saml-sso/05-users-tab.png)
 </Frame>
 
-Roles follow group membership in your IdP and update at each sign-in. To remove someone's access, remove them from the mapped groups or disable them in your IdP. If your IdP supports single logout, signing them out there also ends their Context7 sessions right away.
+Roles follow group membership in your IdP and update at each sign-in. To remove someone's access, remove them from the mapped groups or disable them in your IdP. If your IdP supports single logout, signing them out there also ends their Context7 sessions right away. You can also select **Disable sign-in** in the **Members** tab to end their sessions right away; an SSO member cannot be removed there, because their next sign-in would create the account again.
 
 ## Troubleshooting
 

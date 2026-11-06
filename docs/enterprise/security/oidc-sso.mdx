@@ -50,7 +50,7 @@ If your provider uses a different claim name, you can change what Context7 looks
 
 <Steps>
   <Step title="Open the SSO settings card">
-    Sign in to your Context7 dashboard with the admin account. Open **Workspace Settings**, scroll to the **Authentication** section, and click the **Single Sign-On** card. Select the **OIDC** tab.
+    Sign in to your Context7 dashboard with the admin account. Open **Settings → Authentication**, and click the **Single Sign-On** card. Select the **OIDC** tab.
 
     <Frame>
       ![Context7 Settings showing the Single Sign-On card with the OIDC tab selected](/images/enterprise/oidc-sso/02-sso-card-oidc.png)
@@ -120,15 +120,15 @@ Disabling password sign-in means the default admin account and any manually crea
 
 ## Managing users
 
-All users who have signed in appear in **Workspace Settings → Users**, along with their authentication provider and last login time.
+All users who have signed in appear in the **Members** tab, along with their sign-in method and last sign-in time.
 
 <Frame>
-  ![Workspace Settings Users tab showing OIDC-provisioned users](/images/enterprise/oidc-sso/05-users-tab.png)
+  ![Members tab showing OIDC-provisioned users](/images/enterprise/oidc-sso/05-users-tab.png)
 </Frame>
 
 Roles are controlled by group membership in your IdP. To change someone's role, update their group assignment in your identity provider. The change takes effect on their next sign-in.
 
-To revoke access, remove the user from the relevant group in your IdP. Existing Context7 sessions stay valid until they expire, after at most 7 days, or until the user signs out.
+To revoke access, remove the user from the relevant group in your IdP. Existing Context7 sessions stay valid until they expire, after at most 7 days, or until the user signs out. You can also select **Disable sign-in** in the **Members** tab to end their sessions right away; an SSO member cannot be removed there, because their next sign-in would create the account again.
 
 ## Troubleshooting
 
