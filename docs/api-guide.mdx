@@ -22,6 +22,7 @@ Get your API key at [context7.com/dashboard](https://context7.com/dashboard). Le
 | [Fetch Page](/api-reference/search/read-one-web-page-optionally-narrowed-to-a-question) | `GET /api/v3/fetch` | Read one web page by URL, optionally narrowed to a question |
 | [Search Library](/api-reference/search/search-for-libraries) | `GET /api/v2/libs/search` | Find libraries by name |
 | [Get Context](/api-reference/context/get-documentation-context) | `GET /api/v2/context` | Retrieve documentation snippets for a library |
+| Code Search | `GET /api/v2/code` | Search and read a library's source code at the commit its docs were built from |
 | [Refresh Library](/api-reference/refresh/refresh-a-library) | `POST /api/v1/refresh` | Refresh a library's documentation |
 | [Get Policies](/api-reference/policies/get-teamspace-policies) | `GET /api/v2/policies` | Retrieve teamspace policy configuration |
 | [Update Policies](/api-reference/policies/update-teamspace-policies) | `PATCH /api/v2/policies` | Update teamspace policies |
@@ -146,6 +147,35 @@ for info in docs["infoSnippets"]:
 <Info>
   For TypeScript SDK usage, see [Search](/sdks/ts/commands/search), [Search Library](/sdks/ts/commands/search-library), and [Get Context](/sdks/ts/commands/get-context).
 </Info>
+
+### Search a library's source code
+
+`GET /api/v2/code` searches and reads a library's source code at the commit its documentation was built from. It serves GitHub, GitLab and Bitbucket repositories; a website, llms.txt or OpenAPI library has no source and returns `422 no_source`.
+
+Pass `libraryId` and an `operation`. The default operation is `grep`, which takes a [ripgrep](https://github.com/BurntSushi/ripgrep)-style `pattern` and also accepts `fixed_strings`, `ignore_case`, `glob` (repeatable or newline-separated), `path`, `context`, `output_mode` (`content`, `files_with_matches` or `count`), `head_limit` and `offset`.
+
+| Operation | What it does |
+|-----------|--------------|
+| `grep` | Search lines by ripgrep pattern (the default) |
+| `search` | Find code by meaning, from a plain-language `pattern` |
+| `definition` | Find where a symbol is defined |
+| `references` | Find where a symbol is used |
+| `outline` | List the exported API, or the symbols in a `path` |
+| `read` | Read a symbol, or a `path` such as `src/index.ts#L10-L40` |
+| `list` | List folders and files, like `ls` |
+
+```bash
+curl -G "https://context7.com/api/v2/code" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY" \
+  --data-urlencode "libraryId=/vercel/next.js" \
+  --data-urlencode "operation=grep" \
+  --data-urlencode "pattern=export function" \
+  --data-urlencode "glob=packages/next/src/**"
+```
+
+The response is plain text by default. Add `format=json` for structured results, and `version` to pin a docs tag or release tag. JSON responses include the `commit`, the `version` that answered, and a `versionMatch` field saying how the version was resolved.
+
+If the library's source is not indexed yet, the request returns `202 indexing` with a `Retry-After` header while Context7 builds the index; call again after that. A request that starts too many new indexes returns `429 index_budget`.
 
 ## MCP Tools
 
