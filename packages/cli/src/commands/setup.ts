@@ -60,6 +60,7 @@ interface McpSkillPayload {
 }
 
 type SetupOptions = Partial<Record<SetupAgent, boolean>> & {
+  t3?: boolean;
   project?: boolean;
   yes?: boolean;
   apiKey?: string;
@@ -82,7 +83,9 @@ const CHECKBOX_THEME = {
 };
 
 function getSelectedAgents(options: SetupOptions): SetupAgent[] {
-  return ALL_AGENT_NAMES.filter((name) => options[name]);
+  return ALL_AGENT_NAMES.filter(
+    (name) => options[name] || (options.t3 && (name === "claude" || name === "codex"))
+  );
 }
 
 export function registerSetupCommand(program: Command): void {
@@ -94,6 +97,7 @@ export function registerSetupCommand(program: Command): void {
   }
 
   command
+    .option("--t3", "Set up for T3 Code (Claude Code and Codex providers)")
     .option("--mcp", "Set up MCP server mode")
     .option("--cli", "Set up CLI + Skills mode (no MCP server)")
     .option("-p, --project", "Configure for current project instead of globally")
@@ -229,23 +233,30 @@ async function resolveCliAuth(apiKey?: string): Promise<void> {
 }
 
 async function promptAgents(): Promise<SetupAgent[] | null> {
-  const choices = ALL_AGENT_NAMES.map((name) => ({
+  const choices = ALL_AGENT_NAMES.map((name): { name: string; value: SetupAgent | "t3" } => ({
     name: getAgent(name).displayName,
     value: name,
   }));
 
+  choices.push({ name: "T3 Code (Claude Code and Codex providers)", value: "t3" });
+
   const message = "Which agents do you want to set up?";
 
   try {
-    return await checkboxWithHover(
+    const selected = await checkboxWithHover(
       {
         message,
         choices,
         loop: false,
         theme: CHECKBOX_THEME,
       },
-      { getName: (a: SetupAgent) => getAgent(a).displayName }
+      { getName: (a: SetupAgent | "t3") => (a === "t3" ? "T3 Code" : getAgent(a).displayName) }
     );
+    return [
+      ...new Set(
+        selected.flatMap((agent): SetupAgent[] => (agent === "t3" ? ["claude", "codex"] : [agent]))
+      ),
+    ];
   } catch {
     return null;
   }

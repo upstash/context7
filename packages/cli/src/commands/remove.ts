@@ -28,6 +28,7 @@ type Scope = "global" | "project";
 type UninstallMode = "mcp" | "cli";
 
 type UninstallOptions = Partial<Record<SetupAgent, boolean>> & {
+  t3?: boolean;
   project?: boolean;
   yes?: boolean;
   all?: boolean;
@@ -81,6 +82,7 @@ export function registerRemoveCommand(program: Command): void {
   }
 
   command
+    .option("--t3", "Remove from T3 Code (Claude Code and Codex providers)")
     .option("--all", "Remove both MCP setup and CLI + Skills setup")
     .option("--mcp", "Remove MCP setup")
     .option("--cli", "Remove CLI + Skills setup")
@@ -92,7 +94,9 @@ export function registerRemoveCommand(program: Command): void {
 }
 
 function getSelectedAgents(options: UninstallOptions): SetupAgent[] {
-  return ALL_AGENT_NAMES.filter((name) => options[name]);
+  return ALL_AGENT_NAMES.filter(
+    (name) => options[name] || (options.t3 && (name === "claude" || name === "codex"))
+  );
 }
 
 async function promptAgents(detected: SetupAgent[]): Promise<SetupAgent[] | null> {
