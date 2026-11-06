@@ -76,7 +76,7 @@ One OAuth connection reaches every teamspace you are a member of, with your role
 
 In clients that support [MCP Apps](https://github.com/modelcontextprotocol/ext-apps) (Claude, ChatGPT, VS Code, Cursor), `open_console` shows a summary card in the chat — a teamspace's usage and spend, libraries and benchmark scores, Docs7 sites, or Ask sites — with an **Open console** action that expands it to the full console. `view` picks the card (`usage`, `libraries`, `docs7` or `ask`; default `usage`) and `teamspace` takes an id or name. In other clients `open_console` returns the teamspace list as text.
 
-The page reads through this server's read tools, called for it by the client with your sign-in, so it holds no credential of its own. Write and destructive tools are hidden from it, and requests that need the model ("Fix the lowest", "Find doc gaps") are sent to the chat as your next message.
+The page holds no credential of its own: it reads through `console_data`, an app-only tool (`_meta.ui.visibility: ["app"]`, hidden from the model) that runs one of the console's read tools and answers in `structuredContent`. The client calls it for the page with your sign-in. Every other tool is hidden from the page, and requests that need the model ("Fix the lowest", "Find doc gaps") are sent to the chat as your next message.
 
 ## Management API
 
