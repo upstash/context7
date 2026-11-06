@@ -78,6 +78,8 @@ const KNOWN_MCP_METHODS = new Set([
   "roots/list",
   "sampling/createMessage",
   "server/discover",
+  "skills/get",
+  "skills/list",
   "subscriptions/listen",
   "tasks/cancel",
   "tasks/get",
