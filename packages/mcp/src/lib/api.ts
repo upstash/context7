@@ -1,6 +1,6 @@
 import { SearchResponse, ContextRequest, ContextResponse, ClientContext } from "./types.js";
-import type { DocsFeedback } from "./research-preview-tools.js";
-import type { ToolCallOutcome } from "./tool-names.js";
+import type { DocsFeedback, UpgradeGuideRequest } from "./research-preview-tools.js";
+import { GET_UPGRADE_GUIDE_TOOL, type ToolCallOutcome } from "./tool-names.js";
 import { generateHeaders } from "./encryption.js";
 import { Agent, ProxyAgent, setGlobalDispatcher } from "undici";
 import { CONTEXT7_API_BASE_URL } from "./constants.js";
@@ -217,6 +217,83 @@ export async function submitDocsFeedback(
     );
   } catch (error) {
     const errorMessage = `Error sending feedback. Please try again later. ${error}`;
+    console.error(errorMessage);
+    return { text: errorMessage, outcome: "error" };
+  }
+}
+
+/** The endpoint's 404 codes: answers about the library or version, not failures. */
+const UPGRADE_GUIDE_MISSES = new Set(["library_not_prepared", "version_not_found"]);
+
+/**
+ * Fetches the upgrade guide for a library between two versions
+ * @param request The library ID and the versions to upgrade from and to
+ * @param context Client context including IP, API key, and client info
+ * @returns The guide, a note to call again while it is prepared, or an error
+ */
+export async function fetchUpgradeGuide(
+  request: UpgradeGuideRequest,
+  context: ClientContext = {}
+): Promise<{ text: string; outcome: ToolCallOutcome }> {
+  try {
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/version-upgrade-guide`);
+    url.searchParams.set("libraryId", request.libraryId);
+    url.searchParams.set("fromVersion", request.fromVersion);
+    if (request.toVersion) url.searchParams.set("toVersion", request.toVersion);
+
+    const headers = generateHeaders(context);
+    const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);
+
+    return await observeUpstreamRequest(
+      "fetch_upgrade_guide",
+      () => fetch(url, { headers, signal: abortSignal }),
+      async (response) => {
+        // 202: the code index or release data is being prepared; the agent calls again later.
+        if (response.status === 202) {
+          let json: { retryAfter?: number; message?: string } | undefined;
+          try {
+            json = (await response.json()) as { retryAfter?: number; message?: string };
+          } catch {
+            // Fall through to the generic note
+          }
+          const retryAfter =
+            typeof json?.retryAfter === "number" && json.retryAfter > 0 ? json.retryAfter : 60;
+          const note = `The upgrade guide is being prepared. Call '${GET_UPGRADE_GUIDE_TOOL}' again with the same arguments after ${retryAfter} seconds.`;
+          return { text: json?.message ? `${note}\n\n${json.message}` : note, outcome: "success" };
+        }
+        if (response.status === 404) {
+          let json: { error?: string; message?: string } | undefined;
+          try {
+            json = (await response.json()) as { error?: string; message?: string };
+          } catch {
+            // Not the endpoint's JSON answer
+          }
+          // A library without a guide or an unknown version is an answer, not a failure.
+          if (json?.error && UPGRADE_GUIDE_MISSES.has(json.error))
+            return { text: json.message ?? json.error, outcome: "not_found" };
+          // Any other 404 (for example a deployment without the endpoint) is an upstream error.
+          const text = `The upgrade guide service is not available (HTTP 404). Please try again later.`;
+          console.error(text);
+          return { text, outcome: "error" };
+        }
+        if (!response.ok) {
+          const errorMessage = await parseErrorResponse(response, context);
+          console.error(errorMessage);
+          return { text: errorMessage, outcome: "error" };
+        }
+        const text = await response.text();
+        if (!text) {
+          return {
+            text: "No upgrade guide was returned for these versions.",
+            outcome: "not_found",
+          };
+        }
+        return { text, outcome: "success" };
+      },
+      { abortSignal }
+    );
+  } catch (error) {
+    const errorMessage = `Error fetching the upgrade guide. Please try again later. ${error}`;
     console.error(errorMessage);
     return { text: errorMessage, outcome: "error" };
   }
