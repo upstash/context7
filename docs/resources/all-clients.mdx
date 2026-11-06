@@ -6,9 +6,10 @@ description: Installation examples for MCP clients
 Context7 supports all MCP clients. Below are configuration examples for popular clients. If your client isn't listed, check its documentation for MCP server installation. To configure manually, use the Context7 server URL `https://mcp.context7.com/mcp` with your MCP client and pass your API key via the `Authorization: Bearer YOUR_API_KEY` header.
 
 <Tip>
-  Looking for the easiest way to get started? Use `npx ctx7 setup` to configure Context7
-  automatically, and `npx ctx7 remove` to remove the generated setup later. See the [CLI
-  docs](/clients/cli) for more details.
+  Looking for the easiest way to get started? Paste `Read https://context7.com/get-started.md and
+  set up Context7` into your coding agent. It sets up Context7, and you sign in with OAuth. Or run
+  `npx ctx7 setup` yourself, and `npx ctx7 remove` to remove the generated setup later. See the
+  [CLI docs](/clients/cli) for more details.
 </Tip>
 
 <Note>
@@ -232,7 +233,7 @@ Approve access in your browser. Pi stores and refreshes the OAuth tokens.
 
 ##### Remote server with an API key
 
-Create a key in the [Context7 dashboard](https://context7.com/dashboard) and export it before starting Pi:
+Create a key in the [Context7 dashboard](https://context7.com/dashboard?tab=settings) and export it before starting Pi:
 
 ```sh
 export CONTEXT7_API_KEY="YOUR_API_KEY"

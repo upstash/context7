@@ -30,9 +30,9 @@ Clients that support MCP OAuth ask you to sign in with your Context7 account on 
 
 ### API key
 
-Create a Context7 API key in [the dashboard](https://context7.com/dashboard) and send it as a bearer token. Every key can use the read tools, except those that return personal data: members and invitations, library requests, Ask questions, Docs7 reader searches, conversations, feedback, feature requests and the GitHub account behind a build. To read those or make changes, tick **Write access** when you create the key; a key without it gets `403` `write_access_required`. A key reaches only its own teamspace. See [Write access](/howto/api-keys#write-access).
+Create a Context7 API key in [the dashboard](https://context7.com/dashboard?tab=settings) and send it as a bearer token. Every key can use the read tools, except those that return personal data: members and invitations, library requests, Ask questions, Docs7 reader searches, conversations, feedback, feature requests and the GitHub account behind a build. To read those or make changes, tick **Write access** when you create the key; a key without it gets `403` `write_access_required`. A key reaches only its own teamspace. See [Write access](/howto/api-keys#write-access).
 
-![Create New API Key dialog with Write access ticked](/images/dashboard/api-key-write-access.png)
+![Create API Key dialog with Write access ticked](/images/dashboard/api-key-write-access.png)
 
 ```json
 {

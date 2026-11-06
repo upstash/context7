@@ -53,7 +53,7 @@ Check out our [project addition guide](https://context7.com/docs/adding-librarie
 
 - Node.js >= v20.18.1
 - Cursor, Claude Code, VSCode, Devin Desktop or another MCP Client
-- Context7 API Key (Optional) for higher rate limits and private repositories (Get yours by creating an account at [context7.com/dashboard](https://context7.com/dashboard))
+- Context7 API Key (Optional) for higher rate limits and private repositories (Get yours by creating an account at [context7.com/dashboard](https://context7.com/dashboard?tab=settings))
 
 > [!TIP]
 > **Recommended Post-Setup: Add a Rule to Auto-Invoke Context7**
@@ -788,7 +788,7 @@ To use an API key in Kiro, add:
 }
 ```
 
-You can create an API key at [context7.com/dashboard](https://context7.com/dashboard) for authenticated usage and higher rate limits.
+You can create an API key at [context7.com/dashboard](https://context7.com/dashboard?tab=settings) for authenticated usage and higher rate limits.
 
 #### Kiro Local Server Connection
 
@@ -1477,7 +1477,7 @@ bun run dist/index.js
 
 - `--transport <stdio|http>` – Transport to use (`stdio` by default). Use `http` for remote HTTP server or `stdio` for local integration.
 - `--port <number>` – Port to listen on when using `http` transport (default `3000`).
-- `--api-key <key>` – API key for authentication (or set `CONTEXT7_API_KEY` env var). You can get your API key by creating an account at [context7.com/dashboard](https://context7.com/dashboard).
+- `--api-key <key>` – API key for authentication (or set `CONTEXT7_API_KEY` env var). You can get your API key by creating an account at [context7.com/dashboard](https://context7.com/dashboard?tab=settings).
 
 Example with HTTP transport and port 8080:
 
