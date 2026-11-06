@@ -11,6 +11,7 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    environment: release
     permissions:
       contents: write
       pull-requests: write
@@ -58,6 +59,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      mcpb-sha256: ${{ steps.sha.outputs.sha256 }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v7
@@ -90,6 +93,12 @@ jobs:
           printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"smoke","version":"1"}}}' \
             | node /tmp/mcpb-smoke/server/dist/index.mjs | grep -q '"serverInfo"'
 
+      # The registry gets the hash of the bundle built here, not of the release
+      # asset, which anyone with contents: write can replace.
+      - name: Hash bundle
+        id: sha
+        run: echo "sha256=$(sha256sum packages/mcp/mcpb/context7.mcpb | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+
       - name: Upload to GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -115,3 +124,5 @@ jobs:
       id-token: write
       contents: read
     uses: ./.github/workflows/mcp-registry.yml
+    with:
+      mcpb-sha256: ${{ needs.publish-mcpb.outputs.mcpb-sha256 }}
