@@ -93,8 +93,8 @@ const client = new Context7({
 });
 ```
 
-Vercel Marketplace OIDC tokens last 15 minutes. The `@vercel/integrations` SDK
-caches and refreshes them. Pass a function as `authToken` so each request can use
+Vercel Marketplace OIDC tokens last 15 minutes. Use `@vercel/integrations`
+0.1.2 or later to cache and refresh them. Pass a function as `authToken` so each request can use
 a current token.
 
 Explicit credentials take precedence in this order: `apiKey`, `authToken`, then
