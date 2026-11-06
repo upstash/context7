@@ -44,11 +44,6 @@ export function formatSearchResult(result: SearchResult): string {
     formattedResult.push(`- Benchmark Score: ${result.benchmarkScore}`);
   }
 
-  // Only add versions if it's a valid value
-  if (result.versions !== undefined && result.versions.length > 0) {
-    formattedResult.push(`- Versions: ${result.versions.join(", ")}`);
-  }
-
   if (result.source) {
     formattedResult.push(`- Source: ${result.source}`);
   }

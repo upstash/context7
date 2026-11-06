@@ -352,7 +352,6 @@ Each result includes:
 - Code Snippets: Number of available code examples
 - Source Reputation: Authority indicator (High, Medium, Low, or Unknown)
 - Benchmark Score: Quality indicator (100 is the highest score)
-- Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.
 
 For best results, select libraries based on name match, source reputation, snippet coverage, benchmark score, and relevance to your use case.
 
@@ -441,14 +440,16 @@ You must call 'Resolve Context7 Library ID' tool first to obtain the exact Conte
 
 Do not call this tool more than 3 times per question.
 
-If you know the programming language the user is working in, pass it as \`language\` so the results match their setup.`,
+If you know the programming language the user is working in, pass it as \`language\` so the results match their setup.
+
+If the user's project or question names a version of the library (package.json, a lockfile, "Next.js 14"), pass it as \`version\`. Context7 serves that version's documentation, or the closest version it has, and says which one it served.`,
       inputSchema: z.preprocess(
         aliasArgs({ ...GLOBAL_ALIASES, ...QUERY_DOCS_ALIASES }),
         z.object({
           libraryId: z
             .string()
             .describe(
-              "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v16.2.9') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
+              "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
             ),
           query: z
             .string()
@@ -462,6 +463,12 @@ If you know the programming language the user is working in, pass it as \`langua
             .describe(
               "Programming language the user is writing code in, such as 'Python', 'TypeScript', 'Go', or 'C#'. Ranks code examples in that language first. Leave it out when the language is unknown or does not apply."
             ),
+          version: z
+            .string()
+            .optional()
+            .describe(
+              "Version of the library the user's project uses or the question names, as written there, such as '15.4.3', '^15.4.3' or '14'. Leave it out for the latest documentation."
+            ),
         })
       ),
       annotations: {
@@ -472,11 +479,16 @@ If you know the programming language the user is working in, pass it as \`langua
       },
     },
     async (
-      { query, libraryId, language }: { query: string; libraryId: string; language?: string },
+      {
+        query,
+        libraryId,
+        language,
+        version,
+      }: { query: string; libraryId: string; language?: string; version?: string },
       toolCtx
     ) => {
       const ctx = getClientContext(toolCtx);
-      const response = await fetchLibraryContext({ query, libraryId, language }, ctx);
+      const response = await fetchLibraryContext({ query, libraryId, language, version }, ctx);
       maybeElicitAuthSignIn(server, ctx);
       recordToolCallTelemetry(ctx, response.outcome);
       return {

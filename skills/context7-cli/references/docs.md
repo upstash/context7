@@ -28,7 +28,7 @@ Each result includes:
 - **Code Snippets** — Number of available code examples
 - **Source Reputation** — Authority indicator (High, Medium, Low, or Unknown)
 - **Benchmark Score** — Quality indicator (100 is the highest score)
-- **Versions** — List of versions if available. Use one of those versions if the user provides a version in their query. The format is `/org/project/version`.
+- **Versions** — Indexed versions, if any. When the user's project or query names a version, pass that exact version as `/org/project/version` (e.g. `/vercel/next.js/v15.4.3`), even when it is not listed: Context7 serves the indexed version that covers it.
 
 ### Selection process
 
@@ -57,7 +57,7 @@ ctx7 docs /vercel/next.js "How to set up app router"
 ctx7 docs /vercel/next.js/v16.2.9 "How to set up app router"
 ```
 
-The available versions are listed in the `ctx7 library` output. Use the closest match to what the user specified.
+The available versions are listed in the `ctx7 library` output. Pass the exact version the user specified, even when it is not listed: Context7 serves the indexed version that covers it.
 
 ```bash
 # Output as JSON for scripting

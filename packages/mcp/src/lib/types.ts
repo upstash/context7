@@ -12,7 +12,6 @@ export interface SearchResult {
   stars?: number;
   trustScore?: number;
   benchmarkScore?: number;
-  versions?: string[];
   source?: string;
 }
 
@@ -29,6 +28,7 @@ export type ContextRequest = {
   query: string;
   libraryId: string;
   language?: string;
+  version?: string;
 };
 
 export type ContextResponse = {

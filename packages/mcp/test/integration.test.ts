@@ -858,6 +858,7 @@ describe.each([
       "language",
       "libraryId",
       "query",
+      "version",
     ]);
   });
 
