@@ -16,7 +16,7 @@ the sources it used.
 
 ## Deploy
 
-1. Create an API key in the [Context7 dashboard](https://context7.com/dashboard).
+1. Create an API key in the [Context7 dashboard](https://context7.com/dashboard?tab=settings).
 2. Select **Deploy** and paste the key when Vercel asks for `CONTEXT7_API_KEY`.
 3. Clone the new repository and link it: `vercel link`.
 4. Chat with the deployment from your terminal:
