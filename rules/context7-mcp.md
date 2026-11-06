@@ -19,3 +19,4 @@ If the `query-code` tool is available, use it when the docs do not answer an exa
 - Most questions need 1 to 4 `query-code` calls; stop at 6
 - If it answers "being indexed", retry at most twice, then answer from `query-docs`
 - Cite the file and line of the source you used
+- For an upgrade between two versions, use `diff-code` if it is available: view `api` first, then `patch` with a `symbol`

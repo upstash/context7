@@ -26,6 +26,7 @@ If the \`query-code\` tool is available, use it when the docs do not answer an e
 - Most questions need 1 to 4 \`query-code\` calls; stop at 6
 - If it answers "being indexed", retry at most twice, then answer from \`query-docs\`
 - Cite the file and line of the source you used
+- For an upgrade between two versions, use \`diff-code\` if it is available: view \`api\` first, then \`patch\` with a \`symbol\`
 `;
 
 const FALLBACK_CLI = `Use the \`ctx7\` CLI to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, porting code between libraries, platforms, or SQL dialects, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.

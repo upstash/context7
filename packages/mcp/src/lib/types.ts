@@ -54,7 +54,7 @@ export const CODE_OUTPUT_MODES = ["content", "files_with_matches", "count"] as c
 export const CODE_LIMITS = {
   context: { min: 0, max: 10 },
   head_limit: { min: 1, max: 500 },
-  offset: { min: 0, max: 10_000 },
+  offset: { min: 0, max: 100_000 },
 } as const;
 
 /** Fields of the query-code tool. Search fields follow ripgrep; operations follow LSP. */
@@ -71,6 +71,42 @@ export type CodeRequest = {
   context?: number;
   output_mode?: (typeof CODE_OUTPUT_MODES)[number];
   head_limit?: number;
+  offset?: number;
+};
+
+export const DIFF_VIEWS = ["api", "name-status", "stat", "patch"] as const;
+export const DIFF_SIDES = ["added", "removed", "both"] as const;
+export const DIFF_SCOPES = ["package", "repo"] as const;
+
+/** Ranges of the numeric diff-code fields, clamped like CODE_LIMITS. */
+export const DIFF_LIMITS = {
+  context: { min: 0, max: 10 },
+  head_limit: { min: 1, max: 500 },
+  max_patch_bytes: { min: 1024, max: 262_144 },
+  offset: { min: 0, max: 100_000 },
+} as const;
+
+/** Fields of the diff-code tool. The app route is GET /api/v2/code/diff. */
+export type DiffRequest = {
+  libraryId: string;
+  /** The older version: a git tag or a commit. */
+  base: string;
+  /** The newer version. Default: the version the latest docs describe. */
+  version?: string;
+  view?: (typeof DIFF_VIEWS)[number];
+  symbol?: string;
+  grep?: string;
+  side?: (typeof DIFF_SIDES)[number];
+  fixed_strings?: boolean;
+  ignore_case?: boolean;
+  path?: string;
+  glob?: string | string[];
+  scope?: (typeof DIFF_SCOPES)[number];
+  only_breaking?: boolean;
+  include_private?: boolean;
+  context?: number;
+  head_limit?: number;
+  max_patch_bytes?: number;
   offset?: number;
 };
 
