@@ -644,6 +644,32 @@ describe("research preview", () => {
     ).toBe("private");
   });
 
+  test("returns the same server instructions over HTTP and stdio, with the feedback request only under research preview", async () => {
+    const instructions = async (
+      transport: StreamableHTTPClientTransport | StdioClientTransport
+    ) => {
+      const client = new Client({ name: "research-preview-test", version: "1.0.0" });
+      await client.connect(transport);
+      try {
+        return client.getInstructions() ?? "";
+      } finally {
+        await client.close();
+      }
+    };
+    const httpText = await instructions(httpTransport(httpUrl));
+    expect(httpText).toContain("Context7");
+    expect(httpText).not.toContain("${");
+    expect(httpText).not.toContain("submit-docs-feedback");
+    expect(await instructions(stdioTransport(childEnv))).toBe(httpText);
+
+    const preview = await instructions(httpTransport(`${httpUrl}?research_preview=1`));
+    expect(preview.startsWith(`${httpText}\n\n`)).toBe(true);
+    expect(preview).toContain("submit-docs-feedback");
+    // Claude Code cuts server instructions after 2048 characters
+    // (CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH), so the whole text must fit, preview included.
+    expect(preview.length).toBeLessThanOrEqual(2048);
+  });
+
   test("lists submit-docs-feedback only with research preview and sends it to the API", async () => {
     const toolNames = async (url: string) => {
       const client = new Client({ name: "research-preview-test", version: "1.0.0" });
