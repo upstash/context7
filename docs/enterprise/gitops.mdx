@@ -94,6 +94,42 @@ Every entry needs a `url` (or `repoUrl`). The remaining fields depend on `type`:
 Confluence entries reuse the site URL and API token you set under **Settings → Integrations → Confluence**, so no credentials go in the manifest. Website, llms.txt, and OpenAPI sources are fetched over public HTTP and need no credentials. Configure Confluence before adding Confluence entries, or the sync reports those entries as failed.
 </Note>
 
+### Authority rules
+
+Any entry can set an `authority` block. It assigns [authority labels](/enterprise/authority-labels) to the library's content, the same way the **Authority** section of the library settings does.
+
+```yaml repos.yaml
+repos:
+  - url: https://github.com/acme/qa-handbook
+    authority:
+      default: guideline          # a class name, or "excluded"
+      rules:
+        - prefix: /standards/
+          class: standard
+        - glob: /examples/**
+          class: example
+        - prefix: https://wiki.acme.com/drafts/
+          excluded: true
+```
+
+- `default` sets the library rule: a class name, or `excluded` to hide the whole library.
+- Each item in `rules` has exactly one `prefix` or `glob`, and exactly one `class` or `excluded: true`.
+- A pattern that starts with `https://` matches the page URL. Any other pattern matches the page path.
+- The usual precedence applies: an exclusion always wins, then the most specific rule wins.
+
+Classes are referenced by name, without regard to case. If a name does not match a class in **Teamspace Settings → Access → Authority Classes**, the sync reports that entry as failed and names the unknown class. The sync changes none of that library's rules, and it tries again on the next sync. Other entries still sync.
+
+Rules from the manifest work together with rules made in the dashboard:
+
+- The manifest owns only the rules it created. A sync adds, changes and removes only those rules.
+- The dashboard shows a **GitOps** badge on these rules, and you cannot edit or delete them there. Change them in the manifest.
+- Rules you make in the dashboard are left alone. If a manifest rule has the same match and pattern as a dashboard rule, the manifest takes that rule over.
+- Remove the `authority` block, and the next sync deletes the rules the manifest owned for that library.
+- Remove the whole entry with pruning off, and the library keeps its rules, but you can edit them in the dashboard again.
+- Remove the whole entry with pruning on, and the sync deletes the library together with all of its rules.
+
+Rule changes apply on the next query. They do not re-index the library. Every change appears in the audit log with the actor `gitops`.
+
 The manifest is validated strictly: an unknown `type`, a field that does not belong to the entry's type (a common source of silent mistakes), or a missing required field rejects the **whole** sync. Nothing changes until the file parses cleanly, so a malformed manifest can never partially apply or wipe your index.
 
 ## Configuring in the dashboard
@@ -153,4 +189,4 @@ curl -X POST http://localhost:3000/api/gitops/reconcile \
   -H "Authorization: Bearer <admin-api-key>"
 ```
 
-The response reports what the sync did, including how many repositories were created, updated, left unchanged, pruned, and skipped.
+The response reports what the sync did, including how many repositories were created, updated, left unchanged, pruned, and skipped, how many authority rules changed, and any per-entry errors.
