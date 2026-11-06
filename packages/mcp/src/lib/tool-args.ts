@@ -35,3 +35,24 @@ export function aliasArgs(aliases: AliasMap) {
     return args;
   };
 }
+
+export type NumberLimits = Readonly<Record<string, { readonly min: number; readonly max: number }>>;
+
+/**
+ * z.preprocess step that moves numbers into their ranges. The server rejects
+ * numbers out of range with a 400. Agents often send a larger limit or a
+ * number as a string, so the tools clamp instead of failing.
+ */
+export function clampArgs(limits: NumberLimits) {
+  return (args: unknown): unknown => {
+    if (!args || typeof args !== "object") return args;
+    const out: Record<string, unknown> = { ...(args as Record<string, unknown>) };
+    for (const [key, { min, max }] of Object.entries(limits)) {
+      const raw = out[key];
+      const value = typeof raw === "string" && raw.trim() !== "" ? Number(raw) : raw;
+      if (typeof value !== "number" || !Number.isFinite(value)) continue;
+      out[key] = Math.min(max, Math.max(min, Math.trunc(value)));
+    }
+    return out;
+  };
+}

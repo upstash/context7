@@ -31,6 +31,9 @@ const CODE_INDEXING_QUERY = "force-code-indexing";
 const CODE_NO_SOURCE_QUERY = "force-code-no-source";
 const CODE_GATEWAY_QUERY = "force-code-gateway";
 const CODE_BAD_TAG_QUERY = "force-code-bad-tag";
+const STUB_DIFF = "stub diff text";
+const DIFF_INDEXING_BASE = "force-diff-indexing";
+const DIFF_TOO_MANY_FILES_BASE = "force-diff-too-many-files";
 const CLIENT_IP_ASSERTION_KEY = "0123456789abcdef".repeat(4);
 const INVALID_OAUTH_TOKEN_BODY = {
   error: "invalid_oauth_token",
@@ -224,6 +227,29 @@ function startStubApi(): Promise<string> {
       }
       res.setHeader("Content-Type", "text/plain");
       res.end(STUB_CODE);
+    } else if (apiPath === "/v2/code/diff") {
+      const base = url.searchParams.get("base");
+      res.setHeader("Content-Type", "application/json");
+      if (base === DIFF_INDEXING_BASE) {
+        res.statusCode = 202;
+        res.end(
+          JSON.stringify({
+            error: "indexing",
+            message: "v15.5.0 of /vercel/next.js is being indexed.",
+            retryAfter: 20,
+            base: { state: "indexing" },
+            version: { state: "ready" },
+          })
+        );
+        return;
+      }
+      if (base === DIFF_TOO_MANY_FILES_BASE) {
+        res.statusCode = 413;
+        res.end(JSON.stringify({ error: "too_many_files", message: "2,400 files changed." }));
+        return;
+      }
+      res.setHeader("Content-Type", "text/plain");
+      res.end(STUB_DIFF);
     } else {
       res.statusCode = 404;
       res.end();
@@ -1790,6 +1816,119 @@ describe("query-code tool", () => {
       expect(badTagText).toContain("Docs versions: v15.5.0.");
       expect(badTagText).toContain("one of the docs versions");
       expect(badTagText).not.toContain("Do not retry");
+    } finally {
+      await client.close();
+    }
+  });
+});
+
+describe("diff-code tool", () => {
+  async function stdioClient(environment: Record<string, string>) {
+    const client = new Client({ name: "diff-code-test", version: "1.0.0" });
+    await client.connect(
+      new StdioClientTransport({ command: process.execPath, args: [DIST], env: environment })
+    );
+    return client;
+  }
+
+  test("is not listed without the flag", async () => {
+    const client = await stdioClient(childEnv);
+    try {
+      const { tools } = await client.listTools();
+      expect(tools.map((tool) => tool.name)).not.toContain("diff-code");
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("is listed with the flag and sends its arguments to /v2/code/diff", async () => {
+    const client = await stdioClient({ ...childEnv, CONTEXT7_RESEARCH_PREVIEW: "1" });
+    try {
+      const { tools } = await client.listTools();
+      const tool = tools.find((candidate) => candidate.name === "diff-code");
+      expect(Object.keys(tool?.inputSchema.properties ?? {}).sort()).toEqual([
+        "base",
+        "context",
+        "fixed_strings",
+        "glob",
+        "grep",
+        "head_limit",
+        "ignore_case",
+        "include_private",
+        "libraryId",
+        "max_patch_bytes",
+        "offset",
+        "only_breaking",
+        "path",
+        "scope",
+        "side",
+        "symbol",
+        "version",
+        "view",
+      ]);
+      expect(tool?.inputSchema.required?.slice().sort()).toEqual(["base", "libraryId"]);
+      expect(tool?.annotations?.readOnlyHint).toBe(true);
+
+      const before = requests.length;
+      const result = await client.callTool({
+        name: "diff-code",
+        arguments: {
+          libraryId: "/vercel/next.js",
+          from: "/vercel/next.js/v14.2.0",
+          to: "v15.5.0",
+          view: "patch",
+          symbol: "useRouter",
+          glob: "*.ts",
+          limit: 900,
+          max_patch_bytes: "100",
+        },
+      });
+      expect(result.isError).toBeFalsy();
+      expect(result.content).toMatchObject([{ type: "text", text: STUB_DIFF }]);
+      const sent = requests.slice(before).find((request) => request.path === "/v2/code/diff");
+      expect(sent?.query.get("libraryId")).toBe("/vercel/next.js");
+      expect(sent?.query.get("base")).toBe("v14.2.0");
+      expect(sent?.query.get("version")).toBe("v15.5.0");
+      expect(sent?.query.get("view")).toBe("patch");
+      expect(sent?.query.get("symbol")).toBe("useRouter");
+      expect(sent?.query.getAll("glob")).toEqual(["*.ts"]);
+      expect(sent?.query.get("head_limit")).toBe("500");
+      expect(sent?.query.get("max_patch_bytes")).toBe("1024");
+      expect(sent?.query.get("format")).toBe("txt");
+
+      // Without base the tool refuses the call before it reaches the API.
+      const missingCall = requests.length;
+      const missing = await client.callTool({
+        name: "diff-code",
+        arguments: { libraryId: "/vercel/next.js", version: "v15.5.0" },
+      });
+      expect(missing.isError).toBe(true);
+      expect(requests.slice(missingCall).some((r) => r.path === "/v2/code/diff")).toBe(false);
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("answers 'being indexed' as a normal result and an API error as an error", async () => {
+    const client = await stdioClient({ ...childEnv, CONTEXT7_RESEARCH_PREVIEW: "1" });
+    try {
+      const indexing = await client.callTool({
+        name: "diff-code",
+        arguments: { libraryId: "/vercel/next.js", base: DIFF_INDEXING_BASE },
+      });
+      expect(indexing.isError).toBeFalsy();
+      expect((indexing.content as { text: string }[])[0].text).toMatch(
+        /being indexed.*Call diff-code again.*20 seconds/s
+      );
+
+      const tooMany = await client.callTool({
+        name: "diff-code",
+        arguments: { libraryId: "/vercel/next.js", base: DIFF_TOO_MANY_FILES_BASE },
+      });
+      expect(tooMany.isError).toBe(true);
+      expect((tooMany.content as { text: string }[])[0].text).toMatch(
+        /2,400 files changed\. .*path, glob or symbol/
+      );
     } finally {
       await client.close();
     }

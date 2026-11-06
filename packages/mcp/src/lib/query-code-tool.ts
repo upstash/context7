@@ -3,7 +3,7 @@ import { z } from "zod";
 import { fetchLibraryCode } from "./api.js";
 import { maybeElicitAuthSignIn } from "./auth/auth-prompt.js";
 import { recordToolCallTelemetry } from "./auth-lifecycle-telemetry.js";
-import { aliasArgs, QUERY_DOCS_ALIASES, type AliasMap } from "./tool-args.js";
+import { aliasArgs, clampArgs, QUERY_DOCS_ALIASES, type AliasMap } from "./tool-args.js";
 import { QUERY_CODE_TOOL } from "./tool-names.js";
 import {
   CODE_LIMITS,
@@ -28,22 +28,7 @@ const QUERY_CODE_ALIASES: AliasMap = {
 
 type LimitedField = keyof typeof CODE_LIMITS;
 
-/**
- * The server rejects numbers out of range with a 400. Agents often send a
- * larger limit or a number as a string, so the tool clamps instead of failing.
- */
-function clampCodeArgs(args: unknown): unknown {
-  if (!args || typeof args !== "object") return args;
-  const out: Record<string, unknown> = { ...(args as Record<string, unknown>) };
-  for (const key of Object.keys(CODE_LIMITS) as LimitedField[]) {
-    const raw = out[key];
-    const value = typeof raw === "string" && raw.trim() !== "" ? Number(raw) : raw;
-    if (typeof value !== "number" || !Number.isFinite(value)) continue;
-    const { min, max } = CODE_LIMITS[key];
-    out[key] = Math.min(max, Math.max(min, Math.trunc(value)));
-  }
-  return out;
-}
+const clampCodeArgs = clampArgs(CODE_LIMITS);
 
 /** The bounds only advertise the range: clampCodeArgs already moved the value into it. */
 function limitedNumber(key: LimitedField) {

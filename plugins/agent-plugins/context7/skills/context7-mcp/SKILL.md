@@ -51,6 +51,7 @@ If the `query-code` tool is available, use it for exact facts the docs may not s
 - `version` takes a git tag, e.g. `v3.24.2`. A tag that is not a docs version is indexed first ("being indexed"). If indexing fails, the answer lists the docs versions you can use
 - If it answers "being indexed", retry at most twice, then answer from `query-docs`
 - Cite the file and line of the source you used
+- To compare two versions for an upgrade, use the `diff-code` tool if it is available: `base` is the older version. Start with view `api`, then `patch` with a `symbol`
 
 ### Step 5: Use the Documentation
 

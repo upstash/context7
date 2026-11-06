@@ -1437,6 +1437,15 @@ Context7 MCP provides the following tools that LLMs can use:
   - `fixed_strings`, `ignore_case`, `glob`, `context`, `output_mode` (`content`, `files_with_matches`, `count`), `head_limit`, `offset`: as in ripgrep
   - `path` (optional): a folder or file of the library to search in; for `read`, a file with a range such as `src/client.ts#L40-L80`
 
+- `diff-code` (research preview): Compares a library's source code between two versions: the exported symbols that were added, removed or changed, possibly breaking ones first, and the code change. Listed with `query-code`.
+  - `libraryId` (required): Context7 library ID (e.g., `/colinhacks/zod`)
+  - `base` (required): the older version, a git tag (e.g., `v3.23.8`) or a commit
+  - `version` (optional): the newer version; default is the version the latest docs describe
+  - `view` (optional): `api` (default, changed symbols), `name-status` or `stat` (changed files), or `patch` (unified diff)
+  - `symbol`, `path`, `glob`, `scope` (`package` or `repo`): limit the diff
+  - `grep`, `side` (`added`, `removed`, `both`), `fixed_strings`, `ignore_case`: keep only changes whose changed lines match
+  - `only_breaking`, `include_private`, `context`, `head_limit`, `max_patch_bytes`, `offset`: filter and page the result
+
 `get-library-docs` was renamed to `query-docs`. Update client tool allowlists to use `query-docs`.
 
 ## 🛟 Tips

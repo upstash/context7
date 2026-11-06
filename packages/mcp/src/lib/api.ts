@@ -4,6 +4,7 @@ import {
   ContextResponse,
   ClientContext,
   CodeRequest,
+  DiffRequest,
 } from "./types.js";
 import type { DocsFeedback } from "./research-preview-tools.js";
 import type { ToolCallOutcome } from "./tool-names.js";
@@ -280,6 +281,11 @@ async function codeErrorMessage(
   return message;
 }
 
+/** An agent may copy a full versioned ID ("/vercel/next.js/v15.1.8") into a version field. */
+function stripLibraryId(version: string | undefined, libraryId: string): string | undefined {
+  return version?.startsWith(`${libraryId}/`) ? version.slice(libraryId.length + 1) : version;
+}
+
 /**
  * Queries a library's source code at the version its docs were built from.
  * A 202 means the source is still being indexed: that is a normal answer
@@ -292,10 +298,7 @@ export async function fetchLibraryCode(
   try {
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/code`);
     url.searchParams.set("libraryId", request.libraryId);
-    // An agent may copy a full versioned ID ("/vercel/next.js/v15.1.8") into version.
-    const version = request.version?.startsWith(`${request.libraryId}/`)
-      ? request.version.slice(request.libraryId.length + 1)
-      : request.version;
+    const version = stripLibraryId(request.version, request.libraryId);
     if (version) url.searchParams.set("version", version);
     if (request.operation) url.searchParams.set("operation", request.operation);
     if (request.pattern !== undefined) url.searchParams.set("pattern", request.pattern);
@@ -343,6 +346,104 @@ export async function fetchLibraryCode(
     );
   } catch (error) {
     const errorMessage = `Error querying library source code: ${error}. Do not retry now: answer from query-docs.`;
+    console.error(errorMessage);
+    return { data: errorMessage, outcome: "error" };
+  }
+}
+
+/**
+ * The error text for a failed /v2/code/diff call. As for /v2/code, the next
+ * step comes from the HTTP status and the error code, not from the message text.
+ */
+async function diffErrorMessage(response: Response, context: ClientContext): Promise<string> {
+  const body = (await response
+    .clone()
+    .json()
+    .catch(() => undefined)) as { error?: string; message?: string } | undefined;
+  const code = typeof body?.error === "string" ? body.error : undefined;
+  const knownMiss = code === "version_not_found" || code === "library_not_found";
+  if ((response.status === 404 && !knownMiss) || (!body?.message && response.status >= 500))
+    return `Source code diff is not available now (HTTP ${response.status}). Do not retry now: compare the versions with query-code or answer from query-docs.`;
+  const message = await parseErrorResponse(response, context);
+  if (code === "validation_error")
+    return `${message} Fix the arguments as this message says, then call diff-code again.`;
+  if (code === "too_many_files")
+    return `${message} Call diff-code again with path, glob or symbol, or with view "name-status".`;
+  if (code === "index_failed")
+    return `${message} Call diff-code again with base and version set to versions in this message.`;
+  if (code === "code_search_unavailable") return `${message} Answer from query-docs.`;
+  if (knownMiss)
+    return `${message} Get the library ID from resolve-library-id, and use versions that it lists.`;
+  return message;
+}
+
+/**
+ * Compares a library's source code between two versions (GET /v2/code/diff).
+ * A 202 means one or both versions are being indexed: a normal answer telling
+ * the agent to call again, not an error.
+ */
+export async function fetchLibraryDiff(
+  request: DiffRequest,
+  context: ClientContext = {}
+): Promise<ContextResponse> {
+  try {
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/code/diff`);
+    const params = url.searchParams;
+    params.set("libraryId", request.libraryId);
+    params.set("base", stripLibraryId(request.base, request.libraryId) ?? request.base);
+    const version = stripLibraryId(request.version, request.libraryId);
+    if (version) params.set("version", version);
+    if (request.view) params.set("view", request.view);
+    if (request.symbol) params.set("symbol", request.symbol);
+    if (request.grep !== undefined) params.set("grep", request.grep);
+    if (request.side) params.set("side", request.side);
+    if (request.fixed_strings) params.set("fixed_strings", "true");
+    if (request.ignore_case) params.set("ignore_case", "true");
+    if (request.path) params.set("path", request.path);
+    for (const glob of [request.glob ?? []].flat()) params.append("glob", glob);
+    if (request.scope) params.set("scope", request.scope);
+    if (request.only_breaking) params.set("only_breaking", "true");
+    if (request.include_private) params.set("include_private", "true");
+    if (request.context !== undefined) params.set("context", String(request.context));
+    if (request.head_limit !== undefined) params.set("head_limit", String(request.head_limit));
+    if (request.max_patch_bytes !== undefined)
+      params.set("max_patch_bytes", String(request.max_patch_bytes));
+    if (request.offset) params.set("offset", String(request.offset));
+    params.set("format", "txt");
+
+    const headers = generateHeaders(context);
+    const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);
+
+    return await observeUpstreamRequest(
+      "fetch_diff",
+      () => fetch(url, { headers, signal: abortSignal }),
+      async (response) => {
+        readPromptSignal(response, context);
+        if (response.status === 202) {
+          const body = (await response.json().catch(() => ({}))) as {
+            message?: string;
+            retryAfter?: number;
+          };
+          const wait = retryAfterSeconds(body.retryAfter, response.headers.get("Retry-After"));
+          const message = body.message ?? "The library source is being indexed.";
+          return {
+            data: `${message} This is not an error. Call diff-code again with the same arguments in about ${wait} seconds, at most twice. If it is still indexing, answer from query-docs.`,
+            outcome: "preparing",
+          };
+        }
+        if (!response.ok) {
+          const errorMessage = await diffErrorMessage(response, context);
+          console.error(errorMessage);
+          return { data: errorMessage, outcome: "error" };
+        }
+        const text = await response.text();
+        if (!text) return { data: "No diff results for this query.", outcome: "not_found" };
+        return { data: text, outcome: "success" };
+      },
+      { abortSignal }
+    );
+  } catch (error) {
+    const errorMessage = `Error comparing library source code: ${error}. Do not retry now: answer from query-docs.`;
     console.error(errorMessage);
     return { data: errorMessage, outcome: "error" };
   }

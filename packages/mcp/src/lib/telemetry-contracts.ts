@@ -4,6 +4,7 @@ export type UpstreamOperation =
   | "auth_check"
   | "fetch_code"
   | "fetch_context"
+  | "fetch_diff"
   | "oauth_metadata"
   | "search_libraries"
   | "submit_feedback";
