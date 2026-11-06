@@ -103,6 +103,7 @@
                         "pages": [
                           "enterprise/security/entra-sso",
                           "enterprise/security/oidc-sso",
+                          "enterprise/security/saml-sso",
                           "enterprise/security/library-access"
                         ]
                       },
