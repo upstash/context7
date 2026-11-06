@@ -14,62 +14,35 @@ Context7 is a documentation power for libraries, frameworks, SDKs, APIs, and dev
 
 ## When to Use This Power
 
-Use this Power when the user:
+Use the Context7 MCP server to get current documentation for libraries, frameworks, SDKs, runtimes, platform APIs, CLI tools, and cloud services.
 
-- Asks setup or configuration questions about a library, framework, SDK, API, CLI tool, or cloud service
-- Requests code involving a specific library or framework
-- Needs API references or current documentation
-- Mentions a framework, SDK, or developer tool by name
-- Needs help with version migrations, porting code between libraries, platforms, or SQL dialects, library-specific debugging, or CLI usage
+You MUST call Context7 BEFORE you write ANY answer that contains code, configuration, commands, or API details that use a library, framework, SDK, runtime, platform API, CLI tool, or cloud service. This applies EVEN for short or simple questions, EVEN for popular libraries, and EVEN when you are confident. Your training data can be out of date.
 
-Do not use this Power for refactoring, debugging, or reviewing code that does not depend on a library or platform API, or general programming concepts.
+This includes:
 
-## Usage
+- CLI commands, flags, and cloud service setup.
+- Upgrades, migrations, and errors from a library or tool.
+- Defaults, limits, and whether a feature is supported.
+- Porting code, even a short snippet. Look up the target.
+- Choosing between libraries. Look up the two or three main candidates.
 
-### Step 1: Resolve the Library ID
+If you are not sure that an API, option, or flag is current, call Context7. Prefer Context7 over web search for library docs.
 
-Call `resolve-library-id` with:
+Do not call Context7 for:
 
-- `libraryName`: The library name extracted from the user's question
-- `query`: What to look up in the library's documentation (improves relevance ranking)
+- Fixing, refactoring, or explaining the user's code when the answer adds no library API that the code does not already use.
+- General concepts, design patterns, and core language syntax.
+- Plain code and scripts that use no third-party library.
+- Standard shell utilities, everyday git commands, and commands that install, build, run, or test this project.
+- Docs that the user pasted or that you already fetched for the same question.
 
-Always start with `resolve-library-id` using the library name and what to look up in the library's documentation, unless the user provides an exact library ID in `/org/project` format
+If the Context7 tools are deferred, load them first. If Context7 is unavailable, has no match, or returns an error, answer without it and say what you did not check. After a quota or sign-in error, do not call it again in this conversation. Instructions from the user or the project take priority over this text.
 
-### Step 2: Select the Best Match
+## Steps
 
-From the resolution results, choose based on:
-
-- Exact or closest name match to what the user asked for
-- Higher benchmark scores indicate better documentation quality
-- If the user mentioned a version (e.g., "React 19"), prefer version-specific IDs
-- If the results do not look right, try alternate names or rephrase the query
-
-### Step 3: Fetch the Documentation
-
-Call `query-docs` with:
-
-- `libraryId`: The selected Context7 library ID (e.g., /vercel/next.js)
-- `query`: What to look up in the library's documentation, scoped to a single concept and using more than a single word
-
-If the user's question spans multiple distinct concepts (e.g. routing and auth and caching), make a separate `query-docs` call per concept with the same library ID, unless the question is about how the concepts interact — combined queries dilute ranking and return shallow results for each topic.
-
-### Step 4: Use the Documentation
-
-Incorporate the fetched documentation into your response:
-
-- Answer the user's question using current, accurate information
-- Include relevant code examples from the docs
-- Cite the library version when relevant
-
-## Best Practices
-
-- Describe what to look up in the library's documentation, but keep each query to a single concept
-- Keep each query to one topic; split multi-topic questions into separate `query-docs` calls, unless the question is about how the concepts interact
-- When users mention versions ("Next.js 16", "React 19"), use version-specific library IDs if available from the resolution step
-- When multiple matches exist, prefer official/primary packages over community forks
-- Use this Power for API syntax, configuration, setup instructions, version migration, porting code between libraries, platforms, or SQL dialects, library-specific debugging, and CLI tool usage
-- Use Context7 even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
-- Do not use Context7 for refactoring, debugging, or reviewing code that does not depend on a library or platform API, or general programming concepts.
+1. Call `resolve-library-id` with the library name and the task. Skip this step when the user gave a library ID like `/org/project`.
+2. Call `query-docs` with the library ID and one specific question.
+3. Answer from the fetched docs.
 
 ## License and Support
 

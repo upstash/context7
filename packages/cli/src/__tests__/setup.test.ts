@@ -19,7 +19,7 @@ vi.stubGlobal(
   })
 );
 
-import { getRuleContent } from "../setup/templates.js";
+import { getBundledRuleContent, getRuleContent } from "../setup/templates.js";
 import {
   getMcpUrl,
   getOnPremMcpAuthStatus,
@@ -82,6 +82,16 @@ describe("getRuleContent", () => {
           return Promise.resolve({ ok: true, text: () => Promise.resolve(MOCK_CLI_RULE) });
         return Promise.resolve({ ok: false });
       })
+    );
+  });
+
+  test("bundled fallback matches the rule files in the repo", async () => {
+    const rulesDir = new URL("../../../../rules/", import.meta.url);
+    expect(getBundledRuleContent("mcp", "claude")).toBe(
+      await readFile(new URL("context7-mcp.md", rulesDir), "utf-8")
+    );
+    expect(getBundledRuleContent("cli", "claude")).toBe(
+      await readFile(new URL("context7-cli.md", rulesDir), "utf-8")
     );
   });
 });
