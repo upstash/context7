@@ -6,7 +6,7 @@ description: "Index Confluence spaces from Atlassian Cloud or a self-hosted Data
 
 Context7 can index the pages of a Confluence space and serve them like any other library. It works with **Atlassian Cloud** and with self-hosted **Data Center / Server**.
 
-An admin connects Confluence once under **Settings → Integrations** using an API token. After that, anyone who can add libraries indexes a space — or a specific set of pages by URL — from **Add → Confluence**. There is no OAuth app to register, which keeps the setup self-contained on your own infrastructure.
+An admin connects Confluence once under **Settings → AI & integrations** using an API token. After that, anyone who can add libraries indexes a space — or a specific set of pages by URL — from **Add source → Confluence**. There is no OAuth app to register, which keeps the setup self-contained on your own infrastructure.
 
 <Note>
 Confluence pages are behind authentication, so Context7 reaches them with the token you configure. The token needs read access to the spaces you want to index.
@@ -14,7 +14,7 @@ Confluence pages are behind authentication, so Context7 reaches them with the to
 
 ## Connect Confluence
 
-Open **Settings → Integrations → Confluence**, choose your deployment, fill in the fields, and use **Test connection** to confirm before saving.
+Open **Settings → AI & integrations**, open the **Confluence** row, choose your deployment, fill in the fields, and use **Test connection** to confirm before saving.
 
 <Frame>
   ![Confluence integration settings with the Data Center deployment selected](/images/enterprise/integrations/confluence-settings.png)
@@ -49,13 +49,13 @@ Point Context7 at a service account rather than a personal login, so indexing do
 
 ## Index a space
 
-Go to **Add** and choose **Confluence**.
+Click **Add source** and choose **Confluence**.
 
 <Frame>
-  ![The Add Libraries source picker with a Confluence tile](/images/enterprise/integrations/confluence-source.png)
+  ![The Add sources picker with a Confluence tile](/images/enterprise/integrations/confluence-source.png)
 </Frame>
 
-The **Source** toggle at the top of the form offers two ways to choose what to index:
+The **Find pages** toggle in the form offers two ways to choose what to index:
 
 - **Browse spaces** — pick a space, then index the whole space or select pages from its tree.
 - **By page URL** — paste the URLs of the exact pages you want. No page tree is loaded, so it stays fast even for spaces with thousands of pages, and the pages can come from different spaces.
@@ -63,7 +63,7 @@ The **Source** toggle at the top of the form offers two ways to choose what to i
 ### Browse spaces
 
 <Frame>
-  ![Selecting a Confluence space and pages, with the page tree and Start Parsing button](/images/enterprise/integrations/confluence-add.png)
+  ![Selecting a Confluence space and pages, with the page tree and Submit button](/images/enterprise/integrations/confluence-add.png)
 </Frame>
 
 <Steps>

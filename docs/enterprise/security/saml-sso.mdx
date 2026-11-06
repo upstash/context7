@@ -24,7 +24,7 @@ Context7 builds its SAML URLs from the address it is reached at. Behind a revers
 
 ## Part 1: Register Context7 in your identity provider
 
-In Context7, sign in as an admin, open **Workspace Settings**, and go to the **Authentication** section on the **General** tab. In the **Single Sign-On** card, select the **SAML 2.0** tab. The **Service provider** section at the bottom of the tab lists what your IdP needs, with copy buttons.
+In Context7, sign in as an admin, open **Settings → Authentication**. In the **Single sign-on** card, select the **SAML 2.0** tab. The **Service provider** section near the bottom of the tab lists what your IdP needs, with copy buttons.
 
 <Frame>
   ![Service provider section with the SP entity ID, ACS URL, Single Logout URL, metadata URL and SP certificate](/images/enterprise/saml-sso/04-service-provider.png)
@@ -69,7 +69,7 @@ When you create the application in your IdP:
 
 <Steps>
   <Step title="Import the IdP metadata">
-    Turn on **Enable SAML 2.0**. Paste your IdP's metadata URL into **IdP metadata URL** and click **Import**. If your IdP gives you a file instead, click **Paste XML instead** and paste its contents.
+    Turn on **Enable SAML 2.0**. Paste your IdP's metadata URL into **IdP metadata URL** and click **Import**. If your IdP gives you a file instead, click **Paste XML** and paste its contents.
 
     Context7 fills in the **IdP entity ID**, **Single sign-on URL** and binding, **Single logout URL**, and **IdP signing certificates**. Check the values; you can also enter or change them by hand.
 
@@ -91,7 +91,7 @@ When you create the application in your IdP:
 
     - **Requested NameID format**: **Let the IdP decide** works for most IdPs.
     - **User ID attribute**: identify users by an attribute instead of the NameID. Required when the IdP sends a transient NameID.
-    - **Email**, **Display name**, **Username** and **Groups attribute**: blank means auto-detect. Context7 recognizes the common names, such as `email` or `mail`, `displayName` or `givenName` and `sn`, `groups` or `memberOf`, and the standard Microsoft (Entra ID and ADFS) claims. Enter a name here only if your IdP uses a different one.
+    - **Email attribute**, **Display name attribute**, **Username attribute** and **Groups attribute**: blank means auto-detect. Context7 recognizes the common names, such as `email` or `mail`, `displayName` or `givenName` and `sn`, `groups` or `memberOf`, and the standard Microsoft (Entra ID and ADFS) claims. Enter a name here only if your IdP uses a different one.
   </Step>
 
   <Step title="Map groups to roles">
@@ -104,9 +104,9 @@ When you create the application in your IdP:
   </Step>
 
   <Step title="Test and save">
-    Click **Test connection** to check the settings without saving them. It does not contact your IdP, so sign in once afterwards to confirm the whole flow. It also warns you when an IdP certificate has expired or expires within 30 days.
+    Click **Check configuration** to check the settings without saving them. It does not contact your IdP, so sign in once afterwards to confirm the whole flow. It also warns you when an IdP certificate has expired or expires within 30 days.
 
-    Click **Save & Apply**. The status in the card header changes to **Live**.
+    Click **Save and apply**. The status in the card header changes to **Live**.
   </Step>
 </Steps>
 
@@ -167,13 +167,13 @@ After this, the default admin account and other password users cannot sign in wi
 
 ## Managing users
 
-Users who have signed in appear in **Workspace Settings → Users**, with `saml` as their sign-in method.
+Users who have signed in appear on the **Members** page, with **SAML** as their sign-in method.
 
 <Frame>
-  ![Users tab listing a SAML-provisioned admin next to the password admin](/images/enterprise/saml-sso/05-users-tab.png)
+  ![Members page listing SAML-provisioned users next to the password admin](/images/enterprise/saml-sso/05-users-tab.png)
 </Frame>
 
-Roles follow group membership in your IdP and update at each sign-in. To remove someone's access, remove them from the mapped groups or disable them in your IdP. If your IdP supports single logout, signing them out there also ends their Context7 sessions right away.
+Roles follow group membership in your IdP and update at each sign-in. To remove someone's access, remove them from the mapped groups or disable them in your IdP. You can also choose **Disable sign-in** in their row menu on the **Members** page. SSO members can be disabled, but not removed. If your IdP supports single logout, signing them out there also ends their Context7 sessions right away.
 
 ## Troubleshooting
 
