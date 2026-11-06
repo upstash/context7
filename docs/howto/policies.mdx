@@ -48,9 +48,15 @@ You can also maintain two override lists in quality mode:
 - **Blocked libraries** — always excluded, even if they pass every filter.
 - **Excepted libraries** — always allowed, even if they fail the filters.
 
+An entry can take one of three forms:
+
+- **Organization** — `/vercel` covers the org's libraries, such as `/vercel/next.js`, but not a different org that starts with the same text, such as `/vercel-labs/ai`.
+- **Library** — `/vercel/next.js` covers that library only.
+- **Domain** — `stripe.com` covers every library whose documentation site host is that domain or a subdomain of it, such as `docs.stripe.com`. It does not match a look-alike host such as `mystripe.com` or `stripe.com.evil.example`.
+
 ### Select Manually
 
-Ignore the quality bar entirely and grant access only to a hand-picked list of libraries. Anything not on the list is inaccessible.
+Ignore the quality bar entirely and grant access only to a hand-picked list of libraries. Anything not on the list is inaccessible. The allowed list accepts the same organization, library, and domain entries as the override lists above; a library outside the list is refused on both search and direct documentation requests.
 
 <Note>The card shows the number of libraries currently accessible under your settings, so you can see the impact before saving.</Note>
 
