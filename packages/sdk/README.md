@@ -93,12 +93,9 @@ const client = new Context7({
 });
 ```
 
-The `getIntegrationToken` signature is based on Vercel's current provider
-specification and may change before Marketplace OIDC is generally available.
-
-The token's `resource` claim must match the Context7 resource created during
-Marketplace provisioning. Do not resolve the token once at startup: Vercel
-Marketplace OIDC tokens are short-lived.
+Vercel Marketplace OIDC tokens last 15 minutes. The `@vercel/integrations` SDK
+caches and refreshes them. Pass a function as `authToken` so each request can use
+a current token.
 
 Explicit credentials take precedence in this order: `apiKey`, `authToken`, then
 `CONTEXT7_API_KEY`. This allows OIDC to be tested while a legacy API key remains
