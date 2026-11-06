@@ -3,14 +3,17 @@ import { getIntegrationToken } from "@vercel/integrations";
 
 let client: Context7 | undefined;
 
-/**
- * The Context7 client. It uses `CONTEXT7_API_KEY` when it is set. Otherwise it uses the
- * Context7 integration from the Vercel Marketplace: Vercel mints a short-lived Context7 token
- * for the Context7 resource connected to this project, so no secret is stored.
- */
 export function getContext7(): Context7 {
-  client ??= process.env.CONTEXT7_API_KEY
-    ? new Context7()
-    : new Context7({ authToken: () => getIntegrationToken("context7") });
+  if (client) return client;
+
+  if (process.env.CONTEXT7_API_KEY) {
+    client = new Context7();
+  } else {
+    const resourceId = process.env.CONTEXT7_RESOURCE_ID?.trim();
+    if (!resourceId) {
+      throw new Error("Set CONTEXT7_API_KEY or CONTEXT7_RESOURCE_ID for the connected Vercel resource");
+    }
+    client = new Context7({ authToken: () => getIntegrationToken(resourceId) });
+  }
   return client;
 }

@@ -31,11 +31,15 @@ the sources it used.
 
 ### Without an API key
 
-Remove `CONTEXT7_API_KEY` from the project, and the agent authenticates through the Context7
-integration: on each search, `getIntegrationToken("context7")` from
-[`@vercel/integrations`](https://www.npmjs.com/package/@vercel/integrations) has Vercel mint a
-15-minute Context7 token from the deployment's OIDC token, so no secret is stored. Vercel is
-still rolling out these tokens; until they are available for Context7, keep the key.
+Connect a Context7 Marketplace resource to the Vercel project and open that resource in
+Vercel’s dashboard. Copy its Vercel resource ID (starting with `store_` or `ir_`) from
+the resource page URL. Set `CONTEXT7_RESOURCE_ID` in the project’s environment variables,
+remove `CONTEXT7_API_KEY`, and redeploy.
+
+The agent passes that ID to `getIntegrationToken` from
+[`@vercel/integrations`](https://www.npmjs.com/package/@vercel/integrations).
+The SDK mints a 15-minute token using the deployment’s Vercel OIDC identity, then caches
+and refreshes it. Keep the API key until minting works for your project.
 
 The chat channel accepts your team's Vercel OIDC token in production. To expose the agent to other
 users, replace `placeholderAuth()` in `agent/channels/eve.ts` with your own auth, or add another
@@ -47,7 +51,7 @@ channel such as Slack.
   question, and it calls `search`, which returns ranked documentation snippets with their source
   URLs.
 - `agent/lib/context7.ts` creates the SDK client. It uses `CONTEXT7_API_KEY` when it is set, and
-  otherwise a 15-minute token from the Context7 integration.
+  otherwise a 15-minute token for `CONTEXT7_RESOURCE_ID`.
 - `agent/instructions.md` tells the agent to search first, prefer the documented code, and cite
   its sources.
 
