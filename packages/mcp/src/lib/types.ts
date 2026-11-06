@@ -28,6 +28,7 @@ export type ContextRequest = {
   query: string;
   libraryId: string;
   language?: string;
+  version?: string;
 };
 
 export type ContextResponse = {
