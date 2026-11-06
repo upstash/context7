@@ -24,8 +24,8 @@ Your keys are in the API Keys card, the first card on the **Settings** tab of th
   <Step title="Name the key">
     Enter a name (optional but recommended). Descriptive names like "Cursor", "Claude", "VS Code", or "Devin Desktop" help you identify the key later.
   </Step>
-  <Step title="Choose write access">
-    Every key can read the teamspace settings and usage through the management API. Tick **Write access** for a key that must change the teamspace or read personal data, like members and visitor questions (see [below](#write-access)). Leave it off for keys that only fetch docs or read settings.
+  <Step title="Choose the access">
+    Every key can read the teamspace settings and usage through the management API. Under **Access**, choose **Write access** for a key that must change the teamspace or read personal data, like members and visitor questions (see [below](#write-access)). Choose **Read only** for keys that only fetch docs or read settings.
   </Step>
   <Step title="Copy the key immediately">
     Keys are shown only once for security. The format is `ctx7sk-**********************`.
@@ -44,7 +44,7 @@ Your keys are in the API Keys card, the first card on the **Settings** tab of th
 
 ### Write access
 
-The [Context7 Admin MCP](/howto/admin-mcp) and the [management API](/api-reference/teamspaces/list-teamspaces) (`/api/v2/teamspaces/*`) accept every API key, but a key is read-only there unless **Write access** was ticked when the key was created. A key reaches only its own teamspace.
+The [Context7 Admin MCP](/howto/admin-mcp) and the [management API](/api-reference/teamspaces/list-teamspaces) (`/api/v2/teamspaces/*`) accept every API key, but a key is read-only there unless **Write access** was chosen when the key was created. The **Access** column of the API Keys card shows **Read only** or **Write access** for each key. A key reaches only its own teamspace.
 
 A read-only key can read, with your role:
 
@@ -56,9 +56,9 @@ A key needs **Write access** to:
 - read personal data: members and invitations, library requests, Ask questions, Docs7 reader searches, assistant questions and conversations, page feedback, feature requests, and the GitHub account behind a build
 - change the teamspace: its members, libraries, rules and policies, spending limit, and Docs7 and Ask sites
 
-![Create New API Key dialog with Write access ticked](/images/dashboard/api-key-write-access.png)
+![Create API Key dialog with Write access chosen](/images/dashboard/api-key-write-access.png)
 
-A read-only key gets `403` with the error `write_access_required` when it tries to make a change or read personal data. The teamspace invite link also needs write access, because the link lets anyone join. You cannot add write access to an existing key: create a new key with the box ticked. With the Admin MCP you can also sign in with OAuth and use no key.
+A read-only key gets `403` with the error `write_access_required` when it tries to make a change or read personal data. The teamspace invite link also needs write access, because the link lets anyone join. You cannot add write access to an existing key: create a new key with **Write access** chosen. With the Admin MCP you can also sign in with OAuth and use no key.
 
 ### Revoking Keys
 
