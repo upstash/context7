@@ -23,6 +23,7 @@ RUN pnpm install --frozen-lockfile --prod --filter @upstash/context7-mcp
 
 # Copy built files from builder
 COPY --from=builder /app/packages/mcp/dist ./packages/mcp/dist
+COPY --from=builder /app/packages/mcp/public ./packages/mcp/public
 
 WORKDIR /app/packages/mcp
 ENV OTEL_EXPORTER_PROMETHEUS_HOST=0.0.0.0
