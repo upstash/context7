@@ -34,7 +34,7 @@ the sources it used.
 Remove `CONTEXT7_API_KEY` from the project, and the agent authenticates through the Context7
 integration: on each search, `getIntegrationToken("context7")` from
 [`@vercel/integrations`](https://www.npmjs.com/package/@vercel/integrations) has Vercel mint a
-short-lived Context7 token from the deployment's OIDC token, so no secret is stored. Vercel is
+15-minute Context7 token from the deployment's OIDC token, so no secret is stored. Vercel is
 still rolling out these tokens; until they are available for Context7, keep the key.
 
 The chat channel accepts your team's Vercel OIDC token in production. To expose the agent to other
@@ -47,7 +47,7 @@ channel such as Slack.
   question, and it calls `search`, which returns ranked documentation snippets with their source
   URLs.
 - `agent/lib/context7.ts` creates the SDK client. It uses `CONTEXT7_API_KEY` when it is set, and
-  otherwise a short-lived token from the Context7 integration.
+  otherwise a 15-minute token from the Context7 integration.
 - `agent/instructions.md` tells the agent to search first, prefer the documented code, and cite
   its sources.
 
