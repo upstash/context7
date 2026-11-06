@@ -180,12 +180,12 @@ These are set in your `docker-compose.yml` or `.env` file before starting the co
 | `DATA_DIR` | No | Data directory inside the container (default: `/data`) |
 
 <Note>
-Provider and model selection, non-Bedrock provider keys, and git tokens are configured through the setup wizard and can be updated anytime from the Settings page in the web UI. Bedrock is the exception for authentication: it can use `AWS_BEARER_TOKEN_BEDROCK`, standard AWS credential environment variables, a mounted shared profile, or a workload IAM role. See [AWS Bedrock](/enterprise/integrations/aws-bedrock) for the supported credential chain.
+Provider and model selection, non-Bedrock provider keys, and git tokens are configured through the setup wizard and can be updated anytime from **Settings → AI & integrations** in the web UI. Bedrock is the exception for authentication: it can use `AWS_BEARER_TOKEN_BEDROCK`, standard AWS credential environment variables, a mounted shared profile, or a workload IAM role. See [AWS Bedrock](/enterprise/integrations/aws-bedrock) for the supported credential chain.
 </Note>
 
 ### AI Provider Settings
 
-Configured via the **Settings** page in the web UI.
+Configured via **Settings → AI & integrations** in the web UI.
 
 | Setting | Description |
 |---|---|
@@ -231,7 +231,7 @@ See [AWS Bedrock](/enterprise/integrations/aws-bedrock) for IAM, model, region, 
 
 ### Git Access Tokens
 
-Configured via the **Settings** page in the web UI.
+Configured via **Settings → AI & integrations** in the web UI.
 
 | Setting | Description |
 |---|---|
@@ -245,7 +245,7 @@ The GitLab token is sent only to `gitlab.com` and the host in **Server URL**.
 
 ## Access Control
 
-Admin credentials are set during first login (default: `admin` / `admin`). Change these immediately after setup via **Settings > Change Credentials**.
+Admin credentials are set during first login (default: `admin` / `admin`). Change these immediately after setup via **Personal settings → Password → Change password**. Until you do, a banner on that page asks you to change it.
 
 The Settings page lets you control which operations are available without authentication, including MCP and API search access.
 
@@ -257,27 +257,39 @@ The Settings page lets you control which operations are available without authen
 | Allow anonymous support bundle | Off | Allow unauthenticated support bundle downloads |
 | Require MCP authentication | Off | Require a personal API key for `/mcp` and external `/api/v2` search requests |
 
-When MCP authentication is enabled, each user creates personal keys from **Personal Settings > API Keys**. Clients send the key as `Authorization: Bearer <key>`.
+When MCP authentication is enabled, each user creates personal keys from **Personal settings → API keys**. Clients send the key as `Authorization: Bearer <key>`.
 
 ## Policies
 
 Policies let you control which public documentation from the Context7 cloud is accessible to your on-premise instance. They do not affect locally parsed on-premise content.
 
-Access Policies from **Settings > Policies** tab. Requires admin login and a valid `LICENSE_KEY`.
+Access Policies from **Settings → Content policies**. Requires admin login and a valid `LICENSE_KEY`.
 
 For details on source type toggles and library filters, see [Customizing What Is Retrieved](/security/data-privacy#customizing-what-is-retrieved).
 
 ## Web UI
 
-Open your deployment URL in a browser to access the dashboard. From here you can:
+Open your deployment URL in a browser to access the dashboard. The tabs across the top are **Dashboard**, **Repositories**, **Members** (admins only), **MCP Test**, **Usage**, **Settings** (admins only) and **Support**. From here you can:
 
 - Add and remove libraries
 - Trigger re-indexing
-- Monitor parsing status and logs
+- Monitor parsing status and logs, and the parse queue at **Repositories → Parse queue**
 - Update AI provider settings, git tokens, and permissions
 - Configure policies for public cloud documentation access
 - Test MCP connectivity
-- Change admin credentials
+- Manage members and change your own password
+
+Workspace settings open from the account menu and have one page per section, such as `/settings/authentication` or `/settings/backup`. Your own password and API keys are under **Personal settings** in the same menu.
+
+### Members
+
+Admins manage who can sign in from the **Members** tab. Each row shows the member's role, sign-in method and last sign-in. From the row's actions menu you can:
+
+- **Make admin** or **Make member** for password users. SSO members keep the role their identity provider sends.
+- **Disable sign-in** or **Enable sign-in** for any member. A disabled member cannot sign in, and their existing sessions end.
+- **Remove member** for password users. This deletes the account and its API keys. SSO members cannot be removed here, because their next sign-in would create the account again; disable them instead.
+
+You cannot change or remove your own account, and the workspace always keeps at least one enabled admin. **Add member** creates one password user, or imports many from a CSV file with the columns `username`, `password`, `role`, `displayName` and `email` (`username` and `password` are required; `role` defaults to `member`). SSO users appear in the list after their first sign-in.
 
 ## Operations
 

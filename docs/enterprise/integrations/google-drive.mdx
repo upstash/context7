@@ -6,7 +6,7 @@ description: "Sync Google Docs and Google Slides from Drive folders, Shared Driv
 
 Context7 can sync Google Docs and Google Slides from Google Drive and serve them like any other library. Google Drive stays the source of truth: a daily sync picks up edits, and files that are removed or no longer shared leave the results.
 
-An admin connects a Google service account once under **Settings → Integrations**. Then an admin chooses which folders, Shared Drives, Docs and presentations to sync from **Add → Google Drive**. Only the selected items, and the Docs and presentations under selected folders, are indexed.
+An admin connects a Google service account once under **Settings → Google Drive**. Then an admin chooses which folders, Shared Drives, Docs and presentations to sync from **Add → Google Drive**. Only the selected items, and the Docs and presentations under selected folders, are indexed.
 
 <Note>
 Google Docs and Google Slides are supported. Spreadsheets, PDFs and other file types in a selected folder are skipped. The picker marks them as not supported.
@@ -20,7 +20,7 @@ Context7 reads Drive with a service account and one read-only scope:
 | ----- | --- |
 | `https://www.googleapis.com/auth/drive.readonly` | List the selected folders, export Google Docs and read Google Slides. Context7 never writes to Drive. |
 
-The **Set up Google Cloud** panel in the **Google Drive** card (**Settings → Integrations**) shows these steps. Enter your project ID there, and the panel fills it into the commands.
+The **Set up Google Cloud** panel in the **Google Drive** card (**Settings → Google Drive**) shows these steps. Enter your project ID there, and the panel fills it into the commands.
 
 <Steps>
   <Step title="Create the service account">
@@ -62,7 +62,7 @@ Without delegation, the service account can read only what is explicitly shared 
 
 ## Connect Google Drive
 
-Open **Settings → Integrations** and choose how Context7 authenticates in the **Google Drive** card.
+Open **Settings → Google Drive** and choose how Context7 authenticates in the **Google Drive** card.
 
 <Tabs>
   <Tab title="Service account key">
@@ -150,7 +150,7 @@ Context7 retries Google API quota errors with exponential backoff and limits how
 
 ## Scheduled sync
 
-Google Drive libraries sync every day at 03:00 server time by default. Under **Sync schedule** in the **Google Drive** card (**Settings → Integrations**), you can:
+Google Drive libraries sync every day at 03:00 server time by default. Under **Sync schedule** in the **Google Drive** card (**Settings → Google Drive**), you can:
 
 - turn the scheduled sync off,
 - change the schedule: pick a preset such as **Every 6 hours**, or enter a cron expression such as `0 */6 * * *`,
@@ -160,7 +160,7 @@ When a sync fails, scheduled or manual, Context7 retries that library after 15 m
 
 ## Monitor libraries
 
-The **Libraries** list in the **Google Drive** card (**Settings → Integrations**) shows every Google Drive library with its selection, its last sync, and a status:
+The **Libraries** list in the **Google Drive** card (**Settings → Google Drive**) shows every Google Drive library with its selection, its last sync, and a status:
 
 | Status | Meaning |
 | --- | --- |

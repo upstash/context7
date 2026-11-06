@@ -15,7 +15,7 @@ Keys are scoped to the user account that created them and inherit that user's ro
 
 <Steps>
   <Step title="Open Settings">
-    Go to **Personal Settings > API Keys** in the admin dashboard and click **Create API Key**.
+    Open **Personal settings** from the account menu and click **Create API key** under **API keys**.
 
     <Frame>
       ![API Keys settings page](/images/enterprise/api-keys/api-keys-empty.png)
@@ -41,7 +41,7 @@ Keys are scoped to the user account that created them and inherit that user's ro
 
 ## Revoking a Key
 
-Go to **Settings > API Keys** and click the delete icon next to the key. Revocation is immediate and cannot be undone. Update any integrations using the key before revoking.
+Go to **Personal settings → API keys** and click the delete icon next to the key. Revocation is immediate and cannot be undone. Update any integrations using the key before revoking.
 
 ## Roles
 
@@ -50,11 +50,11 @@ Go to **Settings > API Keys** and click the delete icon next to the key. Revocat
 | `admin` | Full access to all endpoints including settings, user management, and delete operations |
 | `member` | Can trigger parsing and search. Cannot access admin endpoints |
 
-Default credentials on a fresh install are `admin` / `admin`. Change them immediately from **Settings > Change Credentials**.
+Default credentials on a fresh install are `admin` / `admin`. Change them immediately from **Personal settings → Password → Change password**. Until you do, a banner on that page asks you to change it.
 
 ## Anonymous Access
 
-Certain operations can be allowed without authentication. Configure them from **Settings > Permissions**:
+Certain operations can be allowed without authentication. Configure them from **Settings → Authorization**:
 
 | Permission | Default |
 |---|---|
