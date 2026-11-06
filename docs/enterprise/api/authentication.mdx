@@ -14,25 +14,25 @@ Keys are scoped to the user account that created them and inherit that user's ro
 ## Creating an API Key
 
 <Steps>
-  <Step title="Open Settings">
-    Go to **Personal Settings > API Keys** in the admin dashboard and click **Create API Key**.
+  <Step title="Open Personal settings">
+    Open the account menu in the admin dashboard, choose **Personal settings**, and click **Create API key** in the **API keys** card.
 
     <Frame>
-      ![API Keys settings page](/images/enterprise/api-keys/api-keys-empty.png)
+      ![API keys card in Personal settings](/images/enterprise/api-keys/api-keys-empty.png)
     </Frame>
   </Step>
   <Step title="Name the key">
     Give the key a descriptive name so you know which client or service is using it (e.g. `CI pipeline`, `Cursor`).
 
     <Frame>
-      ![Create API Key dialog](/images/enterprise/api-keys/api-keys-create-dialog.png)
+      ![Create API key dialog](/images/enterprise/api-keys/api-keys-create-dialog.png)
     </Frame>
   </Step>
   <Step title="Copy the key">
     Copy the full key value before closing the dialog. It is only shown once.
 
     <Frame>
-      ![API Key Created dialog showing the key value](/images/enterprise/api-keys/api-keys-created.png)
+      ![Copy your key now dialog showing the key value](/images/enterprise/api-keys/api-keys-created.png)
     </Frame>
   </Step>
 </Steps>
@@ -41,7 +41,7 @@ Keys are scoped to the user account that created them and inherit that user's ro
 
 ## Revoking a Key
 
-Go to **Settings > API Keys** and click the delete icon next to the key. Revocation is immediate and cannot be undone. Update any integrations using the key before revoking.
+Go to **Personal settings > API keys** and click the delete icon next to the key. Revocation is immediate and cannot be undone. Update any integrations using the key before revoking.
 
 ## Roles
 
@@ -50,16 +50,18 @@ Go to **Settings > API Keys** and click the delete icon next to the key. Revocat
 | `admin` | Full access to all endpoints including settings, user management, and delete operations |
 | `member` | Can trigger parsing and search. Cannot access admin endpoints |
 
-Default credentials on a fresh install are `admin` / `admin`. Change them immediately from **Settings > Change Credentials**.
+Default credentials on a fresh install are `admin` / `admin`. Change them immediately from **Personal settings > Password > Change password**.
 
-## Anonymous Access
+## Non-admin permissions
 
-Certain operations can be allowed without authentication. Configure them from **Settings > Permissions**:
+These operations can be allowed for every caller who is not an admin: signed-in members and anonymous callers. Configure them in the **Non-admin permissions** card under **Settings > Authorization**:
 
 | Permission | Default |
 |---|---|
-| Anonymous parse / refresh | Off |
-| Anonymous delete | Off |
+| Parse repositories | On |
+| Refresh repositories | On |
+| Delete repositories | Off |
+| Download support bundle | Off |
 
 MCP authentication is configured separately in **Settings > Authentication**. When enabled, external requests to `/mcp`, `/api/v2/libs/search`, and `/api/v2/context` require a personal API key. When disabled, those endpoints allow anonymous access. The local MCP bridge can still call the v2 endpoints over loopback.
 

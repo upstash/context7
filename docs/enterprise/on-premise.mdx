@@ -58,7 +58,7 @@ All configuration is stored locally in the embedded database and can be updated 
 
 <Step title="Ingest your first repository">
 
-From the dashboard, click **Add Repository** and enter a GitHub or GitLab URL. Once ingestion completes, your private docs are ready to query.
+From the dashboard, click **Add source**, choose **GitHub** or **GitLab**, and enter the repository URL. Once ingestion completes, your private docs are ready to query.
 
 You can also add libraries via the REST API:
 
@@ -185,7 +185,7 @@ Provider and model selection, non-Bedrock provider keys, and git tokens are conf
 
 ### AI Provider Settings
 
-Configured via the **Settings** page in the web UI.
+Configured under **Settings > AI & integrations** in the web UI.
 
 | Setting | Description |
 |---|---|
@@ -231,13 +231,13 @@ See [AWS Bedrock](/enterprise/integrations/aws-bedrock) for IAM, model, region, 
 
 ### Git Access Tokens
 
-Configured via the **Settings** page in the web UI.
+Configured under **Settings > AI & integrations** in the web UI.
 
 | Setting | Description |
 |---|---|
 | GitHub Token | GitHub Personal Access Token. Required for GitHub repositories |
 | GitLab Token | GitLab token. Required for GitLab repositories |
-| GitLab **Server URL** | Your self-hosted GitLab host, such as `gitlab.your-company.com`. In the GitLab section, select **Self-hosted**, then enter it in **Server URL** |
+| GitLab **Server URL** | Your self-hosted GitLab host, such as `gitlab.your-company.com`. In the **GitLab** row, select **Self-managed**, then enter it in **Server URL** |
 
 You only need tokens for the platforms you use. If you only parse GitLab repos, you don't need a GitHub token, and vice versa. Create tokens with `repo` scope (GitHub) or `read_repository` scope (GitLab) for private repository access.
 
@@ -245,25 +245,25 @@ The GitLab token is sent only to `gitlab.com` and the host in **Server URL**.
 
 ## Access Control
 
-Admin credentials are set during first login (default: `admin` / `admin`). Change these immediately after setup via **Settings > Change Credentials**.
+Admin credentials are set during first login (default: `admin` / `admin`). Change these immediately after setup via **Personal settings > Password > Change password**.
 
-The Settings page lets you control which operations are available without authentication, including MCP and API search access.
+**Settings > Authorization** controls which operations members and anonymous callers can run. Admins can always run all of them. **Settings > Authentication** controls MCP and API search access.
 
 | Permission | Default | Description |
 |---|---|---|
-| Allow anonymous parse | Off | Allow unauthenticated users to trigger parsing |
-| Allow anonymous refresh | Off | Allow unauthenticated users to refresh libraries |
-| Allow anonymous delete | Off | Allow unauthenticated users to delete libraries |
-| Allow anonymous support bundle | Off | Allow unauthenticated support bundle downloads |
+| Parse repositories | On | Allow members and anonymous callers to add sources and start a first parse |
+| Refresh repositories | On | Allow members and anonymous callers to re-parse existing libraries |
+| Delete repositories | Off | Allow members and anonymous callers to delete libraries |
+| Download support bundle | Off | Allow members and anonymous callers to download the support bundle |
 | Require MCP authentication | Off | Require a personal API key for `/mcp` and external `/api/v2` search requests |
 
-When MCP authentication is enabled, each user creates personal keys from **Personal Settings > API Keys**. Clients send the key as `Authorization: Bearer <key>`.
+When MCP authentication is enabled, each user creates personal keys from **Personal settings > API keys**. Clients send the key as `Authorization: Bearer <key>`.
 
 ## Policies
 
 Policies let you control which public documentation from the Context7 cloud is accessible to your on-premise instance. They do not affect locally parsed on-premise content.
 
-Access Policies from **Settings > Policies** tab. Requires admin login and a valid `LICENSE_KEY`.
+Open **Settings > Content policies**. Requires admin login and a valid `LICENSE_KEY`.
 
 For details on source type toggles and library filters, see [Customizing What Is Retrieved](/security/data-privacy#customizing-what-is-retrieved).
 
