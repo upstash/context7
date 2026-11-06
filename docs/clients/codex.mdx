@@ -28,6 +28,19 @@ codex plugin add context7@context7-marketplace
 
 After adding the plugin, a browser window opens so you can log in to Context7 via OAuth — plugin installs use your account's authenticated rate limits too. Start a new Codex thread after installation so Codex can load the plugin's skill and MCP tools.
 
+### Plugin vs. manual remote MCP
+
+Both the plugin and a manual remote MCP entry point Codex at the same hosted server, `https://mcp.context7.com/mcp`, and expose the same two tools — `resolve-library-id` and `query-docs` (see [MCP Tools](/resources/all-clients#mcp-tools)). The difference is what is bundled and how you authenticate:
+
+| | Context7 plugin | Manual remote MCP |
+| --- | --- | --- |
+| MCP tools | `resolve-library-id`, `query-docs` | `resolve-library-id`, `query-docs` |
+| Documentation-lookup skill | Included — triggers on library questions automatically | Not included; you invoke Context7 explicitly or add an `AGENTS.md` instruction |
+| Authentication | OAuth sign-in in the browser, no API key | `Authorization: Bearer YOUR_API_KEY` header, or the OAuth endpoint |
+| Rate limits | Your signed-in account | The API key's account, or the signed-in account when using OAuth |
+
+Use the plugin if you want the automatic lookup skill with no key to manage. Configure the remote MCP manually if you need a specific API key, run in a headless or CI environment where a browser sign-in is not possible, or want to keep Context7 in a shared `config.toml` without the plugin's skill. For OAuth on a manual remote entry, point the URL at `https://mcp.context7.com/mcp/oauth` instead.
+
 Create or manage API keys in the [Context7 dashboard](https://context7.com/dashboard). For manual configuration or other clients, see [All MCP Clients](/resources/all-clients).
 
 ---
