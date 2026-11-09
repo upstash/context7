@@ -1,11 +1,11 @@
 ---
 title: Research Preview
-description: Turn on experimental Context7 MCP tools, such as documentation feedback and upgrade guides
+description: Turn on experimental Context7 MCP tools, such as documentation feedback, upgrade guides and source code search
 ---
 
 The research preview gives your agent experimental tools from the Context7 MCP server. It is off by default. Tools in the preview can change or be removed without notice.
 
-The research preview currently adds two tools: [documentation feedback](#documentation-feedback) and [upgrade guides](#upgrade-guides).
+The research preview currently adds three tools: [documentation feedback](#documentation-feedback), [upgrade guides](#upgrade-guides) and [source code search](#source-code-search).
 
 ## Turn it on
 
@@ -92,3 +92,18 @@ With the research preview on, the server also lists a `get-upgrade-guide` tool. 
 The first request for a pair of versions can take a minute or more while Context7 prepares it. The tool then tells the agent when to call again.
 
 Guides are prepared for about 100 of the most used libraries. For any other library the tool answers that its guide is not prepared yet. The tool needs `@upstash/context7-mcp` 4.6.0 or later.
+
+## Source code search
+
+With the research preview on, the server also lists a `query-code` tool, and `resolve-library-id` marks the libraries whose source it can search with `Source code: searchable with query-code`. The agent uses it when the docs do not answer an exact question, such as a signature, a default value, an option name, or where an error message comes from. It searches and reads the library's source at the commit its docs describe.
+
+| Field | Description |
+| --- | --- |
+| `libraryId` | A library built from a Git repository, such as `/colinhacks/zod`. `/websites/...` and `/llmstxt/...` libraries have no source |
+| `operation` | `grep` (default), `definition`, `references`, `outline`, `read` or `list` |
+| `pattern` | A regex for `grep`, or a symbol for `definition`, `references` and `read` |
+| `version` | A git tag, such as `v3.24.2`, optional. Without it, the commit the docs were built from. A tag that is not a docs version is indexed on first use |
+
+`grep` also takes ripgrep's options: `fixed_strings`, `ignore_case`, `glob`, `path`, `context`, `output_mode`, `head_limit` and `offset`. While a library's source is being indexed, the tool tells the agent to call again or answer from `query-docs`.
+
+Without the MCP server, the `ctx7 code` command gives the same search in a terminal, for example `npx ctx7@latest code /colinhacks/zod "safeExtend" --op definition`.
