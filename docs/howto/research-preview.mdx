@@ -88,6 +88,9 @@ With the research preview on, the server also lists a `get-upgrade-guide` tool. 
 | `libraryId` | The library, such as `/vercel/next.js` |
 | `fromVersion` | The version you use now, such as `14.2.35` or `14`. A bare major means the oldest release of that line |
 | `toVersion` | The version to upgrade to, such as `16`, optional. A bare major means the newest release of that line; without it, the latest major |
+| `page` | The page of a long guide, optional, `1` by default |
+
+A long guide comes in pages, each in full detail: page 1 holds everything needed to migrate (the summary, prerequisites, codemods, breaking changes and deprecations), and later pages hold behavior and config changes and the API changes, which the agent fetches when it needs them.
 
 The first request for a pair of versions can take a minute or more while Context7 prepares it. The tool then tells the agent when to call again.
 

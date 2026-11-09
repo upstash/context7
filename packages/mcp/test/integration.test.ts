@@ -133,6 +133,15 @@ function startStubApi(): Promise<string> {
         res.statusCode = 404;
         res.setHeader("Content-Type", "text/html");
         res.end("<html>Not Found</html>");
+      } else if (url.searchParams.get("page") === "9") {
+        res.statusCode = 400;
+        res.setHeader("Content-Type", "application/json");
+        res.end(
+          JSON.stringify({
+            error: "page_out_of_range",
+            message: "This guide has 3 pages; page 9 does not exist.",
+          })
+        );
       } else if (fromVersion === UNKNOWN_FROM_VERSION) {
         res.statusCode = 404;
         res.setHeader("Content-Type", "application/json");
@@ -733,7 +742,7 @@ describe("research preview", () => {
   });
 
   describe("get-upgrade-guide", () => {
-    const callGuide = (args: Record<string, string>) =>
+    const callGuide = (args: Record<string, string | number>) =>
       withClient(`${httpUrl}?research_preview=1`, (client) =>
         client.callTool({
           name: "get-upgrade-guide",
@@ -773,6 +782,35 @@ describe("research preview", () => {
 
       const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
       expect(apiCall?.query.has("toVersion")).toBe(false);
+    });
+
+    test("sends the page when given", async () => {
+      const result = await callGuide({ fromVersion: "14", page: 2 });
+
+      expect(result.isError).toBeFalsy();
+      const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
+      expect(apiCall?.query.get("page")).toBe("2");
+    });
+
+    test("omits the page when not given", async () => {
+      await callGuide({ fromVersion: "14" });
+
+      const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
+      expect(apiCall?.query.has("page")).toBe(false);
+    });
+
+    test("returns the API's message for a page past the last", async () => {
+      const result = await callGuide({ fromVersion: "14", page: 9 });
+
+      expect(result.isError).toBe(true);
+      expect(resultText(result)).toBe("This guide has 3 pages; page 9 does not exist.");
+    });
+
+    test("rejects a page below 1 without calling the API", async () => {
+      const result = await callGuide({ fromVersion: "14", page: 0 });
+
+      expect(result.isError).toBe(true);
+      expect(requests.some((request) => request.path === "/v2/version-upgrade-guide")).toBe(false);
     });
 
     test("tells the agent to call again while the guide is prepared", async () => {

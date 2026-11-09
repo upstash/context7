@@ -58,6 +58,14 @@ const upgradeGuideSchema = z.object({
     .describe(
       "The version to upgrade to (e.g., '16'). A bare major means the newest release of that line. Omit for the latest major."
     ),
+  page: z
+    .number()
+    .int()
+    .min(1)
+    .optional()
+    .describe(
+      "Page of a long guide, starting at 1 (the default). Page 1 holds everything needed to migrate; ask for a later page with the number the previous page gives."
+    ),
 });
 
 export type UpgradeGuideRequest = z.infer<typeof upgradeGuideSchema>;
@@ -115,9 +123,11 @@ Do not include sensitive or confidential information such as API keys, passwords
     GET_UPGRADE_GUIDE_TOOL,
     {
       title: "Get Upgrade Guide",
-      description: `Returns everything that changes when a library moves from one version to another, in one response: prerequisites, codemods, breaking changes, deprecations, behavior and config changes from the release notes, changelogs and migration guides of every release in between (each cited), plus the public API changes found in the source code of both versions, attached to the note that explains them, and the API changes no note mentions.
+      description: `Returns everything that changes when a library moves from one version to another: prerequisites, codemods, breaking changes, deprecations, behavior and config changes from the release notes, changelogs and migration guides of every release in between (each cited), plus the public API changes found in the source code of both versions, attached to the note that explains them, and the API changes no note mentions.
 
 Use it when the user upgrades or migrates a library between versions, sees errors after an upgrade, or asks what changed between two versions. Get the library ID from '${RESOLVE_LIBRARY_ID_TOOL}' first.
+
+A long guide comes in pages, each in full detail. Page 1 (the default) holds everything needed to migrate: the summary counts, before you start, codemods, breaking changes and deprecations. Later pages hold behavior changes, config and build changes, verification steps and the API changes. Each page says how many pages there are and what the next one holds; call again with 'page' set to that number when you need it, for example when the upgrade still fails or the user asks about a change page 1 does not cover.
 
 The first call for a version pair can take a minute or more while it is prepared; if the response says it is being prepared, call again after the time it gives.
 

@@ -360,7 +360,7 @@ const UPGRADE_GUIDE_MISSES = new Set(["library_not_prepared", "version_not_found
 
 /**
  * Fetches the upgrade guide for a library between two versions
- * @param request The library ID and the versions to upgrade from and to
+ * @param request The library ID, the versions to upgrade from and to, and the page of the guide
  * @param context Client context including IP, API key, and client info
  * @returns The guide, a note to call again while it is prepared, or an error
  */
@@ -373,6 +373,7 @@ export async function fetchUpgradeGuide(
     url.searchParams.set("libraryId", request.libraryId);
     url.searchParams.set("fromVersion", request.fromVersion);
     if (request.toVersion) url.searchParams.set("toVersion", request.toVersion);
+    if (request.page !== undefined) url.searchParams.set("page", String(request.page));
 
     const headers = generateHeaders(context);
     const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);
