@@ -630,6 +630,18 @@ describe("research preview", () => {
   const stdioTransport = (env: Record<string, string>) =>
     new StdioClientTransport({ command: process.execPath, args: [DIST], env });
 
+  async function withClient<T>(url: string, run: (client: Client) => Promise<T>): Promise<T> {
+    const client = new Client({ name: "research-preview-test", version: "1.0.0" });
+    await client.connect(httpTransport(url));
+    try {
+      return await run(client);
+    } finally {
+      await client.close();
+    }
+  }
+  const toolNames = (url: string) =>
+    withClient(url, async (client) => (await client.listTools()).tools.map((tool) => tool.name));
+
   test("marks tools/list private over HTTP only with ?research_preview=1", async () => {
     expect(await toolsListCacheScope(httpTransport(httpUrl))).toBe("public");
     expect(await toolsListCacheScope(httpTransport(`${httpUrl}?research_preview=1`))).toBe(
@@ -645,125 +657,95 @@ describe("research preview", () => {
   });
 
   test("lists submit-docs-feedback only with research preview and sends it to the API", async () => {
-    const toolNames = async (url: string) => {
-      const client = new Client({ name: "research-preview-test", version: "1.0.0" });
-      await client.connect(httpTransport(url));
-      try {
-        return (await client.listTools()).tools.map((tool) => tool.name);
-      } finally {
-        await client.close();
-      }
-    };
     expect(await toolNames(httpUrl)).not.toContain("submit-docs-feedback");
     expect(await toolNames(`${httpUrl}?research_preview=1`)).toContain("submit-docs-feedback");
 
-    const client = new Client({ name: "research-preview-test", version: "1.0.0" });
-    await client.connect(httpTransport(`${httpUrl}?research_preview=1`));
-    try {
-      feedbackBodies.length = 0;
-      requests.length = 0;
-      const feedback = {
-        libraryId: "/vercel/next.js",
-        query: "app router caching",
-        score: 2,
-        issue: "outdated",
-        comment: "Shows the Next.js 14 cache defaults.",
-      };
-      const result = await client.callTool({ name: "submit-docs-feedback", arguments: feedback });
-
-      expect(result.isError).toBeFalsy();
-      expect(feedbackBodies).toEqual([feedback]);
-      const apiCall = requests.find((request) => request.path === "/v2/feedback");
-      expect(apiCall?.headers.authorization).toBe("Bearer ctx7sk-local-test");
-      expect(apiCall?.headers["x-context7-source"]).toBe("mcp-server");
-      expect(apiCall?.headers["x-context7-research-preview"]).toBe("1");
-    } finally {
-      await client.close();
-    }
-  });
-});
-
-describe("research preview: get-upgrade-guide", () => {
-  const previewTransport = (url: string) =>
-    new StreamableHTTPClientTransport(new URL(url), {
-      requestInit: { headers: { Authorization: "Bearer ctx7sk-local-test" } },
-    });
-
-  async function withClient<T>(url: string, run: (client: Client) => Promise<T>): Promise<T> {
-    const client = new Client({ name: "research-preview-test", version: "1.0.0" });
-    await client.connect(previewTransport(url));
-    try {
-      return await run(client);
-    } finally {
-      await client.close();
-    }
-  }
-
-  const callGuide = (args: Record<string, string>) =>
-    withClient(`${httpUrl}?research_preview=1`, (client) =>
-      client.callTool({
-        name: "get-upgrade-guide",
-        arguments: { libraryId: "/vercel/next.js", ...args },
-      })
-    );
-  const resultText = (result: Awaited<ReturnType<typeof callGuide>>) =>
-    (result.content as { type: string; text: string }[])[0].text;
-
-  beforeEach(() => {
+    feedbackBodies.length = 0;
     requests.length = 0;
-  });
-
-  test("is listed only with research preview", async () => {
-    const toolNames = (url: string) =>
-      withClient(url, async (client) => (await client.listTools()).tools.map((tool) => tool.name));
-    expect(await toolNames(httpUrl)).not.toContain("get-upgrade-guide");
-    expect(await toolNames(`${httpUrl}?research_preview=1`)).toContain("get-upgrade-guide");
-  });
-
-  test("sends the versions to the API and returns the guide text", async () => {
-    const result = await callGuide({ fromVersion: "14.2.35", toVersion: "16" });
+    const feedback = {
+      libraryId: "/vercel/next.js",
+      query: "app router caching",
+      score: 2,
+      issue: "outdated",
+      comment: "Shows the Next.js 14 cache defaults.",
+    };
+    const result = await withClient(`${httpUrl}?research_preview=1`, (client) =>
+      client.callTool({ name: "submit-docs-feedback", arguments: feedback })
+    );
 
     expect(result.isError).toBeFalsy();
-    expect(resultText(result)).toBe(STUB_UPGRADE_GUIDE);
-    const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
-    expect(Object.fromEntries(apiCall!.query)).toEqual({
-      libraryId: "/vercel/next.js",
-      fromVersion: "14.2.35",
-      toVersion: "16",
-    });
+    expect(feedbackBodies).toEqual([feedback]);
+    const apiCall = requests.find((request) => request.path === "/v2/feedback");
     expect(apiCall?.headers.authorization).toBe("Bearer ctx7sk-local-test");
     expect(apiCall?.headers["x-context7-source"]).toBe("mcp-server");
     expect(apiCall?.headers["x-context7-research-preview"]).toBe("1");
   });
 
-  test("omits toVersion when not given", async () => {
-    await callGuide({ fromVersion: "14" });
+  describe("get-upgrade-guide", () => {
+    const callGuide = (args: Record<string, string>) =>
+      withClient(`${httpUrl}?research_preview=1`, (client) =>
+        client.callTool({
+          name: "get-upgrade-guide",
+          arguments: { libraryId: "/vercel/next.js", ...args },
+        })
+      );
+    const resultText = (result: Awaited<ReturnType<typeof callGuide>>) =>
+      (result.content as { type: string; text: string }[])[0].text;
 
-    const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
-    expect(apiCall?.query.has("toVersion")).toBe(false);
-  });
+    beforeEach(() => {
+      requests.length = 0;
+    });
 
-  test("tells the agent to call again while the guide is prepared", async () => {
-    const result = await callGuide({ fromVersion: PREPARING_FROM_VERSION });
+    test("is listed only with research preview", async () => {
+      expect(await toolNames(httpUrl)).not.toContain("get-upgrade-guide");
+      expect(await toolNames(`${httpUrl}?research_preview=1`)).toContain("get-upgrade-guide");
+    });
 
-    expect(result.isError).toBeFalsy();
-    expect(resultText(result)).toContain("being prepared");
-    expect(resultText(result)).toContain("after 90 seconds");
-    expect(resultText(result)).toContain("Indexing the source of next.js 13.0.0.");
-  });
+    test("sends the versions to the API and returns the guide text", async () => {
+      const result = await callGuide({ fromVersion: "14.2.35", toVersion: "16" });
 
-  test("returns the API's 404 message as an answer, not an error", async () => {
-    const result = await callGuide({ fromVersion: UNKNOWN_FROM_VERSION });
+      expect(result.isError).toBeFalsy();
+      expect(resultText(result)).toBe(STUB_UPGRADE_GUIDE);
+      const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
+      expect(Object.fromEntries(apiCall!.query)).toEqual({
+        libraryId: "/vercel/next.js",
+        fromVersion: "14.2.35",
+        toVersion: "16",
+      });
+      expect(apiCall?.headers.authorization).toBe("Bearer ctx7sk-local-test");
+      expect(apiCall?.headers["x-context7-source"]).toBe("mcp-server");
+      expect(apiCall?.headers["x-context7-research-preview"]).toBe("1");
+    });
 
-    expect(result.isError).toBeFalsy();
-    expect(resultText(result)).toBe("No release 99 of next.js.");
-  });
+    test("omits toVersion when not given", async () => {
+      await callGuide({ fromVersion: "14" });
 
-  test("reports a 404 that is not the endpoint's answer as an upstream error", async () => {
-    const result = await callGuide({ fromVersion: MISSING_ENDPOINT_FROM_VERSION });
+      const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
+      expect(apiCall?.query.has("toVersion")).toBe(false);
+    });
 
-    expect(resultText(result)).toContain("not available");
-    expect(resultText(result)).not.toContain("library");
+    test("tells the agent to call again while the guide is prepared", async () => {
+      const result = await callGuide({ fromVersion: PREPARING_FROM_VERSION });
+
+      expect(result.isError).toBeFalsy();
+      expect(resultText(result)).toContain("being prepared");
+      expect(resultText(result)).toContain("after 90 seconds");
+      expect(resultText(result)).toContain("Indexing the source of next.js 13.0.0.");
+    });
+
+    test("returns the API's 404 message as an answer, not an error", async () => {
+      const result = await callGuide({ fromVersion: UNKNOWN_FROM_VERSION });
+
+      expect(result.isError).toBeFalsy();
+      expect(resultText(result)).toBe("No release 99 of next.js.");
+    });
+
+    test("reports a 404 that is not the endpoint's answer as an upstream error", async () => {
+      const result = await callGuide({ fromVersion: MISSING_ENDPOINT_FROM_VERSION });
+
+      expect(resultText(result)).toContain("not available");
+      expect(resultText(result)).not.toContain("library");
+    });
   });
 });
 
