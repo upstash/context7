@@ -130,6 +130,37 @@ describe("on-premise setup network boundary", () => {
     expect(await runSetup()).toBe(first);
   });
 
+  test("re-running setup replaces the AGENTS.md section in a file with CRLF line endings", async () => {
+    const agentsPath = join(tempDir, "AGENTS.md");
+    await writeFile(
+      agentsPath,
+      "# Before\r\n\r\n<!-- context7 -->\r\nstale rule\r\n<!-- context7 -->\r\n\r\n# After\r\n",
+      "utf-8"
+    );
+
+    const program = new Command();
+    program.exitOverride();
+    registerSetupCommand(program);
+    await program.parseAsync([
+      "node",
+      "ctx7",
+      "setup",
+      "--mcp",
+      "--base-url",
+      "https://context7.internal.example",
+      "--codex",
+      "--project",
+      "--yes",
+    ]);
+
+    const updated = await readFile(agentsPath, "utf-8");
+    expect(updated).not.toContain("stale rule");
+    expect(updated).toContain("query-docs");
+    expect(updated.startsWith("# Before\r\n\r\n<!-- context7 -->")).toBe(true);
+    expect(updated.endsWith("<!-- context7 -->\r\n\r\n# After\r\n")).toBe(true);
+    expect(updated.split("<!-- context7 -->")).toHaveLength(3);
+  });
+
   test("selects MCP mode automatically for a custom deployment", async () => {
     const program = new Command();
     program.exitOverride();

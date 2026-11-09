@@ -12,7 +12,7 @@ pi install npm:@upstash/context7-pi
 
 ## Authenticate
 
-The extension works without any setup at IP-based rate limits — useful for trying it out. For higher quotas, generate a free key at [context7.com/dashboard](https://context7.com/dashboard) and export it:
+The extension works without any setup at IP-based rate limits — useful for trying it out. For higher quotas, generate a free key at [context7.com/dashboard](https://context7.com/dashboard?tab=settings) and export it:
 
 ```bash
 export CONTEXT7_API_KEY=ctx7sk_...
