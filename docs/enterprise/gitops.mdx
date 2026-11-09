@@ -14,15 +14,15 @@ The point is to keep your configuration in code. After a disaster, or when stand
 
 ## Before you start
 
-GitOps clones your manifest repository and the repositories it indexes using the Git credentials you configure under **Settings → Integrations**. Connect a GitHub App or a personal access token first; see [GitHub Integration](/enterprise/integrations/github). Automatic syncs on every push require the **GitHub App** (a personal access token cannot receive webhooks).
+GitOps clones your manifest repository and the repositories it indexes using the Git credentials you configure under **Settings → Integrations → GitHub**. Connect a GitHub App or a personal access token first; see [GitHub Integration](/enterprise/integrations/github). Automatic syncs on every push require the **GitHub App** (a personal access token cannot receive webhooks).
 
 <Warning>
-If you set up the GitHub App **before** GitOps was available, it is not subscribed to push events and will not trigger syncs. Add the **push** event to the App on GitHub, or recreate it from **Settings → Integrations**. See [GitHub Integration](/enterprise/integrations/github#webhooks).
+If you set up the GitHub App **before** GitOps was available, it is not subscribed to push events and will not trigger syncs. Add the **push** event to the App on GitHub, or recreate it from **Settings → Integrations → GitHub**. See [GitHub Integration](/enterprise/integrations/github#webhooks).
 </Warning>
 
 ## How it works
 
-You commit a manifest file (by default `repos.yaml`) to a Git repository. Context7 clones that repository using the same Git credentials you already configured under **Settings → Integrations** (a GitHub App or a personal access token), reads the manifest, and compares it against the repositories it currently has indexed.
+You commit a manifest file (by default `repos.yaml`) to a Git repository. Context7 clones that repository using the same Git credentials you already configured under **Settings → Integrations → GitHub** (a GitHub App or a personal access token), reads the manifest, and compares it against the repositories it currently has indexed.
 
 For each source in the manifest, Context7 decides what to do:
 
@@ -53,7 +53,7 @@ repos:
     folders: [docs]
     excludeFolders: [node_modules]
 
-  # Confluence space (uses the connection from Settings → Integrations)
+  # Confluence space (uses the connection from Settings → Integrations → Confluence)
   - url: https://acme.atlassian.net/wiki
     type: confluence
     spaceKey: TEAM
@@ -109,7 +109,7 @@ Open **Settings → Indexing → GitOps**, fill in the manifest repository, and 
 | Sync schedule | How often to reconcile automatically. Choose a preset or enter a custom cron expression. Set to **Manual only** to disable scheduled syncs. |
 | Prune removed repositories | Delete GitOps-managed repositories that are no longer in the manifest. Off by default. |
 
-The manifest repository is cloned with the Git token from **Settings → Integrations**, so private repositories work without any extra credentials. If you have not configured a GitHub App or personal access token for the host, the sync reports a clear error.
+The manifest repository is cloned with the Git token from **Settings → Integrations → GitHub**, so private repositories work without any extra credentials. If you have not configured a GitHub App or personal access token for the host, the sync reports a clear error.
 
 <Warning>
 Pruning permanently deletes a repository's indexed data (snippets and embeddings). It only affects repositories GitOps added, never ones you created in the dashboard, but treat the manifest as authoritative once pruning is on. Removing an entry and syncing will delete that library.

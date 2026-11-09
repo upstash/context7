@@ -6,7 +6,7 @@ description: "Index Confluence spaces from Atlassian Cloud or a self-hosted Data
 
 Context7 can index the pages of a Confluence space and serve them like any other library. It works with **Atlassian Cloud** and with self-hosted **Data Center / Server**.
 
-An admin connects Confluence once under **Settings → Integrations** using an API token. After that, anyone who can add libraries indexes a space — or a specific set of pages by URL — from **Add → Confluence**. There is no OAuth app to register, which keeps the setup self-contained on your own infrastructure.
+An admin connects Confluence once under **Settings → Integrations → Confluence** using an API token. After that, anyone who can add libraries indexes a space — or a specific set of pages by URL — from **Add → Confluence**. There is no OAuth app to register, which keeps the setup self-contained on your own infrastructure.
 
 <Note>
 Confluence pages are behind authentication, so Context7 reaches them with the token you configure. The token needs read access to the spaces you want to index.
@@ -14,7 +14,7 @@ Confluence pages are behind authentication, so Context7 reaches them with the to
 
 ## Connect Confluence
 
-Open **Settings → Integrations → Confluence**, choose your deployment, fill in the fields, and use **Test connection** to confirm before saving.
+Open **Settings → Integrations → Confluence**, choose your deployment, fill in the fields, and use **Test connection** to confirm before saving. (The old `?integration=confluence` link redirects here.)
 
 <Frame>
   ![Confluence integration settings with the Data Center deployment selected](/images/enterprise/integrations/confluence-settings.png)
