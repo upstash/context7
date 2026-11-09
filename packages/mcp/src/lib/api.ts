@@ -1,6 +1,6 @@
 import { SearchResponse, ContextRequest, ContextResponse, ClientContext } from "./types.js";
-import type { DocsFeedback } from "./research-preview-tools.js";
-import type { ToolCallOutcome } from "./tool-names.js";
+import type { DocsFeedback, UpgradeGuideRequest } from "./research-preview-tools.js";
+import { GET_UPGRADE_GUIDE_TOOL, type ToolCallOutcome } from "./tool-names.js";
 import { generateHeaders } from "./encryption.js";
 import { Agent, ProxyAgent, setGlobalDispatcher } from "undici";
 import { CONTEXT7_API_BASE_URL } from "./constants.js";
@@ -25,6 +25,18 @@ const API_TIMEOUT_MS = 60_000;
 const EXPIRED_SIGN_IN_MESSAGE =
   "Your Context7 sign-in expired. Retry the request so your MCP client can refresh the sign-in.";
 
+/** What a research preview tool shows the agent, and the outcome its telemetry records. */
+export type ToolAnswer = { text: string; outcome: ToolCallOutcome };
+
+/** The response body as JSON, or undefined when it is not JSON. */
+async function readJson<T>(response: Response): Promise<T | undefined> {
+  try {
+    return (await response.json()) as T;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Parses error response from the Context7 API
  * Extracts the server's error message, falling back to status-based messages if parsing fails
@@ -34,12 +46,7 @@ const EXPIRED_SIGN_IN_MESSAGE =
  */
 async function parseErrorResponse(response: Response, context: ClientContext): Promise<string> {
   const { apiKey } = context;
-  let json: { error?: string; message?: string } | undefined;
-  try {
-    json = (await response.json()) as { error?: string; message?: string };
-  } catch {
-    // JSON parsing failed, fall through to default
-  }
+  const json = await readJson<{ error?: string; message?: string }>(response);
 
   const status = response.status;
   // On the hosted transport the auth gate answers the next request with an HTTP
@@ -187,7 +194,7 @@ export async function searchLibraries(
 export async function submitDocsFeedback(
   feedback: DocsFeedback,
   context: ClientContext = {}
-): Promise<{ text: string; outcome: ToolCallOutcome }> {
+): Promise<ToolAnswer> {
   try {
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/feedback`);
     const headers = { ...generateHeaders(context), "Content-Type": "application/json" };
@@ -217,6 +224,79 @@ export async function submitDocsFeedback(
     );
   } catch (error) {
     const errorMessage = `Error sending feedback. Please try again later. ${error}`;
+    console.error(errorMessage);
+    return { text: errorMessage, outcome: "error" };
+  }
+}
+
+/** The endpoint's 404 codes: answers about the library or version, not failures. */
+const UPGRADE_GUIDE_MISSES = new Set(["library_not_prepared", "version_not_found"]);
+
+/**
+ * Fetches the upgrade guide for a library between two versions
+ * @param request The library ID and the versions to upgrade from and to
+ * @param context Client context including IP, API key, and client info
+ * @returns The guide, a note to call again while it is prepared, or an error
+ */
+export async function fetchUpgradeGuide(
+  request: UpgradeGuideRequest,
+  context: ClientContext = {}
+): Promise<ToolAnswer> {
+  try {
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/version-upgrade-guide`);
+    url.searchParams.set("libraryId", request.libraryId);
+    url.searchParams.set("fromVersion", request.fromVersion);
+    if (request.toVersion) url.searchParams.set("toVersion", request.toVersion);
+
+    const headers = generateHeaders(context);
+    const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);
+
+    return await observeUpstreamRequest(
+      "fetch_upgrade_guide",
+      () => fetch(url, { headers, signal: abortSignal }),
+      async (response): Promise<ToolAnswer> => {
+        switch (response.status) {
+          // The code index or release data is being prepared; the agent calls again later.
+          case 202: {
+            const json = await readJson<{ retryAfter?: number; message?: string }>(response);
+            const retryAfter =
+              typeof json?.retryAfter === "number" && json.retryAfter > 0 ? json.retryAfter : 60;
+            const note = `The upgrade guide is being prepared. Call '${GET_UPGRADE_GUIDE_TOOL}' again with the same arguments after ${retryAfter} seconds.`;
+            return {
+              text: json?.message ? `${note}\n\n${json.message}` : note,
+              outcome: "success",
+            };
+          }
+          case 404: {
+            const json = await readJson<{ error?: string; message?: string }>(response);
+            // A library without a guide or an unknown version is an answer, not a failure.
+            if (json?.error && UPGRADE_GUIDE_MISSES.has(json.error))
+              return { text: json.message ?? json.error, outcome: "not_found" };
+            // Any other 404 (for example a deployment without the endpoint) is an upstream error.
+            const text =
+              "The upgrade guide service is not available (HTTP 404). Please try again later.";
+            console.error(text);
+            return { text, outcome: "error" };
+          }
+        }
+        if (!response.ok) {
+          const errorMessage = await parseErrorResponse(response, context);
+          console.error(errorMessage);
+          return { text: errorMessage, outcome: "error" };
+        }
+        const text = await response.text();
+        if (!text) {
+          return {
+            text: "No upgrade guide was returned for these versions.",
+            outcome: "not_found",
+          };
+        }
+        return { text, outcome: "success" };
+      },
+      { abortSignal }
+    );
+  } catch (error) {
+    const errorMessage = `Error fetching the upgrade guide. Please try again later. ${error}`;
     console.error(errorMessage);
     return { text: errorMessage, outcome: "error" };
   }
