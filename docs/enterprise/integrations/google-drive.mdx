@@ -14,7 +14,7 @@ Google Docs and Google Slides are supported. Spreadsheets, PDFs and other file t
 
 ## Set up Google Cloud
 
-Context7 reads Drive with a service account and one read-only scope:
+Context7 reads Drive with a service account or a signed-in Google account, with one read-only scope:
 
 | Scope | Why |
 | ----- | --- |
@@ -60,6 +60,28 @@ If sharing with the service account is not practical, the service account can ac
 Without delegation, the service account can read only what is explicitly shared with it. This keeps the approved content small and visible in Drive's sharing settings, so prefer it when you can.
 </Note>
 
+### Google account (optional)
+
+Instead of a service account, an admin can sign in once as a dedicated Workspace user through an OAuth client that belongs to your organization, and Context7 keeps the sign-in. No service account key is stored, no domain-wide delegation is used, and nothing is shared outside your organization. The **Set up Google Cloud** panel in the **Google account** mode of the **Google Drive** card shows the steps and the redirect URI:
+
+<Steps>
+  <Step title="Enable the Drive and Slides APIs">
+    In a Google Cloud project that belongs to your Workspace organization, enable the Google Drive API and the Google Slides API.
+  </Step>
+  <Step title="Make the consent screen Internal">
+    In the Google Auth Platform, create the app and choose **Internal** under **Audience**. Only your organization's users can sign in, and Google does not need to verify the app.
+  </Step>
+  <Step title="Create an OAuth client">
+    Create a **Web application** client and add the redirect URI shown in the panel to **Authorized redirect URIs**. Google accepts only an HTTPS address on a public domain here, so on a host such as `context7.internal` or `http://10.x` it refuses. In that case create a **Desktop app** client instead: it needs no redirect URI, and after sign-in you paste the `http://127.0.0.1` address Google opens into **Address after sign-in**.
+  </Step>
+  <Step title="Create a Workspace user for Context7">
+    Add a user only for Context7, such as `context7-bot@yourcompany.com`. Do not use a person's account: Context7 can read everything this account can open, and the connection stops if the account is suspended.
+  </Step>
+  <Step title="Share the content">
+    Share each folder with that user with **Viewer** access, or add the user to each Shared Drive as a **Viewer**.
+  </Step>
+</Steps>
+
 ## Connect Google Drive
 
 Open **Settings → Integrations** and choose how Context7 authenticates in the **Google Drive** card.
@@ -95,9 +117,14 @@ Open **Settings → Integrations** and choose how Context7 authenticates in the 
 
     Domain-wide delegation is not available in this mode.
   </Tab>
+  <Tab title="Google account (OAuth)">
+    Enter the **OAuth client ID** and **OAuth client secret**, click **Sign in with Google**, and sign in as the Context7 user, not as yourself. The card shows the signed-in email with a copy button. The client ID, secret and sign-in are stored encrypted and never returned from any API. See [Google account](#google-account-optional) for the setup.
+
+    If Google ends the sign-in, for example because the access was revoked or the account was suspended, the card shows **Reconnect required**. Click **Reconnect** and sign in again as the same account; the libraries keep syncing without being added again.
+  </Tab>
 </Tabs>
 
-**Test connection** checks the credentials with Google and lists the first folders, files and Shared Drives that the identity can see. If the list is empty, share a folder with the service account, then test again. After you connect, the card shows the service account's email with a copy button.
+**Test connection** checks the credentials with Google and lists the first folders, files and Shared Drives that the identity can see. If the list is empty, share a folder with the account, then test again.
 
 ## Add a Google Drive library
 
@@ -190,7 +217,8 @@ The server talks only to Google:
 
 | Host | Used for |
 | --- | --- |
-| `oauth2.googleapis.com` | Access tokens for a service account key |
+| `accounts.google.com` | The sign-in page, for a signed-in Google account |
+| `oauth2.googleapis.com` | Access tokens for a service account key, or refreshed tokens for a signed-in Google account |
 | `sts.googleapis.com` | Access tokens for workload identity federation |
 | `iamcredentials.googleapis.com` | Access tokens for workload identity federation with service account impersonation |
 | `www.googleapis.com` | The Drive API |
@@ -212,3 +240,5 @@ Set `GOOGLE_DRIVE_API_URL` and `GOOGLE_SLIDES_API_URL` to send Drive and Slides 
 | "The document is larger than the 10 MB Google Drive export limit" | Split the document. Its last indexed version stays available. |
 | "The selection has more than 10000 documents" | A library holds at most 10,000 Docs and presentations. Split the selection into several libraries, or raise the limit with the `GOOGLE_DRIVE_MAX_FILES` environment variable. |
 | "The Google connector was replaced by a different account" | The library was added with another service account or delegated user. Add the library again with the current connector. |
+| "Google no longer accepts the sign-in … (invalid_grant)" | The access was revoked or the account was suspended. Sign in again with **Reconnect** in the **Google Drive** card. |
+| "Google accepts only HTTPS redirect URIs" or "Google does not accept an IP address in a redirect URI" | This server's address does not work as a Web client redirect URI. Create a Desktop app client and use **Address after sign-in**. |
