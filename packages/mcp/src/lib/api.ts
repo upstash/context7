@@ -1,4 +1,10 @@
-import { SearchResponse, ContextRequest, ContextResponse, ClientContext } from "./types.js";
+import {
+  SearchResponse,
+  ContextRequest,
+  ContextResponse,
+  ClientContext,
+  CodeRequest,
+} from "./types.js";
 import type { DocsFeedback, UpgradeGuideRequest } from "./research-preview-tools.js";
 import { GET_UPGRADE_GUIDE_TOOL, type ToolCallOutcome } from "./tool-names.js";
 import { generateHeaders } from "./encryption.js";
@@ -226,6 +232,126 @@ export async function submitDocsFeedback(
     const errorMessage = `Error sending feedback. Please try again later. ${error}`;
     console.error(errorMessage);
     return { text: errorMessage, outcome: "error" };
+  }
+}
+
+/** Seconds to wait from a 202 body or a Retry-After header (seconds or an HTTP date). */
+export function retryAfterSeconds(bodyValue: unknown, header: string | null): number {
+  if (typeof bodyValue === "number" && Number.isFinite(bodyValue) && bodyValue >= 0)
+    return Math.ceil(bodyValue);
+  if (header) {
+    const seconds = Number(header);
+    if (Number.isFinite(seconds) && seconds >= 0) return Math.ceil(seconds);
+    const date = Date.parse(header);
+    if (Number.isFinite(date)) return Math.max(1, Math.ceil((date - Date.now()) / 1000));
+  }
+  return 30;
+}
+
+/**
+ * The summary line of an empty /v2/code result, such as "0 matching lines in 0 files",
+ * "0 entries in src" or "Symbols in a.ts (0 of 0):". The server's lib/code/format.ts
+ * writes it on the line after the "Library: ..." header.
+ */
+const EMPTY_CODE_SUMMARY = /^(?:(?:at least )?0 |(?:Symbols in .+|Exported API) \(0 of )/;
+
+/** True when the result's summary line counts no results. Library source lines are not checked. */
+export function isEmptyCodeResult(text: string): boolean {
+  const [first = "", second = ""] = text.split("\n", 2);
+  return EMPTY_CODE_SUMMARY.test(first.startsWith("Library: ") ? second : first);
+}
+
+/**
+ * The error text for a failed /v2/code call. The next step comes from the
+ * HTTP status and the error code in the JSON body, not from the message text.
+ */
+async function codeErrorMessage(
+  response: Response,
+  request: CodeRequest,
+  context: ClientContext
+): Promise<string> {
+  const body = (await response
+    .clone()
+    .json()
+    .catch(() => undefined)) as { error?: string; message?: string } | undefined;
+  const code = typeof body?.error === "string" ? body.error : undefined;
+  // A gateway error has no body from the code API: write the whole message here.
+  if (!body?.message && response.status >= 500)
+    return `Source code search is not available now (HTTP ${response.status}). Do not retry now: answer from query-docs.`;
+  const message = await parseErrorResponse(response, context);
+  // For a git tag, index_failed means that the tag may not exist; the message lists the docs versions.
+  const hasVersion = !!request.version || request.libraryId.split("/").filter(Boolean).length > 2;
+  if (code === "index_failed" && hasVersion)
+    return `${message} Call query-code again with one of the docs versions in this message, or without version.`;
+  if (code === "code_search_unavailable") return `${message} Answer from query-docs.`;
+  return message;
+}
+
+/**
+ * Queries a library's source code at the version its docs were built from.
+ * A 202 means the source is still being indexed: that is a normal answer
+ * telling the agent to call again, not an error.
+ */
+export async function fetchLibraryCode(
+  request: CodeRequest,
+  context: ClientContext = {}
+): Promise<ContextResponse> {
+  try {
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/code`);
+    url.searchParams.set("libraryId", request.libraryId);
+    // An agent may copy a full versioned ID ("/vercel/next.js/v15.1.8") into version.
+    const version = request.version?.startsWith(`${request.libraryId}/`)
+      ? request.version.slice(request.libraryId.length + 1)
+      : request.version;
+    if (version) url.searchParams.set("version", version);
+    if (request.operation) url.searchParams.set("operation", request.operation);
+    if (request.pattern !== undefined) url.searchParams.set("pattern", request.pattern);
+    if (request.fixed_strings) url.searchParams.set("fixed_strings", "true");
+    if (request.ignore_case) url.searchParams.set("ignore_case", "true");
+    for (const glob of [request.glob ?? []].flat()) url.searchParams.append("glob", glob);
+    if (request.path) url.searchParams.set("path", request.path);
+    if (request.context !== undefined) url.searchParams.set("context", String(request.context));
+    if (request.output_mode) url.searchParams.set("output_mode", request.output_mode);
+    if (request.head_limit !== undefined)
+      url.searchParams.set("head_limit", String(request.head_limit));
+    if (request.offset) url.searchParams.set("offset", String(request.offset));
+
+    const headers = generateHeaders(context);
+    const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);
+
+    return await observeUpstreamRequest(
+      "fetch_code",
+      () => fetch(url, { headers, signal: abortSignal }),
+      async (response) => {
+        readPromptSignal(response, context);
+        if (response.status === 202) {
+          const body = (await response.json().catch(() => ({}))) as {
+            message?: string;
+            retryAfter?: number;
+          };
+          const wait = retryAfterSeconds(body.retryAfter, response.headers.get("Retry-After"));
+          const message = body.message ?? "The library source is being indexed.";
+          return {
+            data: `${message} This is not an error. Call query-code again with the same arguments in about ${wait} seconds, at most twice. Meanwhile, or if it is still indexing, answer from query-docs.`,
+            // No "indexing" outcome exists: telemetry counts it with the empty results.
+            outcome: "not_found",
+          };
+        }
+        if (!response.ok) {
+          const errorMessage = await codeErrorMessage(response, request, context);
+          console.error(errorMessage);
+          return { data: errorMessage, outcome: "error" };
+        }
+        const text = await response.text();
+        if (!text) return { data: "No source results for this query.", outcome: "not_found" };
+        return { data: text, outcome: isEmptyCodeResult(text) ? "not_found" : "success" };
+      },
+      { abortSignal }
+    );
+  } catch (error) {
+    const errorMessage = `Error querying library source code: ${error}. Do not retry now: answer from query-docs.`;
+    console.error(errorMessage);
+    return { data: errorMessage, outcome: "error" };
   }
 }
 

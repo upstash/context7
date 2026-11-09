@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { CLIENT_INFO_META_KEY } from "@modelcontextprotocol/server";
-import { envelopeClientInfo, formatSearchResults } from "../src/lib/utils.js";
+import { envelopeClientInfo, formatSearchResults, hasSourceCode } from "../src/lib/utils.js";
 import type { SearchResult } from "../src/lib/types.js";
 
 const searchResult: SearchResult = {
@@ -53,5 +53,13 @@ describe("envelopeClientInfo", () => {
   test("returns undefined when the envelope is missing or lacks client info", () => {
     expect(envelopeClientInfo(undefined)).toBeUndefined();
     expect(envelopeClientInfo({})).toBeUndefined();
+  });
+});
+
+describe("hasSourceCode", () => {
+  test("marks Git repository libraries, not websites or llms.txt", () => {
+    expect(hasSourceCode({ id: "/colinhacks/zod", branch: "main" })).toBe(true);
+    expect(hasSourceCode({ id: "/websites/zod_dev", branch: "_contextdev_" })).toBe(false);
+    expect(hasSourceCode({ id: "/llmstxt/zod_dev_llms_txt", branch: "_llmstxt_" })).toBe(false);
   });
 });

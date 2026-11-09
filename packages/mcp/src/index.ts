@@ -32,6 +32,7 @@ import {
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
+import { aliasArgs, GLOBAL_ALIASES, QUERY_DOCS_ALIASES } from "./lib/tool-args.js";
 import {
   DOCS_FEEDBACK_INSTRUCTIONS,
   registerResearchPreviewTools,
@@ -186,22 +187,6 @@ function getClientContext(toolCtx: ServerContext): ClientContext {
   };
 }
 
-// Map of canonical arg name -> hallucinated aliases that should be rewritten
-// to it. LLM clients often echo phrasing from tool descriptions instead of
-// the literal schema keys, which trips Zod validation before the tool runs.
-type AliasMap = Record<string, readonly string[]>;
-
-const GLOBAL_ALIASES: AliasMap = {
-  query: ["userQuery", "question"],
-};
-
-// Tool-scoped aliases, for keys that are canonical on one tool but a
-// hallucination on another (e.g. `libraryName` is canonical for
-// `resolve-library-id`, so we only rewrite it on `query-docs` calls).
-const QUERY_DOCS_ALIASES: AliasMap = {
-  libraryId: ["context7CompatibleLibraryID", "libraryID", "libraryName"],
-};
-
 type JsonRpcId = string | number;
 
 function jsonRpcRequestId(message: unknown): JsonRpcId | undefined {
@@ -273,28 +258,6 @@ function filterBatchSelfCancellations(body: unknown): {
   };
 }
 
-// z.preprocess step that rewrites aliased arg names before validation. Living
-// in the schema keeps aliasing transport-agnostic: the SDK parses the wire
-// message (any transport, any protocol era) and runs this on validation.
-// Returns a remapped copy — the raw wire params object stays untouched.
-function aliasArgs(aliases: AliasMap) {
-  return (value: unknown) => {
-    if (!value || typeof value !== "object") return value;
-    const args: Record<string, unknown> = { ...value };
-    for (const [canonical, alternatives] of Object.entries(aliases)) {
-      if (canonical in args) continue;
-      for (const alt of alternatives) {
-        if (alt in args) {
-          args[canonical] = args[alt];
-          delete args[alt];
-          break;
-        }
-      }
-    }
-    return args;
-  };
-}
-
 function createMcpServer(mcpContext: McpRequestContext, researchPreview: boolean) {
   const serverInfo = {
     name: "Context7",
@@ -352,7 +315,12 @@ Each result includes:
 - Code Snippets: Number of available code examples
 - Source Reputation: Authority indicator (High, Medium, Low, or Unknown)
 - Benchmark Score: Quality indicator (100 is the highest score)
-- Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.
+- Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.${
+        researchPreview
+          ? `
+- Source code: present when 'query-code' can usually search the library's source. '/websites/...' and '/llmstxt/...' IDs have docs only.`
+          : ""
+      }
 
 For best results, select libraries based on name match, source reputation, snippet coverage, benchmark score, and relevance to your use case.
 
@@ -416,7 +384,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
         };
       }
 
-      const resultsText = formatSearchResults(searchResponse);
+      const resultsText = formatSearchResults(searchResponse, { sourceCode: researchPreview });
       const responseText = `Available Libraries:\n\n${resultsText}`;
       maybeElicitAuthSignIn(server, ctx);
       recordToolCallTelemetry(ctx, "success");
