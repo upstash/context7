@@ -360,7 +360,7 @@ const UPGRADE_GUIDE_MISSES = new Set(["library_not_prepared", "version_not_found
 
 /**
  * Fetches the upgrade guide for a library between two versions
- * @param request The library ID, the versions to upgrade from and to, and the page of the guide
+ * @param request The library ID, the versions to upgrade from and to, and the page and guideHash of the guide
  * @param context Client context including IP, API key, and client info
  * @returns The guide, a note to call again while it is prepared, or an error
  */
@@ -374,6 +374,7 @@ export async function fetchUpgradeGuide(
     url.searchParams.set("fromVersion", request.fromVersion);
     if (request.toVersion) url.searchParams.set("toVersion", request.toVersion);
     if (request.page !== undefined) url.searchParams.set("page", String(request.page));
+    if (request.guideHash) url.searchParams.set("guideHash", request.guideHash);
 
     const headers = generateHeaders(context);
     const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);
@@ -393,6 +394,14 @@ export async function fetchUpgradeGuide(
               text: json?.message ? `${note}\n\n${json.message}` : note,
               outcome: "success",
             };
+          }
+          // The guide changed since the page whose guideHash was sent: the agent starts again
+          // from page 1, as the message says. An instruction, like 202, not a failure.
+          case 409: {
+            const json = await readJson<{ error?: string; message?: string }>(response);
+            if (json?.error === "guide_changed" && json.message)
+              return { text: json.message, outcome: "success" };
+            break;
           }
           case 404: {
             const json = await readJson<{ error?: string; message?: string }>(response);

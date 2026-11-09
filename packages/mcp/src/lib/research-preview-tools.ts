@@ -64,7 +64,14 @@ const upgradeGuideSchema = z.object({
     .min(1)
     .optional()
     .describe(
-      "Page of a long guide, starting at 1 (the default). Page 1 holds everything needed to migrate; ask for a later page with the number the previous page gives."
+      "Page of a long guide, starting at 1 (the default). Ask for a later page with the number the previous page gives."
+    ),
+  guideHash: z
+    .string()
+    .regex(/^[0-9a-f]{12}$/)
+    .optional()
+    .describe(
+      "The guideHash a page of the guide names. Send it with every page after the first, so all pages come from the same version of the guide."
     ),
 });
 
@@ -127,7 +134,7 @@ Do not include sensitive or confidential information such as API keys, passwords
 
 Use it when the user upgrades or migrates a library between versions, sees errors after an upgrade, or asks what changed between two versions. Get the library ID from '${RESOLVE_LIBRARY_ID_TOOL}' first.
 
-A long guide comes in pages, each in full detail. Page 1 (the default) holds everything needed to migrate: the summary counts, before you start, codemods, breaking changes and deprecations. Later pages hold behavior changes, config and build changes, verification steps and the API changes. Each page says how many pages there are and what the next one holds; call again with 'page' set to that number when you need it, for example when the upgrade still fails or the user asks about a change page 1 does not cover.
+A long guide comes in pages, each in full detail. Page 1 (the default) starts with everything needed to migrate: the summary counts, before you start, codemods, breaking changes and deprecations. If page 1 says this part continues on later pages, read those pages before migrating. After it come behavior changes, config and build changes, verification steps and the API changes; fetch those pages when you need them, for example when the upgrade still fails or the user asks about a change the pages you read do not cover. Each page says how many pages there are and what the next one holds. Ask for a later page with 'page' and the 'guideHash' the page names; if the guide changed in between, the answer says to start again from page 1.
 
 The first call for a version pair can take a minute or more while it is prepared; if the response says it is being prepared, call again after the time it gives.
 

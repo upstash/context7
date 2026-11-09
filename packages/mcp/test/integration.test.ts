@@ -35,6 +35,7 @@ const CODE_BAD_TAG_QUERY = "force-code-bad-tag";
 const STUB_UPGRADE_GUIDE = "# Upgrading Next.js from 14 to 16";
 const PREPARING_FROM_VERSION = "13";
 const UNKNOWN_FROM_VERSION = "99";
+const STALE_GUIDE_HASH = "fedcba987654";
 /** A deployment without the endpoint answers a plain 404. */
 const MISSING_ENDPOINT_FROM_VERSION = "98";
 const CLIENT_IP_ASSERTION_KEY = "0123456789abcdef".repeat(4);
@@ -133,6 +134,15 @@ function startStubApi(): Promise<string> {
         res.statusCode = 404;
         res.setHeader("Content-Type", "text/html");
         res.end("<html>Not Found</html>");
+      } else if (url.searchParams.get("guideHash") === STALE_GUIDE_HASH) {
+        res.statusCode = 409;
+        res.setHeader("Content-Type", "application/json");
+        res.end(
+          JSON.stringify({
+            error: "guide_changed",
+            message: "This guide has changed. Start again from page 1 (without guideHash).",
+          })
+        );
       } else if (url.searchParams.get("page") === "9") {
         res.statusCode = 400;
         res.setHeader("Content-Type", "application/json");
@@ -790,6 +800,28 @@ describe("research preview", () => {
       expect(result.isError).toBeFalsy();
       const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
       expect(apiCall?.query.get("page")).toBe("2");
+    });
+
+    test("sends the guideHash when given", async () => {
+      const result = await callGuide({ fromVersion: "14", page: 2, guideHash: "0123456789ab" });
+
+      expect(result.isError).toBeFalsy();
+      const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
+      expect(apiCall?.query.get("guideHash")).toBe("0123456789ab");
+    });
+
+    test("tells the agent to start again when the guide changed, without an error", async () => {
+      const result = await callGuide({ fromVersion: "14", page: 2, guideHash: STALE_GUIDE_HASH });
+
+      expect(result.isError).toBeFalsy();
+      expect(resultText(result)).toContain("Start again from page 1");
+    });
+
+    test("rejects a guideHash that is not one without calling the API", async () => {
+      const result = await callGuide({ fromVersion: "14", page: 2, guideHash: "page-two" });
+
+      expect(result.isError).toBe(true);
+      expect(requests.some((request) => request.path === "/v2/version-upgrade-guide")).toBe(false);
     });
 
     test("omits the page when not given", async () => {
