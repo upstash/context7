@@ -357,6 +357,8 @@ export async function fetchLibraryCode(
 
 /** The endpoint's 404 codes: answers about the library or version, not failures. */
 const UPGRADE_GUIDE_MISSES = new Set(["library_not_prepared", "version_not_found"]);
+/** The endpoint's 400 codes that answer the agent's request, not failures. */
+const UPGRADE_GUIDE_ANSWERS = new Set(["page_out_of_range"]);
 
 /**
  * Fetches the upgrade guide for a library between two versions
@@ -373,6 +375,8 @@ export async function fetchUpgradeGuide(
     url.searchParams.set("libraryId", request.libraryId);
     url.searchParams.set("fromVersion", request.fromVersion);
     if (request.toVersion) url.searchParams.set("toVersion", request.toVersion);
+    // The app reads `page` and `guideHash` from the deploy that ships paging (CTX7-3607), and
+    // treats servers before 4.7.0 as unable to page: deploy the app before releasing this.
     if (request.page !== undefined) url.searchParams.set("page", String(request.page));
     if (request.guideHash) url.searchParams.set("guideHash", request.guideHash);
 
@@ -401,7 +405,19 @@ export async function fetchUpgradeGuide(
             const json = await readJson<{ error?: string; message?: string }>(response);
             if (json?.error === "guide_changed" && json.message)
               return { text: json.message, outcome: "success" };
-            break;
+            // The body is read: show the API's own message rather than read it again.
+            const text = json?.message ?? "The upgrade guide request conflicted (HTTP 409).";
+            console.error(text);
+            return { text, outcome: "error" };
+          }
+          // A page past the last: the message names the pages there are. An answer, not a failure.
+          case 400: {
+            const json = await readJson<{ error?: string; message?: string }>(response);
+            if (json?.error && UPGRADE_GUIDE_ANSWERS.has(json.error))
+              return { text: json.message ?? json.error, outcome: "not_found" };
+            const text = json?.message ?? "The upgrade guide request was invalid (HTTP 400).";
+            console.error(text);
+            return { text, outcome: "error" };
           }
           case 404: {
             const json = await readJson<{ error?: string; message?: string }>(response);

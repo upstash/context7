@@ -36,6 +36,7 @@ const STUB_UPGRADE_GUIDE = "# Upgrading Next.js from 14 to 16";
 const PREPARING_FROM_VERSION = "13";
 const UNKNOWN_FROM_VERSION = "99";
 const STALE_GUIDE_HASH = "fedcba987654";
+const CONFLICT_GUIDE_HASH = "aaaaaaaaaaaa";
 /** A deployment without the endpoint answers a plain 404. */
 const MISSING_ENDPOINT_FROM_VERSION = "98";
 const CLIENT_IP_ASSERTION_KEY = "0123456789abcdef".repeat(4);
@@ -143,13 +144,17 @@ function startStubApi(): Promise<string> {
             message: "This guide has changed. Start again from page 1 (without guideHash).",
           })
         );
+      } else if (url.searchParams.get("guideHash") === CONFLICT_GUIDE_HASH) {
+        res.statusCode = 409;
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ error: "other_conflict", message: "Another conflict." }));
       } else if (url.searchParams.get("page") === "9") {
         res.statusCode = 400;
         res.setHeader("Content-Type", "application/json");
         res.end(
           JSON.stringify({
             error: "page_out_of_range",
-            message: "This guide has 3 pages; page 9 does not exist.",
+            message: "This guide has 3 pages; page 9 does not exist. Ask for a page from 1 to 3.",
           })
         );
       } else if (fromVersion === UNKNOWN_FROM_VERSION) {
@@ -831,11 +836,24 @@ describe("research preview", () => {
       expect(apiCall?.query.has("page")).toBe(false);
     });
 
-    test("returns the API's message for a page past the last", async () => {
+    test("returns the API's message for a page past the last as an answer, not an error", async () => {
       const result = await callGuide({ fromVersion: "14", page: 9 });
 
+      expect(result.isError).toBeFalsy();
+      expect(resultText(result)).toBe(
+        "This guide has 3 pages; page 9 does not exist. Ask for a page from 1 to 3."
+      );
+    });
+
+    test("returns the API's message for any other 409, as an error", async () => {
+      const result = await callGuide({
+        fromVersion: "14",
+        page: 2,
+        guideHash: CONFLICT_GUIDE_HASH,
+      });
+
       expect(result.isError).toBe(true);
-      expect(resultText(result)).toBe("This guide has 3 pages; page 9 does not exist.");
+      expect(resultText(result)).toBe("Another conflict.");
     });
 
     test("rejects a page below 1 without calling the API", async () => {
