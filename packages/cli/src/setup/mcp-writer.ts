@@ -110,6 +110,12 @@ export async function writeJsonConfig(
  *
  * Returns false when the file cannot be edited in place (missing, empty, or not
  * parseable as JSONC), so the caller falls back to rewriting it whole.
+ *
+ * A leading U+FEFF is not JSONC. jsonc-parser reports it as an invalid symbol,
+ * which used to refuse the edit and make `ctx7 setup` / `ctx7 remove` rewrite
+ * the file, dropping comments. Windows tools can save UTF-8 files with that
+ * mark; for example, Windows PowerShell 5.1's `Set-Content -Encoding UTF8`
+ * writes it. It is kept on the way back out.
  */
 export async function patchJsonConfig(
   filePath: string,
@@ -122,21 +128,23 @@ export async function patchJsonConfig(
   } catch {
     return false;
   }
-  if (!raw.trim()) return false;
+  const hadBom = raw.charCodeAt(0) === 0xfeff;
+  const text = hadBom ? raw.slice(1) : raw;
+  if (!text.trim()) return false;
 
   const errors: ParseError[] = [];
-  parse(raw, errors, { allowTrailingComma: true });
+  parse(text, errors, { allowTrailingComma: true });
   if (errors.length > 0) return false;
 
-  const edits = modify(raw, path, value, {
+  const edits = modify(text, path, value, {
     formattingOptions: {
       insertSpaces: true,
       tabSize: 2,
       // Keep one line-ending style in the file instead of mixing CRLF and LF.
-      eol: raw.includes("\r\n") ? "\r\n" : "\n",
+      eol: text.includes("\r\n") ? "\r\n" : "\n",
     },
   });
-  const updated = applyEdits(raw, edits);
+  const updated = applyEdits(text, edits);
 
   // `modify` parses without `allowTrailingComma`, so an edit near a trailing
   // comma can leave one behind. Only write an edit that still parses.
@@ -144,8 +152,9 @@ export async function patchJsonConfig(
   parse(updated, verifyErrors, { allowTrailingComma: true });
   if (verifyErrors.length > 0) return false;
 
-  if (updated !== raw) {
-    await writeFile(filePath, updated, "utf-8");
+  const output = hadBom ? `\uFEFF${updated}` : updated;
+  if (output !== raw) {
+    await writeFile(filePath, output, "utf-8");
   }
   return true;
 }
