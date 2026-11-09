@@ -1313,6 +1313,13 @@ export const TOOLS = [
         .describe("Path on the custom domain. Required for proxy routing."),
       custom_domain_routing: z.enum(["dns", "proxy"]).optional(),
       context7_index: z.boolean().optional().describe("Also index the site in Context7."),
+      setup_id: z
+        .string()
+        .regex(/^[a-z0-9]{8,32}$/)
+        .optional()
+        .describe(
+          "The setup ID the Docs7 Add page put in the user's prompt. Pass it when the prompt gives one: the page follows the new site with it."
+        ),
     },
     run: async (args, api) => {
       const created = (await api.post(`${ts(args.teamspace)}/sites`, {
@@ -1324,6 +1331,7 @@ export const TOOLS = [
         customDomainPath: args.custom_domain_path,
         customDomainRouting: args.custom_domain_routing,
         context7Index: args.context7_index,
+        setupId: args.setup_id,
       })) as { data?: Record<string, unknown>; deploymentId?: unknown };
       return { site: siteDetails(data(created)), deploymentId: created?.deploymentId ?? null };
     },
