@@ -189,7 +189,8 @@ Context7 checks a new title or description before it saves it. If the text gives
       hash-routed documentation sites, are crawled as a single page.
 
       An Exclude URLs pattern that leaves out old releases does not stop a version at that URL
-      from being crawled.
+      from being crawled. In a version's crawl, a pattern that would leave out that version's own
+      start page is left out of the exclude list, so the version's pages are still crawled.
 
       A library that was first added at a page inside the site crawls from that page, not from the
       Base URL. Saving a new Base URL moves the crawl to the Base URL when that page is outside it;
