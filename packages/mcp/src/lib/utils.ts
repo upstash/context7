@@ -88,10 +88,6 @@ export function formatSearchResults(
   searchResponse: SearchResponse,
   options: FormatOptions = {}
 ): string {
-  if (!searchResponse.results || searchResponse.results.length === 0) {
-    return "No documentation libraries found matching your query.";
-  }
-
   const parts: string[] = [];
 
   if (searchResponse.searchFilterApplied) {
@@ -100,10 +96,14 @@ export function formatSearchResults(
     );
   }
 
-  const formattedResults = searchResponse.results.map((result) =>
-    formatSearchResult(result, options)
-  );
-  parts.push(formattedResults.join("\n----------\n"));
+  if (!searchResponse.results || searchResponse.results.length === 0) {
+    parts.push("No documentation libraries found matching your query.");
+  } else {
+    const formattedResults = searchResponse.results.map((result) =>
+      formatSearchResult(result, options)
+    );
+    parts.push(formattedResults.join("\n----------\n"));
+  }
 
   return parts.join("\n\n");
 }

@@ -5,6 +5,32 @@ description: Add Context7 to your coding agent. It gives the agent current docs 
 
 import { ClaudeIcon, CursorIcon, OpenAIIcon, StoreButton, VSCodeIcon } from "/snippets/agents.jsx";
 
+## Ask your agent
+
+The easiest way is to paste this prompt into your coding agent:
+
+```txt
+Read https://context7.com/get-started.md and set up Context7
+```
+
+The agent runs `npx ctx7@latest setup` for your client. Then you sign in to Context7 with OAuth in the browser. You do not need an API key.
+
+To set up the [Context7 Admin MCP](/howto/admin-mcp), paste this prompt:
+
+```txt
+Read https://context7.com/admin-mcp/get-started.md and set up the Context7 Admin MCP
+```
+
+## Run the setup command
+
+Or run the setup command yourself. It finds the agents on your machine and configures Context7 for each one.
+
+```bash
+npx ctx7 setup
+```
+
+## Install for your agent
+
 <Tabs>
   <Tab title="Claude" icon={<ClaudeIcon />}>
     <StoreButton href="https://claude.ai/directory/37153cd7-b17c-470e-8b46-007e2859e0f3" icon={<ClaudeIcon />}>Add to Claude</StoreButton>

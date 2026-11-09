@@ -146,3 +146,40 @@ The banner shows only when your site uses at least one of these integrations. It
 The banner does not control Intercom. The Intercom chat widget loads for every visitor, with or without the banner.
 
 The default value is `false`. Without the banner, your integrations load for every visitor.
+
+## Add an agent setup menu
+
+Set `agentSetup` to add a second button next to **Copy as Markdown** on every page. Use it to give readers what their coding agent needs: a prompt, your MCP server URL, or a command that installs your skills.
+
+```json docs.json
+{
+  "agentSetup": [
+    {
+      "title": "Copy prompt",
+      "description": "Paste it into Claude Code, Cursor or any agent.",
+      "copy": "Set up Acme in this project. Read https://docs.acme.com/llms.txt first."
+    },
+    {
+      "title": "Copy remote MCP URL",
+      "copy": "https://mcp.acme.com/mcp"
+    },
+    {
+      "title": "Copy skills command",
+      "copy": "npx skills add acme/skills"
+    },
+    {
+      "title": "See all agent resources",
+      "href": "/agent-resources"
+    }
+  ]
+}
+```
+
+The first item is the button. A chevron next to it opens the other items. Each item has these fields:
+
+- `title` (required): the label of the item.
+- `copy` or `href` (one of the two is required): `copy` puts the text on the clipboard. `href` opens the link in a new tab. A link must be an `http://` or `https://` URL, or a path on your site.
+- `description`: text under the title in the menu. When the button copies its text, the description also shows under the button.
+- `icon`: an icon name, as in other `icon` fields. The default is a copy icon for `copy` and an arrow for `href`.
+
+Without `agentSetup`, Docs7 does not show the menu.

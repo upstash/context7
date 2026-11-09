@@ -28,7 +28,15 @@ ctx7 setup --opencode
 ctx7 setup --vscode
 ctx7 setup --devin
 ctx7 setup --copilot
+ctx7 setup --pi
+ctx7 setup --t3
 ```
+
+T3 Code uses its providers’ configuration. `ctx7 setup --t3` configures both Claude Code
+and Codex; use `--claude` or `--codex` to configure just one. This also affects those
+providers outside T3 Code. `ctx7 remove --t3` removes their Context7 setup. Both
+commands support `--project`, `--mcp`, and `--cli`. Restart the provider session
+in T3 Code after setup.
 
 ### Library Documentation
 
@@ -126,6 +134,7 @@ ctx7 setup --opencode
 ctx7 setup --vscode
 ctx7 setup --devin
 ctx7 setup --copilot
+ctx7 setup --pi
 
 # Use an existing API key instead of OAuth
 ctx7 setup --api-key YOUR_API_KEY
@@ -169,6 +178,7 @@ ctx7 remove --claude --project
 ctx7 remove --vscode --project
 ctx7 remove --devin --project
 ctx7 remove --copilot --project
+ctx7 remove --pi --project
 
 # Remove both setup modes explicitly
 ctx7 remove --cursor --all

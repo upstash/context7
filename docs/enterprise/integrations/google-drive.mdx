@@ -1,0 +1,214 @@
+---
+title: "Google Drive Integration"
+sidebarTitle: "Google Drive"
+description: "Sync Google Docs and Google Slides from Drive folders, Shared Drives and single files, and keep them current every day"
+---
+
+Context7 can sync Google Docs and Google Slides from Google Drive and serve them like any other library. Google Drive stays the source of truth: a daily sync picks up edits, and files that are removed or no longer shared leave the results.
+
+An admin connects a Google service account once under **Settings → Integrations**. Then an admin chooses which folders, Shared Drives, Docs and presentations to sync from **Add → Google Drive**. Only the selected items, and the Docs and presentations under selected folders, are indexed.
+
+<Note>
+Google Docs and Google Slides are supported. Spreadsheets, PDFs and other file types in a selected folder are skipped. The picker marks them as not supported.
+</Note>
+
+## Set up Google Cloud
+
+Context7 reads Drive with a service account and one read-only scope:
+
+| Scope | Why |
+| ----- | --- |
+| `https://www.googleapis.com/auth/drive.readonly` | List the selected folders, export Google Docs and read Google Slides. Context7 never writes to Drive. |
+
+The **Set up Google Cloud** panel in the **Google Drive** card (**Settings → Integrations**) shows these steps. Enter your project ID there, and the panel fills it into the commands.
+
+<Steps>
+  <Step title="Create the service account">
+    Run these commands in [Cloud Shell](https://shell.cloud.google.com/) or with the gcloud CLI. Replace `PROJECT_ID` with your project ID. The first command enables the Google Drive API and the Google Slides API. The service account needs no IAM roles in the project.
+
+    ```bash
+    gcloud services enable drive.googleapis.com slides.googleapis.com --project=PROJECT_ID
+    gcloud iam service-accounts create context7-drive \
+      --display-name="Context7 Drive sync" --project=PROJECT_ID
+    ```
+  </Step>
+  <Step title="Create a key, or use workload identity">
+    To use a key, download one:
+
+    ```bash
+    gcloud iam service-accounts keys create context7-drive-key.json \
+      --iam-account=context7-drive@PROJECT_ID.iam.gserviceaccount.com
+    ```
+
+    Organizations created on or after May 3, 2024 block service account keys by default. If Google refuses to create the key, ask an organization admin to [allow keys for this project](https://cloud.google.com/resource-manager/docs/secure-by-default-organizations), or use **Server credentials** without a key (see [Connect Google Drive](#connect-google-drive)).
+  </Step>
+  <Step title="Share the content">
+    In Google Drive, share each folder you want to sync with the service account's email address, with **Viewer** access. For a Shared Drive, add the service account as a member with the **Viewer** role. If Drive does not allow sharing outside your organization, ask a Workspace admin to allow it for the service account, or use domain-wide delegation.
+  </Step>
+</Steps>
+
+### Domain-wide delegation (optional)
+
+If sharing with the service account is not practical, the service account can act as one Workspace user and see what that user sees.
+
+1. Copy the service account's client ID. It is `client_id` in the JSON key, and the **Set up Google Cloud** panel shows it after you paste the key.
+2. In the Google Workspace Admin console, open **Security → Access and data control → API controls → Manage Domain Wide Delegation**.
+3. Add a new client with that ID and the scope `https://www.googleapis.com/auth/drive.readonly`.
+4. In Context7, enter the user's email address in **Act as user**.
+
+<Note>
+Without delegation, the service account can read only what is explicitly shared with it. This keeps the approved content small and visible in Drive's sharing settings, so prefer it when you can.
+</Note>
+
+## Connect Google Drive
+
+Open **Settings → Integrations** and choose how Context7 authenticates in the **Google Drive** card.
+
+<Tabs>
+  <Tab title="Service account key">
+    Paste the JSON key, and optionally the user for domain-wide delegation. Click **Test connection**, then click **Connect**.
+
+    Context7 checks the key with Google before it saves it, stores it encrypted, and never returns it from any API. The settings page shows only the service account's email and the last characters of the key ID. To rotate the key, paste the new key and save.
+  </Tab>
+  <Tab title="Server credentials">
+    Context7 uses the server's Application Default Credentials, so no key is stored in Context7:
+
+    - `GOOGLE_APPLICATION_CREDENTIALS` pointing at a key file or a [workload identity federation](https://cloud.google.com/iam/docs/workload-identity-federation) configuration, for example for AWS or an OIDC provider.
+    - [Workload Identity](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity) when the server runs on GKE.
+
+    For workload identity federation, let your workload identity pool act as the service account, and write the credential file. Replace the uppercase values with your pool, provider, subject and token file. On AWS or Azure, use `--aws` or `--azure` instead of `--credential-source-file`:
+
+    ```bash
+    gcloud services enable sts.googleapis.com iamcredentials.googleapis.com --project=PROJECT_ID
+    SA=context7-drive@PROJECT_ID.iam.gserviceaccount.com
+    POOL=projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID
+    gcloud iam service-accounts add-iam-policy-binding "$SA" \
+      --role=roles/iam.workloadIdentityUser \
+      --member="principal://iam.googleapis.com/$POOL/subject/SUBJECT"
+    gcloud iam workload-identity-pools create-cred-config "$POOL/providers/PROVIDER_ID" \
+      --service-account="$SA" \
+      --credential-source-file=TOKEN_FILE \
+      --output-file=google-credentials.json
+    ```
+
+    Set `GOOGLE_APPLICATION_CREDENTIALS` to the path of `google-credentials.json` on the Context7 server, and restart it. Then click **Test connection**, and click **Connect**.
+
+    Domain-wide delegation is not available in this mode.
+  </Tab>
+</Tabs>
+
+**Test connection** checks the credentials with Google and lists the first folders, files and Shared Drives that the identity can see. If the list is empty, share a folder with the service account, then test again. After you connect, the card shows the service account's email with a copy button.
+
+## Add a Google Drive library
+
+Go to **Add** and choose **Google Drive**.
+
+- **Shared with the connector** lists the folders, Docs and presentations shared with the service account. Click a folder to open it.
+- **Shared Drives** lists the Shared Drives the service account is a member of.
+
+Select folders, Shared Drives or single files, enter a title, and click **Start Sync**. The selection defines the library: to sync a different set of folders, add another library.
+
+Each Doc is indexed under its Google URL, for example `https://docs.google.com/document/d/<id>/edit`. That link is the `Source:` of every result, so an agent can point people to the original document.
+
+### Google Slides
+
+Each slide of a presentation is indexed as its own page, with a link that opens that slide: `https://docs.google.com/presentation/d/<id>/edit#slide=id.<slide id>`. The slide's title becomes its heading, and its text, lists, links, tables and speaker notes follow. Hidden (skipped) slides are not indexed. Images, charts and diagrams are not indexed, and neither is text inside images.
+
+When a presentation changes, Context7 reads the whole presentation again:
+
+- A slide that did not change reuses its last extraction.
+- A deleted slide leaves the results.
+- If one slide fails to index, its last indexed version stays.
+- If the presentation cannot be read, all its slides keep their last indexed version.
+- A presentation with no visible slides counts as empty and leaves the results.
+
+## How syncing works
+
+Every sync lists the selected folders again and compares each file with the last sync:
+
+| Change in Drive | What happens |
+| --- | --- |
+| A file was edited, renamed or moved inside the selection | It is read and indexed again. |
+| A file did not change | Its indexed content is kept as it is. No LLM or embedding calls are made for it. |
+| A file was deleted, trashed, moved out of the selection, or unshared | It leaves the results. |
+| A selected folder or Shared Drive was deleted, trashed, or unshared | All its files leave the results, and the library page and the **Libraries** list in Settings show a warning. Share it again to restore them. |
+| A file was emptied, or has nothing to index | It leaves the results. It is checked again when it changes. |
+| A new file appeared in a selected folder | It is indexed. |
+
+A sync builds the new index next to the live one and swaps it in only when it finishes, so queries always see a complete library.
+
+### Failures keep valid content
+
+- **One file fails** (for example it is larger than Drive's 10 MB export limit, or the LLM times out while extracting it): the last indexed version of that file stays in the results. The library page shows a warning, its logs list the file and the reason, the **Libraries** list in Settings shows the failed files, and the next sync tries it again.
+- **The whole sync fails** (for example Google refuses access because the Drive API is disabled, or Google cannot be reached): all live content stays as it was, and the error is shown in the library's logs.
+
+<Warning>
+Sharing is the approval. When a selected folder or Shared Drive is no longer shared with the service account, the next sync removes its files from the results. Check sharing changes before the daily sync if you want to keep the content.
+</Warning>
+
+Context7 retries Google API quota errors with exponential backoff and limits how many requests it sends at once.
+
+## Scheduled sync
+
+Google Drive libraries sync every day at 03:00 server time by default. Under **Sync schedule** in the **Google Drive** card (**Settings → Integrations**), you can:
+
+- turn the scheduled sync off,
+- change the schedule: pick a preset such as **Every 6 hours**, or enter a cron expression such as `0 */6 * * *`,
+- click **Sync all now** to queue every Google Drive library at once.
+
+When a sync fails, scheduled or manual, Context7 retries that library after 15 minutes, 1 hour and 6 hours. Each delay counts from the previous attempt. To sync one library by hand, click **Refresh** on its page, or **Sync now** next to it in the **Libraries** list. To read and re-index every file instead of skipping unchanged ones, select **Re-index all files** in the Refresh dialog, or in the library's menu in the **Libraries** list.
+
+## Monitor libraries
+
+The **Libraries** list in the **Google Drive** card (**Settings → Integrations**) shows every Google Drive library with its selection, its last sync, and a status:
+
+| Status | Meaning |
+| --- | --- |
+| Synced | The last sync finished with no failed files. |
+| Syncing or Queued | A sync is running or waiting in the parse queue. |
+| N files failed | Some files could not be refreshed. Expand the row to see each file and the reason; their last indexed version is still served. |
+| Folder unavailable | A selected folder or Shared Drive is no longer shared with the connector, and its files were removed. |
+| Sync failed | The whole sync failed, so the library still serves its previous content. Expand the row for the error. |
+
+Expanding a row shows the most common failure reasons and up to 50 failed files, each linked to Drive. **Download CSV** exports every failed file. Problem libraries sort to the top, and **Needs attention** filters the list to them.
+
+## Authority labels
+
+[Authority labels](/enterprise/authority-labels) can match Google Drive content by path or by URL:
+
+- A path pattern matches the Drive folder path inside the selection, for example `/QA/Standards/` for every file in the **Standards** folder of a selected **QA** folder. For a Shared Drive, the path starts with the Shared Drive's name.
+- A URL pattern matches the Doc's Google URL, for example `https://docs.google.com/document/d/<id>`.
+
+For a presentation:
+
+- A URL prefix `https://docs.google.com/presentation/d/<id>` matches every slide of that presentation.
+- A path rule matches the presentation's folder path, for example `/QA/Standards/Release review`, and applies to all its slides.
+
+## Network access
+
+The server talks only to Google:
+
+| Host | Used for |
+| --- | --- |
+| `oauth2.googleapis.com` | Access tokens for a service account key |
+| `sts.googleapis.com` | Access tokens for workload identity federation |
+| `iamcredentials.googleapis.com` | Access tokens for workload identity federation with service account impersonation |
+| `www.googleapis.com` | The Drive API |
+| `slides.googleapis.com` | The Slides API, for presentations |
+
+Set `GOOGLE_DRIVE_API_URL` and `GOOGLE_SLIDES_API_URL` to send Drive and Slides API calls through another endpoint, such as a Private Google Access address or a proxy. Each value must include the API path, for example `https://www.googleapis.com/drive/v3` and `https://slides.googleapis.com/v1`.
+
+## Troubleshooting
+
+| Message | Fix |
+| --- | --- |
+| "The private_key in the JSON key is damaged" | The key was cut or changed when it was copied. Paste the whole JSON file again, or create a new key. |
+| "Nothing is shared with … yet" | The credentials work, but no folder or Shared Drive is shared with the service account. Share one with **Viewer** access, then test again. |
+| "Google rejected the credentials" | Check the key. With delegation, check that the client ID is allowed the `drive.readonly` scope in the Admin console. |
+| "Google denied access … Check that the Drive API is enabled" | Enable the Google Drive API in the service account's project. |
+| "Google Slides API request failed (403 …)" | Enable the Google Slides API in the service account's project. |
+| "No longer available to the Google connector: folder …" | The folder was deleted, trashed or unshared, and its files were removed. Share it with the service account again, then click **Refresh**. |
+| "Google refused access to the selected folder …" | Check that the Drive API is enabled and that the connector can read the folder. Live content is kept until this is fixed. |
+| "The document is larger than the 10 MB Google Drive export limit" | Split the document. Its last indexed version stays available. |
+| "The selection has more than 10000 documents" | A library holds at most 10,000 Docs and presentations. Split the selection into several libraries, or raise the limit with the `GOOGLE_DRIVE_MAX_FILES` environment variable. |
+| "The Google connector was replaced by a different account" | The library was added with another service account or delegated user. Add the library again with the current connector. |
