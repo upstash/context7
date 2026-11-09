@@ -1,5 +1,11 @@
 # @upstash/context7-mcp
 
+## 4.5.1
+
+### Patch Changes
+
+- fc65a5a: Keep the teamspace library-filter notice in resolve-library-id results when no libraries match.
+
 ## 4.5.0
 
 ### Minor Changes

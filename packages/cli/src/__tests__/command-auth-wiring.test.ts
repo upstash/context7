@@ -12,11 +12,19 @@ vi.mock("../utils/auth.js", () => ({
 
 const mockResolveLibrary = vi.fn();
 const mockGetLibraryContext = vi.fn();
-vi.mock("../utils/api.js", () => ({
-  resolveLibrary: (...args: unknown[]) => mockResolveLibrary(...args),
-  getLibraryContext: (...args: unknown[]) => mockGetLibraryContext(...args),
-  getBaseUrl: () => "https://test.context7.com",
-}));
+const mockGetLibraryCode = vi.fn();
+vi.mock("../utils/api.js", async () => {
+  const actual = await vi.importActual<typeof import("../utils/api.js")>("../utils/api.js");
+  return {
+    CODE_OPERATIONS: actual.CODE_OPERATIONS,
+    CODE_LIMITS: actual.CODE_LIMITS,
+    hasSourceCode: actual.hasSourceCode,
+    resolveLibrary: (...args: unknown[]) => mockResolveLibrary(...args),
+    getLibraryContext: (...args: unknown[]) => mockGetLibraryContext(...args),
+    getLibraryCode: (...args: unknown[]) => mockGetLibraryCode(...args),
+    getBaseUrl: () => "https://test.context7.com",
+  };
+});
 
 vi.mock("../utils/tracking.js", () => ({ trackEvent: vi.fn() }));
 
@@ -48,7 +56,8 @@ afterEach(() => {
 });
 
 async function run(register: (p: Command) => void, ...args: string[]): Promise<void> {
-  const program = new Command();
+  // Like src/index.ts: the root program owns -v/--version.
+  const program = new Command().version("0.0.0-test", "-v, --version");
   program.exitOverride();
   register(program);
   await program.parseAsync(["node", "test", ...args]);
@@ -76,6 +85,116 @@ describe("commands pass a refreshed token to the API", () => {
       { type: "txt" },
       REFRESHED
     );
+  });
+});
+
+describe("ctx7 code", () => {
+  test("passes the refreshed token and ripgrep-style flags to the API", async () => {
+    mockGetLibraryCode.mockResolvedValue({ kind: "result", body: "lib/a.ts:1:x" });
+
+    await run(
+      registerDocsCommands,
+      "code",
+      "/a/b",
+      "use(Router|Params)",
+      "-i",
+      "-g",
+      "*.ts",
+      "-g",
+      "!**/test/**",
+      "-C",
+      "2",
+      "-c"
+    );
+
+    expect(mockGetLibraryCode).toHaveBeenCalledWith(
+      "/a/b",
+      "use(Router|Params)",
+      expect.objectContaining({
+        ignoreCase: true,
+        glob: ["*.ts", "!**/test/**"],
+        context: 2,
+        outputMode: "count",
+      }),
+      REFRESHED
+    );
+    expect(console.log).toHaveBeenCalledWith("lib/a.ts:1:x");
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  test("takes the tag with --tag and the pattern after a repeated -g", async () => {
+    mockGetLibraryCode.mockResolvedValue({ kind: "result", body: "ok" });
+
+    await run(
+      registerDocsCommands,
+      "code",
+      "/a/b",
+      "-g",
+      "*.ts",
+      "-g",
+      "!**/test/**",
+      "Request failed",
+      "--tag",
+      "v2",
+      "-F"
+    );
+
+    expect(mockGetLibraryCode).toHaveBeenCalledWith(
+      "/a/b",
+      "Request failed",
+      expect.objectContaining({ version: "v2", glob: ["*.ts", "!**/test/**"], fixedStrings: true }),
+      REFRESHED
+    );
+  });
+
+  test("prints JSON for errors with --json", async () => {
+    mockGetLibraryCode.mockResolvedValue({ kind: "error", error: "not_indexed", message: "No." });
+
+    await run(registerDocsCommands, "code", "/a/b", "x", "--json");
+
+    expect(console.log).toHaveBeenCalledWith(
+      JSON.stringify({ error: "not_indexed", message: "No." })
+    );
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("asks to retry while the source is being indexed", async () => {
+    mockGetLibraryCode.mockResolvedValue({
+      kind: "indexing",
+      message: "Indexing.",
+      retryAfter: 30,
+    });
+
+    await run(registerDocsCommands, "code", "/a/b", "x");
+
+    expect(process.exitCode).toBe(75);
+  });
+
+  test("clamps out-of-range numbers like the MCP tool", async () => {
+    mockGetLibraryCode.mockResolvedValue({ kind: "result", body: "ok" });
+
+    await run(registerDocsCommands, "code", "/a/b", "x", "-C", "25", "--head-limit", "900");
+
+    expect(mockGetLibraryCode).toHaveBeenCalledWith(
+      "/a/b",
+      "x",
+      expect.objectContaining({ context: 10, headLimit: 500 }),
+      REFRESHED
+    );
+  });
+
+  test("rejects a flag that is not a number without calling the API", async () => {
+    await run(registerDocsCommands, "code", "/a/b", "x", "--offset", "next");
+
+    expect(mockGetLibraryCode).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("rejects an unknown operation without calling the API", async () => {
+    await run(registerDocsCommands, "code", "/a/b", "x", "--op", "graph");
+
+    expect(mockGetLibraryCode).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
   });
 });
 

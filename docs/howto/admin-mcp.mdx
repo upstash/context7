@@ -30,9 +30,9 @@ Clients that support MCP OAuth ask you to sign in with your Context7 account on 
 
 ### API key
 
-Create a Context7 API key in [the dashboard](https://context7.com/dashboard) and send it as a bearer token. Every key can use the read tools, except those that return personal data: members and invitations, library requests, Ask questions, Docs7 reader searches, conversations, feedback, feature requests and the GitHub account behind a build. To read those or make changes, tick **Write access** when you create the key; a key without it gets `403` `write_access_required`. A key reaches only its own teamspace. See [Write access](/howto/api-keys#write-access).
+Create a Context7 API key in [the dashboard](https://context7.com/dashboard?tab=settings) and send it as a bearer token. Every key can use the read tools, except those that return personal data: members and invitations, library requests, Ask questions, Docs7 reader searches, conversations, feedback, feature requests and the GitHub account behind a build. To read those or make changes, tick **Write access** when you create the key; a key without it gets `403` `write_access_required`. A key reaches only its own teamspace. See [Write access](/howto/api-keys#write-access).
 
-![Create New API Key dialog with Write access ticked](/images/dashboard/api-key-write-access.png)
+![Create API Key dialog with Write access ticked](/images/dashboard/api-key-write-access.png)
 
 ```json
 {
@@ -68,7 +68,7 @@ One OAuth connection reaches every teamspace you are a member of, with your role
 | rules     | `manage_rules`, `get_library_policies`, `update_library_policies`, `manage_library_requests`                                                                                                                                                                                                                                                                                                                       |
 | usage     | `get_teamspace_usage`, `set_spending_limit`                                                                                                                                                                                                                                                                                                                                                                        |
 | docs7     | `docs7_list_sites`, `docs7_get_site`, `docs7_create_site`, `docs7_update_site`, `docs7_check_domain`, `docs7_list_deployments`, `docs7_get_deployment`, `docs7_deploy`, `docs7_remove_preview`, `docs7_get_agent_runs`, `docs7_list_pull_requests`, `docs7_connect_repository`, `docs7_manage_example_check`, `docs7_manage_feature_requests`, `docs7_get_analytics`, `docs7_query_logs`, `docs7_get_conversation` |
-| ask       | `ask_list_sites`, `ask_get_site`, `ask_create_site`, `ask_verify_site`, `ask_get_analytics`, `ask_list_questions`                                                                                                                                                                                                                                                                                                  |
+| ask       | `ask_list_sites`, `ask_get_site`, `ask_create_site`, `ask_verify_site`, `ask_delete_site`, `ask_get_analytics`, `ask_list_questions`                                                                                                                                                                                                                                                                               |
 
 `list_libraries` and `docs7_list_sites` return 50 items per page with `total`, `page` and `pages`. `list_libraries` also takes `search` (part of a library's id, title or source URL) and `order: "lowest"` (lowest benchmark score first); `docs7_list_sites` takes `search` (part of a site's name, repository, address or library id). A `page` past the last one is an error.
 
@@ -84,9 +84,10 @@ The same operations are available over the REST API at `/api/v2/teamspaces/{team
 
 ## Safety and limits
 
-- Remove and delete actions (`remove_library`, `manage_members` `remove`, `manage_library_versions` `remove`, `manage_rules` `delete`, `manage_owned_library` `block` and `transfer`, `docs7_manage_feature_requests` `delete`, `docs7_remove_preview`) are marked destructive, so your client asks you before it runs them. They also take `confirm`, set to the exact target — the library id, email, version, rule id, request id or branch.
-- Deleting a whole Docs7 site or Ask site cannot be undone, so it is not in this server. Do it in [the dashboard](https://context7.com/dashboard).
+- Remove and delete actions (`remove_library`, `manage_members` `remove`, `manage_library_versions` `remove`, `manage_rules` `delete`, `manage_owned_library` `block` and `transfer`, `docs7_manage_feature_requests` `delete`, `docs7_remove_preview`, `ask_delete_site`) are marked destructive, so your client asks you before it runs them. They also take `confirm`, set to the exact target — the library id, email, version, rule id, request id, branch or hostname.
+- Deleting a whole Docs7 site cannot be undone, so it is not in this server. Do it in [the dashboard](https://context7.com/dashboard).
 - Results that hold third-party text (questions, searches, feedback, build logs, agent runs, library suggestions and benchmark questions) are fenced in `<untrusted-data-…>` tags.
+- `docs7_get_deployment` with `include: ["origin"]` needs **Write access**, because `origin` names the GitHub account behind the build. A read-only key still gets the build and the other parts, with `origin` replaced by an `error` object.
 - Results above about 20,000 tokens are cut, with a note on how to narrow the request.
 
 Billing, plans, API keys, SSO and teamspace create or delete are not in this server. Use [the dashboard](https://context7.com/dashboard).

@@ -1313,6 +1313,13 @@ export const TOOLS = [
         .describe("Path on the custom domain. Required for proxy routing."),
       custom_domain_routing: z.enum(["dns", "proxy"]).optional(),
       context7_index: z.boolean().optional().describe("Also index the site in Context7."),
+      setup_id: z
+        .string()
+        .regex(/^[a-z0-9]{8,32}$/)
+        .optional()
+        .describe(
+          "The setup ID the Docs7 Add page put in the user's prompt. Pass it when the prompt gives one: the page follows the new site with it."
+        ),
     },
     run: async (args, api) => {
       const created = (await api.post(`${ts(args.teamspace)}/sites`, {
@@ -1324,6 +1331,7 @@ export const TOOLS = [
         customDomainPath: args.custom_domain_path,
         customDomainRouting: args.custom_domain_routing,
         context7Index: args.context7_index,
+        setupId: args.setup_id,
       })) as { data?: Record<string, unknown>; deploymentId?: unknown };
       return { site: siteDetails(data(created)), deploymentId: created?.deploymentId ?? null };
     },
@@ -1838,6 +1846,29 @@ export const TOOLS = [
     idempotent: true,
     args: { site_key: siteKey },
     run: ({ teamspace, site_key }, api) => api.post(`${askSite(teamspace, site_key)}/verify`),
+  }),
+  tool({
+    name: "ask_delete_site",
+    title: "Delete Ask site",
+    description:
+      "Delete an Ask site with its index, question log and analytics. It cannot be undone. Ask the user to confirm first, then set `confirm` to the site's hostname.",
+    kind: "destructive",
+    args: { site_key: siteKey },
+    confirm: async ({ teamspace, site_key }, api) => {
+      const { hostname } = data(await api.get(askSite(teamspace, site_key)));
+      if (typeof hostname !== "string") throw new ToolError(`No Ask site "${site_key}".`);
+      return {
+        action: `Delete the Ask site of ${hostname}, with its questions and analytics`,
+        what: "the site's hostname",
+        expected: hostname,
+        normalize: (answer) =>
+          answer
+            .toLowerCase()
+            .replace(/^https?:\/\//, "")
+            .replace(/\/.*$/, ""),
+      };
+    },
+    run: ({ teamspace, site_key }, api) => api.del(askSite(teamspace, site_key)),
   }),
   tool({
     name: "ask_get_analytics",

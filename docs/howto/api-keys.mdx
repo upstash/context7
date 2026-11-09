@@ -3,11 +3,17 @@ title: Manage API Keys
 description: Create and manage API keys for Context7 authentication
 ---
 
-API keys authenticate your requests to Context7's documentation services. You can create one in the [Context7 dashboard](https://context7.com/dashboard).
+API keys authenticate your requests to Context7's documentation services. Use a key for the REST API, the SDKs, CI and other headless hosts, and gateways or proxies.
+
+<Tip>
+  To add Context7 to a coding agent, you do not need a key. Paste `Read https://context7.com/get-started.md and set up Context7` into your agent. It runs `npx ctx7 setup` for your client, and you sign in with OAuth in the browser. See [Installation](/installation).
+</Tip>
 
 ## Managing API Keys
 
-![API Keys card showing list of keys with details](/images/dashboard/api-keys-card.png)
+Your keys are in the API Keys card of the [Context7 dashboard](https://context7.com/dashboard?tab=settings).
+
+![API Keys card with the Access column for each key](/images/dashboard/api-keys-card.png)
 
 ### Creating API Keys
 
@@ -38,7 +44,7 @@ API keys authenticate your requests to Context7's documentation services. You ca
 
 ### Write access
 
-The [Context7 Admin MCP](/howto/admin-mcp) and the [management API](/api-reference/teamspaces/list-teamspaces) (`/api/v2/teamspaces/*`) accept every API key, but a key is read-only there unless **Write access** was ticked when the key was created. A key reaches only its own teamspace.
+The [Context7 Admin MCP](/howto/admin-mcp) and the [management API](/api-reference/teamspaces/list-teamspaces) (`/api/v2/teamspaces/*`) accept every API key, but a key is read-only there unless **Write access** was ticked when the key was created. The **Access** column of the API Keys card shows **Read only** or **Write access** for each key. A key reaches only its own teamspace.
 
 A read-only key can read, with your role:
 
@@ -50,9 +56,9 @@ A key needs **Write access** to:
 - read personal data: members and invitations, library requests, Ask questions, Docs7 reader searches, assistant questions and conversations, page feedback, feature requests, and the GitHub account behind a build
 - change the teamspace: its members, libraries, rules and policies, spending limit, and Docs7 and Ask sites
 
-![Create New API Key dialog with Write access ticked](/images/dashboard/api-key-write-access.png)
+![Create API Key dialog with Write access ticked](/images/dashboard/api-key-write-access.png)
 
-A read-only key gets `403` with the error `write_access_required` when it tries to make a change or read personal data. The teamspace invite link also needs write access, because the link lets anyone join. You cannot add write access to an existing key: create a new key with the box ticked. With the Admin MCP you can also sign in with OAuth and use no key.
+A read-only key gets `403` with the error `write_access_required` when it tries to make a change or read personal data. The teamspace invite link also needs write access, because the link lets anyone join. You cannot add write access to an existing key: create a new key with **Write access** ticked. With the Admin MCP you can also sign in with OAuth and use no key.
 
 ### Revoking Keys
 

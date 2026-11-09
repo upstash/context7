@@ -57,6 +57,14 @@ Automatic and manual refreshes work across all supported source types:
 
 A website refresh replaces the current version only when the crawl succeeds. If the crawl reads fewer than 10% of the pages in the last version, for example because the site now blocks the crawler, the last version stays in place. The reason appears in the library logs, and the refresh is tried again later. If the site really became smaller, change its crawl settings: the first refresh after a settings change skips this check.
 
+### When a Repository Refresh Finds a New Major Release
+
+A repository refresh replaces the library's main version, so the previous major's documentation would otherwise disappear the day the next major ships. When a refresh finds a new major based on the repository's version tags, Context7 keeps the newest release of the previous major as an additional version and parses it. For example, when a library moves from `v16.2.0` to `v17.0.0`, the last `v16` release is kept and becomes available as a version. On `0.x` versions the minor counts as the major, so a move from `0.15.x` to `0.16.0` keeps the last `0.15` release.
+
+A kept version is not removed by [`previousVersions`](/library-owners) reconciliation, so it stays even when the config does not list it.
+
+No version is kept for a patch or minor release, for a move back or to a different tag family, for calendar, date, or dotless versions, or for a library with a custom branch. Private repositories, injection-flagged libraries, and sources other than Git repositories are left out.
+
 ### When a Source Repository Is Gone
 
 If a library's Git repository is deleted or no longer accessible, the last indexed version keeps being served. Once a refresh at least a day later confirms the repository is still unreachable, the library page and its admin page show a notice that the source repository could not be reached since the date it was first found gone. A successful refresh clears the notice. To clear it, make the repository reachable again, or [redirect the library](/howto/claiming-libraries) to the library that replaces it.

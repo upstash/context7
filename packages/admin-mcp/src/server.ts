@@ -195,7 +195,7 @@ const INSTRUCTIONS = [
   "Long jobs (library parse, Docs7 build, Ask crawl) take minutes: call the get_ tool with `wait: true` and repeat until the state is final. The Docs7 agents run on their schedules (docs7_update_site); this server does not start them.",
   "Common flows: claim a library (claim_library gives context7.json; commit it, then claim_library with verify: true). Set up Ask (ask_create_site gives a meta tag; add it to the site head, deploy, then ask_verify_site). Fix a failed docs build (docs7_get_deployment with include health and logs). Traffic of one page or of every page (docs7_query_logs, dataset page-views or ai-requests, group_by path; docs7_get_analytics has top lists only). Find doc gaps (get_library_benchmarks for the questions the docs fail, get_library_suggestions, docs7_get_analytics report queries, or ask_get_analytics) and fix them in the repository.",
   "When no tool can do what the user asks, or a tool fails or confuses you, tell the Context7 team once per task with submit_feedback_to_context7_team.",
-  "Remove and delete actions need the user's confirmation first: where the client can show a form, the server asks the user itself. Deleting a whole Docs7 or Ask site, billing, plans, API keys and SSO are not in this server: send the user to https://context7.com/dashboard.",
+  "Remove and delete actions need the user's confirmation first: where the client can show a form, the server asks the user itself. Deleting a whole Docs7 site, billing, plans, API keys and SSO are not in this server: send the user to https://context7.com/dashboard.",
 ].join("\n");
 
 /**
