@@ -7,12 +7,15 @@ description: "Release notes for the Context7 On-Premise image."
 
 ### Upgrade notes
 
-- Back up the data volume before you upgrade. The first start runs a database migration automatically.
-- The `latest` image tag now points to 2.0.0. To stay on 1.3.9, pin the image to `1` or `1.3`.
+- Back up the data volume before you upgrade. The first start runs a database migration automatically. To roll back, restore that backup instead of starting the older image on the new data.
+- The `latest` image tag now points to 2.0.0. To stay on 1.3.9, pin the image to `1` or `1.3`. The Helm chart and the Compose files use `latest` by default, so pin `image.tag` to control when your pods move to 2.0.0.
 - Members, Usage and all settings are now under **Workspace Settings**, with one page per section at `/admin/<section>`. Old `/settings/<section>`, `/members`, `/usage` and `?tab=` links redirect to the new pages.
 - The settings of a repository are now at `/projects/<owner>/<repo>/-/settings`.
 - Members who sign in with SSO can be disabled, but not removed, in Context7. Remove them in your identity provider.
 - Only administrators can refresh Google Drive and Notion libraries, even when anonymous refresh is allowed.
+- Only administrators can import libraries. Scripts that import with a member's API key now get a 403 response.
+- The GitLab token is now sent only to `gitlab.com` and to the self-hosted GitLab host set in Workspace Settings › GitLab. Before, any host with "gitlab" in its name got it. On the first start, Context7 sets that host from your existing GitLab libraries when they all use one host. If they use several, the server log names them; set the right one in Workspace Settings › GitLab. After the upgrade, check the host in Workspace Settings › GitLab, and clear it if it is not your GitLab server.
+- The first syncs after the upgrade can use more language model tokens: large Confluence pages that were skipped for their size are now indexed. Turning on the decision model, or leaving the Bedrock model empty in an Asia-Pacific region, also extracts each page again once.
 
 ### Added
 
@@ -34,6 +37,7 @@ description: "Release notes for the Context7 On-Premise image."
 - Large Google Drive, Notion and Confluence pages are now indexed in full instead of being skipped for their size.
 - Updated the AI provider model suggestions to each provider's current models. The Gemini default is now `gemini-3.8-flash`, and Bedrock suggests one inference profile per Claude model for the region's geography.
 - Library pages show a branch only for Git repositories.
+- The parse queue shows members only the libraries they can access, and deleting a library also deletes its parse history.
 
 ### Fixed
 
