@@ -122,7 +122,8 @@
                           "enterprise/library-import",
                           "enterprise/automatic-repository-updates",
                           "enterprise/gitops",
-                          "enterprise/backup-restore"
+                          "enterprise/backup-restore",
+                          "enterprise/decision-models"
                         ]
                       },
                       {
