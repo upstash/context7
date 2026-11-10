@@ -30,11 +30,21 @@ This guide covers the authentication mechanisms and access controls available in
 
 ### Setup Guides
 
-For step-by-step configuration on self-hosted deployments, see:
+**Context7 Cloud**
+
+- [Microsoft Entra ID SSO](/enterprise/sso/entra) — sign in with Entra ID over SAML. No Azure subscription is needed.
+
+**Context7 On-Premise**
 
 - [Microsoft Entra ID (SSO)](/enterprise/security/entra-sso) — wire up Entra ID sign-in for an On-Premise instance
 - [OIDC SSO](/enterprise/security/oidc-sso) — sign in to an On-Premise instance with any OpenID Connect provider
 - [SAML 2.0 SSO](/enterprise/security/saml-sso) — sign in to an On-Premise instance with Okta, ADFS, Ping, Keycloak or any SAML 2.0 provider
-- [Microsoft Entra ID](/enterprise/enterprise-managed-auth/entra) — proxy the Context7 MCP server through Azure APIM with Entra authentication
+
+**Optional MCP authentication (Cloud)**
+
+These guides are not needed for SSO. They control how MCP clients authenticate to the hosted MCP server.
+
+- [Okta Enterprise-Managed Auth](/enterprise/enterprise-managed-auth/okta) — connect MCP clients through Okta Cross-App Access
+- [Entra ID via Azure APIM](/enterprise/enterprise-managed-auth/entra) — route MCP traffic through your own Azure API Management gateway with per-user Entra tokens
 
 Contact our sales team at [context7.com/contact](https://context7.com/contact) for Enterprise plan details.

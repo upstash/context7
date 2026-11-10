@@ -76,10 +76,16 @@
                 "pages": [
                   "enterprise",
                   {
-                    "group": "Auth",
+                    "group": "Single Sign-On",
                     "pages": [
-                      "enterprise/enterprise-managed-auth/entra",
-                      "enterprise/enterprise-managed-auth/okta"
+                      "enterprise/sso/entra"
+                    ]
+                  },
+                  {
+                    "group": "Enterprise-Managed Auth",
+                    "pages": [
+                      "enterprise/enterprise-managed-auth/okta",
+                      "enterprise/enterprise-managed-auth/entra"
                     ]
                   },
                   {

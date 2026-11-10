@@ -1,0 +1,89 @@
+---
+title: "Microsoft Entra ID SSO"
+sidebarTitle: "Entra ID SSO"
+description: "Let your team sign in to Context7 with their Microsoft Entra ID work accounts over SAML."
+---
+
+Context7 Enterprise supports single sign-on with Microsoft Entra ID (formerly Azure AD) over SAML. After setup, your users sign in to Context7 with their work accounts, and the same sign-in works in the dashboard, the `ctx7` CLI and MCP clients that use OAuth.
+
+<Note>
+You do not need an Azure subscription or Azure API Management for SSO. Your Entra admin only creates an Enterprise Application in Microsoft Entra ID. The [Azure APIM gateway](/enterprise/enterprise-managed-auth/entra) is a separate, optional setup. See [Per-user MCP authentication through Azure APIM](#optional-per-user-mcp-authentication-through-azure-apim).
+</Note>
+
+## How it works
+
+We send you two SAML URLs. Your Entra admin creates a SAML Enterprise Application with them and sends back the application's Federation Metadata URL. We add that URL to your connection, test it with you, and turn on SSO.
+
+## Before you start
+
+- A Context7 Enterprise or Enterprise trial teamspace.
+- A Microsoft Entra admin who can create Enterprise Applications.
+- A list of every email domain your users sign in with, for example `example.com` and `eu.example.com`.
+
+Contact [context7@upstash.com](mailto:context7@upstash.com) with your admin's contact details and your email domains to start.
+
+## Step 1: Receive the SAML URLs
+
+We create the SSO connection for your domains and send you two values:
+
+| Value | Example |
+| ----- | ------- |
+| **Identifier (Entity ID)** | `https://clerk.context7.com/saml/samlc_<ID>` |
+| **Reply URL (Assertion Consumer Service URL)** | `https://clerk.context7.com/v1/saml/acs/samlc_<ID>` |
+
+## Step 2: Create the Enterprise Application in Entra
+
+<Steps>
+  <Step title="Create the application">
+    In the Microsoft Entra admin center, go to **Enterprise applications → New application → Create your own application**. Choose **Integrate any other application you don't find in the gallery (Non-gallery)**, then open **Single sign-on** and select **SAML**.
+  </Step>
+  <Step title="Enter the SAML URLs">
+    Under **Basic SAML Configuration**, set **Identifier (Entity ID)** and **Reply URL (Assertion Consumer Service URL)** to the values from step 1. Copy them exactly. A mismatch here is the most common cause of errors.
+  </Step>
+  <Step title="Keep the default claims">
+    The default Entra claims, `emailaddress` and `userprincipalname`, work without changes.
+  </Step>
+  <Step title="Assign users or groups">
+    Under **Users and groups**, assign the people who can use Context7. You can start with a small test group and add more users before rollout.
+  </Step>
+  <Step title="Send us the Federation Metadata URL">
+    On the **Single sign-on** page, copy the **App Federation Metadata Url** and send it to us. It has this format:
+
+    ```
+    https://login.microsoftonline.com/<tenant-id>/federationmetadata/2007-06/federationmetadata.xml?appid=<app-id>
+    ```
+  </Step>
+</Steps>
+
+## Step 3: Test and turn on SSO
+
+We add your metadata to the connection and send you a test link. The link expires after about 10 minutes, so open it soon. Ask us for a new one if it expires.
+
+When the test sign-in succeeds, we turn on SSO. Your users can then sign in in two ways:
+
+- At [context7.com/sign-in](https://context7.com/sign-in), by entering an email address on one of your SSO domains.
+- From the Microsoft My Apps portal.
+
+## Existing accounts
+
+SSO signs users in with the email address that Entra sends. If that address is different from the one a user signed up with before, SSO creates a new account, and the old account and its teamspaces stay with the old address.
+
+Before you turn on SSO, check which address Entra sends for the people who already use Context7, especially the teamspace owner. If the addresses differ, tell us and we will move your teamspace to the SSO account.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="&quot;Application not found&quot; on the test sign-in">
+    The Identifier (Entity ID) in Entra does not match the one we sent, or the application is in a different Entra tenant from your users. Copy the Identifier again and confirm the tenant.
+  </Accordion>
+  <Accordion title="Some users are not sent to SSO">
+    Their email domain is not on the connection. Send us every domain your users sign in with, not only the primary one.
+  </Accordion>
+  <Accordion title="A user signs in to an empty account">
+    Their Entra email address is different from their earlier Context7 address. See [Existing accounts](#existing-accounts).
+  </Accordion>
+</AccordionGroup>
+
+## Optional: per-user MCP authentication through Azure APIM
+
+SSO is enough for most teams. Some organizations also want every MCP request to pass through their own network gateway and carry the developer's own Entra token. For that setup, follow [Azure API Management as MCP gateway](/enterprise/enterprise-managed-auth/entra). It needs an Azure subscription and an APIM instance.
