@@ -1,11 +1,11 @@
 ---
 title: "Azure API Management as MCP gateway"
-sidebarTitle: "Entra ID via Azure APIM"
+sidebarTitle: "Azure APIM gateway"
 description: "Route Context7 MCP traffic through Azure API Management with per-user Microsoft Entra ID authentication."
 ---
 
 <Note>
-This setup is optional, and you do not need it for single sign-on. To let your team sign in to Context7 with Microsoft Entra ID, follow [Microsoft Entra ID SSO](/enterprise/sso/entra). It needs no Azure subscription. Use this guide only if every MCP request must pass through your own Azure gateway with the developer's own Entra token.
+This setup is optional, and you do not need it for single sign-on. To let your team sign in to Context7 with Microsoft Entra ID, follow [Microsoft Entra ID SSO](/enterprise/enterprise-managed-auth/entra-sso). It needs no Azure subscription. Use this guide only if every MCP request must pass through your own Azure gateway with the developer's own Entra token.
 </Note>
 
 This guide walks through deploying Azure API Management (APIM) as a gateway in front of `mcp.context7.com`, with per-user authentication backed by your Microsoft Entra tenant. Developers sign in once with their corporate Entra account in their MCP client (for example VS Code with GitHub Copilot), and every request to Context7 is attributed to that individual through the `oid` claim on their Entra access token.
