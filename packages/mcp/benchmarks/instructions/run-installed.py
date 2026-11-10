@@ -10,7 +10,7 @@ import shutil
 import tempfile
 from types import SimpleNamespace
 
-from run import run_turn
+from run import check_fixture, run_turn
 
 
 def main():
@@ -49,6 +49,9 @@ def main():
     with tempfile.TemporaryDirectory(prefix="installed-mcp-eval-") as scratch:
         project = Path(scratch) / "project"
         shutil.copytree(source, project)
+        problem = check_fixture(project)
+        if problem:
+            parser.error(f"Cannot use the fixture {source}: {problem}.")
         config = project / ".mcp.json"
         data = json.loads(config.read_text())
         entry = data["mcpServers"]["context7"]

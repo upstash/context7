@@ -3,16 +3,32 @@
 import argparse
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
+import hashlib
+import io
 import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
+import tarfile
 import tempfile
+import urllib.error
+import urllib.request
 import uuid
 
 TOOLS = {"resolve-library-id": "resolve", "query-docs": "query"}
 CLAUDE_TOOLS = {f"mcp__context7__{name}": kind for name, kind in TOOLS.items()}
+# The runner archives this commit as the fixture, so every run sees the same files.
+FIXTURE_REV = "a5175f3e91cbfce1275d65dae9aa4676911d999e"
+# Agents load these paths as instructions, skills, or MCP configuration.
+AGENT_PATHS = (".agents", ".claude", ".codex", ".cursor", ".mcp.json", ".opencode", ".pi",
+               "AGENTS.md", "CLAUDE.md", "GEMINI.md", "rules")
+# The repository cases name these files.
+FIXTURE_FILES = ("README.md", "package.json", "eslint.config.js", "packages/cli/package.json",
+                 "packages/cli/src/index.ts", "packages/mcp/package.json",
+                 "packages/mcp/src/index.ts", "packages/sdk/src/client.ts",
+                 "packages/tools-ai-sdk/package.json")
 
 
 def parse(events, agent):
@@ -189,6 +205,129 @@ def configure(args, scratch):
     return env, config
 
 
+def git(*command):
+    try:
+        return subprocess.run(["git", "-C", str(Path(__file__).resolve().parent), *command],
+                              check=True, capture_output=True).stdout
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+
+def build_fixture(rev, directory, project_files):
+    """Extract the pinned commit without the paths that agents load on their own."""
+    top = (git("rev-parse", "--show-toplevel") or b"").decode().strip()
+    archive = top and git("-C", top, "archive", "--format=tar", rev)
+    if not archive:
+        raise SystemExit(f"Cannot archive fixture revision {rev}. Fetch it, or pass --project.")
+    project = directory / "project"
+    project.mkdir()
+    with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
+        tar.extractall(project, **({"filter": "data"} if hasattr(tarfile, "data_filter") else {}))
+    for name in AGENT_PATHS:
+        path = project / name
+        if path.is_dir():
+            shutil.rmtree(path)
+        elif path.exists():
+            path.unlink()
+    for name, source in project_files:
+        target = project / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
+    return project
+
+
+def check_fixture(project):
+    """Return the reason this directory cannot be a fixture, or None."""
+    if "context7" in str(project).lower():
+        return "its path contains 'context7', which biases tool selection"
+    missing = [name for name in FIXTURE_FILES if not (project / name).is_file()]
+    if missing:
+        return "it lacks files that the cases name: " + ", ".join(missing)
+    return None
+
+
+def fixture_digest(project):
+    digest, count = hashlib.sha256(), 0
+    for path in sorted(project.rglob("*")):
+        relative = path.relative_to(project)
+        if path.is_file() and not {".git", "node_modules"} & set(relative.parts):
+            digest.update(str(relative).encode() + b"\0" + hashlib.sha256(path.read_bytes()).digest())
+            count += 1
+    return count, digest.hexdigest()
+
+
+def describe_server(url, key):
+    """Record what the endpoint serves, so a result names the text it measured."""
+    headers = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream",
+               "MCP-Protocol-Version": "2025-06-18"}
+    if key:
+        headers["X-Context7-API-Key"] = key
+
+    def call(method, params):
+        body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}).encode()
+        with urllib.request.urlopen(urllib.request.Request(url, body, headers), timeout=30) as response:
+            text = response.read().decode()
+        for line in [text, *text.splitlines()]:
+            try:
+                message = json.loads(line.removeprefix("data:"))
+            except json.JSONDecodeError:
+                continue
+            if isinstance(message, dict) and "result" in message:
+                return message["result"]
+        raise ValueError(f"no result for {method}")
+
+    try:
+        init = call("initialize", {"protocolVersion": "2025-06-18", "capabilities": {},
+                                   "clientInfo": {"name": "trigger-eval", "version": "1"}})
+    except (OSError, ValueError) as error:
+        raise SystemExit(f"The MCP endpoint {url} did not answer initialize: {error}")
+    instructions = init.get("instructions") or ""
+    server = {
+        **{name: (init.get("serverInfo") or {}).get(name) for name in ("name", "version")},
+        "instructions_chars": len(instructions),
+        "instructions_sha256": hashlib.sha256(instructions.encode()).hexdigest(),
+    }
+    try:
+        server["tools"] = [{
+            "name": tool.get("name"),
+            "description_chars": len(tool.get("description") or ""),
+            "always_load": bool((tool.get("_meta") or {}).get("anthropic/alwaysLoad")),
+        } for tool in call("tools/list", {})["tools"]]
+    except (OSError, ValueError, KeyError) as error:
+        server["tools_error"] = str(error)
+    return server
+
+
+def summarize(rows, agent, repeats):
+    valid = [row for row in rows if not row["error"]]
+
+    def rate(expected, subset):
+        subset = [row for row in subset if row["expected"] is expected]
+        return f"{sum(bool(row['calls']) for row in subset)}/{len(subset)}"
+
+    outcomes = {}
+    for row in valid:
+        outcomes.setdefault(row["index"], set()).add(bool(row["calls"]))
+    rounds = [[row for row in valid if row["repeat"] == repeat] for repeat in range(1, repeats + 1)]
+    summary = {
+        "recall": rate(True, valid),
+        "false_positives": rate(False, valid),
+        "recall_by_repeat": [rate(True, subset) for subset in rounds],
+        "false_positives_by_repeat": [rate(False, subset) for subset in rounds],
+        # Cases whose completed repeats disagree on whether to call Context7.
+        "unstable_cases": sum(len(seen) > 1 for seen in outcomes.values()),
+        "checks_failed": sum(bool(row["checks_failed"]) for row in valid),
+        "tool_errors": sum(row["tool_errors"] for row in valid),
+        "followups_without_prior_query": sum(
+            row["first_calls"] is not None and "query" not in row["first_calls"] for row in valid
+        ),
+        "client_errors": len(rows) - len(valid),
+    }
+    if agent == "codex":
+        summary["cases_with_web_search"] = sum(bool(row["web_searches"]) for row in valid)
+    return summary
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--agent", required=True, choices=["claude", "codex"])
@@ -199,10 +338,17 @@ def main():
                         help="Override Codex web search mode for a separate diagnostic run")
     parser.add_argument("--codex-mcp-direct", action="store_true",
                         help="Expose Context7 in Codex's initial tool list")
-    parser.add_argument("--project", required=True, type=Path, help="Neutral fixture directory")
+    parser.add_argument("--project", type=Path,
+                        help="Use this fixture directory as it is, in place of the pinned commit")
+    parser.add_argument("--fixture-rev", default=FIXTURE_REV,
+                        help="Commit that the runner archives as the fixture")
+    parser.add_argument("--project-file", action="append", default=[], metavar="NAME=PATH",
+                        help="Copy a file into the archived fixture, for example AGENTS.md=rule.md")
     parser.add_argument("--url", required=True, help="Context7 HTTP MCP endpoint")
     parser.add_argument("--eval", required=True, type=Path, action="append")
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--label", help="Name of the variant under test, stored in the report")
+    parser.add_argument("--repeats", type=int, default=3, help="Runs per case")
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--timeout", type=int, default=240, help="Seconds per turn")
     args = parser.parse_args()
@@ -210,48 +356,81 @@ def main():
         parser.error("--codex-web-search requires --agent codex")
     if args.codex_mcp_direct and args.agent != "codex":
         parser.error("--codex-mcp-direct requires --agent codex")
+    if args.repeats < 1:
+        parser.error("--repeats must be 1 or more")
+    if args.project and args.project_file:
+        parser.error("--project-file needs the archived fixture. Remove --project.")
+    project_files = []
+    for item in args.project_file:
+        name, _, source = item.partition("=")
+        if not name or Path(name).is_absolute() or ".." in Path(name).parts or not Path(source).is_file():
+            parser.error(f"--project-file needs NAME=PATH with a relative name and a file: {item}")
+        project_files.append((name, Path(source)))
     args.binary = args.binary or args.agent
-    args.project = args.project.resolve(strict=True)
-    cases = []
+    cases, evals = [], []
     for path in args.eval:
-        for index, case in enumerate(json.loads(path.read_text()), 1):
+        data = path.read_bytes()
+        loaded = json.loads(data)
+        evals.append({"file": path.name, "sha256": hashlib.sha256(data).hexdigest(), "cases": len(loaded)})
+        for index, case in enumerate(loaded, 1):
             cases.append({"set": path.stem.removeprefix("trigger-eval-"), **case, "index": index})
-    results = [None] * len(cases)
+    server = describe_server(args.url, os.environ.get("CONTEXT7_API_KEY"))
+    started = datetime.now(timezone.utc)
+    results = []
     os.umask(0o077)
-    with tempfile.TemporaryDirectory(prefix="trigger-eval-") as directory:
+    # The fixture has its own directory, so agents cannot find the MCP configuration next to it.
+    with tempfile.TemporaryDirectory(prefix="trigger-eval-") as directory, \
+            tempfile.TemporaryDirectory(prefix="trigger-eval-fixture-") as fixture_directory:
+        if args.project:
+            args.project = args.project.resolve(strict=True)
+            source = f"path:{args.project}"
+        else:
+            args.project = build_fixture(args.fixture_rev, Path(fixture_directory).resolve(), project_files)
+            source = f"git:{args.fixture_rev}"
+        problem = check_fixture(args.project)
+        if problem:
+            parser.error(f"Cannot use the fixture {args.project}: {problem}.")
+        files, digest = fixture_digest(args.project)
         env, config = configure(args, Path(directory))
         version = subprocess.check_output([args.binary, "--version"], env=env, text=True).strip()
         with ThreadPoolExecutor(max_workers=args.workers) as pool:
-            pending = {pool.submit(run_case, args, env, config, case): i for i, case in enumerate(cases)}
+            # Each repeat covers all cases before the next one starts, so drift spreads evenly.
+            pending = {
+                pool.submit(run_case, args, env, config, case): (case, repeat)
+                for repeat in range(1, args.repeats + 1) for case in cases
+            }
             for job in as_completed(pending):
-                i = pending[job]
-                result = job.result()
-                result["index"] = cases[i]["index"]
-                results[i] = result
-                print(result["set"], result["index"], result["error"] or result["calls"], flush=True)
-    summary = {}
-    for name in dict.fromkeys(row["set"] for row in results):
-        rows = [row for row in results if row["set"] == name]
-        valid = [row for row in rows if not row["error"]]
-        pos = [row for row in valid if row["expected"] is True]
-        neg = [row for row in valid if row["expected"] is False]
-        summary[name] = {
-            "recall": f"{sum(bool(row['calls']) for row in pos)}/{len(pos)}",
-            "false_positives": f"{sum(bool(row['calls']) for row in neg)}/{len(neg)}",
-            "checks_failed": sum(bool(row["checks_failed"]) for row in valid),
-            "tool_errors": sum(row["tool_errors"] for row in valid),
-            "followups_without_prior_query": sum(
-                row["first_calls"] is not None and "query" not in row["first_calls"] for row in valid
-            ),
-            "client_errors": len(rows) - len(valid),
+                case, repeat = pending[job]
+                result = {**job.result(), "index": case["index"], "repeat": repeat}
+                results.append(result)
+                print(result["set"], result["index"], repeat, result["error"] or result["calls"], flush=True)
+        fixture = {
+            "source": source, "files": files, "sha256": digest,
+            "project_files": {name: hashlib.sha256(source.read_bytes()).hexdigest()
+                              for name, source in project_files},
+            "changed_during_run": fixture_digest(args.project) != (files, digest),
         }
-        if args.agent == "codex":
-            summary[name]["cases_with_web_search"] = sum(bool(row["web_searches"]) for row in valid)
+    sets = list(dict.fromkeys(case["set"] for case in cases))
+    results.sort(key=lambda row: (sets.index(row["set"]), row["index"], row["repeat"]))
+    summary = {
+        name: summarize([row for row in results if row["set"] == name], args.agent, args.repeats)
+        for name in sets
+    }
+    commit = git("rev-parse", "HEAD")
     args.output.write_text(json.dumps({
         "agent": args.agent, "version": version, "model": args.model,
         "reasoning_effort": args.reasoning_effort if args.agent == "codex" else None,
         "codex_web_search": (args.codex_web_search or "default") if args.agent == "codex" else None,
         "codex_mcp_direct": args.codex_mcp_direct if args.agent == "codex" else None,
+        "run": {
+            "label": args.label, "url": args.url, "repeats": args.repeats,
+            "workers": args.workers, "timeout": args.timeout,
+            "started_at": started.isoformat(timespec="seconds"),
+            "finished_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "runner_commit": commit.decode().strip() if commit else None,
+            "runner_changed": bool(git("status", "--porcelain", "--", ".")),
+        },
+        "server": server, "fixture": fixture, "evals": evals,
         "summary": summary, "results": results,
     }, indent=2) + "\n")
     print(json.dumps(summary, indent=2))
