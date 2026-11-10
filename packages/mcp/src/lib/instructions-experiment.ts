@@ -1,4 +1,6 @@
 import { createHash } from "node:crypto";
+import * as jose from "jose";
+import { isJWT } from "./jwt.js";
 import { ALWAYS_LOAD_META, SERVER_INSTRUCTIONS } from "./server-instructions.js";
 
 /**
@@ -51,6 +53,35 @@ export function instructionsBucket(identity: string, salt: string): number {
   return digest.readUInt32BE(0) % 100;
 }
 
+const sha256Hex = (value: string) => createHash("sha256").update(value).digest("hex");
+
+/**
+ * The stable identity that decides a caller's arm, or undefined without one.
+ * - `ctx7sk-` API keys use the same SHA-256 hex that context7app stores, so the app can
+ *   recompute each key's arm.
+ * - JWT access tokens use their `sub` claim (the user ID), which survives token refresh.
+ * - Other tokens use their own hash, so an opaque token can change arms when it rotates.
+ * - Anonymous callers use the client IP.
+ * The token is not verified here; authentication does that before the request is served.
+ */
+export function instructionsExperimentIdentity(identity: {
+  apiKey?: string;
+  clientIp?: string;
+}): string | undefined {
+  const { apiKey, clientIp } = identity;
+  if (apiKey?.startsWith("ctx7sk-")) return `key:${sha256Hex(apiKey)}`;
+  if (apiKey && isJWT(apiKey)) {
+    try {
+      const sub = jose.decodeJwt(apiKey).sub;
+      if (sub) return `user:${sub}`;
+    } catch {
+      // Fall through to the token hash.
+    }
+  }
+  if (apiKey) return `token:${sha256Hex(apiKey)}`;
+  return clientIp ? `ip:${clientIp}` : undefined;
+}
+
 /**
  * The caller's arm, or undefined when the test is off or the caller has no identity.
  * Callers without an arm get the treatment text and are not counted.
@@ -60,11 +91,7 @@ export function assignInstructionsVariant(
   config: InstructionsExperimentConfig
 ): InstructionsVariant | undefined {
   if (!instructionsExperimentEnabled(config)) return undefined;
-  const key = identity.apiKey
-    ? `key:${identity.apiKey}`
-    : identity.clientIp
-      ? `ip:${identity.clientIp}`
-      : undefined;
+  const key = instructionsExperimentIdentity(identity);
   if (!key) return undefined;
   return instructionsBucket(key, config.salt) < config.controlPercent ? "control" : "treatment";
 }

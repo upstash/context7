@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { describe, expect, test } from "vitest";
 import {
   assignInstructionsVariant,
@@ -5,6 +6,7 @@ import {
   instructionsBucket,
   instructionsExperimentConfig,
   instructionsExperimentEnabled,
+  instructionsExperimentIdentity,
   instructionsForVariant,
   LEGACY_SERVER_INSTRUCTIONS,
 } from "../src/lib/instructions-experiment.js";
@@ -27,6 +29,35 @@ describe("instructionsExperimentConfig", () => {
     expect(config).toEqual({ controlPercent: 50, salt: "round-2" });
     expect(instructionsExperimentEnabled(config)).toBe(true);
     expect(instructionsExperimentConfig({}).salt).toBe(DEFAULT_INSTRUCTIONS_EXPERIMENT_SALT);
+  });
+});
+
+describe("instructionsExperimentIdentity", () => {
+  const unsignedJwt = (payload: Record<string, unknown>) =>
+    [{ alg: "none", typ: "JWT" }, payload]
+      .map((part) => Buffer.from(JSON.stringify(part)).toString("base64url"))
+      .join(".") + ".sig";
+
+  test("uses the SHA-256 hex that context7app stores for API keys", () => {
+    const apiKey = "ctx7sk-1234";
+    const appHash = createHash("sha256").update(apiKey).digest("hex");
+    expect(instructionsExperimentIdentity({ apiKey, clientIp: "10.0.0.1" })).toBe(`key:${appHash}`);
+  });
+
+  test("uses the JWT subject, so a refreshed token keeps its arm", () => {
+    const first = unsignedJwt({ sub: "user_abc", exp: 1 });
+    const refreshed = unsignedJwt({ sub: "user_abc", exp: 2 });
+    expect(instructionsExperimentIdentity({ apiKey: first })).toBe("user:user_abc");
+    expect(instructionsExperimentIdentity({ apiKey: refreshed })).toBe("user:user_abc");
+  });
+
+  test("hashes other tokens and falls back to the client IP", () => {
+    expect(instructionsExperimentIdentity({ apiKey: "oat_opaque" })).toMatch(
+      /^token:[0-9a-f]{64}$/
+    );
+    expect(instructionsExperimentIdentity({ apiKey: unsignedJwt({ exp: 1 }) })).toMatch(/^token:/);
+    expect(instructionsExperimentIdentity({ clientIp: "10.0.0.9" })).toBe("ip:10.0.0.9");
+    expect(instructionsExperimentIdentity({})).toBeUndefined();
   });
 });
 
