@@ -35,6 +35,7 @@ const CODE_BAD_TAG_QUERY = "force-code-bad-tag";
 const STUB_UPGRADE_GUIDE = "# Upgrading Next.js from 14 to 16";
 const PREPARING_FROM_VERSION = "13";
 const UNKNOWN_FROM_VERSION = "99";
+const UNAVAILABLE_FROM_VERSION = "12";
 /** A deployment without the endpoint answers a plain 404. */
 const MISSING_ENDPOINT_FROM_VERSION = "98";
 const CLIENT_IP_ASSERTION_KEY = "0123456789abcdef".repeat(4);
@@ -127,6 +128,15 @@ function startStubApi(): Promise<string> {
             status: "preparing",
             retryAfter: 90,
             message: "Indexing the source of next.js 13.0.0.",
+          })
+        );
+      } else if (fromVersion === UNAVAILABLE_FROM_VERSION) {
+        res.statusCode = 503;
+        res.setHeader("Content-Type", "application/json");
+        res.end(
+          JSON.stringify({
+            error: "guide_unavailable",
+            message: "The upgrade guide for Next.js 12.0.0 -> 16.0.0 could not be prepared.",
           })
         );
       } else if (fromVersion === MISSING_ENDPOINT_FROM_VERSION) {
@@ -822,6 +832,15 @@ describe("research preview", () => {
       expect(resultText(result)).toContain("being prepared");
       expect(resultText(result)).toContain("after 90 seconds");
       expect(resultText(result)).toContain("Indexing the source of next.js 13.0.0.");
+    });
+
+    test("returns the API's message when the guide could not be prepared", async () => {
+      const result = await callGuide({ fromVersion: UNAVAILABLE_FROM_VERSION });
+
+      expect(result.isError).toBe(true);
+      expect(resultText(result)).toBe(
+        "The upgrade guide for Next.js 12.0.0 -> 16.0.0 could not be prepared."
+      );
     });
 
     test("returns the API's 404 message as an answer, not an error", async () => {
