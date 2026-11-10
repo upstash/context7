@@ -355,10 +355,17 @@ export async function fetchLibraryCode(
   }
 }
 
-/** The endpoint's 404 codes: answers about the library or version, not failures. */
-const UPGRADE_GUIDE_MISSES = new Set(["library_not_prepared", "version_not_found"]);
-/** The endpoint's 400 codes that answer the agent's request, not failures. */
-const UPGRADE_GUIDE_ANSWERS = new Set(["page_out_of_range"]);
+/**
+ * The endpoint's error codes that answer the agent's request, not failures: a library without
+ * a guide, an unknown version, a page past the last, or a guide that could not be prepared.
+ * The agent sees the API's message, which says what to do next.
+ */
+const UPGRADE_GUIDE_ANSWERS = new Set([
+  "library_not_prepared",
+  "version_not_found",
+  "page_out_of_range",
+  "guide_unavailable",
+]);
 
 /**
  * Fetches the upgrade guide for a library between two versions
@@ -375,9 +382,9 @@ export async function fetchUpgradeGuide(
     url.searchParams.set("libraryId", request.libraryId);
     url.searchParams.set("fromVersion", request.fromVersion);
     if (request.toVersion) url.searchParams.set("toVersion", request.toVersion);
-    // The app reads `page` from the deploy that ships paging (CTX7-3607), and
-    // treats servers before 4.7.0 as unable to page: deploy the app before releasing this.
-    if (request.page !== undefined) url.searchParams.set("page", String(request.page));
+    // Always sent, so the app can tell a client that pages from one that predates paging
+    // (CTX7-3607). The app reads `page` from the deploy that ships paging: deploy it first.
+    url.searchParams.set("page", String(request.page ?? 1));
 
     const headers = generateHeaders(context);
     const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);
@@ -386,6 +393,13 @@ export async function fetchUpgradeGuide(
       "fetch_upgrade_guide",
       () => fetch(url, { headers, signal: abortSignal }),
       async (response): Promise<ToolAnswer> => {
+        // Checked for any status, before the status-specific fallbacks below; cloned so
+        // parseErrorResponse can still read the body of any other error.
+        if (!response.ok) {
+          const json = await readJson<{ error?: string; message?: string }>(response.clone());
+          if (json?.error && UPGRADE_GUIDE_ANSWERS.has(json.error))
+            return { text: json.message ?? json.error, outcome: "not_found" };
+        }
         switch (response.status) {
           // The source code is being indexed or the guide is being prepared; the agent calls again later.
           case 202: {
@@ -398,20 +412,7 @@ export async function fetchUpgradeGuide(
               outcome: "success",
             };
           }
-          // A page past the last: the message names the pages there are. An answer, not a failure.
-          case 400: {
-            const json = await readJson<{ error?: string; message?: string }>(response);
-            if (json?.error && UPGRADE_GUIDE_ANSWERS.has(json.error))
-              return { text: json.message ?? json.error, outcome: "not_found" };
-            const text = json?.message ?? "The upgrade guide request was invalid (HTTP 400).";
-            console.error(text);
-            return { text, outcome: "error" };
-          }
           case 404: {
-            const json = await readJson<{ error?: string; message?: string }>(response);
-            // A library without a guide or an unknown version is an answer, not a failure.
-            if (json?.error && UPGRADE_GUIDE_MISSES.has(json.error))
-              return { text: json.message ?? json.error, outcome: "not_found" };
             // Any other 404 (for example a deployment without the endpoint) is an upstream error.
             const text =
               "The upgrade guide service is not available (HTTP 404). Please try again later.";

@@ -781,6 +781,7 @@ describe("research preview", () => {
         libraryId: "/vercel/next.js",
         fromVersion: "14.2.35",
         toVersion: "16",
+        page: "1",
       });
       expect(apiCall?.headers.authorization).toBe("Bearer ctx7sk-local-test");
       expect(apiCall?.headers["x-context7-source"]).toBe("mcp-server");
@@ -802,11 +803,26 @@ describe("research preview", () => {
       expect(apiCall?.query.get("page")).toBe("2");
     });
 
-    test("omits the page when not given", async () => {
+    test("sends page 1 when no page is given", async () => {
       await callGuide({ fromVersion: "14" });
 
       const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
-      expect(apiCall?.query.has("page")).toBe(false);
+      expect(apiCall?.query.get("page")).toBe("1");
+    });
+
+    test("accepts a page sent as a numeric string", async () => {
+      const result = await callGuide({ fromVersion: "14", page: "2" });
+
+      expect(result.isError).toBeFalsy();
+      const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
+      expect(apiCall?.query.get("page")).toBe("2");
+    });
+
+    test("rejects a page that is not a whole number without calling the API", async () => {
+      const result = await callGuide({ fromVersion: "14", page: "two" });
+
+      expect(result.isError).toBe(true);
+      expect(requests.some((request) => request.path === "/v2/version-upgrade-guide")).toBe(false);
     });
 
     test("returns the API's message for a page past the last as an answer, not an error", async () => {
@@ -834,10 +850,10 @@ describe("research preview", () => {
       expect(resultText(result)).toContain("Indexing the source of next.js 13.0.0.");
     });
 
-    test("returns the API's message when the guide could not be prepared", async () => {
+    test("returns the API's 503 guide_unavailable message as an answer, not an error", async () => {
       const result = await callGuide({ fromVersion: UNAVAILABLE_FROM_VERSION });
 
-      expect(result.isError).toBe(true);
+      expect(result.isError).toBeFalsy();
       expect(resultText(result)).toBe(
         "The upgrade guide for Next.js 12.0.0 -> 16.0.0 could not be prepared."
       );

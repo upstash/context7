@@ -58,10 +58,13 @@ const upgradeGuideSchema = z.object({
     .describe(
       "The version to upgrade to (e.g., '16'). A bare major means the newest release of that line. Omit for the latest major."
     ),
+  // Agents often send a number as a string ("2"); a numeric string becomes a number,
+  // anything else is left for the integer check to reject.
   page: z
-    .number()
-    .int()
-    .min(1)
+    .preprocess(
+      (value) => (typeof value === "string" && value.trim() !== "" ? Number(value) : value),
+      z.number().int().min(1)
+    )
     .optional()
     .describe(
       "Page of a long guide, starting at 1 (the default). Ask for a later page with the number the previous page gives."
