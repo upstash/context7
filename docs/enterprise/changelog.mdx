@@ -9,7 +9,7 @@ description: "Release notes for the Context7 On-Premise image."
 
 - Back up the data volume before you upgrade. The first start runs a database migration automatically.
 - The `latest` image tag now points to 2.0.0. To stay on 1.3.9, pin the image to `1` or `1.3`.
-- Settings now have one page per section at `/settings/<section>`. Bookmarks to the old `?tab=` links redirect to the new pages.
+- Settings now have one page per section under Workspace Settings at `/admin/<section>`. Bookmarks to the old `?tab=` links and to `/settings/<section>`, `/members` and `/usage` redirect to the new pages.
 - The settings of a repository are now at `/projects/<owner>/<repo>/-/settings`.
 - Members who sign in with SSO can be disabled, but not removed, in Context7. Remove them in your identity provider.
 
@@ -22,7 +22,7 @@ description: "Release notes for the Context7 On-Premise image."
 
 ### Changed
 
-- Redesigned the on-premise web interface. Repositories, Members, Usage and Settings are top-level tabs, and each settings section has its own page. A new parse queue page shows running, waiting and recent parses. A new repository settings page lets administrators change the branch, folders and exclusions of a repository.
+- Redesigned the on-premise web interface. One navbar holds the page tabs (Dashboard, Repositories, MCP Test and, for administrators, Workspace Settings), a system status menu that shows the parse queue, and a help menu. Workspace Settings groups Usage, Members and every settings section under `/admin`.
 - Updated the on-premise service image to run on Node.js 24 instead of Node.js 22.
 - Improved the accuracy of APIDOC context by grounding endpoints within their respective page sections and dropping irrelevant snippets.
 - Replaced the agent runtime that on-premise CodeDocs uses to write documentation.
