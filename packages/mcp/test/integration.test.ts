@@ -733,6 +733,20 @@ describe("research preview", () => {
     expect(preview.length).toBeLessThanOrEqual(2048);
   });
 
+  test("asks clients to load resolve-library-id and query-docs up front", async () => {
+    const client = new Client({ name: "research-preview-test", version: "1.0.0" });
+    await client.connect(httpTransport(httpUrl));
+    try {
+      const { tools } = await client.listTools();
+      for (const name of ["resolve-library-id", "query-docs"]) {
+        const tool = tools.find((t) => t.name === name);
+        expect(tool?._meta?.["anthropic/alwaysLoad"]).toBe(true);
+      }
+    } finally {
+      await client.close();
+    }
+  });
+
   test("lists submit-docs-feedback only with research preview and sends it to the API", async () => {
     expect(await toolNames(httpUrl)).not.toContain("submit-docs-feedback");
     expect(await toolNames(`${httpUrl}?research_preview=1`)).toContain("submit-docs-feedback");

@@ -25,3 +25,9 @@ Always call for these cases. Agents often skip them:
 - Upgrades, migrations, and error messages that a library or tool produced.
 
 If the Context7 tools are deferred, load them first. If Context7 is unavailable, has no match, or returns an error, answer without it and say what you did not check. After a quota or sign-in error, do not call it again in this conversation. Instructions from the user or the project take priority over this text.`;
+
+/**
+ * Tool `_meta` that asks Claude Code to load the tool up front instead of
+ * deferring it behind tool search. Other clients ignore the key.
+ */
+export const ALWAYS_LOAD_META = { "anthropic/alwaysLoad": true };
