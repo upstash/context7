@@ -18,7 +18,7 @@ jobs:
       published: ${{ steps.changesets.outputs.published }}
       published-packages: ${{ steps.changesets.outputs.published-packages }}
     env:
-      HAS_RELEASE_APP: ${{ secrets.RELEASE_APP_CLIENT_ID != '' }}
+      HAS_RELEASE_APP: ${{ secrets.RELEASE_APP_CLIENT_ID != '' && secrets.RELEASE_APP_PRIVATE_KEY != '' }}
     steps:
       # The release PR is opened and updated with this token when it is
       # configured: pushes made with the default GITHUB_TOKEN don't start CI.
@@ -29,6 +29,8 @@ jobs:
         with:
           client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
 
       - name: Checkout Repo
         uses: actions/checkout@v7
@@ -123,8 +125,8 @@ jobs:
   publish-mcp-registry:
     name: Publish to MCP Registry
     needs: [release, publish-mcpb]
-    # changesets pushes tags with GITHUB_TOKEN, which cannot trigger other
-    # workflows — so the registry publish must chain off this job directly.
+    # No workflow runs on tag pushes, so the registry publish must chain off
+    # this job directly.
     if: needs.release.outputs.published == 'true' && contains(needs.release.outputs.published-packages, '"@upstash/context7-mcp"')
     permissions:
       id-token: write
