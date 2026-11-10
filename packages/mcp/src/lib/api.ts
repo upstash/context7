@@ -362,7 +362,7 @@ const UPGRADE_GUIDE_ANSWERS = new Set(["page_out_of_range"]);
 
 /**
  * Fetches the upgrade guide for a library between two versions
- * @param request The library ID, the versions to upgrade from and to, and the page and guideHash of the guide
+ * @param request The library ID, the versions to upgrade from and to, and the page of the guide
  * @param context Client context including IP, API key, and client info
  * @returns The guide, a note to call again while it is prepared, or an error
  */
@@ -375,10 +375,9 @@ export async function fetchUpgradeGuide(
     url.searchParams.set("libraryId", request.libraryId);
     url.searchParams.set("fromVersion", request.fromVersion);
     if (request.toVersion) url.searchParams.set("toVersion", request.toVersion);
-    // The app reads `page` and `guideHash` from the deploy that ships paging (CTX7-3607), and
+    // The app reads `page` from the deploy that ships paging (CTX7-3607), and
     // treats servers before 4.7.0 as unable to page: deploy the app before releasing this.
     if (request.page !== undefined) url.searchParams.set("page", String(request.page));
-    if (request.guideHash) url.searchParams.set("guideHash", request.guideHash);
 
     const headers = generateHeaders(context);
     const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);
@@ -388,7 +387,7 @@ export async function fetchUpgradeGuide(
       () => fetch(url, { headers, signal: abortSignal }),
       async (response): Promise<ToolAnswer> => {
         switch (response.status) {
-          // The code index or release data is being prepared; the agent calls again later.
+          // The source code is being indexed or the guide is being prepared; the agent calls again later.
           case 202: {
             const json = await readJson<{ retryAfter?: number; message?: string }>(response);
             const retryAfter =
@@ -398,17 +397,6 @@ export async function fetchUpgradeGuide(
               text: json?.message ? `${note}\n\n${json.message}` : note,
               outcome: "success",
             };
-          }
-          // The guide changed since the page whose guideHash was sent: the agent starts again
-          // from page 1, as the message says. An instruction, like 202, not a failure.
-          case 409: {
-            const json = await readJson<{ error?: string; message?: string }>(response);
-            if (json?.error === "guide_changed" && json.message)
-              return { text: json.message, outcome: "success" };
-            // The body is read: show the API's own message rather than read it again.
-            const text = json?.message ?? "The upgrade guide request conflicted (HTTP 409).";
-            console.error(text);
-            return { text, outcome: "error" };
           }
           // A page past the last: the message names the pages there are. An answer, not a failure.
           case 400: {
