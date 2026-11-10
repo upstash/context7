@@ -8,6 +8,11 @@ import { createDecipheriv } from "node:crypto";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import {
+  assignInstructionsVariant,
+  instructionsForVariant,
+  type InstructionsVariant,
+} from "../src/lib/instructions-experiment.js";
 
 // End-to-end tests: the real built binary (dist/index.js) is exercised over
 // both transports (spawned HTTP server, spawned stdio child) by both protocol
@@ -745,6 +750,121 @@ describe("research preview", () => {
     } finally {
       await client.close();
     }
+  });
+
+  describe("instructions A/B test", () => {
+    let abChild: ChildProcess;
+    let abUrl: string;
+    let abMetricsUrl: string;
+    const salt = "integration-salt";
+    // The first test keys that the server puts in each arm at a 50% control share.
+    const keyFor = (arm: InstructionsVariant) => {
+      for (let i = 0; ; i++) {
+        const apiKey = `ctx7sk-ab-${i}`;
+        if (assignInstructionsVariant({ apiKey }, { controlPercent: 50, salt }) === arm) {
+          return apiKey;
+        }
+      }
+    };
+    const keyTransport = (apiKey: string) =>
+      new StreamableHTTPClientTransport(new URL(abUrl), {
+        requestInit: { headers: { Authorization: `Bearer ${apiKey}` } },
+      });
+
+    beforeAll(async () => {
+      const metricsPort = await getFreePort();
+      abMetricsUrl = `http://127.0.0.1:${metricsPort}/metrics`;
+      ({ child: abChild, url: abUrl } = await startHttpChild({
+        port: 0,
+        environment: {
+          ...childEnv,
+          OTEL_EXPORTER_PROMETHEUS_PORT: String(metricsPort),
+          CONTEXT7_INSTRUCTIONS_CONTROL_PERCENT: "50",
+          CONTEXT7_INSTRUCTIONS_EXPERIMENT_SALT: salt,
+        },
+      }));
+    }, 60_000);
+
+    afterAll(() => {
+      abChild?.kill();
+    });
+
+    test.each(["control", "treatment"] as const)(
+      "gives the %s arm its text, tool meta, and API header",
+      async (arm) => {
+        const apiKey = keyFor(arm);
+        const client = new Client({ name: "ab-test-client", version: "1.0.0" });
+        await client.connect(keyTransport(apiKey));
+        try {
+          expect(client.getInstructions()).toBe(instructionsForVariant(arm).instructions);
+          const { tools } = await client.listTools();
+          for (const name of ["resolve-library-id", "query-docs"]) {
+            const tool = tools.find((t) => t.name === name);
+            expect(tool?._meta?.["anthropic/alwaysLoad"]).toBe(
+              arm === "treatment" ? true : undefined
+            );
+          }
+          requests.length = 0;
+          await client.callTool({
+            name: "resolve-library-id",
+            arguments: { query: "app router", libraryName: "Next.js" },
+          });
+          const apiCall = requests.find((request) => request.path === "/v2/libs/search");
+          expect(apiCall?.headers.authorization).toBe(`Bearer ${apiKey}`);
+          expect(apiCall?.headers["x-context7-instructions-variant"]).toBe(arm);
+        } finally {
+          await client.close();
+        }
+      }
+    );
+
+    test("marks tools/list private while the test runs", async () => {
+      expect(await toolsListCacheScope(keyTransport(keyFor("treatment")))).toBe("private");
+      expect(await toolsListCacheScope(keyTransport(keyFor("control")))).toBe("private");
+    });
+
+    test("counts instruction requests and tool calls per arm and client", async () => {
+      const lines = (await (await fetch(abMetricsUrl)).text()).split("\n");
+      const count = (metric: string, labels: string[]) =>
+        lines
+          .filter((line) => line.startsWith(`${metric}{`) && labels.every((l) => line.includes(l)))
+          .reduce((sum, line) => sum + Number(line.split(" ").at(-1)), 0);
+      for (const arm of ["control", "treatment"]) {
+        const variant = `context7_mcp_instructions_variant="${arm}"`;
+        expect(
+          count("context7_mcp_instructions_experiment_initializations_total", [
+            variant,
+            'context7_mcp_client_name="ab-test-client"',
+          ])
+        ).toBeGreaterThanOrEqual(1);
+        expect(
+          count("context7_mcp_instructions_experiment_tool_calls_total", [
+            variant,
+            'gen_ai_tool_name="resolve-library-id"',
+          ])
+        ).toBeGreaterThanOrEqual(1);
+      }
+      // Modern clients send their name in the _meta envelope, not in clientInfo.
+      expect(
+        count("context7_mcp_instructions_experiment_initializations_total", [
+          'context7_mcp_client_name="unknown"',
+        ])
+      ).toBe(0);
+    });
+
+    test("leaves the default server out of the test", async () => {
+      expect(await toolsListCacheScope(httpTransport(httpUrl))).toBe("public");
+      requests.length = 0;
+      await withClient(httpUrl, (client) =>
+        client.callTool({
+          name: "resolve-library-id",
+          arguments: { query: "app router", libraryName: "Next.js" },
+        })
+      );
+      const apiCall = requests.find((request) => request.path === "/v2/libs/search");
+      expect(apiCall).toBeDefined();
+      expect(apiCall?.headers["x-context7-instructions-variant"]).toBeUndefined();
+    });
   });
 
   test("lists submit-docs-feedback only with research preview and sends it to the API", async () => {

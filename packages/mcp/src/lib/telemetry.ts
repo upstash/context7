@@ -61,6 +61,17 @@ function createInstruments() {
       description: "Number of hosted MCP authentication lifecycle events",
       unit: "{event}",
     }),
+    instructionsInitializations: meter.createCounter(
+      "context7.mcp.instructions_experiment.initializations",
+      {
+        description: "Initialize requests per arm of the server instructions A/B test",
+        unit: "{request}",
+      }
+    ),
+    instructionsToolCalls: meter.createCounter("context7.mcp.instructions_experiment.tool_calls", {
+      description: "Tool calls per arm of the server instructions A/B test",
+      unit: "{call}",
+    }),
     selfCancellingBatches: meter.createCounter("context7.mcp.batches.self_cancelling", {
       description: "JSON-RPC batches in which a request was cancelled by the same batch",
       unit: "{batch}",
@@ -275,6 +286,42 @@ export function recordSelfCancellingBatch(userAgent: string | undefined): void {
     else batchClientNames.add(client);
   }
   getInstruments().selfCancellingBatches.add(1, { "user_agent.name": client });
+}
+
+const MAX_EXPERIMENT_CLIENT_NAMES = 50;
+const experimentClientNames = new Set<string>();
+
+/** Client name label. Callers choose it, so the label set is capped per process. */
+function experimentClientLabel(name: string | undefined): string {
+  let client =
+    /^[\w .@/-]{1,40}/
+      .exec(name ?? "")?.[0]
+      .trim()
+      .toLowerCase() || "unknown";
+  if (!experimentClientNames.has(client)) {
+    if (experimentClientNames.size >= MAX_EXPERIMENT_CLIENT_NAMES) client = "other";
+    else experimentClientNames.add(client);
+  }
+  return client;
+}
+
+export function recordInstructionsInitialization(variant: string, clientName?: string): void {
+  getInstruments().instructionsInitializations.add(1, {
+    "context7.mcp.instructions.variant": variant,
+    "context7.mcp.client.name": experimentClientLabel(clientName),
+  });
+}
+
+export function recordInstructionsToolCall(
+  variant: string,
+  tool: string,
+  clientName?: string
+): void {
+  getInstruments().instructionsToolCalls.add(1, {
+    "context7.mcp.instructions.variant": variant,
+    "gen_ai.tool.name": tool,
+    "context7.mcp.client.name": experimentClientLabel(clientName),
+  });
 }
 
 export function recordAuthenticationEvent(observation: AuthenticationEventObservation): void {

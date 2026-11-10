@@ -86,6 +86,9 @@ export function generateHeaders(context: ClientContext): Record<string, string> 
   if (context.researchPreview) {
     headers["X-Context7-Research-Preview"] = "1";
   }
+  if (context.instructionsVariant) {
+    headers["X-Context7-Instructions-Variant"] = context.instructionsVariant;
+  }
 
   return headers;
 }

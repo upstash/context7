@@ -125,6 +125,18 @@ export async function observeUpstreamRequest<T>(
   );
 }
 
+export function recordInstructionsInitialization(variant: string, clientName?: string): void {
+  implementation?.recordInstructionsInitialization(variant, clientName);
+}
+
+export function recordInstructionsToolCall(
+  variant: string,
+  tool: string,
+  clientName?: string
+): void {
+  implementation?.recordInstructionsToolCall(variant, tool, clientName);
+}
+
 export function recordToolCallOutcome(outcome: ToolCallOutcome): void {
   implementation?.recordToolCallOutcome(outcome);
 }

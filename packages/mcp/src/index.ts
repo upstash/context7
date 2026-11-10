@@ -32,7 +32,12 @@ import {
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
-import { ALWAYS_LOAD_META, SERVER_INSTRUCTIONS } from "./lib/server-instructions.js";
+import {
+  assignInstructionsVariant,
+  instructionsExperimentConfig,
+  instructionsExperimentEnabled,
+  instructionsForVariant,
+} from "./lib/instructions-experiment.js";
 import { aliasArgs, GLOBAL_ALIASES, QUERY_DOCS_ALIASES } from "./lib/tool-args.js";
 import {
   DOCS_FEEDBACK_INSTRUCTIONS,
@@ -45,6 +50,8 @@ import {
   observeAuthentication,
   observeUpstreamRequest,
   recordAuthenticationEvent,
+  recordInstructionsInitialization,
+  recordInstructionsToolCall,
   recordSelfCancellingBatch,
 } from "./lib/telemetry-runtime.js";
 import { mcpBodyErrorHandler } from "./lib/mcp-body-error-handler.js";
@@ -158,6 +165,8 @@ if (TRANSPORT_TYPE === "stdio" && passedPortFlag) {
 }
 
 const requestContext = new AsyncLocalStorage<ClientContext>();
+// Server instructions A/B test on the hosted endpoint; off unless the env sets a control share.
+const instructionsExperiment = instructionsExperimentConfig();
 
 // Global state for stdio mode only
 let stdioApiKey: string | undefined;
@@ -186,6 +195,35 @@ function getClientContext(toolCtx: ServerContext): ClientContext {
     sessionId: stdioSessionId,
     researchPreview: stdioResearchPreview,
   };
+}
+
+function recordExperimentToolCall(ctx: ClientContext, tool: string): void {
+  if (ctx.instructionsVariant) {
+    recordInstructionsToolCall(ctx.instructionsVariant, tool, ctx.clientInfo?.ide);
+  }
+}
+
+// Methods that hand the server instructions to a client: legacy initialize and modern discovery.
+const INSTRUCTION_METHODS = new Set(["initialize", "server/discover"]);
+
+/**
+ * For a body that asks for the server instructions, the client name it sends (or undefined).
+ * Null when the body does not ask for the instructions.
+ */
+function instructionsRequestClientName(body: unknown): string | undefined | null {
+  for (const message of Array.isArray(body) ? body : [body]) {
+    if (!message || typeof message !== "object") continue;
+    const { method, params } = message as {
+      method?: unknown;
+      params?: { clientInfo?: { name?: unknown }; _meta?: unknown };
+    };
+    if (typeof method === "string" && INSTRUCTION_METHODS.has(method)) {
+      // Legacy initialize sends clientInfo; modern requests send it in the _meta envelope.
+      const name = params?.clientInfo?.name ?? envelopeClientInfo(params?._meta)?.ide;
+      return typeof name === "string" ? name : undefined;
+    }
+  }
+  return null;
 }
 
 type JsonRpcId = string | number;
@@ -260,6 +298,12 @@ function filterBatchSelfCancellations(body: unknown): {
 }
 
 function createMcpServer(mcpContext: McpRequestContext, researchPreview: boolean) {
+  const instructionsVariant = requestContext.getStore()?.instructionsVariant;
+  const { instructions, toolMeta } = instructionsForVariant(instructionsVariant);
+  // While the A/B test runs, tools/list differs by arm, so no shared cache may reuse it.
+  const privateToolsList =
+    researchPreview ||
+    (TRANSPORT_TYPE === "http" && instructionsExperimentEnabled(instructionsExperiment));
   const serverInfo = {
     name: "Context7",
     title: SERVER_TITLE,
@@ -287,13 +331,13 @@ function createMcpServer(mcpContext: McpRequestContext, researchPreview: boolean
     // After a deploy that changes a tool schema, clients can still call with the
     // old schema for that hour: keep old argument names accepted (aliasArgs).
     cacheHints: {
-      "tools/list": researchPreview ? PREVIEW_LIST_CACHE_HINT : STATIC_LIST_CACHE_HINT,
+      "tools/list": privateToolsList ? PREVIEW_LIST_CACHE_HINT : STATIC_LIST_CACHE_HINT,
       "prompts/list": STATIC_LIST_CACHE_HINT,
       "resources/list": STATIC_LIST_CACHE_HINT,
       "resources/templates/list": STATIC_LIST_CACHE_HINT,
       "server/discover": STATIC_LIST_CACHE_HINT,
     },
-    instructions: `${SERVER_INSTRUCTIONS}${researchPreview ? `\n\n${DOCS_FEEDBACK_INSTRUCTIONS}` : ""}`,
+    instructions: `${instructions}${researchPreview ? `\n\n${DOCS_FEEDBACK_INSTRUCTIONS}` : ""}`,
   };
   const server = mcpInstrumentation
     ? mcpInstrumentation.createServer(serverInfo, serverOptions, mcpContext)
@@ -303,7 +347,7 @@ function createMcpServer(mcpContext: McpRequestContext, researchPreview: boolean
     RESOLVE_LIBRARY_ID_TOOL,
     {
       title: "Resolve Context7 Library ID",
-      _meta: ALWAYS_LOAD_META,
+      ...(toolMeta && { _meta: toolMeta }),
       description: `Resolves a package/product name to a Context7-compatible library ID and returns matching libraries.
 
 You MUST call this function before 'Query Documentation' tool to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
@@ -366,6 +410,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
     },
     async ({ query, libraryName }: { query: string; libraryName: string }, toolCtx) => {
       const ctx = getClientContext(toolCtx);
+      recordExperimentToolCall(ctx, RESOLVE_LIBRARY_ID_TOOL);
       const searchResponse = await searchLibraries(query, libraryName, ctx);
 
       if (!searchResponse.results || searchResponse.results.length === 0) {
@@ -403,7 +448,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
     QUERY_DOCS_TOOL,
     {
       title: "Query Documentation",
-      _meta: ALWAYS_LOAD_META,
+      ...(toolMeta && { _meta: toolMeta }),
       description: `Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
 
 You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
@@ -445,6 +490,7 @@ If you know the programming language the user is working in, pass it as \`langua
       toolCtx
     ) => {
       const ctx = getClientContext(toolCtx);
+      recordExperimentToolCall(ctx, QUERY_DOCS_TOOL);
       const response = await fetchLibraryContext({ query, libraryId, language }, ctx);
       maybeElicitAuthSignIn(server, ctx);
       recordToolCallTelemetry(ctx, response.outcome);
@@ -642,7 +688,20 @@ async function main() {
           plugin,
           researchPreview: isResearchPreviewValue(req.query.research_preview),
           transport: "http",
+          instructionsVariant: assignInstructionsVariant(
+            { apiKey, clientIp: req.ip },
+            instructionsExperiment
+          ),
         };
+        if (context.instructionsVariant) {
+          const clientName = instructionsRequestClientName(filteredBody.body);
+          if (clientName !== null) {
+            recordInstructionsInitialization(
+              context.instructionsVariant,
+              clientName ?? context.clientInfo?.ide
+            );
+          }
+        }
 
         const oauthClientRegistration = classifyOAuthClientRegistration(apiKey);
         observeCredentialedInitialize(res, req.body, {
