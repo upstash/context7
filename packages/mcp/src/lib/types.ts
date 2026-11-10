@@ -74,6 +74,17 @@ export type CodeRequest = {
   offset?: number;
 };
 
+/** Arms of the server instructions A/B test. */
+export type InstructionsVariant = "control" | "treatment";
+
+export interface InstructionsArm {
+  variant: InstructionsVariant;
+  /** Salted hash of the caller identity, so the app counts the same unit the server assigns. */
+  unit: string;
+  /** Configured share of callers in control, so the app can scale each arm by its share. */
+  controlPercent: number;
+}
+
 export interface ClientContext {
   clientIp?: string;
   apiKey?: string;
@@ -88,8 +99,8 @@ export interface ClientContext {
   sessionId?: string;
   /** Research preview is on; sent as `X-Context7-Research-Preview: 1` so the app counts preview use. */
   researchPreview?: boolean;
-  /** Arm of the server instructions A/B test; sent as `X-Context7-Instructions-Variant`. */
-  instructionsVariant?: "control" | "treatment";
+  /** The caller's arm in the server instructions A/B test; sent on API calls (see encryption.ts). */
+  instructionsArm?: InstructionsArm;
   /** Mutable: set by the upstream API layer when the backend signals the
    *  client should be prompted to sign in. Read by the auth-prompt wrapper. */
   shouldPrompt?: boolean;

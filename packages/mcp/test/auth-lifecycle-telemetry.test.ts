@@ -65,7 +65,7 @@ describe("MCP authentication lifecycle telemetry", () => {
       "error"
     );
 
-    expect(telemetry.recordToolCallOutcome).toHaveBeenCalledWith("error");
+    expect(telemetry.recordToolCallOutcome).toHaveBeenCalledWith("error", undefined);
     expect(telemetry.recordAuthenticationEvent).not.toHaveBeenCalled();
   });
 
@@ -75,8 +75,17 @@ describe("MCP authentication lifecycle telemetry", () => {
       "success"
     );
 
-    expect(telemetry.recordToolCallOutcome).toHaveBeenCalledWith("success");
+    expect(telemetry.recordToolCallOutcome).toHaveBeenCalledWith("success", undefined);
     expect(telemetry.recordAuthenticationEvent).not.toHaveBeenCalled();
+  });
+
+  test("passes the instructions A/B arm to the tool outcome", () => {
+    recordToolCallTelemetry(
+      { transport: "http", instructionsArm: { variant: "control", unit: "u", controlPercent: 50 } },
+      "success"
+    );
+
+    expect(telemetry.recordToolCallOutcome).toHaveBeenCalledWith("success", "control");
   });
 
   test("records successful authenticated tool use", () => {

@@ -8,11 +8,11 @@ import { createDecipheriv } from "node:crypto";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import {
-  assignInstructionsVariant,
-  instructionsForVariant,
-  type InstructionsVariant,
-} from "../src/lib/instructions-experiment.js";
+import { createInstructionsExperiment } from "../src/lib/instructions-experiment.js";
+import type { InstructionsVariant } from "../src/lib/types.js";
+import { ALWAYS_LOAD_META } from "../src/lib/constants.js";
+import { serverInstructions } from "../src/lib/server-instructions.js";
+import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "../src/lib/tool-names.js";
 
 // End-to-end tests: the real built binary (dist/index.js) is exercised over
 // both transports (spawned HTTP server, spawned stdio child) by both protocol
@@ -686,15 +686,20 @@ describe("research preview", () => {
   const stdioTransport = (env: Record<string, string>) =>
     new StdioClientTransport({ command: process.execPath, args: [DIST], env });
 
-  async function withClient<T>(url: string, run: (client: Client) => Promise<T>): Promise<T> {
+  async function withTransport<T>(
+    transport: StreamableHTTPClientTransport | StdioClientTransport,
+    run: (client: Client) => Promise<T>
+  ): Promise<T> {
     const client = new Client({ name: "research-preview-test", version: "1.0.0" });
-    await client.connect(httpTransport(url));
+    await client.connect(transport);
     try {
       return await run(client);
     } finally {
       await client.close();
     }
   }
+  const withClient = <T>(url: string, run: (client: Client) => Promise<T>) =>
+    withTransport(httpTransport(url), run);
   const toolNames = (url: string) =>
     withClient(url, async (client) => (await client.listTools()).tools.map((tool) => tool.name));
 
@@ -713,42 +718,21 @@ describe("research preview", () => {
   });
 
   test("returns the same server instructions over HTTP and stdio, with the feedback request only under research preview", async () => {
-    const instructions = async (
-      transport: StreamableHTTPClientTransport | StdioClientTransport
-    ) => {
-      const client = new Client({ name: "research-preview-test", version: "1.0.0" });
-      await client.connect(transport);
-      try {
-        return client.getInstructions() ?? "";
-      } finally {
-        await client.close();
-      }
-    };
+    const instructions = (transport: StreamableHTTPClientTransport | StdioClientTransport) =>
+      withTransport(transport, async (client) => client.getInstructions() ?? "");
     const httpText = await instructions(httpTransport(httpUrl));
-    expect(httpText).toContain("Context7");
-    expect(httpText).not.toContain("${");
-    expect(httpText).not.toContain("submit-docs-feedback");
+    expect(httpText).toBe(serverInstructions(false));
     expect(await instructions(stdioTransport(childEnv))).toBe(httpText);
 
-    const preview = await instructions(httpTransport(`${httpUrl}?research_preview=1`));
-    expect(preview.startsWith(`${httpText}\n\n`)).toBe(true);
-    expect(preview).toContain("submit-docs-feedback");
-    // Claude Code cuts server instructions after 2048 characters
-    // (CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH), so the whole text must fit, preview included.
-    expect(preview.length).toBeLessThanOrEqual(2048);
+    expect(await instructions(httpTransport(`${httpUrl}?research_preview=1`))).toBe(
+      serverInstructions(true)
+    );
   });
 
   test("asks clients to load resolve-library-id and query-docs up front", async () => {
-    const client = new Client({ name: "research-preview-test", version: "1.0.0" });
-    await client.connect(httpTransport(httpUrl));
-    try {
-      const { tools } = await client.listTools();
-      for (const name of ["resolve-library-id", "query-docs"]) {
-        const tool = tools.find((t) => t.name === name);
-        expect(tool?._meta?.["anthropic/alwaysLoad"]).toBe(true);
-      }
-    } finally {
-      await client.close();
+    const tools = await withClient(httpUrl, async (client) => (await client.listTools()).tools);
+    for (const name of [RESOLVE_LIBRARY_ID_TOOL, QUERY_DOCS_TOOL]) {
+      expect(tools.find((t) => t.name === name)?._meta).toMatchObject(ALWAYS_LOAD_META);
     }
   });
 
@@ -758,14 +742,19 @@ describe("research preview", () => {
     let abMetricsUrl: string;
     const salt = "integration-salt";
     // The first test keys that the server puts in each arm at a 50% control share.
+    // The same experiment as the server, so the test knows each key's arm.
+    const experiment = createInstructionsExperiment({
+      CONTEXT7_INSTRUCTIONS_CONTROL_PERCENT: "50",
+      CONTEXT7_INSTRUCTIONS_EXPERIMENT_SALT: salt,
+    });
     const keyFor = (arm: InstructionsVariant) => {
       for (let i = 0; ; i++) {
         const apiKey = `ctx7sk-ab-${i}`;
-        if (assignInstructionsVariant({ apiKey }, { controlPercent: 50, salt }) === arm) {
-          return apiKey;
-        }
+        if (experiment.assign({ apiKey })?.variant === arm) return apiKey;
       }
     };
+    const instructionsFor = (arm: InstructionsVariant) =>
+      experiment.sessionConfig({ variant: arm, unit: "", controlPercent: 50 }).instructions;
     const keyTransport = (apiKey: string) =>
       new StreamableHTTPClientTransport(new URL(abUrl), {
         requestInit: { headers: { Authorization: `Bearer ${apiKey}` } },
@@ -796,7 +785,7 @@ describe("research preview", () => {
         const client = new Client({ name: "ab-test-client", version: "1.0.0" });
         await client.connect(keyTransport(apiKey));
         try {
-          expect(client.getInstructions()).toBe(instructionsForVariant(arm).instructions);
+          expect(client.getInstructions()).toBe(instructionsFor(arm));
           const { tools } = await client.listTools();
           for (const name of ["resolve-library-id", "query-docs"]) {
             const tool = tools.find((t) => t.name === name);
@@ -812,6 +801,10 @@ describe("research preview", () => {
           const apiCall = requests.find((request) => request.path === "/v2/libs/search");
           expect(apiCall?.headers.authorization).toBe(`Bearer ${apiKey}`);
           expect(apiCall?.headers["x-context7-instructions-variant"]).toBe(arm);
+          expect(apiCall?.headers["x-context7-instructions-unit"]).toBe(
+            experiment.assign({ apiKey })!.unit
+          );
+          expect(apiCall?.headers["x-context7-instructions-control-percent"]).toBe("50");
         } finally {
           await client.close();
         }
@@ -865,12 +858,12 @@ describe("research preview", () => {
       for (const arm of ["control", "treatment"] as const) {
         const discovered = await discoverCacheScope(abUrl, keyFor(arm));
         expect(discovered.scope).toBe("private");
-        expect(discovered.instructions).toBe(instructionsForVariant(arm).instructions);
+        expect(discovered.instructions).toBe(instructionsFor(arm));
       }
       expect((await discoverCacheScope(httpUrl, "ctx7sk-local-test")).scope).toBe("public");
     });
 
-    test("counts instruction requests and tool calls per arm and client", async () => {
+    test("counts instruction requests per arm and client, and tool calls per arm", async () => {
       const lines = (await (await fetch(abMetricsUrl)).text()).split("\n");
       const count = (metric: string, labels: string[]) =>
         lines
@@ -879,13 +872,13 @@ describe("research preview", () => {
       for (const arm of ["control", "treatment"]) {
         const variant = `context7_mcp_instructions_variant="${arm}"`;
         expect(
-          count("context7_mcp_instructions_experiment_initializations_total", [
+          count("context7_mcp_instructions_experiment_instruction_requests_total", [
             variant,
             'context7_mcp_client_name="ab-test-client"',
           ])
         ).toBeGreaterThanOrEqual(1);
         expect(
-          count("context7_mcp_instructions_experiment_tool_calls_total", [
+          count("mcp_server_operation_duration_count", [
             variant,
             'gen_ai_tool_name="resolve-library-id"',
           ])
@@ -893,7 +886,7 @@ describe("research preview", () => {
       }
       // Modern clients send their name in the _meta envelope, not in clientInfo.
       expect(
-        count("context7_mcp_instructions_experiment_initializations_total", [
+        count("context7_mcp_instructions_experiment_instruction_requests_total", [
           'context7_mcp_client_name="unknown"',
         ])
       ).toBe(0);

@@ -1,3 +1,5 @@
+import { DOCS_FEEDBACK_INSTRUCTIONS } from "./research-preview-tools.js";
+
 /**
  * Server instructions that MCP clients add to the agent's system prompt.
  * The call rule is direct on purpose: with softer wording, agents answer library
@@ -26,8 +28,13 @@ Always call for these cases. Agents often skip them:
 
 If the Context7 tools are deferred, load them first. If Context7 is unavailable, has no match, or returns an error, answer without it and say what you did not check. After a quota or sign-in error, do not call it again in this conversation. Instructions from the user or the project take priority over this text.`;
 
+/** Claude Code cuts server instructions after this many characters (CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH). */
+export const CLAUDE_CODE_INSTRUCTIONS_LIMIT = 2048;
+
 /**
- * Tool `_meta` that asks Claude Code to load the tool up front instead of
- * deferring it behind tool search. Other clients ignore the key.
+ * The instructions a session gets: the base text (the current one unless an A/B arm picks
+ * another), plus the feedback request under research preview.
  */
-export const ALWAYS_LOAD_META = { "anthropic/alwaysLoad": true };
+export function serverInstructions(researchPreview: boolean, base = SERVER_INSTRUCTIONS): string {
+  return researchPreview ? `${base}\n\n${DOCS_FEEDBACK_INSTRUCTIONS}` : base;
+}
