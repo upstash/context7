@@ -58,7 +58,7 @@ Context7 signs in as a Workspace user that exists only for Context7. You share f
     Copy the client ID and the client secret into **OAuth client ID** and **OAuth client secret**.
   </Step>
   <Step title="Create a Workspace user for Context7">
-    In the [Google Admin console](https://admin.google.com/ac/users), add a user only for Context7, such as `context7-bot@yourcompany.com`. Do not use a person's account: Context7 can read everything this account can open, and the connection stops if the account is suspended or deleted.
+    In the [Google Admin console](https://admin.google.com/ac/users), add a user only for Context7, such as `context7-bot@yourcompany.com`. Like any Workspace user, it usually takes a paid license seat. Do not use a person's account: Context7 can read everything this account can open, and the connection stops if the account is suspended or deleted.
   </Step>
   <Step title="Share your folders with that user">
     In Google Drive, share each folder with the Context7 user with **Viewer** access, or add the user to each Shared Drive as a **Viewer**.
@@ -192,7 +192,7 @@ A sync builds the new index next to the live one and swaps it in only when it fi
 
 ### Failures keep valid content
 
-- **One file fails** (for example it is larger than Drive's 10 MB export limit, or the LLM times out while extracting it): the last indexed version of that file stays in the results. The library page shows a warning, its logs list the file and the reason, the **Libraries** list in Settings shows the failed files, and the next sync tries it again.
+- **One file fails** (for example a Doc is larger than Drive's 10 MB export limit, or the LLM times out while extracting it): the last indexed version of that file stays in the results. The library page shows a warning, its logs list the file and the reason, the **Libraries** list in Settings shows the failed files, and the next sync tries it again.
 - **The whole sync fails** (for example Google refuses access because the Drive API is disabled, or Google cannot be reached): all live content stays as it was, and the error is shown in the library's logs.
 
 <Warning>
@@ -220,7 +220,7 @@ The **Libraries** list on the **Google** page (**Settings → Integrations → G
 | Synced | The last sync finished with no failed files. |
 | Syncing or Queued | A sync is running or waiting in the parse queue. |
 | N files failed | Some files could not be refreshed. Expand the row to see each file and the reason; their last indexed version is still served. |
-| Folder unavailable | A selected folder or Shared Drive is no longer shared with the connector, and its files were removed. |
+| Folder unavailable | A selected folder or Shared Drive is no longer shared with the Context7 identity, and its files were removed. |
 | Sync failed | The whole sync failed, so the library still serves its previous content. Expand the row for the error. |
 
 Expanding a row shows the most common failure reasons and up to 50 failed files, each linked to Drive. **Download CSV** exports every failed file. Problem libraries sort to the top, and **Needs attention** filters the list to them.
@@ -235,7 +235,7 @@ Expanding a row shows the most common failure reasons and up to 50 failed files,
 For a presentation:
 
 - A URL prefix `https://docs.google.com/presentation/d/<id>` matches every slide of that presentation.
-- A path rule matches the presentation's folder path, for example `/QA/Standards/Release review`, and applies to all its slides.
+- A path rule matches the presentation's path in Drive, for example `/QA/Standards/Release review` for the **Release review** presentation in the **Standards** folder, and applies to all its slides.
 
 ## Network access
 
@@ -260,8 +260,8 @@ With **Google account**, the admin's browser also opens `accounts.google.com` fo
 | "The private_key in the JSON key is damaged" | The key was cut or changed when it was copied. Paste the whole JSON file again, or create a new key. |
 | "Nothing is shared with … yet" | The credentials work, but no folder or Shared Drive is shared with the Context7 identity. Share one with **Viewer** access, then test again. |
 | "Google rejected the credentials" | Check the key. With delegation, check that the client ID is allowed the `drive.readonly` scope in the Admin console. |
-| "Google denied access … Check that the Drive API is enabled" | Enable the Google Drive API in the service account's project. |
-| "Google Slides API request failed (403 …)" | Enable the Google Slides API in the service account's project. |
+| "Google denied access … Check that the Drive API is enabled" | Enable the Google Drive API in the Google Cloud project you connected. |
+| "Google Slides API request failed (403 …)" | Enable the Google Slides API in the Google Cloud project you connected. |
 | "No longer available to the Google connector: folder …" | The folder was deleted, trashed or unshared, and its files were removed. Share it with the Context7 identity again, then click **Refresh**. |
 | "Google refused access to the selected folder …" | Check that the Drive API is enabled and that the connector can read the folder. Live content is kept until this is fixed. |
 | "The document is larger than the 10 MB Google Drive export limit" | Split the document. Its last indexed version stays available. |
