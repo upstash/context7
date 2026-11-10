@@ -14,7 +14,7 @@ description: "Release notes for the Context7 On-Premise image."
 - Members who sign in with SSO can be disabled, but not removed, in Context7. Remove them in your identity provider.
 - Only administrators can refresh Google Drive and Notion libraries, even when anonymous refresh is allowed.
 - Only administrators can import libraries. Scripts that import with a member's API key now get a 403 response.
-- The GitLab token is now sent only to `gitlab.com` and to the self-hosted GitLab host set in Workspace Settings › GitLab. Before, any host with "gitlab" in its name got it. On the first start, Context7 sets that host from your existing GitLab libraries when they all use one host. If they use several, the server log names them; set the right one in Workspace Settings › GitLab.
+- The GitLab token is now sent only to `gitlab.com` and to the self-hosted GitLab host set in Workspace Settings › GitLab. Before, any host with "gitlab" in its name got it. On the first start, Context7 sets that host from your existing GitLab libraries when they all use one host. If they use several, the server log names them; set the right one in Workspace Settings › GitLab. After the upgrade, check the host in Workspace Settings › GitLab, and clear it if it is not your GitLab server.
 - The first syncs after the upgrade can use more language model tokens: large Confluence pages that were skipped for their size are now indexed. Turning on the decision model, or leaving the Bedrock model empty in an Asia-Pacific region, also extracts each page again once.
 
 ### Added
