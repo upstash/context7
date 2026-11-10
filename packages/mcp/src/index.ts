@@ -300,10 +300,11 @@ function filterBatchSelfCancellations(body: unknown): {
 function createMcpServer(mcpContext: McpRequestContext, researchPreview: boolean) {
   const instructionsVariant = requestContext.getStore()?.instructionsVariant;
   const { instructions, toolMeta } = instructionsForVariant(instructionsVariant);
-  // While the A/B test runs, tools/list differs by arm, so no shared cache may reuse it.
-  const privateToolsList =
-    researchPreview ||
-    (TRANSPORT_TYPE === "http" && instructionsExperimentEnabled(instructionsExperiment));
+  // While the A/B test runs, the instructions (server/discover) and tools/list differ by arm,
+  // so no shared cache may reuse them across callers.
+  const experimentRunning =
+    TRANSPORT_TYPE === "http" && instructionsExperimentEnabled(instructionsExperiment);
+  const privateToolsList = researchPreview || experimentRunning;
   const serverInfo = {
     name: "Context7",
     title: SERVER_TITLE,
@@ -335,7 +336,7 @@ function createMcpServer(mcpContext: McpRequestContext, researchPreview: boolean
       "prompts/list": STATIC_LIST_CACHE_HINT,
       "resources/list": STATIC_LIST_CACHE_HINT,
       "resources/templates/list": STATIC_LIST_CACHE_HINT,
-      "server/discover": STATIC_LIST_CACHE_HINT,
+      "server/discover": experimentRunning ? PREVIEW_LIST_CACHE_HINT : STATIC_LIST_CACHE_HINT,
     },
     instructions: `${instructions}${researchPreview ? `\n\n${DOCS_FEEDBACK_INSTRUCTIONS}` : ""}`,
   };

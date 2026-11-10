@@ -823,6 +823,53 @@ describe("research preview", () => {
       expect(await toolsListCacheScope(keyTransport(keyFor("control")))).toBe("private");
     });
 
+    // server/discover carries the instructions, so a shared cache must not reuse it either.
+    async function discoverCacheScope(url: string, apiKey: string) {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream",
+          authorization: `Bearer ${apiKey}`,
+          "mcp-protocol-version": "2026-07-28",
+          "mcp-method": "server/discover",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "server/discover",
+          params: {
+            _meta: {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {},
+              "io.modelcontextprotocol/clientInfo": { name: "ab-test-client", version: "1.0.0" },
+            },
+          },
+        }),
+      });
+      const text = await response.text();
+      const json = text.trimStart().startsWith("{")
+        ? text
+        : text
+            .split("\n")
+            .filter((line) => line.startsWith("data:"))
+            .map((line) => line.slice(5))
+            .join("");
+      const result = (
+        JSON.parse(json) as { result?: { cacheScope?: string; instructions?: string } }
+      ).result;
+      return { scope: result?.cacheScope, instructions: result?.instructions };
+    }
+
+    test("marks server/discover private while the test runs", async () => {
+      for (const arm of ["control", "treatment"] as const) {
+        const discovered = await discoverCacheScope(abUrl, keyFor(arm));
+        expect(discovered.scope).toBe("private");
+        expect(discovered.instructions).toBe(instructionsForVariant(arm).instructions);
+      }
+      expect((await discoverCacheScope(httpUrl, "ctx7sk-local-test")).scope).toBe("public");
+    });
+
     test("counts instruction requests and tool calls per arm and client", async () => {
       const lines = (await (await fetch(abMetricsUrl)).text()).split("\n");
       const count = (metric: string, labels: string[]) =>
