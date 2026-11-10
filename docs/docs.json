@@ -94,6 +94,7 @@
                           "enterprise/integrations/other-git",
                           "enterprise/integrations/gerrit",
                           "enterprise/integrations/confluence",
+                          "enterprise/integrations/google-drive",
                           "enterprise/integrations/aws-bedrock"
                         ]
                       },
@@ -102,6 +103,7 @@
                         "pages": [
                           "enterprise/security/entra-sso",
                           "enterprise/security/oidc-sso",
+                          "enterprise/security/saml-sso",
                           "enterprise/security/library-access"
                         ]
                       },

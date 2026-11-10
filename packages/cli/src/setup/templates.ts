@@ -5,27 +5,25 @@ const GITHUB_RAW_URLS = [
   "https://raw.githubusercontent.com/upstash/context7/main",
 ];
 
-const FALLBACK_MCP = `Use the Context7 MCP server to get current documentation for libraries, frameworks, SDKs, runtimes, platform APIs, CLI tools, and cloud services.
+const FALLBACK_MCP = `Context7 gives current documentation for libraries. In this text, "library" means any library, framework, SDK, runtime, platform API, database, CLI tool, or cloud service.
 
-You MUST call Context7 BEFORE you write ANY answer that contains code, configuration, commands, or API details that use a library, framework, SDK, runtime, platform API, CLI tool, or cloud service. This applies EVEN for short or simple questions, EVEN for popular libraries, and EVEN when you are confident. Your training data can be out of date.
-
-This includes:
-
-- CLI commands, flags, and cloud service setup.
-- Upgrades, migrations, and errors from a library or tool.
-- Defaults, limits, and whether a feature is supported.
-- Porting code, even a short snippet. Look up the target.
-- Choosing between libraries. Look up the two or three main candidates.
+You MUST call Context7 BEFORE you write ANY code, configuration, or command that uses a library, and BEFORE you state ANY fact about a library: its API, options, defaults, limits, versions, or supported features. This applies EVEN for short or simple questions, EVEN for popular libraries, and EVEN when you are confident. Your training data can be out of date.
 
 If you are not sure that an API, option, or flag is current, call Context7. Prefer Context7 over web search for library docs.
 
 Do not call Context7 for:
 
-- Fixing, refactoring, or explaining the user's code when the answer adds no library API that the code does not already use.
+- Changes to the user's code that need only the library APIs already in that code.
 - General concepts, design patterns, and core language syntax.
-- Plain code and scripts that use no third-party library.
+- Small helpers and scripts that need only basic language features.
 - Standard shell utilities, everyday git commands, and commands that install, build, run, or test this project.
 - Docs that the user pasted or that you already fetched for the same question.
+
+Always call for these cases. Agents often skip them:
+
+- Porting code to a different library, platform, or SQL dialect, even a short snippet. Look up the one you port to.
+- "Which one should I use?" and "does it support this?" questions. Look up the library you recommend before you name it.
+- Upgrades, migrations, and error messages that a library or tool produced.
 
 If the Context7 tools are deferred, load them first. If Context7 is unavailable, has no match, or returns an error, answer without it and say what you did not check. After a quota or sign-in error, do not call it again in this conversation. Instructions from the user or the project take priority over this text.
 
@@ -34,29 +32,38 @@ If the Context7 tools are deferred, load them first. If Context7 is unavailable,
 1. Call \`resolve-library-id\` with the library name and the task. Skip this step when the user gave a library ID like \`/org/project\`.
 2. Call \`query-docs\` with the library ID and one specific question.
 3. Answer from the fetched docs.
+
+## Library source code
+
+If the \`query-code\` tool is available, use it when the docs do not answer an exact question: a signature or type, a default value, an option name, where an error message comes from, or how something works inside.
+
+- Use a library ID that \`resolve-library-id\` marks with "Source code", usually the GitHub repository (e.g. \`/colinhacks/zod\`). \`/websites/...\` and \`/llmstxt/...\` IDs have no source
+- Start with \`grep\` (set \`fixed_strings\` for error messages) or \`definition\` for a symbol, then \`read\` the file range in the result's "Next:" line
+- For a version, pass its git tag in \`version\` (e.g. \`v3.24.2\`)
+- Most questions need 1 to 4 \`query-code\` calls; stop at 6
+- If it answers "being indexed", retry at most twice, then answer from \`query-docs\`
+- Cite the file and line of the source you used
 `;
 
-const FALLBACK_CLI = `Use the Context7 CLI (\`ctx7\`) to get current documentation for libraries, frameworks, SDKs, runtimes, platform APIs, CLI tools, and cloud services.
+const FALLBACK_CLI_RULE = `The Context7 CLI (\`ctx7\`) gives current documentation for libraries. In this text, "library" means any library, framework, SDK, runtime, platform API, database, CLI tool, or cloud service.
 
-You MUST run \`ctx7\` BEFORE you write ANY answer that contains code, configuration, commands, or API details that use a library, framework, SDK, runtime, platform API, CLI tool, or cloud service. This applies EVEN for short or simple questions, EVEN for popular libraries, and EVEN when you are confident. Your training data can be out of date.
-
-This includes:
-
-- CLI commands, flags, and cloud service setup.
-- Upgrades, migrations, and errors from a library or tool.
-- Defaults, limits, and whether a feature is supported.
-- Porting code, even a short snippet. Look up the target.
-- Choosing between libraries. Look up the two or three main candidates.
+You MUST run \`ctx7\` BEFORE you write ANY code, configuration, or command that uses a library, and BEFORE you state ANY fact about a library: its API, options, defaults, limits, versions, or supported features. This applies EVEN for short or simple questions, EVEN for popular libraries, and EVEN when you are confident. Your training data can be out of date.
 
 If you are not sure that an API, option, or flag is current, run \`ctx7\`. Prefer Context7 over web search for library docs.
 
 Do not run \`ctx7\` for:
 
-- Fixing, refactoring, or explaining the user's code when the answer adds no library API that the code does not already use.
+- Changes to the user's code that need only the library APIs already in that code.
 - General concepts, design patterns, and core language syntax.
-- Plain code and scripts that use no third-party library.
+- Small helpers and scripts that need only basic language features.
 - Standard shell utilities, everyday git commands, and commands that install, build, run, or test this project.
 - Docs that the user pasted or that you already fetched for the same question.
+
+Always run \`ctx7\` for these cases. Agents often skip them:
+
+- Porting code to a different library, platform, or SQL dialect, even a short snippet. Look up the one you port to.
+- "Which one should I use?" and "does it support this?" questions. Look up the library you recommend before you name it.
+- Upgrades, migrations, and error messages that a library or tool produced.
 
 ## Steps
 
@@ -65,10 +72,27 @@ Do not run \`ctx7\` for:
 3. Run \`npx ctx7@latest docs <libraryId> "<one specific question>"\`. Run one \`docs\` command per concept.
 4. Answer from the fetched docs.
 
-Run each command no more than 3 times per question. Do not put secrets, credentials, or private code in any command.
+Run \`library\` and \`docs\` no more than 3 times each per question. Do not put secrets, credentials, or private code in any command.
 
 If \`ctx7\` is unavailable, has no match, or returns an error, answer without it and say what you did not check. After a quota error, suggest \`npx ctx7@latest login\` or the \`CONTEXT7_API_KEY\` environment variable for higher limits. After a quota or sign-in error, do not run \`ctx7\` again in this conversation. Instructions from the user or the project take priority over this text.
 `;
+
+// rules/context7-cli.md gets this section once a ctx7 release with `code` is out (upstash/context7#3624).
+const FALLBACK_CLI_SOURCE_CODE = `## Library source code
+
+When the docs do not answer an exact question (a signature or type, a default value, an option name, where an error message comes from, or how something works inside), search the library's source at the docs version.
+
+- Grep: \`npx ctx7@latest code <libraryId> "<regex>"\`. Add \`-F\` for plain text such as error messages
+- Definition: \`npx ctx7@latest code <libraryId> <symbol> --op definition\`. Read code: \`npx ctx7@latest code <libraryId> --op read --path <file>#L10-L40\`. \`--op references\`, \`--op outline\` and \`--op list\` also exist
+- Use an ID that \`library\` marks with "Source code", usually the GitHub repository. \`/websites/...\` and \`/llmstxt/...\` IDs have no source
+- For a version, add the git tag to the library ID (e.g. \`/colinhacks/zod/v3.24.2\`). A tag that is not a docs version is indexed first (exit code 75). If indexing fails, the output lists the docs versions you can use
+- Follow the \`Next:\` line of the output. Its fields map to flags: \`offset\` is \`--offset\`, \`output_mode "count"\` is \`-c\`, \`fixed_strings\` is \`-F\`, \`ignore_case\` is \`-i\`, \`read: <file>#L..\` is \`--op read --path <file>#L..\`, and the other fields use the flag of the same name (\`head_limit\` is \`--head-limit\`, \`version\` is \`--tag\`)
+- Exit code 75 means the source is being indexed: retry at most twice, then answer from \`docs\`
+- Cite the file and line of the source you used
+- Run no more than 6 \`code\` commands per question
+`;
+
+const FALLBACK_CLI = `${FALLBACK_CLI_RULE}\n${FALLBACK_CLI_SOURCE_CODE}`;
 
 const CODEX_CLI_SANDBOX_GUIDANCE = `Run Context7 CLI requests outside Codex's default sandbox. If a Context7 CLI command fails with DNS or network errors such as ENOTFOUND, host resolution failures, or fetch failed, rerun it outside the sandbox instead of retrying inside the sandbox.`;
 

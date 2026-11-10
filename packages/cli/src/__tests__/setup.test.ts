@@ -70,7 +70,7 @@ describe("getRuleContent", () => {
       vi.fn(() => Promise.resolve({ ok: false }))
     );
     const content = await getRuleContent("mcp", "claude");
-    expect(content).toContain("Context7 MCP");
+    expect(content).toContain("resolve-library-id");
     expect(content.length).toBeGreaterThan(100);
 
     vi.stubGlobal(
@@ -90,9 +90,11 @@ describe("getRuleContent", () => {
     expect(getBundledRuleContent("mcp", "claude")).toBe(
       await readFile(new URL("context7-mcp.md", rulesDir), "utf-8")
     );
-    expect(getBundledRuleContent("cli", "claude")).toBe(
-      await readFile(new URL("context7-cli.md", rulesDir), "utf-8")
-    );
+    // The bundled CLI rule also has the `ctx7 code` section, which the repo rule gets later.
+    const cliRule = await readFile(new URL("context7-cli.md", rulesDir), "utf-8");
+    const bundledCli = getBundledRuleContent("cli", "claude");
+    expect(bundledCli.startsWith(cliRule)).toBe(true);
+    expect(bundledCli).toContain("npx ctx7@latest code");
   });
 });
 

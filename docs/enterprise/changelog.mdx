@@ -3,11 +3,164 @@ title: "Changelog"
 description: "Release notes for the Context7 On-Premise image."
 ---
 
-<Update label="2026-09-16" description="v1.3.9">
+<Update label="2026-11-06" description="v2.0.0">
+
+### Upgrade notes
+
+- Back up the data volume before you upgrade. The first start runs a database migration automatically.
+- The `latest` image tag now points to 2.0.0. To stay on 1.3.9, pin the image to `1` or `1.3`.
+- Settings now have one page per section at `/settings/<section>`. Bookmarks to the old `?tab=` links redirect to the new pages.
+- The settings of a repository are now at `/projects/<owner>/<repo>/-/settings`.
+- Members who sign in with SSO can be disabled, but not removed, in Context7. Remove them in your identity provider.
+
+### Added
+
+- Added member management: administrators can change a member's role, disable or enable sign-in, and remove members who sign in with a password. Context7 does not let you demote, disable or remove the last active administrator.
+- Added support for SAML 2.0 single sign-on for on-premise installations.
+- Added a Google Drive connector, enabling ingestion and daily synchronization of Google Docs and Google Slides.
+- Added a Notion connector that indexes approved pages and database rows and syncs them daily.
+
+### Changed
+
+- Redesigned the on-premise web interface. Repositories, Members, Usage and Settings are top-level tabs, and each settings section has its own page. A new parse queue page shows running, waiting and recent parses. A new repository settings page lets administrators change the branch, folders and exclusions of a repository.
+- Updated the on-premise service image to run on Node.js 24 instead of Node.js 22.
+- Improved the accuracy of APIDOC context by grounding endpoints within their respective page sections and dropping irrelevant snippets.
+- Replaced the agent runtime that on-premise CodeDocs uses to write documentation.
+
+### Fixed
+
+- Fixed parser stalls that occurred when processing very large pages or long exclusion lists.
+- Improved the stability of the on-premise CodeDocs agent by isolating its process and applying timeouts to SDK requests.
+- Fixed an issue where large HTML conversion inputs could exhaust worker resources.
+- Fixed issues with context7.json folder traversal and case-insensitive enterprise path guards.
+- Fixed an issue that could lead to non-linear snippet token counting when processing looped AI outputs.
+
+### Security
+
+- Hardened security by binding GitLab tokens to exact hosts and restricting library import functionality to administrators only.
+- Improved data privacy by masking secrets in on-premise queries before they are sent to Context7 Cloud.
+- Enhanced data privacy by processing requests for restricted local libraries entirely on-premise, preventing their identifiers from being sent to Context7 Cloud.
+
+</Update>
+
+<Update label="2026-09-17" description="v1.3.9">
 
 ### Added
 
 - Added native AWS Bedrock support for Anthropic Claude inference, Amazon Titan embeddings, reranking, and source-code documentation.
+
+### Changed
+
+- Made AWS Bedrock model defaults region-aware.
+- Improved parser extraction cache reliability through versioning.
+
+### Fixed
+
+- Fixed multiple onboarding issues, including license key requirements, wizard defaults, GitLab token errors, and detailed parse status reporting.
+- Fixed several small issues in the setup flow.
+
+</Update>
+
+<Update label="2026-09-08" description="v1.3.8">
+
+### Added
+
+- Streamlined setting up MCP clients using the Context7 CLI, featuring a guided key flow and client-native configuration.
+
+### Removed
+
+- Removed the display of per-file token counts, model names, and LLM costs from the user interface.
+
+</Update>
+
+<Update label="2026-09-04" description="v1.3.7">
+
+No user-facing changes were recorded for this release.
+
+</Update>
+
+<Update label="2026-08-28" description="v1.3.6">
+
+### Fixed
+
+- Fixed custom model configuration for generated documentation indexing.
+
+</Update>
+
+<Update label="2026-08-27" description="v1.3.5">
+
+### Fixed
+
+- Fixed custom model configuration for code indexing.
+
+</Update>
+
+<Update label="2026-08-26" description="v1.3.4">
+
+### Added
+
+- Added automatic Git repository updates.
+
+### Changed
+
+- Improved UI layouts for automatic repository updates across different screen sizes.
+
+</Update>
+
+<Update label="2026-08-14" description="v1.3.3">
+
+### Added
+
+- Added Gerrit review publishing for generated documentation.
+
+### Changed
+
+- Changed snippet ordering to prioritize relevance over source type.
+- Reduced Redis logging verbosity and clarified snippet counts.
+
+</Update>
+
+<Update label="2026-08-11" description="v1.3.2">
+
+### Added
+
+- Added an official Helm chart for easier on-premise deployment.
+- You can now bound and cancel inference requests.
+
+### Changed
+
+- Enabled running the on-premise image as a non-root user.
+
+### Fixed
+
+- Provided more detailed reasons when a parse extracts no content.
+- Fixed an issue with source code indexing on the on-premise image.
+
+</Update>
+
+<Update label="2026-08-04" description="v1.3.1">
+
+### Added
+
+- You can now cancel in-flight and queued parse jobs.
+- Added support for parsing SCP-style SSH repository URLs.
+
+### Changed
+
+- UI actions now accurately reflect user roles and permissions.
+- Improved website crawler coverage.
+
+### Fixed
+
+- Ensured vector index integrity during parsing and querying.
+- Improved database resilience by preventing a single database issue from affecting all replicas.
+- Automatically dropped projects with invalid URLs to prevent them from getting stuck.
+
+### Security
+
+- Improved security by redacting Git tokens from logs, errors, and support bundles.
+- Enhanced security by requiring administrator privileges for certain API configuration test endpoints after initial setup.
+- Made support bundle generation admin-only by default.
 
 </Update>
 
