@@ -29,15 +29,13 @@ import {
   SERVER_ICONS,
   SERVER_TITLE,
   mcpServerCard,
+  ALWAYS_LOAD_META,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
-import { ALWAYS_LOAD_META, SERVER_INSTRUCTIONS } from "./lib/server-instructions.js";
+import { serverInstructions } from "./lib/server-instructions.js";
 import { aliasArgs, GLOBAL_ALIASES, QUERY_DOCS_ALIASES } from "./lib/tool-args.js";
-import {
-  DOCS_FEEDBACK_INSTRUCTIONS,
-  registerResearchPreviewTools,
-} from "./lib/research-preview-tools.js";
+import { registerResearchPreviewTools } from "./lib/research-preview-tools.js";
 import { installProcessShutdown } from "./lib/process-shutdown.js";
 import {
   forceFlushTelemetry,
@@ -293,7 +291,7 @@ function createMcpServer(mcpContext: McpRequestContext, researchPreview: boolean
       "resources/templates/list": STATIC_LIST_CACHE_HINT,
       "server/discover": STATIC_LIST_CACHE_HINT,
     },
-    instructions: `${SERVER_INSTRUCTIONS}${researchPreview ? `\n\n${DOCS_FEEDBACK_INSTRUCTIONS}` : ""}`,
+    instructions: serverInstructions(researchPreview),
   };
   const server = mcpInstrumentation
     ? mcpInstrumentation.createServer(serverInfo, serverOptions, mcpContext)

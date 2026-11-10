@@ -8,6 +8,9 @@ import { createDecipheriv } from "node:crypto";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { ALWAYS_LOAD_META } from "../src/lib/constants.js";
+import { serverInstructions } from "../src/lib/server-instructions.js";
+import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "../src/lib/tool-names.js";
 
 // End-to-end tests: the real built binary (dist/index.js) is exercised over
 // both transports (spawned HTTP server, spawned stdio child) by both protocol
@@ -681,15 +684,20 @@ describe("research preview", () => {
   const stdioTransport = (env: Record<string, string>) =>
     new StdioClientTransport({ command: process.execPath, args: [DIST], env });
 
-  async function withClient<T>(url: string, run: (client: Client) => Promise<T>): Promise<T> {
+  async function withTransport<T>(
+    transport: StreamableHTTPClientTransport | StdioClientTransport,
+    run: (client: Client) => Promise<T>
+  ): Promise<T> {
     const client = new Client({ name: "research-preview-test", version: "1.0.0" });
-    await client.connect(httpTransport(url));
+    await client.connect(transport);
     try {
       return await run(client);
     } finally {
       await client.close();
     }
   }
+  const withClient = <T>(url: string, run: (client: Client) => Promise<T>) =>
+    withTransport(httpTransport(url), run);
   const toolNames = (url: string) =>
     withClient(url, async (client) => (await client.listTools()).tools.map((tool) => tool.name));
 
@@ -708,42 +716,21 @@ describe("research preview", () => {
   });
 
   test("returns the same server instructions over HTTP and stdio, with the feedback request only under research preview", async () => {
-    const instructions = async (
-      transport: StreamableHTTPClientTransport | StdioClientTransport
-    ) => {
-      const client = new Client({ name: "research-preview-test", version: "1.0.0" });
-      await client.connect(transport);
-      try {
-        return client.getInstructions() ?? "";
-      } finally {
-        await client.close();
-      }
-    };
+    const instructions = (transport: StreamableHTTPClientTransport | StdioClientTransport) =>
+      withTransport(transport, async (client) => client.getInstructions() ?? "");
     const httpText = await instructions(httpTransport(httpUrl));
-    expect(httpText).toContain("Context7");
-    expect(httpText).not.toContain("${");
-    expect(httpText).not.toContain("submit-docs-feedback");
+    expect(httpText).toBe(serverInstructions(false));
     expect(await instructions(stdioTransport(childEnv))).toBe(httpText);
 
-    const preview = await instructions(httpTransport(`${httpUrl}?research_preview=1`));
-    expect(preview.startsWith(`${httpText}\n\n`)).toBe(true);
-    expect(preview).toContain("submit-docs-feedback");
-    // Claude Code cuts server instructions after 2048 characters
-    // (CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH), so the whole text must fit, preview included.
-    expect(preview.length).toBeLessThanOrEqual(2048);
+    expect(await instructions(httpTransport(`${httpUrl}?research_preview=1`))).toBe(
+      serverInstructions(true)
+    );
   });
 
   test("asks clients to load resolve-library-id and query-docs up front", async () => {
-    const client = new Client({ name: "research-preview-test", version: "1.0.0" });
-    await client.connect(httpTransport(httpUrl));
-    try {
-      const { tools } = await client.listTools();
-      for (const name of ["resolve-library-id", "query-docs"]) {
-        const tool = tools.find((t) => t.name === name);
-        expect(tool?._meta?.["anthropic/alwaysLoad"]).toBe(true);
-      }
-    } finally {
-      await client.close();
+    const tools = await withClient(httpUrl, async (client) => (await client.listTools()).tools);
+    for (const name of [RESOLVE_LIBRARY_ID_TOOL, QUERY_DOCS_TOOL]) {
+      expect(tools.find((t) => t.name === name)?._meta).toMatchObject(ALWAYS_LOAD_META);
     }
   });
 
