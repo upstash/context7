@@ -19,7 +19,11 @@ vi.stubGlobal(
   })
 );
 
-import { getBundledRuleContent, getRuleContent } from "../setup/templates.js";
+import {
+  getBundledMcpSkillFiles,
+  getBundledRuleContent,
+  getRuleContent,
+} from "../setup/templates.js";
 import {
   getMcpUrl,
   getOnPremMcpAuthStatus,
@@ -95,6 +99,14 @@ describe("getRuleContent", () => {
     const bundledCli = getBundledRuleContent("cli", "claude");
     expect(bundledCli.startsWith(cliRule)).toBe(true);
     expect(bundledCli).toContain("npx ctx7@latest code");
+  });
+
+  test("bundled context7-mcp skill matches the skill in the repo", async () => {
+    const skill = await readFile(
+      new URL("../../../../skills/context7-mcp/SKILL.md", import.meta.url),
+      "utf-8"
+    );
+    expect(getBundledMcpSkillFiles()).toEqual([{ path: "SKILL.md", content: skill }]);
   });
 });
 

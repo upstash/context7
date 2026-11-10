@@ -275,3 +275,46 @@ describe("Cursor marketplace manifest", () => {
     expect(cursor.owner.name).toBe(claude.owner.name);
   });
 });
+
+// Plugin installers copy directories, so each plugin keeps its own copy of the
+// Context7 guidance. These tests fail when a copy drifts from the source file.
+describe("Context7 guidance copies", () => {
+  const MCP_SKILL = "skills/context7-mcp/SKILL.md";
+  const MCP_SKILL_COPIES = [
+    "packages/opencode/skills/context7-mcp/SKILL.md",
+    "plugins/agent-plugins/context7/skills/context7-mcp/SKILL.md",
+    "plugins/antigravity/context7/skills/context7-mcp/SKILL.md",
+    "plugins/codex/context7/skills/context7-mcp/SKILL.md",
+    "plugins/copilot/context7/skills/context7-mcp/SKILL.md",
+    "plugins/cursor/context7/skills/context7-mcp/SKILL.md",
+  ];
+
+  const read = (relPath: string) => readFile(join(REPO_ROOT, relPath), "utf-8");
+  // Prettier adds a blank line before lists in .md files but not in .mdc files.
+  const normalize = (text: string) => text.replace(/\r\n/g, "\n").replace(/:\n\n- /g, ":\n- ");
+  // The call rule and lists: everything in a rule file before its steps.
+  const coreBlock = async (rulePath: string) => {
+    const rule = await read(rulePath);
+    const end = rule.indexOf("## Steps");
+    expect(end, `${rulePath} should have a ## Steps section`).toBeGreaterThan(0);
+    return normalize(rule.slice(0, end).trim());
+  };
+
+  test.each(MCP_SKILL_COPIES)("%s matches skills/context7-mcp/SKILL.md", async (copy) => {
+    expect(await read(copy)).toBe(await read(MCP_SKILL));
+  });
+
+  test.each([
+    MCP_SKILL,
+    "plugins/cursor/context7/rules/use-context7.mdc",
+    "plugins/context7-power/POWER.md",
+  ])("%s contains the call rule from rules/context7-mcp.md", async (file) => {
+    expect(normalize(await read(file))).toContain(await coreBlock("rules/context7-mcp.md"));
+  });
+
+  test("skills/find-docs/SKILL.md contains the call rule from rules/context7-cli.md", async () => {
+    expect(normalize(await read("skills/find-docs/SKILL.md"))).toContain(
+      await coreBlock("rules/context7-cli.md")
+    );
+  });
+});
