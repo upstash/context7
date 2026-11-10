@@ -280,7 +280,7 @@ const MAX_CLIENT_LABELS = 50;
  * most 50 distinct labels per process and counts later names as "other".
  */
 function cappedClientLabel(seen: Set<string>, name: string | undefined): string {
-  const client = /^[\w.@-]{1,40}/.exec(name?.trim() ?? "")?.[0].toLowerCase() ?? "unknown";
+  const client = /^[\w.-]{1,40}/.exec(name ?? "")?.[0].toLowerCase() ?? "unknown";
   if (seen.has(client)) return client;
   if (seen.size >= MAX_CLIENT_LABELS) return "other";
   seen.add(client);
