@@ -92,7 +92,7 @@ With the research preview on, the server also lists a `get-upgrade-guide` tool. 
 
 A long guide comes in pages, each in full detail and sized for MCP clients. Page 1 starts with what is needed to migrate (the summary, prerequisites, codemods, breaking changes and deprecations); when that part is longer than one page, it continues on the next pages, and page 1 says so. After it come behavior and config changes and the API changes, which the agent fetches when it needs them.
 
-The first request for a pair of versions can take a few minutes while Context7 prepares the guide; a guide is served only once it is complete. The tool then tells the agent when to call again. If a guide cannot be prepared, the tool says so and the agent uses `query-docs` instead; Context7 tries that pair again a few hours later.
+The first request for a pair of versions can take a few minutes while Context7 prepares the guide; a guide is served only once it is complete. The tool then tells the agent when to call again. If a guide cannot be prepared, the tool says so and the agent uses `query-docs` instead. After a wait from minutes to a day, depending on why it failed, a new request prepares the guide again; the tool's answer says when to ask.
 
 Guides are prepared for about 100 of the most used libraries. For any other library the tool answers that its guide is not prepared yet. The tool needs `@upstash/context7-mcp` 4.6.0 or later; reading the pages after the first needs 4.7.0 or later.
 
