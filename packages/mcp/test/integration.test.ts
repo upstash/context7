@@ -35,6 +35,7 @@ const CODE_BAD_TAG_QUERY = "force-code-bad-tag";
 const STUB_UPGRADE_GUIDE = "# Upgrading Next.js from 14 to 16";
 const PREPARING_FROM_VERSION = "13";
 const UNKNOWN_FROM_VERSION = "99";
+const UNAVAILABLE_FROM_VERSION = "12";
 /** A deployment without the endpoint answers a plain 404. */
 const MISSING_ENDPOINT_FROM_VERSION = "98";
 const CLIENT_IP_ASSERTION_KEY = "0123456789abcdef".repeat(4);
@@ -129,10 +130,28 @@ function startStubApi(): Promise<string> {
             message: "Indexing the source of next.js 13.0.0.",
           })
         );
+      } else if (fromVersion === UNAVAILABLE_FROM_VERSION) {
+        res.statusCode = 503;
+        res.setHeader("Content-Type", "application/json");
+        res.end(
+          JSON.stringify({
+            error: "guide_unavailable",
+            message: "The upgrade guide for Next.js 12.0.0 -> 16.0.0 could not be prepared.",
+          })
+        );
       } else if (fromVersion === MISSING_ENDPOINT_FROM_VERSION) {
         res.statusCode = 404;
         res.setHeader("Content-Type", "text/html");
         res.end("<html>Not Found</html>");
+      } else if (url.searchParams.get("page") === "9") {
+        res.statusCode = 400;
+        res.setHeader("Content-Type", "application/json");
+        res.end(
+          JSON.stringify({
+            error: "page_out_of_range",
+            message: "This guide has 3 pages; page 9 does not exist. Ask for a page from 1 to 3.",
+          })
+        );
       } else if (fromVersion === UNKNOWN_FROM_VERSION) {
         res.statusCode = 404;
         res.setHeader("Content-Type", "application/json");
@@ -733,7 +752,7 @@ describe("research preview", () => {
   });
 
   describe("get-upgrade-guide", () => {
-    const callGuide = (args: Record<string, string>) =>
+    const callGuide = (args: Record<string, string | number>) =>
       withClient(`${httpUrl}?research_preview=1`, (client) =>
         client.callTool({
           name: "get-upgrade-guide",
@@ -762,6 +781,7 @@ describe("research preview", () => {
         libraryId: "/vercel/next.js",
         fromVersion: "14.2.35",
         toVersion: "16",
+        page: "1",
       });
       expect(apiCall?.headers.authorization).toBe("Bearer ctx7sk-local-test");
       expect(apiCall?.headers["x-context7-source"]).toBe("mcp-server");
@@ -775,6 +795,52 @@ describe("research preview", () => {
       expect(apiCall?.query.has("toVersion")).toBe(false);
     });
 
+    test("sends the page when given", async () => {
+      const result = await callGuide({ fromVersion: "14", page: 2 });
+
+      expect(result.isError).toBeFalsy();
+      const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
+      expect(apiCall?.query.get("page")).toBe("2");
+    });
+
+    test("sends page 1 when no page is given", async () => {
+      await callGuide({ fromVersion: "14" });
+
+      const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
+      expect(apiCall?.query.get("page")).toBe("1");
+    });
+
+    test("accepts a page sent as a numeric string", async () => {
+      const result = await callGuide({ fromVersion: "14", page: "2" });
+
+      expect(result.isError).toBeFalsy();
+      const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
+      expect(apiCall?.query.get("page")).toBe("2");
+    });
+
+    test("rejects a page that is not a whole number without calling the API", async () => {
+      const result = await callGuide({ fromVersion: "14", page: "two" });
+
+      expect(result.isError).toBe(true);
+      expect(requests.some((request) => request.path === "/v2/version-upgrade-guide")).toBe(false);
+    });
+
+    test("returns the API's message for a page past the last as an answer, not an error", async () => {
+      const result = await callGuide({ fromVersion: "14", page: 9 });
+
+      expect(result.isError).toBeFalsy();
+      expect(resultText(result)).toBe(
+        "This guide has 3 pages; page 9 does not exist. Ask for a page from 1 to 3."
+      );
+    });
+
+    test("rejects a page below 1 without calling the API", async () => {
+      const result = await callGuide({ fromVersion: "14", page: 0 });
+
+      expect(result.isError).toBe(true);
+      expect(requests.some((request) => request.path === "/v2/version-upgrade-guide")).toBe(false);
+    });
+
     test("tells the agent to call again while the guide is prepared", async () => {
       const result = await callGuide({ fromVersion: PREPARING_FROM_VERSION });
 
@@ -782,6 +848,15 @@ describe("research preview", () => {
       expect(resultText(result)).toContain("being prepared");
       expect(resultText(result)).toContain("after 90 seconds");
       expect(resultText(result)).toContain("Indexing the source of next.js 13.0.0.");
+    });
+
+    test("returns the API's 503 guide_unavailable message as an answer, not an error", async () => {
+      const result = await callGuide({ fromVersion: UNAVAILABLE_FROM_VERSION });
+
+      expect(result.isError).toBeFalsy();
+      expect(resultText(result)).toBe(
+        "The upgrade guide for Next.js 12.0.0 -> 16.0.0 could not be prepared."
+      );
     });
 
     test("returns the API's 404 message as an answer, not an error", async () => {
