@@ -98,6 +98,8 @@ Confluence entries reuse the site URL and API token you set under **Settings →
 
 Any entry can set an `authority` block. It assigns [authority labels](/enterprise/authority-labels) to the library's content, the same way the **Authority** section of the library settings does.
 
+GitOps saves these rules also while authority labels are off, so you can prepare them before you turn the feature on. The rules change query results only after an admin turns on **Enable authority labels** under **Workspace Settings → Access → Authority labels**. The manifest declares rules only. Classes and the **Enable authority labels** setting stay in the dashboard.
+
 ```yaml repos.yaml
 repos:
   - url: https://github.com/acme/qa-handbook
@@ -115,9 +117,10 @@ repos:
 - `default` sets the library rule: a class name, or `excluded` to hide the whole library.
 - Each item in `rules` has exactly one `prefix` or `glob`, and exactly one `class` or `excluded: true`.
 - A pattern that starts with `https://` matches the page URL. Any other pattern matches the page path.
+- A prefix matches whole path segments: `/drafts` matches `/drafts/plan` but not `/drafts-old/plan`.
 - The usual precedence applies: an exclusion always wins, then the most specific rule wins.
 
-Classes are referenced by name, without regard to case. If a name does not match a class in **Teamspace Settings → Access → Authority Classes**, the sync reports that entry as failed and names the unknown class. The sync changes none of that library's rules, and it tries again on the next sync. Other entries still sync.
+Classes are referenced by name, without regard to case. If a name does not match a class under **Workspace Settings → Access → Authority labels**, the sync reports that entry as failed and names the unknown class. The sync changes none of that library's rules, and it tries again on the next sync. Other entries still sync.
 
 Rules from the manifest work together with rules made in the dashboard:
 
