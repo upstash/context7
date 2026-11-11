@@ -356,16 +356,35 @@ export async function fetchLibraryCode(
 }
 
 /**
- * The endpoint's error codes that answer the agent's request, not failures: a library without
- * a guide, an unknown version, a page past the last, or a guide that could not be prepared.
- * The agent sees the API's message, which says what to do next.
+ * The endpoint's error codes that answer the agent's request, not failures, with their telemetry
+ * outcome: a library without a guide or an unknown version (not found), a page past the last
+ * (invalid), or a guide that cannot be prepared for now (unavailable). The agent sees the API's
+ * message, which says what to do next, without `isError`.
  */
-const UPGRADE_GUIDE_ANSWERS = new Set([
-  "library_not_prepared",
-  "version_not_found",
-  "page_out_of_range",
-  "guide_unavailable",
+const UPGRADE_GUIDE_ANSWERS: ReadonlyMap<string, ToolCallOutcome> = new Map([
+  ["library_not_prepared", "not_found"],
+  ["version_not_found", "not_found"],
+  ["page_out_of_range", "invalid"],
+  ["guide_unavailable", "unavailable"],
 ]);
+
+/**
+ * The tool's answer to an error response of the upgrade guide endpoint that answers the request
+ * (UPGRADE_GUIDE_ANSWERS), or undefined for any other error. A guide unavailable for now keeps
+ * the API's message, which says when the pair is tried again, and adds the Retry-After the
+ * response may carry.
+ */
+export function upgradeGuideAnswer(
+  json: { error?: string; message?: string } | undefined,
+  retryAfterHeader: string | null
+): ToolAnswer | undefined {
+  const outcome = json?.error ? UPGRADE_GUIDE_ANSWERS.get(json.error) : undefined;
+  if (!json?.error || !outcome) return undefined;
+  const text = json.message ?? json.error;
+  if (outcome !== "unavailable" || !retryAfterHeader) return { text, outcome };
+  const seconds = retryAfterSeconds(undefined, retryAfterHeader);
+  return { text: `${text}\n\nTry this version pair again after ${seconds} seconds.`, outcome };
+}
 
 /**
  * Fetches the upgrade guide for a library between two versions
@@ -397,8 +416,8 @@ export async function fetchUpgradeGuide(
         // parseErrorResponse can still read the body of any other error.
         if (!response.ok) {
           const json = await readJson<{ error?: string; message?: string }>(response.clone());
-          if (json?.error && UPGRADE_GUIDE_ANSWERS.has(json.error))
-            return { text: json.message ?? json.error, outcome: "not_found" };
+          const answer = upgradeGuideAnswer(json, response.headers.get("retry-after"));
+          if (answer) return answer;
         }
         switch (response.status) {
           // The source code is being indexed or the guide is being prepared; the agent calls again later.

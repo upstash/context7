@@ -18,4 +18,9 @@ export const MCP_TOOL_NAMES = [
 ] as const;
 
 export type McpTool = (typeof MCP_TOOL_NAMES)[number];
-export type ToolCallOutcome = "error" | "not_found" | "success";
+/**
+ * A tool call's telemetry outcome. Only `error` marks the MCP operation as failed and is shown to
+ * the agent as `isError`; `invalid` (a request the API refused, such as a page past the last) and
+ * `unavailable` (the API cannot answer it for now) are answers the agent acts on.
+ */
+export type ToolCallOutcome = "error" | "invalid" | "not_found" | "success" | "unavailable";
