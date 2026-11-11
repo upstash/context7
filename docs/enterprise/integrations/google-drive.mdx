@@ -6,7 +6,7 @@ description: "Sync Google Docs and Google Slides from Drive folders, Shared Driv
 
 Context7 can sync Google Docs and Google Slides from Google Drive and serve them like any other library. Google Drive stays the source of truth: a daily sync picks up edits, and files that are removed or no longer shared leave the results.
 
-An admin connects Google once under **Settings → Integrations → Google**. Then an admin chooses which folders, Shared Drives, Docs and presentations to sync from **Add → Google Drive**, **Google Docs** or **Google Slides**. All three use the same connection. Only the selected items, and the Docs and presentations under selected folders, are indexed.
+An admin connects Google once under **Workspace Settings › Google**. Then an admin chooses which folders, Shared Drives, Docs and presentations to sync from **Add source → Google Drive**, **Google Docs** or **Google Slides**. All three use the same connection. Only the selected items, and the Docs and presentations under selected folders, are indexed.
 
 <Note>
 Google Docs and Google Slides are supported. Spreadsheets, PDFs and other file types in a selected folder are skipped. The picker marks them as not supported.
@@ -32,7 +32,7 @@ There are three ways to give Context7 that identity:
 If your security team blocks service account keys and sharing outside your domain, use **Google account**. It needs no key and no domain-wide delegation, and nothing is shared outside your organization.
 </Tip>
 
-Open **Settings → Integrations → Google** and choose the method under **Authentication**. Each method has a **Set up Google Cloud** panel with the steps below. Enter your project ID there, and the panel fills it into the commands.
+Open **Workspace Settings › Google** and choose the method under **Authentication**. Each method has a **Set up Google Cloud** panel with the steps below. Enter your project ID there, and the panel fills it into the commands.
 
 ## Google account
 
@@ -184,7 +184,7 @@ Every sync lists the selected folders again and compares each file with the last
 | A file was edited, renamed or moved inside the selection | It is read and indexed again. |
 | A file did not change | Its indexed content is kept as it is. No LLM or embedding calls are made for it. |
 | A file was deleted, trashed, moved out of the selection, or unshared | It leaves the results. |
-| A selected folder or Shared Drive was deleted, trashed, or unshared | All its files leave the results, and the library page and the **Libraries** list in Settings show a warning. Share it again to restore them. |
+| A selected folder or Shared Drive was deleted, trashed, or unshared | All its files leave the results, and the library page and the **Libraries** list in **Workspace Settings › Google** show a warning. Share it again to restore them. |
 | A file was emptied, or has nothing to index | It leaves the results. It is checked again when it changes. |
 | A new file appeared in a selected folder | It is indexed. |
 
@@ -192,7 +192,7 @@ A sync builds the new index next to the live one and swaps it in only when it fi
 
 ### Failures keep valid content
 
-- **One file fails** (for example a Doc is larger than Drive's 10 MB export limit, or the LLM times out while extracting it): the last indexed version of that file stays in the results. The library page shows a warning, its logs list the file and the reason, the **Libraries** list in Settings shows the failed files, and the next sync tries it again.
+- **One file fails** (for example a Doc is larger than Drive's 10 MB export limit, or the LLM times out while extracting it): the last indexed version of that file stays in the results. The library page shows a warning, its logs list the file and the reason, the **Libraries** list in **Workspace Settings › Google** shows the failed files, and the next sync tries it again.
 - **The whole sync fails** (for example Google refuses access because the Drive API is disabled, or Google cannot be reached): all live content stays as it was, and the error is shown in the library's logs.
 
 <Warning>
@@ -203,7 +203,7 @@ Context7 retries Google API quota errors with exponential backoff and limits how
 
 ## Scheduled sync
 
-Google Drive libraries sync every day at 03:00 server time by default. Under **Sync schedule** on the **Google** page (**Settings → Integrations → Google**), you can:
+Google Drive libraries sync every day at 03:00 server time by default. Under **Sync schedule** on the **Google** page (**Workspace Settings › Google**), you can:
 
 - turn the scheduled sync off,
 - change the schedule: pick a preset such as **Every 6 hours**, or enter a cron expression such as `0 */6 * * *`,
@@ -215,7 +215,7 @@ Only an admin can refresh a Google Drive library, even when **Refresh repositori
 
 ## Monitor libraries
 
-The **Libraries** list on the **Google** page (**Settings → Integrations → Google**) shows every Google Drive library with its selection, its last sync, and a status:
+The **Libraries** list on the **Google** page (**Workspace Settings › Google**) shows every Google Drive library with its selection, its last sync, and a status:
 
 | Status | Meaning |
 | --- | --- |

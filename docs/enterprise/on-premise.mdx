@@ -57,13 +57,13 @@ Open `http://localhost:3000` in your browser. On first launch, the setup wizard 
 2. **Embedding Provider** - Use the same provider as your LLM, or configure a separate one for embeddings.
 3. **Git Tokens** - Add a GitHub and/or GitLab token for the platforms you use.
 
-All configuration is stored locally in the embedded database and can be updated later from the Settings page.
+All configuration is stored locally in the embedded database and can be updated later in Workspace Settings.
 
 </Step>
 
 <Step title="Ingest your first repository">
 
-From the dashboard, click **Add Repository** and enter a GitHub or GitLab URL. Once ingestion completes, your private docs are ready to query.
+From the dashboard, click **Add source**, choose **GitHub** or **GitLab**, and enter the repository URL. Once ingestion completes, your private docs are ready to query.
 
 You can also add libraries via the REST API with a personal API key (see [Authentication](/enterprise/api/authentication)):
 
@@ -201,14 +201,14 @@ These are set in your `docker-compose.yml` or `.env` file before starting the co
 | `MAX_FILES`, `PARSE_CONCURRENCY`, `PARSE_TIMEOUT`, `NOTION_MAX_PAGES`, `GOOGLE_DRIVE_MAX_FILES` | No | Default values for the [parsing settings](#parsing-settings). A value saved in the dashboard wins |
 
 <Note>
-Set AI providers, models, provider keys, and git tokens in the setup wizard. You can change them later on the Settings page. There are no environment variables for git tokens (such as `GITHUB_TOKEN` or `GITLAB_TOKEN`) or for provider API keys.
+Set AI providers, models, provider keys, and git tokens in the setup wizard. You can change them later in Workspace Settings. There are no environment variables for git tokens (such as `GITHUB_TOKEN` or `GITLAB_TOKEN`) or for provider API keys.
 
 AWS Bedrock is the exception. It can also authenticate with `AWS_BEARER_TOKEN_BEDROCK`, the standard AWS credential variables, a mounted shared profile, or a workload IAM role. See [AWS Bedrock](/enterprise/integrations/aws-bedrock).
 </Note>
 
 ### AI Provider Settings
 
-Configured via the **Settings** page in the web UI.
+Configured under **Workspace Settings › AI models** in the web UI.
 
 | Setting | Description |
 |---|---|
@@ -258,7 +258,7 @@ Optionally, a decision model can classify pages, check for duplicate snippets, a
 
 ### Parsing Settings
 
-Change these in **Settings → Indexing → Parsing**. Some settings also have an environment variable. The variable only sets the default; a value saved in the dashboard wins.
+Change these in **Workspace Settings › Parsing**. Some settings also have an environment variable. The variable only sets the default; a value saved in the dashboard wins.
 
 The three count limits also have a **No limit** option: files per library, Notion pages, and Google Drive files. Setting their environment variable to `0` does the same. Without a limit, a very large source can take a long time and make many LLM calls. File timeout and the concurrency settings always have a limit.
 
@@ -288,13 +288,13 @@ When a change takes effect:
 
 ### Git Access Tokens
 
-Configured via the **Settings** page in the web UI.
+Configured under **Workspace Settings › GitHub**, **GitLab** and **Other Git** in the web UI.
 
 | Setting | Description |
 |---|---|
 | GitHub Token | GitHub Personal Access Token. Required for GitHub repositories |
 | GitLab Token | GitLab token. Required for GitLab repositories |
-| GitLab **Server URL** | Your self-hosted GitLab host, such as `gitlab.your-company.com`. In the GitLab section, select **Self-hosted**, then enter it in **Server URL** |
+| GitLab **Server URL** | Your self-hosted GitLab host, such as `gitlab.your-company.com`. In the **GitLab** row, select **Self-managed**, then enter it in **Server URL** |
 
 You only need tokens for the platforms you use. If you only parse GitLab repos, you don't need a GitHub token, and vice versa. Create tokens with `repo` scope (GitHub) or `read_repository` scope (GitLab) for private repository access.
 
@@ -302,7 +302,7 @@ The GitLab token is sent only to `gitlab.com` and the host in **Server URL**.
 
 ## Access Control
 
-Admin credentials are set during first login (default: `admin` / `admin`). Change these immediately after setup via **Settings > Change Credentials**.
+Admin credentials are set during first login (default: `admin` / `admin`). Change these immediately after setup via **Personal settings > Password > Change password**.
 
 Who can do what by default:
 
@@ -310,7 +310,7 @@ Who can do what by default:
 - **Signed-in members and their API keys** can parse and refresh libraries. To re-parse or replace an existing library, a member needs read access to it under the [library access rules](/enterprise/security/library-access).
 - **Anonymous callers** (no session and no API key) can do none of these.
 
-Delete, cancel parse, and support bundle downloads are for admins only. Use the switches below to open some actions to anonymous callers, and to require authentication for MCP and API search.
+Delete, cancel parse, and support bundle downloads are for admins only. Use the switches in **Workspace Settings › Authorization** to open some actions to anonymous callers, and to require authentication for MCP and API search.
 
 <Frame>
   ![The Non-admin permissions card with the anonymous parse, refresh, support bundle, and delete switches off](/images/enterprise/settings/non-admin-permissions.png)
@@ -318,17 +318,17 @@ Delete, cancel parse, and support bundle downloads are for admins only. Use the 
 
 | Permission | Default | Description |
 |---|---|---|
-| Allow anonymous parse | Off | Allow anonymous callers to trigger parsing |
-| Allow anonymous refresh | Off | Allow anonymous callers to refresh libraries. Notion and Google Drive libraries stay admin-only |
-| Allow anonymous delete | Off | Allow anonymous callers and members to delete libraries and cancel parses |
-| Allow anonymous support bundle | Off | Allow anonymous callers and members to download the support bundle |
+| Parse repositories | Off | Allow anonymous callers to trigger parsing |
+| Refresh repositories | Off | Allow anonymous callers to refresh libraries. Notion and Google Drive libraries stay admin-only |
+| Delete repositories | Off | Allow anonymous callers and members to delete libraries and cancel parses |
+| Download support bundle | Off | Allow anonymous callers and members to download the support bundle |
 | Require MCP authentication | Off | Require a session or personal API key for `/mcp`, `/api/v2`, and the library, log, and queue read endpoints. See [Authentication](/enterprise/api/authentication#anonymous-access) |
 
 <Note>
 Earlier versions allowed anonymous parse and refresh by default. If you never saved these switches, they are off after an upgrade. Scripts that call these endpoints without an API key then get `403`. Add a personal API key to the script, or turn the switch on.
 </Note>
 
-When MCP authentication is enabled, each user creates personal keys from **Personal Settings > API Keys**. Clients send the key as `Authorization: Bearer <key>`.
+When MCP authentication is enabled, each user creates personal keys from **Personal settings > API keys**. Clients send the key as `Authorization: Bearer <key>`.
 
 ### Recover admin access
 
@@ -338,7 +338,7 @@ Lost the admin password, or locked out by a broken SSO setup? Run the `reset-pas
 
 Policies let you control which public documentation from the Context7 cloud is accessible to your on-premise instance. They do not affect locally parsed on-premise content.
 
-Access Policies from **Settings > Policies** tab. Requires admin login and a valid `LICENSE_KEY`.
+Open **Workspace Settings › Content policies**. Requires admin login and a valid `LICENSE_KEY`.
 
 For details on source type toggles and library filters, see [Customizing What Is Retrieved](/security/data-privacy#customizing-what-is-retrieved).
 

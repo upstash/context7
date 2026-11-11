@@ -166,7 +166,7 @@ Configure your load balancer or orchestrator readiness check to use `GET /api/re
 
 Start as many replicas as you need behind the load balancer. Every replica is identical: it serves API, MCP, and search traffic **and** pulls parse jobs from the shared queue, so adding replicas grows both query capacity and indexing throughput at once. Work is distributed automatically and no replica is special.
 
-If a large re-index competes with query latency on a replica, lower **Max concurrent parses** (Settings > Indexing) so each replica runs fewer parses at a time, or give replicas more CPU and memory.
+If a large re-index competes with query latency on a replica, lower **Max concurrent parses** (Workspace Settings › Parsing) so each replica runs fewer parses at a time, or give replicas more CPU and memory.
 
 </Step>
 
@@ -328,7 +328,7 @@ A Helm chart renders all of this from a few values (single replica by default, `
 
 If you already run a single container, a built-in command copies your existing SQLite data and LanceDB vectors into PostgreSQL, so you do not have to re-index your libraries or re-embed anything. It reads the data directory from your single container and writes to the target PostgreSQL.
 
-The admin UI shows your current storage mode and the exact migration command under **Settings > Scaling**:
+The admin UI shows your current storage mode and the exact migration command under **Workspace Settings › Scaling**:
 
 <Frame>
   ![Migration helper under Settings, Scaling](/images/scaling-settings.png)
@@ -428,7 +428,7 @@ Redeploy with `DATABASE_URL` and `ENCRYPTION_KEY` set on every replica, followin
 
 </Steps>
 
-After redeploying, **Settings > Scaling** confirms the deployment is running in multi-replica mode:
+After redeploying, **Workspace Settings › Scaling** confirms the deployment is running in multi-replica mode:
 
 <Frame>
   ![Multi-replica mode confirmed](/images/scaling-multi-replica.png)

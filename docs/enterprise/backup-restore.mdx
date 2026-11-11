@@ -31,7 +31,7 @@ A backup archive holds the database and, if you do not set `ENCRYPTION_KEY`, the
 
 ## Configuring Backups
 
-Open **Settings → Backup** in the dashboard. Choose a destination, set a schedule, and save.
+Open **Workspace Settings › Backup** in the dashboard. Choose a destination, set a schedule, and save.
 
 ### Local or Network Path
 
@@ -116,7 +116,7 @@ Backups from earlier versions do not record the key and restore without this che
 
 ### From the dashboard
 
-Open **Settings → Backup**, find the backup in the list, and click the restore icon. Context7 validates the archive, shows what it contains (created date, libraries, schema version), and asks you to confirm. It then stages the restore and restarts to apply it, because the live database and vector index cannot be swapped while the server is running. Under Docker or Kubernetes the server comes back automatically; otherwise start it again after it stops.
+Open **Workspace Settings › Backup**, find the backup in the list, and click the restore icon. Context7 validates the archive, shows what it contains (created date, libraries, schema version), and asks you to confirm. It then stages the restore and restarts to apply it, because the live database and vector index cannot be swapped while the server is running. Under Docker or Kubernetes the server comes back automatically; otherwise start it again after it stops.
 
 ### Offline with the CLI
 
