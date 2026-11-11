@@ -255,6 +255,10 @@ Configured in **Settings → Indexing → Parsing**. For the settings with an en
 
 The three count limits (files per library, Notion pages, Google Drive files) also offer **No limit**. Setting their environment variable to `0` does the same. Without a limit, a very large source can take a long time and make many LLM calls. File timeout and the concurrency settings always have a bound.
 
+<Frame>
+  ![The Max files per library setting with its list open and No limit selected](/images/enterprise/settings/parsing-no-limit.png)
+</Frame>
+
 The settings with an environment variable apply at the next parse on every replica. The first three apply at once on the replica that saves them; in a [multi-replica deployment](/enterprise/deployment/scaling), other replicas pick them up when they restart.
 
 | Setting | Default | Range | Env fallback | Description |
@@ -267,6 +271,10 @@ The settings with an environment variable apply at the next parse on every repli
 | File timeout | `500` s | 30–3600 s | `PARSE_TIMEOUT` | How long one file may take. The parse skips a file that takes longer |
 | Max pages per Notion library | `10000` | 1–100000, or no limit | `NOTION_MAX_PAGES` | A Notion selection with more pages is refused |
 | Max files per Google Drive library | `10000` | 1–100000, or no limit | `GOOGLE_DRIVE_MAX_FILES` | A Google Drive selection with more Docs and Slides is refused |
+
+<Frame>
+  ![The Parsing settings page with concurrency, timeout, and file limit settings](/images/enterprise/settings/parsing-settings.png)
+</Frame>
 
 ### Git Access Tokens
 
@@ -287,6 +295,10 @@ The GitLab token is sent only to `gitlab.com` and the host in **Server URL**.
 Admin credentials are set during first login (default: `admin` / `admin`). Change these immediately after setup via **Settings > Change Credentials**.
 
 Signed-in members and their personal API keys can always parse and refresh libraries. Delete, cancel parse, and support bundle downloads are for admins only. The Settings page lets you open some of these operations to anonymous callers (no session and no API key), and control MCP and API search access.
+
+<Frame>
+  ![The Non-admin permissions card with the anonymous parse, refresh, support bundle, and delete switches off](/images/enterprise/settings/non-admin-permissions.png)
+</Frame>
 
 | Permission | Default | Description |
 |---|---|---|

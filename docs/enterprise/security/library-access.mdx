@@ -63,6 +63,10 @@ Turn it on to flip your instance to deny by default. Members then see only the l
 
 A namespace rule covers every library under a path, so you can govern a whole organization in one step. In the **Library Access** section, switch to **Namespaces** and choose **Add rule**. Enter a prefix such as `/acme` or `/acme/backend`, then set **Everyone** or **Restricted** and add groups and users the same way as for a library.
 
+<Frame>
+  ![The Namespaces view listing the /acme and /acme-internal rules with their access and granted groups](/images/enterprise/library-access/05-namespace-rules.png)
+</Frame>
+
 A prefix matches whole path segments: `/acme` covers `/acme/payments`, but not `/acme-labs/payments`.
 
 Context7 decides each library in this order:
@@ -70,6 +74,12 @@ Context7 decides each library in this order:
 1. The library's own rule, if it has one.
 2. The namespace rule with the longest matching prefix.
 3. The workspace default.
+
+In the **Libraries** view, a library that takes its access from a namespace rule shows the rule under its access, for example `via /acme/*`.
+
+<Frame>
+  ![The Libraries view showing libraries restricted through the /acme and /acme-internal namespace rules](/images/enterprise/library-access/06-namespace-inherited.png)
+</Frame>
 
 ## How it applies
 
@@ -91,5 +101,9 @@ Open **Workspace Settings** and go to **Audit log** to review library access act
 
 - Changes to the workspace default, library rules, and namespace rules, with the admin who made them.
 - Access denials: a documentation request over MCP, or a dashboard or `/api/projects/...` request, for a library the caller cannot access. Each entry shows the user (or `anonymous`) and the library.
+
+<Frame>
+  ![The audit log listing access denials and namespace and library rule changes](/images/enterprise/library-access/07-audit-log.png)
+</Frame>
 
 Successful queries are not logged. Context7 keeps the most recent 2,000 access denials and deletes older ones. Rule changes are not deleted. The page shows the latest 200 entries.
