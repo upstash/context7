@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.11.0
+
+### Minor Changes
+
+- 2111b92: Add the `query-code` MCP tool and the `ctx7 code` command. They search and read a library's source code at the version its docs describe: `grep` with ripgrep's options, plus `definition`, `references`, `outline`, `read` and `list`. `ctx7 library` marks the libraries whose source is searchable, and `resolve-library-id` does so with the research preview on. The MCP tool is part of the research preview: it is listed only with `--research-preview`, `CONTEXT7_RESEARCH_PREVIEW=1` or `?research_preview=1`.
+
+## 0.10.0
+
+### Minor Changes
+
+- 9783083: Add Pi to `ctx7 setup` and `ctx7 remove`. `ctx7 setup --pi` writes the Context7 MCP server to `~/.pi/agent/mcp.json` (or `.pi/mcp.json` with `--project`) with `direct` tool exposure. It also adds the Context7 rule to Pi's context file and installs the skill in `~/.agents/skills`. Pi reads one context file per folder, so setup adds the rule to an existing `AGENTS.override.md` or `CLAUDE.md` instead of creating an `AGENTS.md` that would hide it. Setup honors `PI_CODING_AGENT_DIR`, and with `--oauth` it prints the `pi mcp login context7` step.
+
+### Patch Changes
+
+- 505b812: Keep your comments when `ctx7 setup` or `ctx7 remove` touches an MCP config. `.vscode/mcp.json` and `.cursor/mcp.json` are JSONC, and the CLI accepted them for reading but wrote them back through `JSON.stringify`, so every comment and any layout you kept in the file was silently dropped. The Context7 entry is now added or removed with an in-place edit that leaves the rest of the file alone, comments included. A file the edit cannot handle safely, such as one whose trailing comma would be stranded, is still rewritten whole as before.
+- db66f7a: Fix `ctx7 setup` and `ctx7 remove` leaving the Context7 section in an AGENTS.md or GEMINI.md that has CRLF line endings.
+- ff0422f: Add a T3 Code setup choice and --t3 setup/remove flag that configure its Claude Code and Codex providers.
+
 ## 0.9.0
 
 ### Minor Changes

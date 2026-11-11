@@ -44,7 +44,7 @@
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
     "typescript": "catalog:",
-    "vite": "^8.3.4",
+    "vite": "^8.3.5",
     "vite-plugin-singlefile": "^2.3.3",
     "vitest": "catalog:"
   },

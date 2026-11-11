@@ -39,11 +39,27 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function connect(era: "modern" | "legacy" = "modern") {
+type ElicitAnswer = { action: "accept" | "decline" | "cancel"; content?: Record<string, string> };
+
+/** `answerForm` makes the client declare form elicitation and answer each form with it. */
+async function connect(
+  era: "modern" | "legacy" = "modern",
+  answerForm?: (message: string) => ElicitAnswer
+) {
   const client = new Client(
     { name: "test", version: "1.0.0" },
-    era === "modern" ? { versionNegotiation: { mode: { pin: "2026-07-28" } } } : undefined
+    era === "modern"
+      ? {
+          versionNegotiation: { mode: { pin: "2026-07-28" } },
+          ...(answerForm ? { capabilities: { elicitation: { form: {} } } } : {}),
+        }
+      : undefined
   );
+  if (answerForm) {
+    client.setRequestHandler("elicitation/create", async (request) =>
+      answerForm(request.params.message)
+    );
+  }
   await client.connect(
     new StreamableHTTPClientTransport(new URL("https://admin.mcp.context7.com/mcp"), {
       requestInit: {
@@ -114,7 +130,7 @@ describe("destructive tools", () => {
       arguments: { teamspace: TS, library_id: "/acme/docs", confirm: "acme" },
     });
     expect(refused.isError).toBe(true);
-    expect(text(refused)).toMatch(/Refused.*Ask the user/);
+    expect(text(refused)).toMatch(/Not done.*Ask the user/);
     expect(apiCalls.some((c) => c.method === "DELETE")).toBe(false);
 
     const removed = await client.callTool({
@@ -128,11 +144,10 @@ describe("destructive tools", () => {
     });
   });
 
-  // Deleting a whole site cannot be undone, so it stays in the dashboard.
-  test("there is no tool that deletes a Docs7 or Ask site", async () => {
+  // Deleting a whole Docs7 site cannot be undone, so it stays in the dashboard.
+  test("there is no tool that deletes a Docs7 site", async () => {
     const names = (await (await connect()).listTools()).tools.map((t) => t.name);
     expect(names).not.toContain("docs7_delete_site");
-    expect(names).not.toContain("ask_delete_site");
   });
 
   test("docs7_get_site skips agent usage for a CLI site, which has no agent", async () => {
@@ -172,6 +187,88 @@ describe("destructive tools", () => {
       method: "DELETE",
       path: `/v2/teamspaces/${TS}/members/m-1`,
     });
+  });
+});
+
+describe("a client that can show forms asks the user, not the model", () => {
+  const remove = (client: Client) =>
+    client.callTool({
+      name: "remove_library",
+      // The agent's confirm is ignored: only the user's answer counts.
+      arguments: { teamspace: TS, library_id: "/acme/docs", confirm: "/acme/docs" },
+    });
+  const deleted = () => apiCalls.some((c) => c.method === "DELETE");
+
+  test("the user types the library id: removed", async () => {
+    const messages: string[] = [];
+    const client = await connect("modern", (message) => {
+      messages.push(message);
+      return { action: "accept", content: { answer: "Acme/Docs" } };
+    });
+    expect((await remove(client)).isError).toBeFalsy();
+    expect(messages).toEqual([
+      "Remove the library /acme/docs from the teamspace? Type the library id to confirm: /acme/docs",
+    ]);
+    expect(deleted()).toBe(true);
+  });
+
+  test.each<[string, ElicitAnswer, RegExp]>([
+    ["types another id", { action: "accept", content: { answer: "/acme/other" } }, /is not/],
+    ["declines", { action: "decline" }, /declined/],
+    ["cannot see the form", { action: "cancel" }, /has not agreed/],
+  ])("the user %s: kept", async (_case, answer, reason) => {
+    const result = await remove(await connect("modern", () => answer));
+    expect(result.isError).toBe(true);
+    expect(text(result)).toMatch(reason);
+    expect(deleted()).toBe(false);
+  });
+
+  // One call per destructive action, keyed "tool action" (or "tool" for a plain tool).
+  const DESTRUCTIVE: Record<string, Record<string, unknown>> = {
+    "manage_members remove": { member_id: "m-1" },
+    "manage_library_versions remove": { library_id: "/acme/docs", version: "v1" },
+    remove_library: { library_id: "/acme/docs" },
+    "manage_owned_library block": { library_id: "/acme/docs" },
+    "manage_owned_library transfer": { library_id: "/acme/docs", destination_teamspace: TS },
+    "manage_rules delete": { rule_id: "r1" },
+    docs7_remove_preview: { site_id: "s1", branch: "fix" },
+    "docs7_manage_feature_requests delete": { site_id: "s1", feature_request_id: "f1" },
+    ask_delete_site: { site_key: "ask_1" },
+  };
+
+  test("the list covers every destructive action", () => {
+    const actions = TOOLS.flatMap((def) =>
+      def.actions
+        ? Object.entries(def.actions)
+            .filter(([, kind]) => kind === "destructive")
+            .map(([action]) => `${def.name} ${action}`)
+        : def.kind === "destructive"
+          ? [def.name]
+          : []
+    );
+    expect(Object.keys(DESTRUCTIVE).sort()).toEqual(actions.sort());
+  });
+
+  test.each(Object.entries(DESTRUCTIVE))("%s asks first", async (key, args) => {
+    apiReply = () => ({
+      body: {
+        members: [{ id: "m-1", email: "ana@example.com" }],
+        data: { hostname: "docs.acme.com" },
+      },
+    });
+    const [name, action] = key.split(" ");
+    const call = async (answer: (expected: string) => ElicitAnswer) => {
+      const client = await connect("modern", (message) => answer(message.split(": ").at(-1)!));
+      return client.callTool({ name, arguments: { teamspace: TS, action, ...args } });
+    };
+    const changed = () => apiCalls.some((c) => c.method !== "GET");
+
+    expect((await call(() => ({ action: "decline" }))).isError).toBe(true);
+    expect(changed()).toBe(false);
+
+    const done = await call((expected) => ({ action: "accept", content: { answer: expected } }));
+    expect(done.isError).toBeFalsy();
+    expect(changed()).toBe(true);
   });
 });
 

@@ -15,7 +15,25 @@ Pi includes MCP support from [version 0.99.0](https://github.com/earendil-works/
 pi update
 ```
 
-Choose one of the following connection methods. These commands save the server in `~/.pi/agent/mcp.json`. Add `--local` to `pi mcp add` to save it in your project's `.pi/mcp.json` instead. Pi loads project configuration only after you trust the project.
+### Quick setup
+
+Run the Context7 setup command:
+
+```bash
+npx ctx7 setup --pi
+```
+
+The command signs you in, creates an API key, and writes these files:
+
+- The MCP server goes in `~/.pi/agent/mcp.json`, with `direct` exposure.
+- A Context7 rule goes in `~/.pi/agent/AGENTS.md`.
+- The `context7-mcp` skill goes in `~/.agents/skills`.
+
+Pi reads only one context file in each folder. If `AGENTS.override.md` or `CLAUDE.md` exists there, setup adds the rule to that file and does not create `AGENTS.md`. Setup also uses `PI_CODING_AGENT_DIR` when you set it.
+
+Add `--project` to write `.pi/mcp.json`, the project's `AGENTS.md`, and `.agents/skills` instead. With `--oauth`, setup writes an OAuth entry without an API key. Then run `pi mcp login context7` to sign in. To undo the setup, run `npx ctx7 remove --pi`.
+
+For manual setup, choose one of the following connection methods. These commands save the server in `~/.pi/agent/mcp.json`. Add `--local` to `pi mcp add` to save it in your project's `.pi/mcp.json` instead. Pi loads project configuration only after you trust the project.
 
 ### OAuth
 
@@ -30,7 +48,7 @@ Approve access in your browser. Pi stores and refreshes your OAuth tokens. See [
 
 ### API key
 
-Create an API key in the [Context7 dashboard](https://context7.com/dashboard). Export it before you start Pi, then add the remote server:
+Create an API key in the [Context7 dashboard](https://context7.com/dashboard?tab=settings). Export it before you start Pi, then add the remote server:
 
 ```bash
 export CONTEXT7_API_KEY="YOUR_API_KEY"
@@ -105,7 +123,7 @@ pi install npm:@upstash/context7-pi
 
 Start a new Pi session, or run `/reload` in an open session to load the extension.
 
-The extension works without an API key at the anonymous rate limit. For higher limits, create a key in the [Context7 dashboard](https://context7.com/dashboard) and export it before starting Pi:
+The extension works without an API key at the anonymous rate limit. For higher limits, create a key in the [Context7 dashboard](https://context7.com/dashboard?tab=settings) and export it before starting Pi:
 
 ```bash
 export CONTEXT7_API_KEY="YOUR_API_KEY"

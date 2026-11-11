@@ -15,11 +15,13 @@ ctx7 setup --cli               # Skip prompt, use CLI + Skills mode
 ctx7 setup --claude            # Claude Code only
 ctx7 setup --cursor            # Cursor only
 ctx7 setup --opencode          # OpenCode only
+ctx7 setup --pi                # Pi only
 
 # CLI + Skills mode — target a specific install location
 ctx7 setup --cli --claude      # Claude Code (~/.claude/skills)
 ctx7 setup --cli --cursor      # Cursor (~/.cursor/skills)
 ctx7 setup --cli --antigravity # Antigravity (~/.agent/skills)
+ctx7 setup --cli --pi          # Pi (~/.agents/skills)
 
 ctx7 setup --project           # Configure current project instead of globally
 ctx7 setup --yes               # Skip confirmation prompts

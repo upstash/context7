@@ -190,6 +190,10 @@ Context7 checks a new title or description before it saves it. If the text gives
 
       An Exclude URLs pattern that leaves out old releases does not stop a version at that URL
       from being crawled.
+
+      A library that was first added at a page inside the site crawls from that page, not from the
+      Base URL. Saving a new Base URL moves the crawl to the Base URL when that page is outside it;
+      a page still under the new Base URL stays the start page.
     </Note>
   </Tab>
 </Tabs>
@@ -231,7 +235,7 @@ You can add versions using either:
 
 - **Git tags**: Reference a specific release tag (e.g., `v1.2.0`)
 - **Git branches**: Reference a branch for version-specific documentation (e.g., `release-1.x`)
-- **Website versions**: For a website library, enter the **Version URL** of the documentation for that version (e.g., `https://docs.example.com/2.0/`). The URL must belong to the same library. A URL without a version replaces the latest version.
+- **Website versions**: For a website library, enter the **Version URL** of the documentation for that version (e.g., `https://docs.example.com/2.0/`). The URL must be on the same site as the library. As an owner, you can also add a release that lives under a different path of that site's documentation, such as one manual of a portal (e.g., `https://dev.mysql.com/doc/refman/8.0/en/` for a library whose docs are under `https://dev.mysql.com/doc/`). A URL without a version replaces the latest version.
 
 | Limit            | Value             |
 | ---------------- | ----------------- |
