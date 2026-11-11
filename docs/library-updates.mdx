@@ -57,6 +57,8 @@ Automatic and manual refreshes work across all supported source types:
 
 A website refresh replaces the current version only when the crawl succeeds. If the crawl reads fewer than 10% of the pages in the last version, for example because the site now blocks the crawler, the last version stays in place. The reason appears in the library logs, and the refresh is tried again later. Before each crawl Context7 follows a start page that has moved or been removed to a live page, so a moved page does not by itself fail the refresh. If the site really became smaller, change its crawl settings: the first refresh after a settings change skips this check.
 
+If the start page or Base URL now redirects to a different host that Context7 does not crawl, the crawl is refused and the last version stays in place. The reason appears in the library logs as `the site moved to <host>, which Context7 does not crawl`. If the site moved on purpose, add the library for its new URL.
+
 ### When a Repository Refresh Finds a New Major Release
 
 A repository refresh replaces the library's main version, so the previous major's documentation would otherwise disappear the day the next major ships. When a refresh finds a new major based on the repository's version tags, Context7 keeps the newest release of the previous major as an additional version and parses it. For example, when a library moves from `v16.2.0` to `v17.0.0`, the last `v16` release is kept and becomes available as a version. On `0.x` versions the minor counts as the major, so a move from `0.15.x` to `0.16.0` keeps the last `0.15` release.
