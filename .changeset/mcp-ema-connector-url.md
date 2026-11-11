@@ -2,4 +2,4 @@
 "@upstash/context7-mcp": minor
 ---
 
-Add the `/mcp/ema` endpoint for Enterprise-Managed Auth connectors. It always requires authentication, and its protected resource metadata lists only the Context7 EMA authorization server, so Claude can run the id-jag exchange.
+Support Enterprise-Managed Auth for Claude's connectors. Protected resource metadata now lists the Context7 EMA authorization server first when Claude's hosted connectors ask (Anthropic's egress range, `EMA_DISCOVERY_CIDRS`), so the existing `/mcp` connector can run the id-jag exchange; other clients keep Clerk first. A new `/mcp/ema` endpoint always requires authentication and lists only the EMA authorization server.

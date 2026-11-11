@@ -489,6 +489,38 @@ describe("OAuth discovery", () => {
     });
   });
 
+  test.each([
+    ["/.well-known/oauth-protected-resource", "https://mcp.context7.com"],
+    ["/.well-known/oauth-protected-resource/mcp", "https://mcp.context7.com/mcp"],
+    ["/.well-known/oauth-protected-resource/mcp/oauth", "https://mcp.context7.com/mcp/oauth"],
+  ])("lists the EMA issuer first for Claude's hosted connectors at %s", async (path, resource) => {
+    const fromClaude = await fetch(new URL(path, httpUrl), {
+      headers: { "x-forwarded-for": "160.79.104.25" },
+    });
+    expect(fromClaude.headers.get("cache-control")).toBe("private, no-store");
+    expect(await fromClaude.json()).toEqual(
+      expect.objectContaining({
+        resource,
+        authorization_servers: ["https://context7.com/ema", "https://clerk.context7.com"],
+      })
+    );
+
+    const fromElsewhere = await fetch(new URL(path, httpUrl), {
+      headers: { "x-forwarded-for": "203.0.113.77" },
+    });
+    expect((await fromElsewhere.json()).authorization_servers).toEqual([
+      "https://clerk.context7.com",
+      "https://context7.com",
+    ]);
+  });
+
+  test("an address spoofed before the trusted proxy does not select EMA metadata", async () => {
+    const res = await fetch(new URL("/.well-known/oauth-protected-resource/mcp", httpUrl), {
+      headers: { "x-forwarded-for": "160.79.104.25, 203.0.113.77" },
+    });
+    expect((await res.json()).authorization_servers[0]).toBe("https://clerk.context7.com");
+  });
+
   test("/mcp/ema answers an anonymous call with a 401 challenge", async () => {
     const res = await fetch(new URL("/mcp/ema", httpUrl), {
       method: "POST",

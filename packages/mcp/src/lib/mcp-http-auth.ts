@@ -1,3 +1,4 @@
+import { BlockList, isIP } from "node:net";
 import type { Request, Response } from "express";
 import {
   EMA_AUTH_SERVER_URL,
@@ -225,18 +226,73 @@ export function setBearerChallenge(
   res.set("WWW-Authenticate", `Bearer ${parameters.join(", ")}`);
 }
 
-export function protectedResourceMetadata(resource: string, endpoint?: McpEndpoint) {
+/**
+ * Anthropic's published egress range for Claude's hosted connectors
+ * (claude.ai, Desktop, mobile, Cowork). Claude's backend fetches protected
+ * resource metadata from these addresses; Claude Code and other local clients
+ * fetch it from the user's own machine.
+ */
+const DEFAULT_EMA_DISCOVERY_CIDRS = "160.79.104.0/21";
+
+export interface EmaDiscovery {
+  /** Whether metadata for this client IP should list the EMA issuer first. */
+  prefersEma(ip: string | undefined): boolean;
+}
+
+/**
+ * Parse `EMA_DISCOVERY_CIDRS` (comma-separated IPv4/IPv6 CIDRs). Unset means
+ * Anthropic's range; an empty value turns the behaviour off. Throws on a
+ * malformed entry so a typo fails startup, not discovery.
+ */
+export function parseEmaDiscoveryCidrs(
+  raw: string | undefined = process.env.EMA_DISCOVERY_CIDRS
+): EmaDiscovery {
+  const list = new BlockList();
+  const entries = (raw ?? DEFAULT_EMA_DISCOVERY_CIDRS)
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  for (const entry of entries) {
+    const [network, prefixText] = entry.split("/");
+    const family = isIP(network);
+    const prefix = Number(prefixText);
+    const max = family === 4 ? 32 : 128;
+    if (!family || !/^\d+$/.test(prefixText ?? "") || prefix > max) {
+      throw new Error(`EMA_DISCOVERY_CIDRS has an invalid CIDR: "${entry}"`);
+    }
+    list.addSubnet(network, prefix, family === 4 ? "ipv4" : "ipv6");
+  }
+  return {
+    prefersEma(ip) {
+      if (!ip || entries.length === 0) return false;
+      // Express reports IPv4 peers on a dual-stack socket as ::ffff:a.b.c.d.
+      const address = ip.startsWith("::ffff:") && isIP(ip.slice(7)) === 4 ? ip.slice(7) : ip;
+      const family = isIP(address);
+      if (!family) return false;
+      return list.check(address, family === 4 ? "ipv4" : "ipv6");
+    },
+  };
+}
+
+export function protectedResourceMetadata(
+  resource: string,
+  endpoint?: McpEndpoint,
+  options: { emaFirst?: boolean } = {}
+) {
   return {
     resource,
-    // Claude uses only the first entry. `/mcp/ema` is the Enterprise-Managed
-    // Auth connector URL, so it lists only the EMA issuer, whose metadata
-    // advertises the jwt-bearer grant and Client ID Metadata Documents. Other
-    // routes keep Clerk first for interactive sign-in; the Context7 entry
-    // there serves clients that run the id-jag exchange without Claude.
+    // Claude uses only the first entry, and only the EMA issuer offers what
+    // Claude's Enterprise-Managed Auth needs (the jwt-bearer grant and Client
+    // ID Metadata Documents). So `/mcp/ema`, and any route when Claude's hosted
+    // connectors ask (`emaFirst`), list it first. Other clients keep Clerk
+    // first for interactive sign-in; the Context7 entry there serves clients
+    // that run the id-jag exchange without Claude.
     authorization_servers:
       endpoint === "/mcp/ema"
         ? [EMA_AUTH_SERVER_URL]
-        : Array.from(new Set([OAUTH_AUTH_SERVER_URL, EMA_ISSUER])),
+        : options.emaFirst
+          ? [EMA_AUTH_SERVER_URL, OAUTH_AUTH_SERVER_URL]
+          : Array.from(new Set([OAUTH_AUTH_SERVER_URL, EMA_ISSUER])),
     scopes_supported: ["profile", "email"],
     bearer_methods_supported: ["header"],
   };
