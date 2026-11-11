@@ -1,7 +1,7 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import { mkdir, readFile, writeFile, rm } from "fs/promises";
 import { join } from "path";
-import { tmpdir } from "os";
+import { homedir, tmpdir } from "os";
 
 const MOCK_MCP_RULE = "Use Context7 MCP to fetch docs.\n";
 const MOCK_CLI_RULE = "Use the `ctx7` CLI to fetch docs.\n";
@@ -830,6 +830,15 @@ describe("agent config integration", () => {
         httpUrl: "https://mcp.context7.com/mcp",
         headers: { Authorization: "Bearer sk-test-123" },
       });
+    });
+  });
+
+  describe("antigravity", () => {
+    const agent = getAgent("antigravity");
+
+    test("installs skills to the documented Antigravity skill directories", () => {
+      expect(agent.skill.dir("project")).toBe(join(".agents", "skills"));
+      expect(agent.skill.dir("global")).toBe(join(homedir(), ".gemini", "config", "skills"));
     });
   });
 
