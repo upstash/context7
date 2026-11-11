@@ -116,11 +116,11 @@ repos:
 
 - `default` sets the library rule: a class name, or `excluded` to hide the whole library.
 - Each item in `rules` has exactly one `prefix` or `glob`, and exactly one `class` or `excluded: true`.
-- A pattern that starts with `https://` matches the page URL. Any other pattern matches the page path.
+- A pattern that starts with `https://` or `http://` matches the page URL. Any other pattern matches the page path.
 - A prefix matches whole path segments: `/drafts` matches `/drafts/plan` but not `/drafts-old/plan`.
 - The usual precedence applies: an exclusion always wins, then the most specific rule wins.
 
-Classes are referenced by name, without regard to case. If a name does not match a class under **Workspace Settings → Access → Authority labels**, the sync reports that entry as failed and names the unknown class. The sync changes none of that library's rules, and it tries again on the next sync. Other entries still sync.
+Classes are referenced by name, without regard to case. If a name does not match a class under **Workspace Settings → Access → Authority labels**, the sync reports that entry as failed and names the unknown class. The sync changes none of that library's rules, and it tries again on the next sync. Other entries still sync. If you rename a class in the dashboard, update every manifest entry that uses the old name, or those entries fail until you do.
 
 Rules from the manifest work together with rules made in the dashboard:
 
