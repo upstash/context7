@@ -51,6 +51,7 @@ describe("MCP HTTP authentication policy", () => {
   test("keeps the existing challenge for OAuth and plugin clients in observe mode", () => {
     expect(effectiveMcpAuthMode("observe", "/mcp", undefined, undefined)).toBe("observe");
     expect(effectiveMcpAuthMode("observe", "/mcp/oauth", undefined, undefined)).toBe("required");
+    expect(effectiveMcpAuthMode("observe", "/mcp/ema", undefined, undefined)).toBe("required");
     expect(effectiveMcpAuthMode("observe", "/mcp", "claude-code-plugin", undefined)).toBe(
       "required"
     );

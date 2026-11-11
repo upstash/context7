@@ -676,6 +676,8 @@ async function main() {
     mcpRouter.all("/", (req, res) => handleMcpRequest(req, res));
     // Compatibility alias for clients already configured with /mcp/oauth.
     mcpRouter.all("/oauth", (req, res) => handleMcpRequest(req, res));
+    // Enterprise-Managed Auth connector URL: auth required, EMA issuer only.
+    mcpRouter.all("/ema", (req, res) => handleMcpRequest(req, res));
 
     // SEP-2127 reserves `{streamable-http-url}/server-card`. Register it
     // before the /mcp router so it is not answered as MCP JSON-RPC.
@@ -707,7 +709,7 @@ async function main() {
       }
     );
 
-    for (const endpoint of ["/mcp", "/mcp/oauth"] as const) {
+    for (const endpoint of ["/mcp", "/mcp/oauth", "/mcp/ema"] as const) {
       app.get(
         `/.well-known/oauth-protected-resource${endpoint}`,
         (_req: express.Request, res: express.Response) => {
@@ -718,7 +720,7 @@ async function main() {
             method: "none",
             route: mcpRouteFromUrl(endpoint),
           });
-          res.json(protectedResourceMetadata(resource));
+          res.json(protectedResourceMetadata(resource, endpoint));
         }
       );
     }

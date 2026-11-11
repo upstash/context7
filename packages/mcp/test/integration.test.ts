@@ -479,6 +479,32 @@ describe("OAuth discovery", () => {
     });
   });
 
+  test("lists only the EMA issuer for /mcp/ema, so Claude finds the id-jag grant", async () => {
+    const response = await fetch(new URL("/.well-known/oauth-protected-resource/mcp/ema", httpUrl));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      resource: "https://mcp.context7.com/mcp/ema",
+      authorization_servers: ["https://context7.com/ema"],
+    });
+  });
+
+  test("/mcp/ema answers an anonymous call with a 401 challenge", async () => {
+    const res = await fetch(new URL("/mcp/ema", httpUrl), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+    });
+
+    expect(res.status).toBe(401);
+    expect(res.headers.get("www-authenticate")).toBe(
+      'Bearer resource_metadata="https://mcp.context7.com/.well-known/oauth-protected-resource/mcp/ema"'
+    );
+  });
+
   test("serves the SEP-2127 server card at /mcp/server-card", async () => {
     const response = await fetch(new URL("/mcp/server-card", httpUrl));
 

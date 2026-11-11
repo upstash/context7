@@ -1,5 +1,10 @@
 import type { Request, Response } from "express";
-import { EMA_ISSUER, OAUTH_AUTH_SERVER_URL, RESOURCE_URL } from "./constants.js";
+import {
+  EMA_AUTH_SERVER_URL,
+  EMA_ISSUER,
+  OAUTH_AUTH_SERVER_URL,
+  RESOURCE_URL,
+} from "./constants.js";
 import { isClerkOAuthJwt, isJWT, oauthClientId, validateJWT } from "./jwt.js";
 import { createPerTokenLogWindow } from "./log-throttle.js";
 import {
@@ -16,7 +21,7 @@ import type {
 } from "./telemetry-contracts.js";
 
 export type McpAuthMode = "observe" | "required";
-export type McpEndpoint = "/mcp" | "/mcp/oauth";
+export type McpEndpoint = "/mcp" | "/mcp/oauth" | "/mcp/ema";
 
 export type McpAuthDecision = AuthenticationObservation &
   ({ allowed: true } | { allowed: false; error: string });
@@ -83,8 +88,8 @@ export function parseMcpAuthMode(raw = process.env.MCP_AUTH_ENFORCEMENT): McpAut
 }
 
 /**
- * Clients of `/mcp/oauth` and the Claude Code plugin start OAuth only after a
- * 401, so they keep that challenge in observe mode and observation covers only
+ * Clients of `/mcp/oauth`, `/mcp/ema` and the Claude Code plugin start OAuth
+ * only after a 401, so they keep that challenge in observe mode and observation covers only
  * the plain `/mcp` route. An empty plugin Authorization header comes from older
  * plugin versions that expanded an unset API key; it stays anonymous until
  * enforcement is required.
@@ -95,7 +100,9 @@ export function effectiveMcpAuthMode(
   plugin: string | undefined,
   authorizationHeader: string | undefined
 ): McpAuthMode {
-  if (mode === "required" || endpoint === "/mcp/oauth") return "required";
+  if (mode === "required" || endpoint === "/mcp/oauth" || endpoint === "/mcp/ema") {
+    return "required";
+  }
   return plugin && authorizationHeader !== "" ? "required" : "observe";
 }
 
@@ -192,7 +199,9 @@ export async function evaluateMcpAuthentication(
 }
 
 export function canonicalMcpEndpoint(req: Request): McpEndpoint {
-  return `${req.baseUrl}${req.path}`.replace(/\/$/, "") === "/mcp/oauth" ? "/mcp/oauth" : "/mcp";
+  const path = `${req.baseUrl}${req.path}`.replace(/\/$/, "");
+  if (path === "/mcp/oauth" || path === "/mcp/ema") return path;
+  return "/mcp";
 }
 
 export function protectedResourceUrl(endpoint: McpEndpoint): string {
@@ -216,13 +225,18 @@ export function setBearerChallenge(
   res.set("WWW-Authenticate", `Bearer ${parameters.join(", ")}`);
 }
 
-export function protectedResourceMetadata(resource: string) {
+export function protectedResourceMetadata(resource: string, endpoint?: McpEndpoint) {
   return {
     resource,
-    // Each entry is an independent authorization server. Clerk handles
-    // regular authorization-code flows; Context7 handles only the
-    // enterprise-managed id-jag exchange.
-    authorization_servers: Array.from(new Set([OAUTH_AUTH_SERVER_URL, EMA_ISSUER])),
+    // Claude uses only the first entry. `/mcp/ema` is the Enterprise-Managed
+    // Auth connector URL, so it lists only the EMA issuer, whose metadata
+    // advertises the jwt-bearer grant and Client ID Metadata Documents. Other
+    // routes keep Clerk first for interactive sign-in; the Context7 entry
+    // there serves clients that run the id-jag exchange without Claude.
+    authorization_servers:
+      endpoint === "/mcp/ema"
+        ? [EMA_AUTH_SERVER_URL]
+        : Array.from(new Set([OAUTH_AUTH_SERVER_URL, EMA_ISSUER])),
     scopes_supported: ["profile", "email"],
     bearer_methods_supported: ["header"],
   };
