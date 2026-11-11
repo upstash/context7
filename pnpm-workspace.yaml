@@ -9,6 +9,13 @@ allowBuilds:
 
 minimumReleaseAge: 10080
 
+overrides:
+  "@earendil-works/pi-coding-agent>undici": ^8.12.2
+  "@modelcontextprotocol/sdk": ^1.32.0
+  "@opencode-ai/plugin>effect": 4.0.0-beta.103
+  "@opencode-ai/plugin>zod": ^4.6.6
+  toml: ">=5.0.1"
+
 # Single source of truth for the shared dev toolchain. Packages reference these
 # with "catalog:" so a bump lands in one place instead of drifting per package.
 # Runtime dependencies stay pinned per package, since those ranges are part of
