@@ -29,6 +29,31 @@ function getAuthHeaders(accessToken?: string): Record<string, string> {
   return headers;
 }
 
+/**
+ * How long a call may take before the CLI gives up. `/api/v2/code` waits up to
+ * 40 s on the server for a first index, so it gets more time than the others.
+ */
+export const REQUEST_TIMEOUT_MS = 60_000;
+export const CODE_REQUEST_TIMEOUT_MS = 70_000;
+
+/** fetch with a timeout, so a stalled connection ends with a clear error instead of hanging. */
+export async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number = REQUEST_TIMEOUT_MS
+): Promise<Response> {
+  try {
+    return await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+  } catch (err) {
+    if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) {
+      throw new Error(
+        `Context7 did not answer within ${Math.round(timeoutMs / 1000)} seconds. Check your connection and run the command again.`
+      );
+    }
+    throw err;
+  }
+}
+
 export async function resolveLibrary(
   libraryName: string,
   query?: string,
@@ -39,7 +64,7 @@ export async function resolveLibrary(
     params.set("query", query);
   }
 
-  const response = await fetch(`${baseUrl}/api/v2/libs/search?${params}`, {
+  const response = await fetchWithTimeout(`${baseUrl}/api/v2/libs/search?${params}`, {
     headers: getAuthHeaders(accessToken),
   });
 
@@ -147,9 +172,11 @@ export async function getLibraryCode(
   if (options.headLimit) params.set("head_limit", String(options.headLimit));
   if (options.offset) params.set("offset", String(options.offset));
   if (options.json) params.set("format", "json");
-  const response = await fetch(`${baseUrl}/api/v2/code?${params}`, {
-    headers: getAuthHeaders(accessToken),
-  });
+  const response = await fetchWithTimeout(
+    `${baseUrl}/api/v2/code?${params}`,
+    { headers: getAuthHeaders(accessToken) },
+    CODE_REQUEST_TIMEOUT_MS
+  );
   if (response.status === 202) {
     const body = (await response.json().catch(() => ({}))) as {
       message?: string;
@@ -186,7 +213,7 @@ export async function getLibraryContext(
     params.set("language", options.language);
   }
   const headers = getAuthHeaders(accessToken);
-  const response = await fetch(`${baseUrl}/api/v2/context?${params}`, {
+  const response = await fetchWithTimeout(`${baseUrl}/api/v2/context?${params}`, {
     headers,
   });
 
@@ -245,7 +272,7 @@ export async function searchDocumentation(
     params.set("language", options.language);
   }
 
-  const response = await fetch(`${baseUrl}/api/v3/search?${params}`, {
+  const response = await fetchWithTimeout(`${baseUrl}/api/v3/search?${params}`, {
     headers: getAuthHeaders(accessToken),
   });
 
