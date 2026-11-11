@@ -59,6 +59,33 @@ Turn it on to flip your instance to deny by default. Members then see only the l
   ![The restrict libraries by default toggle](/images/enterprise/library-access/03-default-posture.png)
 </Frame>
 
+## Restrict a namespace
+
+A namespace rule covers every library under a path. Use it to control a whole organization in one step:
+
+1. In the **Library Access** section, switch to **Namespaces**.
+2. Choose **Add rule**.
+3. Enter a prefix, such as `/acme` or `/acme/backend`.
+4. Choose **Everyone** or **Restricted**, and add groups and users as for a library.
+
+<Frame>
+  ![The Namespaces view listing the /acme and /acme-internal rules with their access and granted groups](/images/enterprise/library-access/05-namespace-rules.png)
+</Frame>
+
+A prefix matches whole path segments: `/acme` covers `/acme/payments`, but not `/acme-labs/payments`.
+
+Context7 decides each library in this order:
+
+1. The library's own rule, if it has one.
+2. The namespace rule with the longest matching prefix.
+3. The workspace default.
+
+In the **Libraries** view, a library that takes its access from a namespace rule shows the rule under its access, for example `via /acme/*`.
+
+<Frame>
+  ![The Libraries view showing libraries restricted through the /acme and /acme-internal namespace rules](/images/enterprise/library-access/06-namespace-inherited.png)
+</Frame>
+
 ## How it applies
 
 Access is enforced everywhere a user reaches a library:
@@ -68,3 +95,26 @@ Access is enforced everywhere a user reaches a library:
 - **Dashboard**: members only see the libraries they can access in their library list.
 
 Admins are never restricted. They see and can query every library, which is also how they manage access in the first place.
+
+<Note>
+With **Require MCP authentication** on, these endpoints also need a session or a personal API key: library list, library details, library search, library logs, parse queue, and parse status.
+
+With it off, they answer anonymous callers, but access rules still hide restricted libraries.
+</Note>
+
+## Audit log
+
+Open **Workspace Settings** and go to **Audit log** to review library access activity. The log records:
+
+- Changes to the workspace default, library rules, and namespace rules, with the admin who made them.
+- Access denials: a documentation request over MCP, or a dashboard or `/api/projects/...` request, for a library the caller cannot access. Each entry shows the user (or `anonymous`) and the library.
+
+<Frame>
+  ![The audit log listing access denials and namespace and library rule changes](/images/enterprise/library-access/07-audit-log.png)
+</Frame>
+
+Successful queries are not logged.
+
+- **Access denials:** Context7 keeps the latest 2,000 and deletes older ones.
+- **Rule changes:** kept forever.
+- **The page** shows the latest 200 entries.

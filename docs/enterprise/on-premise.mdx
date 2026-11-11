@@ -4,7 +4,12 @@ sidebarTitle: "Getting Started"
 description: "Run the Context7 stack inside your infrastructure with your chosen AI and storage services"
 ---
 
-Context7 On-Premise keeps your repositories, generated documentation, application database, vector store, and MCP server in your infrastructure. Only the content required for parsing, embedding, reranking, or source-code documentation is sent to the AI providers you choose.
+Context7 On-Premise keeps your repositories, generated documentation, application database, vector store, and MCP server in your infrastructure.
+
+Two kinds of outside services receive data:
+
+- **Your AI providers** receive the content needed for parsing, embedding, reranking, and source-code documentation.
+- **Context7 Cloud** receives license checks, a daily usage report, and public library searches, but only with an online license. See [Network and data flow](#network-and-data-flow).
 
 ## What's Included
 
@@ -60,10 +65,11 @@ All configuration is stored locally in the embedded database and can be updated 
 
 From the dashboard, click **Add Repository** and enter a GitHub or GitLab URL. Once ingestion completes, your private docs are ready to query.
 
-You can also add libraries via the REST API:
+You can also add libraries via the REST API with a personal API key (see [Authentication](/enterprise/api/authentication)):
 
 ```bash
 curl -X POST http://localhost:3000/api/parse \
+  -H "Authorization: Bearer ctx7op-..." \
   -H "Content-Type: application/json" \
   -d '{"repoUrl": "https://github.com/your-org/your-repo"}'
 ```
@@ -178,9 +184,26 @@ These are set in your `docker-compose.yml` or `.env` file before starting the co
 | `LICENSE_KEY` | Yes | License key issued by Upstash |
 | `PORT` | No | HTTP port (default: `3000`) |
 | `DATA_DIR` | No | Data directory inside the container (default: `/data`) |
+| `DATABASE_URL` | No | Postgres connection string. Without it, the embedded SQLite database in `DATA_DIR` is used. See [Scaling](/enterprise/deployment/scaling) |
+| `PG_POOL_MAX` | No | Postgres connection pool size per replica (default: `10`) |
+| `ENCRYPTION_KEY` | No | 64 hex characters (`openssl rand -hex 32`) that encrypt stored secrets. Without it, a key is generated in `$DATA_DIR/.encryption-key`. The variable wins over the file |
+| `VECTOR_STORE` | No | `auto` (default), `lancedb`, `pgvector`, or `milvus`. See [Vector Stores](/enterprise/deployment/vector-stores) |
+| `VECTOR_DATABASE_URL` | No | Postgres connection string for pgvector, if it differs from `DATABASE_URL` |
+| `PG_VECTOR_POOL_MAX` | No | pgvector connection pool size per replica (default: `5`) |
+| `MILVUS_ADDRESS`, `MILVUS_TOKEN`, `MILVUS_USERNAME`, `MILVUS_PASSWORD`, `MILVUS_DATABASE` | No | Milvus connection settings |
+| `CONTEXT7_API_URL` | No | Base URL for license checks, usage reports, and cloud library queries (default: `https://context7.com/api`) |
+| `NODE_EXTRA_CA_CERTS` | No | Path to a PEM bundle of extra CA certificates. The server trusts it for all outbound HTTPS, and git uses it too |
+| `GIT_TLS_INSECURE` | No | `true` or `1` turns off TLS verification for all outbound HTTPS and git. Use it only for testing |
+| `AWS_REGION`, `AWS_DEFAULT_REGION`, `AWS_BEARER_TOKEN_BEDROCK`, standard AWS credential variables | No | AWS Bedrock authentication. See [AWS Bedrock](/enterprise/integrations/aws-bedrock) |
+| `LOG_MAX_SIZE_MB` | No | Size of the log file before it rotates (default: `10`). Logs are JSONL in `$DATA_DIR/logs/context7.jsonl` |
+| `LOG_MAX_FILES` | No | Number of rotated log files to keep (default: `3`) |
+| `NOTION_REQUESTS_PER_MINUTE` | No | Notion API rate (default: `180`). The only other accepted value is `600` |
+| `MAX_FILES`, `PARSE_CONCURRENCY`, `PARSE_TIMEOUT`, `NOTION_MAX_PAGES`, `GOOGLE_DRIVE_MAX_FILES` | No | Default values for the [parsing settings](#parsing-settings). A value saved in the dashboard wins |
 
 <Note>
-Provider and model selection, non-Bedrock provider keys, and git tokens are configured through the setup wizard and can be updated anytime from the Settings page in the web UI. Bedrock is the exception for authentication: it can use `AWS_BEARER_TOKEN_BEDROCK`, standard AWS credential environment variables, a mounted shared profile, or a workload IAM role. See [AWS Bedrock](/enterprise/integrations/aws-bedrock) for the supported credential chain.
+Set AI providers, models, provider keys, and git tokens in the setup wizard. You can change them later on the Settings page. There are no environment variables for git tokens (such as `GITHUB_TOKEN` or `GITLAB_TOKEN`) or for provider API keys.
+
+AWS Bedrock is the exception. It can also authenticate with `AWS_BEARER_TOKEN_BEDROCK`, the standard AWS credential variables, a mounted shared profile, or a workload IAM role. See [AWS Bedrock](/enterprise/integrations/aws-bedrock).
 </Note>
 
 ### AI Provider Settings
@@ -233,6 +256,36 @@ See [AWS Bedrock](/enterprise/integrations/aws-bedrock) for IAM, model, region, 
 
 Optionally, a decision model can classify pages, check for duplicate snippets, and rerank search results in place of the language model. It is faster and costs less for these yes/no decisions. See [Decision Models](/enterprise/decision-models) to turn it on.
 
+### Parsing Settings
+
+Change these in **Settings → Indexing → Parsing**. Some settings also have an environment variable. The variable only sets the default; a value saved in the dashboard wins.
+
+The three count limits also have a **No limit** option: files per library, Notion pages, and Google Drive files. Setting their environment variable to `0` does the same. Without a limit, a very large source can take a long time and make many LLM calls. File timeout and the concurrency settings always have a limit.
+
+<Frame>
+  ![The Max files per library setting with its list open and No limit selected](/images/enterprise/settings/parsing-no-limit.png)
+</Frame>
+
+When a change takes effect:
+
+- **Settings with an environment variable:** at the next parse, on every replica.
+- **Max concurrent parses, Max concurrent LLM requests, LLM timeout:** at once on the replica that saves them. In a [multi-replica deployment](/enterprise/deployment/scaling), other replicas use the new value after they restart.
+
+| Setting | Default | Range | Env fallback | Description |
+|---|---|---|---|---|
+| Max concurrent parses | `1` | 1–10 | — | Parses each replica runs at the same time |
+| Max concurrent LLM requests | `5` | 1–64 | — | Requests in flight to the language model, shared by parsing and search |
+| LLM timeout | `120` s | 30–1800 s | — | How long to wait for the model on one page |
+| Max files per library | `500` | 1–100000, or no limit | `MAX_FILES` | Documentation files a repository parse reads, or pages a website or llms.txt parse keeps. Extra files are skipped and logged |
+| Files parsed in parallel | `5` | 1–64 | `PARSE_CONCURRENCY` | Files one parse processes at the same time |
+| File timeout | `500` s | 30–3600 s | `PARSE_TIMEOUT` | How long one file may take. The parse skips a file that takes longer |
+| Max pages per Notion library | `10000` | 1–100000, or no limit | `NOTION_MAX_PAGES` | A Notion selection with more pages is refused |
+| Max files per Google Drive library | `10000` | 1–100000, or no limit | `GOOGLE_DRIVE_MAX_FILES` | A Google Drive selection with more Docs and Slides is refused |
+
+<Frame>
+  ![The Parsing settings page with concurrency, timeout, and file limit settings](/images/enterprise/settings/parsing-settings.png)
+</Frame>
+
 ### Git Access Tokens
 
 Configured via the **Settings** page in the web UI.
@@ -251,17 +304,35 @@ The GitLab token is sent only to `gitlab.com` and the host in **Server URL**.
 
 Admin credentials are set during first login (default: `admin` / `admin`). Change these immediately after setup via **Settings > Change Credentials**.
 
-The Settings page lets you control which operations are available without authentication, including MCP and API search access.
+Who can do what by default:
+
+- **Admins** can do everything.
+- **Signed-in members and their API keys** can parse and refresh libraries. To re-parse or replace an existing library, a member needs read access to it under the [library access rules](/enterprise/security/library-access).
+- **Anonymous callers** (no session and no API key) can do none of these.
+
+Delete, cancel parse, and support bundle downloads are for admins only. Use the switches below to open some actions to anonymous callers, and to require authentication for MCP and API search.
+
+<Frame>
+  ![The Non-admin permissions card with the anonymous parse, refresh, support bundle, and delete switches off](/images/enterprise/settings/non-admin-permissions.png)
+</Frame>
 
 | Permission | Default | Description |
 |---|---|---|
-| Allow anonymous parse | Off | Allow unauthenticated users to trigger parsing |
-| Allow anonymous refresh | Off | Allow unauthenticated users to refresh libraries |
-| Allow anonymous delete | Off | Allow unauthenticated users to delete libraries |
-| Allow anonymous support bundle | Off | Allow unauthenticated support bundle downloads |
-| Require MCP authentication | Off | Require a personal API key for `/mcp` and external `/api/v2` search requests |
+| Allow anonymous parse | Off | Allow anonymous callers to trigger parsing |
+| Allow anonymous refresh | Off | Allow anonymous callers to refresh libraries. Notion and Google Drive libraries stay admin-only |
+| Allow anonymous delete | Off | Allow anonymous callers and members to delete libraries and cancel parses |
+| Allow anonymous support bundle | Off | Allow anonymous callers and members to download the support bundle |
+| Require MCP authentication | Off | Require a session or personal API key for `/mcp`, `/api/v2`, and the library, log, and queue read endpoints. See [Authentication](/enterprise/api/authentication#anonymous-access) |
+
+<Note>
+Earlier versions allowed anonymous parse and refresh by default. If you never saved these switches, they are off after an upgrade. Scripts that call these endpoints without an API key then get `403`. Add a personal API key to the script, or turn the switch on.
+</Note>
 
 When MCP authentication is enabled, each user creates personal keys from **Personal Settings > API Keys**. Clients send the key as `Authorization: Bearer <key>`.
+
+### Recover admin access
+
+Lost the admin password, or locked out by a broken SSO setup? Run the `reset-password` script inside the container. It resets a local admin account and turns password sign-in back on. See [Docker](/enterprise/deployment/docker#recover-admin-access) or [Kubernetes](/enterprise/deployment/kubernetes#recover-admin-access).
 
 ## Policies
 
@@ -270,6 +341,28 @@ Policies let you control which public documentation from the Context7 cloud is a
 Access Policies from **Settings > Policies** tab. Requires admin login and a valid `LICENSE_KEY`.
 
 For details on source type toggles and library filters, see [Customizing What Is Retrieved](/security/data-privacy#customizing-what-is-retrieved).
+
+## Network and Data Flow
+
+Besides your AI providers, git hosts, and connected sources, an instance with an online license contacts Context7 Cloud:
+
+| Call | When | What is sent |
+|---|---|---|
+| License check | Every hour | The license key |
+| Usage report | Once a day | License key, call counts per endpoint, number of active API keys, app version, team size. No query text |
+| Public library search | On each library search | The search text and library name, with secrets masked first |
+| Public library context | On a context query for a library that is not on this instance | The query, with secrets masked first, and the public library ID |
+
+A context query for one of your local libraries is answered on the instance and sends nothing. No local library content or ID is sent. Per-user usage stays on the instance.
+
+An offline license (`ctx7off.` prefix) is checked locally and makes none of these calls.
+
+The server does not use `HTTP_PROXY` or `HTTPS_PROXY` for its own calls. For the full egress list, `CONTEXT7_API_URL`, and private CA setup, see [Docker](/enterprise/deployment/docker#network-access) or [Kubernetes](/enterprise/deployment/kubernetes#networking-requirements).
+
+## Hosting
+
+- Serve Context7 at the root of a host name, such as `https://context7.internal.yourcompany.com`. Hosting under a sub-path is not supported.
+- Behind a reverse proxy, Context7 uses `X-Forwarded-Host` and `X-Forwarded-Proto` to build SSO redirect URLs. Configure the proxy to set these headers and overwrite any values the client sends.
 
 ## Web UI
 

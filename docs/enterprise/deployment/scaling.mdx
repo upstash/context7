@@ -36,7 +36,13 @@ flowchart TB
     class pg db;
 ```
 
-Replicas coordinate through Postgres: they pull indexing jobs from a shared queue, run jobs that must happen once (backups, usage reporting, GitOps sync) on a single replica using a Postgres lock, and validate each other's signed session tokens. See [How it behaves](#how-it-behaves) for the details.
+Replicas coordinate through Postgres:
+
+- They take indexing jobs from a shared queue.
+- Jobs that must run once (usage reporting, scheduled library updates, GitOps sync) run on one replica, under a Postgres lock.
+- They accept each other's signed session tokens.
+
+See [How it behaves](#how-it-behaves) for the details.
 
 ## What you need
 
@@ -313,7 +319,8 @@ A Helm chart renders all of this from a few values (single replica by default, `
 ## How it behaves
 
 - **Shared work queue.** All replicas pull parse jobs from the same queue in PostgreSQL, so indexing throughput scales with replica count.
-- **Single execution for scheduled jobs.** Jobs that must run once across the fleet, such as the usage report, scheduled backups, and GitOps sync, take a short Postgres advisory lock when they fire, so exactly one replica runs each. No replica is special, and there is nothing to fail over.
+- **Single execution for scheduled jobs.** Some jobs must run once across the fleet: the usage report, scheduled library updates, and GitOps sync. Each takes a short Postgres advisory lock when it starts, so only one replica runs it. No replica is special, so there is nothing to fail over. Built-in backups do not run in this mode; see [Limitations](#limitations).
+- **Shared parse limits.** All replicas share the file and timeout limits under **Settings → Indexing → Parsing**. Each replica reads them when its next parse starts. **Max concurrent parses** applies to each replica separately.
 - **Stateless sessions.** Sessions are signed tokens, so any replica accepts a login issued by another, and logins survive restarts.
 - **Vectors in Postgres.** Embeddings are stored with pgvector, indexed with HNSW using cosine distance. The vector dimension is taken from your embedding model on first write, so there is no manual schema setup and switching embedding models is a re-index, not a migration. To store vectors in Milvus or Zilliz Cloud instead, see [Vector stores](/enterprise/deployment/vector-stores).
 
@@ -430,4 +437,4 @@ After redeploying, **Settings > Scaling** confirms the deployment is running in 
 ## Limitations
 
 - With pgvector, vector search runs in Postgres. For typical on-prem workloads this is well within reach; for a very large index, size Postgres accordingly.
-- Database backups are handled by PostgreSQL in this mode. Use your provider's managed backups or `pg_dump` rather than the built-in backup, which targets the embedded SQLite file. See [Backup and Restore](/enterprise/backup-restore).
+- Built-in backups (scheduled and manual) are disabled whenever `DATABASE_URL` is set. Back up PostgreSQL with your provider's managed backups or `pg_dump`, and back up Milvus separately if you store vectors there. See [Backup and Restore](/enterprise/backup-restore).
