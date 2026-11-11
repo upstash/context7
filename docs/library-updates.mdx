@@ -55,7 +55,7 @@ Automatic and manual refreshes work across all supported source types:
 
 ### When a Website Refresh Fails
 
-A website refresh replaces the current version only when the crawl succeeds. If the crawl reads fewer than 10% of the pages in the last version, for example because the site now blocks the crawler, the last version stays in place. The reason appears in the library logs, and the refresh is tried again later. If the site really became smaller, change its crawl settings: the first refresh after a settings change skips this check.
+A website refresh replaces the current version only when the crawl succeeds. If the crawl reads fewer than 10% of the pages in the last version, for example because the site now blocks the crawler, the last version stays in place. The reason appears in the library logs, and the refresh is tried again later. Before each crawl Context7 follows a start page that has moved or been removed to a live page, so a moved page does not by itself fail the refresh. If the site really became smaller, change its crawl settings: the first refresh after a settings change skips this check.
 
 ### When a Repository Refresh Finds a New Major Release
 
