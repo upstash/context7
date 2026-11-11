@@ -47,7 +47,7 @@
                   "adding-libraries",
                   "library-updates",
                   "howto/claiming-libraries", "howto/verification", "howto/chat-widget",
-                  "howto/rules", "howto/private-sources"
+                  "howto/rules", "howto/private-sources", "howto/research-preview"
                 ]
               },
               {
@@ -78,7 +78,13 @@
                   {
                     "group": "Auth",
                     "pages": [
-                      "enterprise/enterprise-managed-auth/entra",
+                      {
+                        "group": "Microsoft Entra ID",
+                        "pages": [
+                          "enterprise/enterprise-managed-auth/entra-sso",
+                          "enterprise/enterprise-managed-auth/entra"
+                        ]
+                      },
                       "enterprise/enterprise-managed-auth/okta"
                     ]
                   },
@@ -94,6 +100,7 @@
                           "enterprise/integrations/other-git",
                           "enterprise/integrations/gerrit",
                           "enterprise/integrations/confluence",
+                          "enterprise/integrations/google-drive",
                           "enterprise/integrations/aws-bedrock"
                         ]
                       },
@@ -102,6 +109,7 @@
                         "pages": [
                           "enterprise/security/entra-sso",
                           "enterprise/security/oidc-sso",
+                          "enterprise/security/saml-sso",
                           "enterprise/security/library-access"
                         ]
                       },
@@ -121,7 +129,8 @@
                           "enterprise/automatic-repository-updates",
                           "enterprise/gitops",
                           "enterprise/authority-labels",
-                          "enterprise/backup-restore"
+                          "enterprise/backup-restore",
+                          "enterprise/decision-models"
                         ]
                       },
                       {
