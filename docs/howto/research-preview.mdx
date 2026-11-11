@@ -102,7 +102,7 @@ With the research preview on, the server also lists a `query-code` tool, and `re
 
 | Field | Description |
 | --- | --- |
-| `libraryId` | A library built from a Git repository, such as `/colinhacks/zod`. `/websites/...` and `/llmstxt/...` libraries have no source |
+| `libraryId` | A library built from a Git repository, such as `/colinhacks/zod`. `/websites/...` and `/llmstxt/...` libraries have no source. A library ID that was redirected is followed to the library it now points to |
 | `operation` | `grep` (default), `definition`, `references`, `outline`, `read` or `list` |
 | `pattern` | A regex for `grep`, or a symbol for `definition`, `references` and `read` |
 | `version` | A git tag, such as `v3.24.2`, optional. Without it, the commit the docs were built from. A tag that is not a docs version is indexed on first use |
