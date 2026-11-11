@@ -59,6 +59,18 @@ Turn it on to flip your instance to deny by default. Members then see only the l
   ![The restrict libraries by default toggle](/images/enterprise/library-access/03-default-posture.png)
 </Frame>
 
+## Restrict a namespace
+
+A namespace rule covers every library under a path, so you can govern a whole organization in one step. In the **Library Access** section, switch to **Namespaces** and choose **Add rule**. Enter a prefix such as `/acme` or `/acme/backend`, then set **Everyone** or **Restricted** and add groups and users the same way as for a library.
+
+A prefix matches whole path segments: `/acme` covers `/acme/payments`, but not `/acme-labs/payments`.
+
+Context7 decides each library in this order:
+
+1. The library's own rule, if it has one.
+2. The namespace rule with the longest matching prefix.
+3. The workspace default.
+
 ## How it applies
 
 Access is enforced everywhere a user reaches a library:
@@ -68,3 +80,16 @@ Access is enforced everywhere a user reaches a library:
 - **Dashboard**: members only see the libraries they can access in their library list.
 
 Admins are never restricted. They see and can query every library, which is also how they manage access in the first place.
+
+<Note>
+With **Require MCP authentication** turned on, the library list, library details, library search, library logs, parse queue, and parse status endpoints also need a signed-in session or a personal API key. With it turned off, these endpoints answer anonymous callers, and access rules still hide restricted libraries from them.
+</Note>
+
+## Audit log
+
+Open **Workspace Settings** and go to **Audit log** to review library access activity. The log records:
+
+- Changes to the workspace default, library rules, and namespace rules, with the admin who made them.
+- Access denials: a documentation request over MCP, or a dashboard or `/api/projects/...` request, for a library the caller cannot access. Each entry shows the user (or `anonymous`) and the library.
+
+Successful queries are not logged. Context7 keeps the most recent 2,000 access denials and deletes older ones. Rule changes are not deleted. The page shows the latest 200 entries.

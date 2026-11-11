@@ -256,10 +256,15 @@ Context7 requires outbound connectivity to the following:
 | Destination | Purpose |
 |---|---|
 | `ghcr.io` | Container image pulls (`imagePullPolicy: Always`) |
-| `context7.com` | License validation |
+| `context7.com` | Online license only: license validation every hour, a daily usage report (license key, call counts per endpoint, active API key count, app version, team size), and library results from Context7 Cloud. Query text is masked for secrets before it is sent, and restricted local libraries are never sent |
 | Your LLM provider (for example, `api.openai.com` or the regional AWS Bedrock Runtime endpoint) | AI inference and embeddings |
 | AWS credential endpoints, when using workload credentials | Resolving EKS Pod Identity, IRSA, ECS, or EC2 role credentials for Bedrock |
-| `github.com` / `gitlab.com` | Repository cloning |
+| `github.com` / `gitlab.com`, or your self-hosted Git hosts | Repository cloning |
+| Your documentation sources | Website, Confluence, Notion, or Google Drive indexing |
+
+An offline license (`ctx7off.` prefix) is verified locally and makes no calls to `context7.com`: no license checks, no usage report, and no cloud library results. Per-user usage always stays on the instance.
+
+`CONTEXT7_API_URL` (default `https://context7.com/api`) sets the base URL for the license, usage, and cloud library calls. Point it at an egress mirror if your network requires one. The server does not apply `HTTP_PROXY` / `HTTPS_PROXY` to its own calls, so allow this egress directly or through a transparent proxy.
 
 If you use NetworkPolicies, ensure egress to these endpoints is allowed:
 
@@ -282,6 +287,8 @@ spec:
 For stricter policies, allow egress on port 443 to the specific domains listed above, and ensure egress to `kube-dns` on port 53 (UDP/TCP) is permitted for DNS resolution.
 
 When using AWS Bedrock, allow the regional Bedrock Runtime endpoint (`bedrock-runtime.<region>.amazonaws.com`) and any endpoint required by your AWS credential provider. For private clusters, you can instead use a Bedrock Runtime interface VPC endpoint and enter its URL in Context7. See [AWS Bedrock](/enterprise/integrations/aws-bedrock) for IAM, credential, region, and PrivateLink configuration.
+
+If your network uses a private certificate authority, mount its PEM file (for example from a ConfigMap) and set `NODE_EXTRA_CA_CERTS` to its path. The whole server trusts it: LLM and embedding endpoints, Bedrock, Confluence, Notion, Google, SSO identity providers, the license server, and Git. `GIT_TLS_INSECURE=true` turns off TLS verification for all outbound HTTPS and Git calls. Use it only for testing.
 
 ## Operations
 
@@ -337,7 +344,8 @@ Example response:
   "licenseInfo": {
     "valid": true,
     "teamSize": 10,
-    "expiresAt": "2026-06-01T00:00:00.000Z"
+    "expiresAt": "2026-06-01T00:00:00.000Z",
+    "offline": false
   },
   "repos_parsed": 5,
   "uptime": 3600,
@@ -347,10 +355,26 @@ Example response:
     "embedding": "configured",
     "embedding_provider": "openai",
     "github": "configured",
-    "gitlab": "not configured"
+    "github_method": "PAT",
+    "gitlab": "missing"
   }
 }
 ```
+
+Each `connectivity` value is `"configured"` or `"missing"`. `github_method` is `"PAT"`, `"GitHub App"`, or `null`.
+
+`/api/health` is a liveness check. `status` stays `"healthy"` even when the database is unreachable; `repos_parsed` and `connectivity` are then `null`. To check that the instance can serve traffic, use `GET /api/ready`. It returns `200` only when the database answers and the MCP bridge is up, and `503` otherwise.
+
+### Recover admin access
+
+If you lose the admin password, or a broken SSO setup locks you out, reset a local admin account from inside the pod:
+
+```bash
+kubectl exec -n context7 context7-0 -- \
+  node dist/enterprise/reset-password.mjs --username admin
+```
+
+The command sets the password of the local account (and creates it if it does not exist), makes it an enabled admin, signs out its sessions, and turns password sign-in back on. Without `--password <new>`, it prints a generated password once. It refuses a username that belongs to an SSO user. Passwords need at least 8 characters.
 
 ### Logs
 
@@ -377,7 +401,7 @@ kubectl logs -n context7 context7-0
 Look for `[license]` messages in the first few lines. Common causes:
 
 - **Missing or incorrect `LICENSE_KEY`** in the `context7-config` secret
-- **No outbound connectivity** to `context7.com` for license validation
+- **No outbound connectivity** to `context7.com` for license validation (online license only)
 - **Expired license**: contact [context7@upstash.com](mailto:context7@upstash.com) to renew
 
 <Note>

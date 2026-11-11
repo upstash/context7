@@ -6,7 +6,7 @@ description: "Ingest private repositories from a self-managed Git host such as G
 
 Context7 can clone and index repositories from any self-managed Git host that isn't GitHub or GitLab, such as **Gerrit**, **Gitea**, or **self-hosted Bitbucket**, over **HTTPS** or **SSH**.
 
-Under **Settings → Integrations → Other Git**, enter the repository host, choose **HTTPS** or **SSH**, and then [add repositories](#add-a-repository) with their normal clone URL. The host is shared by both authentication methods and also selects which repositories use the review publishing settings.
+Under **Settings → Integrations → Other Git**, enter the repository host, choose **HTTPS** or **SSH**, and then [add repositories](#add-a-repository) with their normal clone URL. The host is shared by both authentication methods and also selects which repositories use the review publishing settings. You can configure one Other Git host. HTTPS credentials apply only to `https://` URLs on that host. The SSH key is used for every `ssh://` clone.
 
 If you use Gerrit, see the [Gerrit integration guide](/enterprise/integrations/gerrit) to submit generated code documentation through `refs/for/{branch}`.
 
@@ -31,7 +31,7 @@ Enter the host, select **HTTPS**, and fill in the account credentials:
 Then add a repository with its HTTPS clone URL, for example `https://gerrit.your-company.com/a/platform/sdk`.
 
 <Note>
-Presenting a private or self-signed TLS certificate? Point `NODE_EXTRA_CA_CERTS` at your CA bundle (recommended), or set `GIT_TLS_INSECURE=true` for testing only. Always use `https://` for credentialed clones. A plaintext `http://` host to a non-loopback address is logged as a warning.
+Presenting a private or self-signed TLS certificate? Point `NODE_EXTRA_CA_CERTS` at your CA bundle (recommended). Context7 then trusts it for all outbound HTTPS, including git. `GIT_TLS_INSECURE=true` turns off TLS verification for all outbound HTTPS and git, not only git. Use it for testing only. Always use `https://` for credentialed clones. A plaintext `http://` host to a non-loopback address is logged as a warning.
 </Note>
 
 ## SSH (deploy key)
@@ -99,7 +99,6 @@ If you prefer the private key never touch the application (it is never written t
       -v /path/to/id_ed25519:/etc/git-ssh/id_ed25519:ro \
       -v /path/to/known_hosts:/etc/git-ssh/known_hosts:ro \
       -e GIT_SSH_COMMAND="ssh -i /etc/git-ssh/id_ed25519 -o UserKnownHostsFile=/etc/git-ssh/known_hosts" \
-      -e LLM_API_KEY=sk-... \
       ghcr.io/context7/enterprise
     ```
   </Tab>

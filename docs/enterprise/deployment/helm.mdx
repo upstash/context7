@@ -136,8 +136,8 @@ See [Migrating an existing deployment](/enterprise/deployment/scaling#migrating-
 | `persistence.storageClass` | `""` | StorageClass for the single-replica volume. |
 | `ingress.enabled` | `false` | Create an Ingress for the service. |
 | `resources` | `1-4 CPU / 2-8Gi` | Pod resource requests and limits. |
-| `env` | `[]` | Extra environment (LLM, embedding, and git credentials, or advanced overrides). |
+| `env` | `[]` | Extra environment variables, for example `AWS_REGION` and workload credentials for Bedrock, `NODE_EXTRA_CA_CERTS`, or `CONTEXT7_API_URL`. |
 | `migration.enabled` | `false` | Run the one-shot SQLite to Postgres migration Job. |
 | `migration.dataPvcName` | `""` | PVC holding the existing `/data` to migrate from. |
 
-Any credential can also be configured in the UI after first boot, so `env` is only needed when you prefer to set credentials declaratively.
+AI provider keys and Git credentials are configured in the UI after first boot. There are no environment variables for them.

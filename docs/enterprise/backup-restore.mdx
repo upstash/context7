@@ -3,12 +3,18 @@ title: "Backup and Restore"
 sidebarTitle: "Backup & Restore"
 ---
 
-Context7 On-Premise can back up all of its data into a single archive, on a schedule or on demand. A backup contains everything needed to rebuild your deployment on a fresh machine: the SQLite database (configuration, credentials, indexed libraries), the vector index, and the encryption key that protects stored secrets.
+Context7 On-Premise can back up all of its data into a single archive, on a schedule or on demand. A backup contains everything needed to rebuild your deployment on a fresh machine: the SQLite database (configuration, credentials, indexed libraries), the vector index (`/data/vectors`), and the encryption key file (`/data/.encryption-key`) that protects stored secrets. A key that you set through the `ENCRYPTION_KEY` environment variable is not in the archive; keep a copy of it yourself.
+
+If you use an external vector store (Milvus or pgvector) with SQLite, the archive holds no vectors. Back up that vector store separately.
+
+<Note>
+Built-in backups (scheduled and manual) are available only with the embedded SQLite database. When `DATABASE_URL` is set (Postgres), they are disabled, also on a single container with `VECTOR_STORE=lancedb`. In that case, back up Postgres with your provider's tools, and back up the `/data/vectors` volume (LanceDB) or your Milvus or pgvector store yourself.
+</Note>
 
 Backups run safely while the server is serving traffic. The database snapshot uses SQLite's online backup API, so you don't need a maintenance window.
 
 <Warning>
-Backup archives include the database and the encryption key, which means anyone holding an archive can read your stored credentials (LLM API keys, Git tokens). Store backups with the same care as the data volume itself. For S3, use a private bucket with server-side encryption.
+Backup archives include the database and, unless you set `ENCRYPTION_KEY`, the encryption key file, which means anyone holding an archive can read your stored credentials (LLM API keys, Git tokens). Store backups with the same care as the data volume itself. For S3, use a private bucket with server-side encryption.
 </Warning>
 
 ## Configuring Backups
@@ -74,6 +80,9 @@ All backup endpoints require an admin session and keep working even if your lice
 | `GET /api/backup/status` | Whether a backup is running, plus the last result |
 | `GET /api/backups` | List available archives |
 | `GET /api/backups/<name>/download` | Download an archive (local destination only) |
+| `GET /api/backups/<name>/manifest` | Read an archive's manifest and check it against this installation (includes `currentSchemaVersion`) |
+| `POST /api/backups/<name>/restore` | Stage a restore. It is applied on the next restart |
+| `POST /api/backups/restore/restart` | Restart the server to apply a staged restore |
 | `GET /api/backup/config` / `PUT` | Read or update the backup configuration |
 
 ## Restoring
@@ -85,6 +94,13 @@ In every case the restore never deletes your current data. It moves the existing
 <Note>
 A backup created by a newer Context7 version cannot be restored into an older installation; the restore tool will refuse and tell you to upgrade first. Backups from older versions restore fine, and the database is migrated automatically the next time the server starts.
 </Note>
+
+The restore also checks the encryption key. The archive records which key encrypted the stored credentials (an `ENCRYPTION_KEY` value or the key file, identified by a fingerprint, never the key itself). The restore refuses to continue when:
+
+- This installation's `ENCRYPTION_KEY` differs from the key the backup was encrypted with. Set `ENCRYPTION_KEY` to the backup's key, or unset it to use the key file from the archive.
+- The backup was taken with `ENCRYPTION_KEY` set, and this installation has no `ENCRYPTION_KEY`. The archive holds no key in that case. Set the same `ENCRYPTION_KEY` before restoring.
+
+Backups from earlier versions do not record the key and restore without this check.
 
 ### From the dashboard
 
@@ -142,10 +158,10 @@ The command prompts for confirmation before replacing anything. Pass `--yes` to 
 
 ## Disaster Recovery Checklist
 
-1. Deploy a fresh Context7 instance on the new machine (same or newer version).
+1. Deploy a fresh Context7 instance on the new machine (same or newer version). If the old deployment set `ENCRYPTION_KEY`, set the same value.
 2. Don't run the setup wizard. Stop the server instead.
 3. Copy your latest backup archive onto the machine.
 4. Run the restore as shown above.
 5. Start the server. Your configuration, credentials, users, indexed libraries, and search index are all back.
 
-Because the encryption key travels inside the archive, restored credentials work immediately on the new machine. Nothing needs to be re-entered.
+If the backup used the key file, the key travels inside the archive, and restored credentials work immediately on the new machine. If you set `ENCRYPTION_KEY` on the old deployment, set the same value on the new one before step 4. Nothing else needs to be re-entered.
