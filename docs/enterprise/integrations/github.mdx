@@ -99,6 +99,7 @@ When the GitHub App is connected, GitHub delivers `push` events to `https://<you
 
 For delivery to work:
 
+- A **webhook secret** must be set in the App. With no secret, Context7 cannot verify the sender and refuses every delivery.
 - Your instance must be **reachable from GitHub** at the webhook URL. An instance behind a firewall that GitHub cannot reach will not receive webhooks.
 - The App must be **subscribed to push events** (new App setups are configured this way automatically).
 
