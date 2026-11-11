@@ -161,11 +161,11 @@ The picker is a tree of your Shared Drives and the items shared with the Context
 
 Enter a title and click **Start sync**. The description is optional. The selection defines the library: to sync a different set of folders, add another library.
 
-Each Doc is indexed under its Google URL, for example `https://docs.google.com/document/d/<id>/edit`. That link is the `Source:` of every result, so an agent can point people to the original document.
+Each Doc is indexed under its Google URL, for example `https://docs.google.com/document/d/<id>/edit`. That link is the `Source:` of every result, so an agent can point people to the original document. Results taken from a document's text also name it, as `Source: <Doc title> (<link>)`.
 
 ### Google Slides
 
-Each slide of a presentation is indexed as its own page, with a link that opens that slide: `https://docs.google.com/presentation/d/<id>/edit#slide=id.<slide id>`. The slide's title becomes its heading, and its text, lists, links, tables and speaker notes follow. Hidden (skipped) slides are not indexed. Images, charts and diagrams are not indexed, and neither is text inside images.
+Each slide of a presentation is indexed as its own page, with a link that opens that slide: `https://docs.google.com/presentation/d/<id>/edit#slide=id.<slide id>`. The slide's title becomes its heading, and its text, lists, links, tables and speaker notes follow. Results taken from a slide name the deck and the slide, as `Source: <deck name>, slide <n>: <slide title> (<link>)`. Hidden (skipped) slides are not indexed. Images, charts and diagrams are not indexed, and neither is text inside images.
 
 When a presentation changes, Context7 reads the whole presentation again:
 
@@ -210,6 +210,8 @@ Google Drive libraries sync every day at 03:00 server time by default. Under **S
 - click **Sync all now** to queue every Google Drive library at once.
 
 When a sync fails, scheduled or manual, Context7 retries that library after 15 minutes, 1 hour and 6 hours. Each delay counts from the previous attempt. To sync one library by hand, click **Refresh** on its page, or **Sync now** next to it in the **Libraries** list. To read and re-index every file instead of skipping unchanged ones, select **Re-index all files** in the Refresh dialog, or in the library's menu in the **Libraries** list.
+
+Only an admin can refresh a Google Drive library, even when **Refresh repositories** is on in **Workspace Settings › Authorization**: the sync reads Drive with the connector's credentials.
 
 ## Monitor libraries
 

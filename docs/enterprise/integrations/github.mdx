@@ -89,10 +89,6 @@ Context7 works with GitHub Enterprise Server, not only github.com. Set your serv
 
 For this to work, Context7 must reach your server's API at `https://<your-host>/api/v3`, and your server must reach Context7 at its webhook URL for push delivery.
 
-<Note>
-Prefer to set this at deploy time, for example as part of a disaster recovery rebuild? Set the `GITHUB_URL` environment variable to your server URL, such as `https://github.your-company.com`. A host saved in the UI takes precedence over the environment variable when both are set.
-</Note>
-
 ## Webhooks
 
 When the GitHub App is connected, GitHub delivers `push` events to `https://<your-host>/api/github/webhook`. Context7 verifies each delivery's signature against the App's webhook secret and uses pushes to drive [GitOps](/enterprise/gitops) reconciliation: a push to a GitOps manifest repository triggers an immediate sync.

@@ -85,14 +85,14 @@ With the research preview on, the server also lists a `get-upgrade-guide` tool. 
 
 | Field | Description |
 | --- | --- |
-| `libraryId` | The library, such as `/vercel/next.js` |
-| `fromVersion` | The version you use now, such as `14.2.35` or `14`. A bare major means the oldest release of that line |
+| `libraryId` | The library, such as `/vercel/next.js`. A version after it, such as `/vercel/next.js/v14.3.0` or `/vercel/next.js@v14`, names the same library |
+| `fromVersion` | The version you use now, such as `14.2.35` or `14`. A bare major means the oldest release of that line. Prereleases are not covered |
 | `toVersion` | The version to upgrade to, such as `16`, optional. A bare major means the newest release of that line; without it, the latest major |
 | `page` | The page of a long guide, optional, `1` by default |
 
 A long guide comes in pages, each in full detail and sized for MCP clients. Page 1 starts with what is needed to migrate (the summary, prerequisites, codemods, breaking changes and deprecations); when that part is longer than one page, it continues on the next pages, and page 1 says so. After it come behavior and config changes and the API changes, which the agent fetches when it needs them.
 
-The first request for a pair of versions can take a few minutes while Context7 prepares the guide; a guide is served only once it is complete. The tool then tells the agent when to call again. If a guide cannot be prepared, the tool says so and the agent uses `query-docs` instead; Context7 tries that pair again a few hours later.
+The first request for a pair of versions can take a few minutes while Context7 prepares the guide; a guide is served only once it is complete. The tool then tells the agent when to call again. If a guide cannot be prepared, the tool says so and the agent uses `query-docs` instead. After a wait from minutes to a day, depending on why it failed, a new request prepares the guide again; the tool's answer says when to ask.
 
 Guides are prepared for about 100 of the most used libraries. For any other library the tool answers that its guide is not prepared yet. The tool needs `@upstash/context7-mcp` 4.6.0 or later; reading the pages after the first needs 4.7.0 or later.
 
@@ -102,11 +102,13 @@ With the research preview on, the server also lists a `query-code` tool, and `re
 
 | Field | Description |
 | --- | --- |
-| `libraryId` | A library built from a Git repository, such as `/colinhacks/zod`. `/websites/...` and `/llmstxt/...` libraries have no source |
+| `libraryId` | A library built from a Git repository, such as `/colinhacks/zod`. `/websites/...` and `/llmstxt/...` libraries have no source. A library ID that was redirected is followed to the library it now points to |
 | `operation` | `grep` (default), `definition`, `references`, `outline`, `read` or `list` |
-| `pattern` | A regex for `grep`, or a symbol for `definition`, `references` and `read` |
+| `pattern` | A regex for `grep`, or a symbol for `definition`, `references` and `read`. For `read`, a file path such as `src/client.ts` or `src/client.ts#L10-L40` reads that file, so you can pass it here instead of `path` |
 | `version` | A git tag, such as `v3.24.2`, optional. Without it, the commit the docs were built from. A tag that is not a docs version is indexed on first use |
 
-`grep` also takes ripgrep's options: `fixed_strings`, `ignore_case`, `glob`, `path`, `context`, `output_mode`, `head_limit` and `offset`. While a library's source is being indexed, the tool tells the agent to call again or answer from `query-docs`.
+`grep` also takes ripgrep's options: `fixed_strings`, `ignore_case`, `glob`, `path`, `context`, `output_mode`, `head_limit` and `offset`. A `pattern` matches the exact text of one line, so to search several words give them as `a|b`. When a pattern of plain words, such as `kafka consumer group rebalance`, matches no line, `grep` returns the lines that match any of its words and says so first. While a library's source is being indexed, the tool tells the agent to call again or answer from `query-docs`.
+
+The tool needs `@upstash/context7-mcp` 4.6.0 or later.
 
 Without the MCP server, the `ctx7 code` command gives the same search in a terminal, for example `npx ctx7@latest code /colinhacks/zod "safeExtend" --op definition`.

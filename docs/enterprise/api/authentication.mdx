@@ -9,7 +9,11 @@ The on-premise API supports API keys for server-to-server and MCP access. Pass t
 Authorization: Bearer ctx7op-xxxxxxxx_xxxxxxxxxxxxxxxx
 ```
 
-Keys are scoped to the user account that created them and inherit that user's role (`admin` or `member`). There are no per-key scopes or expiry - revoke a key to invalidate it.
+The server also accepts the key in the `x-api-key`, `context7-api-key`, or `context7_api_key` header.
+
+A key belongs to the user who created it and has that user's role (`admin` or `member`). Keys have no scopes and do not expire. To stop a key from working, revoke it.
+
+A request with an invalid or revoked key gets `401`. It is not treated as an anonymous request.
 
 ## Creating an API Key
 
@@ -48,21 +52,50 @@ Go to **Personal settings > API keys** and click the delete icon next to the key
 | Role | Access |
 |---|---|
 | `admin` | Full access to all endpoints including settings, user management, and delete operations |
-| `member` | Can trigger parsing and search. Cannot access admin endpoints |
+| `member` | Can parse, refresh, search, and use MCP. Cannot delete libraries, cancel parses, import libraries, or access admin endpoints |
+
+A personal API key acts with the role of its owner:
+
+| Operation | Member key | Admin key |
+|---|---|---|
+| Parse and refresh libraries | Yes, if they can read an existing library | Yes |
+| Refresh Notion and Google Drive libraries | No | Yes |
+| Delete libraries, cancel parses, download the support bundle | No | Yes |
+| Import libraries (`/api/import-libraries`) | No | Yes |
+| `/mcp` and `/api/v2` search and context | Yes | Yes |
+
+Settings, user management, and other admin routes need an admin signed in to the dashboard. They do not accept API keys.
 
 Default credentials on a fresh install are `admin` / `admin`. Change them immediately from **Personal settings > Password > Change password**.
 
 ## Non-admin permissions
 
-These operations can be allowed for every caller who is not an admin: signed-in members and anonymous callers. Configure them in the **Non-admin permissions** card under **Workspace Settings › Authorization**:
+Certain operations can be opened to anonymous callers (no session and no API key). Configure them in the **Non-admin permissions** card under **Workspace Settings › Authorization**:
 
 | Permission | Default |
 |---|---|
-| Parse repositories | On |
-| Refresh repositories | On |
+| Parse repositories | Off |
+| Refresh repositories | Off |
 | Delete repositories | Off |
 | Download support bundle | Off |
 
-MCP authentication is configured separately in **Workspace Settings › Authentication**. When enabled, external requests to `/mcp`, `/api/v2/libs/search`, and `/api/v2/context` require a personal API key. When disabled, those endpoints allow anonymous access. The local MCP bridge can still call the v2 endpoints over loopback.
+These switches do not limit signed-in users. Members and their API keys can always parse and refresh, except Notion and Google Drive libraries, which only admins refresh. To re-parse or replace an existing library, a member needs read access to it.
 
-The legacy global `API_KEY` environment variable protects the broader HTTP API independently of personal MCP keys. New deployments should use dashboard users and personal keys for MCP clients.
+The delete switch also covers cancelling a parse. When it is on, members can delete and cancel too. The support bundle switch works the same way for downloads.
+
+<Note>
+Earlier versions allowed anonymous parse and refresh by default.
+</Note>
+
+MCP authentication is configured separately in **Workspace Settings › Authentication**. When enabled, these endpoints require a dashboard session or a personal API key:
+
+- `/mcp`
+- `/api/v2/*`, including `/api/v2/libs/search` and `/api/v2/context`
+- `GET /api/projects` and `GET /api/projects/{name}`
+- `GET /api/projects/{name}/logs` and `GET /api/projects/{name}/search`
+- `GET /api/queue`
+- `GET /api/parse-status`
+
+When it is off, these endpoints answer anonymous callers. [Library access rules](/enterprise/security/library-access) still hide restricted libraries from them.
+
+The bundled MCP server calls the v2 endpoints over loopback with a secret token. A reverse proxy on the same host therefore cannot skip MCP authentication.

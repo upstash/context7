@@ -356,16 +356,34 @@ export async function fetchLibraryCode(
 }
 
 /**
- * The endpoint's error codes that answer the agent's request, not failures: a library without
- * a guide, an unknown version, a page past the last, or a guide that could not be prepared.
- * The agent sees the API's message, which says what to do next.
+ * The endpoint's error codes that answer the agent's request, not failures, with their telemetry
+ * outcome: a library without a guide or an unknown version (not found), a page past the last
+ * (invalid), or a guide that cannot be prepared for now (unavailable). The agent sees the API's
+ * message, which says what to do next, without `isError`.
  */
-const UPGRADE_GUIDE_ANSWERS = new Set([
-  "library_not_prepared",
-  "version_not_found",
-  "page_out_of_range",
-  "guide_unavailable",
-]);
+const UPGRADE_GUIDE_ANSWERS = {
+  library_not_prepared: "not_found",
+  version_not_found: "not_found",
+  page_out_of_range: "invalid",
+  guide_unavailable: "unavailable",
+} as const satisfies Record<string, ToolCallOutcome>;
+
+function isUpgradeGuideAnswer(error: string): error is keyof typeof UPGRADE_GUIDE_ANSWERS {
+  return Object.hasOwn(UPGRADE_GUIDE_ANSWERS, error);
+}
+
+/**
+ * The tool's answer to an error response of the upgrade guide endpoint that answers the request
+ * (UPGRADE_GUIDE_ANSWERS), or undefined for any other error. The text is the API's message,
+ * which says what to do next and, for a guide unavailable for now, when to ask again.
+ */
+export function upgradeGuideAnswer(
+  json: { error?: string; message?: string } | undefined
+): ToolAnswer | undefined {
+  const error = json?.error;
+  if (!error || !isUpgradeGuideAnswer(error)) return undefined;
+  return { text: json.message ?? error, outcome: UPGRADE_GUIDE_ANSWERS[error] };
+}
 
 /**
  * Fetches the upgrade guide for a library between two versions
@@ -397,8 +415,8 @@ export async function fetchUpgradeGuide(
         // parseErrorResponse can still read the body of any other error.
         if (!response.ok) {
           const json = await readJson<{ error?: string; message?: string }>(response.clone());
-          if (json?.error && UPGRADE_GUIDE_ANSWERS.has(json.error))
-            return { text: json.message ?? json.error, outcome: "not_found" };
+          const answer = upgradeGuideAnswer(json);
+          if (answer) return answer;
         }
         switch (response.status) {
           // The source code is being indexed or the guide is being prepared; the agent calls again later.

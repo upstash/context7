@@ -17,7 +17,9 @@ You'll need:
 - The Context7 admin password. This is the same account you use to open **Workspace settings** today. On a fresh install it is `admin` / `admin` until you change it.
 
 <Note>
-Entra SSO is an **addition** to password login, not a replacement. The seeded admin account keeps working even after you turn on SSO, so you never get locked out if the Entra app goes sideways.
+Entra SSO is an **addition** to password login. The default admin account keeps working after you turn on SSO.
+
+You can turn off password login with the **Password sign-in** card below the SSO card. First make sure at least one admin can sign in through Entra. If you get locked out, see [Recover admin access](/enterprise/deployment/docker#recover-admin-access).
 </Note>
 
 ## Part 1: Register the application in Microsoft Entra
@@ -200,7 +202,7 @@ The redirect URI Context7 sent doesn't match any redirect URI registered on the 
 - Port number: if you're running Context7 on a non-standard port, the Entra registration needs the same port.
 - Path: must be `/api/auth/entra/callback` with no trailing characters.
 
-If you're running behind a reverse proxy, make sure it forwards the `Host` header unchanged; otherwise Context7 will build a callback URL for the internal host, not the public one your users see.
+If you run behind a reverse proxy, make it send `X-Forwarded-Host` and `X-Forwarded-Proto` with your public host and scheme. Otherwise Context7 builds the callback URL from the internal host, not the public one your users see.
 
 ### "This Microsoft Entra account is not assigned a supported Context7 app role"
 

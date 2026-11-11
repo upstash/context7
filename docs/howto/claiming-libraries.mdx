@@ -175,7 +175,7 @@ Context7 checks a new title or description before it saves it. If the text gives
     | ---------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------- |
     | **Base URL**                 | The root URL to crawl for documentation.                                                         | Max 100 characters              |
     | **Display URL**              | Optional URL shown to users instead of the base URL.                                             | Max 500 characters              |
-    | **Keep Query Parameters**    | Whether to treat URLs with different query strings as distinct pages. Enabled by default.        | Boolean                         |
+    | **Keep Query Parameters**    | Whether to treat URLs with different query strings as distinct pages. Enabled by default. When off, links that carry the start page's own query parameters are still crawled. | Boolean                         |
     | **Exclude URLs**             | URL patterns to exclude from crawling. Supports wildcards.                                       | Max 100 patterns                |
 
     <Note>
@@ -194,6 +194,11 @@ Context7 checks a new title or description before it saves it. If the text gives
       A library that was first added at a page inside the site crawls from that page, not from the
       Base URL. Saving a new Base URL moves the crawl to the Base URL when that page is outside it;
       a page still under the new Base URL stays the start page.
+
+      A crawl recovers from a start page the site has since moved or removed: when the start page is
+      gone, the crawl starts from the nearest live page above it in the scope, or from the Base URL;
+      when the page or its site moved to a new host, the crawl follows it there. These recoveries
+      do not change the saved settings.
     </Note>
   </Tab>
 </Tabs>

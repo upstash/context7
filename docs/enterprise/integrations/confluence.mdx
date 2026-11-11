@@ -102,6 +102,8 @@ Choose **By page URL** to index a specific set of pages without browsing a space
 Indexing the entire space means a later refresh also picks up pages added since. A specific page set — selected pages or **By page URL** — pins the project to exactly those pages.
 </Note>
 
+Results taken from a page's text name it, as `Source: <page title> (<page link>)`, where the link opens that page in Confluence.
+
 You can also index Confluence declaratively with [GitOps](/enterprise/gitops): add a `type: confluence` entry with either a `spaceKey` (whole space) or a `pageUrls` list (specific pages, optionally with `includeSubPages`). It reuses this same connection.
 
 ## Refresh and delete
