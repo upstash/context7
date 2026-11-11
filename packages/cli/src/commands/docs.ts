@@ -286,15 +286,17 @@ async function codeCommand(
   const context = wholeNumber(options.context, "--context", CODE_LIMITS.context);
   const headLimit = wholeNumber(options.headLimit, "--head-limit", CODE_LIMITS.headLimit);
   const offset = wholeNumber(options.offset, "--offset", CODE_LIMITS.offset);
-  const wait = wholeNumber(options.wait, "--wait", CODE_LIMITS.wait) ?? CODE_WAIT_SECONDS;
-  if (context === null || headLimit === null || offset === null || wait === null) return;
+  const waitFlag = wholeNumber(options.wait, "--wait", CODE_LIMITS.wait);
+  // Check null (an invalid --wait) before the default replaces it.
+  if (context === null || headLimit === null || offset === null || waitFlag === null) return;
+  const wait = waitFlag ?? CODE_WAIT_SECONDS;
   const accessToken = await getValidAccessToken();
   const target = options.tag ? `${libraryId} ${options.tag}` : libraryId;
   const spinner = isTTY ? ora(`Searching the source of "${target}"...`).start() : null;
   let result;
   let waited = false;
   try {
-    const query = () =>
+    const query = (signal?: AbortSignal) =>
       getLibraryCode(
         libraryId,
         pattern,
@@ -314,6 +316,7 @@ async function codeCommand(
           headLimit: headLimit || undefined,
           offset: offset || undefined,
           json: options.json,
+          signal,
         },
         accessToken
       );
@@ -321,7 +324,7 @@ async function codeCommand(
     result = await waitForLibraryCode(query, wait * 1000, {
       onWait: (_indexing, secondsLeft) => {
         if (!waited) {
-          const text = `The source of ${target} is being indexed. Waiting up to ${secondsLeft} s more (--wait 0 to skip)...`;
+          const text = `The source of ${target} is being indexed. Waiting up to ${secondsLeft} s more...`;
           if (spinner) spinner.text = text;
           else console.error(text);
         }
@@ -349,7 +352,7 @@ async function codeCommand(
     } else {
       log.warn(result.message);
       log.info(
-        `${waited ? "The index is still being built. " : ""}Run the same command again in about ${result.retryAfter} seconds, at most twice. Meanwhile, use "ctx7 docs".`
+        `${waited ? "The index is still being built. " : ""}Run the same command again in about ${result.retryAfter} seconds, and keep trying for up to 3 minutes: a first index usually takes 1 to 3. Meanwhile, use "ctx7 docs".`
       );
     }
     process.exitCode = 75; // EX_TEMPFAIL: try again later

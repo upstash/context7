@@ -181,11 +181,17 @@ describe("ctx7 code", () => {
         .mockResolvedValueOnce({ kind: "result", body: "src/a.ts:1: x" });
 
       const done = run(registerDocsCommands, "code", "/a/b", "x");
-      await vi.advanceTimersByTimeAsync(5_000);
+      // The first answer came fast, so the command pauses for its retryAfter.
+      await vi.advanceTimersByTimeAsync(30_000);
       await done;
 
       expect(mockGetLibraryCode).toHaveBeenCalledTimes(2);
       expect(process.exitCode).not.toBe(75);
+      // Piped: the progress line goes to stderr, the answer alone to stdout.
+      const stderr = vi.mocked(console.error).mock.calls.flat().join("\n");
+      expect(stderr).toContain("is being indexed. Waiting up to");
+      expect(stderr).not.toContain("--wait");
+      expect(vi.mocked(console.log).mock.calls).toEqual([["src/a.ts:1: x"]]);
     } finally {
       vi.useRealTimers();
     }
@@ -202,6 +208,13 @@ describe("ctx7 code", () => {
       expect.objectContaining({ context: 10, headLimit: 500 }),
       REFRESHED
     );
+  });
+
+  test("rejects an invalid --wait instead of waiting the default", async () => {
+    await run(registerDocsCommands, "code", "/a/b", "x", "--wait", "soon");
+
+    expect(mockGetLibraryCode).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
   });
 
   test("rejects a flag that is not a number without calling the API", async () => {

@@ -87,39 +87,68 @@ export const CODE_LIMITS = {
 
 /** Default for `ctx7 code --wait`: a first index takes about 90 s at the median. */
 export const CODE_WAIT_SECONDS = 90;
-/** Pause between calls while an index is built. Each call itself waits for the index on the server. */
+/** Pause after a call the server held open: it already waited for the index. */
 const CODE_WAIT_PAUSE_MS = 3_000;
+/** A call that answers faster than this did not wait on the server: pause for its retryAfter. */
+const CODE_WAIT_FAST_CALL_MS = 5_000;
+/** Start no call with less than this left of the budget: it could not finish. */
+const CODE_WAIT_LAST_CALL_MS = 5_000;
+/** At most this many calls, whatever the budget and retryAfter. */
+export const CODE_WAIT_MAX_CALLS = 10;
+
+type IndexingResult = Extract<CodeQueryResult, { kind: "indexing" }>;
 
 /**
  * Runs `query` again while it answers "indexing", until `budgetMs` has passed.
- * The next call starts only when it can end inside the budget, judged by how
- * long the previous call took, so the command stays within the budget.
+ * After a fast answer it pauses for the answer's retryAfter, after a slow one
+ * (the server waited) only briefly, and never into the last 5 s. The last call
+ * is aborted at the end of the budget; an aborted call counts as "indexing".
  */
 export async function waitForLibraryCode(
-  query: () => Promise<CodeQueryResult>,
+  query: (signal?: AbortSignal) => Promise<CodeQueryResult>,
   budgetMs: number,
   {
     now = Date.now,
     sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)),
+    deadline = (ms: number) => AbortSignal.timeout(ms),
     onWait,
   }: {
     now?: () => number;
     sleep?: (ms: number) => Promise<void>;
+    /** A signal that aborts after `ms`, the rest of the budget. */
+    deadline?: (ms: number) => AbortSignal;
     /** Called before each new wait with the "indexing" answer and the seconds left. */
-    onWait?: (result: Extract<CodeQueryResult, { kind: "indexing" }>, secondsLeft: number) => void;
+    onWait?: (result: IndexingResult, secondsLeft: number) => void;
   } = {}
 ): Promise<CodeQueryResult> {
   const start = now();
+  const left = () => budgetMs - (now() - start);
   let callStart = start;
   let result = await query();
-  while (result.kind === "indexing") {
+  let calls = 1;
+  while (result.kind === "indexing" && calls < CODE_WAIT_MAX_CALLS) {
     const callMs = now() - callStart;
-    const left = budgetMs - (now() - start);
-    if (left < CODE_WAIT_PAUSE_MS + callMs) break;
-    onWait?.(result, Math.round(left / 1000));
-    await sleep(CODE_WAIT_PAUSE_MS);
+    const room = left() - CODE_WAIT_LAST_CALL_MS;
+    if (room <= 0) break;
+    const pauseMs = Math.min(
+      room,
+      callMs < CODE_WAIT_FAST_CALL_MS
+        ? Math.max(result.retryAfter * 1000, CODE_WAIT_PAUSE_MS)
+        : CODE_WAIT_PAUSE_MS
+    );
+    onWait?.(result, Math.round(left() / 1000));
+    await sleep(pauseMs);
+    const indexing: IndexingResult = result;
+    const signal = deadline(left());
     callStart = now();
-    result = await query();
+    calls++;
+    try {
+      result = await query(signal);
+    } catch (err) {
+      // The budget ran out during the call: the index is still being built.
+      if (signal.aborted) return indexing;
+      throw err;
+    }
   }
   return result;
 }
@@ -161,6 +190,8 @@ export interface CodeQueryOptions {
   headLimit?: number;
   offset?: number;
   json?: boolean;
+  /** Aborts the call, e.g. when `ctx7 code --wait` runs out of time. */
+  signal?: AbortSignal;
 }
 
 export type CodeQueryResult =
@@ -190,6 +221,7 @@ export async function getLibraryCode(
   if (options.json) params.set("format", "json");
   const response = await fetch(`${baseUrl}/api/v2/code?${params}`, {
     headers: getAuthHeaders(accessToken),
+    signal: options.signal,
   });
   if (response.status === 202) {
     const body = (await response.json().catch(() => ({}))) as {
