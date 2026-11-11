@@ -158,7 +158,7 @@ Google Drive libraries sync every day at 03:00 server time by default. Under **S
 
 When a sync fails, scheduled or manual, Context7 retries that library after 15 minutes, 1 hour and 6 hours. Each delay counts from the previous attempt. To sync one library by hand, click **Refresh** on its page, or **Sync now** next to it in the **Libraries** list. To read and re-index every file instead of skipping unchanged ones, select **Re-index all files** in the Refresh dialog, or in the library's menu in the **Libraries** list.
 
-Refreshing a Google Drive library needs an admin sign-in, even when **Allow anonymous refresh** is on: the sync reads Drive with the connector's credentials, so an anonymous session cannot start it.
+Only an admin can refresh a Google Drive library, even when **Refresh repositories** is on in **Workspace Settings › Authorization**: the sync reads Drive with the connector's credentials.
 
 ## Monitor libraries
 
