@@ -90,9 +90,9 @@ Each result includes:
 | **Code Snippets**     | Number of indexed code examples — higher means more documentation coverage |
 | **Source Reputation** | Authority indicator: High, Medium, Low, or Unknown                         |
 | **Benchmark Score**   | Quality score from 0 to 100                                                |
-| **Versions**          | Version-specific IDs when available (format: `/org/project/version`)       |
+| **Versions**          | Version tags when available — append one to the ID: `/org/project/version` |
 
-When multiple results come back, the best match is usually the one with the closest name, highest snippet count, and strongest reputation. If you need docs for a specific version, pick the matching version ID from the list.
+When multiple results come back, the best match is usually the one with the closest name, highest snippet count, and strongest reputation. If you need docs for a specific version, append the matching version tag from the list to the library ID.
 
 ```bash
 # Fetch docs for a specific version
@@ -107,7 +107,7 @@ ctx7 library react "How to use hooks for state management" --json | jq '.[0].id'
 Takes a library ID and a natural-language question, and returns relevant code snippets and explanations from the indexed documentation.
 
 ```bash
-ctx7 docs /facebook/react "How to clean up useEffect with async operations"
+ctx7 docs /reactjs/react.dev "How to clean up useEffect with async operations"
 ctx7 docs /vercel/next.js "How to add a proxy that redirects unauthenticated users"
 ctx7 docs /prisma/prisma "How to define one-to-many relations with cascade delete"
 ```
@@ -126,10 +126,10 @@ The output contains two types of content: **code snippets** (titled, with langua
 ctx7 docs /websites/twilio "How to send an SMS" --language Ruby
 
 # Output as structured JSON
-ctx7 docs /facebook/react "How to use hooks for state management" --json
+ctx7 docs /reactjs/react.dev "How to use hooks for state management" --json
 
 # Pipe to other tools — output is clean when not in a TTY (no spinners or colors)
-ctx7 docs /facebook/react "How to use hooks for state management" | head -50
+ctx7 docs /reactjs/react.dev "How to use hooks for state management" | head -50
 ctx7 docs /vercel/next.js "How to add a proxy for route protection" | grep -A 10 "proxy"
 ```
 
@@ -214,7 +214,7 @@ When `--base-url` targets a custom deployment, setup skips the npm update check 
 
 | File                                                | Purpose                                                          |
 | --------------------------------------------------- | ---------------------------------------------------------------- |
-| `.mcp.json` / `.cursor/mcp.json` / `.opencode.json` | MCP server entry                                                 |
+| `.mcp.json` / `.cursor/mcp.json` / `opencode.json`  | MCP server entry                                                 |
 | Agent rules directory                               | Rule file — instructs the agent to use Context7 for library docs |
 | Agent skills directory                              | `context7-mcp` skill                                             |
 
@@ -309,7 +309,7 @@ The CLI collects anonymous usage data to help improve the product. To disable:
 
 ```bash
 # For a single command
-CTX7_TELEMETRY_DISABLED=1 ctx7 docs /facebook/react "useEffect examples"
+CTX7_TELEMETRY_DISABLED=1 ctx7 docs /reactjs/react.dev "useEffect examples"
 
 # Permanently — add to ~/.bashrc or ~/.zshrc
 export CTX7_TELEMETRY_DISABLED=1

@@ -35,7 +35,7 @@ Once both steps are done, the **GitHub App** row shows the connected App and its
 
 ### Verify the App configuration
 
-The setup flow configures everything below automatically, so a newly created App is ready to use. Use this section to confirm the App, or to fix an App you connected before GitOps existed (it will be missing the push event; see [Webhooks](#webhooks)). Open the App at `github.com/settings/apps`.
+The setup flow configures everything below automatically, so a newly created App is ready to use. The exception is an instance on `localhost` or `127.0.0.1`: GitHub cannot reach a local address, so the manifest has no webhook and no push event. Add them by hand when the instance has a reachable URL. Use this section to confirm the App, or to fix an App you connected before GitOps existed (it will be missing the push event; see [Webhooks](#webhooks)). Open the App at `github.com/settings/apps`.
 
 | Setting | Required value |
 | ------- | -------------- |

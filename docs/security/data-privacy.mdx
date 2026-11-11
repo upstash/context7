@@ -22,6 +22,10 @@ When you use Context7 through an MCP client, the AI assistant (not the user dire
 - `libraryName` or `libraryId` — the library to look up
 - API key (if provided, for authentication)
 - MCP client name and version (e.g., IDE info, for analytics)
+- MCP session ID
+- Plugin name, when you connect through a Context7 plugin (for example, the Claude Code plugin)
+- Context7 MCP server version
+- A research preview flag, when you turn the research preview on
 - Transport type (`stdio` or `http`)
 - Client IP address, sent as a short-lived authenticated AES-256-GCM assertion by hosted HTTP deployments (for rate limiting)
 
@@ -76,7 +80,7 @@ Toggle which types of documentation sources are accessible to your teamspace:
 - **Websites** — documentation crawled from websites
 - **llms.txt** — documentation from llms.txt files
 - **Confluence** — Atlassian Confluence workspace pages and documentation
-- **Uploaded Files** — uploaded OpenAPI specifications and PDFs
+- **Uploaded Files** — uploaded OpenAPI specifications, PDFs, DOCX files, and folders
 - **Private Sources** — private sources connected to this teamspace
 
 <Frame>

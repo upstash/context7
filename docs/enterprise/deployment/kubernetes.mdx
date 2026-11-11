@@ -174,7 +174,7 @@ metadata:
   name: context7
   namespace: context7
   annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
 spec:
   ingressClassName: nginx
   tls:
@@ -313,7 +313,7 @@ To pin a specific version:
 
 ```bash
 kubectl set image statefulset/context7 \
-  context7=ghcr.io/context7/enterprise:1.2.0 \
+  context7=ghcr.io/context7/enterprise:2.0.0 \
   -n context7
 ```
 
@@ -347,7 +347,7 @@ Example response:
 ```json
 {
   "status": "healthy",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "setup": "complete",
   "license": "configured",
   "licenseInfo": {

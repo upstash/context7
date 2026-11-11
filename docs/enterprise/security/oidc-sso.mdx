@@ -84,7 +84,7 @@ If your provider uses a different claim name, you can change what Context7 looks
   </Step>
 
   <Step title="Test the connection">
-    Click **Check configuration** before saving. Context7 fetches your provider's discovery document and confirms the required endpoints are present and reachable. A green banner means everything looks good. A red error usually means the issuer URL is wrong or the provider is not accessible from the Context7 server.
+    Click **Check configuration** before saving. Context7 fetches your provider's discovery document and confirms that it lists the authorization and token endpoints. The check does not test the client ID or client secret. The issuer URL must use HTTPS, except for `localhost` and `127.0.0.1`. A green banner means everything looks good. A red error usually means the issuer URL is wrong or the provider is not accessible from the Context7 server.
   </Step>
 
   <Step title="Save and apply">

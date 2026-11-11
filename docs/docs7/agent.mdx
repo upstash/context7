@@ -55,7 +55,7 @@ An after-build run starts once a production build finishes. A daily or weekly ru
 
 ## PR Review Agent
 
-The PR Review Agent starts 5 minutes after an eligible pull request preview finishes, so a quick follow-up push replaces the review before it uses a run. It reviews only files inside the configured docs path and posts its findings in the pull request's Docs7 summary.
+The PR Review Agent starts 5 minutes after an eligible pull request preview finishes, so a quick follow-up push replaces the review before it uses a run. For a repository that Docs7 does not host, there is no preview: the review starts 5 minutes after the pull request is opened or receives a new commit. It reviews only files inside the configured docs path and posts its findings in the pull request's Docs7 summary.
 
 New sites start with PR reviews disabled and **Comment only** selected.
 

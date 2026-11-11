@@ -30,7 +30,7 @@ Two kinds of outside services receive data:
 
 <Step title="Request a trial">
 
-Go to [context7.com/plans](https://context7.com/plans) and click **On-Premise Trial**. Fill out the request form. No credit card required. You'll receive a 30-day full-featured license key via email once approved.
+Go to [context7.com/plans](https://context7.com/plans) and click **Learn More** on the Enterprise plan, then click **Request On-Premise Trial**. Fill out the request form. No credit card required. You'll receive a 30-day full-featured license key via email once approved.
 
 </Step>
 
@@ -241,7 +241,7 @@ Configured under **Workspace Settings › AI models** in the web UI.
 
 ### Embedding Settings
 
-By default, Context7 uses the same provider as your LLM for generating embeddings. You can configure a separate embedding provider if needed.
+By default, Context7 uses the same provider as your LLM for generating embeddings. Anthropic has no embedding models, so when the LLM provider is Anthropic, you must configure a separate embedding provider. With other providers, a separate embedding provider is optional.
 
 | Setting | Description |
 |---|---|
@@ -302,7 +302,7 @@ The GitLab token is sent only to `gitlab.com` and the host in **Server URL**.
 
 ## Access Control
 
-Admin credentials are set during first login (default: `admin` / `admin`). Change these immediately after setup via **Personal settings > Password > Change password**.
+The server creates an `admin` account with the password `admin` at first boot. Change these credentials immediately after setup from **Personal settings > Password > Change password**.
 
 Who can do what by default:
 
@@ -310,7 +310,7 @@ Who can do what by default:
 - **Signed-in members and their API keys** can parse and refresh libraries. To re-parse or replace an existing library, a member needs read access to it under the [library access rules](/enterprise/security/library-access).
 - **Anonymous callers** (no session and no API key) can do none of these.
 
-Delete, cancel parse, and support bundle downloads are for admins only. Use the switches in **Workspace Settings › Authorization** to open some actions to anonymous callers, and to require authentication for MCP and API search.
+Delete, cancel parse, and support bundle downloads are for admins only. Use the switches in **Workspace Settings › Authorization** to open some actions to anonymous callers. The **MCP authentication** switch in **Workspace Settings › Authentication** requires authentication for MCP and API search.
 
 <Frame>
   ![The Non-admin permissions card with the anonymous parse, refresh, support bundle, and delete switches off](/images/enterprise/settings/non-admin-permissions.png)
@@ -322,7 +322,7 @@ Delete, cancel parse, and support bundle downloads are for admins only. Use the 
 | Refresh repositories | Off | Allow anonymous callers to refresh libraries. Notion and Google Drive libraries stay admin-only |
 | Delete repositories | Off | Allow anonymous callers and members to delete libraries and cancel parses |
 | Download support bundle | Off | Allow anonymous callers and members to download the support bundle |
-| Require MCP authentication | Off | Require a session or personal API key for `/mcp`, `/api/v2`, and the library, log, and queue read endpoints. See [Authentication](/enterprise/api/authentication#anonymous-access) |
+| MCP authentication | Off | Require a session or personal API key for `/mcp`, `/api/v2`, and the library, log, and queue read endpoints. See [Authentication](/enterprise/api/authentication#non-admin-permissions) |
 
 <Note>
 Earlier versions allowed anonymous parse and refresh by default. If you never saved these switches, they are off after an upgrade. Scripts that call these endpoints without an API key then get `403`. Add a personal API key to the script, or turn the switch on.

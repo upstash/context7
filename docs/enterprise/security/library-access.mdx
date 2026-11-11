@@ -9,7 +9,7 @@ By default, every signed-in user can query every library indexed on your instanc
 Access is decided per library. A library is either open to everyone or restricted to a set of principals: SSO groups, individual users, or both. Admins always have access to every library.
 
 <Note>
-Group-based access relies on the group claim from your identity provider, so it works when your users sign in through SSO. See [OIDC SSO](/enterprise/security/oidc-sso), [SAML SSO](/enterprise/security/saml-sso) or [Microsoft Entra SSO](/enterprise/security/entra-sso) for setup. For password users, grant access to individual users instead.
+Group-based access relies on the group claim from your identity provider, so it works when your users sign in through SSO. See [OIDC SSO](/enterprise/security/oidc-sso), [SAML SSO](/enterprise/security/saml-sso) or [Microsoft Entra SSO](/enterprise/security/entra-sso) for setup. Microsoft Entra ID does not send the `groups` claim by default: add it to the app registration and grant access by group object ID, as described in [Microsoft Entra SSO](/enterprise/security/entra-sso#what-this-does-not-cover). For password users, grant access to individual users instead.
 </Note>
 
 ## Manage access in one place
@@ -22,7 +22,7 @@ Open **Workspace Settings › Library access**. The **Library access** card has 
 
 The table tells you three things at a glance:
 
-- **Access**: whether the library is open to **Everyone** or **Restricted**. Libraries you have not configured follow the workspace default and are tagged `default`.
+- **Access**: whether the library is open to **Everyone** or **Restricted**. Libraries you have not configured follow the longest matching namespace rule and show `via <namespace>/*`. Without a matching namespace rule, they follow the workspace default and show **Default**.
 - **Granted to**: the groups and users on a restricted library, `All members` when it is open, or `Admins only` when it is restricted but no one has been added yet.
 - **Edit** (pencil icon): opens the access editor for that library.
 

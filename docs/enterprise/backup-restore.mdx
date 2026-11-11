@@ -101,7 +101,7 @@ All backup endpoints require an admin session and keep working even if your lice
 
 Restore a backup from the dashboard (for local backups) or with the offline CLI (for S3 backups, scripted recovery, or a fresh machine).
 
-In every case the restore never deletes your current data. It moves the existing database, vector index, and encryption key into a `pre-restore-<timestamp>` directory inside the data volume, so you can roll back. Delete that directory once you've verified the restore.
+In every case the restore never deletes your current data. It moves the existing database, vector index, and encryption key file (if there is one) into a `pre-restore-<timestamp>` directory inside the data volume, so you can roll back. Delete that directory once you've verified the restore.
 
 <Note>
 A backup created by a newer Context7 version cannot be restored into an older installation; the restore tool will refuse and tell you to upgrade first. Backups from older versions restore fine, and the database is migrated automatically the next time the server starts.
@@ -116,7 +116,7 @@ Backups from earlier versions do not record the key and restore without this che
 
 ### From the dashboard
 
-Open **Workspace Settings › Backup**, find the backup in the list, and click the restore icon. Context7 validates the archive, shows what it contains (created date, libraries, schema version), and asks you to confirm. It then stages the restore and restarts to apply it, because the live database and vector index cannot be swapped while the server is running. Under Docker or Kubernetes the server comes back automatically; otherwise start it again after it stops.
+Open **Workspace Settings › Backup**, find the backup in the list, and click the restore icon. Context7 validates the archive, shows what it contains (**Created**, **Projects**, and **Schema**), and asks you to confirm. It then stages the restore and restarts to apply it, because the live database and vector index cannot be swapped while the server is running. Under Docker or Kubernetes the server comes back automatically; otherwise start it again after it stops.
 
 ### Offline with the CLI
 
