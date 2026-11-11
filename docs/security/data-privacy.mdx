@@ -48,6 +48,7 @@ Context7 stores MCP-formulated queries anonymously and uses them to measure and 
 - On-premise Enterprise plans can use their own LLM provider for code extraction and private library ranking
 - On-premise Enterprise plans can disable public documentation usage, limiting context retrieval to privately indexed documentation only
 - Queries from Enterprise teamspaces are never stored for benchmarking. No setting is needed
+- On-premise deployments forward public documentation lookups to Context7 Cloud when needed. The API key linked to an on-premise license (including trial licenses) identifies these requests: Cloud leaves their query text out of application logs, and skips benchmarking and request measurement for them
 
 Contact our sales team at [context7.com/contact](https://context7.com/contact) for Enterprise and on-premise plan details.
 

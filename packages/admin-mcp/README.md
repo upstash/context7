@@ -25,7 +25,7 @@ Clients that support MCP OAuth sign in on the first request. The server answers 
 
 ### API key (CI and scripts)
 
-Create a Context7 API key in [the dashboard](https://context7.com/dashboard) and send it as a bearer. Every key can read; turn on **Write access** when you create the key to also make changes (a key without it gets 403 on changes). A key reaches only its own teamspace.
+Create a Context7 API key in [the dashboard](https://context7.com/dashboard?tab=settings) and send it as a bearer. Every key can read; tick **Write access** when you create the key to also make changes (a key without it gets 403 on changes). A key reaches only its own teamspace.
 
 ```json
 {

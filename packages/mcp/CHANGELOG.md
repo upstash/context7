@@ -1,5 +1,18 @@
 # @upstash/context7-mcp
 
+## 4.6.0
+
+### Minor Changes
+
+- 2111b92: Add the `query-code` MCP tool and the `ctx7 code` command. They search and read a library's source code at the version its docs describe: `grep` with ripgrep's options, plus `definition`, `references`, `outline`, `read` and `list`. `ctx7 library` marks the libraries whose source is searchable, and `resolve-library-id` does so with the research preview on. The MCP tool is part of the research preview: it is listed only with `--research-preview`, `CONTEXT7_RESEARCH_PREVIEW=1` or `?research_preview=1`.
+- 7765f35: Add the `get-upgrade-guide` research preview tool: everything that changes between two versions of a library in one response, from the release notes and guides of every release in between and the public API diff of both versions.
+
+## 4.5.1
+
+### Patch Changes
+
+- fc65a5a: Keep the teamspace library-filter notice in resolve-library-id results when no libraries match.
+
 ## 4.5.0
 
 ### Minor Changes

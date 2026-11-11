@@ -44,7 +44,7 @@ Works in two modes:
 ## Installation
 
 > [!NOTE]
-> **API Key Recommended**: Get a free API key at [context7.com/dashboard](https://context7.com/dashboard) for higher rate limits.
+> **API Key Recommended**: Get a free API key at [context7.com/dashboard](https://context7.com/dashboard?tab=settings) for higher rate limits.
 
 Set up Context7 for your coding agents with a single command. The `ctx7` CLI requires Node.js 22.13 or newer.
 

@@ -2,20 +2,6 @@ name: Test
 
 on:
   pull_request:
-    paths:
-      - "packages/**"
-      - "plugins/**"
-      - ".cursor-plugin/**"
-      - ".claude-plugin/**"
-      - "skills/**"
-      - "rules/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "tsconfig.json"
-      - "eslint.config.js"
-      - "prettier.config.mjs"
-      - ".github/workflows/test.yml"
   push:
     branches: [master]
   workflow_dispatch:

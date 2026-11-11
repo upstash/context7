@@ -29,7 +29,14 @@ ctx7 setup --vscode
 ctx7 setup --devin
 ctx7 setup --copilot
 ctx7 setup --pi
+ctx7 setup --t3
 ```
+
+T3 Code uses its providers’ configuration. `ctx7 setup --t3` configures both Claude Code
+and Codex; use `--claude` or `--codex` to configure just one. This also affects those
+providers outside T3 Code. `ctx7 remove --t3` removes their Context7 setup. Both
+commands support `--project`, `--mcp`, and `--cli`. Restart the provider session
+in T3 Code after setup.
 
 ### Library Documentation
 
@@ -96,6 +103,21 @@ ctx7 docs /prisma/prisma "one-to-many relations"
 # Output as JSON
 ctx7 docs /facebook/react "hooks" --json
 ```
+
+### Query source code
+
+Search and read a library's source code at the version its docs describe. Search works like ripgrep.
+
+```bash
+ctx7 code /tanstack/query "invalidateQueries\\(" -g "packages/query-core/**"
+ctx7 code /pydantic/pydantic "Input should be a valid integer" -F
+ctx7 code /tokio-rs/tokio JoinHandle -c
+ctx7 code /colinhacks/zod/v3.24.2 ZodEffects --op definition
+ctx7 code /tokio-rs/tokio spawn --op read
+ctx7 code /tanstack/query --op list --path packages/query-core/src
+```
+
+`--op` is `grep` (default), `definition`, `references`, `outline`, `read` or `list`. The search flags are `-F`, `-i`, `-g` (repeat it for more globs), `-C`, `-l`, `-c`, `--head-limit` and `--offset`. Add a git tag to the library ID (`/colinhacks/zod/v3.24.2`) or pass `--tag` for a version. The first query for a library version can answer that the source is still being indexed. Run the command again after the time it gives.
 
 ### Setup
 
