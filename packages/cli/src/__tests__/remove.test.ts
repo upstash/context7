@@ -3,6 +3,7 @@ import { Command } from "commander";
 import { mkdir, readFile, writeFile, rm, access } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
+import { readJsonConfig } from "../setup/mcp-writer.js";
 
 const trackEvent = vi.fn();
 const mockCheckboxWithHover = vi.fn();
@@ -66,6 +67,30 @@ afterEach(async () => {
 });
 
 describe("remove command", () => {
+  test("--t3 removes both provider MCP entries and preserves unrelated servers", async () => {
+    await mkdir(join(tempDir, ".codex"), { recursive: true });
+    await writeFile(
+      join(tempDir, ".mcp.json"),
+      JSON.stringify({
+        mcpServers: {
+          context7: { url: "https://mcp.context7.com/mcp" },
+          other: { command: "other" },
+        },
+      })
+    );
+    await writeFile(
+      join(tempDir, ".codex", "config.toml"),
+      '[mcp_servers.context7]\nurl = "https://mcp.context7.com/mcp"\n\n[mcp_servers.other]\ncommand = "other"\n'
+    );
+    await runCommand("remove", "--t3", "--codex", "--project", "--mcp", "--yes");
+    const json = JSON.parse(await readFile(join(tempDir, ".mcp.json"), "utf-8"));
+    expect(json.mcpServers.context7).toBeUndefined();
+    expect(json.mcpServers.other).toEqual({ command: "other" });
+    const toml = await readFile(join(tempDir, ".codex", "config.toml"), "utf-8");
+    expect(toml).not.toContain("mcp_servers.context7");
+    expect(toml).toContain("mcp_servers.other");
+  });
+
   test("removes only CLI artifacts for cursor project setup", async () => {
     const rulePath = join(tempDir, ".cursor", "rules", "context7.mdc");
     const cliSkillPath = join(tempDir, ".cursor", "skills", "find-docs", "SKILL.md");
@@ -89,6 +114,49 @@ describe("remove command", () => {
       scope: "project",
       modes: ["cli"],
     });
+  });
+
+  test("removing the AGENTS.md section leaves the rest of the file untouched", async () => {
+    const agentsPath = join(tempDir, "AGENTS.md");
+    const own = "# Project rules\n\n```text\nline a\n\n\nline b\n```\n\n\n## Team notes\n\n";
+    const tail = "## Tail section\n";
+    await writeFile(
+      agentsPath,
+      `${own}<!-- context7 -->\nrule body\n<!-- context7 -->\n\n${tail}`,
+      "utf-8"
+    );
+
+    await runCommand("remove", "--codex", "--cli", "--project");
+
+    // Blank lines inside the fenced block and between the user's own sections
+    // are not ours to normalize; only the seam of the removed section is.
+    expect(await readFile(agentsPath, "utf-8")).toBe(`${own}${tail}`);
+  });
+
+  test("removing a trailing AGENTS.md section keeps the preceding content", async () => {
+    const agentsPath = join(tempDir, "AGENTS.md");
+    await writeFile(
+      agentsPath,
+      "# Before\n\nkeep   \n\n<!-- context7 -->\nrule body\n<!-- context7 -->\n",
+      "utf-8"
+    );
+
+    await runCommand("remove", "--codex", "--cli", "--project");
+
+    expect(await readFile(agentsPath, "utf-8")).toBe("# Before\n\nkeep   \n");
+  });
+
+  test("removes the AGENTS.md section from a file with CRLF line endings", async () => {
+    const agentsPath = join(tempDir, "AGENTS.md");
+    await writeFile(
+      agentsPath,
+      "# Before\r\n\r\n<!-- context7 -->\r\nrule body\r\n<!-- context7 -->\r\n\r\n# After\r\n",
+      "utf-8"
+    );
+
+    await runCommand("remove", "--codex", "--cli", "--project");
+
+    expect(await readFile(agentsPath, "utf-8")).toBe("# Before\r\n\r\n# After\r\n");
   });
 
   test("removes only MCP artifacts for codex project setup", async () => {
@@ -383,9 +451,10 @@ describe("remove command", () => {
   // keep this file functional after removing Context7
   "theme": "night",
   "mcp": {
+    // first server
     "alpha": { "type": "remote", "url": "https://alpha.com", "enabled": true },
     "context7": { "type": "remote", "url": "https://mcp.context7.com/mcp", "enabled": true },
-    "omega": { "type": "remote", "url": "https://omega.com", "enabled": false }
+    "omega": { "type": "remote", "url": "https://omega.com", "enabled": false },
   },
   "telemetry": { "enabled": true }
 }
@@ -395,13 +464,47 @@ describe("remove command", () => {
 
     await runCommand("remove", "--opencode", "--mcp", "--project");
 
-    expect(JSON.parse(await readFile(configPath, "utf-8"))).toEqual({
+    const updated = await readFile(configPath, "utf-8");
+    expect(updated).toContain("// keep this file functional after removing Context7");
+    expect(updated).toContain("// first server");
+    expect(updated).toContain(
+      '"omega": { "type": "remote", "url": "https://omega.com", "enabled": false },'
+    );
+    expect(await readJsonConfig(configPath)).toEqual({
       theme: "night",
       mcp: {
         alpha: { type: "remote", url: "https://alpha.com", enabled: true },
         omega: { type: "remote", url: "https://omega.com", enabled: false },
       },
       telemetry: { enabled: true },
+    });
+  });
+
+  test("detects and removes context7 from an opencode 2.x mcp.servers map", async () => {
+    const configPath = join(tempDir, "opencode.jsonc");
+
+    await writeFile(
+      configPath,
+      `{
+  // keep
+  "mcp": {
+    "servers": {
+      "alpha": { "type": "remote", "url": "https://alpha.com" },
+      "context7": { "type": "remote", "url": "https://mcp.context7.com/mcp" },
+    },
+  },
+}
+`,
+      "utf-8"
+    );
+    mockCheckboxWithHover.mockResolvedValueOnce(["opencode"]);
+
+    await runCommand("remove", "--mcp", "--project");
+
+    expect(logOutput.some((line) => line.includes("Detected: OpenCode"))).toBe(true);
+    expect(await readFile(configPath, "utf-8")).toContain("// keep");
+    expect(await readJsonConfig(configPath)).toEqual({
+      mcp: { servers: { alpha: { type: "remote", url: "https://alpha.com" } } },
     });
   });
 

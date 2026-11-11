@@ -1,5 +1,17 @@
 # @upstash/context7-opencode
 
+## 0.2.1
+
+### Patch Changes
+
+- 615e72b: Update the Next.js examples in the tool descriptions, the CLI rule and the bundled skill: the version example is now `/vercel/next.js/v16.2.9`, and the prompts use Next.js 16.
+
+## 0.2.0
+
+### Minor Changes
+
+- 635cfc8: Support OpenCode v2. The plugin now exports a v2 `setup` entrypoint next to the v1 `server` entrypoint, so `opencode plugin add @upstash/context7-opencode` registers the Context7 MCP server and the `context7-mcp` skill on v2 as well.
+
 ## 0.1.0
 
 ### Minor Changes

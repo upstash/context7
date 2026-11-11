@@ -1,17 +1,4 @@
-import type {
-  ListSkillsResponse,
-  SingleSkillResponse,
-  SearchResponse,
-  SuggestResponse,
-  DownloadResponse,
-  LibrarySearchResponse,
-  SkillQuestionsResponse,
-  StructuredGenerateInput,
-  GenerateStreamEvent,
-  SkillQuotaResponse,
-  ContextResponse,
-} from "../types.js";
-import { downloadSkillFromGitHub, getSkillFromGitHub } from "./github.js";
+import type { LibrarySearchResponse, LibrarySearchResult, ContextResponse } from "../types.js";
 import { VERSION } from "../constants.js";
 
 export const DEFAULT_CONTEXT7_BASE_URL = "https://context7.com";
@@ -24,246 +11,6 @@ export function getBaseUrl(): string {
 
 export function setBaseUrl(url: string): void {
   baseUrl = url;
-}
-
-// TODO(deprecate-skills-phase-2): Remove the Skill Hub API helpers in this file
-// when deprecated `ctx7 skills ...` commands are deleted.
-export async function listProjectSkills(project: string): Promise<ListSkillsResponse> {
-  const params = new URLSearchParams({ project });
-  const response = await fetch(`${baseUrl}/api/v2/skills?${params}`);
-  return (await response.json()) as ListSkillsResponse;
-}
-
-export async function getSkill(project: string, skillName: string): Promise<SingleSkillResponse> {
-  const params = new URLSearchParams({ project, skill: skillName });
-  const response = await fetch(`${baseUrl}/api/v2/skills?${params}`);
-  return (await response.json()) as SingleSkillResponse;
-}
-
-export async function searchSkills(query: string): Promise<SearchResponse> {
-  const params = new URLSearchParams({ query });
-  const response = await fetch(`${baseUrl}/api/v2/skills?${params}`);
-  return (await response.json()) as SearchResponse;
-}
-
-export async function suggestSkills(
-  dependencies: string[],
-  accessToken?: string
-): Promise<SuggestResponse> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-  }
-  const response = await fetch(`${baseUrl}/api/v2/skills/suggest`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ dependencies }),
-  });
-  return (await response.json()) as SuggestResponse;
-}
-
-export async function downloadSkill(project: string, skillName: string): Promise<DownloadResponse> {
-  const skillData = await getSkill(project, skillName);
-
-  if (skillData.error) {
-    // handle private repo skills with env var
-    const ghResult = await getSkillFromGitHub(project, skillName);
-    if (ghResult.status !== "ok" || !ghResult.skill) {
-      return {
-        skill: { name: skillName, description: "", url: "", project },
-        files: [],
-        error: skillData.message || skillData.error,
-      };
-    }
-
-    const { files, error } = await downloadSkillFromGitHub(ghResult.skill);
-    if (error) {
-      return { skill: ghResult.skill, files: [], error };
-    }
-    return { skill: ghResult.skill, files };
-  }
-
-  const skill = {
-    name: skillData.name,
-    description: skillData.description,
-    url: skillData.url,
-    project: skillData.project,
-  };
-
-  const { files, error } = await downloadSkillFromGitHub(skill);
-
-  if (error) {
-    return { skill, files: [], error };
-  }
-
-  return { skill, files };
-}
-
-export interface GenerateSkillResponse {
-  content: string;
-  libraryName: string;
-  error?: string;
-}
-
-export async function searchLibraries(
-  query: string,
-  accessToken?: string
-): Promise<LibrarySearchResponse> {
-  const params = new URLSearchParams({ query });
-  const headers: Record<string, string> = {};
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-  }
-  const response = await fetch(`${baseUrl}/api/v2/libs/search?${params}`, { headers });
-  return (await response.json()) as LibrarySearchResponse;
-}
-
-export async function getSkillQuota(accessToken: string): Promise<SkillQuotaResponse> {
-  const response = await fetch(`${baseUrl}/api/v2/skills/quota`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    return {
-      used: 0,
-      limit: 0,
-      remaining: 0,
-      tier: "free",
-      resetDate: null,
-      error: (errorData as { message?: string }).message || `HTTP error ${response.status}`,
-    };
-  }
-
-  return (await response.json()) as SkillQuotaResponse;
-}
-
-export async function getSkillQuestions(
-  libraries: Array<{ id: string; name: string }>,
-  motivation: string,
-  accessToken?: string
-): Promise<SkillQuestionsResponse> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-  }
-
-  const response = await fetch(`${baseUrl}/api/v2/skills/questions`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ libraries, motivation }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    return {
-      questions: [],
-      error: (errorData as { message?: string }).message || `HTTP error ${response.status}`,
-    };
-  }
-
-  return (await response.json()) as SkillQuestionsResponse;
-}
-
-export async function generateSkillStructured(
-  input: StructuredGenerateInput,
-  onEvent?: (event: GenerateStreamEvent) => void,
-  accessToken?: string
-): Promise<GenerateSkillResponse> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-  }
-
-  const response = await fetch(`${baseUrl}/api/v2/skills/generate`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(input),
-  });
-
-  const libraryName = input.libraries[0]?.name || "skill";
-  return handleGenerateResponse(response, libraryName, onEvent);
-}
-
-async function handleGenerateResponse(
-  response: Response,
-  libraryName: string,
-  onEvent?: (event: GenerateStreamEvent) => void
-): Promise<GenerateSkillResponse> {
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    return {
-      content: "",
-      libraryName,
-      error: (errorData as { message?: string }).message || `HTTP error ${response.status}`,
-    };
-  }
-
-  const reader = response.body?.getReader();
-  if (!reader) {
-    return { content: "", libraryName, error: "No response body" };
-  }
-
-  const decoder = new TextDecoder();
-  let content = "";
-  let finalLibraryName = libraryName;
-  let error: string | undefined;
-  let buffer = ""; // Buffer for incomplete lines across chunks
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    const chunk = decoder.decode(value, { stream: true });
-    buffer += chunk;
-
-    // Split by newline but keep track of incomplete lines
-    const lines = buffer.split("\n");
-    // Keep the last element (may be incomplete) in the buffer
-    buffer = lines.pop() || "";
-
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-      if (!trimmedLine) continue;
-
-      try {
-        const data = JSON.parse(trimmedLine) as GenerateStreamEvent;
-
-        if (onEvent) {
-          onEvent(data);
-        }
-
-        if (data.type === "complete") {
-          content = data.content || "";
-          finalLibraryName = data.libraryName || libraryName;
-        } else if (data.type === "error") {
-          error = data.message;
-        }
-      } catch {
-        // Ignore malformed JSON lines
-      }
-    }
-  }
-
-  // Process any remaining data in the buffer
-  if (buffer.trim()) {
-    try {
-      const data = JSON.parse(buffer.trim()) as GenerateStreamEvent;
-      if (onEvent) {
-        onEvent(data);
-      }
-      if (data.type === "complete") {
-        content = data.content || "";
-        finalLibraryName = data.libraryName || libraryName;
-      } else if (data.type === "error") {
-        error = data.message;
-      }
-    } catch {
-      // Ignore malformed JSON
-    }
-  }
-
-  return { content, libraryName: finalLibraryName, error };
 }
 
 function getAuthHeaders(accessToken?: string): Record<string, string> {
@@ -313,6 +60,116 @@ export async function resolveLibrary(
 
 export interface GetContextOptions {
   type?: "json" | "txt";
+  language?: string;
+}
+
+export const CODE_OPERATIONS = [
+  "grep",
+  "definition",
+  "references",
+  "outline",
+  "read",
+  "list",
+] as const;
+export type CodeOperation = (typeof CODE_OPERATIONS)[number];
+
+/**
+ * Ranges of the numeric `ctx7 code` flags. The server rejects a number out of
+ * its range with a 400, so the command clamps numbers into these ranges first.
+ */
+export const CODE_LIMITS = {
+  context: { min: 0, max: 10 },
+  headLimit: { min: 1, max: 500 },
+  offset: { min: 0, max: 10_000 },
+} as const;
+
+/**
+ * Libraries built from a Git repository have source that `ctx7 code` can search.
+ * This is a client-side guess from the ID and the branch: the server decides
+ * with sourceRepo() in its /api/v2/code route and answers 422 "no_source".
+ * Keep the rule the same as hasSourceCode in packages/mcp/src/lib/utils.ts.
+ */
+export function hasSourceCode(result: Pick<LibrarySearchResult, "id" | "branch">): boolean {
+  return !/^\/(websites|llmstxt)\//.test(result.id) && !result.branch?.startsWith("_");
+}
+
+/** Seconds to wait from a 202 body or a Retry-After header (seconds or an HTTP date). */
+export function retryAfterSeconds(bodyValue: unknown, header: string | null): number {
+  if (typeof bodyValue === "number" && Number.isFinite(bodyValue) && bodyValue >= 0)
+    return Math.ceil(bodyValue);
+  if (header) {
+    const seconds = Number(header);
+    if (Number.isFinite(seconds) && seconds >= 0) return Math.ceil(seconds);
+    const date = Date.parse(header);
+    if (Number.isFinite(date)) return Math.max(1, Math.ceil((date - Date.now()) / 1000));
+  }
+  return 30;
+}
+
+/** ripgrep-style search options plus LSP-style operations, as sent to /api/v2/code. */
+export interface CodeQueryOptions {
+  /** A git tag, or a commit from a result header. A version suffix on the library ID also works. */
+  version?: string;
+  operation?: CodeOperation;
+  fixedStrings?: boolean;
+  ignoreCase?: boolean;
+  glob?: string[];
+  path?: string;
+  context?: number;
+  outputMode?: "content" | "files_with_matches" | "count";
+  headLimit?: number;
+  offset?: number;
+  json?: boolean;
+}
+
+export type CodeQueryResult =
+  | { kind: "result"; body: string }
+  | { kind: "indexing"; message: string; retryAfter: number }
+  | { kind: "error"; error: string; message?: string };
+
+/** Queries a library's source code through /api/v2/code. */
+export async function getLibraryCode(
+  libraryId: string,
+  pattern: string | undefined,
+  options: CodeQueryOptions = {},
+  accessToken?: string
+): Promise<CodeQueryResult> {
+  const params = new URLSearchParams({ libraryId });
+  if (options.version) params.set("version", options.version);
+  if (pattern) params.set("pattern", pattern);
+  if (options.operation) params.set("operation", options.operation);
+  if (options.fixedStrings) params.set("fixed_strings", "true");
+  if (options.ignoreCase) params.set("ignore_case", "true");
+  for (const glob of options.glob ?? []) params.append("glob", glob);
+  if (options.path) params.set("path", options.path);
+  if (options.context !== undefined) params.set("context", String(options.context));
+  if (options.outputMode) params.set("output_mode", options.outputMode);
+  if (options.headLimit) params.set("head_limit", String(options.headLimit));
+  if (options.offset) params.set("offset", String(options.offset));
+  if (options.json) params.set("format", "json");
+  const response = await fetch(`${baseUrl}/api/v2/code?${params}`, {
+    headers: getAuthHeaders(accessToken),
+  });
+  if (response.status === 202) {
+    const body = (await response.json().catch(() => ({}))) as {
+      message?: string;
+      retryAfter?: number;
+    };
+    return {
+      kind: "indexing",
+      message: body.message ?? "The library source is being indexed.",
+      retryAfter: retryAfterSeconds(body.retryAfter, response.headers.get("Retry-After")),
+    };
+  }
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
+    return {
+      kind: "error",
+      error: body.error || `HTTP error ${response.status}`,
+      message: body.message,
+    };
+  }
+  return { kind: "result", body: await response.text() };
 }
 
 export async function getLibraryContext(
@@ -324,6 +181,9 @@ export async function getLibraryContext(
   const params = new URLSearchParams({ libraryId, query });
   if (options?.type) {
     params.set("type", options.type);
+  }
+  if (options?.language) {
+    params.set("language", options.language);
   }
   const headers = getAuthHeaders(accessToken);
   const response = await fetch(`${baseUrl}/api/v2/context?${params}`, {
@@ -360,4 +220,42 @@ export async function getLibraryContext(
   }
 
   return (await response.json()) as ContextResponse;
+}
+
+export interface SearchDocumentationOptions {
+  type: "json" | "txt";
+  libraries?: string[];
+  version?: string;
+  language?: string;
+}
+
+export async function searchDocumentation(
+  query: string,
+  options: SearchDocumentationOptions,
+  accessToken?: string
+): Promise<unknown> {
+  const params = new URLSearchParams({ query, type: options.type });
+  for (const library of options.libraries ?? []) {
+    params.append("library", library);
+  }
+  if (options.version) {
+    params.set("version", options.version);
+  }
+  if (options.language) {
+    params.set("language", options.language);
+  }
+
+  const response = await fetch(`${baseUrl}/api/v3/search?${params}`, {
+    headers: getAuthHeaders(accessToken),
+  });
+
+  if (!response.ok) {
+    const errorData = (await response.json().catch(() => ({}))) as {
+      error?: string;
+      message?: string;
+    };
+    throw new Error(errorData.message || errorData.error || `HTTP error ${response.status}`);
+  }
+
+  return options.type === "txt" ? response.text() : response.json();
 }

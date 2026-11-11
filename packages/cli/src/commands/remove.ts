@@ -4,15 +4,23 @@ import ora from "ora";
 import { checkboxWithHover } from "../utils/prompts.js";
 import { log } from "../utils/logger.js";
 import { trackEvent } from "../utils/tracking.js";
-import { ALL_AGENT_NAMES, getAgent, type SetupAgent } from "../setup/agents.js";
+import {
+  ALL_AGENT_NAMES,
+  findAppendRuleFile,
+  getAgent,
+  resolveAppendRuleFile,
+  type SetupAgent,
+} from "../setup/agents.js";
 import {
   readJsonConfig,
   readTomlServerExists,
   removeServerEntry,
   writeJsonConfig,
+  patchJsonConfig,
   resolveMcpPath,
   removeTomlServer,
 } from "../setup/mcp-writer.js";
+import { hasOpenCodeServer, removeOpenCodeServer } from "../setup/opencode-editor.js";
 import { join } from "path";
 import { access, readFile, rm, writeFile } from "fs/promises";
 
@@ -20,6 +28,7 @@ type Scope = "global" | "project";
 type UninstallMode = "mcp" | "cli";
 
 type UninstallOptions = Partial<Record<SetupAgent, boolean>> & {
+  t3?: boolean;
   project?: boolean;
   yes?: boolean;
   all?: boolean;
@@ -73,6 +82,7 @@ export function registerRemoveCommand(program: Command): void {
   }
 
   command
+    .option("--t3", "Remove from T3 Code (Claude Code and Codex providers)")
     .option("--all", "Remove both MCP setup and CLI + Skills setup")
     .option("--mcp", "Remove MCP setup")
     .option("--cli", "Remove CLI + Skills setup")
@@ -84,7 +94,9 @@ export function registerRemoveCommand(program: Command): void {
 }
 
 function getSelectedAgents(options: UninstallOptions): SetupAgent[] {
-  return ALL_AGENT_NAMES.filter((name) => options[name]);
+  return ALL_AGENT_NAMES.filter(
+    (name) => options[name] || (options.t3 && (name === "claude" || name === "codex"))
+  );
 }
 
 async function promptAgents(detected: SetupAgent[]): Promise<SetupAgent[] | null> {
@@ -201,6 +213,7 @@ async function hasMcpConfig(agentName: SetupAgent, scope: Scope): Promise<boolea
     );
     return false;
   }
+  if (agentName === "opencode") return hasOpenCodeServer(existing);
   const section = existing[agent.mcp.configKey];
   return (
     !!section && typeof section === "object" && !Array.isArray(section) && "context7" in section
@@ -217,15 +230,7 @@ async function hasRule(agentName: SetupAgent, scope: Scope): Promise<boolean> {
     return pathExists(join(ruleDir, rule.filename));
   }
 
-  const filePath =
-    scope === "global" ? rule.file("global") : join(process.cwd(), rule.file("project"));
-
-  try {
-    const existing = await readFile(filePath, "utf-8");
-    return existing.includes(CONTEXT7_SECTION_MARKER);
-  } catch {
-    return false;
-  }
+  return (await findAppendRuleFile(rule, scope)) !== undefined;
 }
 
 async function hasSkill(agentName: SetupAgent, scope: Scope, skillName: string): Promise<boolean> {
@@ -328,10 +333,22 @@ async function uninstallMcp(agentName: SetupAgent, scope: Scope): Promise<Cleanu
       return { status: removed ? "removed" : "not found", path: mcpPath };
     }
 
+    if (agentName === "opencode") {
+      const removed = await removeOpenCodeServer(mcpPath);
+      return { status: removed ? "removed" : "not found", path: mcpPath };
+    }
+
     const existing = await readJsonConfig(mcpPath);
     const { config, removed } = removeServerEntry(existing, agent.mcp.configKey, "context7");
     if (removed) {
-      await writeJsonConfig(mcpPath, config);
+      // Removing the last server drops the now-empty section, the same shape
+      // `removeServerEntry` produces, but through an in-place edit so the rest
+      // of the user's JSONC file (comments, layout) survives untouched.
+      const sectionEmptied = !(agent.mcp.configKey in config);
+      const path = sectionEmptied ? [agent.mcp.configKey] : [agent.mcp.configKey, "context7"];
+      if (!(await patchJsonConfig(mcpPath, path, undefined))) {
+        await writeJsonConfig(mcpPath, config);
+      }
     }
     return { status: removed ? "removed" : "not found", path: mcpPath };
   } catch (err) {
@@ -359,7 +376,7 @@ async function uninstallRule(agentName: SetupAgent, scope: Scope): Promise<Clean
   }
 
   const filePath =
-    scope === "global" ? rule.file("global") : join(process.cwd(), rule.file("project"));
+    (await findAppendRuleFile(rule, scope)) ?? (await resolveAppendRuleFile(rule, scope));
 
   try {
     const existing = await readFile(filePath, "utf-8");
@@ -368,16 +385,29 @@ async function uninstallRule(agentName: SetupAgent, scope: Scope): Promise<Clean
     }
 
     const escapedMarker = CONTEXT7_SECTION_MARKER.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const updated = existing
-      .replace(new RegExp(`\\n?${escapedMarker}\\n[\\s\\S]*?${escapedMarker}\\n?`, "m"), "")
-      .replace(/\n{3,}/g, "\n\n")
-      .replace(/^\n+/, "")
-      .trimEnd();
+    // The file may have CRLF line endings (e.g. checked out by Git for Windows).
+    const section = new RegExp(`${escapedMarker}(\\r?\\n)[\\s\\S]*?${escapedMarker}`).exec(
+      existing
+    );
+    if (!section) {
+      return { status: "not found", path: filePath };
+    }
+    const eol = section[1];
+
+    // Only the seam left by the removed section is normalized; everything else in
+    // the file is the user's own content and must stay byte-for-byte identical
+    // (blank lines inside fenced code blocks, spacing between their sections).
+    const before = existing.slice(0, section.index).replace(/(?:\r?\n)+$/, "");
+    const after = existing.slice(section.index + section[0].length).replace(/^(?:\r?\n)+/, "");
+    const updated = (before && after ? `${before}${eol}${eol}${after}` : before || after).replace(
+      /(?:\r?\n)*$/,
+      ""
+    );
 
     if (updated.length === 0) {
       await rm(filePath);
     } else {
-      await writeFile(filePath, `${updated}\n`, "utf-8");
+      await writeFile(filePath, `${updated}${eol}`, "utf-8");
     }
 
     return { status: "removed", path: filePath };

@@ -1,5 +1,5 @@
 # ----- Build Stage -----
-FROM node:lts-alpine AS builder
+FROM node:24-alpine AS builder
 RUN corepack enable pnpm
 WORKDIR /app
 
@@ -12,7 +12,7 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @upstash/context7-mcp build
 
 # ----- Production Stage -----
-FROM node:lts-alpine
+FROM node:24-alpine
 RUN corepack enable pnpm
 WORKDIR /app
 

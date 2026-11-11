@@ -1,6 +1,6 @@
 # Context7 Plugin for OpenCode
 
-Context7 solves a common problem with AI coding assistants: outdated training data and hallucinated APIs. Instead of relying on stale knowledge, Context7 fetches current documentation directly from source repositories.
+Context7 solves a common problem with AI coding agents: outdated training data and hallucinated APIs. Instead of relying on stale knowledge, Context7 fetches current documentation directly from source repositories.
 
 ## What's Included
 
@@ -11,11 +11,28 @@ Installing the plugin adds two things to OpenCode:
 
 ## Installation
 
+On OpenCode v2:
+
+```bash
+opencode plugin add @upstash/context7-opencode
+```
+
+On OpenCode v1 (1.18.29 or newer):
+
 ```bash
 opencode plugin @upstash/context7-opencode
 ```
 
-The command installs the plugin and adds it to your OpenCode config. You can also add it by hand:
+The command installs the plugin and adds it to your OpenCode config. On OpenCode v2 this is the global config. To enable the plugin for a single project only, add it to that project's `opencode.json` by hand. OpenCode v2 uses the `plugins` key:
+
+```json opencode.json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugins": ["@upstash/context7-opencode"]
+}
+```
+
+OpenCode v1 uses `plugin`:
 
 ```json opencode.json
 {
@@ -28,14 +45,23 @@ Restart OpenCode after installing. On the first documentation lookup, OpenCode o
 
 ## API Key
 
-OAuth is the default and needs no configuration. If you would rather use an API key, for example on a headless machine, create one in the [Context7 dashboard](https://context7.com/dashboard) and export it before launching OpenCode:
+OAuth is the default and needs no configuration. If you would rather use an API key, for example on a headless machine, create one in the [Context7 dashboard](https://context7.com/dashboard?tab=settings) and export it before launching OpenCode:
 
 ```bash
 # e.g. in ~/.zshrc or ~/.bashrc
 export CONTEXT7_API_KEY="your-api-key"
 ```
 
-The plugin picks up `CONTEXT7_API_KEY` automatically and sends it as an `Authorization` header instead of running the OAuth flow. You can also pass the key through the plugin options:
+The plugin picks up `CONTEXT7_API_KEY` automatically and sends it as an `Authorization` header instead of running the OAuth flow. You can also pass the key through the plugin options. On OpenCode v2:
+
+```json opencode.json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugins": [{ "package": "@upstash/context7-opencode", "options": { "apiKey": "your-api-key" } }]
+}
+```
+
+On OpenCode v1:
 
 ```json opencode.json
 {
@@ -52,7 +78,7 @@ Both entries are additive, and an entry you configure yourself always wins. If y
 
 The skill triggers on its own when you ask about a library:
 
-- "How do I set up authentication in Next.js 15?"
+- "How do I set up authentication in Next.js 16?"
 - "Show me React Server Components examples"
 - "What's the Prisma syntax for relations?"
 
@@ -64,7 +90,7 @@ Searches for libraries and returns Context7-compatible identifiers.
 
 ```
 Input: "next.js"
-Output: { id: "/vercel/next.js", name: "Next.js", versions: ["v15.1.8", "v14.2.0", ...] }
+Output: { id: "/vercel/next.js", name: "Next.js", versions: ["v16.2.9", "v15.1.8", ...] }
 ```
 
 ### context7_query-docs
@@ -72,7 +98,7 @@ Output: { id: "/vercel/next.js", name: "Next.js", versions: ["v15.1.8", "v14.2.0
 Fetches documentation for a specific library, ranked by relevance to your question.
 
 ```
-Input: { libraryId: "/vercel/next.js", query: "app router middleware" }
+Input: { libraryId: "/vercel/next.js", query: "app router proxy" }
 Output: Relevant documentation snippets with code examples
 ```
 
@@ -81,7 +107,7 @@ Output: Relevant documentation snippets with code examples
 To get documentation for a specific version, include the version in the library ID:
 
 ```
-/vercel/next.js/v15.1.8
+/vercel/next.js/v16.2.9
 /supabase/supabase/v2.45.0
 ```
 

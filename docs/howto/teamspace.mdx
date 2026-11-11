@@ -13,7 +13,7 @@ Add team members, assign roles, and manage access to your Context7 dashboard fro
 
 <Steps>
   <Step title="Open the teamspace menu">
-    Click **Create a teamspace** from the top-left dropdown.
+    Click **Create Teamspace** from the top-left dropdown.
   </Step>
   <Step title="Name the teamspace">
     Enter a teamspace name.
@@ -30,7 +30,8 @@ Add team members, assign roles, and manage access to your Context7 dashboard fro
 | Create API keys       | ✓     | ✓     | ✓         |
 | Manage team members   | ✓     | ✓     | ✗         |
 | Manage library access | ✓     | ✓     | ✗         |
-| Manage private sources | ✓     | ✓     | ✗         |
+| Add or remove private sources | ✓     | ✓     | ✗         |
+| Refresh private sources | ✓     | ✓     | ✓         |
 | Rename teamspace      | ✓     | ✗     | ✗         |
 | Delete teamspace      | ✓     | ✗     | ✗         |
 
@@ -44,15 +45,28 @@ Add team members, assign roles, and manage access to your Context7 dashboard fro
     Choose **Developer** or **Admin**.
   </Step>
   <Step title="Send the invite">
-    Click **Add**. The member receives an invitation email and is automatically added to the teamspace once they sign in.
+    Click **Add**. The member receives an invitation email. After they sign in, they accept the invitation from the banner at the top of their dashboard.
   </Step>
 </Steps>
 
-<Note>The invitation will remain pending until they sign in.</Note>
+<Note>The invitation remains pending until the member accepts or declines it. Pending invitations count toward the teamspace member limit.</Note>
+
+## Inviting Members with a Prompt
+
+Owners and admins can also invite members with a link and a ready-to-send prompt. In the members tab, click **Invite prompt** next to **Invite link**.
+
+The modal shows the **Shareable invite link** and a **Prompt** card. If no link is active, click **Create and copy link** first. Then send the link, or click **Copy prompt** to copy the whole message.
+
+The prompt includes the invite link, the teamspace to select at sign-in, and the setup steps for each kind of tool:
+
+- **Coding agents** — run `npx ctx7@latest setup` in a terminal. Anyone who used Context7 before must run `npx ctx7@latest logout` first, because `setup` keeps an earlier login and does not show the teamspace picker.
+- **claude.ai, the Claude app or ChatGPT** — add a custom connector with the URL `https://mcp.context7.com/mcp/oauth`.
+
+<Note>Every sign-in asks which teamspace to use. If a member selects the personal teamspace, they get none of the teamspace's private libraries and see no error.</Note>
 
 ## Teamspace Settings
 
-If you are the owner of the teamspace, you can rename or delete the teamspace under the overview tab.
+If you are the owner of the teamspace, you can rename or delete the teamspace in the [Context7 dashboard](https://context7.com/dashboard?tab=settings).
 
 ![Teamspace management card](/images/dashboard/teamspace-management.png)
 
@@ -60,8 +74,8 @@ If you are the owner of the teamspace, you can rename or delete the teamspace un
 
 ## Limits
 
-| Plan       | Max Members       |
-| ---------- | ----------------- |
-| Free       | 1 (personal only) |
-| Pro        | 10                |
-| Enterprise | Unlimited         |
+| Plan       | Max Members per Teamspace | Max Teamspaces |
+| ---------- | ------------------------- | -------------- |
+| Free       | 1 (personal only)         | 0              |
+| Pro        | 30                        | 5              |
+| Enterprise | Unlimited                 | Unlimited      |

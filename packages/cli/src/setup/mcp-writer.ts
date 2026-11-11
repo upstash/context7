@@ -1,46 +1,35 @@
 import { access, readFile, writeFile, mkdir } from "fs/promises";
 import { dirname } from "path";
+import { applyEdits, modify, parse, printParseErrorCode, type ParseError } from "jsonc-parser";
 import { STDIO_PACKAGE } from "./agents.js";
 
 export { patchTomlStdioApiKey } from "./toml-editor.js";
-
-function stripJsonComments(text: string): string {
-  let result = "";
-  let i = 0;
-  while (i < text.length) {
-    if (text[i] === '"') {
-      const start = i++;
-      while (i < text.length && text[i] !== '"') {
-        if (text[i] === "\\") i++;
-        i++;
-      }
-      result += text.slice(start, ++i);
-    } else if (text[i] === "/" && text[i + 1] === "/") {
-      i += 2;
-      while (i < text.length && text[i] !== "\n") i++;
-    } else if (text[i] === "/" && text[i + 1] === "*") {
-      i += 2;
-      while (i < text.length && !(text[i] === "*" && text[i + 1] === "/")) i++;
-      i += 2;
-    } else {
-      result += text[i++];
-    }
-  }
-  return result;
-}
 
 export async function readJsonConfig(filePath: string): Promise<Record<string, unknown>> {
   let raw: string;
   try {
     raw = await readFile(filePath, "utf-8");
-  } catch {
-    return {};
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return {};
+    throw error;
   }
+  return parseJsonConfig(raw);
+}
 
+/** Parses JSON or JSONC config text. Blank text is an empty config; invalid text throws. */
+export function parseJsonConfig(raw: string): Record<string, unknown> {
   raw = raw.trim();
   if (!raw) return {};
 
-  return JSON.parse(stripJsonComments(raw)) as Record<string, unknown>;
+  const errors: ParseError[] = [];
+  const config = parse(raw, errors, { allowTrailingComma: true });
+  if (errors.length > 0) {
+    const firstError = errors[0];
+    throw new SyntaxError(
+      `Invalid JSON config at offset ${firstError.offset}: ${printParseErrorCode(firstError.error)}`
+    );
+  }
+  return config as Record<string, unknown>;
 }
 
 export function mergeServerEntry(
@@ -109,6 +98,58 @@ export async function writeJsonConfig(
   await writeFile(filePath, JSON.stringify(config, null, 2) + "\n", "utf-8");
 }
 
+/**
+ * Sets one value in an existing JSON config by path, keeping the file's
+ * comments, key order and trailing commas.
+ *
+ * Agent configs such as `.vscode/mcp.json` and `.cursor/mcp.json` are JSONC and
+ * users keep notes in them; `readJsonConfig` accepts those files, so writing
+ * them back through `JSON.stringify` silently discarded that content. The object
+ * that gains or loses the entry is reprinted with two-space indentation, which
+ * is the granularity JSONC allows; `value` of `undefined` removes the entry.
+ *
+ * Returns false when the file cannot be edited in place (missing, empty, or not
+ * parseable as JSONC), so the caller falls back to rewriting it whole.
+ */
+export async function patchJsonConfig(
+  filePath: string,
+  path: string[],
+  value: unknown
+): Promise<boolean> {
+  let raw: string;
+  try {
+    raw = await readFile(filePath, "utf-8");
+  } catch {
+    return false;
+  }
+  if (!raw.trim()) return false;
+
+  const errors: ParseError[] = [];
+  parse(raw, errors, { allowTrailingComma: true });
+  if (errors.length > 0) return false;
+
+  const edits = modify(raw, path, value, {
+    formattingOptions: {
+      insertSpaces: true,
+      tabSize: 2,
+      // Keep one line-ending style in the file instead of mixing CRLF and LF.
+      eol: raw.includes("\r\n") ? "\r\n" : "\n",
+    },
+  });
+  const updated = applyEdits(raw, edits);
+
+  // `modify` parses without `allowTrailingComma`, so an edit near a trailing
+  // comma can leave one behind. Only write an edit that still parses.
+  const verifyErrors: ParseError[] = [];
+  parse(updated, verifyErrors, { allowTrailingComma: true });
+  if (verifyErrors.length > 0) return false;
+
+  if (updated !== raw) {
+    await writeFile(filePath, updated, "utf-8");
+  }
+  return true;
+}
+
 export async function readTomlServerExists(filePath: string, serverName: string): Promise<boolean> {
   try {
     const raw = await readFile(filePath, "utf-8");
@@ -160,6 +201,7 @@ function stripApiKeyPair(args: string[]): string[] {
       i++; // skip the value too
       continue;
     }
+    if (args[i].startsWith("--api-key=")) continue;
     result.push(args[i]);
   }
   return result;

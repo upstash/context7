@@ -155,6 +155,7 @@ function withoutApiKey(args: string[]): string[] {
       index++;
       continue;
     }
+    if (args[index].startsWith("--api-key=")) continue;
     result.push(args[index]);
   }
   return result;
@@ -196,7 +197,13 @@ export async function patchTomlStdioApiKey(
 
   const apiKeyIndexes = args.flatMap((arg, index) => (arg === "--api-key" ? [index] : []));
   let content: string;
-  if (apiKey && apiKeyIndexes.length === 1 && apiKeyIndexes[0] + 1 < range.tokens.length) {
+  const hasInlineApiKey = args.some((arg) => arg.startsWith("--api-key="));
+  if (
+    apiKey &&
+    !hasInlineApiKey &&
+    apiKeyIndexes.length === 1 &&
+    apiKeyIndexes[0] + 1 < range.tokens.length
+  ) {
     const valueToken = range.tokens[apiKeyIndexes[0] + 1];
     content = raw.slice(0, valueToken.start) + JSON.stringify(apiKey) + raw.slice(valueToken.end);
   } else {

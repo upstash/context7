@@ -9,9 +9,10 @@ When the user asks about libraries, frameworks, or needs code examples, use Cont
 
 Activate this skill when the user:
 
-- Asks setup or configuration questions ("How do I configure Next.js middleware?")
+- Asks setup or configuration questions ("How do I configure a Next.js proxy?")
 - Requests code involving libraries ("Write a Prisma query for...")
 - Needs API references ("What are the Supabase auth methods?")
+- Needs an exact fact from a library's source: a default value, a signature, or where an error comes from
 - Mentions specific frameworks (React, Vue, Svelte, Express, Tailwind, etc.)
 
 ## How to Fetch Documentation
@@ -40,7 +41,18 @@ Call `query-docs` with:
 
 If the user's question spans multiple distinct concepts (e.g. routing and auth and caching), make a separate `query-docs` call per concept with the same library ID, unless the question is about how the concepts interact — combined queries dilute ranking and return shallow results for each topic.
 
-### Step 4: Use the Documentation
+### Step 4: Read the Source When Docs Are Not Exact
+
+If the `query-code` tool is available, use it for exact facts the docs may not state: a signature or type, a default value, an option name, where an error message comes from, or how something works inside.
+
+- `libraryId`: an ID that `resolve-library-id` marks with "Source code", usually the GitHub repository (e.g. `/colinhacks/zod`). `/websites/...` and `/llmstxt/...` IDs have no source
+- Start with `grep` (`fixed_strings: true` for error messages) or `definition` for a symbol, then `read` the file range the result gives. `references`, `outline` and `list` also exist
+- Follow the result's "Next:" line for the read, page or count call to make next. Most questions need 1 to 4 calls; stop at 6
+- `version` takes a git tag, e.g. `v3.24.2`. A tag that is not a docs version is indexed first ("being indexed"). If indexing fails, the answer lists the docs versions you can use
+- If it answers "being indexed", retry at most twice, then answer from `query-docs`
+- Cite the file and line of the source you used
+
+### Step 5: Use the Documentation
 
 Incorporate the fetched documentation into your response:
 
@@ -52,5 +64,5 @@ Incorporate the fetched documentation into your response:
 
 - **Be specific**: Describe what to look up in the library's documentation, but keep each query to a single concept
 - **One topic per query**: Split multi-topic questions into separate `query-docs` calls — resolve the library ID once, then query per concept, unless the question is about how the concepts interact
-- **Version awareness**: When users mention versions ("Next.js 15", "React 19"), use version-specific library IDs if available from the resolution step
+- **Version awareness**: When users mention versions ("Next.js 16", "React 19"), use version-specific library IDs if available from the resolution step
 - **Prefer official sources**: When multiple matches exist, prefer official/primary packages over community forks

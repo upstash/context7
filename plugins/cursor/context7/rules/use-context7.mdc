@@ -7,7 +7,7 @@ When you're unsure about a library's API, syntax, configuration, or behavior, us
 
 Use Context7 when:
 - You're not confident about the exact API or syntax for a library
-- The user asks about a specific version (e.g., "Next.js 15", "React 19")
+- The user asks about a specific version (e.g., "Next.js 16", "React 19")
 - The library or framework has had recent major changes
 - You need accurate code examples for a specific use case
 
@@ -15,4 +15,4 @@ You don't need to use Context7 for:
 - Well-established language features (e.g., JavaScript array methods, Python builtins)
 - Conversations where the user has already provided the relevant code or docs
 
-See the `context7-docs-lookup` skill for detailed instructions on how to resolve libraries and fetch documentation.
+See the `context7-mcp` skill for detailed instructions on how to resolve libraries and fetch documentation.

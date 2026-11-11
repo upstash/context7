@@ -14,7 +14,7 @@ import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { text } = await generateText({
-  model: openai("gpt-5.2"),
+  model: openai("gpt-6-astra"),
   prompt: "How do I use React Server Components?",
   tools: {
     resolveLibraryId: resolveLibraryId(),
@@ -107,7 +107,7 @@ import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { text } = await generateText({
-  model: openai("gpt-5.2"),
+  model: openai("gpt-6-astra"),
   prompt: "Show me how to set up routing in Next.js App Router",
   tools: {
     resolveLibraryId: resolveLibraryId(),
@@ -142,8 +142,8 @@ import { generateText, stepCountIs } from "ai";
 import { openai } from "@ai-sdk/openai";
 
 const { text } = await generateText({
-  model: openai("gpt-5.2"),
-  prompt: "Using /vercel/next.js, explain middleware",
+  model: openai("gpt-6-astra"),
+  prompt: "Using /vercel/next.js, explain proxy",
   tools: {
     queryDocs: queryDocs(),
   },
@@ -163,7 +163,7 @@ import { generateText, stepCountIs } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 
 const { text } = await generateText({
-  model: anthropic("claude-sonnet-4-20250514"),
+  model: anthropic("claude-sonnet-5-5"),
   prompt: "Give me a comprehensive guide to Supabase authentication",
   tools: {
     resolveLibraryId: resolveLibraryId(),
@@ -185,7 +185,7 @@ Library IDs can include version specifiers:
 "/vercel/next.js";
 
 // Specific version
-"/vercel/next.js/v14.3.0-canary.87";
+"/vercel/next.js/v16.2.9";
 ```
 
 The model can request documentation for specific versions when the user asks about a particular version.

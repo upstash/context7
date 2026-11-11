@@ -20,7 +20,7 @@ import { QUERY_DOCS_DESCRIPTION } from "@prompts";
  * import { openai } from '@ai-sdk/openai';
  *
  * const { text } = await generateText({
- *   model: openai('gpt-4o'),
+ *   model: openai('gpt-6-astra'),
  *   prompt: 'Find React documentation about hooks',
  *   tools: {
  *     resolveLibraryId: resolveLibraryId(),
@@ -40,7 +40,7 @@ export function queryDocs(config: Context7ToolsConfig = {}) {
       libraryId: z
         .string()
         .describe(
-          "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v14.3.0-canary.87') retrieved from 'resolveLibraryId' or directly from user query in the format '/org/project' or '/org/project/version'."
+          "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v16.2.9') retrieved from 'resolveLibraryId' or directly from user query in the format '/org/project' or '/org/project/version'."
         ),
       query: z
         .string()

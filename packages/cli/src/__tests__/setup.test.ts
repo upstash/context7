@@ -284,6 +284,27 @@ describe("JSONC support", () => {
     expect(result.mcp).toEqual({});
   });
 
+  test("readJsonConfig accepts trailing commas in OpenCode config", async () => {
+    const path = join(tempDir, "opencode.jsonc");
+    await writeFile(
+      path,
+      '{\n  "$schema": "https://opencode.ai/config.json",\n  "lsp": true,\n}',
+      "utf-8"
+    );
+    const result = await readJsonConfig(path);
+    expect(result.lsp).toBe(true);
+  });
+
+  test("readJsonConfig rejects malformed JSONC", async () => {
+    const path = join(tempDir, "invalid.jsonc");
+    await writeFile(path, '{ "mcp": {', "utf-8");
+    await expect(readJsonConfig(path)).rejects.toThrow(SyntaxError);
+  });
+
+  test("readJsonConfig propagates non-missing file errors", async () => {
+    await expect(readJsonConfig(tempDir)).rejects.toThrow();
+  });
+
   test("readJsonConfig handles block comments", async () => {
     const path = join(tempDir, "config.jsonc");
     await writeFile(path, '{ /* block */ "key": "value" }', "utf-8");
@@ -967,6 +988,22 @@ describe("agent config integration", () => {
     test("removes --api-key when new key is undefined (oauth)", () => {
       const patched = patchStdioApiKey(
         { command: "npx", args: ["-y", "@upstash/context7-mcp", "--api-key", "OLD"] },
+        undefined
+      );
+      expect(patched.args).toEqual(["-y", "@upstash/context7-mcp"]);
+    });
+
+    test("replaces an inline --api-key=<value> arg", () => {
+      const patched = patchStdioApiKey(
+        { command: "npx", args: ["-y", "@upstash/context7-mcp", "--api-key=OLD"] },
+        "NEW"
+      );
+      expect(patched.args).toEqual(["-y", "@upstash/context7-mcp", "--api-key", "NEW"]);
+    });
+
+    test("removes an inline --api-key=<value> arg when new key is undefined (oauth)", () => {
+      const patched = patchStdioApiKey(
+        { command: "npx", args: ["-y", "@upstash/context7-mcp", "--api-key=OLD"] },
         undefined
       );
       expect(patched.args).toEqual(["-y", "@upstash/context7-mcp"]);

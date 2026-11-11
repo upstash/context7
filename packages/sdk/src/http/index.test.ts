@@ -124,6 +124,107 @@ describe("HttpClient error handling", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  test("times out while an auth token provider is still pending", async () => {
+    vi.useFakeTimers();
+    const authToken = vi.fn(() => new Promise<string>(() => {}));
+    const fetchMock = vi.fn();
+    const client = new HttpClient({
+      baseUrl: "https://example.com/api",
+      authToken,
+      fetch: fetchMock,
+      timeout: 25,
+    });
+    const onError = vi.fn();
+    const request = client.request({ method: "GET" }).catch(onError);
+
+    await vi.advanceTimersByTimeAsync(25);
+
+    expect(onError).toHaveBeenCalledWith(
+      expect.objectContaining({ code: "request_timeout", retryable: true })
+    );
+    await request;
+    expect(authToken).toHaveBeenCalledOnce();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  test.each(["resolve", "reject"] as const)(
+    "cancels a pending token wait and handles a late provider %s",
+    async (settlement) => {
+      vi.useFakeTimers();
+      const controller = new AbortController();
+      let resolveToken!: (token: string) => void;
+      let rejectToken!: (error: Error) => void;
+      const authToken = vi.fn(
+        () =>
+          new Promise<string>((resolve, reject) => {
+            resolveToken = resolve;
+            rejectToken = reject;
+          })
+      );
+      const fetchMock = vi.fn();
+      const client = new HttpClient({
+        baseUrl: "https://example.com/api",
+        authToken,
+        fetch: fetchMock,
+        timeout: false,
+      });
+      const onError = vi.fn();
+      const request = client.request({ method: "GET", signal: controller.signal }).catch(onError);
+      const reason = new Error("User cancelled");
+      controller.abort(reason);
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({ code: "request_aborted", retryable: false, cause: reason })
+      );
+      await request;
+
+      if (settlement === "resolve") resolveToken("late-token");
+      else rejectToken(new Error("Late provider failure"));
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(onError).toHaveBeenCalledOnce();
+      expect(authToken).toHaveBeenCalledOnce();
+      expect(fetchMock).not.toHaveBeenCalled();
+    }
+  );
+
+  test("handles cancellation triggered synchronously by the token provider", async () => {
+    const controller = new AbortController();
+    const fetchMock = vi.fn();
+    const client = new HttpClient({
+      baseUrl: "https://example.com/api",
+      authToken: () => {
+        controller.abort();
+        return Promise.reject(new Error("Provider failed after cancellation"));
+      },
+      fetch: fetchMock,
+    });
+
+    await expect(client.request({ signal: controller.signal })).rejects.toMatchObject({
+      code: "request_aborted",
+      retryable: false,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test.each([true, false])("preserves token provider errors with timeout=%s", async (timeout) => {
+    const providerError = new Error("Token service unavailable");
+    const authToken = vi.fn().mockRejectedValue(providerError);
+    const fetchMock = vi.fn();
+    const client = new HttpClient({
+      baseUrl: "https://example.com/api",
+      authToken,
+      fetch: fetchMock,
+      timeout: timeout ? 25 : false,
+    });
+
+    await expect(client.request({ method: "GET" })).rejects.toBe(providerError);
+    expect(authToken).toHaveBeenCalledOnce();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   test("uses the last failure when a retry later fails on the network", async () => {
     const fetchMock = vi
       .fn()

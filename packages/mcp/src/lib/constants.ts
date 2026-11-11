@@ -33,3 +33,55 @@ export const EMA_ISSUER =
   process.env.EMA_ISSUER || process.env.AUTH_SERVER_URL || CONTEXT7_BASE_URL;
 export const EMA_JWKS_URL = process.env.EMA_JWKS_URL || `${CONTEXT7_API_BASE_URL}/oauth/ema-jwks`;
 export const OPENAI_APPS_CHALLENGE_TOKEN = process.env.OPENAI_APPS_CHALLENGE_TOKEN;
+
+export const SERVER_TITLE = "Context7";
+// The vector icon scales to any size; the PNG is 512x512.
+export const SERVER_ICONS = [
+  {
+    src: "https://context7.com/context7-icon-green.svg",
+    mimeType: "image/svg+xml",
+    sizes: ["any"],
+  },
+  {
+    src: "https://context7.com/context7-icon-green.png",
+    mimeType: "image/png",
+    sizes: ["512x512"],
+  },
+];
+
+/** Describe the remote server using the experimental Server Card v1 schema. */
+export function mcpServerCard(resourceUrl = RESOURCE_URL) {
+  return {
+    $schema: "https://static.modelcontextprotocol.io/schemas/v1/server-card.schema.json",
+    name: "io.github.upstash/context7",
+    title: SERVER_TITLE,
+    description:
+      "Up-to-date, version-specific documentation and code examples for software libraries.",
+    version: SERVER_VERSION,
+    websiteUrl: "https://context7.com",
+    icons: SERVER_ICONS,
+    remotes: [
+      {
+        type: "streamable-http",
+        url: `${new URL(resourceUrl).origin}/mcp`,
+        headers: [
+          {
+            name: "Authorization",
+            description:
+              "Optional. A Context7 API key from https://context7.com/dashboard raises the rate limit.",
+            isRequired: false,
+            isSecret: true,
+            value: "Bearer {api_key}",
+            variables: {
+              api_key: {
+                description: "Context7 API key",
+                isSecret: true,
+                placeholder: "ctx7sk-...",
+              },
+            },
+          },
+        ],
+      },
+    ],
+  };
+}

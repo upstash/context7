@@ -15,12 +15,13 @@ ctx7 setup --cli               # Skip prompt, use CLI + Skills mode
 ctx7 setup --claude            # Claude Code only
 ctx7 setup --cursor            # Cursor only
 ctx7 setup --opencode          # OpenCode only
+ctx7 setup --pi                # Pi only
 
 # CLI + Skills mode — target a specific install location
 ctx7 setup --cli --claude      # Claude Code (~/.claude/skills)
 ctx7 setup --cli --cursor      # Cursor (~/.cursor/skills)
-ctx7 setup --cli --universal   # Universal (~/.agents/skills)
-ctx7 setup --cli --antigravity # Antigravity (~/.config/agent/skills)
+ctx7 setup --cli --antigravity # Antigravity (~/.agent/skills)
+ctx7 setup --cli --pi          # Pi (~/.agents/skills)
 
 ctx7 setup --project           # Configure current project instead of globally
 ctx7 setup --yes               # Skip confirmation prompts
@@ -41,3 +42,4 @@ Without `--api-key` or `--oauth`, setup opens a browser for OAuth login. The dev
 
 **What gets written — CLI + Skills mode:**
 - A `find-docs` skill in the chosen agent's skills directory, guiding the agent to use `ctx7 library` and `ctx7 docs` commands
+- A Context7 rule file instructing the agent to use the `ctx7` commands for library docs

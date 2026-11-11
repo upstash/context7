@@ -2,15 +2,6 @@ name: Test
 
 on:
   pull_request:
-    paths:
-      - "packages/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "tsconfig.json"
-      - "eslint.config.js"
-      - "prettier.config.mjs"
-      - ".github/workflows/test.yml"
   push:
     branches: [master]
   workflow_dispatch:
@@ -29,9 +20,9 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -63,6 +54,10 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      # The Admin MCP console page is committed as a built module (Vercel runs no UI build).
+      - name: Admin MCP console bundle is up to date
+        run: pnpm --filter @upstash/context7-admin-mcp build:ui && git diff --exit-code packages/admin-mcp/src/ui/console-html.ts
 
       - name: Typecheck
         run: pnpm typecheck

@@ -189,7 +189,7 @@ export async function performLogin(openBrowser = true): Promise<string | null> {
 
 async function loginCommand(options: { browser: boolean }): Promise<void> {
   trackEvent("command", { name: "login" });
-  const existingToken = await getValidAccessToken();
+  const existingToken = await getValidAccessToken({ recoverExpiredSession: false });
   if (existingToken) {
     console.log(pc.yellow("You are already logged in."));
     console.log(pc.dim("Run 'ctx7 logout' first if you want to log in with a different account."));
@@ -216,7 +216,7 @@ function logoutCommand(): void {
 
 async function whoamiCommand(): Promise<void> {
   trackEvent("command", { name: "whoami" });
-  const accessToken = await getValidAccessToken();
+  const accessToken = await getValidAccessToken({ recoverExpiredSession: false });
 
   if (!accessToken) {
     console.log(pc.yellow("Not logged in."));
