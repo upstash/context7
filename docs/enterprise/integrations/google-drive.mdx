@@ -165,7 +165,11 @@ Each Doc is indexed under its Google URL, for example `https://docs.google.com/d
 
 ### Google Slides
 
-Each slide of a presentation is indexed as its own page, with a link that opens that slide: `https://docs.google.com/presentation/d/<id>/edit#slide=id.<slide id>`. The slide's title becomes its heading, and its text, lists, links, tables and speaker notes follow. Hidden (skipped) slides are not indexed. Images, charts and diagrams are not indexed, and neither is text inside images.
+Each slide of a presentation is indexed as its own page, with a link that opens that slide: `https://docs.google.com/presentation/d/<id>/edit#slide=id.<slide id>`. The slide's title becomes its heading, and its text, lists, links, tables and speaker notes follow. Hidden (skipped) slides are not indexed.
+
+Elements are indexed in reading order: top to bottom, and left to right within a row. An image, chart or video contributes its alt text, as `*Image: …*`, `*Chart: …*` or `*Video: …*`, and a video that has one keeps its link. WordArt contributes its text. Auto-generated alt text, such as a file name or "Picture 3", is left out. Images, charts, diagrams and videos themselves are not indexed.
+
+Docs index an image's alt text the same way, as `*Image: …*`.
 
 When a presentation changes, Context7 reads the whole presentation again:
 
