@@ -58,7 +58,7 @@ A personal API key acts with the role of its owner:
 
 | Operation | Member key | Admin key |
 |---|---|---|
-| Parse and refresh libraries | Yes | Yes |
+| Parse and refresh libraries | Yes, if they can read an existing library | Yes |
 | Refresh Notion and Google Drive libraries | No | Yes |
 | Delete libraries, cancel parses, download the support bundle | No | Yes |
 | Import libraries (`/api/import-libraries`) | No | Yes |
@@ -78,7 +78,7 @@ Certain operations can be opened to anonymous callers (no session and no API key
 | Anonymous delete | Off |
 | Anonymous support bundle | Off |
 
-These switches do not limit signed-in users. Members and their API keys can always parse and refresh.
+These switches do not limit signed-in users. Members and their API keys can always parse and refresh. To re-parse or replace an existing library, a member needs read access to it.
 
 The delete switch also covers cancelling a parse. When it is on, members can delete and cancel too. The support bundle switch works the same way for downloads.
 

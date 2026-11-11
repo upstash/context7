@@ -307,7 +307,7 @@ Admin credentials are set during first login (default: `admin` / `admin`). Chang
 Who can do what by default:
 
 - **Admins** can do everything.
-- **Signed-in members and their API keys** can parse and refresh libraries.
+- **Signed-in members and their API keys** can parse and refresh libraries. To re-parse or replace an existing library, a member needs read access to it under the [library access rules](/enterprise/security/library-access).
 - **Anonymous callers** (no session and no API key) can do none of these.
 
 Delete, cancel parse, and support bundle downloads are for admins only. Use the switches below to open some actions to anonymous callers, and to require authentication for MCP and API search.
@@ -349,10 +349,11 @@ Besides your AI providers, git hosts, and connected sources, an instance with an
 | Call | When | What is sent |
 |---|---|---|
 | License check | Every hour | The license key |
-| Usage report | Once a day | License key, call counts per endpoint, number of active API keys, app version. No query text |
-| Public library search | On each search or context query | The query, with secrets masked first |
+| Usage report | Once a day | License key, call counts per endpoint, number of active API keys, app version, team size. No query text |
+| Public library search | On each library search | The search text and library name, with secrets masked first |
+| Public library context | On a context query for a library that is not on this instance | The query, with secrets masked first, and the public library ID |
 
-The content of your local libraries is never sent. Per-user usage stays on the instance.
+A context query for one of your local libraries is answered on the instance and sends nothing. No local library content or ID is sent. Per-user usage stays on the instance.
 
 An offline license (`ctx7off.` prefix) is checked locally and makes none of these calls.
 
