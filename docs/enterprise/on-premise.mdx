@@ -4,7 +4,7 @@ sidebarTitle: "Getting Started"
 description: "Run the Context7 stack inside your infrastructure with your chosen AI and storage services"
 ---
 
-Context7 On-Premise keeps your repositories, generated documentation, application database, vector store, and MCP server in your infrastructure. Only the content required for parsing, embedding, reranking, or source-code documentation is sent to the AI provider you choose.
+Context7 On-Premise keeps your repositories, generated documentation, application database, vector store, and MCP server in your infrastructure. Only the content required for parsing, embedding, reranking, or source-code documentation is sent to the AI providers you choose.
 
 ## What's Included
 
@@ -228,6 +228,10 @@ By default, Context7 uses the same provider as your LLM for generating embedding
 | Embedding base URL / Bedrock endpoint | Custom embedding endpoint, or an optional Bedrock Runtime endpoint |
 
 See [AWS Bedrock](/enterprise/integrations/aws-bedrock) for IAM, model, region, and private-network configuration.
+
+### Decision Model
+
+Optionally, a decision model can classify pages, check for duplicate snippets, and rerank search results in place of the language model. It is faster and costs less for these yes/no decisions. See [Decision Models](/enterprise/decision-models) to turn it on.
 
 ### Git Access Tokens
 
