@@ -35,6 +35,7 @@ description: "Release notes for the Context7 On-Premise image."
 - Improved the accuracy of APIDOC context by grounding endpoints within their respective page sections and dropping irrelevant snippets.
 - Replaced the agent runtime that on-premise CodeDocs uses to write documentation. CodeDocs keeps the same page IDs when it regenerates identical documentation, so a regeneration does not repeat the extraction.
 - Large Google Drive, Notion and Confluence pages are now indexed in full instead of being skipped for their size.
+- Google Drive, Notion and Confluence pages are now indexed in any language, instead of only the library's detected language. The next ordinary sync re-indexes pages an earlier sync dropped for their language, and long documents that lost a non-English section.
 - Updated the AI provider model suggestions to each provider's current models. The Gemini default is now `gemini-3.8-flash`, and Bedrock suggests one inference profile per Claude model for the region's geography.
 - Library pages show a branch only for Git repositories.
 - The parse queue shows members only the libraries they can access, and deleting a library also deletes its parse history.
