@@ -86,7 +86,7 @@ Confluence, Notion and file uploads are not in this server; add them in the dash
 
 ### Versions
 
-`get_library` returns the library's indexed versions, and `manage_library_versions` adds or removes one. A version is a tag or branch name, or, for a website, the docs URL of that version; pass `is_branch: true` for a branch. After `add`, call `get_library` with `wait: true`. `remove` needs `confirm` set to the version name. Context7 adds the versions of the most popular public libraries itself; for other libraries, add versions with `manage_library_versions`.
+`get_library` returns the library's indexed versions, and `manage_library_versions` adds or removes one. A version is a tag or branch name, or, for a website, the docs URL of that version; pass `is_branch: true` for a branch. After `add`, call `get_library` with `wait: true`. `remove` needs `confirm` set to the version name. Versions also come from `previousVersions` in the library's `context7.json`, and when a refresh finds a new major release, Context7 keeps the previous major as a version. Context7 adds the versions of the most popular public libraries itself.
 
 ## Console
 
