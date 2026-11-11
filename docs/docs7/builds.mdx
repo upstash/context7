@@ -45,8 +45,6 @@ A push to another branch does not create a preview by itself. Preview builds com
 
 ## Pull request previews
 
-Previews require Pro. On Free, a pull request gets the PR review only, without a preview.
-
 Docs7 creates or updates a preview when a pull request:
 
 - comes from a branch in the connected repository
@@ -58,7 +56,7 @@ Closing or merging the pull request removes its preview. Pull requests from fork
 
 Preview responses include `X-Robots-Tag: noindex`, so temporary URLs do not compete with the production site in search results.
 
-On Pro, you can also create a preview for a selected branch manually. Open a preview build to redeploy it or delete its live preview.
+You can also create a preview for a selected branch manually. Open a preview build to redeploy it or delete its live preview.
 
 ## Inspect a build
 
@@ -70,7 +68,7 @@ The detail view contains:
 - **Files changed** for pull request builds
 - **Health** for page errors, broken internal links, unknown components, source warnings, and deployment failures
 
-For GitHub sites, fixable issues from the latest production build also appear in the [Agent work queue](/docs7/agent#context7-agent).
+For GitHub sites, the [Build Fix Agent](/docs7/agent#build-fix-agent) fixes the fixable issues from the latest production build.
 
 ## Build locally
 

@@ -14,6 +14,7 @@ describe("SearchCommand", () => {
           codeLanguage: "tsx",
           codeList: [{ language: "tsx", code: "const [value] = useState(0);" }],
           codeId: "hooks/use-state",
+          rank: 2,
         },
       ],
       infoSnippets: [
@@ -22,6 +23,7 @@ describe("SearchCommand", () => {
           breadcrumb: "Hooks > State",
           content: "State is local to a component instance.",
           pageId: "hooks/state",
+          rank: 1,
         },
       ],
       rules: {

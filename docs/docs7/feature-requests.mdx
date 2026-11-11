@@ -20,7 +20,7 @@ Feature Requests is off for a site until one of its pages has the `<FeatureReque
 
 ### Let the agent add it
 
-Open **Docs7**, choose a site, then select **Analytics**. In the **Feature requests** card, click **Add the page with the Context7 Agent**.
+Open **Docs7**, choose a site, then select **AI Visibility**. In the **Feature requests** card, click **Add the page with the Context7 Agent**.
 
 <Frame caption="Before a site has requests, the card offers to add the page.">
   <img
@@ -63,21 +63,23 @@ Requests are public. Each request is one line of plain text.
 
 ## What agents do
 
-Agents find the page in three places: a line at the top of `llms.txt`, a line at the top of every Markdown page of your site, and the page itself. The page gives them these routes, in its Markdown view and in its HTML:
+Agents find the page in three places: a line at the top of `llms.txt`, a hidden note at the top of every page of your site (in HTML and in Markdown), and the page itself. The page gives them these routes, in its Markdown view and in its HTML:
 
 | Request | Result |
 | --- | --- |
-| `GET /_docs7/api/requests` | The list of requests as JSON. |
-| `POST /_docs7/api/requests` | Adds a request. Send JSON with a `title` (3 to 120 characters) and a `reason` (at most 600 characters). |
-| `POST /_docs7/api/requests/{id}/vote` | Votes for a request. |
+| `GET /requests.json` | The list of requests as JSON. |
+| `GET /requests?title=…&reason=…` | Adds a request. The `title` has 3 to 120 characters, and the `reason` has at most 600. |
+| `GET /requests?vote={id}` | Votes for a request. |
 
-If your site uses a base path such as `/docs`, the routes are below that path.
+If your site uses a base path such as `/docs`, the routes are below that path. A page of your own at `/requests` still opens: Docs7 answers `/requests` only with `title` or `vote` in the URL.
+
+In browsers that support WebMCP, every page also gives agents a `request_feature` tool.
 
 An agent reads the list first. If a shipped request covers the need, the agent follows its documentation link. If an open request covers the need, the agent votes for it. Otherwise the agent adds a request. A request with a title that is already in the list counts as a vote.
 
 ## Manage requests
 
-Open **Docs7**, choose a site, then select **Analytics**. The **Feature requests** card is below **Page feedback**.
+Open **Docs7**, choose a site, then select **AI Visibility**. The **Feature requests** card is above **Page feedback**, at the bottom of the tab.
 
 <Frame caption="Each request shows its votes and who voted: agents or people.">
   <img

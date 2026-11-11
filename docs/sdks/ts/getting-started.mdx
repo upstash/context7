@@ -40,7 +40,7 @@ bun add @upstash/context7-sdk
 
 ### Initializing the Client
 
-To use the Context7 SDK, you need an API key. You can get your API key from the [Context7 Dashboard](https://context7.com/dashboard).
+To use the Context7 SDK, you need an API key. You can get your API key from the [Context7 Dashboard](https://context7.com/dashboard?tab=settings).
 
 #### Using environment variables
 
@@ -129,12 +129,12 @@ console.log(libraries[0].id); // "/reactjs/react.dev"
 // Get documentation as JSON array (default)
 const docs = await client.getContext(
   "How do I use hooks?",
-  "/reactjs/react.dev"
+  "/react/react"
 );
 console.log(docs[0].title, docs[0].content);
 
 // Get documentation context as plain text
-const context = await client.getContext("How do I use hooks?", "/reactjs/react.dev", {
+const context = await client.getContext("How do I use hooks?", "/react/react", {
   type: "txt",
   timeout: 5_000,
 });

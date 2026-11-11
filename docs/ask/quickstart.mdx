@@ -100,7 +100,8 @@ The response is plain text: the parts of your pages that answer the question, ea
 Some agents never read your HTML. They fetch `llms.txt`, a `.md` version of a page, or only the response headers. The prompt from **Copy prompt for your agent** adds the endpoint to all of these too:
 
 - A **Search** section in `llms.txt` and `llms-full.txt`
-- The same section at the end of each markdown page
+- The same section at the top of each markdown page, with a link to your `llms.txt` first
+- A link to your `llms.txt` as the first line of the note, so agents can find every page
 - A `Link` header with `rel="search"` on every page response
 
 These are optional. The tag and the note are all Context7 checks.

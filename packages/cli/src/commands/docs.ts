@@ -2,7 +2,15 @@ import { Command } from "commander";
 import pc from "picocolors";
 import ora from "ora";
 
-import { resolveLibrary, getLibraryContext } from "../utils/api.js";
+import {
+  resolveLibrary,
+  getLibraryContext,
+  getLibraryCode,
+  hasSourceCode,
+  CODE_LIMITS,
+  CODE_OPERATIONS,
+  type CodeOperation,
+} from "../utils/api.js";
 import { recoverLibraryId } from "../utils/library-id.js";
 import { log } from "../utils/logger.js";
 import { trackEvent } from "../utils/tracking.js";
@@ -38,6 +46,9 @@ function formatLibraryResult(lib: LibrarySearchResult, index: number): string {
   }
   if (lib.versions && lib.versions.length > 0) {
     lines.push(`   ${pc.dim(`Versions: ${lib.versions.join(", ")}`)}`);
+  }
+  if (hasSourceCode(lib)) {
+    lines.push(`   ${pc.dim("Source code: searchable with ctx7 code")}`);
   }
 
   return lines.join("\n");
@@ -215,6 +226,127 @@ async function queryCommand(
   }
 }
 
+interface CodeCommandOptions {
+  op?: string;
+  fixedStrings?: boolean;
+  ignoreCase?: boolean;
+  glob?: string[];
+  context?: string;
+  filesWithMatches?: boolean;
+  count?: boolean;
+  path?: string;
+  headLimit?: string;
+  offset?: string;
+  json?: boolean;
+  /** A git tag. `--version` is the CLI's own flag, so the tag has its own name. */
+  tag?: string;
+}
+
+/** Parses a numeric flag and clamps it into its range, like the MCP query-code tool. */
+function wholeNumber(
+  value: string | undefined,
+  name: string,
+  limits: { min: number; max: number }
+): number | undefined | null {
+  if (value === undefined) return undefined;
+  const n = value.trim() === "" ? NaN : Number(value);
+  if (!Number.isFinite(n)) {
+    log.error(`${name} must be a number.`);
+    process.exitCode = 1;
+    return null;
+  }
+  return Math.min(limits.max, Math.max(limits.min, Math.trunc(n)));
+}
+
+async function codeCommand(
+  libraryId: string,
+  pattern: string | undefined,
+  options: CodeCommandOptions
+): Promise<void> {
+  trackEvent("command", { name: "code" });
+  libraryId = recoverLibraryId(libraryId);
+  if (!/^\/[^/]+\/[^/]/.test(libraryId)) {
+    log.error(`Invalid library ID: "${libraryId}"`);
+    log.info(
+      `Expected format: /owner/repo or /owner/repo/version. Run "ctx7 library <name>" to find it.`
+    );
+    process.exitCode = 1;
+    return;
+  }
+  const op = options.op;
+  if (op && !CODE_OPERATIONS.includes(op as CodeOperation)) {
+    log.error(`Invalid --op "${op}". Use one of: ${CODE_OPERATIONS.join(", ")}.`);
+    process.exitCode = 1;
+    return;
+  }
+  const context = wholeNumber(options.context, "--context", CODE_LIMITS.context);
+  const headLimit = wholeNumber(options.headLimit, "--head-limit", CODE_LIMITS.headLimit);
+  const offset = wholeNumber(options.offset, "--offset", CODE_LIMITS.offset);
+  if (context === null || headLimit === null || offset === null) return;
+  const accessToken = await getValidAccessToken();
+  const target = options.tag ? `${libraryId} ${options.tag}` : libraryId;
+  const spinner = isTTY ? ora(`Searching the source of "${target}"...`).start() : null;
+  let result;
+  try {
+    result = await getLibraryCode(
+      libraryId,
+      pattern,
+      {
+        version: options.tag,
+        operation: op as CodeOperation | undefined,
+        fixedStrings: options.fixedStrings,
+        ignoreCase: options.ignoreCase,
+        glob: options.glob,
+        path: options.path,
+        context,
+        outputMode: options.count
+          ? "count"
+          : options.filesWithMatches
+            ? "files_with_matches"
+            : undefined,
+        headLimit: headLimit || undefined,
+        offset: offset || undefined,
+        json: options.json,
+      },
+      accessToken
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    spinner?.fail(`Error: ${message}`);
+    if (!spinner) log.error(message);
+    process.exitCode = 1;
+    return;
+  }
+  spinner?.stop();
+
+  if (result.kind === "indexing") {
+    if (options.json) {
+      console.log(
+        JSON.stringify({
+          error: "indexing",
+          message: result.message,
+          retryAfter: result.retryAfter,
+        })
+      );
+    } else {
+      log.warn(result.message);
+      log.info(
+        `Run the same command again in about ${result.retryAfter} seconds, at most twice. Meanwhile, use "ctx7 docs".`
+      );
+    }
+    process.exitCode = 75; // EX_TEMPFAIL: try again later
+    return;
+  }
+  if (result.kind === "error") {
+    if (options.json)
+      console.log(JSON.stringify({ error: result.error, message: result.message || result.error }));
+    else log.error(result.message || result.error);
+    process.exitCode = 1;
+    return;
+  }
+  console.log(result.body);
+}
+
 export function registerDocsCommands(program: Command): void {
   program
     .command("library")
@@ -244,4 +376,41 @@ export function registerDocsCommands(program: Command): void {
         await queryCommand(libraryId, query, options);
       }
     );
+
+  program
+    .command("code")
+    .argument(
+      "<libraryId>",
+      "Context7 library ID of a Git repository, with an optional tag (e.g., /vercel/next.js or /colinhacks/zod/v3.24.2)"
+    )
+    .argument("[pattern]", "A regex to grep for, or a symbol for --op definition/references/read")
+    .option("--op <operation>", `grep (default), definition, references, outline, read or list`)
+    .option("-F, --fixed-strings", "Treat the pattern as plain text")
+    .option("-i, --ignore-case", "Case-insensitive search")
+    .option(
+      "-g, --glob <glob>",
+      "Only files matching a glob; start with ! to exclude. Repeat for more",
+      (value: string, previous: string[] = []) => [...previous, value]
+    )
+    .option("-C, --context <n>", "Lines of context around each match (0 to 10)")
+    .option("-l, --files-with-matches", "Print only the paths of matching files")
+    .option("-c, --count", "Print the number of matches per file")
+    .option(
+      "--path <path>",
+      "A folder or file of the library; for --op read, a file with #L10-L40; for --op definition, a library file that uses the symbol"
+    )
+    .option(
+      "--head-limit <n>",
+      "Maximum results, 1 to 500 (default: 20; definition 10, outline 50, list 100)"
+    )
+    .option("--offset <n>", "Skip this many results (0 to 10000)")
+    .option("--json", "Output as JSON")
+    .option(
+      "--tag <tag>",
+      "A git tag or commit of the library, e.g. v3.24.2 (default: the docs commit)"
+    )
+    .description("Search and read a library's source code at a version, like ripgrep")
+    .action(async (libraryId: string, pattern: string | undefined, options: CodeCommandOptions) => {
+      await codeCommand(libraryId, pattern, options);
+    });
 }

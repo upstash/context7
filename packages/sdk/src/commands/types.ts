@@ -78,11 +78,21 @@ export interface Documentation {
 export interface SearchCodeSnippet extends ApiCodeSnippet {
   /** Context7 library ID that produced this snippet */
   libraryId: string;
+  /**
+   * 1-based position in the reranked order shared by `codeSnippets` and `infoSnippets`.
+   * Sort both lists together by `rank` to read the results in the order the text response gives them.
+   */
+  rank: number;
 }
 
 export interface SearchInfoSnippet extends ApiInfoSnippet {
   /** Context7 library ID that produced this snippet */
   libraryId: string;
+  /**
+   * 1-based position in the reranked order shared by `codeSnippets` and `infoSnippets`.
+   * Sort both lists together by `rank` to read the results in the order the text response gives them.
+   */
+  rank: number;
 }
 
 export interface SearchResponse {

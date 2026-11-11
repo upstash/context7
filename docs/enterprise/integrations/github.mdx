@@ -6,7 +6,7 @@ description: "Connect Context7 to GitHub with a GitHub App or a personal access 
 
 Context7 needs access to your GitHub repositories to clone and index them. You can connect GitHub in two ways: a **GitHub App** (recommended) or a **personal access token**. The GitHub App additionally delivers push webhooks, which power push-triggered [GitOps](/enterprise/gitops) syncs.
 
-Both are configured under **Settings → Integrations**.
+Both are configured under **Workspace Settings › GitHub**.
 
 <Note>
 Running GitHub Enterprise Server instead of github.com? Point Context7 at your server first. See [GitHub Enterprise Server](#github-enterprise-server).
@@ -20,17 +20,17 @@ Connecting the App is two steps: first create the App, then install it on your r
 
 <Steps>
   <Step title="Create the App">
-    Go to **Settings → Integrations** and choose **Setup GitHub App**. Context7 generates a pre-filled App manifest and sends you to GitHub to create the App in one click. You are redirected back and Context7 stores everything it needs automatically: the App ID, private key, client ID and secret, and the webhook secret.
+    Go to **Workspace Settings › GitHub** and choose **Create GitHub App** in the **GitHub App** row. Context7 generates a pre-filled App manifest and sends you to GitHub to create the App in one click. You are redirected back and Context7 stores everything it needs automatically: the App ID, private key, client ID and secret, and the webhook secret.
   </Step>
   <Step title="Install the App">
     After it is created, install the App on the account or organization that owns your repositories, and grant it access to the repositories you want to index (including your GitOps manifest repository, if you use GitOps).
   </Step>
 </Steps>
 
-Once both steps are done, the GitHub App card shows the connected App and its installation:
+Once both steps are done, the **GitHub App** row shows the connected App and its installation:
 
 <Frame>
-  ![Connected GitHub App with one installation under Settings, Integrations](/images/enterprise/integrations/github-app.png)
+  ![Connected GitHub App with one installation under Workspace Settings, GitHub](/images/enterprise/integrations/github-app.png)
 </Frame>
 
 ### Verify the App configuration
@@ -62,10 +62,10 @@ Under **Webhook**, it is active and points at your instance with a secret config
 
 ## Personal access token
 
-As a simpler alternative, add a GitHub personal access token under **Settings → Integrations**. Use a token with the `repo` scope for private repository access.
+As a simpler alternative, add a GitHub personal access token in the **GitHub token** row under **Workspace Settings › GitHub**. Use a token with the `repo` scope for private repository access.
 
 <Frame>
-  ![Git token fields under Settings, Integrations](/images/enterprise/integrations/git-tokens.png)
+  ![GitHub token fields under Workspace Settings, GitHub](/images/enterprise/integrations/git-tokens.png)
 </Frame>
 
 A personal access token can clone and index repositories, but it **cannot receive webhooks**. With a token only, push-triggered GitOps syncs are unavailable; use the GitOps sync schedule or trigger syncs from CI instead.
@@ -76,10 +76,10 @@ Context7 works with GitHub Enterprise Server, not only github.com. Set your serv
 
 <Steps>
   <Step title="Set your GitHub Enterprise host">
-    Open **Settings → Integrations**, and in the **AI & Integrations** card open **GitHub**. Under **Deployment**, select **Enterprise**. Enter your server host in **Server URL**, for example `github.your-company.com` (no `https://`), then choose **Save & Apply**.
+    Open **Workspace Settings › GitHub**, open the **GitHub token** row, and select **Enterprise Server**. Enter your server host in **Server URL**, for example `github.your-company.com` (no `https://`), then choose **Save and apply**.
 
     <Frame>
-      ![GitHub section with the Enterprise deployment option under Settings, Integrations](/images/enterprise/integrations/git-tokens.png)
+      ![GitHub token row with Enterprise Server selected under Workspace Settings, GitHub](/images/enterprise/integrations/git-tokens.png)
     </Frame>
   </Step>
   <Step title="Create the App or add a token">
@@ -88,10 +88,6 @@ Context7 works with GitHub Enterprise Server, not only github.com. Set your serv
 </Steps>
 
 For this to work, Context7 must reach your server's API at `https://<your-host>/api/v3`, and your server must reach Context7 at its webhook URL for push delivery.
-
-<Note>
-Prefer to set this at deploy time, for example as part of a disaster recovery rebuild? Set the `GITHUB_URL` environment variable to your server URL, such as `https://github.your-company.com`. A host saved in the UI takes precedence over the environment variable when both are set.
-</Note>
 
 ## Webhooks
 
@@ -103,5 +99,5 @@ For delivery to work:
 - The App must be **subscribed to push events** (new App setups are configured this way automatically).
 
 <Warning>
-GitHub Apps created before push support was added are not subscribed to any events, so they do not deliver webhooks. If you set up the App earlier, open it on GitHub and add the **push** event under its event subscriptions, confirm its webhook URL is `https://<your-host>/api/github/webhook`, or recreate the App from **Settings → Integrations**.
+GitHub Apps created before push support was added are not subscribed to any events, so they do not deliver webhooks. If you set up the App earlier, open it on GitHub and add the **push** event under its event subscriptions, confirm its webhook URL is `https://<your-host>/api/github/webhook`, or recreate the App from **Workspace Settings › GitHub**.
 </Warning>

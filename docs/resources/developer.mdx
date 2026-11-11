@@ -34,12 +34,12 @@ node packages/mcp/dist/index.js
 | Flag                        | Description                                                                           | Default |
 | --------------------------- | ------------------------------------------------------------------------------------- | ------- |
 | `--transport <stdio\|http>` | Transport to use. Use `http` for remote HTTP server or `stdio` for local integration. | `stdio` |
-| `--port <number>`           | Port to listen on when using `http` transport.                                        | `3000`  |
+| `--port <number>`           | Port to listen on when using `http` transport. `0` picks a free port.                 | `3000`  |
 | `--api-key <key>`           | API key for `stdio` transport (or set `CONTEXT7_API_KEY` env var). Not allowed with `--transport http`; send the key in the `Authorization: Bearer` header instead. | -       |
 
 <Note>
   Get your API key by creating an account at
-  [context7.com/dashboard](https://context7.com/dashboard).
+  [context7.com/dashboard](https://context7.com/dashboard?tab=settings).
 </Note>
 
 ### Examples

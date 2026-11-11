@@ -12,7 +12,7 @@ pi install npm:@upstash/context7-pi
 
 ## Authenticate
 
-We recommend using an API key. Generate a free key at [context7.com/dashboard](https://context7.com/dashboard) and export it:
+We recommend using an API key. Generate a free key at [context7.com/dashboard](https://context7.com/dashboard?tab=settings) and export it:
 
 ```bash
 export CONTEXT7_API_KEY=ctx7sk-...

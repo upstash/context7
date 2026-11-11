@@ -5,7 +5,7 @@ description: The ctx7 CLI — fetch library documentation and configure Context7
 
 The `ctx7` CLI is the command-line interface for Context7. It does two things:
 
-- **Fetch library documentation** — resolve any library by name and query its up-to-date docs directly in your terminal, without opening a browser
+- **Fetch library documentation** — search all libraries with one question, or resolve any library by name and query its up-to-date docs directly in your terminal, without opening a browser
 - **Configure your AI coding agent** — set up the Context7 MCP server (or a CLI-based `find-docs` skill) for Claude Code, Cursor, OpenCode, and more with a single command
 
 The CLI is useful both as a standalone tool (fetching docs while you code) and as a setup utility (wiring up Context7 for your AI coding agent).
@@ -39,9 +39,38 @@ Requires Node.js 22.13 or later.
 
 ---
 
+## Search Documentation
+
+### ctx7 search
+
+Takes a natural-language question and returns relevant code snippets and explanations in one step. Context7 picks the libraries for you, so no library ID is needed.
+
+```bash
+ctx7 search "How to stream an OpenAI response from a Next.js route"
+ctx7 search "How to validate a request body with a schema"
+```
+
+If you know the library, version, or language, add them to narrow the results:
+
+```bash
+# Search specific libraries — a name or a library ID, repeat for up to four
+ctx7 search "How to stream a response" --library Next.js --library /openai/openai-node
+
+# Search a specific version
+ctx7 search "How to cache a server function" --library Next.js --library-version 15.4.0
+
+# Prefer results in the language you write in
+ctx7 search "How to send an SMS" --library Twilio --language Ruby
+
+# Output as structured JSON
+ctx7 search "How to use hooks for state management" --library React --json
+```
+
+---
+
 ## Query Library Documentation
 
-Fetching docs is a two-step process: first resolve the library name to get its Context7 ID, then use that ID to query documentation.
+To query one library directly, fetching docs is a two-step process: first resolve the library name to get its Context7 ID, then use that ID to query documentation.
 
 ### Step 1 — ctx7 library
 
@@ -127,6 +156,7 @@ ctx7 setup --cli            # CLI + Skills mode
 ctx7 setup --claude
 ctx7 setup --cursor
 ctx7 setup --opencode
+ctx7 setup --pi
 
 # Target a specific install location (CLI + Skills mode)
 ctx7 setup --cli --claude       # Claude Code (~/.claude/skills)
@@ -134,6 +164,7 @@ ctx7 setup --cli --cursor       # Cursor (~/.cursor/skills)
 ctx7 setup --cli --codex        # Codex (~/.agents/skills)
 ctx7 setup --cli --opencode     # OpenCode (~/.agents/skills)
 ctx7 setup --cli --antigravity  # Antigravity (~/.agent/skills)
+ctx7 setup --cli --pi           # Pi (~/.agents/skills)
 
 # Configure for current project only (default is global)
 ctx7 setup --project
@@ -173,7 +204,7 @@ CONTEXT7_API_KEY=ctx7op-... ctx7 setup --mcp --yes \
   --codex
 ```
 
-The CLI checks `/api/auth/mcp` before writing configuration and writes `Authorization: Bearer <personal-key>`. We recommend using an API key. When authentication is enabled and no key was provided, interactive setup requests the key with masked input. Use `--api-key` or `CONTEXT7_API_KEY` for non-interactive automation. On-premise setup uses Streamable HTTP and bundled rule/skill content.
+The CLI checks `/api/auth/mcp` before writing configuration. It either configures anonymous access or writes `Authorization: Bearer <personal-key>`. When authentication is enabled and no key was provided, interactive setup requests the key with masked input. Use `--api-key` or `CONTEXT7_API_KEY` for non-interactive automation. On-premise setup uses Streamable HTTP and bundled rule/skill content.
 
 When `--base-url` targets a custom deployment, setup skips the npm update check and telemetry and does not fetch rules or skills from GitHub or Context7 Cloud. After the CLI package is installed, the only network request made by setup is to the configured deployment. In a restricted environment, mirror `ctx7` and its dependencies in an internal npm registry and run the installed `ctx7` binary instead of `npx ctx7@latest`.
 
@@ -187,12 +218,22 @@ When `--base-url` targets a custom deployment, setup skips the npm update check 
 | Agent rules directory                               | Rule file — instructs the agent to use Context7 for library docs |
 | Agent skills directory                              | `context7-mcp` skill                                             |
 
+The rule file is the contents of [`rules/context7-mcp.md`](https://github.com/upstash/context7/blob/master/rules/context7-mcp.md) and the skill is [`skills/context7-mcp/SKILL.md`](https://github.com/upstash/context7/blob/master/skills/context7-mcp/SKILL.md). For Claude Code, `ctx7 setup --claude` writes the files below. With `--project`, the rule and skill go to `.claude/rules/` and `.claude/skills/` in the project instead; `CLAUDE_CONFIG_DIR` replaces `~/.claude` when it is set.
+
+| File                                        | Purpose                                                          |
+| ------------------------------------------- | ---------------------------------------------------------------- |
+| `~/.claude.json` (or `.mcp.json` with `--project`) | MCP server entry named `context7`                        |
+| `~/.claude/rules/context7.md`               | Rule file — instructs the agent to use Context7 for library docs |
+| `~/.claude/skills/context7-mcp/SKILL.md`    | `context7-mcp` skill                                             |
+
 **What gets written — CLI + Skills mode:**
 
 | File                   | Purpose                                                                             |
 | ---------------------- | ----------------------------------------------------------------------------------- |
-| Agent rules directory  | Rule file — instructs the agent to use the `ctx7` CLI for library docs              |
 | Agent skills directory | `find-docs` skill — guides the agent to use `ctx7 library` and `ctx7 docs` commands |
+| Agent rules directory  | Rule file — instructs the agent to use the `ctx7` commands for library docs         |
+
+The rule file is the contents of [`rules/context7-cli.md`](https://github.com/upstash/context7/blob/master/rules/context7-cli.md) and the skill is [`skills/find-docs/SKILL.md`](https://github.com/upstash/context7/blob/master/skills/find-docs/SKILL.md). For Claude Code, `ctx7 setup --cli --claude` writes `~/.claude/skills/find-docs/SKILL.md` and `~/.claude/rules/context7.md` (`.claude/` in the project with `--project`).
 
 ### ctx7 remove
 
@@ -256,7 +297,7 @@ export CONTEXT7_API_KEY=your_key
 
 | Feature                                                  | Required                                                                     |
 | -------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `ctx7 library` / `ctx7 docs`                             | No — login gives higher rate limits                                          |
+| `ctx7 search` / `ctx7 library` / `ctx7 docs`             | No — login gives higher rate limits                                          |
 | Hosted `ctx7 setup`                                      | Yes — unless `--api-key` is passed (`--oauth` also skips login for MCP mode) |
 | On-premise `ctx7 setup --mcp --base-url ...`             | Only when MCP authentication is enabled on the deployment                    |
 

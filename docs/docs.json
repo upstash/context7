@@ -47,7 +47,7 @@
                   "adding-libraries",
                   "library-updates",
                   "howto/claiming-libraries", "howto/verification", "howto/chat-widget",
-                  "howto/rules", "howto/private-sources"
+                  "howto/rules", "howto/private-sources", "howto/research-preview"
                 ]
               },
               {
@@ -66,7 +66,8 @@
                   },
                   "howto/usage",
                   "howto/teamspace",
-                  "howto/policies"
+                  "howto/policies",
+                  "howto/admin-mcp"
                 ]
               },
               {
@@ -77,7 +78,13 @@
                   {
                     "group": "Auth",
                     "pages": [
-                      "enterprise/enterprise-managed-auth/entra",
+                      {
+                        "group": "Microsoft Entra ID",
+                        "pages": [
+                          "enterprise/enterprise-managed-auth/entra-sso",
+                          "enterprise/enterprise-managed-auth/entra"
+                        ]
+                      },
                       "enterprise/enterprise-managed-auth/okta"
                     ]
                   },
@@ -93,6 +100,8 @@
                           "enterprise/integrations/other-git",
                           "enterprise/integrations/gerrit",
                           "enterprise/integrations/confluence",
+                          "enterprise/integrations/google-drive",
+                          "enterprise/integrations/notion",
                           "enterprise/integrations/aws-bedrock"
                         ]
                       },
@@ -101,6 +110,7 @@
                         "pages": [
                           "enterprise/security/entra-sso",
                           "enterprise/security/oidc-sso",
+                          "enterprise/security/saml-sso",
                           "enterprise/security/library-access"
                         ]
                       },
@@ -109,6 +119,7 @@
                         "pages": [
                           "enterprise/deployment/docker",
                           "enterprise/deployment/kubernetes",
+                          "enterprise/deployment/helm",
                           "enterprise/deployment/scaling",
                           "enterprise/deployment/vector-stores"
                         ]
@@ -119,7 +130,8 @@
                           "enterprise/library-import",
                           "enterprise/automatic-repository-updates",
                           "enterprise/gitops",
-                          "enterprise/backup-restore"
+                          "enterprise/backup-restore",
+                          "enterprise/decision-models"
                         ]
                       },
                       {
@@ -266,6 +278,7 @@
                 "pages": [
                   "docs7/overview",
                   "docs7/quickstart",
+                  "docs7/plans",
                   "docs7/configuration",
                   "docs7/custom-domains",
                   "docs7/migrate-from-mintlify"

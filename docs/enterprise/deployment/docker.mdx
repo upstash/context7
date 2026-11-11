@@ -105,7 +105,7 @@ Example response:
 ```json
 {
   "status": "healthy",
-  "version": "1.3.9",
+  "version": "2.0.0",
   "setup": "complete",
   "license": "configured",
   "licenseInfo": {
@@ -127,6 +127,55 @@ Example response:
   }
 }
 ```
+
+Each `connectivity` value is `"configured"` or `"missing"`. `github_method` is `"PAT"`, `"GitHub App"`, or `null`.
+
+`/api/health` is a liveness check. It still returns `"healthy"` when the database is down; `repos_parsed` and `connectivity` are then `null`.
+
+To check that the instance can serve traffic, use `GET /api/ready`. It returns `200` when the database answers and the MCP bridge is up. Otherwise it returns `503`.
+
+### Recover admin access
+
+If you lose the admin password, or a broken SSO setup locks you out, reset a local admin account from inside the container:
+
+```bash
+docker exec context7 node dist/enterprise/reset-password.mjs --username admin
+```
+
+The command:
+
+- Sets the password of the local account, and creates the account if it does not exist.
+- Makes the account an enabled admin.
+- Signs the account out of its sessions.
+- Turns password sign-in back on.
+
+Without `--password <new>`, it prints a generated password once. Passwords need at least 8 characters. The command does not work for a username that signs in with SSO.
+
+## Network Access
+
+Context7 needs outbound HTTPS to these destinations:
+
+| Destination | Purpose |
+|---|---|
+| `ghcr.io` | Image pulls |
+| `context7.com` | Online license only: license check, daily usage report, and public library search. See [Network and data flow](/enterprise/on-premise#network-and-data-flow) |
+| Your LLM and embedding provider | AI inference and embeddings |
+| Your Git hosts and documentation sources | Repository cloning and website, Confluence, Notion, or Google Drive indexing |
+
+An offline license (`ctx7off.` prefix) is checked locally and makes no calls to `context7.com`. Per-user usage always stays on the instance.
+
+To send these calls through an egress mirror, set `CONTEXT7_API_URL` (default `https://context7.com/api`).
+
+The server does not use `HTTP_PROXY` or `HTTPS_PROXY` for its own calls. Allow this egress directly or through a transparent proxy.
+
+If your network uses a private certificate authority:
+
+1. Mount its PEM file.
+2. Set `NODE_EXTRA_CA_CERTS` to the file's path.
+
+The whole server then trusts it, for every outbound call: AI providers, Bedrock, Confluence, Notion, Google, SSO identity providers, the license server, and Git.
+
+`GIT_TLS_INSECURE=true` turns off TLS checks for all outbound HTTPS and Git calls. Use it only for testing.
 
 ## Running as non-root
 

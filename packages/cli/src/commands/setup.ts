@@ -21,6 +21,7 @@ import {
   ALL_AGENT_NAMES,
   getAgent,
   detectAgents,
+  resolveAppendRuleFile,
 } from "../setup/agents.js";
 import {
   customizeSkillFilesForAgent,
@@ -41,6 +42,7 @@ import {
   readJsonConfig,
   mergeServerEntry,
   writeJsonConfig,
+  patchJsonConfig,
   resolveMcpPath,
   appendTomlServer,
   patchTomlStdioApiKey,
@@ -48,6 +50,7 @@ import {
   patchStdioApiKey,
   getJsonServerEntry,
 } from "../setup/mcp-writer.js";
+import { writeOpenCodeServer } from "../setup/opencode-editor.js";
 
 type Scope = "global" | "project";
 type SetupMode = "mcp" | "cli";
@@ -57,6 +60,7 @@ interface McpSkillPayload {
 }
 
 type SetupOptions = Partial<Record<SetupAgent, boolean>> & {
+  t3?: boolean;
   project?: boolean;
   yes?: boolean;
   apiKey?: string;
@@ -79,7 +83,9 @@ const CHECKBOX_THEME = {
 };
 
 function getSelectedAgents(options: SetupOptions): SetupAgent[] {
-  return ALL_AGENT_NAMES.filter((name) => options[name]);
+  return ALL_AGENT_NAMES.filter(
+    (name) => options[name] || (options.t3 && (name === "claude" || name === "codex"))
+  );
 }
 
 export function registerSetupCommand(program: Command): void {
@@ -91,6 +97,7 @@ export function registerSetupCommand(program: Command): void {
   }
 
   command
+    .option("--t3", "Set up for T3 Code (Claude Code and Codex providers)")
     .option("--mcp", "Set up MCP server mode")
     .option("--cli", "Set up CLI + Skills mode (no MCP server)")
     .option("-p, --project", "Configure for current project instead of globally")
@@ -226,23 +233,30 @@ async function resolveCliAuth(apiKey?: string): Promise<void> {
 }
 
 async function promptAgents(): Promise<SetupAgent[] | null> {
-  const choices = ALL_AGENT_NAMES.map((name) => ({
+  const choices = ALL_AGENT_NAMES.map((name): { name: string; value: SetupAgent | "t3" } => ({
     name: getAgent(name).displayName,
     value: name,
   }));
 
+  choices.push({ name: "T3 Code (Claude Code and Codex providers)", value: "t3" });
+
   const message = "Which agents do you want to set up?";
 
   try {
-    return await checkboxWithHover(
+    const selected = await checkboxWithHover(
       {
         message,
         choices,
         loop: false,
         theme: CHECKBOX_THEME,
       },
-      { getName: (a: SetupAgent) => getAgent(a).displayName }
+      { getName: (a: SetupAgent | "t3") => (a === "t3" ? "T3 Code" : getAgent(a).displayName) }
     );
+    return [
+      ...new Set(
+        selected.flatMap((agent): SetupAgent[] => (agent === "t3" ? ["claude", "codex"] : [agent]))
+      ),
+    ];
   } catch {
     return null;
   }
@@ -284,8 +298,7 @@ async function installRule(
     return { status: "installed", path: rulePath };
   }
 
-  const filePath =
-    scope === "global" ? rule.file("global") : join(process.cwd(), rule.file("project"));
+  const filePath = await resolveAppendRuleFile(rule, scope);
   const escapedMarker = rule.sectionMarker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const section = `${rule.sectionMarker}\n${content}${rule.sectionMarker}`;
 
@@ -297,8 +310,13 @@ async function installRule(
   }
 
   if (existing.includes(rule.sectionMarker)) {
-    const regex = new RegExp(`${escapedMarker}\\n[\\s\\S]*?${escapedMarker}`);
-    const updated = existing.replace(regex, section);
+    // AGENTS.md is often checked out with CRLF line endings (Git for Windows
+    // defaults to core.autocrlf=true). Match either ending and write the new
+    // section with the one the file already uses.
+    const regex = new RegExp(`${escapedMarker}(\\r?\\n)[\\s\\S]*?${escapedMarker}`);
+    const updated = existing.replace(regex, (_match, eol: string) =>
+      section.replace(/\r?\n/g, eol)
+    );
     await writeFile(filePath, updated, "utf-8");
     return { status: "updated", path: filePath };
   }
@@ -359,6 +377,7 @@ async function setupAgent(
   rulePath: string;
   skillStatus: string;
   skillPath: string;
+  signInCommand?: string;
 }> {
   const agent = getAgent(agentName);
 
@@ -369,21 +388,26 @@ async function setupAgent(
   const mcpPath = await resolveMcpPath(mcpCandidates);
 
   let mcpStatus: string;
+  let signInCommand: string | undefined;
   try {
+    let alreadyExists: boolean;
     if (mcpPath.endsWith(".toml")) {
       const apiKey = auth.mode === "api-key" ? auth.apiKey : undefined;
       const patched =
         transport === "stdio" ? await patchTomlStdioApiKey(mcpPath, "context7", apiKey) : false;
-      const { alreadyExists } = patched
-        ? { alreadyExists: true }
-        : await appendTomlServer(
+      alreadyExists =
+        patched ||
+        (
+          await appendTomlServer(
             mcpPath,
             "context7",
             resolveEntryToWrite(agent, auth, transport, undefined, mcpUrl)
-          );
-      mcpStatus = alreadyExists
-        ? `reconfigured with ${AUTH_MODE_LABELS[auth.mode]}`
-        : `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
+          )
+        ).alreadyExists;
+    } else if (agentName === "opencode") {
+      alreadyExists = await writeOpenCodeServer(mcpPath, (existing) =>
+        resolveEntryToWrite(agent, auth, transport, existing, mcpUrl)
+      );
     } else {
       const existing = await readJsonConfig(mcpPath);
       const existingJsonEntry =
@@ -391,17 +415,17 @@ async function setupAgent(
           ? getJsonServerEntry(existing, agent.mcp.configKey, "context7")
           : undefined;
       const entry = resolveEntryToWrite(agent, auth, transport, existingJsonEntry, mcpUrl);
-      const { config, alreadyExists } = mergeServerEntry(
-        existing,
-        agent.mcp.configKey,
-        "context7",
-        entry
-      );
-      mcpStatus = alreadyExists
-        ? `reconfigured with ${AUTH_MODE_LABELS[auth.mode]}`
-        : `configured with ${AUTH_MODE_LABELS[auth.mode]}`;
-      await writeJsonConfig(mcpPath, config);
+      const merged = mergeServerEntry(existing, agent.mcp.configKey, "context7", entry);
+      // Prefer an in-place edit so the user's JSONC comments, key order and
+      // layout survive; fall back to a full rewrite when the file cannot be
+      // edited as JSONC (missing, empty or unparseable).
+      if (!(await patchJsonConfig(mcpPath, [agent.mcp.configKey, "context7"], entry))) {
+        await writeJsonConfig(mcpPath, merged.config);
+      }
+      alreadyExists = merged.alreadyExists;
     }
+    mcpStatus = `${alreadyExists ? "reconfigured" : "configured"} with ${AUTH_MODE_LABELS[auth.mode]}`;
+    if (auth.mode === "oauth") signInCommand = agent.mcp.oauthSignInCommand;
   } catch (err) {
     mcpStatus = `failed: ${err instanceof Error ? err.message : String(err)}`;
   }
@@ -443,6 +467,7 @@ async function setupAgent(
     rulePath,
     skillStatus,
     skillPath,
+    signInCommand,
   };
 }
 
@@ -502,6 +527,9 @@ async function setupMcp(
         : pc.dim("~");
     log.plain(`    ${mcpIcon} MCP server ${r.mcpStatus}`);
     log.plain(`      ${pc.dim(r.mcpPath)}`);
+    if (r.signInCommand) {
+      log.plain(`      ${pc.yellow("next:")} sign in with ${pc.cyan(r.signInCommand)}`);
+    }
     const ruleIcon = r.ruleStatus === "installed" ? pc.green("+") : pc.dim("~");
     log.plain(`    ${ruleIcon} Rule ${r.ruleStatus}`);
     log.plain(`      ${pc.dim(r.rulePath)}`);

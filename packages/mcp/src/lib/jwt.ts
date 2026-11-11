@@ -119,6 +119,16 @@ export function isClerkOAuthJwt(token: string | undefined): token is string {
   }
 }
 
+/** The unverified `client_id` claim of a JWT, if it is a non-empty string. */
+export function oauthClientId(token: string): string | undefined {
+  try {
+    const { client_id: clientId } = jose.decodeJwt(token);
+    return typeof clientId === "string" && clientId ? clientId : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Clerk signs ID tokens and session JWTs with the same issuer and JWKS as its
  * OAuth access tokens, so issuer and signature alone cannot tell them apart.

@@ -127,7 +127,7 @@ After claiming your library, the admin page shows a full configuration editor wi
 - **Chat**: Embed an AI chat assistant on your documentation site
 - **Benchmark**: Evaluation of the quality of your library's documentation
 - **Metrics**: View usage statistics
-- **Versions**: Manage different versions and tags of your library (Git repositories only)
+- **Versions**: Manage different versions and tags of your library (Git repositories and websites)
 
 ## Configuration Fields
 
@@ -174,9 +174,31 @@ Context7 checks a new title or description before it saves it. If the text gives
     | ---------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------- |
     | **Base URL**                 | The root URL to crawl for documentation.                                                         | Max 100 characters              |
     | **Display URL**              | Optional URL shown to users instead of the base URL.                                             | Max 500 characters              |
-    | **URL fragments**            | Keep or drop the part after `#`. Keep treats URLs with different fragments as distinct pages. Drop by default. | Keep / Drop                     |
-    | **Query parameters**         | Keep or drop the part after `?`. Keep treats URLs with different query strings as distinct pages. Keep by default. | Keep / Drop                     |
+    | **Query parameters**         | Keep or drop the part after `?`. Keep treats URLs with different query strings as distinct pages, and is the default. With Drop, links that carry the start page's own query parameters are still crawled. | Keep / Drop                     |
     | **URLs to exclude**          | URL patterns to exclude from crawling. Supports wildcards.                                       | Max 100 patterns                |
+
+    <Note>
+      The crawl stays under the Base URL. A Base URL without a trailing slash is a plain
+      prefix, so `https://example.com/docs/api/admin` also includes
+      `https://example.com/docs/api/admin-graphql/...`. Add a trailing slash to keep the
+      folder boundary: `https://example.com/docs/` includes `/docs` and `/docs/x` but
+      not `/docs-old`.
+
+      Hash fragments (`#...`) are not indexed. Pages that differ only by their fragment, such as
+      hash-routed documentation sites, are crawled as a single page.
+
+      A URLs to exclude pattern that leaves out old releases does not stop a version at that URL
+      from being crawled.
+
+      A library that was first added at a page inside the site crawls from that page, not from the
+      Base URL. Saving a new Base URL moves the crawl to the Base URL when that page is outside it;
+      a page still under the new Base URL stays the start page.
+
+      A crawl recovers from a start page the site has since moved or removed: when the start page is
+      gone, the crawl starts from the nearest live page above it in the scope, or from the Base URL;
+      when the page or its site moved to a new host, the crawl follows it there. These recoveries
+      do not change the saved settings.
+    </Note>
   </Tab>
 </Tabs>
 
@@ -194,7 +216,9 @@ Example rules:
 
 ### Advanced Settings
 
-Git repositories and websites have a **Version detection** field. By default, outdated library versions are automatically detected and excluded from indexing. Select "Index every version, old ones too" to include all versions regardless of age.
+Git repositories and websites have a **Version detection** field. By default, outdated library versions are automatically detected and excluded from indexing. Select **Index every version, old ones too** to include all versions regardless of age.
+
+Private repositories also have a **Generate docs** field. An AI agent writes documentation from the source code on each refresh with new commits, and each run is billed as parsing. When disabled, the next refresh removes the generated pages.
 
 These cards are available for all library types, below the configuration editor:
 
@@ -202,6 +226,8 @@ These cards are available for all library types, below the configuration editor:
 | ------------------ | ----------------------------------------------------------------------------------------------------------- |
 | **Redirect**       | Redirect users to a different library. Remove the redirect to disable it.                                   |
 | **Block indexing** | Opt-out from Context7. When enabled, documentation content is removed and the library becomes inaccessible. |
+
+Context7 refuses a redirect to the library itself, a redirect that would form a loop, and a chain longer than three redirects, counting libraries that already redirect to yours. Readers follow up to three redirects. Point the redirect at the library the chain ends at.
 
 ## Managing Versions
 
@@ -215,6 +241,7 @@ You can add versions using either:
 
 - **Git tags**: Reference a specific release tag (e.g., `v1.2.0`)
 - **Git branches**: Reference a branch for version-specific documentation (e.g., `release-1.x`)
+- **Website versions**: For a website library, enter the **Version URL** of the documentation for that version (e.g., `https://docs.example.com/2.0/`). The URL must be on the same site as the library. As an owner, you can also add a release that lives under a different path of that site's documentation, such as one manual of a portal (e.g., `https://dev.mysql.com/doc/refman/8.0/en/` for a library whose docs are under `https://dev.mysql.com/doc/`). A URL without a version replaces the latest version.
 
 | Limit            | Value             |
 | ---------------- | ----------------- |

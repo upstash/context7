@@ -6,9 +6,10 @@ description: Installation examples for MCP clients
 Context7 supports all MCP clients. Below are configuration examples for popular clients. If your client isn't listed, check its documentation for MCP server installation. To configure manually, use the Context7 server URL `https://mcp.context7.com/mcp` with your MCP client and pass your API key via the `Authorization: Bearer YOUR_API_KEY` header.
 
 <Tip>
-  Looking for the easiest way to get started? Use `npx ctx7 setup` to configure Context7
-  automatically, and `npx ctx7 remove` to remove the generated setup later. See the [CLI
-  docs](/clients/cli) for more details.
+  Looking for the easiest way to get started? Paste `Read https://context7.com/get-started.md and
+  set up Context7` into your coding agent. It sets up Context7, and you sign in with OAuth. Or run
+  `npx ctx7 setup` yourself, and `npx ctx7 remove` to remove the generated setup later. See the
+  [CLI docs](/clients/cli) for more details.
 </Tip>
 
 <Note>
@@ -124,29 +125,73 @@ Since Cursor 1.0, you can click the install button below for instant one-click i
 
 </Accordion>
 
-<Accordion title="Opencode">
+<Accordion title="OpenCode">
 
-Add this to your Opencode configuration file. See [Opencode MCP docs](https://opencode.ai/docs/mcp-servers) for more info.
+Add this to your `opencode.json` file. The shape depends on your OpenCode version. Run `opencode --version` to check it.
+
+- **OpenCode 2.x** keeps servers in `mcp.servers` and connects to each one unless you set `"disabled": true`. It also accepts the 1.x shape. See the [OpenCode 2.x MCP docs](https://opencode.ai/v2/docs/mcp-servers).
+- **OpenCode 1.x** reads servers directly from `mcp` and uses `"enabled": true`. It rejects a config that contains `mcp.servers`. See the [OpenCode 1.x MCP docs](https://opencode.ai/docs/mcp-servers).
 
 #### Remote Server Connection
 
-```json
-"mcp": {
-  "context7": {
-    "type": "remote",
-    "url": "https://mcp.context7.com/mcp",
-    "headers": {
-      "Authorization": "Bearer YOUR_API_KEY"
-    },
-    "enabled": true
+<CodeGroup>
+
+```json OpenCode v2
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "context7": {
+        "type": "remote",
+        "url": "https://mcp.context7.com/mcp",
+        "headers": {
+          "Authorization": "Bearer YOUR_API_KEY"
+        }
+      }
+    }
   }
 }
 ```
 
+```json OpenCode v1
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      },
+      "enabled": true
+    }
+  }
+}
+```
+
+</CodeGroup>
+
 #### Local Server Connection
 
-```json
+<CodeGroup>
+
+```json OpenCode v2
 {
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "context7": {
+        "type": "local",
+        "command": ["npx", "-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+      }
+    }
+  }
+}
+```
+
+```json OpenCode v1
+{
+  "$schema": "https://opencode.ai/config.json",
   "mcp": {
     "context7": {
       "type": "local",
@@ -157,6 +202,8 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
 }
 ```
 
+</CodeGroup>
+
 </Accordion>
 
 <Accordion title="Pi">
@@ -166,6 +213,14 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
 We recommend built-in MCP because the Context7 MCP server receives updates more frequently than the Pi extension.
 
 Pi has built-in MCP support from version 0.99.0. Run `pi update` to update Pi, then choose one connection method below. See the [Pi guide](/clients/pi) for usage examples and [Pi's MCP documentation](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/mcp.md) for configuration details.
+
+##### Quick setup
+
+```sh
+npx ctx7 setup --pi
+```
+
+This command writes the MCP server, a Context7 rule, and a skill for Pi. See the [Pi guide](/clients/pi#quick-setup) for the files it changes.
 
 ##### OAuth
 
@@ -178,7 +233,7 @@ Approve access in your browser. Pi stores and refreshes the OAuth tokens.
 
 ##### Remote server with an API key
 
-Create a key in the [Context7 dashboard](https://context7.com/dashboard) and export it before starting Pi:
+Create a key in the [Context7 dashboard](https://context7.com/dashboard?tab=settings) and export it before starting Pi:
 
 ```sh
 export CONTEXT7_API_KEY="YOUR_API_KEY"
@@ -257,7 +312,7 @@ See [OpenAI Codex MCP docs](https://developers.openai.com/codex/mcp) for more in
 
 #### Context7 Plugin
 
-You can also install Context7 as a Codex plugin. It connects to the hosted MCP server and includes a documentation lookup skill. The first time Codex uses the plugin, a browser window opens so you can log in via OAuth.
+You can also install Context7 as a Codex plugin. It connects to the hosted MCP server and includes a documentation lookup skill. After installation, a browser window opens so you can log in via OAuth.
 
 ```sh
 codex plugin marketplace add upstash/context7
@@ -280,7 +335,7 @@ Add this to your Codex configuration file (`~/.codex/config.toml` or `.codex/con
 [mcp_servers.context7]
 command = "npx"
 args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
-startup_timeout_ms = 20_000
+startup_timeout_sec = 20
 ```
 
 #### Remote Server Connection
@@ -291,7 +346,7 @@ url = "https://mcp.context7.com/mcp"
 http_headers = { "Authorization" = "Bearer YOUR_API_KEY" }
 ```
 
-<Note>If you see startup timeout errors, try increasing `startup_timeout_ms` to `40_000`.</Note>
+<Note>If you see startup timeout errors, try increasing `startup_timeout_sec` to `40`.</Note>
 
 </Accordion>
 
@@ -565,67 +620,30 @@ Open Claude Desktop developer settings and edit your `claude_desktop_config.json
 
 </Accordion>
 
-<Accordion title="ChatGPT (Web)">
+<Accordion title="ChatGPT">
 
-ChatGPT supports MCP servers through remote connectors via [Developer Mode](https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt) (beta). Available for Pro, Plus, Team, Enterprise, and Edu plans.
+Add Context7 to ChatGPT on the web as a custom MCP server plugin. See [Add custom MCP server](https://developers.openai.com/api/docs/guides/custom-mcp-server) in the OpenAI docs. Workspace permissions can block custom MCP servers.
 
-#### 1. Enable Developer Mode
+#### 1. Add the MCP server
 
-Go to: `Settings` → `Apps` → `Advanced settings` → Enable `Developer Mode`
-
-#### 2. Create an App
-
-Go to: `Settings` → `Apps` → `Create App`
-
-Fill in the following:
+Go to [ChatGPT Plugins](https://chatgpt.com/plugins) → select the plus button → `Add custom MCP server`, and fill in the following:
 
 | Field              | Value                                                                                       |
 | ------------------ | ------------------------------------------------------------------------------------------- |
 | **Name**           | `Context7`                                                                                  |
 | **Description**    | `Fetch up-to-date documentation and code examples for any library directly from the source` |
-| **MCP Server URL** | `https://mcp.context7.com/mcp/oauth`                                                        |
+| **Server URL**     | `https://mcp.context7.com/mcp/oauth`                                                        |
+| **Authentication** | `OAuth`                                                                                     |
 
-> Accept the security notice and complete the one-time OAuth authorization.
+Select `I understand and want to continue`, then `Create as a plugin`.
 
-#### 3. Use in a Conversation
+#### 2. Install the plugin
 
-Start a new chat → Click the plus icon → Hover over `More` → Select the `Context7` app.
+Find `Context7` in your plugins, install it, and complete the one-time OAuth authorization.
 
-Alternatively, you can say `use context7` in your prompt and ChatGPT will automatically use the `Context7` app.
+#### 3. Use in a conversation
 
-See [OpenAI MCP docs](https://developers.openai.com/api/docs/mcp) for more info.
-
-</Accordion>
-
-<Accordion title="ChatGPT (Desktop)">
-
-The ChatGPT desktop app shares apps configured on the web. Set up the app on [chatgpt.com](https://chatgpt.com) first.
-
-#### 1. Enable Developer Mode (on the Web)
-
-Go to: `Settings` → `Apps` → `Advanced settings` → Enable `Developer Mode`
-
-#### 2. Create an App (on the Web)
-
-Go to: `Settings` → `Apps` → `Create App`
-
-Fill in the following:
-
-| Field              | Value                                                                                       |
-| ------------------ | ------------------------------------------------------------------------------------------- |
-| **Name**           | `Context7`                                                                                  |
-| **Description**    | `Fetch up-to-date documentation and code examples for any library directly from the source` |
-| **MCP Server URL** | `https://mcp.context7.com/mcp/oauth`                                                        |
-
-> Accept the security notice and complete the one-time OAuth authorization.
-
-#### 3. Use in the Desktop App
-
-Open the ChatGPT desktop app → Start a new chat → ChatGPT will automatically use the `Context7` app when you ask it to.
-
-Apps configured on the web are automatically available in the desktop app.
-
-See [OpenAI MCP docs](https://developers.openai.com/api/docs/mcp) for more info.
+Start a new chat, type `@` in the prompt box, and select `Context7`.
 
 </Accordion>
 
@@ -777,7 +795,7 @@ mcp_servers:
   context7:
     url: "https://mcp.context7.com/mcp"
     headers:
-      CONTEXT7_API_KEY: "YOUR_API_KEY"
+      Authorization: "Bearer YOUR_API_KEY"
 ```
 
 #### Remote Server Connection (OAuth)

@@ -23,8 +23,21 @@ const BASE_PORT = 43117;
 const STUB_DOCS = "stub docs text";
 const EMPTY_CONTEXT_QUERY = "force-empty-context";
 const NO_RESULTS_QUERY = "force-no-results";
+const FILTERED_NO_RESULTS_QUERY = "force-filtered-no-results";
 const UPSTREAM_ERROR_QUERY = "force-upstream-error";
+const SLOW_CONTEXT_QUERY = "force-slow-context";
 const INVALID_JSON_QUERY = "force-invalid-json";
+const STUB_CODE = "stub code text";
+const CODE_INDEXING_QUERY = "force-code-indexing";
+const CODE_NO_SOURCE_QUERY = "force-code-no-source";
+const CODE_GATEWAY_QUERY = "force-code-gateway";
+const CODE_BAD_TAG_QUERY = "force-code-bad-tag";
+const STUB_UPGRADE_GUIDE = "# Upgrading Next.js from 14 to 16";
+const PREPARING_FROM_VERSION = "13";
+const UNKNOWN_FROM_VERSION = "99";
+const UNAVAILABLE_FROM_VERSION = "12";
+/** A deployment without the endpoint answers a plain 404. */
+const MISSING_ENDPOINT_FROM_VERSION = "98";
 const CLIENT_IP_ASSERTION_KEY = "0123456789abcdef".repeat(4);
 const INVALID_OAUTH_TOKEN_BODY = {
   error: "invalid_oauth_token",
@@ -59,6 +72,7 @@ interface RecordedRequest {
 }
 
 const requests: RecordedRequest[] = [];
+const feedbackBodies: unknown[] = [];
 let stubServer: http.Server;
 let childEnv: Record<string, string>;
 let httpChild: ChildProcess;
@@ -93,6 +107,63 @@ function startStubApi(): Promise<string> {
     const apiPath = url.pathname.replace(/^\/api/, "");
     requests.push({ path: apiPath, query: url.searchParams, headers: req.headers });
     const bearer = /^Bearer (.+)$/.exec(req.headers.authorization ?? "")?.[1] ?? "";
+    if (apiPath === "/v2/feedback") {
+      let body = "";
+      req.on("data", (chunk: Buffer) => (body += chunk.toString()));
+      req.on("end", () => {
+        feedbackBodies.push(JSON.parse(body));
+        res.statusCode = 201;
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify({ id: "stub-feedback" }));
+      });
+      return;
+    }
+    if (apiPath === "/v2/version-upgrade-guide") {
+      const fromVersion = url.searchParams.get("fromVersion");
+      if (fromVersion === PREPARING_FROM_VERSION) {
+        res.statusCode = 202;
+        res.setHeader("Content-Type", "application/json");
+        res.end(
+          JSON.stringify({
+            status: "preparing",
+            retryAfter: 90,
+            message: "Indexing the source of next.js 13.0.0.",
+          })
+        );
+      } else if (fromVersion === UNAVAILABLE_FROM_VERSION) {
+        res.statusCode = 503;
+        res.setHeader("Content-Type", "application/json");
+        res.end(
+          JSON.stringify({
+            error: "guide_unavailable",
+            message: "The upgrade guide for Next.js 12.0.0 -> 16.0.0 could not be prepared.",
+          })
+        );
+      } else if (fromVersion === MISSING_ENDPOINT_FROM_VERSION) {
+        res.statusCode = 404;
+        res.setHeader("Content-Type", "text/html");
+        res.end("<html>Not Found</html>");
+      } else if (url.searchParams.get("page") === "9") {
+        res.statusCode = 400;
+        res.setHeader("Content-Type", "application/json");
+        res.end(
+          JSON.stringify({
+            error: "page_out_of_range",
+            message: "This guide has 3 pages; page 9 does not exist. Ask for a page from 1 to 3.",
+          })
+        );
+      } else if (fromVersion === UNKNOWN_FROM_VERSION) {
+        res.statusCode = 404;
+        res.setHeader("Content-Type", "application/json");
+        res.end(
+          JSON.stringify({ error: "version_not_found", message: "No release 99 of next.js." })
+        );
+      } else {
+        res.setHeader("Content-Type", "text/plain");
+        res.end(STUB_UPGRADE_GUIDE);
+      }
+      return;
+    }
     if (apiPath === "/v2/auth/check") {
       // Mirrors context7app: the middleware answers invalid_oauth_token for a
       // rejected oat_ bearer, the handler answers 204 for an accepted one.
@@ -131,6 +202,10 @@ function startStubApi(): Promise<string> {
         res.end(JSON.stringify({ results: [] }));
         return;
       }
+      if (url.searchParams.get("query") === FILTERED_NO_RESULTS_QUERY) {
+        res.end(JSON.stringify({ results: [], searchFilterApplied: true }));
+        return;
+      }
       res.end(
         JSON.stringify({
           results: [
@@ -155,7 +230,57 @@ function startStubApi(): Promise<string> {
         return;
       }
       res.setHeader("Content-Type", "text/plain");
+      if (url.searchParams.get("query") === SLOW_CONTEXT_QUERY) {
+        setTimeout(() => res.end(STUB_DOCS), 500);
+        return;
+      }
       res.end(url.searchParams.get("query") === EMPTY_CONTEXT_QUERY ? "" : STUB_DOCS);
+    } else if (apiPath === "/v2/code") {
+      const query = url.searchParams.get("pattern");
+      if (query === CODE_INDEXING_QUERY) {
+        res.statusCode = 202;
+        res.setHeader("Content-Type", "application/json");
+        res.setHeader("Retry-After", "30");
+        res.end(
+          JSON.stringify({
+            error: "indexing",
+            message: "The source of /vercel/next.js at v15.5.0 is being indexed.",
+            retryAfter: 30,
+          })
+        );
+        return;
+      }
+      if (query === CODE_NO_SOURCE_QUERY) {
+        res.statusCode = 422;
+        res.setHeader("Content-Type", "application/json");
+        res.end(
+          JSON.stringify({
+            error: "no_source",
+            message: "Source code search is not available for /websites/x.",
+          })
+        );
+        return;
+      }
+      if (query === CODE_GATEWAY_QUERY) {
+        res.statusCode = 502;
+        res.setHeader("Content-Type", "text/html");
+        res.end("<html>Bad Gateway</html>");
+        return;
+      }
+      if (query === CODE_BAD_TAG_QUERY) {
+        res.statusCode = 503;
+        res.setHeader("Content-Type", "application/json");
+        res.end(
+          JSON.stringify({
+            error: "index_failed",
+            message:
+              'Git tag "v0" of /vercel/next.js could not be indexed; the tag may not exist. Docs versions: v15.5.0.',
+          })
+        );
+        return;
+      }
+      res.setHeader("Content-Type", "text/plain");
+      res.end(STUB_CODE);
     } else {
       res.statusCode = 404;
       res.end();
@@ -238,6 +363,91 @@ test("reports the bound port when port zero requests an ephemeral port", async (
   } finally {
     child.kill();
   }
+});
+
+// A modern query-docs call over a caller-chosen agent, so tests control socket reuse.
+function callQueryDocsOver(url: string, agent: http.Agent, query: string) {
+  return new Promise<{ status: number; connection: string | undefined }>((resolve, reject) => {
+    const req = http.request(
+      url,
+      {
+        method: "POST",
+        agent,
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream",
+          authorization: "Bearer ctx7sk-local-test",
+          "mcp-protocol-version": "2026-07-28",
+          "mcp-method": "tools/call",
+          "mcp-name": "query-docs",
+        },
+      },
+      (res) => {
+        res.resume();
+        res.on("end", () =>
+          resolve({ status: res.statusCode!, connection: res.headers.connection })
+        );
+      }
+    );
+    req.on("error", reject);
+    req.end(
+      JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "tools/call",
+        params: {
+          name: "query-docs",
+          arguments: { libraryId: "/vercel/next.js", query },
+          _meta: {
+            "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+            "io.modelcontextprotocol/clientCapabilities": {},
+          },
+        },
+      })
+    );
+  });
+}
+
+describe("HTTP shutdown", () => {
+  test("serves requests that arrive on a kept-alive socket during shutdown", async () => {
+    const { child, url } = await startHttpChild({ port: 0 });
+    const exited = new Promise<number | null>((resolve) => child.once("exit", resolve));
+    // One socket, so the second request reuses the connection of the first.
+    const agent = new http.Agent({ keepAlive: true, maxSockets: 1 });
+    try {
+      const inFlight = callQueryDocsOver(url, agent, SLOW_CONTEXT_QUERY);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      child.kill("SIGTERM");
+      // Queued behind the in-flight call, so it reaches the server after SIGTERM.
+      const afterSignal = callQueryDocsOver(url, agent, "app router");
+
+      expect((await inFlight).status).toBe(200);
+      expect(await afterSignal).toEqual({ status: 200, connection: "close" });
+      expect(await exited).toBe(0);
+    } finally {
+      agent.destroy();
+      child.kill();
+    }
+  });
+
+  test("exits cleanly when a request in flight at SIGTERM leaves its socket open", async () => {
+    const { child, url } = await startHttpChild({ port: 0 });
+    const exited = new Promise<number | null>((resolve) => child.once("exit", resolve));
+    const agent = new http.Agent({ keepAlive: true });
+    try {
+      const inFlight = callQueryDocsOver(url, agent, SLOW_CONTEXT_QUERY);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      child.kill("SIGTERM");
+
+      // The response began before SIGTERM, so it keeps the socket alive and the
+      // client sends nothing more; shutdown must still finish inside its limit.
+      expect(await inFlight).toEqual({ status: 200, connection: "keep-alive" });
+      expect(await exited).toBe(0);
+    } finally {
+      agent.destroy();
+      child.kill();
+    }
+  });
 });
 
 async function connect(transportKind: "http" | "stdio", era: "modern" | "legacy") {
@@ -463,6 +673,205 @@ describe("HTTP API key headers", () => {
     } finally {
       await client.close();
     }
+  });
+});
+
+describe("research preview", () => {
+  // The preview tool list differs per caller, so a shared cache must not serve it to others.
+  async function toolsListCacheScope(
+    transport: StreamableHTTPClientTransport | StdioClientTransport
+  ) {
+    const client = new Client(
+      { name: "research-preview-test", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+    await client.connect(transport);
+    try {
+      return ((await client.listTools()) as { cacheScope?: string }).cacheScope;
+    } finally {
+      await client.close();
+    }
+  }
+
+  const httpTransport = (url: string) =>
+    new StreamableHTTPClientTransport(new URL(url), {
+      requestInit: { headers: { Authorization: "Bearer ctx7sk-local-test" } },
+    });
+  const stdioTransport = (env: Record<string, string>) =>
+    new StdioClientTransport({ command: process.execPath, args: [DIST], env });
+
+  async function withClient<T>(url: string, run: (client: Client) => Promise<T>): Promise<T> {
+    const client = new Client({ name: "research-preview-test", version: "1.0.0" });
+    await client.connect(httpTransport(url));
+    try {
+      return await run(client);
+    } finally {
+      await client.close();
+    }
+  }
+  const toolNames = (url: string) =>
+    withClient(url, async (client) => (await client.listTools()).tools.map((tool) => tool.name));
+
+  test("marks tools/list private over HTTP only with ?research_preview=1", async () => {
+    expect(await toolsListCacheScope(httpTransport(httpUrl))).toBe("public");
+    expect(await toolsListCacheScope(httpTransport(`${httpUrl}?research_preview=1`))).toBe(
+      "private"
+    );
+  });
+
+  test("marks tools/list private over stdio only with CONTEXT7_RESEARCH_PREVIEW=1", async () => {
+    expect(await toolsListCacheScope(stdioTransport(childEnv))).toBe("public");
+    expect(
+      await toolsListCacheScope(stdioTransport({ ...childEnv, CONTEXT7_RESEARCH_PREVIEW: "1" }))
+    ).toBe("private");
+  });
+
+  test("lists submit-docs-feedback only with research preview and sends it to the API", async () => {
+    expect(await toolNames(httpUrl)).not.toContain("submit-docs-feedback");
+    expect(await toolNames(`${httpUrl}?research_preview=1`)).toContain("submit-docs-feedback");
+
+    feedbackBodies.length = 0;
+    requests.length = 0;
+    const feedback = {
+      libraryId: "/vercel/next.js",
+      query: "app router caching",
+      score: 2,
+      issue: "outdated",
+      comment: "Shows the Next.js 14 cache defaults.",
+    };
+    const result = await withClient(`${httpUrl}?research_preview=1`, (client) =>
+      client.callTool({ name: "submit-docs-feedback", arguments: feedback })
+    );
+
+    expect(result.isError).toBeFalsy();
+    expect(feedbackBodies).toEqual([feedback]);
+    const apiCall = requests.find((request) => request.path === "/v2/feedback");
+    expect(apiCall?.headers.authorization).toBe("Bearer ctx7sk-local-test");
+    expect(apiCall?.headers["x-context7-source"]).toBe("mcp-server");
+    expect(apiCall?.headers["x-context7-research-preview"]).toBe("1");
+  });
+
+  describe("get-upgrade-guide", () => {
+    const callGuide = (args: Record<string, string | number>) =>
+      withClient(`${httpUrl}?research_preview=1`, (client) =>
+        client.callTool({
+          name: "get-upgrade-guide",
+          arguments: { libraryId: "/vercel/next.js", ...args },
+        })
+      );
+    const resultText = (result: Awaited<ReturnType<typeof callGuide>>) =>
+      (result.content as { type: string; text: string }[])[0].text;
+
+    beforeEach(() => {
+      requests.length = 0;
+    });
+
+    test("is listed only with research preview", async () => {
+      expect(await toolNames(httpUrl)).not.toContain("get-upgrade-guide");
+      expect(await toolNames(`${httpUrl}?research_preview=1`)).toContain("get-upgrade-guide");
+    });
+
+    test("sends the versions to the API and returns the guide text", async () => {
+      const result = await callGuide({ fromVersion: "14.2.35", toVersion: "16" });
+
+      expect(result.isError).toBeFalsy();
+      expect(resultText(result)).toBe(STUB_UPGRADE_GUIDE);
+      const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
+      expect(Object.fromEntries(apiCall!.query)).toEqual({
+        libraryId: "/vercel/next.js",
+        fromVersion: "14.2.35",
+        toVersion: "16",
+        page: "1",
+      });
+      expect(apiCall?.headers.authorization).toBe("Bearer ctx7sk-local-test");
+      expect(apiCall?.headers["x-context7-source"]).toBe("mcp-server");
+      expect(apiCall?.headers["x-context7-research-preview"]).toBe("1");
+    });
+
+    test("omits toVersion when not given", async () => {
+      await callGuide({ fromVersion: "14" });
+
+      const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
+      expect(apiCall?.query.has("toVersion")).toBe(false);
+    });
+
+    test("sends the page when given", async () => {
+      const result = await callGuide({ fromVersion: "14", page: 2 });
+
+      expect(result.isError).toBeFalsy();
+      const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
+      expect(apiCall?.query.get("page")).toBe("2");
+    });
+
+    test("sends page 1 when no page is given", async () => {
+      await callGuide({ fromVersion: "14" });
+
+      const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
+      expect(apiCall?.query.get("page")).toBe("1");
+    });
+
+    test("accepts a page sent as a numeric string", async () => {
+      const result = await callGuide({ fromVersion: "14", page: "2" });
+
+      expect(result.isError).toBeFalsy();
+      const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
+      expect(apiCall?.query.get("page")).toBe("2");
+    });
+
+    test("rejects a page that is not a whole number without calling the API", async () => {
+      const result = await callGuide({ fromVersion: "14", page: "two" });
+
+      expect(result.isError).toBe(true);
+      expect(requests.some((request) => request.path === "/v2/version-upgrade-guide")).toBe(false);
+    });
+
+    test("returns the API's message for a page past the last as an answer, not an error", async () => {
+      const result = await callGuide({ fromVersion: "14", page: 9 });
+
+      expect(result.isError).toBeFalsy();
+      expect(resultText(result)).toBe(
+        "This guide has 3 pages; page 9 does not exist. Ask for a page from 1 to 3."
+      );
+    });
+
+    test("rejects a page below 1 without calling the API", async () => {
+      const result = await callGuide({ fromVersion: "14", page: 0 });
+
+      expect(result.isError).toBe(true);
+      expect(requests.some((request) => request.path === "/v2/version-upgrade-guide")).toBe(false);
+    });
+
+    test("tells the agent to call again while the guide is prepared", async () => {
+      const result = await callGuide({ fromVersion: PREPARING_FROM_VERSION });
+
+      expect(result.isError).toBeFalsy();
+      expect(resultText(result)).toContain("being prepared");
+      expect(resultText(result)).toContain("after 90 seconds");
+      expect(resultText(result)).toContain("Indexing the source of next.js 13.0.0.");
+    });
+
+    test("returns the API's 503 guide_unavailable message as an answer, not an error", async () => {
+      const result = await callGuide({ fromVersion: UNAVAILABLE_FROM_VERSION });
+
+      expect(result.isError).toBeFalsy();
+      expect(resultText(result)).toBe(
+        "The upgrade guide for Next.js 12.0.0 -> 16.0.0 could not be prepared."
+      );
+    });
+
+    test("returns the API's 404 message as an answer, not an error", async () => {
+      const result = await callGuide({ fromVersion: UNKNOWN_FROM_VERSION });
+
+      expect(result.isError).toBeFalsy();
+      expect(resultText(result)).toBe("No release 99 of next.js.");
+    });
+
+    test("reports a 404 that is not the endpoint's answer as an upstream error", async () => {
+      const result = await callGuide({ fromVersion: MISSING_ENDPOINT_FROM_VERSION });
+
+      expect(resultText(result)).toContain("not available");
+      expect(resultText(result)).not.toContain("library");
+    });
   });
 });
 
@@ -699,6 +1108,7 @@ describe.each([
     expect(apiCalls[0].query.get("libraryId")).toBe("/vercel/next.js");
     expect(apiCalls[0].query.get("query")).toBe("app router");
     expect(apiCalls[0].headers["x-context7-transport"]).toBe(transportKind);
+    expect(apiCalls[0].headers["x-context7-research-preview"]).toBeUndefined();
     if (transportKind === "http") {
       expect(apiCalls[0].headers["mcp-client-ip-assertion"]).toMatch(/^v1:/);
       expect(
@@ -718,6 +1128,37 @@ describe.each([
     expect(result.isError).toBe(true);
     const text = (result.content as { type: string; text: string }[])[0].text;
     expect(text).toContain("stub upstream failure");
+  });
+
+  test("flags a failed resolve-library-id search as an error, not an empty match", async () => {
+    const failed = await client.callTool({
+      name: "resolve-library-id",
+      arguments: { libraryName: "Next.js", query: INVALID_JSON_QUERY },
+    });
+    expect(failed.isError).toBe(true);
+
+    const empty = await client.callTool({
+      name: "resolve-library-id",
+      arguments: { libraryName: "does-not-exist", query: NO_RESULTS_QUERY },
+    });
+    expect(empty.isError).toBeFalsy();
+  });
+
+  test("keeps the filter notice when no libraries match", async () => {
+    const result = await client.callTool({
+      name: "resolve-library-id",
+      arguments: { libraryName: "Next.js", query: FILTERED_NO_RESULTS_QUERY },
+    });
+    expect(result.isError).toBeFalsy();
+    expect(result.content).toEqual([
+      {
+        type: "text",
+        text: expect.stringContaining("teamspace's library filters"),
+      },
+    ]);
+    const text = (result.content as { type: string; text: string }[])[0].text;
+    expect(text).toContain("https://context7.com/dashboard?tab=policies");
+    expect(text).toContain("No documentation libraries found matching your query.");
   });
 
   test("calls resolve-library-id end to end", async () => {
@@ -1388,5 +1829,165 @@ describe("expired OAuth access tokens", () => {
     expect(exported).toMatch(
       /context7_mcp_upstream_requests_total\{[^}]*context7_upstream_operation="auth_check"[^}]*\} [1-9]/
     );
+  });
+});
+
+describe("query-code tool", () => {
+  async function stdioClient(environment: Record<string, string>) {
+    const client = new Client({ name: "query-code-test", version: "1.0.0" });
+    await client.connect(
+      new StdioClientTransport({ command: process.execPath, args: [DIST], env: environment })
+    );
+    return client;
+  }
+
+  test("is not listed without the flag", async () => {
+    const client = await stdioClient(childEnv);
+    try {
+      const { tools } = await client.listTools();
+      expect(tools.map((tool) => tool.name)).not.toContain("query-code");
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("is listed with the flag and sends its arguments to /v2/code", async () => {
+    const client = await stdioClient({ ...childEnv, CONTEXT7_RESEARCH_PREVIEW: "1" });
+    try {
+      const { tools } = await client.listTools();
+      const tool = tools.find((candidate) => candidate.name === "query-code");
+      expect(Object.keys(tool?.inputSchema.properties ?? {}).sort()).toEqual([
+        "context",
+        "fixed_strings",
+        "glob",
+        "head_limit",
+        "ignore_case",
+        "libraryId",
+        "offset",
+        "operation",
+        "output_mode",
+        "path",
+        "pattern",
+        "version",
+      ]);
+      expect(tool?.annotations?.readOnlyHint).toBe(true);
+
+      const before = requests.length;
+      const result = await client.callTool({
+        name: "query-code",
+        arguments: {
+          libraryId: "/vercel/next.js",
+          pattern: "useRouter",
+          operation: "definition",
+          file: "packages/next",
+        },
+      });
+      expect(result.isError).toBeFalsy();
+      expect(result.content).toMatchObject([{ type: "text", text: STUB_CODE }]);
+      const sent = requests.slice(before).find((request) => request.path === "/v2/code");
+      expect(sent?.query.get("pattern")).toBe("useRouter");
+      expect(sent?.query.get("path")).toBe("packages/next");
+      expect(sent?.query.get("operation")).toBe("definition");
+
+      // ripgrep-style fields reach the API.
+      const grepCall = requests.length;
+      await client.callTool({
+        name: "query-code",
+        arguments: {
+          libraryId: "/vercel/next.js",
+          pattern: "use(Router|Params)",
+          ignore_case: true,
+          glob: ["*.ts", "!**/test/**"],
+          context: 2,
+          output_mode: "count",
+        },
+      });
+      const grepSent = requests.slice(grepCall).find((request) => request.path === "/v2/code");
+      expect(grepSent?.query.get("ignore_case")).toBe("true");
+      expect(grepSent?.query.getAll("glob")).toEqual(["*.ts", "!**/test/**"]);
+      expect(grepSent?.query.get("context")).toBe("2");
+      expect(grepSent?.query.get("output_mode")).toBe("count");
+
+      // Semantic search is not part of this release, so the tool refuses it.
+      const searchCall = requests.length;
+      const searchResult = await client.callTool({
+        name: "query-code",
+        arguments: {
+          libraryId: "/vercel/next.js",
+          operation: "search",
+          pattern: "where is the router cache invalidated",
+        },
+      });
+      expect(searchResult.isError).toBe(true);
+      expect(requests.slice(searchCall).some((request) => request.path === "/v2/code")).toBe(false);
+
+      // Aliases agents send by habit, a full versioned ID in version, and clamped numbers.
+      const aliasCall = requests.length;
+      await client.callTool({
+        name: "query-code",
+        arguments: {
+          libraryId: "/vercel/next.js",
+          query: "Request failed",
+          fixedStrings: true,
+          version: "/vercel/next.js/v15.5.0",
+          limit: 900,
+          context: 25,
+          offset: "20",
+        },
+      });
+      const aliasSent = requests.slice(aliasCall).find((request) => request.path === "/v2/code");
+      expect(aliasSent?.query.get("libraryId")).toBe("/vercel/next.js");
+      expect(aliasSent?.query.get("version")).toBe("v15.5.0");
+      expect(aliasSent?.query.get("pattern")).toBe("Request failed");
+      expect(aliasSent?.query.get("fixed_strings")).toBe("true");
+      expect(aliasSent?.query.get("head_limit")).toBe("500");
+      expect(aliasSent?.query.get("context")).toBe("10");
+      expect(aliasSent?.query.get("offset")).toBe("20");
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("answers 'still indexing' as a normal result and an API error as an error", async () => {
+    const client = await stdioClient({ ...childEnv, CONTEXT7_RESEARCH_PREVIEW: "1" });
+    try {
+      const indexing = await client.callTool({
+        name: "query-code",
+        arguments: { libraryId: "/vercel/next.js", pattern: CODE_INDEXING_QUERY },
+      });
+      expect(indexing.isError).toBeFalsy();
+      expect((indexing.content as { text: string }[])[0].text).toMatch(
+        /being indexed.*Call query-code again.*30 seconds/s
+      );
+
+      const noSource = await client.callTool({
+        name: "query-code",
+        arguments: { libraryId: "/websites/x", pattern: CODE_NO_SOURCE_QUERY },
+      });
+      expect(noSource.isError).toBe(true);
+      expect((noSource.content as { text: string }[])[0].text).toContain("not available");
+
+      const gateway = await client.callTool({
+        name: "query-code",
+        arguments: { libraryId: "/vercel/next.js", pattern: CODE_GATEWAY_QUERY },
+      });
+      expect(gateway.isError).toBe(true);
+      const gatewayText = (gateway.content as { text: string }[])[0].text;
+      expect(gatewayText).toContain("HTTP 502");
+      expect(gatewayText).toContain("answer from query-docs");
+      expect(gatewayText).not.toContain("try again later");
+
+      const badTag = await client.callTool({
+        name: "query-code",
+        arguments: { libraryId: "/vercel/next.js", version: "v0", pattern: CODE_BAD_TAG_QUERY },
+      });
+      expect(badTag.isError).toBe(true);
+      const badTagText = (badTag.content as { text: string }[])[0].text;
+      expect(badTagText).toContain("Docs versions: v15.5.0.");
+      expect(badTagText).toContain("one of the docs versions");
+      expect(badTagText).not.toContain("Do not retry");
+    } finally {
+      await client.close();
+    }
   });
 });

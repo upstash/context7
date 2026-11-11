@@ -287,5 +287,9 @@ export function recordAuthenticationEvent(observation: AuthenticationEventObserv
   if (observation.outcome) {
     attributes["context7.authentication.outcome"] = observation.outcome;
   }
+  if (observation.oauthClientRegistration) {
+    attributes["context7.authentication.oauth_client_registration"] =
+      observation.oauthClientRegistration;
+  }
   getInstruments().authenticationEvents.add(1, attributes);
 }

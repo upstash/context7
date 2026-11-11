@@ -20,9 +20,9 @@ Use this Power when the user:
 - Requests code involving a specific library or framework
 - Needs API references or current documentation
 - Mentions a framework, SDK, or developer tool by name
-- Needs help with version migrations, library-specific debugging, or CLI usage
+- Needs help with version migrations, porting code between libraries, platforms, or SQL dialects, library-specific debugging, or CLI usage
 
-Do not use this Power for refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.
+Do not use this Power for refactoring, debugging, or reviewing code that does not depend on a library or platform API, or general programming concepts.
 
 ## Usage
 
@@ -67,9 +67,9 @@ Incorporate the fetched documentation into your response:
 - Keep each query to one topic; split multi-topic questions into separate `query-docs` calls, unless the question is about how the concepts interact
 - When users mention versions ("Next.js 16", "React 19"), use version-specific library IDs if available from the resolution step
 - When multiple matches exist, prefer official/primary packages over community forks
-- Use this Power for API syntax, configuration, setup instructions, version migration, library-specific debugging, and CLI tool usage
+- Use this Power for API syntax, configuration, setup instructions, version migration, porting code between libraries, platforms, or SQL dialects, library-specific debugging, and CLI tool usage
 - Use Context7 even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
-- Do not use Context7 for refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.
+- Do not use Context7 for refactoring, debugging, or reviewing code that does not depend on a library or platform API, or general programming concepts.
 
 ## License and Support
 
