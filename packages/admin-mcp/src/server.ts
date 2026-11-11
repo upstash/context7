@@ -3,10 +3,12 @@ import { readFileSync } from "node:fs";
 import {
   CLIENT_INFO_META_KEY,
   type CallToolResult,
+  type InputRequiredResult,
   type McpServer,
   type ServerContext,
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
+import { confirmArg, confirmWithUser } from "./confirm.js";
 import { CONSOLE_TOOL_META, registerConsole } from "./console.js";
 import { TOOLS, ToolError, type Api, type ConsoleRead, type Kind, type ToolDef } from "./tools.js";
 
@@ -134,7 +136,7 @@ function withoutNulls(value: unknown): unknown {
 /** What the model can do about the usual API refusals. */
 const NEXT_STEP: Record<string, string> = {
   write_access_required:
-    "The API key can only read. To make this change, ask the user to create a key with Write access in https://context7.com/dashboard, or to sign in with OAuth.",
+    "The API key can only read settings, libraries and usage. Changes and personal data (members, visitor questions, feedback) need a key with Write access: ask the user to create one in https://context7.com/dashboard, or to sign in with OAuth.",
   docs7_pro_required:
     "This needs Docs7 Pro. The owner can enable it at https://context7.com/docs7.",
   paid_plan_required: "This needs a paid plan: https://context7.com/plans.",
@@ -192,7 +194,8 @@ const INSTRUCTIONS = [
   "Manage Context7 teamspaces, libraries, Docs7 sites and Ask sites. Tools take `teamspace` as an id or a name; leave it out when the user has one teamspace. list_teamspaces gives them all.",
   "Long jobs (library parse, Docs7 build, Ask crawl) take minutes: call the get_ tool with `wait: true` and repeat until the state is final. The Docs7 agents run on their schedules (docs7_update_site); this server does not start them.",
   "Common flows: claim a library (claim_library gives context7.json; commit it, then claim_library with verify: true). Set up Ask (ask_create_site gives a meta tag; add it to the site head, deploy, then ask_verify_site). Fix a failed docs build (docs7_get_deployment with include health and logs). Traffic of one page or of every page (docs7_query_logs, dataset page-views or ai-requests, group_by path; docs7_get_analytics has top lists only). Find doc gaps (get_library_benchmarks for the questions the docs fail, get_library_suggestions, docs7_get_analytics report queries, or ask_get_analytics) and fix them in the repository.",
-  "Remove and delete actions need the user's confirmation first. Deleting a whole Docs7 or Ask site, billing, plans, API keys and SSO are not in this server: send the user to https://context7.com/dashboard.",
+  "When no tool can do what the user asks, or a tool fails or confuses you, tell the Context7 team once per task with submit_feedback_to_context7_team.",
+  "Remove and delete actions need the user's confirmation first: where the client can show a form, the server asks the user itself. Deleting a whole Docs7 site, billing, plans, API keys and SSO are not in this server: send the user to https://context7.com/dashboard.",
 ].join("\n");
 
 /**
@@ -255,7 +258,11 @@ async function resolveTeamspace(value: unknown, api: Api): Promise<string> {
   );
 }
 
-type Outcome = { ok: true; value: unknown } | { ok: false; error: unknown };
+/** `input`: the change waits for the user's confirmation, and `ask` is the form. */
+type Outcome =
+  | { ok: true; value: unknown }
+  | { ok: false; error: unknown }
+  | { ok: "input"; ask: InputRequiredResult };
 type Source = "model" | "console";
 
 /** The tool's input: its args, plus `teamspace` and `action` where they apply. */
@@ -274,6 +281,7 @@ function inputSchemaOf(def: ToolDef): z.ZodObject<z.ZodRawShape> {
         }),
     ...(actions ? { action: z.enum(actions as [string, ...string[]]) } : {}),
     ...def.args,
+    ...(def.confirm ? { confirm: confirmArg } : {}),
   });
 }
 
@@ -308,7 +316,17 @@ async function runTool(
     if (def.teamspace !== false) {
       input.teamspace = await resolveTeamspace(input.teamspace, api);
     }
-    outcome = { ok: true, value: await def.run(input as Parameters<typeof def.run>[0], api) };
+    const toolArgs = input as Parameters<typeof def.run>[0];
+    const kind = def.actions ? def.actions[toolArgs.action] : def.kind;
+    const ask =
+      kind === "destructive"
+        ? confirmWithUser(
+            ctx,
+            await def.confirm!(toolArgs, api),
+            input.confirm as string | undefined
+          )
+        : undefined;
+    outcome = ask ? { ok: "input", ask } : { ok: true, value: await def.run(toolArgs, api) };
   } catch (error) {
     outcome = { ok: false, error };
   }
@@ -319,7 +337,7 @@ async function runTool(
       tool: def.name,
       ...(source === "console" ? { from: "console" } : {}),
       teamspace: input.teamspace,
-      outcome: outcome.ok ? "ok" : "error",
+      outcome: outcome.ok === "input" ? "confirm" : outcome.ok ? "ok" : "error",
     })
   );
   return outcome;
@@ -334,6 +352,9 @@ export function registerAdminTools(server: McpServer): void {
   registerConsole(server);
   for (const def of TOOLS) {
     const kinds: Kind[] = def.actions ? Object.values(def.actions) : [def.kind!];
+    if (kinds.includes("destructive") && !def.confirm) {
+      throw new Error(`${def.name} has a destructive action but no confirm.`);
+    }
     const readOnly = kinds.every((kind) => kind === "read");
 
     server.registerTool(
@@ -354,8 +375,9 @@ export function registerAdminTools(server: McpServer): void {
         // The console page reads through console_data only: a host refuses its calls to the others.
         _meta: def.console === "open" ? CONSOLE_TOOL_META : { ui: { visibility: ["model"] } },
       },
-      async (args: Record<string, unknown>, ctx): Promise<CallToolResult> => {
+      async (args: Record<string, unknown>, ctx): Promise<CallToolResult | InputRequiredResult> => {
         const outcome = await runTool(def, args, ctx, "model");
+        if (outcome.ok === "input") return outcome.ask;
         const untrusted = Boolean(def.untrusted);
         return outcome.ok
           ? {
@@ -405,6 +427,7 @@ function registerConsoleData(server: McpServer): void {
       // `tool` passed the enum of this map's keys.
       const def = reads.get(tool)!;
       const outcome = await runTool(def, args, ctx, "console");
+      if (outcome.ok === "input") throw new Error("A console read never waits for a confirmation.");
       if (!outcome.ok) {
         // content can reach the model, so it keeps the read tool's fence; the page reads the plain error.
         return {
