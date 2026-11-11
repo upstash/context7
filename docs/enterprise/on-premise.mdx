@@ -253,6 +253,8 @@ Optionally, a decision model can classify pages, check for duplicate snippets, a
 
 Configured in **Settings → Indexing → Parsing**. For the settings with an environment variable, a value saved in the dashboard wins; the variable only sets the default.
 
+The three count limits (files per library, Notion pages, Google Drive files) also offer **No limit**. Setting their environment variable to `0` does the same. Without a limit, a very large source can take a long time and make many LLM calls. File timeout and the concurrency settings always have a bound.
+
 The settings with an environment variable apply at the next parse on every replica. The first three apply at once on the replica that saves them; in a [multi-replica deployment](/enterprise/deployment/scaling), other replicas pick them up when they restart.
 
 | Setting | Default | Range | Env fallback | Description |
@@ -260,11 +262,11 @@ The settings with an environment variable apply at the next parse on every repli
 | Max concurrent parses | `1` | 1–10 | — | Parses each replica runs at the same time |
 | Max concurrent LLM requests | `5` | 1–64 | — | Requests in flight to the language model, shared by parsing and search |
 | LLM timeout | `120` s | 30–1800 s | — | How long to wait for the model on one page |
-| Max files per library | `500` | 1–100000 | `MAX_FILES` | Documentation files a repository parse reads, or pages a website or llms.txt parse keeps. Extra files are skipped and logged |
+| Max files per library | `500` | 1–100000, or no limit | `MAX_FILES` | Documentation files a repository parse reads, or pages a website or llms.txt parse keeps. Extra files are skipped and logged |
 | Files parsed in parallel | `5` | 1–64 | `PARSE_CONCURRENCY` | Files one parse processes at the same time |
 | File timeout | `500` s | 30–3600 s | `PARSE_TIMEOUT` | How long one file may take. The parse skips a file that takes longer |
-| Max pages per Notion library | `10000` | 1–100000 | `NOTION_MAX_PAGES` | A Notion selection with more pages is refused |
-| Max files per Google Drive library | `10000` | 1–100000 | `GOOGLE_DRIVE_MAX_FILES` | A Google Drive selection with more Docs and Slides is refused |
+| Max pages per Notion library | `10000` | 1–100000, or no limit | `NOTION_MAX_PAGES` | A Notion selection with more pages is refused |
+| Max files per Google Drive library | `10000` | 1–100000, or no limit | `GOOGLE_DRIVE_MAX_FILES` | A Google Drive selection with more Docs and Slides is refused |
 
 ### Git Access Tokens
 
