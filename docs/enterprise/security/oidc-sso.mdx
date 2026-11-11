@@ -17,7 +17,7 @@ You will need:
 - The Context7 admin password. On a fresh install it is `admin` / `admin` until you change it.
 
 <Note>
-Only one SSO provider can be active at a time. If you already have Microsoft Entra ID configured, enabling OIDC will automatically disable Entra, and vice versa.
+Only one SSO provider can be active at a time. If you already have Microsoft Entra ID or SAML configured, enabling OIDC will automatically disable it, and vice versa.
 </Note>
 
 ## Part 1: Register Context7 in your identity provider
@@ -50,7 +50,7 @@ If your provider uses a different claim name, you can change what Context7 looks
 
 <Steps>
   <Step title="Open the SSO settings card">
-    Sign in to your Context7 dashboard with the admin account. Open **Teamspace Settings**, scroll to the **Authentication** section, and click the **Single Sign-On** card. Select the **OIDC** tab.
+    Sign in to your Context7 dashboard with the admin account. Open **Workspace Settings**, scroll to the **Authentication** section, and click the **Single Sign-On** card. Select the **OIDC** tab.
 
     <Frame>
       ![Context7 Settings showing the Single Sign-On card with the OIDC tab selected](/images/enterprise/oidc-sso/02-sso-card-oidc.png)
@@ -77,7 +77,7 @@ If your provider uses a different claim name, you can change what Context7 looks
     </Frame>
 
     - **Groups claim**: the name of the claim in the token that contains the user's groups. Default is `groups`.
-    - **Admin group value**: the exact group name that maps to the Context7 admin role. Admins can open Teamspace Settings and manage other users.
+    - **Admin group value**: the exact group name that maps to the Context7 admin role. Admins can open Workspace Settings and manage other users.
     - **Member group value**: the exact group name that maps to the member role. Members can use the workspace but cannot access settings.
 
     If you leave both group values blank, every authenticated user gets the member role automatically. This is useful when your IdP does not emit a groups claim and you want to allow any user from your organization in.
@@ -120,15 +120,15 @@ Disabling password sign-in means the default admin account and any manually crea
 
 ## Managing users
 
-All users who have signed in appear in **Teamspace Settings → Users**, along with their authentication provider and last login time.
+All users who have signed in appear in **Workspace Settings → Users**, along with their authentication provider and last login time.
 
 <Frame>
-  ![Teamspace Settings Users tab showing OIDC-provisioned users](/images/enterprise/oidc-sso/05-users-tab.png)
+  ![Workspace Settings Users tab showing OIDC-provisioned users](/images/enterprise/oidc-sso/05-users-tab.png)
 </Frame>
 
 Roles are controlled by group membership in your IdP. To change someone's role, update their group assignment in your identity provider. The change takes effect on their next sign-in.
 
-To revoke access, remove the user from the relevant group in your IdP. Existing browser sessions remain valid until they expire naturally or the user signs out. If you need to cut access immediately, an admin can delete the user row from the Users tab in Teamspace Settings.
+To revoke access, remove the user from the relevant group in your IdP. Existing Context7 sessions stay valid until they expire, after at most 7 days, or until the user signs out.
 
 ## Troubleshooting
 

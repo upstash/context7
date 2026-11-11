@@ -45,7 +45,7 @@ Restart OpenCode after installing. On the first documentation lookup, OpenCode o
 
 ## API Key
 
-OAuth is the default and needs no configuration. If you would rather use an API key, for example on a headless machine, create one in the [Context7 dashboard](https://context7.com/dashboard) and export it before launching OpenCode:
+OAuth is the default and needs no configuration. If you would rather use an API key, for example on a headless machine, create one in the [Context7 dashboard](https://context7.com/dashboard?tab=settings) and export it before launching OpenCode:
 
 ```bash
 # e.g. in ~/.zshrc or ~/.bashrc

@@ -53,7 +53,7 @@ Check out our [project addition guide](https://context7.com/docs/adding-librarie
 
 - Node.js >= v20.18.1
 - Cursor, Claude Code, VSCode, Devin Desktop or another MCP Client
-- Context7 API Key (Optional) for higher rate limits and private repositories (Get yours by creating an account at [context7.com/dashboard](https://context7.com/dashboard))
+- Context7 API Key (Optional) for higher rate limits and private repositories (Get yours by creating an account at [context7.com/dashboard](https://context7.com/dashboard?tab=settings))
 
 > [!TIP]
 > **Recommended Post-Setup: Add a Rule to Auto-Invoke Context7**
@@ -788,7 +788,7 @@ To use an API key in Kiro, add:
 }
 ```
 
-You can create an API key at [context7.com/dashboard](https://context7.com/dashboard) for authenticated usage and higher rate limits.
+You can create an API key at [context7.com/dashboard](https://context7.com/dashboard?tab=settings) for authenticated usage and higher rate limits.
 
 #### Kiro Local Server Connection
 
@@ -1429,6 +1429,14 @@ Context7 MCP provides the following tools that LLMs can use:
   - `query` (required): The concept to look up, scoped to a single topic
   - `language` (optional): The programming language you write in, used to rank code examples in that language first
 
+- `query-code` (research preview): Searches and reads a library's source code at the version its docs describe, like ripgrep and go-to-definition on a checkout of that version. Listed only with research preview on: `--research-preview` or `CONTEXT7_RESEARCH_PREVIEW=1` (stdio), or `?research_preview=1` on the MCP URL (HTTP).
+  - `libraryId` (required): Context7 library ID (e.g., `/vercel/next.js`)
+  - `version` (optional): a git tag of the library (e.g., `v3.24.2`); default is the commit the latest docs describe
+  - `operation` (optional): `grep` (default), `definition`, `references` (resolved with SCIP where indexed), `outline`, `read` or `list`
+  - `pattern`: a regex for `grep` (ripgrep syntax), or a symbol for `definition`, `references` and `read`
+  - `fixed_strings`, `ignore_case`, `glob`, `context`, `output_mode` (`content`, `files_with_matches`, `count`), `head_limit`, `offset`: as in ripgrep
+  - `path` (optional): a folder or file of the library to search in; for `read`, a file with a range such as `src/client.ts#L40-L80`
+
 `get-library-docs` was renamed to `query-docs`. Update client tool allowlists to use `query-docs`.
 
 ## 🛟 Tips
@@ -1477,7 +1485,7 @@ bun run dist/index.js
 
 - `--transport <stdio|http>` – Transport to use (`stdio` by default). Use `http` for remote HTTP server or `stdio` for local integration.
 - `--port <number>` – Port to listen on when using `http` transport (default `3000`).
-- `--api-key <key>` – API key for authentication (or set `CONTEXT7_API_KEY` env var). You can get your API key by creating an account at [context7.com/dashboard](https://context7.com/dashboard).
+- `--api-key <key>` – API key for authentication (or set `CONTEXT7_API_KEY` env var). You can get your API key by creating an account at [context7.com/dashboard](https://context7.com/dashboard?tab=settings).
 
 Example with HTTP transport and port 8080:
 

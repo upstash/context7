@@ -156,6 +156,7 @@ ctx7 setup --cli            # CLI + Skills mode
 ctx7 setup --claude
 ctx7 setup --cursor
 ctx7 setup --opencode
+ctx7 setup --pi
 
 # Target a specific install location (CLI + Skills mode)
 ctx7 setup --cli --claude       # Claude Code (~/.claude/skills)
@@ -163,6 +164,7 @@ ctx7 setup --cli --cursor       # Cursor (~/.cursor/skills)
 ctx7 setup --cli --codex        # Codex (~/.agents/skills)
 ctx7 setup --cli --opencode     # OpenCode (~/.agents/skills)
 ctx7 setup --cli --antigravity  # Antigravity (~/.agent/skills)
+ctx7 setup --cli --pi           # Pi (~/.agents/skills)
 
 # Configure for current project only (default is global)
 ctx7 setup --project
@@ -216,7 +218,7 @@ When `--base-url` targets a custom deployment, setup skips the npm update check 
 | Agent rules directory                               | Rule file — instructs the agent to use Context7 for library docs |
 | Agent skills directory                              | `context7-mcp` skill                                             |
 
-The rule file is the contents of [`rules/context7-mcp.md`](https://github.com/upstash/context7/blob/master/rules/context7-mcp.md) and the skill is [`skills/context7-mcp/SKILL.md`](https://github.com/upstash/context7/blob/master/skills/context7-mcp/SKILL.md). For Claude Code, `ctx7 setup --claude` writes:
+The rule file is the contents of [`rules/context7-mcp.md`](https://github.com/upstash/context7/blob/master/rules/context7-mcp.md) and the skill is [`skills/context7-mcp/SKILL.md`](https://github.com/upstash/context7/blob/master/skills/context7-mcp/SKILL.md). For Claude Code, `ctx7 setup --claude` writes the files below. With `--project`, the rule and skill go to `.claude/rules/` and `.claude/skills/` in the project instead; `CLAUDE_CONFIG_DIR` replaces `~/.claude` when it is set.
 
 | File                                        | Purpose                                                          |
 | ------------------------------------------- | ---------------------------------------------------------------- |
@@ -231,7 +233,7 @@ The rule file is the contents of [`rules/context7-mcp.md`](https://github.com/up
 | Agent skills directory | `find-docs` skill — guides the agent to use `ctx7 library` and `ctx7 docs` commands |
 | Agent rules directory  | Rule file — instructs the agent to use the `ctx7` commands for library docs         |
 
-The rule file is the contents of [`rules/context7-cli.md`](https://github.com/upstash/context7/blob/master/rules/context7-cli.md) and the skill is [`skills/find-docs/SKILL.md`](https://github.com/upstash/context7/blob/master/skills/find-docs/SKILL.md). For Claude Code, `ctx7 setup --cli --claude` writes `~/.claude/skills/find-docs/SKILL.md` and `~/.claude/rules/context7.md`.
+The rule file is the contents of [`rules/context7-cli.md`](https://github.com/upstash/context7/blob/master/rules/context7-cli.md) and the skill is [`skills/find-docs/SKILL.md`](https://github.com/upstash/context7/blob/master/skills/find-docs/SKILL.md). For Claude Code, `ctx7 setup --cli --claude` writes `~/.claude/skills/find-docs/SKILL.md` and `~/.claude/rules/context7.md` (`.claude/` in the project with `--project`).
 
 ### ctx7 remove
 
