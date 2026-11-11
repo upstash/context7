@@ -130,7 +130,9 @@ Example response:
 
 Each `connectivity` value is `"configured"` or `"missing"`. `github_method` is `"PAT"`, `"GitHub App"`, or `null`.
 
-`/api/health` is a liveness check. `status` stays `"healthy"` even when the database is unreachable; `repos_parsed` and `connectivity` are then `null`. To check that the instance can serve traffic, use `GET /api/ready`. It returns `200` only when the database answers and the MCP bridge is up, and `503` otherwise.
+`/api/health` is a liveness check. It still returns `"healthy"` when the database is down; `repos_parsed` and `connectivity` are then `null`.
+
+To check that the instance can serve traffic, use `GET /api/ready`. It returns `200` when the database answers and the MCP bridge is up. Otherwise it returns `503`.
 
 ### Recover admin access
 
@@ -140,7 +142,14 @@ If you lose the admin password, or a broken SSO setup locks you out, reset a loc
 docker exec context7 node dist/enterprise/reset-password.mjs --username admin
 ```
 
-The command sets the password of the local account (and creates it if it does not exist), makes it an enabled admin, signs out its sessions, and turns password sign-in back on. Without `--password <new>`, it prints a generated password once. It refuses a username that belongs to an SSO user. Passwords need at least 8 characters.
+The command:
+
+- Sets the password of the local account, and creates the account if it does not exist.
+- Makes the account an enabled admin.
+- Signs the account out of its sessions.
+- Turns password sign-in back on.
+
+Without `--password <new>`, it prints a generated password once. Passwords need at least 8 characters. The command does not work for a username that signs in with SSO.
 
 ## Network Access
 
@@ -149,15 +158,24 @@ Context7 needs outbound HTTPS to these destinations:
 | Destination | Purpose |
 |---|---|
 | `ghcr.io` | Image pulls |
-| `context7.com` | Online license only: license validation every hour, a daily usage report (license key, call counts per endpoint, active API key count, app version, team size), and library results from Context7 Cloud. Query text is masked for secrets before it is sent, and restricted local libraries are never sent |
+| `context7.com` | Online license only: license check, daily usage report, and public library search. See [Network and data flow](/enterprise/on-premise#network-and-data-flow) |
 | Your LLM and embedding provider | AI inference and embeddings |
 | Your Git hosts and documentation sources | Repository cloning and website, Confluence, Notion, or Google Drive indexing |
 
-An offline license (`ctx7off.` prefix) is verified locally and makes no calls to `context7.com`: no license checks, no usage report, and no cloud library results. Per-user usage always stays on the instance.
+An offline license (`ctx7off.` prefix) is checked locally and makes no calls to `context7.com`. Per-user usage always stays on the instance.
 
-`CONTEXT7_API_URL` (default `https://context7.com/api`) sets the base URL for the license, usage, and cloud library calls. Point it at an egress mirror if your network requires one. The server does not apply `HTTP_PROXY` / `HTTPS_PROXY` to its own calls, so allow this egress directly or through a transparent proxy.
+To send these calls through an egress mirror, set `CONTEXT7_API_URL` (default `https://context7.com/api`).
 
-If your network uses a private certificate authority, mount its PEM file and set `NODE_EXTRA_CA_CERTS` to its path. The whole server trusts it: LLM and embedding endpoints, Bedrock, Confluence, Notion, Google, SSO identity providers, the license server, and Git. `GIT_TLS_INSECURE=true` turns off TLS verification for all outbound HTTPS and Git calls. Use it only for testing.
+The server does not use `HTTP_PROXY` or `HTTPS_PROXY` for its own calls. Allow this egress directly or through a transparent proxy.
+
+If your network uses a private certificate authority:
+
+1. Mount its PEM file.
+2. Set `NODE_EXTRA_CA_CERTS` to the file's path.
+
+The whole server then trusts it, for every outbound call: AI providers, Bedrock, Confluence, Notion, Google, SSO identity providers, the license server, and Git.
+
+`GIT_TLS_INSECURE=true` turns off TLS checks for all outbound HTTPS and Git calls. Use it only for testing.
 
 ## Running as non-root
 

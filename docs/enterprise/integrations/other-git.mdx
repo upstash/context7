@@ -6,7 +6,12 @@ description: "Ingest private repositories from a self-managed Git host such as G
 
 Context7 can clone and index repositories from any self-managed Git host that isn't GitHub or GitLab, such as **Gerrit**, **Gitea**, or **self-hosted Bitbucket**, over **HTTPS** or **SSH**.
 
-Under **Settings → Integrations → Other Git**, enter the repository host, choose **HTTPS** or **SSH**, and then [add repositories](#add-a-repository) with their normal clone URL. The host is shared by both authentication methods and also selects which repositories use the review publishing settings. You can configure one Other Git host. HTTPS credentials apply only to `https://` URLs on that host. The SSH key is used for every `ssh://` clone.
+Under **Settings → Integrations → Other Git**, enter the repository host, choose **HTTPS** or **SSH**, and then [add repositories](#add-a-repository) with their normal clone URL. Both authentication methods use this host. It also decides which repositories use the review publishing settings.
+
+You can configure one Other Git host:
+
+- HTTPS credentials apply only to `https://` URLs on that host.
+- The SSH key is used for every `ssh://` clone.
 
 If you use Gerrit, see the [Gerrit integration guide](/enterprise/integrations/gerrit) to submit generated code documentation through `refs/for/{branch}`.
 
@@ -31,7 +36,11 @@ Enter the host, select **HTTPS**, and fill in the account credentials:
 Then add a repository with its HTTPS clone URL, for example `https://gerrit.your-company.com/a/platform/sdk`.
 
 <Note>
-Presenting a private or self-signed TLS certificate? Point `NODE_EXTRA_CA_CERTS` at your CA bundle (recommended). Context7 then trusts it for all outbound HTTPS, including git. `GIT_TLS_INSECURE=true` turns off TLS verification for all outbound HTTPS and git, not only git. Use it for testing only. Always use `https://` for credentialed clones. A plaintext `http://` host to a non-loopback address is logged as a warning.
+Does your host use a private or self-signed TLS certificate? Set `NODE_EXTRA_CA_CERTS` to your CA bundle (recommended). Context7 then trusts it for all outbound HTTPS, including git.
+
+`GIT_TLS_INSECURE=true` turns off TLS checks for all outbound HTTPS, not only git. Use it for testing only.
+
+Always use `https://` for clones with credentials. Context7 logs a warning for a plain `http://` host that is not on loopback.
 </Note>
 
 ## SSH (deploy key)

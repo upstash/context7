@@ -11,7 +11,9 @@ Authorization: Bearer ctx7op-xxxxxxxx_xxxxxxxxxxxxxxxx
 
 The server also accepts the key in the `x-api-key`, `context7-api-key`, or `context7_api_key` header.
 
-Keys are scoped to the user account that created them and inherit that user's role (`admin` or `member`). There are no per-key scopes or expiry - revoke a key to invalidate it. A request with an invalid or revoked key gets `401`; it is not treated as an anonymous request.
+A key belongs to the user who created it and has that user's role (`admin` or `member`). Keys have no scopes and do not expire. To stop a key from working, revoke it.
+
+A request with an invalid or revoked key gets `401`. It is not treated as an anonymous request.
 
 ## Creating an API Key
 
@@ -76,7 +78,9 @@ Certain operations can be opened to anonymous callers (no session and no API key
 | Anonymous delete | Off |
 | Anonymous support bundle | Off |
 
-These switches do not limit signed-in users: members and their API keys can always parse and refresh. The delete switch also covers cancelling a parse, and opens both actions and support bundle downloads to members.
+These switches do not limit signed-in users. Members and their API keys can always parse and refresh.
+
+The delete switch also covers cancelling a parse. When it is on, members can delete and cancel too. The support bundle switch works the same way for downloads.
 
 <Note>
 Earlier versions allowed anonymous parse and refresh by default.
@@ -91,4 +95,6 @@ MCP authentication is configured separately in **Settings > Authentication**. Wh
 - `GET /api/queue`
 - `GET /api/parse-status`
 
-When disabled, those endpoints answer anonymous callers, and [library access rules](/enterprise/security/library-access) still filter restricted libraries. The bundled MCP server calls the v2 endpoints over loopback with a per-process token, so a reverse proxy on the same host does not bypass MCP authentication.
+When it is off, these endpoints answer anonymous callers. [Library access rules](/enterprise/security/library-access) still hide restricted libraries from them.
+
+The bundled MCP server calls the v2 endpoints over loopback with a secret token. A reverse proxy on the same host therefore cannot skip MCP authentication.

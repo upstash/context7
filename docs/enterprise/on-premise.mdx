@@ -4,7 +4,12 @@ sidebarTitle: "Getting Started"
 description: "Run the Context7 stack inside your infrastructure with your chosen AI and storage services"
 ---
 
-Context7 On-Premise keeps your repositories, generated documentation, application database, vector store, and MCP server in your infrastructure. The content required for parsing, embedding, reranking, or source-code documentation is sent to the AI providers you choose. With an online license, the instance also contacts Context7 Cloud for license checks, a daily usage report, and public library results. See [Network and data flow](#network-and-data-flow).
+Context7 On-Premise keeps your repositories, generated documentation, application database, vector store, and MCP server in your infrastructure.
+
+Two kinds of outside services receive data:
+
+- **Your AI providers** receive the content needed for parsing, embedding, reranking, and source-code documentation.
+- **Context7 Cloud** receives license checks, a daily usage report, and public library searches, but only with an online license. See [Network and data flow](#network-and-data-flow).
 
 ## What's Included
 
@@ -196,7 +201,9 @@ These are set in your `docker-compose.yml` or `.env` file before starting the co
 | `MAX_FILES`, `PARSE_CONCURRENCY`, `PARSE_TIMEOUT`, `NOTION_MAX_PAGES`, `GOOGLE_DRIVE_MAX_FILES` | No | Default values for the [parsing settings](#parsing-settings). A value saved in the dashboard wins |
 
 <Note>
-Provider and model selection, non-Bedrock provider keys, and git tokens are configured through the setup wizard and can be updated anytime from the Settings page in the web UI. There are no environment variables for git tokens (such as `GITHUB_TOKEN` or `GITLAB_TOKEN`) or provider API keys. Bedrock is the exception for authentication: it can use `AWS_BEARER_TOKEN_BEDROCK`, standard AWS credential environment variables, a mounted shared profile, or a workload IAM role. See [AWS Bedrock](/enterprise/integrations/aws-bedrock) for the supported credential chain.
+Set AI providers, models, provider keys, and git tokens in the setup wizard. You can change them later on the Settings page. There are no environment variables for git tokens (such as `GITHUB_TOKEN` or `GITLAB_TOKEN`) or for provider API keys.
+
+AWS Bedrock is the exception. It can also authenticate with `AWS_BEARER_TOKEN_BEDROCK`, the standard AWS credential variables, a mounted shared profile, or a workload IAM role. See [AWS Bedrock](/enterprise/integrations/aws-bedrock).
 </Note>
 
 ### AI Provider Settings
@@ -251,15 +258,18 @@ Optionally, a decision model can classify pages, check for duplicate snippets, a
 
 ### Parsing Settings
 
-Configured in **Settings → Indexing → Parsing**. For the settings with an environment variable, a value saved in the dashboard wins; the variable only sets the default.
+Change these in **Settings → Indexing → Parsing**. Some settings also have an environment variable. The variable only sets the default; a value saved in the dashboard wins.
 
-The three count limits (files per library, Notion pages, Google Drive files) also offer **No limit**. Setting their environment variable to `0` does the same. Without a limit, a very large source can take a long time and make many LLM calls. File timeout and the concurrency settings always have a bound.
+The three count limits also have a **No limit** option: files per library, Notion pages, and Google Drive files. Setting their environment variable to `0` does the same. Without a limit, a very large source can take a long time and make many LLM calls. File timeout and the concurrency settings always have a limit.
 
 <Frame>
   ![The Max files per library setting with its list open and No limit selected](/images/enterprise/settings/parsing-no-limit.png)
 </Frame>
 
-The settings with an environment variable apply at the next parse on every replica. The first three apply at once on the replica that saves them; in a [multi-replica deployment](/enterprise/deployment/scaling), other replicas pick them up when they restart.
+When a change takes effect:
+
+- **Settings with an environment variable:** at the next parse, on every replica.
+- **Max concurrent parses, Max concurrent LLM requests, LLM timeout:** at once on the replica that saves them. In a [multi-replica deployment](/enterprise/deployment/scaling), other replicas use the new value after they restart.
 
 | Setting | Default | Range | Env fallback | Description |
 |---|---|---|---|---|
@@ -294,7 +304,13 @@ The GitLab token is sent only to `gitlab.com` and the host in **Server URL**.
 
 Admin credentials are set during first login (default: `admin` / `admin`). Change these immediately after setup via **Settings > Change Credentials**.
 
-Signed-in members and their personal API keys can always parse and refresh libraries. Delete, cancel parse, and support bundle downloads are for admins only. The Settings page lets you open some of these operations to anonymous callers (no session and no API key), and control MCP and API search access.
+Who can do what by default:
+
+- **Admins** can do everything.
+- **Signed-in members and their API keys** can parse and refresh libraries.
+- **Anonymous callers** (no session and no API key) can do none of these.
+
+Delete, cancel parse, and support bundle downloads are for admins only. Use the switches below to open some actions to anonymous callers, and to require authentication for MCP and API search.
 
 <Frame>
   ![The Non-admin permissions card with the anonymous parse, refresh, support bundle, and delete switches off](/images/enterprise/settings/non-admin-permissions.png)
@@ -309,14 +325,14 @@ Signed-in members and their personal API keys can always parse and refresh libra
 | Require MCP authentication | Off | Require a session or personal API key for `/mcp`, `/api/v2`, and the library, log, and queue read endpoints. See [Authentication](/enterprise/api/authentication#anonymous-access) |
 
 <Note>
-Earlier versions allowed anonymous parse and refresh by default. If you never saved these switches, they are off after an upgrade, and scripts that call these endpoints without an API key get `403`. Add a personal API key, or turn the switch on.
+Earlier versions allowed anonymous parse and refresh by default. If you never saved these switches, they are off after an upgrade. Scripts that call these endpoints without an API key then get `403`. Add a personal API key to the script, or turn the switch on.
 </Note>
 
 When MCP authentication is enabled, each user creates personal keys from **Personal Settings > API Keys**. Clients send the key as `Authorization: Bearer <key>`.
 
 ### Recover admin access
 
-If you lose the admin password, or an SSO misconfiguration locks you out, run the `reset-password` script inside the container. It resets a local admin account and turns password sign-in back on. See [Docker](/enterprise/deployment/docker#recover-admin-access) or [Kubernetes](/enterprise/deployment/kubernetes#recover-admin-access).
+Lost the admin password, or locked out by a broken SSO setup? Run the `reset-password` script inside the container. It resets a local admin account and turns password sign-in back on. See [Docker](/enterprise/deployment/docker#recover-admin-access) or [Kubernetes](/enterprise/deployment/kubernetes#recover-admin-access).
 
 ## Policies
 
@@ -328,9 +344,19 @@ For details on source type toggles and library filters, see [Customizing What Is
 
 ## Network and Data Flow
 
-Besides your AI providers, git hosts, and connected sources, an instance with an online license contacts Context7 Cloud. It validates the license every hour, sends a daily usage report, and queries Context7 Cloud for public library results. The usage report holds the license key, call counts per endpoint, the number of active API keys, and the app version; it holds no query text. Query text for public library results is masked for secrets before it is sent. The content of local libraries is never sent. Per-user usage stays on the instance.
+Besides your AI providers, git hosts, and connected sources, an instance with an online license contacts Context7 Cloud:
 
-An offline license (`ctx7off.` prefix) is verified locally and makes none of these calls. The server does not apply `HTTP_PROXY` or `HTTPS_PROXY` to its own calls. For the full egress list, `CONTEXT7_API_URL`, and private CA setup, see [Docker](/enterprise/deployment/docker#network-access) or [Kubernetes](/enterprise/deployment/kubernetes#networking-requirements).
+| Call | When | What is sent |
+|---|---|---|
+| License check | Every hour | The license key |
+| Usage report | Once a day | License key, call counts per endpoint, number of active API keys, app version. No query text |
+| Public library search | On each search or context query | The query, with secrets masked first |
+
+The content of your local libraries is never sent. Per-user usage stays on the instance.
+
+An offline license (`ctx7off.` prefix) is checked locally and makes none of these calls.
+
+The server does not use `HTTP_PROXY` or `HTTPS_PROXY` for its own calls. For the full egress list, `CONTEXT7_API_URL`, and private CA setup, see [Docker](/enterprise/deployment/docker#network-access) or [Kubernetes](/enterprise/deployment/kubernetes#networking-requirements).
 
 ## Hosting
 
