@@ -187,6 +187,12 @@ async function queryCommand(
     return;
   }
 
+  if (options.json) {
+    spinner?.stop();
+    console.log(JSON.stringify(ctx, null, 2));
+    return;
+  }
+
   const total = (ctx.codeSnippets?.length || 0) + (ctx.infoSnippets?.length || 0);
   if (total === 0) {
     spinner?.warn(`No documentation found for: "${query}"`);
@@ -195,11 +201,6 @@ async function queryCommand(
   }
 
   spinner?.stop();
-
-  if (options.json) {
-    console.log(JSON.stringify(ctx, null, 2));
-    return;
-  }
 
   log.blank();
 

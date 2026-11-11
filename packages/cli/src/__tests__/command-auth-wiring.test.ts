@@ -88,6 +88,21 @@ describe("commands pass a refreshed token to the API", () => {
   });
 });
 
+describe("ctx7 docs", () => {
+  test("prints an empty successful response as JSON with --json", async () => {
+    const response = { codeSnippets: [], infoSnippets: [] };
+    mockGetLibraryContext.mockResolvedValue(response);
+
+    await run(registerDocsCommands, "docs", "/a/b", "q", "--json");
+
+    const stdout = vi.mocked(console.log).mock.calls.flat().join("\n");
+    expect(JSON.parse(stdout)).toEqual(response);
+    expect(console.log).toHaveBeenCalledTimes(1);
+    expect(console.error).not.toHaveBeenCalled();
+    expect(process.exitCode ?? 0).toBe(0);
+  });
+});
+
 describe("ctx7 code", () => {
   test("passes the refreshed token and ripgrep-style flags to the API", async () => {
     mockGetLibraryCode.mockResolvedValue({ kind: "result", body: "lib/a.ts:1:x" });
