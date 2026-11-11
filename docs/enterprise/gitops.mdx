@@ -14,15 +14,15 @@ The point is to keep your configuration in code. After a disaster, or when stand
 
 ## Before you start
 
-GitOps clones your manifest repository and the repositories it indexes using the Git credentials you configure under **Settings → AI & integrations**. Connect a GitHub App or a personal access token first; see [GitHub Integration](/enterprise/integrations/github). Automatic syncs on every push require the **GitHub App** (a personal access token cannot receive webhooks).
+GitOps clones your manifest repository and the repositories it indexes using the Git credentials you configure under **Workspace Settings › GitHub**, **GitLab** or **Other Git**. Connect a GitHub App or a personal access token first; see [GitHub Integration](/enterprise/integrations/github). Automatic syncs on every push require the **GitHub App** (a personal access token cannot receive webhooks).
 
 <Warning>
-If you set up the GitHub App **before** GitOps was available, it is not subscribed to push events and will not trigger syncs. Add the **push** event to the App on GitHub, or recreate it from **Settings → AI & integrations**. See [GitHub Integration](/enterprise/integrations/github#webhooks).
+If you set up the GitHub App **before** GitOps was available, it is not subscribed to push events and will not trigger syncs. Add the **push** event to the App on GitHub, or recreate it from **Workspace Settings › GitHub**. See [GitHub Integration](/enterprise/integrations/github#webhooks).
 </Warning>
 
 ## How it works
 
-You commit a manifest file (by default `repos.yaml`) to a Git repository. Context7 clones that repository using the same Git credentials you already configured under **Settings → AI & integrations** (a GitHub App or a personal access token), reads the manifest, and compares it against the repositories it currently has indexed.
+You commit a manifest file (by default `repos.yaml`) to a Git repository. Context7 clones that repository using the same Git credentials you already configured in Workspace Settings (a GitHub App or a personal access token under **GitHub**, **GitLab** or **Other Git**), reads the manifest, and compares it against the repositories it currently has indexed.
 
 For each source in the manifest, Context7 decides what to do:
 
@@ -53,7 +53,7 @@ repos:
     folders: [docs]
     excludeFolders: [node_modules]
 
-  # Confluence space (uses the connection from Settings → AI & integrations)
+  # Confluence space (uses the connection from Workspace Settings › Confluence)
   - url: https://acme.atlassian.net/wiki
     type: confluence
     spaceKey: TEAM
@@ -91,14 +91,14 @@ Every entry needs a `url` (or `repoUrl`). The remaining fields depend on `type`:
 | `openapi` | `title`, `description`. |
 
 <Note>
-Confluence entries reuse the site URL and API token you set under **Settings → AI & integrations → Confluence**, so no credentials go in the manifest. Website, llms.txt, and OpenAPI sources are fetched over public HTTP and need no credentials. Configure Confluence before adding Confluence entries, or the sync reports those entries as failed.
+Confluence entries reuse the site URL and API token you set under **Workspace Settings › Confluence**, so no credentials go in the manifest. Website, llms.txt, and OpenAPI sources are fetched over public HTTP and need no credentials. Configure Confluence before adding Confluence entries, or the sync reports those entries as failed.
 </Note>
 
 The manifest is validated strictly: an unknown `type`, a field that does not belong to the entry's type (a common source of silent mistakes), or a missing required field rejects the **whole** sync. Nothing changes until the file parses cleanly, so a malformed manifest can never partially apply or wipe your index.
 
 ## Configuring in the dashboard
 
-Open **Settings → GitOps**, fill in the manifest repository, and save.
+Open **Workspace Settings › GitOps**, fill in the manifest repository, and save.
 
 | Setting | Description |
 | ------- | ----------- |
@@ -109,7 +109,7 @@ Open **Settings → GitOps**, fill in the manifest repository, and save.
 | Sync schedule | How often to reconcile automatically. Choose a preset or enter a custom cron expression. Set to **Manual only** to disable scheduled syncs. |
 | Prune removed repositories | Delete GitOps-managed repositories that are no longer in the manifest. Off by default. |
 
-The manifest repository is cloned with the Git token from **Settings → AI & integrations**, so private repositories work without any extra credentials. If you have not configured a GitHub App or personal access token for the host, the sync reports a clear error.
+The manifest repository is cloned with the Git credentials from Workspace Settings (**GitHub**, **GitLab** or **Other Git**), so private repositories work without any extra credentials. If you have not configured a GitHub App or personal access token for the host, the sync reports a clear error.
 
 <Warning>
 Pruning permanently deletes a repository's indexed data (snippets and embeddings). It only affects repositories GitOps added, never ones you created in the dashboard, but treat the manifest as authoritative once pruning is on. Removing an entry and syncing will delete that library.

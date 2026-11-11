@@ -130,10 +130,10 @@ At a minimum, assign yourself the **Context7 Admin** role so you can test the fl
 
 ### Step 1: Open the Single sign-on card
 
-Sign in to your Context7 dashboard with the password admin account. Open **Settings → Authentication**. In the **Single sign-on** card, select the **Microsoft Entra ID** tab.
+Sign in to your Context7 dashboard with the password admin account. Open **Workspace Settings › Authentication**. In the **Single sign-on** card, select the **Microsoft Entra ID** tab.
 
 <Frame>
-  ![Context7 Settings → Authentication with the Single sign-on card on the Microsoft Entra ID tab](/images/enterprise/entra-sso/07-context7-settings-card.png)
+  ![Context7 Workspace Settings › Authentication with the Single sign-on card on the Microsoft Entra ID tab](/images/enterprise/entra-sso/07-context7-settings-card.png)
 </Frame>
 
 ### Step 2: Fill in the credentials
@@ -184,7 +184,7 @@ Role assignments live entirely in Entra. To change someone's access in Context7:
 
 - **Promote a member to admin**: in Entra, go to Enterprise applications → Context7 → Users and groups, remove their Member role, add the Admin role, and ask them to sign out and back in.
 - **Revoke access**: remove the user from Users and groups in Entra. Existing Context7 sessions stay valid until they expire, after at most 7 days, or until the user signs out. To block the user in Context7 too, open **Members** and choose **Disable sign-in** in the user's row menu. SSO members can be disabled, but not removed.
-- **Audit who signed in recently**: the **Members** page shows every Context7 user with their sign-in method and last sign-in time.
+- **Audit who signed in recently**: the **Members** page in Workspace Settings shows every Context7 user with their sign-in method and last sign-in time.
 
 <Frame>
   ![Members page showing password and Entra users side by side](/images/enterprise/entra-sso/11-users-tab.png)

@@ -32,7 +32,7 @@ See [Other Git](/enterprise/integrations/other-git) for HTTPS, SSH, host key, an
 
 <Steps>
   <Step title="Configure repository access">
-    Open **Settings > AI & integrations > Other Git** and enter the Gerrit hostname without a URL scheme, for example `gerrit.example.com`. Context7 uses this value to match repository URLs to the credentials and review settings.
+    Open **Workspace Settings › Other Git** and enter the Gerrit hostname without a URL scheme, for example `gerrit.example.com`. Context7 uses this value to match repository URLs to the credentials and review settings.
 
     Choose **HTTPS** or **SSH**. For HTTPS, enter the service account username and HTTP password. For SSH, enter the private key and, if available, the Gerrit `known_hosts` entry.
   </Step>
@@ -107,7 +107,7 @@ Grant the service account permission to create changes by pushing to `refs/for/*
 
 ### SSH authentication fails
 
-Confirm that the public key is registered to the service account and that the clone URL includes Gerrit's SSH port, commonly `29418`. If host key verification fails, add the server's `known_hosts` entry under **Settings > AI & integrations > Other Git**.
+Confirm that the public key is registered to the service account and that the clone URL includes Gerrit's SSH port, commonly `29418`. If host key verification fails, add the server's `known_hosts` entry under **Workspace Settings › Other Git**.
 
 ### HTTPS authentication fails
 

@@ -52,7 +52,7 @@ Open `http://localhost:3000` in your browser. On first launch, the setup wizard 
 2. **Embedding Provider** - Use the same provider as your LLM, or configure a separate one for embeddings.
 3. **Git Tokens** - Add a GitHub and/or GitLab token for the platforms you use.
 
-All configuration is stored locally in the embedded database and can be updated later from the Settings page.
+All configuration is stored locally in the embedded database and can be updated later in Workspace Settings.
 
 </Step>
 
@@ -180,12 +180,12 @@ These are set in your `docker-compose.yml` or `.env` file before starting the co
 | `DATA_DIR` | No | Data directory inside the container (default: `/data`) |
 
 <Note>
-Provider and model selection, non-Bedrock provider keys, and git tokens are configured through the setup wizard and can be updated anytime from the Settings page in the web UI. Bedrock is the exception for authentication: it can use `AWS_BEARER_TOKEN_BEDROCK`, standard AWS credential environment variables, a mounted shared profile, or a workload IAM role. See [AWS Bedrock](/enterprise/integrations/aws-bedrock) for the supported credential chain.
+Provider and model selection, non-Bedrock provider keys, and git tokens are configured through the setup wizard and can be updated anytime in Workspace Settings in the web UI. Bedrock is the exception for authentication: it can use `AWS_BEARER_TOKEN_BEDROCK`, standard AWS credential environment variables, a mounted shared profile, or a workload IAM role. See [AWS Bedrock](/enterprise/integrations/aws-bedrock) for the supported credential chain.
 </Note>
 
 ### AI Provider Settings
 
-Configured under **Settings > AI & integrations** in the web UI.
+Configured under **Workspace Settings › AI models** in the web UI.
 
 | Setting | Description |
 |---|---|
@@ -235,7 +235,7 @@ Optionally, a decision model can classify pages, check for duplicate snippets, a
 
 ### Git Access Tokens
 
-Configured under **Settings > AI & integrations** in the web UI.
+Configured under **Workspace Settings › GitHub**, **GitLab** and **Other Git** in the web UI.
 
 | Setting | Description |
 |---|---|
@@ -251,7 +251,7 @@ The GitLab token is sent only to `gitlab.com` and the host in **Server URL**.
 
 Admin credentials are set during first login (default: `admin` / `admin`). Change these immediately after setup via **Personal settings > Password > Change password**.
 
-**Settings > Authorization** controls which operations members and anonymous callers can run. Admins can always run all of them. **Settings > Authentication** controls MCP and API search access.
+**Workspace Settings › Authorization** controls which operations members and anonymous callers can run. Admins can always run all of them. **Workspace Settings › Authentication** controls MCP and API search access.
 
 | Permission | Default | Description |
 |---|---|---|
@@ -267,7 +267,7 @@ When MCP authentication is enabled, each user creates personal keys from **Perso
 
 Policies let you control which public documentation from the Context7 cloud is accessible to your on-premise instance. They do not affect locally parsed on-premise content.
 
-Open **Settings > Content policies**. Requires admin login and a valid `LICENSE_KEY`.
+Open **Workspace Settings › Content policies**. Requires admin login and a valid `LICENSE_KEY`.
 
 For details on source type toggles and library filters, see [Customizing What Is Retrieved](/security/data-privacy#customizing-what-is-retrieved).
 

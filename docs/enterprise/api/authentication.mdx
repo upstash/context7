@@ -54,7 +54,7 @@ Default credentials on a fresh install are `admin` / `admin`. Change them immedi
 
 ## Non-admin permissions
 
-These operations can be allowed for every caller who is not an admin: signed-in members and anonymous callers. Configure them in the **Non-admin permissions** card under **Settings > Authorization**:
+These operations can be allowed for every caller who is not an admin: signed-in members and anonymous callers. Configure them in the **Non-admin permissions** card under **Workspace Settings › Authorization**:
 
 | Permission | Default |
 |---|---|
@@ -63,6 +63,6 @@ These operations can be allowed for every caller who is not an admin: signed-in 
 | Delete repositories | Off |
 | Download support bundle | Off |
 
-MCP authentication is configured separately in **Settings > Authentication**. When enabled, external requests to `/mcp`, `/api/v2/libs/search`, and `/api/v2/context` require a personal API key. When disabled, those endpoints allow anonymous access. The local MCP bridge can still call the v2 endpoints over loopback.
+MCP authentication is configured separately in **Workspace Settings › Authentication**. When enabled, external requests to `/mcp`, `/api/v2/libs/search`, and `/api/v2/context` require a personal API key. When disabled, those endpoints allow anonymous access. The local MCP bridge can still call the v2 endpoints over loopback.
 
 The legacy global `API_KEY` environment variable protects the broader HTTP API independently of personal MCP keys. New deployments should use dashboard users and personal keys for MCP clients.

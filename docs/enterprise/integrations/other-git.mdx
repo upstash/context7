@@ -6,7 +6,7 @@ description: "Ingest private repositories from a self-managed Git host such as G
 
 Context7 can clone and index repositories from any self-managed Git host that isn't GitHub or GitLab, such as **Gerrit**, **Gitea**, or **self-hosted Bitbucket**, over **HTTPS** or **SSH**.
 
-Under **Settings → AI & integrations → Other Git**, enter the repository host, choose **HTTPS** or **SSH**, and then [add repositories](#add-a-repository) with their normal clone URL. The host is shared by both authentication methods and also selects which repositories use the review publishing settings.
+Under **Workspace Settings › Other Git**, enter the repository host, choose **HTTPS** or **SSH**, and then [add repositories](#add-a-repository) with their normal clone URL. The host is shared by both authentication methods and also selects which repositories use the review publishing settings.
 
 If you use Gerrit, see the [Gerrit integration guide](/enterprise/integrations/gerrit) to submit generated code documentation through `refs/for/{branch}`.
 
@@ -19,7 +19,7 @@ These hosts have no GitHub-style webhooks. Drive re-indexing on merge from your 
 Enter the host, select **HTTPS**, and fill in the account credentials:
 
 <Frame>
-  ![Other Git HTTPS settings: host, username, and HTTP password under Settings, AI & integrations](/images/enterprise/integrations/other-git-https.png)
+  ![Other Git HTTPS settings: host, username, and HTTP password under Workspace Settings, Other Git](/images/enterprise/integrations/other-git-https.png)
 </Frame>
 
 | Field | Description |
@@ -43,7 +43,7 @@ When a repository is added with an `ssh://` URL, for example `ssh://<user>@gerri
 On the **SSH** tab, paste the private key. It is stored encrypted and used for all `ssh://` clones. Optionally paste a `known_hosts` entry to pin the host key; if you leave it blank, the host key is trusted on first use.
 
 <Frame>
-  ![Other Git SSH settings: private key and known hosts under Settings, AI & integrations](/images/enterprise/integrations/other-git-ssh.png)
+  ![Other Git SSH settings: private key and known hosts under Workspace Settings, Other Git](/images/enterprise/integrations/other-git-ssh.png)
 </Frame>
 
 Generate the `known_hosts` entry with `ssh-keyscan`, for example:
