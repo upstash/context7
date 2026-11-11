@@ -331,7 +331,7 @@ async function codeCommand(
     } else {
       log.warn(result.message);
       log.info(
-        `Run the same command again in about ${result.retryAfter} seconds, at most twice. Meanwhile, use "ctx7 docs".`
+        `Run the same command again in about ${result.retryAfter} seconds, and keep trying for up to 3 minutes: a first index usually takes 1 to 3. Meanwhile, use "ctx7 docs".`
       );
     }
     process.exitCode = 75; // EX_TEMPFAIL: try again later
