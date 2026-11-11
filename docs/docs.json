@@ -78,7 +78,13 @@
                   {
                     "group": "Auth",
                     "pages": [
-                      "enterprise/enterprise-managed-auth/entra",
+                      {
+                        "group": "Microsoft Entra ID",
+                        "pages": [
+                          "enterprise/enterprise-managed-auth/entra-sso",
+                          "enterprise/enterprise-managed-auth/entra"
+                        ]
+                      },
                       "enterprise/enterprise-managed-auth/okta"
                     ]
                   },
@@ -112,6 +118,7 @@
                         "pages": [
                           "enterprise/deployment/docker",
                           "enterprise/deployment/kubernetes",
+                          "enterprise/deployment/helm",
                           "enterprise/deployment/scaling",
                           "enterprise/deployment/vector-stores"
                         ]
@@ -122,7 +129,8 @@
                           "enterprise/library-import",
                           "enterprise/automatic-repository-updates",
                           "enterprise/gitops",
-                          "enterprise/backup-restore"
+                          "enterprise/backup-restore",
+                          "enterprise/decision-models"
                         ]
                       },
                       {

@@ -3,29 +3,41 @@ title: "Changelog"
 description: "Release notes for the Context7 On-Premise image."
 ---
 
-<Update label="2026-11-06" description="v2.0.0">
+<Update label="v2.0.0" description="v2.0.0">
 
 ### Upgrade notes
 
-- Back up the data volume before you upgrade. The first start runs a database migration automatically.
-- The `latest` image tag now points to 2.0.0. To stay on 1.3.9, pin the image to `1` or `1.3`.
-- Settings now have one page per section under Workspace Settings at `/admin/<section>`. Bookmarks to the old `?tab=` links and to `/settings/<section>`, `/members` and `/usage` redirect to the new pages.
+- Back up the data volume before you upgrade. The first start runs a database migration automatically. To roll back, restore that backup instead of starting the older image on the new data.
+- The `latest` image tag now points to 2.0.0. To stay on 1.3.9, pin the image to `1` or `1.3`. The Helm chart and the Compose files use `latest` by default, so pin `image.tag` to control when your pods move to 2.0.0.
+- Members, Usage and all settings are now under **Workspace Settings**, with one page per section at `/admin/<section>`. Old `/settings/<section>`, `/members`, `/usage` and `?tab=` links redirect to the new pages.
 - The settings of a repository are now at `/projects/<owner>/<repo>/-/settings`.
 - Members who sign in with SSO can be disabled, but not removed, in Context7. Remove them in your identity provider.
+- Only administrators can refresh Google Drive and Notion libraries, even when anonymous refresh is allowed.
+- Only administrators can import libraries. Scripts that import with a member's API key now get a 403 response.
+- The GitLab token is now sent only to `gitlab.com` and to the self-hosted GitLab host set in Workspace Settings › GitLab. Before, any host with "gitlab" in its name got it. On the first start, Context7 sets that host from your existing GitLab libraries when they all use one host. If they use several, the server log names them; set the right one in Workspace Settings › GitLab. After the upgrade, check the host in Workspace Settings › GitLab, and clear it if it is not your GitLab server.
+- The first syncs after the upgrade can use more language model tokens: large Confluence pages that were skipped for their size are now indexed. Turning on the decision model, or leaving the Bedrock model empty in an Asia-Pacific region, also extracts each page again once.
 
 ### Added
 
 - Added member management: administrators can change a member's role, disable or enable sign-in, and remove members who sign in with a password. Context7 does not let you demote, disable or remove the last active administrator.
 - Added support for SAML 2.0 single sign-on for on-premise installations.
-- Added a Google Drive connector, enabling ingestion and daily synchronization of Google Docs and Google Slides.
+- Added Google Drive, Google Docs and Google Slides sources that index Google Docs and Google Slides and sync them daily. Administrators pick Shared Drives, folders or single files in a tree that loads folders as you open them and searches all of Drive.
+- Added three ways to connect Google: a service account key, with optional domain-wide delegation; the server's own Google credentials, such as Workload Identity; or a dedicated Workspace user who signs in once through an internal OAuth app, with no key and no sharing outside your domain.
 - Added a Notion connector that indexes approved pages and database rows and syncs them daily.
+- Added automatic descriptions and language detection for Google Drive and Notion libraries when the administrator leaves them empty.
+- Added an optional decision model for page classification, duplicate checks and search reranking. It works with OpenRouter, OpenAI, Vercel AI Gateway or a System One-compatible endpoint, and the language model decides whenever it fails.
+- Added the source document to informational snippets in query results, so agents can cite and link the original page.
 
 ### Changed
 
-- Redesigned the on-premise web interface. One navbar holds the page tabs (Dashboard, Repositories, MCP Test and, for administrators, Workspace Settings), a system status menu that shows the parse queue, and a help menu. Workspace Settings groups Usage, Members and every settings section under `/admin`.
+- Redesigned the on-premise web interface. One navigation bar holds Dashboard, Repositories and MCP Test, a status button for the parse queue and system checks, and a help menu. Members, Usage and all settings are grouped under Workspace Settings, with Google, Notion and the Git hosts in an Integrations group. A new parse queue page shows running, waiting and recent parses. A new repository settings page lets administrators change the branch, folders and exclusions of a repository.
 - Updated the on-premise service image to run on Node.js 24 instead of Node.js 22.
 - Improved the accuracy of APIDOC context by grounding endpoints within their respective page sections and dropping irrelevant snippets.
-- Replaced the agent runtime that on-premise CodeDocs uses to write documentation.
+- Replaced the agent runtime that on-premise CodeDocs uses to write documentation. CodeDocs keeps the same page IDs when it regenerates identical documentation, so a regeneration does not repeat the extraction.
+- Large Google Drive, Notion and Confluence pages are now indexed in full instead of being skipped for their size.
+- Updated the AI provider model suggestions to each provider's current models. The Gemini default is now `gemini-3.8-flash`, and Bedrock suggests one inference profile per Claude model for the region's geography.
+- Library pages show a branch only for Git repositories.
+- The parse queue shows members only the libraries they can access, and deleting a library also deletes its parse history.
 
 ### Fixed
 
@@ -34,12 +46,21 @@ description: "Release notes for the Context7 On-Premise image."
 - Fixed an issue where large HTML conversion inputs could exhaust worker resources.
 - Fixed issues with context7.json folder traversal and case-insensitive enterprise path guards.
 - Fixed an issue that could lead to non-linear snippet token counting when processing looped AI outputs.
+- Fixed content that Google Drive, Notion and Confluence syncs could drop without a warning: short slides and pages are indexed, a failed page classification is retried, and Confluence pages picked by URL are indexed under the right library.
+- Fixed Google Drive picker selections that did not match what the administrator checked, for example when unchecking a file inside a large folder or checking a folder while it loads. Failed loads now show a Retry button.
+- Fixed a cancelled first Google Drive sync that left the library without its selection, so Refresh can restart it.
+- Fixed Google Drive syncs failing on a temporary Google token error. Context7 now retries it for all three connection methods.
+- Fixed Notion libraries that stopped syncing without an error after the Notion token was replaced with another integration. They now show a sync error that tells you to add them again.
+- Fixed Bedrock in Asia-Pacific regions suggesting inference profiles that current models do not have.
+- Fixed pages that went blank when they failed to load. They now show a loading state and a reload prompt.
 
 ### Security
 
 - Hardened security by binding GitLab tokens to exact hosts and restricting library import functionality to administrators only.
 - Improved data privacy by masking secrets in on-premise queries before they are sent to Context7 Cloud.
 - Enhanced data privacy by processing requests for restricted local libraries entirely on-premise, preventing their identifiers from being sent to Context7 Cloud.
+- Restricted refreshing Google Drive and Notion libraries to administrators, because a refresh reads content through the connector's credentials.
+- A Google reconnect now refuses a sign-in as a different Google account, so the connected identity cannot change by mistake.
 
 </Update>
 
