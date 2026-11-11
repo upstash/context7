@@ -18,6 +18,8 @@ vi.mock("../utils/api.js", async () => {
   return {
     CODE_OPERATIONS: actual.CODE_OPERATIONS,
     CODE_LIMITS: actual.CODE_LIMITS,
+    CODE_WAIT_SECONDS: actual.CODE_WAIT_SECONDS,
+    waitForLibraryCode: actual.waitForLibraryCode,
     hasSourceCode: actual.hasSourceCode,
     resolveLibrary: (...args: unknown[]) => mockResolveLibrary(...args),
     getLibraryContext: (...args: unknown[]) => mockGetLibraryContext(...args),
@@ -165,9 +167,28 @@ describe("ctx7 code", () => {
       retryAfter: 30,
     });
 
-    await run(registerDocsCommands, "code", "/a/b", "x");
+    await run(registerDocsCommands, "code", "/a/b", "x", "--wait", "0");
 
+    expect(mockGetLibraryCode).toHaveBeenCalledTimes(1);
     expect(process.exitCode).toBe(75);
+  });
+
+  test("waits for a first index by default and prints the answer", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    try {
+      mockGetLibraryCode
+        .mockResolvedValueOnce({ kind: "indexing", message: "Indexing.", retryAfter: 30 })
+        .mockResolvedValueOnce({ kind: "result", body: "src/a.ts:1: x" });
+
+      const done = run(registerDocsCommands, "code", "/a/b", "x");
+      await vi.advanceTimersByTimeAsync(5_000);
+      await done;
+
+      expect(mockGetLibraryCode).toHaveBeenCalledTimes(2);
+      expect(process.exitCode).not.toBe(75);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   test("clamps out-of-range numbers like the MCP tool", async () => {

@@ -81,7 +81,48 @@ export const CODE_LIMITS = {
   context: { min: 0, max: 10 },
   headLimit: { min: 1, max: 500 },
   offset: { min: 0, max: 10_000 },
+  /** Seconds `ctx7 code` waits for a first index. Agents' shell tools often stop a command at 2 min. */
+  wait: { min: 0, max: 600 },
 } as const;
+
+/** Default for `ctx7 code --wait`: a first index takes about 90 s at the median. */
+export const CODE_WAIT_SECONDS = 90;
+/** Pause between calls while an index is built. Each call itself waits for the index on the server. */
+const CODE_WAIT_PAUSE_MS = 3_000;
+
+/**
+ * Runs `query` again while it answers "indexing", until `budgetMs` has passed.
+ * The next call starts only when it can end inside the budget, judged by how
+ * long the previous call took, so the command stays within the budget.
+ */
+export async function waitForLibraryCode(
+  query: () => Promise<CodeQueryResult>,
+  budgetMs: number,
+  {
+    now = Date.now,
+    sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)),
+    onWait,
+  }: {
+    now?: () => number;
+    sleep?: (ms: number) => Promise<void>;
+    /** Called before each new wait with the "indexing" answer and the seconds left. */
+    onWait?: (result: Extract<CodeQueryResult, { kind: "indexing" }>, secondsLeft: number) => void;
+  } = {}
+): Promise<CodeQueryResult> {
+  const start = now();
+  let callStart = start;
+  let result = await query();
+  while (result.kind === "indexing") {
+    const callMs = now() - callStart;
+    const left = budgetMs - (now() - start);
+    if (left < CODE_WAIT_PAUSE_MS + callMs) break;
+    onWait?.(result, Math.round(left / 1000));
+    await sleep(CODE_WAIT_PAUSE_MS);
+    callStart = now();
+    result = await query();
+  }
+  return result;
+}
 
 /**
  * Libraries built from a Git repository have source that `ctx7 code` can search.

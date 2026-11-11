@@ -6,8 +6,10 @@ import {
   resolveLibrary,
   getLibraryContext,
   getLibraryCode,
+  waitForLibraryCode,
   hasSourceCode,
   CODE_LIMITS,
+  CODE_WAIT_SECONDS,
   CODE_OPERATIONS,
   type CodeOperation,
 } from "../utils/api.js";
@@ -240,6 +242,8 @@ interface CodeCommandOptions {
   json?: boolean;
   /** A git tag. `--version` is the CLI's own flag, so the tag has its own name. */
   tag?: string;
+  /** Seconds to wait for a first index before exiting 75. */
+  wait?: string;
 }
 
 /** Parses a numeric flag and clamps it into its range, like the MCP query-code tool. */
@@ -282,34 +286,48 @@ async function codeCommand(
   const context = wholeNumber(options.context, "--context", CODE_LIMITS.context);
   const headLimit = wholeNumber(options.headLimit, "--head-limit", CODE_LIMITS.headLimit);
   const offset = wholeNumber(options.offset, "--offset", CODE_LIMITS.offset);
-  if (context === null || headLimit === null || offset === null) return;
+  const wait = wholeNumber(options.wait, "--wait", CODE_LIMITS.wait) ?? CODE_WAIT_SECONDS;
+  if (context === null || headLimit === null || offset === null || wait === null) return;
   const accessToken = await getValidAccessToken();
   const target = options.tag ? `${libraryId} ${options.tag}` : libraryId;
   const spinner = isTTY ? ora(`Searching the source of "${target}"...`).start() : null;
   let result;
+  let waited = false;
   try {
-    result = await getLibraryCode(
-      libraryId,
-      pattern,
-      {
-        version: options.tag,
-        operation: op as CodeOperation | undefined,
-        fixedStrings: options.fixedStrings,
-        ignoreCase: options.ignoreCase,
-        glob: options.glob,
-        path: options.path,
-        context,
-        outputMode: options.count
-          ? "count"
-          : options.filesWithMatches
-            ? "files_with_matches"
-            : undefined,
-        headLimit: headLimit || undefined,
-        offset: offset || undefined,
-        json: options.json,
+    const query = () =>
+      getLibraryCode(
+        libraryId,
+        pattern,
+        {
+          version: options.tag,
+          operation: op as CodeOperation | undefined,
+          fixedStrings: options.fixedStrings,
+          ignoreCase: options.ignoreCase,
+          glob: options.glob,
+          path: options.path,
+          context,
+          outputMode: options.count
+            ? "count"
+            : options.filesWithMatches
+              ? "files_with_matches"
+              : undefined,
+          headLimit: headLimit || undefined,
+          offset: offset || undefined,
+          json: options.json,
+        },
+        accessToken
+      );
+    // A first index takes longer than one call waits: call again until the budget runs out.
+    result = await waitForLibraryCode(query, wait * 1000, {
+      onWait: (_indexing, secondsLeft) => {
+        if (!waited) {
+          const text = `The source of ${target} is being indexed. Waiting up to ${secondsLeft} s more (--wait 0 to skip)...`;
+          if (spinner) spinner.text = text;
+          else console.error(text);
+        }
+        waited = true;
       },
-      accessToken
-    );
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     spinner?.fail(`Error: ${message}`);
@@ -331,7 +349,7 @@ async function codeCommand(
     } else {
       log.warn(result.message);
       log.info(
-        `Run the same command again in about ${result.retryAfter} seconds, at most twice. Meanwhile, use "ctx7 docs".`
+        `${waited ? "The index is still being built. " : ""}Run the same command again in about ${result.retryAfter} seconds, at most twice. Meanwhile, use "ctx7 docs".`
       );
     }
     process.exitCode = 75; // EX_TEMPFAIL: try again later
@@ -405,6 +423,10 @@ export function registerDocsCommands(program: Command): void {
     )
     .option("--offset <n>", "Skip this many results (0 to 10000)")
     .option("--json", "Output as JSON")
+    .option(
+      "--wait <seconds>",
+      `Seconds to wait while a version's source is indexed for the first time, 0 to 600 (default: ${CODE_WAIT_SECONDS})`
+    )
     .option(
       "--tag <tag>",
       "A git tag or commit of the library, e.g. v3.24.2 (default: the docs commit)"
