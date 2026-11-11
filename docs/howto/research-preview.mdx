@@ -104,9 +104,9 @@ With the research preview on, the server also lists a `query-code` tool, and `re
 | --- | --- |
 | `libraryId` | A library built from a Git repository, such as `/colinhacks/zod`. `/websites/...` and `/llmstxt/...` libraries have no source |
 | `operation` | `grep` (default), `definition`, `references`, `outline`, `read` or `list` |
-| `pattern` | A regex for `grep`, or a symbol for `definition`, `references` and `read` |
+| `pattern` | A regex for `grep`, or a symbol for `definition`, `references` and `read`. For `read`, a file path such as `src/client.ts` or `src/client.ts#L10-L40` reads that file, so you can pass it here instead of `path` |
 | `version` | A git tag, such as `v3.24.2`, optional. Without it, the commit the docs were built from. A tag that is not a docs version is indexed on first use |
 
-`grep` also takes ripgrep's options: `fixed_strings`, `ignore_case`, `glob`, `path`, `context`, `output_mode`, `head_limit` and `offset`. While a library's source is being indexed, the tool tells the agent to call again or answer from `query-docs`.
+`grep` also takes ripgrep's options: `fixed_strings`, `ignore_case`, `glob`, `path`, `context`, `output_mode`, `head_limit` and `offset`. A `pattern` matches the exact text of one line, so to search several words give them as `a|b`. When a pattern of plain words that no line holds, such as `kafka consumer group rebalance`, finds nothing, `grep` also returns the lines that match any of its words and says so first. While a library's source is being indexed, the tool tells the agent to call again or answer from `query-docs`.
 
 Without the MCP server, the `ctx7 code` command gives the same search in a terminal, for example `npx ctx7@latest code /colinhacks/zod "safeExtend" --op definition`.
