@@ -26,6 +26,7 @@ Run commands with `npx ctx7@latest` so setup always uses the latest CLI without 
 ```bash
 npx ctx7@latest library <name> "<query>"
 npx ctx7@latest docs <libraryId> "<query>"
+npx ctx7@latest code <libraryId> "<regex>"
 ```
 
 Optionally install globally if you prefer a bare `ctx7` command:
@@ -36,7 +37,7 @@ npm install -g ctx7@latest
 
 ## Workflow
 
-Two-step process: resolve the library name to an ID, then query docs with that ID.
+Resolve the library name to an ID, then query docs with that ID. When the docs do not answer an exact question, search the library's source code (Step 3).
 
 ```bash
 # Step 1: Resolve library ID
@@ -48,7 +49,7 @@ npx ctx7@latest docs <libraryId> "<query>"
 
 You MUST call `library` first to obtain a valid library ID UNLESS the user explicitly provides a library ID in the format `/org/project` or `/org/project/version`.
 
-IMPORTANT: Do not run these commands more than 3 times per question. If you cannot find what you need after 3 attempts, use the best result you have.
+IMPORTANT: Do not run `library` and `docs` more than 3 times per question, and `code` more than 6 times. If you cannot find what you need within these limits, use the best result you have.
 
 ## Step 1: Resolve a Library
 
@@ -75,6 +76,7 @@ Each result includes:
 - **Source Reputation** — Authority indicator (High, Medium, Low, or Unknown)
 - **Benchmark Score** — Quality indicator (100 is the highest score)
 - **Versions** — List of versions if available. Use one of those versions if the user provides a version in their query. The format is `/org/project/version`.
+- **Source code** — Present when `ctx7 code` can search the library's source. `/websites/...` and `/llmstxt/...` IDs have docs only.
 
 ### Selection process
 
@@ -135,6 +137,27 @@ Describe what to look up in the library's documentation, rather than the task to
 
 The output contains two types of content: **code snippets** (titled, with language-tagged blocks) and **info snippets** (prose explanations with breadcrumb context).
 
+## Step 3: Read the Source When Docs Are Not Exact
+
+When the docs do not answer an exact question (a signature or type, a default value, an option name, where an error message comes from, or how something works inside), search the library's source at the docs version.
+
+```bash
+# Grep (add -F for plain text such as error messages)
+npx ctx7@latest code /colinhacks/zod "ZodError"
+npx ctx7@latest code /colinhacks/zod -F "Expected string, received"
+
+# Find a definition, then read the file range it gives
+npx ctx7@latest code /colinhacks/zod safeParse --op definition
+npx ctx7@latest code /colinhacks/zod --op read --path packages/zod/src/v4/classic/parse.ts#L22-L27
+```
+
+- Use an ID that `library` marks with "Source code", usually the GitHub repository. `/websites/...` and `/llmstxt/...` IDs have no source
+- `--op references`, `--op outline` and `--op list` also exist
+- For a version, add the git tag to the library ID (e.g. `/colinhacks/zod/v3.24.2`). A tag that is not a docs version is indexed first (exit code 75). If indexing fails, the output lists the docs versions you can use
+- Follow the `Next:` line of the output. Its fields map to flags: `offset` is `--offset`, `output_mode "count"` is `-c`, `fixed_strings` is `-F`, `ignore_case` is `-i`, `read: <file>#L..` is `--op read --path <file>#L..`, and the other fields use the flag of the same name (`head_limit` is `--head-limit`, `version` is `--tag`)
+- Exit code 75 means the source is being indexed: retry at most twice, then answer from `docs`
+- Cite the file and line of the source you used
+
 ## Authentication
 
 Works without authentication. For higher rate limits:
@@ -161,6 +184,7 @@ Do not silently fall back to training data — always tell the user why Context7
 
 - Library IDs require a `/` prefix — `/facebook/react` not `facebook/react`
 - Always run `npx ctx7@latest library` first — `npx ctx7@latest docs react "hooks"` will fail without a valid ID
+- `code` takes a regex or a symbol, not a question — search for `"safeParse"`, not `"how does validation work"`
 - Use descriptive queries, not single words — `"React useEffect cleanup function"` not `"hooks"`
 - One topic per query — split `"routing and auth and caching"` into a separate `docs` command per concept, unless the question is about how they interact
 - Do not include sensitive information (API keys, passwords, credentials) in queries
