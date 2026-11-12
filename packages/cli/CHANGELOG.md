@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.1
+
+### Patch Changes
+
+- 251c6c5: Use `/reactjs/react.dev` in CLI help examples. `/facebook/react` now redirects to another library and returns no documentation.
+
 ## 0.11.0
 
 ### Minor Changes
