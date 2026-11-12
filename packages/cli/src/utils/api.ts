@@ -29,6 +29,42 @@ function getAuthHeaders(accessToken?: string): Record<string, string> {
   return headers;
 }
 
+/**
+ * How long a call may take before the CLI gives up. `/api/v2/code` waits up to
+ * 40 s on the server for a first index, so it gets more time than the others.
+ */
+export const REQUEST_TIMEOUT_MS = 60_000;
+export const CODE_REQUEST_TIMEOUT_MS = 70_000;
+
+/** fetch with a timeout, so a stalled connection ends with a clear error instead of hanging. */
+/** Statuses whose Response cannot carry a body. */
+const NO_BODY_STATUS = new Set([101, 103, 204, 205, 304]);
+
+export async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number = REQUEST_TIMEOUT_MS
+): Promise<Response> {
+  try {
+    const response = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+    // Read the body under the same timeout, so a body that stalls after the
+    // headers also ends with the message below. Answers are small.
+    const body = NO_BODY_STATUS.has(response.status) ? null : await response.arrayBuffer();
+    return new Response(body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    });
+  } catch (err) {
+    if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) {
+      throw new Error(
+        `Context7 did not answer within ${Math.round(timeoutMs / 1000)} seconds. Check your connection and run the command again.`
+      );
+    }
+    throw err;
+  }
+}
+
 export async function resolveLibrary(
   libraryName: string,
   query?: string,
@@ -39,7 +75,7 @@ export async function resolveLibrary(
     params.set("query", query);
   }
 
-  const response = await fetch(`${baseUrl}/api/v2/libs/search?${params}`, {
+  const response = await fetchWithTimeout(`${baseUrl}/api/v2/libs/search?${params}`, {
     headers: getAuthHeaders(accessToken),
   });
 
@@ -135,9 +171,10 @@ export type RetryableResult =
 async function fetchRetryableText(
   url: string,
   accessToken: string | undefined,
-  pendingMessage: string
+  pendingMessage: string,
+  timeoutMs: number = REQUEST_TIMEOUT_MS
 ): Promise<RetryableResult> {
-  const response = await fetch(url, { headers: getAuthHeaders(accessToken) });
+  const response = await fetchWithTimeout(url, { headers: getAuthHeaders(accessToken) }, timeoutMs);
   if (response.status === 202) {
     const body = (await response.json().catch(() => ({}))) as {
       message?: string;
@@ -183,7 +220,8 @@ export async function getLibraryCode(
   return fetchRetryableText(
     `${baseUrl}/api/v2/code?${params}`,
     accessToken,
-    "The library source is being indexed."
+    "The library source is being indexed.",
+    CODE_REQUEST_TIMEOUT_MS
   );
 }
 
@@ -228,7 +266,7 @@ export async function getLibraryContext(
     params.set("language", options.language);
   }
   const headers = getAuthHeaders(accessToken);
-  const response = await fetch(`${baseUrl}/api/v2/context?${params}`, {
+  const response = await fetchWithTimeout(`${baseUrl}/api/v2/context?${params}`, {
     headers,
   });
 
@@ -287,7 +325,7 @@ export async function searchDocumentation(
     params.set("language", options.language);
   }
 
-  const response = await fetch(`${baseUrl}/api/v3/search?${params}`, {
+  const response = await fetchWithTimeout(`${baseUrl}/api/v3/search?${params}`, {
     headers: getAuthHeaders(accessToken),
   });
 

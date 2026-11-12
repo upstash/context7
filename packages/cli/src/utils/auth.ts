@@ -386,14 +386,23 @@ function describeConnectionError(error: unknown, url: string): string {
   return `Could not reach ${url}: ${detail}${code ? ` (${code})` : ""}\n${hint}`;
 }
 
+/** OAuth calls (token refresh, device flow) give up after this long. */
+export const OAUTH_REQUEST_TIMEOUT_MS = 30_000;
+
 async function postForm(url: string, params: URLSearchParams): Promise<Response> {
   try {
     return await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: params.toString(),
+      signal: AbortSignal.timeout(OAUTH_REQUEST_TIMEOUT_MS),
     });
   } catch (error) {
+    if (error instanceof Error && error.name === "TimeoutError") {
+      throw new Error(
+        `${url} did not answer within ${OAUTH_REQUEST_TIMEOUT_MS / 1000} seconds. Check your connection and run the command again.`
+      );
+    }
     throw new Error(describeConnectionError(error, url));
   }
 }
