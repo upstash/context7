@@ -348,13 +348,13 @@ async function codeCommand(
   console.log(result.body);
 }
 
-async function upgradeGuideCommand(
+async function getUpgradeGuideCommand(
   libraryId: string,
   fromVersion: string,
   toVersion: string | undefined,
   options: { page?: string; json?: boolean }
 ): Promise<void> {
-  trackEvent("command", { name: "upgrade-guide" });
+  trackEvent("command", { name: "get-upgrade-guide" });
   libraryId = recoverLibraryId(libraryId);
   if (!/^\/[^/]+\/[^/]/.test(libraryId)) {
     log.error(`Invalid library ID: "${libraryId}"`);
@@ -492,7 +492,7 @@ export function registerDocsCommands(program: Command): void {
     });
 
   program
-    .command("upgrade-guide")
+    .command("get-upgrade-guide")
     .argument("<libraryId>", "Context7 library ID (e.g., /vercel/next.js)")
     .argument(
       "<fromVersion>",
@@ -514,7 +514,7 @@ export function registerDocsCommands(program: Command): void {
         toVersion: string | undefined,
         options: { page?: string; json?: boolean }
       ) => {
-        await upgradeGuideCommand(libraryId, fromVersion, toVersion, options);
+        await getUpgradeGuideCommand(libraryId, fromVersion, toVersion, options);
       }
     );
 }

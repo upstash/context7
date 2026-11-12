@@ -53,7 +53,7 @@ When the docs do not answer an exact question (a signature or type, a default va
 
 ## Upgrades
 
-When the user upgrades a library, sees errors after an upgrade, or asks what changed between two versions, get the upgrade guide: \`npx ctx7@latest upgrade-guide <libraryId> <fromVersion> [toVersion]\` (e.g. \`/vercel/next.js 14 16\`; without a target, the latest major).
+When the user upgrades a library, sees errors after an upgrade, or asks what changed between two versions, get the upgrade guide: \`npx ctx7@latest get-upgrade-guide <libraryId> <fromVersion> [toVersion]\` (e.g. \`/vercel/next.js 14 16\`; without a target, the latest major).
 
 - Page 1 starts with what is needed to migrate. If it says that part continues, read the next pages with \`--page <n>\` before migrating
 - Exit code 75 means the guide is being prepared: run the same command again after the time it gives

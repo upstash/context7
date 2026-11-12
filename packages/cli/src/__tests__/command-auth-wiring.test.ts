@@ -222,11 +222,11 @@ describe("commands stay anonymous when no token is available", () => {
   });
 });
 
-describe("ctx7 upgrade-guide", () => {
+describe("ctx7 get-upgrade-guide", () => {
   test("passes the refreshed token, the versions and the page to the API", async () => {
     mockGetUpgradeGuide.mockResolvedValue({ kind: "result", body: "# Upgrade guide" });
 
-    await run(registerDocsCommands, "upgrade-guide", "/a/b", "14", "16", "--page", "2");
+    await run(registerDocsCommands, "get-upgrade-guide", "/a/b", "14", "16", "--page", "2");
 
     expect(mockGetUpgradeGuide).toHaveBeenCalledWith(
       "/a/b",
@@ -241,7 +241,7 @@ describe("ctx7 upgrade-guide", () => {
   test("leaves the target version and page to the API when they are not given", async () => {
     mockGetUpgradeGuide.mockResolvedValue({ kind: "result", body: "ok" });
 
-    await run(registerDocsCommands, "upgrade-guide", "/a/b", "14.2.35");
+    await run(registerDocsCommands, "get-upgrade-guide", "/a/b", "14.2.35");
 
     expect(mockGetUpgradeGuide).toHaveBeenCalledWith(
       "/a/b",
@@ -258,7 +258,7 @@ describe("ctx7 upgrade-guide", () => {
       retryAfter: 60,
     });
 
-    await run(registerDocsCommands, "upgrade-guide", "/a/b", "14", "--json");
+    await run(registerDocsCommands, "get-upgrade-guide", "/a/b", "14", "--json");
 
     expect(console.log).toHaveBeenCalledWith(
       JSON.stringify({ error: "preparing", message: "Preparing.", retryAfter: 60 })
@@ -273,7 +273,7 @@ describe("ctx7 upgrade-guide", () => {
       message: "Not prepared yet.",
     });
 
-    await run(registerDocsCommands, "upgrade-guide", "/a/b", "14", "--json");
+    await run(registerDocsCommands, "get-upgrade-guide", "/a/b", "14", "--json");
 
     expect(console.log).toHaveBeenCalledWith(
       JSON.stringify({ error: "library_not_prepared", message: "Not prepared yet." })
@@ -282,7 +282,7 @@ describe("ctx7 upgrade-guide", () => {
   });
 
   test("rejects a page that is not a whole number from 1 without calling the API", async () => {
-    await run(registerDocsCommands, "upgrade-guide", "/a/b", "14", "--page", "0");
+    await run(registerDocsCommands, "get-upgrade-guide", "/a/b", "14", "--page", "0");
 
     expect(mockGetUpgradeGuide).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(1);

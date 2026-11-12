@@ -122,9 +122,9 @@ ctx7 code /tanstack/query --op list --path packages/query-core/src
 Get what changes when a library moves from one version to another: breaking changes, codemods, deprecations, behavior and config changes from the release notes of every release in between, and the public API changes found in the source code.
 
 ```bash
-ctx7 upgrade-guide /vercel/next.js 14 16
-ctx7 upgrade-guide /colinhacks/zod 3.24.2
-ctx7 upgrade-guide /vercel/next.js 14 16 --page 2
+ctx7 get-upgrade-guide /vercel/next.js 14 16
+ctx7 get-upgrade-guide /colinhacks/zod 3.24.2
+ctx7 get-upgrade-guide /vercel/next.js 14 16 --page 2
 ```
 
 A bare major such as `14` means the oldest release of that line as the start and the newest as the target. Without a target version, the guide goes to the latest major. A long guide comes in pages; page 1 starts with what is needed to migrate and says what the next pages hold. The first request for a pair of versions can take a few minutes while the guide is prepared: the command then exits with code 75 and says when to run it again. Guides are prepared for the most used libraries; for any other library the command says that its guide is not prepared yet.
