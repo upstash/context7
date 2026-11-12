@@ -248,6 +248,8 @@ curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js@v16.2.9&quer
 
 If that version is not indexed, the request still succeeds and serves the closest documentation Context7 has: a tag matching the requested numbers, a newer release of the same line, or the library's current documentation. JSON responses include a `version` object that says which version was served. A text response starts with a version note when it serves another release or the current documentation. A branch or channel name that is not indexed, such as `/vercel/next.js/canary`, still returns `404 version_not_found`.
 
+A library ID with no version tag also follows the version named in the question. For `libraryId=/vercel/next.js` and the query `How do I cache in Next.js 15?`, an older line than the library's current documentation is served when Context7 has a matching indexed release, and the JSON `version` object reports that release as `verified`. When the question names a version with no indexed release, the current documentation is served with the `version` object reporting it as `unverified`. A question that names more than one version, or that names the source of a migration such as `upgrade from Next.js 15 to 16`, leaves the current documentation in place.
+
 ## Error Handling
 
 The Context7 API uses standard HTTP status codes:
