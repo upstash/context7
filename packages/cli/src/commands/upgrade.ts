@@ -128,7 +128,7 @@ async function upgradeCommand(options: UpgradeOptions): Promise<void> {
 
   if (!info) {
     log.warn("Couldn't check for updates right now.");
-    log.info(`Try again later or run ${pc.cyan(plan.displayCommand)} manually.`);
+    log.notice(`Try again later or run ${pc.cyan(plan.displayCommand)} manually.`);
     return;
   }
 

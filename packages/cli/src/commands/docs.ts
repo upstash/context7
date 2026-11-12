@@ -132,10 +132,10 @@ async function queryCommand(
 
   if (!libraryId.startsWith("/") || !/^\/[^/]+\/[^/]/.test(libraryId)) {
     log.error(`Invalid library ID: "${libraryId}"`);
-    log.info(`Expected format: /owner/repo or /owner/repo/version (e.g., /reactjs/react.dev)`);
-    log.info(`Run "ctx7 library <name>" to find the correct ID`);
+    log.notice(`Expected format: /owner/repo or /owner/repo/version (e.g., /reactjs/react.dev)`);
+    log.notice(`Run "ctx7 library <name>" to find the correct ID`);
     if (process.platform === "win32") {
-      log.info(
+      log.notice(
         `On Git Bash, prefix the ID with an extra slash to avoid path conversion: ctx7 docs "//reactjs/react.dev" "<your question>"`
       );
     }
@@ -175,8 +175,8 @@ async function queryCommand(
     if (ctx.redirectUrl) {
       spinner?.warn("Library has been redirected");
       if (!spinner) log.warn("Library has been redirected");
-      log.info(`New ID: ${pc.cyan(ctx.redirectUrl)}`);
-      log.info(`Run: ${pc.cyan(`ctx7 docs "${ctx.redirectUrl}" "${query}"`)}`);
+      log.notice(`New ID: ${pc.cyan(ctx.redirectUrl)}`);
+      log.notice(`Run: ${pc.cyan(`ctx7 docs "${ctx.redirectUrl}" "${query}"`)}`);
       process.exitCode = 1;
       return;
     }
@@ -267,7 +267,7 @@ async function codeCommand(
   libraryId = recoverLibraryId(libraryId);
   if (!/^\/[^/]+\/[^/]/.test(libraryId)) {
     log.error(`Invalid library ID: "${libraryId}"`);
-    log.info(
+    log.notice(
       `Expected format: /owner/repo or /owner/repo/version. Run "ctx7 library <name>" to find it.`
     );
     process.exitCode = 1;
@@ -332,7 +332,7 @@ async function codeCommand(
       log.warn(result.message);
       // Newer servers already say how long to keep calling; then only map the
       // MCP tool names in that text to their CLI commands.
-      log.info(
+      log.notice(
         /keep calling|up to \d+ minutes/i.test(result.message)
           ? `Run the same command again to call again. For docs meanwhile, use "ctx7 docs" (the CLI's query-docs).`
           : `Run the same command again in about ${result.retryAfter} seconds, and keep trying for up to 3 minutes: a first index usually takes 1 to 3. Meanwhile, use "ctx7 docs".`
