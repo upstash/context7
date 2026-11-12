@@ -96,6 +96,8 @@ The first request for a pair of versions can take a few minutes while Context7 p
 
 Guides are prepared for about 100 of the most used libraries. For any other library the tool answers that its guide is not prepared yet. The tool needs `@upstash/context7-mcp` 4.6.0 or later; reading the pages after the first needs 4.7.0 or later.
 
+A guide is served only to a caller who may read the library, as its documentation is. A library that is blocked, or one your teamspace's source policies exclude, is refused. A private library your teamspace cannot read answers the same as a library with no guide. When Context7 cannot check your access, the tool tells the agent to call again in a minute and to use `query-docs` meanwhile.
+
 ## Source code search
 
 With the research preview on, the server also lists a `query-code` tool, and `resolve-library-id` marks the libraries whose source it can search with `Source code: searchable with query-code`. The agent uses it when the docs do not answer an exact question, such as a signature, a default value, an option name, or where an error message comes from. It searches and reads the library's source at the commit its docs describe.
