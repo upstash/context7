@@ -127,7 +127,7 @@ The available versions are listed in the `library` command output. Use the close
 Retrieves up-to-date documentation and code examples for the resolved library.
 
 ```bash
-npx ctx7@latest docs /facebook/react "How to clean up useEffect with async operations"
+npx ctx7@latest docs /reactjs/react.dev "How to clean up useEffect with async operations"
 npx ctx7@latest docs /vercel/next.js "How to add an authentication proxy to app router"
 npx ctx7@latest docs /prisma/prisma "How to define one-to-many relations with cascade delete"
 ```
@@ -172,7 +172,7 @@ A quota error says "Monthly quota reached" or "quota exceeded". Tell the user th
 
 ## Common Mistakes
 
-- Library IDs require a `/` prefix — `/facebook/react` not `facebook/react`
+- Library IDs require a `/` prefix — `/reactjs/react.dev` not `reactjs/react.dev`
 - Run `npx ctx7@latest library` first unless you already have a valid library ID: `npx ctx7@latest docs react "hooks"` fails without one
 - Use descriptive queries, not single words — `"React useEffect cleanup function"` not `"hooks"`
 - One topic per query — split `"routing and auth and caching"` into a separate `docs` command per concept, unless the question is about how they interact

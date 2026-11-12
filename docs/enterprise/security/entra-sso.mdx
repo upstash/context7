@@ -14,10 +14,12 @@ You'll need:
 
 - An **Entra admin** (or someone who can register applications in your tenant).
 - A running Context7 On-Premise instance that you can reach in your browser.
-- The Context7 admin password. This is the same account you use to open **Workspace Settings** today. On a fresh install it is `admin` / `admin` until you change it.
+- The Context7 admin password. This is the same account you use to open **Workspace settings** today. On a fresh install it is `admin` / `admin` until you change it.
 
 <Note>
-Entra SSO is an **addition** to password login, not a replacement. The seeded admin account keeps working even after you turn on SSO, so you never get locked out if the Entra app goes sideways.
+Entra SSO is an **addition** to password login. The default admin account keeps working after you turn on SSO.
+
+You can turn off password login with the **Password sign-in** card below the SSO card. First make sure at least one admin can sign in through Entra. If you get locked out, see [Recover admin access](/enterprise/deployment/docker#recover-admin-access).
 </Note>
 
 ## Part 1: Register the application in Microsoft Entra
@@ -128,12 +130,12 @@ At a minimum, assign yourself the **Context7 Admin** role so you can test the fl
 
 ## Part 2: Configure Context7
 
-### Step 1: Open the Entra SSO card
+### Step 1: Open the Single sign-on card
 
-Sign in to your Context7 dashboard with the password admin account. Open **Workspace Settings**, and under **Authentication** you'll find a card titled **Microsoft Entra SSO**.
+Sign in to your Context7 dashboard with the password admin account. Open **Workspace Settings › Authentication**. In the **Single sign-on** card, select the **Microsoft Entra ID** tab.
 
 <Frame>
-  ![Context7 Workspace Settings with the Microsoft Entra SSO card highlighted](/images/enterprise/entra-sso/07-context7-settings-card.png)
+  ![Context7 Workspace Settings › Authentication with the Single sign-on card on the Microsoft Entra ID tab](/images/enterprise/entra-sso/07-context7-settings-card.png)
 </Frame>
 
 ### Step 2: Fill in the credentials
@@ -152,7 +154,7 @@ The **Callback URL** shown at the bottom of the card is exactly what Context7 wi
 
 ### Step 3: Test the connection
 
-Before turning SSO on for your users, click **Test connection**. Context7 will make a server-to-server request to Microsoft using the credentials you entered. You'll see one of three results:
+Before turning SSO on for your users, click **Check configuration**. Context7 will make a server-to-server request to Microsoft using the credentials you entered. You'll see one of three results:
 
 - **Green banner**: credentials are valid. You're ready to flip the toggle on.
 - **"Tenant ID is invalid"**: the Tenant ID doesn't match an Entra directory. Double-check you haven't pasted the Client ID into the Tenant field (an easy mistake, since both are GUIDs).
@@ -160,10 +162,10 @@ Before turning SSO on for your users, click **Test connection**. Context7 will m
 
 ### Step 4: Enable SSO
 
-Once the test passes, click the toggle at the top-right of the card, then **Save Microsoft Entra Settings** at the bottom. The status indicator should read **Configured · Sign-in button visible on /login**.
+Once the check passes, turn on **Enable Microsoft Entra ID**, then click **Save and apply** at the bottom. The status badge in the card header changes to **Live**. Only one SSO provider can be active at a time, so turning on Microsoft Entra ID turns off the other SSO providers.
 
 <Frame>
-  ![Entra SSO card with values filled, connection verified, and toggle on](/images/enterprise/entra-sso/08-filled-credentials.png)
+  ![Single sign-on card with Entra values filled, connection verified, and Enable Microsoft Entra ID on](/images/enterprise/entra-sso/08-filled-credentials.png)
 </Frame>
 
 ## Part 3: Sign in
@@ -183,11 +185,11 @@ The first time each person signs in, Context7 creates a user record with the dis
 Role assignments live entirely in Entra. To change someone's access in Context7:
 
 - **Promote a member to admin**: in Entra, go to Enterprise applications → Context7 → Users and groups, remove their Member role, add the Admin role, and ask them to sign out and back in.
-- **Revoke access**: remove the user from Users and groups in Entra. Existing Context7 sessions stay valid until they expire, after at most 7 days, or until the user signs out.
-- **Audit who signed in recently**: **Workspace Settings → Users** shows every Context7 user with their auth provider and last-login timestamp.
+- **Revoke access**: remove the user from Users and groups in Entra. Existing Context7 sessions stay valid until they expire, after at most 7 days, or until the user signs out. To block the user in Context7 too, open **Members** and choose **Disable sign-in** in the user's row menu. SSO members can be disabled, but not removed.
+- **Audit who signed in recently**: the **Members** page in Workspace Settings shows every Context7 user with their sign-in method and last sign-in time.
 
 <Frame>
-  ![Workspace Settings Users tab showing password and Entra users side by side](/images/enterprise/entra-sso/11-users-tab.png)
+  ![Members page showing password and Entra users side by side](/images/enterprise/entra-sso/11-users-tab.png)
 </Frame>
 
 ## Troubleshooting
@@ -200,7 +202,7 @@ The redirect URI Context7 sent doesn't match any redirect URI registered on the 
 - Port number: if you're running Context7 on a non-standard port, the Entra registration needs the same port.
 - Path: must be `/api/auth/entra/callback` with no trailing characters.
 
-If you're running behind a reverse proxy, make sure it forwards the `Host` header unchanged; otherwise Context7 will build a callback URL for the internal host, not the public one your users see.
+If you run behind a reverse proxy, make it send `X-Forwarded-Host` and `X-Forwarded-Proto` with your public host and scheme. Otherwise Context7 builds the callback URL from the internal host, not the public one your users see.
 
 ### "This Microsoft Entra account is not assigned a supported Context7 app role"
 
@@ -217,21 +219,22 @@ Have them retry in a clean browser window.
 
 ### The Entra button doesn't appear on `/login`
 
-The card's status indicator tells you why:
+The status badge in the card header tells you why:
 
 - **Not configured**: tenant ID, client ID, or client secret is missing. Fill them in and save.
-- **Configured · Toggle on to show the sign-in button**: credentials are saved but the feature is off. Flip the toggle at the top of the card.
+- **Off**: credentials are saved but the provider is off. Turn on **Enable Microsoft Entra ID** and click **Save and apply**.
 
 ### Client secret expired
 
-Entra rejects the test with `"Client secret has expired"` once the secret passes its expiry date. In Azure → Certificates & secrets, create a new secret and paste the new **Value** into the Context7 card. Then click **Test connection** to verify, and **Save**.
+Entra rejects the test with `"Client secret has expired"` once the secret passes its expiry date. In Azure → Certificates & secrets, create a new secret and paste the new **Value** into the Context7 card. Then click **Check configuration** to verify, and **Save and apply**.
 
 ## What this does *not* cover
 
 A few things that are out of scope for SSO itself but often come up when rolling it out:
 
-- **Personal MCP API keys**. Once a user signs in via Entra, they can create their own MCP API keys from **Personal Settings → API Keys**. Those are separate from SSO and covered in the main On-Premise guide.
-- **Group-based role mapping**. Context7 reads app roles, not group membership. If your team assigns access via Entra security groups, add the group to Users and groups with one of the two Context7 roles.
+- **Personal MCP API keys**. Once a user signs in via Entra, they can create their own MCP API keys from **Personal settings → API keys**. Those are separate from SSO and covered in the main On-Premise guide.
+- **Group-based role mapping**. Context7 reads app roles, not group membership, to decide the admin or member role. If your team assigns access via Entra security groups, add the group to Users and groups with one of the two Context7 roles.
+- **Group grants for library access**. [Library access](/enterprise/security/library-access) grants by group use the `groups` claim, which Entra does not send by default. In Azure → App registrations → Context7 → **Token configuration**, click **+ Add groups claim**, select **Security groups**, and include it in the **ID** token. The claim contains group object IDs, so grant access by object ID. If a user is in more than 200 groups, Entra leaves out the claim and that user gets no group grants.
 - **SCIM provisioning**. Users are created lazily on first sign-in. There's no background sync pulling the whole directory.
 
 For help with Entra-side policies, conditional access, or MFA, work with your Entra admin. Those are tenant-wide concerns and Context7 respects whatever Microsoft returns at the end of the sign-in.
