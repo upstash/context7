@@ -1,0 +1,68 @@
+---
+title: "Decision Models"
+sidebarTitle: "Decision Models"
+description: "Use a fast classifier instead of the language model for page classification, duplicate checks, and reranking"
+---
+
+A decision model is a small classifier that answers yes/no questions. It is faster and costs less than a language model for these questions. When you turn it on, it makes these decisions in place of the [language model](/enterprise/on-premise#ai-provider-settings):
+
+| Decision | When | What it decides |
+|---|---|---|
+| Page classification | Parsing | Which pages of a source to index, and what each page contains |
+| Duplicate checks | Parsing | Which extracted snippets repeat one another |
+| Reranking | Each MCP, API, and library search | The order of the results. Applies only when **Reranking** is on |
+
+The language model still extracts the documentation and writes the snippets. If the decision model fails or times out, the language model makes that decision.
+
+## Turn on a decision model
+
+The decision model is off by default. To turn it on:
+
+<Steps>
+  <Step title="Open the AI models settings">
+    In the web UI, go to **Workspace Settings › AI models**.
+  </Step>
+  <Step title="Turn on the decision model">
+    In the **Language model** card, turn on **Use a decision model**.
+  </Step>
+  <Step title="Choose a provider">
+    Select a provider, enter its API key, and optionally a model and an endpoint. Then click **Test decision model**.
+  </Step>
+  <Step title="Save">
+    Click **Save and apply**. Reranking uses the decision model right away. Parsing uses it from the next parse or refresh.
+  </Step>
+</Steps>
+
+## Settings
+
+| Setting | Description |
+|---|---|
+| Provider | The service that runs the decision model. See the table below |
+| Model | The decision model name. Leave it blank to use the provider's default |
+| API key | API key for the provider. Stored encrypted in the workspace database |
+| Endpoint | Overrides the provider's URL, for example to go through a proxy. Required for **Custom** |
+
+## Providers
+
+Decision models are served by several companies. Context7 supports these APIs:
+
+| Provider | API | Default model |
+|---|---|---|
+| OpenRouter | OpenRouter Decisions API. One key for decision models from many companies | `typesafe/jev-1.13-20260917` |
+| OpenAI | OpenAI Decisions API | `gpt-6-luna` |
+| Vercel AI Gateway | AI Gateway evaluate API | `typesafe-ai/jev-1.13.0` |
+| Custom | Any endpoint that implements the System One API, such as TypeSafe or a self-hosted model | `jev-1.13` |
+
+**Test decision model** sends one small duplicate check to the provider. It reports a wrong key, model, or endpoint before you save.
+
+## Choosing a model
+
+<Note>
+Page classification and duplicate checks use thresholds that are tuned on Jev 1.13, the default model for every provider except OpenAI. Another model can index a different set of pages. Test a new model on one library before you refresh all of them.
+</Note>
+
+## Data sent to the provider
+
+<Warning>
+When the decision model is on, Context7 sends page text, snippet text, and search queries to the decision model provider. Choose a provider that meets your data policy, or use **Custom** with a model that runs in your infrastructure.
+</Warning>
