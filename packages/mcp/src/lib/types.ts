@@ -78,11 +78,15 @@ export type CodeRequest = {
 export type InstructionsVariant = "control" | "treatment";
 
 export interface InstructionsArm {
+  /** The test this arm belongs to, so reruns and salt changes never share counters. */
+  experimentId: string;
   variant: InstructionsVariant;
-  /** Salted hash of the caller identity, so the app counts the same unit the server assigns. */
+  /** Salted hash of the caller identity: the unit the server randomizes and the app counts. */
   unit: string;
-  /** Configured share of callers in control, so the app can scale each arm by its share. */
+  /** Configured share of callers in control, for the app's split check. */
   controlPercent: number;
+  /** False for anonymous callers, whose unit is their IP (or IPv6 /64) and less stable. */
+  signedIn: boolean;
 }
 
 export interface ClientContext {

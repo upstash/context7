@@ -649,9 +649,12 @@ async function main() {
           instructionsArm: instructionsExperiment.assign({ apiKey, clientIp: req.ip }),
         };
         instructionsExperiment.observeRequest(
-          context.instructionsArm,
-          filteredBody.body,
-          context.clientInfo?.ide
+          {
+            arm: context.instructionsArm,
+            clientIp: req.ip,
+            fallbackClient: context.clientInfo?.ide,
+          },
+          filteredBody.body
         );
 
         const oauthClientRegistration = classifyOAuthClientRegistration(apiKey);

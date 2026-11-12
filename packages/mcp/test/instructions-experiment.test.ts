@@ -9,42 +9,71 @@ vi.mock("../src/lib/telemetry-runtime.js", async (importOriginal) => ({
 
 import { ALWAYS_LOAD_META } from "../src/lib/constants.js";
 import {
+  anonymousNetwork,
   createInstructionsExperiment,
-  DEFAULT_INSTRUCTIONS_EXPERIMENT_SALT,
   instructionsExperimentConfig,
   instructionsExperimentIdentity,
   LEGACY_SERVER_INSTRUCTIONS,
 } from "../src/lib/instructions-experiment.js";
 import { SERVER_INSTRUCTIONS } from "../src/lib/server-instructions.js";
+import type { InstructionsArm } from "../src/lib/types.js";
 
-const experiment = (controlPercent: number, salt = "test-salt") =>
-  createInstructionsExperiment({
-    CONTEXT7_INSTRUCTIONS_CONTROL_PERCENT: String(controlPercent),
-    CONTEXT7_INSTRUCTIONS_EXPERIMENT_SALT: salt,
-  });
+const env = (controlPercent: string, overrides: Record<string, string | undefined> = {}) => ({
+  CONTEXT7_INSTRUCTIONS_CONTROL_PERCENT: controlPercent,
+  CONTEXT7_INSTRUCTIONS_EXPERIMENT_ID: "instructions-v1",
+  CONTEXT7_INSTRUCTIONS_EXPERIMENT_SALT: "a-secret-salt-of-16+",
+  ...overrides,
+});
+const report = vi.fn();
+const experiment = (controlPercent: number, salt = "a-secret-salt-of-16+") =>
+  createInstructionsExperiment(
+    env(String(controlPercent), { CONTEXT7_INSTRUCTIONS_EXPERIMENT_SALT: salt }),
+    {
+      canSealAssertions: () => true,
+      report,
+    }
+  );
 
 beforeEach(() => {
   recordInstructionRequest.mockClear();
+  report.mockClear();
 });
 
 describe("instructionsExperimentConfig", () => {
-  test("is off by default and for invalid values", () => {
-    for (const value of [undefined, "", "abc", "-5", "101", "12.5", "1000"]) {
+  const sealable = () => true;
+
+  test("is off when the percent is unset, empty or 0", () => {
+    for (const value of [undefined, "", " ", "0"]) {
       expect(
-        instructionsExperimentConfig({ CONTEXT7_INSTRUCTIONS_CONTROL_PERCENT: value })
-          .controlPercent
-      ).toBe(0);
+        instructionsExperimentConfig({ CONTEXT7_INSTRUCTIONS_CONTROL_PERCENT: value }, sealable)
+      ).toBeUndefined();
     }
   });
 
-  test("reads the control share and the salt", () => {
-    expect(
-      instructionsExperimentConfig({
-        CONTEXT7_INSTRUCTIONS_CONTROL_PERCENT: " 50 ",
-        CONTEXT7_INSTRUCTIONS_EXPERIMENT_SALT: "round-2",
-      })
-    ).toEqual({ controlPercent: 50, salt: "round-2" });
-    expect(instructionsExperimentConfig({}).salt).toBe(DEFAULT_INSTRUCTIONS_EXPERIMENT_SALT);
+  test("reads the share, the experiment ID and the salt", () => {
+    expect(instructionsExperimentConfig(env(" 50 "), sealable)).toEqual({
+      controlPercent: 50,
+      experimentId: "instructions-v1",
+      salt: "a-secret-salt-of-16+",
+    });
+  });
+
+  test("fails the deploy on an invalid setting instead of rolling out to everyone", () => {
+    for (const value of ["abc", "-5", "101", "12.5", "50%"]) {
+      expect(() => instructionsExperimentConfig(env(value), sealable)).toThrow(/integer 0-100/);
+    }
+    expect(() =>
+      instructionsExperimentConfig(env("50", { CONTEXT7_INSTRUCTIONS_EXPERIMENT_ID: "" }), sealable)
+    ).toThrow(/EXPERIMENT_ID/);
+    expect(() =>
+      instructionsExperimentConfig(
+        env("50", { CONTEXT7_INSTRUCTIONS_EXPERIMENT_SALT: "short" }),
+        sealable
+      )
+    ).toThrow(/SALT/);
+    expect(() => instructionsExperimentConfig(env("50"), () => false)).toThrow(
+      /MCP_CLIENT_IP_ASSERTION_KEY/
+    );
   });
 });
 
@@ -69,7 +98,7 @@ describe("instructionsExperimentIdentity", () => {
     ).toBe("user:user_abc");
   });
 
-  test("hashes other tokens and falls back to the client IP", () => {
+  test("hashes other tokens and falls back to the client network", () => {
     expect(instructionsExperimentIdentity({ apiKey: "oat_opaque" })).toMatch(
       /^token:[0-9a-f]{64}$/
     );
@@ -79,23 +108,46 @@ describe("instructionsExperimentIdentity", () => {
   });
 });
 
+describe("anonymousNetwork", () => {
+  test("keeps IPv4 and groups IPv6 by /64", () => {
+    expect(anonymousNetwork("203.0.113.7")).toBe("203.0.113.7");
+    expect(anonymousNetwork("::ffff:203.0.113.7")).toBe("203.0.113.7");
+    expect(anonymousNetwork("2001:db8:85a3:12::8a2e:370:7334")).toBe("2001:db8:85a3:12::/64");
+    expect(anonymousNetwork("2001:0DB8:85A3:0012:aaaa:bbbb:cccc:dddd")).toBe(
+      "2001:db8:85a3:12::/64"
+    );
+    expect(anonymousNetwork("2001:db8::1")).toBe("2001:db8:0:0::/64");
+  });
+});
+
 describe("assign", () => {
   test("assigns nothing while the test is off or without an identity", () => {
-    expect(experiment(0).assign({ apiKey: "ctx7sk-a" })).toBeUndefined();
     expect(createInstructionsExperiment({}).assign({ apiKey: "ctx7sk-a" })).toBeUndefined();
     expect(experiment(50).assign({})).toBeUndefined();
   });
 
-  test("keeps a caller in one arm and unit, with the configured percent", () => {
+  test("keeps a caller in one arm and unit, with the test's ID and share", () => {
     const half = experiment(50);
     const first = half.assign({ apiKey: "ctx7sk-stable" })!;
+    expect(first).toMatchObject({
+      experimentId: "instructions-v1",
+      controlPercent: 50,
+      signedIn: true,
+    });
     expect(first.unit).toMatch(/^[0-9a-f]{32}$/);
-    expect(first.controlPercent).toBe(50);
     for (let i = 0; i < 20; i++) expect(half.assign({ apiKey: "ctx7sk-stable" })).toEqual(first);
     // Another salt is another split.
-    expect(experiment(50, "other-salt").assign({ apiKey: "ctx7sk-stable" })!.unit).not.toBe(
-      first.unit
-    );
+    expect(
+      experiment(50, "another-secret-salt").assign({ apiKey: "ctx7sk-stable" })!.unit
+    ).not.toBe(first.unit);
+  });
+
+  test("marks anonymous callers, and keeps one IPv6 /64 in one unit", () => {
+    const half = experiment(50);
+    const a = half.assign({ clientIp: "2001:db8:1:2::aaaa" })!;
+    const b = half.assign({ clientIp: "2001:db8:1:2::bbbb" })!;
+    expect(a.signedIn).toBe(false);
+    expect(b.unit).toBe(a.unit);
   });
 
   test("uses the API key before the client IP", () => {
@@ -110,7 +162,7 @@ describe("assign", () => {
 
   test("splits callers close to the control share", () => {
     for (const controlPercent of [10, 50, 90]) {
-      const split = experiment(controlPercent, "split-check");
+      const split = experiment(controlPercent, "split-check-salt-123");
       const total = 20_000;
       let control = 0;
       for (let i = 0; i < total; i++) {
@@ -129,7 +181,13 @@ describe("assign", () => {
 });
 
 describe("sessionConfig", () => {
-  const arm = (variant: "control" | "treatment") => ({ variant, unit: "u", controlPercent: 50 });
+  const arm = (variant: "control" | "treatment"): InstructionsArm => ({
+    experimentId: "instructions-v1",
+    variant,
+    unit: "u",
+    controlPercent: 50,
+    signedIn: true,
+  });
 
   test("control gets the previous text, no tool meta, and private lists", () => {
     expect(experiment(50).sessionConfig(arm("control"))).toEqual({
@@ -145,7 +203,7 @@ describe("sessionConfig", () => {
       toolMeta: ALWAYS_LOAD_META,
       privateLists: true,
     });
-    expect(experiment(0).sessionConfig(undefined)).toEqual({
+    expect(createInstructionsExperiment({}).sessionConfig(undefined)).toEqual({
       instructions: SERVER_INSTRUCTIONS,
       toolMeta: ALWAYS_LOAD_META,
       privateLists: false,
@@ -159,30 +217,48 @@ describe("sessionConfig", () => {
 });
 
 describe("observeRequest", () => {
-  const arm = { variant: "treatment" as const, unit: "u", controlPercent: 50 };
+  const arm: InstructionsArm = {
+    experimentId: "instructions-v1",
+    variant: "treatment",
+    unit: "u",
+    controlPercent: 50,
+    signedIn: true,
+  };
 
-  test("counts initialize and server/discover with the client name", () => {
+  test("counts and reports initialize and server/discover with the client name", () => {
     const half = experiment(50);
-    half.observeRequest(arm, { method: "initialize", params: { clientInfo: { name: "cursor" } } });
-    half.observeRequest(arm, [
+    half.observeRequest(
+      { arm, clientIp: "203.0.113.1" },
+      { method: "initialize", params: { clientInfo: { name: "cursor" } } }
+    );
+    half.observeRequest({ arm }, [
       { method: "notifications/initialized" },
       {
         method: "server/discover",
         params: { _meta: { "io.modelcontextprotocol/clientInfo": { name: "claude-code" } } },
       },
     ]);
-    half.observeRequest(arm, { method: "initialize", params: {} }, "from-user-agent");
+    half.observeRequest(
+      { arm, fallbackClient: "from-user-agent" },
+      { method: "initialize", params: {} }
+    );
     expect(recordInstructionRequest.mock.calls).toEqual([
       ["treatment", "cursor"],
       ["treatment", "claude-code"],
       ["treatment", "from-user-agent"],
     ]);
+    expect(report.mock.calls.map(([exposure]) => exposure)).toEqual([
+      { arm, clientName: "cursor", clientIp: "203.0.113.1" },
+      { arm, clientName: "claude-code", clientIp: undefined },
+      { arm, clientName: "from-user-agent", clientIp: undefined },
+    ]);
   });
 
   test("ignores other requests and callers without an arm", () => {
     const half = experiment(50);
-    half.observeRequest(arm, { method: "tools/call", params: { name: "query-docs" } });
-    half.observeRequest(undefined, { method: "initialize", params: {} });
+    half.observeRequest({ arm }, { method: "tools/call", params: { name: "query-docs" } });
+    half.observeRequest({ arm: undefined }, { method: "initialize", params: {} });
     expect(recordInstructionRequest).not.toHaveBeenCalled();
+    expect(report).not.toHaveBeenCalled();
   });
 });

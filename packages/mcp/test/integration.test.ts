@@ -740,12 +740,15 @@ describe("research preview", () => {
     let abChild: ChildProcess;
     let abUrl: string;
     let abMetricsUrl: string;
-    const salt = "integration-salt";
-    // The first test keys that the server puts in each arm at a 50% control share.
-    // The same experiment as the server, so the test knows each key's arm.
-    const experiment = createInstructionsExperiment({
+    const experimentEnv = {
       CONTEXT7_INSTRUCTIONS_CONTROL_PERCENT: "50",
-      CONTEXT7_INSTRUCTIONS_EXPERIMENT_SALT: salt,
+      CONTEXT7_INSTRUCTIONS_EXPERIMENT_ID: "it-test",
+      CONTEXT7_INSTRUCTIONS_EXPERIMENT_SALT: "integration-salt",
+    };
+    // The same experiment as the server, so the test knows each key's arm.
+    const experiment = createInstructionsExperiment(experimentEnv, {
+      canSealAssertions: () => true,
+      report: () => {},
     });
     const keyFor = (arm: InstructionsVariant) => {
       for (let i = 0; ; i++) {
@@ -754,7 +757,7 @@ describe("research preview", () => {
       }
     };
     const instructionsFor = (arm: InstructionsVariant) =>
-      experiment.sessionConfig({ variant: arm, unit: "", controlPercent: 50 }).instructions;
+      experiment.sessionConfig(experiment.assign({ apiKey: keyFor(arm) })).instructions;
     const keyTransport = (apiKey: string) =>
       new StreamableHTTPClientTransport(new URL(abUrl), {
         requestInit: { headers: { Authorization: `Bearer ${apiKey}` } },
@@ -768,8 +771,7 @@ describe("research preview", () => {
         environment: {
           ...childEnv,
           OTEL_EXPORTER_PROMETHEUS_PORT: String(metricsPort),
-          CONTEXT7_INSTRUCTIONS_CONTROL_PERCENT: "50",
-          CONTEXT7_INSTRUCTIONS_EXPERIMENT_SALT: salt,
+          ...experimentEnv,
         },
       }));
     }, 60_000);
@@ -800,16 +802,40 @@ describe("research preview", () => {
           });
           const apiCall = requests.find((request) => request.path === "/v2/libs/search");
           expect(apiCall?.headers.authorization).toBe(`Bearer ${apiKey}`);
-          expect(apiCall?.headers["x-context7-instructions-variant"]).toBe(arm);
-          expect(apiCall?.headers["x-context7-instructions-unit"]).toBe(
-            experiment.assign({ apiKey })!.unit
+          // The arm reaches the app sealed, so a caller cannot set it.
+          const sealed = apiCall?.headers["x-context7-instructions-assertion"] as string;
+          expect(sealed).toMatch(/^a1:/);
+          expect(JSON.parse(decryptClientIpAssertion(sealed))).toEqual(
+            experiment.assign({ apiKey })
           );
-          expect(apiCall?.headers["x-context7-instructions-control-percent"]).toBe("50");
         } finally {
           await client.close();
         }
       }
     );
+
+    test("reports each exposure to the app without the caller's credentials", async () => {
+      requests.length = 0;
+      for (const arm of ["control", "treatment"] as const) {
+        const client = new Client({ name: "ab-test-client", version: "1.0.0" });
+        await client.connect(keyTransport(keyFor(arm)));
+        await client.close();
+      }
+      // The report is fire-and-forget, so give it a moment.
+      const deadline = Date.now() + 5_000;
+      const exposures = () => requests.filter((r) => r.path === "/v2/mcp/instructions-exposure");
+      while (exposures().length < 2 && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      const reported = exposures().map((r) => {
+        expect(r.headers.authorization).toBeUndefined();
+        expect(r.headers["x-context7-client-ide"]).toBe("ab-test-client");
+        return JSON.parse(
+          decryptClientIpAssertion(r.headers["x-context7-instructions-assertion"] as string)
+        ).variant;
+      });
+      expect(reported.sort()).toEqual(["control", "treatment"]);
+    });
 
     test("marks tools/list private while the test runs", async () => {
       expect(await toolsListCacheScope(keyTransport(keyFor("treatment")))).toBe("private");
