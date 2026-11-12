@@ -1,6 +1,6 @@
 # ctx7
 
-CLI for [Context7](https://context7.com) - query up-to-date library documentation and configure Context7 for AI coding agents.
+CLI for [Context7](https://context7.com) - query up-to-date library documentation, submit a documentation source to the index, and configure Context7 for AI coding agents.
 
 ## Installation
 
@@ -118,6 +118,18 @@ ctx7 code /tanstack/query --op list --path packages/query-core/src
 ```
 
 `--op` is `grep` (default), `definition`, `references`, `outline`, `read` or `list`. The search flags are `-F`, `-i`, `-g` (repeat it for more globs), `-C`, `-l`, `-c`, `--head-limit` and `--offset`. Add a git tag to the library ID (`/colinhacks/zod/v3.24.2`) or pass `--tag` for a version. The first query for a library version can answer that the source is still being indexed. Run the command again after the time it gives.
+
+### Submit a documentation source
+
+Send a URL to the Context7 index. This does not install anything on your machine. `ctx7 setup` is the command that writes local agent configuration.
+
+```bash
+ctx7 submit https://github.com/owner/repo
+ctx7 submit https://dlang.org/spec/spec.html --website-base-url https://dlang.org/spec/
+ctx7 submit https://docs.example.com/llms.txt --json
+```
+
+Requires `ctx7 login` or `CONTEXT7_API_KEY`.
 
 ### Setup
 

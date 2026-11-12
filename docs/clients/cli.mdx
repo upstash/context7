@@ -3,9 +3,10 @@ title: CLI
 description: The ctx7 CLI — fetch library documentation and configure Context7 MCP from your terminal
 ---
 
-The `ctx7` CLI is the command-line interface for Context7. It does two things:
+The `ctx7` CLI is the command-line interface for Context7. It does three things:
 
 - **Fetch library documentation** — search all libraries with one question, or resolve any library by name and query its up-to-date docs directly in your terminal, without opening a browser
+- **Submit a documentation source** — send a Git repository, documentation site, OpenAPI spec, or `llms.txt` file to the Context7 index with `ctx7 submit`. This writes to Context7. It does not install anything on your machine
 - **Configure your AI coding agent** — set up the Context7 MCP server (or a CLI-based `find-docs` skill) for Claude Code, Cursor, OpenCode, and more with a single command
 
 The CLI is useful both as a standalone tool (fetching docs while you code) and as a setup utility (wiring up Context7 for your AI coding agent).
@@ -132,6 +133,34 @@ ctx7 docs /reactjs/react.dev "How to use hooks for state management" --json
 ctx7 docs /reactjs/react.dev "How to use hooks for state management" | head -50
 ctx7 docs /vercel/next.js "How to add a proxy for route protection" | grep -A 10 "proxy"
 ```
+
+---
+
+## Submit a documentation source
+
+`ctx7 submit` sends a URL to the Context7 index. It requires `ctx7 login` or `CONTEXT7_API_KEY`. It does not install a package, skill, or MCP server on this machine. Use `ctx7 setup` for that.
+
+```bash
+# Public GitHub repository
+ctx7 submit https://github.com/owner/repo
+
+# Documentation website, limited to the HTML root you want indexed
+ctx7 submit https://dlang.org/spec/spec.html --website-base-url https://dlang.org/spec/
+
+# OpenAPI spec or llms.txt (also detected from the URL)
+ctx7 submit https://api.example.com/openapi.json --type openapi
+ctx7 submit https://docs.example.com/llms.txt
+
+# Private repository
+ctx7 submit https://github.com/owner/private-repo --private --git-token "$GIT_TOKEN"
+
+# Stable output for scripts and agents
+ctx7 submit https://github.com/owner/repo --json
+```
+
+`--type` is `github`, `gitlab`, `bitbucket`, `git`, `website`, `openapi`, or `llmstxt`. Leave it out and the CLI detects the kind from the URL. A site whose path is not a Git host is a website, including a docs URL with several path segments.
+
+A source that is already indexed returns success and says so, so running the command again is safe. Exit codes: `0` submitted or already indexed, `1` invalid input or another error, `2` authentication required, `4` rate limited.
 
 ---
 
@@ -298,6 +327,7 @@ export CONTEXT7_API_KEY=your_key
 | Feature                                                  | Required                                                                     |
 | -------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | `ctx7 search` / `ctx7 library` / `ctx7 docs`             | No — login gives higher rate limits                                          |
+| `ctx7 submit`                                            | Yes — `ctx7 login` or `CONTEXT7_API_KEY`                                     |
 | Hosted `ctx7 setup`                                      | Yes — unless `--api-key` is passed (`--oauth` also skips login for MCP mode) |
 | On-premise `ctx7 setup --mcp --base-url ...`             | Only when MCP authentication is enabled on the deployment                    |
 

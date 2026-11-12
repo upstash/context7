@@ -259,3 +259,60 @@ export async function searchDocumentation(
 
   return options.type === "txt" ? response.text() : response.json();
 }
+
+export interface SubmitLibraryResult {
+  libraryName?: string;
+  version?: string;
+  message?: string;
+  error?: string;
+  status?: number;
+}
+
+/** Sends a documentation source to the Context7 index. Requires an API key or login. */
+export async function submitLibrary(
+  target: { endpointPath: string; body: Record<string, unknown> },
+  accessToken?: string
+): Promise<SubmitLibraryResult> {
+  const headers = {
+    ...getAuthHeaders(accessToken),
+    "Content-Type": "application/json",
+  };
+
+  if (!headers.Authorization) {
+    return {
+      error: "unauthorized",
+      message: "Authentication required. Set CONTEXT7_API_KEY or run `ctx7 login`.",
+      status: 401,
+    };
+  }
+
+  const response = await fetch(`${baseUrl}${target.endpointPath}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(target.body),
+  });
+
+  const payload = (await response.json().catch(() => ({}))) as {
+    libraryName?: string;
+    version?: string;
+    message?: string;
+    error?: string;
+  };
+
+  if (!response.ok) {
+    return {
+      libraryName: payload.libraryName,
+      version: payload.version,
+      error: payload.error || `HTTP error ${response.status}`,
+      message: payload.message || payload.error || `HTTP error ${response.status}`,
+      status: response.status,
+    };
+  }
+
+  return {
+    libraryName: payload.libraryName,
+    version: payload.version,
+    message: payload.message || "Documentation source submitted",
+    status: response.status,
+  };
+}
