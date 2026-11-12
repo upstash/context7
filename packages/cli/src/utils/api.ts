@@ -36,10 +36,10 @@ function getAuthHeaders(accessToken?: string): Record<string, string> {
 export const REQUEST_TIMEOUT_MS = 60_000;
 export const CODE_REQUEST_TIMEOUT_MS = 70_000;
 
-/** fetch with a timeout, so a stalled connection ends with a clear error instead of hanging. */
 /** Statuses whose Response cannot carry a body. */
 const NO_BODY_STATUS = new Set([101, 103, 204, 205, 304]);
 
+/** fetch with a timeout, so a stalled connection ends with a clear error instead of hanging. */
 export async function fetchWithTimeout(
   url: string,
   init: RequestInit,
