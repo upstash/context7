@@ -4,6 +4,13 @@ sidebarTitle: "Okta"
 description: "Centrally authorize the Context7 MCP server for your organization through Okta Cross-App Access, so developers connect on first login with no per-user OAuth."
 ---
 
+<Note>
+This page covers Okta authorization for the cloud MCP server. For Okta sign-in instead:
+
+- **Context7 On-Premise**: follow [OIDC SSO](/enterprise/security/oidc-sso) or [SAML SSO](/enterprise/security/saml-sso).
+- **Context7 Cloud dashboard**: see [Enterprise SSO](/security/auth-and-access-control#enterprise-sso) or contact [context7@upstash.com](mailto:context7@upstash.com).
+</Note>
+
 Enterprise-Managed Auth (EMA) lets your Okta administrators decide who can use the Context7 MCP server, in the same console where you manage every other app. Developers sign in once with their corporate Okta account and their MCP client is connected automatically. There is no per-user OAuth consent and no API keys to distribute.
 
 It implements the MCP [Enterprise-Managed Authorization](https://modelcontextprotocol.io/extensions/auth/enterprise-managed-authorization) extension: Okta issues a short-lived Identity Assertion (ID-JAG) for the user, Context7 validates it against your Okta tenant, and resolves the user to your teamspace by email.
@@ -14,10 +21,6 @@ Enterprise-Managed Auth currently works with **Claude Code** as the MCP client.
 
 <Note>
 Okta Cross-App Access (the productized ID-JAG flow) is an Early Access feature. Enable it from **Admin Console → Settings → Features** before you start. EMA also requires a Context7 enterprise teamspace.
-</Note>
-
-<Note>
-This page covers the cloud MCP server. To let your team sign in to **Context7 On-Premise** with Okta, follow [OIDC SSO](/enterprise/security/oidc-sso) or [SAML SSO](/enterprise/security/saml-sso) instead.
 </Note>
 
 ## How it works
