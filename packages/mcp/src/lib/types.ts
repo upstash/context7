@@ -85,7 +85,10 @@ export interface InstructionsArm {
   unit: string;
   /** Configured share of callers in control, for the app's split check. */
   controlPercent: number;
-  /** False for anonymous callers, whose unit is their IP (or IPv6 /64) and less stable. */
+  /**
+   * True for a stable identity (API key or user ID). False for an IP network or an opaque
+   * token, whose arm can change between requests.
+   */
   signedIn: boolean;
 }
 

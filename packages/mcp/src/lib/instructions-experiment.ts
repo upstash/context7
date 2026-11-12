@@ -160,7 +160,12 @@ export const reportExposure: ExposureReporter = ({ arm, clientName, clientIp }) 
   };
   const ipAssertion = clientIp && createClientIpAssertion(clientIp);
   if (ipAssertion) headers["mcp-client-ip-assertion"] = ipAssertion;
-  if (clientName) headers["X-Context7-Client-IDE"] = clientName;
+  // The name comes from the caller: a header must be printable ASCII, or fetch rejects it.
+  const client = clientName
+    ?.replace(/[^\x20-\x7e]/g, "")
+    .trim()
+    .slice(0, 100);
+  if (client) headers["X-Context7-Client-IDE"] = client;
   void fetch(`${CONTEXT7_API_BASE_URL}/v2/mcp/instructions-exposure`, {
     method: "POST",
     headers,
@@ -253,7 +258,10 @@ export function createInstructionsExperiment(
         // Other bytes of the same salted digest: stable per caller, not reversible.
         unit: digest.toString("hex", 4, 20),
         controlPercent: config.controlPercent,
-        signedIn: !key.startsWith("ip:"),
+        // Only an API key or a user ID keeps a caller in one arm for good. An IP network or an
+        // opaque token can change between initialize and later calls, so the app reports
+        // those callers apart and does not use them for the main result.
+        signedIn: key.startsWith("key:") || key.startsWith("user:"),
       };
     },
     sessionConfig(arm) {

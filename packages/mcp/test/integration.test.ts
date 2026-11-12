@@ -862,6 +862,32 @@ describe("research preview", () => {
       expect(definition.arms.treatment.alwaysLoad).toBe(true);
     });
 
+    test("does not report an exposure for a request the SDK refused", async () => {
+      requests.length = 0;
+      const response = await fetch(abUrl, {
+        method: "POST",
+        // The SDK answers 406 without text/event-stream in Accept.
+        headers: {
+          "content-type": "application/json",
+          accept: "text/plain",
+          authorization: `Bearer ${keyFor("treatment")}`,
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: {
+            protocolVersion: "2025-06-18",
+            capabilities: {},
+            clientInfo: { name: "ab-test-client", version: "1.0.0" },
+          },
+        }),
+      });
+      expect(response.status).toBeGreaterThanOrEqual(400);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      expect(requests.filter((r) => r.path === "/v2/mcp/instructions-exposure")).toHaveLength(0);
+    });
+
     test("marks tools/list private while the test runs", async () => {
       expect(await toolsListCacheScope(keyTransport(keyFor("treatment")))).toBe("private");
       expect(await toolsListCacheScope(keyTransport(keyFor("control")))).toBe("private");

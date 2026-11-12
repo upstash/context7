@@ -648,14 +648,18 @@ async function main() {
           transport: "http",
           instructionsArm: instructionsExperiment.assign({ apiKey, clientIp: req.ip }),
         };
-        instructionsExperiment.observeRequest(
-          {
-            arm: context.instructionsArm,
-            clientIp: req.ip,
-            fallbackClient: context.clientInfo?.ide,
-          },
-          filteredBody.body
-        );
+        // Count an exposure only when the SDK answered the request, not for a 406 or 500.
+        res.once("finish", () => {
+          if (res.statusCode < 200 || res.statusCode >= 300) return;
+          instructionsExperiment.observeRequest(
+            {
+              arm: context.instructionsArm,
+              clientIp: req.ip,
+              fallbackClient: context.clientInfo?.ide,
+            },
+            filteredBody.body
+          );
+        });
 
         const oauthClientRegistration = classifyOAuthClientRegistration(apiKey);
         observeCredentialedInitialize(res, req.body, {

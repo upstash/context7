@@ -11,6 +11,7 @@ import { ALWAYS_LOAD_META } from "../src/lib/constants.js";
 import {
   anonymousNetwork,
   createInstructionsExperiment,
+  reportExposure,
   instructionsExperimentConfig,
   instructionsExperimentIdentity,
   LEGACY_SERVER_INSTRUCTIONS,
@@ -149,12 +150,15 @@ describe("assign", () => {
     ).not.toBe(first.unit);
   });
 
-  test("marks anonymous callers, and keeps one IPv6 /64 in one unit", () => {
+  test("marks IP and opaque-token callers as not signed in, and keeps one IPv6 /64 in one unit", () => {
     const half = experiment(50);
     const a = half.assign({ clientIp: "2001:db8:1:2::aaaa" })!;
     const b = half.assign({ clientIp: "2001:db8:1:2::bbbb" })!;
     expect(a.signedIn).toBe(false);
     expect(b.unit).toBe(a.unit);
+    // An opaque OAuth token changes when it refreshes, so its arm is not stable either.
+    expect(half.assign({ apiKey: "oat_opaque" })!.signedIn).toBe(false);
+    expect(half.assign({ apiKey: "ctx7sk-a" })!.signedIn).toBe(true);
   });
 
   test("uses the API key before the client IP", () => {
@@ -312,5 +316,33 @@ describe("definition report", () => {
     clock = 61_000;
     half.observeRequest({ arm }, initialize);
     expect(reportDefinition).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("reportExposure", () => {
+  test("sends a caller's client name as a printable ASCII header", () => {
+    const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+    process.env.MCP_CLIENT_IP_ASSERTION_KEY = "ab".repeat(32);
+    try {
+      reportExposure({
+        arm: {
+          experimentId: "instructions-v1",
+          variant: "treatment",
+          unit: "u",
+          controlPercent: 50,
+          signedIn: true,
+        },
+        clientName: "Clöde\nCode\u0000 IDE",
+        clientIp: undefined,
+      });
+      const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+      expect((init.headers as Record<string, string>)["X-Context7-Client-IDE"]).toBe(
+        "CldeCode IDE"
+      );
+    } finally {
+      vi.unstubAllGlobals();
+      delete process.env.MCP_CLIENT_IP_ASSERTION_KEY;
+    }
   });
 });
