@@ -235,6 +235,14 @@ export async function submitDocsFeedback(
   }
 }
 
+/**
+ * True when the server's 202 message already says how long to keep calling.
+ * Newer servers include that rule, so the client adds it only for older ones.
+ */
+export function hasRetryAdvice(message: string): boolean {
+  return /keep calling|up to \d+ minutes/i.test(message);
+}
+
 /** Seconds to wait from a 202 body or a Retry-After header (seconds or an HTTP date). */
 export function retryAfterSeconds(bodyValue: unknown, header: string | null): number {
   if (typeof bodyValue === "number" && Number.isFinite(bodyValue) && bodyValue >= 0)
@@ -332,7 +340,9 @@ export async function fetchLibraryCode(
           const wait = retryAfterSeconds(body.retryAfter, response.headers.get("Retry-After"));
           const message = body.message ?? "The library source is being indexed.";
           return {
-            data: `${message} This is not an error. Call query-code again with the same arguments in about ${wait} seconds, at most twice. Meanwhile, or if it is still indexing, answer from query-docs.`,
+            data: hasRetryAdvice(message)
+              ? `${message} This is not an error.`
+              : `${message} This is not an error. Call query-code again with the same arguments in about ${wait} seconds, and keep calling for up to 3 minutes: a first index usually takes 1 to 3. Meanwhile, or if it is still indexing after that, answer from query-docs.`,
             // No "indexing" outcome exists: telemetry counts it with the empty results.
             outcome: "not_found",
           };

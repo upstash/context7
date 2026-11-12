@@ -24,7 +24,7 @@ If the \`query-code\` tool is available, use it when the docs do not answer an e
 - Start with \`grep\` (set \`fixed_strings\` for error messages) or \`definition\` for a symbol, then \`read\` the file range in the result's "Next:" line
 - For a version, pass its git tag in \`version\` (e.g. \`v3.24.2\`)
 - Most questions need 1 to 4 \`query-code\` calls; stop at 6
-- If it answers "being indexed", retry at most twice, then answer from \`query-docs\`
+- If it answers "being indexed", call again every 30 seconds for up to 3 minutes (a first index usually takes 1 to 3), then answer from \`query-docs\`. These calls do not count toward the 6
 - Cite the file and line of the source you used
 `;
 
@@ -48,7 +48,7 @@ When the docs do not answer an exact question (a signature or type, a default va
 - Use an ID that \`library\` marks with "Source code", usually the GitHub repository. \`/websites/...\` and \`/llmstxt/...\` IDs have no source
 - For a version, add the git tag to the library ID (e.g. \`/colinhacks/zod/v3.24.2\`). A tag that is not a docs version is indexed first (exit code 75). If indexing fails, the output lists the docs versions you can use
 - Follow the \`Next:\` line of the output. Its fields map to flags: \`offset\` is \`--offset\`, \`output_mode "count"\` is \`-c\`, \`fixed_strings\` is \`-F\`, \`ignore_case\` is \`-i\`, \`read: <file>#L..\` is \`--op read --path <file>#L..\`, and the other fields use the flag of the same name (\`head_limit\` is \`--head-limit\`, \`version\` is \`--tag\`)
-- Exit code 75 means the source is being indexed: retry at most twice, then answer from \`docs\`
+- Exit code 75 means the source is being indexed: run the same command again every 30 seconds for up to 3 minutes (a first index usually takes 1 to 3), then answer from \`docs\`. These runs do not count toward the 6 \`code\` commands
 - Cite the file and line of the source you used
 
 ## Upgrades

@@ -1943,6 +1943,44 @@ describe("query-code tool", () => {
       expect(aliasSent?.query.get("head_limit")).toBe("500");
       expect(aliasSent?.query.get("context")).toBe("10");
       expect(aliasSent?.query.get("offset")).toBe("20");
+
+      // A one-word query is a pattern; several words are not grepped but corrected.
+      const wordCall = requests.length;
+      await client.callTool({
+        name: "query-code",
+        arguments: { libraryId: "/vercel/next.js", query: "useRouter" },
+      });
+      const wordSent = requests.slice(wordCall).find((request) => request.path === "/v2/code");
+      expect(wordSent?.query.get("pattern")).toBe("useRouter");
+
+      const wordsCall = requests.length;
+      const words = await client.callTool({
+        name: "query-code",
+        arguments: { libraryId: "/vercel/next.js", query: "how does the router cache work" },
+      });
+      expect(words.isError).toBe(true);
+      expect((words.content as { text: string }[])[0].text).toContain('Pass "pattern"');
+      expect(requests.slice(wordsCall).some((request) => request.path === "/v2/code")).toBe(false);
+
+      // Spaces around one word are trimmed.
+      const paddedCall = requests.length;
+      await client.callTool({
+        name: "query-code",
+        arguments: { libraryId: "/vercel/next.js", query: "  useRouter  " },
+      });
+      const paddedSent = requests.slice(paddedCall).find((request) => request.path === "/v2/code");
+      expect(paddedSent?.query.get("pattern")).toBe("useRouter");
+
+      // list takes no pattern, so a multi-word query is dropped, not refused.
+      const listCall = requests.length;
+      const listed = await client.callTool({
+        name: "query-code",
+        arguments: { libraryId: "/vercel/next.js", operation: "list", query: "router files" },
+      });
+      expect(listed.isError).not.toBe(true);
+      const listSent = requests.slice(listCall).find((request) => request.path === "/v2/code");
+      expect(listSent?.query.get("operation")).toBe("list");
+      expect(listSent?.query.get("pattern")).toBeNull();
     } finally {
       await client.close();
     }

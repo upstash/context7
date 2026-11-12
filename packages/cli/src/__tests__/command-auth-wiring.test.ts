@@ -172,19 +172,44 @@ describe("ctx7 code", () => {
     expect(process.exitCode).toBe(75);
   });
 
-  test("keeps the indexing error name in JSON while the source is being indexed", async () => {
-    mockGetLibraryCode.mockResolvedValue({
-      kind: "pending",
-      message: "Indexing.",
-      retryAfter: 30,
-    });
+  test("writes the indexing notice and errors to stderr when stdout is piped", async () => {
+    mockGetLibraryCode
+      .mockResolvedValueOnce({ kind: "pending", message: "Indexing.", retryAfter: 30 })
+      .mockResolvedValueOnce({ kind: "error", error: "no_source", message: "No source." });
 
-    await run(registerDocsCommands, "code", "/a/b", "x", "--json");
+    await run(registerDocsCommands, "code", "/a/b", "x");
+    await run(registerDocsCommands, "code", "/a/b", "x");
 
-    expect(console.log).toHaveBeenCalledWith(
-      JSON.stringify({ error: "indexing", message: "Indexing.", retryAfter: 30 })
-    );
-    expect(process.exitCode).toBe(75);
+    const stderr = vi.mocked(console.error).mock.calls.flat().join("\n");
+    expect(stderr).toContain("Indexing.");
+    expect(stderr).toContain("Run the same command again");
+    expect(stderr).toContain("No source.");
+    expect(console.log).not.toHaveBeenCalled();
+  });
+
+  test("keeps the indexing notice on stdout in a terminal and JSON on stdout when piped", async () => {
+    const wasTTY = process.stdout.isTTY;
+    try {
+      process.stdout.isTTY = true;
+      mockGetLibraryCode.mockResolvedValue({
+        kind: "pending",
+        message: "Indexing.",
+        retryAfter: 30,
+      });
+      await run(registerDocsCommands, "code", "/a/b", "x");
+      expect(vi.mocked(console.log).mock.calls.flat().join("\n")).toContain("Indexing.");
+      expect(console.error).not.toHaveBeenCalled();
+
+      process.stdout.isTTY = false;
+      vi.mocked(console.log).mockClear();
+      await run(registerDocsCommands, "code", "/a/b", "x", "--json");
+      expect(console.log).toHaveBeenCalledWith(
+        JSON.stringify({ error: "indexing", message: "Indexing.", retryAfter: 30 })
+      );
+      expect(console.error).not.toHaveBeenCalled();
+    } finally {
+      process.stdout.isTTY = wasTTY;
+    }
   });
 
   test("clamps out-of-range numbers like the MCP tool", async () => {
