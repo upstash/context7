@@ -42,7 +42,8 @@ In your IdP, configure the application to include the user's groups in the token
 
 - **Okta**: where you configure the claim depends on the issuer URL you use in Part 2.
   - **Org authorization server** (issuer `https://your-org.okta.com`): open the app's **Sign On** tab and edit the **OpenID Connect ID Token** section. Set **Groups claim type** to **Filter**, name the claim `groups`, and add a filter such as **Matches regex** `.*`. Add `groups` to the **Scopes** field in Context7.
-  - **Custom authorization server** (issuer `https://your-org.okta.com/oauth2/default` or another custom server): go to **Security › API**, select the server, and add a claim on the **Claims** tab. Name it `groups`, include it in the **ID Token** with **Always**, set **Value type** to **Groups**, and add a filter such as **Matches regex** `.*`.
+  - **Custom authorization server** (issuer `https://your-org.okta.com/oauth2/default` or another custom server): go to **Security › API**, select the server, and add a claim on the **Claims** tab. Name it `groups`, include it in the **ID Token** with **Always**, set **Value type** to **Groups**, and add a filter such as **Matches regex** `.*`. A server you created yourself (not `default`) also needs an access policy with a rule that allows the Context7 client, or the token request fails.
+  - **Group limit**: Okta fails the sign-in when more than 100 of a user's groups match the filter. In large orgs, use a narrower filter such as **Starts with** `context7-`, and make sure it still matches your admin and member groups and every group you use in [library access rules](/enterprise/security/library-access).
 - **Keycloak**: enable the `groups` scope or add a Group Membership mapper to the client.
 - **Auth0**: add a custom claim action that sets `groups` from the user's app metadata or roles.
 
