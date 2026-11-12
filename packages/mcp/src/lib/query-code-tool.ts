@@ -29,10 +29,16 @@ const QUERY_CODE_ALIASES: AliasMap = {
 export const QUERY_NOT_A_PATTERN =
   'query-code has no "query" argument. Pass "pattern": a regex matched within one line of the source, not a question or a list of keywords. Search one identifier or one exact phrase, e.g. "isValidScope", and join alternatives with |, e.g. "createClient|createServer". For an exact phrase with spaces, also set fixed_strings. For a how-to question, use query-docs.';
 
+/** Operations that take no pattern: a "query" sent with them is dropped. */
+const NO_PATTERN_OPERATIONS = new Set(["list", "outline"]);
+
 /**
  * Agents send a docs-style "query" by habit. One token, or a phrase with
  * fixed_strings, works as a pattern. Several words would be grepped as one
  * regex and match nothing, so the tool answers with a correction instead.
+ * A real regex with spaces sent as "query" (e.g. `def (get|set)_timeout`) is
+ * rejected too, on purpose: the correction tells the agent to resend it as
+ * "pattern", which takes one call.
  */
 function queryAsPattern(args: unknown, ctx: z.core.$RefinementCtx): unknown {
   if (!args || typeof args !== "object") return args;
@@ -41,8 +47,9 @@ function queryAsPattern(args: unknown, ctx: z.core.$RefinementCtx): unknown {
   const query = out.query;
   delete out.query;
   if ("pattern" in out) return out;
+  if (typeof out.operation === "string" && NO_PATTERN_OPERATIONS.has(out.operation)) return out;
   if (typeof query === "string" && (!/\s/.test(query.trim()) || out.fixed_strings === true)) {
-    out.pattern = query;
+    out.pattern = query.trim();
     return out;
   }
   ctx.addIssue({ code: "custom", message: QUERY_NOT_A_PATTERN, input: query, path: ["query"] });
