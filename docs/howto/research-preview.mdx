@@ -111,6 +111,8 @@ With the research preview on, the server also lists a `query-code` tool, and `re
 
 `grep` also takes ripgrep's options: `fixed_strings`, `ignore_case`, `glob`, `path`, `context`, `output_mode`, `head_limit` and `offset`. A `pattern` matches the exact text of one line, so to search several words give them as `a|b`. When a pattern of plain words, such as `kafka consumer group rebalance`, matches no line, `grep` returns the lines that match any of its words and says so first. While a library's source is being indexed, the tool tells the agent to call again or answer from `query-docs`.
 
+`list` names the files of the repository, and marks the ones that were not indexed with the reason, such as `Cargo.lock  (not indexed: generated)`. A folder shows how many of its files are not indexed. Not indexed files are in the repository, but `grep`, `read` and `definition` cannot see their content. A snapshot indexed before file lists shows indexed files only.
+
 The tool needs `@upstash/context7-mcp` 4.6.0 or later.
 
 Without the MCP server, the `ctx7 code` command gives the same search in a terminal, for example `npx ctx7@latest code /colinhacks/zod "safeExtend" --op definition`.
