@@ -6,6 +6,7 @@ import { registerSetupCommand } from "./commands/setup.js";
 import { registerRemoveCommand } from "./commands/remove.js";
 import { registerDocsCommands } from "./commands/docs.js";
 import { registerSearchCommand } from "./commands/search.js";
+import { registerSubmitCommand } from "./commands/submit.js";
 import { maybeShowUpgradeNotice, registerUpgradeCommand } from "./commands/upgrade.js";
 import { setBaseUrl } from "./utils/api.js";
 import { VERSION } from "./constants.js";
@@ -54,6 +55,10 @@ Examples:
   ${brand.primary('npx ctx7 search "how to stream an OpenAI response from a Next.js route"')}
   ${brand.primary('npx ctx7 library react "how to use hooks"')}
   ${brand.primary('npx ctx7 docs /reactjs/react.dev "useEffect examples"')}
+
+  ${brand.dim("# Submit a documentation source to the Context7 index")}
+  ${brand.primary("npx ctx7 submit https://github.com/owner/repo")}
+  ${brand.primary("npx ctx7 submit https://dlang.org/spec/spec.html --website-base-url https://dlang.org/spec/")}
 `
   );
 
@@ -62,6 +67,7 @@ registerSetupCommand(program);
 registerRemoveCommand(program);
 registerDocsCommands(program);
 registerSearchCommand(program);
+registerSubmitCommand(program);
 registerUpgradeCommand(program);
 
 program.action(() => {
