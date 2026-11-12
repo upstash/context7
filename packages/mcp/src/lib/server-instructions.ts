@@ -19,7 +19,7 @@ Do not call Context7 for:
 - General concepts, design patterns, and core language syntax.
 - Small helpers and scripts that need only basic language features.
 - Standard shell utilities, everyday git commands, and commands that install this project's dependencies, or build, run, or test it.
-- Docs that the user pasted or that you already fetched for the same question.
+- Docs that the user pasted or that you already fetched in this conversation.
 
 Always call for these cases. Agents often skip them:
 - Porting code to a different library, platform, or SQL dialect, even a short snippet. Look up the one you port to.
