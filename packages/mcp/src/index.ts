@@ -2,6 +2,7 @@
 
 import { toNodeHandler } from "@modelcontextprotocol/node";
 import { StdioServerTransport, serveStdio } from "@modelcontextprotocol/server/stdio";
+import { SkillCatalog } from "@modelcontextprotocol/server/ext/skills";
 import {
   McpServer,
   PROTOCOL_VERSION_META_KEY,
@@ -63,6 +64,7 @@ import {
   usableApiKey,
 } from "./lib/mcp-http-auth.js";
 import { mcpRouteFromUrl } from "./lib/mcp-route.js";
+import { context7SkillFiles } from "./lib/skills.js";
 import { parseOAuthAudienceEnforcement } from "./lib/oauth-audience.js";
 
 /** Default HTTP server port */
@@ -71,6 +73,11 @@ const OAUTH_METADATA_TIMEOUT_MS = 10_000;
 const CLAUDE_CODE_PLUGIN = "claude-code-plugin";
 const STATIC_LIST_CACHE_HINT = { ttlMs: 3_600_000, cacheScope: "public" } as const;
 const PREVIEW_LIST_CACHE_HINT = { ttlMs: 3_600_000, cacheScope: "private" } as const;
+// Built once; attach() wires it into each per-request server.
+const skillCatalog = await SkillCatalog.load(context7SkillFiles, {
+  cacheHint: STATIC_LIST_CACHE_HINT,
+  strict: true,
+});
 type McpInstrumentation = NonNullable<Awaited<ReturnType<typeof initializeTelemetry>>>;
 let mcpInstrumentation: McpInstrumentation | undefined;
 
@@ -271,9 +278,9 @@ function createMcpServer(mcpContext: McpRequestContext, researchPreview: boolean
   const serverOptions = {
     // The collections are static for the process lifetime. Explicitly disabling
     // change notifications prevents clients from opening subscriptions/listen
-    // streams for events this server never publishes. Declaring prompts and
-    // resources still installs their empty list handlers for clients that call
-    // them unconditionally.
+    // streams for events this server never publishes. Declaring prompts still
+    // installs its empty list handler for clients that call it unconditionally;
+    // resources carry the skill files.
     capabilities: {
       tools: { listChanged: false },
       prompts: { listChanged: false },
@@ -299,6 +306,7 @@ Do not use for: refactoring, debugging, or reviewing code that does not depend o
   const server = mcpInstrumentation
     ? mcpInstrumentation.createServer(serverInfo, serverOptions, mcpContext)
     : new McpServer(serverInfo, serverOptions);
+  skillCatalog.attach(server);
 
   server.registerTool(
     RESOLVE_LIBRARY_ID_TOOL,
