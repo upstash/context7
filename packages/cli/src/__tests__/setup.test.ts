@@ -20,6 +20,7 @@ vi.stubGlobal(
 );
 
 import {
+  getBundledFindDocsSkillFiles,
   getBundledMcpSkillFiles,
   getBundledRuleContent,
   getRuleContent,
@@ -99,6 +100,16 @@ describe("getRuleContent", () => {
     const bundledCli = getBundledRuleContent("cli", "claude");
     expect(bundledCli.startsWith(cliRule)).toBe(true);
     expect(bundledCli).toContain("npx ctx7@latest code");
+  });
+
+  test("bundled find-docs skill has the frontmatter of the skill in the repo", async () => {
+    const skill = await readFile(
+      new URL("../../../../skills/find-docs/SKILL.md", import.meta.url),
+      "utf-8"
+    );
+    const frontmatter = skill.slice(0, skill.indexOf("\n---\n", 4) + 5);
+    const [bundled] = getBundledFindDocsSkillFiles();
+    expect(bundled!.content.startsWith(frontmatter)).toBe(true);
   });
 
   test("bundled context7-mcp skill matches the skill in the repo", async () => {

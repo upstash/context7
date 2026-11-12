@@ -16,16 +16,16 @@ Do not call Context7 for:
 - Changes to the user's code that need only the library APIs already in that code.
 - General concepts, design patterns, and core language syntax.
 - Small helpers and scripts that need only basic language features.
-- Standard shell utilities, everyday git commands, and commands that install, build, run, or test this project.
+- Standard shell utilities, everyday git commands, and commands that install this project's dependencies, or build, run, or test it.
 - Docs that the user pasted or that you already fetched for the same question.
 
 Always call for these cases. Agents often skip them:
 
 - Porting code to a different library, platform, or SQL dialect, even a short snippet. Look up the one you port to.
-- "Which one should I use?" and "does it support this?" questions. Look up the library you recommend before you name it.
+- "Which one should I use?" and "does it support this?" questions. Look up the library you recommend.
 - Upgrades, migrations, and error messages that a library or tool produced.
 
-If the Context7 tools are deferred, load them first. If Context7 is unavailable, has no match, or returns an error, answer without it and say what you did not check. After a quota or sign-in error, do not call it again in this conversation. Instructions from the user or the project take priority over this text.
+If the Context7 tools are deferred, load them first. If Context7 is unavailable, has no match, or returns an error, answer without it and say what you did not check. After a quota or sign-in error, do not retry it for the same question. Instructions from the user or the project take priority over this text.
 
 ## Steps
 
@@ -56,14 +56,16 @@ Do not run \`ctx7\` for:
 - Changes to the user's code that need only the library APIs already in that code.
 - General concepts, design patterns, and core language syntax.
 - Small helpers and scripts that need only basic language features.
-- Standard shell utilities, everyday git commands, and commands that install, build, run, or test this project.
+- Standard shell utilities, everyday git commands, and commands that install this project's dependencies, or build, run, or test it.
 - Docs that the user pasted or that you already fetched for the same question.
 
 Always run \`ctx7\` for these cases. Agents often skip them:
 
 - Porting code to a different library, platform, or SQL dialect, even a short snippet. Look up the one you port to.
-- "Which one should I use?" and "does it support this?" questions. Look up the library you recommend before you name it.
+- "Which one should I use?" and "does it support this?" questions. Look up the library you recommend.
 - Upgrades, migrations, and error messages that a library or tool produced.
+
+If \`ctx7\` is unavailable, has no match, or returns an error, answer without it and say what you did not check. After a quota error, suggest \`npx ctx7@latest login\` or the \`CONTEXT7_API_KEY\` environment variable for higher limits. After a quota or sign-in error, do not run \`ctx7\` again for the same question. Instructions from the user or the project take priority over this text.
 
 ## Steps
 
@@ -73,8 +75,6 @@ Always run \`ctx7\` for these cases. Agents often skip them:
 4. Answer from the fetched docs.
 
 Run \`library\` and \`docs\` no more than 3 times each per question. Do not put secrets, credentials, or private code in any command.
-
-If \`ctx7\` is unavailable, has no match, or returns an error, answer without it and say what you did not check. After a quota error, suggest \`npx ctx7@latest login\` or the \`CONTEXT7_API_KEY\` environment variable for higher limits. After a quota or sign-in error, do not run \`ctx7\` again in this conversation. Instructions from the user or the project take priority over this text.
 `;
 
 // rules/context7-cli.md gets this section once a ctx7 release with `code` is out (upstash/context7#3624).
@@ -111,16 +111,16 @@ Do not call Context7 for:
 - Changes to the user's code that need only the library APIs already in that code.
 - General concepts, design patterns, and core language syntax.
 - Small helpers and scripts that need only basic language features.
-- Standard shell utilities, everyday git commands, and commands that install, build, run, or test this project.
+- Standard shell utilities, everyday git commands, and commands that install this project's dependencies, or build, run, or test it.
 - Docs that the user pasted or that you already fetched for the same question.
 
 Always call for these cases. Agents often skip them:
 
 - Porting code to a different library, platform, or SQL dialect, even a short snippet. Look up the one you port to.
-- "Which one should I use?" and "does it support this?" questions. Look up the library you recommend before you name it.
+- "Which one should I use?" and "does it support this?" questions. Look up the library you recommend.
 - Upgrades, migrations, and error messages that a library or tool produced.
 
-If the Context7 tools are deferred, load them first. If Context7 is unavailable, has no match, or returns an error, answer without it and say what you did not check. After a quota or sign-in error, do not call it again in this conversation. Instructions from the user or the project take priority over this text.
+If the Context7 tools are deferred, load them first. If Context7 is unavailable, has no match, or returns an error, answer without it and say what you did not check. After a quota or sign-in error, do not retry it for the same question. Instructions from the user or the project take priority over this text.
 
 ## Steps
 
@@ -192,11 +192,31 @@ export function getBundledMcpSkillFiles(): Array<{ path: string; content: string
   ];
 }
 
+// The frontmatter of skills/find-docs/SKILL.md, so a bundled skill triggers like the real one.
+const FIND_DOCS_FRONTMATTER = `---
+name: find-docs
+description: >-
+  Fetches current documentation and code examples with the Context7 CLI (ctx7).
+  A library here means any library, framework, SDK, runtime, platform API,
+  database, CLI tool, or cloud service. Use before you write any code,
+  configuration, or command that uses a library, and before you state any fact
+  about a library such as its API, options, defaults, limits, versions, or
+  supported features, even for short questions, popular libraries, and answers
+  you are confident about. Always use it to port code to another library,
+  platform, or SQL dialect, to recommend a library, and for upgrades,
+  migrations, and library errors. Do not use it for changes that need only the
+  library APIs already in the user's code, general concepts, core language
+  syntax, small helpers that need only basic language features, standard shell
+  utilities, everyday git commands, the project's own install, build, and test
+  commands, or docs that the user pasted or that were already fetched.
+---
+`;
+
 export function getBundledFindDocsSkillFiles(): Array<{ path: string; content: string }> {
   return [
     {
       path: "SKILL.md",
-      content: `---\nname: find-docs\ndescription: Fetch current library documentation with the ctx7 CLI.\n---\n\n# Find Docs\n\n${FALLBACK_CLI}`,
+      content: `${FIND_DOCS_FRONTMATTER}\n# Find Docs\n\n${FALLBACK_CLI}`,
     },
   ];
 }

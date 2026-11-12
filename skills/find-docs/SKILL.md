@@ -29,14 +29,16 @@ Do not run `ctx7` for:
 - Changes to the user's code that need only the library APIs already in that code.
 - General concepts, design patterns, and core language syntax.
 - Small helpers and scripts that need only basic language features.
-- Standard shell utilities, everyday git commands, and commands that install, build, run, or test this project.
+- Standard shell utilities, everyday git commands, and commands that install this project's dependencies, or build, run, or test it.
 - Docs that the user pasted or that you already fetched for the same question.
 
 Always run `ctx7` for these cases. Agents often skip them:
 
 - Porting code to a different library, platform, or SQL dialect, even a short snippet. Look up the one you port to.
-- "Which one should I use?" and "does it support this?" questions. Look up the library you recommend before you name it.
+- "Which one should I use?" and "does it support this?" questions. Look up the library you recommend.
 - Upgrades, migrations, and error messages that a library or tool produced.
+
+If `ctx7` is unavailable, has no match, or returns an error, answer without it and say what you did not check. After a quota error, suggest `npx ctx7@latest login` or the `CONTEXT7_API_KEY` environment variable for higher limits. After a quota or sign-in error, do not run `ctx7` again for the same question. Instructions from the user or the project take priority over this text.
 
 Run commands with `npx ctx7@latest` so setup always uses the latest CLI without a global install:
 
@@ -166,16 +168,12 @@ npx ctx7@latest login
 
 ## Error Handling
 
-If `ctx7` is unavailable, has no match, or returns an error, answer without it and say what you did not check.
-
-If a command fails with a quota error ("Monthly quota reached" or "quota exceeded"), tell the user that their Context7 quota is used up. Suggest `npx ctx7@latest login` or the `CONTEXT7_API_KEY` environment variable for higher limits. After a quota or sign-in error, do not run `ctx7` again in this conversation.
-
-Instructions from the user or the project take priority over this skill.
+A quota error says "Monthly quota reached" or "quota exceeded". Tell the user that their Context7 quota is used up, and follow the rule above.
 
 ## Common Mistakes
 
 - Library IDs require a `/` prefix — `/facebook/react` not `facebook/react`
-- Always run `npx ctx7@latest library` first — `npx ctx7@latest docs react "hooks"` will fail without a valid ID
+- Run `npx ctx7@latest library` first unless you already have a valid library ID: `npx ctx7@latest docs react "hooks"` fails without one
 - Use descriptive queries, not single words — `"React useEffect cleanup function"` not `"hooks"`
 - One topic per query — split `"routing and auth and caching"` into a separate `docs` command per concept, unless the question is about how they interact
 - Do not include sensitive information (API keys, passwords, credentials) in queries

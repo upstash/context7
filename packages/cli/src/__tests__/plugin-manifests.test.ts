@@ -290,7 +290,7 @@ describe("Context7 guidance copies", () => {
   ];
 
   const read = (relPath: string) => readFile(join(REPO_ROOT, relPath), "utf-8");
-  // Prettier adds a blank line before lists in .md files but not in .mdc files.
+  // Prettier adds a blank line before a list in .md files; some copies have none.
   const normalize = (text: string) => text.replace(/\r\n/g, "\n").replace(/:\n\n- /g, ":\n- ");
   // The call rule and lists: everything in a rule file before its steps.
   const coreBlock = async (rulePath: string) => {

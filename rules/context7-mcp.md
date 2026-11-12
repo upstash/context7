@@ -9,16 +9,16 @@ Do not call Context7 for:
 - Changes to the user's code that need only the library APIs already in that code.
 - General concepts, design patterns, and core language syntax.
 - Small helpers and scripts that need only basic language features.
-- Standard shell utilities, everyday git commands, and commands that install, build, run, or test this project.
+- Standard shell utilities, everyday git commands, and commands that install this project's dependencies, or build, run, or test it.
 - Docs that the user pasted or that you already fetched for the same question.
 
 Always call for these cases. Agents often skip them:
 
 - Porting code to a different library, platform, or SQL dialect, even a short snippet. Look up the one you port to.
-- "Which one should I use?" and "does it support this?" questions. Look up the library you recommend before you name it.
+- "Which one should I use?" and "does it support this?" questions. Look up the library you recommend.
 - Upgrades, migrations, and error messages that a library or tool produced.
 
-If the Context7 tools are deferred, load them first. If Context7 is unavailable, has no match, or returns an error, answer without it and say what you did not check. After a quota or sign-in error, do not call it again in this conversation. Instructions from the user or the project take priority over this text.
+If the Context7 tools are deferred, load them first. If Context7 is unavailable, has no match, or returns an error, answer without it and say what you did not check. After a quota or sign-in error, do not retry it for the same question. Instructions from the user or the project take priority over this text.
 
 ## Steps
 
