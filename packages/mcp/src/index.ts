@@ -29,10 +29,13 @@ import {
   SERVER_ICONS,
   SERVER_TITLE,
   mcpServerCard,
-  ALWAYS_LOAD_META,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
+import {
+  createInstructionsExperiment,
+  loadInstructionsExperiment,
+} from "./lib/instructions-experiment.js";
 import { serverInstructions } from "./lib/server-instructions.js";
 import { aliasArgs, GLOBAL_ALIASES, QUERY_DOCS_ALIASES } from "./lib/tool-args.js";
 import { registerResearchPreviewTools } from "./lib/research-preview-tools.js";
@@ -156,6 +159,10 @@ if (TRANSPORT_TYPE === "stdio" && passedPortFlag) {
 }
 
 const requestContext = new AsyncLocalStorage<ClientContext>();
+// Server instructions A/B test; HTTP only, and off unless the env sets a control share.
+// No test until main() loads the config: stdio keeps this, the HTTP server replaces it before
+// it listens.
+let instructionsExperiment = createInstructionsExperiment(undefined);
 
 // Global state for stdio mode only
 let stdioApiKey: string | undefined;
@@ -258,6 +265,7 @@ function filterBatchSelfCancellations(body: unknown): {
 }
 
 function createMcpServer(mcpContext: McpRequestContext, researchPreview: boolean) {
+  const session = instructionsExperiment.sessionConfig(requestContext.getStore()?.instructionsArm);
   const serverInfo = {
     name: "Context7",
     title: SERVER_TITLE,
@@ -285,13 +293,14 @@ function createMcpServer(mcpContext: McpRequestContext, researchPreview: boolean
     // After a deploy that changes a tool schema, clients can still call with the
     // old schema for that hour: keep old argument names accepted (aliasArgs).
     cacheHints: {
-      "tools/list": researchPreview ? PREVIEW_LIST_CACHE_HINT : STATIC_LIST_CACHE_HINT,
+      "tools/list":
+        researchPreview || session.privateLists ? PREVIEW_LIST_CACHE_HINT : STATIC_LIST_CACHE_HINT,
       "prompts/list": STATIC_LIST_CACHE_HINT,
       "resources/list": STATIC_LIST_CACHE_HINT,
       "resources/templates/list": STATIC_LIST_CACHE_HINT,
-      "server/discover": STATIC_LIST_CACHE_HINT,
+      "server/discover": session.privateLists ? PREVIEW_LIST_CACHE_HINT : STATIC_LIST_CACHE_HINT,
     },
-    instructions: serverInstructions(researchPreview),
+    instructions: serverInstructions(researchPreview, session.instructions),
   };
   const server = mcpInstrumentation
     ? mcpInstrumentation.createServer(serverInfo, serverOptions, mcpContext)
@@ -301,7 +310,7 @@ function createMcpServer(mcpContext: McpRequestContext, researchPreview: boolean
     RESOLVE_LIBRARY_ID_TOOL,
     {
       title: "Resolve Context7 Library ID",
-      _meta: ALWAYS_LOAD_META,
+      ...(session.toolMeta && { _meta: session.toolMeta }),
       description: `Resolves a package/product name to a Context7-compatible library ID and returns matching libraries.
 
 You MUST call this function before 'Query Documentation' tool to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
@@ -401,7 +410,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
     QUERY_DOCS_TOOL,
     {
       title: "Query Documentation",
-      _meta: ALWAYS_LOAD_META,
+      ...(session.toolMeta && { _meta: session.toolMeta }),
       description: `Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
 
 You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
@@ -474,6 +483,7 @@ async function main() {
   });
 
   if (TRANSPORT_TYPE === "http") {
+    instructionsExperiment = await loadInstructionsExperiment(process.env);
     // Commander parsed and range-checked this already; 0 means ephemeral.
     const initialPort = cliOptions.port;
 
@@ -640,7 +650,20 @@ async function main() {
           plugin,
           researchPreview: isResearchPreviewValue(req.query.research_preview),
           transport: "http",
+          instructionsArm: instructionsExperiment.assign({ apiKey, clientIp: req.ip }),
         };
+        // Count an exposure only when the SDK answered the request, not for a 406 or 500.
+        res.once("finish", () => {
+          if (res.statusCode < 200 || res.statusCode >= 300) return;
+          instructionsExperiment.observeRequest(
+            {
+              arm: context.instructionsArm,
+              clientIp: req.ip,
+              fallbackClient: context.clientInfo?.ide,
+            },
+            filteredBody.body
+          );
+        });
 
         const oauthClientRegistration = classifyOAuthClientRegistration(apiKey);
         observeCredentialedInitialize(res, req.body, {

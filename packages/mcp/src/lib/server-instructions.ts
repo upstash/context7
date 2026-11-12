@@ -31,9 +31,10 @@ If the Context7 tools are deferred, load them first. If Context7 is unavailable,
 /** Claude Code cuts server instructions after this many characters (CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH). */
 export const CLAUDE_CODE_INSTRUCTIONS_LIMIT = 2048;
 
-/** The instructions a session gets: the base text, plus the feedback request under research preview. */
-export function serverInstructions(researchPreview: boolean): string {
-  return researchPreview
-    ? `${SERVER_INSTRUCTIONS}\n\n${DOCS_FEEDBACK_INSTRUCTIONS}`
-    : SERVER_INSTRUCTIONS;
+/**
+ * The instructions a session gets: the base text (the current one unless an A/B arm picks
+ * another), plus the feedback request under research preview.
+ */
+export function serverInstructions(researchPreview: boolean, base = SERVER_INSTRUCTIONS): string {
+  return researchPreview ? `${base}\n\n${DOCS_FEEDBACK_INSTRUCTIONS}` : base;
 }

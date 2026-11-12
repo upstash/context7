@@ -4,10 +4,15 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { StdioClientTransport, getDefaultEnvironment } from "@modelcontextprotocol/client/stdio";
 import { execSync } from "node:child_process";
 import { spawn, type ChildProcess } from "node:child_process";
-import { createDecipheriv } from "node:crypto";
+import { createDecipheriv, createHmac } from "node:crypto";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import {
+  createInstructionsExperiment,
+  LEGACY_SERVER_INSTRUCTIONS,
+} from "../src/lib/instructions-experiment.js";
+import type { InstructionsVariant } from "../src/lib/types.js";
 import { ALWAYS_LOAD_META } from "../src/lib/constants.js";
 import { serverInstructions } from "../src/lib/server-instructions.js";
 import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "../src/lib/tool-names.js";
@@ -104,12 +109,31 @@ function getFreePort(): Promise<number> {
   });
 }
 
+const definitionBodies: string[] = [];
+const stubExperimentConfig = { experimentId: "it-test", controlPercent: 50 };
+
 function startStubApi(): Promise<string> {
   stubServer = http.createServer((req, res) => {
     const url = new URL(req.url!, "http://stub.local");
     const apiPath = url.pathname.replace(/^\/api/, "");
     requests.push({ path: apiPath, query: url.searchParams, headers: req.headers });
     const bearer = /^Bearer (.+)$/.exec(req.headers.authorization ?? "")?.[1] ?? "";
+    if (apiPath === "/v2/mcp/instructions-experiment" && req.method === "GET") {
+      // The A/B test's config, which the app keeps in Redis.
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify(stubExperimentConfig));
+      return;
+    }
+    if (apiPath === "/v2/mcp/instructions-experiment") {
+      let body = "";
+      req.on("data", (chunk: Buffer) => (body += chunk.toString()));
+      req.on("end", () => {
+        definitionBodies.push(body);
+        res.statusCode = 204;
+        res.end();
+      });
+      return;
+    }
     if (apiPath === "/v2/feedback") {
       let body = "";
       req.on("data", (chunk: Buffer) => (body += chunk.toString()));
@@ -751,6 +775,237 @@ describe("research preview", () => {
     for (const name of [RESOLVE_LIBRARY_ID_TOOL, QUERY_DOCS_TOOL]) {
       expect(tools.find((t) => t.name === name)?._meta).toMatchObject(ALWAYS_LOAD_META);
     }
+  });
+
+  describe("instructions A/B test", () => {
+    let abChild: ChildProcess;
+    let abUrl: string;
+    let abMetricsUrl: string;
+    // The server reads the config from the stub API at startup.
+    const experimentEnv = { CONTEXT7_INSTRUCTIONS_EXPERIMENT: "remote" };
+    // The same experiment and key as the server, so the test knows each key's arm.
+    const experiment = createInstructionsExperiment(stubExperimentConfig, {
+      report: () => {},
+      hmac: (message) =>
+        createHmac("sha256", Buffer.from(CLIENT_IP_ASSERTION_KEY, "hex")).update(message).digest(),
+    });
+    const keyFor = (arm: InstructionsVariant) => {
+      for (let i = 0; ; i++) {
+        const apiKey = `ctx7sk-ab-${i}`;
+        if (experiment.assign({ apiKey })?.variant === arm) return apiKey;
+      }
+    };
+    const instructionsFor = (arm: InstructionsVariant) =>
+      experiment.sessionConfig(experiment.assign({ apiKey: keyFor(arm) })).instructions;
+    const keyTransport = (apiKey: string) =>
+      new StreamableHTTPClientTransport(new URL(abUrl), {
+        requestInit: { headers: { Authorization: `Bearer ${apiKey}` } },
+      });
+
+    beforeAll(async () => {
+      const metricsPort = await getFreePort();
+      abMetricsUrl = `http://127.0.0.1:${metricsPort}/metrics`;
+      ({ child: abChild, url: abUrl } = await startHttpChild({
+        port: 0,
+        environment: {
+          ...childEnv,
+          OTEL_EXPORTER_PROMETHEUS_PORT: String(metricsPort),
+          ...experimentEnv,
+        },
+      }));
+    }, 60_000);
+
+    afterAll(() => {
+      abChild?.kill();
+    });
+
+    test.each(["control", "treatment"] as const)(
+      "gives the %s arm its text, tool meta, and API header",
+      async (arm) => {
+        const apiKey = keyFor(arm);
+        const client = new Client({ name: "ab-test-client", version: "1.0.0" });
+        await client.connect(keyTransport(apiKey));
+        try {
+          expect(client.getInstructions()).toBe(instructionsFor(arm));
+          const { tools } = await client.listTools();
+          for (const name of ["resolve-library-id", "query-docs"]) {
+            const tool = tools.find((t) => t.name === name);
+            expect(tool?._meta?.["anthropic/alwaysLoad"]).toBe(
+              arm === "treatment" ? true : undefined
+            );
+          }
+          requests.length = 0;
+          await client.callTool({
+            name: "resolve-library-id",
+            arguments: { query: "app router", libraryName: "Next.js" },
+          });
+          const apiCall = requests.find((request) => request.path === "/v2/libs/search");
+          expect(apiCall?.headers.authorization).toBe(`Bearer ${apiKey}`);
+          // The arm reaches the app sealed, so a caller cannot set it.
+          const sealed = apiCall?.headers["x-context7-instructions-assertion"] as string;
+          expect(sealed).toMatch(/^a1:/);
+          expect(JSON.parse(decryptClientIpAssertion(sealed))).toEqual(
+            experiment.assign({ apiKey })
+          );
+        } finally {
+          await client.close();
+        }
+      }
+    );
+
+    test("reports each exposure to the app without the caller's credentials", async () => {
+      requests.length = 0;
+      for (const arm of ["control", "treatment"] as const) {
+        const client = new Client({ name: "ab-test-client", version: "1.0.0" });
+        await client.connect(keyTransport(keyFor(arm)));
+        await client.close();
+      }
+      // The report is fire-and-forget, so give it a moment.
+      const deadline = Date.now() + 5_000;
+      const exposures = () => requests.filter((r) => r.path === "/v2/mcp/instructions-exposure");
+      while (exposures().length < 2 && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      const reported = exposures().map((r) => {
+        expect(r.headers.authorization).toBeUndefined();
+        expect(r.headers["x-context7-client-ide"]).toBe("ab-test-client");
+        return JSON.parse(
+          decryptClientIpAssertion(r.headers["x-context7-instructions-assertion"] as string)
+        ).variant;
+      });
+      expect(reported.sort()).toEqual(["control", "treatment"]);
+
+      // The first exposure also sends what each arm gets, once per process.
+      expect(definitionBodies).toHaveLength(1);
+      const definition = JSON.parse(decryptClientIpAssertion(definitionBodies[0]!));
+      expect(definitionBodies[0]!.startsWith("p1:")).toBe(true);
+      expect(definition.arms.control).toEqual({
+        instructions: LEGACY_SERVER_INSTRUCTIONS,
+        alwaysLoad: false,
+      });
+      expect(definition.arms.treatment.alwaysLoad).toBe(true);
+    });
+
+    test("does not report an exposure for a request the SDK refused", async () => {
+      requests.length = 0;
+      const response = await fetch(abUrl, {
+        method: "POST",
+        // The SDK answers 406 without text/event-stream in Accept.
+        headers: {
+          "content-type": "application/json",
+          accept: "text/plain",
+          authorization: `Bearer ${keyFor("treatment")}`,
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "initialize",
+          params: {
+            protocolVersion: "2025-06-18",
+            capabilities: {},
+            clientInfo: { name: "ab-test-client", version: "1.0.0" },
+          },
+        }),
+      });
+      expect(response.status).toBeGreaterThanOrEqual(400);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      expect(requests.filter((r) => r.path === "/v2/mcp/instructions-exposure")).toHaveLength(0);
+    });
+
+    test("marks tools/list private while the test runs", async () => {
+      expect(await toolsListCacheScope(keyTransport(keyFor("treatment")))).toBe("private");
+      expect(await toolsListCacheScope(keyTransport(keyFor("control")))).toBe("private");
+    });
+
+    // server/discover carries the instructions, so a shared cache must not reuse it either.
+    async function discoverCacheScope(url: string, apiKey: string) {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream",
+          authorization: `Bearer ${apiKey}`,
+          "mcp-protocol-version": "2026-07-28",
+          "mcp-method": "server/discover",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "server/discover",
+          params: {
+            _meta: {
+              "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+              "io.modelcontextprotocol/clientCapabilities": {},
+              "io.modelcontextprotocol/clientInfo": { name: "ab-test-client", version: "1.0.0" },
+            },
+          },
+        }),
+      });
+      const text = await response.text();
+      const json = text.trimStart().startsWith("{")
+        ? text
+        : text
+            .split("\n")
+            .filter((line) => line.startsWith("data:"))
+            .map((line) => line.slice(5))
+            .join("");
+      const result = (
+        JSON.parse(json) as { result?: { cacheScope?: string; instructions?: string } }
+      ).result;
+      return { scope: result?.cacheScope, instructions: result?.instructions };
+    }
+
+    test("marks server/discover private while the test runs", async () => {
+      for (const arm of ["control", "treatment"] as const) {
+        const discovered = await discoverCacheScope(abUrl, keyFor(arm));
+        expect(discovered.scope).toBe("private");
+        expect(discovered.instructions).toBe(instructionsFor(arm));
+      }
+      expect((await discoverCacheScope(httpUrl, "ctx7sk-local-test")).scope).toBe("public");
+    });
+
+    test("counts instruction requests per arm and client, and tool calls per arm", async () => {
+      const lines = (await (await fetch(abMetricsUrl)).text()).split("\n");
+      const count = (metric: string, labels: string[]) =>
+        lines
+          .filter((line) => line.startsWith(`${metric}{`) && labels.every((l) => line.includes(l)))
+          .reduce((sum, line) => sum + Number(line.split(" ").at(-1)), 0);
+      for (const arm of ["control", "treatment"]) {
+        const variant = `context7_mcp_instructions_variant="${arm}"`;
+        expect(
+          count("context7_mcp_instructions_experiment_instruction_requests_total", [
+            variant,
+            'context7_mcp_client_name="ab-test-client"',
+          ])
+        ).toBeGreaterThanOrEqual(1);
+        expect(
+          count("mcp_server_operation_duration_count", [
+            variant,
+            'gen_ai_tool_name="resolve-library-id"',
+          ])
+        ).toBeGreaterThanOrEqual(1);
+      }
+      // Modern clients send their name in the _meta envelope, not in clientInfo.
+      expect(
+        count("context7_mcp_instructions_experiment_instruction_requests_total", [
+          'context7_mcp_client_name="unknown"',
+        ])
+      ).toBe(0);
+    });
+
+    test("leaves the default server out of the test", async () => {
+      expect(await toolsListCacheScope(httpTransport(httpUrl))).toBe("public");
+      requests.length = 0;
+      await withClient(httpUrl, (client) =>
+        client.callTool({
+          name: "resolve-library-id",
+          arguments: { query: "app router", libraryName: "Next.js" },
+        })
+      );
+      const apiCall = requests.find((request) => request.path === "/v2/libs/search");
+      expect(apiCall).toBeDefined();
+      expect(apiCall?.headers["x-context7-instructions-variant"]).toBeUndefined();
+    });
   });
 
   test("lists submit-docs-feedback only with research preview and sends it to the API", async () => {
