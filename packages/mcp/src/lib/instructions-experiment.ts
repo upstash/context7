@@ -3,6 +3,7 @@ import { isIP } from "node:net";
 import * as jose from "jose";
 import { ALWAYS_LOAD_META, CONTEXT7_API_BASE_URL } from "./constants.js";
 import {
+  assertionKeyHmac,
   assertionKeyIsConfigured,
   createClientIpAssertion,
   createInstructionsArmAssertion,
@@ -30,44 +31,108 @@ export const LEGACY_SERVER_INSTRUCTIONS = `Use this server to fetch current docu
 
 Do not use for: refactoring, debugging, or reviewing code that does not depend on a library or platform API, or general programming concepts.`;
 
+/**
+ * The test's settings. context7app keeps them in Redis (set on /admin/prompt-experiments) and
+ * the hosted server reads them once at startup, so a change needs only a pod restart.
+ * - With an experiment ID: `controlPercent` of callers get control, the rest treatment, and
+ *   each caller's arm is sealed for the app to count (0 and 100 are allowed).
+ * - Without one: everyone gets the same text, uncounted: control at 100, treatment at 0.
+ */
 export interface InstructionsExperimentConfig {
-  /** Share of callers in control, 1 to 100. Undefined when the test is off. */
+  experimentId: string | null;
   controlPercent: number;
-  experimentId: string;
-  salt: string;
+}
+
+const EXPERIMENT_ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,39}$/;
+
+/** The config the app sent, or undefined when it is not valid. */
+export function parseInstructionsExperimentConfig(
+  value: unknown
+): InstructionsExperimentConfig | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const { experimentId, controlPercent } = value as Record<string, unknown>;
+  if (!Number.isInteger(controlPercent)) return undefined;
+  const percent = controlPercent as number;
+  if (percent < 0 || percent > 100) return undefined;
+  if (experimentId === null) {
+    return percent === 0 || percent === 100
+      ? { experimentId: null, controlPercent: percent }
+      : undefined;
+  }
+  return typeof experimentId === "string" && EXPERIMENT_ID_PATTERN.test(experimentId)
+    ? { experimentId, controlPercent: percent }
+    : undefined;
+}
+
+/** Everyone gets the production instructions: what a pod serves when it cannot read the config. */
+export const PRODUCTION_ONLY: InstructionsExperimentConfig = {
+  experimentId: null,
+  controlPercent: 100,
+};
+
+const CONFIG_ATTEMPTS = 3;
+const CONFIG_TIMEOUT_MS = 5_000;
+
+/** Reads the config from context7app, with retries; undefined when it cannot. */
+export async function fetchInstructionsExperimentConfig(
+  options: { attempts?: number; retryDelayMs?: number } = {}
+): Promise<InstructionsExperimentConfig | undefined> {
+  const attempts = options.attempts ?? CONFIG_ATTEMPTS;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    try {
+      const response = await fetch(`${CONTEXT7_API_BASE_URL}/v2/mcp/instructions-experiment`, {
+        headers: { "X-Context7-Source": "mcp-server" },
+        signal: AbortSignal.timeout(CONFIG_TIMEOUT_MS),
+      });
+      // 404: no experiment is configured, which is an answer, not an error to retry.
+      if (response.status === 404) return undefined;
+      if (response.ok) return parseInstructionsExperimentConfig(await response.json());
+    } catch {
+      // Retry below.
+    }
+    if (attempt < attempts) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, (options.retryDelayMs ?? 1_000) * attempt)
+      );
+    }
+  }
+  return undefined;
 }
 
 /**
- * Reads the test settings. `CONTEXT7_INSTRUCTIONS_CONTROL_PERCENT` unset, empty or 0 turns the
- * test off (everyone gets the current instructions). Any other value must be an integer
- * 1-100 and needs `CONTEXT7_INSTRUCTIONS_EXPERIMENT_ID`, a secret
- * `CONTEXT7_INSTRUCTIONS_EXPERIMENT_SALT` (16+ characters), and a valid
- * `MCP_CLIENT_IP_ASSERTION_KEY`; otherwise this throws, so a typo fails the deploy instead of
- * silently rolling the new instructions out to everyone. Roll back with 100 (all control).
+ * The hosted server's test, from `CONTEXT7_INSTRUCTIONS_EXPERIMENT=remote`. Without that
+ * variable (stdio, self-hosted servers) there is no test and everyone gets the current text.
+ * With it, the server reads the config from the app once. When the app has none, sends an
+ * invalid one, or cannot be reached, everyone gets the production text, so a failure never
+ * rolls the new text out. The arms need `MCP_CLIENT_IP_ASSERTION_KEY`: without it this throws,
+ * so the deploy fails instead.
  */
-export function instructionsExperimentConfig(
+export async function loadInstructionsExperiment(
   env: Record<string, string | undefined> = process.env,
-  canSealAssertions = assertionKeyIsConfigured
-): InstructionsExperimentConfig | undefined {
-  const raw = env.CONTEXT7_INSTRUCTIONS_CONTROL_PERCENT?.trim();
-  if (!raw || raw === "0") return undefined;
-  const fail = (message: string): never => {
-    throw new Error(`Instructions A/B test: ${message}`);
-  };
-  if (!/^\d{1,3}$/.test(raw) || Number(raw) < 1 || Number(raw) > 100) {
-    fail(`CONTEXT7_INSTRUCTIONS_CONTROL_PERCENT must be an integer 0-100, got "${raw}"`);
+  options: {
+    fetchConfig?: () => Promise<InstructionsExperimentConfig | undefined>;
+    canSealAssertions?: () => boolean;
+  } = {}
+): Promise<InstructionsExperiment> {
+  const mode = env.CONTEXT7_INSTRUCTIONS_EXPERIMENT?.trim();
+  if (!mode) return createInstructionsExperiment(undefined);
+  if (mode !== "remote") {
+    throw new Error(
+      `Instructions A/B test: CONTEXT7_INSTRUCTIONS_EXPERIMENT must be "remote", got "${mode}"`
+    );
   }
-  const experimentId = env.CONTEXT7_INSTRUCTIONS_EXPERIMENT_ID?.trim() ?? "";
-  if (!/^[a-z0-9][a-z0-9-]{0,39}$/.test(experimentId)) {
-    fail("CONTEXT7_INSTRUCTIONS_EXPERIMENT_ID must be 1-40 lowercase letters, digits or dashes");
+  if (!(options.canSealAssertions ?? assertionKeyIsConfigured)()) {
+    throw new Error(
+      "Instructions A/B test: MCP_CLIENT_IP_ASSERTION_KEY must be set so context7app can verify the arms"
+    );
   }
-  const salt = env.CONTEXT7_INSTRUCTIONS_EXPERIMENT_SALT?.trim() ?? "";
-  if (salt.length < 16)
-    fail("CONTEXT7_INSTRUCTIONS_EXPERIMENT_SALT must be a secret of 16+ characters");
-  if (!canSealAssertions()) {
-    fail("MCP_CLIENT_IP_ASSERTION_KEY must be set so context7app can verify the arms");
+  const config = await (options.fetchConfig ?? fetchInstructionsExperimentConfig)();
+  if (!config) {
+    console.error(
+      "Instructions A/B test: no valid config from context7app; serving the production instructions"
+    );
   }
-  return { controlPercent: Number(raw), experimentId, salt };
+  return createInstructionsExperiment(config ?? PRODUCTION_ONLY);
 }
 
 /**
@@ -212,17 +277,23 @@ const armSession = (variant: InstructionsVariant | undefined) =>
     ? { instructions: LEGACY_SERVER_INSTRUCTIONS, toolMeta: undefined }
     : { instructions: SERVER_INSTRUCTIONS, toolMeta: ALWAYS_LOAD_META };
 
-/** The test for one process. Pass an empty env (stdio) to keep it off. */
+/**
+ * The test for one process. Undefined config: no test, everyone gets the current text.
+ */
 export function createInstructionsExperiment(
-  env: Record<string, string | undefined> = process.env,
+  config: InstructionsExperimentConfig | undefined,
   options: {
     report?: ExposureReporter;
     reportDefinition?: DefinitionReporter;
-    canSealAssertions?: () => boolean;
     now?: () => number;
+    hmac?: (message: string) => Buffer | null;
   } = {}
 ): InstructionsExperiment {
-  const config = instructionsExperimentConfig(env, options.canSealAssertions);
+  const experimentId = config?.experimentId ?? null;
+  const controlPercent = config?.controlPercent ?? 0;
+  // Without an experiment ID nobody gets an arm: the share picks the one text everyone gets.
+  const defaultVariant: InstructionsVariant = controlPercent === 100 ? "control" : "treatment";
+  const hmac = options.hmac ?? assertionKeyHmac;
   const report = options.report ?? reportExposure;
   const sendDefinition = options.reportDefinition ?? reportDefinition;
   const now = options.now ?? Date.now;
@@ -230,7 +301,8 @@ export function createInstructionsExperiment(
   let definition: "unsent" | "sending" | "sent" = "unsent";
   let lastAttempt = -Infinity;
   const ensureDefinition = () => {
-    if (!config || definition !== "unsent" || now() - lastAttempt < DEFINITION_RETRY_MS) return;
+    if (!experimentId || definition !== "unsent" || now() - lastAttempt < DEFINITION_RETRY_MS)
+      return;
     definition = "sending";
     lastAttempt = now();
     const arm = (variant: InstructionsVariant) => {
@@ -238,8 +310,8 @@ export function createInstructionsExperiment(
       return { instructions: session.instructions, alwaysLoad: session.toolMeta !== undefined };
     };
     void sendDefinition({
-      experimentId: config.experimentId,
-      controlPercent: config.controlPercent,
+      experimentId,
+      controlPercent,
       arms: { control: arm("control"), treatment: arm("treatment") },
     })
       .catch(() => false)
@@ -249,15 +321,17 @@ export function createInstructionsExperiment(
   };
   return {
     assign(identity) {
-      const key = config ? instructionsExperimentIdentity(identity) : undefined;
-      if (!config || !key) return undefined;
-      const digest = createHash("sha256").update(`${config.salt}:${key}`).digest();
+      const key = experimentId ? instructionsExperimentIdentity(identity) : undefined;
+      // Keyed with the secret assertion key, so a caller cannot work out or pick its arm, and
+      // with the experiment ID, so each experiment is a new split.
+      const digest = key ? hmac(`${experimentId}:${key}`) : null;
+      if (!experimentId || !key || !digest) return undefined;
       return {
-        experimentId: config.experimentId,
-        variant: digest.readUInt32BE(0) % 100 < config.controlPercent ? "control" : "treatment",
-        // Other bytes of the same salted digest: stable per caller, not reversible.
+        experimentId,
+        variant: digest.readUInt32BE(0) % 100 < controlPercent ? "control" : "treatment",
+        // Other bytes of the same digest: stable per caller, not reversible.
         unit: digest.toString("hex", 4, 20),
-        controlPercent: config.controlPercent,
+        controlPercent,
         // Only an API key or a user ID keeps a caller in one arm for good. An IP network or an
         // opaque token can change between initialize and later calls, so the app reports
         // those callers apart and does not use them for the main result.
@@ -265,7 +339,8 @@ export function createInstructionsExperiment(
       };
     },
     sessionConfig(arm) {
-      return { ...armSession(arm?.variant), privateLists: config !== undefined };
+      // Lists differ by arm only while callers get arms.
+      return { ...armSession(arm?.variant ?? defaultVariant), privateLists: experimentId !== null };
     },
     observeRequest({ arm, clientIp, fallbackClient }, body) {
       if (!arm) return;

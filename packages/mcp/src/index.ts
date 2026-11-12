@@ -32,7 +32,10 @@ import {
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
-import { createInstructionsExperiment } from "./lib/instructions-experiment.js";
+import {
+  createInstructionsExperiment,
+  loadInstructionsExperiment,
+} from "./lib/instructions-experiment.js";
 import { serverInstructions } from "./lib/server-instructions.js";
 import { aliasArgs, GLOBAL_ALIASES, QUERY_DOCS_ALIASES } from "./lib/tool-args.js";
 import { registerResearchPreviewTools } from "./lib/research-preview-tools.js";
@@ -157,9 +160,9 @@ if (TRANSPORT_TYPE === "stdio" && passedPortFlag) {
 
 const requestContext = new AsyncLocalStorage<ClientContext>();
 // Server instructions A/B test; HTTP only, and off unless the env sets a control share.
-const instructionsExperiment = createInstructionsExperiment(
-  TRANSPORT_TYPE === "http" ? process.env : {}
-);
+// No test until main() loads the config: stdio keeps this, the HTTP server replaces it before
+// it listens.
+let instructionsExperiment = createInstructionsExperiment(undefined);
 
 // Global state for stdio mode only
 let stdioApiKey: string | undefined;
@@ -480,6 +483,7 @@ async function main() {
   });
 
   if (TRANSPORT_TYPE === "http") {
+    instructionsExperiment = await loadInstructionsExperiment(process.env);
     // Commander parsed and range-checked this already; 0 means ephemeral.
     const initialPort = cliOptions.port;
 

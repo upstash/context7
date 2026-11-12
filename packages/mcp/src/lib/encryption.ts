@@ -1,4 +1,4 @@
-import { createCipheriv, randomBytes } from "crypto";
+import { createCipheriv, createHmac, randomBytes } from "crypto";
 import { isIP } from "node:net";
 import { SERVER_VERSION } from "./constants.js";
 import type { ClientContext, InstructionsArm } from "./types.js";
@@ -63,6 +63,12 @@ export function createClientIpAssertion(
 ): string | null {
   if (isIP(clientIp) === 0) return null;
   return sealAssertion(ASSERTION_VERSION, clientIp, nowMs, nonce);
+}
+
+/** HMAC-SHA256 of a message with the assertion key, or null without a valid key. */
+export function assertionKeyHmac(message: string): Buffer | null {
+  const key = assertionKey();
+  return key ? createHmac("sha256", key).update(message).digest() : null;
 }
 
 /** True when assertions can be sealed: the instructions A/B test needs this. */

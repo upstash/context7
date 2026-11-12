@@ -4,7 +4,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { StdioClientTransport, getDefaultEnvironment } from "@modelcontextprotocol/client/stdio";
 import { execSync } from "node:child_process";
 import { spawn, type ChildProcess } from "node:child_process";
-import { createDecipheriv } from "node:crypto";
+import { createDecipheriv, createHmac } from "node:crypto";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -110,6 +110,7 @@ function getFreePort(): Promise<number> {
 }
 
 const definitionBodies: string[] = [];
+const stubExperimentConfig = { experimentId: "it-test", controlPercent: 50 };
 
 function startStubApi(): Promise<string> {
   stubServer = http.createServer((req, res) => {
@@ -117,6 +118,12 @@ function startStubApi(): Promise<string> {
     const apiPath = url.pathname.replace(/^\/api/, "");
     requests.push({ path: apiPath, query: url.searchParams, headers: req.headers });
     const bearer = /^Bearer (.+)$/.exec(req.headers.authorization ?? "")?.[1] ?? "";
+    if (apiPath === "/v2/mcp/instructions-experiment" && req.method === "GET") {
+      // The A/B test's config, which the app keeps in Redis.
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify(stubExperimentConfig));
+      return;
+    }
     if (apiPath === "/v2/mcp/instructions-experiment") {
       let body = "";
       req.on("data", (chunk: Buffer) => (body += chunk.toString()));
@@ -774,15 +781,13 @@ describe("research preview", () => {
     let abChild: ChildProcess;
     let abUrl: string;
     let abMetricsUrl: string;
-    const experimentEnv = {
-      CONTEXT7_INSTRUCTIONS_CONTROL_PERCENT: "50",
-      CONTEXT7_INSTRUCTIONS_EXPERIMENT_ID: "it-test",
-      CONTEXT7_INSTRUCTIONS_EXPERIMENT_SALT: "integration-salt",
-    };
-    // The same experiment as the server, so the test knows each key's arm.
-    const experiment = createInstructionsExperiment(experimentEnv, {
-      canSealAssertions: () => true,
+    // The server reads the config from the stub API at startup.
+    const experimentEnv = { CONTEXT7_INSTRUCTIONS_EXPERIMENT: "remote" };
+    // The same experiment and key as the server, so the test knows each key's arm.
+    const experiment = createInstructionsExperiment(stubExperimentConfig, {
       report: () => {},
+      hmac: (message) =>
+        createHmac("sha256", Buffer.from(CLIENT_IP_ASSERTION_KEY, "hex")).update(message).digest(),
     });
     const keyFor = (arm: InstructionsVariant) => {
       for (let i = 0; ; i++) {

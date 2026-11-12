@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 const recordInstructionRequest = vi.hoisted(() => vi.fn());
 vi.mock("../src/lib/telemetry-runtime.js", async (importOriginal) => ({
@@ -11,34 +11,32 @@ import { ALWAYS_LOAD_META } from "../src/lib/constants.js";
 import {
   anonymousNetwork,
   createInstructionsExperiment,
-  reportExposure,
-  instructionsExperimentConfig,
   instructionsExperimentIdentity,
   LEGACY_SERVER_INSTRUCTIONS,
+  fetchInstructionsExperimentConfig,
+  loadInstructionsExperiment,
+  parseInstructionsExperimentConfig,
+  reportExposure,
 } from "../src/lib/instructions-experiment.js";
 import { SERVER_INSTRUCTIONS } from "../src/lib/server-instructions.js";
 import type { InstructionsArm } from "../src/lib/types.js";
 
-const env = (controlPercent: string, overrides: Record<string, string | undefined> = {}) => ({
-  CONTEXT7_INSTRUCTIONS_CONTROL_PERCENT: controlPercent,
-  CONTEXT7_INSTRUCTIONS_EXPERIMENT_ID: "instructions-v1",
-  CONTEXT7_INSTRUCTIONS_EXPERIMENT_SALT: "a-secret-salt-of-16+",
-  ...overrides,
-});
 const report = vi.fn();
 const reportDefinition = vi.fn(async () => true);
 let clock = 0;
-const experiment = (controlPercent: number, salt = "a-secret-salt-of-16+") =>
+const experiment = (controlPercent: number, experimentId: string | null = "instructions-v1") =>
   createInstructionsExperiment(
-    env(String(controlPercent), { CONTEXT7_INSTRUCTIONS_EXPERIMENT_SALT: salt }),
-    {
-      canSealAssertions: () => true,
-      report,
-      reportDefinition,
-      now: () => clock,
-    }
+    { experimentId, controlPercent },
+    { report, reportDefinition, now: () => clock }
   );
 
+beforeAll(() => {
+  // The arms are an HMAC with the assertion key.
+  process.env.MCP_CLIENT_IP_ASSERTION_KEY = "ab".repeat(32);
+});
+afterAll(() => {
+  delete process.env.MCP_CLIENT_IP_ASSERTION_KEY;
+});
 beforeEach(() => {
   recordInstructionRequest.mockClear();
   report.mockClear();
@@ -47,41 +45,127 @@ beforeEach(() => {
   clock = 0;
 });
 
-describe("instructionsExperimentConfig", () => {
-  const sealable = () => true;
-
-  test("is off when the percent is unset, empty or 0", () => {
-    for (const value of [undefined, "", " ", "0"]) {
-      expect(
-        instructionsExperimentConfig({ CONTEXT7_INSTRUCTIONS_CONTROL_PERCENT: value }, sealable)
-      ).toBeUndefined();
-    }
-  });
-
-  test("reads the share, the experiment ID and the salt", () => {
-    expect(instructionsExperimentConfig(env(" 50 "), sealable)).toEqual({
-      controlPercent: 50,
+describe("parseInstructionsExperimentConfig", () => {
+  test("reads an experiment, or one text for everyone without an ID", () => {
+    expect(
+      parseInstructionsExperimentConfig({ experimentId: "instructions-v1", controlPercent: 80 })
+    ).toEqual({
       experimentId: "instructions-v1",
-      salt: "a-secret-salt-of-16+",
+      controlPercent: 80,
+    });
+    expect(parseInstructionsExperimentConfig({ experimentId: null, controlPercent: 0 })).toEqual({
+      experimentId: null,
+      controlPercent: 0,
     });
   });
 
-  test("fails the deploy on an invalid setting instead of rolling out to everyone", () => {
-    for (const value of ["abc", "-5", "101", "12.5", "50%"]) {
-      expect(() => instructionsExperimentConfig(env(value), sealable)).toThrow(/integer 0-100/);
+  test("refuses anything else", () => {
+    for (const value of [
+      null,
+      "80",
+      { experimentId: "instructions-v1", controlPercent: 101 },
+      { experimentId: "instructions-v1", controlPercent: 12.5 },
+      { experimentId: "instructions-v1", controlPercent: "80" },
+      { experimentId: "Bad ID", controlPercent: 80 },
+      { experimentId: null, controlPercent: 50 },
+      { controlPercent: 80 },
+    ]) {
+      expect(parseInstructionsExperimentConfig(value)).toBeUndefined();
     }
-    expect(() =>
-      instructionsExperimentConfig(env("50", { CONTEXT7_INSTRUCTIONS_EXPERIMENT_ID: "" }), sealable)
-    ).toThrow(/EXPERIMENT_ID/);
-    expect(() =>
-      instructionsExperimentConfig(
-        env("50", { CONTEXT7_INSTRUCTIONS_EXPERIMENT_SALT: "short" }),
-        sealable
-      )
-    ).toThrow(/SALT/);
-    expect(() => instructionsExperimentConfig(env("50"), () => false)).toThrow(
-      /MCP_CLIENT_IP_ASSERTION_KEY/
+  });
+});
+
+describe("fetchInstructionsExperimentConfig", () => {
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+  const withFetch = async (fetchMock: ReturnType<typeof vi.fn>) => {
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      return await fetchInstructionsExperimentConfig({ retryDelayMs: 0 });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  };
+
+  test("reads the config from /v2/mcp/instructions-experiment", async () => {
+    const fetchMock = vi.fn(async () =>
+      json({ experimentId: "instructions-v1", controlPercent: 80 })
     );
+    expect(await withFetch(fetchMock)).toEqual({
+      experimentId: "instructions-v1",
+      controlPercent: 80,
+    });
+    expect(String((fetchMock.mock.calls[0] as unknown[])[0])).toMatch(
+      /\/v2\/mcp\/instructions-experiment$/
+    );
+  });
+
+  test("retries a failed request, but not a 404 (no experiment configured)", async () => {
+    const flaky = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("network"))
+      .mockResolvedValueOnce(json({ experimentId: null, controlPercent: 0 }));
+    expect(await withFetch(flaky)).toEqual({ experimentId: null, controlPercent: 0 });
+    expect(flaky).toHaveBeenCalledTimes(2);
+
+    const missing = vi.fn(async () => json({ error: "experiment_not_configured" }, 404));
+    expect(await withFetch(missing)).toBeUndefined();
+    expect(missing).toHaveBeenCalledTimes(1);
+  });
+
+  test("gives up after three failures, and refuses an invalid config", async () => {
+    const down = vi.fn(async () => json({}, 503));
+    expect(await withFetch(down)).toBeUndefined();
+    expect(down).toHaveBeenCalledTimes(3);
+    expect(
+      await withFetch(vi.fn(async () => json({ experimentId: null, controlPercent: 50 })))
+    ).toBeUndefined();
+  });
+});
+
+describe("loadInstructionsExperiment", () => {
+  const remote = { CONTEXT7_INSTRUCTIONS_EXPERIMENT: "remote" };
+  const arm = (e: Awaited<ReturnType<typeof loadInstructionsExperiment>>) =>
+    e.assign({ apiKey: "ctx7sk-load" });
+
+  test("runs no test without the variable, and does not read the config", async () => {
+    const fetchConfig = vi.fn();
+    const e = await loadInstructionsExperiment({}, { fetchConfig });
+    expect(fetchConfig).not.toHaveBeenCalled();
+    expect(arm(e)).toBeUndefined();
+    expect(e.sessionConfig(undefined).instructions).toBe(SERVER_INSTRUCTIONS);
+  });
+
+  test("uses the config the app sent", async () => {
+    const e = await loadInstructionsExperiment(remote, {
+      fetchConfig: async () => ({ experimentId: "instructions-v1", controlPercent: 80 }),
+      canSealAssertions: () => true,
+    });
+    expect(arm(e)).toMatchObject({ experimentId: "instructions-v1", controlPercent: 80 });
+  });
+
+  test("serves the production text to everyone when it gets no config", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const e = await loadInstructionsExperiment(remote, {
+      fetchConfig: async () => undefined,
+      canSealAssertions: () => true,
+    });
+    expect(arm(e)).toBeUndefined();
+    expect(e.sessionConfig(undefined)).toMatchObject({
+      instructions: LEGACY_SERVER_INSTRUCTIONS,
+      toolMeta: undefined,
+    });
+    expect(error).toHaveBeenCalled();
+    error.mockRestore();
+  });
+
+  test("fails the start on a wrong mode or without the assertion key", async () => {
+    await expect(
+      loadInstructionsExperiment({ CONTEXT7_INSTRUCTIONS_EXPERIMENT: "on" })
+    ).rejects.toThrow(/must be "remote"/);
+    await expect(
+      loadInstructionsExperiment(remote, { canSealAssertions: () => false })
+    ).rejects.toThrow(/MCP_CLIENT_IP_ASSERTION_KEY/);
   });
 });
 
@@ -130,7 +214,8 @@ describe("anonymousNetwork", () => {
 
 describe("assign", () => {
   test("assigns nothing while the test is off or without an identity", () => {
-    expect(createInstructionsExperiment({}).assign({ apiKey: "ctx7sk-a" })).toBeUndefined();
+    expect(createInstructionsExperiment(undefined).assign({ apiKey: "ctx7sk-a" })).toBeUndefined();
+    expect(experiment(100, null).assign({ apiKey: "ctx7sk-a" })).toBeUndefined();
     expect(experiment(50).assign({})).toBeUndefined();
   });
 
@@ -144,10 +229,10 @@ describe("assign", () => {
     });
     expect(first.unit).toMatch(/^[0-9a-f]{32}$/);
     for (let i = 0; i < 20; i++) expect(half.assign({ apiKey: "ctx7sk-stable" })).toEqual(first);
-    // Another salt is another split.
-    expect(
-      experiment(50, "another-secret-salt").assign({ apiKey: "ctx7sk-stable" })!.unit
-    ).not.toBe(first.unit);
+    // Another experiment is another split.
+    expect(experiment(50, "instructions-v2").assign({ apiKey: "ctx7sk-stable" })!.unit).not.toBe(
+      first.unit
+    );
   });
 
   test("marks IP and opaque-token callers as not signed in, and keeps one IPv6 /64 in one unit", () => {
@@ -173,7 +258,7 @@ describe("assign", () => {
 
   test("splits callers close to the control share", () => {
     for (const controlPercent of [10, 50, 90]) {
-      const split = experiment(controlPercent, "split-check-salt-123");
+      const split = experiment(controlPercent, "split-check");
       const total = 20_000;
       let control = 0;
       for (let i = 0; i < total; i++) {
@@ -214,11 +299,20 @@ describe("sessionConfig", () => {
       toolMeta: ALWAYS_LOAD_META,
       privateLists: true,
     });
-    expect(createInstructionsExperiment({}).sessionConfig(undefined)).toEqual({
+    expect(createInstructionsExperiment(undefined).sessionConfig(undefined)).toEqual({
       instructions: SERVER_INSTRUCTIONS,
       toolMeta: ALWAYS_LOAD_META,
       privateLists: false,
     });
+  });
+
+  test("without an experiment ID, 100 gives everyone control and 0 treatment, uncounted", () => {
+    expect(experiment(100, null).sessionConfig(undefined)).toEqual({
+      instructions: LEGACY_SERVER_INSTRUCTIONS,
+      toolMeta: undefined,
+      privateLists: false,
+    });
+    expect(experiment(0, null).sessionConfig(undefined).instructions).toBe(SERVER_INSTRUCTIONS);
   });
 
   test("both texts fit Claude Code's limit with room for the preview line", () => {
@@ -323,7 +417,6 @@ describe("reportExposure", () => {
   test("sends a caller's client name as a printable ASCII header", () => {
     const fetchMock = vi.fn(async () => new Response(null, { status: 204 }));
     vi.stubGlobal("fetch", fetchMock);
-    process.env.MCP_CLIENT_IP_ASSERTION_KEY = "ab".repeat(32);
     try {
       reportExposure({
         arm: {
@@ -342,7 +435,6 @@ describe("reportExposure", () => {
       );
     } finally {
       vi.unstubAllGlobals();
-      delete process.env.MCP_CLIENT_IP_ASSERTION_KEY;
     }
   });
 });
