@@ -60,6 +60,39 @@ describe("request timeouts", () => {
     );
   });
 
+  test("turns a body that stalls after the headers into the same clear error", async () => {
+    const stalled = new Response(
+      new ReadableStream({
+        pull(controller) {
+          controller.error(new DOMException("The operation timed out.", "TimeoutError"));
+        },
+      }),
+      { status: 200 }
+    );
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(stalled));
+
+    await expect(fetchWithTimeout("https://example.test", {}, 5_000)).rejects.toThrow(
+      "Context7 did not answer within 5 seconds"
+    );
+  });
+
+  test("keeps the status, headers and body of a full answer", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response('{"a":1}', { status: 202, headers: { "Retry-After": "30" } })
+        )
+    );
+
+    const response = await fetchWithTimeout("https://example.test", {});
+
+    expect(response.status).toBe(202);
+    expect(response.headers.get("Retry-After")).toBe("30");
+    expect(await response.json()).toEqual({ a: 1 });
+  });
+
   test("passes other network errors through", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("fetch failed")));
 

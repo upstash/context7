@@ -37,13 +37,24 @@ export const REQUEST_TIMEOUT_MS = 60_000;
 export const CODE_REQUEST_TIMEOUT_MS = 70_000;
 
 /** fetch with a timeout, so a stalled connection ends with a clear error instead of hanging. */
+/** Statuses whose Response cannot carry a body. */
+const NO_BODY_STATUS = new Set([101, 103, 204, 205, 304]);
+
 export async function fetchWithTimeout(
   url: string,
   init: RequestInit,
   timeoutMs: number = REQUEST_TIMEOUT_MS
 ): Promise<Response> {
   try {
-    return await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+    const response = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+    // Read the body under the same timeout, so a body that stalls after the
+    // headers also ends with the message below. Answers are small.
+    const body = NO_BODY_STATUS.has(response.status) ? null : await response.arrayBuffer();
+    return new Response(body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    });
   } catch (err) {
     if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) {
       throw new Error(
