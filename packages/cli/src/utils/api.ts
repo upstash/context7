@@ -172,6 +172,56 @@ export async function getLibraryCode(
   return { kind: "result", body: await response.text() };
 }
 
+export interface UpgradeGuideOptions {
+  /** The version to upgrade to. Without it, the latest major. */
+  toVersion?: string;
+  /** The page of a long guide, from 1. */
+  page?: number;
+  json?: boolean;
+}
+
+export type UpgradeGuideResult =
+  | { kind: "result"; body: string }
+  | { kind: "preparing"; message: string; retryAfter: number }
+  | { kind: "error"; error: string; message?: string };
+
+/** Fetches the upgrade guide between two versions of a library through /api/v2/version-upgrade-guide. */
+export async function getUpgradeGuide(
+  libraryId: string,
+  fromVersion: string,
+  options: UpgradeGuideOptions = {},
+  accessToken?: string
+): Promise<UpgradeGuideResult> {
+  const params = new URLSearchParams({ libraryId, fromVersion });
+  if (options.toVersion) params.set("toVersion", options.toVersion);
+  // Always sent, so the app pages the guide for this client (as the MCP tool does).
+  params.set("page", String(options.page ?? 1));
+  if (options.json) params.set("type", "json");
+  const response = await fetch(`${baseUrl}/api/v2/version-upgrade-guide?${params}`, {
+    headers: getAuthHeaders(accessToken),
+  });
+  if (response.status === 202) {
+    const body = (await response.json().catch(() => ({}))) as {
+      message?: string;
+      retryAfter?: number;
+    };
+    return {
+      kind: "preparing",
+      message: body.message ?? "The upgrade guide is being prepared.",
+      retryAfter: retryAfterSeconds(body.retryAfter, response.headers.get("Retry-After")),
+    };
+  }
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
+    return {
+      kind: "error",
+      error: body.error || `HTTP error ${response.status}`,
+      message: body.message,
+    };
+  }
+  return { kind: "result", body: await response.text() };
+}
+
 export async function getLibraryContext(
   libraryId: string,
   query: string,

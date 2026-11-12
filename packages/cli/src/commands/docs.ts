@@ -6,6 +6,7 @@ import {
   resolveLibrary,
   getLibraryContext,
   getLibraryCode,
+  getUpgradeGuide,
   hasSourceCode,
   CODE_LIMITS,
   CODE_OPERATIONS,
@@ -347,6 +348,82 @@ async function codeCommand(
   console.log(result.body);
 }
 
+async function upgradeGuideCommand(
+  libraryId: string,
+  fromVersion: string,
+  toVersion: string | undefined,
+  options: { page?: string; json?: boolean }
+): Promise<void> {
+  trackEvent("command", { name: "upgrade-guide" });
+  libraryId = recoverLibraryId(libraryId);
+  if (!/^\/[^/]+\/[^/]/.test(libraryId)) {
+    log.error(`Invalid library ID: "${libraryId}"`);
+    log.info(`Expected format: /owner/repo. Run "ctx7 library <name>" to find it.`);
+    process.exitCode = 1;
+    return;
+  }
+  let page: number | undefined;
+  if (options.page !== undefined) {
+    page = Number(options.page);
+    if (!Number.isInteger(page) || page < 1) {
+      log.error("--page must be a whole number from 1.");
+      process.exitCode = 1;
+      return;
+    }
+  }
+  const accessToken = await getValidAccessToken();
+  const target = `${libraryId} ${fromVersion} -> ${toVersion ?? "latest"}`;
+  const spinner = isTTY ? ora(`Fetching the upgrade guide for ${target}...`).start() : null;
+  let result;
+  try {
+    result = await getUpgradeGuide(
+      libraryId,
+      fromVersion,
+      { toVersion, page, json: options.json },
+      accessToken
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    spinner?.fail(`Error: ${message}`);
+    if (!spinner) log.error(message);
+    process.exitCode = 1;
+    return;
+  }
+  spinner?.stop();
+
+  if (result.kind === "preparing") {
+    if (options.json) {
+      console.log(
+        JSON.stringify({
+          error: "preparing",
+          message: result.message,
+          retryAfter: result.retryAfter,
+        })
+      );
+    } else {
+      log.warn(result.message);
+      // The API's message usually says when to call again; add it only when it does not.
+      if (!/again/i.test(result.message))
+        log.info(`Run the same command again in about ${result.retryAfter} seconds.`);
+    }
+    process.exitCode = 75; // EX_TEMPFAIL: try again later
+    return;
+  }
+  if (result.kind === "error") {
+    if (options.json)
+      console.log(JSON.stringify({ error: result.error, message: result.message || result.error }));
+    else log.error(result.message || result.error);
+    process.exitCode = 1;
+    return;
+  }
+  if (!result.body) {
+    log.warn("No upgrade guide was returned for these versions.");
+    process.exitCode = 1;
+    return;
+  }
+  console.log(result.body);
+}
+
 export function registerDocsCommands(program: Command): void {
   program
     .command("library")
@@ -413,4 +490,31 @@ export function registerDocsCommands(program: Command): void {
     .action(async (libraryId: string, pattern: string | undefined, options: CodeCommandOptions) => {
       await codeCommand(libraryId, pattern, options);
     });
+
+  program
+    .command("upgrade-guide")
+    .argument("<libraryId>", "Context7 library ID (e.g., /vercel/next.js)")
+    .argument(
+      "<fromVersion>",
+      "The version the project uses now (e.g., 14.2.35 or 14); a bare major means the oldest release of that line"
+    )
+    .argument(
+      "[toVersion]",
+      "The version to upgrade to (e.g., 16); a bare major means the newest release of that line (default: the latest major)"
+    )
+    .option("--page <n>", "Page of a long guide, from 1 (default: 1); each page names the next")
+    .option("--json", "Output as JSON")
+    .description(
+      "Get what changes between two versions of a library: breaking changes, codemods, deprecations and API changes"
+    )
+    .action(
+      async (
+        libraryId: string,
+        fromVersion: string,
+        toVersion: string | undefined,
+        options: { page?: string; json?: boolean }
+      ) => {
+        await upgradeGuideCommand(libraryId, fromVersion, toVersion, options);
+      }
+    );
 }
