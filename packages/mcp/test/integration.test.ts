@@ -8,7 +8,10 @@ import { createDecipheriv } from "node:crypto";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { createInstructionsExperiment } from "../src/lib/instructions-experiment.js";
+import {
+  createInstructionsExperiment,
+  LEGACY_SERVER_INSTRUCTIONS,
+} from "../src/lib/instructions-experiment.js";
 import type { InstructionsVariant } from "../src/lib/types.js";
 import { ALWAYS_LOAD_META } from "../src/lib/constants.js";
 import { serverInstructions } from "../src/lib/server-instructions.js";
@@ -105,12 +108,24 @@ function getFreePort(): Promise<number> {
   });
 }
 
+const definitionBodies: string[] = [];
+
 function startStubApi(): Promise<string> {
   stubServer = http.createServer((req, res) => {
     const url = new URL(req.url!, "http://stub.local");
     const apiPath = url.pathname.replace(/^\/api/, "");
     requests.push({ path: apiPath, query: url.searchParams, headers: req.headers });
     const bearer = /^Bearer (.+)$/.exec(req.headers.authorization ?? "")?.[1] ?? "";
+    if (apiPath === "/v2/mcp/instructions-experiment") {
+      let body = "";
+      req.on("data", (chunk: Buffer) => (body += chunk.toString()));
+      req.on("end", () => {
+        definitionBodies.push(body);
+        res.statusCode = 204;
+        res.end();
+      });
+      return;
+    }
     if (apiPath === "/v2/feedback") {
       let body = "";
       req.on("data", (chunk: Buffer) => (body += chunk.toString()));
@@ -835,6 +850,16 @@ describe("research preview", () => {
         ).variant;
       });
       expect(reported.sort()).toEqual(["control", "treatment"]);
+
+      // The first exposure also sends what each arm gets, once per process.
+      expect(definitionBodies).toHaveLength(1);
+      const definition = JSON.parse(decryptClientIpAssertion(definitionBodies[0]!));
+      expect(definitionBodies[0]!.startsWith("p1:")).toBe(true);
+      expect(definition.arms.control).toEqual({
+        instructions: LEGACY_SERVER_INSTRUCTIONS,
+        alwaysLoad: false,
+      });
+      expect(definition.arms.treatment.alwaysLoad).toBe(true);
     });
 
     test("marks tools/list private while the test runs", async () => {

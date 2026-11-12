@@ -82,6 +82,17 @@ export function createInstructionsArmAssertion(
 }
 
 /**
+ * What each arm of the instructions A/B test gets, as an assertion (tag `p1`), so the admin
+ * page can show the prompts the MCP server really serves.
+ */
+export function createInstructionsDefinitionAssertion(
+  definition: object,
+  nowMs = Date.now()
+): string | null {
+  return sealAssertion("p1", JSON.stringify(definition), nowMs);
+}
+
+/**
  * Generate headers for Context7 API requests.
  * Handles client IP encryption, authentication, and telemetry headers.
  */

@@ -6,13 +6,14 @@ import {
   assertionKeyIsConfigured,
   createClientIpAssertion,
   createInstructionsArmAssertion,
+  createInstructionsDefinitionAssertion,
   INSTRUCTIONS_ARM_HEADER,
 } from "./encryption.js";
 import { findJsonRpcMessage } from "./json-rpc.js";
 import { isJWT } from "./jwt.js";
 import { SERVER_INSTRUCTIONS } from "./server-instructions.js";
 import { recordInstructionRequest } from "./telemetry-runtime.js";
-import type { InstructionsArm } from "./types.js";
+import type { InstructionsArm, InstructionsVariant } from "./types.js";
 import { envelopeClientInfo } from "./utils.js";
 
 /**
@@ -169,15 +170,78 @@ export const reportExposure: ExposureReporter = ({ arm, clientName, clientIp }) 
   });
 };
 
+/** What each arm gets, for the admin page in context7app. */
+export interface InstructionsExperimentDefinition {
+  experimentId: string;
+  controlPercent: number;
+  arms: Record<InstructionsVariant, { instructions: string; alwaysLoad: boolean }>;
+}
+
+/** Sends the definition to context7app; resolves true once the app has stored it. */
+export type DefinitionReporter = (definition: InstructionsExperimentDefinition) => Promise<boolean>;
+
+/** Posts the sealed definition to /v2/mcp/instructions-experiment. */
+export const reportDefinition: DefinitionReporter = async (definition) => {
+  const assertion = createInstructionsDefinitionAssertion(definition);
+  if (!assertion) return false;
+  try {
+    const response = await fetch(`${CONTEXT7_API_BASE_URL}/v2/mcp/instructions-experiment`, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain", "X-Context7-Source": "mcp-server" },
+      body: assertion,
+      signal: AbortSignal.timeout(EXPOSURE_TIMEOUT_MS),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+};
+
+/** Wait between attempts when the app did not store the definition. */
+const DEFINITION_RETRY_MS = 60_000;
+
 const INSTRUCTION_METHODS = ["initialize", "server/discover"];
+
+const armSession = (variant: InstructionsVariant | undefined) =>
+  variant === "control"
+    ? { instructions: LEGACY_SERVER_INSTRUCTIONS, toolMeta: undefined }
+    : { instructions: SERVER_INSTRUCTIONS, toolMeta: ALWAYS_LOAD_META };
 
 /** The test for one process. Pass an empty env (stdio) to keep it off. */
 export function createInstructionsExperiment(
   env: Record<string, string | undefined> = process.env,
-  options: { report?: ExposureReporter; canSealAssertions?: () => boolean } = {}
+  options: {
+    report?: ExposureReporter;
+    reportDefinition?: DefinitionReporter;
+    canSealAssertions?: () => boolean;
+    now?: () => number;
+  } = {}
 ): InstructionsExperiment {
   const config = instructionsExperimentConfig(env, options.canSealAssertions);
   const report = options.report ?? reportExposure;
+  const sendDefinition = options.reportDefinition ?? reportDefinition;
+  const now = options.now ?? Date.now;
+  // The definition goes once per process, with the first exposure; a failure retries later.
+  let definition: "unsent" | "sending" | "sent" = "unsent";
+  let lastAttempt = -Infinity;
+  const ensureDefinition = () => {
+    if (!config || definition !== "unsent" || now() - lastAttempt < DEFINITION_RETRY_MS) return;
+    definition = "sending";
+    lastAttempt = now();
+    const arm = (variant: InstructionsVariant) => {
+      const session = armSession(variant);
+      return { instructions: session.instructions, alwaysLoad: session.toolMeta !== undefined };
+    };
+    void sendDefinition({
+      experimentId: config.experimentId,
+      controlPercent: config.controlPercent,
+      arms: { control: arm("control"), treatment: arm("treatment") },
+    })
+      .catch(() => false)
+      .then((stored) => {
+        definition = stored ? "sent" : "unsent";
+      });
+  };
   return {
     assign(identity) {
       const key = config ? instructionsExperimentIdentity(identity) : undefined;
@@ -193,12 +257,7 @@ export function createInstructionsExperiment(
       };
     },
     sessionConfig(arm) {
-      const control = arm?.variant === "control";
-      return {
-        instructions: control ? LEGACY_SERVER_INSTRUCTIONS : SERVER_INSTRUCTIONS,
-        toolMeta: control ? undefined : ALWAYS_LOAD_META,
-        privateLists: config !== undefined,
-      };
+      return { ...armSession(arm?.variant), privateLists: config !== undefined };
     },
     observeRequest({ arm, clientIp, fallbackClient }, body) {
       if (!arm) return;
@@ -210,6 +269,7 @@ export function createInstructionsExperiment(
         (typeof name === "string" ? name : envelopeClientInfo(message.params?._meta)?.ide) ??
         fallbackClient;
       recordInstructionRequest(arm.variant, clientName);
+      ensureDefinition();
       report({ arm, clientName, clientIp });
     },
   };

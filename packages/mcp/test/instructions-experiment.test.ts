@@ -25,18 +25,25 @@ const env = (controlPercent: string, overrides: Record<string, string | undefine
   ...overrides,
 });
 const report = vi.fn();
+const reportDefinition = vi.fn(async () => true);
+let clock = 0;
 const experiment = (controlPercent: number, salt = "a-secret-salt-of-16+") =>
   createInstructionsExperiment(
     env(String(controlPercent), { CONTEXT7_INSTRUCTIONS_EXPERIMENT_SALT: salt }),
     {
       canSealAssertions: () => true,
       report,
+      reportDefinition,
+      now: () => clock,
     }
   );
 
 beforeEach(() => {
   recordInstructionRequest.mockClear();
   report.mockClear();
+  reportDefinition.mockReset();
+  reportDefinition.mockResolvedValue(true);
+  clock = 0;
 });
 
 describe("instructionsExperimentConfig", () => {
@@ -260,5 +267,50 @@ describe("observeRequest", () => {
     half.observeRequest({ arm: undefined }, { method: "initialize", params: {} });
     expect(recordInstructionRequest).not.toHaveBeenCalled();
     expect(report).not.toHaveBeenCalled();
+  });
+});
+
+describe("definition report", () => {
+  const arm: InstructionsArm = {
+    experimentId: "instructions-v1",
+    variant: "control",
+    unit: "u",
+    controlPercent: 50,
+    signedIn: true,
+  };
+  const initialize = { method: "initialize", params: { clientInfo: { name: "cursor" } } };
+  const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+  test("sends both arms' prompts once per process, with the first exposure", async () => {
+    const half = experiment(50);
+    expect(reportDefinition).not.toHaveBeenCalled();
+    half.observeRequest({ arm }, initialize);
+    await flush();
+    half.observeRequest({ arm }, initialize);
+    expect(reportDefinition.mock.calls).toEqual([
+      [
+        {
+          experimentId: "instructions-v1",
+          controlPercent: 50,
+          arms: {
+            control: { instructions: LEGACY_SERVER_INSTRUCTIONS, alwaysLoad: false },
+            treatment: { instructions: SERVER_INSTRUCTIONS, alwaysLoad: true },
+          },
+        },
+      ],
+    ]);
+  });
+
+  test("retries a minute after the app did not store it", async () => {
+    reportDefinition.mockResolvedValueOnce(false);
+    const half = experiment(50);
+    half.observeRequest({ arm }, initialize);
+    await flush();
+    clock = 30_000;
+    half.observeRequest({ arm }, initialize);
+    expect(reportDefinition).toHaveBeenCalledTimes(1);
+    clock = 61_000;
+    half.observeRequest({ arm }, initialize);
+    expect(reportDefinition).toHaveBeenCalledTimes(2);
   });
 });
