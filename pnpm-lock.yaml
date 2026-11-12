@@ -45,7 +45,7 @@ overrides:
   '@modelcontextprotocol/sdk': ^1.32.0
   '@opencode-ai/plugin>effect': 4.0.0-beta.103
   '@opencode-ai/plugin>zod': ^4.6.6
-  toml: '>=5.0.1'
+  toml: ^5.0.1
 
 importers:
 
