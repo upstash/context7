@@ -29,14 +29,13 @@ import {
   SERVER_ICONS,
   SERVER_TITLE,
   mcpServerCard,
+  ALWAYS_LOAD_META,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
+import { serverInstructions } from "./lib/server-instructions.js";
 import { aliasArgs, GLOBAL_ALIASES, QUERY_DOCS_ALIASES } from "./lib/tool-args.js";
-import {
-  DOCS_FEEDBACK_INSTRUCTIONS,
-  registerResearchPreviewTools,
-} from "./lib/research-preview-tools.js";
+import { registerResearchPreviewTools } from "./lib/research-preview-tools.js";
 import { installProcessShutdown } from "./lib/process-shutdown.js";
 import {
   forceFlushTelemetry,
@@ -292,9 +291,7 @@ function createMcpServer(mcpContext: McpRequestContext, researchPreview: boolean
       "resources/templates/list": STATIC_LIST_CACHE_HINT,
       "server/discover": STATIC_LIST_CACHE_HINT,
     },
-    instructions: `Use this server to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, porting code between libraries, platforms, or SQL dialects, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
-
-Do not use for: refactoring, debugging, or reviewing code that does not depend on a library or platform API, or general programming concepts.${researchPreview ? `\n\n${DOCS_FEEDBACK_INSTRUCTIONS}` : ""}`,
+    instructions: serverInstructions(researchPreview),
   };
   const server = mcpInstrumentation
     ? mcpInstrumentation.createServer(serverInfo, serverOptions, mcpContext)
@@ -304,6 +301,7 @@ Do not use for: refactoring, debugging, or reviewing code that does not depend o
     RESOLVE_LIBRARY_ID_TOOL,
     {
       title: "Resolve Context7 Library ID",
+      _meta: ALWAYS_LOAD_META,
       description: `Resolves a package/product name to a Context7-compatible library ID and returns matching libraries.
 
 You MUST call this function before 'Query Documentation' tool to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
@@ -403,6 +401,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
     QUERY_DOCS_TOOL,
     {
       title: "Query Documentation",
+      _meta: ALWAYS_LOAD_META,
       description: `Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
 
 You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
