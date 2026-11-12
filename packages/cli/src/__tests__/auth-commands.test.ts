@@ -155,6 +155,19 @@ describe("whoami command", () => {
     expect(logOutput.some((l) => l.includes("test@example.com"))).toBe(true);
   });
 
+  test("passes a timeout signal to the identity request", async () => {
+    mockGetValidAccessToken.mockResolvedValue("valid-token");
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true, name: "T", email: null, teamspace: null }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await runCommand("whoami");
+
+    expect(fetchMock.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
+  });
+
   test("reports API-key authentication without calling the dashboard", async () => {
     mockGetValidAccessToken.mockResolvedValue("ctx7sk-valid-key");
     const fetchMock = vi.fn();
