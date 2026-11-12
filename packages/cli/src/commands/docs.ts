@@ -82,6 +82,12 @@ async function resolveCommand(
     return;
   }
 
+  if (options.json) {
+    spinner?.stop();
+    console.log(JSON.stringify(data.results || [], null, 2));
+    return;
+  }
+
   if (!data.results || data.results.length === 0) {
     spinner?.warn(`No libraries found matching "${library}"`);
     if (!spinner) log.warn(`No libraries found matching "${library}"`);
@@ -91,11 +97,6 @@ async function resolveCommand(
   const results = data.results;
 
   spinner?.stop();
-
-  if (options.json) {
-    console.log(JSON.stringify(results, null, 2));
-    return;
-  }
 
   log.blank();
 

@@ -88,6 +88,20 @@ describe("commands pass a refreshed token to the API", () => {
   });
 });
 
+describe("ctx7 library", () => {
+  test("prints an empty successful response as JSON with --json", async () => {
+    mockResolveLibrary.mockResolvedValue({ results: [] });
+
+    await run(registerDocsCommands, "library", "react", "--json");
+
+    const stdout = vi.mocked(console.log).mock.calls.flat().join("\n");
+    expect(JSON.parse(stdout)).toEqual([]);
+    expect(console.log).toHaveBeenCalledTimes(1);
+    expect(console.error).not.toHaveBeenCalled();
+    expect(process.exitCode).toBeUndefined();
+  });
+});
+
 describe("ctx7 docs", () => {
   test("prints an empty successful response as JSON with --json", async () => {
     const response = { codeSnippets: [], infoSnippets: [] };
@@ -99,7 +113,7 @@ describe("ctx7 docs", () => {
     expect(JSON.parse(stdout)).toEqual(response);
     expect(console.log).toHaveBeenCalledTimes(1);
     expect(console.error).not.toHaveBeenCalled();
-    expect(process.exitCode ?? 0).toBe(0);
+    expect(process.exitCode).toBeUndefined();
   });
 });
 
