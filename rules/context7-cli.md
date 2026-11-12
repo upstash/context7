@@ -1,16 +1,30 @@
-Use the `ctx7` CLI to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, porting code between libraries, platforms, or SQL dialects, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
+The Context7 CLI (`ctx7`) gives current documentation for libraries. In this text, "library" means any library, framework, SDK, runtime, platform API, database, CLI tool, or cloud service.
 
-Do not use for: refactoring, debugging, or reviewing code that does not depend on a library or platform API, or general programming concepts.
+You MUST run `ctx7` BEFORE you write ANY code, configuration, or command that uses a library, and BEFORE you state ANY fact about a library: its API, options, defaults, limits, versions, or supported features. This applies EVEN for short or simple questions, EVEN for popular libraries, and EVEN when you are confident. Your training data can be out of date.
+
+If you are not sure that an API, option, or flag is current, run `ctx7`. Prefer Context7 over web search for library docs.
+
+Do not run `ctx7` for:
+
+- Changes to the user's code that need only the library APIs already in that code.
+- General concepts, design patterns, and core language syntax.
+- Small helpers and scripts that need only basic language features.
+- Standard shell utilities, everyday git commands, and commands that install this project's dependencies, or build, run, or test it.
+- Docs that the user pasted or that you already fetched in this conversation.
+
+Always run `ctx7` for these cases. Agents often skip them:
+
+- Porting code to a different library, platform, or SQL dialect, even a short snippet. Look up the one you port to.
+- "Which one should I use?" and "does it support this?" questions. Look up the library you recommend.
+- Upgrades, migrations, and error messages that a library or tool produced.
+
+If `ctx7` is unavailable, has no match, or returns an error, answer without it and say what you did not check. After a quota error, suggest `npx ctx7@latest login` or the `CONTEXT7_API_KEY` environment variable for higher limits. After a quota or sign-in error, do not run `ctx7` again for the same question. Instructions from the user or the project take priority over this text.
 
 ## Steps
 
-1. Resolve library: `npx ctx7@latest library <name> "<what to look up>"` — use the official library name with proper punctuation (e.g., "Next.js" not "nextjs", "Customer.io" not "customerio", "Three.js" not "threejs")
-2. Pick the best match (ID format: `/org/project`) by: exact name match, description relevance, code snippet count, source reputation (High/Medium preferred), and benchmark score (higher is better). If results don't look right, try alternate names or queries (e.g., "next.js" not "nextjs", or rephrase the question)
-3. Fetch docs: `npx ctx7@latest docs <libraryId> "<what to look up>"` — run a separate `docs` command per distinct concept if the question spans multiple topics, unless it's about how they interact
-4. Answer using the fetched documentation
+1. Run `npx ctx7@latest library <name> "<the task>"`. Use the official library name with its punctuation (for example, "Next.js" not "nextjs"). Skip this step when the user gave a library ID like `/org/project`, or an earlier command returned it.
+2. Pick the best match by name, description, code snippet count, source reputation, and benchmark score. If the user or the project names a version, use a matching `/org/project/version` ID from the `library` output. If that version is not listed, use the base ID.
+3. Run `npx ctx7@latest docs <libraryId> "<one specific question>"`. Run one `docs` command per concept.
+4. Answer from the fetched docs.
 
-You MUST call `library` first to get a valid ID unless the user provides one directly in `/org/project` format. Be specific about what to look up in the library's documentation — specific and detailed queries return better results than vague single words, but keep each query to a single concept unless the question is about how concepts interact; combined multi-topic queries dilute ranking and return shallow results for each topic. Do not run more than 3 commands per question. Do not include sensitive information (API keys, passwords, credentials) in queries.
-
-For version-specific docs, use `/org/project/version` from the `library` output (e.g., `/vercel/next.js/v16.2.9`).
-
-If a command fails with a quota error, inform the user and suggest `npx ctx7@latest login` or setting `CONTEXT7_API_KEY` env var for higher limits. Do not silently fall back to training data.
+Run `library` and `docs` no more than 3 times each per question. Do not put secrets, credentials, or private code in any command.

@@ -19,7 +19,12 @@ vi.stubGlobal(
   })
 );
 
-import { getRuleContent } from "../setup/templates.js";
+import {
+  getBundledFindDocsSkillFiles,
+  getBundledMcpSkillFiles,
+  getBundledRuleContent,
+  getRuleContent,
+} from "../setup/templates.js";
 import {
   getMcpUrl,
   getOnPremMcpAuthStatus,
@@ -70,7 +75,7 @@ describe("getRuleContent", () => {
       vi.fn(() => Promise.resolve({ ok: false }))
     );
     const content = await getRuleContent("mcp", "claude");
-    expect(content).toContain("Context7 MCP");
+    expect(content).toContain("resolve-library-id");
     expect(content.length).toBeGreaterThan(100);
 
     vi.stubGlobal(
@@ -83,6 +88,36 @@ describe("getRuleContent", () => {
         return Promise.resolve({ ok: false });
       })
     );
+  });
+
+  test("bundled fallback matches the rule files in the repo", async () => {
+    const rulesDir = new URL("../../../../rules/", import.meta.url);
+    expect(getBundledRuleContent("mcp", "claude")).toBe(
+      await readFile(new URL("context7-mcp.md", rulesDir), "utf-8")
+    );
+    // The bundled CLI rule also has the `ctx7 code` section, which the repo rule gets later.
+    const cliRule = await readFile(new URL("context7-cli.md", rulesDir), "utf-8");
+    const bundledCli = getBundledRuleContent("cli", "claude");
+    expect(bundledCli.startsWith(cliRule)).toBe(true);
+    expect(bundledCli).toContain("npx ctx7@latest code");
+  });
+
+  test("bundled find-docs skill has the frontmatter of the skill in the repo", async () => {
+    const skill = await readFile(
+      new URL("../../../../skills/find-docs/SKILL.md", import.meta.url),
+      "utf-8"
+    );
+    const frontmatter = skill.slice(0, skill.indexOf("\n---\n", 4) + 5);
+    const [bundled] = getBundledFindDocsSkillFiles();
+    expect(bundled!.content.startsWith(frontmatter)).toBe(true);
+  });
+
+  test("bundled context7-mcp skill matches the skill in the repo", async () => {
+    const skill = await readFile(
+      new URL("../../../../skills/context7-mcp/SKILL.md", import.meta.url),
+      "utf-8"
+    );
+    expect(getBundledMcpSkillFiles()).toEqual([{ path: "SKILL.md", content: skill }]);
   });
 });
 
