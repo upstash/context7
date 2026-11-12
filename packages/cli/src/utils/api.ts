@@ -122,10 +122,43 @@ export interface CodeQueryOptions {
   json?: boolean;
 }
 
-export type CodeQueryResult =
+/**
+ * The answer of an endpoint that can ask the client to come back later: the text, a 202 while the
+ * server prepares something (the source index, an upgrade guide), or an error.
+ */
+export type RetryableResult =
   | { kind: "result"; body: string }
-  | { kind: "indexing"; message: string; retryAfter: number }
+  | { kind: "pending"; message: string; retryAfter: number }
   | { kind: "error"; error: string; message?: string };
+
+/** GETs an endpoint that answers 202 while it prepares, and reads its answer as RetryableResult. */
+async function fetchRetryableText(
+  url: string,
+  accessToken: string | undefined,
+  pendingMessage: string
+): Promise<RetryableResult> {
+  const response = await fetch(url, { headers: getAuthHeaders(accessToken) });
+  if (response.status === 202) {
+    const body = (await response.json().catch(() => ({}))) as {
+      message?: string;
+      retryAfter?: number;
+    };
+    return {
+      kind: "pending",
+      message: body.message ?? pendingMessage,
+      retryAfter: retryAfterSeconds(body.retryAfter, response.headers.get("Retry-After")),
+    };
+  }
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
+    return {
+      kind: "error",
+      error: body.error || `HTTP error ${response.status}`,
+      message: body.message,
+    };
+  }
+  return { kind: "result", body: await response.text() };
+}
 
 /** Queries a library's source code through /api/v2/code. */
 export async function getLibraryCode(
@@ -133,7 +166,7 @@ export async function getLibraryCode(
   pattern: string | undefined,
   options: CodeQueryOptions = {},
   accessToken?: string
-): Promise<CodeQueryResult> {
+): Promise<RetryableResult> {
   const params = new URLSearchParams({ libraryId });
   if (options.version) params.set("version", options.version);
   if (pattern) params.set("pattern", pattern);
@@ -147,29 +180,11 @@ export async function getLibraryCode(
   if (options.headLimit) params.set("head_limit", String(options.headLimit));
   if (options.offset) params.set("offset", String(options.offset));
   if (options.json) params.set("format", "json");
-  const response = await fetch(`${baseUrl}/api/v2/code?${params}`, {
-    headers: getAuthHeaders(accessToken),
-  });
-  if (response.status === 202) {
-    const body = (await response.json().catch(() => ({}))) as {
-      message?: string;
-      retryAfter?: number;
-    };
-    return {
-      kind: "indexing",
-      message: body.message ?? "The library source is being indexed.",
-      retryAfter: retryAfterSeconds(body.retryAfter, response.headers.get("Retry-After")),
-    };
-  }
-  if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
-    return {
-      kind: "error",
-      error: body.error || `HTTP error ${response.status}`,
-      message: body.message,
-    };
-  }
-  return { kind: "result", body: await response.text() };
+  return fetchRetryableText(
+    `${baseUrl}/api/v2/code?${params}`,
+    accessToken,
+    "The library source is being indexed."
+  );
 }
 
 export interface UpgradeGuideOptions {
@@ -180,46 +195,23 @@ export interface UpgradeGuideOptions {
   json?: boolean;
 }
 
-export type UpgradeGuideResult =
-  | { kind: "result"; body: string }
-  | { kind: "preparing"; message: string; retryAfter: number }
-  | { kind: "error"; error: string; message?: string };
-
 /** Fetches the upgrade guide between two versions of a library through /api/v2/version-upgrade-guide. */
 export async function getUpgradeGuide(
   libraryId: string,
   fromVersion: string,
   options: UpgradeGuideOptions = {},
   accessToken?: string
-): Promise<UpgradeGuideResult> {
+): Promise<RetryableResult> {
   const params = new URLSearchParams({ libraryId, fromVersion });
   if (options.toVersion) params.set("toVersion", options.toVersion);
   // Always sent, so the app pages the guide for this client (as the MCP tool does).
   params.set("page", String(options.page ?? 1));
   if (options.json) params.set("type", "json");
-  const response = await fetch(`${baseUrl}/api/v2/version-upgrade-guide?${params}`, {
-    headers: getAuthHeaders(accessToken),
-  });
-  if (response.status === 202) {
-    const body = (await response.json().catch(() => ({}))) as {
-      message?: string;
-      retryAfter?: number;
-    };
-    return {
-      kind: "preparing",
-      message: body.message ?? "The upgrade guide is being prepared.",
-      retryAfter: retryAfterSeconds(body.retryAfter, response.headers.get("Retry-After")),
-    };
-  }
-  if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
-    return {
-      kind: "error",
-      error: body.error || `HTTP error ${response.status}`,
-      message: body.message,
-    };
-  }
-  return { kind: "result", body: await response.text() };
+  return fetchRetryableText(
+    `${baseUrl}/api/v2/version-upgrade-guide?${params}`,
+    accessToken,
+    "The upgrade guide is being prepared."
+  );
 }
 
 export async function getLibraryContext(

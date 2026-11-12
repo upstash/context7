@@ -162,13 +162,28 @@ describe("ctx7 code", () => {
 
   test("asks to retry while the source is being indexed", async () => {
     mockGetLibraryCode.mockResolvedValue({
-      kind: "indexing",
+      kind: "pending",
       message: "Indexing.",
       retryAfter: 30,
     });
 
     await run(registerDocsCommands, "code", "/a/b", "x");
 
+    expect(process.exitCode).toBe(75);
+  });
+
+  test("keeps the indexing error name in JSON while the source is being indexed", async () => {
+    mockGetLibraryCode.mockResolvedValue({
+      kind: "pending",
+      message: "Indexing.",
+      retryAfter: 30,
+    });
+
+    await run(registerDocsCommands, "code", "/a/b", "x", "--json");
+
+    expect(console.log).toHaveBeenCalledWith(
+      JSON.stringify({ error: "indexing", message: "Indexing.", retryAfter: 30 })
+    );
     expect(process.exitCode).toBe(75);
   });
 
@@ -253,7 +268,7 @@ describe("ctx7 get-upgrade-guide", () => {
 
   test("asks to run again while the guide is being prepared", async () => {
     mockGetUpgradeGuide.mockResolvedValue({
-      kind: "preparing",
+      kind: "pending",
       message: "Preparing.",
       retryAfter: 60,
     });
@@ -281,10 +296,25 @@ describe("ctx7 get-upgrade-guide", () => {
     expect(process.exitCode).toBe(1);
   });
 
-  test("rejects a page that is not a whole number from 1 without calling the API", async () => {
-    await run(registerDocsCommands, "get-upgrade-guide", "/a/b", "14", "--page", "0");
+  test.each(["0", "1.5", "next"])("rejects --page %s without calling the API", async (page) => {
+    await run(registerDocsCommands, "get-upgrade-guide", "/a/b", "14", "--page", page);
 
     expect(mockGetUpgradeGuide).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("rejects an invalid library ID without calling the API", async () => {
+    await run(registerDocsCommands, "get-upgrade-guide", "react", "18");
+
+    expect(mockGetUpgradeGuide).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("warns when the API returns an empty guide", async () => {
+    mockGetUpgradeGuide.mockResolvedValue({ kind: "result", body: "" });
+
+    await run(registerDocsCommands, "get-upgrade-guide", "/a/b", "14");
+
     expect(process.exitCode).toBe(1);
   });
 });
