@@ -279,6 +279,8 @@ ctx7 whoami
 ctx7 logout
 ```
 
+`ctx7 whoami` reports the signed-in account: its `name`, `email` and the `teamspace` (id and name) the account belongs to. Use it to confirm which account owns the credential you are about to use. There is no endpoint to list keys or inspect a single key's owner beyond this; manage keys in [the dashboard](/howto/api-keys).
+
 ### Session expiry
 
 If your saved login can no longer be refreshed, the CLI clears it and asks whether to sign in again. Answering yes runs `ctx7 login` and continues the command with the new login. Answering no continues without an account.
@@ -314,6 +316,8 @@ CTX7_TELEMETRY_DISABLED=1 ctx7 docs /reactjs/react.dev "useEffect examples"
 # Permanently — add to ~/.bashrc or ~/.zshrc
 export CTX7_TELEMETRY_DISABLED=1
 ```
+
+Against hosted Context7, the CLI sends events to `context7.com/api/v2/cli/events` and checks the npm registry (`registry.npmjs.org`) for a newer `ctx7` version. The update check is cached for 24 hours, so it runs at most once a day, and is skipped for `--json`, `--version` and `--base-url`. A custom `--base-url` deployment disables both the events and the update check: the only request setup makes is to the configured deployment.
 
 ---
 

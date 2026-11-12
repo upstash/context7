@@ -26,6 +26,7 @@ Get your API key at [context7.com/dashboard](https://context7.com/dashboard?tab=
 | [Get Policies](/api-reference/policies/get-teamspace-policies) | `GET /api/v2/policies` | Retrieve teamspace policy configuration |
 | [Update Policies](/api-reference/policies/update-teamspace-policies) | `PATCH /api/v2/policies` | Update teamspace policies |
 | [Get Metrics](/api-reference/metrics/get-library-usage-metrics) | `GET /api/v2/libs/metrics` | Retrieve usage metrics for libraries |
+| [Get Usage](/api-reference/usage/get-api-usage) | `GET /api/v2/usage` | See the requests this month for the key's member and the whole teamspace |
 | [Add GitHub Repo](/api-reference/add-library/add-a-github-repository) | `POST /api/v2/add/repo/github` | Submit a GitHub repository for processing |
 | [Add GitLab Repo](/api-reference/add-library/add-a-gitlab-repository) | `POST /api/v2/add/repo/gitlab` | Submit a GitLab repository for processing |
 | [Add Bitbucket Repo](/api-reference/add-library/add-a-bitbucket-repository) | `POST /api/v2/add/repo/bitbucket` | Submit a Bitbucket repository for processing |
@@ -165,6 +166,8 @@ Call the REST API directly to control requests from your own code, or use the MC
 - **Without API key**: Low rate limits and no custom configuration
 - **With API key**: Higher limits based on your plan
 - View current usage and reset windows in the [dashboard](https://context7.com/dashboard?tab=overview).
+
+Call [Get Usage](/api-reference/usage/get-api-usage) (`GET /api/v2/usage`) to read the same numbers from your own code. The response has `plan`, `usageResetsAt` (when the monthly count resets, in UTC), `member` (the member who owns the API key, with `requests` this month and `includedInPlan`) and `teamspace` (all members, with extra requests, cost and a daily breakdown). The `member` numbers match the `RateLimit-*` headers on search and docs responses. Calling this endpoint does not count as a request.
 
 When you exceed rate limits, the API returns a `429` status code with these headers:
 

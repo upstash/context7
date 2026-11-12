@@ -92,7 +92,7 @@ Optional inputs:
 - `generate_docs: true` generates docs from the source of a private repository.
 - `website_base_url` limits a website crawl to pages under that URL.
 
-Confluence, Notion and file uploads are not in this server; add them in the dashboard. To change how a library the teamspace owns is parsed, call `update_library_config` with only the fields to change, then `refresh_library` to apply them. `update_library_config` takes `branch`, `folders`, `exclude_folders`, `exclude_files`, `rules`, `base_url`, `web_url`, `exclude_urls`, `use_query_params` and `keep_version_specific_pages`, among others. `refresh_library` starts a parse and is subject to the daily refresh limit.
+Confluence, Notion and file uploads are not in this server; add them in the dashboard. To change how a library the teamspace owns is parsed, call `update_library_config` with only the fields to change, then `refresh_library` to apply them. `update_library_config` takes `branch`, `folders`, `exclude_folders`, `exclude_files`, `rules`, `base_url`, `web_url`, `exclude_urls`, `use_query_params` and `keep_version_specific_pages`, among others. `folders` and `exclude_folders` take at most 50 entries, `exclude_files` at most 100, and each entry at most 255 characters. `refresh_library` starts a parse and is subject to the daily refresh limit.
 
 ### Versions
 
@@ -107,6 +107,16 @@ The page holds no credential of its own: it reads through `console_data`, an app
 ## Management API
 
 The same operations are available over the REST API at `/api/v2/teamspaces/{teamspaceId}`, so a script can use them without an MCP client. It takes the same credentials as this server: an API key, which reaches only its own teamspace and can make changes or read personal data only with **Write access**, or an OAuth token issued for this server. See the [API reference](/api-reference/teamspaces/list-teamspaces) for the routes.
+
+The read tools map to these `GET` routes, each taking the same `teamspaceId` path segment:
+
+| Tool | Route |
+| --- | --- |
+| `list_teamspaces` | [`GET /api/v2/teamspaces`](/api-reference/teamspaces/list-teamspaces) — no `teamspaceId`; returns the teamspaces of the credential, each with `id`, `name` and `isPersonal` |
+| `list_libraries` | [`GET /api/v2/teamspaces/{teamspaceId}/libraries`](/api-reference/teamspace-libraries/list-libraries) — the teamspace's private and owned libraries, each with `id`, `title`, `sourceUrl`, `state` and `benchmarkScore` |
+| `get_library` | [`GET /api/v2/teamspaces/{teamspaceId}/libraries/{owner}/{repo}`](/api-reference/teamspace-libraries/get-a-library) — one library by owner and repo, with its parse state (`processing`, `finalizing`, `complete` or `error`), versions, token and snippet counts, and benchmark score |
+
+The reference page for each route lists the full query parameters and response schema. The MCP tools apply `search`, `order` and `page` for `list_libraries`, and `wait` for `get_library` on top of these responses.
 
 ## Safety and limits
 
