@@ -40,7 +40,7 @@ export async function parseSuccessResponse<TResult>(
   response: Response,
   metadata: Context7ResponseMetadata
 ): Promise<Context7Response<TResult>> {
-  if (response.headers.get("content-type")?.includes("application/json")) {
+  if (isJsonContentType(response.headers)) {
     return { result: (await parseJson(response, metadata)) as TResult };
   }
 
@@ -69,7 +69,7 @@ export async function throwResponseError(
         };
       }
     } catch (cause) {
-      if (response.headers.get("content-type")?.includes("application/json")) {
+      if (isJsonContentType(response.headers)) {
         throw jsonParseError(rawBody, metadata, cause, retryable);
       }
     }
@@ -106,6 +106,21 @@ function jsonParseError(
     retryable,
     cause,
   });
+}
+
+/**
+ * Media types are case-insensitive (RFC 9110 section 8.3.1). Compare only the
+ * type/subtype essence, so parameters such as `charset` are ignored and
+ * lookalikes such as `application/jsonp` do not match.
+ */
+function isJsonContentType(headers: Headers): boolean {
+  const contentType = headers.get("content-type");
+  if (!contentType) return false;
+  const essence = contentType
+    .split(";", 1)[0]
+    .replace(/^[ \t]+|[ \t]+$/g, "")
+    .toLowerCase();
+  return essence === "application/json";
 }
 
 function extractTxtResponseHeaders(headers: Headers): TxtResponseHeaders | undefined {
