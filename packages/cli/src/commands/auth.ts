@@ -261,19 +261,32 @@ interface WhoamiResponse {
 
 class SessionRejectedError extends Error {}
 
+/** The identity check gives up after this long, so login and whoami do not hang on a stalled host. */
+const WHOAMI_TIMEOUT_MS = 30_000;
+
 async function fetchWhoami(accessToken: string): Promise<WhoamiResponse> {
-  const response = await fetch(`${getBaseUrl()}/api/dashboard/whoami`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  try {
+    const response = await fetch(`${getBaseUrl()}/api/dashboard/whoami`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      signal: AbortSignal.timeout(WHOAMI_TIMEOUT_MS),
+    });
 
-  if (response.status === 401) {
-    throw new SessionRejectedError("Session was rejected by the server");
-  }
-  if (!response.ok) {
-    throw new Error("Failed to fetch user info");
-  }
+    if (response.status === 401) {
+      throw new SessionRejectedError("Session was rejected by the server");
+    }
+    if (!response.ok) {
+      throw new Error("Failed to fetch user info");
+    }
 
-  return (await response.json()) as WhoamiResponse;
+    return (await response.json()) as WhoamiResponse;
+  } catch (error) {
+    if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
+      throw new Error(
+        `Context7 did not answer within ${WHOAMI_TIMEOUT_MS / 1000} seconds. Check your connection and run the command again.`
+      );
+    }
+    throw error;
+  }
 }

@@ -99,7 +99,7 @@ libraryId: an ID that 'resolve-library-id' marks with "Source code", usually the
 operation:
 - grep (default): ripgrep over the source. 'pattern' is a regex (Rust/RE2 syntax, no lookaround); set fixed_strings for plain text such as error messages or names with $. Case-sensitive unless ignore_case. A symbol-like pattern also lists its definitions.
 - definition: where a symbol is defined, e.g. 'createClient', 'Client.send' or 'tokio::time::timeout'. Optional 'path': a file of this library (from an earlier result) that uses the symbol, optionally with '#L40', to pick the exact symbol. Never a file of the user's project.
-- references: every use of a symbol. Resolved by a compiler-based SCIP index where the library has one (TypeScript, JavaScript, Python, Go, Rust); otherwise whole-word name matches without comments and strings.
+- references: every use of a symbol, as whole-word name matches without comments and strings. A few libraries have a compiler-based SCIP index, and then the references are resolved; the result says which.
 - outline: the exported API, or the symbols of the file in 'path'.
 - read: the code of 'path' (with an optional '#L10-L40' range) or of the symbol in 'pattern'. At most 200 lines.
 - list: the files in folder 'path', or the files matching 'glob'.

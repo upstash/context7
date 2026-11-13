@@ -6,10 +6,12 @@ import {
   resolveLibrary,
   getLibraryContext,
   getLibraryCode,
+  getUpgradeGuide,
   hasSourceCode,
   CODE_LIMITS,
   CODE_OPERATIONS,
   type CodeOperation,
+  type RetryableResult,
 } from "../utils/api.js";
 import { recoverLibraryId } from "../utils/library-id.js";
 import { log } from "../utils/logger.js";
@@ -120,6 +122,25 @@ async function resolveCommand(
   }
 }
 
+/**
+ * Recovers a library ID that Git Bash rewrote on Windows and checks its format. Prints why it is
+ * invalid and returns null, or returns the ID.
+ */
+function validateLibraryId(input: string, command: string): string | null {
+  const libraryId = recoverLibraryId(input);
+  if (/^\/[^/]+\/[^/]/.test(libraryId)) return libraryId;
+  log.error(`Invalid library ID: "${libraryId}"`);
+  log.notice(`Expected format: /owner/repo or /owner/repo/version (e.g., /reactjs/react.dev)`);
+  log.notice(`Run "ctx7 library <name>" to find the correct ID`);
+  if (process.platform === "win32") {
+    log.notice(
+      `On Git Bash, prefix the ID with an extra slash to avoid path conversion: ctx7 ${command} "//reactjs/react.dev" ...`
+    );
+  }
+  process.exitCode = 1;
+  return null;
+}
+
 async function queryCommand(
   libraryId: string,
   query: string,
@@ -127,21 +148,9 @@ async function queryCommand(
 ): Promise<void> {
   trackEvent("command", { name: "docs" });
 
-  // Git Bash on Windows rewrites "/owner/repo" into a Windows path; recover it.
-  libraryId = recoverLibraryId(libraryId);
-
-  if (!libraryId.startsWith("/") || !/^\/[^/]+\/[^/]/.test(libraryId)) {
-    log.error(`Invalid library ID: "${libraryId}"`);
-    log.notice(`Expected format: /owner/repo or /owner/repo/version (e.g., /reactjs/react.dev)`);
-    log.notice(`Run "ctx7 library <name>" to find the correct ID`);
-    if (process.platform === "win32") {
-      log.notice(
-        `On Git Bash, prefix the ID with an extra slash to avoid path conversion: ctx7 docs "//reactjs/react.dev" "<your question>"`
-      );
-    }
-    process.exitCode = 1;
-    return;
-  }
+  const validId = validateLibraryId(libraryId, "docs");
+  if (!validId) return;
+  libraryId = validId;
 
   // Resolve the token before the spinner starts: an expired session may prompt.
   const accessToken = await getValidAccessToken();
@@ -242,11 +251,16 @@ interface CodeCommandOptions {
   tag?: string;
 }
 
-/** Parses a numeric flag and clamps it into its range, like the MCP query-code tool. */
+/**
+ * Parses a numeric flag. By default it clamps the number into its range, like the MCP query-code
+ * tool; with `reject`, a number that is not a whole number in the range is an error. Prints the
+ * error and returns null for a bad value.
+ */
 function wholeNumber(
   value: string | undefined,
   name: string,
-  limits: { min: number; max: number }
+  limits: { min: number; max: number },
+  mode: "clamp" | "reject" = "clamp"
 ): number | undefined | null {
   if (value === undefined) return undefined;
   const n = value.trim() === "" ? NaN : Number(value);
@@ -255,7 +269,79 @@ function wholeNumber(
     process.exitCode = 1;
     return null;
   }
+  if (mode === "reject") {
+    if (!Number.isInteger(n) || n < limits.min || n > limits.max) {
+      const range =
+        limits.max === Infinity ? `from ${limits.min}` : `from ${limits.min} to ${limits.max}`;
+      log.error(`${name} must be a whole number ${range}.`);
+      process.exitCode = 1;
+      return null;
+    }
+    return n;
+  }
   return Math.min(limits.max, Math.max(limits.min, Math.trunc(n)));
+}
+
+/**
+ * Runs a request to an endpoint that can answer "come back later" and prints its answer. A pending
+ * answer prints the server's message and the retry hint (or JSON with `pendingError`) and exits
+ * with 75 (EX_TEMPFAIL); an error prints its message (or JSON) and exits with 1.
+ */
+async function runRetryable(
+  spinnerText: string,
+  request: () => Promise<RetryableResult>,
+  options: {
+    json?: boolean;
+    /** The `error` value of a pending answer in JSON output. */
+    pendingError: string;
+    /** The hint after a pending answer's message, from its wait and its text. */
+    retryHint: (retryAfter: number, message: string) => string;
+    /** Printed as a warning (exit 1) when the answer is empty. Without it, the body is printed. */
+    emptyMessage?: string;
+  }
+): Promise<void> {
+  const spinner = isTTY ? ora(spinnerText).start() : null;
+  let result: RetryableResult;
+  try {
+    result = await request();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    spinner?.fail(`Error: ${message}`);
+    if (!spinner) log.error(message);
+    process.exitCode = 1;
+    return;
+  }
+  spinner?.stop();
+
+  if (result.kind === "pending") {
+    if (options.json) {
+      console.log(
+        JSON.stringify({
+          error: options.pendingError,
+          message: result.message,
+          retryAfter: result.retryAfter,
+        })
+      );
+    } else {
+      log.warn(result.message);
+      log.notice(options.retryHint(result.retryAfter, result.message));
+    }
+    process.exitCode = 75; // EX_TEMPFAIL: try again later
+    return;
+  }
+  if (result.kind === "error") {
+    if (options.json)
+      console.log(JSON.stringify({ error: result.error, message: result.message || result.error }));
+    else log.error(result.message || result.error);
+    process.exitCode = 1;
+    return;
+  }
+  if (!result.body && options.emptyMessage) {
+    log.warn(options.emptyMessage);
+    process.exitCode = 1;
+    return;
+  }
+  console.log(result.body);
 }
 
 async function codeCommand(
@@ -264,15 +350,9 @@ async function codeCommand(
   options: CodeCommandOptions
 ): Promise<void> {
   trackEvent("command", { name: "code" });
-  libraryId = recoverLibraryId(libraryId);
-  if (!/^\/[^/]+\/[^/]/.test(libraryId)) {
-    log.error(`Invalid library ID: "${libraryId}"`);
-    log.notice(
-      `Expected format: /owner/repo or /owner/repo/version. Run "ctx7 library <name>" to find it.`
-    );
-    process.exitCode = 1;
-    return;
-  }
+  const validId = validateLibraryId(libraryId, "code");
+  if (!validId) return;
+  libraryId = validId;
   const op = options.op;
   if (op && !CODE_OPERATIONS.includes(op as CodeOperation)) {
     log.error(`Invalid --op "${op}". Use one of: ${CODE_OPERATIONS.join(", ")}.`);
@@ -285,70 +365,67 @@ async function codeCommand(
   if (context === null || headLimit === null || offset === null) return;
   const accessToken = await getValidAccessToken();
   const target = options.tag ? `${libraryId} ${options.tag}` : libraryId;
-  const spinner = isTTY ? ora(`Searching the source of "${target}"...`).start() : null;
-  let result;
-  try {
-    result = await getLibraryCode(
-      libraryId,
-      pattern,
-      {
-        version: options.tag,
-        operation: op as CodeOperation | undefined,
-        fixedStrings: options.fixedStrings,
-        ignoreCase: options.ignoreCase,
-        glob: options.glob,
-        path: options.path,
-        context,
-        outputMode: options.count
-          ? "count"
-          : options.filesWithMatches
-            ? "files_with_matches"
-            : undefined,
-        headLimit: headLimit || undefined,
-        offset: offset || undefined,
-        json: options.json,
-      },
-      accessToken
-    );
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    spinner?.fail(`Error: ${message}`);
-    if (!spinner) log.error(message);
-    process.exitCode = 1;
-    return;
-  }
-  spinner?.stop();
-
-  if (result.kind === "indexing") {
-    if (options.json) {
-      console.log(
-        JSON.stringify({
-          error: "indexing",
-          message: result.message,
-          retryAfter: result.retryAfter,
-        })
-      );
-    } else {
-      log.warn(result.message);
+  await runRetryable(
+    `Searching the source of "${target}"...`,
+    () =>
+      getLibraryCode(
+        libraryId,
+        pattern,
+        {
+          version: options.tag,
+          operation: op as CodeOperation | undefined,
+          fixedStrings: options.fixedStrings,
+          ignoreCase: options.ignoreCase,
+          glob: options.glob,
+          path: options.path,
+          context,
+          outputMode: options.count
+            ? "count"
+            : options.filesWithMatches
+              ? "files_with_matches"
+              : undefined,
+          headLimit: headLimit || undefined,
+          offset: offset || undefined,
+          json: options.json,
+        },
+        accessToken
+      ),
+    {
+      json: options.json,
+      pendingError: "indexing",
       // Newer servers already say how long to keep calling; then only map the
       // MCP tool names in that text to their CLI commands.
-      log.notice(
-        /keep calling|up to \d+ minutes/i.test(result.message)
+      retryHint: (seconds, message) =>
+        /keep calling|up to \d+ minutes/i.test(message)
           ? `Run the same command again to call again. For docs meanwhile, use "ctx7 docs" (the CLI's query-docs).`
-          : `Run the same command again in about ${result.retryAfter} seconds, and keep trying for up to 3 minutes: a first index usually takes 1 to 3. Meanwhile, use "ctx7 docs".`
-      );
+          : `Run the same command again in about ${seconds} seconds, and keep trying for up to 3 minutes: a first index usually takes 1 to 3. Meanwhile, use "ctx7 docs".`,
     }
-    process.exitCode = 75; // EX_TEMPFAIL: try again later
-    return;
-  }
-  if (result.kind === "error") {
-    if (options.json)
-      console.log(JSON.stringify({ error: result.error, message: result.message || result.error }));
-    else log.error(result.message || result.error);
-    process.exitCode = 1;
-    return;
-  }
-  console.log(result.body);
+  );
+}
+
+async function getUpgradeGuideCommand(
+  libraryId: string,
+  fromVersion: string,
+  toVersion: string | undefined,
+  options: { page?: string; json?: boolean }
+): Promise<void> {
+  trackEvent("command", { name: "get-upgrade-guide" });
+  const validId = validateLibraryId(libraryId, "get-upgrade-guide");
+  if (!validId) return;
+  const page = wholeNumber(options.page, "--page", { min: 1, max: Infinity }, "reject");
+  if (page === null) return;
+  const accessToken = await getValidAccessToken();
+  await runRetryable(
+    `Fetching the upgrade guide for ${validId} ${fromVersion} -> ${toVersion ?? "latest"}...`,
+    () =>
+      getUpgradeGuide(validId, fromVersion, { toVersion, page, json: options.json }, accessToken),
+    {
+      json: options.json,
+      pendingError: "preparing",
+      retryHint: (seconds) => `Run the same command again in about ${seconds} seconds.`,
+      emptyMessage: "No upgrade guide was returned for these versions.",
+    }
+  );
 }
 
 export function registerDocsCommands(program: Command): void {
@@ -417,4 +494,31 @@ export function registerDocsCommands(program: Command): void {
     .action(async (libraryId: string, pattern: string | undefined, options: CodeCommandOptions) => {
       await codeCommand(libraryId, pattern, options);
     });
+
+  program
+    .command("get-upgrade-guide")
+    .argument("<libraryId>", "Context7 library ID (e.g., /vercel/next.js)")
+    .argument(
+      "<fromVersion>",
+      "The version the project uses now (e.g., 14.2.35 or 14); a bare major means the oldest release of that line"
+    )
+    .argument(
+      "[toVersion]",
+      "The version to upgrade to (e.g., 16); a bare major means the newest release of that line (default: the latest major)"
+    )
+    .option("--page <n>", "Page of a long guide, from 1 (default: 1); each page names the next")
+    .option("--json", "Output as JSON")
+    .description(
+      "Get what changes between two versions of a library: breaking changes, codemods, deprecations and API changes"
+    )
+    .action(
+      async (
+        libraryId: string,
+        fromVersion: string,
+        toVersion: string | undefined,
+        options: { page?: string; json?: boolean }
+      ) => {
+        await getUpgradeGuideCommand(libraryId, fromVersion, toVersion, options);
+      }
+    );
 }

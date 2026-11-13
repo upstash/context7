@@ -275,7 +275,7 @@ When a change takes effect:
 |---|---|---|---|---|
 | Max concurrent parses | `1` | 1–10 | — | Parses each replica runs at the same time |
 | Max concurrent LLM requests | `5` | 1–64 | — | Requests in flight to the language model, shared by parsing and search |
-| LLM timeout | `120` s | 30–1800 s | — | How long to wait for the model on one page |
+| LLM timeout | `120` s | 30–1800 s | — | How long to wait for one model call. Each part of a page takes up to four calls in a row (a page check, then code, API and info extraction), so it may run up to four times this value |
 | Max files per library | `500` | 1–100000, or no limit | `MAX_FILES` | Documentation files a repository parse reads, or pages a website or llms.txt parse keeps. Extra files are skipped and logged |
 | Files parsed in parallel | `5` | 1–64 | `PARSE_CONCURRENCY` | Files one parse processes at the same time |
 | File timeout | `500` s | 30–3600 s | `PARSE_TIMEOUT` | How long one file may take. The parse skips a file that takes longer |
@@ -322,13 +322,17 @@ Delete, cancel parse, and support bundle downloads are for admins only. Use the 
 | Refresh repositories | Off | Allow anonymous callers to refresh libraries. Notion and Google Drive libraries stay admin-only |
 | Delete repositories | Off | Allow anonymous callers and members to delete libraries and cancel parses |
 | Download support bundle | Off | Allow anonymous callers and members to download the support bundle |
-| MCP authentication | Off | Require a session or personal API key for `/mcp`, `/api/v2`, and the library, log, and queue read endpoints. See [Authentication](/enterprise/api/authentication#non-admin-permissions) |
+| MCP authentication | On for a new install | Require a session or personal API key for `/mcp`, `/api/v2`, and the library, log, and queue read endpoints. See [Authentication](/enterprise/api/authentication#non-admin-permissions) |
 
 <Note>
 Earlier versions allowed anonymous parse and refresh by default. If you never saved these switches, they are off after an upgrade. Scripts that call these endpoints without an API key then get `403`. Add a personal API key to the script, or turn the switch on.
 </Note>
 
+A fresh install with no users, no existing admin, and no libraries starts with MCP authentication on. An install you upgrade keeps the setting you saved, so if you never turned it on it stays off.
+
 When MCP authentication is enabled, each user creates personal keys from **Personal settings > API keys**. Clients send the key as `Authorization: Bearer <key>`.
+
+When MCP authentication is off, a client that sends a valid personal API key is still treated as that user for [library access](/enterprise/security/library-access), so it reads the restricted libraries the user can access. A client with no key, or an unknown key, is anonymous and reads only libraries that are open to everyone.
 
 ### Recover admin access
 
