@@ -865,35 +865,6 @@ Use these alternatives to run the local Context7 MCP server with other runtimes.
 
 </Accordion>
 
-<Accordion title="NixOS and Nix">
-
-The local server needs a Node.js runtime with `npx` on `PATH`. On NixOS, keep `nodejs` in your profile, install it with Home Manager, or enter a shell that provides it:
-
-```bash
-# Home Manager (home.nix)
-home.packages = [ pkgs.nodejs ];
-
-# Or a one-off shell without changing your config
-nix shell nixpkgs#nodejs
-```
-
-Then configure the local server as usual. `nix shell` puts `npx` on `PATH` for that session only, so launch your MCP client from the same shell:
-
-```json
-{
-  "mcpServers": {
-    "context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
-    }
-  }
-}
-```
-
-For the hosted server, add `https://mcp.context7.com/mcp` as a remote entry with no local runtime, or point your client at a package that wraps `npx` for you.
-
-</Accordion>
-
 <Accordion title="Copilot Coding Agent">
 
 Add the following configuration to `Repository` -> `Settings` -> `Code & automation` -> `Copilot` -> `MCP servers`. Only secrets named with the `COPILOT_MCP_` prefix are exposed to the MCP config, so store your key as a `COPILOT_MCP_CONTEXT7_API_KEY` Actions secret and reference it:

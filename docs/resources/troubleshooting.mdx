@@ -241,7 +241,7 @@ If you're behind a corporate proxy, configure Context7 to route through it.
 
 Allow these hosts through the proxy:
 
-- The local stdio server (`npx -y @upstash/context7-mcp`) retrieves documentation from `context7.com` (the API base `https://context7.com/api`). Override it with `CONTEXT7_API_URL` for an egress mirror.
+- The local stdio server (`npx -y @upstash/context7-mcp`) retrieves documentation from `context7.com` (the API base `https://context7.com/api`).
 - A remote MCP client connects to `mcp.context7.com`, the hosted MCP endpoint. This is the URL in each client config and is separate from the API host the local server calls.
 
 ### Set Environment Variables

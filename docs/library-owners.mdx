@@ -73,7 +73,7 @@ Here's an example `context7.json` file with the most common options:
 
 - **`branch`** (string): The name of the git branch to parse. If not provided, the default branch will be used.
 
-- **`folders`** (array): Specific folder paths to include when parsing. If empty, Context7 scans the entire repository. When `folders` is set, only the `README` files in the repository root are always included. The file itself sets no cap on the number of entries; the [management API](/howto/admin-mcp#adding-and-indexing-a-library) and Admin MCP `update_library_config`, which change the same setting for a library the teamspace owns, take at most 50.
+- **`folders`** (array): Specific folder paths to include when parsing. If empty, Context7 scans the entire repository. When `folders` is set, only the `README` files in the repository root are always included.
 
 - **`excludeFolders`** (array): Patterns to exclude from documentation parsing. Supports simple names, paths, and glob patterns (see Exclusion Patterns below).
 

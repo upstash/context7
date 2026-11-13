@@ -108,16 +108,6 @@ The page holds no credential of its own: it reads through `console_data`, an app
 
 The same operations are available over the REST API at `/api/v2/teamspaces/{teamspaceId}`, so a script can use them without an MCP client. It takes the same credentials as this server: an API key, which reaches only its own teamspace and can make changes or read personal data only with **Write access**, or an OAuth token issued for this server. See the [API reference](/api-reference/teamspaces/list-teamspaces) for the routes.
 
-The read tools map to these `GET` routes, each taking the same `teamspaceId` path segment:
-
-| Tool | Route |
-| --- | --- |
-| `list_teamspaces` | [`GET /api/v2/teamspaces`](/api-reference/teamspaces/list-teamspaces) — no `teamspaceId`; returns the teamspaces of the credential, each with `id`, `name` and `isPersonal` |
-| `list_libraries` | [`GET /api/v2/teamspaces/{teamspaceId}/libraries`](/api-reference/teamspace-libraries/list-libraries) — the teamspace's private and owned libraries, each with `id`, `title`, `sourceUrl`, `state` and `benchmarkScore` |
-| `get_library` | [`GET /api/v2/teamspaces/{teamspaceId}/libraries/{owner}/{repo}`](/api-reference/teamspace-libraries/get-a-library) — one library by owner and repo, with its parse state (`processing`, `finalizing`, `complete` or `error`), versions, token and snippet counts, and benchmark score |
-
-The reference page for each route lists the full query parameters and response schema. The MCP tools apply `search`, `order` and `page` for `list_libraries`, and `wait` for `get_library` on top of these responses.
-
 ## Safety and limits
 
 - Remove and delete actions (`remove_library`, `manage_members` `remove`, `manage_library_versions` `remove`, `manage_rules` `delete`, `manage_owned_library` `block` and `transfer`, `docs7_manage_feature_requests` `delete`, `docs7_remove_preview`, `ask_delete_site`) are marked destructive, so your client asks you before it runs them. When the client supports form elicitation (MCP protocol 2026-07-28), the server also shows you a form where you type the exact target — the library id, email, version, rule id, request id, branch or hostname — and the agent cannot answer it for you. In other clients the agent passes the target as `confirm`: ask it to wait for your yes instead of letting it fill the value in itself.
