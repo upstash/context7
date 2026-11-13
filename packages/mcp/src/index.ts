@@ -21,6 +21,7 @@ import express from "express";
 import { Command, InvalidArgumentError } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
 import { randomUUID } from "node:crypto";
+import { fileURLToPath } from "node:url";
 import {
   SERVER_VERSION,
   RESOURCE_URL,
@@ -687,6 +688,10 @@ async function main() {
       res.status(200).send(mcpServerCard());
     });
     app.use("/mcp", mcpRouter);
+
+    app.get("/", (_req, res) => {
+      res.sendFile("index.html", { root: fileURLToPath(new URL("../public/", import.meta.url)) });
+    });
 
     app.get("/ping", (_req: express.Request, res: express.Response) => {
       res.json({ status: "ok", message: "pong" });
