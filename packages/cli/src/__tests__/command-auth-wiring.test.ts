@@ -13,6 +13,7 @@ vi.mock("../utils/auth.js", () => ({
 const mockResolveLibrary = vi.fn();
 const mockGetLibraryContext = vi.fn();
 const mockGetLibraryCode = vi.fn();
+const mockGetUpgradeGuide = vi.fn();
 vi.mock("../utils/api.js", async () => {
   const actual = await vi.importActual<typeof import("../utils/api.js")>("../utils/api.js");
   return {
@@ -22,6 +23,7 @@ vi.mock("../utils/api.js", async () => {
     resolveLibrary: (...args: unknown[]) => mockResolveLibrary(...args),
     getLibraryContext: (...args: unknown[]) => mockGetLibraryContext(...args),
     getLibraryCode: (...args: unknown[]) => mockGetLibraryCode(...args),
+    getUpgradeGuide: (...args: unknown[]) => mockGetUpgradeGuide(...args),
     getBaseUrl: () => "https://test.context7.com",
   };
 });
@@ -160,7 +162,7 @@ describe("ctx7 code", () => {
 
   test("asks to retry while the source is being indexed", async () => {
     mockGetLibraryCode.mockResolvedValue({
-      kind: "indexing",
+      kind: "pending",
       message: "Indexing.",
       retryAfter: 30,
     });
@@ -168,6 +170,46 @@ describe("ctx7 code", () => {
     await run(registerDocsCommands, "code", "/a/b", "x");
 
     expect(process.exitCode).toBe(75);
+  });
+
+  test("writes the indexing notice and errors to stderr when stdout is piped", async () => {
+    mockGetLibraryCode
+      .mockResolvedValueOnce({ kind: "pending", message: "Indexing.", retryAfter: 30 })
+      .mockResolvedValueOnce({ kind: "error", error: "no_source", message: "No source." });
+
+    await run(registerDocsCommands, "code", "/a/b", "x");
+    await run(registerDocsCommands, "code", "/a/b", "x");
+
+    const stderr = vi.mocked(console.error).mock.calls.flat().join("\n");
+    expect(stderr).toContain("Indexing.");
+    expect(stderr).toContain("Run the same command again");
+    expect(stderr).toContain("No source.");
+    expect(console.log).not.toHaveBeenCalled();
+  });
+
+  test("keeps the indexing notice on stdout in a terminal and JSON on stdout when piped", async () => {
+    const wasTTY = process.stdout.isTTY;
+    try {
+      process.stdout.isTTY = true;
+      mockGetLibraryCode.mockResolvedValue({
+        kind: "pending",
+        message: "Indexing.",
+        retryAfter: 30,
+      });
+      await run(registerDocsCommands, "code", "/a/b", "x");
+      expect(vi.mocked(console.log).mock.calls.flat().join("\n")).toContain("Indexing.");
+      expect(console.error).not.toHaveBeenCalled();
+
+      process.stdout.isTTY = false;
+      vi.mocked(console.log).mockClear();
+      await run(registerDocsCommands, "code", "/a/b", "x", "--json");
+      expect(console.log).toHaveBeenCalledWith(
+        JSON.stringify({ error: "indexing", message: "Indexing.", retryAfter: 30 })
+      );
+      expect(console.error).not.toHaveBeenCalled();
+    } finally {
+      process.stdout.isTTY = wasTTY;
+    }
   });
 
   test("clamps out-of-range numbers like the MCP tool", async () => {
@@ -217,5 +259,87 @@ describe("commands stay anonymous when no token is available", () => {
     await run(registerDocsCommands, "docs", "/a/b", "q");
 
     expect(mockGetLibraryContext).toHaveBeenCalledWith("/a/b", "q", { type: "txt" }, undefined);
+  });
+});
+
+describe("ctx7 get-upgrade-guide", () => {
+  test("passes the refreshed token, the versions and the page to the API", async () => {
+    mockGetUpgradeGuide.mockResolvedValue({ kind: "result", body: "# Upgrade guide" });
+
+    await run(registerDocsCommands, "get-upgrade-guide", "/a/b", "14", "16", "--page", "2");
+
+    expect(mockGetUpgradeGuide).toHaveBeenCalledWith(
+      "/a/b",
+      "14",
+      { toVersion: "16", page: 2, json: undefined },
+      REFRESHED
+    );
+    expect(console.log).toHaveBeenCalledWith("# Upgrade guide");
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  test("leaves the target version and page to the API when they are not given", async () => {
+    mockGetUpgradeGuide.mockResolvedValue({ kind: "result", body: "ok" });
+
+    await run(registerDocsCommands, "get-upgrade-guide", "/a/b", "14.2.35");
+
+    expect(mockGetUpgradeGuide).toHaveBeenCalledWith(
+      "/a/b",
+      "14.2.35",
+      { toVersion: undefined, page: undefined, json: undefined },
+      REFRESHED
+    );
+  });
+
+  test("asks to run again while the guide is being prepared", async () => {
+    mockGetUpgradeGuide.mockResolvedValue({
+      kind: "pending",
+      message: "Preparing.",
+      retryAfter: 60,
+    });
+
+    await run(registerDocsCommands, "get-upgrade-guide", "/a/b", "14", "--json");
+
+    expect(console.log).toHaveBeenCalledWith(
+      JSON.stringify({ error: "preparing", message: "Preparing.", retryAfter: 60 })
+    );
+    expect(process.exitCode).toBe(75);
+  });
+
+  test("prints the API's message for a guide that is not available", async () => {
+    mockGetUpgradeGuide.mockResolvedValue({
+      kind: "error",
+      error: "library_not_prepared",
+      message: "Not prepared yet.",
+    });
+
+    await run(registerDocsCommands, "get-upgrade-guide", "/a/b", "14", "--json");
+
+    expect(console.log).toHaveBeenCalledWith(
+      JSON.stringify({ error: "library_not_prepared", message: "Not prepared yet." })
+    );
+    expect(process.exitCode).toBe(1);
+  });
+
+  test.each(["0", "1.5", "next"])("rejects --page %s without calling the API", async (page) => {
+    await run(registerDocsCommands, "get-upgrade-guide", "/a/b", "14", "--page", page);
+
+    expect(mockGetUpgradeGuide).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("rejects an invalid library ID without calling the API", async () => {
+    await run(registerDocsCommands, "get-upgrade-guide", "react", "18");
+
+    expect(mockGetUpgradeGuide).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("warns when the API returns an empty guide", async () => {
+    mockGetUpgradeGuide.mockResolvedValue({ kind: "result", body: "" });
+
+    await run(registerDocsCommands, "get-upgrade-guide", "/a/b", "14");
+
+    expect(process.exitCode).toBe(1);
   });
 });

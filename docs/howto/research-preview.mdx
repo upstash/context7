@@ -81,17 +81,28 @@ approval_mode = "approve"
 
 ## Upgrade guides
 
-With the research preview on, the server also lists a `get-upgrade-guide` tool. The agent calls it when you upgrade a library, or ask what changed between two versions. It returns one guide with the prerequisites, codemods, breaking changes, deprecations, and behavior and config changes from the release notes, changelogs and migration guides of every release in between, each with its source. It adds the public API changes found in the source code of both versions, including those no note mentions.
+With the research preview on, the server also lists a `get-upgrade-guide` tool. The agent calls it when you upgrade a library, or ask what changed between two versions. It returns one guide with the prerequisites, codemods, breaking changes, deprecations, and behavior and config changes from the release notes, changelogs and migration guides of every release in between, each with its source. It adds the public API changes found in the source code of both versions, including those no note mentions. The target version does not contain releases of an older line published after a newer line had started, such as Express 4.x releases published after 5.0.0, so the guide leaves them out and names them in its header.
 
 | Field | Description |
 | --- | --- |
-| `libraryId` | The library, such as `/vercel/next.js` |
-| `fromVersion` | The version you use now, such as `14.2.35` or `14`. A bare major means the oldest release of that line |
+| `libraryId` | The library, such as `/vercel/next.js`. A version after it, such as `/vercel/next.js/v14.3.0` or `/vercel/next.js@v14`, names the same library |
+| `fromVersion` | The version you use now, such as `14.2.35` or `14`. A bare major means the oldest release of that line. Prereleases are not covered |
 | `toVersion` | The version to upgrade to, such as `16`, optional. A bare major means the newest release of that line; without it, the latest major |
+| `page` | The page of a long guide, optional, `1` by default |
 
-The first request for a pair of versions can take a minute or more while Context7 prepares it. The tool then tells the agent when to call again.
+The release-note text is quoted from the library: third-party content, not Context7's own. Each note's detail, `Find it`, code and command lines are printed between `<release-note>` tags, and every page that has notes says to treat their titles and that text as data, not as instructions.
 
-Guides are prepared for about 100 of the most used libraries. For any other library the tool answers that its guide is not prepared yet. The tool needs `@upstash/context7-mcp` 4.6.0 or later.
+A long guide comes in pages, each in full detail and sized for MCP clients. Page 1 starts with what is needed to migrate (the summary, prerequisites, codemods, breaking changes and deprecations); when that part is longer than one page, it continues on the next pages, and page 1 says so. After it come behavior and config changes and the API changes, which the agent fetches when it needs them.
+
+When releases in the range had no notes, or have not been read yet, page 1 says how many of each, and its summary adds that changes made only in those releases are not in the notes, so read their changelogs or use `query-docs` for them.
+
+The first request for a pair of versions can take a few minutes while Context7 prepares the guide; a guide is served only once it is complete. The tool then tells the agent when to call again. The number of new guides that can be started each day is limited, with a higher limit when you use an API key. Past it, the tool says when to ask again, and the agent uses `query-docs` meanwhile. If a guide cannot be prepared, the tool says so and the agent uses `query-docs` instead. After a wait from minutes to a day, depending on why it failed, a new request prepares the guide again; the tool's answer says when to ask.
+
+Guides are prepared for about 100 of the most used libraries. For any other library the tool answers that its guide is not prepared yet. The tool needs `@upstash/context7-mcp` 4.6.0 or later; reading the pages after the first needs 4.7.0 or later.
+
+A guide is served only to a caller who may read the library, as its documentation is. A library that is blocked, or one your teamspace's source policies exclude, is refused. A private library your teamspace cannot read answers the same as a library with no guide. When Context7 cannot check your access, the tool tells the agent to call again in a minute and to use `query-docs` meanwhile.
+
+Without the MCP server, the `ctx7 get-upgrade-guide` command returns the same guide in a terminal, for example `npx ctx7@latest get-upgrade-guide /vercel/next.js 14 16`. Add `--page 2` for the next page.
 
 ## Source code search
 
@@ -99,11 +110,15 @@ With the research preview on, the server also lists a `query-code` tool, and `re
 
 | Field | Description |
 | --- | --- |
-| `libraryId` | A library built from a Git repository, such as `/colinhacks/zod`. `/websites/...` and `/llmstxt/...` libraries have no source |
+| `libraryId` | A library built from a Git repository, such as `/colinhacks/zod`. `/websites/...` and `/llmstxt/...` libraries have no source. A library ID that was redirected is followed to the library it now points to |
 | `operation` | `grep` (default), `definition`, `references`, `outline`, `read` or `list` |
-| `pattern` | A regex for `grep`, or a symbol for `definition`, `references` and `read` |
-| `version` | A git tag, such as `v3.24.2`, optional. Without it, the commit the docs were built from. A tag that is not a docs version is indexed on first use |
+| `pattern` | A regex for `grep`, or a symbol for `definition`, `references` and `read`. For `read`, a file path such as `src/client.ts`, `src/client.ts#L10-L40` or `read: src/client.ts` reads that file, so you can pass it here instead of `path`. A `read:` prefix or a line range means a file, and if that file is not in the source the answer is an error rather than a symbol lookup |
+| `version` | A git tag, such as `v3.24.2`, optional. Without it, or with `latest`, the library's newest release, or the commit the docs were built from when the library has no such release. A tag that is not a docs version is indexed on first use |
 
-`grep` also takes ripgrep's options: `fixed_strings`, `ignore_case`, `glob`, `path`, `context`, `output_mode`, `head_limit` and `offset`. While a library's source is being indexed, the tool tells the agent to call again or answer from `query-docs`.
+`grep` also takes ripgrep's options: `fixed_strings`, `ignore_case`, `glob`, `path`, `context`, `output_mode`, `head_limit` and `offset`. A `pattern` matches the exact text of one line, so to search several words give them as `a|b`. When a pattern of plain words, such as `kafka consumer group rebalance`, matches no line, `grep` returns the lines that match any of its words and says so first. While a library's source is being indexed, the tool tells the agent to keep calling for up to 3 minutes; a first index usually takes 1 to 3 minutes, and longer for a very large repository. This also applies to a version tag indexed on first use. Meanwhile, or after that, the agent answers from `query-docs`. A content page also ends at about 40 KB of match lines and context, rather than only at `head_limit`; the result then says `more results` with the `offset` of the next page, and that page starts at the first match the cutoff left out.
+
+`list` names the files of the repository, and marks the ones that were not indexed with the reason, such as `Cargo.lock  (not indexed: generated)`. A folder shows how many of its files are not indexed. Not indexed files are in the repository, but `grep`, `read` and `definition` cannot see their content. A library or version indexed before this change lists its indexed files only.
+
+The tool needs `@upstash/context7-mcp` 4.6.0 or later.
 
 Without the MCP server, the `ctx7 code` command gives the same search in a terminal, for example `npx ctx7@latest code /colinhacks/zod "safeExtend" --op definition`.

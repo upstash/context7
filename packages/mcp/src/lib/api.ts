@@ -235,6 +235,14 @@ export async function submitDocsFeedback(
   }
 }
 
+/**
+ * True when the server's 202 message already says how long to keep calling.
+ * Newer servers include that rule, so the client adds it only for older ones.
+ */
+export function hasRetryAdvice(message: string): boolean {
+  return /keep calling|up to \d+ minutes/i.test(message);
+}
+
 /** Seconds to wait from a 202 body or a Retry-After header (seconds or an HTTP date). */
 export function retryAfterSeconds(bodyValue: unknown, header: string | null): number {
   if (typeof bodyValue === "number" && Number.isFinite(bodyValue) && bodyValue >= 0)
@@ -332,7 +340,9 @@ export async function fetchLibraryCode(
           const wait = retryAfterSeconds(body.retryAfter, response.headers.get("Retry-After"));
           const message = body.message ?? "The library source is being indexed.";
           return {
-            data: `${message} This is not an error. Call query-code again with the same arguments in about ${wait} seconds, at most twice. Meanwhile, or if it is still indexing, answer from query-docs.`,
+            data: hasRetryAdvice(message)
+              ? `${message} This is not an error.`
+              : `${message} This is not an error. Call query-code again with the same arguments in about ${wait} seconds, and keep calling for up to 3 minutes: a first index usually takes 1 to 3. Meanwhile, or if it is still indexing after that, answer from query-docs.`,
             // No "indexing" outcome exists: telemetry counts it with the empty results.
             outcome: "not_found",
           };
@@ -355,12 +365,39 @@ export async function fetchLibraryCode(
   }
 }
 
-/** The endpoint's 404 codes: answers about the library or version, not failures. */
-const UPGRADE_GUIDE_MISSES = new Set(["library_not_prepared", "version_not_found"]);
+/**
+ * The endpoint's error codes that answer the agent's request, not failures, with their telemetry
+ * outcome: a library without a guide or an unknown version (not found), a page past the last
+ * (invalid), or a guide that cannot be prepared for now (unavailable). The agent sees the API's
+ * message, which says what to do next, without `isError`.
+ */
+const UPGRADE_GUIDE_ANSWERS = {
+  library_not_prepared: "not_found",
+  version_not_found: "not_found",
+  page_out_of_range: "invalid",
+  guide_unavailable: "unavailable",
+} as const satisfies Record<string, ToolCallOutcome>;
+
+function isUpgradeGuideAnswer(error: string): error is keyof typeof UPGRADE_GUIDE_ANSWERS {
+  return Object.hasOwn(UPGRADE_GUIDE_ANSWERS, error);
+}
+
+/**
+ * The tool's answer to an error response of the upgrade guide endpoint that answers the request
+ * (UPGRADE_GUIDE_ANSWERS), or undefined for any other error. The text is the API's message,
+ * which says what to do next and, for a guide unavailable for now, when to ask again.
+ */
+export function upgradeGuideAnswer(
+  json: { error?: string; message?: string } | undefined
+): ToolAnswer | undefined {
+  const error = json?.error;
+  if (!error || !isUpgradeGuideAnswer(error)) return undefined;
+  return { text: json.message ?? error, outcome: UPGRADE_GUIDE_ANSWERS[error] };
+}
 
 /**
  * Fetches the upgrade guide for a library between two versions
- * @param request The library ID and the versions to upgrade from and to
+ * @param request The library ID, the versions to upgrade from and to, and the page of the guide
  * @param context Client context including IP, API key, and client info
  * @returns The guide, a note to call again while it is prepared, or an error
  */
@@ -373,6 +410,9 @@ export async function fetchUpgradeGuide(
     url.searchParams.set("libraryId", request.libraryId);
     url.searchParams.set("fromVersion", request.fromVersion);
     if (request.toVersion) url.searchParams.set("toVersion", request.toVersion);
+    // Always sent, so the app can tell a client that pages from one that predates paging
+    // (CTX7-3607). The app reads `page` from the deploy that ships paging: deploy it first.
+    url.searchParams.set("page", String(request.page ?? 1));
 
     const headers = generateHeaders(context);
     const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);
@@ -381,8 +421,15 @@ export async function fetchUpgradeGuide(
       "fetch_upgrade_guide",
       () => fetch(url, { headers, signal: abortSignal }),
       async (response): Promise<ToolAnswer> => {
+        // Checked for any status, before the status-specific fallbacks below; cloned so
+        // parseErrorResponse can still read the body of any other error.
+        if (!response.ok) {
+          const json = await readJson<{ error?: string; message?: string }>(response.clone());
+          const answer = upgradeGuideAnswer(json);
+          if (answer) return answer;
+        }
         switch (response.status) {
-          // The code index or release data is being prepared; the agent calls again later.
+          // The source code is being indexed or the guide is being prepared; the agent calls again later.
           case 202: {
             const json = await readJson<{ retryAfter?: number; message?: string }>(response);
             const retryAfter =
@@ -394,10 +441,6 @@ export async function fetchUpgradeGuide(
             };
           }
           case 404: {
-            const json = await readJson<{ error?: string; message?: string }>(response);
-            // A library without a guide or an unknown version is an answer, not a failure.
-            if (json?.error && UPGRADE_GUIDE_MISSES.has(json.error))
-              return { text: json.message ?? json.error, outcome: "not_found" };
             // Any other 404 (for example a deployment without the endpoint) is an upstream error.
             const text =
               "The upgrade guide service is not available (HTTP 404). Please try again later.";

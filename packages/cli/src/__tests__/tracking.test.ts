@@ -34,6 +34,7 @@ describe("trackEvent", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ event: "command", data: { name: "setup" } }),
+      signal: expect.any(AbortSignal),
     });
   });
 

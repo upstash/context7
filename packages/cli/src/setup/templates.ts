@@ -24,7 +24,7 @@ If the \`query-code\` tool is available, use it when the docs do not answer an e
 - Start with \`grep\` (set \`fixed_strings\` for error messages) or \`definition\` for a symbol, then \`read\` the file range in the result's "Next:" line
 - For a version, pass its git tag in \`version\` (e.g. \`v3.24.2\`)
 - Most questions need 1 to 4 \`query-code\` calls; stop at 6
-- If it answers "being indexed", retry at most twice, then answer from \`query-docs\`
+- If it answers "being indexed", call again every 30 seconds for up to 3 minutes (a first index usually takes 1 to 3), then answer from \`query-docs\`. These calls do not count toward the 6
 - Cite the file and line of the source you used
 `;
 
@@ -48,8 +48,16 @@ When the docs do not answer an exact question (a signature or type, a default va
 - Use an ID that \`library\` marks with "Source code", usually the GitHub repository. \`/websites/...\` and \`/llmstxt/...\` IDs have no source
 - For a version, add the git tag to the library ID (e.g. \`/colinhacks/zod/v3.24.2\`). A tag that is not a docs version is indexed first (exit code 75). If indexing fails, the output lists the docs versions you can use
 - Follow the \`Next:\` line of the output. Its fields map to flags: \`offset\` is \`--offset\`, \`output_mode "count"\` is \`-c\`, \`fixed_strings\` is \`-F\`, \`ignore_case\` is \`-i\`, \`read: <file>#L..\` is \`--op read --path <file>#L..\`, and the other fields use the flag of the same name (\`head_limit\` is \`--head-limit\`, \`version\` is \`--tag\`)
-- Exit code 75 means the source is being indexed: retry at most twice, then answer from \`docs\`
+- Exit code 75 means the source is being indexed: run the same command again every 30 seconds for up to 3 minutes (a first index usually takes 1 to 3), then answer from \`docs\`. These runs do not count toward the 6 \`code\` commands
 - Cite the file and line of the source you used
+
+## Upgrades
+
+When the user upgrades a library, sees errors after an upgrade, or asks what changed between two versions, get the upgrade guide: \`npx ctx7@latest get-upgrade-guide <libraryId> <fromVersion> [toVersion]\` (e.g. \`/vercel/next.js 14 16\`; without a target, the latest major).
+
+- Page 1 starts with what is needed to migrate. If it says that part continues, read the next pages with \`--page <n>\` before migrating
+- Exit code 75 means the guide is being prepared: run the same command again after the time it gives
+- If it says the guide is not prepared or could not be prepared, use \`docs\` for the upgrade instead
 
 You MUST call \`library\` first to get a valid ID (format: \`/org/project\`) unless the user provides one directly. Be specific about what to look up in the library's documentation — specific and detailed queries return better results than vague single words, but keep each query to a single concept unless the question is about how concepts interact; combined multi-topic queries dilute ranking and return shallow results for each topic. Do not run more than 3 \`library\` and \`docs\` commands per question, and not more than 6 \`code\` commands. Do not include sensitive information (API keys, passwords, credentials) in queries.
 

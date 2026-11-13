@@ -1599,9 +1599,10 @@ Prometheus receives these metric families:
 - `nodejs_eventloop_*`, `v8js_gc_duration`, `v8js_memory_heap_*`, and
   `v8js_resource_active` from the official OpenTelemetry Node runtime instrumentation
 
-Tool outcomes on the standard MCP operation metric distinguish `success`, `not_found`, and
-`error`. An acknowledged `subscriptions/listen` operation is timed through its acknowledgement;
-the separate subscription metrics track the active stream and its bounded terminal outcome.
+Tool outcomes on the standard MCP operation metric distinguish `success`, `not_found`,
+`invalid`, `unavailable`, and `error`; only `error` marks the operation as failed. An
+acknowledged `subscriptions/listen` operation is timed through its acknowledgement; the
+separate subscription metrics track the active stream and its bounded terminal outcome.
 Upstream outcomes distinguish
 HTTP, response-decoding, network, timeout, and cancellation failures and include both the bounded
 status-code class and the exact numeric HTTP status. Authentication reports accepted, missing,

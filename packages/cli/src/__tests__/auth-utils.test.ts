@@ -870,6 +870,21 @@ describe("startDeviceAuthorization", () => {
   });
 });
 
+describe("OAuth body timeouts", () => {
+  test("a login body that stalls after the headers ends with the timeout message", async () => {
+    const abort = Object.assign(new Error("The operation was aborted due to timeout"), {
+      name: "TimeoutError",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.reject(abort) })
+    );
+    await expect(startDeviceAuthorization("https://t.example", "test-client")).rejects.toThrow(
+      "https://t.example/api/oauth/device/code did not answer within 30 seconds"
+    );
+  });
+});
+
 describe("pollDeviceToken", () => {
   test("approved on 200 returns tokens", async () => {
     vi.stubGlobal(

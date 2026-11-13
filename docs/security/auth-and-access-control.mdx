@@ -7,7 +7,7 @@ This guide covers the authentication mechanisms and access controls available in
 ## API Key Security
 
 - API keys use cryptographic random generation
-- Keys are hashed and encrypted in our database
+- Keys are stored hashed, never in plain text
 - Keys can be rotated at any time from your dashboard
 - Rate limiting prevents abuse and unauthorized access
 
@@ -35,6 +35,7 @@ For step-by-step configuration on self-hosted deployments, see:
 - [Microsoft Entra ID (SSO)](/enterprise/security/entra-sso) — wire up Entra ID sign-in for an On-Premise instance
 - [OIDC SSO](/enterprise/security/oidc-sso) — sign in to an On-Premise instance with any OpenID Connect provider
 - [SAML 2.0 SSO](/enterprise/security/saml-sso) — sign in to an On-Premise instance with Okta, ADFS, Ping, Keycloak or any SAML 2.0 provider
-- [Microsoft Entra ID](/enterprise/enterprise-managed-auth/entra) — proxy the Context7 MCP server through Azure APIM with Entra authentication
+- [Microsoft Entra ID SSO](/enterprise/enterprise-managed-auth/entra-sso) — sign in to Context7 Cloud with Entra ID over SAML, no Azure subscription needed
+- [Azure APIM gateway](/enterprise/enterprise-managed-auth/entra) — optional: proxy the Context7 MCP server through Azure APIM with Entra authentication
 
 Contact our sales team at [context7.com/contact](https://context7.com/contact) for Enterprise plan details.

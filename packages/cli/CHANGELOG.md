@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.11.1
+
+### Patch Changes
+
+- 251c6c5: Use `/reactjs/react.dev` in CLI help examples. `/facebook/react` now redirects to another library and returns no documentation.
+
+## 0.11.0
+
+### Minor Changes
+
+- 2111b92: Add the `query-code` MCP tool and the `ctx7 code` command. They search and read a library's source code at the version its docs describe: `grep` with ripgrep's options, plus `definition`, `references`, `outline`, `read` and `list`. `ctx7 library` marks the libraries whose source is searchable, and `resolve-library-id` does so with the research preview on. The MCP tool is part of the research preview: it is listed only with `--research-preview`, `CONTEXT7_RESEARCH_PREVIEW=1` or `?research_preview=1`.
+
 ## 0.10.0
 
 ### Minor Changes

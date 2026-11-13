@@ -19,7 +19,7 @@ Your keys are in the API Keys card of the [Context7 dashboard](https://context7.
 
 <Steps>
   <Step title="Open the create dialog">
-    Click **Create API Key** in the API Keys card.
+    Click **Create API Key...** in the API Keys card.
   </Step>
   <Step title="Name the key">
     Enter a name (optional but recommended). Descriptive names like "Cursor", "Claude", "VS Code", or "Devin Desktop" help you identify the key later.
@@ -63,11 +63,11 @@ A read-only key gets `403` with the error `write_access_required` when it tries 
 ### Revoking Keys
 
 <Steps>
-  <Step title="Delete the key">
-    Click the delete button next to the key you no longer need.
+  <Step title="Revoke the key">
+    Click the **Revoke** (trash) icon next to the key you no longer need.
   </Step>
-  <Step title="Confirm deletion">
-    Confirm in the modal. The key deactivates immediately — all requests using it will fail.
+  <Step title="Confirm revocation">
+    Click **Revoke API Key** in the modal to confirm. The key deactivates immediately — all requests using it will fail.
   </Step>
 </Steps>
 
@@ -75,3 +75,5 @@ A read-only key gets `403` with the error `write_access_required` when it tries 
   Revoking a key is permanent and cannot be undone. Update any applications using the key before
   revoking.
 </Note>
+
+Keys are created, listed and revoked only in the dashboard. The REST API and the [Admin MCP](/howto/admin-mcp) accept a key and use it within its teamspace, but they do not list keys or revoke them.
