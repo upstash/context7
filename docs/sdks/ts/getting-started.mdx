@@ -71,15 +71,15 @@ const client = new Context7({
 ```
 
 <Note>
-  The SDK checks for API keys in this order: 1. `config.apiKey` (if provided) 2.
-  `process.env.CONTEXT7_API_KEY`
+  The SDK checks for credentials in this order: 1. `config.apiKey` (if provided) 2.
+  `config.authToken` (if provided) 3. `process.env.CONTEXT7_API_KEY`
 </Note>
 
 #### Production HTTP configuration
 
 The SDK applies a 30-second request timeout and retries transient network failures, `408`, `425`,
-`429`, and `5xx` responses. Only `GET` requests are retried; mutating requests remain
-single-attempt.
+`429`, `500`, `502`, `503`, and `504` responses up to 5 times by default. Only `GET` requests are
+retried; mutating requests remain single-attempt.
 
 ```typescript
 const client = new Context7({

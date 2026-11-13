@@ -33,7 +33,7 @@ The widget is a lightweight JavaScript snippet that renders a floating chat butt
     https://context7.com/{owner}/{repo}/admin
     ```
 
-    Open the **Chat** tab and toggle **Widget enabled** on.
+    Open the **Chat** tab and toggle **Enabled** on.
   </Step>
 
   <Step title="Add Allowed Domains">
@@ -41,7 +41,7 @@ The widget is a lightweight JavaScript snippet that renders a floating chat butt
 
     Examples:
     - `docs.example.com` — exact domain match
-    - `*.example.com` — matches all subdomains (e.g., `docs.example.com`, `blog.example.com`)
+    - `*.example.com` — matches all subdomains (e.g., `docs.example.com`, `blog.example.com`) and `example.com` itself
     - `example.com` — matches the root domain only
 
     <Warning>
@@ -50,7 +50,7 @@ The widget is a lightweight JavaScript snippet that renders a floating chat butt
   </Step>
 
   <Step title="Save Settings">
-    Click **Save** to persist your widget configuration.
+    Click **Save changes** to persist your widget configuration.
   </Step>
 
   <Step title="Add the Script Tag">
@@ -84,7 +84,9 @@ it in the root layout or HTML file so it loads on every page.
 
 Optional attributes: data-color (hex color, default #059669), data-position
 (bottom-right or bottom-left), data-placeholder (input placeholder text),
-data-welcome-message (initial assistant message shown when the chat opens).
+data-welcome-message (initial assistant message shown when the chat opens),
+data-width (panel width in px, 320-1200, default 400), data-height (panel
+height in px, 400-1200, default 600).
 ```
 
 ## Framework Examples
@@ -143,6 +145,8 @@ The widget supports optional attributes for customization:
 | `data-position`      | Widget position on the page            | `bottom-right`       |
 | `data-placeholder`   | Placeholder text in the input field    | `Ask about the docs...` |
 | `data-welcome-message` | Initial assistant message shown when the chat opens | Generated from library ID |
+| `data-width`         | Chat panel width in pixels (320-1200)  | `400`                |
+| `data-height`        | Chat panel height in pixels (400-1200) | `600`                |
 
 ### Examples
 
@@ -177,6 +181,19 @@ The widget supports optional attributes for customization:
 ></script>
 ```
 
+**Custom size:**
+
+```html
+<script
+  src="https://context7.com/widget.js"
+  data-library="/vercel/next.js"
+  data-width="560"
+  data-height="750"
+></script>
+```
+
+The panel never grows larger than the browser window. On screens 640px wide or less, the widget always opens as a full-width sheet and ignores these values.
+
 ### Position Options
 
 | Value          | Description                       |
@@ -206,6 +223,6 @@ Manage domains from the **Chat** tab on your library's admin page:
 
 1. Click **Add domain** to add a new entry
 2. Enter the domain (e.g., `docs.example.com` or `*.example.com`)
-3. Click **Save** to apply changes
+3. Click **Save changes** to apply changes
 
-To remove a domain, click the trash icon next to it and save.
+To remove a domain, click the X icon next to it and save.

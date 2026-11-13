@@ -22,6 +22,13 @@ Server URL: `https://admin.mcp.context7.com/mcp`
 }
 ```
 
+Clients that add a remote server as a connector take this URL instead:
+
+- **Claude.ai and Claude Desktop** — Customize → Connectors → + Add → Add custom connector. On a Team or Enterprise plan, an owner adds it in Organization settings first.
+- **ChatGPT** — on the web, chatgpt.com/plugins → + → Add custom MCP server → Create as a plugin; in the desktop app, Settings → MCP servers → Add server (Streamable HTTP).
+
+The connector asks you to sign in while you add it. In the ChatGPT desktop app, use **Authenticate** on the server.
+
 ## Authentication
 
 ### OAuth
@@ -69,14 +76,33 @@ One OAuth connection reaches every teamspace you are a member of, with your role
 | usage     | `get_teamspace_usage`, `set_spending_limit`                                                                                                                                                                                                                                                                                                                                                                        |
 | docs7     | `docs7_list_sites`, `docs7_get_site`, `docs7_create_site`, `docs7_update_site`, `docs7_check_domain`, `docs7_list_deployments`, `docs7_get_deployment`, `docs7_deploy`, `docs7_remove_preview`, `docs7_get_agent_runs`, `docs7_list_pull_requests`, `docs7_connect_repository`, `docs7_manage_example_check`, `docs7_manage_feature_requests`, `docs7_get_analytics`, `docs7_query_logs`, `docs7_get_conversation` |
 | ask       | `ask_list_sites`, `ask_get_site`, `ask_create_site`, `ask_verify_site`, `ask_delete_site`, `ask_get_analytics`, `ask_list_questions`                                                                                                                                                                                                                                                                               |
+| feedback  | `submit_feedback_to_context7_team`                                                                                                                                                                                                                                                                                                                                                                                 |
+
+`submit_feedback_to_context7_team` sends the agent's report on a missing, broken or confusing tool to the Context7 team, not to your teamspace. The agent calls it at most once per task; it takes `task`, `kind` (`missing`, `broken`, `confusing` or `idea`), `impact` (`blocked`, `worked_around` or `friction`), `description` and an optional `tool_name`, and takes no `teamspace`. With an API key, it needs a key with **Write access**.
 
 `list_libraries` and `docs7_list_sites` return 50 items per page with `total`, `page` and `pages`. `list_libraries` also takes `search` (part of a library's id, title or source URL) and `order: "lowest"` (lowest benchmark score first); `docs7_list_sites` takes `search` (part of a site's name, repository, address or library id). A `page` past the last one is an error.
+
+### Adding and indexing a library
+
+`add_library` takes a `source` — `github`, `gitlab`, `bitbucket`, `git` (any other Git host), `website`, `llmstxt` or `openapi` — and a `url`. The `url` is the repository, documentation website, `llms.txt` or OpenAPI spec URL, depending on the source; for GitHub, GitLab and Bitbucket it is the repository URL. The parse takes minutes, so call `get_library` with the returned library id and `wait: true` until the state is `complete` or `error`.
+
+Optional inputs:
+
+- `private: true` adds a repository as a private source (owner or admin, paid plan). The GitHub, GitLab or Bitbucket account must be connected in the dashboard first.
+- `generate_docs: true` generates docs from the source of a private repository.
+- `website_base_url` limits a website crawl to pages under that URL.
+
+Confluence, Notion and file uploads are not in this server; add them in the dashboard. To change how a library the teamspace owns is parsed, call `update_library_config` with only the fields to change, then `refresh_library` to apply them. `update_library_config` takes `branch`, `folders`, `exclude_folders`, `exclude_files`, `rules`, `base_url`, `web_url`, `exclude_urls`, `use_query_params` and `keep_version_specific_pages`, among others. `refresh_library` starts a parse and is subject to the daily refresh limit.
+
+### Versions
+
+`get_library` returns the library's indexed versions, and `manage_library_versions` adds or removes one. A version is a tag or branch name, or, for a website, the docs URL of that version; pass `is_branch: true` for a branch. After `add`, call `get_library` with `wait: true`. `remove` needs `confirm` set to the version name. Versions also come from `previousVersions` in the library's `context7.json`, and when a refresh finds a new major release, Context7 keeps the previous major as a version. Context7 adds the versions of the most popular public libraries itself.
 
 ## Console
 
 In clients that support [MCP Apps](https://github.com/modelcontextprotocol/ext-apps) (Claude, ChatGPT, VS Code, Cursor), `open_console` shows a summary card in the chat — a teamspace's usage and spend, libraries and benchmark scores, Docs7 sites, or Ask sites — with an **Open console** action that expands it to the full console. `view` picks the card (`usage`, `libraries`, `docs7` or `ask`; default `usage`) and `teamspace` takes an id or name. In other clients `open_console` returns the teamspace list as text.
 
-The page reads through this server's read tools, called for it by the client with your sign-in, so it holds no credential of its own. Write and destructive tools are hidden from it, and requests that need the model ("Fix the lowest", "Find doc gaps") are sent to the chat as your next message.
+The page holds no credential of its own: it reads through `console_data`, an app-only tool (`_meta.ui.visibility: ["app"]`, hidden from the model) that runs one of the console's read tools and answers in `structuredContent`. The client calls it for the page with your sign-in. All other tools except `open_console` are hidden from the page, and requests that need the model ("Fix the lowest", "Find doc gaps") are sent to the chat as your next message.
 
 ## Management API
 
@@ -84,7 +110,7 @@ The same operations are available over the REST API at `/api/v2/teamspaces/{team
 
 ## Safety and limits
 
-- Remove and delete actions (`remove_library`, `manage_members` `remove`, `manage_library_versions` `remove`, `manage_rules` `delete`, `manage_owned_library` `block` and `transfer`, `docs7_manage_feature_requests` `delete`, `docs7_remove_preview`, `ask_delete_site`) are marked destructive, so your client asks you before it runs them. They also take `confirm`, set to the exact target — the library id, email, version, rule id, request id, branch or hostname.
+- Remove and delete actions (`remove_library`, `manage_members` `remove`, `manage_library_versions` `remove`, `manage_rules` `delete`, `manage_owned_library` `block` and `transfer`, `docs7_manage_feature_requests` `delete`, `docs7_remove_preview`, `ask_delete_site`) are marked destructive, so your client asks you before it runs them. When the client supports form elicitation (MCP protocol 2026-07-28), the server also shows you a form where you type the exact target — the library id, email, version, rule id, request id, branch or hostname — and the agent cannot answer it for you. In other clients the agent passes the target as `confirm`: ask it to wait for your yes instead of letting it fill the value in itself.
 - Deleting a whole Docs7 site cannot be undone, so it is not in this server. Do it in [the dashboard](https://context7.com/dashboard).
 - Results that hold third-party text (questions, searches, feedback, build logs, agent runs, library suggestions and benchmark questions) are fenced in `<untrusted-data-…>` tags.
 - `docs7_get_deployment` with `include: ["origin"]` needs **Write access**, because `origin` names the GitHub account behind the build. A read-only key still gets the build and the other parts, with `origin` replaced by an `error` object.

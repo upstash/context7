@@ -6,7 +6,7 @@ description: "Sync Google Docs and Google Slides from Drive folders, Shared Driv
 
 Context7 can sync Google Docs and Google Slides from Google Drive and serve them like any other library. Google Drive stays the source of truth: a daily sync picks up edits, and files that are removed or no longer shared leave the results.
 
-An admin connects Google once under **Settings → Integrations → Google**. Then an admin chooses which folders, Shared Drives, Docs and presentations to sync from **Add → Google Drive**, **Google Docs** or **Google Slides**. All three use the same connection. Only the selected items, and the Docs and presentations under selected folders, are indexed.
+An admin connects Google once under **Workspace Settings › Google**. Then an admin chooses which folders, Shared Drives, Docs and presentations to sync from **Add source → Google Drive**, **Google Docs** or **Google Slides**. All three use the same connection. Only the selected items, and the Docs and presentations under selected folders, are indexed.
 
 <Note>
 Google Docs and Google Slides are supported. Spreadsheets, PDFs and other file types in a selected folder are skipped. The picker marks them as not supported.
@@ -32,7 +32,7 @@ There are three ways to give Context7 that identity:
 If your security team blocks service account keys and sharing outside your domain, use **Google account**. It needs no key and no domain-wide delegation, and nothing is shared outside your organization.
 </Tip>
 
-Open **Settings → Integrations → Google** and choose the method under **Authentication**. Each method has a **Set up Google Cloud** panel with the steps below. Enter your project ID there, and the panel fills it into the commands.
+Open **Workspace Settings › Google** and choose the method under **Authentication**. Each method has a **Set up Google Cloud** panel with the steps below. Enter your project ID there, and the panel fills it into the commands.
 
 ## Google account
 
@@ -161,11 +161,11 @@ The picker is a tree of your Shared Drives and the items shared with the Context
 
 Enter a title and click **Start sync**. The description is optional. The selection defines the library: to sync a different set of folders, add another library.
 
-Each Doc is indexed under its Google URL, for example `https://docs.google.com/document/d/<id>/edit`. That link is the `Source:` of every result, so an agent can point people to the original document.
+Each Doc is indexed under its Google URL, for example `https://docs.google.com/document/d/<id>/edit`. That link is the `Source:` of every result, so an agent can point people to the original document. Results taken from a document's text also name it, as `Source: <Doc title> (<link>)`.
 
 ### Google Slides
 
-Each slide of a presentation is indexed as its own page, with a link that opens that slide: `https://docs.google.com/presentation/d/<id>/edit#slide=id.<slide id>`. The slide's title becomes its heading, and its text, lists, links, tables and speaker notes follow. Hidden (skipped) slides are not indexed.
+Each slide of a presentation is indexed as its own page, with a link that opens that slide: `https://docs.google.com/presentation/d/<id>/edit#slide=id.<slide id>`. The slide's title becomes its heading, and its text, lists, links, tables and speaker notes follow. Results taken from a slide name the deck and the slide, as `Source: <deck name>, slide <n>: <slide title> (<link>)`. Hidden (skipped) slides are not indexed.
 
 Elements are indexed in reading order: top to bottom, and left to right within a row. An image, chart or video contributes its alt text, as `*Image: …*`, `*Chart: …*` or `*Video: …*`, and a video that has one keeps its link. WordArt contributes its text. Auto-generated alt text, such as a file name or "Picture 3", is left out. Images, charts, diagrams and videos themselves are not indexed.
 
@@ -188,7 +188,7 @@ Every sync lists the selected folders again and compares each file with the last
 | A file was edited, renamed or moved inside the selection | It is read and indexed again. |
 | A file did not change | Its indexed content is kept as it is. No LLM or embedding calls are made for it. |
 | A file was deleted, trashed, moved out of the selection, or unshared | It leaves the results. |
-| A selected folder or Shared Drive was deleted, trashed, or unshared | All its files leave the results, and the library page and the **Libraries** list in Settings show a warning. Share it again to restore them. |
+| A selected folder or Shared Drive was deleted, trashed, or unshared | All its files leave the results, and the library page and the **Libraries** list in **Workspace Settings › Google** show a warning. Share it again to restore them. |
 | A file was emptied, or has nothing to index | It leaves the results. It is checked again when it changes. |
 | A new file appeared in a selected folder | It is indexed. |
 
@@ -196,7 +196,7 @@ A sync builds the new index next to the live one and swaps it in only when it fi
 
 ### Failures keep valid content
 
-- **One file fails** (for example a Doc is larger than Drive's 10 MB export limit, or the LLM times out while extracting it): the last indexed version of that file stays in the results. The library page shows a warning, its logs list the file and the reason, the **Libraries** list in Settings shows the failed files, and the next sync tries it again.
+- **One file fails** (for example a Doc is larger than Drive's 10 MB export limit, or the LLM times out while extracting it): the last indexed version of that file stays in the results. The library page shows a warning, its logs list the file and the reason, the **Libraries** list in **Workspace Settings › Google** shows the failed files, and the next sync tries it again.
 - **The whole sync fails** (for example Google refuses access because the Drive API is disabled, or Google cannot be reached): all live content stays as it was, and the error is shown in the library's logs.
 
 <Warning>
@@ -207,7 +207,7 @@ Context7 retries Google API quota errors with exponential backoff and limits how
 
 ## Scheduled sync
 
-Google Drive libraries sync every day at 03:00 server time by default. Under **Sync schedule** on the **Google** page (**Settings → Integrations → Google**), you can:
+Google Drive libraries sync every day at 03:00 server time by default. Under **Sync schedule** on the **Google** page (**Workspace Settings › Google**), you can:
 
 - turn the scheduled sync off,
 - change the schedule: pick a preset such as **Every 6 hours**, or enter a cron expression such as `0 */6 * * *`,
@@ -215,9 +215,11 @@ Google Drive libraries sync every day at 03:00 server time by default. Under **S
 
 When a sync fails, scheduled or manual, Context7 retries that library after 15 minutes, 1 hour and 6 hours. Each delay counts from the previous attempt. To sync one library by hand, click **Refresh** on its page, or **Sync now** next to it in the **Libraries** list. To read and re-index every file instead of skipping unchanged ones, select **Re-index all files** in the Refresh dialog, or in the library's menu in the **Libraries** list.
 
+Only an admin can refresh a Google Drive library, even when **Refresh repositories** is on in **Workspace Settings › Authorization**: the sync reads Drive with the connector's credentials.
+
 ## Monitor libraries
 
-The **Libraries** list on the **Google** page (**Settings → Integrations → Google**) shows every Google Drive library with its selection, its last sync, and a status:
+The **Libraries** list on the **Google** page (**Workspace Settings › Google**) shows every Google Drive library with its selection, its last sync, and a status:
 
 | Status | Meaning |
 | --- | --- |
@@ -233,7 +235,7 @@ Expanding a row shows the most common failure reasons and up to 50 failed files,
 
 [Authority labels](/enterprise/authority-labels) can match Google Drive content by path or by URL:
 
-- A path pattern matches the Drive folder path inside the selection, for example `/QA/Standards/` for every file in the **Standards** folder of a selected **QA** folder. For a Shared Drive, the path starts with the Shared Drive's name.
+- A path pattern matches the file's folder path and file name inside the selection. For example, `/QA/Standards/Release sign-off` is the **Release sign-off** Doc in the **Standards** folder of a selected **QA** folder, and the prefix `/QA/Standards/` matches every file in that folder. For a Shared Drive, the path starts with the Shared Drive's name.
 - A URL pattern matches the Doc's Google URL, for example `https://docs.google.com/document/d/<id>`.
 
 For a presentation:
