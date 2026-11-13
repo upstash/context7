@@ -39,23 +39,26 @@ const client = new Context7({
   apiKey: "<CONTEXT7_API_KEY>",
 });
 
+// Search documentation in one request. Context7 selects the relevant library.
+const results = await client.search("How do I cache a Next.js function?", {
+  libraries: ["Next.js"],
+  version: "15.4.0",
+  language: "TypeScript",
+  type: "json",
+});
+console.log(results.codeSnippets[0]?.libraryId, results.codeSnippets[0]?.codeTitle);
+console.log(results.rules);
+
 // Search for libraries
-const libraries = await client.searchLibrary(
-  "I need to build a UI with components",
-  "react"
-);
-console.log(libraries[0].id); // "/facebook/react"
+const libraries = await client.searchLibrary("I need to build a UI with components", "react");
+console.log(libraries[0].id); // "/reactjs/react.dev"
 
 // Get documentation as JSON array (default)
-const docs = await client.getContext("How do I use hooks?", "/facebook/react");
+const docs = await client.getContext("How do I use hooks?", "/reactjs/react.dev");
 console.log(docs[0].title, docs[0].content);
 
 // Get documentation context as plain text
-const context = await client.getContext(
-  "How do I use hooks?",
-  "/facebook/react",
-  { type: "txt" }
-);
+const context = await client.getContext("How do I use hooks?", "/reactjs/react.dev", { type: "txt" });
 console.log(context);
 ```
 
@@ -75,6 +78,90 @@ Then initialize without options:
 const client = new Context7();
 ```
 
+### Vercel Marketplace OIDC
+
+Vercel Marketplace resources can authenticate without a long-lived Context7
+API key. Pass Vercel's per-resource access-token callback as a token provider
+so each request receives a current token. Open the connected Context7 resource in
+the Vercel dashboard, copy its Vercel resource ID (`store_…` or `ir_…`) from
+the resource page URL, and set it as `CONTEXT7_RESOURCE_ID` in your Vercel project's
+environment variables.
+
+```ts
+import { Context7 } from "@upstash/context7-sdk";
+import { getIntegrationToken } from "@vercel/integrations";
+
+const resourceId = process.env.CONTEXT7_RESOURCE_ID;
+if (!resourceId) throw new Error("Set CONTEXT7_RESOURCE_ID to your Vercel resource ID");
+
+const client = new Context7({
+  authToken: () => getIntegrationToken(resourceId),
+});
+```
+
+Vercel Marketplace OIDC tokens last 15 minutes. Use `@vercel/integrations`
+0.1.2 or later to cache and refresh them. Pass a function as `authToken` so each
+request can use a current token.
+
+Explicit credentials take precedence in this order: `apiKey`, `authToken`, then
+`CONTEXT7_API_KEY`. This allows OIDC to be tested while a legacy API key remains
+available during a dual-auth migration.
+
+### Production HTTP options
+
+Requests time out after 30 seconds and retry transient network errors, `408`, `425`, `429`,
+and `5xx` responses by default. You can configure those defaults for the client and override
+timeout, cancellation, and native fetch caching per request:
+
+```ts
+import { Context7, Context7Error } from "@upstash/context7-sdk";
+
+const client = new Context7({
+  apiKey: process.env.CONTEXT7_API_KEY,
+  timeout: 10_000,
+  retry: {
+    retries: 3,
+    backoff: (attempt) => 100 * 2 ** attempt,
+  },
+  onResponse: ({ status, requestId, rateLimit, attempt }) => {
+    console.log({ status, requestId, rateLimit, attempt });
+  },
+});
+
+const controller = new AbortController();
+
+try {
+  const docs = await client.getContext("How do I use hooks?", "/reactjs/react.dev", {
+    signal: controller.signal,
+    timeout: 5_000,
+    cache: "no-store",
+  });
+  console.log(docs);
+} catch (error) {
+  if (error instanceof Context7Error) {
+    console.error(error.code, error.status, error.requestId, error.rateLimit);
+  }
+}
+```
+
+The client also accepts `baseUrl`, `headers`, `keepAlive`, and a custom `fetch` implementation for
+proxies, instrumentation, tests, and runtimes that do not expose a global `fetch`. The configured
+API key always controls the `Authorization` header.
+
+As in `@upstash/redis`, you can express a timeout with a fresh signal for every request:
+
+```ts
+const client = new Context7({
+  apiKey: process.env.CONTEXT7_API_KEY,
+  signal: () => AbortSignal.timeout(10_000),
+});
+```
+
+Set `retry: false` to make exactly one request, `timeout: false` to disable the request timeout,
+or `cache: false` to omit the native fetch cache option.
+
+Only `GET` requests are retried. Mutating requests remain single-attempt.
+
 ## Docs
 
 See the [documentation](https://context7.com/docs/sdks/ts/getting-started) for details.
@@ -85,6 +172,12 @@ See the [documentation](https://context7.com/docs/sdks/ts/getting-started) for d
 
 ```sh
 pnpm test
+```
+
+Run the live API integration tests separately with a configured API key:
+
+```sh
+pnpm test:integration
 ```
 
 ### Building

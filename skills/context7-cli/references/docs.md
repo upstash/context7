@@ -4,13 +4,15 @@ Retrieves and queries up-to-date documentation and code examples from Context7 f
 
 If the user already provided a library ID in `/org/project` or `/org/project/version` format, pass it directly to `ctx7 docs`.
 
+To search all libraries with one command and no library ID, use [`ctx7 search`](#search-all-libraries).
+
 ## Step 1: Resolve a Library
 
 Resolves a package/product name to a Context7-compatible library ID and returns matching libraries.
 
 ```bash
 ctx7 library react "How to clean up useEffect with async operations"
-ctx7 library nextjs "How to set up app router with middleware"
+ctx7 library nextjs "How to set up app router with a proxy"
 ctx7 library prisma "How to define one-to-many relations with cascade delete"
 ```
 
@@ -52,7 +54,7 @@ If the user mentions a specific version, use a version-specific library ID:
 ctx7 docs /vercel/next.js "How to set up app router"
 
 # Version-specific
-ctx7 docs /vercel/next.js/v14.3.0-canary.87 "How to set up app router"
+ctx7 docs /vercel/next.js/v16.2.9 "How to set up app router"
 ```
 
 The available versions are listed in the `ctx7 library` output. Use the closest match to what the user specified.
@@ -69,8 +71,8 @@ Retrieves up-to-date documentation and code examples for the resolved library.
 You must call `ctx7 library` first to obtain the exact Context7-compatible library ID required to use this command, UNLESS the user explicitly provides a library ID in the format `/org/project` or `/org/project/version`.
 
 ```bash
-ctx7 docs /facebook/react "How to clean up useEffect with async operations"
-ctx7 docs /vercel/next.js "How to add authentication middleware to app router"
+ctx7 docs /reactjs/react.dev "How to clean up useEffect with async operations"
+ctx7 docs /vercel/next.js "How to add an authentication proxy to app router"
 ctx7 docs /prisma/prisma "How to define one-to-many relations with cascade delete"
 ```
 
@@ -80,25 +82,55 @@ IMPORTANT: Do not call `ctx7 docs` more than 3 times per question. If you cannot
 
 The query directly affects the quality of results. Be specific and include relevant details, but keep each query to one topic — if the question spans multiple distinct concepts, run a separate `ctx7 docs` command per concept instead of combining them, unless the question is about how the concepts interact. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query.
 
-| Quality | Example |
-|---------|---------|
-| Good | `"How to set up authentication with JWT in Express.js"` |
-| Good | `"React useEffect cleanup function with async operations"` |
-| Bad (too vague) | `"auth"` |
-| Bad (too vague) | `"hooks"` |
-| Bad (too broad) | `"routing and auth and caching in Next.js"` |
+| Quality         | Example                                                    |
+| --------------- | ---------------------------------------------------------- |
+| Good            | `"How to set up authentication with JWT in Express.js"`    |
+| Good            | `"React useEffect cleanup function with async operations"` |
+| Bad (too vague) | `"auth"`                                                   |
+| Bad (too vague) | `"hooks"`                                                  |
+| Bad (too broad) | `"routing and auth and caching in Next.js"`                |
 
 Describe what to look up in the library's documentation in the query when possible — vague one-word queries return generic results, and multi-topic queries dilute ranking and return shallow results for each topic.
 
 The output contains two types of content: **code snippets** (titled, with language-tagged blocks) and **info snippets** (prose explanations with breadcrumb context).
 
 ```bash
+# Rank code examples in the language you write in first
+ctx7 docs /websites/twilio "How to send an SMS" --language Ruby
+
 # Output as structured JSON
-ctx7 docs /facebook/react "How to use hooks for state management" --json
+ctx7 docs /reactjs/react.dev "How to use hooks for state management" --json
 
 # Pipe to other tools — output is clean when not in a TTY (no spinners or colors)
-ctx7 docs /facebook/react "How to use hooks for state management" | head -50
-ctx7 docs /vercel/next.js "How to add middleware for route protection" | grep -A5 "middleware"
+ctx7 docs /reactjs/react.dev "How to use hooks for state management" | head -50
+ctx7 docs /vercel/next.js "How to add a proxy for route protection" | grep -A5 "proxy"
+```
+
+## Search All Libraries
+
+Searches the documentation of all libraries in one step. Context7 picks the libraries, so no library ID is needed.
+
+```bash
+ctx7 search "How to stream an OpenAI response from a Next.js route"
+ctx7 search "How to validate a request body with a schema"
+```
+
+Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query.
+
+If the library, version, or language is known, add them to narrow the results:
+
+```bash
+# Search specific libraries — a name or a library ID, repeat for up to four
+ctx7 search "How to stream a response" --library Next.js --library /openai/openai-node
+
+# Search a specific version
+ctx7 search "How to cache a server function" --library Next.js --library-version 15.4.0
+
+# Prefer results in the language you write in
+ctx7 search "How to send an SMS" --library Twilio --language Ruby
+
+# Output as structured JSON
+ctx7 search "How to use hooks for state management" --library React --json
 ```
 
 ## Authentication

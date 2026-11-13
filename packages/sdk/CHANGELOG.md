@@ -1,5 +1,45 @@
 # @upstash/context7-sdk
 
+## 0.7.0
+
+### Minor Changes
+
+- bdd9bf7: `searchLibrary` returns an empty list (or, with `type: "txt"`, a "No libraries found" message) when nothing matches, instead of throwing a 404 `Context7Error`. Text results label the trust score as "Source Reputation", the same as the MCP server.
+
+## 0.6.0
+
+### Minor Changes
+
+- 158ad26: `search()` JSON results now type the `rank` field on each code and info snippet: the snippet's 1-based place in the reranked order shared by both lists. Sort `codeSnippets` and `infoSnippets` together by `rank` to read the results in the order the text response gives them.
+
+## 0.5.1
+
+### Patch Changes
+
+- 8861808: Honor request timeouts and cancellation while waiting for an asynchronous authentication token provider.
+
+## 0.5.0
+
+### Minor Changes
+
+- 2c6c8e7: Add a typed `search` method that finds relevant documentation without a separate library resolution request.
+
+## 0.4.1
+
+### Patch Changes
+
+- 5a7039b: Add per-request bearer-token providers and Vercel Marketplace resource OIDC validation.
+
+## 0.4.0
+
+### Minor Changes
+
+- 4eff2b9: Fix response type inference for runtime-selected formats, honor disabled retries, and separate deterministic SDK tests from live API integration tests. Calls that forward options whose response format is selected at runtime now correctly return an array-or-string union and may require result narrowing.
+
+  Add production HTTP controls while keeping API-key authentication required: client and per-request timeouts, abort signals, configurable transient HTTP retries, native fetch cache settings, custom fetch/base URL/header/keepalive support, URL validation, response metadata hooks, and structured `Context7Error` fields for status, code, request ID, rate limits, retryability, malformed JSON, and cause.
+
+  Requests now time out after 30 seconds by default. Set `timeout: false` on the client or an individual request to disable the timeout.
+
 ## 0.3.1
 
 ### Patch Changes

@@ -1,5 +1,116 @@
 # Changelog
 
+## 0.11.1
+
+### Patch Changes
+
+- 251c6c5: Use `/reactjs/react.dev` in CLI help examples. `/facebook/react` now redirects to another library and returns no documentation.
+
+## 0.11.0
+
+### Minor Changes
+
+- 2111b92: Add the `query-code` MCP tool and the `ctx7 code` command. They search and read a library's source code at the version its docs describe: `grep` with ripgrep's options, plus `definition`, `references`, `outline`, `read` and `list`. `ctx7 library` marks the libraries whose source is searchable, and `resolve-library-id` does so with the research preview on. The MCP tool is part of the research preview: it is listed only with `--research-preview`, `CONTEXT7_RESEARCH_PREVIEW=1` or `?research_preview=1`.
+
+## 0.10.0
+
+### Minor Changes
+
+- 9783083: Add Pi to `ctx7 setup` and `ctx7 remove`. `ctx7 setup --pi` writes the Context7 MCP server to `~/.pi/agent/mcp.json` (or `.pi/mcp.json` with `--project`) with `direct` tool exposure. It also adds the Context7 rule to Pi's context file and installs the skill in `~/.agents/skills`. Pi reads one context file per folder, so setup adds the rule to an existing `AGENTS.override.md` or `CLAUDE.md` instead of creating an `AGENTS.md` that would hide it. Setup honors `PI_CODING_AGENT_DIR`, and with `--oauth` it prints the `pi mcp login context7` step.
+
+### Patch Changes
+
+- 505b812: Keep your comments when `ctx7 setup` or `ctx7 remove` touches an MCP config. `.vscode/mcp.json` and `.cursor/mcp.json` are JSONC, and the CLI accepted them for reading but wrote them back through `JSON.stringify`, so every comment and any layout you kept in the file was silently dropped. The Context7 entry is now added or removed with an in-place edit that leaves the rest of the file alone, comments included. A file the edit cannot handle safely, such as one whose trailing comma would be stranded, is still rewritten whole as before.
+- db66f7a: Fix `ctx7 setup` and `ctx7 remove` leaving the Context7 section in an AGENTS.md or GEMINI.md that has CRLF line endings.
+- ff0422f: Add a T3 Code setup choice and --t3 setup/remove flag that configure its Claude Code and Codex providers.
+
+## 0.9.0
+
+### Minor Changes
+
+- 60e59f9: Add `ctx7 search <query>` to search documentation across all libraries in one step, without a library ID. Optional `--library`, `--library-version` and `--language` narrow the results, and `--json` returns structured output.
+
+### Patch Changes
+
+- ceaf5f9: Write the OpenCode MCP entry inside `mcp.servers` when the config already uses the OpenCode 2.x layout, without the 1.x `enabled` field. `ctx7 setup` also moves an entry that an earlier version wrote next to `mcp.servers`. Other configs keep the 1.x layout, which OpenCode 1.x and 2.x both read. `ctx7 remove` finds Context7 in either layout.
+- 35bd973: Show the update notice to canary users once the matching stable version is released.
+
+## 0.8.2
+
+### Patch Changes
+
+- b6ad942: Keep you signed in when several ctx7 commands run at once on an expired session. Each command used to refresh the token on its own, and two refreshes with the same token made the server revoke the whole session. Refreshes now take a lock file next to the credentials file: the first command refreshes and writes the new credentials, and the others wait for it and read them. A running command keeps its lock fresh, so a slow refresh is waited for, while a lock left behind by a crashed command is ignored after ten seconds and no command hangs on it. If the lock cannot be taken, for example on a read-only home directory, the command refreshes as before.
+
+## 0.8.1
+
+### Patch Changes
+
+- 5a2b651: Narrow the "Do not use for" line in the server instructions and rule templates so agents use Context7 when they port code between libraries, platforms, or SQL dialects.
+- 323bda9: Keep the comments and trailing commas in an OpenCode config file when `ctx7 setup` or `ctx7 remove` edits it.
+- 7f6943d: `ctx7 setup` now removes an existing `--api-key=<value>` arg when it rewrites a stdio MCP entry, so switching to OAuth or rotating the key no longer leaves the old key in the config.
+
+## 0.8.0
+
+### Minor Changes
+
+- 94cdfb1: Remove the deprecated `skills` and `generate` commands from `ctx7`; `ctx7 setup` still installs the find-docs and context7-mcp skills.
+
+## 0.7.0
+
+### Minor Changes
+
+- f54b372: Tell users when their Context7 session has expired instead of silently continuing without an account. If the server rejects the stored refresh token, the CLI clears the dead credentials. In a terminal it asks "Your Context7 session has expired. Sign in again now? (Y/n)" and, on yes, signs you in and continues the command. In scripts, agents, CI or with `--json` it never prompts; it prints a one-line notice to stderr and continues anonymously. Network errors, rate limits and server errors keep the credentials so the next command retries.
+
+## 0.6.1
+
+### Patch Changes
+
+- 615e72b: Update the Next.js examples in the tool descriptions, the CLI rule and the bundled skill: the version example is now `/vercel/next.js/v16.2.9`, and the prompts use Next.js 16.
+
+## 0.6.0
+
+### Minor Changes
+
+- 2c0f362: Add a `--language` option to `ctx7 docs`. When you pass the programming language you write in, Context7 ranks code examples in that language first.
+
+## 0.5.16
+
+### Patch Changes
+
+- 61cf806: Keep the rest of AGENTS.md / GEMINI.md untouched when `ctx7 remove` deletes the Context7 rule section; only the seam left by the removed section is normalized.
+
+## 0.5.15
+
+### Patch Changes
+
+- c1e314b: `ctx7 setup` now downloads the find-docs and context7-mcp skills directly from GitHub instead of the deprecated Skill Hub API.
+
+## 0.5.14
+
+### Patch Changes
+
+- 16095a9: Update CLI prompt, terminal display, and browser launch dependencies. The CLI now declares Node.js 22.13 or later, which its dependencies already need. Update the MCP server JWT and OpenTelemetry dependencies.
+
+## 0.5.13
+
+### Patch Changes
+
+- 9b6f702: Accept trailing commas in OpenCode JSONC config files during setup and removal.
+
+## 0.5.12
+
+### Patch Changes
+
+- 4416fb8: Use the shared API URL for login and explain how to sign in again when the server rejects a saved session.
+
+  Recommend logout and login only when the server returns HTTP 401. Report other identity-check failures without asking users to discard saved credentials.
+
+## 0.5.11
+
+### Patch Changes
+
+- e127fa1: Add outbound-independent on-premise MCP setup through `ctx7 setup --base-url`, including secure interactive personal API-key entry and anonymous-auth discovery support.
+
 ## 0.5.10
 
 ### Patch Changes

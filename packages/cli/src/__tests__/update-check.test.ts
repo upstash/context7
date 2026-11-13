@@ -43,6 +43,11 @@ describe("compareVersions", () => {
     expect(compareVersions("0.3.13", "0.3.13")).toBe(0);
     expect(compareVersions("0.3.13", "0.3.14")).toBeLessThan(0);
   });
+
+  test("orders a prerelease before its release", () => {
+    expect(compareVersions("0.3.14", "0.3.14-canary-20250101000000")).toBeGreaterThan(0);
+    expect(compareVersions("0.3.14-canary-20250101000000", "0.3.14")).toBeLessThan(0);
+  });
 });
 
 describe("detectInstallMethod", () => {
@@ -111,25 +116,6 @@ describe("getUpgradePlan", () => {
 });
 
 describe("checkForUpdates", () => {
-  test("fetches and caches the latest version", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({ version: "9.9.9" }),
-      })
-    );
-
-    const info = await checkForUpdates({
-      force: true,
-      stateFile,
-      now: 123456,
-    });
-
-    expect(info?.latestVersion).toBe("9.9.9");
-    expect(info?.updateAvailable).toBe(true);
-  });
-
   test("uses cached latest version when the cache is fresh", async () => {
     vi.stubGlobal(
       "fetch",
@@ -139,7 +125,8 @@ describe("checkForUpdates", () => {
       })
     );
 
-    await checkForUpdates({ force: true, stateFile, now: 1000 });
+    const fetched = await checkForUpdates({ force: true, stateFile, now: 1000 });
+    expect(fetched?.updateAvailable).toBe(true);
 
     const fetchMock = vi.mocked(fetch);
     fetchMock.mockClear();
@@ -293,9 +280,15 @@ describe("update notifications", () => {
     ).toBe(true);
   });
 
-  test("skips notifier for json and version argv", () => {
+  test("skips notifier for json, version, and custom deployments", () => {
     expect(shouldSkipUpdateNotifier(["node", "ctx7", "library", "react", "--json"])).toBe(true);
     expect(shouldSkipUpdateNotifier(["node", "ctx7", "--version"])).toBe(true);
-    expect(shouldSkipUpdateNotifier(["node", "ctx7", "skills", "list"])).toBe(false);
+    expect(
+      shouldSkipUpdateNotifier(["node", "ctx7", "setup", "--base-url", "https://context7.internal"])
+    ).toBe(true);
+    expect(shouldSkipUpdateNotifier(["node", "ctx7", "--base-url=https://context7.internal"])).toBe(
+      true
+    );
+    expect(shouldSkipUpdateNotifier(["node", "ctx7", "docs", "/a/b", "q"])).toBe(false);
   });
 });

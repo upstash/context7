@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
-import { mkdir, readFile, writeFile, rm, access } from "fs/promises";
+import { mkdir, readFile, rm, access } from "fs/promises";
 import { join } from "path";
 import { tmpdir } from "os";
 
-import { installSkillFiles, symlinkSkill } from "../utils/installer.js";
+import { installSkillFiles } from "../utils/installer.js";
 import { isSafeSkillName, assertSkillNameInRoot } from "../utils/skill-name.js";
 
 let tempDir: string;
@@ -123,37 +123,5 @@ describe("installSkillFiles", () => {
     await expect(
       installSkillFiles("good", [{ path: "../escape.txt", content: "x" }], skillsRoot)
     ).rejects.toThrow(/outside/);
-  });
-});
-
-describe("symlinkSkill", () => {
-  test("creates symlink under skills root for safe name", async () => {
-    const skillsRoot = join(tempDir, "linked");
-    await mkdir(skillsRoot, { recursive: true });
-
-    const source = join(tempDir, "source");
-    await mkdir(source, { recursive: true });
-    await writeFile(join(source, "marker"), "ok");
-
-    await symlinkSkill("good", source, skillsRoot);
-
-    const linkedMarker = await readFile(join(skillsRoot, "good", "marker"), "utf8");
-    expect(linkedMarker).toBe("ok");
-  });
-
-  test("does not rm parent when skill name is '..'", async () => {
-    const skillsRoot = join(tempDir, ".cursor", "skills");
-    await mkdir(skillsRoot, { recursive: true });
-
-    const sentinel = join(tempDir, ".cursor", "keep.txt");
-    await writeFile(sentinel, "sentinel");
-
-    const source = join(tempDir, "source");
-    await mkdir(source, { recursive: true });
-
-    await expect(symlinkSkill("..", source, skillsRoot)).rejects.toThrow();
-
-    expect(await exists(sentinel)).toBe(true);
-    expect(await exists(join(tempDir, ".cursor"))).toBe(true);
   });
 });

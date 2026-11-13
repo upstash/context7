@@ -11,13 +11,7 @@ import {
 const DEFAULT_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 export type InstallMethod =
-  | "npm-global"
-  | "pnpm-global"
-  | "bun-global"
-  | "npx"
-  | "pnpm-dlx"
-  | "bunx"
-  | "unknown";
+  "npm-global" | "pnpm-global" | "bun-global" | "npx" | "pnpm-dlx" | "bunx" | "unknown";
 
 interface UpdateState {
   latestVersion?: string;
@@ -102,7 +96,8 @@ export function compareVersions(a: string, b: string): number {
     if (diff !== 0) return diff;
   }
 
-  return 0;
+  // A prerelease (e.g. a canary build) sorts before its release.
+  return Number(b.includes("-")) - Number(a.includes("-"));
 }
 
 export function detectInstallMethod(env: NodeJS.ProcessEnv = process.env): InstallMethod {
@@ -296,5 +291,12 @@ export async function markUpdateNotificationShown(
 }
 
 export function shouldSkipUpdateNotifier(argv = process.argv): boolean {
-  return argv.includes("--json") || argv.includes("-v") || argv.includes("--version");
+  return argv.some(
+    (arg) =>
+      arg === "--json" ||
+      arg === "-v" ||
+      arg === "--version" ||
+      arg === "--base-url" ||
+      arg.startsWith("--base-url=")
+  );
 }

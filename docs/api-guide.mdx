@@ -5,25 +5,28 @@ description: Authentication, rate limits, best practices, and integration guides
 
 ## Authentication
 
-All API requests require authentication using an API key. Include your API key in the `Authorization` header:
+Use an API key with every request. Include your API key in the `Authorization` header:
 
 ```bash
 Authorization: Bearer CONTEXT7_API_KEY
 ```
 
-Get your API key at [context7.com/dashboard](https://context7.com/dashboard). Learn more about [creating and managing API keys](/howto/api-keys).
+Get your API key at [context7.com/dashboard](https://context7.com/dashboard?tab=settings). Learn more about [creating and managing API keys](/howto/api-keys).
 
 
 ## API Methods
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| [Search Documentation](/api-reference/search/search-documentation-in-one-request) | `GET /api/v3/search` | Find relevant documentation without resolving a library first |
+| [Fetch Page](/api-reference/search/read-one-web-page-optionally-narrowed-to-a-question) | `GET /api/v3/fetch` | Read one web page by URL, optionally narrowed to a question |
 | [Search Library](/api-reference/search/search-for-libraries) | `GET /api/v2/libs/search` | Find libraries by name |
 | [Get Context](/api-reference/context/get-documentation-context) | `GET /api/v2/context` | Retrieve documentation snippets for a library |
 | [Refresh Library](/api-reference/refresh/refresh-a-library) | `POST /api/v1/refresh` | Refresh a library's documentation |
 | [Get Policies](/api-reference/policies/get-teamspace-policies) | `GET /api/v2/policies` | Retrieve teamspace policy configuration |
 | [Update Policies](/api-reference/policies/update-teamspace-policies) | `PATCH /api/v2/policies` | Update teamspace policies |
 | [Get Metrics](/api-reference/metrics/get-library-usage-metrics) | `GET /api/v2/libs/metrics` | Retrieve usage metrics for libraries |
+| [Get Usage](/api-reference/usage/get-api-usage) | `GET /api/v2/usage` | See the requests this month for the key's member and the whole teamspace |
 | [Add GitHub Repo](/api-reference/add-library/add-a-github-repository) | `POST /api/v2/add/repo/github` | Submit a GitHub repository for processing |
 | [Add GitLab Repo](/api-reference/add-library/add-a-gitlab-repository) | `POST /api/v2/add/repo/gitlab` | Submit a GitLab repository for processing |
 | [Add Bitbucket Repo](/api-reference/add-library/add-a-bitbucket-repository) | `POST /api/v2/add/repo/bitbucket` | Submit a Bitbucket repository for processing |
@@ -47,21 +50,27 @@ Use `/owner/repo` for GitHub repositories, or `/<source>/<id>` for other sources
 | GitLab / Bitbucket / generic Git repo | `/<owner>/<repo>` (same shape as GitHub) |
 | Website | `/websites/uploadcare` |
 | llms.txt source | `/llmstxt/<source>` |
-| npm / package source | `/packages/<name>` or `/npm/<name>` |
-| Uploaded docs | `/docs/<name>` |
+| OpenAPI spec | `/openapi/<name>` |
+| Uploaded PDF / DOCX file | `/pdf/<name>`, `/docx/<name>` |
+| Uploaded file collection | `/files/<name>` |
+| Notion pages | `/notion-<workspace>/<id>` |
 
 You can pin a specific version with either `/owner/repo/<version>` or `/owner/repo@<version>`:
 
 ```
-/vercel/next.js/v15.1.8
-/vercel/next.js@v15.1.8
+/vercel/next.js/v16.2.9
+/vercel/next.js@v16.2.9
 ```
 
 <Tip>
   Don't know the ID for a library? Find it on [context7.com](https://context7.com) — the URL path of the library page **is** the ID. Or call [Search Library](/api-reference/search/search-for-libraries) and use the `id` from the response.
 </Tip>
 
-### Complete Workflow Example
+### Search Context7 documentation
+
+The Search API is the simplest way to retrieve documentation. You provide a question, and Context7 selects relevant libraries before searching and reranking their snippets.
+
+If no documentation matches, Search returns `404 no_documentation_found`; treat it as an empty result. A temporary search failure returns `503 search_failed` and can be retried.
 
 ```python
 import os
@@ -69,22 +78,59 @@ import requests
 
 headers = {"Authorization": f"Bearer {os.environ['CONTEXT7_API_KEY']}"}
 
-# Step 1: Search for the library
+# Context7 selects the library and returns the best snippets
+response = requests.get(
+    "https://context7.com/api/v3/search",
+    headers=headers,
+    params={
+        "query": "How do I stream an OpenAI response from a Next.js route?",
+        "library": ["Next.js", "OpenAI"],
+        "language": "TypeScript",
+        "type": "json",
+    },
+)
+response.raise_for_status()
+docs = response.json()
+
+for snippet in docs["codeSnippets"]:
+    print(f"Library: {snippet['libraryId']}")
+    print(f"Title: {snippet['codeTitle']}")
+    for code in snippet["codeList"]:
+        print(f"Code: {code['code'][:200]}...")
+
+for info in docs["infoSnippets"]:
+    print(f"Content: {info['content'][:200]}...")
+```
+
+Library hints are optional and do not need to be exact. You can provide up to four names or exact Context7 library IDs. Use `version` with at least one library hint, and use `language` when you want language-specific examples to rank higher.
+
+### Choose a library yourself
+
+Use Search Library followed by Get Context when your application needs to inspect or choose a specific documentation source.
+
+```python
+import os
+import requests
+
+headers = {"Authorization": f"Bearer {os.environ['CONTEXT7_API_KEY']}"}
+
+# Find libraries that match the task
 search_response = requests.get(
     "https://context7.com/api/v2/libs/search",
     headers=headers,
-    params={"libraryName": "react", "query": "I need to manage state"}
+    params={"libraryName": "react", "query": "I need to manage state"},
 )
-data = search_response.json()
-best_match = data["results"][0]
+search_response.raise_for_status()
+best_match = search_response.json()["results"][0]
 print(f"Found: {best_match['title']} ({best_match['id']})")
 
-# Step 2: Get documentation context
+# Request documentation from the selected library
 context_response = requests.get(
     "https://context7.com/api/v2/context",
     headers=headers,
-    params={"libraryId": best_match["id"], "query": "How do I use useState?", "type": "json"}
+    params={"libraryId": best_match["id"], "query": "How do I use useState?", "type": "json"},
 )
+context_response.raise_for_status()
 docs = context_response.json()
 
 for snippet in docs["codeSnippets"]:
@@ -97,14 +143,31 @@ for info in docs["infoSnippets"]:
 ```
 
 <Info>
-  For TypeScript SDK usage, see [Search Library](/sdks/ts/commands/search-library) and [Get Context](/sdks/ts/commands/get-context).
+  Each Search API call counts as one request. The two-step flow makes two API calls when it searches for a library and then retrieves its documentation.
 </Info>
+
+<Info>
+  For TypeScript SDK usage, see [Search](/sdks/ts/commands/search), [Search Library](/sdks/ts/commands/search-library), and [Get Context](/sdks/ts/commands/get-context).
+</Info>
+
+## MCP Tools
+
+The [Context7 MCP server](/resources/all-clients) exposes the same lookups as agent tools. Each tool maps to one REST endpoint, with the same parameters as the query fields:
+
+| MCP tool | Endpoint | Parameters |
+|----------|----------|------------|
+| `resolve-library-id` | [Search Library](/api-reference/search/search-for-libraries) — `GET /api/v2/libs/search` | `libraryName`, `query` |
+| `query-docs` | [Get Context](/api-reference/context/get-documentation-context) — `GET /api/v2/context` | `libraryId`, `query`, `language` |
+
+Call the REST API directly to control requests from your own code, or use the MCP tools when you want an agent to fetch documentation automatically during inference. Both use the same [API key](#authentication).
 
 ## Rate Limits
 
 - **Without API key**: Low rate limits and no custom configuration
 - **With API key**: Higher limits based on your plan
-- View current usage and reset windows in the [dashboard](https://context7.com/dashboard).
+- View current usage and reset windows in the [dashboard](https://context7.com/dashboard?tab=overview).
+
+Call [Get Usage](/api-reference/usage/get-api-usage) (`GET /api/v2/usage`) to read the same numbers from your own code. The response has `plan`, `usageResetsAt` (when the monthly count resets, in UTC), `member` (the member who owns the API key, with `requests` this month and `includedInPlan`) and `teamspace` (all members, with extra requests, cost and a daily breakdown). The `member` numbers match the `RateLimit-*` headers on search and docs responses. Calling this endpoint does not count as a request.
 
 When you exceed rate limits, the API returns a `429` status code with these headers:
 
@@ -123,7 +186,7 @@ Use detailed, natural language queries for better results:
 
 ```bash
 # Good - specific question
-curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js&query=How%20to%20implement%20authentication%20with%20middleware" \
+curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js&query=How%20to%20implement%20authentication%20with%20a%20proxy" \
   -H "Authorization: Bearer CONTEXT7_API_KEY"
 
 # Less optimal - vague query
@@ -133,6 +196,19 @@ curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js&query=auth" 
 # Non-GitHub source (website) - same endpoint, same shape
 curl "https://context7.com/api/v2/context?libraryId=/websites/uploadcare&query=image%20transformations" \
   -H "Authorization: Bearer CONTEXT7_API_KEY"
+```
+
+### Add hints only when they provide useful context
+
+Start with only the question when the relevant library is clear from the task. Add library hints when a name is ambiguous or when the answer needs documentation from more than one product.
+
+```bash
+curl -G "https://context7.com/api/v3/search" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY" \
+  --data-urlencode "query=How do I stream an OpenAI response from a Next.js route?" \
+  --data-urlencode "library=Next.js" \
+  --data-urlencode "library=OpenAI" \
+  --data-urlencode "language=TypeScript"
 ```
 
 ### Cache Responses
@@ -166,12 +242,16 @@ def fetch_with_retry(url, headers, max_retries=3):
 Pin to a specific version for consistent results. Both `/` and `@` syntax are supported:
 
 ```bash
-curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js/v15.1.8&query=app%20router" \
+curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js/v16.2.9&query=app%20router" \
   -H "Authorization: Bearer CONTEXT7_API_KEY"
 
-curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js@v15.1.8&query=app%20router" \
+curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js@v16.2.9&query=app%20router" \
   -H "Authorization: Bearer CONTEXT7_API_KEY"
 ```
+
+If that version is not indexed, the request still succeeds and serves the closest documentation Context7 has: a tag matching the requested numbers, a newer release of the same line, or the library's current documentation. JSON responses include a `version` object that says which version was served. A text response starts with a version note when it serves another release or the current documentation. A branch or channel name that is not indexed, such as `/vercel/next.js/canary`, still returns `404 version_not_found`.
+
+A library ID with no version tag also follows the version named in the question. For `libraryId=/vercel/next.js` and the query `How do I cache in Next.js 15?`, an older line than the library's current documentation is served when Context7 has a matching indexed release, and the JSON `version` object reports that release as `verified`. When no indexed release matches, the current documentation is served as before, without a `version` object, and Context7 queues that version for indexing. A question that names more than one version, or that names the source of a migration such as `upgrade from Next.js 15 to 16`, leaves the current documentation in place.
 
 ## Error Handling
 

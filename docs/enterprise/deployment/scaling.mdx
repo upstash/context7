@@ -36,14 +36,20 @@ flowchart TB
     class pg db;
 ```
 
-Replicas coordinate through Postgres: they pull indexing jobs from a shared queue, run jobs that must happen once (backups, usage reporting, GitOps sync) on a single replica using a Postgres lock, and validate each other's signed session tokens. See [How it behaves](#how-it-behaves) for the details.
+Replicas coordinate through Postgres:
+
+- They take indexing jobs from a shared queue.
+- Jobs that must run once (usage reporting, scheduled library updates, GitOps sync) run on one replica, under a Postgres lock.
+- They accept each other's signed session tokens.
+
+See [How it behaves](#how-it-behaves) for the details.
 
 ## What you need
 
 - A **PostgreSQL** database (managed or self-hosted) with the **pgvector** extension, reachable from every replica. Managed Postgres such as RDS, Cloud SQL, and Azure support pgvector; for self-hosted use the `pgvector/pgvector` image. To keep vectors in Milvus or Zilliz Cloud instead, see [Vector stores](/enterprise/deployment/vector-stores).
 - A **load balancer** in front of the replicas.
 
-The embedded SQLite and LanceDB are not used once `DATABASE_URL` is set.
+The embedded SQLite database is not used once `DATABASE_URL` is set. The embedded LanceDB index is also not used, unless you set `VECTOR_STORE=lancedb`.
 
 ## Configuration
 
@@ -53,7 +59,8 @@ Set the same values on every replica. Presence of `DATABASE_URL` is what switche
 | --- | --- | --- |
 | `DATABASE_URL` | Yes | PostgreSQL connection string, for example `postgres://user:pass@host:5432/context7`. Enables multi-replica mode; vectors go to pgvector in this database. |
 | `ENCRYPTION_KEY` | Yes | 64 hex characters, shared by all replicas so they can decrypt the same stored credentials and validate each other's session tokens. Generate with `openssl rand -hex 32`. |
-| `PG_POOL_MAX` | No | PostgreSQL connections per replica. Defaults to `10`. |
+| `PG_POOL_MAX` | No | Size of the main PostgreSQL connection pool per replica. Defaults to `10`. |
+| `PG_VECTOR_POOL_MAX` | No | Size of the separate pgvector connection pool per replica. Defaults to `5`. Each replica can open up to `PG_POOL_MAX` + `PG_VECTOR_POOL_MAX` connections. |
 
 <Warning>
 `ENCRYPTION_KEY` must be identical on every replica and must stay stable. If it changes, stored credentials can no longer be decrypted and all sessions are invalidated. Store it in your secret manager.
@@ -67,7 +74,7 @@ Set the same values on every replica. Presence of `DATABASE_URL` is what switche
 
 Context7 stores vectors with [pgvector](https://github.com/pgvector/pgvector). You need PostgreSQL 13 or newer with pgvector **0.5.0 or newer** (0.5.0 added the HNSW index used for similarity search).
 
-On first boot Context7 runs `CREATE EXTENSION IF NOT EXISTS vector` and creates its tables and indexes automatically. You just provide a database whose user is allowed to create the extension. On managed Postgres that usually means enabling pgvector for the instance first, then connecting with a privileged role.
+On first boot Context7 creates its relational tables. On the first vector write, it runs `CREATE EXTENSION IF NOT EXISTS vector` and creates the vector tables and indexes. You just provide a database whose user is allowed to create the extension. On managed Postgres that usually means enabling pgvector for the instance first, then connecting with a privileged role.
 
 <Tabs>
 
@@ -160,7 +167,7 @@ Configure your load balancer or orchestrator readiness check to use `GET /api/re
 
 Start as many replicas as you need behind the load balancer. Every replica is identical: it serves API, MCP, and search traffic **and** pulls parse jobs from the shared queue, so adding replicas grows both query capacity and indexing throughput at once. Work is distributed automatically and no replica is special.
 
-If a large re-index competes with query latency on a replica, lower **Max concurrent parses** (Settings > Indexing) so each replica runs fewer parses at a time, or give replicas more CPU and memory.
+If a large re-index competes with query latency on a replica, lower **Max concurrent parses** (Workspace Settings › Parsing) so each replica runs fewer parses at a time, or give replicas more CPU and memory. The new value applies at once on the replica that saves it. Other replicas use it after they restart.
 
 </Step>
 
@@ -307,21 +314,22 @@ kubectl apply -f deployment.yaml
 ```
 
 <Note>
-A Helm chart renders all of this from a few values (single replica by default, `scaling.enabled=true` to scale out) and ships with the enterprise distribution.
+A Helm chart renders all of this from a few values (single replica by default, `scaling.enabled=true` to scale out). See [Helm](/enterprise/deployment/helm).
 </Note>
 
 ## How it behaves
 
 - **Shared work queue.** All replicas pull parse jobs from the same queue in PostgreSQL, so indexing throughput scales with replica count.
-- **Single execution for scheduled jobs.** Jobs that must run once across the fleet, such as the usage report, scheduled backups, and GitOps sync, take a short Postgres advisory lock when they fire, so exactly one replica runs each. No replica is special, and there is nothing to fail over.
+- **Single execution for scheduled jobs.** Some jobs must run once across the fleet: the usage report, scheduled library updates, and GitOps sync. Each takes a short Postgres advisory lock when it starts, so only one replica runs it. No replica is special, so there is nothing to fail over. Built-in backups do not run in this mode; see [Limitations](#limitations).
+- **Shared parse limits.** All replicas share the file and timeout limits under **Workspace Settings › Parsing**. Each replica reads them when its next parse starts. **Max concurrent parses** applies to each replica separately.
 - **Stateless sessions.** Sessions are signed tokens, so any replica accepts a login issued by another, and logins survive restarts.
-- **Vectors in Postgres.** Embeddings are stored with pgvector, indexed with HNSW using cosine distance. The vector dimension is taken from your embedding model on first write, so there is no manual schema setup and switching embedding models is a re-index, not a migration. To store vectors in Milvus or Zilliz Cloud instead, see [Vector stores](/enterprise/deployment/vector-stores).
+- **Vectors in Postgres.** Embeddings are stored with pgvector, indexed with HNSW using cosine distance. The vector dimension is taken from your embedding model on first write, so there is no manual schema setup. Switching to an embedding model with the same dimension is a re-index, not a migration. The vector tables keep the dimension they were created with, so a model with a different dimension cannot write to them: drop the `ee_vectors_*` tables and re-index every library. AWS Bedrock embedding models use their own tables for each model, so this does not apply to them. To store vectors in Milvus or Zilliz Cloud instead, see [Vector stores](/enterprise/deployment/vector-stores).
 
 ## Migrating an existing deployment
 
 If you already run a single container, a built-in command copies your existing SQLite data and LanceDB vectors into PostgreSQL, so you do not have to re-index your libraries or re-embed anything. It reads the data directory from your single container and writes to the target PostgreSQL.
 
-The admin UI shows your current storage mode and the exact migration command under **Settings > Scaling**:
+The admin UI shows your current storage mode and the exact migration command under **Workspace Settings › Scaling**:
 
 <Frame>
   ![Migration helper under Settings, Scaling](/images/scaling-settings.png)
@@ -356,7 +364,7 @@ docker run --rm \
   node dist/enterprise/migrate.mjs
 ```
 
-Use the same volume (`context7-data`) your single container uses, so the command reads your existing database and vectors.
+Use the same volume your single container uses, so the command reads your existing database and vectors. Docker Compose adds the project name as a prefix to volume names (for example, `context7_context7-data`). Run `docker volume ls` to find the correct name.
 
 </Tab>
 
@@ -421,7 +429,7 @@ Redeploy with `DATABASE_URL` and `ENCRYPTION_KEY` set on every replica, followin
 
 </Steps>
 
-After redeploying, **Settings > Scaling** confirms the deployment is running in multi-replica mode:
+After redeploying, **Workspace Settings › Scaling** confirms the deployment is running in multi-replica mode:
 
 <Frame>
   ![Multi-replica mode confirmed](/images/scaling-multi-replica.png)
@@ -430,4 +438,4 @@ After redeploying, **Settings > Scaling** confirms the deployment is running in 
 ## Limitations
 
 - With pgvector, vector search runs in Postgres. For typical on-prem workloads this is well within reach; for a very large index, size Postgres accordingly.
-- Database backups are handled by PostgreSQL in this mode. Use your provider's managed backups or `pg_dump` rather than the built-in backup, which targets the embedded SQLite file. See [Backup and Restore](/enterprise/backup-restore).
+- Built-in backups (scheduled and manual) are disabled whenever `DATABASE_URL` is set. Back up PostgreSQL with your provider's managed backups or `pg_dump`, and back up Milvus separately if you store vectors there. See [Backup and Restore](/enterprise/backup-restore).

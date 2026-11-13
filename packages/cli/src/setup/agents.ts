@@ -1,26 +1,24 @@
-import { access } from "fs/promises";
-import { join } from "path";
+import { access, readFile, stat } from "fs/promises";
+import { dirname, join } from "path";
 import { homedir } from "os";
 
-export type AuthMode = "oauth" | "api-key";
 export type Transport = "http" | "stdio";
 
-export interface AuthOptions {
-  mode: AuthMode;
-  apiKey?: string;
-}
+export type AuthOptions =
+  { mode: "api-key"; apiKey: string } | { mode: "oauth" | "none"; apiKey?: never };
+export type AuthMode = AuthOptions["mode"];
 
 export const AUTH_MODE_LABELS: Record<AuthMode, string> = {
   oauth: "OAuth",
   "api-key": "API Key",
+  none: "no authentication",
 };
 
-const MCP_BASE_URL = "https://mcp.context7.com";
 export const STDIO_PACKAGE = "@upstash/context7-mcp";
 
 function stdioArgs(auth: AuthOptions): string[] {
   const args = ["-y", STDIO_PACKAGE];
-  if (auth.mode === "api-key" && auth.apiKey) {
+  if (auth.mode === "api-key") {
     args.push("--api-key", auth.apiKey);
   }
   return args;
@@ -69,6 +67,24 @@ export function resolveDevinConfigDir(
   return join(home, ".config", "devin");
 }
 
+/**
+ * Mirrors pi's own config directory lookup: `PI_CODING_AGENT_DIR` overrides
+ * `~/.pi/agent`, with a leading `~` expanded to the home directory.
+ */
+export function resolvePiAgentDir(
+  platform: NodeJS.Platform = process.platform,
+  home: string = homedir(),
+  env: { PI_CODING_AGENT_DIR?: string } = { PI_CODING_AGENT_DIR: process.env.PI_CODING_AGENT_DIR }
+): string {
+  const override = env.PI_CODING_AGENT_DIR;
+  if (!override) return join(home, ".pi", "agent");
+  if (override === "~") return home;
+  if (override.startsWith("~/") || (platform === "win32" && override.startsWith("~\\"))) {
+    return join(home, override.slice(2));
+  }
+  return override;
+}
+
 export type RuleType =
   | {
       kind: "file";
@@ -76,7 +92,60 @@ export type RuleType =
       filename: string;
       contentPrefix?: string;
     }
-  | { kind: "append"; file: (scope: "project" | "global") => string; sectionMarker: string };
+  | AppendRule;
+
+export interface AppendRule {
+  kind: "append";
+  file: (scope: "project" | "global") => string;
+  sectionMarker: string;
+  /**
+   * For agents that load only the first context file they find in a folder: the file names they
+   * try, in order. Setup writes the rule into the first one that exists, so a new file never
+   * hides the user's own instructions.
+   */
+  contextFileOrder?: string[];
+}
+
+function defaultAppendRuleFile(rule: AppendRule, scope: "project" | "global"): string {
+  return scope === "global" ? rule.file("global") : join(process.cwd(), rule.file("project"));
+}
+
+/** Every file that may hold an append rule, in the agent's lookup order. */
+function appendRuleCandidates(rule: AppendRule, scope: "project" | "global"): string[] {
+  const defaultFile = defaultAppendRuleFile(rule, scope);
+  if (!rule.contextFileOrder) return [defaultFile];
+  return rule.contextFileOrder.map((name) => join(dirname(defaultFile), name));
+}
+
+/** The file setup writes an append rule into: the first context file the agent loads. */
+export async function resolveAppendRuleFile(
+  rule: AppendRule,
+  scope: "project" | "global"
+): Promise<string> {
+  for (const candidate of appendRuleCandidates(rule, scope)) {
+    try {
+      if ((await stat(candidate)).isFile()) return candidate;
+    } catch {
+      // Not present; try the next name.
+    }
+  }
+  return defaultAppendRuleFile(rule, scope);
+}
+
+/** The first file, in the agent's lookup order, that holds the rule's section. */
+export async function findAppendRuleFile(
+  rule: AppendRule,
+  scope: "project" | "global"
+): Promise<string | undefined> {
+  for (const candidate of appendRuleCandidates(rule, scope)) {
+    try {
+      if ((await readFile(candidate, "utf-8")).includes(rule.sectionMarker)) return candidate;
+    } catch {
+      // Missing or unreadable; try the next file.
+    }
+  }
+  return undefined;
+}
 
 export interface AgentConfig {
   displayName: string;
@@ -85,7 +154,13 @@ export interface AgentConfig {
     projectPaths: string[];
     globalPaths: string[];
     configKey: string;
-    buildEntry: (auth: AuthOptions, transport: Transport) => Record<string, unknown>;
+    buildEntry: (
+      auth: AuthOptions,
+      transport: Transport,
+      mcpUrl: string
+    ) => Record<string, unknown>;
+    /** Command to finish OAuth sign-in, for agents that do not start it on their own. */
+    oauthSignInCommand?: string;
   };
   rule: RuleType;
   skill: {
@@ -96,10 +171,6 @@ export interface AgentConfig {
     projectPaths: string[];
     globalPaths: string[];
   };
-}
-
-function mcpUrl(auth: AuthOptions): string {
-  return auth.mode === "oauth" ? `${MCP_BASE_URL}/mcp/oauth` : `${MCP_BASE_URL}/mcp`;
 }
 
 /**
@@ -114,11 +185,9 @@ function mcpUrl(auth: AuthOptions): string {
  * sent. The server accepts the legacy `CONTEXT7_API_KEY` header too, so existing
  * configs keep working.
  *
- * Guarded on a non-empty key because the server rejects an empty bearer, while
- * omitting the header falls back to anonymous access.
  */
 function withHeaders(base: Record<string, unknown>, auth: AuthOptions): Record<string, unknown> {
-  if (auth.mode === "api-key" && auth.apiKey) {
+  if (auth.mode === "api-key") {
     return { ...base, headers: { Authorization: `Bearer ${auth.apiKey}` } };
   }
   return base;
@@ -133,10 +202,8 @@ const agents = {
         return [claudeGlobalMcpPath()];
       },
       configKey: "mcpServers",
-      buildEntry: (auth, transport) =>
-        transport === "stdio"
-          ? stdioEntry(auth)
-          : withHeaders({ type: "http", url: mcpUrl(auth) }, auth),
+      buildEntry: (auth, transport, mcpUrl) =>
+        transport === "stdio" ? stdioEntry(auth) : withHeaders({ type: "http", url: mcpUrl }, auth),
     },
     rule: {
       kind: "file",
@@ -163,8 +230,8 @@ const agents = {
       projectPaths: [join(".cursor", "mcp.json")],
       globalPaths: [join(homedir(), ".cursor", "mcp.json")],
       configKey: "mcpServers",
-      buildEntry: (auth, transport) =>
-        transport === "stdio" ? stdioEntry(auth) : withHeaders({ url: mcpUrl(auth) }, auth),
+      buildEntry: (auth, transport, mcpUrl) =>
+        transport === "stdio" ? stdioEntry(auth) : withHeaders({ url: mcpUrl }, auth),
     },
     rule: {
       kind: "file",
@@ -192,10 +259,10 @@ const agents = {
         return [join(resolveVscodeUserDir(), "mcp.json")];
       },
       configKey: "servers",
-      buildEntry: (auth, transport) =>
+      buildEntry: (auth, transport, mcpUrl) =>
         transport === "stdio"
           ? { type: "stdio", ...stdioEntry(auth) }
-          : withHeaders({ type: "http", url: mcpUrl(auth) }, auth),
+          : withHeaders({ type: "http", url: mcpUrl }, auth),
     },
     rule: {
       kind: "file",
@@ -227,10 +294,10 @@ const agents = {
         return [join(resolveDevinConfigDir(), "mcp_config.json")];
       },
       configKey: "mcpServers",
-      buildEntry: (auth, transport) =>
+      buildEntry: (auth, transport, mcpUrl) =>
         transport === "stdio"
           ? stdioEntry(auth)
-          : withHeaders({ transport: "http", url: mcpUrl(auth) }, auth),
+          : withHeaders({ transport: "http", url: mcpUrl }, auth),
     },
     rule: {
       kind: "append",
@@ -257,10 +324,10 @@ const agents = {
       projectPaths: [".mcp.json"],
       globalPaths: [join(homedir(), ".copilot", "mcp-config.json")],
       configKey: "mcpServers",
-      buildEntry: (auth, transport) =>
+      buildEntry: (auth, transport, mcpUrl) =>
         transport === "stdio"
           ? { type: "stdio", ...stdioEntry(auth), tools: ["*"] }
-          : withHeaders({ type: "http", url: mcpUrl(auth), tools: ["*"] }, auth),
+          : withHeaders({ type: "http", url: mcpUrl, tools: ["*"] }, auth),
     },
     rule: {
       kind: "append",
@@ -292,10 +359,10 @@ const agents = {
         join(homedir(), ".config", "opencode", ".opencode.jsonc"),
       ],
       configKey: "mcp",
-      buildEntry: (auth, transport) =>
+      buildEntry: (auth, transport, mcpUrl) =>
         transport === "stdio"
           ? { type: "local", command: ["npx", ...stdioArgs(auth)], enabled: true }
-          : withHeaders({ type: "remote", url: mcpUrl(auth), enabled: true }, auth),
+          : withHeaders({ type: "remote", url: mcpUrl, enabled: true }, auth),
     },
     rule: {
       kind: "append",
@@ -320,10 +387,8 @@ const agents = {
       projectPaths: [join(".codex", "config.toml")],
       globalPaths: [join(homedir(), ".codex", "config.toml")],
       configKey: "mcp_servers",
-      buildEntry: (auth, transport) =>
-        transport === "stdio"
-          ? stdioEntry(auth)
-          : withHeaders({ type: "http", url: mcpUrl(auth) }, auth),
+      buildEntry: (auth, transport, mcpUrl) =>
+        transport === "stdio" ? stdioEntry(auth) : withHeaders({ type: "http", url: mcpUrl }, auth),
     },
     rule: {
       kind: "append",
@@ -352,8 +417,8 @@ const agents = {
       projectPaths: [],
       globalPaths: [join(homedir(), ".gemini", "config", "mcp_config.json")],
       configKey: "mcpServers",
-      buildEntry: (auth, transport) =>
-        transport === "stdio" ? stdioEntry(auth) : withHeaders({ serverUrl: mcpUrl(auth) }, auth),
+      buildEntry: (auth, transport, mcpUrl) =>
+        transport === "stdio" ? stdioEntry(auth) : withHeaders({ serverUrl: mcpUrl }, auth),
     },
     rule: {
       kind: "append",
@@ -377,8 +442,8 @@ const agents = {
       projectPaths: [join(".gemini", "settings.json")],
       globalPaths: [join(homedir(), ".gemini", "settings.json")],
       configKey: "mcpServers",
-      buildEntry: (auth, transport) =>
-        transport === "stdio" ? stdioEntry(auth) : withHeaders({ httpUrl: mcpUrl(auth) }, auth),
+      buildEntry: (auth, transport, mcpUrl) =>
+        transport === "stdio" ? stdioEntry(auth) : withHeaders({ httpUrl: mcpUrl }, auth),
     },
     rule: {
       kind: "append",
@@ -393,6 +458,44 @@ const agents = {
     detect: {
       projectPaths: [".gemini"],
       globalPaths: [join(homedir(), ".gemini")],
+    },
+  },
+
+  // Pi has built-in MCP support from v0.99.0. Without an explicit exposure it
+  // hides MCP tools behind codemode scripts, so the rule's direct calls to
+  // resolve-library-id and query-docs would not find them. Pi's docs recommend
+  // `direct` for small, frequently used servers like Context7.
+  pi: {
+    displayName: "Pi",
+    mcp: {
+      projectPaths: [join(".pi", "mcp.json")],
+      get globalPaths() {
+        return [join(resolvePiAgentDir(), "mcp.json")];
+      },
+      configKey: "mcpServers",
+      buildEntry: (auth, transport, mcpUrl) => ({
+        ...(transport === "stdio" ? stdioEntry(auth) : withHeaders({ url: mcpUrl }, auth)),
+        exposure: "direct",
+      }),
+      oauthSignInCommand: "pi mcp login context7",
+    },
+    rule: {
+      kind: "append",
+      file: (scope) => (scope === "global" ? join(resolvePiAgentDir(), "AGENTS.md") : "AGENTS.md"),
+      sectionMarker: "<!-- context7 -->",
+      // Pi reads one context file per folder, so a new AGENTS.md would hide an existing CLAUDE.md.
+      contextFileOrder: ["AGENTS.override.md", "AGENTS.md", "AGENTS.MD", "CLAUDE.md", "CLAUDE.MD"],
+    },
+    skill: {
+      name: "context7-mcp",
+      dir: (scope) =>
+        scope === "global" ? join(homedir(), ".agents", "skills") : join(".agents", "skills"),
+    },
+    detect: {
+      projectPaths: [".pi"],
+      get globalPaths() {
+        return [resolvePiAgentDir()];
+      },
     },
   },
 } satisfies Record<string, AgentConfig>;

@@ -2,45 +2,56 @@ import type {
   Context7Config,
   GetContextOptions,
   SearchLibraryOptions,
+  SearchOptions,
   Library,
   Documentation,
+  SearchResponse,
 } from "@commands/types";
 import { Context7Error } from "@error";
 import { HttpClient } from "@http";
-import { SearchLibraryCommand, GetContextCommand } from "@commands/index";
+import type { AuthTokenProvider } from "@http";
+import { SearchLibraryCommand, GetContextCommand, SearchCommand } from "@commands/index";
 
 const DEFAULT_BASE_URL = "https://context7.com/api";
 const API_KEY_PREFIX = "ctx7sk";
 
+type Credential =
+  { kind: "apiKey"; value: string } | { kind: "authToken"; value: string | AuthTokenProvider };
+
 export type * from "@commands/types";
+export type {
+  AuthTokenProvider,
+  CacheSetting,
+  Context7Fetch,
+  Context7ResponseMetadata,
+  RateLimitMetadata,
+  RetryConfig,
+} from "@http";
 export * from "@error";
 
 export class Context7 {
-  private httpClient: HttpClient;
+  private readonly httpClient: HttpClient;
 
   constructor(config: Context7Config = {}) {
-    const apiKey = config.apiKey || process.env.CONTEXT7_API_KEY;
+    const credential = resolveCredential(config);
 
-    if (!apiKey) {
-      throw new Context7Error(
-        "API key is required. Pass it in the config or set CONTEXT7_API_KEY environment variable."
-      );
-    }
-
-    if (!apiKey.startsWith(API_KEY_PREFIX)) {
+    if (credential.kind === "apiKey" && !credential.value.startsWith(API_KEY_PREFIX)) {
       console.warn(`API key should start with '${API_KEY_PREFIX}'`);
     }
 
     this.httpClient = new HttpClient({
-      baseUrl: DEFAULT_BASE_URL,
+      baseUrl: config.baseUrl ?? DEFAULT_BASE_URL,
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        ...withoutAuthorizationHeader(config.headers),
       },
-      retry: {
-        retries: 5,
-        backoff: (retryCount) => Math.exp(retryCount) * 50,
-      },
-      cache: "no-store",
+      authToken: credential.value,
+      retry: config.retry,
+      cache: config.cache ?? "no-store",
+      timeout: config.timeout,
+      signal: config.signal,
+      keepAlive: config.keepAlive,
+      fetch: config.fetch,
+      onResponse: config.onResponse,
     });
   }
 
@@ -50,7 +61,7 @@ export class Context7 {
   async searchLibrary(
     query: string,
     libraryName: string,
-    options: SearchLibraryOptions & { type: "json" }
+    options?: SearchLibraryOptions & { type?: "json" }
   ): Promise<Library[]>;
 
   /**
@@ -63,13 +74,13 @@ export class Context7 {
   ): Promise<string>;
 
   /**
-   * Search for libraries matching the given query (defaults to JSON)
+   * Search for libraries with options whose response type is determined at runtime
    */
   async searchLibrary(
     query: string,
     libraryName: string,
     options?: SearchLibraryOptions
-  ): Promise<Library[]>;
+  ): Promise<Library[] | string>;
 
   /**
    * Search for libraries matching the given query
@@ -84,7 +95,7 @@ export class Context7 {
     options?: SearchLibraryOptions
   ): Promise<Library[] | string> {
     const command = new SearchLibraryCommand(query, libraryName, options);
-    return await command.exec(this.httpClient);
+    return command.exec(this.httpClient);
   }
 
   /**
@@ -93,7 +104,7 @@ export class Context7 {
   async getContext(
     query: string,
     libraryId: string,
-    options: GetContextOptions & { type: "json" }
+    options?: GetContextOptions & { type?: "json" }
   ): Promise<Documentation[]>;
 
   /**
@@ -106,13 +117,13 @@ export class Context7 {
   ): Promise<string>;
 
   /**
-   * Get documentation context for a library (defaults to JSON)
+   * Get documentation context with options whose response type is determined at runtime
    */
   async getContext(
     query: string,
     libraryId: string,
     options?: GetContextOptions
-  ): Promise<Documentation[]>;
+  ): Promise<Documentation[] | string>;
 
   /**
    * Get documentation context for a library
@@ -127,6 +138,55 @@ export class Context7 {
     options?: GetContextOptions
   ): Promise<Documentation[] | string> {
     const command = new GetContextCommand(query, libraryId, options);
-    return await command.exec(this.httpClient);
+    return command.exec(this.httpClient);
   }
+
+  /**
+   * Search documentation as structured snippets
+   */
+  async search(query: string, options?: SearchOptions & { type?: "json" }): Promise<SearchResponse>;
+
+  /**
+   * Search documentation as plain text
+   */
+  async search(query: string, options: SearchOptions & { type: "txt" }): Promise<string>;
+
+  /**
+   * Search documentation with options whose response type is determined at runtime
+   */
+  async search(query: string, options?: SearchOptions): Promise<SearchResponse | string>;
+
+  /**
+   * Search documentation without resolving a library first
+   * @param query The user's question or task
+   * @param options Library, version, language, response format, and request options
+   * @returns SearchResponse by default, or formatted text when type is "txt"
+   * @throws Context7Error with status 404 when no documentation matches
+   */
+  async search(query: string, options?: SearchOptions): Promise<SearchResponse | string> {
+    const command = new SearchCommand(query, options);
+    return command.exec(this.httpClient);
+  }
+}
+
+function resolveCredential(config: Context7Config): Credential {
+  if (config.apiKey) return { kind: "apiKey", value: config.apiKey };
+  if (config.authToken) return { kind: "authToken", value: config.authToken };
+
+  const environmentApiKey = getEnvironmentApiKey();
+  if (environmentApiKey) return { kind: "apiKey", value: environmentApiKey };
+
+  throw new Context7Error(
+    "Authentication is required. Pass apiKey or authToken, or set CONTEXT7_API_KEY."
+  );
+}
+
+function getEnvironmentApiKey(): string | undefined {
+  return typeof process === "undefined" ? undefined : process.env?.CONTEXT7_API_KEY;
+}
+
+function withoutAuthorizationHeader(headers?: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(headers ?? {}).filter(([name]) => name.toLowerCase() !== "authorization")
+  );
 }

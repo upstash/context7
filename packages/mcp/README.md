@@ -2,7 +2,7 @@
 
 [![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/en/install-mcp?name=context7&config=eyJ1cmwiOiJodHRwczovL21jcC5jb250ZXh0Ny5jb20vbWNwIn0%3D) [<img alt="Install in VS Code (npx)" src="https://img.shields.io/badge/Install%20in%20VS%20Code-0098FF?style=for-the-badge&logo=visualstudiocode&logoColor=white">](https://insiders.vscode.dev/redirect?url=vscode%3Amcp%2Finstall%3F%7B%22name%22%3A%22context7%22%2C%22command%22%3A%22npx%22%2C%22args%22%3A%5B%22-y%22%2C%22%40upstash%2Fcontext7-mcp%40latest%22%5D%7D)
 
-# Context7 MCP - Up-to-date Code Docs For Any Prompt
+# Context7 MCP - Up-to-date Docs for AI Agents
 
 [![Website](https://img.shields.io/badge/Website-context7.com-blue)](https://context7.com) [![NPM Version](https://img.shields.io/npm/v/%40upstash%2Fcontext7-mcp?color=red)](https://www.npmjs.com/package/@upstash/context7-mcp) [![MIT licensed](https://img.shields.io/npm/l/%40upstash%2Fcontext7-mcp)](./LICENSE)
 
@@ -18,12 +18,12 @@ LLMs rely on outdated or generic information about the libraries you use. You ge
 
 ## ✅ With Context7
 
-Context7 MCP pulls up-to-date, version-specific documentation and code examples straight from the source — and places them directly into your prompt.
+Context7 MCP pulls up-to-date, version-specific documentation and code examples straight from the source — and gives them to your coding agent.
 
 Add `use context7` to your prompt (or [set up a rule](#️-installation) to auto-invoke):
 
 ```txt
-Create a Next.js middleware that checks for a valid JWT in cookies
+Create a Next.js proxy that checks for a valid JWT in cookies
 and redirects unauthenticated users to `/login`. use context7
 ```
 
@@ -32,7 +32,7 @@ Configure a Cloudflare Worker script to cache
 JSON API responses for five minutes. use context7
 ```
 
-Context7 fetches up-to-date code examples and documentation right into your LLM's context.
+Context7 fetches up-to-date code examples and documentation right into your coding agent's context.
 
 - 1️⃣ Write your prompt naturally
 - 2️⃣ Tell the LLM to `use context7` (or [set up a rule](#️-installation) once)
@@ -53,7 +53,7 @@ Check out our [project addition guide](https://context7.com/docs/adding-librarie
 
 - Node.js >= v20.18.1
 - Cursor, Claude Code, VSCode, Devin Desktop or another MCP Client
-- Context7 API Key (Optional) for higher rate limits and private repositories (Get yours by creating an account at [context7.com/dashboard](https://context7.com/dashboard))
+- Context7 API Key (Optional) for higher rate limits and private repositories (Get yours by creating an account at [context7.com/dashboard](https://context7.com/dashboard?tab=settings))
 
 > [!TIP]
 > **Recommended Post-Setup: Add a Rule to Auto-Invoke Context7**
@@ -157,10 +157,10 @@ claude mcp add --scope user --header "Authorization: Bearer YOUR_API_KEY" --tran
 
 Run this command in your terminal. See [Amp MCP docs](https://ampcode.com/manual#mcp) for more info.
 
-#### Without API Key (Basic Usage)
+#### With OAuth
 
 ```sh
-amp mcp add context7 https://mcp.context7.com/mcp
+amp mcp add context7 https://mcp.context7.com/mcp/oauth
 ```
 
 #### With API Key (Higher Rate Limits & Private Repos)
@@ -532,7 +532,7 @@ If the `mcpServers` object does not exist, create it.
 <details>
 <summary><b>Install in Qwen Coder</b></summary>
 
-See [Qwen Coder MCP Configuration](https://qwenlm.github.io/qwen-code-docs/en/tools/mcp-server/#how-to-set-up-your-mcp-server) for details.
+See [Qwen Coder MCP Configuration](https://qwenlm.github.io/qwen-code-docs/en/developers/tools/mcp-server/#how-to-set-up-your-mcp-server) for details.
 
 1.  Open the Qwen Coder settings file. The location is `~/.qwen/settings.json` (where `~` is your home directory).
 2.  Add the following to the `mcpServers` object in your `settings.json` file:
@@ -593,29 +593,71 @@ Open Claude Desktop developer settings and edit your `claude_desktop_config.json
 </details>
 
 <details>
-<summary><b>Install in Opencode</b></summary>
+<summary><b>Install in OpenCode</b></summary>
 
-Add this to your Opencode configuration file. See [Opencode MCP docs](https://opencode.ai/docs/mcp-servers) for more info.
+Add this to your `opencode.json` file. The shape depends on your OpenCode version. Run `opencode --version` to check it.
 
-#### Opencode Remote Server Connection
+- **OpenCode 2.x** keeps servers in `mcp.servers` and connects to each one unless you set `"disabled": true`. It also accepts the 1.x shape. See the [OpenCode 2.x MCP docs](https://opencode.ai/v2/docs/mcp-servers).
+- **OpenCode 1.x** reads servers directly from `mcp` and uses `"enabled": true`. It rejects a config that contains `mcp.servers`. See the [OpenCode 1.x MCP docs](https://opencode.ai/docs/mcp-servers).
+
+#### OpenCode 2.x Remote Server Connection
 
 ```json
-"mcp": {
-  "context7": {
-    "type": "remote",
-    "url": "https://mcp.context7.com/mcp",
-    "headers": {
-      "Authorization": "Bearer YOUR_API_KEY"
-    },
-    "enabled": true
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "context7": {
+        "type": "remote",
+        "url": "https://mcp.context7.com/mcp",
+        "headers": {
+          "Authorization": "Bearer YOUR_API_KEY"
+        }
+      }
+    }
   }
 }
 ```
 
-#### Opencode Local Server Connection
+#### OpenCode 1.x Remote Server Connection
 
 ```json
 {
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      },
+      "enabled": true
+    }
+  }
+}
+```
+
+#### OpenCode 2.x Local Server Connection
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "context7": {
+        "type": "local",
+        "command": ["npx", "-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+      }
+    }
+  }
+}
+```
+
+#### OpenCode 1.x Local Server Connection
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
   "mcp": {
     "context7": {
       "type": "local",
@@ -641,7 +683,7 @@ Add the following configuration to your OpenAI Codex MCP server settings:
 [mcp_servers.context7]
 args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
 command = "npx"
-startup_timeout_ms = 20_000
+startup_timeout_sec = 20
 ```
 
 #### Remote Server Connection
@@ -654,7 +696,7 @@ http_headers = { "Authorization" = "Bearer YOUR_API_KEY" }
 
 > Optional troubleshooting — only if you see startup "request timed out" or "not found program". Most users can ignore this.
 >
-> - First try: increase `startup_timeout_ms` to `40_000` and retry.
+> - First try: increase `startup_timeout_sec` to `40` and retry.
 > - Windows quick fix (absolute `npx` path + explicit env):
 >
 > ```toml
@@ -667,7 +709,7 @@ http_headers = { "Authorization" = "Bearer YOUR_API_KEY" }
 >   "YOUR_API_KEY"
 > ]
 > env = { SystemRoot="C:\\Windows", APPDATA="C:\\Users\\yourname\\AppData\\Roaming" }
-> startup_timeout_ms = 40_000
+> startup_timeout_sec = 40
 > ```
 >
 > - macOS quick fix (use Node + installed package entry point):
@@ -715,7 +757,7 @@ See [JetBrains AI Assistant Documentation](https://www.jetbrains.com/help/ai-ass
 </details>
 
 <details>
-  
+
 <summary><b>Install in Kiro</b></summary>
 
 See [Kiro Model Context Protocol Documentation](https://kiro.dev/docs/mcp/configuration/) for details.
@@ -746,7 +788,7 @@ To use an API key in Kiro, add:
 }
 ```
 
-You can create an API key at [context7.com/dashboard](https://context7.com/dashboard) for authenticated usage and higher rate limits.
+You can create an API key at [context7.com/dashboard](https://context7.com/dashboard?tab=settings) for authenticated usage and higher rate limits.
 
 #### Kiro Local Server Connection
 
@@ -1017,7 +1059,7 @@ Add the following configuration to the `mcp` section of your Copilot Coding Agen
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY"
       },
-      "tools": ["get-library-docs", "resolve-library-id"]
+      "tools": ["query-docs", "resolve-library-id"]
     }
   }
 }
@@ -1042,7 +1084,7 @@ For more information, see the [official GitHub documentation](https://docs.githu
       "headers": {
         "Authorization": "Bearer YOUR_API_KEY"
       },
-      "tools": ["get-library-docs", "resolve-library-id"]
+      "tools": ["query-docs", "resolve-library-id"]
     }
   }
 }
@@ -1056,7 +1098,7 @@ Or, for a local server:
     "context7": {
       "type": "local",
       "command": "npx",
-      "tools": ["get-library-docs", "resolve-library-id"],
+      "tools": ["query-docs", "resolve-library-id"],
       "args": ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
     }
   }
@@ -1194,7 +1236,7 @@ Open the "Settings" page of the app, navigate to "Plugins," and enter the follow
 }
 ```
 
-Once saved, enter in the chat `get-library-docs` followed by your Context7 documentation ID (e.g., `get-library-docs /nuxt/ui`). More information is available on [BoltAI's Documentation site](https://docs.boltai.com/docs/plugins/mcp-servers). For BoltAI on iOS, [see this guide](https://docs.boltai.com/docs/boltai-mobile/mcp-servers).
+Once saved, enter in the chat `query-docs` followed by your Context7 documentation ID (e.g., `query-docs /nuxt/ui how to set up a theme`). More information is available on [BoltAI's Documentation site](https://docs.boltai.com/docs/plugins/mcp-servers). For BoltAI on iOS, [see this guide](https://docs.boltai.com/docs/boltai-mobile/mcp-servers).
 
 </details>
 
@@ -1315,6 +1357,7 @@ See [Local and Remote MCPs for Perplexity](https://www.perplexity.ai/help-center
 ```
 
 7. Click `Save`.
+
 </details>
 
 <details>
@@ -1328,12 +1371,6 @@ Run this command in your terminal:
 
 ```sh
 droid mcp add context7 https://mcp.context7.com/mcp --type http --header "Authorization: Bearer YOUR_API_KEY"
-```
-
-Or without an API key (basic usage with rate limits):
-
-```sh
-droid mcp add context7 https://mcp.context7.com/mcp --type http
 ```
 
 #### Factory Local Server Connection (Stdio)
@@ -1377,12 +1414,6 @@ autohand mcp add context7 npx -y @upstash/context7-mcp --api-key YOUR_API_KEY
 
 Add `--scope project` before `context7` to save the server in the current project's `.autohand` configuration instead of your user configuration.
 
-For basic usage without an API key, you can connect to the remote server instead:
-
-```sh
-autohand mcp add --transport http context7 https://mcp.context7.com/mcp
-```
-
 </details>
 
 ## 🔨 Available Tools
@@ -1391,11 +1422,22 @@ Context7 MCP provides the following tools that LLMs can use:
 
 - `resolve-library-id`: Resolves a general library name into a Context7-compatible library ID.
   - `libraryName` (required): The name of the library to search for
+  - `query` (required): What you need the docs for, used to rank matches
 
-- `get-library-docs`: Fetches documentation for a library using a Context7-compatible library ID.
-  - `context7CompatibleLibraryID` (required): Exact Context7-compatible library ID (e.g., `/mongodb/docs`, `/vercel/next.js`)
-  - `topic` (optional): Focus the docs on a specific topic (e.g., "routing", "hooks")
-  - `page` (optional, default 1): Page number for pagination (1-10). If the context is not sufficient, try page=2, page=3, etc. with the same topic.
+- `query-docs`: Queries up-to-date documentation and code examples for a Context7-compatible library ID.
+  - `libraryId` (required): Exact Context7-compatible library ID (e.g., `/mongodb/docs`, `/vercel/next.js`)
+  - `query` (required): The concept to look up, scoped to a single topic
+  - `language` (optional): The programming language you write in, used to rank code examples in that language first
+
+- `query-code` (research preview): Searches and reads a library's source code at the version its docs describe, like ripgrep and go-to-definition on a checkout of that version. Listed only with research preview on: `--research-preview` or `CONTEXT7_RESEARCH_PREVIEW=1` (stdio), or `?research_preview=1` on the MCP URL (HTTP).
+  - `libraryId` (required): Context7 library ID (e.g., `/vercel/next.js`)
+  - `version` (optional): a git tag of the library (e.g., `v3.24.2`); default is the commit the latest docs describe
+  - `operation` (optional): `grep` (default), `definition`, `references` (resolved with SCIP where indexed), `outline`, `read` or `list`
+  - `pattern`: a regex for `grep` (ripgrep syntax), or a symbol for `definition`, `references` and `read`
+  - `fixed_strings`, `ignore_case`, `glob`, `context`, `output_mode` (`content`, `files_with_matches`, `count`), `head_limit`, `offset`: as in ripgrep
+  - `path` (optional): a folder or file of the library to search in; for `read`, a file with a range such as `src/client.ts#L40-L80`
+
+`get-library-docs` was renamed to `query-docs`. Update client tool allowlists to use `query-docs`.
 
 ## 🛟 Tips
 
@@ -1443,13 +1485,19 @@ bun run dist/index.js
 
 - `--transport <stdio|http>` – Transport to use (`stdio` by default). Use `http` for remote HTTP server or `stdio` for local integration.
 - `--port <number>` – Port to listen on when using `http` transport (default `3000`).
-- `--api-key <key>` – API key for authentication (or set `CONTEXT7_API_KEY` env var). You can get your API key by creating an account at [context7.com/dashboard](https://context7.com/dashboard).
+- `--api-key <key>` – API key for authentication (or set `CONTEXT7_API_KEY` env var). You can get your API key by creating an account at [context7.com/dashboard](https://context7.com/dashboard?tab=settings).
 
 Example with HTTP transport and port 8080:
 
 ```bash
 bun run dist/index.js --transport http --port 8080
 ```
+
+HTTP transport requires a credential on every request by default. Clients send `Authorization: Bearer YOUR_API_KEY`. Set `MCP_AUTH_ENFORCEMENT=observe` to also accept requests without credentials on `/mcp`.
+
+Opaque OAuth access tokens (`oat_…`) are checked against the Context7 API before each request is served (one check per token per minute on each replica; the cache is in memory, and a rejected token stays rejected for ten minutes). An expired or revoked token gets an HTTP 401 with a `WWW-Authenticate` challenge so MCP clients refresh it. Set `MCP_OAUTH_TOKEN_VALIDATION=off` to skip that check and forward the token unchecked.
+
+OAuth JWT access tokens from the authorization server (`OAUTH_AUTH_SERVER_URL`) are verified locally: signature against its JWKS, issuer, a `typ` of `at+jwt`, and expiry with a minute of clock tolerance. Clerk ID tokens and session JWTs share that issuer but are not access tokens, so they are always rejected. The token's `aud` must name this server (`RESOURCE_URL` origin, `/mcp`, or `/mcp/oauth`; override with a comma-separated `MCP_OAUTH_ALLOWED_AUDIENCES`). The query string of an audience on an allowed host is ignored. `MCP_OAUTH_AUDIENCE_ENFORCEMENT` sets what a mismatch does: `observe` (default) admits a token with a missing or foreign audience; `foreign` answers HTTP 401 to a token issued for another server and still admits one with no `aud`; `required` answers 401 to both. Every mismatch is logged with the OAuth client ID, the audience and the outcome, once per token per hour on each replica.
 
 Another example with stdio transport:
 
@@ -1490,6 +1538,143 @@ CONTEXT7_API_KEY=your_api_key_here
 }
 ```
 
+### OpenTelemetry observability
+
+Context7 instruments individual MCP requests and notifications at the SDK transport boundary,
+including messages inside a valid batch and MCP v2 `subscriptions/listen` operations handled by the
+SDK entry layer. Requests rejected by the SDK's HTTP envelope and protocol-version validation before
+dispatch remain visible in normal HTTP/gateway telemetry, but are not reported as MCP operations.
+Observed operations follow the
+development-status [OpenTelemetry MCP semantic conventions](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/mcp.md)
+for server metrics and spans. Trace context is extracted from the `traceparent`, `tracestate`, and
+`baggage` fields in MCP `params._meta` as defined by
+[SEP-414](https://modelcontextprotocol.io/seps/414-request-meta).
+
+The HTTP transport exposes metrics in Prometheus format on a dedicated listener at
+`127.0.0.1:9464/metrics` by default. The production Docker image explicitly binds that listener to
+`0.0.0.0` so an internal Prometheus pod scraper or `PodMonitor` can reach it. The stdio transport
+does not open a telemetry port. Keeping this listener separate from the public MCP port prevents
+the metrics endpoint from being routed through a catch-all gateway rule. On SIGTERM, SIGINT, or
+SIGHUP, both transports use a bounded shutdown path that stops serving, closes active MCP
+connections and subscriptions, and best-effort flushes externally installed SDK metric and trace
+providers before exit. Stdio EOF triggers the same path.
+
+The exporter uses the standard OpenTelemetry Prometheus settings:
+
+- `OTEL_EXPORTER_PROMETHEUS_HOST` changes the bind address (default `127.0.0.1`; the Docker image
+  sets `0.0.0.0`).
+- `OTEL_EXPORTER_PROMETHEUS_PORT` changes the port (default `9464`).
+- `OTEL_METRICS_EXPORTER=none` or `OTEL_SDK_DISABLED=true` disables the embedded exporter.
+
+`OTEL_SDK_DISABLED=true` is the hard-off switch: provider modules are not loaded and MCP
+transports and handlers are not wrapped, preserving the baseline request path. In contrast,
+`OTEL_METRICS_EXPORTER=none` disables only the embedded Prometheus bootstrap, so a provider
+installed by a Node preload can still receive the MCP signals.
+
+Exporter bind or configuration failures are logged but do not prevent the MCP endpoint from
+starting. If a Node preload has already registered global OpenTelemetry providers, they take
+precedence. The embedded Prometheus listener is not started when a global `MeterProvider` exists,
+and MCP spans are exported through the preload's `TracerProvider`. This supports an OpenTelemetry
+Node SDK or Kubernetes auto-instrumentation without creating a second provider in the application.
+When an external SDK owns the provider, configure its Node runtime instrumentation there as well;
+the application does not register a duplicate collector.
+
+It reports bounded-cardinality counters, histograms, and in-flight gauges for MCP methods,
+subscriptions, tool outcomes, authentication outcomes, Context7 upstream requests, and Node runtime
+saturation.
+Prometheus receives these metric families:
+
+- `mcp_server_operation_duration` (its `_count` series is the MCP operation count, and tool-call
+  series include the `context7_mcp_tool_outcome` label)
+- `mcp_server_session_duration` for real stateful stdio sessions (stateless HTTP request transports
+  are intentionally excluded)
+- `context7_mcp_operations_active`
+- `context7_mcp_subscriptions_active` and `context7_mcp_subscription_duration`
+- `context7_mcp_upstream_requests_total` and `context7_mcp_upstream_request_duration`
+- `context7_mcp_authentication_attempts_total` and `context7_mcp_authentication_duration`
+- `context7_mcp_authentication_events_total` for bounded authentication lifecycle events such as
+  credential challenges, metadata discovery, credentialed initialization, and authenticated tool
+  use
+- `context7_mcp_upstream_requests_active` and `context7_mcp_authentication_active`
+- `nodejs_eventloop_*`, `v8js_gc_duration`, `v8js_memory_heap_*`, and
+  `v8js_resource_active` from the official OpenTelemetry Node runtime instrumentation
+
+Tool outcomes on the standard MCP operation metric distinguish `success`, `not_found`,
+`invalid`, `unavailable`, and `error`; only `error` marks the operation as failed. An
+acknowledged `subscriptions/listen` operation is timed through its acknowledgement; the
+separate subscription metrics track the active stream and its bounded terminal outcome.
+Upstream outcomes distinguish
+HTTP, response-decoding, network, timeout, and cancellation failures and include both the bounded
+status-code class and the exact numeric HTTP status. Authentication reports accepted, missing,
+invalid, and unexpected-error outcomes. Authentication event series use only the bounded route,
+enforcement mode, event, method, and outcome dimensions. The OAuth authorization-server metadata
+proxy caps its upstream fetch at 10 seconds and returns `502` if that dependency times out.
+
+The labels intentionally exclude API keys, client IPs, queries, library IDs, session IDs, and raw
+error text. Expose port `9464` only to your Prometheus scraper or `ServiceMonitor`, not through the
+public MCP ingress. For continuity with existing MCP series, the route label uses `anonymous` for
+the standard `/mcp` path and `oauth` for the `/mcp/oauth` compatibility alias; the `anonymous` value
+identifies the route and does not imply that the request bypassed authentication. The enforcement
+label reports the mode applied to each request: `/mcp/oauth` and Claude Code plugin requests report
+`required` while the server runs in `observe` mode, because those clients always receive the
+challenge.
+
+#### Signal ownership with an Envoy gateway
+
+Do not treat `mcp_server_operation_duration_count` as another HTTP request counter. An Envoy
+Gateway observes HTTP envelopes, while this metric observes JSON-RPC requests and notifications
+after SDK dispatch. A valid batch is one HTTP request but several MCP operations, and HTTP requests
+rejected before MCP dispatch never increment the MCP metric.
+
+Context7 deliberately does **not** register generic inbound HTTP server metrics. Keep the following
+signals in the existing Envoy scrape instead of collecting them again from the application:
+
+- downstream HTTP request/response totals, status classes, duration, active requests, connections,
+  resets, and gateway timeouts (`envoy_http_*_downstream_*`)
+- Envoy-to-MCP backend request totals, status codes, duration, active/pending requests, connection
+  failures, retries, resets, timeouts, and circuit-breaker overflows (`envoy_cluster_upstream_*`)
+- Envoy process health and resource metrics
+
+The application exporter owns only signals the ingress gateway cannot provide: MCP method and
+protocol semantics (including batches, notifications, and active MCP v2 subscriptions), tool and
+authentication outcomes, MCP-to-Context7 API calls, and Node event-loop/V8 health. In the
+Kubernetes deployment Envoy is a
+Gateway API proxy rather than a sidecar in the MCP pod, so `context7_mcp_upstream_*` describes the
+MCP server's outbound Context7 API dependency, not Envoy's inbound MCP backend cluster. Pod and
+container CPU, memory, network, and restart metrics should continue to come from the Kubernetes
+monitoring stack.
+
+See the [Envoy HTTP connection manager statistics](https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/stats)
+and [upstream cluster statistics](https://www.envoyproxy.io/docs/envoy/latest/configuration/upstream/cluster_manager/cluster_stats.html)
+for the proxy-owned metric families.
+
+For a replicated Kubernetes deployment, discover and scrape every MCP pod directly. Do not use one
+static, load-balanced Service target: successive scrapes can reach different replicas and produce
+incomplete per-process counters and runtime series. For an annotation-based `kubernetes-pods`
+scrape job, add the following fields to the MCP workload's pod template:
+
+```yaml
+spec:
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9464"
+        prometheus.io/path: /metrics
+    spec:
+      containers:
+        - name: mcp
+          ports:
+            - name: metrics
+              containerPort: 9464
+              protocol: TCP
+```
+
+Prometheus will then scrape `http://<mcp-pod-ip>:9464/metrics` for each replica. Declaring
+`EXPOSE 9464` in the image does not add the Kubernetes `containerPort` metadata. The scrape interval
+is controlled by Prometheus; the exporter does not impose one. If the monitoring stack uses the
+Prometheus Operator instead, configure the equivalent per-pod endpoint with a `PodMonitor`.
+
 <details>
 <summary><b>Local Configuration Example</b></summary>
 
@@ -1508,7 +1693,7 @@ CONTEXT7_API_KEY=your_api_key_here
 
 ### OAuth Authentication
 
-Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization).
+Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/latest/basic/authorization).
 
 To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client configuration:
 
@@ -1560,7 +1745,7 @@ For errors like `Error: Cannot find module 'uriTemplate.js'`, try the `--experim
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp@1.0.6"]
+      "args": ["-y", "--node-options=--experimental-vm-modules", "@upstash/context7-mcp"]
     }
   }
 }
@@ -1620,6 +1805,34 @@ Stay updated and join our community:
 - [Income Stream Surfers: "Context7: The New MCP Server That Will CHANGE AI Coding"](https://www.youtube.com/watch?v=PS-2Azb-C3M)
 - [AICodeKing: "Context7 + Cline & RooCode: This MCP Server Makes CLINE 100X MORE EFFECTIVE!"](https://www.youtube.com/watch?v=qZfENAPMnyo)
 - [Sean Kochel: "5 MCP Servers For Vibe Coding Glory (Just Plug-In & Go)"](https://www.youtube.com/watch?v=LqTQi8qexJM)
+
+## Vercel Marketplace OIDC
+
+Vercel Marketplace resources can call the remote MCP server without a
+long-lived Context7 API key. Obtain a fresh per-resource access token from
+Vercel's Marketplace integration runtime and send it as the bearer credential:
+
+```ts
+import { getIntegrationToken } from "@vercel/integrations";
+
+const authorization = `Bearer ${await getIntegrationToken("context7")}`;
+```
+
+The `getIntegrationToken` signature is based on Vercel's current provider
+specification and may change before Marketplace OIDC is generally available.
+
+Use `authorization` as the `Authorization` header when creating the MCP HTTP
+transport. Create the transport inside the request that uses it so a short-lived
+token is not retained across function invocations. Its `resource` claim must
+match the Context7 resource created during Marketplace provisioning.
+
+The hosted MCP service must be configured with the exact issuer and audience
+assigned by Vercel when the Context7 Marketplace product is created:
+
+```sh
+VERCEL_MARKETPLACE_OIDC_ISSUER=https://integrations.vercel.com/oac_...
+VERCEL_MARKETPLACE_OIDC_AUDIENCE=https://integrations.vercel.com/context7/icfg_...
+```
 
 ## 📄 License
 

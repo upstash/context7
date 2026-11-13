@@ -6,20 +6,21 @@ description: Installation examples for MCP clients
 Context7 supports all MCP clients. Below are configuration examples for popular clients. If your client isn't listed, check its documentation for MCP server installation. To configure manually, use the Context7 server URL `https://mcp.context7.com/mcp` with your MCP client and pass your API key via the `Authorization: Bearer YOUR_API_KEY` header.
 
 <Tip>
-  Looking for the easiest way to get started? Use `npx ctx7 setup` to configure Context7
-  automatically, and `npx ctx7 remove` to remove the generated setup later. See the [CLI
-  docs](/clients/cli) for more details.
+  Looking for the easiest way to get started? Paste `Read https://context7.com/get-started.md and
+  set up Context7` into your coding agent. It sets up Context7, and you sign in with OAuth. Or run
+  `npx ctx7 setup` yourself, and `npx ctx7 remove` to remove the generated setup later. See the
+  [CLI docs](/clients/cli) for more details.
 </Tip>
 
 <Note>
   For detailed guides including rules, skills, agents, and best practices, see
   [Cursor](/clients/cursor) for rules and Composer integration tips, and [Claude
-  Code](/clients/claude-code) for skills, agents, commands, and plugin installation.
+  Code](/clients/claude-code) for plugin installation and sign-in.
 </Note>
 
 ## OAuth Authentication
 
-Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/2025-03-26/basic/authorization).
+Context7 MCP server supports OAuth 2.0 authentication for MCP clients that implement the [MCP OAuth specification](https://modelcontextprotocol.io/specification/latest/basic/authorization).
 
 To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client configuration:
 
@@ -29,6 +30,38 @@ To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client con
 ```
 
 OAuth is only available for remote HTTP connections. For local MCP connections using stdio transport, use API key authentication instead.
+
+## MCP Tools
+
+The Context7 MCP server exposes two tools. Clients list them under these exact names:
+
+| Tool | Description |
+|------|-------------|
+| `resolve-library-id` | Resolve a library name to a Context7-compatible library ID |
+| `query-docs` | Fetch up-to-date documentation and code examples for a library |
+
+### `resolve-library-id`
+
+Search for a library by name and resolve it to a Context7-compatible library ID (e.g., `/vercel/next.js`). Call this tool before `query-docs` unless the user already provides a library ID in the `/owner/repo` format.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `libraryName` | string, required | Library name to search for, with the official punctuation — e.g., `Next.js`, not `nextjs` |
+| `query` | string, required | What you want to do with the library, e.g., `set up middleware` |
+
+The tool returns the matching libraries with their ID, title, description, code snippet count, source reputation, benchmark score, and available versions.
+
+### `query-docs`
+
+Fetch documentation context for a library and a specific question.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `libraryId` | string, required | Exact Context7-compatible library ID, e.g., `/vercel/next.js` or `/vercel/next.js/v16.2.9` |
+| `query` | string, required | What to look up, scoped to a single concept |
+| `language` | string, optional | Programming language you write in, e.g., `Python` or `Go`. Code examples in that language rank first |
+
+The tool returns the relevant documentation and code examples as text.
 
 <AccordionGroup>
 
@@ -92,29 +125,73 @@ Since Cursor 1.0, you can click the install button below for instant one-click i
 
 </Accordion>
 
-<Accordion title="Opencode">
+<Accordion title="OpenCode">
 
-Add this to your Opencode configuration file. See [Opencode MCP docs](https://opencode.ai/docs/mcp-servers) for more info.
+Add this to your `opencode.json` file. The shape depends on your OpenCode version. Run `opencode --version` to check it.
+
+- **OpenCode 2.x** keeps servers in `mcp.servers` and connects to each one unless you set `"disabled": true`. It also accepts the 1.x shape. See the [OpenCode 2.x MCP docs](https://opencode.ai/v2/docs/mcp-servers).
+- **OpenCode 1.x** reads servers directly from `mcp` and uses `"enabled": true`. It rejects a config that contains `mcp.servers`. See the [OpenCode 1.x MCP docs](https://opencode.ai/docs/mcp-servers).
 
 #### Remote Server Connection
 
-```json
-"mcp": {
-  "context7": {
-    "type": "remote",
-    "url": "https://mcp.context7.com/mcp",
-    "headers": {
-      "Authorization": "Bearer YOUR_API_KEY"
-    },
-    "enabled": true
+<CodeGroup>
+
+```json OpenCode v2
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "context7": {
+        "type": "remote",
+        "url": "https://mcp.context7.com/mcp",
+        "headers": {
+          "Authorization": "Bearer YOUR_API_KEY"
+        }
+      }
+    }
   }
 }
 ```
 
+```json OpenCode v1
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY"
+      },
+      "enabled": true
+    }
+  }
+}
+```
+
+</CodeGroup>
+
 #### Local Server Connection
 
-```json
+<CodeGroup>
+
+```json OpenCode v2
 {
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "context7": {
+        "type": "local",
+        "command": ["npx", "-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
+      }
+    }
+  }
+}
+```
+
+```json OpenCode v1
+{
+  "$schema": "https://opencode.ai/config.json",
   "mcp": {
     "context7": {
       "type": "local",
@@ -124,6 +201,70 @@ Add this to your Opencode configuration file. See [Opencode MCP docs](https://op
   }
 }
 ```
+
+</CodeGroup>
+
+</Accordion>
+
+<Accordion title="Pi">
+
+#### Built-in MCP
+
+We recommend built-in MCP because the Context7 MCP server receives updates more frequently than the Pi extension.
+
+Pi has built-in MCP support from version 0.99.0. Run `pi update` to update Pi, then choose one connection method below. See the [Pi guide](/clients/pi) for usage examples and [Pi's MCP documentation](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/mcp.md) for configuration details.
+
+##### Quick setup
+
+```sh
+npx ctx7 setup --pi
+```
+
+This command writes the MCP server, a Context7 rule, and a skill for Pi. See the [Pi guide](/clients/pi#quick-setup) for the files it changes.
+
+##### OAuth
+
+```sh
+pi mcp add context7 --url https://mcp.context7.com/mcp --exposure direct
+pi mcp login context7
+```
+
+Approve access in your browser. Pi stores and refreshes the OAuth tokens.
+
+##### Remote server with an API key
+
+Create a key in the [Context7 dashboard](https://context7.com/dashboard?tab=settings) and export it before starting Pi:
+
+```sh
+export CONTEXT7_API_KEY="YOUR_API_KEY"
+pi mcp add context7 --url https://mcp.context7.com/mcp \
+  --bearer-token-env-var CONTEXT7_API_KEY --exposure direct
+```
+
+##### Local server connection
+
+With Node.js and `npx` installed, run:
+
+```sh
+export CONTEXT7_API_KEY="YOUR_API_KEY"
+pi mcp add context7 --exposure direct \
+  --env CONTEXT7_API_KEY='${CONTEXT7_API_KEY}' \
+  -- npx -y @upstash/context7-mcp
+```
+
+These commands save the server in `~/.pi/agent/mcp.json`. Add `--local` to `pi mcp add` to use `.pi/mcp.json` for a trusted project. The `--exposure direct` option makes Context7's tools visible to the model immediately.
+
+Run `pi mcp list` to check the connection. In an open Pi session, run `/reload`, then use `/mcp` to inspect the server. Ask Pi to use Context7 for a library documentation question.
+
+#### Context7 extension
+
+The [official Context7 extension](/clients/pi#context7-extension) is an alternative. It includes a documentation skill and the `/c7-docs` prompt. It calls the hosted Context7 HTTP API directly, without using the remote MCP server:
+
+```sh
+pi install npm:@upstash/context7-pi
+```
+
+Run `/reload` or start a new Pi session, then ask a documentation question or use `/c7-docs next.js Cache Components`. It reads your API key from the `CONTEXT7_API_KEY` environment variable. Choose either the extension or the MCP setup above to avoid duplicate tools.
 
 </Accordion>
 
@@ -146,20 +287,15 @@ openclaw mcp login context7
 
 OpenClaw also provides a code-based login fallback for headless or remote environments. See [Set Up OAuth](/howto/oauth) for more details.
 
-#### API Key or Anonymous Access
+#### API Key
 
-To connect without OAuth, register the standard endpoint:
+To connect with an API key, register the standard endpoint:
 
 ```sh
 openclaw mcp add context7 \
   --url https://mcp.context7.com/mcp \
-  --transport streamable-http
-```
-
-This works without an API key at the anonymous rate limit. For higher limits, create a key in the [Context7 dashboard](https://context7.com/dashboard) and append this option to the command:
-
-```sh
---header "Authorization: Bearer YOUR_API_KEY"
+  --transport streamable-http \
+  --header "Authorization: Bearer YOUR_API_KEY"
 ```
 
 Verify that OpenClaw can connect and discover the Context7 tools:
@@ -199,7 +335,7 @@ Add this to your Codex configuration file (`~/.codex/config.toml` or `.codex/con
 [mcp_servers.context7]
 command = "npx"
 args = ["-y", "@upstash/context7-mcp", "--api-key", "YOUR_API_KEY"]
-startup_timeout_ms = 20_000
+startup_timeout_sec = 20
 ```
 
 #### Remote Server Connection
@@ -210,7 +346,7 @@ url = "https://mcp.context7.com/mcp"
 http_headers = { "Authorization" = "Bearer YOUR_API_KEY" }
 ```
 
-<Note>If you see startup timeout errors, try increasing `startup_timeout_ms` to `40_000`.</Note>
+<Note>If you see startup timeout errors, try increasing `startup_timeout_sec` to `40`.</Note>
 
 </Accordion>
 
@@ -484,67 +620,30 @@ Open Claude Desktop developer settings and edit your `claude_desktop_config.json
 
 </Accordion>
 
-<Accordion title="ChatGPT (Web)">
+<Accordion title="ChatGPT">
 
-ChatGPT supports MCP servers through remote connectors via [Developer Mode](https://developers.openai.com/api/docs/guides/developer-mode) (beta). Available for Pro, Plus, Team, Enterprise, and Edu plans.
+Add Context7 to ChatGPT on the web as a custom MCP server plugin. See [Add custom MCP server](https://developers.openai.com/api/docs/guides/custom-mcp-server) in the OpenAI docs. Workspace permissions can block custom MCP servers.
 
-#### 1. Enable Developer Mode
+#### 1. Add the MCP server
 
-Go to: `Settings` → `Apps` → `Advanced settings` → Enable `Developer Mode`
-
-#### 2. Create an App
-
-Go to: `Settings` → `Apps` → `Create App`
-
-Fill in the following:
+Go to [ChatGPT Plugins](https://chatgpt.com/plugins) → select the plus button → `Add custom MCP server`, and fill in the following:
 
 | Field              | Value                                                                                       |
 | ------------------ | ------------------------------------------------------------------------------------------- |
 | **Name**           | `Context7`                                                                                  |
 | **Description**    | `Fetch up-to-date documentation and code examples for any library directly from the source` |
-| **MCP Server URL** | `https://mcp.context7.com/mcp/oauth`                                                        |
+| **Server URL**     | `https://mcp.context7.com/mcp/oauth`                                                        |
+| **Authentication** | `OAuth`                                                                                     |
 
-> Accept the security notice and complete the one-time OAuth authorization.
+Select `I understand and want to continue`, then `Create as a plugin`.
 
-#### 3. Use in a Conversation
+#### 2. Install the plugin
 
-Start a new chat → Click the plus icon → Hover over `More` → Select the `Context7` app.
+Find `Context7` in your plugins, install it, and complete the one-time OAuth authorization.
 
-Alternatively, you can say `use context7` in your prompt and ChatGPT will automatically use the `Context7` app.
+#### 3. Use in a conversation
 
-See [OpenAI MCP docs](https://developers.openai.com/api/docs/mcp) for more info.
-
-</Accordion>
-
-<Accordion title="ChatGPT (Desktop)">
-
-The ChatGPT desktop app shares apps configured on the web. Set up the app on [chatgpt.com](https://chatgpt.com) first.
-
-#### 1. Enable Developer Mode (on the Web)
-
-Go to: `Settings` → `Apps` → `Advanced settings` → Enable `Developer Mode`
-
-#### 2. Create an App (on the Web)
-
-Go to: `Settings` → `Apps` → `Create App`
-
-Fill in the following:
-
-| Field              | Value                                                                                       |
-| ------------------ | ------------------------------------------------------------------------------------------- |
-| **Name**           | `Context7`                                                                                  |
-| **Description**    | `Fetch up-to-date documentation and code examples for any library directly from the source` |
-| **MCP Server URL** | `https://mcp.context7.com/mcp/oauth`                                                        |
-
-> Accept the security notice and complete the one-time OAuth authorization.
-
-#### 3. Use in the Desktop App
-
-Open the ChatGPT desktop app → Start a new chat → ChatGPT will automatically use the `Context7` app when you ask it to.
-
-Apps configured on the web are automatically available in the desktop app.
-
-See [OpenAI MCP docs](https://developers.openai.com/api/docs/mcp) for more info.
+Start a new chat, type `@` in the prompt box, and select `Context7`.
 
 </Accordion>
 
@@ -696,7 +795,7 @@ mcp_servers:
   context7:
     url: "https://mcp.context7.com/mcp"
     headers:
-      CONTEXT7_API_KEY: "YOUR_API_KEY"
+      Authorization: "Bearer YOUR_API_KEY"
 ```
 
 #### Remote Server Connection (OAuth)
@@ -755,7 +854,7 @@ Use these alternatives to run the local Context7 MCP server with other runtimes.
       "command": "deno",
       "args": [
         "run",
-        "--allow-env=NO_DEPRECATION,TRACE_DEPRECATION",
+        "--allow-env",
         "--allow-net",
         "npm:@upstash/context7-mcp"
       ]
@@ -870,10 +969,10 @@ See [Warp Model Context Protocol Documentation](https://docs.warp.dev/knowledge-
 
 Run this command in your terminal. See [Amp MCP docs](https://ampcode.com/manual#mcp) for more info.
 
-#### Without API Key (Basic Usage)
+#### With OAuth
 
 ```sh
-amp mcp add context7 https://mcp.context7.com/mcp
+amp mcp add context7 https://mcp.context7.com/mcp/oauth
 ```
 
 #### With API Key (Higher Rate Limits & Private Repos)
@@ -1046,7 +1145,7 @@ docker build -t context7-mcp .
 Context7 is available in the [Docker MCP Catalog](https://hub.docker.com/mcp/server/context7/overview) as a **remote** server, so you don't need to build, pull, or run a local image. The MCP Toolkit connects to the hosted endpoint for you.
 
 1. In Docker Desktop, open **MCP Toolkit → Catalog**, search for **Context7**, and enable it.
-2. (Optional) In the server's **Config** tab, set your Context7 API key (`CONTEXT7_API_KEY`) for higher rate limits. The server also works without one.
+2. In the server's **Config** tab, set your free Context7 API key (`CONTEXT7_API_KEY`).
 3. Connect your MCP client to Docker's MCP gateway. Either run `docker mcp client connect <client>` (for example `vscode`, `cursor`, or `claude-desktop`), or add the gateway to your client config manually:
 
 ```json
@@ -1370,7 +1469,7 @@ droid mcp add context7 "npx -y @upstash/context7-mcp" --env CONTEXT7_API_KEY=YOU
 
 [Emdash](https://github.com/generalaction/emdash) is an orchestration layer for running multiple coding agents in parallel.
 
-Context7 is available as a built-in entry in Emdash's MCP catalog. Enable it from the MCP view and provide your `CONTEXT7_API_KEY` (optional, for higher rate limits). Emdash adapts and writes the MCP config into your selected coding agent's config (Codex, Claude Code, Cursor, etc.) for you.
+Context7 is available as a built-in entry in Emdash's MCP catalog. Enable it from the MCP view and authenticate with OAuth, or provide your `CONTEXT7_API_KEY` when the selected agent does not support OAuth. Emdash adapts and writes the MCP config into your selected coding agent's config (Codex, Claude Code, Cursor, etc.) for you.
 
 See the [Emdash repository](https://github.com/generalaction/emdash) for more information.
 
@@ -1378,7 +1477,20 @@ See the [Emdash repository](https://github.com/generalaction/emdash) for more in
 
 <Accordion title="Desktop Extension">
 
-Install the [context7.mcpb](https://github.com/upstash/context7/tree/master/packages/mcp/mcpb/context7.mcpb) file and add it to your client. See [MCP bundles docs](https://github.com/modelcontextprotocol/mcpb#mcp-bundles-mcpb) for more info.
+Install the [context7.mcpb](https://github.com/upstash/context7/releases/download/mcpb-v4.3.0/context7.mcpb) file and add it to your client. See [MCP bundles docs](https://github.com/modelcontextprotocol/mcpb#mcp-bundles-mcpb) for more info.
+
+</Accordion>
+
+<Accordion title="FLUJO">
+
+[FLUJO](https://github.com/mario-andreschak/FLUJO) connects to Context7 through its remote-server setup.
+
+1. Open **Connected Apps** and select **Connect App** → **I have connection details** → **At a remote URL**.
+2. Enter `https://mcp.context7.com/mcp` as the **Server URL** and click **Connect**.
+3. Select **Continue to setup** if prompted. In **Configure & Test**, confirm that **Streamable HTTP** is selected.
+4. Under **Custom HTTP headers**, add an `Authorization` header with the value `Bearer YOUR_API_KEY` and select **Secret** to mask it. Leave the optional OAuth client credentials blank for this endpoint.
+5. Run **3) Test run** if the connection test has not started automatically. After the test passes, click **Update server** to save.
+6. Open the connected server's **Tools** tab. Select `resolve-library-id`, provide a library name and a documentation query, and click **Test tool**. Use a returned library ID with `query-docs` to retrieve documentation.
 
 </Accordion>
 

@@ -2,6 +2,33 @@ packages:
   - "packages/*"
 
 allowBuilds:
+  "@google/genai": false
   esbuild: true
+  msgpackr-extract: false
+  protobufjs: false
 
 minimumReleaseAge: 10080
+
+overrides:
+  "@earendil-works/pi-coding-agent>undici": ^8.12.2
+  "@modelcontextprotocol/sdk": ^1.32.0
+  "@opencode-ai/plugin>effect": 4.0.0-beta.103
+  "@opencode-ai/plugin>zod": ^4.6.6
+  toml: ^5.0.1
+
+# Single source of truth for the shared dev toolchain. Packages reference these
+# with "catalog:" so a bump lands in one place instead of drifting per package.
+# Runtime dependencies stay pinned per package, since those ranges are part of
+# each package's published contract.
+catalog:
+  "@types/node": ^26.6.6
+  "@typescript-eslint/eslint-plugin": ^8.71.0
+  "@typescript-eslint/parser": ^8.71.0
+  dotenv: ^18.0.9
+  eslint: ^10.9.1
+  eslint-plugin-prettier: ^5.5.6
+  prettier: ^3.9.9
+  tsup: ^8.5.1
+  typescript: ^6.0.3
+  typescript-eslint: ^8.72.1
+  vitest: ^5.0.3

@@ -1,5 +1,46 @@
+import type {
+  AuthTokenProvider,
+  CacheSetting,
+  Context7Fetch,
+  Context7ResponseMetadata,
+  RetryConfig,
+} from "@http";
+import type { ApiCodeSnippet, ApiInfoSnippet } from "@commands/get-context/types";
+
 export interface Context7Config {
   apiKey?: string;
+  /**
+   * Bearer token or per-request token provider. Use a provider for short-lived
+   * OIDC tokens so the SDK never caches an expired credential.
+   */
+  authToken?: string | AuthTokenProvider;
+  /** Override the Context7 API URL, for example when using a proxy. */
+  baseUrl?: string;
+  /** Retry transient network and HTTP failures. Set to false to disable retries. */
+  retry?: RetryConfig;
+  /** Native fetch cache mode. Defaults to "no-store". */
+  cache?: CacheSetting;
+  /** Request timeout in milliseconds. Set to false to disable it. @default 30000 */
+  timeout?: number | false;
+  /** Abort all requests made by this client when this signal aborts. */
+  signal?: AbortSignal | (() => AbortSignal);
+  /** Whether fetch may keep the connection alive. @default true */
+  keepAlive?: boolean;
+  /** Custom fetch implementation for non-standard runtimes, testing, or instrumentation. */
+  fetch?: Context7Fetch;
+  /** Additional headers sent with every request. Authorization cannot be overridden. */
+  headers?: Record<string, string>;
+  /** Observe response status, request IDs, rate limits, and retry attempts. */
+  onResponse?: (metadata: Context7ResponseMetadata) => void;
+}
+
+export interface Context7RequestOptions {
+  /** Abort this request. */
+  signal?: AbortSignal;
+  /** Override the client timeout for this request. Set to false to disable it. */
+  timeout?: number | false;
+  /** Override the native fetch cache mode for this request. */
+  cache?: CacheSetting;
 }
 
 /**
@@ -34,7 +75,58 @@ export interface Documentation {
   source: string;
 }
 
-export interface GetContextOptions {
+export interface SearchCodeSnippet extends ApiCodeSnippet {
+  /** Context7 library ID that produced this snippet */
+  libraryId: string;
+  /**
+   * 1-based position in the reranked order shared by `codeSnippets` and `infoSnippets`.
+   * Sort both lists together by `rank` to read the results in the order the text response gives them.
+   */
+  rank: number;
+}
+
+export interface SearchInfoSnippet extends ApiInfoSnippet {
+  /** Context7 library ID that produced this snippet */
+  libraryId: string;
+  /**
+   * 1-based position in the reranked order shared by `codeSnippets` and `infoSnippets`.
+   * Sort both lists together by `rank` to read the results in the order the text response gives them.
+   */
+  rank: number;
+}
+
+export interface SearchResponse {
+  codeSnippets: SearchCodeSnippet[];
+  infoSnippets: SearchInfoSnippet[];
+  rules?: {
+    global: string[];
+    libraries: {
+      libraryId: string;
+      libraryOwn: string[];
+      libraryTeam: string[];
+    }[];
+  };
+}
+
+export interface SearchOptions extends Context7RequestOptions {
+  /**
+   * Library names or Context7 library IDs to prefer. Up to four values are accepted.
+   */
+  libraries?: string[];
+  /** Version to prefer. A library hint is required when a version is provided. */
+  version?: string;
+  /** Programming language to prefer when ranking snippets. */
+  language?: string;
+  /**
+   * Response format.
+   * - "json": Returns SearchResponse with snippets and optional rules (default)
+   * - "txt": Returns formatted text
+   * @default "json"
+   */
+  type?: "json" | "txt";
+}
+
+export interface GetContextOptions extends Context7RequestOptions {
   /**
    * Response format.
    * - "json": Returns Documentation[] array (default)
@@ -44,7 +136,7 @@ export interface GetContextOptions {
   type?: "json" | "txt";
 }
 
-export interface SearchLibraryOptions {
+export interface SearchLibraryOptions extends Context7RequestOptions {
   /**
    * Response format.
    * - "json": Returns Library[] array (default)
@@ -54,4 +146,7 @@ export interface SearchLibraryOptions {
   type?: "json" | "txt";
 }
 
-export type QueryParams = Record<string, string | number | boolean | undefined>;
+export type QueryParams = Record<
+  string,
+  string | number | boolean | readonly (string | number | boolean)[] | undefined
+>;

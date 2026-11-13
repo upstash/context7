@@ -3,7 +3,7 @@
   "name": "context7",
   "display_name": "Context7",
   "version": "4.0.3",
-  "description": "Up-to-date Code Docs For Any Prompt",
+  "description": "Up-to-date docs for AI agents",
   "long_description": "Context7 MCP pulls up-to-date, version-specific documentation and code examples straight from the source — and places them directly into your prompt.",
   "author": {
     "name": "Upstash",

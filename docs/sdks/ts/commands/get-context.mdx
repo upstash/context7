@@ -14,7 +14,7 @@ Retrieve documentation context for a specific library. Returns documentation as 
 </ParamField>
 
 <ParamField path="libraryId" type="string" required>
-  The library ID (e.g., `/facebook/react`)
+  The library ID (e.g., `/react/react`)
 </ParamField>
 
 <ParamField path="options" type="GetContextOptions">
@@ -25,6 +25,15 @@ Retrieve documentation context for a specific library. Returns documentation as 
       - `txt`: Plain text format
 
       Default: `"json"`
+    </ParamField>
+    <ParamField path="signal" type="AbortSignal">
+      Abort signal for cancelling this request.
+    </ParamField>
+    <ParamField path="timeout" type="number | false">
+      Per-request timeout in milliseconds. Use `false` to disable the client timeout.
+    </ParamField>
+    <ParamField path="cache" type="CacheSetting">
+      Native fetch cache mode. Use `false` to omit the cache option.
     </ParamField>
   </Expandable>
 </ParamField>
@@ -65,7 +74,7 @@ const client = new Context7();
 
 const docs = await client.getContext(
   "How do I use hooks?",
-  "/facebook/react"
+  "/react/react"
 );
 
 docs.forEach((doc) => {
@@ -82,7 +91,7 @@ const client = new Context7();
 
 const context = await client.getContext(
   "How do I use hooks?",
-  "/facebook/react",
+  "/react/react",
   { type: "txt" }
 );
 
@@ -119,7 +128,7 @@ import { Context7 } from "@upstash/context7-sdk";
 const client = new Context7();
 
 async function getDocsForPrompt(library: string, question: string) {
-  const context = await client.getContext(question, library);
+  const context = await client.getContext(question, library, { type: "txt" });
 
   return `
 Here is the relevant documentation:
@@ -130,7 +139,7 @@ User question: ${question}
 `;
 }
 
-const prompt = await getDocsForPrompt("/facebook/react", "How do I use useEffect?");
+const prompt = await getDocsForPrompt("/react/react", "How do I use useEffect?");
 ```
 
 ### Processing Individual Snippets
@@ -142,7 +151,7 @@ const client = new Context7();
 
 const docs = await client.getContext(
   "How to create components?",
-  "/facebook/react",
+  "/react/react",
   { type: "json" }
 );
 

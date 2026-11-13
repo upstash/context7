@@ -4,7 +4,7 @@
       "type": "http",
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "Authorization": "${CONTEXT7_API_KEY:-}"
+        "Context7-API-Key": "${CONTEXT7_API_KEY:-}"
       }
     }
   }

@@ -17,12 +17,6 @@ import { trackEvent } from "../utils/tracking.js";
 import { CLI_CLIENT_ID } from "../constants.js";
 import { getBaseUrl } from "../utils/api.js";
 
-let baseUrl = "https://context7.com";
-
-export function setAuthBaseUrl(url: string): void {
-  baseUrl = url;
-}
-
 export function registerAuthCommands(program: Command): void {
   program
     .command("login")
@@ -112,6 +106,7 @@ async function announceIdentity(accessToken: string): Promise<string> {
 }
 
 export async function performLogin(openBrowser = true): Promise<string | null> {
+  const baseUrl = getBaseUrl();
   const spinner = ora("Preparing login...").start();
 
   let authorization;
@@ -194,7 +189,7 @@ export async function performLogin(openBrowser = true): Promise<string | null> {
 
 async function loginCommand(options: { browser: boolean }): Promise<void> {
   trackEvent("command", { name: "login" });
-  const existingToken = await getValidAccessToken();
+  const existingToken = await getValidAccessToken({ recoverExpiredSession: false });
   if (existingToken) {
     console.log(pc.yellow("You are already logged in."));
     console.log(pc.dim("Run 'ctx7 logout' first if you want to log in with a different account."));
@@ -221,7 +216,7 @@ function logoutCommand(): void {
 
 async function whoamiCommand(): Promise<void> {
   trackEvent("command", { name: "whoami" });
-  const accessToken = await getValidAccessToken();
+  const accessToken = await getValidAccessToken({ recoverExpiredSession: false });
 
   if (!accessToken) {
     console.log(pc.yellow("Not logged in."));
@@ -246,8 +241,14 @@ async function whoamiCommand(): Promise<void> {
     if (whoami.teamspace) {
       console.log(`${pc.dim("Teamspace:".padEnd(13))}${whoami.teamspace.name}`);
     }
-  } catch {
-    console.log(pc.dim("(Session may be expired - run 'ctx7 login' to refresh)"));
+  } catch (error) {
+    console.log(
+      pc.dim(
+        error instanceof SessionRejectedError
+          ? "Session was rejected by the server. Run 'ctx7 logout', then 'ctx7 login' to sign in again."
+          : "Could not verify your session. Try again later."
+      )
+    );
   }
 }
 
@@ -258,16 +259,34 @@ interface WhoamiResponse {
   teamspace: { id: string; name: string } | null;
 }
 
+class SessionRejectedError extends Error {}
+
+/** The identity check gives up after this long, so login and whoami do not hang on a stalled host. */
+const WHOAMI_TIMEOUT_MS = 30_000;
+
 async function fetchWhoami(accessToken: string): Promise<WhoamiResponse> {
-  const response = await fetch(`${getBaseUrl()}/api/dashboard/whoami`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  try {
+    const response = await fetch(`${getBaseUrl()}/api/dashboard/whoami`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      signal: AbortSignal.timeout(WHOAMI_TIMEOUT_MS),
+    });
 
-  if (!response.ok) {
-    throw new Error("Failed to fetch user info");
+    if (response.status === 401) {
+      throw new SessionRejectedError("Session was rejected by the server");
+    }
+    if (!response.ok) {
+      throw new Error("Failed to fetch user info");
+    }
+
+    return (await response.json()) as WhoamiResponse;
+  } catch (error) {
+    if (error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError")) {
+      throw new Error(
+        `Context7 did not answer within ${WHOAMI_TIMEOUT_MS / 1000} seconds. Check your connection and run the command again.`
+      );
+    }
+    throw error;
   }
-
-  return (await response.json()) as WhoamiResponse;
 }

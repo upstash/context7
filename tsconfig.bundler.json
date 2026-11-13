@@ -1,0 +1,24 @@
+{
+  // Shared profile for packages that are consumed through a bundler
+  // (sdk, tools-ai-sdk, pi). mcp uses the Node16 profile in tsconfig.json
+  // instead, and cli carries its own emit-oriented config.
+  //
+  // No "ignoreDeprecations" anywhere in the tsconfigs: the only deprecated
+  // option is the baseUrl tsup injects into its dts worker, suppressed via
+  // dts.compilerOptions in each tsup.config.ts instead.
+  "compilerOptions": {
+    "lib": ["ESNext"],
+    "types": ["node"],
+    "module": "esnext",
+    "target": "esnext",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowJs": true
+  }
+}

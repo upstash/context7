@@ -1,6 +1,6 @@
 # Context7 Plugin for GitHub Copilot CLI
 
-Context7 solves a common problem with AI coding assistants: outdated training data and hallucinated APIs. Instead of relying on stale knowledge, Context7 fetches current documentation directly from source repositories.
+Context7 solves a common problem with AI coding agents: outdated training data and hallucinated APIs. Instead of relying on stale knowledge, Context7 fetches current documentation directly from source repositories.
 
 ## What's Included
 
@@ -20,16 +20,26 @@ copilot plugin marketplace add upstash/context7
 copilot plugin install context7@context7-marketplace
 ```
 
-## API Key (Recommended)
+## Authentication
 
-Without an API key, the plugin connects anonymously and shares the anonymous rate limits. To use your own plan, create an API key in the [Context7 dashboard](https://context7.com/dashboard) and export it as an environment variable before launching Copilot CLI:
+Authenticate so the hosted Context7 server can identify you and apply your plan's limits. Use one of these methods:
+
+### OAuth
+
+Start an interactive Copilot CLI session. When Context7 asks you to sign in, Copilot CLI opens your browser. Sign in there and return to the terminal.
+
+Non-interactive runs (`copilot -p`) do not open the browser. Sign in from an interactive session first, or use an API key.
+
+### API Key
+
+Create a free API key in the [Context7 dashboard](https://context7.com/dashboard?tab=settings) and export it as an environment variable before launching Copilot CLI:
 
 ```bash
 # e.g. in ~/.zshrc or ~/.bashrc
 export CONTEXT7_API_KEY="your-api-key"
 ```
 
-The plugin's MCP server configuration picks up `CONTEXT7_API_KEY` automatically. Restart Copilot CLI after setting it, then verify the key is being used by checking your usage in the [dashboard](https://context7.com/dashboard).
+Restart Copilot CLI after setting it, then verify the key is being used by checking your usage in the [dashboard](https://context7.com/dashboard).
 
 ## Available Tools
 
@@ -39,7 +49,7 @@ Searches for libraries and returns Context7-compatible identifiers.
 
 ```
 Input: "next.js"
-Output: { id: "/vercel/next.js", name: "Next.js", versions: ["v15.1.8", "v14.2.0", ...] }
+Output: { id: "/vercel/next.js", name: "Next.js", versions: ["v16.2.9", "v15.1.8", ...] }
 ```
 
 ### query-docs
@@ -47,7 +57,7 @@ Output: { id: "/vercel/next.js", name: "Next.js", versions: ["v15.1.8", "v14.2.0
 Fetches documentation for a specific library, ranked by relevance to your question.
 
 ```
-Input: { libraryId: "/vercel/next.js", query: "app router middleware" }
+Input: { libraryId: "/vercel/next.js", query: "app router proxy" }
 Output: Relevant documentation snippets with code examples
 ```
 
@@ -55,7 +65,7 @@ Output: Relevant documentation snippets with code examples
 
 The plugin works automatically when you ask about libraries:
 
-- "How do I set up authentication in Next.js 15?"
+- "How do I set up authentication in Next.js 16?"
 - "Show me React Server Components examples"
 - "What's the Prisma syntax for relations?"
 
@@ -63,7 +73,7 @@ For manual lookups, use the command:
 
 ```
 /context7:docs next.js app router
-/context7:docs /vercel/next.js/v15.1.8 middleware
+/context7:docs /vercel/next.js/v16.2.9 proxy
 ```
 
 Or use the docs-researcher agent when you want to keep your main context clean:
@@ -77,7 +87,7 @@ copilot --agent docs-researcher -p "look up Supabase auth methods"
 To get documentation for a specific version, include the version in the library ID:
 
 ```
-/vercel/next.js/v15.1.8
+/vercel/next.js/v16.2.9
 /supabase/supabase/v2.45.0
 ```
 

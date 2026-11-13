@@ -1,0 +1,15 @@
+enableGlobalVirtualStore: false
+
+minimumReleaseAgeExclude:
+  - "@ai-sdk/*"
+  - "@vercel/*"
+  - "@workflow/*"
+  - ai
+  - eve
+  - workflow
+
+allowBuilds:
+  esbuild: true
+
+overrides:
+  "eve>undici": ^8.12.2

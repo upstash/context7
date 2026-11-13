@@ -134,6 +134,24 @@ const mutations: MutationCase[] = [
     expectedArgs: `["${PACKAGE}"]`,
   },
   {
+    name: "replaces an inline --api-key= key",
+    args: `["${PACKAGE}", "--api-key=OLD"]`,
+    apiKey: "NEW",
+    expectedArgs: `["${PACKAGE}","--api-key","NEW"]`,
+  },
+  {
+    name: "removes an inline --api-key= key",
+    args: `["${PACKAGE}", "--api-key=OLD"]`,
+    apiKey: undefined,
+    expectedArgs: `["${PACKAGE}"]`,
+  },
+  {
+    name: "drops an inline key next to a separate one",
+    args: `["${PACKAGE}", "--api-key=A", "--api-key", "B"]`,
+    apiKey: "NEW",
+    expectedArgs: `["${PACKAGE}","--api-key","NEW"]`,
+  },
+  {
     name: "normalizes duplicate keys",
     args: `["${PACKAGE}", "--api-key", "A", "--api-key", "B"]`,
     apiKey: "NEW",
@@ -265,16 +283,7 @@ const invalidArgs = [
   { name: "missing args", value: null },
 ] as const;
 
-const CONFIG_COUNT =
-  rotations.length +
-  mutations.length +
-  preservationVariants.length +
-  absentTargets.length +
-  unsafeTargets.length +
-  invalidArgs.length;
-if (CONFIG_COUNT !== 62) throw new Error(`Expected 62 TOML fixtures, received ${CONFIG_COUNT}`);
-
-describe("patchTomlStdioApiKey 62-config compatibility matrix", () => {
+describe("patchTomlStdioApiKey compatibility matrix", () => {
   let tempDir: string;
   let configPath: string;
 

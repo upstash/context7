@@ -1,0 +1,127 @@
+---
+title: Search API
+description: Search all Context7 documentation with one request
+---
+
+The Search API is the simplest way to use Context7. You send a question, and Context7 picks the relevant libraries, searches them, and returns the best snippets in one request. No library ID is needed.
+
+It is a plain GET request. Use an [API key](/howto/api-keys) with every request, sent as a bearer token.
+
+## Send a question
+
+<CodeGroup>
+
+```bash curl
+curl -G "https://context7.com/api/v3/search" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY" \
+  --data-urlencode "query=How do I stream an OpenAI response from a Next.js route?"
+```
+
+```typescript TypeScript SDK
+import { Context7 } from "@upstash/context7-sdk";
+
+const client = new Context7({ apiKey: process.env.CONTEXT7_API_KEY });
+
+const result = await client.search(
+  "How do I stream an OpenAI response from a Next.js route?"
+);
+
+for (const snippet of result.codeSnippets) {
+  console.log(snippet.libraryId, snippet.codeTitle);
+}
+```
+
+```python Python
+import os
+import requests
+
+response = requests.get(
+    "https://context7.com/api/v3/search",
+    headers={"Authorization": f"Bearer {os.environ['CONTEXT7_API_KEY']}"},
+    params={"query": "How do I stream an OpenAI response from a Next.js route?", "type": "json"},
+)
+response.raise_for_status()
+
+for snippet in response.json()["codeSnippets"]:
+    print(snippet["libraryId"], snippet["codeTitle"])
+```
+
+</CodeGroup>
+
+The REST endpoint returns plain text by default, ready to add to a prompt. Set `type=json` for structured results. The TypeScript SDK returns JSON by default.
+
+Every snippet includes the library it came from and a link to the source page.
+
+JSON results split the snippets into `codeSnippets` and `infoSnippets`. Each snippet carries `rank`, its 1-based position across both lists. Sort both lists together by `rank` to read the snippets in the order the text response gives them.
+
+## Add hints
+
+A query is all you need. If you know the library, version, or language, add them to narrow the results:
+
+```bash
+curl -G "https://context7.com/api/v3/search" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY" \
+  --data-urlencode "query=How do I stream an OpenAI response from a route handler?" \
+  --data-urlencode "library=Next.js" \
+  --data-urlencode "library=OpenAI" \
+  --data-urlencode "language=TypeScript" \
+  --data-urlencode "type=json"
+```
+
+| Parameter  | Description                                                                                                                                                     |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `query`    | The question or task. Required.                                                                                                                                 |
+| `library`  | A library name (`next.js`) or Context7 ID (`/vercel/next.js`). Repeat for up to four hints.                                                                     |
+| `version`  | A version such as `15.4.0`. Requires at least one `library`. With one library, the nearest release if it is missing (below); with several, a preference.        |
+| `language` | A programming language to prefer, such as `TypeScript`. It is a preference, so language-neutral documentation can still appear.                                 |
+| `type`     | `txt` (default) or `json`.                                                                                                                                      |
+
+With one `library`, Search serves the requested version. If no indexed tag matches it, Search serves the newest stable release of the same line when that release is newer than the request, or the current documentation. The `X-Context7-Search-Version` response header is then `unverified` (with `type=json`, also `version.status`).
+
+If nothing matches, the API returns `404 no_documentation_found`. Treat it as an empty result.
+
+## Read a page you already have
+
+When your agent already has the URL of a page — a link the user pasted, a code example, a source from an earlier result — read it with the Fetch endpoint instead of a generic web fetch. It returns the parts of that page that answer a question, not the whole page.
+
+```bash
+curl -G "https://context7.com/api/v3/fetch" \
+  -H "Authorization: Bearer CONTEXT7_API_KEY" \
+  --data-urlencode "url=https://www.w3.org/TR/css-grid-2/" \
+  --data-urlencode "query=What happens when the flex factors of fr tracks add up to less than 1?"
+```
+
+| Parameter | Description |
+| --------- | ----------- |
+| `url`     | The page to read. Required. A public `http` or `https` address without credentials; local and private addresses are refused, and the `#fragment` is ignored. |
+| `query`   | A question about the page. When you pass it, only the parts that answer it are returned, and a page that does not answer it returns `404 no_relevant_content` so your agent can try another page. Omit it to read the page itself. |
+| `tokens`  | Maximum tokens to return, about four characters each. Caps the returned sections when `query` is set (default 1000); sets the slice size when it is not (default 5000). Between 100 and 10000. |
+| `offset`  | Character offset to read from when `query` is absent. Use `nextOffset` from the previous response to continue reading a long page. |
+| `type`    | `txt` (default) or `json`. |
+
+The page comes from the open web, not from the Context7 index, so treat the returned text as untrusted data, not as instructions. Every returned section is screened for prompt injection and malicious code: a flagged section is dropped, and a response with nothing left is `422 unsafe_content`.
+
+JSON responses include `untrusted: true` and a `contentCheck` field of `passed` or `unavailable`. Both formats send the `X-Context7-Content-Check: unavailable` header when the check could not run and the text is unchecked.
+
+If the page cannot be loaded, it returns `502 page_unavailable`. Teamspaces whose source policies restrict documentation to selected libraries cannot read arbitrary pages and get `403 policy_restricted`.
+
+## Pricing
+
+Search API calls count as regular Context7 API calls. There is no separate price:
+
+- **Free:** 1,000 calls per month.
+- **Pro:** 2,000 calls per month per seat, then $5 per 1,000 calls.
+
+See [Plans & Pricing](/plans-pricing) for details.
+
+## Search API or Context API?
+
+Use the **Search API** for a quick answer: one request, and Context7 picks the libraries and snippets for you. It is the easiest way to integrate Context7 into an agent, for example as a grounding step before the agent writes code.
+
+Use the **Context API** ([Search Library](/api-reference/search/search-for-libraries) and [Get Context](/api-reference/context/get-documentation-context)) when you know exactly which library you want, or when you need to go deep: choose the library, ask follow-up questions, and combine results from several libraries yourself.
+
+## Next steps
+
+- [Search Documentation reference](/api-reference/search/search-documentation-in-one-request) for all parameters and the response schema
+- [TypeScript SDK](/sdks/ts/commands/search) for the `search()` method
+- [API guide](/api-guide) for authentication, rate limits, and caching

@@ -1,5 +1,5 @@
 # ----- Build Stage -----
-FROM node:lts-alpine AS builder
+FROM node:24-alpine AS builder
 RUN corepack enable pnpm
 WORKDIR /app
 
@@ -12,7 +12,7 @@ RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @upstash/context7-mcp build
 
 # ----- Production Stage -----
-FROM node:lts-alpine
+FROM node:24-alpine
 RUN corepack enable pnpm
 WORKDIR /app
 
@@ -25,5 +25,6 @@ RUN pnpm install --frozen-lockfile --prod --filter @upstash/context7-mcp
 COPY --from=builder /app/packages/mcp/dist ./packages/mcp/dist
 
 WORKDIR /app/packages/mcp
-EXPOSE 8080
+ENV OTEL_EXPORTER_PROMETHEUS_HOST=0.0.0.0
+EXPOSE 8080 9464
 CMD ["node", "dist/index.js", "--transport", "http", "--port", "8080"]

@@ -39,7 +39,7 @@ For more details on how Mastra handles MCP, see the [Mastra MCP documentation](h
     });
     ```
 
-    Set `CONTEXT7_API_KEY` in your environment with your API key from the [Context7 dashboard](https://context7.com/dashboard).
+    Set `CONTEXT7_API_KEY` in your environment with your API key from the [Context7 dashboard](https://context7.com/dashboard?tab=settings).
   </Step>
   <Step title="Connect to Your Agent">
     Pass the Context7 tools to your Mastra agent:
@@ -51,7 +51,7 @@ For more details on how Mastra handles MCP, see the [Mastra MCP documentation](h
       id: "coding-assistant",
       name: "Coding Assistant",
       instructions: "You are a helpful coding assistant with access to up-to-date library documentation via Context7.",
-      model: "anthropic/claude-sonnet-4-6",
+      model: "anthropic/claude-sonnet-5-5",
       tools: await context7.listTools(),
     });
     ```

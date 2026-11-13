@@ -20,7 +20,7 @@ import type { Context7ToolsConfig } from "./types";
  * import { openai } from '@ai-sdk/openai';
  *
  * const { text } = await generateText({
- *   model: openai('gpt-4o'),
+ *   model: openai('gpt-6-astra'),
  *   prompt: 'Find React documentation about hooks',
  *   tools: {
  *     resolveLibraryId: resolveLibraryId(),
@@ -51,16 +51,10 @@ export function resolveLibraryId(config: Context7ToolsConfig = {}) {
     execute: async ({ query, libraryName }: { query: string; libraryName: string }) => {
       try {
         const client = getClient();
-        const results = await client.searchLibrary(query, libraryName, { type: "txt" });
-
-        if (!results || results.length === 0) {
-          return `No libraries found matching "${libraryName}". Try a different search term or check the library name.`;
-        }
-
-        return results;
+        return await client.searchLibrary(query, libraryName, { type: "txt" });
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Failed to search libraries";
-        return `Error searching for libraries: ${errorMessage}. Check your API key and try again.`;
+        return `Error searching for libraries: ${errorMessage}`;
       }
     },
   });

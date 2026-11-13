@@ -1,17 +1,10 @@
 import { defineConfig } from "vitest/config";
 import path from "path";
-import dotenv from "dotenv";
 
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-
-export default defineConfig({
+export const sharedConfig = {
   test: {
     globals: true,
     environment: "node",
-    include: ["src/**/*.test.ts"],
-    env: process.env,
-    // These tests call the live API, so the 5s default fails on latency alone.
-    testTimeout: 30_000,
   },
   resolve: {
     alias: {
@@ -20,5 +13,14 @@ export default defineConfig({
       "@error": path.resolve(__dirname, "./src/error/index.ts"),
       "@utils": path.resolve(__dirname, "./src/utils"),
     },
+  },
+};
+
+export default defineConfig({
+  ...sharedConfig,
+  test: {
+    ...sharedConfig.test,
+    include: ["src/**/*.test.ts"],
+    exclude: ["src/**/*.integration.test.ts"],
   },
 });

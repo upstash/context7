@@ -1,5 +1,141 @@
 # @upstash/context7-mcp
 
+## 4.7.0
+
+### Minor Changes
+
+- d451493: Add a `page` argument to the `get-upgrade-guide` research preview tool: a long guide now comes in pages, each in full detail. Page 1 starts with everything needed to migrate (summary, before you start, codemods, breaking changes, deprecations), which continues on the next pages when it is longer than one page; behavior, config and API changes follow. A guide is served only once it is complete, so its pages always fit together; until then the tool says it is being prepared and when to call again, or that it could not be prepared.
+
+### Patch Changes
+
+- f2daacb: `get-upgrade-guide` no longer tells the agent never to retry a guide that could not be prepared: the agent uses `query-docs` now and calls again only after the time the answer gives. Telemetry records an unavailable guide as `unavailable` and a page past the last as `invalid`, instead of `not_found`; neither is shown to the agent as an error.
+
+## 4.6.0
+
+### Minor Changes
+
+- 2111b92: Add the `query-code` MCP tool and the `ctx7 code` command. They search and read a library's source code at the version its docs describe: `grep` with ripgrep's options, plus `definition`, `references`, `outline`, `read` and `list`. `ctx7 library` marks the libraries whose source is searchable, and `resolve-library-id` does so with the research preview on. The MCP tool is part of the research preview: it is listed only with `--research-preview`, `CONTEXT7_RESEARCH_PREVIEW=1` or `?research_preview=1`.
+- 7765f35: Add the `get-upgrade-guide` research preview tool: everything that changes between two versions of a library in one response, from the release notes and guides of every release in between and the public API diff of both versions.
+
+## 4.5.1
+
+### Patch Changes
+
+- fc65a5a: Keep the teamspace library-filter notice in resolve-library-id results when no libraries match.
+
+## 4.5.0
+
+### Minor Changes
+
+- 7836c58: Research preview: a `submit-docs-feedback` tool sends feedback on the documentation that `query-docs` returned: a score from 0 to 5, what was wrong, and a short comment. It is listed only with research preview on: `--research-preview` or `CONTEXT7_RESEARCH_PREVIEW=1` for stdio, and `?research_preview=1` on the MCP URL for the hosted server. With research preview on, the server instructions also ask the agent to send this feedback after it answers. API calls carry `X-Context7-Research-Preview: 1`, so Context7 can count how many people use the research preview.
+
+### Patch Changes
+
+- 5f41ea5: Record whether an OAuth client uses a Client ID Metadata Document or a registered client ID in MCP authentication telemetry.
+- c964733: In stdio mode, an API key that is an unset variable placeholder (`${CONTEXT7_API_KEY}` or `$CONTEXT7_API_KEY`) now counts as no key: the server falls back to `CONTEXT7_API_KEY`, and when that is not usable either it logs one warning and runs without a key. Before, it sent the placeholder as the key and every tool call failed with 401. Gemini CLI passes the placeholder through when the user skips the Context7 extension's API key prompt. API keys are now trimmed, so a key with surrounding spaces is sent without them. The HTTP transport is unchanged.
+
+## 4.4.4
+
+### Patch Changes
+
+- 66e4771: Reject `--port=<n>` and `--api-key=<key>` with incompatible transports, matching the space-separated forms.
+- 6a54ec3: `--port` rejects values that are not an integer from 0 to 65535, and the port-in-use retry stops at 65535 instead of crashing.
+- 5a2b651: Narrow the "Do not use for" line in the server instructions and rule templates so agents use Context7 when they port code between libraries, platforms, or SQL dialects.
+
+## 4.4.3
+
+### Patch Changes
+
+- 1b00727: Update the MCP SDK to `@modelcontextprotocol/server` 2.3.1 and `@modelcontextprotocol/node` 2.1.1, which converts tool schemas lazily, so each per-request server costs less to build. On the 2026-07-28 protocol, `tools/list`, `prompts/list`, `resources/list`, `resources/templates/list` and `server/discover` now return `ttlMs: 3600000` and `cacheScope: "public"`, so clients can reuse them for an hour instead of listing on every request. `resolve-library-id` now sets `isError: true` when the library search fails; a search with no matches is still a normal result.
+
+  On SIGTERM the HTTP server now finishes the requests on open connections before it closes the MCP handler, and answers them with `Connection: close`. Before, those requests got HTTP 499 or 500 from the closed handler, and the shutdown hit its 5 s limit and exited with code 1. The SDK's rejections of malformed client requests are now logged as one line without a stack trace.
+
+## 4.4.2
+
+### Patch Changes
+
+- e824044: Advertise a server title and scalable icons (SVG and a 512x512 PNG) in the MCP handshake and the server card.
+
+## 4.4.1
+
+### Patch Changes
+
+- 7cbd5fd: Consume request/cancellation pairs contained in the same JSON-RPC batch before dispatch. This prevents the legacy stateless HTTP transport from leaving the response stream open when cancellation suppresses the terminal protocol response.
+
+## 4.4.0
+
+### Minor Changes
+
+- 2d57b23: Add a `foreign` mode to the OAuth audience check on the hosted HTTP transport. `MCP_OAUTH_AUDIENCE_ENFORCEMENT=foreign` answers HTTP 401 (`WWW-Authenticate: Bearer error="invalid_token"`, "This token was issued for another server. If you connect through a gateway or proxy, use a Context7 API key instead.") to a Clerk OAuth JWT whose `aud` names another server, and still admits a token with no `aud`, which grants authorized before Clerk's "Include Audience" setting carry on every refresh. `observe` (the default) and `required` are unchanged. The query string of an audience on an allowed host is ignored, since Cursor writes the configured MCP URL (`https://mcp.context7.com/mcp?client=codex`) into `resource`; on any other host it is kept. The `audienceMismatch` log line now carries `outcome=accepted|rejected` and is written at most once per token per hour instead of every ten minutes.
+
+### Patch Changes
+
+- 2882596: Verify Microsoft Entra token signatures before looking up the audience, and cap the Entra config cache.
+- 615e72b: Update the Next.js examples in the tool descriptions, the CLI rule and the bundled skill: the version example is now `/vercel/next.js/v16.2.9`, and the prompts use Next.js 16.
+
+## 4.3.0
+
+### Minor Changes
+
+- 2c0f362: Add an optional `language` argument to `query-docs`. When the agent knows the programming language the user writes in, Context7 ranks code examples in that language first.
+
+## 4.2.1
+
+### Patch Changes
+
+- c30f279: Verify OAuth JWT access tokens from the authorization server (Clerk) strictly on the hosted HTTP transport: signature, issuer, a `typ` of `at+jwt`, expiry with a minute of clock tolerance, and the token's `aud`. Clerk ID tokens and session JWTs, which share the issuer, now get HTTP 401. The audience is compared against the `RESOURCE_URL` origin, `/mcp` and `/mcp/oauth` (override with `MCP_OAUTH_ALLOWED_AUDIENCES`); `MCP_OAUTH_AUDIENCE_ENFORCEMENT` defaults to `observe`, which admits a mismatch and logs the OAuth client ID and audience (once per token every ten minutes), and `required` answers 401. These JWTs count as `oauth` in authentication telemetry, a token the Context7 API rejects on a tool call is challenged on the next request, and a rejected OAuth token now stays rejected in the per-replica cache for ten minutes instead of thirty seconds.
+- dd48abc: query-docs now sets `isError` on its result when the documentation request fails (invalid library ID, API or network error), so clients that branch on `isError` no longer treat the error text as documentation.
+- 6116042: Report the actual assigned HTTP port when `--port 0` requests an ephemeral port.
+
+## 4.2.0
+
+### Minor Changes
+
+- 48eb9f0: Require credentials on the HTTP `/mcp` endpoint by default. Set `MCP_AUTH_ENFORCEMENT=observe` to keep anonymous `/mcp` access and record privacy-safe authentication migration events; `/mcp/oauth` and Claude Code plugin requests keep their challenge in both modes. `/mcp/oauth` stays as a compatibility alias, each endpoint publishes its own OAuth protected-resource metadata, an empty or scheme-only `Authorization: Bearer` header counts as a missing credential, and CORS responses expose `WWW-Authenticate` and `MCP-Session-Id`.
+
+### Patch Changes
+
+- 126379b: Answer an expired or revoked OAuth access token (`oat_…`) on the hosted HTTP transport with an HTTP 401 and a `WWW-Authenticate: Bearer error="invalid_token"` challenge, so MCP clients refresh the token instead of showing a tool error. The server checks the token against the Context7 API before serving the request, caches the verdict in memory per token hash for about a minute on each replica, and fails open when the check is unavailable. Set `MCP_OAUTH_TOKEN_VALIDATION=off` to disable the check. When the Context7 API still rejects an OAuth token on a tool call, the tool text now says the sign-in expired instead of describing API keys.
+
+## 4.1.3
+
+### Patch Changes
+
+- afdd129: Over HTTP, answer `subscriptions/listen` with an acknowledgement and an immediate `complete` result instead of a "Subscription limit reached" error, and stop logging those refusals. Context7 has no change notifications, so the stream closes at once. Stdio subscriptions stay disabled. Removes the `MCP_MAX_SUBSCRIPTIONS` setting.
+- 2b7c4f0: Update the undici dependency to 7.30.
+
+## 4.1.2
+
+### Patch Changes
+
+- 16095a9: Update CLI prompt, terminal display, and browser launch dependencies. The CLI now declares Node.js 22.13 or later, which its dependencies already need. Update the MCP server JWT and OpenTelemetry dependencies.
+- 72181dd: Serve a SEP-2127 server card at `/mcp/server-card`.
+
+## 4.1.1
+
+### Patch Changes
+
+- 5ed5e9a: Disable unused MCP notification subscriptions so clients do not hold open SSE streams for static tool, prompt, and resource collections.
+
+## 4.1.0
+
+### Minor Changes
+
+- 915abfe: Add bounded OpenTelemetry metrics for MCP requests, tools, authentication, and upstream API calls, exposed for Prometheus on the HTTP server's internal telemetry port.
+
+## 4.0.7
+
+### Patch Changes
+
+- 0087bab: Allow the Claude Code plugin to use anonymous access when its API key header is empty.
+
+## 4.0.6
+
+### Patch Changes
+
+- 5a7039b: Add per-request bearer-token providers and Vercel Marketplace resource OIDC validation.
+- 80e681a: Return sanitized JSON-RPC errors for rejected MCP request bodies.
+
 ## 4.0.5
 
 ### Patch Changes

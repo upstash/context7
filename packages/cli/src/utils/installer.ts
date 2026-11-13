@@ -1,4 +1,4 @@
-import { mkdir, writeFile, rm, symlink, lstat } from "fs/promises";
+import { mkdir, writeFile } from "fs/promises";
 import { resolve, dirname } from "path";
 
 import type { SkillFile } from "../types.js";
@@ -28,22 +28,4 @@ export async function installSkillFiles(
     await mkdir(fileDir, { recursive: true });
     await writeFile(filePath, file.content);
   }
-}
-
-export async function symlinkSkill(
-  skillName: string,
-  sourcePath: string,
-  skillsRoot: string
-): Promise<void> {
-  const targetPath = assertSkillNameInRoot(skillsRoot, skillName);
-
-  try {
-    const stats = await lstat(targetPath);
-    if (stats.isSymbolicLink() || stats.isDirectory()) {
-      await rm(targetPath, { recursive: true });
-    }
-  } catch {}
-
-  await mkdir(skillsRoot, { recursive: true });
-  await symlink(sourcePath, targetPath);
 }

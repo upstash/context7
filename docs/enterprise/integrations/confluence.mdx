@@ -6,7 +6,7 @@ description: "Index Confluence spaces from Atlassian Cloud or a self-hosted Data
 
 Context7 can index the pages of a Confluence space and serve them like any other library. It works with **Atlassian Cloud** and with self-hosted **Data Center / Server**.
 
-An admin connects Confluence once under **Settings → Integrations** using an API token. After that, anyone who can add libraries indexes a space — or a specific set of pages by URL — from **Add → Confluence**. There is no OAuth app to register, which keeps the setup self-contained on your own infrastructure.
+An admin connects Confluence once under **Workspace Settings › Confluence** using an API token. After that, anyone who can add libraries indexes a space — or a specific set of pages by URL — from **Add source → Confluence**. There is no OAuth app to register, which keeps the setup self-contained on your own infrastructure.
 
 <Note>
 Confluence pages are behind authentication, so Context7 reaches them with the token you configure. The token needs read access to the spaces you want to index.
@@ -14,7 +14,7 @@ Confluence pages are behind authentication, so Context7 reaches them with the to
 
 ## Connect Confluence
 
-Open **Settings → Integrations → Confluence**, choose your deployment, fill in the fields, and use **Test connection** to confirm before saving.
+Open **Workspace Settings › Confluence**, open the **Confluence site** row, choose your deployment, fill in the fields, and use **Test connection** to confirm before saving.
 
 <Frame>
   ![Confluence integration settings with the Data Center deployment selected](/images/enterprise/integrations/confluence-settings.png)
@@ -49,13 +49,13 @@ Point Context7 at a service account rather than a personal login, so indexing do
 
 ## Index a space
 
-Go to **Add** and choose **Confluence**.
+Click **Add source** and choose **Confluence**.
 
 <Frame>
-  ![The Add Libraries source picker with a Confluence tile](/images/enterprise/integrations/confluence-source.png)
+  ![The Add sources picker with a Confluence tile](/images/enterprise/integrations/confluence-source.png)
 </Frame>
 
-The **Source** toggle at the top of the form offers two ways to choose what to index:
+The **Find pages** toggle in the form offers two ways to choose what to index:
 
 - **Browse spaces** — pick a space, then index the whole space or select pages from its tree.
 - **By page URL** — paste the URLs of the exact pages you want. No page tree is loaded, so it stays fast even for spaces with thousands of pages, and the pages can come from different spaces.
@@ -63,7 +63,7 @@ The **Source** toggle at the top of the form offers two ways to choose what to i
 ### Browse spaces
 
 <Frame>
-  ![Selecting a Confluence space and pages, with the page tree and Start Parsing button](/images/enterprise/integrations/confluence-add.png)
+  ![Selecting a Confluence space and pages, with the page tree and Submit button](/images/enterprise/integrations/confluence-add.png)
 </Frame>
 
 <Steps>
@@ -74,7 +74,7 @@ The **Source** toggle at the top of the form offers two ways to choose what to i
     Leave **Index the entire space** on to index everything, which is the fastest path and the right choice for large spaces. Turn it off to pick individual pages: the page tree mirrors the space hierarchy, so selecting a parent selects its children. Very large spaces load their pages in batches — use **Load more pages** to fetch the rest, and the search box to filter.
   </Step>
   <Step title="Start parsing">
-    Context7 fetches the pages, converts them to Markdown (code blocks, tables, and callouts are preserved), and indexes them. The project appears under your libraries when it finishes.
+    Context7 fetches the pages, converts them to Markdown, and indexes them. Code blocks, tables (with their inline links and code), callouts, and nested macros are preserved. Content a macro pulls in at view time rather than stores in the page — a Jira issue, an included page, a diagram, an attachment — becomes a bracketed placeholder such as `[Jira: PROJ-123]` or `[Included page: Shared Setup]`, and navigation macros like the table of contents are dropped. The project appears under your libraries when it finishes.
   </Step>
 </Steps>
 
@@ -102,8 +102,10 @@ Choose **By page URL** to index a specific set of pages without browsing a space
 Indexing the entire space means a later refresh also picks up pages added since. A specific page set — selected pages or **By page URL** — pins the project to exactly those pages.
 </Note>
 
+Results taken from a page's text name it, as `Source: <page title> (<page link>)`, where the link opens that page in Confluence.
+
 You can also index Confluence declaratively with [GitOps](/enterprise/gitops): add a `type: confluence` entry with either a `spaceKey` (whole space) or a `pageUrls` list (specific pages, optionally with `includeSubPages`). It reuses this same connection.
 
 ## Refresh and delete
 
-A Confluence project behaves like any other library. **Refresh** re-indexes the space using the stored selection and the current admin token, so rotating the token in Settings updates future refreshes without editing the project. **Delete** removes the project and its indexed content.
+A Confluence project behaves like any other library. **Refresh** re-indexes the space using the stored selection and the current admin token, so rotating the token in Workspace Settings updates future refreshes without editing the project. **Delete** removes the project and its indexed content.

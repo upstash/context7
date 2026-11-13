@@ -9,20 +9,20 @@ GitOps lets you keep the list of sources Context7 indexes in a Git repository, i
 The point is to keep your configuration in code. After a disaster, or when standing up a second environment, you point a fresh instance at the manifest repository and the entire index rebuilds itself with no manual clicks.
 
 <Frame>
-  ![The GitOps settings card under Settings, Indexing](/images/enterprise/gitops/gitops-settings.png)
+  ![The GitOps settings card under Settings, GitOps](/images/enterprise/gitops/gitops-settings.png)
 </Frame>
 
 ## Before you start
 
-GitOps clones your manifest repository and the repositories it indexes using the Git credentials you configure under **Settings → Integrations**. Connect a GitHub App or a personal access token first; see [GitHub Integration](/enterprise/integrations/github). Automatic syncs on every push require the **GitHub App** (a personal access token cannot receive webhooks).
+GitOps clones your manifest repository and the repositories it indexes using the Git credentials you configure under **Workspace Settings › GitHub**, **GitLab** or **Other Git**. Connect a GitHub App or a personal access token first; see [GitHub Integration](/enterprise/integrations/github). Automatic syncs on every push require the **GitHub App** (a personal access token cannot receive webhooks).
 
 <Warning>
-If you set up the GitHub App **before** GitOps was available, it is not subscribed to push events and will not trigger syncs. Add the **push** event to the App on GitHub, or recreate it from **Settings → Integrations**. See [GitHub Integration](/enterprise/integrations/github#webhooks).
+If you set up the GitHub App **before** GitOps was available, it is not subscribed to push events and will not trigger syncs. Add the **push** event to the App on GitHub, or recreate it from **Workspace Settings › GitHub**. See [GitHub Integration](/enterprise/integrations/github#webhooks).
 </Warning>
 
 ## How it works
 
-You commit a manifest file (by default `repos.yaml`) to a Git repository. Context7 clones that repository using the same Git credentials you already configured under **Settings → Integrations** (a GitHub App or a personal access token), reads the manifest, and compares it against the repositories it currently has indexed.
+You commit a manifest file (by default `repos.yaml`) to a Git repository. Context7 clones that repository using the same Git credentials you already configured in Workspace Settings (a GitHub App or a personal access token under **GitHub**, **GitLab** or **Other Git**), reads the manifest, and compares it against the repositories it currently has indexed.
 
 For each source in the manifest, Context7 decides what to do:
 
@@ -30,10 +30,10 @@ For each source in the manifest, Context7 decides what to do:
 - **Re-index** it if its manifest entry changed, for example a different branch, new folder filters, or a changed page limit, or if its last indexing run did not finish.
 - **Leave it untouched** if it already matches. Running a sync with no changes is a safe no-op.
 
-When pruning is enabled, repositories that you remove from the manifest are also deleted from the instance. Pruning only ever removes repositories that GitOps itself added; repositories you add by hand in the dashboard are never touched.
+When pruning is enabled, repositories that you remove from the manifest are also deleted from the instance. Pruning only removes repositories that GitOps manages. A repository you add by hand in the dashboard is not touched, unless the manifest also lists it. In that case the first sync adopts it: GitOps re-parses it and manages it from then on, so pruning can delete it later if you remove it from the manifest.
 
 <Note>
-GitOps is the source of truth only for the repositories listed in the manifest. You can still add other repositories manually in the dashboard, and they will be left alone during a sync.
+GitOps is the source of truth only for the repositories listed in the manifest. You can still add other repositories manually in the dashboard, and they will be left alone during a sync as long as the manifest does not list them.
 </Note>
 
 ## The manifest file
@@ -53,7 +53,7 @@ repos:
     folders: [docs]
     excludeFolders: [node_modules]
 
-  # Confluence space (uses the connection from Settings → Integrations)
+  # Confluence space (uses the connection from Workspace Settings › Confluence)
   - url: https://acme.atlassian.net/wiki
     type: confluence
     spaceKey: TEAM
@@ -84,21 +84,60 @@ Every entry needs a `url` (or `repoUrl`). The remaining fields depend on `type`:
 
 | `type` | Fields |
 | ------ | ------ |
-| `git` (default) | `branch`, `folders`, `excludeFolders`, `excludeFiles`, `indexSourceCode` — the same options as the **Add Repository** form. |
+| `git` (default) | `branch`, `folders`, `excludeFolders`, `excludeFiles`, `indexSourceCode` — the same options as the repository form under **Add source**. |
 | `confluence` | Either `spaceKey` (indexes the whole space; plus `spaceId`, Cloud only, resolved automatically from the key when omitted, and `spaceName`) **or** `pageUrls` (a list of page URLs to index, which may span spaces) with optional `includeSubPages` to also index each page's sub-tree. Plus `title` and `description`. Set one form or the other, not both. |
 | `website` | `maxPages`, `maxDepth`, `excludePatterns`, `title`, `description`. |
 | `llmstxt` | `maxPages`, `title`, `description`. The URL must point to an `llms.txt`, `llms-full.txt`, or `llms-small.txt` file. |
 | `openapi` | `title`, `description`. |
 
 <Note>
-Confluence entries reuse the site URL and API token you set under **Settings → Integrations → Confluence**, so no credentials go in the manifest. Website, llms.txt, and OpenAPI sources are fetched over public HTTP and need no credentials. Configure Confluence before adding Confluence entries, or the sync reports those entries as failed.
+Confluence entries reuse the site URL and API token you set under **Workspace Settings › Confluence**, so no credentials go in the manifest. Website, llms.txt, and OpenAPI sources are fetched over public HTTP and need no credentials. Configure Confluence before adding Confluence entries, or the sync reports those entries as failed.
 </Note>
+
+### Authority rules
+
+Any entry can set an `authority` block. It assigns [authority labels](/enterprise/authority-labels) to the library's content, the same way the **Authority** section of the library settings does.
+
+GitOps saves these rules also while authority labels are off, so you can prepare them before you turn the feature on. The rules change query results only after an admin turns on **Enable authority labels** under **Workspace Settings → Access → Authority labels**. The manifest declares rules only. Classes and the **Enable authority labels** setting stay in the dashboard.
+
+```yaml repos.yaml
+repos:
+  - url: https://github.com/acme/qa-handbook
+    authority:
+      default: guideline          # a class name, or "excluded"
+      rules:
+        - prefix: /standards/
+          class: standard
+        - glob: /examples/**
+          class: example
+        - prefix: https://wiki.acme.com/drafts/
+          excluded: true
+```
+
+- `default` sets the library rule: a class name, or `excluded` to hide the whole library.
+- Each item in `rules` has exactly one `prefix` or `glob`, and exactly one `class` or `excluded: true`.
+- A pattern that starts with `https://` or `http://` matches the page URL. Any other pattern matches the page path.
+- A prefix matches whole path segments: `/drafts` matches `/drafts/plan` but not `/drafts-old/plan`.
+- The usual precedence applies: an exclusion always wins, then the most specific rule wins.
+
+Classes are referenced by name, without regard to case. If a name does not match a class under **Workspace Settings → Access → Authority labels**, the sync reports that entry as failed and names the unknown class. The sync changes none of that library's rules, and it tries again on the next sync. Other entries still sync. If you rename a class in the dashboard, update every manifest entry that uses the old name, or those entries fail until you do.
+
+Rules from the manifest work together with rules made in the dashboard:
+
+- The manifest owns only the rules it created. A sync adds, changes and removes only those rules.
+- The dashboard shows a **GitOps** badge on these rules, and you cannot edit or delete them there. Change them in the manifest.
+- Rules you make in the dashboard are left alone. If a manifest rule has the same match and pattern as a dashboard rule, the manifest takes that rule over.
+- Remove the `authority` block, and the next sync deletes the rules the manifest owned for that library.
+- Remove the whole entry with pruning off, and the library keeps its rules, but you can edit them in the dashboard again.
+- Remove the whole entry with pruning on, and the sync deletes the library together with all of its rules.
+
+Rule changes apply on the next query. They do not re-index the library. Every change appears in the audit log with the actor `gitops`.
 
 The manifest is validated strictly: an unknown `type`, a field that does not belong to the entry's type (a common source of silent mistakes), or a missing required field rejects the **whole** sync. Nothing changes until the file parses cleanly, so a malformed manifest can never partially apply or wipe your index.
 
 ## Configuring in the dashboard
 
-Open **Settings → Indexing → GitOps**, fill in the manifest repository, and save.
+Open **Workspace Settings › GitOps**, fill in the manifest repository, and save.
 
 | Setting | Description |
 | ------- | ----------- |
@@ -109,10 +148,10 @@ Open **Settings → Indexing → GitOps**, fill in the manifest repository, and 
 | Sync schedule | How often to reconcile automatically. Choose a preset or enter a custom cron expression. Set to **Manual only** to disable scheduled syncs. |
 | Prune removed repositories | Delete GitOps-managed repositories that are no longer in the manifest. Off by default. |
 
-The manifest repository is cloned with the Git token from **Settings → Integrations**, so private repositories work without any extra credentials. If you have not configured a GitHub App or personal access token for the host, the sync reports a clear error.
+The manifest repository is cloned with the Git credentials from Workspace Settings (**GitHub**, **GitLab** or **Other Git**), so private repositories work without any extra credentials. If you have not configured a GitHub App or personal access token for the host, the sync reports a clear error.
 
 <Warning>
-Pruning permanently deletes a repository's indexed data (snippets and embeddings). It only affects repositories GitOps added, never ones you created in the dashboard, but treat the manifest as authoritative once pruning is on. Removing an entry and syncing will delete that library.
+Pruning permanently deletes a repository's indexed data (snippets and embeddings). It only affects repositories GitOps manages, including dashboard-added repositories that GitOps adopted because the manifest lists them. Treat the manifest as authoritative once pruning is on. Removing an entry and syncing will delete that library.
 </Warning>
 
 ## When syncs happen
@@ -153,4 +192,4 @@ curl -X POST http://localhost:3000/api/gitops/reconcile \
   -H "Authorization: Bearer <admin-api-key>"
 ```
 
-The response reports what the sync did, including how many repositories were created, updated, left unchanged, pruned, and skipped.
+The response reports what the sync did, including how many repositories were created, updated, left unchanged, pruned, and skipped, how many authority rules changed, and any per-entry errors.
