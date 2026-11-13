@@ -275,7 +275,7 @@ When a change takes effect:
 |---|---|---|---|---|
 | Max concurrent parses | `1` | 1–10 | — | Parses each replica runs at the same time |
 | Max concurrent LLM requests | `5` | 1–64 | — | Requests in flight to the language model, shared by parsing and search |
-| LLM timeout | `120` s | 30–1800 s | — | How long to wait for the model on one page. The page's extraction can take a few calls, and this timeout covers all of them |
+| LLM timeout | `120` s | 30–1800 s | — | How long to wait for one model call. Each part of a page takes up to four calls in a row (a page check, then code, API and info extraction), so it may run up to four times this value |
 | Max files per library | `500` | 1–100000, or no limit | `MAX_FILES` | Documentation files a repository parse reads, or pages a website or llms.txt parse keeps. Extra files are skipped and logged |
 | Files parsed in parallel | `5` | 1–64 | `PARSE_CONCURRENCY` | Files one parse processes at the same time |
 | File timeout | `500` s | 30–3600 s | `PARSE_TIMEOUT` | How long one file may take. The parse skips a file that takes longer |
