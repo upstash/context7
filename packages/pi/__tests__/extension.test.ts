@@ -31,9 +31,9 @@ describe("extension registration", () => {
     expect(def.description).toContain("Context7");
   });
 
-  it("query-docs has libraryId + query params", () => {
+  it("query-docs has libraryId, query and version params", () => {
     const def = tools.get("query-docs")!;
-    expect(paramKeys(def)).toEqual(["libraryId", "query"]);
+    expect(paramKeys(def)).toEqual(["libraryId", "query", "version"]);
     expect(def.description).toContain("Context7");
   });
 });

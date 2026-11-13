@@ -435,7 +435,7 @@ If the user's project or question names a version of the library (package.json, 
             .string()
             .optional()
             .describe(
-              "Version of the library the user's project uses or the question names, as written there, such as '15.4.3', '^15.4.3' or '14'. Leave it out for the latest documentation."
+              "Version of the library the user's project uses or the question names, as written there, such as '15.4.3', '^15.4.3' or '14'. Pass it here, not as a suffix of libraryId. Leave it out for the latest documentation."
             ),
         })
       ),

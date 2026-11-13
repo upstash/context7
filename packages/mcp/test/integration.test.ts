@@ -1181,6 +1181,14 @@ describe.each([
     expect(requests.find((r) => r.path === "/v2/context")!.query.get("language")).toBe("Python");
   });
 
+  test("forwards the version to the context endpoint", async () => {
+    await client.callTool({
+      name: "query-docs",
+      arguments: { libraryId: "/vercel/next.js", query: "caching", version: "^15.4.3" },
+    });
+    expect(requests.find((r) => r.path === "/v2/context")!.query.get("version")).toBe("^15.4.3");
+  });
+
   test("accepts a long language hint instead of rejecting the call", async () => {
     const language = "TypeScript with React 19 and Next.js 16 app router";
     const result = await client.callTool({

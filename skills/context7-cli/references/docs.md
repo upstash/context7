@@ -28,7 +28,7 @@ Each result includes:
 - **Code Snippets** — Number of available code examples
 - **Source Reputation** — Authority indicator (High, Medium, Low, or Unknown)
 - **Benchmark Score** — Quality indicator (100 is the highest score)
-- **Versions** — Indexed versions, if any. When the user's project or query names a version, pass that exact version as `/org/project/version` (e.g. `/vercel/next.js/v15.4.3`), even when it is not listed: Context7 serves the indexed version that covers it.
+- **Versions** — Indexed versions, if any. When the user's project or query names a version, pass it with `--tag` (e.g. `--tag 15.4.3`, or `--tag ^15.4.3` as written in package.json), even when it is not listed: Context7 serves the indexed version that covers it.
 
 ### Selection process
 
@@ -45,16 +45,16 @@ Each result includes:
 
 IMPORTANT: Do not call `ctx7 library` more than 3 times per question. If you cannot find what you need after 3 calls, use the best result you have.
 
-### Version-specific IDs
+### Versions
 
-If the user mentions a specific version, use a version-specific library ID:
+If the user's project or question names a version, pass it with `--tag`:
 
 ```bash
 # General (latest indexed)
 ctx7 docs /vercel/next.js "How to set up app router"
 
 # Version-specific
-ctx7 docs /vercel/next.js/v16.2.9 "How to set up app router"
+ctx7 docs /vercel/next.js "How to set up app router" --tag 16.2.9
 ```
 
 The available versions are listed in the `ctx7 library` output. Pass the exact version the user specified, even when it is not listed: Context7 serves the indexed version that covers it.
