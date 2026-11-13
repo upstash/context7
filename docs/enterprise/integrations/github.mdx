@@ -99,7 +99,7 @@ When the GitHub App is connected, GitHub delivers `push` events to `https://<you
 
 For delivery to work:
 
-- Context7 must hold the App's webhook secret. **Create GitHub App** stores it for you; with no secret, Context7 cannot verify the sender and refuses every delivery.
+- Context7 must hold the App's webhook secret. **Create GitHub App** stores it for you; with no secret, Context7 cannot verify the sender and refuses every delivery. An App created while the instance ran on `localhost` has no webhook secret; once the instance has a reachable URL, recreate the App from **Workspace Settings › GitHub** instead of adding the webhook by hand.
 - Your instance must be **reachable from GitHub** at the webhook URL. An instance behind a firewall that GitHub cannot reach will not receive webhooks.
 - The App must be **subscribed to push events** (new App setups are configured this way automatically).
 
