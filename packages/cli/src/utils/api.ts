@@ -117,6 +117,7 @@ export const CODE_LIMITS = {
   context: { min: 0, max: 10 },
   headLimit: { min: 1, max: 500 },
   offset: { min: 0, max: 10_000 },
+  maxCount: { min: 1, max: 10_000 },
 } as const;
 
 /**
@@ -152,6 +153,13 @@ export interface CodeQueryOptions {
   glob?: string[];
   path?: string;
   context?: number;
+  /** rg -B and -A: context before and after, overriding `context` for that side. */
+  beforeContext?: number;
+  afterContext?: number;
+  /** rg -w: whole words only. */
+  wordRegexp?: boolean;
+  /** rg -m: at most this many matching lines per file. */
+  maxCount?: number;
   outputMode?: "content" | "files_with_matches" | "count";
   headLimit?: number;
   offset?: number;
@@ -213,6 +221,11 @@ export async function getLibraryCode(
   for (const glob of options.glob ?? []) params.append("glob", glob);
   if (options.path) params.set("path", options.path);
   if (options.context !== undefined) params.set("context", String(options.context));
+  if (options.beforeContext !== undefined)
+    params.set("before_context", String(options.beforeContext));
+  if (options.afterContext !== undefined) params.set("after_context", String(options.afterContext));
+  if (options.wordRegexp) params.set("word_regexp", "true");
+  if (options.maxCount) params.set("max_count", String(options.maxCount));
   if (options.outputMode) params.set("output_mode", options.outputMode);
   if (options.headLimit) params.set("head_limit", String(options.headLimit));
   if (options.offset) params.set("offset", String(options.offset));

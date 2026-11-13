@@ -133,6 +133,29 @@ ctx7 docs /reactjs/react.dev "How to use hooks for state management" | head -50
 ctx7 docs /vercel/next.js "How to add a proxy for route protection" | grep -A 10 "proxy"
 ```
 
+## Query Library Source Code
+
+### ctx7 code
+
+Searches and reads a library's source code at the commit its docs were built from. Use it when the docs do not answer an exact question: a signature or type, a default value, an option name, or where an error message comes from. It works for libraries built from a Git repository, which `ctx7 library` marks with "Source code: searchable with ctx7 code".
+
+```bash
+# Grep, like ripgrep
+ctx7 code /tanstack/query "invalidateQueries\\(" -g "packages/query-core/**" -A 5
+ctx7 code /pydantic/pydantic "Input should be a valid integer" -F
+
+# Find a definition, then read the file range the answer names
+ctx7 code /colinhacks/zod/v3.24.2 ZodEffects --op definition
+ctx7 code /tokio-rs/tokio --op read --path tokio/src/task/spawn.rs#L1-L60
+
+# List the files of a folder
+ctx7 code /tanstack/query --op list --path packages/query-core/src
+```
+
+`--op` is `grep` (default), `definition`, `references`, `outline`, `read` or `list`. The search flags follow ripgrep: `-F`, `-i`, `-w`, `-g` (repeat it for more globs), `-C`, `-A`, `-B`, `-m`, `-l` and `-c`, plus `--head-limit` and `--offset` for pages. For a version, add its git tag to the library ID (`/colinhacks/zod/v3.24.2`) or pass `--tag`.
+
+Each answer ends with a `Next:` line that names the next command, such as `--op read --path <file>#L10-L40` or `run again with --offset 20`. The first query for a library version can exit with code `75` while its source is being indexed, which usually takes 1 to 3 minutes. Run the same command again after the time it gives.
+
 ---
 
 ## Setup
