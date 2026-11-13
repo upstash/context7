@@ -94,7 +94,7 @@ The release-note text is quoted from the library: third-party content, not Conte
 
 A long guide comes in pages, each in full detail and sized for MCP clients. Page 1 starts with what is needed to migrate (the summary, prerequisites, codemods, breaking changes and deprecations); when that part is longer than one page, it continues on the next pages, and page 1 says so. After it come behavior and config changes and the API changes, which the agent fetches when it needs them.
 
-When releases in the range had no notes, page 1 says how many and its summary adds that changes made only in those releases are not in the notes, so read their changelogs or use `query-docs` for them.
+When releases in the range had no notes, or have not been read yet, page 1 names each and its summary adds that changes made only in those releases are not in the notes, so read their changelogs or use `query-docs` for them.
 
 The first request for a pair of versions can take a few minutes while Context7 prepares the guide; a guide is served only once it is complete. The tool then tells the agent when to call again. The number of new guides that can be started each day is limited, with a higher limit when you use an API key. Past it, the tool says when to ask again, and the agent uses `query-docs` meanwhile. If a guide cannot be prepared, the tool says so and the agent uses `query-docs` instead. After a wait from minutes to a day, depending on why it failed, a new request prepares the guide again; the tool's answer says when to ask.
 
