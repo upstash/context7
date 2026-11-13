@@ -40,7 +40,7 @@ export async function parseSuccessResponse<TResult>(
   response: Response,
   metadata: Context7ResponseMetadata
 ): Promise<Context7Response<TResult>> {
-  if (response.headers.get("content-type")?.includes("application/json")) {
+  if (isJsonResponse(response)) {
     return { result: (await parseJson(response, metadata)) as TResult };
   }
 
@@ -69,7 +69,7 @@ export async function throwResponseError(
         };
       }
     } catch (cause) {
-      if (response.headers.get("content-type")?.includes("application/json")) {
+      if (isJsonResponse(response)) {
         throw jsonParseError(rawBody, metadata, cause, retryable);
       }
     }
@@ -143,4 +143,8 @@ function parseRetryAfter(value: string | null): number | undefined {
   const date = Date.parse(value);
   if (Number.isNaN(date)) return undefined;
   return Math.max(0, Math.ceil((date - Date.now()) / 1000));
+}
+
+function isJsonResponse(response: Response): boolean {
+  return /^application\/json(?:[ \t]*;|[ \t]*$)/i.test(response.headers.get("content-type") ?? "");
 }
