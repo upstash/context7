@@ -38,7 +38,7 @@ The Notion card shows the last sync, unavailable selections, and failed pages. O
 
 ## Access and disconnecting
 
-Notion sharing controls what the connection can import. Enterprise library access rules control who can query the indexed content. Set those rules for the people who should have access to the library.
+Notion sharing controls what the connection can import. Enterprise library access rules control who can query the indexed content. Set those rules for the people who should have access to the library. A new Notion library starts restricted to admins, so grant access before members can query it.
 
 Disconnecting Notion or revoking the token stops successful syncs. Replacing the connection with a different bot also stops syncs for libraries tied to the old bot. Existing indexed content stays available in these cases. Delete the old Enterprise library if you want to stop serving its content. With a working connection, unsharing an individual page removes it after a successful discovery and sync.
 
