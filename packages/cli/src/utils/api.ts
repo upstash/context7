@@ -5,6 +5,22 @@ export const DEFAULT_CONTEXT7_BASE_URL = "https://context7.com";
 
 let baseUrl = DEFAULT_CONTEXT7_BASE_URL;
 
+// Library metadata and docs are crowdsourced. Strip terminal control characters
+// (C0 except \t\n, DEL, C1) so a malicious entry cannot inject escape sequences.
+// Every response this module returns goes through it.
+const CONTROL_CHARS = /[\x00-\x08\x0B-\x1F\x7F-\x9F]/g;
+
+export function stripControlChars<T>(value: T): T {
+  if (typeof value === "string") return value.replace(CONTROL_CHARS, "") as T;
+  if (Array.isArray(value)) return value.map(stripControlChars) as T;
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([k, v]) => [k, stripControlChars(v)])
+    ) as T;
+  }
+  return value;
+}
+
 export function getBaseUrl(): string {
   return baseUrl;
 }
@@ -84,14 +100,14 @@ export async function resolveLibrary(
       error?: string;
       message?: string;
     };
-    return {
+    return stripControlChars({
       results: [],
       error: errorData.error || `HTTP error ${response.status}`,
       message: errorData.message,
-    };
+    });
   }
 
-  return (await response.json()) as LibrarySearchResponse;
+  return stripControlChars((await response.json()) as LibrarySearchResponse);
 }
 
 export interface GetContextOptions {
@@ -182,19 +198,19 @@ async function fetchRetryableText(
     };
     return {
       kind: "pending",
-      message: body.message ?? pendingMessage,
+      message: stripControlChars(body.message ?? pendingMessage),
       retryAfter: retryAfterSeconds(body.retryAfter, response.headers.get("Retry-After")),
     };
   }
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
-    return {
+    return stripControlChars({
       kind: "error",
       error: body.error || `HTTP error ${response.status}`,
       message: body.message,
-    };
+    });
   }
-  return { kind: "result", body: await response.text() };
+  return { kind: "result", body: stripControlChars(await response.text()) };
 }
 
 /** Queries a library's source code through /api/v2/code. */
@@ -278,28 +294,28 @@ export async function getLibraryContext(
     };
 
     if (response.status === 301 && errorData.redirectUrl) {
-      return {
+      return stripControlChars({
         codeSnippets: [],
         infoSnippets: [],
         error: errorData.error || "library_redirected",
         message: errorData.message,
         redirectUrl: errorData.redirectUrl,
-      };
+      });
     }
 
-    return {
+    return stripControlChars({
       codeSnippets: [],
       infoSnippets: [],
       error: errorData.error || `HTTP error ${response.status}`,
       message: errorData.message,
-    };
+    });
   }
 
   if (options?.type === "txt") {
-    return await response.text();
+    return stripControlChars(await response.text());
   }
 
-  return (await response.json()) as ContextResponse;
+  return stripControlChars((await response.json()) as ContextResponse);
 }
 
 export interface SearchDocumentationOptions {
@@ -334,8 +350,12 @@ export async function searchDocumentation(
       error?: string;
       message?: string;
     };
-    throw new Error(errorData.message || errorData.error || `HTTP error ${response.status}`);
+    throw new Error(
+      stripControlChars(errorData.message || errorData.error || `HTTP error ${response.status}`)
+    );
   }
 
-  return options.type === "txt" ? response.text() : response.json();
+  return stripControlChars(
+    options.type === "txt" ? await response.text() : ((await response.json()) as unknown)
+  );
 }
