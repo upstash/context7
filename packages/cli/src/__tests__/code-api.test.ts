@@ -99,3 +99,38 @@ describe("request timeouts", () => {
     await expect(fetchWithTimeout("https://example.test", {})).rejects.toThrow("fetch failed");
   });
 });
+
+describe("getLibraryCode ripgrep flags", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  test("sends -A, -B, -w and -m as the API fields", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("src/a.ts:1: x"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await getLibraryCode("/a/b", "x", {
+      beforeContext: 2,
+      afterContext: 5,
+      wordRegexp: true,
+      maxCount: 3,
+    });
+
+    const url = new URL(fetchMock.mock.calls[0]![0] as string);
+    expect(url.searchParams.get("before_context")).toBe("2");
+    expect(url.searchParams.get("after_context")).toBe("5");
+    expect(url.searchParams.get("word_regexp")).toBe("true");
+    expect(url.searchParams.get("max_count")).toBe("3");
+  });
+
+  test("leaves unset flags out", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("src/a.ts:1: x"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await getLibraryCode("/a/b", "x");
+
+    const url = new URL(fetchMock.mock.calls[0]![0] as string);
+    for (const name of ["before_context", "after_context", "word_regexp", "max_count"])
+      expect(url.searchParams.has(name)).toBe(false);
+  });
+});

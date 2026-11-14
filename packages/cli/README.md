@@ -117,7 +117,7 @@ ctx7 code /tokio-rs/tokio spawn --op read
 ctx7 code /tanstack/query --op list --path packages/query-core/src
 ```
 
-`--op` is `grep` (default), `definition`, `references`, `outline`, `read` or `list`. The search flags are `-F`, `-i`, `-g` (repeat it for more globs), `-C`, `-l`, `-c`, `--head-limit` and `--offset`. Add a git tag to the library ID (`/colinhacks/zod/v3.24.2`) or pass `--tag` for a version. The first query for a library version can answer that the source is still being indexed. Run the command again after the time it gives.
+`--op` is `grep` (default), `definition`, `references`, `outline`, `read` or `list`. The search flags are `-F`, `-i`, `-w`, `-g` (repeat it for more globs), `-C`, `-A`, `-B`, `-m`, `-l`, `-c`, `--head-limit` and `--offset`. The `Next:` line of an answer names the next command in these flags. Add a git tag to the library ID (`/colinhacks/zod/v3.24.2`) or pass `--tag` for a version. The first query for a library version can answer that the source is still being indexed. Run the command again after the time it gives.
 
 Get what changes when a library moves from one version to another: breaking changes, codemods, deprecations, behavior and config changes from the release notes of every release in between, and the public API changes found in the source code.
 
@@ -127,7 +127,7 @@ ctx7 get-upgrade-guide /colinhacks/zod 3.24.2
 ctx7 get-upgrade-guide /vercel/next.js 14 16 --page 2
 ```
 
-A bare major such as `14` means the oldest release of that line as the start and the newest as the target. Without a target version, the guide goes to the latest major. A long guide comes in pages; page 1 starts with what is needed to migrate and says what the next pages hold. The first request for a pair of versions can take a few minutes while the guide is prepared: the command then exits with code 75 and says when to run it again. Guides are prepared for the most used libraries; for any other library the command says that its guide is not prepared yet.
+A bare major such as `14` means the newest release of that line, as the start and as the target. Pass the installed version, such as `14.2.35`, as the start for a precise guide. Without a target version, the guide goes to the latest major. A long guide comes in pages; page 1 starts with what is needed to migrate and says what the next pages hold. The first request for a pair of versions can take a few minutes while the guide is prepared: the command then exits with code 75 and says when to run it again. Guides are prepared for the most used libraries; for any other library the command says that its guide is not prepared yet.
 
 ### Setup
 

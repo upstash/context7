@@ -54,6 +54,13 @@ Examples:
   ${brand.primary('npx ctx7 search "how to stream an OpenAI response from a Next.js route"')}
   ${brand.primary('npx ctx7 library react "how to use hooks"')}
   ${brand.primary('npx ctx7 docs /reactjs/react.dev "useEffect examples"')}
+
+  ${brand.dim("# Search a library's source code")}
+  ${brand.primary('npx ctx7 code /colinhacks/zod "safeExtend"')}
+  ${brand.primary("npx ctx7 code /colinhacks/zod ZodEffects --op definition")}
+
+  ${brand.dim("# Get an upgrade guide between two versions")}
+  ${brand.primary("npx ctx7 get-upgrade-guide /vercel/next.js 14 16")}
 `
   );
 
