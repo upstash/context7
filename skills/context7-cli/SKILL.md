@@ -31,6 +31,7 @@ npx ctx7@latest <command>
 ctx7 search <query>                   # Search all libraries in one step
 ctx7 library <name> <query>           # Step 1: resolve library ID
 ctx7 docs <libraryId> <query>         # Step 2: fetch docs
+ctx7 code <libraryId> <pattern>       # Search the library's source (grep, --op definition/read/...)
 
 # Setup
 ctx7 setup                            # Configure Context7 MCP (interactive)
