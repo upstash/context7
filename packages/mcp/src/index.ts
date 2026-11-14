@@ -57,8 +57,10 @@ import {
   effectiveMcpAuthMode,
   evaluateMcpAuthentication,
   parseMcpAuthMode,
+  parseEmaDiscoveryCidrs,
   protectedResourceMetadata,
   protectedResourceUrl,
+  type McpEndpoint,
   setBearerChallenge,
   usableApiKey,
 } from "./lib/mcp-http-auth.js";
@@ -577,6 +579,7 @@ async function main() {
       onerror: (error) => console.error("MCP node adapter error:", error),
     });
     const authMode = parseMcpAuthMode();
+    const emaDiscovery = parseEmaDiscoveryCidrs();
     // Read again per token; parsed here so a typo fails startup, not requests.
     parseOAuthAudienceEnforcement();
 
@@ -676,6 +679,8 @@ async function main() {
     mcpRouter.all("/", (req, res) => handleMcpRequest(req, res));
     // Compatibility alias for clients already configured with /mcp/oauth.
     mcpRouter.all("/oauth", (req, res) => handleMcpRequest(req, res));
+    // Enterprise-Managed Auth connector URL: auth required, EMA issuer only.
+    mcpRouter.all("/ema", (req, res) => handleMcpRequest(req, res));
 
     // SEP-2127 reserves `{streamable-http-url}/server-card`. Register it
     // before the /mcp router so it is not answered as MCP JSON-RPC.
@@ -693,24 +698,41 @@ async function main() {
     });
 
     // OAuth 2.0 Protected Resource Metadata (RFC 9728)
-    // Used by MCP clients to discover the authorization server
+    // Used by MCP clients to discover the authorization server. Claude's hosted
+    // connectors get the EMA issuer first (see protectedResourceMetadata), so the
+    // document depends on the caller's address and must not be cached by shared
+    // caches.
+    const sendProtectedResourceMetadata = (
+      req: express.Request,
+      res: express.Response,
+      resource: string,
+      endpoint?: McpEndpoint
+    ) => {
+      res.set("Cache-Control", "private, no-store");
+      res.json(
+        protectedResourceMetadata(resource, endpoint, {
+          emaFirst: emaDiscovery.prefersEma(req.ip),
+        })
+      );
+    };
+
     app.get(
       "/.well-known/oauth-protected-resource",
-      (_req: express.Request, res: express.Response) => {
+      (req: express.Request, res: express.Response) => {
         recordAuthenticationEvent({
           enforcementMode: authMode,
           event: "metadata_requested",
           method: "none",
           route: mcpRouteFromUrl(RESOURCE_URL),
         });
-        res.json(protectedResourceMetadata(RESOURCE_URL));
+        sendProtectedResourceMetadata(req, res, RESOURCE_URL);
       }
     );
 
-    for (const endpoint of ["/mcp", "/mcp/oauth"] as const) {
+    for (const endpoint of ["/mcp", "/mcp/oauth", "/mcp/ema"] as const) {
       app.get(
         `/.well-known/oauth-protected-resource${endpoint}`,
-        (_req: express.Request, res: express.Response) => {
+        (req: express.Request, res: express.Response) => {
           const resource = protectedResourceUrl(endpoint);
           recordAuthenticationEvent({
             enforcementMode: authMode,
@@ -718,7 +740,7 @@ async function main() {
             method: "none",
             route: mcpRouteFromUrl(endpoint),
           });
-          res.json(protectedResourceMetadata(resource));
+          sendProtectedResourceMetadata(req, res, resource, endpoint);
         }
       );
     }

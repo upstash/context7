@@ -31,6 +31,13 @@ export const OAUTH_JWKS_URL =
 // must set OAUTH_AUTH_SERVER_URL separately when Clerk is not the intended issuer.
 export const EMA_ISSUER =
   process.env.EMA_ISSUER || process.env.AUTH_SERVER_URL || CONTEXT7_BASE_URL;
+// Issuer of the EMA authorization server that `/mcp/ema` advertises. It shares
+// Context7's token endpoint but has its own metadata, which advertises Client ID
+// Metadata Documents so Claude can run id-jag exchanges. Tokens it mints still
+// carry iss=EMA_ISSUER, so token validation is unchanged.
+export const EMA_AUTH_SERVER_URL = (
+  process.env.EMA_AUTH_SERVER_URL || `${EMA_ISSUER.replace(/\/+$/, "")}/ema`
+).replace(/\/+$/, "");
 export const EMA_JWKS_URL = process.env.EMA_JWKS_URL || `${CONTEXT7_API_BASE_URL}/oauth/ema-jwks`;
 export const OPENAI_APPS_CHALLENGE_TOKEN = process.env.OPENAI_APPS_CHALLENGE_TOKEN;
 

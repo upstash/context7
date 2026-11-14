@@ -17,7 +17,12 @@ import {
   resetOpaqueOAuthTokenValidation,
   validateOpaqueOAuthToken,
 } from "../src/lib/oauth-token-validation.js";
-import { JWT_WARNING_WINDOW_MS, resetJwtWarningLog } from "../src/lib/mcp-http-auth.js";
+import {
+  JWT_WARNING_WINDOW_MS,
+  parseEmaDiscoveryCidrs,
+  protectedResourceMetadata,
+  resetJwtWarningLog,
+} from "../src/lib/mcp-http-auth.js";
 import {
   classifyAuthMethod,
   effectiveMcpAuthMode,
@@ -51,6 +56,7 @@ describe("MCP HTTP authentication policy", () => {
   test("keeps the existing challenge for OAuth and plugin clients in observe mode", () => {
     expect(effectiveMcpAuthMode("observe", "/mcp", undefined, undefined)).toBe("observe");
     expect(effectiveMcpAuthMode("observe", "/mcp/oauth", undefined, undefined)).toBe("required");
+    expect(effectiveMcpAuthMode("observe", "/mcp/ema", undefined, undefined)).toBe("required");
     expect(effectiveMcpAuthMode("observe", "/mcp", "claude-code-plugin", undefined)).toBe(
       "required"
     );
@@ -252,5 +258,42 @@ describe("MCP HTTP authentication policy", () => {
     await expect(
       evaluateMcpAuthentication("header.payload.signature", "observe")
     ).resolves.toMatchObject({ allowed: true, method: "jwt" });
+  });
+});
+
+describe("EMA discovery for Claude's hosted connectors", () => {
+  test("matches Anthropic's egress range by default", () => {
+    const discovery = parseEmaDiscoveryCidrs(undefined);
+    expect(discovery.prefersEma("160.79.104.1")).toBe(true);
+    expect(discovery.prefersEma("160.79.111.254")).toBe(true);
+    expect(discovery.prefersEma("::ffff:160.79.105.9")).toBe(true);
+    expect(discovery.prefersEma("160.79.112.1")).toBe(false);
+    expect(discovery.prefersEma("203.0.113.77")).toBe(false);
+    expect(discovery.prefersEma(undefined)).toBe(false);
+    expect(discovery.prefersEma("not-an-ip")).toBe(false);
+  });
+
+  test("an empty setting turns it off", () => {
+    expect(parseEmaDiscoveryCidrs("").prefersEma("160.79.104.1")).toBe(false);
+  });
+
+  test("accepts IPv6 ranges", () => {
+    expect(parseEmaDiscoveryCidrs("2001:db8::/32").prefersEma("2001:db8::1")).toBe(true);
+  });
+
+  test("a malformed range fails at startup", () => {
+    expect(() => parseEmaDiscoveryCidrs("160.79.104.0")).toThrow(/invalid CIDR/);
+    expect(() => parseEmaDiscoveryCidrs("160.79.104.0/33")).toThrow(/invalid CIDR/);
+    expect(() => parseEmaDiscoveryCidrs("nope/8")).toThrow(/invalid CIDR/);
+  });
+
+  test("lists the EMA issuer first only when asked", () => {
+    expect(
+      protectedResourceMetadata("https://mcp.context7.com/mcp", "/mcp", { emaFirst: true })
+        .authorization_servers
+    ).toEqual(["https://context7.com/ema", "https://clerk.context7.com"]);
+    expect(
+      protectedResourceMetadata("https://mcp.context7.com/mcp", "/mcp").authorization_servers
+    ).toEqual(["https://clerk.context7.com", "https://context7.com"]);
   });
 });
