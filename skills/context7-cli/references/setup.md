@@ -20,7 +20,7 @@ ctx7 setup --pi                # Pi only
 # CLI + Skills mode — target a specific install location
 ctx7 setup --cli --claude      # Claude Code (~/.claude/skills)
 ctx7 setup --cli --cursor      # Cursor (~/.cursor/skills)
-ctx7 setup --cli --antigravity # Antigravity (~/.agent/skills)
+ctx7 setup --cli --antigravity # Antigravity (~/.gemini/config/skills)
 ctx7 setup --cli --pi          # Pi (~/.agents/skills)
 
 ctx7 setup --project           # Configure current project instead of globally

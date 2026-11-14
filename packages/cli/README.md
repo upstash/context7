@@ -227,7 +227,7 @@ The CLI automatically detects which AI coding agents you have installed and conf
 | VS Code                                                             | `.agents/skills/` |
 | Devin                                                               | `.devin/skills/`  |
 | GitHub Copilot CLI                                                  | `.agents/skills/` |
-| Antigravity                                                         | `.agent/skills/`  |
+| Antigravity                                                         | `.agents/skills/` |
 
 ## Disabling Telemetry
 
