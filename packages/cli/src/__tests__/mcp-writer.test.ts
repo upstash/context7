@@ -114,6 +114,27 @@ describe("patchJsonConfig", () => {
     expect(await readFile(configPath, "utf-8")).toBe(JSONC_CONFIG);
   });
 
+  test("keeps comments when the file starts with a UTF-8 BOM", async () => {
+    // Windows PowerShell 5.1's `Set-Content -Encoding UTF8` writes a BOM.
+    // jsonc-parser reports that mark as InvalidSymbol, so the edit used to
+    // be refused and ctx7 setup rewrote the file, dropping the comments.
+    const source = `\uFEFF${JSONC_CONFIG.replace(/\n/g, "\r\n")}`;
+    await writeFile(configPath, source, "utf-8");
+
+    expect(await patchJsonConfig(configPath, ["servers", "context7"], CONTEXT7_ENTRY)).toBe(true);
+
+    const after = await readFile(configPath, "utf-8");
+    expect(after.charCodeAt(0)).toBe(0xfeff);
+    expectCommentsPreserved(JSONC_CONFIG, after);
+    expect(after.split("\n").length - 1).toBe(after.split("\r\n").length - 1);
+
+    const config = parseConfig(after.slice(1));
+    expect(config.servers).toMatchObject({
+      "internal-docs": { type: "http", url: "https://docs.example.com/mcp" },
+      context7: CONTEXT7_ENTRY,
+    });
+  });
+
   test("keeps the file's own line endings", async () => {
     const crlf = JSONC_CONFIG.replace(/\n/g, "\r\n");
     await writeFile(configPath, crlf, "utf-8");
@@ -121,6 +142,7 @@ describe("patchJsonConfig", () => {
     expect(await patchJsonConfig(configPath, ["servers", "context7"], CONTEXT7_ENTRY)).toBe(true);
 
     const after = await readFile(configPath, "utf-8");
+    expect(after.charCodeAt(0)).not.toBe(0xfeff);
     expect(after.split("\n").length - 1).toBe(after.split("\r\n").length - 1);
   });
 
