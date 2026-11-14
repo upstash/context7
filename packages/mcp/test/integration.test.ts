@@ -8,6 +8,9 @@ import { createDecipheriv } from "node:crypto";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { ALWAYS_LOAD_META } from "../src/lib/constants.js";
+import { serverInstructions } from "../src/lib/server-instructions.js";
+import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "../src/lib/tool-names.js";
 
 // End-to-end tests: the real built binary (dist/index.js) is exercised over
 // both transports (spawned HTTP server, spawned stdio child) by both protocol
@@ -700,15 +703,20 @@ describe("research preview", () => {
   const stdioTransport = (env: Record<string, string>) =>
     new StdioClientTransport({ command: process.execPath, args: [DIST], env });
 
-  async function withClient<T>(url: string, run: (client: Client) => Promise<T>): Promise<T> {
+  async function withTransport<T>(
+    transport: StreamableHTTPClientTransport | StdioClientTransport,
+    run: (client: Client) => Promise<T>
+  ): Promise<T> {
     const client = new Client({ name: "research-preview-test", version: "1.0.0" });
-    await client.connect(httpTransport(url));
+    await client.connect(transport);
     try {
       return await run(client);
     } finally {
       await client.close();
     }
   }
+  const withClient = <T>(url: string, run: (client: Client) => Promise<T>) =>
+    withTransport(httpTransport(url), run);
   const toolNames = (url: string) =>
     withClient(url, async (client) => (await client.listTools()).tools.map((tool) => tool.name));
 
@@ -724,6 +732,25 @@ describe("research preview", () => {
     expect(
       await toolsListCacheScope(stdioTransport({ ...childEnv, CONTEXT7_RESEARCH_PREVIEW: "1" }))
     ).toBe("private");
+  });
+
+  test("returns the same server instructions over HTTP and stdio, with the feedback request only under research preview", async () => {
+    const instructions = (transport: StreamableHTTPClientTransport | StdioClientTransport) =>
+      withTransport(transport, async (client) => client.getInstructions() ?? "");
+    const httpText = await instructions(httpTransport(httpUrl));
+    expect(httpText).toBe(serverInstructions(false));
+    expect(await instructions(stdioTransport(childEnv))).toBe(httpText);
+
+    expect(await instructions(httpTransport(`${httpUrl}?research_preview=1`))).toBe(
+      serverInstructions(true)
+    );
+  });
+
+  test("asks clients to load resolve-library-id and query-docs up front", async () => {
+    const tools = await withClient(httpUrl, async (client) => (await client.listTools()).tools);
+    for (const name of [RESOLVE_LIBRARY_ID_TOOL, QUERY_DOCS_TOOL]) {
+      expect(tools.find((t) => t.name === name)?._meta).toMatchObject(ALWAYS_LOAD_META);
+    }
   });
 
   test("lists submit-docs-feedback only with research preview and sends it to the API", async () => {
