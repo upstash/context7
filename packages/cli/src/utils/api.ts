@@ -97,6 +97,8 @@ export async function resolveLibrary(
 export interface GetContextOptions {
   type?: "json" | "txt";
   language?: string;
+  /** The version the user's project uses, as written there ("15.4.3", "^15.4.3", "14"). */
+  version?: string;
 }
 
 export const CODE_OPERATIONS = [
@@ -264,6 +266,9 @@ export async function getLibraryContext(
   }
   if (options?.language) {
     params.set("language", options.language);
+  }
+  if (options?.version) {
+    params.set("version", options.version);
   }
   const headers = getAuthHeaders(accessToken);
   const response = await fetchWithTimeout(`${baseUrl}/api/v2/context?${params}`, {

@@ -90,13 +90,13 @@ Each result includes:
 | **Code Snippets**     | Number of indexed code examples — higher means more documentation coverage |
 | **Source Reputation** | Authority indicator: High, Medium, Low, or Unknown                         |
 | **Benchmark Score**   | Quality score from 0 to 100                                                |
-| **Versions**          | Version tags when available — append one to the ID: `/org/project/version` |
+| **Versions**          | Version tags when available — pass a version with `--tag`                  |
 
-When multiple results come back, the best match is usually the one with the closest name, highest snippet count, and strongest reputation. If you need docs for a specific version, append the matching version tag from the list to the library ID.
+When multiple results come back, the best match is usually the one with the closest name, highest snippet count, and strongest reputation. If you need docs for a specific version, pass the version your project uses with `--tag`, as written in your package file (`15.4.3`, `^15.4.3`, `14`). Context7 serves that version or the closest one it has.
 
 ```bash
 # Fetch docs for a specific version
-ctx7 docs /vercel/next.js/v16.2.9 "How to set up app router"
+ctx7 docs /vercel/next.js "How to set up app router" --tag 16.2.9
 
 # Output as JSON for scripting
 ctx7 library react "How to use hooks for state management" --json | jq '.[0].id'
