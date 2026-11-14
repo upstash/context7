@@ -38,7 +38,12 @@ export function mergeServerEntry(
   serverName: string,
   entry: Record<string, unknown>
 ): { config: Record<string, unknown>; alreadyExists: boolean } {
-  const section = (existing[configKey] as Record<string, unknown> | undefined) ?? {};
+  // A section that is not an object (array, string, number, null) cannot hold
+  // named entries; treat it as empty so the merged config stays a plain map
+  // instead of spreading indexes into it.
+  const raw = existing[configKey];
+  const section =
+    raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
   const alreadyExists = serverName in section;
 
   return {
@@ -108,8 +113,9 @@ export async function writeJsonConfig(
  * that gains or loses the entry is reprinted with two-space indentation, which
  * is the granularity JSONC allows; `value` of `undefined` removes the entry.
  *
- * Returns false when the file cannot be edited in place (missing, empty, or not
- * parseable as JSONC), so the caller falls back to rewriting it whole.
+ * Returns false when the file cannot be edited in place (missing, empty, not
+ * parseable as JSONC, or a path segment that is not an object), so the caller
+ * falls back to rewriting it whole.
  */
 export async function patchJsonConfig(
   filePath: string,
@@ -128,15 +134,23 @@ export async function patchJsonConfig(
   parse(raw, errors, { allowTrailingComma: true });
   if (errors.length > 0) return false;
 
-  const edits = modify(raw, path, value, {
-    formattingOptions: {
-      insertSpaces: true,
-      tabSize: 2,
-      // Keep one line-ending style in the file instead of mixing CRLF and LF.
-      eol: raw.includes("\r\n") ? "\r\n" : "\n",
-    },
-  });
-  const updated = applyEdits(raw, edits);
+  let updated: string;
+  try {
+    const edits = modify(raw, path, value, {
+      formattingOptions: {
+        insertSpaces: true,
+        tabSize: 2,
+        // Keep one line-ending style in the file instead of mixing CRLF and LF.
+        eol: raw.includes("\r\n") ? "\r\n" : "\n",
+      },
+    });
+    updated = applyEdits(raw, edits);
+  } catch {
+    // `modify` throws when a path segment is not an object (`"mcpServers": []`,
+    // a string, a number or null). That is a file this function cannot edit in
+    // place, so decline it and let the caller rewrite the config.
+    return false;
+  }
 
   // `modify` parses without `allowTrailingComma`, so an edit near a trailing
   // comma can leave one behind. Only write an edit that still parses.
