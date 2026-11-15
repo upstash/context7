@@ -10,10 +10,10 @@ describe("cliCodeHints", () => {
         'Next: more results: call again with offset 20 | read: src/a.ts#L1-L40 | exact totals: call again with output_mode "count"'
       )
     ).toBe(
-      "Next: more results: run again with --offset 20 | ctx7 code /acme/widgets --op read --path src/a.ts#L1-L40 | exact totals: run again with -c"
+      "Next: more results: run again with --offset 20 | ctx7 read /acme/widgets src/a.ts#L1-L40 | exact totals: run again with -c"
     );
     expect(hint("Next: read: src/a.ts#L5-L45")).toBe(
-      "Next: ctx7 code /acme/widgets --op read --path src/a.ts#L5-L45"
+      "Next: ctx7 read /acme/widgets src/a.ts#L5-L45"
     );
   });
 
@@ -49,7 +49,7 @@ describe("cliCodeHints", () => {
       "<library-source>",
       "src/a.ts:3:  // call again with offset 20 and set fixed_strings: true",
       "</library-source>",
-      "Next: ctx7 code /acme/widgets --op read --path src/a.ts#L1-L40",
+      "Next: ctx7 read /acme/widgets src/a.ts#L1-L40",
     ]);
   });
 });

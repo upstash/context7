@@ -44,11 +44,12 @@ Do not use for: refactoring, debugging, or reviewing code that does not depend o
 When the docs do not answer an exact question (a signature or type, a default value, an option name, where an error message comes from, or how something works inside), search the library's source at the docs version.
 
 - Grep: \`npx ctx7@latest code <libraryId> "<regex>"\`. Add \`-F\` for plain text such as error messages
-- Definition: \`npx ctx7@latest code <libraryId> <symbol> --op definition\`. Read code: \`npx ctx7@latest code <libraryId> --op read --path <file>#L10-L40\`. \`--op references\`, \`--op outline\` and \`--op list\` also exist
+- Grep in some folders only: \`npx ctx7@latest code <libraryId> "<regex>" src/ lib/\`, as with \`rg PATTERN PATH\`. Quote a pattern with spaces
+- Read code: \`npx ctx7@latest read <libraryId> <file>#L10-L40\`, or \`npx ctx7@latest read <libraryId> <symbol>\` for its definition. \`--op definition\`, \`--op references\`, \`--op outline\` and \`--op list\` also exist
 - Use an ID that \`library\` marks with "Source code", usually the GitHub repository. \`/websites/...\` and \`/llmstxt/...\` IDs have no source
-- For a version, add the git tag to the library ID (e.g. \`/colinhacks/zod/v3.24.2\`). A tag that is not a docs version is indexed first (exit code 75). If indexing fails, the output lists the docs versions you can use
-- Follow the \`Next:\` line of the output. Its fields map to flags: \`offset\` is \`--offset\`, \`output_mode "count"\` is \`-c\`, \`fixed_strings\` is \`-F\`, \`ignore_case\` is \`-i\`, \`read: <file>#L..\` is \`--op read --path <file>#L..\`, and the other fields use the flag of the same name (\`head_limit\` is \`--head-limit\`, \`version\` is \`--tag\`)
-- Exit code 75 means the source is being indexed: run the same command again every 30 seconds for up to 3 minutes (a first index usually takes 1 to 3), then answer from \`docs\`. These runs do not count toward the 6 \`code\` commands
+- For a version, add the git tag to the library ID, spelled as the repository spells it (e.g. \`/colinhacks/zod/v3.24.2\`, \`/keycloak/keycloak/26.8.2\`). A tag that is not a docs version is indexed first (exit code 75). If indexing fails, the output lists the docs versions you can use
+- Follow the \`Next:\` line of the output: it names the command or flag to run next
+- Exit code 75 means the source is being indexed: run the same command again every 30 seconds for up to 3 minutes (a first index usually takes 1 to 3), then answer from \`docs\`. These runs do not count toward the 6 \`code\` and \`read\` commands
 - Cite the file and line of the source you used
 
 ## Upgrades
@@ -59,7 +60,7 @@ When the user upgrades a library, sees errors after an upgrade, or asks what cha
 - Exit code 75 means the guide is being prepared: run the same command again after the time it gives
 - If it says the guide is not prepared or could not be prepared, use \`docs\` for the upgrade instead
 
-You MUST call \`library\` first to get a valid ID (format: \`/org/project\`) unless the user provides one directly. Be specific about what to look up in the library's documentation — specific and detailed queries return better results than vague single words, but keep each query to a single concept unless the question is about how concepts interact; combined multi-topic queries dilute ranking and return shallow results for each topic. Do not run more than 3 \`library\` and \`docs\` commands per question, and not more than 6 \`code\` commands. Do not include sensitive information (API keys, passwords, credentials) in queries.
+You MUST call \`library\` first to get a valid ID (format: \`/org/project\`) unless the user provides one directly. Be specific about what to look up in the library's documentation — specific and detailed queries return better results than vague single words, but keep each query to a single concept unless the question is about how concepts interact; combined multi-topic queries dilute ranking and return shallow results for each topic. Do not run more than 3 \`library\` and \`docs\` commands per question, and not more than 6 \`code\` and \`read\` commands. Do not include sensitive information (API keys, passwords, credentials) in queries.
 
 For version-specific docs, use \`/org/project/version\` from the \`library\` output (e.g., \`/vercel/next.js/v16.2.9\`).
 

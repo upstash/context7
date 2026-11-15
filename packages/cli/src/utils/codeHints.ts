@@ -29,7 +29,7 @@ const READ_HINT = /(^|\| |Next: )read: (\S+)/g;
 /** Rewrites one line of hint text. */
 function hintLine(line: string, libraryId: string): string {
   let out = line.replace(READ_HINT, (_, before: string, target: string) => {
-    return `${before}ctx7 code ${libraryId} --op read --path ${target}`;
+    return `${before}ctx7 read ${libraryId} ${target}`;
   });
   for (const [pattern, flag] of FIELD_FLAGS) out = out.replace(pattern, flag);
   return out;

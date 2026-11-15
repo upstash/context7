@@ -144,17 +144,24 @@ Searches and reads a library's source code at the commit its docs were built fro
 ctx7 code /tanstack/query "invalidateQueries\\(" -g "packages/query-core/**" -A 5
 ctx7 code /pydantic/pydantic "Input should be a valid integer" -F
 
+# Search only some folders or files, as in rg PATTERN PATH
+ctx7 code /tanstack/query "invalidateQueries" packages/query-core/src/
+
 # Find a definition, then read the file range the answer names
 ctx7 code /colinhacks/zod/v3.24.2 ZodEffects --op definition
-ctx7 code /tokio-rs/tokio --op read --path tokio/src/task/spawn.rs#L1-L60
+ctx7 read /tokio-rs/tokio tokio/src/task/spawn.rs#L1-L60
 
 # List the files of a folder
 ctx7 code /tanstack/query --op list --path packages/query-core/src
 ```
 
-`--op` is `grep` (default), `definition`, `references`, `outline`, `read` or `list`. The search flags follow ripgrep: `-F`, `-i`, `-w`, `-g` (repeat it for more globs), `-C`, `-A`, `-B`, `-m`, `-l` and `-c`, plus `--head-limit` and `--offset` for pages. For a version, add its git tag to the library ID (`/colinhacks/zod/v3.24.2`) or pass `--tag`.
+`--op` is `grep` (default), `definition`, `references`, `outline`, `read` or `list`. The search flags follow ripgrep: `-F`, `-i`, `-w`, `-g` (repeat it for more globs), `-C`, `-A`, `-B`, `-m`, `-l` and `-c`, plus `--head-limit` and `--offset` for pages. Folders or files after the pattern narrow the search; a folder needs a trailing `/` or a path with a `/`. For a version, add its git tag to the library ID (`/colinhacks/zod/v3.24.2`) or pass `--tag`.
 
-Each answer ends with a `Next:` line that names the next command, such as `--op read --path <file>#L10-L40` or `run again with --offset 20`. The first query for a library version can exit with code `75` while its source is being indexed, which usually takes 1 to 3 minutes. Run the same command again after the time it gives.
+`ctx7 read <libraryId> <target>` shows up to 200 lines: a file with an optional range (`src/a.ts#L10-L40`) or the definition of a symbol (`Client.send`). It is the same as `ctx7 code` with `--op read`.
+
+Quote a pattern with spaces. If the shell splits it into words, or a version is written as its own argument, the command fails and prints the command to run instead.
+
+Each answer ends with a `Next:` line that names the next command, such as `ctx7 read <libraryId> <file>#L10-L40` or `run again with --offset 20`. The first query for a library version can exit with code `75` while its source is being indexed, which usually takes 1 to 3 minutes. Run the same command again after the time it gives.
 
 ---
 
