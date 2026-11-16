@@ -11,23 +11,11 @@ There are three experimental tools: [documentation feedback](#documentation-feed
 
 ### From the dashboard
 
-1. Open [Dashboard > Settings > MCP Tools](https://context7.com/dashboard?tab=settings) in the Context7 dashboard.
-2. Turn on **All experimental tools**, or turn on only the tools that you want.
-
-![MCP Tools card in the dashboard Settings tab, with the core tools always on, the All experimental tools switch and one switch per experimental tool](/images/howto/experimental-tools/mcp-tools-card.png)
-
-**All experimental tools** also turns on the experimental tools that we add later. The core tools, `resolve-library-id` and `query-docs`, are always on.
-
-The server lists the tools you turned on when your MCP client signs in with your Context7 account (OAuth) or sends one of your API keys. You do not need to change the client configuration.
-
-- Remote server: a change shows within a few minutes. To see it at once, reconnect the server or start a new session.
-- Local server: the server reads your choice when it starts, so restart it after a change. This needs `@upstash/context7-mcp` 4.7.1 or later.
-
-To turn a tool off, turn its switch off.
+The MCP Tools card in [Dashboard > Settings](https://context7.com/dashboard?tab=settings) is unavailable at the moment. Use one of the other ways below to turn on experimental tools.
 
 ### For every tool at once
 
-A flag turns on every experimental tool, also without a sign-in. It takes precedence over your dashboard choice: with a flag, the server lists every experimental tool whatever your switches say.
+A flag turns on every experimental tool, also without a sign-in.
 
 For the remote server, add `experimental=1` to the server URL:
 
@@ -68,7 +56,7 @@ For the local server, pass `--experimental`, or set `CONTEXT7_EXPERIMENTAL=1`:
 
 Experimental tools were called the research preview before. If you already use `research_preview=1`, `--research-preview` or `CONTEXT7_RESEARCH_PREVIEW=1`, you do not need to change anything: these names still turn on every experimental tool, like `experimental=1`, `--experimental` and `CONTEXT7_EXPERIMENTAL=1`. The new names need `@upstash/context7-mcp` 4.7.1 or later on a local server.
 
-To choose single tools instead, remove the old name from your configuration and use the [dashboard](#from-the-dashboard).
+To choose single tools instead, remove the old name from your configuration and use the [dashboard](#from-the-dashboard) once the MCP Tools card is back.
 
 Start a new session after you change the configuration, so that your client loads the new tools.
 
