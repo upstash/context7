@@ -73,10 +73,9 @@ import { parseOAuthAudienceEnforcement } from "./lib/oauth-audience.js";
 const DEFAULT_PORT = 3000;
 const OAUTH_METADATA_TIMEOUT_MS = 10_000;
 const CLAUDE_CODE_PLUGIN = "claude-code-plugin";
-const STATIC_LIST_CACHE_HINT = { ttlMs: 3_600_000, cacheScope: "public" } as const;
-const EXPERIMENTAL_LIST_CACHE_HINT = { ttlMs: 3_600_000, cacheScope: "private" } as const;
-// A signed-in caller's list follows their dashboard choice, so a change shows within minutes.
-const SIGNED_IN_LIST_CACHE_HINT = { ttlMs: 300_000, cacheScope: "private" } as const;
+const STATIC_CACHE_HINT = { ttlMs: 3_600_000, cacheScope: "public" } as const;
+// A signed-in caller's tools follow their dashboard choice, so a change shows within minutes.
+const PRIVATE_CACHE_HINT = { ttlMs: 300_000, cacheScope: "private" } as const;
 type McpInstrumentation = NonNullable<Awaited<ReturnType<typeof initializeTelemetry>>>;
 let mcpInstrumentation: McpInstrumentation | undefined;
 
@@ -170,7 +169,6 @@ let stdioApiKey: string | undefined;
 let stdioClientInfo: { ide?: string; version?: string } | undefined;
 // One session ID per stdio process.
 let stdioSessionId: string | undefined;
-let stdioExperimental = false;
 let stdioExperimentalTools: readonly ExperimentalTool[] = [];
 
 /**
@@ -191,7 +189,6 @@ function getClientContext(toolCtx: ServerContext): ClientContext {
     clientInfo: requestClientInfo ?? stdioClientInfo,
     transport: "stdio",
     sessionId: stdioSessionId,
-    experimental: stdioExperimental,
     experimentalTools: stdioExperimentalTools,
   };
 }
@@ -277,7 +274,8 @@ function createMcpServer(
   experimentalTools: readonly ExperimentalTool[],
   signedIn: boolean
 ) {
-  const enabled = new Set(experimentalTools);
+  const enabled: ReadonlySet<ExperimentalTool> = new Set(experimentalTools);
+  const callerHint = signedIn || enabled.size > 0 ? PRIVATE_CACHE_HINT : STATIC_CACHE_HINT;
   const serverInfo = {
     name: "Context7",
     title: SERVER_TITLE,
@@ -298,24 +296,18 @@ function createMcpServer(
       prompts: { listChanged: false },
       resources: { listChanged: false, subscribe: false },
     },
-    // These results change only on deploy, so clients may reuse them for an
-    // hour instead of listing on every request. They are the same for every
-    // caller, except tools/list: a signed-in caller's list follows their
-    // experimental tools choice, so it is private and kept 5 minutes; a list
-    // with experimental tools turned on by flag is private too, so no shared
-    // cache gives them to other callers.
-    // After a deploy that changes a tool schema, clients can still call with the
-    // old schema for that hour: keep old argument names accepted (aliasArgs).
+    // These results change only on deploy, so clients may reuse them for an hour.
+    // The tools and the instructions (server/discover) depend on the caller's
+    // experimental tools, so with a credential or an experimental tool they are
+    // private and kept 5 minutes. After a deploy that changes a tool schema,
+    // clients can still call with the old schema for that hour: keep old
+    // argument names accepted (aliasArgs).
     cacheHints: {
-      "tools/list": signedIn
-        ? SIGNED_IN_LIST_CACHE_HINT
-        : enabled.size > 0
-          ? EXPERIMENTAL_LIST_CACHE_HINT
-          : STATIC_LIST_CACHE_HINT,
-      "prompts/list": STATIC_LIST_CACHE_HINT,
-      "resources/list": STATIC_LIST_CACHE_HINT,
-      "resources/templates/list": STATIC_LIST_CACHE_HINT,
-      "server/discover": STATIC_LIST_CACHE_HINT,
+      "tools/list": callerHint,
+      "prompts/list": STATIC_CACHE_HINT,
+      "resources/list": STATIC_CACHE_HINT,
+      "resources/templates/list": STATIC_CACHE_HINT,
+      "server/discover": callerHint,
     },
     instructions: `Use this server to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, porting code between libraries, platforms, or SQL dialects, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
 
@@ -490,7 +482,7 @@ If you know the programming language the user is working in, pass it as \`langua
     }
   );
 
-  if (enabled.size > 0) registerExperimentalTools(server, getClientContext, experimentalTools);
+  registerExperimentalTools(server, getClientContext, enabled);
 
   return server;
 }
@@ -670,7 +662,6 @@ async function main() {
           mcpAuthMode: enforcementMode,
           mcpEndpoint: endpoint,
           plugin,
-          experimental,
           transport: "http",
         };
         // Every experimental tool by URL flag; else the signed-in user's dashboard choice
@@ -886,7 +877,7 @@ async function main() {
         "The API key is an unset variable placeholder such as ${CONTEXT7_API_KEY}. Running without an API key."
       );
     }
-    stdioExperimental =
+    const stdioExperimental =
       experimentalFlag ||
       isEnabledFlag(process.env.CONTEXT7_EXPERIMENTAL) ||
       isEnabledFlag(process.env.CONTEXT7_RESEARCH_PREVIEW);
@@ -894,11 +885,13 @@ async function main() {
     // Read once at start: a dashboard change shows after the client restarts the server.
     stdioExperimentalTools = stdioExperimental
       ? EXPERIMENTAL_TOOL_NAMES
-      : await fetchExperimentalTools({
-          apiKey: stdioApiKey,
-          transport: "stdio",
-          sessionId: stdioSessionId,
-        });
+      : await fetchExperimentalTools(
+          { apiKey: stdioApiKey, transport: "stdio", sessionId: stdioSessionId },
+          (cause) =>
+            console.error(
+              `Could not read your experimental tools choice: ${cause}. The server lists no experimental tools until it restarts.`
+            )
+        );
     const rawStdioTransport = new StdioServerTransport();
     const stdioTransport = mcpInstrumentation
       ? mcpInstrumentation.instrumentStdioTransport(rawStdioTransport)

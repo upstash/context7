@@ -793,6 +793,7 @@ describe("experimental tools", () => {
   });
 
   test("lists no experimental tool when the choice cannot be read", async () => {
+    requests.length = 0;
     const names = await withClient(
       httpUrl,
       async (client) => (await client.listTools()).tools.map((tool) => tool.name),
@@ -800,6 +801,67 @@ describe("experimental tools", () => {
     );
     expect(names).toEqual(expect.arrayContaining(["resolve-library-id", "query-docs"]));
     expect(names.some((name) => ["query-code", "get-upgrade-guide"].includes(name))).toBe(false);
+    const settingsCall = requests.find((request) => request.path === "/v2/mcp/experimental-tools");
+    expect(settingsCall?.headers.authorization).toBe("Bearer ctx7sk-exp-fail-1");
+  });
+
+  test("calls query-code over HTTP when the signed-in user turned it on", async () => {
+    requests.length = 0;
+    const result = await withClient(
+      httpUrl,
+      (client) =>
+        client.callTool({
+          name: "query-code",
+          arguments: { libraryId: "/vercel/next.js", pattern: "useRouter" },
+        }),
+      "ctx7sk-exp-code-4"
+    );
+    expect(result.isError).toBeFalsy();
+    expect(result.content).toMatchObject([{ type: "text", text: STUB_CODE }]);
+    const codeCall = requests.find((request) => request.path === "/v2/code");
+    expect(codeCall?.headers.authorization).toBe("Bearer ctx7sk-exp-code-4");
+  });
+
+  test("marks server/discover private for a signed-in caller", async () => {
+    const client = new Client(
+      { name: "experimental-test", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+    await client.connect(httpTransport(httpUrl, "ctx7sk-exp-all-2"));
+    try {
+      const discover = client.getDiscoverResult() as { cacheScope?: string; instructions?: string };
+      expect(discover.cacheScope).toBe("private");
+      expect(discover.instructions).toContain("submit-docs-feedback");
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("lists the dashboard choice over stdio with an API key", async () => {
+    const client = new Client({ name: "experimental-test", version: "1.0.0" });
+    await client.connect(
+      stdioTransport({ ...childEnv, CONTEXT7_API_KEY: "ctx7sk-exp-code-stdio" })
+    );
+    try {
+      const names = (await client.listTools()).tools.map((tool) => tool.name);
+      expect(names).toContain("query-code");
+      expect(names).not.toContain("get-upgrade-guide");
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("lists every experimental tool over stdio with the old CONTEXT7_RESEARCH_PREVIEW=1", async () => {
+    const client = new Client({ name: "experimental-test", version: "1.0.0" });
+    await client.connect(stdioTransport({ ...childEnv, CONTEXT7_RESEARCH_PREVIEW: "1" }));
+    try {
+      const names = (await client.listTools()).tools.map((tool) => tool.name);
+      expect(names).toEqual(
+        expect.arrayContaining(["query-code", "get-upgrade-guide", "submit-docs-feedback"])
+      );
+    } finally {
+      await client.close();
+    }
   });
 
   test("marks API calls of a signed-in user with experimental tools on", async () => {

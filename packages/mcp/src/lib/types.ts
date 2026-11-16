@@ -87,11 +87,6 @@ export interface ClientContext {
   transport?: "stdio" | "http";
   sessionId?: string;
   /**
-   * All experimental tools were turned on by flag, env var or `?experimental=1` (otherwise the
-   * signed-in user's dashboard choice decides).
-   */
-  experimental?: boolean;
-  /**
    * The experimental tools this server lists; a non-empty list is sent as
    * `X-Context7-Experimental: 1` so the app counts experimental use.
    */
