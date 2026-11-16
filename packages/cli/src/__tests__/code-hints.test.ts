@@ -29,7 +29,10 @@ describe("cliCodeHints", () => {
     expect(hint("Pass fixed_strings: true for text.")).toBe("Add -F for text.");
     expect(hint('Use operation "list" to see the files.')).toBe("Use --op list to see the files.");
     expect(hint('Use operation "read" with path to read files.')).toBe(
-      "Use --op read with --path to read files."
+      "Use ctx7 read /acme/widgets <file> to read files."
+    );
+    expect(hint('Read the file with operation "read" and path "src/a.ts".')).toBe(
+      "Read the file with ctx7 read /acme/widgets src/a.ts."
     );
     expect(hint("head_limit is at most 100 in files_with_matches mode")).toBe(
       "--head-limit is at most 100 in files_with_matches mode"
