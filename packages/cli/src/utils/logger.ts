@@ -23,11 +23,22 @@ export function box(lines: string[], color: (message: string) => string = pc.gre
   console.log(bottom);
 }
 
+/**
+ * Writes a diagnostic. When stdout is piped (`ctx7 code ... | grep x`), the
+ * pipe would hide it, so it goes to stderr; a terminal shows it on stdout.
+ */
+function diagnostic(text: string): void {
+  if (process.stdout.isTTY) console.log(text);
+  else console.error(text);
+}
+
 export const log = {
   info: (message: string) => console.log(pc.cyan(message)),
   success: (message: string) => console.log(pc.green(`✔ ${message}`)),
-  warn: (message: string) => console.log(pc.yellow(`⚠ ${message}`)),
-  error: (message: string) => console.log(pc.red(`✖ ${message}`)),
+  warn: (message: string) => diagnostic(pc.yellow(`⚠ ${message}`)),
+  error: (message: string) => diagnostic(pc.red(`✖ ${message}`)),
+  /** A hint that belongs with a warning or an error, so it goes where they go. */
+  notice: (message: string) => diagnostic(pc.cyan(message)),
   dim: (message: string) => console.log(pc.dim(message)),
   item: (message: string) => console.log(pc.green(`  ${message}`)),
   itemAdd: (message: string) => console.log(`  ${pc.green("+")} ${message}`),

@@ -1,4 +1,4 @@
-import type { ToolCallOutcome } from "./tool-names.js";
+import type { ExperimentalTool, ToolCallOutcome } from "./tool-names.js";
 
 export interface SearchResult {
   id: string;
@@ -104,8 +104,11 @@ export interface ClientContext {
   mcpAuthMode?: "observe" | "required";
   transport?: "stdio" | "http";
   sessionId?: string;
-  /** Research preview is on; sent as `X-Context7-Research-Preview: 1` so the app counts preview use. */
-  researchPreview?: boolean;
+  /**
+   * The experimental tools this server lists; a non-empty list is sent as
+   * `X-Context7-Experimental: 1` so the app counts experimental use.
+   */
+  experimentalTools?: readonly ExperimentalTool[];
   /** The caller's arm in the server instructions A/B test; sent on API calls (see encryption.ts). */
   instructionsArm?: InstructionsArm;
   /** Mutable: set by the upstream API layer when the backend signals the

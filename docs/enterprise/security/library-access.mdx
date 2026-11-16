@@ -51,9 +51,11 @@ You can edit a library from the **Edit** button in the table, or from the **Acce
 
 ## Set the default for new libraries
 
-New libraries are open to everyone unless you change the workspace default. Use the **Restrict libraries by default** toggle in the **Default access** card.
+New repositories and websites are open to everyone unless you change the workspace default. Use the **Restrict libraries by default** toggle in the **Default access** card.
 
-Turn it on to flip your instance to deny by default. Members then see only the libraries they have been explicitly granted, and each new library stays private until you grant access to it.
+New **Google Drive**, **Notion** and **Confluence** libraries start restricted to admins, because they can hold private company documents. Grant access to the groups or users who need them from the library's row. A connector library you add later is restricted the same way, unless the workspace default is already **Restricted** or a namespace rule covers it. Re-syncing a connector library never changes access you have set.
+
+Turn the toggle on to flip your instance to deny by default. Members then see only the libraries they have been explicitly granted, and each new library stays private until you grant access to it.
 
 <Frame>
   ![The restrict libraries by default toggle](/images/enterprise/library-access/03-default-posture.png)
@@ -99,7 +101,7 @@ Admins are never restricted. They see and can query every library, which is also
 <Note>
 With **Require MCP authentication** on, these endpoints also need a session or a personal API key: library list, library details, library search, library logs, parse queue, and parse status.
 
-With it off, they answer anonymous callers, but access rules still hide restricted libraries.
+With it off, they answer anonymous callers, but access rules still hide restricted libraries. A caller that sends a valid personal API key is still treated as its owner, so it sees the libraries that user can access.
 </Note>
 
 ## Audit log

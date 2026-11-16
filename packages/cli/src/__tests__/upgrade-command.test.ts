@@ -51,9 +51,12 @@ beforeEach(() => {
   logOutput = [];
   shouldShowUpdateNotification.mockResolvedValue(true);
   shouldSkipUpdateNotifier.mockReturnValue(false);
-  vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
-    logOutput.push(args.join(" "));
-  });
+  // Warnings and errors go to stderr when stdout is not a terminal, as in a test.
+  for (const stream of ["log", "error"] as const) {
+    vi.spyOn(console, stream).mockImplementation((...args: unknown[]) => {
+      logOutput.push(args.join(" "));
+    });
+  }
   spawn.mockReturnValue({
     on: (event: string, handler: (value?: number) => void) => {
       if (event === "close") handler(0);

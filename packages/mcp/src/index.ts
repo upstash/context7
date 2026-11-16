@@ -10,7 +10,7 @@ import {
   type ServerContext,
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
-import { searchLibraries, fetchLibraryContext } from "./lib/api.js";
+import { searchLibraries, fetchLibraryContext, fetchExperimentalTools } from "./lib/api.js";
 import type { ClientContext } from "./lib/types.js";
 import {
   formatSearchResults,
@@ -18,7 +18,7 @@ import {
   envelopeClientInfo,
 } from "./lib/utils.js";
 import express from "express";
-import { Command, InvalidArgumentError } from "commander";
+import { Command, InvalidArgumentError, Option } from "commander";
 import { AsyncLocalStorage } from "async_hooks";
 import { randomUUID } from "node:crypto";
 import {
@@ -31,14 +31,21 @@ import {
   mcpServerCard,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
-import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "./lib/tool-names.js";
+import {
+  EXPERIMENTAL_TOOL_NAMES,
+  QUERY_CODE_TOOL,
+  QUERY_DOCS_TOOL,
+  RESOLVE_LIBRARY_ID_TOOL,
+  SUBMIT_DOCS_FEEDBACK_TOOL,
+  type ExperimentalTool,
+} from "./lib/tool-names.js";
 import {
   createInstructionsExperiment,
   loadInstructionsExperiment,
 } from "./lib/instructions-experiment.js";
-import { serverInstructions } from "./lib/server-instructions.js";
 import { aliasArgs, GLOBAL_ALIASES, QUERY_DOCS_ALIASES } from "./lib/tool-args.js";
-import { registerResearchPreviewTools } from "./lib/research-preview-tools.js";
+import { registerExperimentalTools } from "./lib/experimental-tools.js";
+import { serverInstructions } from "./lib/server-instructions.js";
 import { installProcessShutdown } from "./lib/process-shutdown.js";
 import {
   forceFlushTelemetry,
@@ -71,8 +78,9 @@ import { parseOAuthAudienceEnforcement } from "./lib/oauth-audience.js";
 const DEFAULT_PORT = 3000;
 const OAUTH_METADATA_TIMEOUT_MS = 10_000;
 const CLAUDE_CODE_PLUGIN = "claude-code-plugin";
-const STATIC_LIST_CACHE_HINT = { ttlMs: 3_600_000, cacheScope: "public" } as const;
-const PREVIEW_LIST_CACHE_HINT = { ttlMs: 3_600_000, cacheScope: "private" } as const;
+const STATIC_CACHE_HINT = { ttlMs: 3_600_000, cacheScope: "public" } as const;
+// A signed-in caller's tools follow their dashboard choice, so a change shows within minutes.
+const PRIVATE_CACHE_HINT = { ttlMs: 300_000, cacheScope: "private" } as const;
 type McpInstrumentation = NonNullable<Awaited<ReturnType<typeof initializeTelemetry>>>;
 let mcpInstrumentation: McpInstrumentation | undefined;
 
@@ -80,15 +88,13 @@ function getPluginFromRequest(req: express.Request): typeof CLAUDE_CODE_PLUGIN |
   return req.query.client === CLAUDE_CODE_PLUGIN ? CLAUDE_CODE_PLUGIN : undefined;
 }
 
-function isResearchPreviewValue(value: unknown): boolean {
+function isEnabledFlag(value: unknown): boolean {
   return value === "1" || value === "true";
 }
 
-function researchPreviewFromRequest(request: Request | undefined): boolean {
-  return (
-    request !== undefined &&
-    isResearchPreviewValue(new URL(request.url).searchParams.get("research_preview"))
-  );
+/** `?experimental=1` turns on every experimental tool; `?research_preview=1` is its old name. */
+function experimentalFromQuery(query: express.Request["query"]): boolean {
+  return isEnabledFlag(query.experimental) || isEnabledFlag(query.research_preview);
 }
 
 // Parse CLI arguments using commander
@@ -110,9 +116,10 @@ const program = new Command()
   )
   .option("--api-key <key>", "API key for authentication (or set CONTEXT7_API_KEY env var)")
   .option(
-    "--research-preview",
-    "show experimental tools, stdio only (or set CONTEXT7_RESEARCH_PREVIEW=1 env var)"
+    "--experimental",
+    "show every experimental tool, stdio only (or set CONTEXT7_EXPERIMENTAL=1 env var). Without it, a signed-in API key lists the tools turned on at context7.com/dashboard?tab=settings"
   )
+  .addOption(new Option("--research-preview", "old name of --experimental").hideHelp())
   .allowUnknownOption() // let MCP Inspector / other wrappers pass through extra flags
   .parse(process.argv);
 
@@ -120,8 +127,10 @@ const cliOptions = program.opts<{
   transport: string;
   port: number;
   apiKey?: string;
+  experimental?: boolean;
   researchPreview?: boolean;
 }>();
+const experimentalFlag = cliOptions.experimental === true || cliOptions.researchPreview === true;
 
 // Validate transport option
 const allowedTransports = ["stdio", "http"];
@@ -146,9 +155,9 @@ if (TRANSPORT_TYPE === "http" && passedApiKeyFlag) {
   process.exit(1);
 }
 
-if (TRANSPORT_TYPE === "http" && cliOptions.researchPreview) {
+if (TRANSPORT_TYPE === "http" && experimentalFlag) {
   console.error(
-    "The --research-preview flag is not allowed when using --transport http. Clients add ?research_preview=1 to the MCP URL instead."
+    "The --experimental flag is not allowed when using --transport http. Clients add ?experimental=1 to the MCP URL instead."
   );
   process.exit(1);
 }
@@ -169,7 +178,7 @@ let stdioApiKey: string | undefined;
 let stdioClientInfo: { ide?: string; version?: string } | undefined;
 // One session ID per stdio process.
 let stdioSessionId: string | undefined;
-let stdioResearchPreview = false;
+let stdioExperimentalTools: readonly ExperimentalTool[] = [];
 
 /**
  * Get the effective client context
@@ -189,7 +198,7 @@ function getClientContext(toolCtx: ServerContext): ClientContext {
     clientInfo: requestClientInfo ?? stdioClientInfo,
     transport: "stdio",
     sessionId: stdioSessionId,
-    researchPreview: stdioResearchPreview,
+    experimentalTools: stdioExperimentalTools,
   };
 }
 
@@ -264,8 +273,21 @@ function filterBatchSelfCancellations(body: unknown): {
   };
 }
 
-function createMcpServer(mcpContext: McpRequestContext, researchPreview: boolean) {
+/**
+ * Builds the server for one request (HTTP) or one connection (stdio). `experimentalTools` are
+ * the experimental tools to list; `signedIn` says the caller sent a credential, whose dashboard
+ * choice can change the list.
+ */
+function createMcpServer(
+  mcpContext: McpRequestContext,
+  experimentalTools: readonly ExperimentalTool[],
+  signedIn: boolean
+) {
+  const enabled: ReadonlySet<ExperimentalTool> = new Set(experimentalTools);
   const session = instructionsExperiment.sessionConfig(requestContext.getStore()?.instructionsArm);
+  // The lists also differ by arm while the instructions A/B test runs.
+  const callerHint =
+    signedIn || enabled.size > 0 || session.privateLists ? PRIVATE_CACHE_HINT : STATIC_CACHE_HINT;
   const serverInfo = {
     name: "Context7",
     title: SERVER_TITLE,
@@ -286,21 +308,20 @@ function createMcpServer(mcpContext: McpRequestContext, researchPreview: boolean
       prompts: { listChanged: false },
       resources: { listChanged: false, subscribe: false },
     },
-    // These results change only on deploy, so clients may reuse them for an
-    // hour instead of listing on every request. They are the same for every
-    // caller, except tools/list with research preview on: that one is private,
-    // so no shared cache gives the preview tools to other callers.
-    // After a deploy that changes a tool schema, clients can still call with the
-    // old schema for that hour: keep old argument names accepted (aliasArgs).
+    // These results change only on deploy, so clients may reuse them for an hour.
+    // The tools and the instructions (server/discover) depend on the caller's
+    // experimental tools, so with a credential or an experimental tool they are
+    // private and kept 5 minutes. After a deploy that changes a tool schema,
+    // clients can still call with the old schema for that hour: keep old
+    // argument names accepted (aliasArgs).
     cacheHints: {
-      "tools/list":
-        researchPreview || session.privateLists ? PREVIEW_LIST_CACHE_HINT : STATIC_LIST_CACHE_HINT,
-      "prompts/list": STATIC_LIST_CACHE_HINT,
-      "resources/list": STATIC_LIST_CACHE_HINT,
-      "resources/templates/list": STATIC_LIST_CACHE_HINT,
-      "server/discover": session.privateLists ? PREVIEW_LIST_CACHE_HINT : STATIC_LIST_CACHE_HINT,
+      "tools/list": callerHint,
+      "prompts/list": STATIC_CACHE_HINT,
+      "resources/list": STATIC_CACHE_HINT,
+      "resources/templates/list": STATIC_CACHE_HINT,
+      "server/discover": callerHint,
     },
-    instructions: serverInstructions(researchPreview, session.instructions),
+    instructions: serverInstructions(enabled.has(SUBMIT_DOCS_FEEDBACK_TOOL), session.instructions),
   };
   const server = mcpInstrumentation
     ? mcpInstrumentation.createServer(serverInfo, serverOptions, mcpContext)
@@ -323,7 +344,7 @@ Each result includes:
 - Source Reputation: Authority indicator (High, Medium, Low, or Unknown)
 - Benchmark Score: Quality indicator (100 is the highest score)
 - Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.${
-        researchPreview
+        enabled.has(QUERY_CODE_TOOL)
           ? `
 - Source code: present when 'query-code' can usually search the library's source. '/websites/...' and '/llmstxt/...' IDs have docs only.`
           : ""
@@ -391,7 +412,9 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
         };
       }
 
-      const resultsText = formatSearchResults(searchResponse, { sourceCode: researchPreview });
+      const resultsText = formatSearchResults(searchResponse, {
+        sourceCode: enabled.has(QUERY_CODE_TOOL),
+      });
       const responseText = `Available Libraries:\n\n${resultsText}`;
       maybeElicitAuthSignIn(server, ctx);
       recordToolCallTelemetry(ctx, "success");
@@ -471,7 +494,7 @@ If you know the programming language the user is working in, pass it as \`langua
     }
   );
 
-  if (researchPreview) registerResearchPreviewTools(server, getClientContext);
+  registerExperimentalTools(server, getClientContext, enabled);
 
   return server;
 }
@@ -561,8 +584,11 @@ async function main() {
     // before dispatch. Any other silent hang goes idle and the gateway reaps
     // it at streamIdleTimeout (300s) instead of its 1200s hard cap.
     const rawMcpHandler = createMcpHandler(
-      (mcpContext) =>
-        createMcpServer(mcpContext, researchPreviewFromRequest(mcpContext.requestInfo)),
+      // handleMcpRequest resolved the caller's experimental tools before the SDK runs this.
+      (mcpContext) => {
+        const context = requestContext.getStore();
+        return createMcpServer(mcpContext, context?.experimentalTools ?? [], !!context?.apiKey);
+      },
       {
         keepAliveMs: 0,
         // The SDK reports each 4xx answer to a malformed client request as a new
@@ -641,6 +667,7 @@ async function main() {
           return res.status(202).end();
         }
 
+        const experimental = experimentalFromQuery(req.query);
         const context: ClientContext = {
           clientIp: req.ip,
           apiKey,
@@ -648,7 +675,6 @@ async function main() {
           mcpAuthMode: enforcementMode,
           mcpEndpoint: endpoint,
           plugin,
-          researchPreview: isResearchPreviewValue(req.query.research_preview),
           transport: "http",
           instructionsArm: instructionsExperiment.assign({ apiKey, clientIp: req.ip }),
         };
@@ -664,6 +690,13 @@ async function main() {
             filteredBody.body
           );
         });
+        // Every experimental tool by URL flag; else the signed-in user's dashboard choice
+        // (cached per credential). Only POST carries MCP messages.
+        context.experimentalTools = experimental
+          ? EXPERIMENTAL_TOOL_NAMES
+          : req.method === "POST"
+            ? await fetchExperimentalTools(context)
+            : [];
 
         const oauthClientRegistration = classifyOAuthClientRegistration(apiKey);
         observeCredentialedInitialize(res, req.body, {
@@ -870,10 +903,21 @@ async function main() {
         "The API key is an unset variable placeholder such as ${CONTEXT7_API_KEY}. Running without an API key."
       );
     }
-    stdioResearchPreview =
-      cliOptions.researchPreview === true ||
-      isResearchPreviewValue(process.env.CONTEXT7_RESEARCH_PREVIEW);
+    const stdioExperimental =
+      experimentalFlag ||
+      isEnabledFlag(process.env.CONTEXT7_EXPERIMENTAL) ||
+      isEnabledFlag(process.env.CONTEXT7_RESEARCH_PREVIEW);
     stdioSessionId = randomUUID();
+    // Read once at start: a dashboard change shows after the client restarts the server.
+    stdioExperimentalTools = stdioExperimental
+      ? EXPERIMENTAL_TOOL_NAMES
+      : await fetchExperimentalTools(
+          { apiKey: stdioApiKey, transport: "stdio", sessionId: stdioSessionId },
+          (cause) =>
+            console.error(
+              `Could not read your experimental tools choice: ${cause}. The server lists no experimental tools until it restarts.`
+            )
+        );
     const rawStdioTransport = new StdioServerTransport();
     const stdioTransport = mcpInstrumentation
       ? mcpInstrumentation.instrumentStdioTransport(rawStdioTransport)
@@ -881,7 +925,7 @@ async function main() {
 
     const stdioHandle = serveStdio(
       (mcpContext) => {
-        const server = createMcpServer(mcpContext, stdioResearchPreview);
+        const server = createMcpServer(mcpContext, stdioExperimentalTools, !!stdioApiKey);
 
         // Capture client info from MCP initialize handshake (stdio only — HTTP
         // mode plumbs client info through requestContext per request).

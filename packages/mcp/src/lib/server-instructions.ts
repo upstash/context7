@@ -1,4 +1,4 @@
-import { DOCS_FEEDBACK_INSTRUCTIONS } from "./research-preview-tools.js";
+import { DOCS_FEEDBACK_INSTRUCTIONS } from "./experimental-tools.js";
 
 /**
  * Server instructions that MCP clients add to the agent's system prompt.
@@ -33,8 +33,8 @@ export const CLAUDE_CODE_INSTRUCTIONS_LIMIT = 2048;
 
 /**
  * The instructions a session gets: the base text (the current one unless an A/B arm picks
- * another), plus the feedback request under research preview.
+ * another), plus the feedback request when that tool is on.
  */
-export function serverInstructions(researchPreview: boolean, base = SERVER_INSTRUCTIONS): string {
-  return researchPreview ? `${base}\n\n${DOCS_FEEDBACK_INSTRUCTIONS}` : base;
+export function serverInstructions(feedbackRequest: boolean, base = SERVER_INSTRUCTIONS): string {
+  return feedbackRequest ? `${base}\n\n${DOCS_FEEDBACK_INSTRUCTIONS}` : base;
 }

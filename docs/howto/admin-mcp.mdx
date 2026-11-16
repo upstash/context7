@@ -92,7 +92,7 @@ Optional inputs:
 - `generate_docs: true` generates docs from the source of a private repository.
 - `website_base_url` limits a website crawl to pages under that URL.
 
-Confluence, Notion and file uploads are not in this server; add them in the dashboard. To change how a library the teamspace owns is parsed, call `update_library_config` with only the fields to change, then `refresh_library` to apply them. `update_library_config` takes `branch`, `folders`, `exclude_folders`, `exclude_files`, `rules`, `base_url`, `web_url`, `exclude_urls`, `use_query_params` and `keep_version_specific_pages`, among others. `refresh_library` starts a parse and is subject to the daily refresh limit.
+Confluence, Notion and file uploads are not in this server; add them in the dashboard. To change how a library the teamspace owns is parsed, call `update_library_config` with only the fields to change, then `refresh_library` to apply them. `update_library_config` takes `branch`, `folders`, `exclude_folders`, `exclude_files`, `rules`, `base_url`, `web_url`, `exclude_urls`, `use_query_params` and `keep_version_specific_pages`, among others. `folders` and `exclude_folders` take at most 50 entries, `exclude_files` at most 100, and each entry at most 255 characters. `refresh_library` starts a parse and is subject to the daily refresh limit.
 
 ### Versions
 

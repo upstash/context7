@@ -315,6 +315,8 @@ CTX7_TELEMETRY_DISABLED=1 ctx7 docs /reactjs/react.dev "useEffect examples"
 export CTX7_TELEMETRY_DISABLED=1
 ```
 
+Against hosted Context7, the CLI sends anonymous usage events to `context7.com` and checks the npm registry (`registry.npmjs.org`) for a newer `ctx7` version. The update check is cached for 24 hours, so it runs at most once a day, and is skipped for `--json`, `-v`/`--version` and `--base-url`. `CTX7_TELEMETRY_DISABLED` stops the events, not the update check. A custom `--base-url` deployment turns off both.
+
 ---
 
 ## Next Steps

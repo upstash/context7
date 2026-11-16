@@ -6,5 +6,7 @@ export function trackEvent(event: string, data?: Record<string, unknown>): void 
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ event, data }),
+    // Fire and forget, but never keep the process alive on a stalled host.
+    signal: AbortSignal.timeout(3000),
   }).catch(() => {});
 }
