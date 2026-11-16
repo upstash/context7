@@ -36,7 +36,7 @@ npm install -g ctx7@latest
 
 ## Workflow
 
-Two-step process: resolve the library name to an ID, then query docs with that ID.
+Two-step process: resolve the library name to an ID, then query docs with that ID. When the docs do not answer an exact question, search the library's source with `code` (Step 3).
 
 ```bash
 # Step 1: Resolve library ID
@@ -48,7 +48,7 @@ npx ctx7@latest docs <libraryId> "<query>"
 
 You MUST call `library` first to obtain a valid library ID UNLESS the user explicitly provides a library ID in the format `/org/project` or `/org/project/version`.
 
-IMPORTANT: Do not run these commands more than 3 times per question. If you cannot find what you need after 3 attempts, use the best result you have.
+IMPORTANT: Do not run `library` and `docs` more than 3 times per question, and `code` more than 6 times. If you cannot find what you need, use the best result you have.
 
 ## Step 1: Resolve a Library
 
@@ -75,6 +75,7 @@ Each result includes:
 - **Source Reputation** — Authority indicator (High, Medium, Low, or Unknown)
 - **Benchmark Score** — Quality indicator (100 is the highest score)
 - **Versions** — List of versions if available. Use one of those versions if the user provides a version in their query. The format is `/org/project/version`.
+- **Source code** — Present when `code` can search the library's source (see Step 3).
 
 ### Selection process
 
@@ -135,6 +136,29 @@ Describe what to look up in the library's documentation, rather than the task to
 
 The output contains two types of content: **code snippets** (titled, with language-tagged blocks) and **info snippets** (prose explanations with breadcrumb context).
 
+## Step 3: Search the Source
+
+When the docs do not answer an exact question (a signature or type, a default value, an option name, where an error message comes from, or how something works inside), search the library's source at the docs version. Use a library ID whose `library` result shows "Source code", usually the GitHub repository. `/websites/...` and `/llmstxt/...` IDs have no source.
+
+```bash
+# Grep: a regex matched within one line. Quote it.
+npx ctx7@latest code /colinhacks/zod 'safeExtend'
+npx ctx7@latest code /tanstack/query 'invalidateQueries\(' --path packages/query-core
+
+# Plain text, such as an error message
+npx ctx7@latest code /pydantic/pydantic -F 'Input should be a valid integer'
+
+# Find a definition, then read the file range the answer names
+npx ctx7@latest code /colinhacks/zod/v3.24.2 ZodEffects --op definition
+npx ctx7@latest code /tokio-rs/tokio --op read --path 'tokio/src/task/spawn.rs#L1-L60'
+```
+
+- Search one identifier or one exact phrase, not several keywords: `'isValidScope'`, not `'Invalid scopes isValidScope authorization endpoint'`. Join alternatives with `|`
+- For a version, add its git tag to the library ID exactly as the repository spells it (`/colinhacks/zod/v3.24.2`, `/keycloak/keycloak/26.8.2`); do not add or drop a `v`
+- Follow the `Next:` line of the output. Its fields map to flags: `offset` is `--offset`, `head_limit` is `--head-limit`, `output_mode "count"` is `-c`, `fixed_strings` is `-F`, `ignore_case` is `-i`, `version` is `--tag`, and `read: <file>#L..` is `--op read --path '<file>#L..'`
+- Exit code 75 means the source is being indexed: run the same command again every 30 seconds for up to 3 minutes, then answer from `docs`
+- Do not run more than 6 `code` commands per question. Cite the file and line of the source you used
+
 ## Authentication
 
 Works without authentication. For higher rate limits:
@@ -163,4 +187,6 @@ Do not silently fall back to training data — always tell the user why Context7
 - Always run `npx ctx7@latest library` first — `npx ctx7@latest docs react "hooks"` will fail without a valid ID
 - Use descriptive queries, not single words — `"React useEffect cleanup function"` not `"hooks"`
 - One topic per query — split `"routing and auth and caching"` into a separate `docs` command per concept, unless the question is about how they interact
+- Quote a `code` pattern, and search one identifier or phrase — several unquoted words are split by the shell, and several keywords match no single line
+- Spell a version tag as the repository does — `/keycloak/keycloak/26.8.2`, not `/keycloak/keycloak/v26.8.2`
 - Do not include sensitive information (API keys, passwords, credentials) in queries

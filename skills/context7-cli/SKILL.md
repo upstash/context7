@@ -5,7 +5,7 @@ description: Use the ctx7 CLI to fetch library documentation and configure Conte
 
 # ctx7 CLI
 
-The Context7 CLI does two things: fetches up-to-date library documentation and sets up Context7 MCP for your editor.
+The Context7 CLI fetches up-to-date library documentation, searches a library's source code, and sets up Context7 MCP for your editor.
 
 Make sure the CLI is up to date before running commands:
 
@@ -21,7 +21,7 @@ npx ctx7@latest <command>
 
 ## What this skill covers
 
-- **[Documentation](references/docs.md)** — Fetch current docs for any library. Use when writing code, verifying API signatures, or when training data may be outdated.
+- **[Documentation](references/docs.md)** — Fetch current docs for any library. Use when writing code, verifying API signatures, or when training data may be outdated. Also covers searching a library's source with `ctx7 code`.
 - **[Setup](references/setup.md)** — Configure Context7 MCP for Claude Code / Cursor / OpenCode.
 
 ## Quick Reference
@@ -31,6 +31,8 @@ npx ctx7@latest <command>
 ctx7 search <query>                   # Search all libraries in one step
 ctx7 library <name> <query>           # Step 1: resolve library ID
 ctx7 docs <libraryId> <query>         # Step 2: fetch docs
+ctx7 code <libraryId> '<regex>'       # Search the library's source (grep)
+ctx7 code <libraryId> --op read --path '<file>#L10-L40'  # Read a file range
 
 # Setup
 ctx7 setup                            # Configure Context7 MCP (interactive)
@@ -59,3 +61,5 @@ export CONTEXT7_API_KEY=your_key
 
 - Library IDs require a `/` prefix — `/reactjs/react.dev` not `reactjs/react.dev`
 - Always run `ctx7 library` first — `ctx7 docs react "hooks"` will fail without a valid ID
+- Quote a `ctx7 code` pattern and search one identifier or phrase, not several keywords
+- Spell a version tag as the repository does — `/keycloak/keycloak/26.8.2`, not `/keycloak/keycloak/v26.8.2`
