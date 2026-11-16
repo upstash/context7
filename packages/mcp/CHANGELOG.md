@@ -1,5 +1,15 @@
 # @upstash/context7-mcp
 
+## 4.7.1
+
+### Patch Changes
+
+- d80a84c: While a library's source is being indexed, `ctx7 code` and `query-code` now say to call again for up to 3 minutes instead of at most twice: a first index usually takes 1 to 3 minutes. When the server message already gives this rule, the clients no longer repeat it.
+- d53d88d: The research preview is now called experimental tools. Each signed-in user picks the experimental tools to list at Settings > MCP Tools in the Context7 dashboard, where "All experimental tools" also includes tools added later. The old flags (`--research-preview`, `CONTEXT7_RESEARCH_PREVIEW=1`, `?research_preview=1`) and the new `--experimental`, `CONTEXT7_EXPERIMENTAL=1` and `?experimental=1` still turn on every experimental tool.
+- 6e469e3: Update `@modelcontextprotocol/node` to 2.1.2 and `@modelcontextprotocol/server` to 2.4.0, which bring in security fixes for `@hono/node-server`, `hono` and their dependencies.
+- 0718ba8: `query-code` no longer greps a docs-style `query` of several words, which matched nothing: it answers with a correction that `pattern` is a regex matched within one line. A one-word `query`, or a phrase with `fixed_strings`, still works as the pattern. `pattern` now takes up to 1000 characters, like the server.
+- c5e26f6: Describe query-code references as name matches, resolved only for libraries with a SCIP index
+
 ## 4.7.0
 
 ### Minor Changes
