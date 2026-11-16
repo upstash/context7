@@ -530,45 +530,38 @@ export async function fetchLibraryContext(
 const EXPERIMENTAL_TOOLS_TIMEOUT_MS = 3_000;
 /** How long a credential's choice is reused. A dashboard change shows within this time. */
 const EXPERIMENTAL_TOOLS_TTL_MS = 60_000;
-/** A failed lookup lists no experimental tools, and is tried again sooner. */
+/** After a failed lookup the last known choice (or none) is kept, and asked again sooner. */
 const EXPERIMENTAL_TOOLS_FAILURE_TTL_MS = 15_000;
 const EXPERIMENTAL_TOOLS_CACHE_LIMIT = 10_000;
 
-const experimentalToolsCache = new Map<string, { tools: ExperimentalTool[]; expiresAt: number }>();
+type ExperimentalToolsEntry = { tools: ExperimentalTool[]; expiresAt: number };
+type ExperimentalToolsLookup = { tools: ExperimentalTool[]; failure?: string };
 
-/** Test hook: forget every cached choice. */
-export function clearExperimentalToolsCache(): void {
-  experimentalToolsCache.clear();
+const experimentalToolsCache = new Map<string, ExperimentalToolsEntry>();
+/** One lookup per credential at a time: parallel requests share it. */
+const experimentalToolsInFlight = new Map<string, Promise<ExperimentalToolsLookup>>();
+
+function rememberExperimentalTools(cacheKey: string, tools: ExperimentalTool[], ttlMs: number) {
+  experimentalToolsCache.delete(cacheKey);
+  if (experimentalToolsCache.size >= EXPERIMENTAL_TOOLS_CACHE_LIMIT) {
+    // Maps keep insertion order: drop the oldest entry.
+    const oldest = experimentalToolsCache.keys().next().value;
+    if (oldest !== undefined) experimentalToolsCache.delete(oldest);
+  }
+  experimentalToolsCache.set(cacheKey, { tools, expiresAt: Date.now() + ttlMs });
 }
 
-/**
- * The experimental tools the credential's user turned on in the dashboard
- * (`GET /v2/mcp/experimental-tools`). Without a credential, or when the call fails, none: the
- * server then lists only the stable tools. Cached per credential (a hash, never the token) so a
- * session does not ask on every request.
- */
-export async function fetchExperimentalTools(
+async function lookUpExperimentalTools(
   context: ClientContext,
-  now = Date.now()
-): Promise<ExperimentalTool[]> {
-  const { apiKey } = context;
-  if (!apiKey) return [];
-
-  const cacheKey = createHash("sha256").update(apiKey).digest("hex");
-  const cached = experimentalToolsCache.get(cacheKey);
-  if (cached && cached.expiresAt > now) return cached.tools;
-
-  const remember = (tools: ExperimentalTool[], ttlMs: number) => {
-    experimentalToolsCache.delete(cacheKey);
-    if (experimentalToolsCache.size >= EXPERIMENTAL_TOOLS_CACHE_LIMIT) {
-      // Maps keep insertion order: drop the oldest entry.
-      const oldest = experimentalToolsCache.keys().next().value;
-      if (oldest !== undefined) experimentalToolsCache.delete(oldest);
-    }
-    experimentalToolsCache.set(cacheKey, { tools, expiresAt: now + ttlMs });
-    return tools;
+  cacheKey: string
+): Promise<ExperimentalToolsLookup> {
+  // On failure keep the last known choice, even an expired one, so an outage of the app does
+  // not take tools away from a session; only a credential never read lists none.
+  const fail = (failure: string): ExperimentalToolsLookup => {
+    const tools = experimentalToolsCache.get(cacheKey)?.tools ?? [];
+    rememberExperimentalTools(cacheKey, tools, EXPERIMENTAL_TOOLS_FAILURE_TTL_MS);
+    return { tools, failure };
   };
-
   try {
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/mcp/experimental-tools`);
     // No experimental header here: this call decides whether there are any.
@@ -579,18 +572,59 @@ export async function fetchExperimentalTools(
       () => fetch(url, { headers, signal: abortSignal }),
       async (response) => {
         if (!response.ok) {
-          return remember([], EXPERIMENTAL_TOOLS_FAILURE_TTL_MS);
+          const json = await readJson<{ error?: string }>(response);
+          // As parseErrorResponse: an expired sign-in gets the HTTP 401 challenge next request.
+          if (
+            response.status === 401 &&
+            context.transport === "http" &&
+            (isOpaqueOAuthToken(context.apiKey) || isClerkOAuthJwt(context.apiKey)) &&
+            (json?.error === INVALID_OAUTH_TOKEN_ERROR_CODE || json?.error === undefined)
+          ) {
+            rememberInvalidOAuthToken(context.apiKey);
+          }
+          return fail(`the Context7 API answered HTTP ${response.status}`);
         }
         const body = await readJson<{ all?: unknown; tools?: unknown }>(response);
         // `all` is every experimental tool this server has, also ones the app does not know yet.
         const tools =
           body?.all === true ? [...EXPERIMENTAL_TOOL_NAMES] : experimentalToolsFrom(body?.tools);
-        return remember(tools, EXPERIMENTAL_TOOLS_TTL_MS);
+        rememberExperimentalTools(cacheKey, tools, EXPERIMENTAL_TOOLS_TTL_MS);
+        return { tools };
       },
       { abortSignal }
     );
   } catch (error) {
-    console.error("Error reading experimental tools:", error);
-    return remember([], EXPERIMENTAL_TOOLS_FAILURE_TTL_MS);
+    return fail(`the Context7 API could not be reached (${error})`);
   }
+}
+
+/**
+ * The experimental tools the credential's user turned on in the dashboard
+ * (`GET /v2/mcp/experimental-tools`). Without a credential none: the server then lists only the
+ * stable tools. When the lookup fails, the last known choice (or none) and `onFailure` gets the
+ * cause. Cached per credential (a hash, never the token) so a session does not ask on every
+ * request.
+ */
+export async function fetchExperimentalTools(
+  context: ClientContext,
+  onFailure: (cause: string) => void = (cause) =>
+    console.error(`Error reading experimental tools: ${cause}`)
+): Promise<ExperimentalTool[]> {
+  const { apiKey } = context;
+  if (!apiKey) return [];
+
+  const cacheKey = createHash("sha256").update(apiKey).digest("hex");
+  const cached = experimentalToolsCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.tools;
+
+  let lookup = experimentalToolsInFlight.get(cacheKey);
+  if (!lookup) {
+    lookup = lookUpExperimentalTools(context, cacheKey).finally(() =>
+      experimentalToolsInFlight.delete(cacheKey)
+    );
+    experimentalToolsInFlight.set(cacheKey, lookup);
+  }
+  const { tools, failure } = await lookup;
+  if (failure) onFailure(failure);
+  return tools;
 }
