@@ -3,7 +3,7 @@ import * as os from "os";
 import pc from "picocolors";
 import { confirm } from "@inquirer/prompts";
 import { CLI_CLIENT_ID } from "../constants.js";
-import { getBaseUrl } from "./api.js";
+import { getBaseUrl, isHostedDeployment } from "./api.js";
 import { acquireFileLock, type ReleaseLock } from "./file-lock.js";
 import {
   CREDENTIALS_FILE_NAME,
@@ -272,6 +272,8 @@ async function refreshAndStore(
 export async function getValidAccessToken(
   options: GetValidAccessTokenOptions = {}
 ): Promise<string | undefined> {
+  // `ctx7 login` signs in to hosted Context7 only, so its tokens never go to a custom deployment.
+  if (!isHostedDeployment()) return undefined;
   const tokens = loadTokens();
   if (!tokens) return undefined;
 

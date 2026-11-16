@@ -13,6 +13,10 @@ export function setBaseUrl(url: string): void {
   baseUrl = url;
 }
 
+export function isHostedDeployment(): boolean {
+  return baseUrl === DEFAULT_CONTEXT7_BASE_URL;
+}
+
 /** The deployment URL from `--base-url`, else from `CONTEXT7_BASE_URL`. */
 export function configuredBaseUrl(flag?: string, env = process.env): string | undefined {
   return flag?.trim() || env.CONTEXT7_BASE_URL?.trim() || undefined;

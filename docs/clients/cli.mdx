@@ -145,7 +145,11 @@ ctx7 library react "How to clean up useEffect"
 ctx7 docs /your-org/your-repo "How to configure the client"
 ```
 
-`--base-url` wins when both are set. `ctx7 search` and `ctx7 code` are available only on hosted Context7.
+`--base-url` wins when both are set. A custom deployment authenticates with `CONTEXT7_API_KEY` only: the CLI does not send your `ctx7 login` session to it. `ctx7 search`, `ctx7 code` and `ctx7 get-upgrade-guide` are available only on hosted Context7.
+
+<Note>
+  `CONTEXT7_BASE_URL` is the deployment's root URL, without `/api`. The MCP server reads a different variable, `CONTEXT7_API_URL`, which ends in `/api`.
+</Note>
 
 ---
 
