@@ -289,6 +289,14 @@ describe("update notifications", () => {
     expect(shouldSkipUpdateNotifier(["node", "ctx7", "--base-url=https://context7.internal"])).toBe(
       true
     );
-    expect(shouldSkipUpdateNotifier(["node", "ctx7", "docs", "/a/b", "q"])).toBe(false);
+    expect(shouldSkipUpdateNotifier(["node", "ctx7", "docs", "/a/b", "q"], {})).toBe(false);
+  });
+
+  test("skips the update notifier when CONTEXT7_BASE_URL is set", () => {
+    const argv = ["node", "ctx7", "docs", "/a/b", "q"];
+    expect(shouldSkipUpdateNotifier(argv, { CONTEXT7_BASE_URL: "https://context7.internal" })).toBe(
+      true
+    );
+    expect(shouldSkipUpdateNotifier(argv, { CONTEXT7_BASE_URL: "  " })).toBe(false);
   });
 });

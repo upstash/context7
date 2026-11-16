@@ -7,7 +7,7 @@ import { registerRemoveCommand } from "./commands/remove.js";
 import { registerDocsCommands } from "./commands/docs.js";
 import { registerSearchCommand } from "./commands/search.js";
 import { maybeShowUpgradeNotice, registerUpgradeCommand } from "./commands/upgrade.js";
-import { setBaseUrl } from "./utils/api.js";
+import { configuredBaseUrl, setBaseUrl } from "./utils/api.js";
 import { VERSION } from "./constants.js";
 
 const brand = {
@@ -21,11 +21,11 @@ program
   .name("ctx7")
   .description("Context7 CLI - Fetch documentation context and configure Context7")
   .version(VERSION, "-v, --version")
-  .option("--base-url <url>", "Use a custom Context7 deployment URL")
+  .option("--base-url <url>", "Use a custom Context7 deployment URL (default: $CONTEXT7_BASE_URL)")
   .hook("preAction", (thisCommand) => {
-    const opts = thisCommand.opts();
-    if (opts.baseUrl) {
-      setBaseUrl(opts.baseUrl);
+    const baseUrl = configuredBaseUrl(thisCommand.opts().baseUrl);
+    if (baseUrl) {
+      setBaseUrl(baseUrl);
     }
   })
   .hook("preAction", async (_thisCommand, actionCommand) => {

@@ -290,7 +290,8 @@ export async function markUpdateNotificationShown(
   );
 }
 
-export function shouldSkipUpdateNotifier(argv = process.argv): boolean {
+export function shouldSkipUpdateNotifier(argv = process.argv, env = process.env): boolean {
+  if (env.CONTEXT7_BASE_URL?.trim()) return true;
   return argv.some(
     (arg) =>
       arg === "--json" ||
