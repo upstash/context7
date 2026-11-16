@@ -32,7 +32,7 @@ ctx7 search <query>                   # Search all libraries in one step
 ctx7 library <name> <query>           # Step 1: resolve library ID
 ctx7 docs <libraryId> <query>         # Step 2: fetch docs
 ctx7 code <libraryId> '<regex>'       # Search the library's source (grep)
-ctx7 code <libraryId> --op read --path '<file>#L10-L40'  # Read a file range
+ctx7 read <libraryId> '<file>#L10-L40'         # Read a file range
 
 # Setup
 ctx7 setup                            # Configure Context7 MCP (interactive)

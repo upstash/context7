@@ -147,12 +147,12 @@ ctx7 code /pydantic/pydantic -F 'Input should be a valid integer'
 
 # Find a definition, then read the file range the answer names
 ctx7 code /colinhacks/zod/v3.24.2 ZodEffects --op definition
-ctx7 code /tokio-rs/tokio --op read --path 'tokio/src/task/spawn.rs#L1-L60'
+ctx7 read /tokio-rs/tokio 'tokio/src/task/spawn.rs#L1-L60'
 ```
 
 - Search one identifier or one exact phrase, not several keywords: `'isValidScope'`, not `'Invalid scopes isValidScope authorization endpoint'`. Join alternatives with `|`
 - For a version, add its git tag to the library ID exactly as the repository spells it (`/colinhacks/zod/v3.24.2`, `/keycloak/keycloak/26.8.2`); do not add or drop a `v`
-- Follow the `Next:` line of the output. Its fields map to flags: `offset` is `--offset`, `head_limit` is `--head-limit`, `output_mode "count"` is `-c`, `fixed_strings` is `-F`, `ignore_case` is `-i`, `version` is `--tag`, and `read: <file>#L..` is `--op read --path '<file>#L..'`
+- Follow the `Next:` line of the output: it gives the next command or flag to run (`ctx7 read ...`, `--offset 20`, `-F`)
 - Exit code 75 means the source is being indexed: run the same command again every 30 seconds for up to 3 minutes, then answer from `docs`
 - Do not run more than 6 `code` commands per question. Cite the file and line of the source you used
 
