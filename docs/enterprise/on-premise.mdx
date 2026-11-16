@@ -167,8 +167,22 @@ CONTEXT7_API_KEY=ctx7op-... ctx7 setup --mcp --yes \
 You can use `--api-key ctx7op-...` instead, but command-line arguments may be retained in shell history. Setup writes the MCP client configuration, a Context7 rule, and a bundled `context7-mcp` skill. The bundled files mean the deployment does not need to expose Context7 Cloud's skill APIs.
 
 <Note>
-  Custom `--base-url` setup uses the deployment's Streamable HTTP endpoint. Hosted OAuth, local stdio transport, and CLI-query mode are not available for on-premise targets.
+  Custom `--base-url` setup uses the deployment's Streamable HTTP endpoint. Hosted OAuth, local stdio transport, and the CLI + Skills setup mode are not available for on-premise targets.
 </Note>
+
+### Query from the CLI
+
+Without an MCP client, `ctx7 library` and `ctx7 docs` query the deployment directly. Set its root URL and a personal API key once:
+
+```bash
+export CONTEXT7_BASE_URL=https://context7.internal.yourcompany.com
+export CONTEXT7_API_KEY=ctx7op-...
+
+ctx7 library my-repo "How to configure the client"
+ctx7 docs /my-org/my-repo "How to configure the client"
+```
+
+`ctx7 search` and `ctx7 code` are available only on hosted Context7.
 
 ### Manual configuration
 

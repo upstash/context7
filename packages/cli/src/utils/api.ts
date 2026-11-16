@@ -13,6 +13,11 @@ export function setBaseUrl(url: string): void {
   baseUrl = url;
 }
 
+/** The deployment URL from `--base-url`, else from `CONTEXT7_BASE_URL`. */
+export function configuredBaseUrl(flag?: string, env = process.env): string | undefined {
+  return flag?.trim() || env.CONTEXT7_BASE_URL?.trim() || undefined;
+}
+
 function getAuthHeaders(accessToken?: string): Record<string, string> {
   const headers: Record<string, string> = {
     "X-Context7-Source": "cli",
