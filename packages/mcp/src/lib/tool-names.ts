@@ -4,17 +4,31 @@ export const SUBMIT_DOCS_FEEDBACK_TOOL = "submit-docs-feedback" as const;
 export const QUERY_CODE_TOOL = "query-code" as const;
 export const GET_UPGRADE_GUIDE_TOOL = "get-upgrade-guide" as const;
 
-/** Tools listed only with research preview on (see research-preview-tools.ts). */
-export const RESEARCH_PREVIEW_TOOL_NAMES = [
-  SUBMIT_DOCS_FEEDBACK_TOOL,
-  GET_UPGRADE_GUIDE_TOOL,
+/**
+ * Experimental tools (see experimental-tools.ts). Each is listed only when it is turned on: all
+ * of them with `--experimental`, `CONTEXT7_EXPERIMENTAL=1` or `?experimental=1`, or the ones the
+ * signed-in user turned on at context7.com/dashboard?tab=settings. "All experimental tools"
+ * there turns on every name in this list, also one the app does not list yet. Keep in step with
+ * the app's `EXPERIMENTAL_TOOLS` (context7app `lib/mcp/experimentalTools.ts`).
+ */
+export const EXPERIMENTAL_TOOL_NAMES = [
   QUERY_CODE_TOOL,
+  GET_UPGRADE_GUIDE_TOOL,
+  SUBMIT_DOCS_FEEDBACK_TOOL,
 ] as const;
+
+export type ExperimentalTool = (typeof EXPERIMENTAL_TOOL_NAMES)[number];
+
+/** Known experimental tool names in catalog order, without duplicates. */
+export function experimentalToolsFrom(values: unknown): ExperimentalTool[] {
+  if (!Array.isArray(values)) return [];
+  return EXPERIMENTAL_TOOL_NAMES.filter((name) => values.includes(name));
+}
 
 export const MCP_TOOL_NAMES = [
   QUERY_DOCS_TOOL,
   RESOLVE_LIBRARY_ID_TOOL,
-  ...RESEARCH_PREVIEW_TOOL_NAMES,
+  ...EXPERIMENTAL_TOOL_NAMES,
 ] as const;
 
 export type McpTool = (typeof MCP_TOOL_NAMES)[number];
