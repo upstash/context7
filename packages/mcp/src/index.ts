@@ -33,6 +33,7 @@ import {
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import {
   EXPERIMENTAL_TOOL_NAMES,
+  experimentalToolsLookupFor,
   QUERY_CODE_TOOL,
   QUERY_DOCS_TOOL,
   RESOLVE_LIBRARY_ID_TOOL,
@@ -599,6 +600,9 @@ async function main() {
       onerror: (error) => console.error("MCP node adapter error:", error),
     });
     const authMode = parseMcpAuthMode();
+    // MCP_EXPERIMENTAL_TOOLS_LOOKUP=off stops the dashboard lookups without a rollback: signed-in
+    // callers then get experimental tools only from the URL flag.
+    const experimentalToolsLookupEnabled = process.env.MCP_EXPERIMENTAL_TOOLS_LOOKUP !== "off";
     // Read again per token; parsed here so a typo fails startup, not requests.
     parseOAuthAudienceEnforcement();
 
@@ -665,11 +669,17 @@ async function main() {
           transport: "http",
         };
         // Every experimental tool by URL flag; else the signed-in user's dashboard choice
-        // (cached per credential). Only POST carries MCP messages.
+        // (cached per credential). Only POST carries MCP messages. Listing refreshes the choice;
+        // initialize and experimental tool calls ask only when this process has none; the rest
+        // use the cached choice.
         context.experimentalTools = experimental
           ? EXPERIMENTAL_TOOL_NAMES
           : req.method === "POST"
-            ? await fetchExperimentalTools(context)
+            ? await fetchExperimentalTools(context, undefined, {
+                lookUp: experimentalToolsLookupEnabled
+                  ? experimentalToolsLookupFor(req.body)
+                  : "never",
+              })
             : [];
 
         const oauthClientRegistration = classifyOAuthClientRegistration(apiKey);
