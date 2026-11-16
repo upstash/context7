@@ -1,24 +1,38 @@
 ---
-title: Research Preview
+title: Experimental Tools
 description: Turn on experimental Context7 MCP tools, such as documentation feedback, upgrade guides and source code search
 ---
 
-The research preview gives your agent experimental tools from the Context7 MCP server. It is off by default. Tools in the preview can change or be removed without notice.
+Experimental tools are Context7 MCP tools that are still in development. They are off by default. They can change or be removed without notice.
 
-The research preview currently adds three tools: [documentation feedback](#documentation-feedback), [upgrade guides](#upgrade-guides) and [source code search](#source-code-search).
+There are three experimental tools: [documentation feedback](#documentation-feedback), [upgrade guides](#upgrade-guides) and [source code search](#source-code-search).
 
-## Turn it on
+## Turn them on
 
-### Remote server
+### From the dashboard
 
-Add `research_preview=1` to the server URL:
+1. Open [Dashboard > Settings > MCP Tools](https://context7.com/dashboard?tab=settings) in the Context7 dashboard.
+2. Turn on **All experimental tools**, or turn on only the tools that you want.
+
+**All experimental tools** also turns on the experimental tools that we add later. The core tools, `resolve-library-id` and `query-docs`, are always on.
+
+The server lists the tools you turned on when your MCP client signs in with your Context7 account (OAuth) or sends one of your API keys. You do not need to change the client configuration.
+
+- Remote server: a change shows within a few minutes. To see it at once, reconnect the server or start a new session.
+- Local server: the server reads your choice when it starts, so restart it after a change. This needs `@upstash/context7-mcp` 4.8.0 or later.
+
+To turn a tool off, turn its switch off.
+
+### For every tool at once
+
+To list every experimental tool, also without a sign-in, add `experimental=1` to the server URL:
 
 ```json
 {
   "mcpServers": {
     "context7": {
       "type": "http",
-      "url": "https://mcp.context7.com/mcp?research_preview=1",
+      "url": "https://mcp.context7.com/mcp?experimental=1",
       "headers": { "Authorization": "Bearer YOUR_API_KEY" }
     }
   }
@@ -28,33 +42,31 @@ Add `research_preview=1` to the server URL:
 With Claude Code:
 
 ```bash
-claude mcp add --scope user --header "Authorization: Bearer YOUR_API_KEY" --transport http context7 "https://mcp.context7.com/mcp?research_preview=1"
+claude mcp add --scope user --header "Authorization: Bearer YOUR_API_KEY" --transport http context7 "https://mcp.context7.com/mcp?experimental=1"
 ```
 
-The OAuth endpoint takes the same parameter: `https://mcp.context7.com/mcp/oauth?research_preview=1`.
+The OAuth endpoint takes the same parameter: `https://mcp.context7.com/mcp/oauth?experimental=1`.
 
-### Local server
-
-Pass `--research-preview`, or set `CONTEXT7_RESEARCH_PREVIEW=1`. This needs `@upstash/context7-mcp` 4.5.0 or later.
+For the local server, pass `--experimental`, or set `CONTEXT7_EXPERIMENTAL=1`:
 
 ```json
 {
   "mcpServers": {
     "context7": {
       "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp@latest", "--api-key", "YOUR_API_KEY", "--research-preview"]
+      "args": ["-y", "@upstash/context7-mcp@latest", "--api-key", "YOUR_API_KEY", "--experimental"]
     }
   }
 }
 ```
 
-Start a new session after you change the configuration, so that your client loads the new tools.
+The old names `research_preview=1`, `--research-preview` and `CONTEXT7_RESEARCH_PREVIEW=1` still work.
 
-To turn the research preview off, remove the parameter, the flag or the variable.
+Start a new session after you change the configuration, so that your client loads the new tools.
 
 ## Documentation feedback
 
-With the research preview on, the server lists a `submit-docs-feedback` tool, and its instructions ask the agent to call it once for each library after it answers with `query-docs`. The agent rates how well the documentation answered the question:
+With documentation feedback on, the server lists a `submit-docs-feedback` tool, and its instructions ask the agent to call it once for each library after it answers with `query-docs`. The agent rates how well the documentation answered the question:
 
 | Field | Description |
 | --- | --- |
@@ -81,7 +93,7 @@ approval_mode = "approve"
 
 ## Upgrade guides
 
-With the research preview on, the server also lists a `get-upgrade-guide` tool. The agent calls it when you upgrade a library, or ask what changed between two versions. It returns one guide with the prerequisites, codemods, breaking changes, deprecations, and behavior and config changes from the release notes, changelogs and migration guides of every release in between, each with its source. It adds the public API changes found in the source code of both versions, including those no note mentions. The target version does not contain releases of an older line published after a newer line had started, such as Express 4.x releases published after 5.0.0, so the guide leaves them out and names them in its header.
+With upgrade guides on, the server lists a `get-upgrade-guide` tool. The agent calls it when you upgrade a library, or ask what changed between two versions. It returns one guide with the prerequisites, codemods, breaking changes, deprecations, and behavior and config changes from the release notes, changelogs and migration guides of every release in between, each with its source. It adds the public API changes found in the source code of both versions, including those no note mentions. The target version does not contain releases of an older line published after a newer line had started, such as Express 4.x releases published after 5.0.0, so the guide leaves them out and names them in its header.
 
 | Field | Description |
 | --- | --- |
@@ -106,7 +118,7 @@ Without the MCP server, the `ctx7 get-upgrade-guide` command returns the same gu
 
 ## Source code search
 
-With the research preview on, the server also lists a `query-code` tool, and `resolve-library-id` marks the libraries whose source it can search with `Source code: searchable with query-code`. The agent uses it when the docs do not answer an exact question, such as a signature, a default value, an option name, or where an error message comes from. It searches and reads the library's source at the commit its docs describe.
+With source code search on, the server lists a `query-code` tool, and `resolve-library-id` marks the libraries whose source it can search with `Source code: searchable with query-code`. The agent uses it when the docs do not answer an exact question, such as a signature, a default value, an option name, or where an error message comes from. It searches and reads the library's source at the commit its docs describe.
 
 | Field | Description |
 | --- | --- |

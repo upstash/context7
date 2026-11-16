@@ -81,7 +81,7 @@ function limitedNumber(key: LimitedField) {
   return z.number().int().min(min).max(max).optional();
 }
 
-/** Registers query-code. Experimental: called from registerResearchPreviewTools. */
+/** Registers query-code. Experimental: called from registerExperimentalTools. */
 export function registerQueryCodeTool(
   server: McpServer,
   getClientContext: (toolCtx: ServerContext) => ClientContext

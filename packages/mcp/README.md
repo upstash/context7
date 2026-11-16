@@ -1429,7 +1429,7 @@ Context7 MCP provides the following tools that LLMs can use:
   - `query` (required): The concept to look up, scoped to a single topic
   - `language` (optional): The programming language you write in, used to rank code examples in that language first
 
-- `query-code` (research preview): Searches and reads a library's source code at the version its docs describe, like ripgrep and go-to-definition on a checkout of that version. Listed only with research preview on: `--research-preview` or `CONTEXT7_RESEARCH_PREVIEW=1` (stdio), or `?research_preview=1` on the MCP URL (HTTP).
+- `query-code` (experimental): Searches and reads a library's source code at the version its docs describe, like ripgrep and go-to-definition on a checkout of that version. Listed only when it is on: turn it on at [Dashboard > Settings > MCP Tools](https://context7.com/dashboard?tab=settings) for a signed-in client, or turn on every experimental tool with `--experimental` or `CONTEXT7_EXPERIMENTAL=1` (stdio), or `?experimental=1` on the MCP URL (HTTP).
   - `libraryId` (required): Context7 library ID (e.g., `/vercel/next.js`)
   - `version` (optional): a git tag of the library (e.g., `v3.24.2`); default is the commit the latest docs describe
   - `operation` (optional): `grep` (default), `definition`, `references` (resolved with SCIP where indexed), `outline`, `read` or `list`

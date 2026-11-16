@@ -1,4 +1,4 @@
-import type { ToolCallOutcome } from "./tool-names.js";
+import type { ExperimentalTool, ToolCallOutcome } from "./tool-names.js";
 
 export interface SearchResult {
   id: string;
@@ -86,8 +86,16 @@ export interface ClientContext {
   mcpAuthMode?: "observe" | "required";
   transport?: "stdio" | "http";
   sessionId?: string;
-  /** Research preview is on; sent as `X-Context7-Research-Preview: 1` so the app counts preview use. */
-  researchPreview?: boolean;
+  /**
+   * All experimental tools were turned on by flag, env var or `?experimental=1` (otherwise the
+   * signed-in user's dashboard choice decides).
+   */
+  experimental?: boolean;
+  /**
+   * The experimental tools this server lists; a non-empty list is sent as
+   * `X-Context7-Experimental: 1` so the app counts experimental use.
+   */
+  experimentalTools?: readonly ExperimentalTool[];
   /** Mutable: set by the upstream API layer when the backend signals the
    *  client should be prompted to sign in. Read by the auth-prompt wrapper. */
   shouldPrompt?: boolean;

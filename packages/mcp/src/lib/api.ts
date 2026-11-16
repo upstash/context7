@@ -5,8 +5,15 @@ import {
   ClientContext,
   CodeRequest,
 } from "./types.js";
-import type { DocsFeedback, UpgradeGuideRequest } from "./research-preview-tools.js";
-import { GET_UPGRADE_GUIDE_TOOL, type ToolCallOutcome } from "./tool-names.js";
+import type { DocsFeedback, UpgradeGuideRequest } from "./experimental-tools.js";
+import {
+  EXPERIMENTAL_TOOL_NAMES,
+  experimentalToolsFrom,
+  GET_UPGRADE_GUIDE_TOOL,
+  type ExperimentalTool,
+  type ToolCallOutcome,
+} from "./tool-names.js";
+import { createHash } from "node:crypto";
 import { generateHeaders } from "./encryption.js";
 import { Agent, ProxyAgent, setGlobalDispatcher } from "undici";
 import { CONTEXT7_API_BASE_URL } from "./constants.js";
@@ -31,7 +38,7 @@ const API_TIMEOUT_MS = 60_000;
 const EXPIRED_SIGN_IN_MESSAGE =
   "Your Context7 sign-in expired. Retry the request so your MCP client can refresh the sign-in.";
 
-/** What a research preview tool shows the agent, and the outcome its telemetry records. */
+/** What an experimental tool shows the agent, and the outcome its telemetry records. */
 export type ToolAnswer = { text: string; outcome: ToolCallOutcome };
 
 /** The response body as JSON, or undefined when it is not JSON. */
@@ -516,5 +523,74 @@ export async function fetchLibraryContext(
     const errorMessage = `Error fetching library context. Please try again later. ${error}`;
     console.error(errorMessage);
     return { data: errorMessage, outcome: "error" };
+  }
+}
+
+/** Ceiling on the settings call: it runs before a request is served, so it must stay short. */
+const EXPERIMENTAL_TOOLS_TIMEOUT_MS = 3_000;
+/** How long a credential's choice is reused. A dashboard change shows within this time. */
+const EXPERIMENTAL_TOOLS_TTL_MS = 60_000;
+/** A failed lookup lists no experimental tools, and is tried again sooner. */
+const EXPERIMENTAL_TOOLS_FAILURE_TTL_MS = 15_000;
+const EXPERIMENTAL_TOOLS_CACHE_LIMIT = 10_000;
+
+const experimentalToolsCache = new Map<string, { tools: ExperimentalTool[]; expiresAt: number }>();
+
+/** Test hook: forget every cached choice. */
+export function clearExperimentalToolsCache(): void {
+  experimentalToolsCache.clear();
+}
+
+/**
+ * The experimental tools the credential's user turned on in the dashboard
+ * (`GET /v2/mcp/experimental-tools`). Without a credential, or when the call fails, none: the
+ * server then lists only the stable tools. Cached per credential (a hash, never the token) so a
+ * session does not ask on every request.
+ */
+export async function fetchExperimentalTools(
+  context: ClientContext,
+  now = Date.now()
+): Promise<ExperimentalTool[]> {
+  const { apiKey } = context;
+  if (!apiKey) return [];
+
+  const cacheKey = createHash("sha256").update(apiKey).digest("hex");
+  const cached = experimentalToolsCache.get(cacheKey);
+  if (cached && cached.expiresAt > now) return cached.tools;
+
+  const remember = (tools: ExperimentalTool[], ttlMs: number) => {
+    experimentalToolsCache.delete(cacheKey);
+    if (experimentalToolsCache.size >= EXPERIMENTAL_TOOLS_CACHE_LIMIT) {
+      // Maps keep insertion order: drop the oldest entry.
+      const oldest = experimentalToolsCache.keys().next().value;
+      if (oldest !== undefined) experimentalToolsCache.delete(oldest);
+    }
+    experimentalToolsCache.set(cacheKey, { tools, expiresAt: now + ttlMs });
+    return tools;
+  };
+
+  try {
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/mcp/experimental-tools`);
+    // No experimental header here: this call decides whether there are any.
+    const headers = generateHeaders({ ...context, experimentalTools: undefined });
+    const abortSignal = AbortSignal.timeout(EXPERIMENTAL_TOOLS_TIMEOUT_MS);
+    return await observeUpstreamRequest(
+      "fetch_experimental_tools",
+      () => fetch(url, { headers, signal: abortSignal }),
+      async (response) => {
+        if (!response.ok) {
+          return remember([], EXPERIMENTAL_TOOLS_FAILURE_TTL_MS);
+        }
+        const body = await readJson<{ all?: unknown; tools?: unknown }>(response);
+        // `all` is every experimental tool this server has, also ones the app does not know yet.
+        const tools =
+          body?.all === true ? [...EXPERIMENTAL_TOOL_NAMES] : experimentalToolsFrom(body?.tools);
+        return remember(tools, EXPERIMENTAL_TOOLS_TTL_MS);
+      },
+      { abortSignal }
+    );
+  } catch (error) {
+    console.error("Error reading experimental tools:", error);
+    return remember([], EXPERIMENTAL_TOOLS_FAILURE_TTL_MS);
   }
 }
