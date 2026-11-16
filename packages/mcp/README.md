@@ -1486,6 +1486,7 @@ bun run dist/index.js
 - `--transport <stdio|http>` – Transport to use (`stdio` by default). Use `http` for remote HTTP server or `stdio` for local integration.
 - `--port <number>` – Port to listen on when using `http` transport (default `3000`).
 - `--api-key <key>` – API key for authentication (or set `CONTEXT7_API_KEY` env var). You can get your API key by creating an account at [context7.com/dashboard](https://context7.com/dashboard?tab=settings).
+- `--experimental` – List every experimental tool, stdio only (or set `CONTEXT7_EXPERIMENTAL=1`). Without it, a server with an API key lists the experimental tools you turned on at [Dashboard > Settings > MCP Tools](https://context7.com/dashboard?tab=settings), read when it starts. The old names `--research-preview` and `CONTEXT7_RESEARCH_PREVIEW=1` still work. See [Experimental Tools](https://context7.com/docs/howto/experimental-tools).
 
 Example with HTTP transport and port 8080:
 

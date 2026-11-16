@@ -25,7 +25,9 @@ To turn a tool off, turn its switch off.
 
 ### For every tool at once
 
-To list every experimental tool, also without a sign-in, add `experimental=1` to the server URL:
+A flag turns on every experimental tool, also without a sign-in. It takes precedence over your dashboard choice: with a flag, the server lists every experimental tool whatever your switches say.
+
+For the remote server, add `experimental=1` to the server URL:
 
 ```json
 {
@@ -60,7 +62,11 @@ For the local server, pass `--experimental`, or set `CONTEXT7_EXPERIMENTAL=1`:
 }
 ```
 
-The old names `research_preview=1`, `--research-preview` and `CONTEXT7_RESEARCH_PREVIEW=1` still work.
+### Research preview setups
+
+Experimental tools were called the research preview before. If you already use `research_preview=1`, `--research-preview` or `CONTEXT7_RESEARCH_PREVIEW=1`, you do not need to change anything: these names still turn on every experimental tool, like `experimental=1`, `--experimental` and `CONTEXT7_EXPERIMENTAL=1`. The new names need `@upstash/context7-mcp` 4.8.0 or later on a local server.
+
+To choose single tools instead, remove the old name from your configuration and use the [dashboard](#from-the-dashboard).
 
 Start a new session after you change the configuration, so that your client loads the new tools.
 
