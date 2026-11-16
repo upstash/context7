@@ -29,6 +29,42 @@ function getAuthHeaders(accessToken?: string): Record<string, string> {
   return headers;
 }
 
+/**
+ * How long a call may take before the CLI gives up. `/api/v2/code` waits up to
+ * 40 s on the server for a first index, so it gets more time than the others.
+ */
+export const REQUEST_TIMEOUT_MS = 60_000;
+export const CODE_REQUEST_TIMEOUT_MS = 70_000;
+
+/** Statuses whose Response cannot carry a body. */
+const NO_BODY_STATUS = new Set([101, 103, 204, 205, 304]);
+
+/** fetch with a timeout, so a stalled connection ends with a clear error instead of hanging. */
+export async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs: number = REQUEST_TIMEOUT_MS
+): Promise<Response> {
+  try {
+    const response = await fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+    // Read the body under the same timeout, so a body that stalls after the
+    // headers also ends with the message below. Answers are small.
+    const body = NO_BODY_STATUS.has(response.status) ? null : await response.arrayBuffer();
+    return new Response(body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    });
+  } catch (err) {
+    if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) {
+      throw new Error(
+        `Context7 did not answer within ${Math.round(timeoutMs / 1000)} seconds. Check your connection and run the command again.`
+      );
+    }
+    throw err;
+  }
+}
+
 export async function resolveLibrary(
   libraryName: string,
   query?: string,
@@ -39,7 +75,7 @@ export async function resolveLibrary(
     params.set("query", query);
   }
 
-  const response = await fetch(`${baseUrl}/api/v2/libs/search?${params}`, {
+  const response = await fetchWithTimeout(`${baseUrl}/api/v2/libs/search?${params}`, {
     headers: getAuthHeaders(accessToken),
   });
 
@@ -122,10 +158,44 @@ export interface CodeQueryOptions {
   json?: boolean;
 }
 
-export type CodeQueryResult =
+/**
+ * The answer of an endpoint that can ask the client to come back later: the text, a 202 while the
+ * server prepares something (the source index, an upgrade guide), or an error.
+ */
+export type RetryableResult =
   | { kind: "result"; body: string }
-  | { kind: "indexing"; message: string; retryAfter: number }
+  | { kind: "pending"; message: string; retryAfter: number }
   | { kind: "error"; error: string; message?: string };
+
+/** GETs an endpoint that answers 202 while it prepares, and reads its answer as RetryableResult. */
+async function fetchRetryableText(
+  url: string,
+  accessToken: string | undefined,
+  pendingMessage: string,
+  timeoutMs: number = REQUEST_TIMEOUT_MS
+): Promise<RetryableResult> {
+  const response = await fetchWithTimeout(url, { headers: getAuthHeaders(accessToken) }, timeoutMs);
+  if (response.status === 202) {
+    const body = (await response.json().catch(() => ({}))) as {
+      message?: string;
+      retryAfter?: number;
+    };
+    return {
+      kind: "pending",
+      message: body.message ?? pendingMessage,
+      retryAfter: retryAfterSeconds(body.retryAfter, response.headers.get("Retry-After")),
+    };
+  }
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
+    return {
+      kind: "error",
+      error: body.error || `HTTP error ${response.status}`,
+      message: body.message,
+    };
+  }
+  return { kind: "result", body: await response.text() };
+}
 
 /** Queries a library's source code through /api/v2/code. */
 export async function getLibraryCode(
@@ -133,7 +203,7 @@ export async function getLibraryCode(
   pattern: string | undefined,
   options: CodeQueryOptions = {},
   accessToken?: string
-): Promise<CodeQueryResult> {
+): Promise<RetryableResult> {
   const params = new URLSearchParams({ libraryId });
   if (options.version) params.set("version", options.version);
   if (pattern) params.set("pattern", pattern);
@@ -147,29 +217,39 @@ export async function getLibraryCode(
   if (options.headLimit) params.set("head_limit", String(options.headLimit));
   if (options.offset) params.set("offset", String(options.offset));
   if (options.json) params.set("format", "json");
-  const response = await fetch(`${baseUrl}/api/v2/code?${params}`, {
-    headers: getAuthHeaders(accessToken),
-  });
-  if (response.status === 202) {
-    const body = (await response.json().catch(() => ({}))) as {
-      message?: string;
-      retryAfter?: number;
-    };
-    return {
-      kind: "indexing",
-      message: body.message ?? "The library source is being indexed.",
-      retryAfter: retryAfterSeconds(body.retryAfter, response.headers.get("Retry-After")),
-    };
-  }
-  if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
-    return {
-      kind: "error",
-      error: body.error || `HTTP error ${response.status}`,
-      message: body.message,
-    };
-  }
-  return { kind: "result", body: await response.text() };
+  return fetchRetryableText(
+    `${baseUrl}/api/v2/code?${params}`,
+    accessToken,
+    "The library source is being indexed.",
+    CODE_REQUEST_TIMEOUT_MS
+  );
+}
+
+export interface UpgradeGuideOptions {
+  /** The version to upgrade to. Without it, the latest major. */
+  toVersion?: string;
+  /** The page of a long guide, from 1. */
+  page?: number;
+  json?: boolean;
+}
+
+/** Fetches the upgrade guide between two versions of a library through /api/v2/version-upgrade-guide. */
+export async function getUpgradeGuide(
+  libraryId: string,
+  fromVersion: string,
+  options: UpgradeGuideOptions = {},
+  accessToken?: string
+): Promise<RetryableResult> {
+  const params = new URLSearchParams({ libraryId, fromVersion });
+  if (options.toVersion) params.set("toVersion", options.toVersion);
+  // Always sent, so the app pages the guide for this client (as the MCP tool does).
+  params.set("page", String(options.page ?? 1));
+  if (options.json) params.set("type", "json");
+  return fetchRetryableText(
+    `${baseUrl}/api/v2/version-upgrade-guide?${params}`,
+    accessToken,
+    "The upgrade guide is being prepared."
+  );
 }
 
 export async function getLibraryContext(
@@ -186,7 +266,7 @@ export async function getLibraryContext(
     params.set("language", options.language);
   }
   const headers = getAuthHeaders(accessToken);
-  const response = await fetch(`${baseUrl}/api/v2/context?${params}`, {
+  const response = await fetchWithTimeout(`${baseUrl}/api/v2/context?${params}`, {
     headers,
   });
 
@@ -245,7 +325,7 @@ export async function searchDocumentation(
     params.set("language", options.language);
   }
 
-  const response = await fetch(`${baseUrl}/api/v3/search?${params}`, {
+  const response = await fetchWithTimeout(`${baseUrl}/api/v3/search?${params}`, {
     headers: getAuthHeaders(accessToken),
   });
 

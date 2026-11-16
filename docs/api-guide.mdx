@@ -26,6 +26,7 @@ Get your API key at [context7.com/dashboard](https://context7.com/dashboard?tab=
 | [Get Policies](/api-reference/policies/get-teamspace-policies) | `GET /api/v2/policies` | Retrieve teamspace policy configuration |
 | [Update Policies](/api-reference/policies/update-teamspace-policies) | `PATCH /api/v2/policies` | Update teamspace policies |
 | [Get Metrics](/api-reference/metrics/get-library-usage-metrics) | `GET /api/v2/libs/metrics` | Retrieve usage metrics for libraries |
+| [Get Usage](/api-reference/usage/get-api-usage) | `GET /api/v2/usage` | See the requests this month for the key's member and the whole teamspace |
 | [Add GitHub Repo](/api-reference/add-library/add-a-github-repository) | `POST /api/v2/add/repo/github` | Submit a GitHub repository for processing |
 | [Add GitLab Repo](/api-reference/add-library/add-a-gitlab-repository) | `POST /api/v2/add/repo/gitlab` | Submit a GitLab repository for processing |
 | [Add Bitbucket Repo](/api-reference/add-library/add-a-bitbucket-repository) | `POST /api/v2/add/repo/bitbucket` | Submit a Bitbucket repository for processing |
@@ -166,6 +167,8 @@ Call the REST API directly to control requests from your own code, or use the MC
 - **With API key**: Higher limits based on your plan
 - View current usage and reset windows in the [dashboard](https://context7.com/dashboard?tab=overview).
 
+Call [Get Usage](/api-reference/usage/get-api-usage) (`GET /api/v2/usage`) to read the same numbers from your own code. The response has `plan`, `usageResetsAt` (when the monthly count resets, in UTC), `member` (the member who owns the API key, with `requests` this month and `includedInPlan`) and `teamspace` (all members, with extra requests, cost and a daily breakdown). The `member` numbers match the `RateLimit-*` headers on search and docs responses. Calling this endpoint does not count as a request.
+
 When you exceed rate limits, the API returns a `429` status code with these headers:
 
 | Header | Description |
@@ -247,6 +250,8 @@ curl "https://context7.com/api/v2/context?libraryId=/vercel/next.js@v16.2.9&quer
 ```
 
 If that version is not indexed, the request still succeeds and serves the closest documentation Context7 has: a tag matching the requested numbers, a newer release of the same line, or the library's current documentation. JSON responses include a `version` object that says which version was served. A text response starts with a version note when it serves another release or the current documentation. A branch or channel name that is not indexed, such as `/vercel/next.js/canary`, still returns `404 version_not_found`.
+
+A library ID with no version tag also follows the version named in the question. For `libraryId=/vercel/next.js` and the query `How do I cache in Next.js 15?`, an older line than the library's current documentation is served when Context7 has a matching indexed release, and the JSON `version` object reports that release as `verified`. When no indexed release matches, the current documentation is served as before, without a `version` object, and Context7 queues that version for indexing. A question that names more than one version, or that names the source of a migration such as `upgrade from Next.js 15 to 16`, leaves the current documentation in place.
 
 ## Error Handling
 

@@ -113,7 +113,7 @@ async function refreshAccessToken(refreshToken: string): Promise<TokenData> {
     })
   );
   if (response.ok) {
-    return (await response.json()) as TokenData;
+    return readOAuthJson<TokenData>(response, `${getBaseUrl()}/api/oauth/token`);
   }
 
   const body = await response.text().catch(() => "");
@@ -386,15 +386,41 @@ function describeConnectionError(error: unknown, url: string): string {
   return `Could not reach ${url}: ${detail}${code ? ` (${code})` : ""}\n${hint}`;
 }
 
+/** OAuth calls (token refresh, device flow) give up after this long. */
+export const OAUTH_REQUEST_TIMEOUT_MS = 30_000;
+
 async function postForm(url: string, params: URLSearchParams): Promise<Response> {
   try {
     return await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: params.toString(),
+      signal: AbortSignal.timeout(OAUTH_REQUEST_TIMEOUT_MS),
     });
   } catch (error) {
+    if (isTimeout(error)) throw oauthTimeoutError(url);
     throw new Error(describeConnectionError(error, url));
+  }
+}
+
+const isTimeout = (error: unknown): boolean =>
+  error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
+
+const oauthTimeoutError = (url: string): Error =>
+  new Error(
+    `${url} did not answer within ${OAUTH_REQUEST_TIMEOUT_MS / 1000} seconds. Check your connection and run the command again.`
+  );
+
+/**
+ * Reads an OAuth answer's JSON body. The request's timeout also covers the body, so a body
+ * that stalls after the headers ends with the same message as a stalled connection.
+ */
+async function readOAuthJson<T>(response: Response, url: string): Promise<T> {
+  try {
+    return (await response.json()) as T;
+  } catch (error) {
+    if (isTimeout(error)) throw oauthTimeoutError(url);
+    throw error;
   }
 }
 
@@ -403,7 +429,7 @@ async function oauthRequest<T>(url: string, params: URLSearchParams, fallback: s
   if (!response.ok) {
     throw new Error(await describeErrorResponse(response, fallback));
   }
-  return (await response.json()) as T;
+  return readOAuthJson<T>(response, url);
 }
 
 /** RFC 8628 §3.2 default poll interval when the server omits `interval`. */
@@ -461,7 +487,7 @@ export async function pollDeviceToken(
   }
 
   if (response.ok) {
-    const tokens = (await response.json()) as TokenData;
+    const tokens = await readOAuthJson<TokenData>(response, `${baseUrl}/api/oauth/device/token`);
     return { status: "approved", tokens };
   }
 

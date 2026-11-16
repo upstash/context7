@@ -11,6 +11,10 @@
   },
   "redirects": [
     {
+      "source": "/howto/research-preview",
+      "destination": "/howto/experimental-tools"
+    },
+    {
       "source": "/enterprise/azure-apim",
       "destination": "/enterprise/enterprise-managed-auth/entra"
     },
@@ -47,7 +51,7 @@
                   "adding-libraries",
                   "library-updates",
                   "howto/claiming-libraries", "howto/verification", "howto/chat-widget",
-                  "howto/rules", "howto/private-sources", "howto/research-preview"
+                  "howto/rules", "howto/private-sources", "howto/experimental-tools"
                 ]
               },
               {

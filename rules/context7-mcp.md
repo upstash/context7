@@ -17,5 +17,5 @@ If the `query-code` tool is available, use it when the docs do not answer an exa
 - Start with `grep` (set `fixed_strings` for error messages) or `definition` for a symbol, then `read` the file range in the result's "Next:" line
 - For a version, pass its git tag in `version` (e.g. `v3.24.2`)
 - Most questions need 1 to 4 `query-code` calls; stop at 6
-- If it answers "being indexed", retry at most twice, then answer from `query-docs`
+- If it answers "being indexed", call again every 30 seconds for up to 3 minutes (a first index usually takes 1 to 3), then answer from `query-docs`. These calls do not count toward the 6
 - Cite the file and line of the source you used

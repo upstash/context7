@@ -203,7 +203,7 @@ describe("on-premise setup network boundary", () => {
     expect(process.exitCode).toBe(1);
     expect(promptMocks.select).not.toHaveBeenCalled();
     expect(fetch).not.toHaveBeenCalled();
-    expect(console.log).toHaveBeenCalledWith(
+    expect(console.error).toHaveBeenCalledWith(
       expect.stringContaining("Pass the Context7 deployment root")
     );
   });

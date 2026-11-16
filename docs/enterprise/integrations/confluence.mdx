@@ -74,7 +74,7 @@ The **Find pages** toggle in the form offers two ways to choose what to index:
     Leave **Index the entire space** on to index everything, which is the fastest path and the right choice for large spaces. Turn it off to pick individual pages: the page tree mirrors the space hierarchy, so selecting a parent selects its children. Very large spaces load their pages in batches — use **Load more pages** to fetch the rest, and the search box to filter.
   </Step>
   <Step title="Start parsing">
-    Context7 fetches the pages, converts them to Markdown (code blocks, tables, and callouts are preserved), and indexes them. The project appears under your libraries when it finishes.
+    Context7 fetches the pages, converts them to Markdown, and indexes them. Code blocks, tables (with their inline links and code), callouts, and nested macros are preserved. Content a macro pulls in at view time rather than stores in the page — a Jira issue, an included page, a diagram, an attachment — becomes a bracketed placeholder such as `[Jira: PROJ-123]` or `[Included page: Shared Setup]`, and navigation macros like the table of contents are dropped. The project appears under your libraries when it finishes.
   </Step>
 </Steps>
 

@@ -167,6 +167,25 @@ function startStubApi(): Promise<string> {
       }
       return;
     }
+    if (apiPath === "/v2/mcp/experimental-tools") {
+      // Stands in for the dashboard choice: ctx7sk-exp-code turned on query-code,
+      // ctx7sk-exp-all turned on all experimental tools (the app lists none of them here, as
+      // for a tool it does not know yet), ctx7sk-exp-fail cannot be read, every other
+      // credential turned on nothing.
+      if (bearer.startsWith("ctx7sk-exp-fail")) {
+        res.statusCode = 500;
+        res.end();
+        return;
+      }
+      res.setHeader("Content-Type", "application/json");
+      res.end(
+        JSON.stringify({
+          all: bearer.startsWith("ctx7sk-exp-all"),
+          tools: bearer.startsWith("ctx7sk-exp-code") ? ["query-code", "not-a-tool"] : [],
+        })
+      );
+      return;
+    }
     if (apiPath === "/v2/auth/check") {
       // Mirrors context7app: the middleware answers invalid_oauth_token for a
       // rejected oat_ bearer, the handler answers 204 for an accepted one.
@@ -679,13 +698,13 @@ describe("HTTP API key headers", () => {
   });
 });
 
-describe("research preview", () => {
-  // The preview tool list differs per caller, so a shared cache must not serve it to others.
+describe("experimental tools", () => {
+  // The experimental tool list differs per caller, so a shared cache must not serve it to others.
   async function toolsListCacheScope(
     transport: StreamableHTTPClientTransport | StdioClientTransport
   ) {
     const client = new Client(
-      { name: "research-preview-test", version: "1.0.0" },
+      { name: "experimental-test", version: "1.0.0" },
       { versionNegotiation: { mode: { pin: "2026-07-28" } } }
     );
     await client.connect(transport);
@@ -696,9 +715,9 @@ describe("research preview", () => {
     }
   }
 
-  const httpTransport = (url: string) =>
+  const httpTransport = (url: string, apiKey = "ctx7sk-local-test") =>
     new StreamableHTTPClientTransport(new URL(url), {
-      requestInit: { headers: { Authorization: "Bearer ctx7sk-local-test" } },
+      requestInit: { headers: { Authorization: `Bearer ${apiKey}` } },
     });
   const stdioTransport = (env: Record<string, string>) =>
     new StdioClientTransport({ command: process.execPath, args: [DIST], env });
@@ -707,7 +726,7 @@ describe("research preview", () => {
     transport: StreamableHTTPClientTransport | StdioClientTransport,
     run: (client: Client) => Promise<T>
   ): Promise<T> {
-    const client = new Client({ name: "research-preview-test", version: "1.0.0" });
+    const client = new Client({ name: "experimental-test", version: "1.0.0" });
     await client.connect(transport);
     try {
       return await run(client);
@@ -715,33 +734,31 @@ describe("research preview", () => {
       await client.close();
     }
   }
-  const withClient = <T>(url: string, run: (client: Client) => Promise<T>) =>
-    withTransport(httpTransport(url), run);
+  const withClient = <T>(url: string, run: (client: Client) => Promise<T>, apiKey?: string) =>
+    withTransport(httpTransport(url, apiKey), run);
   const toolNames = (url: string) =>
     withClient(url, async (client) => (await client.listTools()).tools.map((tool) => tool.name));
 
-  test("marks tools/list private over HTTP only with ?research_preview=1", async () => {
-    expect(await toolsListCacheScope(httpTransport(httpUrl))).toBe("public");
-    expect(await toolsListCacheScope(httpTransport(`${httpUrl}?research_preview=1`))).toBe(
-      "private"
-    );
+  test("marks tools/list private over HTTP for a signed-in caller", async () => {
+    // The test server requires a credential, so an anonymous HTTP list is covered over stdio.
+    expect(await toolsListCacheScope(httpTransport(httpUrl))).toBe("private");
   });
 
-  test("marks tools/list private over stdio only with CONTEXT7_RESEARCH_PREVIEW=1", async () => {
+  test("marks tools/list private over stdio only with CONTEXT7_EXPERIMENTAL=1", async () => {
     expect(await toolsListCacheScope(stdioTransport(childEnv))).toBe("public");
     expect(
-      await toolsListCacheScope(stdioTransport({ ...childEnv, CONTEXT7_RESEARCH_PREVIEW: "1" }))
+      await toolsListCacheScope(stdioTransport({ ...childEnv, CONTEXT7_EXPERIMENTAL: "1" }))
     ).toBe("private");
   });
 
-  test("returns the same server instructions over HTTP and stdio, with the feedback request only under research preview", async () => {
+  test("returns the same server instructions over HTTP and stdio, with the feedback request only when that tool is on", async () => {
     const instructions = (transport: StreamableHTTPClientTransport | StdioClientTransport) =>
       withTransport(transport, async (client) => client.getInstructions() ?? "");
     const httpText = await instructions(httpTransport(httpUrl));
     expect(httpText).toBe(serverInstructions(false));
     expect(await instructions(stdioTransport(childEnv))).toBe(httpText);
 
-    expect(await instructions(httpTransport(`${httpUrl}?research_preview=1`))).toBe(
+    expect(await instructions(httpTransport(`${httpUrl}?experimental=1`))).toBe(
       serverInstructions(true)
     );
   });
@@ -753,9 +770,141 @@ describe("research preview", () => {
     }
   });
 
-  test("lists submit-docs-feedback only with research preview and sends it to the API", async () => {
+  test("lists every experimental tool with ?experimental=1 or its old name", async () => {
+    for (const url of [`${httpUrl}?experimental=1`, `${httpUrl}?research_preview=1`]) {
+      expect(await toolNames(url)).toEqual(
+        expect.arrayContaining(["query-code", "get-upgrade-guide", "submit-docs-feedback"])
+      );
+    }
+  });
+
+  test("lists the experimental tools the signed-in user turned on", async () => {
+    requests.length = 0;
+    const names = await withClient(
+      httpUrl,
+      async (client) => (await client.listTools()).tools.map((tool) => tool.name),
+      "ctx7sk-exp-code-1"
+    );
+    expect(names).toContain("query-code");
+    expect(names).not.toContain("get-upgrade-guide");
+    expect(names).not.toContain("submit-docs-feedback");
+
+    const settingsCall = requests.find((request) => request.path === "/v2/mcp/experimental-tools");
+    expect(settingsCall?.headers.authorization).toBe("Bearer ctx7sk-exp-code-1");
+    expect(settingsCall?.headers["x-context7-experimental"]).toBeUndefined();
+  });
+
+  test("lists every experimental tool it has when the user turned on all of them", async () => {
+    const names = await withClient(
+      httpUrl,
+      async (client) => (await client.listTools()).tools.map((tool) => tool.name),
+      "ctx7sk-exp-all-1"
+    );
+    expect(names).toEqual(
+      expect.arrayContaining(["query-code", "get-upgrade-guide", "submit-docs-feedback"])
+    );
+  });
+
+  test("reads a credential's choice once a minute, not on every request", async () => {
+    requests.length = 0;
+    for (let i = 0; i < 2; i++) {
+      await withClient(httpUrl, (client) => client.listTools(), "ctx7sk-exp-code-2");
+    }
+    expect(
+      requests.filter((request) => request.path === "/v2/mcp/experimental-tools")
+    ).toHaveLength(1);
+  });
+
+  test("lists no experimental tool when the choice cannot be read", async () => {
+    requests.length = 0;
+    const names = await withClient(
+      httpUrl,
+      async (client) => (await client.listTools()).tools.map((tool) => tool.name),
+      "ctx7sk-exp-fail-1"
+    );
+    expect(names).toEqual(expect.arrayContaining(["resolve-library-id", "query-docs"]));
+    expect(names.some((name) => ["query-code", "get-upgrade-guide"].includes(name))).toBe(false);
+    const settingsCall = requests.find((request) => request.path === "/v2/mcp/experimental-tools");
+    expect(settingsCall?.headers.authorization).toBe("Bearer ctx7sk-exp-fail-1");
+  });
+
+  test("calls query-code over HTTP when the signed-in user turned it on", async () => {
+    requests.length = 0;
+    const result = await withClient(
+      httpUrl,
+      (client) =>
+        client.callTool({
+          name: "query-code",
+          arguments: { libraryId: "/vercel/next.js", pattern: "useRouter" },
+        }),
+      "ctx7sk-exp-code-4"
+    );
+    expect(result.isError).toBeFalsy();
+    expect(result.content).toMatchObject([{ type: "text", text: STUB_CODE }]);
+    const codeCall = requests.find((request) => request.path === "/v2/code");
+    expect(codeCall?.headers.authorization).toBe("Bearer ctx7sk-exp-code-4");
+  });
+
+  test("marks server/discover private for a signed-in caller", async () => {
+    const client = new Client(
+      { name: "experimental-test", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+    await client.connect(httpTransport(httpUrl, "ctx7sk-exp-all-2"));
+    try {
+      const discover = client.getDiscoverResult() as { cacheScope?: string; instructions?: string };
+      expect(discover.cacheScope).toBe("private");
+      expect(discover.instructions).toContain("submit-docs-feedback");
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("lists the dashboard choice over stdio with an API key", async () => {
+    const client = new Client({ name: "experimental-test", version: "1.0.0" });
+    await client.connect(
+      stdioTransport({ ...childEnv, CONTEXT7_API_KEY: "ctx7sk-exp-code-stdio" })
+    );
+    try {
+      const names = (await client.listTools()).tools.map((tool) => tool.name);
+      expect(names).toContain("query-code");
+      expect(names).not.toContain("get-upgrade-guide");
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("lists every experimental tool over stdio with the old CONTEXT7_RESEARCH_PREVIEW=1", async () => {
+    const client = new Client({ name: "experimental-test", version: "1.0.0" });
+    await client.connect(stdioTransport({ ...childEnv, CONTEXT7_RESEARCH_PREVIEW: "1" }));
+    try {
+      const names = (await client.listTools()).tools.map((tool) => tool.name);
+      expect(names).toEqual(
+        expect.arrayContaining(["query-code", "get-upgrade-guide", "submit-docs-feedback"])
+      );
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("marks API calls of a signed-in user with experimental tools on", async () => {
+    requests.length = 0;
+    await withClient(
+      httpUrl,
+      (client) =>
+        client.callTool({
+          name: "query-docs",
+          arguments: { libraryId: "/vercel/next.js", query: "routing" },
+        }),
+      "ctx7sk-exp-code-3"
+    );
+    const apiCall = requests.find((request) => request.path === "/v2/context");
+    expect(apiCall?.headers["x-context7-experimental"]).toBe("1");
+  });
+
+  test("lists submit-docs-feedback only when on and sends it to the API", async () => {
     expect(await toolNames(httpUrl)).not.toContain("submit-docs-feedback");
-    expect(await toolNames(`${httpUrl}?research_preview=1`)).toContain("submit-docs-feedback");
+    expect(await toolNames(`${httpUrl}?experimental=1`)).toContain("submit-docs-feedback");
 
     feedbackBodies.length = 0;
     requests.length = 0;
@@ -766,7 +915,7 @@ describe("research preview", () => {
       issue: "outdated",
       comment: "Shows the Next.js 14 cache defaults.",
     };
-    const result = await withClient(`${httpUrl}?research_preview=1`, (client) =>
+    const result = await withClient(`${httpUrl}?experimental=1`, (client) =>
       client.callTool({ name: "submit-docs-feedback", arguments: feedback })
     );
 
@@ -775,12 +924,12 @@ describe("research preview", () => {
     const apiCall = requests.find((request) => request.path === "/v2/feedback");
     expect(apiCall?.headers.authorization).toBe("Bearer ctx7sk-local-test");
     expect(apiCall?.headers["x-context7-source"]).toBe("mcp-server");
-    expect(apiCall?.headers["x-context7-research-preview"]).toBe("1");
+    expect(apiCall?.headers["x-context7-experimental"]).toBe("1");
   });
 
   describe("get-upgrade-guide", () => {
     const callGuide = (args: Record<string, string | number>) =>
-      withClient(`${httpUrl}?research_preview=1`, (client) =>
+      withClient(`${httpUrl}?experimental=1`, (client) =>
         client.callTool({
           name: "get-upgrade-guide",
           arguments: { libraryId: "/vercel/next.js", ...args },
@@ -793,9 +942,9 @@ describe("research preview", () => {
       requests.length = 0;
     });
 
-    test("is listed only with research preview", async () => {
+    test("is listed only when on", async () => {
       expect(await toolNames(httpUrl)).not.toContain("get-upgrade-guide");
-      expect(await toolNames(`${httpUrl}?research_preview=1`)).toContain("get-upgrade-guide");
+      expect(await toolNames(`${httpUrl}?experimental=1`)).toContain("get-upgrade-guide");
     });
 
     test("sends the versions to the API and returns the guide text", async () => {
@@ -812,7 +961,7 @@ describe("research preview", () => {
       });
       expect(apiCall?.headers.authorization).toBe("Bearer ctx7sk-local-test");
       expect(apiCall?.headers["x-context7-source"]).toBe("mcp-server");
-      expect(apiCall?.headers["x-context7-research-preview"]).toBe("1");
+      expect(apiCall?.headers["x-context7-experimental"]).toBe("1");
     });
 
     test("omits toVersion when not given", async () => {
@@ -1135,7 +1284,7 @@ describe.each([
     expect(apiCalls[0].query.get("libraryId")).toBe("/vercel/next.js");
     expect(apiCalls[0].query.get("query")).toBe("app router");
     expect(apiCalls[0].headers["x-context7-transport"]).toBe(transportKind);
-    expect(apiCalls[0].headers["x-context7-research-preview"]).toBeUndefined();
+    expect(apiCalls[0].headers["x-context7-experimental"]).toBeUndefined();
     if (transportKind === "http") {
       expect(apiCalls[0].headers["mcp-client-ip-assertion"]).toMatch(/^v1:/);
       expect(
@@ -1879,7 +2028,7 @@ describe("query-code tool", () => {
   });
 
   test("is listed with the flag and sends its arguments to /v2/code", async () => {
-    const client = await stdioClient({ ...childEnv, CONTEXT7_RESEARCH_PREVIEW: "1" });
+    const client = await stdioClient({ ...childEnv, CONTEXT7_EXPERIMENTAL: "1" });
     try {
       const { tools } = await client.listTools();
       const tool = tools.find((candidate) => candidate.name === "query-code");
@@ -1970,13 +2119,51 @@ describe("query-code tool", () => {
       expect(aliasSent?.query.get("head_limit")).toBe("500");
       expect(aliasSent?.query.get("context")).toBe("10");
       expect(aliasSent?.query.get("offset")).toBe("20");
+
+      // A one-word query is a pattern; several words are not grepped but corrected.
+      const wordCall = requests.length;
+      await client.callTool({
+        name: "query-code",
+        arguments: { libraryId: "/vercel/next.js", query: "useRouter" },
+      });
+      const wordSent = requests.slice(wordCall).find((request) => request.path === "/v2/code");
+      expect(wordSent?.query.get("pattern")).toBe("useRouter");
+
+      const wordsCall = requests.length;
+      const words = await client.callTool({
+        name: "query-code",
+        arguments: { libraryId: "/vercel/next.js", query: "how does the router cache work" },
+      });
+      expect(words.isError).toBe(true);
+      expect((words.content as { text: string }[])[0].text).toContain('Pass "pattern"');
+      expect(requests.slice(wordsCall).some((request) => request.path === "/v2/code")).toBe(false);
+
+      // Spaces around one word are trimmed.
+      const paddedCall = requests.length;
+      await client.callTool({
+        name: "query-code",
+        arguments: { libraryId: "/vercel/next.js", query: "  useRouter  " },
+      });
+      const paddedSent = requests.slice(paddedCall).find((request) => request.path === "/v2/code");
+      expect(paddedSent?.query.get("pattern")).toBe("useRouter");
+
+      // list takes no pattern, so a multi-word query is dropped, not refused.
+      const listCall = requests.length;
+      const listed = await client.callTool({
+        name: "query-code",
+        arguments: { libraryId: "/vercel/next.js", operation: "list", query: "router files" },
+      });
+      expect(listed.isError).not.toBe(true);
+      const listSent = requests.slice(listCall).find((request) => request.path === "/v2/code");
+      expect(listSent?.query.get("operation")).toBe("list");
+      expect(listSent?.query.get("pattern")).toBeNull();
     } finally {
       await client.close();
     }
   });
 
   test("answers 'still indexing' as a normal result and an API error as an error", async () => {
-    const client = await stdioClient({ ...childEnv, CONTEXT7_RESEARCH_PREVIEW: "1" });
+    const client = await stdioClient({ ...childEnv, CONTEXT7_EXPERIMENTAL: "1" });
     try {
       const indexing = await client.callTool({
         name: "query-code",

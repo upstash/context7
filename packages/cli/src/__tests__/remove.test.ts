@@ -50,10 +50,12 @@ async function runCommand(...args: string[]): Promise<void> {
 beforeEach(async () => {
   vi.clearAllMocks();
   logOutput = [];
-  vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
-    logOutput.push(args.join(" "));
-  });
-  vi.spyOn(console, "error").mockImplementation(() => {});
+  // Warnings and errors go to stderr when stdout is not a terminal, as in a test.
+  for (const stream of ["log", "error"] as const) {
+    vi.spyOn(console, stream).mockImplementation((...args: unknown[]) => {
+      logOutput.push(args.join(" "));
+    });
+  }
   originalCwd = process.cwd();
   tempDir = join(tmpdir(), `ctx7-uninstall-${Date.now()}`);
   await mkdir(tempDir, { recursive: true });

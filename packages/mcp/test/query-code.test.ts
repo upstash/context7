@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { isEmptyCodeResult, retryAfterSeconds } from "../src/lib/api.js";
+import { hasRetryAdvice, isEmptyCodeResult, retryAfterSeconds } from "../src/lib/api.js";
 
 const HEADER =
   "Library: /colinhacks/zod at v3.24.2 (commit 0123456789ab, the commit the docs were built from) | License: MIT";
@@ -44,5 +44,20 @@ describe("retryAfterSeconds", () => {
   test("never gives NaN", () => {
     expect(retryAfterSeconds(undefined, "soon")).toBe(30);
     expect(retryAfterSeconds("x", null)).toBe(30);
+  });
+});
+
+describe("hasRetryAdvice", () => {
+  test("sees the retry rule in a newer server message", () => {
+    expect(
+      hasRetryAdvice(
+        "The source of /lukeed/clsx at master is being indexed. A first index usually takes 1 to 3 minutes. Call again in about 30 seconds, and keep calling until it answers, for up to 3 minutes."
+      )
+    ).toBe(true);
+  });
+  test("is false for an older server message", () => {
+    expect(hasRetryAdvice("The source of /vercel/next.js at v15.5.0 is being indexed.")).toBe(
+      false
+    );
   });
 });

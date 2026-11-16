@@ -1,4 +1,4 @@
-import { DOCS_FEEDBACK_INSTRUCTIONS } from "./research-preview-tools.js";
+import { DOCS_FEEDBACK_INSTRUCTIONS } from "./experimental-tools.js";
 
 /**
  * Server instructions that MCP clients add to the agent's system prompt.
@@ -31,9 +31,9 @@ If the Context7 tools are deferred, load them first. If Context7 is unavailable,
 /** Claude Code cuts server instructions after this many characters (CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH). */
 export const CLAUDE_CODE_INSTRUCTIONS_LIMIT = 2048;
 
-/** The instructions a session gets: the base text, plus the feedback request under research preview. */
-export function serverInstructions(researchPreview: boolean): string {
-  return researchPreview
+/** The instructions a session gets: the base text, plus the feedback request when that tool is on. */
+export function serverInstructions(feedbackRequest: boolean): string {
+  return feedbackRequest
     ? `${SERVER_INSTRUCTIONS}\n\n${DOCS_FEEDBACK_INSTRUCTIONS}`
     : SERVER_INSTRUCTIONS;
 }
