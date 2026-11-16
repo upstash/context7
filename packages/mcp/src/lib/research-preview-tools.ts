@@ -50,7 +50,7 @@ const upgradeGuideSchema = z.object({
   fromVersion: z
     .string()
     .describe(
-      "The version the project uses now (e.g., '14.2.35' or '14'). A bare major means the oldest release of that line."
+      "The version the project uses now (e.g., '14.2.35' or '14'). A bare major means the newest release of that line; pass the installed version for a precise guide."
     ),
   toVersion: z
     .string()

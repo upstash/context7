@@ -13,6 +13,7 @@ import {
   type CodeOperation,
   type RetryableResult,
 } from "../utils/api.js";
+import { cliCodeHints } from "../utils/codeHints.js";
 import { recoverLibraryId } from "../utils/library-id.js";
 import { log } from "../utils/logger.js";
 import { trackEvent } from "../utils/tracking.js";
@@ -241,6 +242,10 @@ interface CodeCommandOptions {
   ignoreCase?: boolean;
   glob?: string[];
   context?: string;
+  beforeContext?: string;
+  afterContext?: string;
+  wordRegexp?: boolean;
+  maxCount?: string;
   filesWithMatches?: boolean;
   count?: boolean;
   path?: string;
@@ -298,8 +303,11 @@ async function runRetryable(
     retryHint: (retryAfter: number, message: string) => string;
     /** Printed as a warning (exit 1) when the answer is empty. Without it, the body is printed. */
     emptyMessage?: string;
+    /** Rewrites the server's text (answer, pending and error messages) before it is printed. */
+    text?: (text: string) => string;
   }
 ): Promise<void> {
+  const text = options.text ?? ((value: string) => value);
   const spinner = isTTY ? ora(spinnerText).start() : null;
   let result: RetryableResult;
   try {
@@ -323,7 +331,7 @@ async function runRetryable(
         })
       );
     } else {
-      log.warn(result.message);
+      log.warn(text(result.message));
       log.notice(options.retryHint(result.retryAfter, result.message));
     }
     process.exitCode = 75; // EX_TEMPFAIL: try again later
@@ -332,7 +340,7 @@ async function runRetryable(
   if (result.kind === "error") {
     if (options.json)
       console.log(JSON.stringify({ error: result.error, message: result.message || result.error }));
-    else log.error(result.message || result.error);
+    else log.error(text(result.message || result.error));
     process.exitCode = 1;
     return;
   }
@@ -341,7 +349,7 @@ async function runRetryable(
     process.exitCode = 1;
     return;
   }
-  console.log(result.body);
+  console.log(options.json ? result.body : text(result.body));
 }
 
 async function codeCommand(
@@ -360,9 +368,20 @@ async function codeCommand(
     return;
   }
   const context = wholeNumber(options.context, "--context", CODE_LIMITS.context);
+  const beforeContext = wholeNumber(options.beforeContext, "--before-context", CODE_LIMITS.context);
+  const afterContext = wholeNumber(options.afterContext, "--after-context", CODE_LIMITS.context);
+  const maxCount = wholeNumber(options.maxCount, "--max-count", CODE_LIMITS.maxCount);
   const headLimit = wholeNumber(options.headLimit, "--head-limit", CODE_LIMITS.headLimit);
   const offset = wholeNumber(options.offset, "--offset", CODE_LIMITS.offset);
-  if (context === null || headLimit === null || offset === null) return;
+  if (
+    context === null ||
+    beforeContext === null ||
+    afterContext === null ||
+    maxCount === null ||
+    headLimit === null ||
+    offset === null
+  )
+    return;
   const accessToken = await getValidAccessToken();
   const target = options.tag ? `${libraryId} ${options.tag}` : libraryId;
   await runRetryable(
@@ -379,6 +398,10 @@ async function codeCommand(
           glob: options.glob,
           path: options.path,
           context,
+          beforeContext,
+          afterContext,
+          wordRegexp: options.wordRegexp,
+          maxCount,
           outputMode: options.count
             ? "count"
             : options.filesWithMatches
@@ -392,6 +415,7 @@ async function codeCommand(
       ),
     {
       json: options.json,
+      text: (value) => cliCodeHints(value, libraryId),
       pendingError: "indexing",
       // Newer servers already say how long to keep calling; then only map the
       // MCP tool names in that text to their CLI commands.
@@ -474,6 +498,10 @@ export function registerDocsCommands(program: Command): void {
       (value: string, previous: string[] = []) => [...previous, value]
     )
     .option("-C, --context <n>", "Lines of context around each match (0 to 10)")
+    .option("-B, --before-context <n>", "Lines of context before each match (0 to 10)")
+    .option("-A, --after-context <n>", "Lines of context after each match (0 to 10)")
+    .option("-w, --word-regexp", "Match whole words only")
+    .option("-m, --max-count <n>", "At most this many matching lines per file")
     .option("-l, --files-with-matches", "Print only the paths of matching files")
     .option("-c, --count", "Print the number of matches per file")
     .option(
@@ -491,6 +519,19 @@ export function registerDocsCommands(program: Command): void {
       "A git tag or commit of the library, e.g. v3.24.2 (default: the docs commit)"
     )
     .description("Search and read a library's source code at a version, like ripgrep")
+    .addHelpText(
+      "after",
+      `
+Examples:
+  ctx7 code /tanstack/query "invalidateQueries\\(" -g "packages/query-core/**" -A 5
+  ctx7 code /pydantic/pydantic "Input should be a valid integer" -F
+  ctx7 code /colinhacks/zod/v3.24.2 ZodEffects --op definition
+  ctx7 code /tokio-rs/tokio --op read --path tokio/src/task/spawn.rs#L1-L60
+  ctx7 code /tanstack/query --op list --path packages/query-core/src
+
+A first query for a library version can exit with code 75 while its source is indexed:
+run the same command again after the time it gives.`
+    )
     .action(async (libraryId: string, pattern: string | undefined, options: CodeCommandOptions) => {
       await codeCommand(libraryId, pattern, options);
     });
@@ -500,7 +541,7 @@ export function registerDocsCommands(program: Command): void {
     .argument("<libraryId>", "Context7 library ID (e.g., /vercel/next.js)")
     .argument(
       "<fromVersion>",
-      "The version the project uses now (e.g., 14.2.35 or 14); a bare major means the oldest release of that line"
+      "The version the project uses now (e.g., 14.2.35 or 14); a bare major means the newest release of that line"
     )
     .argument(
       "[toVersion]",
@@ -510,6 +551,13 @@ export function registerDocsCommands(program: Command): void {
     .option("--json", "Output as JSON")
     .description(
       "Get what changes between two versions of a library: breaking changes, codemods, deprecations and API changes"
+    )
+    .addHelpText(
+      "after",
+      `
+Examples:
+  ctx7 get-upgrade-guide /vercel/next.js 14 16
+  ctx7 get-upgrade-guide /vercel/next.js 14.2.35 --page 2`
     )
     .action(
       async (
