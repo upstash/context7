@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.12.0
+
+### Minor Changes
+
+- 6515def: Add `ctx7 get-upgrade-guide <libraryId> <fromVersion> [toVersion]`, the CLI counterpart of the `get-upgrade-guide` MCP tool. It prints the guide between two versions of a library, with `--page` for long guides and `--json`, and exits with code 75 while the guide is being prepared.
+
+### Patch Changes
+
+- 7d8781b: `ctx7 login` and `ctx7 whoami` no longer hang on a stalled host: the identity check times out after 30 s, and an OAuth answer whose body stalls after the headers ends with the same clear timeout message as a stalled connection.
+- 76511d5: `ctx7` API calls now time out instead of hanging on a stalled connection: `ctx7 code` after 70 s (the server waits up to 40 s for a first index), the other commands after 60 s, also when the answer stalls after its headers. Login and token refresh calls time out after 30 s, and the usage ping after 3 s, so a stalled host no longer keeps `ctx7` running. A timeout prints a clear error and exits 1.
+- 8fc3f6d: When stdout is piped, `ctx7` writes warnings, errors and their hints to stderr, so `ctx7 code ... | grep x` still shows the "being indexed" notice and errors. `--json` output stays on stdout.
+- d80a84c: While a library's source is being indexed, `ctx7 code` and `query-code` now say to call again for up to 3 minutes instead of at most twice: a first index usually takes 1 to 3 minutes. When the server message already gives this rule, the clients no longer repeat it.
+
 ## 0.11.1
 
 ### Patch Changes
