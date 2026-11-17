@@ -217,7 +217,7 @@ Once the pod is ready, open your Ingress hostname in a browser to complete the s
 
 ## Running as non-root
 
-The container runs as root by default, so existing deployments are unaffected. Set a `securityContext` to run it unprivileged, as the manifest above does. This satisfies a `runAsNonRoot` admission policy.
+The image runs as UID `10001` by default. Images up to and including 2.0.2 ran as root. Set a `securityContext` as the manifest above does, so that the pod also gets `fsGroup` and satisfies a `runAsNonRoot` admission policy.
 
 `runAsUser` can be **any** UID. Everything Context7 writes lives under `/data`:
 
@@ -243,6 +243,8 @@ If the volume is not writable by the UID you choose, the server exits at startup
 [config] Not writable by uid 12345: /data/context7.db, /data/logs, /data/vectors.
 [config] Set fsGroup on the volume so Kubernetes re-owns it for this uid, or chown
 it: chown -R 12345: /data. Note that hostPath-backed volumes ignore fsGroup.
+[config] With Docker, chown the volume once from a throwaway container: docker run
+--rm -v <volume>:/data alpine chown -R 12345: /data
 ```
 
 Upgrading an existing deployment needs no manual `chown`. The kubelet re-chowns the volume on mount when `fsGroup` is set.
