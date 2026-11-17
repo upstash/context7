@@ -37,6 +37,7 @@ When the docs do not answer an exact question (a signature or type, a default va
 - Use an ID that \`library\` marks with "Source code", usually the GitHub repository. \`/websites/...\` and \`/llmstxt/...\` IDs have no source
 - For a version, add the git tag to the library ID (e.g. \`/colinhacks/zod/v3.24.2\`). A tag that is not a docs version is indexed first (exit code 75). If indexing fails, the output lists the docs versions you can use
 - Follow the \`Next:\` line of the output. Its fields map to flags: \`offset\` is \`--offset\`, \`output_mode "count"\` is \`-c\`, \`fixed_strings\` is \`-F\`, \`ignore_case\` is \`-i\`, \`read: <file>#L..\` is \`--op read --path <file>#L..\`, and the other fields use the flag of the same name (\`head_limit\` is \`--head-limit\`, \`version\` is \`--tag\`)
+- Most questions need 1 to 4 \`code\` commands; stop at 6
 - Exit code 75 means the source is being indexed: run the same command again every 30 seconds for up to 3 minutes (a first index usually takes 1 to 3), then answer from \`docs\`. These runs do not count toward the 6 \`code\` commands
 - Cite the file and line of the source you used
 
