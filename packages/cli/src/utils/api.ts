@@ -9,8 +9,9 @@ export function getBaseUrl(): string {
   return baseUrl;
 }
 
+/** Trailing slashes are dropped, as `ctx7 setup` does, so paths join cleanly. */
 export function setBaseUrl(url: string): void {
-  baseUrl = url;
+  baseUrl = url.replace(/\/+$/, "");
 }
 
 export function isHostedDeployment(): boolean {
