@@ -197,7 +197,7 @@ docker run --rm -v context7-data:/data alpine chown -R 10001:10001 /data
 
 Then start the new image as usual. With a bind mount instead of a named volume, run `sudo chown -R 10001:10001` on the host directory.
 
-If you mount a Git SSH deploy key, mount it under `/data/home/.ssh/` instead of `/root/.ssh/`, and make it readable by UID `10001`.
+If you mount a Git SSH deploy key, for example under `/root/.ssh/`, the new image does not read it there. Mount it outside `/data`, make it readable by UID `10001`, and point `GIT_SSH_COMMAND` at it, or paste the key in the dashboard instead: see [Other Git](/enterprise/integrations/other-git#ssh-deploy-key). Do not mount it under `/data`. Docker creates the missing directories there as root, and the server then exits at startup.
 
 ### Running as a different UID
 
