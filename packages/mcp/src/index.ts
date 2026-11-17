@@ -33,7 +33,7 @@ import {
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import {
   EXPERIMENTAL_TOOL_NAMES,
-  QUERY_CODE_TOOL,
+  CODE_TOOLS,
   QUERY_DOCS_TOOL,
   RESOLVE_LIBRARY_ID_TOOL,
   SUBMIT_DOCS_FEEDBACK_TOOL,
@@ -41,6 +41,7 @@ import {
 } from "./lib/tool-names.js";
 import { aliasArgs, GLOBAL_ALIASES, QUERY_DOCS_ALIASES } from "./lib/tool-args.js";
 import { DOCS_FEEDBACK_INSTRUCTIONS, registerExperimentalTools } from "./lib/experimental-tools.js";
+import { CODE_TOOLS_INSTRUCTIONS } from "./lib/code-tools.js";
 import { installProcessShutdown } from "./lib/process-shutdown.js";
 import {
   isSnapshotEnabled,
@@ -317,7 +318,7 @@ function createMcpServer(
     },
     instructions: `Use this server to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, porting code between libraries, platforms, or SQL dialects, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
 
-Do not use for: refactoring, debugging, or reviewing code that does not depend on a library or platform API, or general programming concepts.${enabled.has(SUBMIT_DOCS_FEEDBACK_TOOL) ? `\n\n${DOCS_FEEDBACK_INSTRUCTIONS}` : ""}`,
+Do not use for: refactoring, debugging, or reviewing code that does not depend on a library or platform API, or general programming concepts.${enabled.has(CODE_TOOLS) ? `\n\n${CODE_TOOLS_INSTRUCTIONS}` : ""}${enabled.has(SUBMIT_DOCS_FEEDBACK_TOOL) ? `\n\n${DOCS_FEEDBACK_INSTRUCTIONS}` : ""}`,
   };
   const server = mcpInstrumentation
     ? mcpInstrumentation.createServer(serverInfo, serverOptions, mcpContext)
@@ -339,9 +340,9 @@ Each result includes:
 - Source Reputation: Authority indicator (High, Medium, Low, or Unknown)
 - Benchmark Score: Quality indicator (100 is the highest score)
 - Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.${
-        enabled.has(QUERY_CODE_TOOL)
+        enabled.has(CODE_TOOLS)
           ? `
-- Source code: present when 'query-code' can usually search the library's source. '/websites/...' and '/llmstxt/...' IDs have docs only.`
+- Source code: present when 'grep-code', 'glob-code', 'read-code' and 'find-symbol' can usually search the library's source. '/websites/...' and '/llmstxt/...' IDs have docs only.`
           : ""
       }
 
@@ -408,7 +409,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       }
 
       const resultsText = formatSearchResults(searchResponse, {
-        sourceCode: enabled.has(QUERY_CODE_TOOL),
+        sourceCode: enabled.has(CODE_TOOLS),
       });
       const responseText = `Available Libraries:\n\n${resultsText}`;
       maybeElicitAuthSignIn(server, ctx);

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { hasRetryAdvice, isEmptyCodeResult, retryAfterSeconds } from "../src/lib/api.js";
+import { rewriteCodeHints } from "../src/lib/code-tools.js";
 
 const HEADER =
   "Library: /colinhacks/zod at v3.24.2 (commit 0123456789ab, the commit the docs were built from) | License: MIT";
@@ -58,6 +59,48 @@ describe("hasRetryAdvice", () => {
   test("is false for an older server message", () => {
     expect(hasRetryAdvice("The source of /vercel/next.js at v15.5.0 is being indexed.")).toBe(
       false
+    );
+  });
+});
+
+// Hint texts as the server's lib/code writes them, in terms of its operations and fields.
+describe("rewriteCodeHints", () => {
+  test("turns a Next: read hint into a read-code call", () => {
+    expect(rewriteCodeHints("Next: read: src/client.ts#L40-L80 | more: offset 20")).toBe(
+      'Next: read-code with file_path "src/client.ts", offset 40, limit 41 | more: offset 20'
+    );
+    expect(rewriteCodeHints("Next: read: src/client.ts")).toBe(
+      'Next: read-code with file_path "src/client.ts"'
+    );
+  });
+
+  test("names the tool for each operation and the tool's own flags", () => {
+    expect(
+      rewriteCodeHints(
+        'No file src/x.ts in the indexed source. Use operation "list" to see the files.'
+      )
+    ).toBe("No file src/x.ts in the indexed source. Find the files with glob-code.");
+    expect(
+      rewriteCodeHints(
+        'Read the file with operation "read" and path "src/a.ts" (ctx7 code: --op read --path src/a.ts)'
+      )
+    ).toBe('Read the file: read-code with file_path "src/a.ts"');
+    expect(rewriteCodeHints('Use operation "grep" or "definition" now.')).toBe(
+      'Use grep-code or "definition" now.'
+    );
+    expect(rewriteCodeHints('or use operation "definition".')).toBe(
+      'or use find-symbol with operation "definition".'
+    );
+    expect(rewriteCodeHints("Pass fixed_strings: true for text, or try ignore_case: true.")).toBe(
+      "Pass -F: true for text, or try -i: true."
+    );
+  });
+
+  test("leaves library source as it is", () => {
+    const source =
+      '<library-source>\nconst fixed_strings = opts.operation "read";\nNext: read: x\n</library-source>';
+    expect(rewriteCodeHints(`Next: read: src/a.ts#L1-L2\n${source}\nset fixed_strings`)).toBe(
+      `Next: read-code with file_path "src/a.ts", offset 1, limit 2\n${source}\nset -F`
     );
   });
 });

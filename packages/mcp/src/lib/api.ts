@@ -9,6 +9,8 @@ import type { DocsFeedback, UpgradeGuideRequest } from "./experimental-tools.js"
 import {
   experimentalToolsFromChoice,
   GET_UPGRADE_GUIDE_TOOL,
+  GREP_CODE_TOOL,
+  type CodeTool,
   type ExperimentalTool,
   type ToolCallOutcome,
 } from "./tool-names.js";
@@ -282,7 +284,8 @@ export function isEmptyCodeResult(text: string): boolean {
 async function codeErrorMessage(
   response: Response,
   request: CodeRequest,
-  context: ClientContext
+  context: ClientContext,
+  tool: CodeTool
 ): Promise<string> {
   const body = (await response
     .clone()
@@ -296,7 +299,7 @@ async function codeErrorMessage(
   // For a git tag, index_failed means that the tag may not exist; the message lists the docs versions.
   const hasVersion = !!request.version || request.libraryId.split("/").filter(Boolean).length > 2;
   if (code === "index_failed" && hasVersion)
-    return `${message} Call query-code again with one of the docs versions in this message, or without version.`;
+    return `${message} Call ${tool} again with one of the docs versions in this message, or without version.`;
   if (code === "code_search_unavailable") return `${message} Answer from query-docs.`;
   return message;
 }
@@ -308,7 +311,8 @@ async function codeErrorMessage(
  */
 export async function fetchLibraryCode(
   request: CodeRequest,
-  context: ClientContext = {}
+  context: ClientContext = {},
+  tool: CodeTool = GREP_CODE_TOOL
 ): Promise<ContextResponse> {
   try {
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/code`);
@@ -325,6 +329,13 @@ export async function fetchLibraryCode(
     for (const glob of [request.glob ?? []].flat()) url.searchParams.append("glob", glob);
     if (request.path) url.searchParams.set("path", request.path);
     if (request.context !== undefined) url.searchParams.set("context", String(request.context));
+    if (request.before_context !== undefined)
+      url.searchParams.set("before_context", String(request.before_context));
+    if (request.after_context !== undefined)
+      url.searchParams.set("after_context", String(request.after_context));
+    if (request.word_regexp) url.searchParams.set("word_regexp", "true");
+    if (request.multiline) url.searchParams.set("multiline", "true");
+    if (request.multiline_dotall) url.searchParams.set("multiline_dotall", "true");
     if (request.output_mode) url.searchParams.set("output_mode", request.output_mode);
     if (request.head_limit !== undefined)
       url.searchParams.set("head_limit", String(request.head_limit));
@@ -348,13 +359,13 @@ export async function fetchLibraryCode(
           return {
             data: hasRetryAdvice(message)
               ? `${message} This is not an error.`
-              : `${message} This is not an error. Call query-code again with the same arguments in about ${wait} seconds, and keep calling for up to 3 minutes: a first index usually takes 1 to 3. Meanwhile, or if it is still indexing after that, answer from query-docs.`,
+              : `${message} This is not an error. Call ${tool} again with the same arguments in about ${wait} seconds, and keep calling for up to 3 minutes: a first index usually takes 1 to 3. Meanwhile, or if it is still indexing after that, answer from query-docs.`,
             // No "indexing" outcome exists: telemetry counts it with the empty results.
             outcome: "not_found",
           };
         }
         if (!response.ok) {
-          const errorMessage = await codeErrorMessage(response, request, context);
+          const errorMessage = await codeErrorMessage(response, request, context, tool);
           console.error(errorMessage);
           return { data: errorMessage, outcome: "error" };
         }

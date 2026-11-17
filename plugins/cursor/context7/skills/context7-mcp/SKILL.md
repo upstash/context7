@@ -43,11 +43,11 @@ If the user's question spans multiple distinct concepts (e.g. routing and auth a
 
 ### Step 4: Read the Source When Docs Are Not Exact
 
-If the `query-code` tool is available, use it for exact facts the docs may not state: a signature or type, a default value, an option name, where an error message comes from, or how something works inside.
+If the `grep-code`, `glob-code`, `read-code` and `find-symbol` tools are available, use them for exact facts the docs may not state: a signature or type, a default value, an option name, where an error message comes from, or how something works inside. They work like your own Grep, Glob and Read tools, on the library's source at one version, not on the user's project.
 
 - `libraryId`: an ID that `resolve-library-id` marks with "Source code", usually the GitHub repository (e.g. `/colinhacks/zod`). `/websites/...` and `/llmstxt/...` IDs have no source
-- Start with `grep` (`fixed_strings: true` for error messages) or `definition` for a symbol, then `read` the file range the result gives. `references`, `outline` and `list` also exist
-- Follow the result's "Next:" line for the read, page or count call to make next. Most questions need 1 to 4 calls; stop at 6
+- Find code with `grep-code` (`-F: true` for error messages), find files with `glob-code`, and look up a symbol's definition, references or a file's symbols with `find-symbol`. Then `read-code` the file range the result gives
+- Follow the result's "Next:" line for the read or page call to make next. Most questions need 1 to 4 calls; stop at 6
 - `version` takes a git tag, e.g. `v3.24.2`. A tag that is not a docs version is indexed first ("being indexed"). If indexing fails, the answer lists the docs versions you can use
 - If it answers "being indexed", call again every 30 seconds for up to 3 minutes (a first index usually takes 1 to 3), then answer from `query-docs`. These calls do not count toward the 6
 - Cite the file and line of the source you used

@@ -18,13 +18,14 @@ Do not use for: refactoring, debugging, or reviewing code that does not depend o
 
 ## Library source code
 
-If the \`query-code\` tool is available, use it when the docs do not answer an exact question: a signature or type, a default value, an option name, where an error message comes from, or how something works inside.
+If the \`grep-code\`, \`glob-code\`, \`read-code\` and \`find-symbol\` tools are available, use them when the docs do not answer an exact question: a signature or type, a default value, an option name, where an error message comes from, or how something works inside. They work like your own Grep, Glob and Read tools, on the library's source at one version, not on the user's project.
 
 - Use a library ID that \`resolve-library-id\` marks with "Source code", usually the GitHub repository (e.g. \`/colinhacks/zod\`). \`/websites/...\` and \`/llmstxt/...\` IDs have no source
-- Start with \`grep\` (set \`fixed_strings\` for error messages) or \`definition\` for a symbol, then \`read\` the file range in the result's "Next:" line
+- Find code with \`grep-code\` (escape regex characters, or set \`-F\` for an error message), find files with \`glob-code\`, then \`read-code\` the range in the result's "Next:" line
+- \`find-symbol\` finds where a symbol is defined, where it is used, or the symbols of a file
 - For a version, pass its git tag in \`version\` (e.g. \`v3.24.2\`)
-- Most questions need 1 to 4 \`query-code\` calls; stop at 6
-- If it answers "being indexed", call again every 30 seconds for up to 3 minutes (a first index usually takes 1 to 3), then answer from \`query-docs\`. These calls do not count toward the 6
+- Most questions need 1 to 4 calls; stop at 6
+- If a tool answers "being indexed", call again every 30 seconds for up to 3 minutes (a first index usually takes 1 to 3), then answer from \`query-docs\`. These calls do not count toward the 6
 - Cite the file and line of the source you used
 `;
 

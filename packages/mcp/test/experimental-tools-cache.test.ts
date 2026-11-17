@@ -27,21 +27,21 @@ describe("fetchExperimentalTools", () => {
     const onFailure = vi.fn();
 
     fetchMock.mockResolvedValueOnce(choice(["query-code"]));
-    expect(await fetchExperimentalTools(context, onFailure)).toEqual(["query-code"]);
+    expect(await fetchExperimentalTools(context, onFailure)).toEqual(["code-tools"]);
 
     // The choice expired (5 minutes) and the app is down: keep it, and ask again after 2 minutes.
     now.mockReturnValue(start + 301_000);
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 500 }));
-    expect(await fetchExperimentalTools(context, onFailure)).toEqual(["query-code"]);
+    expect(await fetchExperimentalTools(context, onFailure)).toEqual(["code-tools"]);
     expect(onFailure).toHaveBeenCalledWith(expect.stringContaining("HTTP 500"));
 
     now.mockReturnValue(start + 400_000);
-    expect(await fetchExperimentalTools(context, onFailure)).toEqual(["query-code"]);
+    expect(await fetchExperimentalTools(context, onFailure)).toEqual(["code-tools"]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
     now.mockReturnValue(start + 422_000);
     fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
-    expect(await fetchExperimentalTools(context, onFailure)).toEqual(["query-code"]);
+    expect(await fetchExperimentalTools(context, onFailure)).toEqual(["code-tools"]);
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
@@ -77,10 +77,10 @@ describe("fetchExperimentalTools", () => {
   });
 
   test("makes one call for parallel requests of one credential", async () => {
-    fetchMock.mockResolvedValueOnce(choice(["query-code"]));
+    fetchMock.mockResolvedValueOnce(choice(["code-tools"]));
     const context = { apiKey: "ctx7sk-parallel" };
     const lists = await Promise.all([1, 2, 3].map(() => fetchExperimentalTools(context)));
-    expect(lists).toEqual([["query-code"], ["query-code"], ["query-code"]]);
+    expect(lists).toEqual([["code-tools"], ["code-tools"], ["code-tools"]]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
