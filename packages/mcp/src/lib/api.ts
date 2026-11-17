@@ -243,6 +243,12 @@ export async function submitDocsFeedback(
   }
 }
 
+/**
+ * Seconds a code tool request lets the API wait for an index before it answers "being indexed".
+ * The API would otherwise hold it up to 40 s; the agent goes on with query-docs instead.
+ */
+export const CODE_INDEX_WAIT_SECONDS = 5;
+
 /** A sentence of the server's 202 message that tells the agent to wait and call again. */
 const WAIT_ADVICE = /\b(call again|keep calling|meanwhile)\b/i;
 
@@ -336,6 +342,7 @@ export async function fetchLibraryCode(
     if (request.head_limit !== undefined)
       url.searchParams.set("head_limit", String(request.head_limit));
     if (request.offset) url.searchParams.set("offset", String(request.offset));
+    url.searchParams.set("wait", String(CODE_INDEX_WAIT_SECONDS));
 
     const headers = generateHeaders(context);
     const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);
