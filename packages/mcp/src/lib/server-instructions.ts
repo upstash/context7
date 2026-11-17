@@ -1,3 +1,4 @@
+import { CODE_TOOLS_INSTRUCTIONS } from "./code-tools.js";
 import { DOCS_FEEDBACK_INSTRUCTIONS } from "./experimental-tools.js";
 
 /**
@@ -33,8 +34,17 @@ export const CLAUDE_CODE_INSTRUCTIONS_LIMIT = 2048;
 
 /**
  * The instructions a session gets: the base text (the current one unless an A/B arm picks
- * another), plus the feedback request when that tool is on.
+ * another), then the sections of the experimental tools the caller has on. Claude Code keeps
+ * the first 2048 characters, so the base text comes first.
  */
-export function serverInstructions(feedbackRequest: boolean, base = SERVER_INSTRUCTIONS): string {
-  return feedbackRequest ? `${base}\n\n${DOCS_FEEDBACK_INSTRUCTIONS}` : base;
+export function serverInstructions(
+  options: { base?: string; codeTools?: boolean; feedbackRequest?: boolean } = {}
+): string {
+  return [
+    options.base ?? SERVER_INSTRUCTIONS,
+    options.codeTools && CODE_TOOLS_INSTRUCTIONS,
+    options.feedbackRequest && DOCS_FEEDBACK_INSTRUCTIONS,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }

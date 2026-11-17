@@ -84,7 +84,7 @@ One OAuth connection reaches every teamspace you are a member of, with your role
 
 ### Adding and indexing a library
 
-`add_library` takes a `source` — `github`, `gitlab`, `bitbucket`, `git` (any other Git host), `website`, `llmstxt` or `openapi` — and a `url`. The `url` is the repository, documentation website, `llms.txt` or OpenAPI spec URL, depending on the source; for GitHub, GitLab and Bitbucket it is the repository URL. The parse takes minutes, so call `get_library` with the returned library id and `wait: true` until the state is `complete` or `error`.
+`add_library` takes a `source` — `github`, `gitlab`, `bitbucket`, `git` (any other Git host), `website`, `llmstxt` or `openapi` — and a `url`. The `url` is the repository, documentation website, `llms.txt` or OpenAPI spec URL, depending on the source; for GitHub, GitLab and Bitbucket it is the repository URL. The parse takes minutes, so call `get_library` with the returned library id and `wait: true` until the state is `complete` or `error`. A source Context7 already has as a public library is not added again: the call answers `200` with `alreadyAvailable: true` and the library's `libraryName`, which you can read with `get_library`. A private library is never reported this way, so the call does not reveal another teamspace's library.
 
 Optional inputs:
 

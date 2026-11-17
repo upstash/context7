@@ -1,6 +1,7 @@
 import { createCipheriv, createHmac, randomBytes } from "crypto";
 import { isIP } from "node:net";
 import { SERVER_VERSION } from "./constants.js";
+import { CODE_TOOLS } from "./tool-names.js";
 import type { ClientContext, InstructionsArm } from "./types.js";
 
 export const INSTRUCTIONS_ARM_HEADER = "X-Context7-Instructions-Assertion";
@@ -19,29 +20,24 @@ function assertionKey() {
   return key && validateEncryptionKey(key) ? Buffer.from(key, "hex") : null;
 }
 
+/** Whether this process holds the key the app shares with the hosted MCP server. */
+export function hasMcpAssertionKey(): boolean {
+  return assertionKey() !== null;
+}
+
 /**
- * Seal a short-lived, authenticated assertion for context7app.
- * Format: <tag>:<unix timestamp seconds>:<12-byte nonce hex>:<ciphertext + tag hex>
- * The tag is part of the authenticated data, so one kind of assertion cannot pass as another.
+ * Seal `plaintext` as a short-lived assertion the app opens with `openMcpAssertion(tag, …)`.
+ * Format: <tag>:<unix timestamp seconds>:<12-byte nonce hex>:<ciphertext + tag hex>. The tag
+ * and timestamp are authenticated data, so one kind of assertion cannot pass as another.
  */
-function sealAssertion(
+export function sealMcpAssertion(
   tag: string,
   plaintext: string,
   nowMs = Date.now(),
   nonce = randomBytes(12)
 ): string | null {
   const key = assertionKey();
-  if (!key) {
-    if (!reportedInvalidAssertionKey) {
-      reportedInvalidAssertionKey = true;
-      console.error(
-        "MCP_CLIENT_IP_ASSERTION_KEY is missing or invalid; client IP assertions are disabled."
-      );
-    }
-    return null;
-  }
-  if (nonce.length !== 12) return null;
-
+  if (!key || nonce.length !== 12) return null;
   try {
     const timestamp = Math.floor(nowMs / 1000).toString();
     const aad = `${tag}:${timestamp}`;
@@ -55,25 +51,32 @@ function sealAssertion(
   }
 }
 
-/** A client-IP assertion (tag `v1`): the app trusts it in place of the proxy's IP. */
+/**
+ * Create a short-lived, authenticated client-IP assertion.
+ * Format: v1:<unix timestamp seconds>:<12-byte nonce hex>:<ciphertext + tag hex>
+ */
 export function createClientIpAssertion(
   clientIp: string,
   nowMs = Date.now(),
   nonce = randomBytes(12)
 ): string | null {
+  if (!assertionKey()) {
+    if (!reportedInvalidAssertionKey) {
+      reportedInvalidAssertionKey = true;
+      console.error(
+        "MCP_CLIENT_IP_ASSERTION_KEY is missing or invalid; client IP assertions are disabled."
+      );
+    }
+    return null;
+  }
   if (isIP(clientIp) === 0) return null;
-  return sealAssertion(ASSERTION_VERSION, clientIp, nowMs, nonce);
+  return sealMcpAssertion(ASSERTION_VERSION, clientIp, nowMs, nonce);
 }
 
 /** HMAC-SHA256 of a message with the assertion key, or null without a valid key. */
 export function assertionKeyHmac(message: string): Buffer | null {
   const key = assertionKey();
   return key ? createHmac("sha256", key).update(message).digest() : null;
-}
-
-/** True when assertions can be sealed: the instructions A/B test needs this. */
-export function assertionKeyIsConfigured(): boolean {
-  return assertionKey() !== null;
 }
 
 /**
@@ -84,7 +87,7 @@ export function createInstructionsArmAssertion(
   arm: InstructionsArm,
   nowMs = Date.now()
 ): string | null {
-  return sealAssertion("a1", JSON.stringify(arm), nowMs);
+  return sealMcpAssertion("a1", JSON.stringify(arm), nowMs);
 }
 
 /**
@@ -95,7 +98,7 @@ export function createInstructionsDefinitionAssertion(
   definition: object,
   nowMs = Date.now()
 ): string | null {
-  return sealAssertion("p1", JSON.stringify(definition), nowMs);
+  return sealMcpAssertion("p1", JSON.stringify(definition), nowMs);
 }
 
 /**
@@ -132,6 +135,10 @@ export function generateHeaders(context: ClientContext): Record<string, string> 
   }
   if (context.experimentalTools?.length) {
     headers["X-Context7-Experimental"] = "1";
+  }
+  // Tells the app the agent has the code tools, so a query-docs answer can point at them.
+  if (context.experimentalTools?.includes(CODE_TOOLS)) {
+    headers["X-Context7-Code-Tools"] = "1";
   }
   if (context.instructionsArm) {
     const assertion = createInstructionsArmAssertion(context.instructionsArm);

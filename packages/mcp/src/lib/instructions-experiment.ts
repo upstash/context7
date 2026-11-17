@@ -4,7 +4,7 @@ import * as jose from "jose";
 import { ALWAYS_LOAD_META, CONTEXT7_API_BASE_URL } from "./constants.js";
 import {
   assertionKeyHmac,
-  assertionKeyIsConfigured,
+  hasMcpAssertionKey,
   createClientIpAssertion,
   createInstructionsArmAssertion,
   createInstructionsDefinitionAssertion,
@@ -121,7 +121,7 @@ export async function loadInstructionsExperiment(
       `Instructions A/B test: CONTEXT7_INSTRUCTIONS_EXPERIMENT must be "remote", got "${mode}"`
     );
   }
-  if (!(options.canSealAssertions ?? assertionKeyIsConfigured)()) {
+  if (!(options.canSealAssertions ?? hasMcpAssertionKey)()) {
     throw new Error(
       "Instructions A/B test: MCP_CLIENT_IP_ASSERTION_KEY must be set so context7app can verify the arms"
     );
