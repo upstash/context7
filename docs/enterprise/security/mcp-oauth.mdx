@@ -1,0 +1,138 @@
+---
+title: "OAuth Sign-In for MCP Clients"
+description: "Let MCP clients sign in with your company SSO instead of a personal API key."
+---
+
+MCP clients such as Claude Code, Cursor, VS Code and MCP Inspector can sign in to your deployment with OAuth. The user adds the server URL to the client. The client opens a browser, the user signs in with the workspace's SSO provider or password, approves the client, and the client receives a token. No key goes into a config file.
+
+The deployment is its own OAuth 2.1 authorization server. It follows the [MCP authorization specification](https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization) (version 2026-07-28). Personal API keys keep working unless you choose OAuth only.
+
+## Turn on OAuth
+
+<Steps>
+  <Step title="Set the public URL">
+    Set `CONTEXT7_PUBLIC_URL` to the origin your users and clients reach, such as `https://context7.internal.yourcompany.com`, and restart the container. The value must use `https` (plain `http` is allowed only for `localhost`) and must not have a path.
+
+    The OAuth issuer, the MCP resource (`<public URL>/mcp`) and all metadata URLs come from this value, not from request headers. OAuth stays off until it is set. A deployment served under a path prefix cannot use OAuth.
+  </Step>
+  <Step title="Choose the MCP authentication mode">
+    In **Workspace Settings › Authentication**, turn on **Require MCP authentication** and choose a mode:
+
+    | Mode | `/mcp` accepts |
+    |---|---|
+    | Personal API keys | Personal API keys (the behavior before OAuth) |
+    | OAuth | OAuth access tokens only |
+    | OAuth and API keys | Both |
+
+    The mode applies to `/mcp` only. `/api/v2` and the other read endpoints keep accepting personal API keys. A dashboard session cookie also works on `/mcp` in every mode, for the in-app MCP test page.
+  </Step>
+  <Step title="Connect a client">
+    Run `ctx7 setup --mcp --base-url <public URL>` or add `<public URL>/mcp` to the client by hand, with no `Authorization` header. The client starts the sign-in flow on its first request.
+  </Step>
+</Steps>
+
+If `CONTEXT7_PUBLIC_URL` is later removed, `/mcp` falls back to personal API keys so that a deployment change cannot lock every client out.
+
+## Client registration
+
+A client identifies itself to the authorization server in one of two ways:
+
+- **Client ID metadata document (CIMD)**: the client ID is an `https` URL. The server fetches the JSON document at that URL to read the client's name and redirect URIs. This is the preferred method in the MCP specification.
+- **Dynamic client registration (DCR)**: the client registers itself at `/oauth/register` and gets a client ID. The MCP specification keeps it for older clients.
+
+Configure both in **Workspace Settings › Authentication**:
+
+| Setting | Default | Description |
+|---|---|---|
+| Client ID metadata documents | Any public host | `Any public host`, `Allowlist` (only the client ID hosts you list, such as `claude.ai`), or `Off` |
+| Dynamic client registration | On | Turn it off to refuse new registrations. Clients that registered before keep working |
+
+For an air-gapped deployment, choose **Allowlist** with no external hosts, or **Off**, and keep DCR on.
+
+The consent page shows the client name, its client ID and where the browser goes back to. A DCR client chose its own name, so the page marks it as not verified.
+
+### Redirect URIs
+
+- An `https` redirect URI must match a registered URI exactly.
+- `http://127.0.0.1`, `http://[::1]` and `http://localhost` redirect URIs may use any port (RFC 8252). The host and path must match.
+- Native app schemes such as `cursor://` and `vscode://` are allowed. The consent page shows the full URI for them.
+- `javascript:`, `data:`, `file:` and other schemes a browser runs locally are refused, as are plain `http` URIs to other hosts.
+
+## Sign-in flow
+
+1. The client calls `/mcp` without a token and gets `401` with `WWW-Authenticate: Bearer resource_metadata="<public URL>/.well-known/oauth-protected-resource/mcp", scope="docs:read"`.
+2. The client reads the protected resource metadata (RFC 9728) and the authorization server metadata at `/.well-known/oauth-authorization-server` (RFC 8414).
+3. The client opens `/oauth/authorize` in the browser with PKCE (`S256` only), `state` and `resource=<public URL>/mcp`.
+4. A user without a session signs in through the active SSO provider or with a password, and comes back to the authorize step. Only the authorize step is accepted as a return target, so a crafted sign-in link cannot redirect anywhere else.
+5. The user approves or denies the client on the consent page. The browser returns to the client with a code, `state` and `iss`.
+6. The client exchanges the code at `/oauth/token` and calls `/mcp` with `Authorization: Bearer <access token>`.
+
+The only scope is `docs:read`. What a client can read is decided by the user's [library access rules](/enterprise/security/library-access), exactly as for the user's personal API key.
+
+## Authorized apps
+
+Each user sees the clients they approved under **Personal settings › Authorized apps**, with when each was created and last used, and can revoke any of them. Admins see every user's authorized apps under **Workspace Settings › Authentication** and can revoke them.
+
+## Security
+
+### Token lifetimes
+
+| Credential | Lifetime |
+|---|---|
+| Authorization code | 60 seconds, single use |
+| Access token | 1 hour |
+| Refresh token | 7 days without use, and never more than 30 days after the user approved the client |
+
+After 30 days the user signs in and approves again. This also bounds how long a user removed only in your identity provider keeps access: Context7 on-premise has no SCIM, so disable the user in Context7 to end access at once.
+
+### Rotation and reuse detection
+
+- Every refresh returns a new refresh token, and the old one stops working.
+- If an old refresh token is presented again, the server revokes the whole authorization and writes a "token reuse" audit entry. The client must sign in again.
+- If an authorization code is used twice, the server revokes what the first use issued.
+- Access tokens are checked against the user on every request. A disabled or deleted user is refused at once.
+
+### What ends an authorization
+
+- The user or an admin revokes it.
+- The client revokes its refresh token at `/oauth/revoke` (RFC 7009).
+- The user changes their password, or an admin resets it with `reset-password`.
+- An admin disables or removes the user.
+
+An SSO sign-in does not end authorizations. Neither does a SAML single logout from the identity provider, because an authorization belongs to the client, not to a browser session.
+
+### What is stored
+
+Codes, access tokens and refresh tokens are stored only as SHA-256 hashes. The server issues no client secrets. Tokens start with `ctx7oc-`, `ctx7oa-` and `ctx7or-`, so they cannot be confused with personal API keys (`ctx7op-`) or browser sessions, and logs and support bundles mask them. A browser session token sent as a bearer token is not accepted on `/mcp`.
+
+An access token is accepted only by the deployment that issued it, and only for its `/mcp` resource. A token for any other resource is refused.
+
+### The CIMD fetch
+
+With client ID metadata documents on, the server fetches a URL that the client chose, from inside your network. The fetch is limited:
+
+- `https` only, with no credentials in the URL.
+- Only public addresses. Every address is checked when the connection opens, so DNS that changes after a check cannot reach an internal host. Loopback, private, link-local (including cloud metadata addresses) and reserved ranges are refused.
+- At most 3 redirects, each checked the same way.
+- At most 64 KB and 5 seconds.
+- Documents are cached for 5 minutes to 24 hours, following `Cache-Control`. A failed fetch is cached for 1 minute.
+
+The server trusts the CA bundle in `NODE_EXTRA_CA_CERTS` for this fetch, like for all outbound HTTPS.
+
+### Audit log
+
+**Workspace Settings › Audit** records client registrations (DCR and the first use of a CIMD client), approvals, denials, revocations with who revoked, token reuse, and changes to the OAuth settings. Entries never hold a code, token or PKCE verifier.
+
+### Clickjacking and CSRF
+
+The consent page and every `/oauth` answer send `X-Frame-Options: DENY` and `frame-ancestors 'none'`. Approval is a `POST` from the deployment's own origin, bound to the signed-in user and to a signed request that expires after 10 minutes.
+
+## Troubleshooting
+
+| Symptom | Cause |
+|---|---|
+| The OAuth modes are not available in the settings | `CONTEXT7_PUBLIC_URL` is missing or not a valid origin. The card shows the reason |
+| The client never opens a browser | **Require MCP authentication** is off, so `/mcp` answers without a token |
+| "This application cannot sign in" | Unknown client, an unregistered redirect URI, or a CIMD document the server cannot fetch or accept |
+| `invalid_target` | The client sent a `resource` other than `<public URL>/mcp`. Check that the client uses the public URL |
+| `invalid_request: state is required` | The client did not send `state`. The server requires it |

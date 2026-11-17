@@ -157,6 +157,12 @@ Context7 accepts a sign-in only when the response:
 - is still valid, allowing 60 seconds of clock difference;
 - has not been used before.
 
+## Sign-in from MCP clients
+
+With [OAuth sign-in for MCP clients](/enterprise/security/mcp-oauth), an MCP client sends the user to this sign-in flow when it needs a token. After the IdP posts the response, Context7 returns to the client's consent step instead of the dashboard. `RelayState` is still ignored. An IdP-initiated sign-in always lands on the dashboard.
+
+An OAuth authorization is not a browser session: single logout from the IdP does not end it. To end it at once, choose **Disable sign-in** for the user on the **Members** page, or revoke it under **Workspace Settings › Authentication**.
+
 ## Disabling password sign-in
 
 Once SAML is live, you can require everyone to sign in through your IdP: turn off the **Password sign-in** card below the SSO card.
