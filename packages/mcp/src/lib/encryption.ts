@@ -1,6 +1,7 @@
 import { createCipheriv, randomBytes } from "crypto";
 import { isIP } from "node:net";
 import { SERVER_VERSION } from "./constants.js";
+import { CODE_TOOLS } from "./tool-names.js";
 import type { ClientContext } from "./types.js";
 
 const ASSERTION_ALGORITHM = "aes-256-gcm";
@@ -104,6 +105,10 @@ export function generateHeaders(context: ClientContext): Record<string, string> 
   }
   if (context.experimentalTools?.length) {
     headers["X-Context7-Experimental"] = "1";
+  }
+  // Tells the app the agent has the code tools, so a query-docs answer can point at them.
+  if (context.experimentalTools?.includes(CODE_TOOLS)) {
+    headers["X-Context7-Code-Tools"] = "1";
   }
 
   return headers;

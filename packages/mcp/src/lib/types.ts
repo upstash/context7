@@ -83,7 +83,8 @@ export interface ClientContext {
   sessionId?: string;
   /**
    * The experimental tools this server lists; a non-empty list is sent as
-   * `X-Context7-Experimental: 1` so the app counts experimental use.
+   * `X-Context7-Experimental: 1` so the app counts experimental use. With the code tools on,
+   * `X-Context7-Code-Tools: 1` too.
    */
   experimentalTools?: readonly ExperimentalTool[];
   /** Mutable: set by the upstream API layer when the backend signals the
