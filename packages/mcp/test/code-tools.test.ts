@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { hasRetryAdvice, isEmptyCodeResult, retryAfterSeconds } from "../src/lib/api.js";
+import { indexingAnswer, isEmptyCodeResult } from "../src/lib/api.js";
 import { rewriteCodeHints } from "../src/lib/code-tools.js";
 
 const HEADER =
@@ -32,33 +32,21 @@ describe("isEmptyCodeResult", () => {
   });
 });
 
-describe("retryAfterSeconds", () => {
-  test("prefers the body, then a header in seconds or as an HTTP date", () => {
-    expect(retryAfterSeconds(12, "99")).toBe(12);
-    expect(retryAfterSeconds(undefined, "45")).toBe(45);
-    const inOneMinute = new Date(Date.now() + 60_000).toUTCString();
-    const fromDate = retryAfterSeconds(undefined, inOneMinute);
-    expect(fromDate).toBeGreaterThan(50);
-    expect(fromDate).toBeLessThanOrEqual(60);
+describe("indexingAnswer", () => {
+  test("drops the server's advice to keep calling and sends the agent to query-docs", () => {
+    const text = indexingAnswer(
+      'Git tag "v4.7.0" is not a docs version of /honojs/hono, so its source is being indexed from the tag. A first index usually takes 1 to 3 minutes, and longer for a very large repository. Call again in about 30 seconds, and keep calling until it answers, for up to 3 minutes. Meanwhile, or after that, answer from query-docs.',
+      "grep-code"
+    );
+    expect(text).toBe(
+      'Git tag "v4.7.0" is not a docs version of /honojs/hono, so its source is being indexed from the tag. A first index usually takes 1 to 3 minutes, and longer for a very large repository. This is not an error. Until the index is done, every code tool call for this version gives this answer, so do not try other patterns or files and do not wait: answer from query-docs now. Only if the source is still needed at the end of the task, call grep-code once more.'
+    );
+    expect(text).not.toMatch(/keep calling|call again/i);
   });
 
-  test("never gives NaN", () => {
-    expect(retryAfterSeconds(undefined, "soon")).toBe(30);
-    expect(retryAfterSeconds("x", null)).toBe(30);
-  });
-});
-
-describe("hasRetryAdvice", () => {
-  test("sees the retry rule in a newer server message", () => {
-    expect(
-      hasRetryAdvice(
-        "The source of /lukeed/clsx at master is being indexed. A first index usually takes 1 to 3 minutes. Call again in about 30 seconds, and keep calling until it answers, for up to 3 minutes."
-      )
-    ).toBe(true);
-  });
-  test("is false for an older server message", () => {
-    expect(hasRetryAdvice("The source of /vercel/next.js at v15.5.0 is being indexed.")).toBe(
-      false
+  test("works without a server message", () => {
+    expect(indexingAnswer(undefined, "read-code")).toMatch(
+      /^The library source is being indexed\. This is not an error\..*call read-code once more/
     );
   });
 });

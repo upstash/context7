@@ -243,25 +243,20 @@ export async function submitDocsFeedback(
   }
 }
 
-/**
- * True when the server's 202 message already says how long to keep calling.
- * Newer servers include that rule, so the client adds it only for older ones.
- */
-export function hasRetryAdvice(message: string): boolean {
-  return /keep calling|up to \d+ minutes/i.test(message);
-}
+/** A sentence of the server's 202 message that tells the agent to wait and call again. */
+const WAIT_ADVICE = /\b(call again|keep calling|meanwhile)\b/i;
 
-/** Seconds to wait from a 202 body or a Retry-After header (seconds or an HTTP date). */
-export function retryAfterSeconds(bodyValue: unknown, header: string | null): number {
-  if (typeof bodyValue === "number" && Number.isFinite(bodyValue) && bodyValue >= 0)
-    return Math.ceil(bodyValue);
-  if (header) {
-    const seconds = Number(header);
-    if (Number.isFinite(seconds) && seconds >= 0) return Math.ceil(seconds);
-    const date = Date.parse(header);
-    if (Number.isFinite(date)) return Math.max(1, Math.ceil((date - Date.now()) / 1000));
-  }
-  return 30;
+/**
+ * The answer while a library's source is being indexed. The code tools never make the agent
+ * wait: an index can take minutes, or stall, and the user's session must go on. So the server's
+ * own "keep calling" advice is dropped, and the agent answers from query-docs now.
+ */
+export function indexingAnswer(message: string | undefined, tool: string): string {
+  const base = (message ?? "The library source is being indexed.")
+    .split(/(?<=\.)\s+/)
+    .filter((sentence) => !WAIT_ADVICE.test(sentence))
+    .join(" ");
+  return `${base} This is not an error. Until the index is done, every code tool call for this version gives this answer, so do not try other patterns or files and do not wait: answer from query-docs now. Only if the source is still needed at the end of the task, call ${tool} once more.`;
 }
 
 /**
@@ -306,7 +301,8 @@ async function codeErrorMessage(
 
 /**
  * Queries a library's source code at the version its docs were built from.
- * A 202 means the source is still being indexed: that is a normal answer
+ * A 202 means the source is still being indexed: that is a normal answer, and the agent goes on
+ * without it (see indexingAnswer)
  * telling the agent to call again, not an error.
  */
 export async function fetchLibraryCode(
@@ -350,16 +346,9 @@ export async function fetchLibraryCode(
       async (response) => {
         readPromptSignal(response, context);
         if (response.status === 202) {
-          const body = (await response.json().catch(() => ({}))) as {
-            message?: string;
-            retryAfter?: number;
-          };
-          const wait = retryAfterSeconds(body.retryAfter, response.headers.get("Retry-After"));
-          const message = body.message ?? "The library source is being indexed.";
+          const body = (await response.json().catch(() => ({}))) as { message?: string };
           return {
-            data: hasRetryAdvice(message)
-              ? `${message} This is not an error.`
-              : `${message} This is not an error. Call ${tool} again with the same arguments in about ${wait} seconds, and keep calling for up to 3 minutes: a first index usually takes 1 to 3. Meanwhile, or if it is still indexing after that, answer from query-docs.`,
+            data: indexingAnswer(body.message, tool),
             // No "indexing" outcome exists: telemetry counts it with the empty results.
             outcome: "not_found",
           };

@@ -2272,7 +2272,7 @@ describe("code tools", () => {
       });
       expect(indexing.isError).toBeFalsy();
       expect((indexing.content as { text: string }[])[0].text).toMatch(
-        /being indexed.*Call grep-code again.*30 seconds/s
+        /being indexed\..*do not wait: answer from query-docs now.*call grep-code once more/s
       );
 
       const noSource = await client.callTool({

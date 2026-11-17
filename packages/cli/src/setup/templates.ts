@@ -25,7 +25,7 @@ If the \`grep-code\`, \`glob-code\`, \`read-code\` and \`find-symbol\` tools are
 - \`find-symbol\` finds where a symbol is defined, where it is used, or the symbols of a file
 - For a version, pass its git tag in \`version\` (e.g. \`v3.24.2\`)
 - Most questions need 1 to 4 calls; stop at 6
-- If a tool answers "being indexed", call again every 30 seconds for up to 3 minutes (a first index usually takes 1 to 3), then answer from \`query-docs\`. These calls do not count toward the 6
+- If a tool answers "being indexed", do not wait: answer from \`query-docs\` now. If you still need the source after that, call the tool once more
 - Cite the file and line of the source you used
 `;
 

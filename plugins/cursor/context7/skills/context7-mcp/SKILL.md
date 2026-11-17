@@ -49,7 +49,7 @@ If the `grep-code`, `glob-code`, `read-code` and `find-symbol` tools are availab
 - Find code with `grep-code` (`-F: true` for error messages), find files with `glob-code`, and look up a symbol's definition, references or a file's symbols with `find-symbol`. Then `read-code` the file range the result gives
 - Follow the result's "Next:" line for the read or page call to make next. Most questions need 1 to 4 calls; stop at 6
 - `version` takes a git tag, e.g. `v3.24.2`. A tag that is not a docs version is indexed first ("being indexed"). If indexing fails, the answer lists the docs versions you can use
-- If it answers "being indexed", call again every 30 seconds for up to 3 minutes (a first index usually takes 1 to 3), then answer from `query-docs`. These calls do not count toward the 6
+- If it answers "being indexed", do not wait: answer from `query-docs` now. If you still need the source after that, call the tool once more
 - Cite the file and line of the source you used
 
 ### Step 5: Use the Documentation
