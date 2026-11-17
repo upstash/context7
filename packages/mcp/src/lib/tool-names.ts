@@ -39,3 +39,13 @@ export type McpTool = (typeof MCP_TOOL_NAMES)[number];
  * answers the agent acts on. A guide still being prepared is `success`.
  */
 export type ToolCallOutcome = "error" | "invalid" | "not_found" | "success" | "unavailable";
+
+/**
+ * The tools a stored dashboard choice `{ all, tools }` turns on. `all` is every experimental tool
+ * this server has, also ones the app does not know yet; anything malformed turns on none.
+ */
+export function experimentalToolsFromChoice(choice: unknown): ExperimentalTool[] {
+  if (!choice || typeof choice !== "object") return [];
+  const { all, tools } = choice as { all?: unknown; tools?: unknown };
+  return all === true ? [...EXPERIMENTAL_TOOL_NAMES] : experimentalToolsFrom(tools);
+}

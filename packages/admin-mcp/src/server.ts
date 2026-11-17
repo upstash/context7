@@ -59,7 +59,15 @@ function telemetryHeaders(tool: string, ctx: ServerContext): Record<string, stri
   };
 }
 
+/**
+ * The API client for one tool call. Each request carries its 1-based number in
+ * the call (`X-Context7-Tool-Request`), so the app counts a tool call once even
+ * when it resolves the teamspace first or polls with `wait: true`. A call that
+ * fails before its first request (a ToolError from its arguments) is in the
+ * audit line but never reaches the app, so the two counts can differ slightly.
+ */
 function createApi(state: RequestState, telemetry: Record<string, string>): Api {
+  let requests = 0;
   const request = async (
     method: string,
     path: string,
@@ -76,6 +84,7 @@ function createApi(state: RequestState, telemetry: Record<string, string>): Api 
         "X-Context7-Source": "admin-mcp",
         "X-Context7-Server-Version": SERVER_VERSION,
         ...telemetry,
+        "X-Context7-Tool-Request": String(++requests),
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -138,7 +147,7 @@ const NEXT_STEP: Record<string, string> = {
   write_access_required:
     "The API key can only read settings, libraries and usage. Changes and personal data (members, visitor questions, feedback) need a key with Write access: ask the user to create one in https://context7.com/dashboard, or to sign in with OAuth.",
   docs7_pro_required:
-    "This needs Docs7 Pro. The owner can enable it at https://context7.com/docs7.",
+    "This needs Docs7 Pro, a subscription of its own per teamspace: the Context7 Pro plan (the PRO badge, `ownerPlan`) does not include it, and `docs7ProEnabled` from get_teamspace says if it is on. The owner can enable it at https://context7.com/docs7.",
   paid_plan_required: "This needs a paid plan: https://context7.com/plans.",
   docs7_agent_rate_limited: "The site used its agent runs for this month. Try again next month.",
   run_in_progress: "A run is already in progress. Wait for it with docs7_get_agent_runs.",
@@ -258,6 +267,24 @@ async function resolveTeamspace(value: unknown, api: Api): Promise<string> {
   );
 }
 
+/**
+ * Why a tool call failed, for the audit line: the API status and its error
+ * code, or the kind of local failure. Never a message, which can hold user text.
+ */
+export function failureFields(error: unknown): { status?: number; errorCode: string } {
+  if (error instanceof ApiError) {
+    const code = (error.body as { error?: unknown } | null)?.error;
+    return {
+      status: error.status,
+      errorCode:
+        typeof code === "string" && /^[a-z0-9_-]{1,64}$/.test(code) ? code : `http_${error.status}`,
+    };
+  }
+  if (error instanceof ToolError) return { errorCode: "tool_error" };
+  if (error instanceof Error && error.name === "TimeoutError") return { errorCode: "timeout" };
+  return { errorCode: "exception" };
+}
+
 /** `input`: the change waits for the user's confirmation, and `ask` is the form. */
 type Outcome =
   | { ok: true; value: unknown }
@@ -338,6 +365,7 @@ async function runTool(
       ...(source === "console" ? { from: "console" } : {}),
       teamspace: input.teamspace,
       outcome: outcome.ok === "input" ? "confirm" : outcome.ok ? "ok" : "error",
+      ...(outcome.ok === false ? failureFields(outcome.error) : {}),
     })
   );
   return outcome;

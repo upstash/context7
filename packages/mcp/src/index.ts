@@ -43,6 +43,11 @@ import { aliasArgs, GLOBAL_ALIASES, QUERY_DOCS_ALIASES } from "./lib/tool-args.j
 import { DOCS_FEEDBACK_INSTRUCTIONS, registerExperimentalTools } from "./lib/experimental-tools.js";
 import { installProcessShutdown } from "./lib/process-shutdown.js";
 import {
+  isSnapshotEnabled,
+  snapshotExperimentalTools,
+  startExperimentalToolsSnapshot,
+} from "./lib/experimental-tools-snapshot.js";
+import {
   forceFlushTelemetry,
   initializeTelemetry,
   observeAuthentication,
@@ -74,8 +79,9 @@ const DEFAULT_PORT = 3000;
 const OAUTH_METADATA_TIMEOUT_MS = 10_000;
 const CLAUDE_CODE_PLUGIN = "claude-code-plugin";
 const STATIC_CACHE_HINT = { ttlMs: 3_600_000, cacheScope: "public" } as const;
-// A signed-in caller's tools follow their dashboard choice, so a change shows within minutes.
-const PRIVATE_CACHE_HINT = { ttlMs: 300_000, cacheScope: "private" } as const;
+// A signed-in caller's tools follow their dashboard choice. The hosted server reads it from memory
+// (refreshed every 15 s), so a short hint lets a change show within about a minute.
+const PRIVATE_CACHE_HINT = { ttlMs: 60_000, cacheScope: "private" } as const;
 type McpInstrumentation = NonNullable<Awaited<ReturnType<typeof initializeTelemetry>>>;
 let mcpInstrumentation: McpInstrumentation | undefined;
 
@@ -664,13 +670,16 @@ async function main() {
           plugin,
           transport: "http",
         };
-        // Every experimental tool by URL flag; else the signed-in user's dashboard choice
-        // (cached per credential). Only POST carries MCP messages.
+        // Every experimental tool by URL flag; else the signed-in user's dashboard choice, from the
+        // in-memory snapshot when the hosted server has one, or else the cached API lookup. Only
+        // POST carries MCP messages.
         context.experimentalTools = experimental
           ? EXPERIMENTAL_TOOL_NAMES
-          : req.method === "POST"
-            ? await fetchExperimentalTools(context)
-            : [];
+          : req.method !== "POST"
+            ? []
+            : isSnapshotEnabled()
+              ? snapshotExperimentalTools(apiKey)
+              : await fetchExperimentalTools(context);
 
         const oauthClientRegistration = classifyOAuthClientRegistration(apiKey);
         observeCredentialedInitialize(res, req.body, {
@@ -868,6 +877,13 @@ async function main() {
       });
     };
 
+    // At most one 5 s request; a failed first read starts with nothing on.
+    await startExperimentalToolsSnapshot();
+    if (!isSnapshotEnabled()) {
+      console.warn(
+        "[Context7] Experimental tools snapshot off (no MCP_CLIENT_IP_ASSERTION_KEY): dashboard choices are looked up through the Context7 API, once per credential every 5 minutes"
+      );
+    }
     startServer(initialPort);
   } else {
     const keySources = [cliOptions.apiKey, process.env.CONTEXT7_API_KEY];

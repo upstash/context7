@@ -1498,6 +1498,12 @@ HTTP transport requires a credential on every request by default. Clients send `
 
 Opaque OAuth access tokens (`oat_…`) are checked against the Context7 API before each request is served (one check per token per minute on each replica; the cache is in memory, and a rejected token stays rejected for ten minutes). An expired or revoked token gets an HTTP 401 with a `WWW-Authenticate` challenge so MCP clients refresh it. Set `MCP_OAUTH_TOKEN_VALIDATION=off` to skip that check and forward the token unchecked.
 
+For a signed-in caller, the server reads the experimental tools turned on in the Context7 dashboard.
+
+The hosted server holds `MCP_CLIENT_IP_ASSERTION_KEY`, the key it shares with the Context7 app. With it, each process keeps every user's choice in memory: it polls the app's internal snapshot endpoint every 15 seconds, which answers `304 Not Modified` unless something changed, and `tools/list` asks clients to cache the list for one minute, so a dashboard change shows within about a minute. API keys, Clerk OAuth JWTs and opaque OAuth tokens (through the user id the auth check returns) are answered from memory, with no call per request; other credentials get no experimental tools from the dashboard. Opaque tokens need an app that returns `X-Context7-User-Id` from `/api/v2/auth/check` and `MCP_OAUTH_TOKEN_VALIDATION` left on; without them those users get none either. While the app is unreachable the last copy stays in use.
+
+Without that key (the stdio server, a self-hosted HTTP server), the server asks the Context7 API and keeps the answer for five minutes per credential.
+
 OAuth JWT access tokens from the authorization server (`OAUTH_AUTH_SERVER_URL`) are verified locally: signature against its JWKS, issuer, a `typ` of `at+jwt`, and expiry with a minute of clock tolerance. Clerk ID tokens and session JWTs share that issuer but are not access tokens, so they are always rejected. The token's `aud` must name this server (`RESOURCE_URL` origin, `/mcp`, or `/mcp/oauth`; override with a comma-separated `MCP_OAUTH_ALLOWED_AUDIENCES`). The query string of an audience on an allowed host is ignored. `MCP_OAUTH_AUDIENCE_ENFORCEMENT` sets what a mismatch does: `observe` (default) admits a token with a missing or foreign audience; `foreign` answers HTTP 401 to a token issued for another server and still admits one with no `aud`; `required` answers 401 to both. Every mismatch is logged with the OAuth client ID, the audience and the outcome, once per token per hour on each replica.
 
 Another example with stdio transport:
