@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { fetchExperimentalTools } from "../src/lib/api.js";
+import { experimentalToolsFromChoice } from "../src/lib/tool-names.js";
 import { isOAuthTokenRememberedInvalid } from "../src/lib/oauth-token-validation.js";
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -28,20 +29,46 @@ describe("fetchExperimentalTools", () => {
     fetchMock.mockResolvedValueOnce(choice(["query-code"]));
     expect(await fetchExperimentalTools(context, onFailure)).toEqual(["query-code"]);
 
-    // The choice expired and the app is down: keep it, and ask again after 15 seconds.
-    now.mockReturnValue(start + 61_000);
+    // The choice expired (5 minutes) and the app is down: keep it, and ask again after 2 minutes.
+    now.mockReturnValue(start + 301_000);
     fetchMock.mockResolvedValueOnce(new Response(null, { status: 500 }));
     expect(await fetchExperimentalTools(context, onFailure)).toEqual(["query-code"]);
     expect(onFailure).toHaveBeenCalledWith(expect.stringContaining("HTTP 500"));
 
-    now.mockReturnValue(start + 70_000);
+    now.mockReturnValue(start + 400_000);
     expect(await fetchExperimentalTools(context, onFailure)).toEqual(["query-code"]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
-    now.mockReturnValue(start + 77_000);
+    now.mockReturnValue(start + 422_000);
     fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
     expect(await fetchExperimentalTools(context, onFailure)).toEqual(["query-code"]);
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
+  test("serves from the cache instead of starting more than 32 lookups at once", async () => {
+    let release!: () => void;
+    const pending = new Promise<Response>((resolve) => {
+      release = () => resolve(choice([]));
+    });
+    fetchMock.mockReturnValue(pending);
+    const lookups = Array.from({ length: 40 }, (_, i) =>
+      fetchExperimentalTools({ apiKey: `ctx7sk-burst-${i}` })
+    );
+    try {
+      await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(32));
+    } finally {
+      release();
+    }
+    expect(await Promise.all(lookups)).toEqual(Array.from({ length: 40 }, () => []));
+    expect(fetchMock).toHaveBeenCalledTimes(32);
+  });
+
+  test("reports a failed lookup once, not once per waiting request", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 503 }));
+    const onFailure = vi.fn();
+    const context = { apiKey: "ctx7sk-shared-failure" };
+    await Promise.all([1, 2, 3].map(() => fetchExperimentalTools(context, onFailure)));
+    expect(onFailure).toHaveBeenCalledTimes(1);
   });
 
   test("lists none when a credential's first lookup fails", async () => {
@@ -66,5 +93,20 @@ describe("fetchExperimentalTools", () => {
     );
     await fetchExperimentalTools({ apiKey: "oat_expired-settings", transport: "http" }, () => {});
     expect(isOAuthTokenRememberedInvalid("oat_expired-settings")).toBe(true);
+  });
+});
+
+describe("experimentalToolsFromChoice", () => {
+  test("expands all and keeps only known tools", () => {
+    expect(experimentalToolsFromChoice({ all: true, tools: [] })).toEqual([
+      "query-code",
+      "get-upgrade-guide",
+      "submit-docs-feedback",
+    ]);
+    expect(experimentalToolsFromChoice({ all: false, tools: ["query-code", "nope"] })).toEqual([
+      "query-code",
+    ]);
+    expect(experimentalToolsFromChoice(null)).toEqual([]);
+    expect(experimentalToolsFromChoice("all")).toEqual([]);
   });
 });

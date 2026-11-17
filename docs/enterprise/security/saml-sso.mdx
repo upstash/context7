@@ -15,7 +15,7 @@ You need:
 - A Context7 admin account. On a fresh install it is `admin` / `admin` until you change it.
 
 <Note>
-Only one SSO provider can be active at a time. Enabling SAML turns off Microsoft Entra ID and OIDC, and enabling either of those turns off SAML.
+Only one SSO provider can be active at a time. Enabling SAML turns off OIDC, and enabling OIDC turns off SAML.
 </Note>
 
 <Note>
@@ -55,7 +55,7 @@ When you create the application in your IdP:
   <Accordion title="Microsoft Entra ID">
     In **Enterprise applications**, create a non-gallery application and choose **SAML** as the single sign-on method. Upload the Context7 metadata file, or enter the **Identifier (Entity ID)**, **Reply URL** and **Logout URL** by hand. Use **Add a group claim** to send group membership. Entra sends group object IDs, so use the object IDs as the admin and member group values in Context7. Then copy the **App Federation Metadata Url** into Context7.
 
-    If Entra ID is your only IdP, you can use the dedicated [Microsoft Entra SSO](/enterprise/security/entra-sso) integration instead.
+    For the step-by-step Entra setup, see [Microsoft Entra SSO](/enterprise/security/entra-sso).
   </Accordion>
   <Accordion title="ADFS">
     Add a relying party trust and import its data from the Context7 metadata URL or file. Add claim rules that send the user's email, display name and group membership, and a rule that sends a persistent identifier or the email address as the NameID. Then use `https://<your-adfs-host>/FederationMetadata/2007-06/FederationMetadata.xml` as the metadata URL in Context7.
