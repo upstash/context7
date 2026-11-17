@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { indexingAnswer, isEmptyCodeResult } from "../src/lib/api.js";
-import { rewriteCodeHints } from "../src/lib/code-tools.js";
+import { grepRequest, rewriteCodeHints } from "../src/lib/code-tools.js";
 
 const HEADER =
   "Library: /colinhacks/zod at v3.24.2 (commit 0123456789ab, the commit the docs were built from) | License: MIT";
@@ -53,6 +53,27 @@ describe("indexingAnswer", () => {
 
 // Hint texts as the server's lib/code writes them, in terms of its operations and fields.
 describe("rewriteCodeHints", () => {
+  test("leaves paths, file names and quoted patterns alone", () => {
+    expect(rewriteCodeHints("Next: read: packages/mcp/src/lib/query-code-tool.ts#L1-L40")).toBe(
+      'Next: read-code with file_path "packages/mcp/src/lib/query-code-tool.ts", offset 1, limit 40'
+    );
+    expect(rewriteCodeHints("Next: read: src/ignore_case.py#L5-L45")).toContain(
+      'file_path "src/ignore_case.py"'
+    );
+    expect(rewriteCodeHints('3 matching lines in 2 files for "fixed_strings"')).toBe(
+      '3 matching lines in 2 files for "fixed_strings"'
+    );
+    expect(rewriteCodeHints("No match. Try ignore_case: true, or query-code again.")).toBe(
+      "No match. Try -i: true, or grep-code again."
+    );
+  });
+
+  test("keeps a path with spaces whole", () => {
+    expect(rewriteCodeHints("Next: read: docs/My File.md#L1-L40 | more: offset 20")).toBe(
+      'Next: read-code with file_path "docs/My File.md", offset 1, limit 40 | more: offset 20'
+    );
+  });
+
   test("turns a Next: read hint into a read-code call", () => {
     expect(rewriteCodeHints("Next: read: src/client.ts#L40-L80 | more: offset 20")).toBe(
       'Next: read-code with file_path "src/client.ts", offset 40, limit 41 | more: offset 20'
@@ -90,5 +111,18 @@ describe("rewriteCodeHints", () => {
     expect(rewriteCodeHints(`Next: read: src/a.ts#L1-L2\n${source}\nset fixed_strings`)).toBe(
       `Next: read-code with file_path "src/a.ts", offset 1, limit 2\n${source}\nset -F`
     );
+  });
+});
+
+describe("grepRequest", () => {
+  const base = { libraryId: "/a/b", pattern: "x" };
+
+  test("refuses a type with an include glob, which would widen the search", () => {
+    expect(grepRequest({ ...base, type: "ts", glob: "src/**" })).toMatch(/not both/);
+  });
+
+  test("adds a type's globs to an exclude glob", () => {
+    const request = grepRequest({ ...base, type: "py", glob: "!**/test/**" });
+    expect(typeof request === "object" && request.glob).toEqual(["!**/test/**", "*.py", "*.pyi"]);
   });
 });

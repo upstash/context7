@@ -9,7 +9,6 @@ import type { DocsFeedback, UpgradeGuideRequest } from "./experimental-tools.js"
 import {
   experimentalToolsFromChoice,
   GET_UPGRADE_GUIDE_TOOL,
-  GREP_CODE_TOOL,
   type CodeTool,
   type ExperimentalTool,
   type ToolCallOutcome,
@@ -308,13 +307,12 @@ async function codeErrorMessage(
 /**
  * Queries a library's source code at the version its docs were built from.
  * A 202 means the source is still being indexed: that is a normal answer, and the agent goes on
- * without it (see indexingAnswer)
- * telling the agent to call again, not an error.
+ * without it (see indexingAnswer).
  */
 export async function fetchLibraryCode(
   request: CodeRequest,
-  context: ClientContext = {},
-  tool: CodeTool = GREP_CODE_TOOL
+  context: ClientContext,
+  tool: CodeTool
 ): Promise<ContextResponse> {
   try {
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/code`);

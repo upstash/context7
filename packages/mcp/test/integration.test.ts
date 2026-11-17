@@ -881,6 +881,21 @@ describe("experimental tools", () => {
     }
   });
 
+  test("leaves the code tools out of the instructions when they are off", async () => {
+    const client = new Client(
+      { name: "experimental-test", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+    await client.connect(httpTransport(httpUrl, "ctx7sk-no-tools-1"));
+    try {
+      const discover = client.getDiscoverResult() as { instructions?: string };
+      expect(discover.instructions).toContain("Use this server to fetch current documentation");
+      expect(discover.instructions).not.toContain("grep-code");
+    } finally {
+      await client.close();
+    }
+  });
+
   test("lists the dashboard choice over stdio with an API key", async () => {
     const client = new Client({ name: "experimental-test", version: "1.0.0" });
     await client.connect(
