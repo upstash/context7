@@ -44,6 +44,18 @@ import { aliasArgs, GLOBAL_ALIASES, QUERY_DOCS_ALIASES } from "./lib/tool-args.j
 import { DOCS_FEEDBACK_INSTRUCTIONS, registerExperimentalTools } from "./lib/experimental-tools.js";
 import { installProcessShutdown } from "./lib/process-shutdown.js";
 import {
+  isSnapshotEnabled,
+  snapshotExperimentalTools,
+  startExperimentalToolsSnapshot,
+  verifiedJwtSubject,
+  type SnapshotIdentity,
+} from "./lib/experimental-tools-snapshot.js";
+import { isClerkOAuthJwt, isJWT } from "./lib/jwt.js";
+import {
+  isOpaqueOAuthToken,
+  validatedOpaqueOAuthTokenUserId,
+} from "./lib/oauth-token-validation.js";
+import {
   forceFlushTelemetry,
   initializeTelemetry,
   observeAuthentication,
@@ -672,15 +684,24 @@ async function main() {
         // (cached per credential). Only POST carries MCP messages. Listing refreshes the choice;
         // initialize and experimental tool calls ask only when this process has none; the rest
         // use the cached choice.
+        // With the snapshot configured, a credential that names its user without a network call
+        // (API key, verified Clerk JWT, opaque token with a cached check) reads only the
+        // in-memory snapshot; any other credential falls back to the bounded lookup.
+        const identity =
+          isSnapshotEnabled() && req.method === "POST"
+            ? snapshotIdentity(apiKey, authentication.event === "credential_validated")
+            : undefined;
         context.experimentalTools = experimental
           ? EXPERIMENTAL_TOOL_NAMES
-          : req.method === "POST"
-            ? await fetchExperimentalTools(context, undefined, {
-                lookUp: experimentalToolsLookupEnabled
-                  ? experimentalToolsLookupFor(req.body)
-                  : "never",
-              })
-            : [];
+          : req.method !== "POST"
+            ? []
+            : identity
+              ? snapshotExperimentalTools(identity)
+              : await fetchExperimentalTools(context, undefined, {
+                  lookUp: experimentalToolsLookupEnabled
+                    ? experimentalToolsLookupFor(req.body)
+                    : "never",
+                });
 
         const oauthClientRegistration = classifyOAuthClientRegistration(apiKey);
         observeCredentialedInitialize(res, req.body, {
@@ -878,6 +899,8 @@ async function main() {
       });
     };
 
+    // Bounded by the snapshot's request timeout; a failed first read starts with nothing on.
+    await startExperimentalToolsSnapshot();
     startServer(initialPort);
   } else {
     const keySources = [cliOptions.apiKey, process.env.CONTEXT7_API_KEY];
@@ -946,3 +969,22 @@ main().catch((error) => {
   console.error("Fatal error in main():", error);
   process.exit(1);
 });
+
+/** How a credential names its user for the experimental tools snapshot, with no network call. */
+function snapshotIdentity(
+  apiKey: string | undefined,
+  verified: boolean
+): SnapshotIdentity | undefined {
+  if (!apiKey) return undefined;
+  if (isOpaqueOAuthToken(apiKey)) {
+    const userId = validatedOpaqueOAuthTokenUserId(apiKey);
+    return userId ? { userId } : undefined;
+  }
+  if (isClerkOAuthJwt(apiKey)) {
+    const userId = verified ? verifiedJwtSubject(apiKey) : undefined;
+    return userId ? { userId } : undefined;
+  }
+  // Entra, Vercel Marketplace and other JWTs name no Context7 user here.
+  if (isJWT(apiKey)) return undefined;
+  return { apiKey };
+}
