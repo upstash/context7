@@ -347,3 +347,70 @@ describe("on-premise setup network boundary", () => {
     await expect(readFile(join(tempDir, ".codex", "config.toml"), "utf-8")).rejects.toThrow();
   });
 });
+
+describe("on-premise OAuth sign-in", () => {
+  function authStatus(body: Record<string, unknown>) {
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => body } as Response);
+  }
+
+  async function runSetup(...extra: string[]) {
+    const program = new Command();
+    program.exitOverride();
+    registerSetupCommand(program);
+    await program.parseAsync([
+      "node",
+      "ctx7",
+      "setup",
+      "--mcp",
+      "--base-url",
+      "https://context7.internal.example",
+      "--codex",
+      "--project",
+      ...extra,
+    ]);
+  }
+
+  const codexConfig = () => readFile(join(tempDir, ".codex", "config.toml"), "utf-8");
+
+  test("writes a keyless config without prompting when the server uses OAuth only", async () => {
+    authStatus({ enabled: true, mode: "oauth" });
+    await runSetup();
+    expect(promptMocks.password).not.toHaveBeenCalled();
+    const config = await codexConfig();
+    expect(config).toContain('url = "https://context7.internal.example/mcp"');
+    expect(config).not.toContain("Authorization");
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  test("refuses --api-key when the server accepts OAuth only", async () => {
+    authStatus({ enabled: true, mode: "oauth" });
+    await runSetup("--api-key", "ctx7op-abc_def", "--yes");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("prefers OAuth when the server accepts both and no key is given", async () => {
+    authStatus({ enabled: true, mode: "both" });
+    await runSetup("--yes");
+    expect(promptMocks.password).not.toHaveBeenCalled();
+    expect(await codexConfig()).not.toContain("Authorization");
+  });
+
+  test("keeps an explicit key when the server accepts both", async () => {
+    authStatus({ enabled: true, mode: "both" });
+    await runSetup("--api-key", "ctx7op-abc_def", "--yes");
+    expect(await codexConfig()).toContain('Authorization = "Bearer ctx7op-abc_def"');
+  });
+
+  test("refuses --oauth when the server accepts personal keys only", async () => {
+    authStatus({ enabled: true, mode: "personal_keys" });
+    await runSetup("--oauth", "--yes");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("treats a server that reports no mode as personal keys only", async () => {
+    authStatus({ enabled: true });
+    await runSetup("--yes");
+    expect(process.exitCode).toBe(1);
+    expect(promptMocks.password).not.toHaveBeenCalled();
+  });
+});

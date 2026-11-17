@@ -36,6 +36,7 @@ import {
   getOnPremMcpAuthStatus,
   resolveSetupDeployment,
   type CustomSetupDeployment,
+  type OnPremMcpAuthStatus,
   type SetupDeployment,
 } from "../setup/deployment.js";
 import {
@@ -135,8 +136,9 @@ async function resolveAuth(
   const explicitApiKey = options.apiKey?.trim();
 
   if (deployment.kind === "custom") {
+    let status: OnPremMcpAuthStatus;
     try {
-      if (!(await getOnPremMcpAuthStatus(deployment))) return { mode: "none" };
+      status = await getOnPremMcpAuthStatus(deployment);
     } catch (err) {
       log.error(
         `Could not check MCP authentication at ${deployment.baseUrl}: ${err instanceof Error ? err.message : String(err)}`
@@ -144,9 +146,31 @@ async function resolveAuth(
       process.exitCode = 1;
       return null;
     }
+    if (!status.enabled) return { mode: "none" };
+
+    // With OAuth, the config holds no key: the client opens a browser to sign in.
+    if (status.mode === "oauth") {
+      if (explicitApiKey) {
+        log.error(
+          `${deployment.baseUrl} accepts only OAuth sign-in for MCP. Rerun without --api-key; your client signs in through the browser.`
+        );
+        process.exitCode = 1;
+        return null;
+      }
+      return { mode: "oauth" };
+    }
+    if (options.oauth) {
+      if (status.mode === "both") return { mode: "oauth" };
+      log.error(
+        `${deployment.baseUrl} does not offer OAuth sign-in for MCP. Use a personal API key instead.`
+      );
+      process.exitCode = 1;
+      return null;
+    }
 
     const apiKey = explicitApiKey || process.env.CONTEXT7_API_KEY?.trim();
     if (apiKey) return { mode: "api-key", apiKey };
+    if (status.mode === "both") return { mode: "oauth" };
 
     if (!options.yes) {
       const promptedApiKey = await promptForOnPremApiKey(deployment);
@@ -179,9 +203,6 @@ function getSetupValidationError(
     }
     if (options.stdio) {
       return "--stdio is not supported with --base-url. On-premise setup uses the HTTP /mcp endpoint.";
-    }
-    if (options.oauth) {
-      return "--oauth is only supported by hosted Context7. Use a personal on-premise API key.";
     }
   }
 
