@@ -4,7 +4,7 @@ sidebarTitle: "OIDC SSO"
 description: "Let your team sign in with any OIDC-compatible identity provider instead of shared passwords."
 ---
 
-Context7 On-Premise supports single sign-on with any provider that implements the OpenID Connect standard: Okta, Keycloak, Auth0, Ping Identity, on-premise LDAP-backed IdPs, and many others. Once you connect your provider, team members are redirected to your identity provider to authenticate, and Context7 creates or updates their user record automatically on each sign-in.
+Context7 On-Premise supports single sign-on with any provider that implements the OpenID Connect standard: Okta, Keycloak, Microsoft Entra ID, Auth0, Ping Identity, on-premise LDAP-backed IdPs, and many others. Once you connect your provider, team members are redirected to your identity provider to authenticate, and Context7 creates or updates their user record automatically on each sign-in.
 
 The login flow uses the Authorization Code flow with PKCE, so no tokens are ever passed through the browser query string and no client secret is exposed to the frontend.
 
@@ -17,7 +17,7 @@ You will need:
 - The Context7 admin password. On a fresh install it is `admin` / `admin` until you change it.
 
 <Note>
-Only one SSO provider can be active at a time. If you already have Microsoft Entra ID or SAML configured, enabling OIDC will automatically disable it, and vice versa.
+Only one SSO provider can be active at a time. If you already have SAML configured, enabling OIDC will automatically disable it, and vice versa.
 </Note>
 
 ## Part 1: Register Context7 in your identity provider
@@ -45,6 +45,7 @@ In your IdP, configure the application to include the user's groups in the token
   - **Custom authorization server** (issuer `https://your-org.okta.com/oauth2/default` or another custom server): go to **Security › API**, select the server, and add a claim on the **Claims** tab. Name it `groups`, include it in the **ID Token** with **Always**, set **Value type** to **Groups**, and add a filter such as **Matches regex** `.*`. A server you created yourself (not `default`) also needs an access policy with a rule that allows the Context7 client, or the token request fails.
   - **Group limit**: Okta fails the sign-in when more than 100 of a user's groups match the filter. In large orgs, use a narrower filter such as **Starts with** `context7-`, and make sure it still matches your admin and member groups and every group you use in [library access rules](/enterprise/security/library-access).
 - **Keycloak**: enable the `groups` scope or add a Group Membership mapper to the client.
+- **Microsoft Entra ID**: in the app registration, open **Token configuration** and add a groups claim for the ID token. Entra sends group Object IDs. See [Microsoft Entra SSO](/enterprise/security/entra-sso#option-2-oidc).
 - **Auth0**: add a custom claim action that sets `groups` from the user's app metadata or roles.
 
 If your provider uses a different claim name, you can change what Context7 looks for in the **Groups claim** field in the settings card.
