@@ -4,7 +4,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { StdioClientTransport, getDefaultEnvironment } from "@modelcontextprotocol/client/stdio";
 import { execSync } from "node:child_process";
 import { spawn, type ChildProcess } from "node:child_process";
-import { createDecipheriv } from "node:crypto";
+import { createDecipheriv, createHash } from "node:crypto";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -162,6 +162,36 @@ function startStubApi(): Promise<string> {
         res.setHeader("Content-Type", "text/plain");
         res.end(STUB_UPGRADE_GUIDE);
       }
+      return;
+    }
+    if (apiPath === "/internal/mcp/experimental-tools-snapshot") {
+      // Stands in for the app's snapshot (the hosted HTTP server holds the assertion key): the
+      // ctx7sk-exp-code-N keys' user turned on query-code (and an unknown tool), the
+      // ctx7sk-exp-all-N keys' user turned on all; ctx7sk-exp-fail-N and every other credential
+      // are not in it.
+      if (!req.headers["x-context7-mcp-assertion"]) {
+        res.statusCode = 401;
+        res.end();
+        return;
+      }
+      const sha = (key: string) => createHash("sha256").update(key).digest("hex");
+      const apiKeys: Record<string, string> = {};
+      for (let n = 1; n <= 9; n++) {
+        apiKeys[sha(`ctx7sk-exp-code-${n}`)] = "user_code";
+        apiKeys[sha(`ctx7sk-exp-all-${n}`)] = "user_all";
+      }
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("ETag", '"1"');
+      res.end(
+        JSON.stringify({
+          version: "1",
+          users: {
+            user_code: { all: false, tools: ["query-code", "not-a-tool"] },
+            user_all: { all: true, tools: [] },
+          },
+          apiKeys,
+        })
+      );
       return;
     }
     if (apiPath === "/v2/mcp/experimental-tools") {
@@ -766,9 +796,8 @@ describe("experimental tools", () => {
     expect(names).not.toContain("get-upgrade-guide");
     expect(names).not.toContain("submit-docs-feedback");
 
-    const settingsCall = requests.find((request) => request.path === "/v2/mcp/experimental-tools");
-    expect(settingsCall?.headers.authorization).toBe("Bearer ctx7sk-exp-code-1");
-    expect(settingsCall?.headers["x-context7-experimental"]).toBeUndefined();
+    // Answered from the in-memory snapshot: no lookup per credential.
+    expect(requests.some((request) => request.path === "/v2/mcp/experimental-tools")).toBe(false);
   });
 
   test("lists every experimental tool it has when the user turned on all of them", async () => {
@@ -782,17 +811,15 @@ describe("experimental tools", () => {
     );
   });
 
-  test("reads a credential's choice once a minute, not on every request", async () => {
+  test("never asks the app for a credential's choice per request", async () => {
     requests.length = 0;
     for (let i = 0; i < 2; i++) {
       await withClient(httpUrl, (client) => client.listTools(), "ctx7sk-exp-code-2");
     }
-    expect(
-      requests.filter((request) => request.path === "/v2/mcp/experimental-tools")
-    ).toHaveLength(1);
+    expect(requests.some((request) => request.path === "/v2/mcp/experimental-tools")).toBe(false);
   });
 
-  test("lists no experimental tool when the choice cannot be read", async () => {
+  test("lists no experimental tool for a credential the snapshot does not hold", async () => {
     requests.length = 0;
     const names = await withClient(
       httpUrl,
@@ -801,8 +828,6 @@ describe("experimental tools", () => {
     );
     expect(names).toEqual(expect.arrayContaining(["resolve-library-id", "query-docs"]));
     expect(names.some((name) => ["query-code", "get-upgrade-guide"].includes(name))).toBe(false);
-    const settingsCall = requests.find((request) => request.path === "/v2/mcp/experimental-tools");
-    expect(settingsCall?.headers.authorization).toBe("Bearer ctx7sk-exp-fail-1");
   });
 
   test("calls query-code over HTTP when the signed-in user turned it on", async () => {

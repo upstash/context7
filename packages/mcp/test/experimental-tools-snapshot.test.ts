@@ -1,13 +1,13 @@
+import { createDecipheriv } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   apiKeyHash,
+  isSnapshotEnabled,
   refreshSnapshot,
   snapshotExperimentalTools,
-  snapshotSourceFromEnv,
   startExperimentalToolsSnapshot,
   stopExperimentalToolsSnapshot,
-  SNAPSHOT_ENTRIES_KEY,
-  SNAPSHOT_VERSION_KEY,
+  SNAPSHOT_PATH,
 } from "../src/lib/experimental-tools-snapshot.js";
 import {
   resetOpaqueOAuthTokenValidation,
@@ -15,7 +15,8 @@ import {
   validatedOpaqueOAuthTokenUserId,
 } from "../src/lib/oauth-token-validation.js";
 
-const SOURCE = { url: "https://redis.test", token: "read-only" };
+const ASSERTION_KEY = "0123456789abcdef".repeat(4);
+const KEY = "ctx7sk-11111111-2222-3333-4444-555555555555";
 
 /** An unsigned JWT: the snapshot reads `sub` only after the auth gate verified the token. */
 const jwt = (header: object, payload: object) =>
@@ -28,45 +29,58 @@ const clerkJwt = (sub: string) =>
   jwt({ alg: "RS256", typ: "at+jwt" }, { iss: "https://clerk.context7.com", sub });
 const otherJwt = (sub: string) =>
   jwt({ alg: "RS256" }, { iss: "https://login.microsoftonline.com/x", sub });
-const KEY = "ctx7sk-11111111-2222-3333-4444-555555555555";
 
-/** A stand-in for the Upstash REST API holding one snapshot. */
-function fakeRedis() {
+/** Opens the assertion the way the app does (`openMcpAssertion("s1", …)`). */
+function openAssertion(assertion: string): string | null {
+  const [tag, timestamp, nonce, sealed] = assertion.split(":");
+  if (tag !== "s1") return null;
+  const bytes = Buffer.from(sealed, "hex");
+  const decipher = createDecipheriv(
+    "aes-256-gcm",
+    Buffer.from(ASSERTION_KEY, "hex"),
+    Buffer.from(nonce, "hex")
+  );
+  decipher.setAAD(Buffer.from(`${tag}:${timestamp}`));
+  decipher.setAuthTag(bytes.subarray(-16));
+  return Buffer.concat([decipher.update(bytes.subarray(0, -16)), decipher.final()]).toString();
+}
+
+/** A stand-in for the app's snapshot endpoint. */
+function fakeApp() {
   const state = {
     version: "1",
-    entries: {
-      "u:user_a": JSON.stringify({ all: false, tools: ["query-code", "unknown-tool"] }),
-      "u:user_all": JSON.stringify({ all: true, tools: [] }),
-      "u:user_bad": "{not json",
-      [`k:${apiKeyHash(KEY)}`]: "user_a",
-    } as Record<string, string>,
-    /** Bumps the version between the two version reads of the next pipeline. */
-    changeDuringRead: false,
+    users: {
+      user_a: { all: false, tools: ["query-code", "unknown-tool"] },
+      user_all: { all: true, tools: [] },
+      user_bad: "not a choice",
+    } as Record<string, unknown>,
+    apiKeys: { [apiKeyHash(KEY)]: "user_a" } as Record<string, string>,
     down: false,
-    hgetalls: 0,
+    full: 0,
+    notModified: 0,
   };
   const fetchMock = vi.fn(async (url: string | URL, init?: RequestInit) => {
     if (state.down) throw new TypeError("fetch failed");
-    const body = JSON.parse(String(init?.body));
-    const run = ([cmd, key]: string[]) => {
-      if (cmd === "GET" && key === SNAPSHOT_VERSION_KEY) return { result: state.version };
-      if (cmd === "HGETALL" && key === SNAPSHOT_ENTRIES_KEY) {
-        state.hgetalls++;
-        if (state.changeDuringRead) {
-          state.version = String(Number(state.version) + 1);
-          state.changeDuringRead = false;
-        }
-        return { result: Object.entries(state.entries).flat() };
-      }
-      return { error: `unexpected ${cmd} ${key}` };
-    };
-    const reply = String(url).endsWith("/pipeline") ? body.map(run) : run(body);
-    return new Response(JSON.stringify(reply), { status: 200 });
+    expect(String(url)).toMatch(new RegExp(`${SNAPSHOT_PATH}$`));
+    const headers = new Headers(init?.headers);
+    if (
+      openAssertion(headers.get("X-Context7-Mcp-Assertion") ?? "") !== "experimental-tools-snapshot"
+    ) {
+      return new Response(null, { status: 401 });
+    }
+    if (headers.get("If-None-Match") === `"${state.version}"`) {
+      state.notModified++;
+      return new Response(null, { status: 304 });
+    }
+    state.full++;
+    const { version, users, apiKeys } = state;
+    return new Response(JSON.stringify({ version, users, apiKeys }), { status: 200 });
   });
   return { state, fetchMock };
 }
 
 beforeEach(() => {
+  vi.stubEnv("MCP_CLIENT_IP_ASSERTION_KEY", ASSERTION_KEY);
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -74,27 +88,25 @@ afterEach(() => {
   stopExperimentalToolsSnapshot();
   resetOpaqueOAuthTokenValidation();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   vi.restoreAllMocks();
 });
 
 describe("experimental tools snapshot", () => {
-  test("is configured only with both variables", () => {
-    expect(snapshotSourceFromEnv({})).toBeUndefined();
-    expect(
-      snapshotSourceFromEnv({ MCP_EXPERIMENTAL_TOOLS_REDIS_REST_URL: "https://x/" })
-    ).toBeUndefined();
-    expect(
-      snapshotSourceFromEnv({
-        MCP_EXPERIMENTAL_TOOLS_REDIS_REST_URL: "https://x/",
-        MCP_EXPERIMENTAL_TOOLS_REDIS_REST_TOKEN: "t",
-      })
-    ).toEqual({ url: "https://x", token: "t" });
+  test("is on only for a process with the shared assertion key", async () => {
+    vi.stubEnv("MCP_CLIENT_IP_ASSERTION_KEY", "");
+    const { fetchMock } = fakeApp();
+    vi.stubGlobal("fetch", fetchMock);
+    await startExperimentalToolsSnapshot();
+    expect(isSnapshotEnabled()).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  test("answers from memory for API keys and user ids", async () => {
-    const { fetchMock } = fakeRedis();
+  test("answers from memory for every credential kind", async () => {
+    const { fetchMock } = fakeApp();
     vi.stubGlobal("fetch", fetchMock);
-    await startExperimentalToolsSnapshot(SOURCE);
+    await startExperimentalToolsSnapshot();
+    expect(isSnapshotEnabled()).toBe(true);
     const calls = fetchMock.mock.calls.length;
 
     expect(snapshotExperimentalTools(KEY)).toEqual(["query-code"]);
@@ -104,48 +116,34 @@ describe("experimental tools snapshot", () => {
       "submit-docs-feedback",
     ]);
     expect(snapshotExperimentalTools(clerkJwt("user_bad"))).toEqual([]);
-    expect(snapshotExperimentalTools(otherJwt("user_all"))).toEqual([]);
-    expect(snapshotExperimentalTools(undefined)).toEqual([]);
-    expect(snapshotExperimentalTools("ctx7sk-unknown")).toEqual([]);
     expect(snapshotExperimentalTools(clerkJwt("nobody"))).toEqual([]);
+    expect(snapshotExperimentalTools(otherJwt("user_all"))).toEqual([]);
+    expect(snapshotExperimentalTools("ctx7sk-unknown")).toEqual([]);
+    expect(snapshotExperimentalTools(undefined)).toEqual([]);
     // Reading the snapshot never calls out.
     expect(fetchMock.mock.calls.length).toBe(calls);
   });
 
-  test("reads the entries again only after the version changes", async () => {
-    const { state, fetchMock } = fakeRedis();
+  test("reads the whole snapshot again only after it changed", async () => {
+    const { state, fetchMock } = fakeApp();
     vi.stubGlobal("fetch", fetchMock);
-    await startExperimentalToolsSnapshot(SOURCE);
+    await startExperimentalToolsSnapshot();
     await refreshSnapshot();
     await refreshSnapshot();
-    expect(state.hgetalls).toBe(1);
+    expect(state.full).toBe(1);
+    expect(state.notModified).toBe(2);
 
-    state.entries["u:user_a"] = JSON.stringify({ all: true, tools: [] });
+    state.users.user_a = { all: true, tools: [] };
     state.version = "2";
     await refreshSnapshot();
-    expect(state.hgetalls).toBe(2);
+    expect(state.full).toBe(2);
     expect(snapshotExperimentalTools(KEY)).toHaveLength(3);
   });
 
-  test("keeps the last snapshot when a change lands during the read", async () => {
-    const { state, fetchMock } = fakeRedis();
+  test("keeps serving the last snapshot while the app is down", async () => {
+    const { state, fetchMock } = fakeApp();
     vi.stubGlobal("fetch", fetchMock);
-    await startExperimentalToolsSnapshot(SOURCE);
-
-    state.version = "2";
-    state.entries["u:user_a"] = JSON.stringify({ all: true, tools: [] });
-    state.changeDuringRead = true;
-    await refreshSnapshot();
-    expect(snapshotExperimentalTools(KEY)).toEqual(["query-code"]);
-
-    await refreshSnapshot();
-    expect(snapshotExperimentalTools(KEY)).toHaveLength(3);
-  });
-
-  test("keeps serving the last snapshot while Redis is down", async () => {
-    const { state, fetchMock } = fakeRedis();
-    vi.stubGlobal("fetch", fetchMock);
-    await startExperimentalToolsSnapshot(SOURCE);
+    await startExperimentalToolsSnapshot();
     state.down = true;
     for (let i = 0; i < 5; i++) await refreshSnapshot();
     expect(snapshotExperimentalTools(KEY)).toEqual(["query-code"]);
@@ -159,10 +157,10 @@ describe("experimental tools snapshot", () => {
   });
 
   test("lists nothing until the first read succeeds", async () => {
-    const { state, fetchMock } = fakeRedis();
+    const { state, fetchMock } = fakeApp();
     state.down = true;
     vi.stubGlobal("fetch", fetchMock);
-    await startExperimentalToolsSnapshot(SOURCE);
+    await startExperimentalToolsSnapshot();
     expect(snapshotExperimentalTools(KEY)).toEqual([]);
     state.down = false;
     await refreshSnapshot();
@@ -185,9 +183,9 @@ describe("opaque OAuth token user", () => {
   });
 
   test("finds the token's tools in the snapshot", async () => {
-    const { fetchMock } = fakeRedis();
+    const { fetchMock } = fakeApp();
     vi.stubGlobal("fetch", fetchMock);
-    await startExperimentalToolsSnapshot(SOURCE);
+    await startExperimentalToolsSnapshot();
     expect(snapshotExperimentalTools("oat_z")).toEqual([]);
     vi.stubGlobal(
       "fetch",

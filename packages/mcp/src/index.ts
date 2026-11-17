@@ -877,13 +877,11 @@ async function main() {
       });
     };
 
-    // At most two Redis requests of 5 s each; a failed first read starts with nothing on.
+    // At most one 5 s request; a failed first read starts with nothing on.
     await startExperimentalToolsSnapshot();
     if (!isSnapshotEnabled()) {
-      // On the hosted server this means the Redis variables are missing, and every signed-in
-      // credential is looked up through the Context7 API instead.
       console.warn(
-        "[Context7] MCP_EXPERIMENTAL_TOOLS_REDIS_REST_URL/TOKEN are not set: dashboard experimental tools are looked up through the Context7 API, once per credential every 5 minutes"
+        "[Context7] Experimental tools snapshot off (no MCP_CLIENT_IP_ASSERTION_KEY): dashboard choices are looked up through the Context7 API, once per credential every 5 minutes"
       );
     }
     startServer(initialPort);

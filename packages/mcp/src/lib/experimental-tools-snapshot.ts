@@ -1,26 +1,27 @@
 import { createHash } from "node:crypto";
 import * as jose from "jose";
+import { CONTEXT7_API_BASE_URL } from "./constants.js";
+import { hasMcpAssertionKey, sealMcpAssertion } from "./encryption.js";
 import { isClerkOAuthJwt, isJWT } from "./jwt.js";
 import { isOpaqueOAuthToken, validatedOpaqueOAuthTokenUserId } from "./oauth-token-validation.js";
 import { experimentalToolsFromChoice, type ExperimentalTool } from "./tool-names.js";
 
 /**
- * The hosted server's copy of every user's experimental tools choice, read from the app's
- * experimental tools Redis database and kept in process memory, the way feature flag SDKs
- * evaluate flags locally (LaunchDarkly, Unleash). A request reads only this copy: listing tools
- * never calls the Context7 API, Supabase or Redis, so traffic cannot turn into lookups (the
- * CTX7-3866 incident). Each process asks Redis for one version number every POLL_MS and reads the
- * whole copy only after a change, so the Redis load is a few commands a minute per process
- * whatever the traffic.
+ * The hosted server's copy of every user's experimental tools choice, kept in process memory the
+ * way feature flag SDKs evaluate flags locally (LaunchDarkly, Unleash). A request reads only this
+ * copy: listing tools never calls the Context7 API, so traffic cannot turn into lookups (the
+ * CTX7-3866 incident). Each process polls the app's snapshot endpoint every POLL_MS with
+ * `If-None-Match`; without a change the app answers 304 after one Redis read, so the load is a
+ * few small requests a minute per process whatever the traffic.
  *
- * The app keeps the database (context7app `lib/mcp/experimentalToolsStore.ts`); keep the two in
- * step. One hash holds only users with a tool on:
- * - `u:<userId>`: the choice, `{ "all": boolean, "tools": string[] }`;
- * - `k:<sha256 hex of an API key>`: the user id of that key's member;
- * and a counter the app increments on every change.
+ * The endpoint (context7app `app/api/internal/mcp/experimental-tools-snapshot/route.ts`) is for
+ * the hosted server only: it is authenticated with an assertion sealed with the key the app shares
+ * with it (`MCP_CLIENT_IP_ASSERTION_KEY`), so a process without that key does not poll.
  */
-export const SNAPSHOT_ENTRIES_KEY = "#mcp_experimental_tools#entries";
-export const SNAPSHOT_VERSION_KEY = "#mcp_experimental_tools#version";
+export const SNAPSHOT_PATH = "/internal/mcp/experimental-tools-snapshot";
+/** Keep in step with the route: the tag and plaintext of its assertion. */
+const SNAPSHOT_ASSERTION_TAG = "s1";
+const SNAPSHOT_ASSERTION_SUBJECT = "experimental-tools-snapshot";
 
 const POLL_MS = 15_000;
 /** Poll interval while no snapshot was ever read, so a process that started during a blip recovers fast. */
@@ -35,85 +36,52 @@ interface Snapshot {
   apiKeys: Map<string, string>;
 }
 
-interface SnapshotSource {
-  url: string;
-  token: string;
+/** The endpoint's body (`ExperimentalToolsSnapshot` in context7app). */
+interface SnapshotBody {
+  version?: unknown;
+  users?: Record<string, unknown>;
+  apiKeys?: Record<string, unknown>;
 }
 
-let source: SnapshotSource | undefined;
+let enabled = false;
 let snapshot: Snapshot | undefined;
 let timer: ReturnType<typeof setTimeout> | undefined;
 let failuresInRow = 0;
 
-/** Read from `MCP_EXPERIMENTAL_TOOLS_REDIS_REST_URL` / `_TOKEN` (a read-only token is enough). */
-export function snapshotSourceFromEnv(env = process.env): SnapshotSource | undefined {
-  const url = env.MCP_EXPERIMENTAL_TOOLS_REDIS_REST_URL?.trim();
-  const token = env.MCP_EXPERIMENTAL_TOOLS_REDIS_REST_TOKEN?.trim();
-  return url && token ? { url: url.replace(/\/$/, ""), token } : undefined;
-}
-
 /** Whether this process takes experimental tools from the snapshot. */
 export function isSnapshotEnabled(): boolean {
-  return source !== undefined;
+  return enabled;
 }
 
-async function redis<T>(path: string, body: unknown): Promise<T> {
-  const response = await fetch(`${source!.url}${path}`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${source!.token}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
-  if (!response.ok) throw new Error(`Redis answered HTTP ${response.status}`);
-  return (await response.json()) as T;
-}
-
-type RedisReply = { result?: unknown; error?: string };
-
-function parseSnapshot(version: string, flat: unknown): Snapshot {
+function parseSnapshot(body: SnapshotBody): Snapshot {
   const users = new Map<string, ExperimentalTool[]>();
-  const apiKeys = new Map<string, string>();
-  const fields = Array.isArray(flat) ? flat : [];
-  for (let i = 0; i + 1 < fields.length; i += 2) {
-    const field = fields[i];
-    const value = fields[i + 1];
-    if (typeof field !== "string" || typeof value !== "string") continue;
-    if (field.startsWith("k:")) {
-      apiKeys.set(field.slice(2), value);
-    } else if (field.startsWith("u:")) {
-      try {
-        const tools = experimentalToolsFromChoice(JSON.parse(value));
-        if (tools.length > 0) users.set(field.slice(2), tools);
-      } catch {
-        // A malformed entry lists nothing for that user; the rest of the snapshot still loads.
-      }
-    }
+  for (const [userId, choice] of Object.entries(body.users ?? {})) {
+    const tools = experimentalToolsFromChoice(choice);
+    if (tools.length > 0) users.set(userId, tools);
   }
-  return { version, users, apiKeys };
+  const apiKeys = new Map<string, string>();
+  for (const [hash, userId] of Object.entries(body.apiKeys ?? {})) {
+    if (typeof userId === "string") apiKeys.set(hash, userId);
+  }
+  return { version: String(body.version ?? "0"), users, apiKeys };
 }
 
-/** One poll: read the version, and the whole snapshot only when it changed. */
+/** One poll: a 304 keeps the copy, a 200 replaces it. */
 export async function refreshSnapshot(): Promise<void> {
-  if (!source) return;
+  if (!enabled) return;
   try {
-    const current = await redis<RedisReply>("", ["GET", SNAPSHOT_VERSION_KEY]);
-    if (current.error) throw new Error(current.error);
-    const version = String(current.result ?? "0");
-    if (snapshot?.version !== version) {
-      // Every app write is one script that also increments the version, so entries read between
-      // two equal versions are one consistent state. A pipeline, not a transaction: it needs no
-      // MULTI support and never holds other clients back.
-      const [before, entries, after] = await redis<RedisReply[]>("/pipeline", [
-        ["GET", SNAPSHOT_VERSION_KEY],
-        ["HGETALL", SNAPSHOT_ENTRIES_KEY],
-        ["GET", SNAPSHOT_VERSION_KEY],
-      ]);
-      const error = before?.error ?? entries?.error ?? after?.error;
-      if (error) throw new Error(error);
-      const readVersion = String(before?.result ?? "0");
-      // A change landed during the read: keep the last snapshot and read again next poll.
-      if (readVersion !== String(after?.result ?? "0")) return;
-      snapshot = parseSnapshot(readVersion, entries?.result);
+    const assertion = sealMcpAssertion(SNAPSHOT_ASSERTION_TAG, SNAPSHOT_ASSERTION_SUBJECT);
+    if (!assertion) throw new Error("the MCP assertion could not be sealed");
+    const response = await fetch(`${CONTEXT7_API_BASE_URL}${SNAPSHOT_PATH}`, {
+      headers: {
+        "X-Context7-Mcp-Assertion": assertion,
+        ...(snapshot && { "If-None-Match": `"${snapshot.version}"` }),
+      },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    if (response.status !== 304) {
+      if (!response.ok) throw new Error(`the Context7 API answered HTTP ${response.status}`);
+      snapshot = parseSnapshot((await response.json()) as SnapshotBody);
     }
     if (failuresInRow > 0) {
       console.error(
@@ -122,7 +90,7 @@ export async function refreshSnapshot(): Promise<void> {
     }
     failuresInRow = 0;
   } catch (error) {
-    // Keep serving the last snapshot: an outage of the database never changes a tool list.
+    // Keep serving the last snapshot: an outage of the app never changes a tool list.
     failuresInRow++;
     if (failuresInRow <= LOGGED_FAILURES) {
       const reason = error instanceof Error ? error.message : String(error);
@@ -136,16 +104,16 @@ export async function refreshSnapshot(): Promise<void> {
 }
 
 /**
- * Start polling when the database is configured. The first read is awaited, so a new process
- * lists the right tools from its first request; it takes up to two requests (version, then the
- * hash) of REQUEST_TIMEOUT_MS each.
+ * Start polling when this process holds the shared MCP assertion key (the hosted server). The
+ * first read is awaited, up to REQUEST_TIMEOUT_MS, so a new process lists the right tools from
+ * its first request.
  */
 export async function startExperimentalToolsSnapshot(
-  configured = snapshotSourceFromEnv()
+  canAuthenticate = hasMcpAssertionKey()
 ): Promise<void> {
   stopExperimentalToolsSnapshot();
-  source = configured;
-  if (!source) return;
+  enabled = canAuthenticate;
+  if (!enabled) return;
   await refreshSnapshot();
   const schedule = () => {
     // Jitter keeps the processes of one deployment from polling in step.
@@ -164,7 +132,7 @@ export async function startExperimentalToolsSnapshot(
 export function stopExperimentalToolsSnapshot(): void {
   if (timer) clearTimeout(timer);
   timer = undefined;
-  source = undefined;
+  enabled = false;
   snapshot = undefined;
   failuresInRow = 0;
 }
