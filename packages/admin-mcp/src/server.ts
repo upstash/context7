@@ -265,6 +265,24 @@ async function resolveTeamspace(value: unknown, api: Api): Promise<string> {
   );
 }
 
+/**
+ * Why a tool call failed, for the audit line: the API status and its error
+ * code, or the kind of local failure. Never a message, which can hold user text.
+ */
+export function failureFields(error: unknown): { status?: number; errorCode: string } {
+  if (error instanceof ApiError) {
+    const code = (error.body as { error?: unknown } | null)?.error;
+    return {
+      status: error.status,
+      errorCode:
+        typeof code === "string" && /^[a-z0-9_-]{1,64}$/.test(code) ? code : `http_${error.status}`,
+    };
+  }
+  if (error instanceof ToolError) return { errorCode: "tool_error" };
+  if (error instanceof Error && error.name === "TimeoutError") return { errorCode: "timeout" };
+  return { errorCode: "exception" };
+}
+
 /** `input`: the change waits for the user's confirmation, and `ask` is the form. */
 type Outcome =
   | { ok: true; value: unknown }
@@ -345,6 +363,7 @@ async function runTool(
       ...(source === "console" ? { from: "console" } : {}),
       teamspace: input.teamspace,
       outcome: outcome.ok === "input" ? "confirm" : outcome.ok ? "ok" : "error",
+      ...(outcome.ok === false ? failureFields(outcome.error) : {}),
     })
   );
   return outcome;
