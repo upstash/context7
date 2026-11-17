@@ -494,6 +494,53 @@ describe("HttpClient error handling", () => {
     });
   });
 
+  test.each([
+    "application/json",
+    "Application/Json",
+    "APPLICATION/JSON",
+    "application/JSON; charset=utf-8",
+    "Application/Json ;charset=UTF-8",
+  ])("parses a JSON body for content-type %j", async (contentType) => {
+    mockFetch(
+      new Response(JSON.stringify({ results: [] }), {
+        status: 200,
+        headers: { "content-type": contentType },
+      })
+    );
+
+    const response = await newClient().request({ path: ["search"] });
+
+    expect(response.result).toEqual({ results: [] });
+  });
+
+  test("does not treat application/jsonp as JSON", async () => {
+    mockFetch(
+      new Response("callback({})", {
+        status: 200,
+        headers: { "content-type": "application/jsonp" },
+      })
+    );
+
+    const response = await newClient().request({ path: ["search"] });
+
+    expect(response.result).toBe("callback({})");
+  });
+
+  test("reports a parse error for malformed JSON with a mixed-case content-type", async () => {
+    mockFetch(
+      new Response("{invalid", {
+        status: 502,
+        headers: { "content-type": "Application/Json" },
+      })
+    );
+
+    const error = await newClient()
+      .request({ path: ["search"] })
+      .catch((e) => e);
+
+    expect(error).toBeInstanceOf(Context7JSONParseError);
+  });
+
   test("rejects invalid base URLs", () => {
     expect(() => new HttpClient({ baseUrl: "example.com" })).toThrow(Context7UrlError);
     expect(() => new HttpClient({ baseUrl: "ftp://example.com" })).toThrow(Context7UrlError);
