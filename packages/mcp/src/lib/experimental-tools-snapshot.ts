@@ -136,8 +136,9 @@ export async function refreshSnapshot(): Promise<void> {
 }
 
 /**
- * Start polling when the database is configured. The first read is awaited (bounded by the
- * request timeout) so a new process lists the right tools from its first request.
+ * Start polling when the database is configured. The first read is awaited, so a new process
+ * lists the right tools from its first request; it takes up to two requests (version, then the
+ * hash) of REQUEST_TIMEOUT_MS each.
  */
 export async function startExperimentalToolsSnapshot(
   configured = snapshotSourceFromEnv()

@@ -79,8 +79,9 @@ const DEFAULT_PORT = 3000;
 const OAUTH_METADATA_TIMEOUT_MS = 10_000;
 const CLAUDE_CODE_PLUGIN = "claude-code-plugin";
 const STATIC_CACHE_HINT = { ttlMs: 3_600_000, cacheScope: "public" } as const;
-// A signed-in caller's tools follow their dashboard choice, so a change shows within minutes.
-const PRIVATE_CACHE_HINT = { ttlMs: 300_000, cacheScope: "private" } as const;
+// A signed-in caller's tools follow their dashboard choice. The hosted server reads it from memory
+// (refreshed every 15 s), so a short hint lets a change show within about a minute.
+const PRIVATE_CACHE_HINT = { ttlMs: 60_000, cacheScope: "private" } as const;
 type McpInstrumentation = NonNullable<Awaited<ReturnType<typeof initializeTelemetry>>>;
 let mcpInstrumentation: McpInstrumentation | undefined;
 
@@ -876,8 +877,15 @@ async function main() {
       });
     };
 
-    // Bounded by the snapshot's request timeout; a failed first read starts with nothing on.
+    // At most two Redis requests of 5 s each; a failed first read starts with nothing on.
     await startExperimentalToolsSnapshot();
+    if (!isSnapshotEnabled()) {
+      // On the hosted server this means the Redis variables are missing, and every signed-in
+      // credential is looked up through the Context7 API instead.
+      console.warn(
+        "[Context7] MCP_EXPERIMENTAL_TOOLS_REDIS_REST_URL/TOKEN are not set: dashboard experimental tools are looked up through the Context7 API, once per credential every 5 minutes"
+      );
+    }
     startServer(initialPort);
   } else {
     const keySources = [cliOptions.apiKey, process.env.CONTEXT7_API_KEY];
