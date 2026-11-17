@@ -73,7 +73,7 @@ The consent page shows the client name, its client ID and where the browser goes
 2. The client reads the protected resource metadata (RFC 9728) and the authorization server metadata at `/.well-known/oauth-authorization-server` (RFC 8414).
 3. The client opens `/oauth/authorize` in the browser with PKCE (`S256` only), `state` and `resource=<public URL>/mcp`.
 4. A user without a session signs in through the active SSO provider or with a password, and comes back to the authorize step. Only the authorize step is accepted as a return target, so a crafted sign-in link cannot redirect anywhere else. The server looks up the client only after sign-in, so anonymous visitors cannot make it fetch client documents.
-5. The user approves or denies the client on the consent page. The browser returns to the client with a code, `state` and `iss`. A request that is not valid (an unknown client, a wrong redirect URI, missing PKCE or `state`, another `resource`) shows an error page instead: clients register themselves, so the server sends the browser to a client only after the user has seen it.
+5. On the consent page the user selects **Connect** or **Cancel**. The browser returns to the client with a code, `state` and `iss`. A request that is not valid (an unknown client, a wrong redirect URI, missing PKCE or `state`, another `resource`) shows an error page instead: clients register themselves, so the server sends the browser to a client only after the user has seen it.
 6. The client exchanges the code at `/oauth/token` and calls `/mcp` with `Authorization: Bearer <access token>`.
 
 The only scope is `docs:read`. What a client can read is decided by the user's [library access rules](/enterprise/security/library-access), exactly as for the user's personal API key.
@@ -143,6 +143,6 @@ The consent page and every `/oauth` answer send `X-Frame-Options: DENY` and `fra
 |---|---|
 | The OAuth modes are not available in the settings | `CONTEXT7_PUBLIC_URL` is missing or not a valid origin. The card shows the reason |
 | The client never opens a browser | **MCP authentication** is off, so `/mcp` answers without a token |
-| "This application cannot sign in" | Unknown client, an unregistered redirect URI, a CIMD document the server cannot fetch or accept, or a request error shown in parentheses |
+| "This app cannot sign in" | Unknown client, an unregistered redirect URI, a CIMD document the server cannot fetch or accept, or a request error shown in parentheses |
 | `(invalid_target)` | The client sent no `resource`, or one other than `<public URL>/mcp`. Check that the client uses the public URL |
 | `(invalid_request)` with "state is required" | The client did not send `state`. The server requires it |
