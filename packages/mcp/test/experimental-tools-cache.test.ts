@@ -99,12 +99,16 @@ describe("fetchExperimentalTools", () => {
 describe("experimentalToolsFromChoice", () => {
   test("expands all and keeps only known tools", () => {
     expect(experimentalToolsFromChoice({ all: true, tools: [] })).toEqual([
-      "query-code",
+      "code-tools",
       "get-upgrade-guide",
       "submit-docs-feedback",
     ]);
     expect(experimentalToolsFromChoice({ all: false, tools: ["query-code", "nope"] })).toEqual([
-      "query-code",
+      "code-tools",
+    ]);
+    // The app stores the new id, code-tools, once its rename is live.
+    expect(experimentalToolsFromChoice({ all: false, tools: ["code-tools"] })).toEqual([
+      "code-tools",
     ]);
     expect(experimentalToolsFromChoice(null)).toEqual([]);
     expect(experimentalToolsFromChoice("all")).toEqual([]);

@@ -109,9 +109,9 @@ describe("experimental tools snapshot", () => {
     expect(isSnapshotEnabled()).toBe(true);
     const calls = fetchMock.mock.calls.length;
 
-    expect(snapshotExperimentalTools(KEY)).toEqual(["query-code"]);
+    expect(snapshotExperimentalTools(KEY)).toEqual(["code-tools"]);
     expect(snapshotExperimentalTools(clerkJwt("user_all"))).toEqual([
-      "query-code",
+      "code-tools",
       "get-upgrade-guide",
       "submit-docs-feedback",
     ]);
@@ -146,7 +146,7 @@ describe("experimental tools snapshot", () => {
     await startExperimentalToolsSnapshot();
     state.down = true;
     for (let i = 0; i < 5; i++) await refreshSnapshot();
-    expect(snapshotExperimentalTools(KEY)).toEqual(["query-code"]);
+    expect(snapshotExperimentalTools(KEY)).toEqual(["code-tools"]);
     // Only the first failures of a streak are logged.
     expect(vi.mocked(console.error).mock.calls).toHaveLength(3);
     state.down = false;
@@ -164,7 +164,7 @@ describe("experimental tools snapshot", () => {
     expect(snapshotExperimentalTools(KEY)).toEqual([]);
     state.down = false;
     await refreshSnapshot();
-    expect(snapshotExperimentalTools(KEY)).toEqual(["query-code"]);
+    expect(snapshotExperimentalTools(KEY)).toEqual(["code-tools"]);
   });
 });
 
@@ -194,7 +194,7 @@ describe("opaque OAuth token user", () => {
       )
     );
     await validateOpaqueOAuthToken("oat_z");
-    expect(snapshotExperimentalTools("oat_z")).toEqual(["query-code"]);
+    expect(snapshotExperimentalTools("oat_z")).toEqual(["code-tools"]);
   });
 
   test("is unknown when the app does not name it", async () => {

@@ -166,9 +166,9 @@ function startStubApi(): Promise<string> {
     }
     if (apiPath === "/internal/mcp/experimental-tools-snapshot") {
       // Stands in for the app's snapshot (the hosted HTTP server holds the assertion key): the
-      // ctx7sk-exp-code-N keys' user turned on the code tools by their old name query-code (and an unknown tool), the
-      // ctx7sk-exp-all-N keys' user turned on all; ctx7sk-exp-fail-N and every other credential
-      // are not in it.
+      // ctx7sk-exp-code-N keys' user turned on the code tools by their old name query-code (and an
+      // unknown tool), the ctx7sk-exp-all-N keys' user turned on all; ctx7sk-exp-fail-N and every
+      // other credential are not in it.
       if (!req.headers["x-context7-mcp-assertion"]) {
         res.statusCode = 401;
         res.end();
