@@ -1,10 +1,8 @@
 import { createHash } from "node:crypto";
 import * as jose from "jose";
-import {
-  EXPERIMENTAL_TOOL_NAMES,
-  experimentalToolsFrom,
-  type ExperimentalTool,
-} from "./tool-names.js";
+import { isClerkOAuthJwt, isJWT } from "./jwt.js";
+import { isOpaqueOAuthToken, validatedOpaqueOAuthTokenUserId } from "./oauth-token-validation.js";
+import { experimentalToolsFromChoice, type ExperimentalTool } from "./tool-names.js";
 
 /**
  * The hosted server's copy of every user's experimental tools choice, read from the app's
@@ -59,11 +57,6 @@ export function isSnapshotEnabled(): boolean {
   return source !== undefined;
 }
 
-/** Whether the first read of the snapshot has finished. */
-export function isSnapshotLoaded(): boolean {
-  return snapshot !== undefined;
-}
-
 async function redis<T>(path: string, body: unknown): Promise<T> {
   const response = await fetch(`${source!.url}${path}`, {
     method: "POST",
@@ -89,9 +82,7 @@ function parseSnapshot(version: string, flat: unknown): Snapshot {
       apiKeys.set(field.slice(2), value);
     } else if (field.startsWith("u:")) {
       try {
-        const choice = JSON.parse(value) as { all?: unknown; tools?: unknown };
-        const tools =
-          choice.all === true ? [...EXPERIMENTAL_TOOL_NAMES] : experimentalToolsFrom(choice.tools);
+        const tools = experimentalToolsFromChoice(JSON.parse(value));
         if (tools.length > 0) users.set(field.slice(2), tools);
       } catch {
         // A malformed entry lists nothing for that user; the rest of the snapshot still loads.
@@ -177,28 +168,33 @@ export function stopExperimentalToolsSnapshot(): void {
   failuresInRow = 0;
 }
 
-/** How a credential names its user, without a network call; undefined when it cannot. */
-export type SnapshotIdentity = { apiKey: string } | { userId: string };
-
 /** The sha256 hex the app stores for an API key (`hashApiKey`). */
 export function apiKeyHash(apiKey: string): string {
   return createHash("sha256").update(apiKey).digest("hex");
 }
 
-/** The `sub` of a JWT already verified at the authentication boundary. */
-export function verifiedJwtSubject(token: string): string | undefined {
-  try {
-    const { sub } = jose.decodeJwt(token);
-    return typeof sub === "string" && sub ? sub : undefined;
-  } catch {
-    return undefined;
+/**
+ * The user a credential names, found without a network call: a Clerk OAuth JWT's `sub` (the
+ * request got here only after `evaluateMcpAuthentication` verified it), an opaque token's user
+ * from its cached auth check, or an API key's user from the snapshot. Other JWTs (Entra, Vercel
+ * Marketplace) name no Context7 user here.
+ */
+function userIdOf(credential: string, apiKeys: Map<string, string>): string | undefined {
+  if (isOpaqueOAuthToken(credential)) return validatedOpaqueOAuthTokenUserId(credential);
+  if (isClerkOAuthJwt(credential)) {
+    const { sub } = jose.decodeJwt(credential);
+    return typeof sub === "string" ? sub : undefined;
   }
+  if (isJWT(credential)) return undefined;
+  return apiKeys.get(apiKeyHash(credential));
 }
 
-/** The caller's experimental tools from the snapshot: nothing on before it is first read. */
-export function snapshotExperimentalTools(identity: SnapshotIdentity): ExperimentalTool[] {
-  if (!snapshot) return [];
-  const userId =
-    "userId" in identity ? identity.userId : snapshot.apiKeys.get(apiKeyHash(identity.apiKey));
+/**
+ * The caller's experimental tools from the snapshot, with no network call. Nothing is on for an
+ * anonymous caller, an unknown credential, or before the first read.
+ */
+export function snapshotExperimentalTools(credential: string | undefined): ExperimentalTool[] {
+  if (!snapshot || !credential) return [];
+  const userId = userIdOf(credential, snapshot.apiKeys);
   return (userId && snapshot.users.get(userId)) || [];
 }

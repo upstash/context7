@@ -7,9 +7,7 @@ import {
 } from "./types.js";
 import type { DocsFeedback, UpgradeGuideRequest } from "./experimental-tools.js";
 import {
-  EXPERIMENTAL_TOOL_NAMES,
-  experimentalToolsFrom,
-  type ExperimentalToolsLookup,
+  experimentalToolsFromChoice,
   GET_UPGRADE_GUIDE_TOOL,
   type ExperimentalTool,
   type ToolCallOutcome,
@@ -594,10 +592,7 @@ async function lookUpExperimentalTools(
           }
           return fail(`the Context7 API answered HTTP ${response.status}`);
         }
-        const body = await readJson<{ all?: unknown; tools?: unknown }>(response);
-        // `all` is every experimental tool this server has, also ones the app does not know yet.
-        const tools =
-          body?.all === true ? [...EXPERIMENTAL_TOOL_NAMES] : experimentalToolsFrom(body?.tools);
+        const tools = experimentalToolsFromChoice(await readJson<unknown>(response));
         rememberExperimentalTools(cacheKey, tools, EXPERIMENTAL_TOOLS_TTL_MS);
         return { tools };
       },
@@ -610,26 +605,22 @@ async function lookUpExperimentalTools(
 
 /**
  * The experimental tools the credential's user turned on in the dashboard
- * (`GET /v2/mcp/experimental-tools`). Without a credential none: the server then lists only the
- * stable tools. When the lookup fails, the last known choice (or none), and `onFailure` gets the
- * cause once per lookup. Cached per credential (a hash, never the token).
- *
- * `lookUp` says when it may call the app (`experimentalToolsLookupFor`); otherwise it answers
- * from the cache, also with an expired choice, or with none (CTX7-3866).
+ * (`GET /v2/mcp/experimental-tools`), for the stdio server and an HTTP server without the
+ * snapshot (`experimental-tools-snapshot.ts`). Without a credential none: the server then lists
+ * only the stable tools. When the lookup fails, the last known choice (or none), and `onFailure`
+ * gets the cause once per lookup. Cached per credential (a hash, never the token).
  */
 export async function fetchExperimentalTools(
   context: ClientContext,
   onFailure: (cause: string) => void = (cause) =>
-    console.error(`Error reading experimental tools: ${cause}`),
-  { lookUp = "expired" }: { lookUp?: ExperimentalToolsLookup } = {}
+    console.error(`Error reading experimental tools: ${cause}`)
 ): Promise<ExperimentalTool[]> {
   const { apiKey } = context;
   if (!apiKey) return [];
 
   const cacheKey = createHash("sha256").update(apiKey).digest("hex");
   const cached = experimentalToolsCache.get(cacheKey);
-  if (cached && (lookUp !== "expired" || cached.expiresAt > Date.now())) return cached.tools;
-  if (lookUp === "never") return [];
+  if (cached && cached.expiresAt > Date.now()) return cached.tools;
 
   let lookup = experimentalToolsInFlight.get(cacheKey);
   if (lookup) return (await lookup).tools;

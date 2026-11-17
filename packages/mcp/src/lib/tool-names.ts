@@ -41,35 +41,11 @@ export type McpTool = (typeof MCP_TOOL_NAMES)[number];
 export type ToolCallOutcome = "error" | "invalid" | "not_found" | "success" | "unavailable";
 
 /**
- * When a request may ask the app for the caller's experimental tools (`fetchExperimentalTools`):
- * - `expired`: the cached choice is older than its lifetime (or there is none);
- * - `missing`: this process has no choice for the credential yet; an expired one is used;
- * - `never`: only the cached choice, or none.
+ * The tools a stored dashboard choice `{ all, tools }` turns on. `all` is every experimental tool
+ * this server has, also ones the app does not know yet; anything malformed turns on none.
  */
-export type ExperimentalToolsLookup = "expired" | "missing" | "never";
-
-/** The tool list: a dashboard change shows here, so it refreshes an expired choice. */
-const LISTING_METHODS = new Set(["tools/list", "server/discover"]);
-
-/**
- * How a JSON-RPC body (one message or a batch) may look up the caller's experimental tools.
- * Listing refreshes the choice. initialize (its instructions name the docs feedback tool) and a
- * call to an experimental tool need one only when this process has none. Every other request
- * uses the cached choice and never asks the app (CTX7-3866).
- */
-export function experimentalToolsLookupFor(body: unknown): ExperimentalToolsLookup {
-  const messages = Array.isArray(body) ? body : [body];
-  let lookUp: ExperimentalToolsLookup = "never";
-  for (const message of messages) {
-    if (!message || typeof message !== "object") continue;
-    const { method, params } = message as { method?: unknown; params?: unknown };
-    if (typeof method !== "string") continue;
-    if (LISTING_METHODS.has(method)) return "expired";
-    if (method === "initialize") lookUp = "missing";
-    if (method === "tools/call" && params && typeof params === "object") {
-      const name = (params as { name?: unknown }).name;
-      if ((EXPERIMENTAL_TOOL_NAMES as readonly unknown[]).includes(name)) lookUp = "missing";
-    }
-  }
-  return lookUp;
+export function experimentalToolsFromChoice(choice: unknown): ExperimentalTool[] {
+  if (!choice || typeof choice !== "object") return [];
+  const { all, tools } = choice as { all?: unknown; tools?: unknown };
+  return all === true ? [...EXPERIMENTAL_TOOL_NAMES] : experimentalToolsFrom(tools);
 }

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { fetchExperimentalTools } from "../src/lib/api.js";
-import { experimentalToolsLookupFor } from "../src/lib/tool-names.js";
+import { experimentalToolsFromChoice } from "../src/lib/tool-names.js";
 import { isOAuthTokenRememberedInvalid } from "../src/lib/oauth-token-validation.js";
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -43,35 +43,6 @@ describe("fetchExperimentalTools", () => {
     fetchMock.mockRejectedValueOnce(new TypeError("fetch failed"));
     expect(await fetchExperimentalTools(context, onFailure)).toEqual(["query-code"]);
     expect(fetchMock).toHaveBeenCalledTimes(3);
-  });
-
-  test("asks only when its lookup mode allows it", async () => {
-    const start = Date.now();
-    const now = vi.spyOn(Date, "now").mockReturnValue(start);
-    const context = { apiKey: "ctx7sk-modes" };
-
-    // never: none, and no call.
-    expect(await fetchExperimentalTools(context, undefined, { lookUp: "never" })).toEqual([]);
-    expect(fetchMock).not.toHaveBeenCalled();
-
-    // missing: asks once, then reuses the choice even after it expired.
-    fetchMock.mockResolvedValueOnce(choice(["query-code"]));
-    expect(await fetchExperimentalTools(context, undefined, { lookUp: "missing" })).toEqual([
-      "query-code",
-    ]);
-    now.mockReturnValue(start + 3_600_000);
-    expect(await fetchExperimentalTools(context, undefined, { lookUp: "missing" })).toEqual([
-      "query-code",
-    ]);
-    expect(await fetchExperimentalTools(context, undefined, { lookUp: "never" })).toEqual([
-      "query-code",
-    ]);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-
-    // expired: the tool list refreshes it.
-    fetchMock.mockResolvedValueOnce(choice([]));
-    expect(await fetchExperimentalTools(context)).toEqual([]);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   test("serves from the cache instead of starting more than 32 lookups at once", async () => {
@@ -125,38 +96,17 @@ describe("fetchExperimentalTools", () => {
   });
 });
 
-describe("experimentalToolsLookupFor", () => {
-  const call = (name: string) => ({
-    jsonrpc: "2.0",
-    id: 1,
-    method: "tools/call",
-    params: { name },
-  });
-  const request = (method: string) => ({ jsonrpc: "2.0", id: 1, method });
-
-  test("refreshes an expired choice for the tool list", () => {
-    expect(experimentalToolsLookupFor(request("tools/list"))).toBe("expired");
-    expect(experimentalToolsLookupFor(request("server/discover"))).toBe("expired");
-    expect(experimentalToolsLookupFor([call("query-docs"), request("tools/list")])).toBe("expired");
-  });
-
-  test("asks for initialize and experimental tool calls only without a choice", () => {
-    expect(experimentalToolsLookupFor(request("initialize"))).toBe("missing");
-    expect(experimentalToolsLookupFor(call("query-code"))).toBe("missing");
-    expect(experimentalToolsLookupFor([call("query-docs"), call("get-upgrade-guide")])).toBe(
-      "missing"
-    );
-  });
-
-  test("never asks for core tool calls, notifications or malformed bodies", () => {
-    expect(experimentalToolsLookupFor(call("query-docs"))).toBe("never");
-    expect(experimentalToolsLookupFor(call("resolve-library-id"))).toBe("never");
-    expect(
-      experimentalToolsLookupFor({ jsonrpc: "2.0", method: "notifications/initialized" })
-    ).toBe("never");
-    expect(experimentalToolsLookupFor(request("ping"))).toBe("never");
-    expect(experimentalToolsLookupFor(undefined)).toBe("never");
-    expect(experimentalToolsLookupFor("tools/list")).toBe("never");
-    expect(experimentalToolsLookupFor({ method: "tools/call", params: null })).toBe("never");
+describe("experimentalToolsFromChoice", () => {
+  test("expands all and keeps only known tools", () => {
+    expect(experimentalToolsFromChoice({ all: true, tools: [] })).toEqual([
+      "query-code",
+      "get-upgrade-guide",
+      "submit-docs-feedback",
+    ]);
+    expect(experimentalToolsFromChoice({ all: false, tools: ["query-code", "nope"] })).toEqual([
+      "query-code",
+    ]);
+    expect(experimentalToolsFromChoice(null)).toEqual([]);
+    expect(experimentalToolsFromChoice("all")).toEqual([]);
   });
 });

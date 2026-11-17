@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   apiKeyHash,
-  isSnapshotLoaded,
   refreshSnapshot,
   snapshotExperimentalTools,
   snapshotSourceFromEnv,
@@ -17,6 +16,18 @@ import {
 } from "../src/lib/oauth-token-validation.js";
 
 const SOURCE = { url: "https://redis.test", token: "read-only" };
+
+/** An unsigned JWT: the snapshot reads `sub` only after the auth gate verified the token. */
+const jwt = (header: object, payload: object) =>
+  [header, payload, "sig"]
+    .map((part) =>
+      Buffer.from(typeof part === "string" ? part : JSON.stringify(part)).toString("base64url")
+    )
+    .join(".");
+const clerkJwt = (sub: string) =>
+  jwt({ alg: "RS256", typ: "at+jwt" }, { iss: "https://clerk.context7.com", sub });
+const otherJwt = (sub: string) =>
+  jwt({ alg: "RS256" }, { iss: "https://login.microsoftonline.com/x", sub });
 const KEY = "ctx7sk-11111111-2222-3333-4444-555555555555";
 
 /** A stand-in for the Upstash REST API holding one snapshot. */
@@ -86,16 +97,17 @@ describe("experimental tools snapshot", () => {
     await startExperimentalToolsSnapshot(SOURCE);
     const calls = fetchMock.mock.calls.length;
 
-    expect(snapshotExperimentalTools({ apiKey: KEY })).toEqual(["query-code"]);
-    expect(snapshotExperimentalTools({ userId: "user_a" })).toEqual(["query-code"]);
-    expect(snapshotExperimentalTools({ userId: "user_all" })).toEqual([
+    expect(snapshotExperimentalTools(KEY)).toEqual(["query-code"]);
+    expect(snapshotExperimentalTools(clerkJwt("user_all"))).toEqual([
       "query-code",
       "get-upgrade-guide",
       "submit-docs-feedback",
     ]);
-    expect(snapshotExperimentalTools({ userId: "user_bad" })).toEqual([]);
-    expect(snapshotExperimentalTools({ apiKey: "ctx7sk-unknown" })).toEqual([]);
-    expect(snapshotExperimentalTools({ userId: "nobody" })).toEqual([]);
+    expect(snapshotExperimentalTools(clerkJwt("user_bad"))).toEqual([]);
+    expect(snapshotExperimentalTools(otherJwt("user_all"))).toEqual([]);
+    expect(snapshotExperimentalTools(undefined)).toEqual([]);
+    expect(snapshotExperimentalTools("ctx7sk-unknown")).toEqual([]);
+    expect(snapshotExperimentalTools(clerkJwt("nobody"))).toEqual([]);
     // Reading the snapshot never calls out.
     expect(fetchMock.mock.calls.length).toBe(calls);
   });
@@ -112,7 +124,7 @@ describe("experimental tools snapshot", () => {
     state.version = "2";
     await refreshSnapshot();
     expect(state.hgetalls).toBe(2);
-    expect(snapshotExperimentalTools({ apiKey: KEY })).toHaveLength(3);
+    expect(snapshotExperimentalTools(KEY)).toHaveLength(3);
   });
 
   test("keeps the last snapshot when a change lands during the read", async () => {
@@ -124,10 +136,10 @@ describe("experimental tools snapshot", () => {
     state.entries["u:user_a"] = JSON.stringify({ all: true, tools: [] });
     state.changeDuringRead = true;
     await refreshSnapshot();
-    expect(snapshotExperimentalTools({ apiKey: KEY })).toEqual(["query-code"]);
+    expect(snapshotExperimentalTools(KEY)).toEqual(["query-code"]);
 
     await refreshSnapshot();
-    expect(snapshotExperimentalTools({ apiKey: KEY })).toHaveLength(3);
+    expect(snapshotExperimentalTools(KEY)).toHaveLength(3);
   });
 
   test("keeps serving the last snapshot while Redis is down", async () => {
@@ -136,7 +148,7 @@ describe("experimental tools snapshot", () => {
     await startExperimentalToolsSnapshot(SOURCE);
     state.down = true;
     for (let i = 0; i < 5; i++) await refreshSnapshot();
-    expect(snapshotExperimentalTools({ apiKey: KEY })).toEqual(["query-code"]);
+    expect(snapshotExperimentalTools(KEY)).toEqual(["query-code"]);
     // Only the first failures of a streak are logged.
     expect(vi.mocked(console.error).mock.calls).toHaveLength(3);
     state.down = false;
@@ -151,11 +163,10 @@ describe("experimental tools snapshot", () => {
     state.down = true;
     vi.stubGlobal("fetch", fetchMock);
     await startExperimentalToolsSnapshot(SOURCE);
-    expect(isSnapshotLoaded()).toBe(false);
-    expect(snapshotExperimentalTools({ apiKey: KEY })).toEqual([]);
+    expect(snapshotExperimentalTools(KEY)).toEqual([]);
     state.down = false;
     await refreshSnapshot();
-    expect(snapshotExperimentalTools({ apiKey: KEY })).toEqual(["query-code"]);
+    expect(snapshotExperimentalTools(KEY)).toEqual(["query-code"]);
   });
 });
 
@@ -171,6 +182,21 @@ describe("opaque OAuth token user", () => {
     await validateOpaqueOAuthToken("oat_x", 1_000);
     expect(validatedOpaqueOAuthTokenUserId("oat_x", 1_000)).toBe("user_a");
     expect(validatedOpaqueOAuthTokenUserId("oat_x", 1_000 + 61_000)).toBeUndefined();
+  });
+
+  test("finds the token's tools in the snapshot", async () => {
+    const { fetchMock } = fakeRedis();
+    vi.stubGlobal("fetch", fetchMock);
+    await startExperimentalToolsSnapshot(SOURCE);
+    expect(snapshotExperimentalTools("oat_z")).toEqual([]);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () => new Response(null, { status: 204, headers: { "X-Context7-User-Id": "user_a" } })
+      )
+    );
+    await validateOpaqueOAuthToken("oat_z");
+    expect(snapshotExperimentalTools("oat_z")).toEqual(["query-code"]);
   });
 
   test("is unknown when the app does not name it", async () => {

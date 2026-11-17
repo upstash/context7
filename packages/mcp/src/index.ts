@@ -33,7 +33,6 @@ import {
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import {
   EXPERIMENTAL_TOOL_NAMES,
-  experimentalToolsLookupFor,
   QUERY_CODE_TOOL,
   QUERY_DOCS_TOOL,
   RESOLVE_LIBRARY_ID_TOOL,
@@ -47,14 +46,7 @@ import {
   isSnapshotEnabled,
   snapshotExperimentalTools,
   startExperimentalToolsSnapshot,
-  verifiedJwtSubject,
-  type SnapshotIdentity,
 } from "./lib/experimental-tools-snapshot.js";
-import { isClerkOAuthJwt, isJWT } from "./lib/jwt.js";
-import {
-  isOpaqueOAuthToken,
-  validatedOpaqueOAuthTokenUserId,
-} from "./lib/oauth-token-validation.js";
 import {
   forceFlushTelemetry,
   initializeTelemetry,
@@ -612,9 +604,6 @@ async function main() {
       onerror: (error) => console.error("MCP node adapter error:", error),
     });
     const authMode = parseMcpAuthMode();
-    // MCP_EXPERIMENTAL_TOOLS_LOOKUP=off stops the dashboard lookups without a rollback: signed-in
-    // callers then get experimental tools only from the URL flag.
-    const experimentalToolsLookupEnabled = process.env.MCP_EXPERIMENTAL_TOOLS_LOOKUP !== "off";
     // Read again per token; parsed here so a typo fails startup, not requests.
     parseOAuthAudienceEnforcement();
 
@@ -680,28 +669,16 @@ async function main() {
           plugin,
           transport: "http",
         };
-        // Every experimental tool by URL flag; else the signed-in user's dashboard choice
-        // (cached per credential). Only POST carries MCP messages. Listing refreshes the choice;
-        // initialize and experimental tool calls ask only when this process has none; the rest
-        // use the cached choice.
-        // With the snapshot configured, a credential that names its user without a network call
-        // (API key, verified Clerk JWT, opaque token with a cached check) reads only the
-        // in-memory snapshot; any other credential falls back to the bounded lookup.
-        const identity =
-          isSnapshotEnabled() && req.method === "POST"
-            ? snapshotIdentity(apiKey, authentication.event === "credential_validated")
-            : undefined;
+        // Every experimental tool by URL flag; else the signed-in user's dashboard choice, from the
+        // in-memory snapshot when the hosted server has one, or else the cached API lookup. Only
+        // POST carries MCP messages.
         context.experimentalTools = experimental
           ? EXPERIMENTAL_TOOL_NAMES
           : req.method !== "POST"
             ? []
-            : identity
-              ? snapshotExperimentalTools(identity)
-              : await fetchExperimentalTools(context, undefined, {
-                  lookUp: experimentalToolsLookupEnabled
-                    ? experimentalToolsLookupFor(req.body)
-                    : "never",
-                });
+            : isSnapshotEnabled()
+              ? snapshotExperimentalTools(apiKey)
+              : await fetchExperimentalTools(context);
 
         const oauthClientRegistration = classifyOAuthClientRegistration(apiKey);
         observeCredentialedInitialize(res, req.body, {
@@ -969,22 +946,3 @@ main().catch((error) => {
   console.error("Fatal error in main():", error);
   process.exit(1);
 });
-
-/** How a credential names its user for the experimental tools snapshot, with no network call. */
-function snapshotIdentity(
-  apiKey: string | undefined,
-  verified: boolean
-): SnapshotIdentity | undefined {
-  if (!apiKey) return undefined;
-  if (isOpaqueOAuthToken(apiKey)) {
-    const userId = validatedOpaqueOAuthTokenUserId(apiKey);
-    return userId ? { userId } : undefined;
-  }
-  if (isClerkOAuthJwt(apiKey)) {
-    const userId = verified ? verifiedJwtSubject(apiKey) : undefined;
-    return userId ? { userId } : undefined;
-  }
-  // Entra, Vercel Marketplace and other JWTs name no Context7 user here.
-  if (isJWT(apiKey)) return undefined;
-  return { apiKey };
-}
