@@ -137,7 +137,7 @@ The first three take the parameters of the Grep, Glob and Read tools that coding
 
 | Tool | What it does | Fields |
 | --- | --- | --- |
-| `grep-code` | Searches file contents, like ripgrep | `pattern` (a regex), `path`, `glob`, `type` (such as `ts` or `py`), `output_mode` (`content`, `files_with_matches` or `count`), `-A`, `-B`, `-C`, `-i`, `-F`, `-w`, `multiline`, `head_limit`, `offset` |
+| `grep-code` | Searches file contents, like ripgrep | `pattern` (a regex), `path`, `glob`, `type` (such as `ts` or `py`), `output_mode` (`content`, `files_with_matches` or `count`), `-A`, `-B`, `-C`, `-i`, `-F`, `-w`, `head_limit`, `offset` |
 | `glob-code` | Finds files by name. With `path` and no `pattern`, lists the files and folders of that folder | `pattern` (a glob such as `**/*client*.ts`), `path`, `head_limit`, `offset` |
 | `read-code` | Reads numbered lines of a file | `file_path`, `offset` (the first line), `limit` (at most 200 lines) |
 | `find-symbol` | Finds where a symbol is defined (`definition`), where it is used (`references`), or the symbols of a file or the library's exported API (`outline`) | `operation`, `symbol`, `path`, `head_limit`, `offset` |

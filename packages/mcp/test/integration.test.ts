@@ -2100,7 +2100,6 @@ describe("code tools", () => {
         "glob",
         "head_limit",
         "libraryId",
-        "multiline",
         "offset",
         "output_mode",
         "path",
@@ -2148,7 +2147,6 @@ describe("code tools", () => {
         "-B": 1,
         "-A": 2,
         "-w": true,
-        multiline: true,
       });
       expect(grep.result.isError).toBeFalsy();
       expect(grep.result.content).toMatchObject([{ type: "text", text: STUB_CODE }]);
@@ -2169,8 +2167,7 @@ describe("code tools", () => {
       expect(grep.query?.get("before_context")).toBe("1");
       expect(grep.query?.get("after_context")).toBe("2");
       expect(grep.query?.get("word_regexp")).toBe("true");
-      expect(grep.query?.get("multiline")).toBe("true");
-      expect(grep.query?.get("multiline_dotall")).toBe("true");
+      expect(grep.query?.has("multiline")).toBe(false);
 
       const glob = await sent(client, "glob-code", {
         libraryId: "/vercel/next.js",
@@ -2246,6 +2243,24 @@ describe("code tools", () => {
       expect(words.result.isError).toBe(true);
       expect((words.result.content as { text: string }[])[0].text).toContain('Pass "pattern"');
       expect(words.query).toBeUndefined();
+
+      // Multiline search is not offered: the agent is told, not given a single-line search.
+      const multiline = await sent(client, "grep-code", {
+        libraryId: "/vercel/next.js",
+        pattern: "useRouter\\(\\)\\n",
+        multiline: true,
+      });
+      expect(multiline.result.isError).toBe(true);
+      expect((multiline.result.content as { text: string }[])[0].text).toContain(
+        "has no multiline search"
+      );
+      expect(multiline.query).toBeUndefined();
+      const singleLine = await sent(client, "grep-code", {
+        libraryId: "/vercel/next.js",
+        pattern: "useRouter",
+        multiline: false,
+      });
+      expect(singleLine.query?.has("multiline")).toBe(false);
 
       const read = await sent(client, "read-code", {
         libraryId: "/vercel/next.js",
