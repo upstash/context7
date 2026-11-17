@@ -58,6 +58,8 @@ export type OnPremMcpAuthMode = "personal_keys" | "oauth" | "both";
 export interface OnPremMcpAuthStatus {
   enabled: boolean;
   mode: OnPremMcpAuthMode;
+  /** False until the server has CONTEXT7_PUBLIC_URL; OAuth sign-in cannot work before. */
+  oauthAvailable: boolean;
 }
 
 export async function getOnPremMcpAuthStatus(
@@ -79,11 +81,15 @@ export async function getOnPremMcpAuthStatus(
     throw new Error(`HTTP ${response.status} from ${deployment.baseUrl}/api/auth/mcp`);
   }
 
-  const body = (await response.json()) as { enabled?: unknown; mode?: unknown };
+  const body = (await response.json()) as {
+    enabled?: unknown;
+    mode?: unknown;
+    oauth?: { available?: unknown };
+  };
   if (typeof body.enabled !== "boolean") {
     throw new Error(`Invalid response from ${deployment.baseUrl}/api/auth/mcp`);
   }
   const mode: OnPremMcpAuthMode =
     body.mode === "oauth" || body.mode === "both" ? body.mode : "personal_keys";
-  return { enabled: body.enabled, mode };
+  return { enabled: body.enabled, mode, oauthAvailable: body.oauth?.available === true };
 }

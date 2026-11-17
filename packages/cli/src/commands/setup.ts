@@ -150,6 +150,13 @@ async function resolveAuth(
 
     // With OAuth, the config holds no key: the client opens a browser to sign in.
     if (status.mode === "oauth") {
+      if (!status.oauthAvailable) {
+        log.error(
+          `${deployment.baseUrl} accepts only OAuth sign-in for MCP, but OAuth is not set up there yet (CONTEXT7_PUBLIC_URL is missing). Ask your administrator.`
+        );
+        process.exitCode = 1;
+        return null;
+      }
       if (explicitApiKey) {
         log.error(
           `${deployment.baseUrl} accepts only OAuth sign-in for MCP. Rerun without --api-key; your client signs in through the browser.`
@@ -159,8 +166,11 @@ async function resolveAuth(
       }
       return { mode: "oauth" };
     }
+    const offersOAuth = status.mode === "both" && status.oauthAvailable;
+    // An explicit key wins over --oauth, as for hosted Context7.
+    if (explicitApiKey) return { mode: "api-key", apiKey: explicitApiKey };
     if (options.oauth) {
-      if (status.mode === "both") return { mode: "oauth" };
+      if (offersOAuth) return { mode: "oauth" };
       log.error(
         `${deployment.baseUrl} does not offer OAuth sign-in for MCP. Use a personal API key instead.`
       );
@@ -168,9 +178,9 @@ async function resolveAuth(
       return null;
     }
 
-    const apiKey = explicitApiKey || process.env.CONTEXT7_API_KEY?.trim();
+    const apiKey = process.env.CONTEXT7_API_KEY?.trim();
     if (apiKey) return { mode: "api-key", apiKey };
-    if (status.mode === "both") return { mode: "oauth" };
+    if (offersOAuth) return { mode: "oauth" };
 
     if (!options.yes) {
       const promptedApiKey = await promptForOnPremApiKey(deployment);

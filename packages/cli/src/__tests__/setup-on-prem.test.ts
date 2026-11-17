@@ -373,7 +373,7 @@ describe("on-premise OAuth sign-in", () => {
   const codexConfig = () => readFile(join(tempDir, ".codex", "config.toml"), "utf-8");
 
   test("writes a keyless config without prompting when the server uses OAuth only", async () => {
-    authStatus({ enabled: true, mode: "oauth" });
+    authStatus({ enabled: true, mode: "oauth", oauth: { available: true } });
     await runSetup();
     expect(promptMocks.password).not.toHaveBeenCalled();
     const config = await codexConfig();
@@ -383,20 +383,20 @@ describe("on-premise OAuth sign-in", () => {
   });
 
   test("refuses --api-key when the server accepts OAuth only", async () => {
-    authStatus({ enabled: true, mode: "oauth" });
+    authStatus({ enabled: true, mode: "oauth", oauth: { available: true } });
     await runSetup("--api-key", "ctx7op-abc_def", "--yes");
     expect(process.exitCode).toBe(1);
   });
 
   test("prefers OAuth when the server accepts both and no key is given", async () => {
-    authStatus({ enabled: true, mode: "both" });
+    authStatus({ enabled: true, mode: "both", oauth: { available: true } });
     await runSetup("--yes");
     expect(promptMocks.password).not.toHaveBeenCalled();
     expect(await codexConfig()).not.toContain("Authorization");
   });
 
   test("keeps an explicit key when the server accepts both", async () => {
-    authStatus({ enabled: true, mode: "both" });
+    authStatus({ enabled: true, mode: "both", oauth: { available: true } });
     await runSetup("--api-key", "ctx7op-abc_def", "--yes");
     expect(await codexConfig()).toContain('Authorization = "Bearer ctx7op-abc_def"');
   });
@@ -404,6 +404,40 @@ describe("on-premise OAuth sign-in", () => {
   test("refuses --oauth when the server accepts personal keys only", async () => {
     authStatus({ enabled: true, mode: "personal_keys" });
     await runSetup("--oauth", "--yes");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("uses OAuth for --oauth against a server that accepts both", async () => {
+    authStatus({ enabled: true, mode: "both", oauth: { available: true } });
+    await runSetup("--oauth", "--yes");
+    expect(await codexConfig()).not.toContain("Authorization");
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  test("lets an explicit key win over --oauth", async () => {
+    authStatus({ enabled: true, mode: "both", oauth: { available: true } });
+    await runSetup("--oauth", "--api-key", "ctx7op-abc_def", "--yes");
+    expect(await codexConfig()).toContain('Authorization = "Bearer ctx7op-abc_def"');
+  });
+
+  test("writes no credential when MCP auth is off, whatever the mode", async () => {
+    for (const mode of ["oauth", "both"]) {
+      authStatus({ enabled: false, mode, oauth: { available: true } });
+      await runSetup("--yes");
+      expect(await codexConfig()).not.toContain("Authorization");
+      expect(process.exitCode).toBeUndefined();
+    }
+  });
+
+  test("falls back to a key when the server selected both but has no public URL", async () => {
+    authStatus({ enabled: true, mode: "both", oauth: { available: false } });
+    await runSetup("--api-key", "ctx7op-abc_def", "--yes");
+    expect(await codexConfig()).toContain('Authorization = "Bearer ctx7op-abc_def"');
+  });
+
+  test("explains that an OAuth-only server without a public URL cannot be set up yet", async () => {
+    authStatus({ enabled: true, mode: "oauth", oauth: { available: false } });
+    await runSetup("--yes");
     expect(process.exitCode).toBe(1);
   });
 
