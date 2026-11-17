@@ -17,6 +17,37 @@ function assertionKey() {
   return key && validateEncryptionKey(key) ? Buffer.from(key, "hex") : null;
 }
 
+/** Whether this process holds the key the app shares with the hosted MCP server. */
+export function hasMcpAssertionKey(): boolean {
+  return assertionKey() !== null;
+}
+
+/**
+ * Seal `plaintext` as a short-lived assertion the app opens with `openMcpAssertion(tag, …)`.
+ * Format: <tag>:<unix timestamp seconds>:<12-byte nonce hex>:<ciphertext + tag hex>. The tag
+ * and timestamp are authenticated data, so one kind of assertion cannot pass as another.
+ */
+export function sealMcpAssertion(
+  tag: string,
+  plaintext: string,
+  nowMs = Date.now(),
+  nonce = randomBytes(12)
+): string | null {
+  const key = assertionKey();
+  if (!key || nonce.length !== 12) return null;
+  try {
+    const timestamp = Math.floor(nowMs / 1000).toString();
+    const aad = `${tag}:${timestamp}`;
+    const cipher = createCipheriv(ASSERTION_ALGORITHM, key, nonce);
+    cipher.setAAD(Buffer.from(aad, "utf8"));
+    const ciphertext = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
+    const ciphertextAndTag = Buffer.concat([ciphertext, cipher.getAuthTag()]);
+    return `${aad}:${nonce.toString("hex")}:${ciphertextAndTag.toString("hex")}`;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Create a short-lived, authenticated client-IP assertion.
  * Format: v1:<unix timestamp seconds>:<12-byte nonce hex>:<ciphertext + tag hex>
@@ -26,8 +57,7 @@ export function createClientIpAssertion(
   nowMs = Date.now(),
   nonce = randomBytes(12)
 ): string | null {
-  const key = assertionKey();
-  if (!key) {
+  if (!assertionKey()) {
     if (!reportedInvalidAssertionKey) {
       reportedInvalidAssertionKey = true;
       console.error(
@@ -36,19 +66,8 @@ export function createClientIpAssertion(
     }
     return null;
   }
-  if (nonce.length !== 12 || isIP(clientIp) === 0) return null;
-
-  try {
-    const timestamp = Math.floor(nowMs / 1000).toString();
-    const aad = `${ASSERTION_VERSION}:${timestamp}`;
-    const cipher = createCipheriv(ASSERTION_ALGORITHM, key, nonce);
-    cipher.setAAD(Buffer.from(aad, "utf8"));
-    const ciphertext = Buffer.concat([cipher.update(clientIp, "utf8"), cipher.final()]);
-    const ciphertextAndTag = Buffer.concat([ciphertext, cipher.getAuthTag()]);
-    return `${aad}:${nonce.toString("hex")}:${ciphertextAndTag.toString("hex")}`;
-  } catch {
-    return null;
-  }
+  if (isIP(clientIp) === 0) return null;
+  return sealMcpAssertion(ASSERTION_VERSION, clientIp, nowMs, nonce);
 }
 
 /**

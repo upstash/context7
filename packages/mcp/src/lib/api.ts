@@ -7,8 +7,7 @@ import {
 } from "./types.js";
 import type { DocsFeedback, UpgradeGuideRequest } from "./experimental-tools.js";
 import {
-  EXPERIMENTAL_TOOL_NAMES,
-  experimentalToolsFrom,
+  experimentalToolsFromChoice,
   GET_UPGRADE_GUIDE_TOOL,
   type ExperimentalTool,
   type ToolCallOutcome,
@@ -527,19 +526,28 @@ export async function fetchLibraryContext(
 }
 
 /** Ceiling on the settings call: it runs before a request is served, so it must stay short. */
-const EXPERIMENTAL_TOOLS_TIMEOUT_MS = 3_000;
-/** How long a credential's choice is reused. A dashboard change shows within this time. */
-const EXPERIMENTAL_TOOLS_TTL_MS = 60_000;
-/** After a failed lookup the last known choice (or none) is kept, and asked again sooner. */
-const EXPERIMENTAL_TOOLS_FAILURE_TTL_MS = 15_000;
+const EXPERIMENTAL_TOOLS_TIMEOUT_MS = 2_000;
+/**
+ * How long a credential's choice is reused. A dashboard change shows within this time; it matches
+ * the private cache hint of tools/list. 4.7.1 used 60 s and asked on every request, which
+ * overloaded the app's key validation in production (CTX7-3866).
+ */
+const EXPERIMENTAL_TOOLS_TTL_MS = 5 * 60_000;
+/** After a failed lookup the last known choice (or none) is kept this long before asking again. */
+const EXPERIMENTAL_TOOLS_FAILURE_TTL_MS = 2 * 60_000;
 const EXPERIMENTAL_TOOLS_CACHE_LIMIT = 10_000;
+/**
+ * Lookups one process runs at a time. Past it a request is served from the cache (or with none)
+ * instead of adding to the load on a slow app.
+ */
+const EXPERIMENTAL_TOOLS_MAX_IN_FLIGHT = 32;
 
 type ExperimentalToolsEntry = { tools: ExperimentalTool[]; expiresAt: number };
-type ExperimentalToolsLookup = { tools: ExperimentalTool[]; failure?: string };
+type ExperimentalToolsResult = { tools: ExperimentalTool[]; failure?: string };
 
 const experimentalToolsCache = new Map<string, ExperimentalToolsEntry>();
 /** One lookup per credential at a time: parallel requests share it. */
-const experimentalToolsInFlight = new Map<string, Promise<ExperimentalToolsLookup>>();
+const experimentalToolsInFlight = new Map<string, Promise<ExperimentalToolsResult>>();
 
 function rememberExperimentalTools(cacheKey: string, tools: ExperimentalTool[], ttlMs: number) {
   experimentalToolsCache.delete(cacheKey);
@@ -554,10 +562,10 @@ function rememberExperimentalTools(cacheKey: string, tools: ExperimentalTool[], 
 async function lookUpExperimentalTools(
   context: ClientContext,
   cacheKey: string
-): Promise<ExperimentalToolsLookup> {
+): Promise<ExperimentalToolsResult> {
   // On failure keep the last known choice, even an expired one, so an outage of the app does
   // not take tools away from a session; only a credential never read lists none.
-  const fail = (failure: string): ExperimentalToolsLookup => {
+  const fail = (failure: string): ExperimentalToolsResult => {
     const tools = experimentalToolsCache.get(cacheKey)?.tools ?? [];
     rememberExperimentalTools(cacheKey, tools, EXPERIMENTAL_TOOLS_FAILURE_TTL_MS);
     return { tools, failure };
@@ -584,10 +592,7 @@ async function lookUpExperimentalTools(
           }
           return fail(`the Context7 API answered HTTP ${response.status}`);
         }
-        const body = await readJson<{ all?: unknown; tools?: unknown }>(response);
-        // `all` is every experimental tool this server has, also ones the app does not know yet.
-        const tools =
-          body?.all === true ? [...EXPERIMENTAL_TOOL_NAMES] : experimentalToolsFrom(body?.tools);
+        const tools = experimentalToolsFromChoice(await readJson<unknown>(response));
         rememberExperimentalTools(cacheKey, tools, EXPERIMENTAL_TOOLS_TTL_MS);
         return { tools };
       },
@@ -600,10 +605,10 @@ async function lookUpExperimentalTools(
 
 /**
  * The experimental tools the credential's user turned on in the dashboard
- * (`GET /v2/mcp/experimental-tools`). Without a credential none: the server then lists only the
- * stable tools. When the lookup fails, the last known choice (or none) and `onFailure` gets the
- * cause. Cached per credential (a hash, never the token) so a session does not ask on every
- * request.
+ * (`GET /v2/mcp/experimental-tools`), for the stdio server and an HTTP server without the
+ * snapshot (`experimental-tools-snapshot.ts`). Without a credential none: the server then lists
+ * only the stable tools. When the lookup fails, the last known choice (or none), and `onFailure`
+ * gets the cause once per lookup. Cached per credential (a hash, never the token).
  */
 export async function fetchExperimentalTools(
   context: ClientContext,
@@ -618,12 +623,14 @@ export async function fetchExperimentalTools(
   if (cached && cached.expiresAt > Date.now()) return cached.tools;
 
   let lookup = experimentalToolsInFlight.get(cacheKey);
-  if (!lookup) {
-    lookup = lookUpExperimentalTools(context, cacheKey).finally(() =>
-      experimentalToolsInFlight.delete(cacheKey)
-    );
-    experimentalToolsInFlight.set(cacheKey, lookup);
+  if (lookup) return (await lookup).tools;
+  if (experimentalToolsInFlight.size >= EXPERIMENTAL_TOOLS_MAX_IN_FLIGHT) {
+    return cached?.tools ?? [];
   }
+  lookup = lookUpExperimentalTools(context, cacheKey).finally(() =>
+    experimentalToolsInFlight.delete(cacheKey)
+  );
+  experimentalToolsInFlight.set(cacheKey, lookup);
   const { tools, failure } = await lookup;
   if (failure) onFailure(failure);
   return tools;
