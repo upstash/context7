@@ -17,9 +17,9 @@ A request with an invalid or revoked key gets `401`. It is not treated as an ano
 
 ## OAuth for MCP clients
 
-MCP clients can also sign in with OAuth instead of a personal key. The client gets a short-lived access token (`ctx7oa-...`) for the user who approved it, and sends it as `Authorization: Bearer <token>`. An OAuth access token works only on `/mcp`, has the role and library access of its user, and is refused by every other endpoint. See [OAuth Sign-In for MCP Clients](/enterprise/security/mcp-oauth).
+MCP clients can also sign in with OAuth instead of a personal key. The client gets a short-lived access token (`ctx7oa-...`) for the user who approved it, and sends it as `Authorization: Bearer <token>`. An OAuth access token works only on `/mcp` and has the role and library access of its user. No other endpoint accepts it as a credential. See [OAuth Sign-In for MCP Clients](/enterprise/security/mcp-oauth).
 
-When OAuth is on, a `401` from `/mcp` carries a `WWW-Authenticate: Bearer resource_metadata="..."` header that points clients to the sign-in flow. A browser session token sent as a bearer token is not accepted on `/mcp`; the dashboard session cookie still is.
+A `401` from `/mcp` carries a `WWW-Authenticate` header. When OAuth is on, it holds `resource_metadata="..."`, which points clients to the sign-in flow. A browser session token sent as a bearer token is not accepted on `/mcp`; the dashboard session cookie still is.
 
 ## Creating an API Key
 
@@ -70,7 +70,7 @@ A personal API key acts with the role of its owner:
 | Import libraries (`/api/import-libraries`) | No | Yes |
 | `/mcp` and `/api/v2` search and context | Yes | Yes |
 
-In **OAuth** mode, `/mcp` refuses personal API keys. `/api/v2` accepts them in every mode.
+In **OAuth only** mode with MCP authentication on, `/mcp` refuses personal API keys. `/api/v2` accepts them in every mode.
 
 Settings, user management, and other admin routes need an admin signed in to the dashboard. They do not accept API keys.
 
