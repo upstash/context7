@@ -34,7 +34,7 @@ import {
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import {
   EXPERIMENTAL_TOOL_NAMES,
-  QUERY_CODE_TOOL,
+  CODE_TOOLS,
   QUERY_DOCS_TOOL,
   RESOLVE_LIBRARY_ID_TOOL,
   SUBMIT_DOCS_FEEDBACK_TOOL,
@@ -44,6 +44,11 @@ import { aliasArgs, GLOBAL_ALIASES, QUERY_DOCS_ALIASES } from "./lib/tool-args.j
 import { registerExperimentalTools } from "./lib/experimental-tools.js";
 import { serverInstructions } from "./lib/server-instructions.js";
 import { installProcessShutdown } from "./lib/process-shutdown.js";
+import {
+  isSnapshotEnabled,
+  snapshotExperimentalTools,
+  startExperimentalToolsSnapshot,
+} from "./lib/experimental-tools-snapshot.js";
 import {
   forceFlushTelemetry,
   initializeTelemetry,
@@ -76,8 +81,9 @@ const DEFAULT_PORT = 3000;
 const OAUTH_METADATA_TIMEOUT_MS = 10_000;
 const CLAUDE_CODE_PLUGIN = "claude-code-plugin";
 const STATIC_CACHE_HINT = { ttlMs: 3_600_000, cacheScope: "public" } as const;
-// A signed-in caller's tools follow their dashboard choice, so a change shows within minutes.
-const PRIVATE_CACHE_HINT = { ttlMs: 300_000, cacheScope: "private" } as const;
+// A signed-in caller's tools follow their dashboard choice. The hosted server reads it from memory
+// (refreshed every 15 s), so a short hint lets a change show within about a minute.
+const PRIVATE_CACHE_HINT = { ttlMs: 60_000, cacheScope: "private" } as const;
 type McpInstrumentation = NonNullable<Awaited<ReturnType<typeof initializeTelemetry>>>;
 let mcpInstrumentation: McpInstrumentation | undefined;
 
@@ -311,7 +317,10 @@ function createMcpServer(
       "resources/templates/list": STATIC_CACHE_HINT,
       "server/discover": callerHint,
     },
-    instructions: serverInstructions(enabled.has(SUBMIT_DOCS_FEEDBACK_TOOL)),
+    instructions: serverInstructions({
+      codeTools: enabled.has(CODE_TOOLS),
+      feedbackRequest: enabled.has(SUBMIT_DOCS_FEEDBACK_TOOL),
+    }),
   };
   const server = mcpInstrumentation
     ? mcpInstrumentation.createServer(serverInfo, serverOptions, mcpContext)
@@ -334,9 +343,9 @@ Each result includes:
 - Source Reputation: Authority indicator (High, Medium, Low, or Unknown)
 - Benchmark Score: Quality indicator (100 is the highest score)
 - Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.${
-        enabled.has(QUERY_CODE_TOOL)
+        enabled.has(CODE_TOOLS)
           ? `
-- Source code: present when 'query-code' can usually search the library's source. '/websites/...' and '/llmstxt/...' IDs have docs only.`
+- Source code: present when 'grep-code', 'glob-code', 'read-code' and 'find-symbol' can usually search the library's source. '/websites/...' and '/llmstxt/...' IDs have docs only.`
           : ""
       }
 
@@ -403,7 +412,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
       }
 
       const resultsText = formatSearchResults(searchResponse, {
-        sourceCode: enabled.has(QUERY_CODE_TOOL),
+        sourceCode: enabled.has(CODE_TOOLS),
       });
       const responseText = `Available Libraries:\n\n${resultsText}`;
       maybeElicitAuthSignIn(server, ctx);
@@ -666,13 +675,16 @@ async function main() {
           plugin,
           transport: "http",
         };
-        // Every experimental tool by URL flag; else the signed-in user's dashboard choice
-        // (cached per credential). Only POST carries MCP messages.
+        // Every experimental tool by URL flag; else the signed-in user's dashboard choice, from the
+        // in-memory snapshot when the hosted server has one, or else the cached API lookup. Only
+        // POST carries MCP messages.
         context.experimentalTools = experimental
           ? EXPERIMENTAL_TOOL_NAMES
-          : req.method === "POST"
-            ? await fetchExperimentalTools(context)
-            : [];
+          : req.method !== "POST"
+            ? []
+            : isSnapshotEnabled()
+              ? snapshotExperimentalTools(apiKey)
+              : await fetchExperimentalTools(context);
 
         const oauthClientRegistration = classifyOAuthClientRegistration(apiKey);
         observeCredentialedInitialize(res, req.body, {
@@ -870,6 +882,13 @@ async function main() {
       });
     };
 
+    // At most one 5 s request; a failed first read starts with nothing on.
+    await startExperimentalToolsSnapshot();
+    if (!isSnapshotEnabled()) {
+      console.warn(
+        "[Context7] Experimental tools snapshot off (no MCP_CLIENT_IP_ASSERTION_KEY): dashboard choices are looked up through the Context7 API, once per credential every 5 minutes"
+      );
+    }
     startServer(initialPort);
   } else {
     const keySources = [cliOptions.apiKey, process.env.CONTEXT7_API_KEY];

@@ -51,6 +51,7 @@ import {
   getJsonServerEntry,
 } from "../setup/mcp-writer.js";
 import { writeOpenCodeServer } from "../setup/opencode-editor.js";
+import { configuredBaseUrl } from "../utils/api.js";
 
 type Scope = "global" | "project";
 type SetupMode = "mcp" | "cli";
@@ -109,7 +110,8 @@ export function registerSetupCommand(program: Command): void {
     // lets Commander accept --base-url after `setup`.
     .option("--base-url <url>", "Use a custom Context7 deployment (for example, on-premise)")
     .action(async (_options: SetupOptions, command: Command) => {
-      await setupCommand(command.optsWithGlobals<SetupOptions>());
+      const options = command.optsWithGlobals<SetupOptions>();
+      await setupCommand({ ...options, baseUrl: configuredBaseUrl(options.baseUrl) });
     });
 }
 

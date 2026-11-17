@@ -1,3 +1,4 @@
+import { CODE_TOOLS_INSTRUCTIONS } from "./code-tools.js";
 import { DOCS_FEEDBACK_INSTRUCTIONS } from "./experimental-tools.js";
 
 /**
@@ -31,9 +32,18 @@ If the Context7 tools are deferred, load them first. If Context7 is unavailable,
 /** Claude Code cuts server instructions after this many characters (CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH). */
 export const CLAUDE_CODE_INSTRUCTIONS_LIMIT = 2048;
 
-/** The instructions a session gets: the base text, plus the feedback request when that tool is on. */
-export function serverInstructions(feedbackRequest: boolean): string {
-  return feedbackRequest
-    ? `${SERVER_INSTRUCTIONS}\n\n${DOCS_FEEDBACK_INSTRUCTIONS}`
-    : SERVER_INSTRUCTIONS;
+/**
+ * The instructions a session gets: the base text, then the sections of the experimental tools
+ * the caller has on. Claude Code keeps the first 2048 characters, so the base text comes first.
+ */
+export function serverInstructions(
+  options: { codeTools?: boolean; feedbackRequest?: boolean } = {}
+): string {
+  return [
+    SERVER_INSTRUCTIONS,
+    options.codeTools && CODE_TOOLS_INSTRUCTIONS,
+    options.feedbackRequest && DOCS_FEEDBACK_INSTRUCTIONS,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }

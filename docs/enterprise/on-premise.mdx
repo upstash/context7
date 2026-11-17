@@ -31,14 +31,19 @@ Context7 indexes documentation in any human language. Which pages a library keep
 | Source | Languages indexed |
 |---|---|
 | Confluence, Google Drive, Notion | Every page, whatever its language. One library can mix languages. Requires 2.0.1 or later |
+| Git repository | Every page, whatever its language. One library can mix languages. Requires 2.0.2 or later |
 | Website, llms.txt | The language of the site, detected from its first page. Pages in other languages are skipped |
-| Git repository, OpenAPI | English. Pages in other languages are skipped |
+| OpenAPI | English |
 
 For Google Drive and Notion libraries, Context7 detects the library language when you leave it empty.
 
 <Note>
 Before 2.0.1, a long document in a mixed-language Google Drive or Notion library could lose a section in another language. After you upgrade, sync each such library once with **Re-index all files** (Google Drive) or **Re-index all pages** (Notion) selected.
+
+Before 2.0.2, Git repositories skipped pages that were not in the library's language. After you upgrade, refresh each Git library that mixes languages once, so that Context7 indexes those pages.
 </Note>
+
+If a repository keeps translated copies of its docs, such as `docs/en` and `docs/de`, exclude the folders you don't need in the repository settings to avoid duplicate results.
 
 ## Setup
 
@@ -167,8 +172,22 @@ CONTEXT7_API_KEY=ctx7op-... ctx7 setup --mcp --yes \
 You can use `--api-key ctx7op-...` instead, but command-line arguments may be retained in shell history. Setup writes the MCP client configuration, a Context7 rule, and a bundled `context7-mcp` skill. The bundled files mean the deployment does not need to expose Context7 Cloud's skill APIs.
 
 <Note>
-  Custom `--base-url` setup uses the deployment's Streamable HTTP endpoint. Hosted OAuth, local stdio transport, and CLI-query mode are not available for on-premise targets.
+  Custom `--base-url` setup uses the deployment's Streamable HTTP endpoint. Hosted OAuth, local stdio transport, and the CLI + Skills setup mode are not available for on-premise targets.
 </Note>
+
+### Query from the CLI
+
+Without an MCP client, `ctx7 library` and `ctx7 docs` query the deployment directly. Set its root URL and a personal API key once:
+
+```bash
+export CONTEXT7_BASE_URL=https://context7.internal.yourcompany.com
+export CONTEXT7_API_KEY=ctx7op-...
+
+ctx7 library my-repo "How to configure the client"
+ctx7 docs /my-org/my-repo "How to configure the client"
+```
+
+Use the root URL, without `/api`. `ctx7 search`, `ctx7 code` and `ctx7 get-upgrade-guide` are available only on hosted Context7.
 
 ### Manual configuration
 

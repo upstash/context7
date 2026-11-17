@@ -133,6 +133,24 @@ ctx7 docs /reactjs/react.dev "How to use hooks for state management" | head -50
 ctx7 docs /vercel/next.js "How to add a proxy for route protection" | grep -A 10 "proxy"
 ```
 
+### On-premise deployments
+
+`ctx7 library` and `ctx7 docs` also query an on-premise deployment. Set the deployment's root URL in `CONTEXT7_BASE_URL` once, or pass `--base-url` on each command. When MCP authentication is enabled on the deployment, set `CONTEXT7_API_KEY` to a personal API key from the dashboard:
+
+```bash
+export CONTEXT7_BASE_URL=https://context7.internal.example
+export CONTEXT7_API_KEY=ctx7op-...
+
+ctx7 library react "How to clean up useEffect"
+ctx7 docs /your-org/your-repo "How to configure the client"
+```
+
+`--base-url` wins when both are set. A custom deployment authenticates with `CONTEXT7_API_KEY` only: the CLI does not send your `ctx7 login` session to it. `ctx7 search`, `ctx7 code` and `ctx7 get-upgrade-guide` are available only on hosted Context7.
+
+<Note>
+  `CONTEXT7_BASE_URL` is the deployment's root URL, without `/api`. The MCP server reads a different variable, `CONTEXT7_API_URL`, which ends in `/api`.
+</Note>
+
 ---
 
 ## Setup
@@ -187,7 +205,7 @@ Without `--api-key` or `--oauth`, setup runs the OAuth device flow: it shows a v
 
 ### On-premise setup
 
-Pass the root URL of your on-premise deployment with `--base-url`. Do not include `/mcp` or `/api`:
+Pass the root URL of your on-premise deployment with `--base-url`, or set it once in `CONTEXT7_BASE_URL`. Do not include `/mcp` or `/api`:
 
 ```bash
 # MCP authentication disabled on the deployment
@@ -208,7 +226,7 @@ The CLI checks `/api/auth/mcp` before writing configuration. It either configure
 
 When `--base-url` targets a custom deployment, setup skips the npm update check and telemetry and does not fetch rules or skills from GitHub or Context7 Cloud. After the CLI package is installed, the only network request made by setup is to the configured deployment. In a restricted environment, mirror `ctx7` and its dependencies in an internal npm registry and run the installed `ctx7` binary instead of `npx ctx7@latest`.
 
-`--base-url` currently supports MCP setup only. It cannot be combined with `--oauth`, `--stdio`, or `--cli` for a custom deployment.
+For a custom deployment, `ctx7 setup` supports MCP setup only. It cannot be combined with `--oauth`, `--stdio`, or `--cli`.
 
 **What gets written — MCP mode:**
 
