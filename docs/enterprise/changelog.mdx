@@ -7,13 +7,12 @@ description: "Release notes for the Context7 On-Premise image."
 
 ### Upgrade notes
 
-- Reranking is now on by default when a cheap model can rank results: a decision model, a chosen rerank model, or the small default model of OpenAI, Anthropic or Gemini. Each query then makes one more language model call. Bedrock and custom endpoints stay opt-in. To turn it off, clear **Rerank results** in Workspace Settings › Indexing › AI models.
+- Reranking is now on by default when a cheap model can rank results: a decision model, a chosen rerank model, or the small default model of OpenAI, Anthropic or Gemini. Each query then makes one more language model call. Bedrock and custom endpoints stay opt-in. To turn it off, clear **Rerank results** in Workspace Settings › AI models.
 - Git repositories that mix languages skipped some pages before 2.0.2. After you upgrade, refresh each such library once. An unchanged repository is not refreshed automatically.
 
 ### Added
 
 - Git repositories now index pages in every language. One library can mix languages, for example German and English documentation. If a repository keeps translated copies of its docs, such as `docs/en` and `docs/de`, exclude the folders you do not need in the repository settings.
-- Context7 detects the language of a Git repository from its README and uses it for the library.
 
 ### Security
 
@@ -31,9 +30,9 @@ description: "Release notes for the Context7 On-Premise image."
 
 ### Added
 
-- Added optional authority labels for query results. Administrators assign classes such as standard, guideline or example to libraries and paths, and can exclude paths from results. Turn them on in Workspace Settings › Access › Authority labels.
+- Added optional authority labels for query results. Administrators assign classes such as standard, guideline or example to libraries and paths, and can exclude paths from results. Turn them on in Workspace Settings › Authority labels.
 - Added authority rules to the GitOps manifest. A `repos.yaml` entry can set a library's default class, path rules and exclusions.
-- Added the parse limits to Workspace Settings › Indexing › Parsing. The environment variables still set the defaults. The file, Notion page and Google Drive file limits can be set to no limit.
+- Added the parse limits to Workspace Settings › Parsing. The environment variables still set the defaults. The file, Notion page and Google Drive file limits can be set to no limit.
 - Added a `reset-password` command to the image that recovers access for a local administrator: `docker exec <container> node dist/enterprise/reset-password.mjs --username admin`.
 
 ### Changed
@@ -45,7 +44,7 @@ description: "Release notes for the Context7 On-Premise image."
 - Improved results for Confluence, Notion and Google Drive libraries. Queries return more text passages and fewer code snippets, and reranking prefers pages that state a fact, decision, procedure or owner. Library search matches each word and ranks exact names first.
 - Google Drive sync keeps image alt text, chart titles and videos from Docs and Slides, and reads slide text in visual order.
 - Confluence, Google Drive and Notion libraries now index pages in every language.
-- The extraction timeout of a long page now covers all the language model calls that one part of the page makes, so slow pages time out less often.
+- One part of a page now gets four times the LLM timeout, for its classification and up to three extractions, and a part whose classification times out is tried again.
 - The support bundle checks the configured AI providers.
 
 ### Fixed
