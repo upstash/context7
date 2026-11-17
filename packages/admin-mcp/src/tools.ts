@@ -652,7 +652,7 @@ export const TOOLS = [
     name: "add_library",
     title: "Add library",
     description:
-      "Add a library to the teamspace from a repository, website, llms.txt or OpenAPI URL. The parse takes minutes: then call get_library with the library id from the answer and `wait: true`. A private repository needs the GitHub, GitLab or Bitbucket account connected in the dashboard. Confluence, Notion and file uploads are added in the dashboard.",
+      "Add a library to the teamspace from a repository, website, llms.txt or OpenAPI URL. The parse takes minutes: then call get_library with the library id from the answer and `wait: true`. A source Context7 already has as a public library answers `alreadyAvailable: true` with its id: read it with get_library, there is nothing to add. A private repository needs the GitHub, GitLab or Bitbucket account connected in the dashboard. Confluence, Notion and file uploads are added in the dashboard.",
     kind: "write",
     args: {
       source: z
