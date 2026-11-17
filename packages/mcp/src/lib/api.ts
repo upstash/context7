@@ -341,6 +341,8 @@ export async function fetchLibraryCode(
       url.searchParams.set("head_limit", String(request.head_limit));
     if (request.offset) url.searchParams.set("offset", String(request.offset));
     url.searchParams.set("wait", String(CODE_INDEX_WAIT_SECONDS));
+    // Each file's path once above its lines, not on every line: about 40% fewer tokens.
+    url.searchParams.set("heading", "true");
 
     const headers = generateHeaders(context);
     const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);
