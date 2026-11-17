@@ -44,10 +44,10 @@ Do not use for: refactoring, debugging, or reviewing code that does not depend o
 When the docs do not answer an exact question (a signature or type, a default value, an option name, where an error message comes from, or how something works inside), search the library's source at the docs version.
 
 - Grep: \`npx ctx7@latest code <libraryId> "<regex>"\`. Add \`-F\` for plain text such as error messages
-- Definition: \`npx ctx7@latest code <libraryId> <symbol> --op definition\`. Read code: \`npx ctx7@latest code <libraryId> --op read --path <file>#L10-L40\`. \`--op references\`, \`--op outline\` and \`--op list\` also exist
+- Definition: \`npx ctx7@latest code <libraryId> <symbol> --op definition\`. Read code: \`npx ctx7@latest read <libraryId> <file>#L10-L40\`. \`--op references\`, \`--op outline\` and \`--op list\` also exist
 - Use an ID that \`library\` marks with "Source code", usually the GitHub repository. \`/websites/...\` and \`/llmstxt/...\` IDs have no source
 - For a version, add the git tag to the library ID (e.g. \`/colinhacks/zod/v3.24.2\`). A tag that is not a docs version is indexed first (exit code 75). If indexing fails, the output lists the docs versions you can use
-- Follow the \`Next:\` line of the output. Its fields map to flags: \`offset\` is \`--offset\`, \`output_mode "count"\` is \`-c\`, \`fixed_strings\` is \`-F\`, \`ignore_case\` is \`-i\`, \`read: <file>#L..\` is \`--op read --path <file>#L..\`, and the other fields use the flag of the same name (\`head_limit\` is \`--head-limit\`, \`version\` is \`--tag\`)
+- Follow the \`Next:\` line of the output: it gives the next command or flag to run (\`ctx7 read ...\`, \`--offset 20\`, \`-F\`)
 - Exit code 75 means the source is being indexed: run the same command again every 30 seconds for up to 3 minutes (a first index usually takes 1 to 3), then answer from \`docs\`. These runs do not count toward the 6 \`code\` commands
 - Cite the file and line of the source you used
 
