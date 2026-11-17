@@ -10,10 +10,10 @@ describe("cliCodeHints", () => {
         'Next: more results: call again with offset 20 | read: src/a.ts#L1-L40 | exact totals: call again with output_mode "count"'
       )
     ).toBe(
-      "Next: more results: run again with --offset 20 | ctx7 code /acme/widgets --op read --path src/a.ts#L1-L40 | exact totals: run again with -c"
+      "Next: more results: run again with --offset 20 | ctx7 read /acme/widgets src/a.ts#L1-L40 | exact totals: run again with -c"
     );
     expect(hint("Next: read: src/a.ts#L5-L45")).toBe(
-      "Next: ctx7 code /acme/widgets --op read --path src/a.ts#L5-L45"
+      "Next: ctx7 read /acme/widgets src/a.ts#L5-L45"
     );
   });
 
@@ -29,7 +29,10 @@ describe("cliCodeHints", () => {
     expect(hint("Pass fixed_strings: true for text.")).toBe("Add -F for text.");
     expect(hint('Use operation "list" to see the files.')).toBe("Use --op list to see the files.");
     expect(hint('Use operation "read" with path to read files.')).toBe(
-      "Use --op read with --path to read files."
+      "Use ctx7 read /acme/widgets <file> to read files."
+    );
+    expect(hint('Read the file with operation "read" and path "src/a.ts".')).toBe(
+      "Read the file with ctx7 read /acme/widgets src/a.ts."
     );
     expect(hint("head_limit is at most 100 in files_with_matches mode")).toBe(
       "--head-limit is at most 100 in files_with_matches mode"
@@ -49,7 +52,7 @@ describe("cliCodeHints", () => {
       "<library-source>",
       "src/a.ts:3:  // call again with offset 20 and set fixed_strings: true",
       "</library-source>",
-      "Next: ctx7 code /acme/widgets --op read --path src/a.ts#L1-L40",
+      "Next: ctx7 read /acme/widgets src/a.ts#L1-L40",
     ]);
   });
 });

@@ -1,4 +1,4 @@
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import pc from "picocolors";
 import ora from "ora";
 
@@ -13,6 +13,7 @@ import {
   type CodeOperation,
   type RetryableResult,
 } from "../utils/api.js";
+import { codeArgs, readArgs } from "../utils/codeArgs.js";
 import { cliCodeHints } from "../utils/codeHints.js";
 import { recoverLibraryId } from "../utils/library-id.js";
 import { log } from "../utils/logger.js";
@@ -254,6 +255,22 @@ interface CodeCommandOptions {
   json?: boolean;
   /** A git tag. `--version` is the CLI's own flag, so the tag has its own name. */
   tag?: string;
+  // Hidden habits from other tools, accepted because each has one meaning (see codeArgs.ts).
+  /** rg -n: lines are always numbered, so it changes nothing. */
+  lineNumber?: boolean;
+  limit?: string;
+  maxResults?: string;
+  pathFilter?: string;
+  query?: string;
+  search?: string;
+  library?: string;
+}
+
+/** Prints a usage error and its corrected command. */
+function argsError(result: { error: string; hint?: string }): void {
+  log.error(result.error);
+  if (result.hint) log.notice(result.hint);
+  process.exitCode = 1;
 }
 
 /**
@@ -353,14 +370,23 @@ async function runRetryable(
 }
 
 async function codeCommand(
-  libraryId: string,
-  pattern: string | undefined,
+  rawLibraryId: string | undefined,
+  rawPattern: string | undefined,
+  extra: string[],
   options: CodeCommandOptions
 ): Promise<void> {
   trackEvent("command", { name: "code" });
-  const validId = validateLibraryId(libraryId, "code");
+  const args = codeArgs(rawLibraryId, rawPattern, extra, {
+    library: options.library,
+    query: options.query ?? options.search,
+    path: options.path ?? options.pathFilter,
+    glob: options.glob,
+  });
+  if (!args.ok) return argsError(args);
+  const validId = validateLibraryId(args.libraryId, "code");
   if (!validId) return;
-  libraryId = validId;
+  const libraryId = validId;
+  const pattern = args.pattern;
   const op = options.op;
   if (op && !CODE_OPERATIONS.includes(op as CodeOperation)) {
     log.error(`Invalid --op "${op}". Use one of: ${CODE_OPERATIONS.join(", ")}.`);
@@ -371,7 +397,11 @@ async function codeCommand(
   const beforeContext = wholeNumber(options.beforeContext, "--before-context", CODE_LIMITS.context);
   const afterContext = wholeNumber(options.afterContext, "--after-context", CODE_LIMITS.context);
   const maxCount = wholeNumber(options.maxCount, "--max-count", CODE_LIMITS.maxCount);
-  const headLimit = wholeNumber(options.headLimit, "--head-limit", CODE_LIMITS.headLimit);
+  const headLimit = wholeNumber(
+    options.headLimit ?? options.limit ?? options.maxResults,
+    "--head-limit",
+    CODE_LIMITS.headLimit
+  );
   const offset = wholeNumber(options.offset, "--offset", CODE_LIMITS.offset);
   if (
     context === null ||
@@ -395,8 +425,8 @@ async function codeCommand(
           operation: op as CodeOperation | undefined,
           fixedStrings: options.fixedStrings,
           ignoreCase: options.ignoreCase,
-          glob: options.glob,
-          path: options.path,
+          glob: args.glob,
+          path: args.path,
           context,
           beforeContext,
           afterContext,
@@ -423,6 +453,36 @@ async function codeCommand(
         /keep calling|up to \d+ minutes/i.test(message)
           ? `Run the same command again to call again. For docs meanwhile, use "ctx7 docs" (the CLI's query-docs).`
           : `Run the same command again in about ${seconds} seconds, and keep trying for up to 3 minutes: a first index usually takes 1 to 3. Meanwhile, use "ctx7 docs".`,
+    }
+  );
+}
+
+async function readCommand(
+  rawLibraryId: string | undefined,
+  rawTarget: string | undefined,
+  options: { json?: boolean; tag?: string }
+): Promise<void> {
+  trackEvent("command", { name: "read" });
+  const args = readArgs(rawLibraryId, rawTarget);
+  if (!args.ok) return argsError(args);
+  const libraryId = validateLibraryId(args.libraryId, "read");
+  if (!libraryId) return;
+  const accessToken = await getValidAccessToken();
+  await runRetryable(
+    `Reading the source of "${libraryId}"...`,
+    () =>
+      getLibraryCode(
+        libraryId,
+        args.symbol,
+        { version: options.tag, operation: "read", path: args.path, json: options.json },
+        accessToken
+      ),
+    {
+      json: options.json,
+      text: (value) => cliCodeHints(value, libraryId),
+      pendingError: "indexing",
+      retryHint: () =>
+        `Run the same command again to call again. For docs meanwhile, use "ctx7 docs".`,
     }
   );
 }
@@ -485,10 +545,11 @@ export function registerDocsCommands(program: Command): void {
   program
     .command("code")
     .argument(
-      "<libraryId>",
+      "[libraryId]",
       "Context7 library ID of a Git repository, with an optional tag (e.g., /vercel/next.js or /colinhacks/zod/v3.24.2)"
     )
     .argument("[pattern]", "A regex to grep for, or a symbol for --op definition/references/read")
+    .argument("[paths...]", "Folders or files to search in, as in rg PATTERN PATH")
     .option("--op <operation>", `grep (default), definition, references, outline, read or list`)
     .option("-F, --fixed-strings", "Treat the pattern as plain text")
     .option("-i, --ignore-case", "Case-insensitive search")
@@ -518,6 +579,13 @@ export function registerDocsCommands(program: Command): void {
       "--tag <tag>",
       "A git tag or commit of the library, e.g. v3.24.2 (default: the docs commit)"
     )
+    .addOption(new Option("-n, --line-number", "Lines are always numbered").hideHelp())
+    .addOption(new Option("--limit <n>", "Same as --head-limit").hideHelp())
+    .addOption(new Option("--max-results <n>", "Same as --head-limit").hideHelp())
+    .addOption(new Option("--path-filter <path>", "Same as --path").hideHelp())
+    .addOption(new Option("--query <pattern>", "Same as the pattern argument").hideHelp())
+    .addOption(new Option("--search <pattern>", "Same as the pattern argument").hideHelp())
+    .addOption(new Option("--library <libraryId>", "Same as the libraryId argument").hideHelp())
     .description("Search and read a library's source code at a version, like ripgrep")
     .addHelpText(
       "after",
@@ -526,15 +594,60 @@ Examples:
   ctx7 code /tanstack/query "invalidateQueries\\(" -g "packages/query-core/**" -A 5
   ctx7 code /pydantic/pydantic "Input should be a valid integer" -F
   ctx7 code /colinhacks/zod/v3.24.2 ZodEffects --op definition
-  ctx7 code /tokio-rs/tokio --op read --path tokio/src/task/spawn.rs#L1-L60
+  ctx7 code /tanstack/query "invalidateQueries" packages/query-core/src
+  ctx7 read /tokio-rs/tokio tokio/src/task/spawn.rs#L1-L60
   ctx7 code /tanstack/query --op list --path packages/query-core/src
 
 A first query for a library version can exit with code 75 while its source is indexed:
 run the same command again after the time it gives.`
     )
-    .action(async (libraryId: string, pattern: string | undefined, options: CodeCommandOptions) => {
-      await codeCommand(libraryId, pattern, options);
-    });
+    .action(
+      async (
+        libraryId: string | undefined,
+        pattern: string | undefined,
+        paths: string[],
+        options: CodeCommandOptions
+      ) => {
+        await codeCommand(libraryId, pattern, paths, options);
+      }
+    );
+
+  program
+    .command("read")
+    .argument(
+      "[libraryId]",
+      "Context7 library ID of a Git repository, with an optional tag (e.g., /tokio-rs/tokio)"
+    )
+    .argument(
+      "[target]",
+      "A file with an optional line range (src/a.ts#L10-L40), or a symbol to show its definition (Client.send)"
+    )
+    .option("--json", "Output as JSON")
+    .option(
+      "--tag <tag>",
+      "A git tag or commit of the library, e.g. v3.24.2 (default: the docs commit)"
+    )
+    .description(
+      "Read a file range or a symbol's definition from a library's source, up to 200 lines"
+    )
+    .addHelpText(
+      "after",
+      `
+Examples:
+  ctx7 read /tokio-rs/tokio tokio/src/task/spawn.rs#L1-L60
+  ctx7 read /colinhacks/zod/v3.24.2 ZodEffects
+
+Same as: ctx7 code <libraryId> --op read --path <file> (or <symbol> --op read).`
+    )
+    .action(
+      async (
+        libraryId: string | undefined,
+        target: string | undefined,
+        options: { json?: boolean; tag?: string }
+      ) => {
+        await readCommand(libraryId, target, options);
+      }
+    );
 
   program
     .command("get-upgrade-guide")

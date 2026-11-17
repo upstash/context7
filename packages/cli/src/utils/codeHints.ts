@@ -28,9 +28,14 @@ const READ_HINT = /(^|\| |Next: )read: (\S+)/g;
 
 /** Rewrites one line of hint text. */
 function hintLine(line: string, libraryId: string): string {
-  let out = line.replace(READ_HINT, (_, before: string, target: string) => {
-    return `${before}ctx7 code ${libraryId} --op read --path ${target}`;
-  });
+  let out = line
+    .replace(READ_HINT, (_, before: string, target: string) => {
+      return `${before}ctx7 read ${libraryId} ${target}`;
+    })
+    // `Read the file with operation "read" and path "src/a.ts"` and
+    // `Use operation "read" with path to read files` name the read command.
+    .replace(/\bwith operation "read" and path "([^"]+)"/g, `with ctx7 read ${libraryId} $1`)
+    .replace(/\boperation "read" with path\b/g, `ctx7 read ${libraryId} <file>`);
   for (const [pattern, flag] of FIELD_FLAGS) out = out.replace(pattern, flag);
   return out;
 }

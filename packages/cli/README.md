@@ -113,7 +113,8 @@ ctx7 code /tanstack/query "invalidateQueries\\(" -g "packages/query-core/**"
 ctx7 code /pydantic/pydantic "Input should be a valid integer" -F
 ctx7 code /tokio-rs/tokio JoinHandle -c
 ctx7 code /colinhacks/zod/v3.24.2 ZodEffects --op definition
-ctx7 code /tokio-rs/tokio spawn --op read
+ctx7 code /tanstack/query "invalidateQueries" packages/query-core/src/
+ctx7 read /tokio-rs/tokio tokio/src/task/spawn.rs#L1-L60
 ctx7 code /tanstack/query --op list --path packages/query-core/src
 ```
 
