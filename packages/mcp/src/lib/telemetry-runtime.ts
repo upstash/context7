@@ -15,6 +15,7 @@ import type {
 } from "./telemetry-contracts.js";
 import { embeddedPrometheusIsEnabled, telemetryIsDisabled } from "./telemetry-config.js";
 import type { ToolCallOutcome } from "./tool-names.js";
+import type { InstructionsVariant } from "./types.js";
 
 interface TelemetryStartupOptions {
   allowEmbeddedPrometheus: boolean;
@@ -125,8 +126,15 @@ export async function observeUpstreamRequest<T>(
   );
 }
 
-export function recordToolCallOutcome(outcome: ToolCallOutcome): void {
-  implementation?.recordToolCallOutcome(outcome);
+export function recordInstructionRequest(variant: InstructionsVariant, clientName?: string): void {
+  implementation?.recordInstructionRequest(variant, clientName);
+}
+
+export function recordToolCallOutcome(
+  outcome: ToolCallOutcome,
+  instructionsVariant?: InstructionsVariant
+): void {
+  implementation?.recordToolCallOutcome(outcome, instructionsVariant);
 }
 
 export async function forceFlushTelemetry(): Promise<void> {

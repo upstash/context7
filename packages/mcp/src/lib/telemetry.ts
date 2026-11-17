@@ -10,6 +10,7 @@ import type {
   UpstreamOutcome,
 } from "./telemetry-contracts.js";
 import type { ToolCallOutcome } from "./tool-names.js";
+import type { InstructionsVariant } from "./types.js";
 
 const METER_NAME = "io.github.upstash.context7.mcp";
 const DURATION_BUCKETS_SECONDS = [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60];
@@ -61,6 +62,14 @@ function createInstruments() {
       description: "Number of hosted MCP authentication lifecycle events",
       unit: "{event}",
     }),
+    instructionRequests: meter.createCounter(
+      "context7.mcp.instructions_experiment.instruction_requests",
+      {
+        description:
+          "Requests for the server instructions (initialize, server/discover) per arm of the A/B test, as received",
+        unit: "{request}",
+      }
+    ),
     selfCancellingBatches: meter.createCounter("context7.mcp.batches.self_cancelling", {
       description: "JSON-RPC batches in which a request was cancelled by the same batch",
       unit: "{batch}",
@@ -131,9 +140,12 @@ export function classifyUpstreamError(
   return fallback;
 }
 
-export function recordToolCallOutcome(outcome: ToolCallOutcome): void {
+export function recordToolCallOutcome(
+  outcome: ToolCallOutcome,
+  instructionsVariant?: InstructionsVariant
+): void {
   if (outcome === "error") markCurrentMcpOperationError();
-  markCurrentMcpToolOutcome(outcome);
+  markCurrentMcpToolOutcome(outcome, instructionsVariant);
 }
 
 export async function observeUpstreamRequest<T>(
@@ -260,21 +272,36 @@ export async function observeAuthentication<T extends AuthenticationObservation>
   }
 }
 
-const MAX_BATCH_CLIENT_NAMES = 50;
-const batchClientNames = new Set<string>();
+const MAX_CLIENT_LABELS = 50;
 
 /**
- * Counts a batch that cancelled its own request, by the product token of the
- * caller's User-Agent. The header is caller-controlled, so the label set is
- * capped per process; later names are counted as "other".
+ * A client-name label for a metric: the leading product token (a User-Agent such as
+ * "claude-code/2.1" gives "claude-code"). Callers choose the name, so each metric keeps at
+ * most 50 distinct labels per process and counts later names as "other".
  */
+function cappedClientLabel(seen: Set<string>, name: string | undefined): string {
+  const client = /^[\w.-]{1,40}/.exec(name ?? "")?.[0].toLowerCase() ?? "unknown";
+  if (seen.has(client)) return client;
+  if (seen.size >= MAX_CLIENT_LABELS) return "other";
+  seen.add(client);
+  return client;
+}
+
+const batchClientNames = new Set<string>();
+const instructionRequestClientNames = new Set<string>();
+
+/** Counts a batch that cancelled its own request, by the product token of the caller's User-Agent. */
 export function recordSelfCancellingBatch(userAgent: string | undefined): void {
-  let client = /^[\w.-]{1,40}/.exec(userAgent ?? "")?.[0].toLowerCase() ?? "unknown";
-  if (!batchClientNames.has(client)) {
-    if (batchClientNames.size >= MAX_BATCH_CLIENT_NAMES) client = "other";
-    else batchClientNames.add(client);
-  }
-  getInstruments().selfCancellingBatches.add(1, { "user_agent.name": client });
+  getInstruments().selfCancellingBatches.add(1, {
+    "user_agent.name": cappedClientLabel(batchClientNames, userAgent),
+  });
+}
+
+export function recordInstructionRequest(variant: InstructionsVariant, clientName?: string): void {
+  getInstruments().instructionRequests.add(1, {
+    "context7.mcp.instructions.variant": variant,
+    "context7.mcp.client.name": cappedClientLabel(instructionRequestClientNames, clientName),
+  });
 }
 
 export function recordAuthenticationEvent(observation: AuthenticationEventObservation): void {

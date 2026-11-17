@@ -1,8 +1,10 @@
-import { createCipheriv, randomBytes } from "crypto";
+import { createCipheriv, createHmac, randomBytes } from "crypto";
 import { isIP } from "node:net";
 import { SERVER_VERSION } from "./constants.js";
 import { CODE_TOOLS } from "./tool-names.js";
-import type { ClientContext } from "./types.js";
+import type { ClientContext, InstructionsArm } from "./types.js";
+
+export const INSTRUCTIONS_ARM_HEADER = "X-Context7-Instructions-Assertion";
 
 const ASSERTION_ALGORITHM = "aes-256-gcm";
 const ASSERTION_VERSION = "v1";
@@ -71,6 +73,34 @@ export function createClientIpAssertion(
   return sealMcpAssertion(ASSERTION_VERSION, clientIp, nowMs, nonce);
 }
 
+/** HMAC-SHA256 of a message with the assertion key, or null without a valid key. */
+export function assertionKeyHmac(message: string): Buffer | null {
+  const key = assertionKey();
+  return key ? createHmac("sha256", key).update(message).digest() : null;
+}
+
+/**
+ * The caller's A/B arm as an assertion (tag `a1`), so the app records only arms the MCP
+ * server assigned and never trusts a header a caller set.
+ */
+export function createInstructionsArmAssertion(
+  arm: InstructionsArm,
+  nowMs = Date.now()
+): string | null {
+  return sealMcpAssertion("a1", JSON.stringify(arm), nowMs);
+}
+
+/**
+ * What each arm of the instructions A/B test gets, as an assertion (tag `p1`), so the admin
+ * page can show the prompts the MCP server really serves.
+ */
+export function createInstructionsDefinitionAssertion(
+  definition: object,
+  nowMs = Date.now()
+): string | null {
+  return sealMcpAssertion("p1", JSON.stringify(definition), nowMs);
+}
+
 /**
  * Generate headers for Context7 API requests.
  * Handles client IP encryption, authentication, and telemetry headers.
@@ -109,6 +139,10 @@ export function generateHeaders(context: ClientContext): Record<string, string> 
   // Tells the app the agent has the code tools, so a query-docs answer can point at them.
   if (context.experimentalTools?.includes(CODE_TOOLS)) {
     headers["X-Context7-Code-Tools"] = "1";
+  }
+  if (context.instructionsArm) {
+    const assertion = createInstructionsArmAssertion(context.instructionsArm);
+    if (assertion) headers[INSTRUCTIONS_ARM_HEADER] = assertion;
   }
 
   return headers;

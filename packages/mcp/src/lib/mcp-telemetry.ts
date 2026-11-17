@@ -35,6 +35,7 @@ import {
   type Span,
 } from "@opentelemetry/api";
 import { MCP_TOOL_NAMES, type ToolCallOutcome } from "./tool-names.js";
+import type { InstructionsVariant } from "./types.js";
 import { runInMcpOperationScope } from "./mcp-operation-scope.js";
 import { mcpRouteFromUrl } from "./mcp-route.js";
 import {
@@ -109,6 +110,7 @@ interface McpOperation {
   statusDescription?: string;
   startedAt: number;
   toolOutcome?: ToolCallOutcome;
+  instructionsVariant?: InstructionsVariant;
 }
 
 interface ServerResponseClassification {
@@ -276,13 +278,17 @@ function finishOperation(operation: McpOperation): void {
   operation.state = "finished";
 
   const attributes: Attributes =
-    operation.errorType || operation.toolOutcome
+    operation.errorType || operation.toolOutcome || operation.instructionsVariant
       ? { ...operation.attributes }
       : operation.attributes;
   if (operation.errorType) attributes["error.type"] = operation.errorType;
   if (operation.toolOutcome) {
     attributes["context7.mcp.tool.outcome"] = operation.toolOutcome;
     operation.span.setAttribute("context7.mcp.tool.outcome", operation.toolOutcome);
+  }
+  if (operation.instructionsVariant) {
+    attributes["context7.mcp.instructions.variant"] = operation.instructionsVariant;
+    operation.span.setAttribute("context7.mcp.instructions.variant", operation.instructionsVariant);
   }
 
   const { activeOperations, operationDuration } = mcpInstruments();

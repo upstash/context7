@@ -33,14 +33,15 @@ If the Context7 tools are deferred, load them first. If Context7 is unavailable,
 export const CLAUDE_CODE_INSTRUCTIONS_LIMIT = 2048;
 
 /**
- * The instructions a session gets: the base text, then the sections of the experimental tools
- * the caller has on. Claude Code keeps the first 2048 characters, so the base text comes first.
+ * The instructions a session gets: the base text (the current one unless an A/B arm picks
+ * another), then the sections of the experimental tools the caller has on. Claude Code keeps
+ * the first 2048 characters, so the base text comes first.
  */
 export function serverInstructions(
-  options: { codeTools?: boolean; feedbackRequest?: boolean } = {}
+  options: { base?: string; codeTools?: boolean; feedbackRequest?: boolean } = {}
 ): string {
   return [
-    SERVER_INSTRUCTIONS,
+    options.base ?? SERVER_INSTRUCTIONS,
     options.codeTools && CODE_TOOLS_INSTRUCTIONS,
     options.feedbackRequest && DOCS_FEEDBACK_INSTRUCTIONS,
   ]

@@ -69,6 +69,24 @@ export type CodeRequest = {
   offset?: number;
 };
 
+/** Arms of the server instructions A/B test. */
+export type InstructionsVariant = "control" | "treatment";
+
+export interface InstructionsArm {
+  /** The test this arm belongs to, so reruns and salt changes never share counters. */
+  experimentId: string;
+  variant: InstructionsVariant;
+  /** Salted hash of the caller identity: the unit the server randomizes and the app counts. */
+  unit: string;
+  /** Configured share of callers in control, for the app's split check. */
+  controlPercent: number;
+  /**
+   * True for a stable identity (API key or user ID). False for an IP network or an opaque
+   * token, whose arm can change between requests.
+   */
+  signedIn: boolean;
+}
+
 export interface ClientContext {
   clientIp?: string;
   apiKey?: string;
@@ -87,6 +105,8 @@ export interface ClientContext {
    * `X-Context7-Code-Tools: 1` too.
    */
   experimentalTools?: readonly ExperimentalTool[];
+  /** The caller's arm in the server instructions A/B test; sent on API calls (see encryption.ts). */
+  instructionsArm?: InstructionsArm;
   /** Mutable: set by the upstream API layer when the backend signals the
    *  client should be prompted to sign in. Read by the auth-prompt wrapper. */
   shouldPrompt?: boolean;
