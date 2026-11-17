@@ -24,7 +24,7 @@ SSO is an **addition** to password login. The default admin account keeps workin
 </Note>
 
 <Note>
-Deployments that already saved settings in the older **Microsoft Entra ID** tab still see that tab, and their sign-in keeps working. If you move to the SAML 2.0 or OIDC tab, Context7 creates a new user record for each person on their first sign-in through the new provider.
+Deployments that already saved settings in the older **Microsoft Entra ID** tab still see that tab, and their sign-in keeps working. Only one SSO provider can be active at a time, so turning on SAML 2.0 or OIDC turns off sign-in through the Entra tab. If you move to the SAML 2.0 or OIDC tab, Context7 creates a new user record for each person on their first sign-in through the new provider.
 </Note>
 
 ## Option 1: SAML 2.0 (recommended)
@@ -67,7 +67,7 @@ Open `/login` in a private browser window and click the SSO button to test the s
 3. For **Redirect URI**, select **Web** and enter `https://<your-context7-host>/api/auth/oidc/callback`. The **OIDC** tab in Context7 shows the exact URL with a copy button. Click **Register**.
 4. On the **Overview** page, copy the **Application (client) ID** and the **Directory (tenant) ID**.
 5. In **Certificates & secrets**, click **+ New client secret**, then copy its **Value**. Entra shows the value only once.
-6. In **Token configuration**, click **+ Add groups claim**, select **Security groups**, and include it in the **ID** token.
+6. In **Token configuration**, click **+ Add groups claim**, select **Security groups** (or **Groups assigned to the application** for large tenants), and include it in the **ID** token. See [Users in many groups have no groups](#users-in-many-groups-have-no-groups).
 
 To restrict who can sign in, open the same app in **Enterprise applications**, set **Assignment required?** to **Yes**, and assign users or groups, as in [Option 1, Part 2](#part-2-assign-users).
 
@@ -101,7 +101,7 @@ None of the user's groups matches the admin or member group value. Check that th
 
 ### Users in many groups have no groups
 
-If a user is in more than 200 groups, Entra leaves out the groups claim, and that user gets no group-based role or library grants. Use **Groups assigned to the application** in the group claim settings, so that Entra sends only the groups that you assign to Context7.
+If a user is in more than 150 groups (SAML) or 200 groups (OIDC), Entra leaves out the groups claim, and that user gets no group-based role or library grants. Use **Groups assigned to the application** in the group claim settings, so that Entra sends only the groups that you assign to Context7.
 
 ### Client secret expired (OIDC)
 
