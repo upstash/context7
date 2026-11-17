@@ -12,7 +12,6 @@ Activate this skill when the user:
 - Asks setup or configuration questions ("How do I configure a Next.js proxy?")
 - Requests code involving libraries ("Write a Prisma query for...")
 - Needs API references ("What are the Supabase auth methods?")
-- Needs an exact fact from a library's source: a default value, a signature, or where an error comes from
 - Mentions specific frameworks (React, Vue, Svelte, Express, Tailwind, etc.)
 
 ## How to Fetch Documentation
