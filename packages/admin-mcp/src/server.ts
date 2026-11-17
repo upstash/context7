@@ -59,7 +59,13 @@ function telemetryHeaders(tool: string, ctx: ServerContext): Record<string, stri
   };
 }
 
+/**
+ * The API client for one tool call. Each request carries its 1-based number in
+ * the call (`X-Context7-Tool-Request`), so the app counts a tool call once even
+ * when it resolves the teamspace first or polls with `wait: true`.
+ */
 function createApi(state: RequestState, telemetry: Record<string, string>): Api {
+  let requests = 0;
   const request = async (
     method: string,
     path: string,
@@ -76,6 +82,7 @@ function createApi(state: RequestState, telemetry: Record<string, string>): Api 
         "X-Context7-Source": "admin-mcp",
         "X-Context7-Server-Version": SERVER_VERSION,
         ...telemetry,
+        "X-Context7-Tool-Request": String(++requests),
         ...(body === undefined ? {} : { "Content-Type": "application/json" }),
       },
       body: body === undefined ? undefined : JSON.stringify(body),
@@ -138,7 +145,7 @@ const NEXT_STEP: Record<string, string> = {
   write_access_required:
     "The API key can only read settings, libraries and usage. Changes and personal data (members, visitor questions, feedback) need a key with Write access: ask the user to create one in https://context7.com/dashboard, or to sign in with OAuth.",
   docs7_pro_required:
-    "This needs Docs7 Pro. The owner can enable it at https://context7.com/docs7.",
+    "This needs Docs7 Pro, a subscription of its own per teamspace: the Context7 Pro plan (the PRO badge, `ownerPlan`) does not include it, and `docs7ProEnabled` from get_teamspace says if it is on. The owner can enable it at https://context7.com/docs7.",
   paid_plan_required: "This needs a paid plan: https://context7.com/plans.",
   docs7_agent_rate_limited: "The site used its agent runs for this month. Try again next month.",
   run_in_progress: "A run is already in progress. Wait for it with docs7_get_agent_runs.",

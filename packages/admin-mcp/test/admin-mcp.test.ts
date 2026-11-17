@@ -100,6 +100,8 @@ describe("query parameters", () => {
       const client = await connect();
       await client.callTool({ name: "get_teamspace_usage", arguments: { teamspace: "acme" } });
       expect(apiCalls.at(-1)?.path).toBe(`/v2/teamspaces/${ACME}/usage`);
+      // The lookup and the call are requests 1 and 2 of one tool call, which the app counts once.
+      expect(apiCalls.map((c) => c.headers.get("X-Context7-Tool-Request"))).toEqual(["1", "2"]);
 
       teamspaces([{ id: ACME, name: "Acme" }]);
       await client.callTool({ name: "get_teamspace_usage", arguments: {} });
@@ -980,4 +982,5 @@ test("feedback needs no teamspace and posts one record", async () => {
     },
   });
   expect(apiCalls[0].headers.get("X-Context7-Tool")).toBe("submit_feedback_to_context7_team");
+  expect(apiCalls[0].headers.get("X-Context7-Tool-Request")).toBe("1");
 });
