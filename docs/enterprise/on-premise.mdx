@@ -31,14 +31,19 @@ Context7 indexes documentation in any human language. Which pages a library keep
 | Source | Languages indexed |
 |---|---|
 | Confluence, Google Drive, Notion | Every page, whatever its language. One library can mix languages. Requires 2.0.1 or later |
+| Git repository | Every page, whatever its language. One library can mix languages. Requires 2.0.2 or later |
 | Website, llms.txt | The language of the site, detected from its first page. Pages in other languages are skipped |
-| Git repository, OpenAPI | English. Pages in other languages are skipped |
+| OpenAPI | English |
 
 For Google Drive and Notion libraries, Context7 detects the library language when you leave it empty.
 
 <Note>
 Before 2.0.1, a long document in a mixed-language Google Drive or Notion library could lose a section in another language. After you upgrade, sync each such library once with **Re-index all files** (Google Drive) or **Re-index all pages** (Notion) selected.
+
+Before 2.0.2, Git repositories skipped pages that were not in the library's language. After you upgrade, refresh each Git library that mixes languages once, so that Context7 indexes those pages.
 </Note>
+
+If a repository keeps translated copies of its docs, such as `docs/en` and `docs/de`, exclude the folders you don't need in the repository settings to avoid duplicate results.
 
 ## Setup
 
