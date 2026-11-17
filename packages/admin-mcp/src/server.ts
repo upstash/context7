@@ -62,7 +62,9 @@ function telemetryHeaders(tool: string, ctx: ServerContext): Record<string, stri
 /**
  * The API client for one tool call. Each request carries its 1-based number in
  * the call (`X-Context7-Tool-Request`), so the app counts a tool call once even
- * when it resolves the teamspace first or polls with `wait: true`.
+ * when it resolves the teamspace first or polls with `wait: true`. A call that
+ * fails before its first request (a ToolError from its arguments) is in the
+ * audit line but never reaches the app, so the two counts can differ slightly.
  */
 function createApi(state: RequestState, telemetry: Record<string, string>): Api {
   let requests = 0;
