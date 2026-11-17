@@ -2246,6 +2246,14 @@ describe("code tools", () => {
       });
       expect(symbol.query?.get("pattern")).toBe("useRouter");
 
+      // Without an operation, find-symbol looks up the definition.
+      const bare = await sent(client, "find-symbol", {
+        libraryId: "/vercel/next.js",
+        name: "useRouter",
+      });
+      expect(bare.query?.get("operation")).toBe("definition");
+      expect(bare.query?.get("pattern")).toBe("useRouter");
+
       // Usage errors are answered without a request.
       const unknownType = await sent(client, "grep-code", {
         libraryId: "/vercel/next.js",

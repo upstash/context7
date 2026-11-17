@@ -286,7 +286,10 @@ const SYMBOL_OPERATIONS = ["definition", "references", "outline"] as const;
 
 const symbolSchema = z.object({
   ...libraryFields,
-  operation: z.enum(SYMBOL_OPERATIONS).describe("The navigation to perform"),
+  operation: z
+    .enum(SYMBOL_OPERATIONS)
+    .default("definition")
+    .describe("The navigation to perform. Default: definition."),
   symbol: z
     .string()
     .max(500)
