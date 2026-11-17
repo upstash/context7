@@ -41,18 +41,7 @@ Call `query-docs` with:
 
 If the user's question spans multiple distinct concepts (e.g. routing and auth and caching), make a separate `query-docs` call per concept with the same library ID, unless the question is about how the concepts interact — combined queries dilute ranking and return shallow results for each topic.
 
-### Step 4: Read the Source When Docs Are Not Exact
-
-If the `grep-code`, `glob-code`, `read-code` and `find-symbol` tools are available, use them for exact facts the docs may not state: a signature or type, a default value, an option name, where an error message comes from, or how something works inside. They work like your own Grep, Glob and Read tools, on the library's source at one version, not on the user's project.
-
-- `libraryId`: an ID that `resolve-library-id` marks with "Source code", usually the GitHub repository (e.g. `/colinhacks/zod`). `/websites/...` and `/llmstxt/...` IDs have no source
-- Find code with `grep-code` (`-F: true` for error messages), find files with `glob-code`, and look up a symbol's definition, references or a file's symbols with `find-symbol`. Then `read-code` the file range the result gives
-- Follow the result's "Next:" line for the read or page call to make next. Most questions need 1 to 4 calls; stop at 6
-- `version` takes a git tag, e.g. `v3.24.2`. A tag that is not a docs version is indexed first ("being indexed"). If indexing fails, the answer lists the docs versions you can use
-- If it answers "being indexed", do not wait: answer from `query-docs` now. If you still need the source after that, call the tool once more
-- Cite the file and line of the source you used
-
-### Step 5: Use the Documentation
+### Step 4: Use the Documentation
 
 Incorporate the fetched documentation into your response:
 
