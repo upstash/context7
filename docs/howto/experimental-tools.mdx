@@ -154,6 +154,6 @@ A qualified symbol such as `QueuePool.__init__` is answered from the owner's own
 
 `glob-code` names the files of the repository, and marks the ones that were not indexed with the reason, such as `Cargo.lock  (not indexed: generated)`. A folder shows how many of its files are not indexed. Not indexed files are in the repository, but `grep-code`, `read-code` and `find-symbol` cannot see their content. A library or version indexed before this change lists its indexed files only.
 
-These tools need `@upstash/context7-mcp` 4.8.0 or later. Earlier versions, from 4.6.0, list one `query-code` tool with an `operation` field instead.
+These tools need `@upstash/context7-mcp` 4.7.3 or later. Earlier versions, from 4.6.0, list one `query-code` tool with an `operation` field instead.
 
 Without the MCP server, the `ctx7 code` command gives the same search in a terminal, for example `npx ctx7@latest code /colinhacks/zod "safeExtend" --op definition`.
