@@ -44,11 +44,11 @@ Every method uses the same read-only scope, and Context7 stores any secret encry
 | Identity Google sees | The Context7 Workspace user | The service account | The user in **Act as user** | The service account |
 | You share folders with | The Context7 Workspace user | The service account, an `iam.gserviceaccount.com` address outside your domain | The user in **Act as user** | The service account, outside your domain |
 | Super admin approval | No | No | Yes, for domain-wide delegation | No |
-| Public hostname | Only for a **Web application** client | No | No | No |
+| Redirect URI | An HTTPS name under a public top-level domain, only for a **Web application** client. The host can stay internal | No | No | No |
 | A leaked credential can read | What is shared with the Context7 user | What is shared with the service account | Drive as any user in your domain | What is shared with the service account |
-| To revoke access | Click **Disconnect**, which also revokes the sign-in at Google, or suspend the Context7 user | Delete the key in Google Cloud | Remove the client ID from domain-wide delegation, and delete the key | Remove the service account binding for the workload |
+| To revoke access | Click **Disconnect**, which also asks Google to revoke the sign-in (if that fails, remove the access in the Google account's security settings), or suspend the Context7 user | Delete the key in Google Cloud | Remove the client ID from domain-wide delegation, and delete the key | Remove the service account binding for the workload |
 
-**Disconnect** on the **Google** page removes the stored credentials. For a service account key, the key stays valid at Google until you delete it there. Libraries keep their indexed content after a disconnect, but they stop syncing until you connect the same identity again.
+**Disconnect** on the **Google** page removes the stored credentials. For a service account key, the key stays valid at Google until you delete it there. Libraries keep their indexed content after a disconnect, but they stop syncing until you connect again with the same method, account and **Act as user**. A new key for the same service account is fine.
 
 ## Google account
 
