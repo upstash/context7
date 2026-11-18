@@ -148,6 +148,7 @@ async function resolveAuth(
       return null;
     }
     if (!status.enabled) return { mode: "none" };
+    const envApiKey = process.env.CONTEXT7_API_KEY?.trim();
 
     // With OAuth, the config holds no key: the client opens a browser to sign in.
     if (status.mode === "oauth") {
@@ -165,6 +166,11 @@ async function resolveAuth(
         process.exitCode = 1;
         return null;
       }
+      if (envApiKey) {
+        log.warn(
+          `Ignoring CONTEXT7_API_KEY: ${deployment.baseUrl} accepts only OAuth sign-in for MCP.`
+        );
+      }
       return { mode: "oauth" };
     }
     const offersOAuth = status.mode === "both" && status.oauthAvailable;
@@ -179,18 +185,13 @@ async function resolveAuth(
       return null;
     }
 
-    const apiKey = process.env.CONTEXT7_API_KEY?.trim();
-    if (apiKey) {
-      // /mcp refuses other keys, such as a hosted Context7 key kept in the shell for ctx7.
-      const isPersonalKey = apiKey.startsWith(ON_PREM_PERSONAL_KEY_PREFIX);
-      if (!isPersonalKey) {
-        log.warn(
-          offersOAuth
-            ? `Ignoring CONTEXT7_API_KEY: it is not a personal key for this deployment (${ON_PREM_PERSONAL_KEY_PREFIX}...). Using OAuth sign-in.`
-            : `CONTEXT7_API_KEY is not a personal key for this deployment (${ON_PREM_PERSONAL_KEY_PREFIX}...), so ${deployment.baseUrl} may refuse it.`
-        );
-      }
-      if (isPersonalKey || !offersOAuth) return { mode: "api-key", apiKey };
+    // /mcp refuses other keys, such as a hosted Context7 key kept in the shell for ctx7.
+    if (envApiKey?.startsWith(ON_PREM_PERSONAL_KEY_PREFIX))
+      return { mode: "api-key", apiKey: envApiKey };
+    if (envApiKey) {
+      log.warn(
+        `Ignoring CONTEXT7_API_KEY: it is not a personal key for this deployment (${ON_PREM_PERSONAL_KEY_PREFIX}...).`
+      );
     }
     if (offersOAuth) return { mode: "oauth" };
 
