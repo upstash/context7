@@ -243,8 +243,7 @@ If the volume is not writable by the UID you choose, the server exits at startup
 [config] Not writable by uid 12345: /data/context7.db, /data/logs, /data/vectors.
 [config] Set fsGroup on the volume so Kubernetes re-owns it for this uid, or chown
 it: chown -R 12345: /data. Note that hostPath-backed volumes ignore fsGroup.
-[config] With Docker, chown the volume once from a throwaway container: docker run
---rm -v <volume>:/data alpine chown -R 12345: /data
+[config] With Docker, chown the volume once from a throwaway container: docker run --rm -v <volume>:/data alpine chown -R 12345: /data
 ```
 
 Upgrading an existing deployment needs no manual `chown`. The kubelet re-chowns the volume on mount when `fsGroup` is set.

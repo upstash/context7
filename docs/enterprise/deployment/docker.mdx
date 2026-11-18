@@ -188,7 +188,7 @@ Everything Context7 writes lives under `/data`, including source clones (`/data/
 A volume written by an image that ran as root holds files owned by root. UID `10001` cannot write them, so the server exits at startup and names the paths it could not write. Before you start the new image, stop the old container and chown the volume once:
 
 ```bash
-docker stop context7
+docker stop context7 && docker rm context7
 ```
 
 ```bash
