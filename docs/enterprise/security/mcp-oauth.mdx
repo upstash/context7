@@ -58,6 +58,8 @@ When a policy change refuses a client (for example, CIMD turned off, or its host
 
 DCR allows 10 registrations per address per hour, and at most 1,000 unused registrations from the last day. Registrations that never get an approval are deleted after 7 days.
 
+The per-address limit uses the address of the connection, because a caller can write anything in `X-Forwarded-For`. Behind a reverse proxy or load balancer, every client then shares one limit. Set `CONTEXT7_TRUSTED_PROXY_HOPS` to the number of proxies in front of the server, for example `1` for one ingress. A value higher than the real number lets callers choose their address.
+
 The consent page shows the client name, its client ID and where the browser goes back to. A DCR client chose its own name, so the page marks it as not verified.
 
 ### Redirect URIs
@@ -144,5 +146,6 @@ The consent page and every `/oauth` answer send `X-Frame-Options: DENY` and `fra
 | The OAuth modes are not available in the settings | `CONTEXT7_PUBLIC_URL` is missing or not a valid origin. The card shows the reason |
 | The client never opens a browser | **MCP authentication** is off, so `/mcp` answers without a token |
 | "This app cannot sign in" | Unknown client, an unregistered redirect URI, a CIMD document the server cannot fetch or accept, or a request error shown in parentheses |
+| Client registration answers `429` for many users | The deployment is behind a proxy and `CONTEXT7_TRUSTED_PROXY_HOPS` is not set, so all clients share one limit |
 | `(invalid_target)` | The client sent no `resource`, or one other than `<public URL>/mcp`. Check that the client uses the public URL |
 | `(invalid_request)` with "state is required" | The client did not send `state`. The server requires it |

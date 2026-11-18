@@ -243,6 +243,7 @@ These are set in your `docker-compose.yml` or `.env` file before starting the co
 | `PG_VECTOR_POOL_MAX` | No | pgvector connection pool size per replica (default: `5`) |
 | `MILVUS_ADDRESS`, `MILVUS_TOKEN`, `MILVUS_USERNAME`, `MILVUS_PASSWORD`, `MILVUS_DATABASE` | No | Milvus connection settings |
 | `CONTEXT7_PUBLIC_URL` | No | The origin users and MCP clients reach, such as `https://context7.internal.yourcompany.com`. Required for [OAuth sign-in for MCP clients](/enterprise/security/mcp-oauth) |
+| `CONTEXT7_TRUSTED_PROXY_HOPS` | No | The number of reverse proxies or load balancers in front of the server (default: `0`). OAuth client registration limits use it to find the caller's address. See [Client registration](/enterprise/security/mcp-oauth#client-registration) |
 | `CONTEXT7_API_URL` | No | Base URL for license checks, usage reports, and cloud library queries (default: `https://context7.com/api`) |
 | `NODE_EXTRA_CA_CERTS` | No | Path to a PEM bundle of extra CA certificates. The server trusts it for all outbound HTTPS, and git uses it too |
 | `GIT_TLS_INSECURE` | No | `true` or `1` turns off TLS verification for all outbound HTTPS and git. Use it only for testing |
