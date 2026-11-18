@@ -2297,7 +2297,7 @@ describe("code tools", () => {
       });
       expect(indexing.isError).toBeFalsy();
       expect((indexing.content as { text: string }[])[0].text).toMatch(
-        /being indexed\..*do not wait: answer from query-docs now.*call grep-code once more/s
+        /being indexed\..*do not poll: answer from query-docs now.*call grep-code once more after about 2 minutes/s
       );
 
       const noSource = await client.callTool({
