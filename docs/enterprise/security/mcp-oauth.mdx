@@ -115,7 +115,7 @@ An SSO sign-in does not end authorizations. Neither does a SAML single logout fr
 
 ### What is stored
 
-Codes, access tokens and refresh tokens are stored only as SHA-256 hashes. The server issues no client secrets. Tokens start with `ctx7oc-`, `ctx7oa-` and `ctx7or-`, so they cannot be confused with personal API keys (`ctx7op-`) or browser sessions, and logs and support bundles mask them. A browser session token sent as a bearer token is not accepted on `/mcp`.
+Codes, access tokens and refresh tokens are stored only as SHA-256 hashes. The server issues no client secrets. Tokens start with `ctx7oc-`, `ctx7oa-` and `ctx7or-`, so they cannot be confused with personal API keys (`ctx7op-`) or browser sessions, and logs and support bundles mask them. With OAuth on, a browser session token sent as a bearer token is not accepted on `/mcp`.
 
 An access token is accepted only by the deployment that issued it, and only for its `/mcp` resource. A token for any other resource is refused.
 
