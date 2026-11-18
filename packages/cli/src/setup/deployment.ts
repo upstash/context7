@@ -52,6 +52,8 @@ export function getMcpUrl(deployment: SetupDeployment, auth: AuthOptions): strin
   return `${deployment.baseUrl}/mcp`;
 }
 
+export const ON_PREM_PERSONAL_KEY_PREFIX = "ctx7op-";
+
 /** Which credentials the on-premise /mcp endpoint accepts. Servers before OAuth report no mode. */
 export type OnPremMcpAuthMode = "personal_keys" | "oauth" | "both";
 

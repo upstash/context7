@@ -159,7 +159,7 @@ Pass the root URL of your deployment (without `/mcp` or `/api`) and select the c
   </Tab>
 </Tabs>
 
-Setup reads the deployment's MCP authentication setting. When MCP authentication is disabled, no credential is written. When the deployment uses [OAuth sign-in](/enterprise/security/mcp-oauth), setup writes no key either: the client opens a browser on its first request, and the user signs in (SSO or password) and approves the client. With **OAuth and API keys**, setup chooses OAuth unless you pass a key. The dashboard's Connect card shows the same keyless setup.
+Setup reads the deployment's MCP authentication setting. When MCP authentication is disabled, no credential is written. When the deployment uses [OAuth sign-in](/enterprise/security/mcp-oauth), setup writes no key either: the client opens a browser on its first request, and the user signs in (SSO or password) and approves the client. With **OAuth and API keys**, setup chooses OAuth unless you pass `--api-key` or set `CONTEXT7_API_KEY` to a personal key (`ctx7op-`). It ignores any other key in `CONTEXT7_API_KEY`, such as a hosted Context7 key, and prints a warning. Keyless setup needs `ctx7` 0.13.0 or later: an older version asks for a key, and **OAuth only** refuses that key. The dashboard's Connect card shows the same keyless setup.
 
 When the deployment accepts only personal API keys, the dashboard's Connect card presents two steps: sign in and click **Create API key**, then copy the command after the dashboard inserts the one-time-visible key. Select **Configure manually** to reveal the equivalent client-native configuration instead. If you run the base command without `--api-key`, the CLI requests the key with hidden input.
 

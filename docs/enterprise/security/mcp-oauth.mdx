@@ -30,7 +30,7 @@ The deployment is its own OAuth 2.1 authorization server. It follows the [MCP au
     **MCP authentication** must be on for OAuth to start: clients begin the sign-in only when `/mcp` answers `401`. With it off, `/mcp` answers anonymous callers, a valid personal API key still names its user, and an OAuth token that cannot be used is ignored.
   </Step>
   <Step title="Connect a client">
-    Run `ctx7 setup --mcp --base-url <public URL>` or add `<public URL>/mcp` to the client by hand, with no `Authorization` header. The client starts the sign-in flow on its first request.
+    Run `ctx7 setup --mcp --base-url <public URL>` or add `<public URL>/mcp` to the client by hand, with no `Authorization` header. The client starts the sign-in flow on its first request. Keyless setup needs `ctx7` 0.13.0 or later: an older version asks for a key, and **OAuth only** refuses that key.
   </Step>
 </Steps>
 

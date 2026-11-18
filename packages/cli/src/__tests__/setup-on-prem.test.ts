@@ -401,6 +401,34 @@ describe("on-premise OAuth sign-in", () => {
     expect(await codexConfig()).toContain('Authorization = "Bearer ctx7op-abc_def"');
   });
 
+  test("keeps a personal key from the environment when the server accepts both", async () => {
+    vi.stubEnv("CONTEXT7_API_KEY", "ctx7op-env_secret");
+    authStatus({ enabled: true, mode: "both", oauth: { available: true } });
+    await runSetup();
+    expect(await codexConfig()).toContain("ctx7op-env_secret");
+    expect(console.error).not.toHaveBeenCalled();
+  });
+
+  test("ignores another key from the environment when OAuth is offered", async () => {
+    vi.stubEnv("CONTEXT7_API_KEY", "ctx7sk-hosted");
+    authStatus({ enabled: true, mode: "both", oauth: { available: true } });
+    await runSetup();
+    expect(await codexConfig()).not.toContain("ctx7sk-hosted");
+    const warning = vi.mocked(console.error).mock.calls.flat().join(" ");
+    expect(warning).toContain("Ignoring CONTEXT7_API_KEY");
+    expect(warning).not.toContain("ctx7sk-hosted");
+  });
+
+  test("warns about another key from the environment when OAuth is not offered", async () => {
+    vi.stubEnv("CONTEXT7_API_KEY", "ctx7sk-hosted");
+    authStatus({ enabled: true, mode: "personal_keys" });
+    await runSetup();
+    expect(await codexConfig()).toContain("ctx7sk-hosted");
+    const warning = vi.mocked(console.error).mock.calls.flat().join(" ");
+    expect(warning).toContain("may refuse it");
+    expect(warning).not.toContain("ctx7sk-hosted");
+  });
+
   test("refuses --oauth when the server accepts personal keys only", async () => {
     authStatus({ enabled: true, mode: "personal_keys" });
     await runSetup("--oauth", "--yes");
