@@ -94,7 +94,10 @@ export function registerSetupCommand(program: Command): void {
 
   for (const name of ALL_AGENT_NAMES) {
     const agent = getAgent(name);
-    command.option(`--${name}`, agent.setupDescription ?? `Set up for ${agent.displayName}`);
+    command.option(
+      agent.setupOption ?? `--${name}`,
+      agent.setupDescription ?? `Set up for ${agent.displayName}`
+    );
   }
 
   command

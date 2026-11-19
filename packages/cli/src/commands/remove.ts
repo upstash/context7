@@ -78,7 +78,7 @@ export function registerRemoveCommand(program: Command): void {
 
   for (const name of ALL_AGENT_NAMES) {
     const agent = getAgent(name);
-    command.option(`--${name}`, `Remove from ${agent.displayName}`);
+    command.option(agent.setupOption ?? `--${name}`, `Remove from ${agent.displayName}`);
   }
 
   command
@@ -154,7 +154,7 @@ async function resolveAgents(options: UninstallOptions, scope: Scope): Promise<S
 
   if (detected.length === 0) {
     log.warn(
-      `No Context7 setup detected. Pass one of: ${ALL_AGENT_NAMES.map((name) => `--${name}`).join(", ")}.`
+      `No Context7 setup detected. Pass one of: ${ALL_AGENT_NAMES.map((name) => getAgent(name).setupOption ?? `--${name}`).join(", ")}.`
     );
     return [];
   }
