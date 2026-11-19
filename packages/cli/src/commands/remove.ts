@@ -6,6 +6,7 @@ import { log } from "../utils/logger.js";
 import { trackEvent } from "../utils/tracking.js";
 import {
   ALL_AGENT_NAMES,
+  LISTED_AGENT_NAMES,
   agentOptionKey,
   type AgentOptionKey,
   findAppendRuleFile,
@@ -157,7 +158,7 @@ async function resolveAgents(options: UninstallOptions, scope: Scope): Promise<S
 
   if (detected.length === 0) {
     log.warn(
-      `No Context7 setup detected. Pass one of: ${ALL_AGENT_NAMES.map((name) => `--${name}`).join(", ")}.`
+      `No Context7 setup detected. Pass one of: ${LISTED_AGENT_NAMES.map((name) => `--${name}`).join(", ")}.`
     );
     return [];
   }

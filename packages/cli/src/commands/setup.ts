@@ -19,6 +19,7 @@ import {
   type Transport,
   AUTH_MODE_LABELS,
   ALL_AGENT_NAMES,
+  LISTED_AGENT_NAMES,
   agentOptionKey,
   type AgentOptionKey,
   getAgent,
@@ -238,7 +239,7 @@ async function resolveCliAuth(apiKey?: string): Promise<void> {
 }
 
 async function promptAgents(): Promise<SetupAgent[] | null> {
-  const choices = ALL_AGENT_NAMES.map((name): { name: string; value: SetupAgent | "t3" } => ({
+  const choices = LISTED_AGENT_NAMES.map((name): { name: string; value: SetupAgent | "t3" } => ({
     name: getAgent(name).displayName,
     value: name,
   }));

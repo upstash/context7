@@ -153,6 +153,11 @@ export async function findAppendRuleFile(
 
 export interface AgentConfig {
   displayName: string;
+  /**
+   * Hidden agents work only through their flag (for example `--vscode-insiders`).
+   * They are left out of the setup picker and setup auto-detection.
+   */
+  hidden?: boolean;
   setupDescription?: string;
   mcp: {
     projectPaths: string[];
@@ -197,9 +202,14 @@ function withHeaders(base: Record<string, unknown>, auth: AuthOptions): Record<s
   return base;
 }
 
-function vscodeAgent(displayName: string, appFolder: VscodeAppFolder): AgentConfig {
+function vscodeAgent(
+  displayName: string,
+  appFolder: VscodeAppFolder,
+  extra: Partial<Pick<AgentConfig, "hidden">> = {}
+): AgentConfig {
   const userDir = () => resolveVscodeUserDir(undefined, undefined, undefined, appFolder);
   return {
+    ...extra,
     displayName,
     mcp: {
       projectPaths: [join(".vscode", "mcp.json")],
@@ -225,9 +235,7 @@ function vscodeAgent(displayName: string, appFolder: VscodeAppFolder): AgentConf
         scope === "global" ? join(homedir(), ".agents", "skills") : join(".agents", "skills"),
     },
     detect: {
-      // Both builds share `.vscode`, so only stable VS Code claims it during
-      // project detection. Project setup for Insiders stays available by flag.
-      projectPaths: appFolder === "Code" ? [".vscode"] : [],
+      projectPaths: [".vscode"],
       get globalPaths() {
         return [userDir()];
       },
@@ -296,8 +304,9 @@ const agents = {
   vscode: vscodeAgent("VS Code", "Code"),
 
   // VS Code Insiders keeps its own user folder, but shares the workspace
-  // `.vscode/mcp.json` with stable VS Code.
-  "vscode-insiders": vscodeAgent("VS Code Insiders", "Code - Insiders"),
+  // `.vscode/mcp.json` with stable VS Code. Few users run it, so it is
+  // available only through `--vscode-insiders`.
+  "vscode-insiders": vscodeAgent("VS Code Insiders", "Code - Insiders", { hidden: true }),
 
   devin: {
     displayName: "Devin",
@@ -531,6 +540,11 @@ export function getAgent(name: SetupAgent): AgentConfig {
 
 export const ALL_AGENT_NAMES: SetupAgent[] = Object.keys(agents) as SetupAgent[];
 
+/** Agents shown in the setup picker and found by setup auto-detection. */
+export const LISTED_AGENT_NAMES: SetupAgent[] = ALL_AGENT_NAMES.filter(
+  (name) => !getAgent(name).hidden
+);
+
 async function pathExists(p: string): Promise<boolean> {
   try {
     await access(p);
@@ -543,8 +557,8 @@ async function pathExists(p: string): Promise<boolean> {
 export async function detectAgents(scope: "project" | "global"): Promise<SetupAgent[]> {
   const detected: SetupAgent[] = [];
 
-  for (const name of ALL_AGENT_NAMES) {
-    const agent = agents[name];
+  for (const name of LISTED_AGENT_NAMES) {
+    const agent: AgentConfig = agents[name];
     const paths = scope === "global" ? agent.detect.globalPaths : agent.detect.projectPaths;
     for (const p of paths) {
       const fullPath = scope === "global" ? p : join(process.cwd(), p);

@@ -44,6 +44,7 @@ import {
   detectAgents,
   ALL_AGENT_NAMES,
   resolveVscodeUserDir,
+  LISTED_AGENT_NAMES,
   agentOptionKey,
   resolveDevinConfigDir,
   type AuthOptions,
@@ -688,9 +689,28 @@ describe("agent config integration", () => {
       }
     });
 
-    test("shares the workspace config with VS Code but does not claim it in detection", () => {
+    test("shares the workspace config with VS Code", () => {
       expect(agent.mcp.projectPaths).toEqual(getAgent("vscode").mcp.projectPaths);
-      expect(agent.detect.projectPaths).toEqual([]);
+    });
+
+    test("is hidden from the picker and auto-detection but keeps its flag", () => {
+      expect(agent.hidden).toBe(true);
+      expect(ALL_AGENT_NAMES).toContain("vscode-insiders");
+      expect(LISTED_AGENT_NAMES).not.toContain("vscode-insiders");
+      expect(LISTED_AGENT_NAMES).toContain("vscode");
+    });
+
+    test("is not auto-detected from a shared .vscode folder", async () => {
+      const previousCwd = process.cwd();
+      await mkdir(join(tempDir, ".vscode"), { recursive: true });
+      try {
+        process.chdir(tempDir);
+        const detected = await detectAgents("project");
+        expect(detected).toContain("vscode");
+        expect(detected).not.toContain("vscode-insiders");
+      } finally {
+        process.chdir(previousCwd);
+      }
     });
 
     test("buildEntry matches VS Code", () => {
