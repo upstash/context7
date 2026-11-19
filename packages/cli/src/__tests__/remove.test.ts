@@ -389,6 +389,28 @@ describe("remove command", () => {
     });
   });
 
+  test("removes context7 from the shared workspace config with --vscode-insiders", async () => {
+    const mcpPath = join(tempDir, ".vscode", "mcp.json");
+
+    await mkdir(join(tempDir, ".vscode"), { recursive: true });
+    await writeFile(
+      mcpPath,
+      JSON.stringify({
+        servers: {
+          other: { type: "http", url: "https://other.com" },
+          context7: { type: "http", url: "https://mcp.context7.com/mcp" },
+        },
+      }),
+      "utf-8"
+    );
+
+    await runCommand("remove", "--vscode-insiders", "--mcp", "--project");
+
+    expect(JSON.parse(await readFile(mcpPath, "utf-8"))).toEqual({
+      servers: { other: { type: "http", url: "https://other.com" } },
+    });
+  });
+
   test("removes only context7 from Devin MCP config", async () => {
     const configPath = join(tempDir, ".devin", "mcp_config.json");
 

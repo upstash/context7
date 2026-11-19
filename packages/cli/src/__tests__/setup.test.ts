@@ -44,6 +44,7 @@ import {
   detectAgents,
   ALL_AGENT_NAMES,
   resolveVscodeUserDir,
+  agentOptionKey,
   resolveDevinConfigDir,
   type AuthOptions,
   type Transport,
@@ -664,6 +665,43 @@ describe("agent config integration", () => {
       if (agent.rule.kind === "file") {
         expect(agent.rule.contentPrefix).toBe('---\napplyTo: "**"\n---\n\n');
       }
+    });
+  });
+
+  describe("vscode-insiders", () => {
+    const agent = getAgent("vscode-insiders");
+
+    test.each([
+      ["darwin", "/home/test", {}, "/home/test/Library/Application Support/Code - Insiders/User"],
+      ["win32", "/home/test", {}, "/home/test/AppData/Roaming/Code - Insiders/User"],
+      ["linux", "/home/test", { XDG_CONFIG_HOME: "/xdg" }, "/xdg/Code - Insiders/User"],
+    ] as const)("resolves the %s Insiders user directory", (platform, home, env, expected) => {
+      expect(resolveVscodeUserDir(platform, home, env, "Code - Insiders")).toBe(expected);
+    });
+
+    test("writes global config into the Insiders user directory", () => {
+      const userDir = resolveVscodeUserDir(undefined, undefined, undefined, "Code - Insiders");
+      expect(agent.mcp.globalPaths).toEqual([join(userDir, "mcp.json")]);
+      expect(agent.detect.globalPaths).toEqual([userDir]);
+      if (agent.rule.kind === "file") {
+        expect(agent.rule.dir("global")).toBe(join(userDir, "prompts"));
+      }
+    });
+
+    test("shares the workspace config with VS Code but does not claim it in detection", () => {
+      expect(agent.mcp.projectPaths).toEqual(getAgent("vscode").mcp.projectPaths);
+      expect(agent.detect.projectPaths).toEqual([]);
+    });
+
+    test("buildEntry matches VS Code", () => {
+      expect(buildEntry(agent, apiKeyAuth, "http")).toEqual(
+        buildEntry(getAgent("vscode"), apiKeyAuth, "http")
+      );
+    });
+
+    test("maps to the commander option key", () => {
+      expect(agentOptionKey("vscode-insiders")).toBe("vscodeInsiders");
+      expect(agentOptionKey("vscode")).toBe("vscode");
     });
   });
 

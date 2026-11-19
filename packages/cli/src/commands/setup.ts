@@ -19,6 +19,8 @@ import {
   type Transport,
   AUTH_MODE_LABELS,
   ALL_AGENT_NAMES,
+  agentOptionKey,
+  type AgentOptionKey,
   getAgent,
   detectAgents,
   resolveAppendRuleFile,
@@ -60,7 +62,7 @@ interface McpSkillPayload {
   status: "installed" | "installed (bundled)" | "installed (bundled fallback)";
 }
 
-type SetupOptions = Partial<Record<SetupAgent, boolean>> & {
+type SetupOptions = Partial<Record<AgentOptionKey, boolean>> & {
   t3?: boolean;
   project?: boolean;
   yes?: boolean;
@@ -85,7 +87,8 @@ const CHECKBOX_THEME = {
 
 function getSelectedAgents(options: SetupOptions): SetupAgent[] {
   return ALL_AGENT_NAMES.filter(
-    (name) => options[name] || (options.t3 && (name === "claude" || name === "codex"))
+    (name) =>
+      options[agentOptionKey(name)] || (options.t3 && (name === "claude" || name === "codex"))
   );
 }
 

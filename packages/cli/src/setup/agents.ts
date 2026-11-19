@@ -39,21 +39,25 @@ function claudeGlobalMcpPath(): string {
   return join(homedir(), ".claude.json");
 }
 
+/** The user data folder name of each VS Code build. */
+export type VscodeAppFolder = "Code" | "Code - Insiders";
+
 export function resolveVscodeUserDir(
   platform: NodeJS.Platform = process.platform,
   home: string = homedir(),
   env: { APPDATA?: string; XDG_CONFIG_HOME?: string } = {
     APPDATA: process.env.APPDATA,
     XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME,
-  }
+  },
+  appFolder: VscodeAppFolder = "Code"
 ): string {
   if (platform === "win32") {
-    return join(env.APPDATA || join(home, "AppData", "Roaming"), "Code", "User");
+    return join(env.APPDATA || join(home, "AppData", "Roaming"), appFolder, "User");
   }
   if (platform === "darwin") {
-    return join(home, "Library", "Application Support", "Code", "User");
+    return join(home, "Library", "Application Support", appFolder, "User");
   }
-  return join(env.XDG_CONFIG_HOME || join(home, ".config"), "Code", "User");
+  return join(env.XDG_CONFIG_HOME || join(home, ".config"), appFolder, "User");
 }
 
 export function resolveDevinConfigDir(
@@ -193,6 +197,44 @@ function withHeaders(base: Record<string, unknown>, auth: AuthOptions): Record<s
   return base;
 }
 
+function vscodeAgent(displayName: string, appFolder: VscodeAppFolder): AgentConfig {
+  const userDir = () => resolveVscodeUserDir(undefined, undefined, undefined, appFolder);
+  return {
+    displayName,
+    mcp: {
+      projectPaths: [join(".vscode", "mcp.json")],
+      get globalPaths() {
+        return [join(userDir(), "mcp.json")];
+      },
+      configKey: "servers",
+      buildEntry: (auth, transport, mcpUrl) =>
+        transport === "stdio"
+          ? { type: "stdio", ...stdioEntry(auth) }
+          : withHeaders({ type: "http", url: mcpUrl }, auth),
+    },
+    rule: {
+      kind: "file",
+      dir: (scope) =>
+        scope === "global" ? join(userDir(), "prompts") : join(".github", "instructions"),
+      filename: "context7.instructions.md",
+      contentPrefix: `---\napplyTo: "**"\n---\n\n`,
+    },
+    skill: {
+      name: "context7-mcp",
+      dir: (scope) =>
+        scope === "global" ? join(homedir(), ".agents", "skills") : join(".agents", "skills"),
+    },
+    detect: {
+      // Both builds share `.vscode`, so only stable VS Code claims it during
+      // project detection. Project setup for Insiders stays available by flag.
+      projectPaths: appFolder === "Code" ? [".vscode"] : [],
+      get globalPaths() {
+        return [userDir()];
+      },
+    },
+  };
+}
+
 const agents = {
   claude: {
     displayName: "Claude Code",
@@ -251,40 +293,11 @@ const agents = {
     },
   },
 
-  vscode: {
-    displayName: "VS Code",
-    mcp: {
-      projectPaths: [join(".vscode", "mcp.json")],
-      get globalPaths() {
-        return [join(resolveVscodeUserDir(), "mcp.json")];
-      },
-      configKey: "servers",
-      buildEntry: (auth, transport, mcpUrl) =>
-        transport === "stdio"
-          ? { type: "stdio", ...stdioEntry(auth) }
-          : withHeaders({ type: "http", url: mcpUrl }, auth),
-    },
-    rule: {
-      kind: "file",
-      dir: (scope) =>
-        scope === "global"
-          ? join(resolveVscodeUserDir(), "prompts")
-          : join(".github", "instructions"),
-      filename: "context7.instructions.md",
-      contentPrefix: `---\napplyTo: "**"\n---\n\n`,
-    },
-    skill: {
-      name: "context7-mcp",
-      dir: (scope) =>
-        scope === "global" ? join(homedir(), ".agents", "skills") : join(".agents", "skills"),
-    },
-    detect: {
-      projectPaths: [".vscode"],
-      get globalPaths() {
-        return [resolveVscodeUserDir()];
-      },
-    },
-  },
+  vscode: vscodeAgent("VS Code", "Code"),
+
+  // VS Code Insiders keeps its own user folder, but shares the workspace
+  // `.vscode/mcp.json` with stable VS Code.
+  "vscode-insiders": vscodeAgent("VS Code Insiders", "Code - Insiders"),
 
   devin: {
     displayName: "Devin",
@@ -501,6 +514,16 @@ const agents = {
 } satisfies Record<string, AgentConfig>;
 
 export type SetupAgent = keyof typeof agents;
+
+/** Commander stores `--vscode-insiders` as `vscodeInsiders`. */
+type CamelCase<S extends string> = S extends `${infer Head}-${infer Tail}`
+  ? `${Head}${Capitalize<CamelCase<Tail>>}`
+  : S;
+export type AgentOptionKey = CamelCase<SetupAgent>;
+
+export function agentOptionKey(name: SetupAgent): AgentOptionKey {
+  return name.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase()) as AgentOptionKey;
+}
 
 export function getAgent(name: SetupAgent): AgentConfig {
   return agents[name];

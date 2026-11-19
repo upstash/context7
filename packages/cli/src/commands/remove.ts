@@ -6,6 +6,8 @@ import { log } from "../utils/logger.js";
 import { trackEvent } from "../utils/tracking.js";
 import {
   ALL_AGENT_NAMES,
+  agentOptionKey,
+  type AgentOptionKey,
   findAppendRuleFile,
   getAgent,
   resolveAppendRuleFile,
@@ -27,7 +29,7 @@ import { access, readFile, rm, writeFile } from "fs/promises";
 type Scope = "global" | "project";
 type UninstallMode = "mcp" | "cli";
 
-type UninstallOptions = Partial<Record<SetupAgent, boolean>> & {
+type UninstallOptions = Partial<Record<AgentOptionKey, boolean>> & {
   t3?: boolean;
   project?: boolean;
   yes?: boolean;
@@ -95,7 +97,8 @@ export function registerRemoveCommand(program: Command): void {
 
 function getSelectedAgents(options: UninstallOptions): SetupAgent[] {
   return ALL_AGENT_NAMES.filter(
-    (name) => options[name] || (options.t3 && (name === "claude" || name === "codex"))
+    (name) =>
+      options[agentOptionKey(name)] || (options.t3 && (name === "claude" || name === "codex"))
   );
 }
 
