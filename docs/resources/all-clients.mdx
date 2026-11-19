@@ -645,6 +645,18 @@ Find `Context7` in your plugins, install it, and complete the one-time OAuth aut
 
 Start a new chat, type `@` in the prompt box, and select `Context7`.
 
+#### Authentication
+
+ChatGPT connects with OAuth only and has no field for an API key. Use `https://mcp.context7.com/mcp/oauth`, which asks every request without a sign-in to sign in. During authorization you choose the Context7 teamspace the plugin uses. To switch teamspaces, reconnect the plugin and choose another teamspace on the consent screen.
+
+#### Reconnecting
+
+If ChatGPT reports that the Context7 sign-in expired, open your ChatGPT plugins, find `Context7`, and reconnect it to run the OAuth authorization again.
+
+#### Quota errors
+
+A monthly quota error means a Free teamspace used its included requests. It gets 20 bonus requests the next day and its full allowance at the start of the next calendar month (UTC); to keep working, upgrade at [context7.com/plans](https://context7.com/plans). A rate limit error is a per-minute limit: wait a minute and try again. See [Plans & Pricing](/plans-pricing).
+
 </Accordion>
 
 <Accordion title="Trae">
