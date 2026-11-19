@@ -5,6 +5,7 @@
   "description": "MCP server for Context7",
   "scripts": {
     "build": "tsc && chmod 755 dist/index.js",
+    "build:skill": "node scripts/build-skill.mjs",
     "test": "pnpm exec vitest run",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

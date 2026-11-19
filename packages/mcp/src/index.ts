@@ -2,7 +2,6 @@
 
 import { toNodeHandler } from "@modelcontextprotocol/node";
 import { StdioServerTransport, serveStdio } from "@modelcontextprotocol/server/stdio";
-import { SkillCatalog } from "@modelcontextprotocol/server/ext/skills";
 import {
   McpServer,
   PROTOCOL_VERSION_META_KEY,
@@ -74,7 +73,7 @@ import {
   usableApiKey,
 } from "./lib/mcp-http-auth.js";
 import { mcpRouteFromUrl } from "./lib/mcp-route.js";
-import { context7SkillFiles } from "./lib/skills.js";
+import { context7SkillCatalog } from "./lib/skills.js";
 import { parseOAuthAudienceEnforcement } from "./lib/oauth-audience.js";
 
 /** Default HTTP server port */
@@ -85,11 +84,6 @@ const STATIC_CACHE_HINT = { ttlMs: 3_600_000, cacheScope: "public" } as const;
 // A signed-in caller's tools follow their dashboard choice. The hosted server reads it from memory
 // (refreshed every 15 s), so a short hint lets a change show within about a minute.
 const PRIVATE_CACHE_HINT = { ttlMs: 60_000, cacheScope: "private" } as const;
-// Built once; attach() wires it into each per-request server.
-const skillCatalog = await SkillCatalog.load(context7SkillFiles, {
-  cacheHint: STATIC_CACHE_HINT,
-  strict: true,
-});
 type McpInstrumentation = NonNullable<Awaited<ReturnType<typeof initializeTelemetry>>>;
 let mcpInstrumentation: McpInstrumentation | undefined;
 
@@ -330,7 +324,9 @@ Do not use for: refactoring, debugging, or reviewing code that does not depend o
   const server = mcpInstrumentation
     ? mcpInstrumentation.createServer(serverInfo, serverOptions, mcpContext)
     : new McpServer(serverInfo, serverOptions);
-  skillCatalog.attach(server);
+  // attach() is an @experimental SDK API: how an extension is wired to a server may change in a
+  // minor SDK release, so recheck this call on every SDK upgrade.
+  context7SkillCatalog.attach(server);
 
   server.registerTool(
     RESOLVE_LIBRARY_ID_TOOL,

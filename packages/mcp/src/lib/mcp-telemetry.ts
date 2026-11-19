@@ -70,6 +70,7 @@ const KNOWN_MCP_METHODS = new Set([
   "ping",
   "prompts/get",
   "prompts/list",
+  "resources/directory/read",
   "resources/list",
   "resources/read",
   "resources/subscribe",
