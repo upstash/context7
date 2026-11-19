@@ -5,7 +5,7 @@ description: Turn on experimental Context7 MCP tools, such as documentation feed
 
 Experimental tools are Context7 MCP tools that are still in development. They are off by default. They can change or be removed without notice.
 
-Two experimental tools can be turned on: [documentation feedback](#documentation-feedback) and [upgrade guides](#upgrade-guides). [Source code search](#source-code-search) is turned off for everyone for now and is not listed in the dashboard or by the MCP server.
+Two experimental tools can be turned on: [documentation feedback](#documentation-feedback) and [upgrade guides](#upgrade-guides). [Source code search](#source-code-search) is turned off for now: the dashboard does not offer it.
 
 ## Turn them on
 
@@ -27,7 +27,7 @@ To turn a tool off, turn its switch off.
 
 ### For every tool at once
 
-A flag turns on every experimental tool, also without a sign-in. It takes precedence over your dashboard choice: with a flag, the server lists every experimental tool whatever your switches say. Source code search stays off either way.
+A flag turns on every experimental tool, also without a sign-in. It takes precedence over your dashboard choice: with a flag, the server lists every experimental tool whatever your switches say.
 
 For the remote server, add `experimental=1` to the server URL:
 
@@ -127,7 +127,7 @@ Without the MCP server, the `ctx7 get-upgrade-guide` command returns the same gu
 ## Source code search
 
 <Note>
-Source code search is turned off for everyone for now, and no MCP server lists its tools. `/api/v2/code` and `/api/v2/code/diff` answer `503 code_search_unavailable`, and `ctx7 code` is unavailable on hosted Context7. Your saved choice is kept, and the tools return when source code search is back.
+Source code search is turned off for now. The dashboard does not offer it, and an MCP server signed in with your account does not list its tools. Your saved choice is kept, and the tools return when source code search is back.
 </Note>
 
 With source code search on, the server lists 4 tools: `grep-code`, `glob-code`, `read-code` and `find-symbol`. `resolve-library-id` marks the libraries whose source they can search with `Source code: searchable with grep-code, glob-code, read-code and find-symbol`. The agent uses them when the docs do not answer an exact question, such as a signature, a default value, an option name, or where an error message comes from. They search and read the library's source at the commit its docs describe.
