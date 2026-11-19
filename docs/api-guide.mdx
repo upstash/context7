@@ -167,7 +167,9 @@ Call the REST API directly to control requests from your own code, or use the MC
 - **With API key**: Higher limits based on your plan
 - View current usage and reset windows in the [dashboard](https://context7.com/dashboard?tab=overview).
 
-Call [Get Usage](/api-reference/usage/get-api-usage) (`GET /api/v2/usage`) to read the same numbers from your own code. The response has `plan`, `usageResetsAt` (when the monthly count resets, in UTC), `member` (the member who owns the API key, with `requests` this month and `includedInPlan`) and `teamspace` (all members, with extra requests, cost and a daily breakdown). The `member` numbers match the `RateLimit-*` headers on search and docs responses. Calling this endpoint does not count as a request.
+Call [Get Usage](/api-reference/usage/get-api-usage) (`GET /api/v2/usage`) to read the same numbers from your own code. The response has `plan`, `usageResetsAt` (when the monthly count resets, in UTC), `member` (the member who owns the API key, with `requests` this month and `includedInPlan`) and `teamspace` (all members, with `extraRequests`, `extraCostUsd` for the extra requests this month, `spendingLimitUsd` or `null`, and a `daily` array). Each `daily` entry has `date` and `requests`, plus `searchRequests`, `docsRequests` and `extraCostUsd`.
+
+The `days` query parameter sets how many days `teamspace.daily` covers, ending today in UTC. It defaults to `30`, accepts `1` to `90`, and on the Free plan returns at most the last 10 days. The `member` numbers match the `RateLimit-*` headers on search and docs responses. Calling this endpoint does not count as a request.
 
 When you exceed rate limits, the API returns a `429` status code with these headers:
 
