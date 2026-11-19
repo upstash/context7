@@ -10,3 +10,6 @@ minimumReleaseAgeExclude:
 
 allowBuilds:
   esbuild: true
+
+overrides:
+  "eve>undici": ^8.12.2

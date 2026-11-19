@@ -53,7 +53,7 @@ Check out our [project addition guide](https://context7.com/docs/adding-librarie
 
 - Node.js >= v20.18.1
 - Cursor, Claude Code, VSCode, Devin Desktop or another MCP Client
-- Context7 API Key (Optional) for higher rate limits and private repositories (Get yours by creating an account at [context7.com/dashboard](https://context7.com/dashboard))
+- Context7 API Key (Optional) for higher rate limits and private repositories (Get yours by creating an account at [context7.com/dashboard](https://context7.com/dashboard?tab=settings))
 
 > [!TIP]
 > **Recommended Post-Setup: Add a Rule to Auto-Invoke Context7**
@@ -788,7 +788,7 @@ To use an API key in Kiro, add:
 }
 ```
 
-You can create an API key at [context7.com/dashboard](https://context7.com/dashboard) for authenticated usage and higher rate limits.
+You can create an API key at [context7.com/dashboard](https://context7.com/dashboard?tab=settings) for authenticated usage and higher rate limits.
 
 #### Kiro Local Server Connection
 
@@ -1429,6 +1429,12 @@ Context7 MCP provides the following tools that LLMs can use:
   - `query` (required): The concept to look up, scoped to a single topic
   - `language` (optional): The programming language you write in, used to rank code examples in that language first
 
+- `grep-code`, `glob-code`, `read-code` and `find-symbol` (experimental): Search and read a library's source code at the version its docs describe. They take the parameters of the Grep, Glob and Read tools that coding agents have, with `libraryId` and an optional `version` (a git tag) added. Listed only when the code tools are on: turn them on at [Dashboard > Settings > MCP Tools](https://context7.com/dashboard?tab=settings) for a signed-in client, or turn on every experimental tool with `--experimental` or `CONTEXT7_EXPERIMENTAL=1` (stdio), or `?experimental=1` on the MCP URL (HTTP).
+  - `grep-code`: ripgrep over the source. `pattern` (required), `path`, `glob`, `type`, `output_mode` (`content`, `files_with_matches`, `count`), `-A`, `-B`, `-C`, `-i`, `-F`, `-w`, `multiline`, `head_limit`, `offset`
+  - `glob-code`: files by name. `pattern` (a glob such as `**/*client*.ts`), `path`, `head_limit`, `offset`; with `path` and no `pattern`, the files and folders of that folder
+  - `read-code`: numbered lines of a file. `file_path` (required), `offset` (first line), `limit` (at most 200 lines)
+  - `find-symbol`: `operation` `definition`, `references` (resolved with SCIP where indexed) or `outline`, with `symbol`, and `path` for a file
+
 `get-library-docs` was renamed to `query-docs`. Update client tool allowlists to use `query-docs`.
 
 ## 🛟 Tips
@@ -1477,7 +1483,8 @@ bun run dist/index.js
 
 - `--transport <stdio|http>` – Transport to use (`stdio` by default). Use `http` for remote HTTP server or `stdio` for local integration.
 - `--port <number>` – Port to listen on when using `http` transport (default `3000`).
-- `--api-key <key>` – API key for authentication (or set `CONTEXT7_API_KEY` env var). You can get your API key by creating an account at [context7.com/dashboard](https://context7.com/dashboard).
+- `--api-key <key>` – API key for authentication (or set `CONTEXT7_API_KEY` env var). You can get your API key by creating an account at [context7.com/dashboard](https://context7.com/dashboard?tab=settings).
+- `--experimental` – List every experimental tool, stdio only (or set `CONTEXT7_EXPERIMENTAL=1`). Without it, a server with an API key lists the experimental tools you turned on at [Dashboard > Settings > MCP Tools](https://context7.com/dashboard?tab=settings), read when it starts. The old names `--research-preview` and `CONTEXT7_RESEARCH_PREVIEW=1` still work. See [Experimental Tools](https://context7.com/docs/howto/experimental-tools).
 
 Example with HTTP transport and port 8080:
 
@@ -1488,6 +1495,12 @@ bun run dist/index.js --transport http --port 8080
 HTTP transport requires a credential on every request by default. Clients send `Authorization: Bearer YOUR_API_KEY`. Set `MCP_AUTH_ENFORCEMENT=observe` to also accept requests without credentials on `/mcp`.
 
 Opaque OAuth access tokens (`oat_…`) are checked against the Context7 API before each request is served (one check per token per minute on each replica; the cache is in memory, and a rejected token stays rejected for ten minutes). An expired or revoked token gets an HTTP 401 with a `WWW-Authenticate` challenge so MCP clients refresh it. Set `MCP_OAUTH_TOKEN_VALIDATION=off` to skip that check and forward the token unchecked.
+
+For a signed-in caller, the server reads the experimental tools turned on in the Context7 dashboard.
+
+The hosted server holds `MCP_CLIENT_IP_ASSERTION_KEY`, the key it shares with the Context7 app. With it, each process keeps every user's choice in memory: it polls the app's internal snapshot endpoint every 15 seconds, which answers `304 Not Modified` unless something changed, and `tools/list` asks clients to cache the list for one minute, so a dashboard change shows within about a minute. API keys, Clerk OAuth JWTs and opaque OAuth tokens (through the user id the auth check returns) are answered from memory, with no call per request; other credentials get no experimental tools from the dashboard. Opaque tokens need an app that returns `X-Context7-User-Id` from `/api/v2/auth/check` and `MCP_OAUTH_TOKEN_VALIDATION` left on; without them those users get none either. While the app is unreachable the last copy stays in use.
+
+Without that key (the stdio server, a self-hosted HTTP server), the server asks the Context7 API and keeps the answer for five minutes per credential.
 
 OAuth JWT access tokens from the authorization server (`OAUTH_AUTH_SERVER_URL`) are verified locally: signature against its JWKS, issuer, a `typ` of `at+jwt`, and expiry with a minute of clock tolerance. Clerk ID tokens and session JWTs share that issuer but are not access tokens, so they are always rejected. The token's `aud` must name this server (`RESOURCE_URL` origin, `/mcp`, or `/mcp/oauth`; override with a comma-separated `MCP_OAUTH_ALLOWED_AUDIENCES`). The query string of an audience on an allowed host is ignored. `MCP_OAUTH_AUDIENCE_ENFORCEMENT` sets what a mismatch does: `observe` (default) admits a token with a missing or foreign audience; `foreign` answers HTTP 401 to a token issued for another server and still admits one with no `aud`; `required` answers 401 to both. Every mismatch is logged with the OAuth client ID, the audience and the outcome, once per token per hour on each replica.
 
@@ -1591,9 +1604,10 @@ Prometheus receives these metric families:
 - `nodejs_eventloop_*`, `v8js_gc_duration`, `v8js_memory_heap_*`, and
   `v8js_resource_active` from the official OpenTelemetry Node runtime instrumentation
 
-Tool outcomes on the standard MCP operation metric distinguish `success`, `not_found`, and
-`error`. An acknowledged `subscriptions/listen` operation is timed through its acknowledgement;
-the separate subscription metrics track the active stream and its bounded terminal outcome.
+Tool outcomes on the standard MCP operation metric distinguish `success`, `not_found`,
+`invalid`, `unavailable`, and `error`; only `error` marks the operation as failed. An
+acknowledged `subscriptions/listen` operation is timed through its acknowledgement; the
+separate subscription metrics track the active stream and its bounded terminal outcome.
 Upstream outcomes distinguish
 HTTP, response-decoding, network, timeout, and cancellation failures and include both the bounded
 status-code class and the exact numeric HTTP status. Authentication reports accepted, missing,

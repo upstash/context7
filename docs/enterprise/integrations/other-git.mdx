@@ -6,7 +6,12 @@ description: "Ingest private repositories from a self-managed Git host such as G
 
 Context7 can clone and index repositories from any self-managed Git host that isn't GitHub or GitLab, such as **Gerrit**, **Gitea**, or **self-hosted Bitbucket**, over **HTTPS** or **SSH**.
 
-Under **Settings → Integrations → Other Git**, enter the repository host, choose **HTTPS** or **SSH**, and then [add repositories](#add-a-repository) with their normal clone URL. The host is shared by both authentication methods and also selects which repositories use the review publishing settings.
+Under **Workspace Settings › Other Git**, choose **HTTPS** or **SSH**, and then [add repositories](#add-a-repository) with their normal clone URL. The **Host** field is on the **HTTPS** tab. It decides which `https://` repositories use the stored credentials, and which repositories use the review publishing settings.
+
+You can configure one Other Git host:
+
+- HTTPS credentials apply only to `https://` URLs on that host.
+- The SSH key is used for every `ssh://` clone.
 
 If you use Gerrit, see the [Gerrit integration guide](/enterprise/integrations/gerrit) to submit generated code documentation through `refs/for/{branch}`.
 
@@ -19,31 +24,35 @@ These hosts have no GitHub-style webhooks. Drive re-indexing on merge from your 
 Enter the host, select **HTTPS**, and fill in the account credentials:
 
 <Frame>
-  ![Other Git HTTPS settings: host, username, and HTTP password under Settings, Integrations](/images/enterprise/integrations/other-git-https.png)
+  ![Other Git HTTPS settings: host, username, and HTTP password under Workspace Settings, Other Git](/images/enterprise/integrations/other-git-https.png)
 </Frame>
 
 | Field | Description |
 | ----- | ----------- |
 | Host | The Git host, without `https://`. For example, `gerrit.your-company.com`. Repositories whose `https://` URL is on this host are cloned with the credentials below. |
 | Username | The account username. This is required, because HTTP basic auth needs a username (for Gerrit, generate an HTTP password in its settings and use that account's username). |
-| HTTP Password / Token | The account's HTTP password or access token. |
+| HTTP password or token | The account's HTTP password or access token. |
 
 Then add a repository with its HTTPS clone URL, for example `https://gerrit.your-company.com/a/platform/sdk`.
 
 <Note>
-Presenting a private or self-signed TLS certificate? Point `NODE_EXTRA_CA_CERTS` at your CA bundle (recommended), or set `GIT_TLS_INSECURE=true` for testing only. Always use `https://` for credentialed clones. A plaintext `http://` host to a non-loopback address is logged as a warning.
+Does your host use a private or self-signed TLS certificate? Set `NODE_EXTRA_CA_CERTS` to your CA bundle (recommended). Context7 then trusts it for all outbound HTTPS, including git.
+
+`GIT_TLS_INSECURE=true` turns off TLS checks for all outbound HTTPS, not only git. Use it for testing only.
+
+Always use `https://` for clones with credentials. Context7 logs a warning for a plain `http://` host that is not on loopback.
 </Note>
 
 ## SSH (deploy key)
 
-When a repository is added with an `ssh://` URL, for example `ssh://<user>@gerrit.your-company.com:29418/platform/sdk`, Context7 authenticates with a deploy key. Enter the repository host, select **SSH**, and register the key's **public** half on a service account in your Git host that can read the repositories you want to index. Then give Context7 the private half one of two ways.
+When a repository is added with an `ssh://` URL, for example `ssh://<user>@gerrit.your-company.com:29418/platform/sdk`, Context7 authenticates with a deploy key. Select **SSH**, and register the key's **public** half on a service account in your Git host that can read the repositories you want to index. Then give Context7 the private half one of two ways. The key is used for every `ssh://` clone, whatever the host. If you use [review publishing](/enterprise/integrations/gerrit) over SSH, also enter the host on the **HTTPS** tab.
 
 ### Paste the key in the UI (recommended)
 
 On the **SSH** tab, paste the private key. It is stored encrypted and used for all `ssh://` clones. Optionally paste a `known_hosts` entry to pin the host key; if you leave it blank, the host key is trusted on first use.
 
 <Frame>
-  ![Other Git SSH settings: private key and known hosts under Settings, Integrations](/images/enterprise/integrations/other-git-ssh.png)
+  ![Other Git SSH settings: private key and known hosts under Workspace Settings, Other Git](/images/enterprise/integrations/other-git-ssh.png)
 </Frame>
 
 Generate the `known_hosts` entry with `ssh-keyscan`, for example:
@@ -99,7 +108,7 @@ If you prefer the private key never touch the application (it is never written t
       -v /path/to/id_ed25519:/etc/git-ssh/id_ed25519:ro \
       -v /path/to/known_hosts:/etc/git-ssh/known_hosts:ro \
       -e GIT_SSH_COMMAND="ssh -i /etc/git-ssh/id_ed25519 -o UserKnownHostsFile=/etc/git-ssh/known_hosts" \
-      -e LLM_API_KEY=sk-... \
+      -e LICENSE_KEY="$LICENSE_KEY" \
       ghcr.io/context7/enterprise
     ```
   </Tab>
@@ -114,8 +123,8 @@ The on-premise image ships with an SSH client, so no extra packages are needed e
 Once the host is configured, add repositories the same as any other source:
 
 <Steps>
-  <Step title="Open Add Repository">
-    From **Add Repository**, choose the **Other Git** source.
+  <Step title="Open Add source">
+    Click **Add source** and choose the **Other Git** source.
   </Step>
   <Step title="Paste the clone URL">
     Enter the repository's clone URL. The scheme selects how it authenticates:

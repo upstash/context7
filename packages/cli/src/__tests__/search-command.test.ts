@@ -16,6 +16,7 @@ const originalArgv = process.argv;
 beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
   vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
   process.exitCode = undefined;
 });
 
@@ -68,7 +69,7 @@ describe("ctx7 search", () => {
     registerSearchCommand(program);
     await program.parseAsync(["node", "ctx7", "search", "missing docs", "--json"]);
 
-    expect(console.log).toHaveBeenCalledWith(
+    expect(console.error).toHaveBeenCalledWith(
       expect.stringContaining("No documentation library matched")
     );
     expect(process.exitCode).toBe(1);

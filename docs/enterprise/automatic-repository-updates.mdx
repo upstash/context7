@@ -18,7 +18,7 @@ Automatic updates apply to Git repository sources. Website, Confluence, OpenAPI,
 
 ## Configure updates
 
-Open **Settings → Indexing → Automatic Updates**.
+Open **Workspace Settings › Automatic updates**.
 
 <Frame>
   ![Automatic repository update triggers and activity counters](/images/enterprise/automatic-repository-updates/overview.png)
@@ -28,7 +28,7 @@ You can configure up to 10 schedules. Each schedule has a name, a cron expressio
 
 <Steps>
   <Step title="Add a schedule">
-    Select **Add schedule**, choose a preset or enter a custom cron expression, then select **Add**.
+    Select **Add schedule**, choose a preset or enter a custom cron expression, then select **Add schedule** in the dialog.
 
     <Frame>
       ![Schedule editor with name, frequency, and cron expression fields](/images/enterprise/automatic-repository-updates/schedule-editor.png)
@@ -38,7 +38,7 @@ You can configure up to 10 schedules. Each schedule has a name, a cron expressio
     Turn on **GitHub push** to refresh matching repositories as soon as a push arrives. GitHub App is currently the only provider integration with this event-driven trigger. It requires an active webhook and the **Push** event subscription. See [GitHub Integration](/enterprise/integrations/github#webhooks).
   </Step>
   <Step title="Save the configuration">
-    Select **Save & Apply**. Enabling at least one schedule also starts a repository check when Context7 starts.
+    Select **Save changes**. Enabling at least one schedule also starts a repository check when Context7 starts.
   </Step>
 </Steps>
 
@@ -80,7 +80,7 @@ In a multi-replica deployment, a shared lock prevents duplicate scheduled and ma
 | Checked | Repositories whose tracked branch was checked |
 | Queued | Repositories added to the refresh queue |
 | Unchanged | Repositories already indexed at the remote commit |
-| Deferred | Refreshes waiting for retry backoff or paused after repeated failures |
+| Deferred | Refreshes waiting for retry backoff or paused after repeated failures. Shown under **Unchanged** when there are any |
 | Failed | Checks that could not read the remote branch |
 
 The trigger table also shows the last result for each schedule and for GitHub push events.

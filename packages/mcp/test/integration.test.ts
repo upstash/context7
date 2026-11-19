@@ -6,7 +6,7 @@ import { SkillsClient } from "@modelcontextprotocol/client/ext/skills";
 import { readFile } from "node:fs/promises";
 import { execSync } from "node:child_process";
 import { spawn, type ChildProcess } from "node:child_process";
-import { createDecipheriv } from "node:crypto";
+import { createDecipheriv, createHash } from "node:crypto";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -25,9 +25,21 @@ const BASE_PORT = 43117;
 const STUB_DOCS = "stub docs text";
 const EMPTY_CONTEXT_QUERY = "force-empty-context";
 const NO_RESULTS_QUERY = "force-no-results";
+const FILTERED_NO_RESULTS_QUERY = "force-filtered-no-results";
 const UPSTREAM_ERROR_QUERY = "force-upstream-error";
 const SLOW_CONTEXT_QUERY = "force-slow-context";
 const INVALID_JSON_QUERY = "force-invalid-json";
+const STUB_CODE = "stub code text";
+const CODE_INDEXING_QUERY = "force-code-indexing";
+const CODE_NO_SOURCE_QUERY = "force-code-no-source";
+const CODE_GATEWAY_QUERY = "force-code-gateway";
+const CODE_BAD_TAG_QUERY = "force-code-bad-tag";
+const STUB_UPGRADE_GUIDE = "# Upgrading Next.js from 14 to 16";
+const PREPARING_FROM_VERSION = "13";
+const UNKNOWN_FROM_VERSION = "99";
+const UNAVAILABLE_FROM_VERSION = "12";
+/** A deployment without the endpoint answers a plain 404. */
+const MISSING_ENDPOINT_FROM_VERSION = "98";
 const CLIENT_IP_ASSERTION_KEY = "0123456789abcdef".repeat(4);
 const INVALID_OAUTH_TOKEN_BODY = {
   error: "invalid_oauth_token",
@@ -108,6 +120,102 @@ function startStubApi(): Promise<string> {
       });
       return;
     }
+    if (apiPath === "/v2/version-upgrade-guide") {
+      const fromVersion = url.searchParams.get("fromVersion");
+      if (fromVersion === PREPARING_FROM_VERSION) {
+        res.statusCode = 202;
+        res.setHeader("Content-Type", "application/json");
+        res.end(
+          JSON.stringify({
+            status: "preparing",
+            retryAfter: 90,
+            message: "Indexing the source of next.js 13.0.0.",
+          })
+        );
+      } else if (fromVersion === UNAVAILABLE_FROM_VERSION) {
+        res.statusCode = 503;
+        res.setHeader("Content-Type", "application/json");
+        res.end(
+          JSON.stringify({
+            error: "guide_unavailable",
+            message: "The upgrade guide for Next.js 12.0.0 -> 16.0.0 could not be prepared.",
+          })
+        );
+      } else if (fromVersion === MISSING_ENDPOINT_FROM_VERSION) {
+        res.statusCode = 404;
+        res.setHeader("Content-Type", "text/html");
+        res.end("<html>Not Found</html>");
+      } else if (url.searchParams.get("page") === "9") {
+        res.statusCode = 400;
+        res.setHeader("Content-Type", "application/json");
+        res.end(
+          JSON.stringify({
+            error: "page_out_of_range",
+            message: "This guide has 3 pages; page 9 does not exist. Ask for a page from 1 to 3.",
+          })
+        );
+      } else if (fromVersion === UNKNOWN_FROM_VERSION) {
+        res.statusCode = 404;
+        res.setHeader("Content-Type", "application/json");
+        res.end(
+          JSON.stringify({ error: "version_not_found", message: "No release 99 of next.js." })
+        );
+      } else {
+        res.setHeader("Content-Type", "text/plain");
+        res.end(STUB_UPGRADE_GUIDE);
+      }
+      return;
+    }
+    if (apiPath === "/internal/mcp/experimental-tools-snapshot") {
+      // Stands in for the app's snapshot (the hosted HTTP server holds the assertion key): the
+      // ctx7sk-exp-code-N keys' user turned on the code tools by their old name query-code (and an
+      // unknown tool), the ctx7sk-exp-all-N keys' user turned on all; ctx7sk-exp-fail-N and every
+      // other credential are not in it.
+      if (!req.headers["x-context7-mcp-assertion"]) {
+        res.statusCode = 401;
+        res.end();
+        return;
+      }
+      const sha = (key: string) => createHash("sha256").update(key).digest("hex");
+      const apiKeys: Record<string, string> = {};
+      for (let n = 1; n <= 9; n++) {
+        apiKeys[sha(`ctx7sk-exp-code-${n}`)] = "user_code";
+        apiKeys[sha(`ctx7sk-exp-all-${n}`)] = "user_all";
+      }
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("ETag", '"1"');
+      res.end(
+        JSON.stringify({
+          version: "1",
+          users: {
+            user_code: { all: false, tools: ["query-code", "not-a-tool"] },
+            user_all: { all: true, tools: [] },
+          },
+          apiKeys,
+        })
+      );
+      return;
+    }
+    if (apiPath === "/v2/mcp/experimental-tools") {
+      // Stands in for the dashboard choice: ctx7sk-exp-code turned on the code tools by their old
+      // name query-code,
+      // ctx7sk-exp-all turned on all experimental tools (the app lists none of them here, as
+      // for a tool it does not know yet), ctx7sk-exp-fail cannot be read, every other
+      // credential turned on nothing.
+      if (bearer.startsWith("ctx7sk-exp-fail")) {
+        res.statusCode = 500;
+        res.end();
+        return;
+      }
+      res.setHeader("Content-Type", "application/json");
+      res.end(
+        JSON.stringify({
+          all: bearer.startsWith("ctx7sk-exp-all"),
+          tools: bearer.startsWith("ctx7sk-exp-code") ? ["query-code", "not-a-tool"] : [],
+        })
+      );
+      return;
+    }
     if (apiPath === "/v2/auth/check") {
       // Mirrors context7app: the middleware answers invalid_oauth_token for a
       // rejected oat_ bearer, the handler answers 204 for an accepted one.
@@ -146,6 +254,10 @@ function startStubApi(): Promise<string> {
         res.end(JSON.stringify({ results: [] }));
         return;
       }
+      if (url.searchParams.get("query") === FILTERED_NO_RESULTS_QUERY) {
+        res.end(JSON.stringify({ results: [], searchFilterApplied: true }));
+        return;
+      }
       res.end(
         JSON.stringify({
           results: [
@@ -175,6 +287,52 @@ function startStubApi(): Promise<string> {
         return;
       }
       res.end(url.searchParams.get("query") === EMPTY_CONTEXT_QUERY ? "" : STUB_DOCS);
+    } else if (apiPath === "/v2/code") {
+      const query = url.searchParams.get("pattern");
+      if (query === CODE_INDEXING_QUERY) {
+        res.statusCode = 202;
+        res.setHeader("Content-Type", "application/json");
+        res.setHeader("Retry-After", "30");
+        res.end(
+          JSON.stringify({
+            error: "indexing",
+            message: "The source of /vercel/next.js at v15.5.0 is being indexed.",
+            retryAfter: 30,
+          })
+        );
+        return;
+      }
+      if (query === CODE_NO_SOURCE_QUERY) {
+        res.statusCode = 422;
+        res.setHeader("Content-Type", "application/json");
+        res.end(
+          JSON.stringify({
+            error: "no_source",
+            message: "Source code search is not available for /websites/x.",
+          })
+        );
+        return;
+      }
+      if (query === CODE_GATEWAY_QUERY) {
+        res.statusCode = 502;
+        res.setHeader("Content-Type", "text/html");
+        res.end("<html>Bad Gateway</html>");
+        return;
+      }
+      if (query === CODE_BAD_TAG_QUERY) {
+        res.statusCode = 503;
+        res.setHeader("Content-Type", "application/json");
+        res.end(
+          JSON.stringify({
+            error: "index_failed",
+            message:
+              'Git tag "v0" of /vercel/next.js could not be indexed; the tag may not exist. Docs versions: v15.5.0.',
+          })
+        );
+        return;
+      }
+      res.setHeader("Content-Type", "text/plain");
+      res.end(STUB_CODE);
     } else {
       res.statusCode = 404;
       res.end();
@@ -570,13 +728,13 @@ describe("HTTP API key headers", () => {
   });
 });
 
-describe("research preview", () => {
-  // The preview tool list differs per caller, so a shared cache must not serve it to others.
+describe("experimental tools", () => {
+  // The experimental tool list differs per caller, so a shared cache must not serve it to others.
   async function toolsListCacheScope(
     transport: StreamableHTTPClientTransport | StdioClientTransport
   ) {
     const client = new Client(
-      { name: "research-preview-test", version: "1.0.0" },
+      { name: "experimental-test", version: "1.0.0" },
       { versionNegotiation: { mode: { pin: "2026-07-28" } } }
     );
     await client.connect(transport);
@@ -587,63 +745,354 @@ describe("research preview", () => {
     }
   }
 
-  const httpTransport = (url: string) =>
+  const httpTransport = (url: string, apiKey = "ctx7sk-local-test") =>
     new StreamableHTTPClientTransport(new URL(url), {
-      requestInit: { headers: { Authorization: "Bearer ctx7sk-local-test" } },
+      requestInit: { headers: { Authorization: `Bearer ${apiKey}` } },
     });
   const stdioTransport = (env: Record<string, string>) =>
     new StdioClientTransport({ command: process.execPath, args: [DIST], env });
 
-  test("marks tools/list private over HTTP only with ?research_preview=1", async () => {
-    expect(await toolsListCacheScope(httpTransport(httpUrl))).toBe("public");
-    expect(await toolsListCacheScope(httpTransport(`${httpUrl}?research_preview=1`))).toBe(
-      "private"
-    );
-  });
-
-  test("marks tools/list private over stdio only with CONTEXT7_RESEARCH_PREVIEW=1", async () => {
-    expect(await toolsListCacheScope(stdioTransport(childEnv))).toBe("public");
-    expect(
-      await toolsListCacheScope(stdioTransport({ ...childEnv, CONTEXT7_RESEARCH_PREVIEW: "1" }))
-    ).toBe("private");
-  });
-
-  test("lists submit-docs-feedback only with research preview and sends it to the API", async () => {
-    const toolNames = async (url: string) => {
-      const client = new Client({ name: "research-preview-test", version: "1.0.0" });
-      await client.connect(httpTransport(url));
-      try {
-        return (await client.listTools()).tools.map((tool) => tool.name);
-      } finally {
-        await client.close();
-      }
-    };
-    expect(await toolNames(httpUrl)).not.toContain("submit-docs-feedback");
-    expect(await toolNames(`${httpUrl}?research_preview=1`)).toContain("submit-docs-feedback");
-
-    const client = new Client({ name: "research-preview-test", version: "1.0.0" });
-    await client.connect(httpTransport(`${httpUrl}?research_preview=1`));
+  async function withClient<T>(
+    url: string,
+    run: (client: Client) => Promise<T>,
+    apiKey?: string
+  ): Promise<T> {
+    const client = new Client({ name: "experimental-test", version: "1.0.0" });
+    await client.connect(httpTransport(url, apiKey));
     try {
-      feedbackBodies.length = 0;
-      requests.length = 0;
-      const feedback = {
-        libraryId: "/vercel/next.js",
-        query: "app router caching",
-        score: 2,
-        issue: "outdated",
-        comment: "Shows the Next.js 14 cache defaults.",
-      };
-      const result = await client.callTool({ name: "submit-docs-feedback", arguments: feedback });
-
-      expect(result.isError).toBeFalsy();
-      expect(feedbackBodies).toEqual([feedback]);
-      const apiCall = requests.find((request) => request.path === "/v2/feedback");
-      expect(apiCall?.headers.authorization).toBe("Bearer ctx7sk-local-test");
-      expect(apiCall?.headers["x-context7-source"]).toBe("mcp-server");
-      expect(apiCall?.headers["x-context7-research-preview"]).toBe("1");
+      return await run(client);
     } finally {
       await client.close();
     }
+  }
+  const toolNames = (url: string) =>
+    withClient(url, async (client) => (await client.listTools()).tools.map((tool) => tool.name));
+
+  test("marks tools/list private over HTTP for a signed-in caller", async () => {
+    // The test server requires a credential, so an anonymous HTTP list is covered over stdio.
+    expect(await toolsListCacheScope(httpTransport(httpUrl))).toBe("private");
+  });
+
+  test("marks tools/list private over stdio only with CONTEXT7_EXPERIMENTAL=1", async () => {
+    expect(await toolsListCacheScope(stdioTransport(childEnv))).toBe("public");
+    expect(
+      await toolsListCacheScope(stdioTransport({ ...childEnv, CONTEXT7_EXPERIMENTAL: "1" }))
+    ).toBe("private");
+  });
+
+  test("lists every experimental tool with ?experimental=1 or its old name", async () => {
+    for (const url of [`${httpUrl}?experimental=1`, `${httpUrl}?research_preview=1`]) {
+      expect(await toolNames(url)).toEqual(
+        expect.arrayContaining([
+          "grep-code",
+          "glob-code",
+          "read-code",
+          "find-symbol",
+          "get-upgrade-guide",
+          "submit-docs-feedback",
+        ])
+      );
+    }
+  });
+
+  test("lists the experimental tools the signed-in user turned on", async () => {
+    requests.length = 0;
+    const names = await withClient(
+      httpUrl,
+      async (client) => (await client.listTools()).tools.map((tool) => tool.name),
+      "ctx7sk-exp-code-1"
+    );
+    expect(names).toEqual(
+      expect.arrayContaining(["grep-code", "glob-code", "read-code", "find-symbol"])
+    );
+    expect(names).not.toContain("query-code");
+    expect(names).not.toContain("get-upgrade-guide");
+    expect(names).not.toContain("submit-docs-feedback");
+
+    // Answered from the in-memory snapshot: no lookup per credential.
+    expect(requests.some((request) => request.path === "/v2/mcp/experimental-tools")).toBe(false);
+  });
+
+  test("lists every experimental tool it has when the user turned on all of them", async () => {
+    const names = await withClient(
+      httpUrl,
+      async (client) => (await client.listTools()).tools.map((tool) => tool.name),
+      "ctx7sk-exp-all-1"
+    );
+    expect(names).toEqual(
+      expect.arrayContaining([
+        "grep-code",
+        "glob-code",
+        "read-code",
+        "find-symbol",
+        "get-upgrade-guide",
+        "submit-docs-feedback",
+      ])
+    );
+  });
+
+  test("never asks the app for a credential's choice per request", async () => {
+    requests.length = 0;
+    for (let i = 0; i < 2; i++) {
+      await withClient(httpUrl, (client) => client.listTools(), "ctx7sk-exp-code-2");
+    }
+    expect(requests.some((request) => request.path === "/v2/mcp/experimental-tools")).toBe(false);
+  });
+
+  test("lists no experimental tool for a credential the snapshot does not hold", async () => {
+    requests.length = 0;
+    const names = await withClient(
+      httpUrl,
+      async (client) => (await client.listTools()).tools.map((tool) => tool.name),
+      "ctx7sk-exp-fail-1"
+    );
+    expect(names).toEqual(expect.arrayContaining(["resolve-library-id", "query-docs"]));
+    expect(names.some((name) => ["grep-code", "get-upgrade-guide"].includes(name))).toBe(false);
+  });
+
+  test("calls grep-code over HTTP when the signed-in user turned the code tools on", async () => {
+    requests.length = 0;
+    const result = await withClient(
+      httpUrl,
+      (client) =>
+        client.callTool({
+          name: "grep-code",
+          arguments: { libraryId: "/vercel/next.js", pattern: "useRouter" },
+        }),
+      "ctx7sk-exp-code-4"
+    );
+    expect(result.isError).toBeFalsy();
+    expect(result.content).toMatchObject([{ type: "text", text: STUB_CODE }]);
+    const codeCall = requests.find((request) => request.path === "/v2/code");
+    expect(codeCall?.headers.authorization).toBe("Bearer ctx7sk-exp-code-4");
+  });
+
+  test("marks server/discover private for a signed-in caller", async () => {
+    const client = new Client(
+      { name: "experimental-test", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+    await client.connect(httpTransport(httpUrl, "ctx7sk-exp-all-2"));
+    try {
+      const discover = client.getDiscoverResult() as { cacheScope?: string; instructions?: string };
+      expect(discover.cacheScope).toBe("private");
+      expect(discover.instructions).toContain("submit-docs-feedback");
+      expect(discover.instructions).toContain("read the library's source with 'grep-code'");
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("leaves the code tools out of the instructions when they are off", async () => {
+    const client = new Client(
+      { name: "experimental-test", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+    await client.connect(httpTransport(httpUrl, "ctx7sk-no-tools-1"));
+    try {
+      const discover = client.getDiscoverResult() as { instructions?: string };
+      expect(discover.instructions).toContain("Use this server to fetch current documentation");
+      expect(discover.instructions).not.toContain("grep-code");
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("lists the dashboard choice over stdio with an API key", async () => {
+    const client = new Client({ name: "experimental-test", version: "1.0.0" });
+    await client.connect(
+      stdioTransport({ ...childEnv, CONTEXT7_API_KEY: "ctx7sk-exp-code-stdio" })
+    );
+    try {
+      const names = (await client.listTools()).tools.map((tool) => tool.name);
+      expect(names).toContain("grep-code");
+      expect(names).not.toContain("get-upgrade-guide");
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("lists every experimental tool over stdio with the old CONTEXT7_RESEARCH_PREVIEW=1", async () => {
+    const client = new Client({ name: "experimental-test", version: "1.0.0" });
+    await client.connect(stdioTransport({ ...childEnv, CONTEXT7_RESEARCH_PREVIEW: "1" }));
+    try {
+      const names = (await client.listTools()).tools.map((tool) => tool.name);
+      expect(names).toEqual(
+        expect.arrayContaining([
+          "grep-code",
+          "glob-code",
+          "read-code",
+          "find-symbol",
+          "get-upgrade-guide",
+          "submit-docs-feedback",
+        ])
+      );
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("marks API calls of a signed-in user with experimental tools on", async () => {
+    requests.length = 0;
+    await withClient(
+      httpUrl,
+      (client) =>
+        client.callTool({
+          name: "query-docs",
+          arguments: { libraryId: "/vercel/next.js", query: "routing" },
+        }),
+      "ctx7sk-exp-code-3"
+    );
+    const apiCall = requests.find((request) => request.path === "/v2/context");
+    expect(apiCall?.headers["x-context7-experimental"]).toBe("1");
+  });
+
+  test("lists submit-docs-feedback only when on and sends it to the API", async () => {
+    expect(await toolNames(httpUrl)).not.toContain("submit-docs-feedback");
+    expect(await toolNames(`${httpUrl}?experimental=1`)).toContain("submit-docs-feedback");
+
+    feedbackBodies.length = 0;
+    requests.length = 0;
+    const feedback = {
+      libraryId: "/vercel/next.js",
+      query: "app router caching",
+      score: 2,
+      issue: "outdated",
+      comment: "Shows the Next.js 14 cache defaults.",
+    };
+    const result = await withClient(`${httpUrl}?experimental=1`, (client) =>
+      client.callTool({ name: "submit-docs-feedback", arguments: feedback })
+    );
+
+    expect(result.isError).toBeFalsy();
+    expect(feedbackBodies).toEqual([feedback]);
+    const apiCall = requests.find((request) => request.path === "/v2/feedback");
+    expect(apiCall?.headers.authorization).toBe("Bearer ctx7sk-local-test");
+    expect(apiCall?.headers["x-context7-source"]).toBe("mcp-server");
+    expect(apiCall?.headers["x-context7-experimental"]).toBe("1");
+  });
+
+  describe("get-upgrade-guide", () => {
+    const callGuide = (args: Record<string, string | number>) =>
+      withClient(`${httpUrl}?experimental=1`, (client) =>
+        client.callTool({
+          name: "get-upgrade-guide",
+          arguments: { libraryId: "/vercel/next.js", ...args },
+        })
+      );
+    const resultText = (result: Awaited<ReturnType<typeof callGuide>>) =>
+      (result.content as { type: string; text: string }[])[0].text;
+
+    beforeEach(() => {
+      requests.length = 0;
+    });
+
+    test("is listed only when on", async () => {
+      expect(await toolNames(httpUrl)).not.toContain("get-upgrade-guide");
+      expect(await toolNames(`${httpUrl}?experimental=1`)).toContain("get-upgrade-guide");
+    });
+
+    test("sends the versions to the API and returns the guide text", async () => {
+      const result = await callGuide({ fromVersion: "14.2.35", toVersion: "16" });
+
+      expect(result.isError).toBeFalsy();
+      expect(resultText(result)).toBe(STUB_UPGRADE_GUIDE);
+      const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
+      expect(Object.fromEntries(apiCall!.query)).toEqual({
+        libraryId: "/vercel/next.js",
+        fromVersion: "14.2.35",
+        toVersion: "16",
+        page: "1",
+      });
+      expect(apiCall?.headers.authorization).toBe("Bearer ctx7sk-local-test");
+      expect(apiCall?.headers["x-context7-source"]).toBe("mcp-server");
+      expect(apiCall?.headers["x-context7-experimental"]).toBe("1");
+    });
+
+    test("omits toVersion when not given", async () => {
+      await callGuide({ fromVersion: "14" });
+
+      const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
+      expect(apiCall?.query.has("toVersion")).toBe(false);
+    });
+
+    test("sends the page when given", async () => {
+      const result = await callGuide({ fromVersion: "14", page: 2 });
+
+      expect(result.isError).toBeFalsy();
+      const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
+      expect(apiCall?.query.get("page")).toBe("2");
+    });
+
+    test("sends page 1 when no page is given", async () => {
+      await callGuide({ fromVersion: "14" });
+
+      const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
+      expect(apiCall?.query.get("page")).toBe("1");
+    });
+
+    test("accepts a page sent as a numeric string", async () => {
+      const result = await callGuide({ fromVersion: "14", page: "2" });
+
+      expect(result.isError).toBeFalsy();
+      const apiCall = requests.find((request) => request.path === "/v2/version-upgrade-guide");
+      expect(apiCall?.query.get("page")).toBe("2");
+    });
+
+    test("rejects a page that is not a whole number without calling the API", async () => {
+      const result = await callGuide({ fromVersion: "14", page: "two" });
+
+      expect(result.isError).toBe(true);
+      expect(requests.some((request) => request.path === "/v2/version-upgrade-guide")).toBe(false);
+    });
+
+    test("returns the API's message for a page past the last as an answer, not an error", async () => {
+      const result = await callGuide({ fromVersion: "14", page: 9 });
+
+      expect(result.isError).toBeFalsy();
+      expect(resultText(result)).toBe(
+        "This guide has 3 pages; page 9 does not exist. Ask for a page from 1 to 3."
+      );
+    });
+
+    test("rejects a page below 1 without calling the API", async () => {
+      const result = await callGuide({ fromVersion: "14", page: 0 });
+
+      expect(result.isError).toBe(true);
+      expect(requests.some((request) => request.path === "/v2/version-upgrade-guide")).toBe(false);
+    });
+
+    test("tells the agent to call again while the guide is prepared", async () => {
+      const result = await callGuide({ fromVersion: PREPARING_FROM_VERSION });
+
+      expect(result.isError).toBeFalsy();
+      expect(resultText(result)).toContain("being prepared");
+      expect(resultText(result)).toContain("after 90 seconds");
+      expect(resultText(result)).toContain("Indexing the source of next.js 13.0.0.");
+    });
+
+    test("returns the API's 503 guide_unavailable message as an answer, not an error", async () => {
+      const result = await callGuide({ fromVersion: UNAVAILABLE_FROM_VERSION });
+
+      expect(result.isError).toBeFalsy();
+      expect(resultText(result)).toBe(
+        "The upgrade guide for Next.js 12.0.0 -> 16.0.0 could not be prepared."
+      );
+    });
+
+    test("returns the API's 404 message as an answer, not an error", async () => {
+      const result = await callGuide({ fromVersion: UNKNOWN_FROM_VERSION });
+
+      expect(result.isError).toBeFalsy();
+      expect(resultText(result)).toBe("No release 99 of next.js.");
+    });
+
+    test("reports a 404 that is not the endpoint's answer as an upstream error", async () => {
+      const result = await callGuide({ fromVersion: MISSING_ENDPOINT_FROM_VERSION });
+
+      expect(resultText(result)).toContain("not available");
+      expect(resultText(result)).not.toContain("library");
+    });
   });
 });
 
@@ -890,7 +1339,7 @@ describe.each([
     expect(apiCalls[0].query.get("libraryId")).toBe("/vercel/next.js");
     expect(apiCalls[0].query.get("query")).toBe("app router");
     expect(apiCalls[0].headers["x-context7-transport"]).toBe(transportKind);
-    expect(apiCalls[0].headers["x-context7-research-preview"]).toBeUndefined();
+    expect(apiCalls[0].headers["x-context7-experimental"]).toBeUndefined();
     if (transportKind === "http") {
       expect(apiCalls[0].headers["mcp-client-ip-assertion"]).toMatch(/^v1:/);
       expect(
@@ -924,6 +1373,23 @@ describe.each([
       arguments: { libraryName: "does-not-exist", query: NO_RESULTS_QUERY },
     });
     expect(empty.isError).toBeFalsy();
+  });
+
+  test("keeps the filter notice when no libraries match", async () => {
+    const result = await client.callTool({
+      name: "resolve-library-id",
+      arguments: { libraryName: "Next.js", query: FILTERED_NO_RESULTS_QUERY },
+    });
+    expect(result.isError).toBeFalsy();
+    expect(result.content).toEqual([
+      {
+        type: "text",
+        text: expect.stringContaining("teamspace's library filters"),
+      },
+    ]);
+    const text = (result.content as { type: string; text: string }[])[0].text;
+    expect(text).toContain("https://context7.com/dashboard?tab=policies");
+    expect(text).toContain("No documentation libraries found matching your query.");
   });
 
   test("calls resolve-library-id end to end", async () => {
@@ -1594,5 +2060,286 @@ describe("expired OAuth access tokens", () => {
     expect(exported).toMatch(
       /context7_mcp_upstream_requests_total\{[^}]*context7_upstream_operation="auth_check"[^}]*\} [1-9]/
     );
+  });
+});
+
+describe("code tools", () => {
+  async function stdioClient(environment: Record<string, string>) {
+    const client = new Client({ name: "code-tools-test", version: "1.0.0" });
+    await client.connect(
+      new StdioClientTransport({ command: process.execPath, args: [DIST], env: environment })
+    );
+    return client;
+  }
+
+  const CODE_TOOLS = ["find-symbol", "glob-code", "grep-code", "read-code"];
+
+  /** Calls a tool and returns the /v2/code request it sent, if any. */
+  async function sent(client: Client, name: string, args: Record<string, unknown>) {
+    const before = requests.length;
+    const result = await client.callTool({ name, arguments: args });
+    const request = requests.slice(before).find((candidate) => candidate.path === "/v2/code");
+    return { result, query: request?.query };
+  }
+
+  test("are not listed without the flag", async () => {
+    const client = await stdioClient(childEnv);
+    try {
+      const names = (await client.listTools()).tools.map((tool) => tool.name);
+      for (const name of [...CODE_TOOLS, "query-code"]) expect(names).not.toContain(name);
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("are listed with the flag, with the parameters of Grep, Glob and Read", async () => {
+    const client = await stdioClient({ ...childEnv, CONTEXT7_EXPERIMENTAL: "1" });
+    try {
+      const { tools } = await client.listTools();
+      const names = tools.map((tool) => tool.name);
+      expect(names).toEqual(expect.arrayContaining(CODE_TOOLS));
+      expect(names).not.toContain("query-code");
+      const fields = (name: string) =>
+        Object.keys(tools.find((tool) => tool.name === name)?.inputSchema.properties ?? {}).sort();
+      expect(fields("grep-code")).toEqual([
+        "-A",
+        "-B",
+        "-C",
+        "-F",
+        "-i",
+        "-n",
+        "-w",
+        "glob",
+        "head_limit",
+        "libraryId",
+        "multiline",
+        "offset",
+        "output_mode",
+        "path",
+        "pattern",
+        "type",
+        "version",
+      ]);
+      expect(fields("glob-code")).toEqual([
+        "head_limit",
+        "libraryId",
+        "offset",
+        "path",
+        "pattern",
+        "version",
+      ]);
+      expect(fields("read-code")).toEqual(["file_path", "libraryId", "limit", "offset", "version"]);
+      expect(fields("find-symbol")).toEqual([
+        "head_limit",
+        "libraryId",
+        "offset",
+        "operation",
+        "path",
+        "symbol",
+        "version",
+      ]);
+      for (const name of CODE_TOOLS) {
+        expect(tools.find((tool) => tool.name === name)?.annotations?.readOnlyHint).toBe(true);
+      }
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("send their arguments to /v2/code", async () => {
+    const client = await stdioClient({ ...childEnv, CONTEXT7_EXPERIMENTAL: "1" });
+    try {
+      const grep = await sent(client, "grep-code", {
+        libraryId: "/vercel/next.js",
+        pattern: "use(Router|Params)",
+        path: "packages/next",
+        glob: "!**/test/**",
+        type: "typescript",
+        output_mode: "count",
+        "-i": true,
+        "-B": 1,
+        "-A": 2,
+        "-w": true,
+        multiline: true,
+      });
+      expect(grep.result.isError).toBeFalsy();
+      expect(grep.result.content).toMatchObject([{ type: "text", text: STUB_CODE }]);
+      expect(grep.query?.get("operation")).toBe("grep");
+      // The API answers "being indexed" after a short wait, so the agent is not held.
+      expect(grep.query?.get("wait")).toBe("5");
+      expect(grep.query?.get("pattern")).toBe("use(Router|Params)");
+      expect(grep.query?.get("path")).toBe("packages/next");
+      expect(grep.query?.getAll("glob")).toEqual([
+        "!**/test/**",
+        "*.ts",
+        "*.tsx",
+        "*.mts",
+        "*.cts",
+      ]);
+      expect(grep.query?.get("output_mode")).toBe("count");
+      expect(grep.query?.get("ignore_case")).toBe("true");
+      expect(grep.query?.get("before_context")).toBe("1");
+      expect(grep.query?.get("after_context")).toBe("2");
+      expect(grep.query?.get("word_regexp")).toBe("true");
+      expect(grep.query?.get("multiline")).toBe("true");
+      expect(grep.query?.get("multiline_dotall")).toBe("true");
+
+      const glob = await sent(client, "glob-code", {
+        libraryId: "/vercel/next.js",
+        pattern: "**/*router*.ts",
+        path: "packages",
+      });
+      expect(glob.query?.get("operation")).toBe("list");
+      expect(glob.query?.getAll("glob")).toEqual(["**/*router*.ts"]);
+      expect(glob.query?.get("path")).toBe("packages");
+      expect(glob.query?.get("pattern")).toBeNull();
+
+      const read = await sent(client, "read-code", {
+        libraryId: "/vercel/next.js",
+        file_path: "packages/next/src/client/router.ts",
+        offset: 40,
+        limit: 500,
+      });
+      expect(read.query?.get("operation")).toBe("read");
+      expect(read.query?.get("path")).toBe("packages/next/src/client/router.ts#L40-L239");
+
+      const symbol = await sent(client, "find-symbol", {
+        libraryId: "/vercel/next.js",
+        operation: "definition",
+        symbol: "useRouter",
+        path: "packages/next",
+      });
+      expect(symbol.query?.get("operation")).toBe("definition");
+      expect(symbol.query?.get("pattern")).toBe("useRouter");
+      expect(symbol.query?.get("path")).toBe("packages/next");
+
+      const outline = await sent(client, "find-symbol", {
+        libraryId: "/vercel/next.js",
+        operation: "outline",
+        path: "packages/next/src/client/router.ts",
+      });
+      expect(outline.query?.get("operation")).toBe("outline");
+      expect(outline.query?.get("pattern")).toBeNull();
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("accept the names agents send by habit and clamp numbers", async () => {
+    const client = await stdioClient({ ...childEnv, CONTEXT7_EXPERIMENTAL: "1" });
+    try {
+      const alias = await sent(client, "grep-code", {
+        libraryId: "/vercel/next.js",
+        query: "Request failed",
+        fixed_strings: true,
+        version: "/vercel/next.js/v15.5.0",
+        limit: 900,
+        context: 25,
+        offset: "20",
+      });
+      expect(alias.query?.get("libraryId")).toBe("/vercel/next.js");
+      expect(alias.query?.get("version")).toBe("v15.5.0");
+      expect(alias.query?.get("pattern")).toBe("Request failed");
+      expect(alias.query?.get("fixed_strings")).toBe("true");
+      expect(alias.query?.get("head_limit")).toBe("500");
+      expect(alias.query?.get("context")).toBe("10");
+      expect(alias.query?.get("offset")).toBe("20");
+
+      // A one-word query is a pattern; several words are not grepped but corrected.
+      const word = await sent(client, "grep-code", {
+        libraryId: "/vercel/next.js",
+        query: "  useRouter  ",
+      });
+      expect(word.query?.get("pattern")).toBe("useRouter");
+      const words = await sent(client, "grep-code", {
+        libraryId: "/vercel/next.js",
+        query: "how does the router cache work",
+      });
+      expect(words.result.isError).toBe(true);
+      expect((words.result.content as { text: string }[])[0].text).toContain('Pass "pattern"');
+      expect(words.query).toBeUndefined();
+
+      const read = await sent(client, "read-code", {
+        libraryId: "/vercel/next.js",
+        path: "packages/next/src/client/router.ts#L10-L20",
+        offset: 1,
+      });
+      expect(read.query?.get("path")).toBe("packages/next/src/client/router.ts#L10-L20");
+
+      const symbol = await sent(client, "find-symbol", {
+        libraryId: "/vercel/next.js",
+        operation: "references",
+        pattern: "useRouter",
+      });
+      expect(symbol.query?.get("pattern")).toBe("useRouter");
+
+      // Without an operation, find-symbol looks up the definition.
+      const bare = await sent(client, "find-symbol", {
+        libraryId: "/vercel/next.js",
+        name: "useRouter",
+      });
+      expect(bare.query?.get("operation")).toBe("definition");
+      expect(bare.query?.get("pattern")).toBe("useRouter");
+
+      // Usage errors are answered without a request.
+      const unknownType = await sent(client, "grep-code", {
+        libraryId: "/vercel/next.js",
+        pattern: "x",
+        type: "cobol",
+      });
+      expect(unknownType.result.isError).toBe(true);
+      expect(unknownType.query).toBeUndefined();
+      const noSymbol = await sent(client, "find-symbol", {
+        libraryId: "/vercel/next.js",
+        operation: "definition",
+      });
+      expect(noSymbol.result.isError).toBe(true);
+      expect(noSymbol.query).toBeUndefined();
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("answer 'still indexing' as a normal result and an API error as an error", async () => {
+    const client = await stdioClient({ ...childEnv, CONTEXT7_EXPERIMENTAL: "1" });
+    try {
+      const indexing = await client.callTool({
+        name: "grep-code",
+        arguments: { libraryId: "/vercel/next.js", pattern: CODE_INDEXING_QUERY },
+      });
+      expect(indexing.isError).toBeFalsy();
+      expect((indexing.content as { text: string }[])[0].text).toMatch(
+        /being indexed\..*do not wait: answer from query-docs now.*call grep-code once more/s
+      );
+
+      const noSource = await client.callTool({
+        name: "grep-code",
+        arguments: { libraryId: "/websites/x", pattern: CODE_NO_SOURCE_QUERY },
+      });
+      expect(noSource.isError).toBe(true);
+      expect((noSource.content as { text: string }[])[0].text).toContain("not available");
+
+      const gateway = await client.callTool({
+        name: "grep-code",
+        arguments: { libraryId: "/vercel/next.js", pattern: CODE_GATEWAY_QUERY },
+      });
+      expect(gateway.isError).toBe(true);
+      const gatewayText = (gateway.content as { text: string }[])[0].text;
+      expect(gatewayText).toContain("HTTP 502");
+      expect(gatewayText).toContain("answer from query-docs");
+      expect(gatewayText).not.toContain("try again later");
+
+      const badTag = await client.callTool({
+        name: "grep-code",
+        arguments: { libraryId: "/vercel/next.js", version: "v0", pattern: CODE_BAD_TAG_QUERY },
+      });
+      expect(badTag.isError).toBe(true);
+      const badTagText = (badTag.content as { text: string }[])[0].text;
+      expect(badTagText).toContain("Docs versions: v15.5.0.");
+      expect(badTagText).toContain("Call grep-code again with one of the docs versions");
+      expect(badTagText).not.toContain("Do not retry");
+    } finally {
+      await client.close();
+    }
   });
 });

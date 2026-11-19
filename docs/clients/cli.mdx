@@ -90,9 +90,9 @@ Each result includes:
 | **Code Snippets**     | Number of indexed code examples — higher means more documentation coverage |
 | **Source Reputation** | Authority indicator: High, Medium, Low, or Unknown                         |
 | **Benchmark Score**   | Quality score from 0 to 100                                                |
-| **Versions**          | Version-specific IDs when available (format: `/org/project/version`)       |
+| **Versions**          | Version tags when available — append one to the ID: `/org/project/version` |
 
-When multiple results come back, the best match is usually the one with the closest name, highest snippet count, and strongest reputation. If you need docs for a specific version, pick the matching version ID from the list.
+When multiple results come back, the best match is usually the one with the closest name, highest snippet count, and strongest reputation. If you need docs for a specific version, append the matching version tag from the list to the library ID.
 
 ```bash
 # Fetch docs for a specific version
@@ -107,7 +107,7 @@ ctx7 library react "How to use hooks for state management" --json | jq '.[0].id'
 Takes a library ID and a natural-language question, and returns relevant code snippets and explanations from the indexed documentation.
 
 ```bash
-ctx7 docs /facebook/react "How to clean up useEffect with async operations"
+ctx7 docs /reactjs/react.dev "How to clean up useEffect with async operations"
 ctx7 docs /vercel/next.js "How to add a proxy that redirects unauthenticated users"
 ctx7 docs /prisma/prisma "How to define one-to-many relations with cascade delete"
 ```
@@ -126,12 +126,30 @@ The output contains two types of content: **code snippets** (titled, with langua
 ctx7 docs /websites/twilio "How to send an SMS" --language Ruby
 
 # Output as structured JSON
-ctx7 docs /facebook/react "How to use hooks for state management" --json
+ctx7 docs /reactjs/react.dev "How to use hooks for state management" --json
 
 # Pipe to other tools — output is clean when not in a TTY (no spinners or colors)
-ctx7 docs /facebook/react "How to use hooks for state management" | head -50
+ctx7 docs /reactjs/react.dev "How to use hooks for state management" | head -50
 ctx7 docs /vercel/next.js "How to add a proxy for route protection" | grep -A 10 "proxy"
 ```
+
+### On-premise deployments
+
+`ctx7 library` and `ctx7 docs` also query an on-premise deployment. Set the deployment's root URL in `CONTEXT7_BASE_URL` once, or pass `--base-url` on each command. When MCP authentication is enabled on the deployment, set `CONTEXT7_API_KEY` to a personal API key from the dashboard:
+
+```bash
+export CONTEXT7_BASE_URL=https://context7.internal.example
+export CONTEXT7_API_KEY=ctx7op-...
+
+ctx7 library react "How to clean up useEffect"
+ctx7 docs /your-org/your-repo "How to configure the client"
+```
+
+`--base-url` wins when both are set. A custom deployment authenticates with `CONTEXT7_API_KEY` only: the CLI does not send your `ctx7 login` session to it. `ctx7 search`, `ctx7 code` and `ctx7 get-upgrade-guide` are available only on hosted Context7.
+
+<Note>
+  `CONTEXT7_BASE_URL` is the deployment's root URL, without `/api`. The MCP server reads a different variable, `CONTEXT7_API_URL`, which ends in `/api`.
+</Note>
 
 ---
 
@@ -156,6 +174,7 @@ ctx7 setup --cli            # CLI + Skills mode
 ctx7 setup --claude
 ctx7 setup --cursor
 ctx7 setup --opencode
+ctx7 setup --pi
 
 # Target a specific install location (CLI + Skills mode)
 ctx7 setup --cli --claude       # Claude Code (~/.claude/skills)
@@ -163,6 +182,7 @@ ctx7 setup --cli --cursor       # Cursor (~/.cursor/skills)
 ctx7 setup --cli --codex        # Codex (~/.agents/skills)
 ctx7 setup --cli --opencode     # OpenCode (~/.agents/skills)
 ctx7 setup --cli --antigravity  # Antigravity (~/.agent/skills)
+ctx7 setup --cli --pi           # Pi (~/.agents/skills)
 
 # Configure for current project only (default is global)
 ctx7 setup --project
@@ -185,7 +205,7 @@ Without `--api-key` or `--oauth`, setup runs the OAuth device flow: it shows a v
 
 ### On-premise setup
 
-Pass the root URL of your on-premise deployment with `--base-url`. Do not include `/mcp` or `/api`:
+Pass the root URL of your on-premise deployment with `--base-url`, or set it once in `CONTEXT7_BASE_URL`. Do not include `/mcp` or `/api`:
 
 ```bash
 # MCP authentication disabled on the deployment
@@ -206,15 +226,23 @@ The CLI checks `/api/auth/mcp` before writing configuration. It either configure
 
 When `--base-url` targets a custom deployment, setup skips the npm update check and telemetry and does not fetch rules or skills from GitHub or Context7 Cloud. After the CLI package is installed, the only network request made by setup is to the configured deployment. In a restricted environment, mirror `ctx7` and its dependencies in an internal npm registry and run the installed `ctx7` binary instead of `npx ctx7@latest`.
 
-`--base-url` currently supports MCP setup only. It cannot be combined with `--oauth`, `--stdio`, or `--cli` for a custom deployment.
+For a custom deployment, `ctx7 setup` supports MCP setup only. It cannot be combined with `--oauth`, `--stdio`, or `--cli`.
 
 **What gets written — MCP mode:**
 
 | File                                                | Purpose                                                          |
 | --------------------------------------------------- | ---------------------------------------------------------------- |
-| `.mcp.json` / `.cursor/mcp.json` / `.opencode.json` | MCP server entry                                                 |
+| `.mcp.json` / `.cursor/mcp.json` / `opencode.json`  | MCP server entry                                                 |
 | Agent rules directory                               | Rule file — instructs the agent to use Context7 for library docs |
 | Agent skills directory                              | `context7-mcp` skill                                             |
+
+The rule file is the contents of [`rules/context7-mcp.md`](https://github.com/upstash/context7/blob/master/rules/context7-mcp.md) and the skill is [`skills/context7-mcp/SKILL.md`](https://github.com/upstash/context7/blob/master/skills/context7-mcp/SKILL.md). For Claude Code, `ctx7 setup --claude` writes the files below. With `--project`, the rule and skill go to `.claude/rules/` and `.claude/skills/` in the project instead; `CLAUDE_CONFIG_DIR` replaces `~/.claude` when it is set.
+
+| File                                        | Purpose                                                          |
+| ------------------------------------------- | ---------------------------------------------------------------- |
+| `~/.claude.json` (or `.mcp.json` with `--project`) | MCP server entry named `context7`                        |
+| `~/.claude/rules/context7.md`               | Rule file — instructs the agent to use Context7 for library docs |
+| `~/.claude/skills/context7-mcp/SKILL.md`    | `context7-mcp` skill                                             |
 
 **What gets written — CLI + Skills mode:**
 
@@ -222,6 +250,8 @@ When `--base-url` targets a custom deployment, setup skips the npm update check 
 | ---------------------- | ----------------------------------------------------------------------------------- |
 | Agent skills directory | `find-docs` skill — guides the agent to use `ctx7 library` and `ctx7 docs` commands |
 | Agent rules directory  | Rule file — instructs the agent to use the `ctx7` commands for library docs         |
+
+The rule file is the contents of [`rules/context7-cli.md`](https://github.com/upstash/context7/blob/master/rules/context7-cli.md) and the skill is [`skills/find-docs/SKILL.md`](https://github.com/upstash/context7/blob/master/skills/find-docs/SKILL.md). For Claude Code, `ctx7 setup --cli --claude` writes `~/.claude/skills/find-docs/SKILL.md` and `~/.claude/rules/context7.md` (`.claude/` in the project with `--project`).
 
 ### ctx7 remove
 
@@ -271,7 +301,7 @@ ctx7 logout
 
 If your saved login can no longer be refreshed, the CLI clears it and asks whether to sign in again. Answering yes runs `ctx7 login` and continues the command with the new login. Answering no continues without an account.
 
-No prompt is shown when output is piped or `--json` is passed — the CLI prints a notice to stderr and continues without an account, so parsed output stays clean. `ctx7 login`, `ctx7 whoami`, `ctx7 setup`, and `ctx7 generate` also skip the prompt. Network, rate-limit, and server errors keep your saved login, so the next command retries.
+No prompt is shown when output is piped or `--json` is passed — the CLI prints a notice to stderr and continues without an account, so parsed output stays clean. `ctx7 login`, `ctx7 whoami`, and `ctx7 setup` also skip the prompt. Network, rate-limit, and server errors keep your saved login, so the next command retries.
 
 ### API Key
 
@@ -297,11 +327,13 @@ The CLI collects anonymous usage data to help improve the product. To disable:
 
 ```bash
 # For a single command
-CTX7_TELEMETRY_DISABLED=1 ctx7 docs /facebook/react "useEffect examples"
+CTX7_TELEMETRY_DISABLED=1 ctx7 docs /reactjs/react.dev "useEffect examples"
 
 # Permanently — add to ~/.bashrc or ~/.zshrc
 export CTX7_TELEMETRY_DISABLED=1
 ```
+
+Against hosted Context7, the CLI sends anonymous usage events to `context7.com` and checks the npm registry (`registry.npmjs.org`) for a newer `ctx7` version. The update check is cached for 24 hours, so it runs at most once a day, and is skipped for `--json`, `-v`/`--version` and `--base-url`. `CTX7_TELEMETRY_DISABLED` stops the events, not the update check. A custom `--base-url` deployment turns off both.
 
 ---
 

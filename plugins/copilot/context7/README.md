@@ -32,7 +32,7 @@ Non-interactive runs (`copilot -p`) do not open the browser. Sign in from an int
 
 ### API Key
 
-Create a free API key in the [Context7 dashboard](https://context7.com/dashboard) and export it as an environment variable before launching Copilot CLI:
+Create a free API key in the [Context7 dashboard](https://context7.com/dashboard?tab=settings) and export it as an environment variable before launching Copilot CLI:
 
 ```bash
 # e.g. in ~/.zshrc or ~/.bashrc

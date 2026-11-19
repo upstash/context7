@@ -1,5 +1,17 @@
 # @upstash/context7-sdk
 
+## 0.7.1
+
+### Patch Changes
+
+- 4087030: The SDK now reads a JSON response when the server sends a mixed-case `Content-Type`, such as `Application/Json`. Before, `searchLibrary()` threw a `TypeError` on such a response. Lookalike types such as `application/jsonp` stay on the text path.
+
+## 0.7.0
+
+### Minor Changes
+
+- bdd9bf7: `searchLibrary` returns an empty list (or, with `type: "txt"`, a "No libraries found" message) when nothing matches, instead of throwing a 404 `Context7Error`. Text results label the trust score as "Source Reputation", the same as the MCP server.
+
 ## 0.6.0
 
 ### Minor Changes

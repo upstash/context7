@@ -37,7 +37,7 @@ flowchart LR
 ## Before You Start
 
 - An **offline on-premise license**. The export page is only visible to accounts that hold one.
-- Your on-premise **AI provider is configured** (Settings → completed setup wizard). Import re-embeds snippets, so it needs a working embedding provider.
+- Your on-premise **AI provider is configured** (the setup wizard, or **Workspace Settings › AI models**). Import re-embeds snippets, so it needs a working embedding provider.
 
 ## Exporting from Context7 Cloud
 
@@ -85,10 +85,10 @@ Move `context7-libraries.zip` into your airgapped environment using whatever met
 
 <Step title="Open the import page">
 
-In your on-premise dashboard, click **Add Repo**, then choose the **Context7 Export** source. This source only appears on offline-license installs.
+In your on-premise dashboard, click **Add source**, then choose the **Context7 export** source. This source only appears on offline-license installs.
 
 <Frame>
-  ![Context7 Export source on the Add page](/images/enterprise/library-import/import-source.png)
+  ![Context7 export source on the Add sources page](/images/enterprise/library-import/import-source.png)
 </Frame>
 
 </Step>
@@ -101,7 +101,7 @@ Select your `.zip` export (up to 100 MB). To replace libraries that already exis
   ![Uploading a Context7 export to import](/images/enterprise/library-import/import-upload.png)
 </Frame>
 
-Each library is queued as its own job. Follow progress under the **Parse Queue** tab while snippets are re-embedded locally.
+Each library is queued as its own job. Follow progress on the **Parse queue** page while snippets are re-embedded locally.
 
 </Step>
 

@@ -35,11 +35,11 @@ node packages/mcp/dist/index.js
 | --------------------------- | ------------------------------------------------------------------------------------- | ------- |
 | `--transport <stdio\|http>` | Transport to use. Use `http` for remote HTTP server or `stdio` for local integration. | `stdio` |
 | `--port <number>`           | Port to listen on when using `http` transport. `0` picks a free port.                 | `3000`  |
-| `--api-key <key>`           | API key for authentication (or set `CONTEXT7_API_KEY` env var).                       | -       |
+| `--api-key <key>`           | API key for `stdio` transport (or set `CONTEXT7_API_KEY` env var). Not allowed with `--transport http`; send the key in the `Authorization: Bearer` header instead. | -       |
 
 <Note>
   Get your API key by creating an account at
-  [context7.com/dashboard](https://context7.com/dashboard).
+  [context7.com/dashboard](https://context7.com/dashboard?tab=settings).
 </Note>
 
 ### Examples
@@ -58,6 +58,8 @@ OAuth JWT access tokens from the authorization server (`OAUTH_AUTH_SERVER_URL`) 
 
 The HTTP server is stateless — it creates a fresh server instance per request and keeps no session state. Session operations therefore have nothing to attach to: a `GET` or `DELETE` on `/mcp` is answered with `405 Method Not Allowed` rather than opening a standalone Server-Sent Events stream. Server-Sent Events are used only to stream responses to `POST` requests, and keepalive heartbeats are disabled.
 
+`GET /ping` answers `{"status":"ok","message":"pong"}` without reading any credential. It is a liveness check only: it does not validate an API key or OAuth token, and it does not consume request quota. A `200` from `/ping` says the server is up, not that the credential you sent with it is valid. To verify a key, make a real lookup such as `query-docs`: with an invalid key, the tool returns an error with the Context7 API's message.
+
 Stdio transport with API key:
 
 ```bash
@@ -66,22 +68,11 @@ node packages/mcp/dist/index.js --transport stdio --api-key YOUR_API_KEY
 
 ## Environment Variables
 
-You can use the `CONTEXT7_API_KEY` environment variable instead of passing the `--api-key` flag. This is useful for:
-
-- Storing API keys securely in `.env` files
-- Integration with MCP server setups that use dotenv
-- Tools that prefer environment variable configuration
+With `stdio` transport, you can use the `CONTEXT7_API_KEY` environment variable instead of passing the `--api-key` flag. Set it in your shell or in the `env` block of your MCP client configuration. The server does not load `.env` files.
 
 <Warning>
   The `--api-key` CLI flag takes precedence over the environment variable when both are provided.
 </Warning>
-
-### Using .env File
-
-```bash
-# .env
-CONTEXT7_API_KEY=your_api_key_here
-```
 
 ### MCP Configuration with Environment Variable
 

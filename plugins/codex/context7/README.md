@@ -31,7 +31,7 @@ The plugin connects to the hosted Context7 MCP server:
 }
 ```
 
-When you add the plugin, a browser window opens to log in to Context7 via OAuth, so your requests use your account's authenticated rate limits. On remote or headless machines where a browser can't open, run `npx ctx7 setup --codex` instead — it uses the OAuth device flow and writes an API-key-backed configuration to `~/.codex/config.toml`. Create or manage API keys in the [Context7 dashboard](https://context7.com/dashboard).
+When you add the plugin, a browser window opens to log in to Context7 via OAuth, so your requests use your account's authenticated rate limits. On remote or headless machines where a browser can't open, run `npx ctx7 setup --codex` instead — it uses the OAuth device flow and writes an API-key-backed configuration to `~/.codex/config.toml`. Create or manage API keys in the [Context7 dashboard](https://context7.com/dashboard?tab=settings).
 
 ## Available Tools
 

@@ -18,7 +18,11 @@ vi.mock("fs", () => {
 });
 
 vi.mock("../constants.js", () => ({ CLI_CLIENT_ID: "test-client-id" }));
-vi.mock("../utils/api.js", () => ({ getBaseUrl: () => "https://test.context7.com" }));
+const deployment = vi.hoisted(() => ({ hosted: true }));
+vi.mock("../utils/api.js", () => ({
+  getBaseUrl: () => "https://test.context7.com",
+  isHostedDeployment: () => deployment.hosted,
+}));
 
 const mockConfirm = vi.fn();
 vi.mock("@inquirer/prompts", () => ({ confirm: (...args: unknown[]) => mockConfirm(...args) }));
@@ -228,6 +232,26 @@ describe("isTokenExpired", () => {
 });
 
 describe("getValidAccessToken", () => {
+  test("does not read or refresh hosted tokens for a custom deployment", async () => {
+    const tokens: TokenData = {
+      access_token: "expired-tok",
+      token_type: "bearer",
+      refresh_token: "refresh-tok",
+      expires_at: Date.now() - 1000,
+    };
+    mfs.existsSync.mockReturnValue(true);
+    mfs.readFileSync.mockReturnValue(JSON.stringify(tokens));
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    deployment.hosted = false;
+    try {
+      expect(await getValidAccessToken()).toBeUndefined();
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally {
+      deployment.hosted = true;
+      fetchSpy.mockRestore();
+    }
+  });
+
   test("returns undefined when no tokens stored", async () => {
     mfs.existsSync.mockReturnValue(false);
     expect(await getValidAccessToken()).toBeUndefined();
@@ -866,6 +890,21 @@ describe("startDeviceAuthorization", () => {
 
     await expect(startDeviceAuthorization("https://t", "c")).rejects.toThrow(
       /UNABLE_TO_VERIFY_LEAF_SIGNATURE.*NODE_EXTRA_CA_CERTS/s
+    );
+  });
+});
+
+describe("OAuth body timeouts", () => {
+  test("a login body that stalls after the headers ends with the timeout message", async () => {
+    const abort = Object.assign(new Error("The operation was aborted due to timeout"), {
+      name: "TimeoutError",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.reject(abort) })
+    );
+    await expect(startDeviceAuthorization("https://t.example", "test-client")).rejects.toThrow(
+      "https://t.example/api/oauth/device/code did not answer within 30 seconds"
     );
   });
 });

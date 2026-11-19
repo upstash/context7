@@ -1,5 +1,50 @@
 # @upstash/context7-mcp
 
+## 4.7.3
+
+### Patch Changes
+
+- 159156f: Replace the experimental `query-code` tool with `grep-code`, `glob-code`, `read-code` and `find-symbol`. `query-code` is removed; a dashboard choice that turned it on now turns on the new tools. They take the parameters of the Grep, Glob and Read tools that coding agents have, so agents search the library instead of the local project.
+
+## 4.7.2
+
+### Patch Changes
+
+- f5f2e4e: Serve the dashboard's experimental tools choice without a lookup per request. The hosted HTTP server (with `MCP_CLIENT_IP_ASSERTION_KEY`) keeps every user's choice in memory, refreshed from the Context7 app's snapshot endpoint every 15 seconds. Other servers ask the Context7 API at most once per credential every five minutes (two minutes after a failure), with at most 32 lookups in flight.
+
+## 4.7.1
+
+### Patch Changes
+
+- d80a84c: While a library's source is being indexed, `ctx7 code` and `query-code` now say to call again for up to 3 minutes instead of at most twice: a first index usually takes 1 to 3 minutes. When the server message already gives this rule, the clients no longer repeat it.
+- d53d88d: The research preview is now called experimental tools. Each signed-in user picks the experimental tools to list at Settings > MCP Tools in the Context7 dashboard, where "All experimental tools" also includes tools added later. The old flags (`--research-preview`, `CONTEXT7_RESEARCH_PREVIEW=1`, `?research_preview=1`) and the new `--experimental`, `CONTEXT7_EXPERIMENTAL=1` and `?experimental=1` still turn on every experimental tool.
+- 6e469e3: Update `@modelcontextprotocol/node` to 2.1.2 and `@modelcontextprotocol/server` to 2.4.0, which bring in security fixes for `@hono/node-server`, `hono` and their dependencies.
+- 0718ba8: `query-code` no longer greps a docs-style `query` of several words, which matched nothing: it answers with a correction that `pattern` is a regex matched within one line. A one-word `query`, or a phrase with `fixed_strings`, still works as the pattern. `pattern` now takes up to 1000 characters, like the server.
+- c5e26f6: Describe query-code references as name matches, resolved only for libraries with a SCIP index
+
+## 4.7.0
+
+### Minor Changes
+
+- d451493: Add a `page` argument to the `get-upgrade-guide` research preview tool: a long guide now comes in pages, each in full detail. Page 1 starts with everything needed to migrate (summary, before you start, codemods, breaking changes, deprecations), which continues on the next pages when it is longer than one page; behavior, config and API changes follow. A guide is served only once it is complete, so its pages always fit together; until then the tool says it is being prepared and when to call again, or that it could not be prepared.
+
+### Patch Changes
+
+- f2daacb: `get-upgrade-guide` no longer tells the agent never to retry a guide that could not be prepared: the agent uses `query-docs` now and calls again only after the time the answer gives. Telemetry records an unavailable guide as `unavailable` and a page past the last as `invalid`, instead of `not_found`; neither is shown to the agent as an error.
+
+## 4.6.0
+
+### Minor Changes
+
+- 2111b92: Add the `query-code` MCP tool and the `ctx7 code` command. They search and read a library's source code at the version its docs describe: `grep` with ripgrep's options, plus `definition`, `references`, `outline`, `read` and `list`. `ctx7 library` marks the libraries whose source is searchable, and `resolve-library-id` does so with the research preview on. The MCP tool is part of the research preview: it is listed only with `--research-preview`, `CONTEXT7_RESEARCH_PREVIEW=1` or `?research_preview=1`.
+- 7765f35: Add the `get-upgrade-guide` research preview tool: everything that changes between two versions of a library in one response, from the release notes and guides of every release in between and the public API diff of both versions.
+
+## 4.5.1
+
+### Patch Changes
+
+- fc65a5a: Keep the teamspace library-filter notice in resolve-library-id results when no libraries match.
+
 ## 4.5.0
 
 ### Minor Changes

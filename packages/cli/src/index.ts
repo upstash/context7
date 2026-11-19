@@ -7,7 +7,7 @@ import { registerRemoveCommand } from "./commands/remove.js";
 import { registerDocsCommands } from "./commands/docs.js";
 import { registerSearchCommand } from "./commands/search.js";
 import { maybeShowUpgradeNotice, registerUpgradeCommand } from "./commands/upgrade.js";
-import { setBaseUrl } from "./utils/api.js";
+import { configuredBaseUrl, setBaseUrl } from "./utils/api.js";
 import { VERSION } from "./constants.js";
 
 const brand = {
@@ -21,11 +21,11 @@ program
   .name("ctx7")
   .description("Context7 CLI - Fetch documentation context and configure Context7")
   .version(VERSION, "-v, --version")
-  .option("--base-url <url>", "Use a custom Context7 deployment URL")
+  .option("--base-url <url>", "Use a custom Context7 deployment URL (default: $CONTEXT7_BASE_URL)")
   .hook("preAction", (thisCommand) => {
-    const opts = thisCommand.opts();
-    if (opts.baseUrl) {
-      setBaseUrl(opts.baseUrl);
+    const baseUrl = configuredBaseUrl(thisCommand.opts().baseUrl);
+    if (baseUrl) {
+      setBaseUrl(baseUrl);
     }
   })
   .hook("preAction", async (_thisCommand, actionCommand) => {
@@ -53,7 +53,7 @@ Examples:
   ${brand.dim("# Query library documentation")}
   ${brand.primary('npx ctx7 search "how to stream an OpenAI response from a Next.js route"')}
   ${brand.primary('npx ctx7 library react "how to use hooks"')}
-  ${brand.primary('npx ctx7 docs /facebook/react "useEffect examples"')}
+  ${brand.primary('npx ctx7 docs /reactjs/react.dev "useEffect examples"')}
 `
   );
 
@@ -74,7 +74,7 @@ program.action(() => {
   console.log("  Quick start:");
   console.log(`    ${brand.primary("npx ctx7 setup")}`);
   console.log(`    ${brand.primary('npx ctx7 search "how to validate a request body"')}`);
-  console.log(`    ${brand.primary('npx ctx7 docs /facebook/react "useEffect examples"')}`);
+  console.log(`    ${brand.primary('npx ctx7 docs /reactjs/react.dev "useEffect examples"')}`);
   console.log("");
 
   console.log(`  Run ${brand.primary("npx ctx7 --help")} for all commands and options`);

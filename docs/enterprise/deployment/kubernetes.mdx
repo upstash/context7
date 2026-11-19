@@ -174,7 +174,7 @@ metadata:
   name: context7
   namespace: context7
   annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
 spec:
   ingressClassName: nginx
   tls:
@@ -256,10 +256,17 @@ Context7 requires outbound connectivity to the following:
 | Destination | Purpose |
 |---|---|
 | `ghcr.io` | Container image pulls (`imagePullPolicy: Always`) |
-| `context7.com` | License validation |
+| `context7.com` | Online license only: license check, daily usage report, and public library search. See [Network and data flow](/enterprise/on-premise#network-and-data-flow) |
 | Your LLM provider (for example, `api.openai.com` or the regional AWS Bedrock Runtime endpoint) | AI inference and embeddings |
 | AWS credential endpoints, when using workload credentials | Resolving EKS Pod Identity, IRSA, ECS, or EC2 role credentials for Bedrock |
-| `github.com` / `gitlab.com` | Repository cloning |
+| `github.com` / `gitlab.com`, or your self-hosted Git hosts | Repository cloning |
+| Your documentation sources | Website, Confluence, Notion, or Google Drive indexing |
+
+An offline license (`ctx7off.` prefix) is checked locally and makes no calls to `context7.com`. Per-user usage always stays on the instance.
+
+To send these calls through an egress mirror, set `CONTEXT7_API_URL` (default `https://context7.com/api`).
+
+The server does not use `HTTP_PROXY` or `HTTPS_PROXY` for its own calls. Allow this egress directly or through a transparent proxy.
 
 If you use NetworkPolicies, ensure egress to these endpoints is allowed:
 
@@ -283,6 +290,15 @@ For stricter policies, allow egress on port 443 to the specific domains listed a
 
 When using AWS Bedrock, allow the regional Bedrock Runtime endpoint (`bedrock-runtime.<region>.amazonaws.com`) and any endpoint required by your AWS credential provider. For private clusters, you can instead use a Bedrock Runtime interface VPC endpoint and enter its URL in Context7. See [AWS Bedrock](/enterprise/integrations/aws-bedrock) for IAM, credential, region, and PrivateLink configuration.
 
+If your network uses a private certificate authority:
+
+1. Mount its PEM file (for example from a ConfigMap).
+2. Set `NODE_EXTRA_CA_CERTS` to the file's path.
+
+The whole server then trusts it, for every outbound call: AI providers, Bedrock, Confluence, Notion, Google, SSO identity providers, the license server, and Git.
+
+`GIT_TLS_INSECURE=true` turns off TLS checks for all outbound HTTPS and Git calls. Use it only for testing.
+
 ## Operations
 
 ### Updating
@@ -297,7 +313,7 @@ To pin a specific version:
 
 ```bash
 kubectl set image statefulset/context7 \
-  context7=ghcr.io/context7/enterprise:1.2.0 \
+  context7=ghcr.io/context7/enterprise:2.0.0 \
   -n context7
 ```
 
@@ -331,13 +347,14 @@ Example response:
 ```json
 {
   "status": "healthy",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "setup": "complete",
   "license": "configured",
   "licenseInfo": {
     "valid": true,
     "teamSize": 10,
-    "expiresAt": "2026-06-01T00:00:00.000Z"
+    "expiresAt": "2026-06-01T00:00:00.000Z",
+    "offline": false
   },
   "repos_parsed": 5,
   "uptime": 3600,
@@ -347,10 +364,35 @@ Example response:
     "embedding": "configured",
     "embedding_provider": "openai",
     "github": "configured",
-    "gitlab": "not configured"
+    "github_method": "PAT",
+    "gitlab": "missing"
   }
 }
 ```
+
+Each `connectivity` value is `"configured"` or `"missing"`. `github_method` is `"PAT"`, `"GitHub App"`, or `null`.
+
+`/api/health` is a liveness check. It still returns `"healthy"` when the database is down; `repos_parsed` and `connectivity` are then `null`.
+
+To check that the instance can serve traffic, use `GET /api/ready`. It returns `200` when the database answers and the MCP bridge is up. Otherwise it returns `503`.
+
+### Recover admin access
+
+If you lose the admin password, or a broken SSO setup locks you out, reset a local admin account from inside the pod:
+
+```bash
+kubectl exec -n context7 context7-0 -- \
+  node dist/enterprise/reset-password.mjs --username admin
+```
+
+The command:
+
+- Sets the password of the local account, and creates the account if it does not exist.
+- Makes the account an enabled admin.
+- Signs the account out of its sessions.
+- Turns password sign-in back on.
+
+Without `--password <new>`, it prints a generated password once. Passwords need at least 8 characters. The command does not work for a username that signs in with SSO.
 
 ### Logs
 
@@ -377,7 +419,7 @@ kubectl logs -n context7 context7-0
 Look for `[license]` messages in the first few lines. Common causes:
 
 - **Missing or incorrect `LICENSE_KEY`** in the `context7-config` secret
-- **No outbound connectivity** to `context7.com` for license validation
+- **No outbound connectivity** to `context7.com` for license validation (online license only)
 - **Expired license**: contact [context7@upstash.com](mailto:context7@upstash.com) to renew
 
 <Note>
@@ -391,7 +433,7 @@ The manifests above run a single replica: a StatefulSet with a `ReadWriteOnce` v
 To run multiple replicas behind the Service, move that state to an external PostgreSQL with the `pgvector` extension. Relational data and embeddings both live in Postgres, so every pod becomes stateless and interchangeable: swap the StatefulSet for a `Deployment` with `replicas` greater than one, mount `/data` as scratch (`emptyDir`), and gate readiness on `/api/ready` so a pod only receives traffic once it has connected to Postgres.
 
 <Note>
-A Helm chart renders all of this from a few values: the single-replica StatefulSet by default, or a multi-replica Deployment with `scaling.enabled=true`. It ships with the enterprise distribution.
+A Helm chart renders all of this from a few values: the single-replica StatefulSet by default, or a multi-replica Deployment with `scaling.enabled=true`. See [Helm](/enterprise/deployment/helm).
 </Note>
 
 See [Scaling](/enterprise/deployment/scaling) for the full setup, PostgreSQL and pgvector provisioning, and migrating an existing single-container deployment.

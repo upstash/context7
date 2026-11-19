@@ -1,5 +1,56 @@
 # Changelog
 
+## 0.12.2
+
+### Patch Changes
+
+- 7fe6e09: The rules and skills that `ctx7 setup` and the plugins install are back to their text from before the source code and upgrade guide tools: no `query-code`, `ctx7 code` or `get-upgrade-guide` guidance. The MCP server describes its experimental tools only to users who turned them on.
+
+## 0.12.1
+
+### Patch Changes
+
+- 3ec0de0: `ctx7` reads the deployment URL from `CONTEXT7_BASE_URL` when `--base-url` is not passed, so on-premise users set it once instead of on every command. `--base-url` still wins when both are set, and a custom URL from either source turns off the update check and telemetry.
+
+  For a custom deployment, `ctx7` no longer sends the `ctx7 login` session (or refreshes it against that host); it authenticates with `CONTEXT7_API_KEY` only.
+
+## 0.12.0
+
+### Minor Changes
+
+- 6515def: Add `ctx7 get-upgrade-guide <libraryId> <fromVersion> [toVersion]`, the CLI counterpart of the `get-upgrade-guide` MCP tool. It prints the guide between two versions of a library, with `--page` for long guides and `--json`, and exits with code 75 while the guide is being prepared.
+
+### Patch Changes
+
+- 7d8781b: `ctx7 login` and `ctx7 whoami` no longer hang on a stalled host: the identity check times out after 30 s, and an OAuth answer whose body stalls after the headers ends with the same clear timeout message as a stalled connection.
+- 76511d5: `ctx7` API calls now time out instead of hanging on a stalled connection: `ctx7 code` after 70 s (the server waits up to 40 s for a first index), the other commands after 60 s, also when the answer stalls after its headers. Login and token refresh calls time out after 30 s, and the usage ping after 3 s, so a stalled host no longer keeps `ctx7` running. A timeout prints a clear error and exits 1.
+- 8fc3f6d: When stdout is piped, `ctx7` writes warnings, errors and their hints to stderr, so `ctx7 code ... | grep x` still shows the "being indexed" notice and errors. `--json` output stays on stdout.
+- d80a84c: While a library's source is being indexed, `ctx7 code` and `query-code` now say to call again for up to 3 minutes instead of at most twice: a first index usually takes 1 to 3 minutes. When the server message already gives this rule, the clients no longer repeat it.
+
+## 0.11.1
+
+### Patch Changes
+
+- 251c6c5: Use `/reactjs/react.dev` in CLI help examples. `/facebook/react` now redirects to another library and returns no documentation.
+
+## 0.11.0
+
+### Minor Changes
+
+- 2111b92: Add the `query-code` MCP tool and the `ctx7 code` command. They search and read a library's source code at the version its docs describe: `grep` with ripgrep's options, plus `definition`, `references`, `outline`, `read` and `list`. `ctx7 library` marks the libraries whose source is searchable, and `resolve-library-id` does so with the research preview on. The MCP tool is part of the research preview: it is listed only with `--research-preview`, `CONTEXT7_RESEARCH_PREVIEW=1` or `?research_preview=1`.
+
+## 0.10.0
+
+### Minor Changes
+
+- 9783083: Add Pi to `ctx7 setup` and `ctx7 remove`. `ctx7 setup --pi` writes the Context7 MCP server to `~/.pi/agent/mcp.json` (or `.pi/mcp.json` with `--project`) with `direct` tool exposure. It also adds the Context7 rule to Pi's context file and installs the skill in `~/.agents/skills`. Pi reads one context file per folder, so setup adds the rule to an existing `AGENTS.override.md` or `CLAUDE.md` instead of creating an `AGENTS.md` that would hide it. Setup honors `PI_CODING_AGENT_DIR`, and with `--oauth` it prints the `pi mcp login context7` step.
+
+### Patch Changes
+
+- 505b812: Keep your comments when `ctx7 setup` or `ctx7 remove` touches an MCP config. `.vscode/mcp.json` and `.cursor/mcp.json` are JSONC, and the CLI accepted them for reading but wrote them back through `JSON.stringify`, so every comment and any layout you kept in the file was silently dropped. The Context7 entry is now added or removed with an in-place edit that leaves the rest of the file alone, comments included. A file the edit cannot handle safely, such as one whose trailing comma would be stranded, is still rewritten whole as before.
+- db66f7a: Fix `ctx7 setup` and `ctx7 remove` leaving the Context7 section in an AGENTS.md or GEMINI.md that has CRLF line endings.
+- ff0422f: Add a T3 Code setup choice and --t3 setup/remove flag that configure its Claude Code and Codex providers.
+
 ## 0.9.0
 
 ### Minor Changes

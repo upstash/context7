@@ -51,14 +51,14 @@ console.log(results.rules);
 
 // Search for libraries
 const libraries = await client.searchLibrary("I need to build a UI with components", "react");
-console.log(libraries[0].id); // "/facebook/react"
+console.log(libraries[0].id); // "/reactjs/react.dev"
 
 // Get documentation as JSON array (default)
-const docs = await client.getContext("How do I use hooks?", "/facebook/react");
+const docs = await client.getContext("How do I use hooks?", "/reactjs/react.dev");
 console.log(docs[0].title, docs[0].content);
 
 // Get documentation context as plain text
-const context = await client.getContext("How do I use hooks?", "/facebook/react", { type: "txt" });
+const context = await client.getContext("How do I use hooks?", "/reactjs/react.dev", { type: "txt" });
 console.log(context);
 ```
 
@@ -82,23 +82,26 @@ const client = new Context7();
 
 Vercel Marketplace resources can authenticate without a long-lived Context7
 API key. Pass Vercel's per-resource access-token callback as a token provider
-so each request receives a current token:
+so each request receives a current token. Open the connected Context7 resource in
+the Vercel dashboard, copy its Vercel resource ID (`store_…` or `ir_…`) from
+the resource page URL, and set it as `CONTEXT7_RESOURCE_ID` in your Vercel project's
+environment variables.
 
 ```ts
 import { Context7 } from "@upstash/context7-sdk";
 import { getIntegrationToken } from "@vercel/integrations";
 
+const resourceId = process.env.CONTEXT7_RESOURCE_ID;
+if (!resourceId) throw new Error("Set CONTEXT7_RESOURCE_ID to your Vercel resource ID");
+
 const client = new Context7({
-  authToken: () => getIntegrationToken("context7"),
+  authToken: () => getIntegrationToken(resourceId),
 });
 ```
 
-The `getIntegrationToken` signature is based on Vercel's current provider
-specification and may change before Marketplace OIDC is generally available.
-
-The token's `resource` claim must match the Context7 resource created during
-Marketplace provisioning. Do not resolve the token once at startup: Vercel
-Marketplace OIDC tokens are short-lived.
+Vercel Marketplace OIDC tokens last 15 minutes. Use `@vercel/integrations`
+0.1.2 or later to cache and refresh them. Pass a function as `authToken` so each
+request can use a current token.
 
 Explicit credentials take precedence in this order: `apiKey`, `authToken`, then
 `CONTEXT7_API_KEY`. This allows OIDC to be tested while a legacy API key remains
@@ -128,7 +131,7 @@ const client = new Context7({
 const controller = new AbortController();
 
 try {
-  const docs = await client.getContext("How do I use hooks?", "/facebook/react", {
+  const docs = await client.getContext("How do I use hooks?", "/reactjs/react.dev", {
     signal: controller.signal,
     timeout: 5_000,
     cache: "no-store",

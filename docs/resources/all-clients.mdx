@@ -6,15 +6,16 @@ description: Installation examples for MCP clients
 Context7 supports all MCP clients. Below are configuration examples for popular clients. If your client isn't listed, check its documentation for MCP server installation. To configure manually, use the Context7 server URL `https://mcp.context7.com/mcp` with your MCP client and pass your API key via the `Authorization: Bearer YOUR_API_KEY` header.
 
 <Tip>
-  Looking for the easiest way to get started? Use `npx ctx7 setup` to configure Context7
-  automatically, and `npx ctx7 remove` to remove the generated setup later. See the [CLI
-  docs](/clients/cli) for more details.
+  Looking for the easiest way to get started? Paste `Read https://context7.com/get-started.md and
+  set up Context7` into your coding agent. It sets up Context7, and you sign in with OAuth. Or run
+  `npx ctx7 setup` yourself, and `npx ctx7 remove` to remove the generated setup later. See the
+  [CLI docs](/clients/cli) for more details.
 </Tip>
 
 <Note>
   For detailed guides including rules, skills, agents, and best practices, see
   [Cursor](/clients/cursor) for rules and Composer integration tips, and [Claude
-  Code](/clients/claude-code) for skills, agents, commands, and plugin installation.
+  Code](/clients/claude-code) for plugin installation and sign-in.
 </Note>
 
 ## OAuth Authentication
@@ -213,6 +214,14 @@ We recommend built-in MCP because the Context7 MCP server receives updates more 
 
 Pi has built-in MCP support from version 0.99.0. Run `pi update` to update Pi, then choose one connection method below. See the [Pi guide](/clients/pi) for usage examples and [Pi's MCP documentation](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/mcp.md) for configuration details.
 
+##### Quick setup
+
+```sh
+npx ctx7 setup --pi
+```
+
+This command writes the MCP server, a Context7 rule, and a skill for Pi. See the [Pi guide](/clients/pi#quick-setup) for the files it changes.
+
 ##### OAuth
 
 ```sh
@@ -224,7 +233,7 @@ Approve access in your browser. Pi stores and refreshes the OAuth tokens.
 
 ##### Remote server with an API key
 
-Create a key in the [Context7 dashboard](https://context7.com/dashboard) and export it before starting Pi:
+Create a key in the [Context7 dashboard](https://context7.com/dashboard?tab=settings) and export it before starting Pi:
 
 ```sh
 export CONTEXT7_API_KEY="YOUR_API_KEY"
@@ -255,7 +264,7 @@ The [official Context7 extension](/clients/pi#context7-extension) is an alternat
 pi install npm:@upstash/context7-pi
 ```
 
-Run `/reload` or start a new Pi session, then ask a documentation question or use `/c7-docs next.js Cache Components`. It supports anonymous access and the `CONTEXT7_API_KEY` environment variable. Choose either the extension or the MCP setup above to avoid duplicate tools.
+Run `/reload` or start a new Pi session, then ask a documentation question or use `/c7-docs next.js Cache Components`. It reads your API key from the `CONTEXT7_API_KEY` environment variable. Choose either the extension or the MCP setup above to avoid duplicate tools.
 
 </Accordion>
 
@@ -636,6 +645,18 @@ Find `Context7` in your plugins, install it, and complete the one-time OAuth aut
 
 Start a new chat, type `@` in the prompt box, and select `Context7`.
 
+#### Authentication
+
+ChatGPT connects with OAuth only and has no field for an API key. Use `https://mcp.context7.com/mcp/oauth`, which asks every request without a sign-in to sign in. During authorization you choose the Context7 teamspace the plugin uses. To switch teamspaces, reconnect the plugin and choose another teamspace on the consent screen.
+
+#### Reconnecting
+
+If ChatGPT reports that the Context7 sign-in expired, open your ChatGPT plugins, find `Context7`, and reconnect it to run the OAuth authorization again.
+
+#### Quota errors
+
+A monthly quota error means a Free teamspace used its included requests. It gets 20 bonus requests the next day and its full allowance at the start of the next calendar month (UTC); to keep working, upgrade at [context7.com/plans](https://context7.com/plans). A rate limit error is a per-minute limit: wait a minute and try again. See [Plans & Pricing](/plans-pricing).
+
 </Accordion>
 
 <Accordion title="Trae">
@@ -845,7 +866,7 @@ Use these alternatives to run the local Context7 MCP server with other runtimes.
       "command": "deno",
       "args": [
         "run",
-        "--allow-env=NO_DEPRECATION,TRACE_DEPRECATION",
+        "--allow-env",
         "--allow-net",
         "npm:@upstash/context7-mcp"
       ]

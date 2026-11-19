@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@upstash/context7-sdk": "^0.6.0",
+    "@vercel/integrations": "^0.1.2",
     "ai": "^7.0.150",
     "eve": "^0.83.0",
     "zod": "4.6.7"
