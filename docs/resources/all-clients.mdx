@@ -647,15 +647,15 @@ Start a new chat, type `@` in the prompt box, and select `Context7`.
 
 #### Authentication
 
-ChatGPT authenticates with OAuth only. There is no field for an API key, so ChatGPT cannot send a custom API key header: use the OAuth server URL `https://mcp.context7.com/mcp/oauth`, not the API key server URL `/mcp`. The account you are signed in to in the browser is the Context7 teamspace the plugin uses; to switch teamspaces, sign out and back in with the account that owns the other teamspace.
+ChatGPT connects with OAuth only and has no field for an API key. Use `https://mcp.context7.com/mcp/oauth`, which asks every request without a sign-in to sign in. During authorization you choose the Context7 teamspace the plugin uses. To switch teamspaces, reconnect the plugin and choose another teamspace on the consent screen.
 
 #### Reconnecting
 
-If ChatGPT reports that the Context7 sign-in expired, open your ChatGPT plugins, find `Context7`, and reconnect it to run the OAuth authorization again. The plugin then retries with a fresh sign-in.
+If ChatGPT reports that the Context7 sign-in expired, open your ChatGPT plugins, find `Context7`, and reconnect it to run the OAuth authorization again.
 
 #### Quota errors
 
-When the request is refused with a monthly quota or rate limit error, the teamspace has used its plan's included requests. Continue on the current plan at the start of the next calendar month (UTC), or upgrade at [context7.com/plans](https://context7.com/plans) for a higher limit. See [Plans & Pricing](/plans-pricing).
+A monthly quota error means a Free teamspace used its included requests. It gets 20 bonus requests the next day and its full allowance at the start of the next calendar month (UTC); to keep working, upgrade at [context7.com/plans](https://context7.com/plans). A rate limit error is a per-minute limit: wait a minute and try again. See [Plans & Pricing](/plans-pricing).
 
 </Accordion>
 
