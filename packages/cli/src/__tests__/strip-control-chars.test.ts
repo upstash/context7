@@ -9,7 +9,7 @@ import {
 } from "../utils/api.js";
 
 const EVIL = "\x1b]52;c;ZWNobyBwd25k\x07\x1b[2J\x1b[Htitle\r\n\tok\x9b1m";
-const CLEAN = "]52;c;ZWNobyBwd25k[2J[Htitle\n\tok1m";
+const CLEAN = "title\n\tok";
 
 function stubFetch(body: string, init: ResponseInit = {}): void {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body, init)));
@@ -26,6 +26,17 @@ describe("stripControlChars", () => {
       a: [CLEAN, 1, null],
       b: { c: CLEAN },
     });
+  });
+
+  it("removes whole OSC and CSI sequences, not just their introducers", () => {
+    expect(stripControlChars("\x1b]8;;https://evil.example\x1b\\link\x1b]8;;\x1b\\")).toBe("link");
+    expect(stripControlChars("\x1b[31mred\x1b[0m \x9b2Jdone")).toBe("red done");
+  });
+
+  it("strips object keys, which JSON.stringify would print with C1 intact", () => {
+    const stripped = stripControlChars({ "k\x9b2J": { "\x1b[2Jinner\x85": EVIL } });
+    expect(stripped).toEqual({ k: { inner: CLEAN } });
+    expect(JSON.stringify(stripped)).not.toMatch(/[\x00-\x08\x0B-\x1F\x7F-\x9F]/);
   });
 
   it("keeps printable Unicode", () => {
@@ -95,9 +106,9 @@ describe("API responses are stripped", () => {
     stubFetch(EVIL);
     expect(await searchDocumentation("q", { type: "txt" })).toBe(CLEAN);
 
-    stubFetch(json({ results: [{ title: EVIL }] }));
+    stubFetch(json({ results: [{ title: EVIL, ["key\x9b2J"]: 1 }] }));
     expect(await searchDocumentation("q", { type: "json" })).toEqual({
-      results: [{ title: CLEAN }],
+      results: [{ title: CLEAN, key: 1 }],
     });
 
     stubFetch(json({ message: EVIL }), { status: 500 });
