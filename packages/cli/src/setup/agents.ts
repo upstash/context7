@@ -410,9 +410,12 @@ const agents = {
   // the official Codelabs guide, Antigravity 2.0/IDE/CLI read MCP servers from
   // ~/.gemini/config/mcp_config.json globally; there is no project-level MCP
   // config, so projectPaths is empty and setupAgent falls back to global.
+  // Skills follow https://antigravity.google/docs/skills: workspace skills live
+  // in .agents/skills (.agent/skills is legacy), and global skills shared by
+  // the App, IDE and CLI live in ~/.gemini/config/skills.
   antigravity: {
     displayName: "Antigravity",
-    setupDescription: "Set up for Antigravity (.agent/skills)",
+    setupDescription: "Set up for Antigravity (.agents/skills)",
     mcp: {
       projectPaths: [],
       globalPaths: [join(homedir(), ".gemini", "config", "mcp_config.json")],
@@ -428,7 +431,9 @@ const agents = {
     skill: {
       name: "context7-mcp",
       dir: (scope) =>
-        scope === "global" ? join(homedir(), ".agent", "skills") : join(".agent", "skills"),
+        scope === "global"
+          ? join(homedir(), ".gemini", "config", "skills")
+          : join(".agents", "skills"),
     },
     detect: {
       projectPaths: [".agent"],
