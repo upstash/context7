@@ -26,6 +26,7 @@ ctx7 setup --cursor
 ctx7 setup --claude
 ctx7 setup --opencode
 ctx7 setup --vscode
+ctx7 setup --vscode-insiders
 ctx7 setup --devin
 ctx7 setup --copilot
 ctx7 setup --pi
@@ -142,6 +143,7 @@ ctx7 setup --cursor
 ctx7 setup --claude
 ctx7 setup --opencode
 ctx7 setup --vscode
+ctx7 setup --vscode-insiders
 ctx7 setup --devin
 ctx7 setup --copilot
 ctx7 setup --pi
