@@ -20,8 +20,14 @@ describe("agent command registry", () => {
     const command = program.commands.find((candidate) => candidate.name() === commandName);
     expect(command).toBeDefined();
     expect(registeredLongOptions(command!)).toEqual(
-      expect.arrayContaining(ALL_AGENT_NAMES.map((name) => `--${name}`))
+      expect.arrayContaining(
+        ALL_AGENT_NAMES.map((name) => getAgent(name).setupOption ?? `--${name}`)
+      )
     );
+
+    expect(
+      command!.options.find((option) => option.long === "--vscode-insiders")?.attributeName()
+    ).toBe("vscodeInsiders");
   });
 
   test("file-specific rule formatting belongs to the agent policy", () => {
