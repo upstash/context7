@@ -84,6 +84,12 @@ async function resolveCommand(
     return;
   }
 
+  if (options.json) {
+    spinner?.stop();
+    console.log(JSON.stringify(data.results || [], null, 2));
+    return;
+  }
+
   if (!data.results || data.results.length === 0) {
     spinner?.warn(`No libraries found matching "${library}"`);
     if (!spinner) log.warn(`No libraries found matching "${library}"`);
@@ -93,11 +99,6 @@ async function resolveCommand(
   const results = data.results;
 
   spinner?.stop();
-
-  if (options.json) {
-    console.log(JSON.stringify(results, null, 2));
-    return;
-  }
 
   log.blank();
 
@@ -196,6 +197,12 @@ async function queryCommand(
     return;
   }
 
+  if (options.json) {
+    spinner?.stop();
+    console.log(JSON.stringify(ctx, null, 2));
+    return;
+  }
+
   const total = (ctx.codeSnippets?.length || 0) + (ctx.infoSnippets?.length || 0);
   if (total === 0) {
     spinner?.warn(`No documentation found for: "${query}"`);
@@ -204,11 +211,6 @@ async function queryCommand(
   }
 
   spinner?.stop();
-
-  if (options.json) {
-    console.log(JSON.stringify(ctx, null, 2));
-    return;
-  }
 
   log.blank();
 
