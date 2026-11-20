@@ -196,6 +196,22 @@ describe("mergeServerEntry", () => {
       url: "https://mcp.context7.com/mcp",
     });
   });
+
+  test.each([
+    ["an array", []],
+    ["a string", "none"],
+    ["null", null],
+  ])("replaces a section that is %s with a plain map", (_label, section) => {
+    const { config, alreadyExists } = mergeServerEntry(
+      { mcpServers: section },
+      "mcpServers",
+      "context7",
+      { url: "https://mcp.context7.com/mcp" }
+    );
+    expect(alreadyExists).toBe(false);
+    // Rewriting the file must not spread array indexes or string characters in.
+    expect(config.mcpServers).toEqual({ context7: { url: "https://mcp.context7.com/mcp" } });
+  });
 });
 
 describe("removeServerEntry", () => {
