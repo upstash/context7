@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.13.0
+
+### Minor Changes
+
+- 32dccfd: Agents pass the version a project uses as its own value, not as a suffix of the library ID. `query-docs` (MCP and pi) takes a `version` input and `ctx7 docs` a `--tag` option, sent to `/v2/context` as `version`; Context7 serves that version or the closest one it has. `resolve-library-id` no longer lists versions.
+
+### Patch Changes
+
+- 7b68139: Strip terminal control characters from crowdsourced API content (library titles, descriptions, docs, code, upgrade guides and search results) before printing, preventing ANSI/OSC escape sequence injection in `ctx7` output. Reported by Syed Anas Mohiuddin.
+
 ## 0.12.2
 
 ### Patch Changes
