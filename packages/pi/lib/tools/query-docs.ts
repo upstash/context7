@@ -7,11 +7,13 @@ import {
   QUERY_DOCS_DESCRIPTION,
   QUERY_DOCS_LIBRARY_ID_DESCRIPTION,
   QUERY_DOCS_QUERY_DESCRIPTION,
+  QUERY_DOCS_VERSION_DESCRIPTION,
 } from "../prompts";
 
 const Params = Type.Object({
   libraryId: Type.String({ description: QUERY_DOCS_LIBRARY_ID_DESCRIPTION }),
   query: Type.String({ description: QUERY_DOCS_QUERY_DESCRIPTION }),
+  version: Type.Optional(Type.String({ description: QUERY_DOCS_VERSION_DESCRIPTION })),
 });
 
 export const queryDocsTool: ToolDefinition<typeof Params, undefined> = {
@@ -20,7 +22,7 @@ export const queryDocsTool: ToolDefinition<typeof Params, undefined> = {
   description: QUERY_DOCS_DESCRIPTION,
   parameters: Params,
   async execute(_toolCallId: string, params: Static<typeof Params>) {
-    const text = await fetchLibraryContext(params.query, params.libraryId);
+    const text = await fetchLibraryContext(params.query, params.libraryId, params.version);
     return toToolResult(text);
   },
 };
