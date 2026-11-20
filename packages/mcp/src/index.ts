@@ -73,6 +73,7 @@ import {
   usableApiKey,
 } from "./lib/mcp-http-auth.js";
 import { mcpRouteFromUrl } from "./lib/mcp-route.js";
+import { context7SkillCatalog } from "./lib/skills.js";
 import { parseOAuthAudienceEnforcement } from "./lib/oauth-audience.js";
 
 /** Default HTTP server port */
@@ -295,9 +296,9 @@ function createMcpServer(
   const serverOptions = {
     // The collections are static for the process lifetime. Explicitly disabling
     // change notifications prevents clients from opening subscriptions/listen
-    // streams for events this server never publishes. Declaring prompts and
-    // resources still installs their empty list handlers for clients that call
-    // them unconditionally.
+    // streams for events this server never publishes. Declaring prompts still
+    // installs its empty list handler for clients that call it unconditionally;
+    // resources carry the skill files.
     capabilities: {
       tools: { listChanged: false },
       prompts: { listChanged: false },
@@ -323,6 +324,9 @@ Do not use for: refactoring, debugging, or reviewing code that does not depend o
   const server = mcpInstrumentation
     ? mcpInstrumentation.createServer(serverInfo, serverOptions, mcpContext)
     : new McpServer(serverInfo, serverOptions);
+  // attach() is an @experimental SDK API: how an extension is wired to a server may change in a
+  // minor SDK release, so recheck this call on every SDK upgrade.
+  context7SkillCatalog.attach(server);
 
   server.registerTool(
     RESOLVE_LIBRARY_ID_TOOL,
