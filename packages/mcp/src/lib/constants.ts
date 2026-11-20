@@ -85,3 +85,9 @@ export function mcpServerCard(resourceUrl = RESOURCE_URL) {
     ],
   };
 }
+
+/**
+ * Tool `_meta` that asks Claude Code to load the tool up front instead of
+ * deferring it behind tool search. Other clients ignore the key.
+ */
+export const ALWAYS_LOAD_META = { "anthropic/alwaysLoad": true } as const;
