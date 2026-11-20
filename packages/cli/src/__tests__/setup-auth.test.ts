@@ -18,6 +18,7 @@ const mockSpinner = {
   start: vi.fn().mockReturnThis(),
   succeed: vi.fn().mockReturnThis(),
   fail: vi.fn().mockReturnThis(),
+  stop: vi.fn().mockReturnThis(),
 };
 vi.mock("ora", () => ({ default: () => mockSpinner }));
 
@@ -42,7 +43,7 @@ describe("setup authentication", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(resolveSetupApiKey()).resolves.toBe("ctx7sk-device-key");
+    await expect(resolveSetupApiKey()).resolves.toEqual({ apiKey: "ctx7sk-device-key" });
 
     expect(mockPerformLogin).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
@@ -55,7 +56,7 @@ describe("setup authentication", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(resolveSetupApiKey()).resolves.toBe("ctx7sk-new-key");
+    await expect(resolveSetupApiKey()).resolves.toEqual({ apiKey: "ctx7sk-new-key" });
 
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -68,7 +69,7 @@ describe("setup authentication", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(resolveSetupApiKey()).resolves.toBe("ctx7sk-generated-key");
+    await expect(resolveSetupApiKey()).resolves.toEqual({ apiKey: "ctx7sk-generated-key" });
 
     expect(fetchMock).toHaveBeenCalledWith(
       "https://test.context7.com/api/dashboard/api-keys",
@@ -77,5 +78,39 @@ describe("setup authentication", () => {
         headers: expect.objectContaining({ Authorization: "Bearer legacy-oauth-token" }),
       })
     );
+  });
+
+  test.each(["api_keys_disabled", "api_key_admins_only"])(
+    "reports a %s refusal instead of failing",
+    async (code) => {
+      mockGetValidAccessToken.mockResolvedValue("legacy-oauth-token");
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status: 403,
+          json: () => Promise.resolve({ error: code, message: "Connect with OAuth instead" }),
+        })
+      );
+
+      await expect(resolveSetupApiKey()).resolves.toEqual({ refusal: code });
+      expect(mockSpinner.fail).not.toHaveBeenCalled();
+    }
+  );
+
+  test("fails on any other 403", async () => {
+    mockGetValidAccessToken.mockResolvedValue("legacy-oauth-token");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: () => Promise.resolve({ error: "access_denied", message: "No access" }),
+      })
+    );
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(resolveSetupApiKey()).resolves.toBeNull();
+    expect(mockSpinner.fail).toHaveBeenCalledWith("Authentication failed");
   });
 });

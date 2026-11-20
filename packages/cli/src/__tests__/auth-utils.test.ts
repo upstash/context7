@@ -941,6 +941,25 @@ describe("pollDeviceToken", () => {
     expect((await pollDeviceToken("https://t", "c", "dc")).status).toBe(expected);
   });
 
+  test("passes on the server's reason for access_denied", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: () =>
+          Promise.resolve({
+            error: "access_denied",
+            error_description: "This teamspace does not allow API keys.",
+          }),
+      })
+    );
+    expect(await pollDeviceToken("https://t", "c", "dc")).toEqual({
+      status: "denied",
+      errorMessage: "This teamspace does not allow API keys.",
+    });
+  });
+
   test("returns transient on a 5xx response", async () => {
     vi.stubGlobal(
       "fetch",
