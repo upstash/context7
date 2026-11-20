@@ -108,6 +108,12 @@ Click it. You are redirected to your identity provider's login page. After authe
 
 The first time someone signs in, Context7 creates a user record using their name, email, and role from the token claims. On subsequent sign-ins, the name, email, and role are refreshed from the latest token, so changes in your IdP take effect automatically on the next login.
 
+## Sign-in from MCP clients
+
+With [OAuth sign-in for MCP clients](/enterprise/security/mcp-oauth), an MCP client sends the user to this sign-in flow when it needs a token. After the IdP sends the user back, Context7 returns to the client's consent step instead of the dashboard. Nothing changes in your IdP configuration.
+
+An OAuth authorization outlives the browser session: removing a user from the IdP group ends it only when it expires, after at most 30 days. To end it at once, choose **Disable sign-in** for the user on the **Members** page.
+
 ## Disabling password sign-in
 
 Once OIDC is live, you can turn off password-based sign-in entirely so that all users must authenticate through your IdP.

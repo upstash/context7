@@ -347,3 +347,153 @@ describe("on-premise setup network boundary", () => {
     await expect(readFile(join(tempDir, ".codex", "config.toml"), "utf-8")).rejects.toThrow();
   });
 });
+
+describe("on-premise OAuth sign-in", () => {
+  function authStatus(body: Record<string, unknown>) {
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => body } as Response);
+  }
+
+  async function runSetup(...extra: string[]) {
+    const program = new Command();
+    program.exitOverride();
+    registerSetupCommand(program);
+    await program.parseAsync([
+      "node",
+      "ctx7",
+      "setup",
+      "--mcp",
+      "--base-url",
+      "https://context7.internal.example",
+      "--codex",
+      "--project",
+      ...extra,
+    ]);
+  }
+
+  const codexConfig = () => readFile(join(tempDir, ".codex", "config.toml"), "utf-8");
+
+  test("writes a keyless config without prompting when the server uses OAuth only", async () => {
+    authStatus({ enabled: true, mode: "oauth", oauth: { available: true } });
+    await runSetup();
+    expect(promptMocks.password).not.toHaveBeenCalled();
+    const config = await codexConfig();
+    expect(config).toContain('url = "https://context7.internal.example/mcp"');
+    expect(config).not.toContain("Authorization");
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  test("refuses --api-key when the server accepts OAuth only", async () => {
+    authStatus({ enabled: true, mode: "oauth", oauth: { available: true } });
+    await runSetup("--api-key", "ctx7op-abc_def", "--yes");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("prefers OAuth when the server accepts both and no key is given", async () => {
+    authStatus({ enabled: true, mode: "both", oauth: { available: true } });
+    await runSetup("--yes");
+    expect(promptMocks.password).not.toHaveBeenCalled();
+    expect(await codexConfig()).not.toContain("Authorization");
+  });
+
+  test("keeps an explicit key when the server accepts both", async () => {
+    authStatus({ enabled: true, mode: "both", oauth: { available: true } });
+    await runSetup("--api-key", "ctx7op-abc_def", "--yes");
+    expect(await codexConfig()).toContain('Authorization = "Bearer ctx7op-abc_def"');
+  });
+
+  test("keeps a personal key from the environment when the server accepts both", async () => {
+    vi.stubEnv("CONTEXT7_API_KEY", "ctx7op-env_secret");
+    authStatus({ enabled: true, mode: "both", oauth: { available: true } });
+    await runSetup();
+    expect(await codexConfig()).toContain("ctx7op-env_secret");
+    expect(console.error).not.toHaveBeenCalled();
+  });
+
+  test("ignores another key from the environment when OAuth is offered", async () => {
+    vi.stubEnv("CONTEXT7_API_KEY", "ctx7sk-hosted");
+    authStatus({ enabled: true, mode: "both", oauth: { available: true } });
+    await runSetup();
+    expect(await codexConfig()).not.toContain("ctx7sk-hosted");
+    const warning = vi.mocked(console.error).mock.calls.flat().join(" ");
+    expect(warning).toContain("Ignoring CONTEXT7_API_KEY");
+    expect(warning).not.toContain("ctx7sk-hosted");
+  });
+
+  test("asks for a key instead of writing another key from the environment", async () => {
+    vi.stubEnv("CONTEXT7_API_KEY", "ctx7sk-hosted");
+    promptMocks.password.mockResolvedValue("ctx7op-typed_key");
+    authStatus({ enabled: true, mode: "personal_keys" });
+    await runSetup();
+    const config = await codexConfig();
+    expect(config).toContain("ctx7op-typed_key");
+    expect(config).not.toContain("ctx7sk-hosted");
+    const warning = vi.mocked(console.error).mock.calls.flat().join(" ");
+    expect(warning).toContain("Ignoring CONTEXT7_API_KEY");
+    expect(warning).not.toContain("ctx7sk-hosted");
+  });
+
+  test("fails under --yes when the only key in the environment is not a personal key", async () => {
+    vi.stubEnv("CONTEXT7_API_KEY", "ctx7sk-hosted");
+    authStatus({ enabled: true, mode: "personal_keys" });
+    await runSetup("--yes");
+    expect(process.exitCode).toBe(1);
+    expect(promptMocks.password).not.toHaveBeenCalled();
+  });
+
+  test("warns that an OAuth-only server ignores a key from the environment", async () => {
+    vi.stubEnv("CONTEXT7_API_KEY", "ctx7op-env_secret");
+    authStatus({ enabled: true, mode: "oauth", oauth: { available: true } });
+    await runSetup();
+    expect(await codexConfig()).not.toContain("ctx7op-env_secret");
+    const warning = vi.mocked(console.error).mock.calls.flat().join(" ");
+    expect(warning).toContain("accepts only OAuth sign-in");
+    expect(warning).not.toContain("ctx7op-env_secret");
+  });
+
+  test("refuses --oauth when the server accepts personal keys only", async () => {
+    authStatus({ enabled: true, mode: "personal_keys" });
+    await runSetup("--oauth", "--yes");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("uses OAuth for --oauth against a server that accepts both", async () => {
+    authStatus({ enabled: true, mode: "both", oauth: { available: true } });
+    await runSetup("--oauth", "--yes");
+    expect(await codexConfig()).not.toContain("Authorization");
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  test("lets an explicit key win over --oauth", async () => {
+    authStatus({ enabled: true, mode: "both", oauth: { available: true } });
+    await runSetup("--oauth", "--api-key", "ctx7op-abc_def", "--yes");
+    expect(await codexConfig()).toContain('Authorization = "Bearer ctx7op-abc_def"');
+  });
+
+  test("writes no credential when MCP auth is off, whatever the mode", async () => {
+    for (const mode of ["oauth", "both"]) {
+      authStatus({ enabled: false, mode, oauth: { available: true } });
+      await runSetup("--yes");
+      expect(await codexConfig()).not.toContain("Authorization");
+      expect(process.exitCode).toBeUndefined();
+    }
+  });
+
+  test("falls back to a key when the server selected both but has no public URL", async () => {
+    authStatus({ enabled: true, mode: "both", oauth: { available: false } });
+    await runSetup("--api-key", "ctx7op-abc_def", "--yes");
+    expect(await codexConfig()).toContain('Authorization = "Bearer ctx7op-abc_def"');
+  });
+
+  test("explains that an OAuth-only server without a public URL cannot be set up yet", async () => {
+    authStatus({ enabled: true, mode: "oauth", oauth: { available: false } });
+    await runSetup("--yes");
+    expect(process.exitCode).toBe(1);
+  });
+
+  test("treats a server that reports no mode as personal keys only", async () => {
+    authStatus({ enabled: true });
+    await runSetup("--yes");
+    expect(process.exitCode).toBe(1);
+    expect(promptMocks.password).not.toHaveBeenCalled();
+  });
+});
