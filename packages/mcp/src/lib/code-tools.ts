@@ -96,6 +96,8 @@ function clampNumbers(limits: Record<string, readonly [number, number]>) {
 /** The bounds only advertise the range: clampNumbers already moved the value into it. */
 const bounded = (min: number, max: number) => z.number().int().min(min).max(max).optional();
 
+const NO_MULTILINE = `${GREP_CODE_TOOL} matches within one line and has no multiline search. Search for one line of the code, then read the lines around it with ${READ_CODE_TOOL}.`;
+
 export const QUERY_NOT_A_PATTERN = `${GREP_CODE_TOOL} has no "query" argument. Pass "pattern": a regex matched within one line of the source, not a question or a list of keywords. Search one identifier or one exact phrase, e.g. "isValidScope", and join alternatives with |, e.g. "createClient|createServer". For an exact phrase with spaces, also set -F. For a how-to question, use query-docs.`;
 
 /**
@@ -106,6 +108,13 @@ export const QUERY_NOT_A_PATTERN = `${GREP_CODE_TOOL} has no "query" argument. P
 function queryAsPattern(args: unknown, ctx: z.core.$RefinementCtx): unknown {
   if (!args || typeof args !== "object") return args;
   const out: Record<string, unknown> = { ...(args as Record<string, unknown>) };
+  // A multiline search over a whole repository times out on the API, so it is not offered. Say
+  // so, rather than run the pattern on single lines, where a \n in it never matches.
+  for (const key of ["multiline", "-U"]) {
+    if (out[key] === true)
+      ctx.addIssue({ code: "custom", message: NO_MULTILINE, input: true, path: [key] });
+    delete out[key];
+  }
   if (!("query" in out)) return out;
   const query = out.query;
   delete out.query;
@@ -247,10 +256,6 @@ const grepSchema = z.object({
     .optional()
     .describe("Treat the pattern as plain text (rg -F), e.g. for error messages"),
   "-w": z.boolean().optional().describe("Match whole words only (rg -w)"),
-  multiline: z
-    .boolean()
-    .optional()
-    .describe("Let patterns span lines and . match newlines (rg -U --multiline-dotall)"),
   head_limit: bounded(1, 500).describe(
     "Return only the first N results. Default: 20. At most 100 lines in content mode."
   ),
@@ -339,7 +344,6 @@ export function grepRequest(input: z.infer<typeof grepSchema>): CodeRequest | st
     ignore_case: input["-i"],
     fixed_strings: input["-F"],
     word_regexp: input["-w"],
-    ...(input.multiline ? { multiline: true, multiline_dotall: true } : {}),
     head_limit: input.head_limit,
     offset: input.offset,
   };
