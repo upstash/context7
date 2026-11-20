@@ -68,7 +68,11 @@ function fakeApp() {
     ) {
       return new Response(null, { status: 401 });
     }
-    if (headers.get("If-None-Match") === `"${state.version}"`) {
+    if (headers.has("If-None-Match")) {
+      expect(headers.get("If-None-Match")).toBe(`"${headers.get("X-Context7-Snapshot-Version")}"`);
+    }
+    // The header the app can rely on: a proxy may change or drop If-None-Match.
+    if (headers.get("X-Context7-Snapshot-Version") === state.version) {
       state.notModified++;
       return new Response(null, { status: 304 });
     }

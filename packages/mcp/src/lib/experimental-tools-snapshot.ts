@@ -11,7 +11,7 @@ import { experimentalToolsFromChoice, type ExperimentalTool } from "./tool-names
  * way feature flag SDKs evaluate flags locally (LaunchDarkly, Unleash). A request reads only this
  * copy: listing tools never calls the Context7 API, so traffic cannot turn into lookups (the
  * CTX7-3866 incident). Each process polls the app's snapshot endpoint every POLL_MS with
- * `If-None-Match`; without a change the app answers 304 after one Redis read, so the load is a
+ * `If-None-Match` and `X-Context7-Snapshot-Version`; without a change the app answers 304 after one Redis read, so the load is a
  * few small requests a minute per process whatever the traffic.
  *
  * The endpoint (context7app `app/api/internal/mcp/experimental-tools-snapshot/route.ts`) is for
@@ -75,7 +75,11 @@ export async function refreshSnapshot(): Promise<void> {
     const response = await fetch(`${CONTEXT7_API_BASE_URL}${SNAPSHOT_PATH}`, {
       headers: {
         "X-Context7-Mcp-Assertion": assertion,
-        ...(snapshot && { "If-None-Match": `"${snapshot.version}"` }),
+        // Both: production polls never matched on If-None-Match alone (CTX7-3943).
+        ...(snapshot && {
+          "If-None-Match": `"${snapshot.version}"`,
+          "X-Context7-Snapshot-Version": snapshot.version,
+        }),
       },
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
