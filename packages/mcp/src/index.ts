@@ -73,6 +73,7 @@ import {
   usableApiKey,
 } from "./lib/mcp-http-auth.js";
 import { mcpRouteFromUrl } from "./lib/mcp-route.js";
+import { context7SkillCatalog } from "./lib/skills.js";
 import { parseOAuthAudienceEnforcement } from "./lib/oauth-audience.js";
 
 /** Default HTTP server port */
@@ -295,9 +296,9 @@ function createMcpServer(
   const serverOptions = {
     // The collections are static for the process lifetime. Explicitly disabling
     // change notifications prevents clients from opening subscriptions/listen
-    // streams for events this server never publishes. Declaring prompts and
-    // resources still installs their empty list handlers for clients that call
-    // them unconditionally.
+    // streams for events this server never publishes. Declaring prompts still
+    // installs its empty list handler for clients that call it unconditionally;
+    // resources carry the skill files.
     capabilities: {
       tools: { listChanged: false },
       prompts: { listChanged: false },
@@ -323,6 +324,9 @@ Do not use for: refactoring, debugging, or reviewing code that does not depend o
   const server = mcpInstrumentation
     ? mcpInstrumentation.createServer(serverInfo, serverOptions, mcpContext)
     : new McpServer(serverInfo, serverOptions);
+  // attach() is an @experimental SDK API: how an extension is wired to a server may change in a
+  // minor SDK release, so recheck this call on every SDK upgrade.
+  context7SkillCatalog.attach(server);
 
   server.registerTool(
     RESOLVE_LIBRARY_ID_TOOL,
@@ -338,8 +342,7 @@ Each result includes:
 - Description: Short summary
 - Code Snippets: Number of available code examples
 - Source Reputation: Authority indicator (High, Medium, Low, or Unknown)
-- Benchmark Score: Quality indicator (100 is the highest score)
-- Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.${
+- Benchmark Score: Quality indicator (100 is the highest score)${
         enabled.has(CODE_TOOLS)
           ? `
 - Source code: present when 'grep-code', 'glob-code', 'read-code' and 'find-symbol' can usually search the library's source. '/websites/...' and '/llmstxt/...' IDs have docs only.`
@@ -435,14 +438,16 @@ You must call 'Resolve Context7 Library ID' tool first to obtain the exact Conte
 
 Do not call this tool more than 3 times per question.
 
-If you know the programming language the user is working in, pass it as \`language\` so the results match their setup.`,
+If you know the programming language the user is working in, pass it as \`language\` so the results match their setup.
+
+If the user's project or question names a version of the library (package.json, a lockfile, "Next.js 14"), pass it as \`version\`. Context7 serves that version's documentation, or the closest version it has, and says which one it served.`,
       inputSchema: z.preprocess(
         aliasArgs({ ...GLOBAL_ALIASES, ...QUERY_DOCS_ALIASES }),
         z.object({
           libraryId: z
             .string()
             .describe(
-              "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v16.2.9') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
+              "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'."
             ),
           query: z
             .string()
@@ -456,6 +461,12 @@ If you know the programming language the user is working in, pass it as \`langua
             .describe(
               "Programming language the user is writing code in, such as 'Python', 'TypeScript', 'Go', or 'C#'. Ranks code examples in that language first. Leave it out when the language is unknown or does not apply."
             ),
+          version: z
+            .string()
+            .optional()
+            .describe(
+              "Version of the library the user's project uses or the question names, as written there, such as '15.4.3', '^15.4.3' or '14'. Pass it here, not as a suffix of libraryId. Leave it out for the latest documentation."
+            ),
         })
       ),
       annotations: {
@@ -466,11 +477,16 @@ If you know the programming language the user is working in, pass it as \`langua
       },
     },
     async (
-      { query, libraryId, language }: { query: string; libraryId: string; language?: string },
+      {
+        query,
+        libraryId,
+        language,
+        version,
+      }: { query: string; libraryId: string; language?: string; version?: string },
       toolCtx
     ) => {
       const ctx = getClientContext(toolCtx);
-      const response = await fetchLibraryContext({ query, libraryId, language }, ctx);
+      const response = await fetchLibraryContext({ query, libraryId, language, version }, ctx);
       maybeElicitAuthSignIn(server, ctx);
       recordToolCallTelemetry(ctx, response.outcome);
       return {

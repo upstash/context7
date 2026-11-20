@@ -144,7 +144,7 @@ function validateLibraryId(input: string, command: string): string | null {
 async function queryCommand(
   libraryId: string,
   query: string,
-  options: { json?: boolean; language?: string }
+  options: { json?: boolean; language?: string; tag?: string }
 ): Promise<void> {
   trackEvent("command", { name: "docs" });
 
@@ -162,7 +162,7 @@ async function queryCommand(
     result = await getLibraryContext(
       libraryId,
       query,
-      { type: outputType, language: options.language },
+      { type: outputType, language: options.language, version: options.tag },
       accessToken
     );
   } catch (err) {
@@ -451,9 +451,18 @@ export function registerDocsCommands(program: Command): void {
       "--language <name>",
       "Programming language you write in (e.g., Python, Go); ranks code examples in that language first"
     )
+    // `--version` is the CLI's own flag, so the library version is --tag, as in `ctx7 code`.
+    .option(
+      "--tag <version>",
+      "Version of the library your project uses, as written there (e.g., 15.4.3, ^15.4.3, 14); Context7 serves that version or the closest one it has"
+    )
     .description("Query documentation for a library")
     .action(
-      async (libraryId: string, query: string, options: { json?: boolean; language?: string }) => {
+      async (
+        libraryId: string,
+        query: string,
+        options: { json?: boolean; language?: string; tag?: string }
+      ) => {
         await queryCommand(libraryId, query, options);
       }
     );
