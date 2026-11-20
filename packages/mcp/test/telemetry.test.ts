@@ -69,6 +69,7 @@ describe("MCP telemetry cardinality", () => {
     expect(mcpRouteFromUrl("https://example.com/mcp/oauth/")).toBe("oauth");
     expect(mcpRouteFromUrl("https://example.com/mcp")).toBe("anonymous");
     expect(mcpRouteFromUrl("/mcp/oauth")).toBe("oauth");
+    expect(mcpRouteFromUrl("/mcp/ema")).toBe("oauth");
     expect(mcpRouteFromUrl("/mcp")).toBe("anonymous");
   });
 
