@@ -89,7 +89,7 @@ Here's an example `context7.json` file with the most common options:
   If any rule is rejected, none of the rules are applied and the library's existing rules are removed. The library logs show that the rules were rejected. Change or remove the rule, then refresh the library.
 </Note>
 
-- **`previousVersions`** (array): Information about previous versions of your library that should also be available in Context7. Each entry has exactly one of:
+- **`previousVersions`** (array): Information about previous versions of your library that should also be available in Context7. Context7 chooses the versions of the most popular public libraries itself and ignores this field for them. Each entry has exactly one of:
   - **`tag`**: The Git tag or version identifier
   - **`branch`**: The Git branch
 

@@ -47,10 +47,15 @@ export async function searchLibraries(query: string, libraryName: string): Promi
   return (await response.json()) as SearchResponse;
 }
 
-export async function fetchLibraryContext(query: string, libraryId: string): Promise<string> {
+export async function fetchLibraryContext(
+  query: string,
+  libraryId: string,
+  version?: string
+): Promise<string> {
   const url = new URL(`${BASE_URL}/v2/context`);
   url.searchParams.set("query", query);
   url.searchParams.set("libraryId", libraryId);
+  if (version) url.searchParams.set("version", version);
 
   const response = await fetch(url, { headers: authHeaders() });
   if (!response.ok) {

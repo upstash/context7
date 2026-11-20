@@ -16,7 +16,7 @@ Each result includes:
 - Code Snippets: Number of available code examples
 - Source Reputation: Authority indicator (High, Medium, Low, or Unknown)
 - Benchmark Score: Quality indicator (100 is the highest score)
-- Versions: List of versions if available. Use one of those versions if the user provides a version in their query. The format of the version is /org/project/version.
+- Versions: Indexed versions, if any. When the user's project or query names a version, pass it as the 'version' input of 'Query Documentation' (e.g. 15.4.3 or ^15.4.3 as written in package.json), even when it is not listed: Context7 serves the indexed version that covers it.
 
 For best results, select libraries based on name match, source reputation, snippet coverage, benchmark score, and relevance to your use case.
 
@@ -54,7 +54,10 @@ You must call 'Resolve Context7 Library ID' tool first to obtain the exact Conte
 Do not call this tool more than 3 times per question.`;
 
 export const QUERY_DOCS_LIBRARY_ID_DESCRIPTION =
-  "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase', '/vercel/next.js/v16.2.9') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'.";
+  "Exact Context7-compatible library ID (e.g., '/mongodb/docs', '/vercel/next.js', '/supabase/supabase') retrieved from 'resolve-library-id' or directly from user query in the format '/org/project' or '/org/project/version'.";
 
 export const QUERY_DOCS_QUERY_DESCRIPTION =
   "What to look up in the library's documentation, scoped to a single concept. Be specific and include relevant details, but keep each query to one topic — if the user's question spans multiple distinct concepts, make a separate call per concept instead of combining them, unless the question is about how the concepts interact. Good: 'How to set up authentication with JWT in Express.js' or 'React useEffect cleanup function examples'. Bad (too vague): 'auth' or 'hooks'. Bad (too broad): 'routing and auth and caching in Next.js'. The query is sent to the Context7 API for processing. Do not include any sensitive or confidential information such as API keys, passwords, credentials, personal data, or proprietary code in your query.";
+
+export const QUERY_DOCS_VERSION_DESCRIPTION =
+  "Version of the library the user's project uses or the question names, as written there, such as '15.4.3', '^15.4.3' or '14'. Pass it here, not as a suffix of libraryId. Leave it out for the latest documentation.";
