@@ -10,3 +10,6 @@ dist
 # Environment files
 .env
 .env.*
+
+# Generated from skills/context7-mcp/SKILL.md (pnpm build:skill)
+src/lib/skill-md.ts

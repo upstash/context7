@@ -1,5 +1,27 @@
 # @upstash/context7-mcp
 
+## 4.7.3
+
+### Patch Changes
+
+- 159156f: Replace the experimental `query-code` tool with `grep-code`, `glob-code`, `read-code` and `find-symbol`. `query-code` is removed; a dashboard choice that turned it on now turns on the new tools. They take the parameters of the Grep, Glob and Read tools that coding agents have, so agents search the library instead of the local project.
+
+## 4.7.2
+
+### Patch Changes
+
+- f5f2e4e: Serve the dashboard's experimental tools choice without a lookup per request. The hosted HTTP server (with `MCP_CLIENT_IP_ASSERTION_KEY`) keeps every user's choice in memory, refreshed from the Context7 app's snapshot endpoint every 15 seconds. Other servers ask the Context7 API at most once per credential every five minutes (two minutes after a failure), with at most 32 lookups in flight.
+
+## 4.7.1
+
+### Patch Changes
+
+- d80a84c: While a library's source is being indexed, `ctx7 code` and `query-code` now say to call again for up to 3 minutes instead of at most twice: a first index usually takes 1 to 3 minutes. When the server message already gives this rule, the clients no longer repeat it.
+- d53d88d: The research preview is now called experimental tools. Each signed-in user picks the experimental tools to list at Settings > MCP Tools in the Context7 dashboard, where "All experimental tools" also includes tools added later. The old flags (`--research-preview`, `CONTEXT7_RESEARCH_PREVIEW=1`, `?research_preview=1`) and the new `--experimental`, `CONTEXT7_EXPERIMENTAL=1` and `?experimental=1` still turn on every experimental tool.
+- 6e469e3: Update `@modelcontextprotocol/node` to 2.1.2 and `@modelcontextprotocol/server` to 2.4.0, which bring in security fixes for `@hono/node-server`, `hono` and their dependencies.
+- 0718ba8: `query-code` no longer greps a docs-style `query` of several words, which matched nothing: it answers with a correction that `pattern` is a regex matched within one line. A one-word `query`, or a phrase with `fixed_strings`, still works as the pattern. `pattern` now takes up to 1000 characters, like the server.
+- c5e26f6: Describe query-code references as name matches, resolved only for libraries with a SCIP index
+
 ## 4.7.0
 
 ### Minor Changes

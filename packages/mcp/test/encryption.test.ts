@@ -40,3 +40,18 @@ describe("client IP assertions", () => {
     }
   );
 });
+
+describe("generateHeaders", () => {
+  test("marks experimental use, and the code tools only when they are on", () => {
+    const off = generateHeaders({});
+    expect(off["X-Context7-Experimental"]).toBeUndefined();
+    expect(off["X-Context7-Code-Tools"]).toBeUndefined();
+
+    const guide = generateHeaders({ experimentalTools: ["get-upgrade-guide"] });
+    expect(guide["X-Context7-Experimental"]).toBe("1");
+    expect(guide["X-Context7-Code-Tools"]).toBeUndefined();
+
+    const code = generateHeaders({ experimentalTools: ["code-tools"] });
+    expect(code["X-Context7-Code-Tools"]).toBe("1");
+  });
+});

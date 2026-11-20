@@ -2,9 +2,11 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest"
 import { Client } from "@modelcontextprotocol/client";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { StdioClientTransport, getDefaultEnvironment } from "@modelcontextprotocol/client/stdio";
+import { SkillsClient } from "@modelcontextprotocol/client/ext/skills";
+import { readFile } from "node:fs/promises";
 import { execSync } from "node:child_process";
 import { spawn, type ChildProcess } from "node:child_process";
-import { createDecipheriv } from "node:crypto";
+import { createDecipheriv, createHash } from "node:crypto";
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -162,6 +164,56 @@ function startStubApi(): Promise<string> {
         res.setHeader("Content-Type", "text/plain");
         res.end(STUB_UPGRADE_GUIDE);
       }
+      return;
+    }
+    if (apiPath === "/internal/mcp/experimental-tools-snapshot") {
+      // Stands in for the app's snapshot (the hosted HTTP server holds the assertion key): the
+      // ctx7sk-exp-code-N keys' user turned on the code tools by their old name query-code (and an
+      // unknown tool), the ctx7sk-exp-all-N keys' user turned on all; ctx7sk-exp-fail-N and every
+      // other credential are not in it.
+      if (!req.headers["x-context7-mcp-assertion"]) {
+        res.statusCode = 401;
+        res.end();
+        return;
+      }
+      const sha = (key: string) => createHash("sha256").update(key).digest("hex");
+      const apiKeys: Record<string, string> = {};
+      for (let n = 1; n <= 9; n++) {
+        apiKeys[sha(`ctx7sk-exp-code-${n}`)] = "user_code";
+        apiKeys[sha(`ctx7sk-exp-all-${n}`)] = "user_all";
+      }
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("ETag", '"1"');
+      res.end(
+        JSON.stringify({
+          version: "1",
+          users: {
+            user_code: { all: false, tools: ["query-code", "not-a-tool"] },
+            user_all: { all: true, tools: [] },
+          },
+          apiKeys,
+        })
+      );
+      return;
+    }
+    if (apiPath === "/v2/mcp/experimental-tools") {
+      // Stands in for the dashboard choice: ctx7sk-exp-code turned on the code tools by their old
+      // name query-code,
+      // ctx7sk-exp-all turned on all experimental tools (the app lists none of them here, as
+      // for a tool it does not know yet), ctx7sk-exp-fail cannot be read, every other
+      // credential turned on nothing.
+      if (bearer.startsWith("ctx7sk-exp-fail")) {
+        res.statusCode = 500;
+        res.end();
+        return;
+      }
+      res.setHeader("Content-Type", "application/json");
+      res.end(
+        JSON.stringify({
+          all: bearer.startsWith("ctx7sk-exp-all"),
+          tools: bearer.startsWith("ctx7sk-exp-code") ? ["query-code", "not-a-tool"] : [],
+        })
+      );
       return;
     }
     if (apiPath === "/v2/auth/check") {
@@ -676,13 +728,13 @@ describe("HTTP API key headers", () => {
   });
 });
 
-describe("research preview", () => {
-  // The preview tool list differs per caller, so a shared cache must not serve it to others.
+describe("experimental tools", () => {
+  // The experimental tool list differs per caller, so a shared cache must not serve it to others.
   async function toolsListCacheScope(
     transport: StreamableHTTPClientTransport | StdioClientTransport
   ) {
     const client = new Client(
-      { name: "research-preview-test", version: "1.0.0" },
+      { name: "experimental-test", version: "1.0.0" },
       { versionNegotiation: { mode: { pin: "2026-07-28" } } }
     );
     await client.connect(transport);
@@ -693,16 +745,20 @@ describe("research preview", () => {
     }
   }
 
-  const httpTransport = (url: string) =>
+  const httpTransport = (url: string, apiKey = "ctx7sk-local-test") =>
     new StreamableHTTPClientTransport(new URL(url), {
-      requestInit: { headers: { Authorization: "Bearer ctx7sk-local-test" } },
+      requestInit: { headers: { Authorization: `Bearer ${apiKey}` } },
     });
   const stdioTransport = (env: Record<string, string>) =>
     new StdioClientTransport({ command: process.execPath, args: [DIST], env });
 
-  async function withClient<T>(url: string, run: (client: Client) => Promise<T>): Promise<T> {
-    const client = new Client({ name: "research-preview-test", version: "1.0.0" });
-    await client.connect(httpTransport(url));
+  async function withClient<T>(
+    url: string,
+    run: (client: Client) => Promise<T>,
+    apiKey?: string
+  ): Promise<T> {
+    const client = new Client({ name: "experimental-test", version: "1.0.0" });
+    await client.connect(httpTransport(url, apiKey));
     try {
       return await run(client);
     } finally {
@@ -712,23 +768,188 @@ describe("research preview", () => {
   const toolNames = (url: string) =>
     withClient(url, async (client) => (await client.listTools()).tools.map((tool) => tool.name));
 
-  test("marks tools/list private over HTTP only with ?research_preview=1", async () => {
-    expect(await toolsListCacheScope(httpTransport(httpUrl))).toBe("public");
-    expect(await toolsListCacheScope(httpTransport(`${httpUrl}?research_preview=1`))).toBe(
-      "private"
-    );
+  test("marks tools/list private over HTTP for a signed-in caller", async () => {
+    // The test server requires a credential, so an anonymous HTTP list is covered over stdio.
+    expect(await toolsListCacheScope(httpTransport(httpUrl))).toBe("private");
   });
 
-  test("marks tools/list private over stdio only with CONTEXT7_RESEARCH_PREVIEW=1", async () => {
+  test("marks tools/list private over stdio only with CONTEXT7_EXPERIMENTAL=1", async () => {
     expect(await toolsListCacheScope(stdioTransport(childEnv))).toBe("public");
     expect(
-      await toolsListCacheScope(stdioTransport({ ...childEnv, CONTEXT7_RESEARCH_PREVIEW: "1" }))
+      await toolsListCacheScope(stdioTransport({ ...childEnv, CONTEXT7_EXPERIMENTAL: "1" }))
     ).toBe("private");
   });
 
-  test("lists submit-docs-feedback only with research preview and sends it to the API", async () => {
+  test("lists every experimental tool with ?experimental=1 or its old name", async () => {
+    for (const url of [`${httpUrl}?experimental=1`, `${httpUrl}?research_preview=1`]) {
+      expect(await toolNames(url)).toEqual(
+        expect.arrayContaining([
+          "grep-code",
+          "glob-code",
+          "read-code",
+          "find-symbol",
+          "get-upgrade-guide",
+          "submit-docs-feedback",
+        ])
+      );
+    }
+  });
+
+  test("lists the experimental tools the signed-in user turned on", async () => {
+    requests.length = 0;
+    const names = await withClient(
+      httpUrl,
+      async (client) => (await client.listTools()).tools.map((tool) => tool.name),
+      "ctx7sk-exp-code-1"
+    );
+    expect(names).toEqual(
+      expect.arrayContaining(["grep-code", "glob-code", "read-code", "find-symbol"])
+    );
+    expect(names).not.toContain("query-code");
+    expect(names).not.toContain("get-upgrade-guide");
+    expect(names).not.toContain("submit-docs-feedback");
+
+    // Answered from the in-memory snapshot: no lookup per credential.
+    expect(requests.some((request) => request.path === "/v2/mcp/experimental-tools")).toBe(false);
+  });
+
+  test("lists every experimental tool it has when the user turned on all of them", async () => {
+    const names = await withClient(
+      httpUrl,
+      async (client) => (await client.listTools()).tools.map((tool) => tool.name),
+      "ctx7sk-exp-all-1"
+    );
+    expect(names).toEqual(
+      expect.arrayContaining([
+        "grep-code",
+        "glob-code",
+        "read-code",
+        "find-symbol",
+        "get-upgrade-guide",
+        "submit-docs-feedback",
+      ])
+    );
+  });
+
+  test("never asks the app for a credential's choice per request", async () => {
+    requests.length = 0;
+    for (let i = 0; i < 2; i++) {
+      await withClient(httpUrl, (client) => client.listTools(), "ctx7sk-exp-code-2");
+    }
+    expect(requests.some((request) => request.path === "/v2/mcp/experimental-tools")).toBe(false);
+  });
+
+  test("lists no experimental tool for a credential the snapshot does not hold", async () => {
+    requests.length = 0;
+    const names = await withClient(
+      httpUrl,
+      async (client) => (await client.listTools()).tools.map((tool) => tool.name),
+      "ctx7sk-exp-fail-1"
+    );
+    expect(names).toEqual(expect.arrayContaining(["resolve-library-id", "query-docs"]));
+    expect(names.some((name) => ["grep-code", "get-upgrade-guide"].includes(name))).toBe(false);
+  });
+
+  test("calls grep-code over HTTP when the signed-in user turned the code tools on", async () => {
+    requests.length = 0;
+    const result = await withClient(
+      httpUrl,
+      (client) =>
+        client.callTool({
+          name: "grep-code",
+          arguments: { libraryId: "/vercel/next.js", pattern: "useRouter" },
+        }),
+      "ctx7sk-exp-code-4"
+    );
+    expect(result.isError).toBeFalsy();
+    expect(result.content).toMatchObject([{ type: "text", text: STUB_CODE }]);
+    const codeCall = requests.find((request) => request.path === "/v2/code");
+    expect(codeCall?.headers.authorization).toBe("Bearer ctx7sk-exp-code-4");
+  });
+
+  test("marks server/discover private for a signed-in caller", async () => {
+    const client = new Client(
+      { name: "experimental-test", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+    await client.connect(httpTransport(httpUrl, "ctx7sk-exp-all-2"));
+    try {
+      const discover = client.getDiscoverResult() as { cacheScope?: string; instructions?: string };
+      expect(discover.cacheScope).toBe("private");
+      expect(discover.instructions).toContain("submit-docs-feedback");
+      expect(discover.instructions).toContain("read the library's source with 'grep-code'");
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("leaves the code tools out of the instructions when they are off", async () => {
+    const client = new Client(
+      { name: "experimental-test", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+    await client.connect(httpTransport(httpUrl, "ctx7sk-no-tools-1"));
+    try {
+      const discover = client.getDiscoverResult() as { instructions?: string };
+      expect(discover.instructions).toContain("Use this server to fetch current documentation");
+      expect(discover.instructions).not.toContain("grep-code");
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("lists the dashboard choice over stdio with an API key", async () => {
+    const client = new Client({ name: "experimental-test", version: "1.0.0" });
+    await client.connect(
+      stdioTransport({ ...childEnv, CONTEXT7_API_KEY: "ctx7sk-exp-code-stdio" })
+    );
+    try {
+      const names = (await client.listTools()).tools.map((tool) => tool.name);
+      expect(names).toContain("grep-code");
+      expect(names).not.toContain("get-upgrade-guide");
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("lists every experimental tool over stdio with the old CONTEXT7_RESEARCH_PREVIEW=1", async () => {
+    const client = new Client({ name: "experimental-test", version: "1.0.0" });
+    await client.connect(stdioTransport({ ...childEnv, CONTEXT7_RESEARCH_PREVIEW: "1" }));
+    try {
+      const names = (await client.listTools()).tools.map((tool) => tool.name);
+      expect(names).toEqual(
+        expect.arrayContaining([
+          "grep-code",
+          "glob-code",
+          "read-code",
+          "find-symbol",
+          "get-upgrade-guide",
+          "submit-docs-feedback",
+        ])
+      );
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("marks API calls of a signed-in user with experimental tools on", async () => {
+    requests.length = 0;
+    await withClient(
+      httpUrl,
+      (client) =>
+        client.callTool({
+          name: "query-docs",
+          arguments: { libraryId: "/vercel/next.js", query: "routing" },
+        }),
+      "ctx7sk-exp-code-3"
+    );
+    const apiCall = requests.find((request) => request.path === "/v2/context");
+    expect(apiCall?.headers["x-context7-experimental"]).toBe("1");
+  });
+
+  test("lists submit-docs-feedback only when on and sends it to the API", async () => {
     expect(await toolNames(httpUrl)).not.toContain("submit-docs-feedback");
-    expect(await toolNames(`${httpUrl}?research_preview=1`)).toContain("submit-docs-feedback");
+    expect(await toolNames(`${httpUrl}?experimental=1`)).toContain("submit-docs-feedback");
 
     feedbackBodies.length = 0;
     requests.length = 0;
@@ -739,7 +960,7 @@ describe("research preview", () => {
       issue: "outdated",
       comment: "Shows the Next.js 14 cache defaults.",
     };
-    const result = await withClient(`${httpUrl}?research_preview=1`, (client) =>
+    const result = await withClient(`${httpUrl}?experimental=1`, (client) =>
       client.callTool({ name: "submit-docs-feedback", arguments: feedback })
     );
 
@@ -748,12 +969,12 @@ describe("research preview", () => {
     const apiCall = requests.find((request) => request.path === "/v2/feedback");
     expect(apiCall?.headers.authorization).toBe("Bearer ctx7sk-local-test");
     expect(apiCall?.headers["x-context7-source"]).toBe("mcp-server");
-    expect(apiCall?.headers["x-context7-research-preview"]).toBe("1");
+    expect(apiCall?.headers["x-context7-experimental"]).toBe("1");
   });
 
   describe("get-upgrade-guide", () => {
     const callGuide = (args: Record<string, string | number>) =>
-      withClient(`${httpUrl}?research_preview=1`, (client) =>
+      withClient(`${httpUrl}?experimental=1`, (client) =>
         client.callTool({
           name: "get-upgrade-guide",
           arguments: { libraryId: "/vercel/next.js", ...args },
@@ -766,9 +987,9 @@ describe("research preview", () => {
       requests.length = 0;
     });
 
-    test("is listed only with research preview", async () => {
+    test("is listed only when on", async () => {
       expect(await toolNames(httpUrl)).not.toContain("get-upgrade-guide");
-      expect(await toolNames(`${httpUrl}?research_preview=1`)).toContain("get-upgrade-guide");
+      expect(await toolNames(`${httpUrl}?experimental=1`)).toContain("get-upgrade-guide");
     });
 
     test("sends the versions to the API and returns the guide text", async () => {
@@ -785,7 +1006,7 @@ describe("research preview", () => {
       });
       expect(apiCall?.headers.authorization).toBe("Bearer ctx7sk-local-test");
       expect(apiCall?.headers["x-context7-source"]).toBe("mcp-server");
-      expect(apiCall?.headers["x-context7-research-preview"]).toBe("1");
+      expect(apiCall?.headers["x-context7-experimental"]).toBe("1");
     });
 
     test("omits toVersion when not given", async () => {
@@ -1087,13 +1308,23 @@ describe.each([
     ]);
   });
 
-  // The declared `capabilities: { prompts: {}, resources: {} }` replaced three
-  // hand-written empty-list handlers; clients that call these unconditionally
-  // must still get an empty collection rather than "method not found".
-  test("answers prompts/resources list requests with empty collections", async () => {
+  // The declared `capabilities: { prompts: {} }` replaced a hand-written
+  // empty-list handler; clients that call it unconditionally must still get an
+  // empty collection rather than "method not found".
+  test("answers prompts/list with an empty collection", async () => {
     expect((await client.listPrompts()).prompts).toEqual([]);
-    expect((await client.listResources()).resources).toEqual([]);
-    expect((await client.listResourceTemplates()).resourceTemplates).toEqual([]);
+  });
+
+  test("serves the context7-mcp skill as the repo's SKILL.md", async () => {
+    const skills = new SkillsClient(client);
+    expect(skills.supported).toBe(true);
+    const listing = await skills.list();
+    expect(listing.invalid).toEqual([]);
+    expect(listing.skills.map((s) => s.uri)).toEqual(["skill://context7-mcp/SKILL.md"]);
+    const file = await skills.read(listing.skills[0]);
+    expect(file.text).toBe(
+      await readFile(path.join(PKG_ROOT, "../../skills/context7-mcp/SKILL.md"), "utf8")
+    );
   });
 
   test("calls query-docs end to end", async () => {
@@ -1109,7 +1340,7 @@ describe.each([
     expect(apiCalls[0].query.get("libraryId")).toBe("/vercel/next.js");
     expect(apiCalls[0].query.get("query")).toBe("app router");
     expect(apiCalls[0].headers["x-context7-transport"]).toBe(transportKind);
-    expect(apiCalls[0].headers["x-context7-research-preview"]).toBeUndefined();
+    expect(apiCalls[0].headers["x-context7-experimental"]).toBeUndefined();
     if (transportKind === "http") {
       expect(apiCalls[0].headers["mcp-client-ip-assertion"]).toMatch(/^v1:/);
       expect(
@@ -1841,181 +2072,264 @@ describe("expired OAuth access tokens", () => {
   });
 });
 
-describe("query-code tool", () => {
+describe("code tools", () => {
   async function stdioClient(environment: Record<string, string>) {
-    const client = new Client({ name: "query-code-test", version: "1.0.0" });
+    const client = new Client({ name: "code-tools-test", version: "1.0.0" });
     await client.connect(
       new StdioClientTransport({ command: process.execPath, args: [DIST], env: environment })
     );
     return client;
   }
 
-  test("is not listed without the flag", async () => {
+  const CODE_TOOLS = ["find-symbol", "glob-code", "grep-code", "read-code"];
+
+  /** Calls a tool and returns the /v2/code request it sent, if any. */
+  async function sent(client: Client, name: string, args: Record<string, unknown>) {
+    const before = requests.length;
+    const result = await client.callTool({ name, arguments: args });
+    const request = requests.slice(before).find((candidate) => candidate.path === "/v2/code");
+    return { result, query: request?.query };
+  }
+
+  test("are not listed without the flag", async () => {
     const client = await stdioClient(childEnv);
     try {
-      const { tools } = await client.listTools();
-      expect(tools.map((tool) => tool.name)).not.toContain("query-code");
+      const names = (await client.listTools()).tools.map((tool) => tool.name);
+      for (const name of [...CODE_TOOLS, "query-code"]) expect(names).not.toContain(name);
     } finally {
       await client.close();
     }
   });
 
-  test("is listed with the flag and sends its arguments to /v2/code", async () => {
-    const client = await stdioClient({ ...childEnv, CONTEXT7_RESEARCH_PREVIEW: "1" });
+  test("are listed with the flag, with the parameters of Grep, Glob and Read", async () => {
+    const client = await stdioClient({ ...childEnv, CONTEXT7_EXPERIMENTAL: "1" });
     try {
       const { tools } = await client.listTools();
-      const tool = tools.find((candidate) => candidate.name === "query-code");
-      expect(Object.keys(tool?.inputSchema.properties ?? {}).sort()).toEqual([
-        "context",
-        "fixed_strings",
+      const names = tools.map((tool) => tool.name);
+      expect(names).toEqual(expect.arrayContaining(CODE_TOOLS));
+      expect(names).not.toContain("query-code");
+      const fields = (name: string) =>
+        Object.keys(tools.find((tool) => tool.name === name)?.inputSchema.properties ?? {}).sort();
+      expect(fields("grep-code")).toEqual([
+        "-A",
+        "-B",
+        "-C",
+        "-F",
+        "-i",
+        "-n",
+        "-w",
         "glob",
         "head_limit",
-        "ignore_case",
+        "libraryId",
+        "multiline",
+        "offset",
+        "output_mode",
+        "path",
+        "pattern",
+        "type",
+        "version",
+      ]);
+      expect(fields("glob-code")).toEqual([
+        "head_limit",
         "libraryId",
         "offset",
-        "operation",
-        "output_mode",
         "path",
         "pattern",
         "version",
       ]);
-      expect(tool?.annotations?.readOnlyHint).toBe(true);
-
-      const before = requests.length;
-      const result = await client.callTool({
-        name: "query-code",
-        arguments: {
-          libraryId: "/vercel/next.js",
-          pattern: "useRouter",
-          operation: "definition",
-          file: "packages/next",
-        },
-      });
-      expect(result.isError).toBeFalsy();
-      expect(result.content).toMatchObject([{ type: "text", text: STUB_CODE }]);
-      const sent = requests.slice(before).find((request) => request.path === "/v2/code");
-      expect(sent?.query.get("pattern")).toBe("useRouter");
-      expect(sent?.query.get("path")).toBe("packages/next");
-      expect(sent?.query.get("operation")).toBe("definition");
-
-      // ripgrep-style fields reach the API.
-      const grepCall = requests.length;
-      await client.callTool({
-        name: "query-code",
-        arguments: {
-          libraryId: "/vercel/next.js",
-          pattern: "use(Router|Params)",
-          ignore_case: true,
-          glob: ["*.ts", "!**/test/**"],
-          context: 2,
-          output_mode: "count",
-        },
-      });
-      const grepSent = requests.slice(grepCall).find((request) => request.path === "/v2/code");
-      expect(grepSent?.query.get("ignore_case")).toBe("true");
-      expect(grepSent?.query.getAll("glob")).toEqual(["*.ts", "!**/test/**"]);
-      expect(grepSent?.query.get("context")).toBe("2");
-      expect(grepSent?.query.get("output_mode")).toBe("count");
-
-      // Semantic search is not part of this release, so the tool refuses it.
-      const searchCall = requests.length;
-      const searchResult = await client.callTool({
-        name: "query-code",
-        arguments: {
-          libraryId: "/vercel/next.js",
-          operation: "search",
-          pattern: "where is the router cache invalidated",
-        },
-      });
-      expect(searchResult.isError).toBe(true);
-      expect(requests.slice(searchCall).some((request) => request.path === "/v2/code")).toBe(false);
-
-      // Aliases agents send by habit, a full versioned ID in version, and clamped numbers.
-      const aliasCall = requests.length;
-      await client.callTool({
-        name: "query-code",
-        arguments: {
-          libraryId: "/vercel/next.js",
-          query: "Request failed",
-          fixedStrings: true,
-          version: "/vercel/next.js/v15.5.0",
-          limit: 900,
-          context: 25,
-          offset: "20",
-        },
-      });
-      const aliasSent = requests.slice(aliasCall).find((request) => request.path === "/v2/code");
-      expect(aliasSent?.query.get("libraryId")).toBe("/vercel/next.js");
-      expect(aliasSent?.query.get("version")).toBe("v15.5.0");
-      expect(aliasSent?.query.get("pattern")).toBe("Request failed");
-      expect(aliasSent?.query.get("fixed_strings")).toBe("true");
-      expect(aliasSent?.query.get("head_limit")).toBe("500");
-      expect(aliasSent?.query.get("context")).toBe("10");
-      expect(aliasSent?.query.get("offset")).toBe("20");
-
-      // A one-word query is a pattern; several words are not grepped but corrected.
-      const wordCall = requests.length;
-      await client.callTool({
-        name: "query-code",
-        arguments: { libraryId: "/vercel/next.js", query: "useRouter" },
-      });
-      const wordSent = requests.slice(wordCall).find((request) => request.path === "/v2/code");
-      expect(wordSent?.query.get("pattern")).toBe("useRouter");
-
-      const wordsCall = requests.length;
-      const words = await client.callTool({
-        name: "query-code",
-        arguments: { libraryId: "/vercel/next.js", query: "how does the router cache work" },
-      });
-      expect(words.isError).toBe(true);
-      expect((words.content as { text: string }[])[0].text).toContain('Pass "pattern"');
-      expect(requests.slice(wordsCall).some((request) => request.path === "/v2/code")).toBe(false);
-
-      // Spaces around one word are trimmed.
-      const paddedCall = requests.length;
-      await client.callTool({
-        name: "query-code",
-        arguments: { libraryId: "/vercel/next.js", query: "  useRouter  " },
-      });
-      const paddedSent = requests.slice(paddedCall).find((request) => request.path === "/v2/code");
-      expect(paddedSent?.query.get("pattern")).toBe("useRouter");
-
-      // list takes no pattern, so a multi-word query is dropped, not refused.
-      const listCall = requests.length;
-      const listed = await client.callTool({
-        name: "query-code",
-        arguments: { libraryId: "/vercel/next.js", operation: "list", query: "router files" },
-      });
-      expect(listed.isError).not.toBe(true);
-      const listSent = requests.slice(listCall).find((request) => request.path === "/v2/code");
-      expect(listSent?.query.get("operation")).toBe("list");
-      expect(listSent?.query.get("pattern")).toBeNull();
+      expect(fields("read-code")).toEqual(["file_path", "libraryId", "limit", "offset", "version"]);
+      expect(fields("find-symbol")).toEqual([
+        "head_limit",
+        "libraryId",
+        "offset",
+        "operation",
+        "path",
+        "symbol",
+        "version",
+      ]);
+      for (const name of CODE_TOOLS) {
+        expect(tools.find((tool) => tool.name === name)?.annotations?.readOnlyHint).toBe(true);
+      }
     } finally {
       await client.close();
     }
   });
 
-  test("answers 'still indexing' as a normal result and an API error as an error", async () => {
-    const client = await stdioClient({ ...childEnv, CONTEXT7_RESEARCH_PREVIEW: "1" });
+  test("send their arguments to /v2/code", async () => {
+    const client = await stdioClient({ ...childEnv, CONTEXT7_EXPERIMENTAL: "1" });
+    try {
+      const grep = await sent(client, "grep-code", {
+        libraryId: "/vercel/next.js",
+        pattern: "use(Router|Params)",
+        path: "packages/next",
+        glob: "!**/test/**",
+        type: "typescript",
+        output_mode: "count",
+        "-i": true,
+        "-B": 1,
+        "-A": 2,
+        "-w": true,
+        multiline: true,
+      });
+      expect(grep.result.isError).toBeFalsy();
+      expect(grep.result.content).toMatchObject([{ type: "text", text: STUB_CODE }]);
+      expect(grep.query?.get("operation")).toBe("grep");
+      // The API answers "being indexed" after a short wait, so the agent is not held.
+      expect(grep.query?.get("wait")).toBe("5");
+      expect(grep.query?.get("pattern")).toBe("use(Router|Params)");
+      expect(grep.query?.get("path")).toBe("packages/next");
+      expect(grep.query?.getAll("glob")).toEqual([
+        "!**/test/**",
+        "*.ts",
+        "*.tsx",
+        "*.mts",
+        "*.cts",
+      ]);
+      expect(grep.query?.get("output_mode")).toBe("count");
+      expect(grep.query?.get("ignore_case")).toBe("true");
+      expect(grep.query?.get("before_context")).toBe("1");
+      expect(grep.query?.get("after_context")).toBe("2");
+      expect(grep.query?.get("word_regexp")).toBe("true");
+      expect(grep.query?.get("multiline")).toBe("true");
+      expect(grep.query?.get("multiline_dotall")).toBe("true");
+
+      const glob = await sent(client, "glob-code", {
+        libraryId: "/vercel/next.js",
+        pattern: "**/*router*.ts",
+        path: "packages",
+      });
+      expect(glob.query?.get("operation")).toBe("list");
+      expect(glob.query?.getAll("glob")).toEqual(["**/*router*.ts"]);
+      expect(glob.query?.get("path")).toBe("packages");
+      expect(glob.query?.get("pattern")).toBeNull();
+
+      const read = await sent(client, "read-code", {
+        libraryId: "/vercel/next.js",
+        file_path: "packages/next/src/client/router.ts",
+        offset: 40,
+        limit: 500,
+      });
+      expect(read.query?.get("operation")).toBe("read");
+      expect(read.query?.get("path")).toBe("packages/next/src/client/router.ts#L40-L239");
+
+      const symbol = await sent(client, "find-symbol", {
+        libraryId: "/vercel/next.js",
+        operation: "definition",
+        symbol: "useRouter",
+        path: "packages/next",
+      });
+      expect(symbol.query?.get("operation")).toBe("definition");
+      expect(symbol.query?.get("pattern")).toBe("useRouter");
+      expect(symbol.query?.get("path")).toBe("packages/next");
+
+      const outline = await sent(client, "find-symbol", {
+        libraryId: "/vercel/next.js",
+        operation: "outline",
+        path: "packages/next/src/client/router.ts",
+      });
+      expect(outline.query?.get("operation")).toBe("outline");
+      expect(outline.query?.get("pattern")).toBeNull();
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("accept the names agents send by habit and clamp numbers", async () => {
+    const client = await stdioClient({ ...childEnv, CONTEXT7_EXPERIMENTAL: "1" });
+    try {
+      const alias = await sent(client, "grep-code", {
+        libraryId: "/vercel/next.js",
+        query: "Request failed",
+        fixed_strings: true,
+        version: "/vercel/next.js/v15.5.0",
+        limit: 900,
+        context: 25,
+        offset: "20",
+      });
+      expect(alias.query?.get("libraryId")).toBe("/vercel/next.js");
+      expect(alias.query?.get("version")).toBe("v15.5.0");
+      expect(alias.query?.get("pattern")).toBe("Request failed");
+      expect(alias.query?.get("fixed_strings")).toBe("true");
+      expect(alias.query?.get("head_limit")).toBe("500");
+      expect(alias.query?.get("context")).toBe("10");
+      expect(alias.query?.get("offset")).toBe("20");
+
+      // A one-word query is a pattern; several words are not grepped but corrected.
+      const word = await sent(client, "grep-code", {
+        libraryId: "/vercel/next.js",
+        query: "  useRouter  ",
+      });
+      expect(word.query?.get("pattern")).toBe("useRouter");
+      const words = await sent(client, "grep-code", {
+        libraryId: "/vercel/next.js",
+        query: "how does the router cache work",
+      });
+      expect(words.result.isError).toBe(true);
+      expect((words.result.content as { text: string }[])[0].text).toContain('Pass "pattern"');
+      expect(words.query).toBeUndefined();
+
+      const read = await sent(client, "read-code", {
+        libraryId: "/vercel/next.js",
+        path: "packages/next/src/client/router.ts#L10-L20",
+        offset: 1,
+      });
+      expect(read.query?.get("path")).toBe("packages/next/src/client/router.ts#L10-L20");
+
+      const symbol = await sent(client, "find-symbol", {
+        libraryId: "/vercel/next.js",
+        operation: "references",
+        pattern: "useRouter",
+      });
+      expect(symbol.query?.get("pattern")).toBe("useRouter");
+
+      // Without an operation, find-symbol looks up the definition.
+      const bare = await sent(client, "find-symbol", {
+        libraryId: "/vercel/next.js",
+        name: "useRouter",
+      });
+      expect(bare.query?.get("operation")).toBe("definition");
+      expect(bare.query?.get("pattern")).toBe("useRouter");
+
+      // Usage errors are answered without a request.
+      const unknownType = await sent(client, "grep-code", {
+        libraryId: "/vercel/next.js",
+        pattern: "x",
+        type: "cobol",
+      });
+      expect(unknownType.result.isError).toBe(true);
+      expect(unknownType.query).toBeUndefined();
+      const noSymbol = await sent(client, "find-symbol", {
+        libraryId: "/vercel/next.js",
+        operation: "definition",
+      });
+      expect(noSymbol.result.isError).toBe(true);
+      expect(noSymbol.query).toBeUndefined();
+    } finally {
+      await client.close();
+    }
+  });
+
+  test("answer 'still indexing' as a normal result and an API error as an error", async () => {
+    const client = await stdioClient({ ...childEnv, CONTEXT7_EXPERIMENTAL: "1" });
     try {
       const indexing = await client.callTool({
-        name: "query-code",
+        name: "grep-code",
         arguments: { libraryId: "/vercel/next.js", pattern: CODE_INDEXING_QUERY },
       });
       expect(indexing.isError).toBeFalsy();
       expect((indexing.content as { text: string }[])[0].text).toMatch(
-        /being indexed.*Call query-code again.*30 seconds/s
+        /being indexed\..*do not wait: answer from query-docs now.*call grep-code once more/s
       );
 
       const noSource = await client.callTool({
-        name: "query-code",
+        name: "grep-code",
         arguments: { libraryId: "/websites/x", pattern: CODE_NO_SOURCE_QUERY },
       });
       expect(noSource.isError).toBe(true);
       expect((noSource.content as { text: string }[])[0].text).toContain("not available");
 
       const gateway = await client.callTool({
-        name: "query-code",
+        name: "grep-code",
         arguments: { libraryId: "/vercel/next.js", pattern: CODE_GATEWAY_QUERY },
       });
       expect(gateway.isError).toBe(true);
@@ -2025,13 +2339,13 @@ describe("query-code tool", () => {
       expect(gatewayText).not.toContain("try again later");
 
       const badTag = await client.callTool({
-        name: "query-code",
+        name: "grep-code",
         arguments: { libraryId: "/vercel/next.js", version: "v0", pattern: CODE_BAD_TAG_QUERY },
       });
       expect(badTag.isError).toBe(true);
       const badTagText = (badTag.content as { text: string }[])[0].text;
       expect(badTagText).toContain("Docs versions: v15.5.0.");
-      expect(badTagText).toContain("one of the docs versions");
+      expect(badTagText).toContain("Call grep-code again with one of the docs versions");
       expect(badTagText).not.toContain("Do not retry");
     } finally {
       await client.close();

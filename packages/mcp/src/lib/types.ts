@@ -1,4 +1,4 @@
-import type { ToolCallOutcome } from "./tool-names.js";
+import type { ExperimentalTool, ToolCallOutcome } from "./tool-names.js";
 
 export interface SearchResult {
   id: string;
@@ -47,17 +47,7 @@ export const CODE_OPERATIONS = [
 export type CodeOperation = (typeof CODE_OPERATIONS)[number];
 export const CODE_OUTPUT_MODES = ["content", "files_with_matches", "count"] as const;
 
-/**
- * Ranges of the numeric query-code fields. The server rejects a number out of
- * its range with a 400, so the tool clamps numbers into these ranges first.
- */
-export const CODE_LIMITS = {
-  context: { min: 0, max: 10 },
-  head_limit: { min: 1, max: 500 },
-  offset: { min: 0, max: 10_000 },
-} as const;
-
-/** Fields of the query-code tool. Search fields follow ripgrep; operations follow LSP. */
+/** A GET /v2/code request, as the code tools (code-tools.ts) send it. Search fields follow ripgrep. */
 export type CodeRequest = {
   libraryId: string;
   /** A git tag, or a commit from a result header. A version suffix on libraryId also works. */
@@ -69,6 +59,11 @@ export type CodeRequest = {
   glob?: string | string[];
   path?: string;
   context?: number;
+  before_context?: number;
+  after_context?: number;
+  word_regexp?: boolean;
+  multiline?: boolean;
+  multiline_dotall?: boolean;
   output_mode?: (typeof CODE_OUTPUT_MODES)[number];
   head_limit?: number;
   offset?: number;
@@ -86,8 +81,12 @@ export interface ClientContext {
   mcpAuthMode?: "observe" | "required";
   transport?: "stdio" | "http";
   sessionId?: string;
-  /** Research preview is on; sent as `X-Context7-Research-Preview: 1` so the app counts preview use. */
-  researchPreview?: boolean;
+  /**
+   * The experimental tools this server lists; a non-empty list is sent as
+   * `X-Context7-Experimental: 1` so the app counts experimental use. With the code tools on,
+   * `X-Context7-Code-Tools: 1` too.
+   */
+  experimentalTools?: readonly ExperimentalTool[];
   /** Mutable: set by the upstream API layer when the backend signals the
    *  client should be prompted to sign in. Read by the auth-prompt wrapper. */
   shouldPrompt?: boolean;

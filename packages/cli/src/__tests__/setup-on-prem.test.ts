@@ -96,6 +96,23 @@ describe("on-premise setup network boundary", () => {
     expect(await readFile(join(tempDir, "AGENTS.md"), "utf-8")).toContain("query-docs");
   });
 
+  test("reads the deployment from CONTEXT7_BASE_URL when --base-url is not passed", async () => {
+    vi.stubEnv("CONTEXT7_BASE_URL", "https://context7.internal.example");
+    const program = new Command();
+    program.exitOverride();
+    registerSetupCommand(program);
+
+    await program.parseAsync(["node", "ctx7", "setup", "--codex", "--project", "--yes"]);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledWith(
+      "https://context7.internal.example/api/auth/mcp",
+      expect.anything()
+    );
+    const config = await readFile(join(tempDir, ".codex", "config.toml"), "utf-8");
+    expect(config).toContain('url = "https://context7.internal.example/mcp"');
+  });
+
   test("re-running setup replaces the AGENTS.md section without touching user content", async () => {
     const agentsPath = join(tempDir, "AGENTS.md");
     await writeFile(

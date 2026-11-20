@@ -1,5 +1,11 @@
 # @upstash/context7-opencode
 
+## 0.2.2
+
+### Patch Changes
+
+- 7fe6e09: The rules and skills that `ctx7 setup` and the plugins install are back to their text from before the source code and upgrade guide tools: no `query-code`, `ctx7 code` or `get-upgrade-guide` guidance. The MCP server describes its experimental tools only to users who turned them on.
+
 ## 0.2.1
 
 ### Patch Changes

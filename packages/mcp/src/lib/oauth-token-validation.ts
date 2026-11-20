@@ -37,7 +37,12 @@ const MAX_CACHE_ENTRIES = 10_000;
 interface CachedVerdict {
   verdict: OpaqueOAuthTokenVerdict;
   expiresAt: number;
+  /** The token's user, from the check's `X-Context7-User-Id` (apps from CTX7-3867 on). */
+  userId?: string;
 }
+
+/** Header of a 204 from the auth check naming the token's user. */
+export const AUTH_CHECK_USER_ID_HEADER = "x-context7-user-id";
 
 // Keyed by the SHA-256 of the token so a heap dump or a debug print of the
 // cache never exposes a usable credential. Map insertion order doubles as the
@@ -70,14 +75,19 @@ function ttlFor(verdict: OpaqueOAuthTokenVerdict): number {
   return UNAVAILABLE_TTL_MS;
 }
 
-function remember(key: string, verdict: OpaqueOAuthTokenVerdict, now: number): void {
+function remember(
+  key: string,
+  verdict: OpaqueOAuthTokenVerdict,
+  now: number,
+  userId?: string
+): void {
   verdicts.delete(key);
   while (verdicts.size >= MAX_CACHE_ENTRIES) {
     const oldest = verdicts.keys().next().value;
     if (oldest === undefined) break;
     verdicts.delete(oldest);
   }
-  verdicts.set(key, { verdict, expiresAt: now + ttlFor(verdict) });
+  verdicts.set(key, { verdict, expiresAt: now + ttlFor(verdict), ...(userId && { userId }) });
 }
 
 function recall(key: string, now: number): OpaqueOAuthTokenVerdict | undefined {
@@ -99,7 +109,9 @@ async function readErrorCode(response: Response): Promise<string | undefined> {
   }
 }
 
-async function requestVerdict(token: string): Promise<OpaqueOAuthTokenVerdict> {
+async function requestVerdict(
+  token: string
+): Promise<{ verdict: OpaqueOAuthTokenVerdict; userId?: string }> {
   const abortSignal = AbortSignal.timeout(AUTH_CHECK_TIMEOUT_MS);
   try {
     return await observeUpstreamRequest(
@@ -115,22 +127,25 @@ async function requestVerdict(token: string): Promise<OpaqueOAuthTokenVerdict> {
           signal: abortSignal,
         }),
       async (response) => {
-        if (response.ok) return "valid";
+        if (response.ok) {
+          const userId = response.headers.get(AUTH_CHECK_USER_ID_HEADER)?.trim();
+          return { verdict: "valid" as const, ...(userId && { userId }) };
+        }
         // Only the API's explicit rejection of the OAuth token counts; any other
         // status (404 before the endpoint ships, 429, 5xx) fails open.
         if (response.status === 401) {
           const code = await readErrorCode(response);
-          if (code === INVALID_OAUTH_TOKEN_ERROR_CODE) return "invalid";
+          if (code === INVALID_OAUTH_TOKEN_ERROR_CODE) return { verdict: "invalid" as const };
         }
         console.error(`[Context7] OAuth token check unavailable (status ${response.status})`);
-        return "unavailable";
+        return { verdict: "unavailable" as const };
       },
       { abortSignal }
     );
   } catch (error) {
     const reason = error instanceof Error ? error.name : "unknown error";
     console.error(`[Context7] OAuth token check failed (${reason})`);
-    return "unavailable";
+    return { verdict: "unavailable" };
   }
 }
 
@@ -153,8 +168,8 @@ export async function validateOpaqueOAuthToken(
   // The TTL counts from when the check started, so a slow check never extends
   // the window during which a stale verdict is served.
   const check = requestVerdict(token)
-    .then((verdict) => {
-      remember(key, verdict, now);
+    .then(({ verdict, userId }) => {
+      remember(key, verdict, now, userId);
       return verdict;
     })
     .finally(() => {
@@ -177,6 +192,18 @@ export function rememberInvalidOAuthToken(token: string, now = Date.now()): void
 /** Whether a data request rejected this token within the last `INVALID_TTL_MS`. */
 export function isOAuthTokenRememberedInvalid(token: string, now = Date.now()): boolean {
   return recall(cacheKey(token), now) === "invalid";
+}
+
+/**
+ * The user of an opaque OAuth token the last check found valid, while that verdict is cached;
+ * the experimental tools snapshot reads it so the token needs no lookup of its own.
+ */
+export function validatedOpaqueOAuthTokenUserId(
+  token: string,
+  now = Date.now()
+): string | undefined {
+  const cached = verdicts.get(cacheKey(token));
+  return cached && cached.verdict === "valid" && cached.expiresAt > now ? cached.userId : undefined;
 }
 
 /** Test hook: drop every cached verdict and in-flight check. */

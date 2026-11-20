@@ -5,8 +5,15 @@ import {
   ClientContext,
   CodeRequest,
 } from "./types.js";
-import type { DocsFeedback, UpgradeGuideRequest } from "./research-preview-tools.js";
-import { GET_UPGRADE_GUIDE_TOOL, type ToolCallOutcome } from "./tool-names.js";
+import type { DocsFeedback, UpgradeGuideRequest } from "./experimental-tools.js";
+import {
+  experimentalToolsFromChoice,
+  GET_UPGRADE_GUIDE_TOOL,
+  type CodeTool,
+  type ExperimentalTool,
+  type ToolCallOutcome,
+} from "./tool-names.js";
+import { createHash } from "node:crypto";
 import { generateHeaders } from "./encryption.js";
 import { Agent, ProxyAgent, setGlobalDispatcher } from "undici";
 import { CONTEXT7_API_BASE_URL } from "./constants.js";
@@ -31,7 +38,7 @@ const API_TIMEOUT_MS = 60_000;
 const EXPIRED_SIGN_IN_MESSAGE =
   "Your Context7 sign-in expired. Retry the request so your MCP client can refresh the sign-in.";
 
-/** What a research preview tool shows the agent, and the outcome its telemetry records. */
+/** What an experimental tool shows the agent, and the outcome its telemetry records. */
 export type ToolAnswer = { text: string; outcome: ToolCallOutcome };
 
 /** The response body as JSON, or undefined when it is not JSON. */
@@ -236,24 +243,25 @@ export async function submitDocsFeedback(
 }
 
 /**
- * True when the server's 202 message already says how long to keep calling.
- * Newer servers include that rule, so the client adds it only for older ones.
+ * Seconds a code tool request lets the API wait for an index before it answers "being indexed".
+ * The API would otherwise hold it up to 40 s; the agent goes on with query-docs instead.
  */
-export function hasRetryAdvice(message: string): boolean {
-  return /keep calling|up to \d+ minutes/i.test(message);
-}
+export const CODE_INDEX_WAIT_SECONDS = 5;
 
-/** Seconds to wait from a 202 body or a Retry-After header (seconds or an HTTP date). */
-export function retryAfterSeconds(bodyValue: unknown, header: string | null): number {
-  if (typeof bodyValue === "number" && Number.isFinite(bodyValue) && bodyValue >= 0)
-    return Math.ceil(bodyValue);
-  if (header) {
-    const seconds = Number(header);
-    if (Number.isFinite(seconds) && seconds >= 0) return Math.ceil(seconds);
-    const date = Date.parse(header);
-    if (Number.isFinite(date)) return Math.max(1, Math.ceil((date - Date.now()) / 1000));
-  }
-  return 30;
+/** A sentence of the server's 202 message that tells the agent to wait and call again. */
+const WAIT_ADVICE = /\b(call again|keep calling|meanwhile)\b/i;
+
+/**
+ * The answer while a library's source is being indexed. The code tools never make the agent
+ * wait: an index can take minutes, or stall, and the user's session must go on. So the server's
+ * own "keep calling" advice is dropped, and the agent answers from query-docs now.
+ */
+export function indexingAnswer(message: string | undefined, tool: string): string {
+  const base = (message ?? "The library source is being indexed.")
+    .split(/(?<=\.)\s+/)
+    .filter((sentence) => !WAIT_ADVICE.test(sentence))
+    .join(" ");
+  return `${base} This is not an error. Until the index is done, every code tool call for this version gives this answer, so do not try other patterns or files and do not wait: answer from query-docs now. Only if the source is still needed at the end of the task, call ${tool} once more.`;
 }
 
 /**
@@ -276,7 +284,8 @@ export function isEmptyCodeResult(text: string): boolean {
 async function codeErrorMessage(
   response: Response,
   request: CodeRequest,
-  context: ClientContext
+  context: ClientContext,
+  tool: CodeTool
 ): Promise<string> {
   const body = (await response
     .clone()
@@ -290,19 +299,20 @@ async function codeErrorMessage(
   // For a git tag, index_failed means that the tag may not exist; the message lists the docs versions.
   const hasVersion = !!request.version || request.libraryId.split("/").filter(Boolean).length > 2;
   if (code === "index_failed" && hasVersion)
-    return `${message} Call query-code again with one of the docs versions in this message, or without version.`;
+    return `${message} Call ${tool} again with one of the docs versions in this message, or without version.`;
   if (code === "code_search_unavailable") return `${message} Answer from query-docs.`;
   return message;
 }
 
 /**
  * Queries a library's source code at the version its docs were built from.
- * A 202 means the source is still being indexed: that is a normal answer
- * telling the agent to call again, not an error.
+ * A 202 means the source is still being indexed: that is a normal answer, and the agent goes on
+ * without it (see indexingAnswer).
  */
 export async function fetchLibraryCode(
   request: CodeRequest,
-  context: ClientContext = {}
+  context: ClientContext,
+  tool: CodeTool
 ): Promise<ContextResponse> {
   try {
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/code`);
@@ -319,10 +329,18 @@ export async function fetchLibraryCode(
     for (const glob of [request.glob ?? []].flat()) url.searchParams.append("glob", glob);
     if (request.path) url.searchParams.set("path", request.path);
     if (request.context !== undefined) url.searchParams.set("context", String(request.context));
+    if (request.before_context !== undefined)
+      url.searchParams.set("before_context", String(request.before_context));
+    if (request.after_context !== undefined)
+      url.searchParams.set("after_context", String(request.after_context));
+    if (request.word_regexp) url.searchParams.set("word_regexp", "true");
+    if (request.multiline) url.searchParams.set("multiline", "true");
+    if (request.multiline_dotall) url.searchParams.set("multiline_dotall", "true");
     if (request.output_mode) url.searchParams.set("output_mode", request.output_mode);
     if (request.head_limit !== undefined)
       url.searchParams.set("head_limit", String(request.head_limit));
     if (request.offset) url.searchParams.set("offset", String(request.offset));
+    url.searchParams.set("wait", String(CODE_INDEX_WAIT_SECONDS));
 
     const headers = generateHeaders(context);
     const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);
@@ -333,22 +351,15 @@ export async function fetchLibraryCode(
       async (response) => {
         readPromptSignal(response, context);
         if (response.status === 202) {
-          const body = (await response.json().catch(() => ({}))) as {
-            message?: string;
-            retryAfter?: number;
-          };
-          const wait = retryAfterSeconds(body.retryAfter, response.headers.get("Retry-After"));
-          const message = body.message ?? "The library source is being indexed.";
+          const body = (await response.json().catch(() => ({}))) as { message?: string };
           return {
-            data: hasRetryAdvice(message)
-              ? `${message} This is not an error.`
-              : `${message} This is not an error. Call query-code again with the same arguments in about ${wait} seconds, and keep calling for up to 3 minutes: a first index usually takes 1 to 3. Meanwhile, or if it is still indexing after that, answer from query-docs.`,
+            data: indexingAnswer(body.message, tool),
             // No "indexing" outcome exists: telemetry counts it with the empty results.
             outcome: "not_found",
           };
         }
         if (!response.ok) {
-          const errorMessage = await codeErrorMessage(response, request, context);
+          const errorMessage = await codeErrorMessage(response, request, context, tool);
           console.error(errorMessage);
           return { data: errorMessage, outcome: "error" };
         }
@@ -518,4 +529,115 @@ export async function fetchLibraryContext(
     console.error(errorMessage);
     return { data: errorMessage, outcome: "error" };
   }
+}
+
+/** Ceiling on the settings call: it runs before a request is served, so it must stay short. */
+const EXPERIMENTAL_TOOLS_TIMEOUT_MS = 2_000;
+/**
+ * How long a credential's choice is reused. A dashboard change shows within this time; it matches
+ * the private cache hint of tools/list. 4.7.1 used 60 s and asked on every request, which
+ * overloaded the app's key validation in production (CTX7-3866).
+ */
+const EXPERIMENTAL_TOOLS_TTL_MS = 5 * 60_000;
+/** After a failed lookup the last known choice (or none) is kept this long before asking again. */
+const EXPERIMENTAL_TOOLS_FAILURE_TTL_MS = 2 * 60_000;
+const EXPERIMENTAL_TOOLS_CACHE_LIMIT = 10_000;
+/**
+ * Lookups one process runs at a time. Past it a request is served from the cache (or with none)
+ * instead of adding to the load on a slow app.
+ */
+const EXPERIMENTAL_TOOLS_MAX_IN_FLIGHT = 32;
+
+type ExperimentalToolsEntry = { tools: ExperimentalTool[]; expiresAt: number };
+type ExperimentalToolsResult = { tools: ExperimentalTool[]; failure?: string };
+
+const experimentalToolsCache = new Map<string, ExperimentalToolsEntry>();
+/** One lookup per credential at a time: parallel requests share it. */
+const experimentalToolsInFlight = new Map<string, Promise<ExperimentalToolsResult>>();
+
+function rememberExperimentalTools(cacheKey: string, tools: ExperimentalTool[], ttlMs: number) {
+  experimentalToolsCache.delete(cacheKey);
+  if (experimentalToolsCache.size >= EXPERIMENTAL_TOOLS_CACHE_LIMIT) {
+    // Maps keep insertion order: drop the oldest entry.
+    const oldest = experimentalToolsCache.keys().next().value;
+    if (oldest !== undefined) experimentalToolsCache.delete(oldest);
+  }
+  experimentalToolsCache.set(cacheKey, { tools, expiresAt: Date.now() + ttlMs });
+}
+
+async function lookUpExperimentalTools(
+  context: ClientContext,
+  cacheKey: string
+): Promise<ExperimentalToolsResult> {
+  // On failure keep the last known choice, even an expired one, so an outage of the app does
+  // not take tools away from a session; only a credential never read lists none.
+  const fail = (failure: string): ExperimentalToolsResult => {
+    const tools = experimentalToolsCache.get(cacheKey)?.tools ?? [];
+    rememberExperimentalTools(cacheKey, tools, EXPERIMENTAL_TOOLS_FAILURE_TTL_MS);
+    return { tools, failure };
+  };
+  try {
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/mcp/experimental-tools`);
+    // No experimental header here: this call decides whether there are any.
+    const headers = generateHeaders({ ...context, experimentalTools: undefined });
+    const abortSignal = AbortSignal.timeout(EXPERIMENTAL_TOOLS_TIMEOUT_MS);
+    return await observeUpstreamRequest(
+      "fetch_experimental_tools",
+      () => fetch(url, { headers, signal: abortSignal }),
+      async (response) => {
+        if (!response.ok) {
+          const json = await readJson<{ error?: string }>(response);
+          // As parseErrorResponse: an expired sign-in gets the HTTP 401 challenge next request.
+          if (
+            response.status === 401 &&
+            context.transport === "http" &&
+            (isOpaqueOAuthToken(context.apiKey) || isClerkOAuthJwt(context.apiKey)) &&
+            (json?.error === INVALID_OAUTH_TOKEN_ERROR_CODE || json?.error === undefined)
+          ) {
+            rememberInvalidOAuthToken(context.apiKey);
+          }
+          return fail(`the Context7 API answered HTTP ${response.status}`);
+        }
+        const tools = experimentalToolsFromChoice(await readJson<unknown>(response));
+        rememberExperimentalTools(cacheKey, tools, EXPERIMENTAL_TOOLS_TTL_MS);
+        return { tools };
+      },
+      { abortSignal }
+    );
+  } catch (error) {
+    return fail(`the Context7 API could not be reached (${error})`);
+  }
+}
+
+/**
+ * The experimental tools the credential's user turned on in the dashboard
+ * (`GET /v2/mcp/experimental-tools`), for the stdio server and an HTTP server without the
+ * snapshot (`experimental-tools-snapshot.ts`). Without a credential none: the server then lists
+ * only the stable tools. When the lookup fails, the last known choice (or none), and `onFailure`
+ * gets the cause once per lookup. Cached per credential (a hash, never the token).
+ */
+export async function fetchExperimentalTools(
+  context: ClientContext,
+  onFailure: (cause: string) => void = (cause) =>
+    console.error(`Error reading experimental tools: ${cause}`)
+): Promise<ExperimentalTool[]> {
+  const { apiKey } = context;
+  if (!apiKey) return [];
+
+  const cacheKey = createHash("sha256").update(apiKey).digest("hex");
+  const cached = experimentalToolsCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.tools;
+
+  let lookup = experimentalToolsInFlight.get(cacheKey);
+  if (lookup) return (await lookup).tools;
+  if (experimentalToolsInFlight.size >= EXPERIMENTAL_TOOLS_MAX_IN_FLIGHT) {
+    return cached?.tools ?? [];
+  }
+  lookup = lookUpExperimentalTools(context, cacheKey).finally(() =>
+    experimentalToolsInFlight.delete(cacheKey)
+  );
+  experimentalToolsInFlight.set(cacheKey, lookup);
+  const { tools, failure } = await lookup;
+  if (failure) onFailure(failure);
+  return tools;
 }

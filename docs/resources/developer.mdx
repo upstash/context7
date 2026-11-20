@@ -58,6 +58,8 @@ OAuth JWT access tokens from the authorization server (`OAUTH_AUTH_SERVER_URL`) 
 
 The HTTP server is stateless — it creates a fresh server instance per request and keeps no session state. Session operations therefore have nothing to attach to: a `GET` or `DELETE` on `/mcp` is answered with `405 Method Not Allowed` rather than opening a standalone Server-Sent Events stream. Server-Sent Events are used only to stream responses to `POST` requests, and keepalive heartbeats are disabled.
 
+`GET /ping` answers `{"status":"ok","message":"pong"}` without reading any credential. It is a liveness check only: it does not validate an API key or OAuth token, and it does not consume request quota. A `200` from `/ping` says the server is up, not that the credential you sent with it is valid. To verify a key, make a real lookup such as `query-docs`: with an invalid key, the tool returns an error with the Context7 API's message.
+
 Stdio transport with API key:
 
 ```bash
