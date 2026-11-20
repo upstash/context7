@@ -1,5 +1,11 @@
-import { describe, expect, test } from "vitest";
-import { configuredBaseUrl } from "../utils/api.js";
+import { afterEach, describe, expect, test } from "vitest";
+import {
+  configuredBaseUrl,
+  DEFAULT_CONTEXT7_BASE_URL,
+  getBaseUrl,
+  isHostedDeployment,
+  setBaseUrl,
+} from "../utils/api.js";
 
 describe("configuredBaseUrl", () => {
   test("prefers --base-url over CONTEXT7_BASE_URL", () => {
@@ -17,5 +23,21 @@ describe("configuredBaseUrl", () => {
   test("returns undefined when neither is set", () => {
     expect(configuredBaseUrl(undefined, {})).toBeUndefined();
     expect(configuredBaseUrl("  ", { CONTEXT7_BASE_URL: "" })).toBeUndefined();
+  });
+});
+
+describe("setBaseUrl", () => {
+  afterEach(() => setBaseUrl(DEFAULT_CONTEXT7_BASE_URL));
+
+  test("drops trailing slashes, so request paths do not start with //", () => {
+    setBaseUrl("https://ctx7.example.com/");
+    expect(getBaseUrl()).toBe("https://ctx7.example.com");
+    setBaseUrl("https://ctx7.example.com/context7//");
+    expect(getBaseUrl()).toBe("https://ctx7.example.com/context7");
+  });
+
+  test("still treats the hosted URL with a trailing slash as hosted", () => {
+    setBaseUrl("https://context7.com/");
+    expect(isHostedDeployment()).toBe(true);
   });
 });
