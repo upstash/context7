@@ -59,6 +59,10 @@ jobs:
       - name: Admin MCP console bundle is up to date
         run: pnpm --filter @upstash/context7-admin-mcp build:ui && git diff --exit-code packages/admin-mcp/src/ui/console-html.ts
 
+      # The context7-mcp skill served over MCP is committed as a module generated from skills/context7-mcp/SKILL.md.
+      - name: MCP skill module is up to date
+        run: pnpm --filter @upstash/context7-mcp build:skill && git diff --exit-code packages/mcp/src/lib/skill-md.ts
+
       - name: Typecheck
         run: pnpm typecheck
 

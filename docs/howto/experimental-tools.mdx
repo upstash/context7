@@ -72,6 +72,16 @@ To choose single tools instead, remove the old name from your configuration and 
 
 Start a new session after you change the configuration, so that your client loads the new tools.
 
+## When Context7 turns them off
+
+Context7 can turn every experimental tool off for all users, without a new server version. While they are off:
+
+- The dashboard does not show the MCP Tools card or the announcement, so there is nothing to turn on.
+- An MCP server signed in with your account or sending one of your API keys lists no experimental tool: the remote server within about a minute (reconnect or start a new session to see it), a local server after a restart.
+- The flags above still turn on every experimental tool, for your client alone. They take precedence over this.
+
+Your saved choice is kept and comes back when the tools do.
+
 ## Documentation feedback
 
 With documentation feedback on, the server lists a `submit-docs-feedback` tool, and its instructions ask the agent to call it once for each library after it answers with `query-docs`. The agent rates how well the documentation answered the question:

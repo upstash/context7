@@ -2,6 +2,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest"
 import { Client } from "@modelcontextprotocol/client";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/client";
 import { StdioClientTransport, getDefaultEnvironment } from "@modelcontextprotocol/client/stdio";
+import { SkillsClient } from "@modelcontextprotocol/client/ext/skills";
+import { readFile } from "node:fs/promises";
 import { execSync } from "node:child_process";
 import { spawn, type ChildProcess } from "node:child_process";
 import { createDecipheriv, createHash } from "node:crypto";
@@ -1302,16 +1304,27 @@ describe.each([
       "language",
       "libraryId",
       "query",
+      "version",
     ]);
   });
 
-  // The declared `capabilities: { prompts: {}, resources: {} }` replaced three
-  // hand-written empty-list handlers; clients that call these unconditionally
-  // must still get an empty collection rather than "method not found".
-  test("answers prompts/resources list requests with empty collections", async () => {
+  // The declared `capabilities: { prompts: {} }` replaced a hand-written
+  // empty-list handler; clients that call it unconditionally must still get an
+  // empty collection rather than "method not found".
+  test("answers prompts/list with an empty collection", async () => {
     expect((await client.listPrompts()).prompts).toEqual([]);
-    expect((await client.listResources()).resources).toEqual([]);
-    expect((await client.listResourceTemplates()).resourceTemplates).toEqual([]);
+  });
+
+  test("serves the context7-mcp skill as the repo's SKILL.md", async () => {
+    const skills = new SkillsClient(client);
+    expect(skills.supported).toBe(true);
+    const listing = await skills.list();
+    expect(listing.invalid).toEqual([]);
+    expect(listing.skills.map((s) => s.uri)).toEqual(["skill://context7-mcp/SKILL.md"]);
+    const file = await skills.read(listing.skills[0]);
+    expect(file.text).toBe(
+      await readFile(path.join(PKG_ROOT, "../../skills/context7-mcp/SKILL.md"), "utf8")
+    );
   });
 
   test("calls query-docs end to end", async () => {
@@ -1397,6 +1410,14 @@ describe.each([
       arguments: { libraryId: "/websites/twilio", query: "send an SMS", language: "Python" },
     });
     expect(requests.find((r) => r.path === "/v2/context")!.query.get("language")).toBe("Python");
+  });
+
+  test("forwards the version to the context endpoint", async () => {
+    await client.callTool({
+      name: "query-docs",
+      arguments: { libraryId: "/vercel/next.js", query: "caching", version: "^15.4.3" },
+    });
+    expect(requests.find((r) => r.path === "/v2/context")!.query.get("version")).toBe("^15.4.3");
   });
 
   test("accepts a long language hint instead of rejecting the call", async () => {
