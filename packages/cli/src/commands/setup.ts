@@ -51,7 +51,7 @@ import {
   getJsonServerEntry,
 } from "../setup/mcp-writer.js";
 import { writeOpenCodeServer } from "../setup/opencode-editor.js";
-import { configuredBaseUrl } from "../utils/api.js";
+import { configuredBaseUrl, OAUTH_SETUP_COMMAND } from "../utils/api.js";
 
 type Scope = "global" | "project";
 type SetupMode = "mcp" | "cli";
@@ -163,9 +163,20 @@ async function resolveAuth(
   if (explicitApiKey) return { mode: "api-key", apiKey: explicitApiKey };
   if (options.oauth) return { mode: "oauth" };
 
-  const resolvedApiKey = await resolveSetupApiKey();
-  if (!resolvedApiKey) return null;
-  return { mode: "api-key", apiKey: resolvedApiKey };
+  const resolved = await resolveSetupApiKey();
+  if (!resolved) return null;
+  if ("apiKey" in resolved) return { mode: "api-key", apiKey: resolved.apiKey };
+
+  // The teamspace refuses this member an API key: OAuth is the only way in.
+  if (options.stdio) {
+    log.error(
+      `Your teamspace allows only OAuth for your account, and --stdio needs an API key. Run ${OAUTH_SETUP_COMMAND} to use the HTTP endpoint with OAuth.`
+    );
+    process.exitCode = 1;
+    return null;
+  }
+  log.warn("Your teamspace allows only OAuth for your account. Setting up with OAuth instead.");
+  return { mode: "oauth" };
 }
 
 function getSetupValidationError(

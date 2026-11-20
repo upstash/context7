@@ -509,7 +509,8 @@ export async function pollDeviceToken(
     case "slow_down":
       return { status: "slow_down" };
     case "access_denied":
-      return { status: "denied" };
+      // The server may say why (for example, the teamspace refuses this member an API key).
+      return { status: "denied", errorMessage: err.error_description };
     case "expired_token":
       return { status: "expired" };
     default:
