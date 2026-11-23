@@ -101,7 +101,7 @@ describe("parseOAuthAudienceEnforcement", () => {
 describe("FOREIGN_OAUTH_AUDIENCE_MESSAGE", () => {
   test("is the agreed wording and safe inside a quoted WWW-Authenticate parameter", () => {
     expect(FOREIGN_OAUTH_AUDIENCE_MESSAGE).toBe(
-      "This token was issued for another server. If you connect through a gateway or proxy, use a Context7 API key instead."
+      "This token was issued for another server. If you connect through a gateway or proxy, add it as a trusted gateway in your teamspace's Enterprise settings, or use a Context7 API key."
     );
     expect(FOREIGN_OAUTH_AUDIENCE_MESSAGE).not.toMatch(/["\\]/);
   });

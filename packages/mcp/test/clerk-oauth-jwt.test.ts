@@ -30,7 +30,7 @@ vi.mock("jose", async () => {
   };
 });
 
-import { isClerkOAuthJwt, validateJWT } from "../src/lib/jwt.js";
+import { isClerkOAuthJwt, resetTrustedGatewayCache, validateJWT } from "../src/lib/jwt.js";
 import {
   classifyAuthMethod,
   classifyOAuthClientRegistration,
@@ -117,6 +117,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   resetOpaqueOAuthTokenValidation();
+  resetTrustedGatewayCache();
   resetJwtWarningLog();
   fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
@@ -302,7 +303,10 @@ describe("audience enforcement", () => {
       expect(logged).toContain(
         `audienceMismatch clientId=${CLIENT_ID} aud=${FOREIGN_AUDIENCE} enforcement=${mode} outcome=${onForeign.outcome === "accepted" ? "accepted" : "rejected"}`
       );
-      expect(fetchMock).not.toHaveBeenCalled();
+      // A rejected foreign audience is first looked up as a trusted gateway; nothing else is fetched.
+      for (const [url] of fetchMock.mock.calls) {
+        expect(String(url)).toContain("/v2/gateway-audiences/");
+      }
     }
   );
 
@@ -452,6 +456,86 @@ describe("audience enforcement", () => {
   });
 });
 
+describe("trusted gateway audiences", () => {
+  const GATEWAY = "https://aiverse.example.com/context7/mcp";
+  const lookupUrl = `https://context7.com/api/v2/gateway-audiences/${encodeURIComponent(GATEWAY)}`;
+
+  test("foreign: accepts a registered gateway audience without logging a mismatch", async () => {
+    vi.stubEnv("MCP_OAUTH_AUDIENCE_ENFORCEMENT", "foreign");
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+
+    const token = await sign({ aud: "HTTPS://AIVERSE.example.com/context7/mcp/" });
+
+    await expect(validateJWT(token)).resolves.toEqual({ valid: true });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0][0])).toBe(lookupUrl);
+    expect(loggedLines()).toBe("");
+  });
+
+  test("foreign: rejects an unregistered audience and caches the miss", async () => {
+    vi.stubEnv("MCP_OAUTH_AUDIENCE_ENFORCEMENT", "foreign");
+    fetchMock.mockResolvedValue(new Response(null, { status: 404 }));
+    const token = await sign({ aud: GATEWAY });
+
+    for (let i = 0; i < 2; i += 1) {
+      await expect(validateJWT(token)).resolves.toMatchObject({
+        valid: false,
+        error: FOREIGN_OAUTH_AUDIENCE_MESSAGE,
+      });
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  test("foreign: rejects when the lookup fails, and asks again next time", async () => {
+    vi.stubEnv("MCP_OAUTH_AUDIENCE_ENFORCEMENT", "foreign");
+    fetchMock.mockRejectedValue(new Error("network down"));
+    const token = await sign({ aud: GATEWAY });
+
+    await expect(validateJWT(token)).resolves.toMatchObject({ valid: false });
+    await expect(validateJWT(token)).resolves.toMatchObject({ valid: false });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  test("observe: does not look the audience up", async () => {
+    await expect(validateJWT(await sign({ aud: GATEWAY }))).resolves.toMatchObject({
+      valid: true,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test("a JWT the API refused as foreign gets that message, not 'expired'", async () => {
+    vi.stubEnv("MCP_OAUTH_AUDIENCE_ENFORCEMENT", "foreign");
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+    const token = await sign({ aud: GATEWAY });
+    rememberInvalidOAuthToken(token, Date.now(), "foreign_audience");
+
+    const decision = await evaluateMcpAuthentication(token, "required");
+
+    expect(decision).toEqual({
+      allowed: false,
+      method: "oauth",
+      error: FOREIGN_OAUTH_AUDIENCE_MESSAGE,
+      event: "credential_rejected",
+      outcome: "invalid",
+    });
+  });
+
+  test("an opaque token the auth check refused as foreign gets that message", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        { error: "invalid_oauth_token", message: FOREIGN_OAUTH_AUDIENCE_MESSAGE },
+        { status: 401 }
+      )
+    );
+
+    await expect(evaluateMcpAuthentication("oat_gateway", "required")).resolves.toMatchObject({
+      allowed: false,
+      error: FOREIGN_OAUTH_AUDIENCE_MESSAGE,
+      outcome: "invalid",
+    });
+  });
+});
+
 describe("a Clerk OAuth JWT the Context7 API rejected", () => {
   test("is challenged on the next request without re-verification", async () => {
     const token = await sign();
@@ -496,6 +580,25 @@ describe("a Clerk OAuth JWT the Context7 API rejected", () => {
       outcome: "expired",
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  test("keeps the API's foreign-audience message, so the client does not sign in again", async () => {
+    const token = await sign();
+    fetchMock.mockResolvedValueOnce(
+      Response.json(
+        { error: "invalid_oauth_token", message: FOREIGN_OAUTH_AUDIENCE_MESSAGE },
+        { status: 401 }
+      )
+    );
+
+    const result = await searchLibraries("q", "react", { apiKey: token, transport: "http" });
+    expect(result.error).toBe(FOREIGN_OAUTH_AUDIENCE_MESSAGE);
+
+    await expect(evaluateMcpAuthentication(token, "required")).resolves.toMatchObject({
+      allowed: false,
+      error: FOREIGN_OAUTH_AUDIENCE_MESSAGE,
+      outcome: "invalid",
+    });
   });
 });
 

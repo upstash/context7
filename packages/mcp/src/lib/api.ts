@@ -22,6 +22,7 @@ import tls from "tls";
 import { observeUpstreamRequest } from "./telemetry-runtime.js";
 import {
   INVALID_OAUTH_TOKEN_ERROR_CODE,
+  invalidOAuthTokenReason,
   isOpaqueOAuthToken,
   rememberInvalidOAuthToken,
 } from "./oauth-token-validation.js";
@@ -72,8 +73,9 @@ async function parseErrorResponse(response: Response, context: ClientContext): P
     (isOpaqueOAuthToken(apiKey) || isClerkOAuthJwt(apiKey)) &&
     (json?.error === INVALID_OAUTH_TOKEN_ERROR_CODE || json?.error === undefined)
   ) {
-    rememberInvalidOAuthToken(apiKey);
-    return EXPIRED_SIGN_IN_MESSAGE;
+    const reason = invalidOAuthTokenReason(json?.message);
+    rememberInvalidOAuthToken(apiKey, Date.now(), reason);
+    return reason && json?.message ? json.message : EXPIRED_SIGN_IN_MESSAGE;
   }
   if (json?.message) {
     return json.message;
@@ -586,7 +588,7 @@ async function lookUpExperimentalTools(
       () => fetch(url, { headers, signal: abortSignal }),
       async (response) => {
         if (!response.ok) {
-          const json = await readJson<{ error?: string }>(response);
+          const json = await readJson<{ error?: string; message?: string }>(response);
           // As parseErrorResponse: an expired sign-in gets the HTTP 401 challenge next request.
           if (
             response.status === 401 &&
@@ -594,7 +596,11 @@ async function lookUpExperimentalTools(
             (isOpaqueOAuthToken(context.apiKey) || isClerkOAuthJwt(context.apiKey)) &&
             (json?.error === INVALID_OAUTH_TOKEN_ERROR_CODE || json?.error === undefined)
           ) {
-            rememberInvalidOAuthToken(context.apiKey);
+            rememberInvalidOAuthToken(
+              context.apiKey,
+              Date.now(),
+              invalidOAuthTokenReason(json?.message)
+            );
           }
           return fail(`the Context7 API answered HTTP ${response.status}`);
         }

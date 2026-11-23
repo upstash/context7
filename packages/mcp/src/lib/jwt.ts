@@ -7,7 +7,11 @@ import {
   OAUTH_JWKS_URL,
   RESOURCE_URL,
 } from "./constants.js";
-import { checkOAuthAudience, FOREIGN_OAUTH_AUDIENCE_MESSAGE } from "./oauth-audience.js";
+import {
+  checkOAuthAudience,
+  FOREIGN_OAUTH_AUDIENCE_MESSAGE,
+  normalizeAudience,
+} from "./oauth-audience.js";
 import { isVercelMarketplaceIssuer, validateVercelMarketplaceJwt } from "./vercelMarketplaceJwt.js";
 
 const oauthJwks = jose.createRemoteJWKSet(new URL(OAUTH_JWKS_URL));
@@ -79,6 +83,60 @@ async function fetchEntraConfig(audience: string): Promise<EntraConfig | null> {
     // the next request retries.
   }
   return null;
+}
+
+/**
+ * Trusted MCP gateways: a teamspace can register its gateway's MCP URL in the
+ * Context7 app, so a token a user's agent obtained through that gateway (its
+ * `aud` is the gateway's URL) is accepted. Only the app knows which teamspace
+ * the token's user acts on, so this server merely asks whether the audience is
+ * registered and, if so, lets the token through for the app to decide.
+ */
+const GATEWAY_TTL_MS = 60 * 1000;
+const GATEWAY_CACHE_MAX = 1000;
+const trustedGatewayByAudience = new Map<string, { registered: boolean; expiresAt: number }>();
+
+/** Test hook: forget every cached gateway lookup. */
+export function resetTrustedGatewayCache(): void {
+  trustedGatewayByAudience.clear();
+}
+
+/** `undefined` when the app could not answer; such a miss is not cached. */
+async function isTrustedGatewayAudience(audience: string): Promise<boolean | undefined> {
+  const now = Date.now();
+  const cached = trustedGatewayByAudience.get(audience);
+  if (cached) {
+    if (cached.expiresAt > now) return cached.registered;
+    trustedGatewayByAudience.delete(audience);
+  }
+
+  try {
+    const res = await fetch(
+      `${CONTEXT7_API_BASE_URL}/v2/gateway-audiences/${encodeURIComponent(audience)}`
+    );
+    if (res.status === 204 || res.status === 404) {
+      const registered = res.status === 204;
+      if (trustedGatewayByAudience.size >= GATEWAY_CACHE_MAX) {
+        trustedGatewayByAudience.delete(trustedGatewayByAudience.keys().next().value!);
+      }
+      trustedGatewayByAudience.set(audience, { registered, expiresAt: now + GATEWAY_TTL_MS });
+      return registered;
+    }
+  } catch {
+    // Network error: transient, so not cached.
+  }
+  return undefined;
+}
+
+async function anyTrustedGatewayAudience(aud: unknown): Promise<boolean> {
+  const audiences = (typeof aud === "string" ? [aud] : Array.isArray(aud) ? aud : [])
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => normalizeAudience(value))
+    .filter(Boolean);
+  for (const audience of audiences) {
+    if (await isTrustedGatewayAudience(audience)) return true;
+  }
+  return false;
 }
 
 export interface JWTValidationResult {
@@ -159,6 +217,12 @@ async function validateClerkOAuthJwt(token: string): Promise<JWTValidationResult
   const clientId =
     typeof payload.client_id === "string" && payload.client_id ? payload.client_id : "unknown";
   const warning = `audienceMismatch clientId=${clientId} aud=${audience.aud} enforcement=${audience.enforcement} outcome=${audience.outcome}`;
+  if (audience.outcome === "rejected" && (await anyTrustedGatewayAudience(payload.aud))) {
+    // A teamspace's trusted gateway. The Context7 API accepts it only for a
+    // user of that teamspace and answers 401 otherwise, so it is not logged
+    // as a mismatch here.
+    return { valid: true };
+  }
   if (audience.outcome === "rejected") {
     // A new token from the same client would be rejected the same way, so
     // "re-authenticate" would only send it in a loop; the message names the

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { CONTEXT7_API_BASE_URL, SERVER_VERSION } from "./constants.js";
 import { observeUpstreamRequest } from "./telemetry-runtime.js";
+import { FOREIGN_OAUTH_AUDIENCE_MESSAGE } from "./oauth-audience.js";
 
 /**
  * Opaque Clerk OAuth access tokens (`oat_…`) cannot be verified locally the way
@@ -39,7 +40,15 @@ interface CachedVerdict {
   expiresAt: number;
   /** The token's user, from the check's `X-Context7-User-Id` (apps from CTX7-3867 on). */
   userId?: string;
+  /**
+   * The API refused the token as issued for another server (for example a
+   * gateway another teamspace trusts). Signing in again cannot help, so the
+   * client is told why instead of "expired".
+   */
+  reason?: InvalidOAuthTokenReason;
 }
+
+export type InvalidOAuthTokenReason = "foreign_audience";
 
 /** Header of a 204 from the auth check naming the token's user. */
 export const AUTH_CHECK_USER_ID_HEADER = "x-context7-user-id";
@@ -79,7 +88,8 @@ function remember(
   key: string,
   verdict: OpaqueOAuthTokenVerdict,
   now: number,
-  userId?: string
+  userId?: string,
+  reason?: InvalidOAuthTokenReason
 ): void {
   verdicts.delete(key);
   while (verdicts.size >= MAX_CACHE_ENTRIES) {
@@ -87,7 +97,12 @@ function remember(
     if (oldest === undefined) break;
     verdicts.delete(oldest);
   }
-  verdicts.set(key, { verdict, expiresAt: now + ttlFor(verdict), ...(userId && { userId }) });
+  verdicts.set(key, {
+    verdict,
+    expiresAt: now + ttlFor(verdict),
+    ...(userId && { userId }),
+    ...(reason && { reason }),
+  });
 }
 
 function recall(key: string, now: number): OpaqueOAuthTokenVerdict | undefined {
@@ -100,18 +115,28 @@ function recall(key: string, now: number): OpaqueOAuthTokenVerdict | undefined {
   return cached.verdict;
 }
 
-async function readErrorCode(response: Response): Promise<string | undefined> {
+async function readError(response: Response): Promise<{ code?: string; message?: string }> {
   try {
-    const body = (await response.json()) as { error?: unknown };
-    return typeof body.error === "string" ? body.error : undefined;
+    const body = (await response.json()) as { error?: unknown; message?: unknown };
+    return {
+      ...(typeof body.error === "string" && { code: body.error }),
+      ...(typeof body.message === "string" && { message: body.message }),
+    };
   } catch {
-    return undefined;
+    return {};
   }
 }
 
-async function requestVerdict(
-  token: string
-): Promise<{ verdict: OpaqueOAuthTokenVerdict; userId?: string }> {
+/** Why the Context7 API refused an OAuth token, from its 401 body `message`. */
+export function invalidOAuthTokenReason(message: unknown): InvalidOAuthTokenReason | undefined {
+  return message === FOREIGN_OAUTH_AUDIENCE_MESSAGE ? "foreign_audience" : undefined;
+}
+
+async function requestVerdict(token: string): Promise<{
+  verdict: OpaqueOAuthTokenVerdict;
+  userId?: string;
+  reason?: InvalidOAuthTokenReason;
+}> {
   const abortSignal = AbortSignal.timeout(AUTH_CHECK_TIMEOUT_MS);
   try {
     return await observeUpstreamRequest(
@@ -134,8 +159,11 @@ async function requestVerdict(
         // Only the API's explicit rejection of the OAuth token counts; any other
         // status (404 before the endpoint ships, 429, 5xx) fails open.
         if (response.status === 401) {
-          const code = await readErrorCode(response);
-          if (code === INVALID_OAUTH_TOKEN_ERROR_CODE) return { verdict: "invalid" as const };
+          const { code, message } = await readError(response);
+          if (code === INVALID_OAUTH_TOKEN_ERROR_CODE) {
+            const reason = invalidOAuthTokenReason(message);
+            return { verdict: "invalid" as const, ...(reason && { reason }) };
+          }
         }
         console.error(`[Context7] OAuth token check unavailable (status ${response.status})`);
         return { verdict: "unavailable" as const };
@@ -168,8 +196,8 @@ export async function validateOpaqueOAuthToken(
   // The TTL counts from when the check started, so a slow check never extends
   // the window during which a stale verdict is served.
   const check = requestVerdict(token)
-    .then(({ verdict, userId }) => {
-      remember(key, verdict, now, userId);
+    .then(({ verdict, userId, reason }) => {
+      remember(key, verdict, now, userId, reason);
       return verdict;
     })
     .finally(() => {
@@ -185,8 +213,23 @@ export async function validateOpaqueOAuthToken(
  * instead of waiting for the cached positive verdict to expire, or, for a JWT
  * that still verifies locally, at all.
  */
-export function rememberInvalidOAuthToken(token: string, now = Date.now()): void {
-  remember(cacheKey(token), "invalid", now);
+export function rememberInvalidOAuthToken(
+  token: string,
+  now = Date.now(),
+  reason?: InvalidOAuthTokenReason
+): void {
+  remember(cacheKey(token), "invalid", now, undefined, reason);
+}
+
+/** Why a cached invalid verdict was given, when the API said so. */
+export function rememberedInvalidOAuthTokenReason(
+  token: string,
+  now = Date.now()
+): InvalidOAuthTokenReason | undefined {
+  const cached = verdicts.get(cacheKey(token));
+  return cached && cached.verdict === "invalid" && cached.expiresAt > now
+    ? cached.reason
+    : undefined;
 }
 
 /** Whether a data request rejected this token within the last `INVALID_TTL_MS`. */
