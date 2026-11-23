@@ -122,7 +122,14 @@ async function promptForOnPremApiKey(deployment: CustomSetupDeployment): Promise
     return await password({
       message: `Personal API key (create one at ${deployment.baseUrl}/account)`,
       mask: true,
-      validate: (value) => value.trim().length > 0 || "API key is required",
+      validate: (value) => {
+        const key = value.trim();
+        if (!key) return "API key is required";
+        return (
+          key.startsWith(ON_PREM_PERSONAL_KEY_PREFIX) ||
+          `Enter a personal key (${ON_PREM_PERSONAL_KEY_PREFIX}...)`
+        );
+      },
     }).then((value) => value.trim());
   } catch {
     log.error("Setup cancelled before a personal API key was entered.");

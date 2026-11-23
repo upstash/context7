@@ -395,6 +395,18 @@ describe("on-premise OAuth sign-in", () => {
     expect(await codexConfig()).not.toContain("Authorization");
   });
 
+  test("accepts only a personal key at the prompt", async () => {
+    authStatus({ enabled: true, mode: "personal_keys" });
+    promptMocks.password.mockResolvedValue("ctx7op-typed_key");
+    await runSetup();
+    const { validate } = promptMocks.password.mock.calls[0][0] as {
+      validate: (value: string) => true | string;
+    };
+    expect(validate("ctx7op-abc_def")).toBe(true);
+    expect(validate("  ")).toBe("API key is required");
+    expect(validate("ctx7sk-hosted")).toContain("personal key");
+  });
+
   test("refuses an explicit key that is not a personal key", async () => {
     authStatus({ enabled: true, mode: "both", oauth: { available: true } });
     await runSetup("--api-key", "ctx7sk-hosted", "--yes");
