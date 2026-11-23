@@ -24,9 +24,18 @@ Both judges scored each pair in randomized order with the server labels hidden.
 They used shared documentation references for all 60 library cases and fixture
 evidence for repository tasks. They scored correct, partial, and incorrect as
 2, 1, and 0. The README task was judged from the applied diff. Their full-credit
-thresholds differed. Neither judge found a gain in fully correct answers.
-[`results-installed.json`](results-installed.json) contains per-case call counts
-and scores.
+thresholds differed. [`results-installed.json`](results-installed.json) contains
+per-case call counts and scores.
+
+Each case ran once per arm, and single runs of one configuration differ by about
+three points. All differences in the table are within that spread. For users
+with the installed rule and skill, this run found no measurable change in lookups
+or answer correctness.
+
+The library references come from Context7. A judge can then favor answers that
+used Context7. Both arms called Context7 on all 60 library cases, so this bias
+does not change the comparison above. It can change a comparison where only one
+arm calls Context7.
 
 In the separate server-only wording control, Claude Code used Context7 on
 43/219 required cases with the old wording and 203/219 with the new wording,
@@ -70,3 +79,10 @@ python3 grade-installed.py --fixture "$BENCH_PROJECT" --old /tmp/ctx7-old.jsonl 
 Run `run-installed.py --case NUMBER` with a fresh output file to retry a
 failed case, then replace that case's row before grading. References come from
 the live Context7 index and can change between runs.
+
+The scripts read three optional fields of the held-out cases in
+`trigger-eval-all.json`. `library` names the library that
+`fetch-installed-references.py` looks up. `evidence` selects the fixture evidence
+that `grade-installed.py` gives the judge. `edits` lists the files that a case
+can change. `run-installed.py` runs that case in its own copy of the fixture and
+records the diff. Case numbers count held-out cases in file order.

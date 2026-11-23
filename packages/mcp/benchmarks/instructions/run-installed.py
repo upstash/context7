@@ -58,13 +58,16 @@ def main():
         entry["url"] = args.url
         entry["headers"] = {"Authorization": f"Bearer {key}"}
         config.write_text(json.dumps(data))
-        # The single patch case gets its own checkout so other cases see the pristine fixture.
+        # Cases with an `edits` field get their own checkout, so other cases see the pristine fixture.
+        edit_cases = {i for i in selected if cases[i - 1].get("edits")}
+        if len(edit_cases) > 1:
+            parser.error("Only one selected case can edit the fixture.")
         edit_project = Path(scratch) / "patch-project"
-        if 81 in selected:
+        if edit_cases:
             shutil.copytree(project, edit_project)
 
         def run_case(i):
-            edit = i == 81
+            edit = i in edit_cases
             cwd = edit_project if edit else project
             client = SimpleNamespace(agent="claude", binary=args.binary, model=args.model,
                                      timeout=args.timeout, project=cwd)
@@ -74,12 +77,14 @@ def main():
             )
             diff = None
             if edit:
-                name = "README.md"
-                diff = "".join(unified_diff(
-                    (project / name).read_text().splitlines(keepends=True),
-                    (edit_project / name).read_text().splitlines(keepends=True),
-                    fromfile="before", tofile="after",
-                ))
+                diff = "".join(
+                    "".join(unified_diff(
+                        (project / name).read_text().splitlines(keepends=True),
+                        (edit_project / name).read_text().splitlines(keepends=True),
+                        fromfile=f"before/{name}", tofile=f"after/{name}",
+                    ))
+                    for name in cases[i - 1]["edits"]
+                )
             for secret in filter(None, (key, judge_key)):
                 answer = answer.replace(secret, "[redacted]")
                 if diff:

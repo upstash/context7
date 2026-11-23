@@ -969,361 +969,421 @@
     "query": "kysely: how do I write a left join on a subquery that picks the latest order per user?",
     "should_trigger": true,
     "category": "direct-api",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Kysely"
   },
   {
     "query": "In Pinia, how do I reset a setup store back to its initial state? $reset only seems to work for option stores",
     "should_trigger": true,
     "category": "direct-api",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Pinia"
   },
   {
     "query": "what's the right way to register a global guard in NestJS that can still inject other providers",
     "should_trigger": true,
     "category": "direct-api",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "NestJS"
   },
   {
     "query": "socket.io rooms - how do i broadcast to everyone in a room except the sender, from inside the connection handler",
     "should_trigger": true,
     "category": "direct-api",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Socket.IO"
   },
   {
     "query": "With the Vercel AI SDK, how do I define a tool with an input schema and let generateText call it over several steps before answering?",
     "should_trigger": true,
     "category": "direct-api",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Vercel AI SDK"
   },
   {
     "query": "we use XState v5. how do I spawn a child actor from the parent machine and send events to it later?",
     "should_trigger": true,
     "category": "direct-api",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "XState"
   },
   {
     "query": "mapbox gl js: add a geojson source with clustering turned on, then color the cluster circles by point_count",
     "should_trigger": true,
     "category": "direct-api",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Mapbox GL JS"
   },
   {
     "query": "how do you make attributes filterable in a Meilisearch index and then filter on two of them in one search call",
     "should_trigger": true,
     "category": "direct-api",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Meilisearch"
   },
   {
     "query": "We moved from Nuxt 3 to Nuxt 4 and a bunch of imports from ~/components broke. did the default srcDir move to app/?",
     "should_trigger": true,
     "category": "version-breakage",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Nuxt"
   },
   {
     "query": "upgrading MSW 1.x -> 2.x and rest.get('/api/user', (req, res, ctx) => ...) doesnt exist anymore. whats the new handler signature",
     "should_trigger": true,
     "category": "version-breakage",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Mock Service Worker"
   },
   {
     "query": "Storybook 8 dropped storiesOf? we still have about 40 files using it. what's the replacement and is there a codemod",
     "should_trigger": true,
     "category": "version-breakage",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Storybook"
   },
   {
     "query": "chakra ui v3 removed a lot of props we relied on, e.g. colorScheme on Button no longer does anything. what replaced it",
     "should_trigger": true,
     "category": "version-breakage",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Chakra UI"
   },
   {
     "query": "after bumping @sentry/browser to v8, new Sentry.Integrations.BrowserTracing() is undefined. how is tracing set up now?",
     "should_trigger": true,
     "category": "version-breakage",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Sentry JavaScript"
   },
   {
     "query": "jotai v2 - the Provider scope prop is gone? how do I get an isolated store per subtree now",
     "should_trigger": true,
     "category": "version-breakage",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Jotai"
   },
   {
     "query": "We're on Rails 8 now and want to replace Sidekiq with Solid Queue. What does the new default config expect in production, does it need its own database?",
     "should_trigger": true,
     "category": "version-breakage",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Ruby on Rails Solid Queue"
   },
   {
     "query": "Auth.js v5 (the next-auth beta): what replaces getServerSession? every one of our api routes calls it",
     "should_trigger": true,
     "category": "version-breakage",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Auth.js"
   },
   {
     "query": "my lead asked me to add background jobs with retries to our node api. we're looking at Inngest. how do I define a function that runs on an event and retries just one step if it fails",
     "should_trigger": true,
     "category": "real-world-task",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Inngest"
   },
   {
     "query": "we need product analytics + session replay in our vue app. planning to use posthog. what's the setup, and how do i identify the user after they log in?",
     "should_trigger": true,
     "category": "real-world-task",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "PostHog"
   },
   {
     "query": "We resize uploaded images on the server before saving them and want to use sharp. How do I make webp thumbnails at 3 widths and keep the EXIF orientation correct?",
     "should_trigger": true,
     "category": "real-world-task",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "sharp"
   },
   {
     "query": "got a ticket for search-as-you-type on the product catalog. we already pay for algolia. how do i wire up instantsearch in a vue 3 frontend",
     "should_trigger": true,
     "category": "real-world-task",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Algolia Vue InstantSearch"
   },
   {
     "query": "client wants an excel export of the orders table: bold header row, a currency column, first row frozen. node backend, thinking exceljs. how",
     "should_trigger": true,
     "category": "real-world-task",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "ExcelJS"
   },
   {
     "query": "We need SMS verification codes at signup. Twilio Verify looks like the right product. How do I send a code and then check it from a Python backend?",
     "should_trigger": true,
     "category": "real-world-task",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Twilio Verify"
   },
   {
     "query": "marketing wants to edit pages without us, so we picked Sanity as the CMS. how do I fetch a page by slug with GROQ and render the portable text body in our frontend?",
     "should_trigger": true,
     "category": "real-world-task",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Sanity GROQ Portable Text"
   },
   {
     "query": "pm wants order fulfillment to survive server restarts, someone suggested temporal. how do i write a workflow plus an activity with the typescript sdk and run a worker",
     "should_trigger": true,
     "category": "real-world-task",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Temporal TypeScript SDK"
   },
   {
     "query": "Cypress says cy.origin() needs experimentalSessionAndOrigin but I thought that flag got removed? we're on cypress 13",
     "should_trigger": true,
     "category": "debugging-needs-docs",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Cypress"
   },
   {
     "query": "electron app: window.require is not a function in the renderer after we upgraded electron. is this the contextIsolation default change? what's the proper way to expose fs now",
     "should_trigger": true,
     "category": "debugging-needs-docs",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Electron"
   },
   {
     "query": "kafkajs consumer rebalances every ~30s and logs 'The group is rebalancing, so a rejoin is needed'. our handler takes a while per message. which consumer settings fix this",
     "should_trigger": true,
     "category": "debugging-needs-docs",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "KafkaJS"
   },
   {
     "query": "trying to get pretty logs in dev with pino. transport: { target: 'pino-pretty' } gives 'unable to determine transport target'. pino-pretty is in devDependencies",
     "should_trigger": true,
     "category": "debugging-needs-docs",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Pino"
   },
   {
     "query": "Turborepo never caches our build task, every run is a cache miss even when nothing changed. turbo.json:\n{\n  \"tasks\": {\n    \"build\": { \"dependsOn\": [\"^build\"] }\n  }\n}",
     "should_trigger": true,
     "category": "debugging-needs-docs",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Turborepo"
   },
   {
     "query": "MikroORM throws 'Using global EntityManager instance methods for context specific actions is disallowed' in our koa app. how do i fork the em per request the right way",
     "should_trigger": true,
     "category": "debugging-needs-docs",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "MikroORM"
   },
   {
     "query": "tauri: invoke('greet', { name }) from the frontend returns 'command greet not found' even though the rust fn has #[tauri::command] on it",
     "should_trigger": true,
     "category": "debugging-needs-docs",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Tauri"
   },
   {
     "query": "write a Three.js scene that loads a glTF model with GLTFLoader, adds OrbitControls and a simple key + ambient light setup",
     "should_trigger": true,
     "category": "implementation",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Three.js"
   },
   {
     "query": "make a Lit web component for a 5-star rating input that fires a change event with the selected value",
     "should_trigger": true,
     "category": "implementation",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Lit"
   },
   {
     "query": "set up an Elysia server with a typed POST /todos route that validates the body with t.Object and serves swagger docs",
     "should_trigger": true,
     "category": "implementation",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Elysia"
   },
   {
     "query": "build an accordion with motion (framer motion) where the panel height animates open and closed and the chevron rotates",
     "should_trigger": true,
     "category": "implementation",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Motion React"
   },
   {
     "query": "Write a Payload CMS collection config for blog posts: slug field that's unique, rich text body, author relationship to users, and drafts enabled.",
     "should_trigger": true,
     "category": "implementation",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Payload CMS"
   },
   {
     "query": "give me an ECharts option object for a stacked area chart with a time x-axis and a dataZoom slider at the bottom",
     "should_trigger": true,
     "category": "implementation",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Apache ECharts"
   },
   {
     "query": "write an htmx infinite scroll list where the last row loads the next page when it scrolls into view. backend just returns html rows",
     "should_trigger": true,
     "category": "implementation",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "htmx"
   },
   {
     "query": "we use chi for routing in go. how do i mount a subrouter under /admin that has its own middleware stack",
     "should_trigger": true,
     "category": "non-js",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "go-chi chi"
   },
   {
     "query": "clap derive in rust: how do I make a subcommand that takes a repeatable --tag flag and an optional positional path",
     "should_trigger": true,
     "category": "non-js",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "clap Rust"
   },
   {
     "query": "python httpx AsyncClient - how do I set a per-request timeout and retry automatically on connection errors?",
     "should_trigger": true,
     "category": "non-js",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "HTTPX"
   },
   {
     "query": "Quarkus: how do I declare a REST client interface with @RegisterRestClient and give it a different base URL per profile?",
     "should_trigger": true,
     "category": "non-js",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Quarkus"
   },
   {
     "query": "jetpack compose: whats the lifecycle-aware way to collect a StateFlow from my ViewModel inside a composable",
     "should_trigger": true,
     "category": "non-js",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Jetpack Compose Lifecycle"
   },
   {
     "query": "Livewire 3 form objects - how do I validate one and show the error message under each input?",
     "should_trigger": true,
     "category": "non-js",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Laravel Livewire"
   },
   {
     "query": "Oban: how do I schedule a job to run 10 minutes from now and make it unique per user_id so it isn't queued twice?",
     "should_trigger": true,
     "category": "non-js",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Oban"
   },
   {
     "query": "EF Core 8 on SQL Server: how do I map a JSON column to an owned type and filter on a property inside it in a LINQ query",
     "should_trigger": true,
     "category": "non-js",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Entity Framework Core"
   },
   {
     "query": "knex transaction rollback",
     "should_trigger": true,
     "category": "terse",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Knex.js"
   },
   {
     "query": "mantine notifications setup",
     "should_trigger": true,
     "category": "terse",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Mantine"
   },
   {
     "query": "gorm preload nested associations",
     "should_trigger": true,
     "category": "terse",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "GORM"
   },
   {
     "query": "biome ignore files config",
     "should_trigger": true,
     "category": "terse",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Biome"
   },
   {
     "query": "pytest-asyncio session scoped fixture",
     "should_trigger": true,
     "category": "terse",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "pytest-asyncio"
   },
   {
     "query": "valibot optional with default",
     "should_trigger": true,
     "category": "terse",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Valibot"
   },
   {
     "query": "aws sam cli: how do I invoke my lambda locally with an API Gateway event and load env vars from a json file?",
     "should_trigger": true,
     "category": "cloud-cli",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "AWS SAM CLI"
   },
   {
     "query": "netlify cli - deploy a preview build from CI and print the deploy url, without the interactive site linking prompt",
     "should_trigger": true,
     "category": "cloud-cli",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Netlify CLI"
   },
   {
     "query": "which az cli commands do I need to create a storage account and put it behind a private endpoint",
     "should_trigger": true,
     "category": "cloud-cli",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Azure CLI"
   },
   {
     "query": "pulumi: how do i set a secret config value from the cli and read it in a python program",
     "should_trigger": true,
     "category": "cloud-cli",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Pulumi"
   },
   {
     "query": "railway cli - how do I run a one-off script locally but with the production service's env vars injected",
     "should_trigger": true,
     "category": "cloud-cli",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Railway CLI"
   },
   {
     "query": "Rewrite this Winston setup with pino, keeping JSON output and both console + file destinations:\nconst logger = winston.createLogger({ level: 'info', format: winston.format.json(), transports: [new winston.transports.Console(), new winston.transports.File({ filename: 'app.log' })] })",
     "should_trigger": true,
     "category": "porting",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Pino"
   },
   {
     "query": "we're moving a report from SQL Server to BigQuery. how do I translate this? SELECT TOP 10 ISNULL(region, 'n/a') AS region, DATEADD(day, -7, GETDATE()) AS since FROM sales",
     "should_trigger": true,
     "category": "porting",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Google BigQuery"
   },
   {
     "query": "convert this Chart.js line chart to Recharts: { type: 'line', data: { labels, datasets: [{ label: 'Signups', data: counts, tension: 0.3 }] }, options: { plugins: { legend: { display: false } } } }",
     "should_trigger": true,
     "category": "porting",
-    "set": "heldout"
+    "set": "heldout",
+    "library": "Recharts"
   },
   {
     "query": "we use NestJS. this service method is called doStuff2, suggest a clearer name. it loads an invoice, adds late fees, and saves it",
@@ -1437,31 +1497,37 @@
     "query": "what does packages/evals actually test? give me a short summary from the code",
     "should_trigger": false,
     "category": "codebase-task",
-    "set": "heldout"
+    "set": "heldout",
+    "evidence": "packages-evals"
   },
   {
     "query": "does packages/tools-ai-sdk import anything from packages/sdk, or is it standalone?",
     "should_trigger": false,
     "category": "codebase-task",
-    "set": "heldout"
+    "set": "heldout",
+    "evidence": "tools-ai-sdk-imports"
   },
   {
     "query": "Add a 'Packages' section to README.md that lists each folder under packages/ with a one-line description of it",
     "should_trigger": false,
     "category": "codebase-task",
-    "set": "heldout"
+    "set": "heldout",
+    "evidence": "readme-packages",
+    "edits": ["README.md"]
   },
   {
     "query": "check the docs/ folder for relative links that point to files that don't exist",
     "should_trigger": false,
     "category": "codebase-task",
-    "set": "heldout"
+    "set": "heldout",
+    "evidence": "docs-relative-links"
   },
   {
     "query": "compare the scripts in the package.json of packages/cli and packages/mcp and tell me which ones differ",
     "should_trigger": false,
     "category": "codebase-task",
-    "set": "heldout"
+    "set": "heldout",
+    "evidence": "package-scripts"
   },
   {
     "query": "bash one-liner to find files over 500MB under my home dir, sorted biggest first",
