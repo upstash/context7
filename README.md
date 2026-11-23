@@ -52,7 +52,7 @@ Set up Context7 for your coding agents with a single command. The `ctx7` CLI req
 npx ctx7 setup
 ```
 
-Authenticates via OAuth, generates an API key, and installs the appropriate skill. You can choose between CLI + Skills or MCP mode. Use `--cursor`, `--claude`, or `--opencode` to target a specific agent.
+Authenticates via OAuth, generates an API key, and installs the appropriate skill. You can choose between CLI + Skills or MCP mode. Use `--cursor`, `--claude`, `--opencode`, or `--vscode-insiders` to target a specific agent.
 
 To remove the generated setup later, run `npx ctx7 remove`. If you globally installed the CLI with `npm install -g ctx7`, remove that package separately with `npm uninstall -g ctx7`.
 

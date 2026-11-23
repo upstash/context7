@@ -44,6 +44,7 @@ import {
   detectAgents,
   ALL_AGENT_NAMES,
   resolveVscodeUserDir,
+  resolveVscodeInsidersUserDir,
   resolveDevinConfigDir,
   type AuthOptions,
   type Transport,
@@ -657,6 +658,32 @@ describe("agent config integration", () => {
       ["linux", "/home/test", {}, "/home/test/.config/Code/User"],
     ] as const)("resolves the %s user directory", (platform, home, env, expected) => {
       expect(resolveVscodeUserDir(platform, home, env)).toBe(expected);
+    });
+
+    test.each([
+      ["darwin", "/home/test", {}, "/home/test/Library/Application Support/Code - Insiders/User"],
+      [
+        "win32",
+        "/home/test",
+        { APPDATA: "C:\\Users\\test\\AppData\\Roaming" },
+        "C:\\Users\\test\\AppData\\Roaming/Code - Insiders/User",
+      ],
+      ["win32", "/home/test", {}, "/home/test/AppData/Roaming/Code - Insiders/User"],
+      ["linux", "/home/test", { XDG_CONFIG_HOME: "/xdg" }, "/xdg/Code - Insiders/User"],
+      ["linux", "/home/test", {}, "/home/test/.config/Code - Insiders/User"],
+    ] as const)(
+      "resolves the VS Code Insiders directory on %s",
+      (platform, home, env, expected) => {
+        expect(resolveVscodeInsidersUserDir(platform, home, env)).toBe(expected);
+      }
+    );
+
+    test("registers VS Code Insiders as a separate global target", () => {
+      const insiders = getAgent("vscodeInsiders");
+
+      expect(insiders.setupOption).toBe("--vscode-insiders");
+      expect(insiders.mcp.globalPaths[0]).toMatch(/Code - Insiders[\\/]User[\\/]mcp\.json$/);
+      expect(insiders.detect.projectPaths).toEqual([]);
     });
 
     test("owns its instructions frontmatter in the agent rule policy", () => {

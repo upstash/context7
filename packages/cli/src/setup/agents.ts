@@ -56,6 +56,23 @@ export function resolveVscodeUserDir(
   return join(env.XDG_CONFIG_HOME || join(home, ".config"), "Code", "User");
 }
 
+export function resolveVscodeInsidersUserDir(
+  platform: NodeJS.Platform = process.platform,
+  home: string = homedir(),
+  env: { APPDATA?: string; XDG_CONFIG_HOME?: string } = {
+    APPDATA: process.env.APPDATA,
+    XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME,
+  }
+): string {
+  if (platform === "win32") {
+    return join(env.APPDATA || join(home, "AppData", "Roaming"), "Code - Insiders", "User");
+  }
+  if (platform === "darwin") {
+    return join(home, "Library", "Application Support", "Code - Insiders", "User");
+  }
+  return join(env.XDG_CONFIG_HOME || join(home, ".config"), "Code - Insiders", "User");
+}
+
 export function resolveDevinConfigDir(
   platform: NodeJS.Platform = process.platform,
   home: string = homedir(),
@@ -150,6 +167,7 @@ export async function findAppendRuleFile(
 export interface AgentConfig {
   displayName: string;
   setupDescription?: string;
+  setupOption?: string;
   mcp: {
     projectPaths: string[];
     globalPaths: string[];
@@ -191,6 +209,48 @@ function withHeaders(base: Record<string, unknown>, auth: AuthOptions): Record<s
     return { ...base, headers: { Authorization: `Bearer ${auth.apiKey}` } };
   }
   return base;
+}
+
+function vscodeAgent(
+  displayName: string,
+  resolveUserDir: () => string,
+  setupOption?: string,
+  detectProject = true
+): AgentConfig {
+  return {
+    displayName,
+    setupDescription: `Set up for ${displayName}`,
+    setupOption,
+    mcp: {
+      projectPaths: [join(".vscode", "mcp.json")],
+      get globalPaths() {
+        return [join(resolveUserDir(), "mcp.json")];
+      },
+      configKey: "servers",
+      buildEntry: (auth, transport, mcpUrl) =>
+        transport === "stdio"
+          ? { type: "stdio", ...stdioEntry(auth) }
+          : withHeaders({ type: "http", url: mcpUrl }, auth),
+    },
+    rule: {
+      kind: "file",
+      dir: (scope) =>
+        scope === "global" ? join(resolveUserDir(), "prompts") : join(".github", "instructions"),
+      filename: "context7.instructions.md",
+      contentPrefix: `---\napplyTo: "**"\n---\n\n`,
+    },
+    skill: {
+      name: "context7-mcp",
+      dir: (scope) =>
+        scope === "global" ? join(homedir(), ".agents", "skills") : join(".agents", "skills"),
+    },
+    detect: {
+      projectPaths: detectProject ? [".vscode"] : [],
+      get globalPaths() {
+        return [resolveUserDir()];
+      },
+    },
+  };
 }
 
 const agents = {
@@ -251,40 +311,14 @@ const agents = {
     },
   },
 
-  vscode: {
-    displayName: "VS Code",
-    mcp: {
-      projectPaths: [join(".vscode", "mcp.json")],
-      get globalPaths() {
-        return [join(resolveVscodeUserDir(), "mcp.json")];
-      },
-      configKey: "servers",
-      buildEntry: (auth, transport, mcpUrl) =>
-        transport === "stdio"
-          ? { type: "stdio", ...stdioEntry(auth) }
-          : withHeaders({ type: "http", url: mcpUrl }, auth),
-    },
-    rule: {
-      kind: "file",
-      dir: (scope) =>
-        scope === "global"
-          ? join(resolveVscodeUserDir(), "prompts")
-          : join(".github", "instructions"),
-      filename: "context7.instructions.md",
-      contentPrefix: `---\napplyTo: "**"\n---\n\n`,
-    },
-    skill: {
-      name: "context7-mcp",
-      dir: (scope) =>
-        scope === "global" ? join(homedir(), ".agents", "skills") : join(".agents", "skills"),
-    },
-    detect: {
-      projectPaths: [".vscode"],
-      get globalPaths() {
-        return [resolveVscodeUserDir()];
-      },
-    },
-  },
+  vscode: vscodeAgent("VS Code", resolveVscodeUserDir),
+
+  vscodeInsiders: vscodeAgent(
+    "VS Code Insiders",
+    resolveVscodeInsidersUserDir,
+    "--vscode-insiders",
+    false
+  ),
 
   devin: {
     displayName: "Devin",
