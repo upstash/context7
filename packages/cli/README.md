@@ -149,7 +149,7 @@ ctx7 setup --pi
 # Use an existing API key instead of OAuth
 ctx7 setup --api-key YOUR_API_KEY
 
-# Use OAuth endpoint (IDE handles auth flow)
+# Use OAuth sign-in (the client signs in through the browser)
 ctx7 setup --oauth
 
 # Configure an on-premise deployment (pass the deployment root)
