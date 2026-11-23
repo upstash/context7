@@ -21,7 +21,9 @@ import { envelopeClientInfo } from "./utils.js";
  * Server-side A/B test of the server instructions on the hosted endpoint.
  *
  * Control gets the instructions from before CTX7-3596 and deferred tools. Treatment gets the
- * current instructions and `alwaysLoad`. A caller keeps one arm across requests, because the
+ * current instructions and `alwaysLoad`. Until the rollout ends, every server without a running
+ * test (stdio, self-hosted, or a hosted pod without the test's variable) serves control, so only
+ * the treatment arm of the hosted test gets the new text. A caller keeps one arm across requests, because the
  * arm comes from a salted hash of a stable caller identity. The hosted server is stateless,
  * so this is what keeps initialize and later requests in the same arm.
  */
@@ -37,6 +39,7 @@ Do not use for: refactoring, debugging, or reviewing code that does not depend o
  * - With an experiment ID: `controlPercent` of callers get control, the rest treatment, and
  *   each caller's arm is sealed for the app to count (0 and 100 are allowed).
  * - Without one: everyone gets the same text, uncounted: control at 100, treatment at 0.
+ * Callers without an arm (no experiment, or no identity) get control unless the share is 0.
  */
 export interface InstructionsExperimentConfig {
   experimentId: string | null;
@@ -101,7 +104,7 @@ export async function fetchInstructionsExperimentConfig(
 
 /**
  * The hosted server's test, from `CONTEXT7_INSTRUCTIONS_EXPERIMENT=remote`. Without that
- * variable (stdio, self-hosted servers) there is no test and everyone gets the current text.
+ * variable (stdio, self-hosted servers) there is no test and everyone gets the control text.
  * With it, the server reads the config from the app once. When the app has none, sends an
  * invalid one, or cannot be reached, everyone gets the production text, so a failure never
  * rolls the new text out. The arms need `MCP_CLIENT_IP_ASSERTION_KEY`: without it this throws,
@@ -194,7 +197,7 @@ export interface InstructionsSessionConfig {
 export interface InstructionsExperiment {
   /** The caller's arm, or undefined when the test is off or the caller has no identity. */
   assign(identity: { apiKey?: string; clientIp?: string }): InstructionsArm | undefined;
-  /** What a session gets. Callers without an arm get the treatment text. */
+  /** What a session gets. Callers without an arm get control unless the share is 0. */
   sessionConfig(arm: InstructionsArm | undefined): InstructionsSessionConfig;
   /**
    * For a request that asks for the instructions (initialize or server/discover): counts it
@@ -278,7 +281,7 @@ const armSession = (variant: InstructionsVariant | undefined) =>
     : { instructions: SERVER_INSTRUCTIONS, toolMeta: ALWAYS_LOAD_META };
 
 /**
- * The test for one process. Undefined config: no test, everyone gets the current text.
+ * The test for one process. Undefined config: no test, everyone gets the control text.
  */
 export function createInstructionsExperiment(
   config: InstructionsExperimentConfig | undefined,
@@ -290,9 +293,11 @@ export function createInstructionsExperiment(
   } = {}
 ): InstructionsExperiment {
   const experimentId = config?.experimentId ?? null;
-  const controlPercent = config?.controlPercent ?? 0;
-  // Without an experiment ID nobody gets an arm: the share picks the one text everyone gets.
-  const defaultVariant: InstructionsVariant = controlPercent === 100 ? "control" : "treatment";
+  const controlPercent = config?.controlPercent ?? 100;
+  // Callers without an arm get control, so a small treatment share never reaches callers the
+  // test cannot place. Without an experiment ID nobody gets an arm, and a share of 0 is how the
+  // app gives everyone the treatment text.
+  const defaultVariant: InstructionsVariant = controlPercent === 0 ? "treatment" : "control";
   const hmac = options.hmac ?? assertionKeyHmac;
   const report = options.report ?? reportExposure;
   const sendDefinition = options.reportDefinition ?? reportDefinition;

@@ -13,7 +13,6 @@ import {
   LEGACY_SERVER_INSTRUCTIONS,
 } from "../src/lib/instructions-experiment.js";
 import type { InstructionsVariant } from "../src/lib/types.js";
-import { ALWAYS_LOAD_META } from "../src/lib/constants.js";
 import { serverInstructions } from "../src/lib/server-instructions.js";
 import { QUERY_DOCS_TOOL, RESOLVE_LIBRARY_ID_TOOL } from "../src/lib/tool-names.js";
 
@@ -806,22 +805,26 @@ describe("experimental tools", () => {
     ).toBe("private");
   });
 
-  test("returns the same server instructions over HTTP and stdio, with the experimental sections only when those tools are on", async () => {
+  test("serves the control text over HTTP and stdio without a test, with the experimental sections only when those tools are on", async () => {
     const instructions = (transport: StreamableHTTPClientTransport | StdioClientTransport) =>
       withTransport(transport, async (client) => client.getInstructions() ?? "");
     const httpText = await instructions(httpTransport(httpUrl));
-    expect(httpText).toBe(serverInstructions());
+    expect(httpText).toBe(serverInstructions({ base: LEGACY_SERVER_INSTRUCTIONS }));
     expect(await instructions(stdioTransport(childEnv))).toBe(httpText);
 
     expect(await instructions(httpTransport(`${httpUrl}?experimental=1`))).toBe(
-      serverInstructions({ codeTools: true, feedbackRequest: true })
+      serverInstructions({
+        base: LEGACY_SERVER_INSTRUCTIONS,
+        codeTools: true,
+        feedbackRequest: true,
+      })
     );
   });
 
-  test("asks clients to load resolve-library-id and query-docs up front", async () => {
+  test("does not ask clients to load the docs tools up front without a test", async () => {
     const tools = await withClient(httpUrl, async (client) => (await client.listTools()).tools);
     for (const name of [RESOLVE_LIBRARY_ID_TOOL, QUERY_DOCS_TOOL]) {
-      expect(tools.find((t) => t.name === name)?._meta).toMatchObject(ALWAYS_LOAD_META);
+      expect(tools.find((t) => t.name === name)?._meta?.["anthropic/alwaysLoad"]).toBeUndefined();
     }
   });
 
@@ -1165,7 +1168,7 @@ describe("experimental tools", () => {
     await client.connect(httpTransport(httpUrl, "ctx7sk-no-tools-1"));
     try {
       const discover = client.getDiscoverResult() as { instructions?: string };
-      expect(discover.instructions).toBe(serverInstructions());
+      expect(discover.instructions).toBe(serverInstructions({ base: LEGACY_SERVER_INSTRUCTIONS }));
       expect(discover.instructions).not.toContain("grep-code");
     } finally {
       await client.close();

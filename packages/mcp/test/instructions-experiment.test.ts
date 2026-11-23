@@ -133,7 +133,7 @@ describe("loadInstructionsExperiment", () => {
     const e = await loadInstructionsExperiment({}, { fetchConfig });
     expect(fetchConfig).not.toHaveBeenCalled();
     expect(arm(e)).toBeUndefined();
-    expect(e.sessionConfig(undefined).instructions).toBe(SERVER_INSTRUCTIONS);
+    expect(e.sessionConfig(undefined).instructions).toBe(LEGACY_SERVER_INSTRUCTIONS);
   });
 
   test("uses the config the app sent", async () => {
@@ -293,16 +293,31 @@ describe("sessionConfig", () => {
     });
   });
 
-  test("treatment and callers without an arm get the current text and alwaysLoad", () => {
+  test("treatment gets the current text and alwaysLoad", () => {
     expect(experiment(50).sessionConfig(arm("treatment"))).toEqual({
       instructions: SERVER_INSTRUCTIONS,
       toolMeta: ALWAYS_LOAD_META,
       privateLists: true,
     });
+  });
+
+  test("without a test, everyone gets the control text and no alwaysLoad", () => {
     expect(createInstructionsExperiment(undefined).sessionConfig(undefined)).toEqual({
+      instructions: LEGACY_SERVER_INSTRUCTIONS,
+      toolMeta: undefined,
+      privateLists: false,
+    });
+  });
+
+  test("callers the test cannot place get control unless the control share is 0", () => {
+    // A 1% rollout must not give the new text to callers without an identity.
+    expect(experiment(99).sessionConfig(undefined)).toMatchObject({
+      instructions: LEGACY_SERVER_INSTRUCTIONS,
+      toolMeta: undefined,
+    });
+    expect(experiment(0).sessionConfig(undefined)).toMatchObject({
       instructions: SERVER_INSTRUCTIONS,
       toolMeta: ALWAYS_LOAD_META,
-      privateLists: false,
     });
   });
 
