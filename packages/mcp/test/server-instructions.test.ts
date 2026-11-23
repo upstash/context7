@@ -33,4 +33,16 @@ describe("serverInstructions", () => {
       )
     ).toContain(SERVER_INSTRUCTIONS);
   });
+
+  test("keeps the code tools trigger sentence within Claude Code's limit when every section is on", () => {
+    // Claude Code cuts the rest of this section. The first sentence says when to read the source.
+    const trigger = CODE_TOOLS_INSTRUCTIONS.slice(0, CODE_TOOLS_INSTRUCTIONS.indexOf(". ") + 1);
+    expect(trigger).toMatch(/read the library's source with .*'find-symbol'\.$/);
+    expect(
+      serverInstructions({ codeTools: true, feedbackRequest: true }).slice(
+        0,
+        CLAUDE_CODE_INSTRUCTIONS_LIMIT
+      )
+    ).toContain(trigger);
+  });
 });

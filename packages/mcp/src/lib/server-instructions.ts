@@ -36,6 +36,11 @@ export const CLAUDE_CODE_INSTRUCTIONS_LIMIT = 2048;
  * The instructions a session gets: the base text (the current one unless an A/B arm picks
  * another), then the sections of the experimental tools the caller has on. Claude Code keeps
  * the first 2048 characters, so the base text comes first.
+ *
+ * With both experimental sections on, the text is longer than 2048 characters. Claude Code then
+ * keeps the first sentence of the code tools section, which says when to read library source, and
+ * cuts the rest. The details it cuts are also in the code tools' parameter descriptions, and the
+ * feedback request is also in the 'submit-docs-feedback' tool description.
  */
 export function serverInstructions(
   options: { base?: string; codeTools?: boolean; feedbackRequest?: boolean } = {}
