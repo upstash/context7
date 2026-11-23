@@ -232,7 +232,7 @@ These are set in your `docker-compose.yml` or `.env` file before starting the co
 | `AWS_REGION`, `AWS_DEFAULT_REGION`, `AWS_BEARER_TOKEN_BEDROCK`, standard AWS credential variables | No | AWS Bedrock authentication. See [AWS Bedrock](/enterprise/integrations/aws-bedrock) |
 | `LOG_MAX_SIZE_MB` | No | Size of the log file before it rotates (default: `10`). Logs are JSONL in `$DATA_DIR/logs/context7.jsonl` |
 | `LOG_MAX_FILES` | No | Number of rotated log files to keep (default: `3`) |
-| `AZURE_DEVOPS_ALLOW_HTTP` | No | `true` allows an `http://` [Azure DevOps Server](/enterprise/integrations/azure-devops#azure-devops-server) URL. Without it, Context7 requires `https://` |
+| `AZURE_DEVOPS_ALLOW_HTTP` | No | `true` allows an `http://` [Azure DevOps Server](/enterprise/integrations/azure-devops#connect-azure-devops) URL. Without it, Context7 requires `https://` |
 | `NOTION_REQUESTS_PER_MINUTE` | No | Notion API rate (default: `180`). The only other accepted value is `600` |
 | `MAX_FILES`, `PARSE_CONCURRENCY`, `PARSE_TIMEOUT`, `NOTION_MAX_PAGES`, `GOOGLE_DRIVE_MAX_FILES`, `AZURE_DEVOPS_MAX_WORK_ITEMS` | No | Default values for the [parsing settings](#parsing-settings). A value saved in the dashboard wins |
 
