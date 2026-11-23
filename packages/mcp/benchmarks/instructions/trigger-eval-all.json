@@ -1520,7 +1520,8 @@
     "should_trigger": false,
     "category": "codebase-task",
     "set": "heldout",
-    "evidence": "docs-relative-links"
+    "evidence": "docs-relative-links",
+    "max_turns": 30
   },
   {
     "query": "compare the scripts in the package.json of packages/cli and packages/mcp and tell me which ones differ",

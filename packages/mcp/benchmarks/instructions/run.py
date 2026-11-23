@@ -136,15 +136,16 @@ def run_turn(args, env, config, prompt, session=None, followup=False, *, max_tur
 def run_case(args, env, config, case):
     followup = case.get("followup")
     session = str(uuid.uuid4()) if followup else None
+    max_turns = case.get("max_turns", 10)
     calls, answer, thread, error, tool_errors, web_searches = run_turn(
-        args, env, config, case["query"], session
+        args, env, config, case["query"], session, max_turns=max_turns
     )
     first_calls = None
     if followup and not error:
         first_calls = [name for name, _ in calls]
         if thread:
             calls, answer, _, error, followup_errors, web_searches = run_turn(
-                args, env, config, followup, thread, followup=True
+                args, env, config, followup, thread, followup=True, max_turns=max_turns
             )
             tool_errors += followup_errors
         else:

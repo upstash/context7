@@ -72,7 +72,7 @@ def main():
             client = SimpleNamespace(agent="claude", binary=args.binary, model=args.model,
                                      timeout=args.timeout, project=cwd)
             calls, answer, _, error, tool_errors, _ = run_turn(
-                client, env, cwd / ".mcp.json", cases[i - 1]["query"], max_turns=16,
+                client, env, cwd / ".mcp.json", cases[i - 1]["query"], max_turns=cases[i - 1].get("max_turns", 16),
                 extra_tools=("Edit", "Write") if edit else (),
             )
             diff = None

@@ -55,6 +55,9 @@ Each case runs three times by default. `--repeats 1` gives a quick pass, but do
 not compare variants on one run per case. Earlier single runs of one configuration
 differed by about three points on the 171 lookup cases.
 
+Claude Code turns stop after 10 agent turns. A case can set `max_turns` to allow
+more, for a repository task that needs many tool calls.
+
 Repeat both commands against the baseline endpoint. For the Codex rule arm, keep
 the candidate endpoint and add `--project-file AGENTS.md=path/to/rule.md`, which
 copies the rule under test into the fixture.
