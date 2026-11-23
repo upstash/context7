@@ -355,8 +355,8 @@ Delete, cancel parse, and support bundle downloads are for admins only. Use the 
 
 | Permission | Default | Description |
 |---|---|---|
-| Parse repositories | Off | Allow anonymous callers to trigger parsing |
-| Refresh repositories | Off | Allow anonymous callers to refresh libraries. Notion, Google Drive, and Azure DevOps libraries stay admin-only |
+| Parse repositories | Off | Allow anonymous callers to trigger parsing. A parse with **Index source code** on still needs a signed-in member or a personal API key |
+| Refresh repositories | Off | Allow anonymous callers to refresh libraries. Notion, Google Drive, and Azure DevOps libraries stay admin-only, and a library with **Index source code** on needs a signed-in member or a personal API key |
 | Delete repositories | Off | Allow anonymous callers and members to delete libraries and cancel parses |
 | Download support bundle | Off | Allow anonymous callers and members to download the support bundle |
 | MCP authentication | On for a new install | Require a session or personal API key for `/mcp`, `/api/v2`, and the library, log, and queue read endpoints. See [Authentication](/enterprise/api/authentication#non-admin-permissions) |

@@ -81,6 +81,8 @@ Certain operations can be opened to anonymous callers (no session and no API key
 
 These switches do not limit signed-in users. Members and their API keys can always parse and refresh, except Notion and Google Drive libraries, which only admins refresh. To re-parse or replace an existing library, a member needs read access to it.
 
+The parse and refresh switches cover documentation-only work. A parse with source code indexing (`indexSourceCode`), and a refresh of a library whose settings have **Index source code** on, run the CodeDocs agent on the repository, so they always need a member: a session or a personal API key. Anonymous callers get `401` with `Sign in required to index source code`. CodeDocs generation (`POST /api/generate-codedocs`) needs a member the same way.
+
 The delete switch also covers cancelling a parse. When it is on, members can delete and cancel too. The support bundle switch works the same way for downloads.
 
 <Note>
