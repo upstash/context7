@@ -16,7 +16,7 @@ Each work item page contains:
 - A details line: state and reason, area, iteration, priority, severity, assigned to, tags, parent, and the created and changed dates.
 - The rich-text fields: description, acceptance criteria, repro steps, system info and resolution, and the CMMI justification, proposed fix and analysis.
 - The custom fields of your process, under their display names. Short values go in the details line. Long text and HTML fields get their own section.
-- Up to 200 comments, when **Include comments** is on.
+- Up to 200 comments, when **Include comments** is on. Deleted comments are left out.
 
 Context7 does not index attachments, images, history, links other than the parent, or HTML that a reader does not see, such as HTML comments. Work items that the credential cannot read are left out.
 
@@ -50,7 +50,7 @@ Context7 stores the credential encrypted. You can replace it at any time: librar
       </Step>
     </Steps>
 
-    Tokens expire. Paste a new token before the old one expires.
+    Tokens expire. Paste a new token before the old one expires. A service principal on Azure DevOps Services does not expire in this way.
   </Tab>
   <Tab title="Service principal (Entra ID)">
     Works with Azure DevOps Services only. Context7 gets short-lived tokens, and no employee account is involved.
@@ -72,7 +72,7 @@ Context7 stores the credential encrypted. You can replace it at any time: librar
 </Tabs>
 
 <Note>
-**Azure DevOps Server:** use `https://`, because the credential goes with every request. For an internal server without TLS, set `AZURE_DEVOPS_ALLOW_HTTP=true`. For an internal or self-signed certificate, set `NODE_EXTRA_CA_CERTS` to your CA bundle.
+**Azure DevOps Server:** use `https://`, because the credential goes with every request. Azure DevOps Services always uses `https://`. For an internal server without TLS, set `AZURE_DEVOPS_ALLOW_HTTP=true`. For an internal or self-signed certificate, set `NODE_EXTRA_CA_CERTS` to your CA bundle.
 </Note>
 
 ## Add a library
@@ -125,7 +125,7 @@ Each sync lists the matching work items again. It indexes only the work items th
 
 Context7 keeps the indexed content:
 
-- **The listing fails**, for example because the credential expired. The library keeps its work items and shows the error. Context7 retries after 15 minutes, 1 hour and 6 hours.
+- **The listing fails**, for example because the credential expired or the project is gone. The library keeps its work items and shows the error. Context7 retries after 15 minutes, 1 hour and 6 hours.
 - **A work item fails.** It keeps its last indexed version and is retried on the next sync. The library lists it; choose **Export failures as CSV** for the full list.
 - **A sync would remove too many work items:** all of them, or more than half of a library with 20 or more, with unchanged filters. Context7 stops and keeps the index, because the credential has usually lost access. If the removal is expected, choose **Refresh** with **Re-index all work items**.
 
