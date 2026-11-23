@@ -106,7 +106,7 @@ export function registerSetupCommand(program: Command): void {
     .option("-p, --project", "Configure for current project instead of globally")
     .option("-y, --yes", "Skip confirmation prompts")
     .option("--api-key <key>", "Use API key authentication")
-    .option("--oauth", "Use OAuth endpoint (IDE handles auth flow)")
+    .option("--oauth", "Use OAuth sign-in (the client signs in through the browser)")
     .option("--stdio", "Configure the MCP server as a local stdio process (default: HTTP)")
     // The root option handles shared API configuration; this local declaration also
     // lets Commander accept --base-url after `setup`.
