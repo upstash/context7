@@ -167,3 +167,35 @@ OpenCode 1.18.15 completed the explicit Context7 lookup control against both
 servers through OpenRouter. Three of ten pilot cases hit client errors.
 The captured candidate request contained both Context7 tool definitions
 and omitted the candidate server instructions.
+
+## Claude Code rerun on the current master
+
+A rerun on 2026-11-23 compared master at `d648d80c` with the same master and
+#3665 merged. It used Claude Code 2.1.326 with Opus 5.5, Context7 MCP v4.7.3,
+a Context7 API key, and the pinned fixture. It ran the held-out cases, the
+behavior set, and the many-library set two times each, with no project rule.
+The old server served 703 characters of instructions without the up-front
+loading hint. The new server served 1,771 characters and the hint on both tools.
+
+| Set            | Old required lookups | New required lookups | Old unneeded lookups | New unneeded lookups |
+| -------------- | -------------------: | -------------------: | -------------------: | -------------------: |
+| Held-out       |               39/120 |              119/120 |                 0/60 |                 0/60 |
+| Behavior       |                22/48 |                45/48 |                 0/50 |                 2/50 |
+| Many libraries |                 7/48 |                47/48 |                  N/A |                  N/A |
+
+| Server | Client errors | MCP tool errors | Unstable cases | Behavior check failures | Many-library budget failures | Follow-ups without a prior query |
+| ------ | ------------: | --------------: | -------------: | ----------------------: | ---------------------------: | -------------------------------: |
+| Old    |             0 |               5 |              6 |                       0 |                            0 |                                9 |
+| New    |             0 |               2 |              3 |                       0 |                           12 |                                0 |
+
+Both unneeded lookups in the new arm came from one follow-up case. After the
+first turn fetched Express docs, the agent queried them again for a POST route.
+Each many-library budget failure is a question that names five or six
+libraries. The agent called each tool once per library, which is more than the
+three calls per question that the tool description allows. The old arm passed
+that check because it rarely called Context7.
+
+An earlier rerun without an API key used Context7's anonymous quota. Most new
+arm calls then failed with quota and rate limit errors. The agent stopped after
+the first error, as the new text says, but those runs do not measure normal
+tool results.

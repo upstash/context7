@@ -44,6 +44,30 @@ lookups. That control measures lookup coverage. The normal-install run above
 measures the incremental effect of changing the server for users with the
 installed rule and skill. [Server change and benchmark results](https://github.com/upstash/context7/pull/3665)
 
+## Rerun on the current master
+
+A second run repeated this comparison on 2026-11-23 with Claude Code 2.1.326,
+Opus 5.5, and Context7 MCP v4.7.3. The old arm ran master at `d648d80c`. The
+new arm ran the same master with #3665 merged. The fixture was the pinned commit
+`a5175f3e`, set up with `ctx7` 0.9.0. The runner and graders were the scripts in
+this folder. Each case ran once per arm, and all 60 references were available.
+
+| Metric                                        | Old server | New server |
+| --------------------------------------------- | ---------: | ---------: |
+| Any Context7 call on lookup cases             |      60/60 |      60/60 |
+| Reached `query-docs` on lookup cases          |      60/60 |      60/60 |
+| Unnecessary lookup cases                      |       0/30 |       1/30 |
+| Fully correct answers, GPT-5.4 mini           |      77/90 |      81/90 |
+| Fully correct answers, Gemini 3.1 Pro Preview |      87/90 |      88/90 |
+
+Neither judge scored an answer in either arm as incorrect. The GPT-5.4 mini
+judge scored the new arm higher on 9 cases and lower on 5. The Gemini judge
+scored it higher on 2 cases and lower on 1. The one unnecessary lookup was a
+bug in the user's own Sentry `beforeSend` filter. As in the first run, all
+differences are within the spread of single runs.
+[`results-installed-rerun.json`](results-installed-rerun.json) contains per-case
+call counts and scores.
+
 ## Reproduce
 
 Use one disposable, neutral repository snapshot with the files used by the
