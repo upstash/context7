@@ -174,8 +174,16 @@ async function resolveAuth(
       return { mode: "oauth" };
     }
     const offersOAuth = status.mode === "both" && status.oauthAvailable;
-    // An explicit key wins over --oauth, as for hosted Context7.
-    if (explicitApiKey) return { mode: "api-key", apiKey: explicitApiKey };
+    // An explicit key wins over --oauth, as for hosted Context7, but /mcp refuses any other kind of key.
+    if (explicitApiKey) {
+      if (explicitApiKey.startsWith(ON_PREM_PERSONAL_KEY_PREFIX))
+        return { mode: "api-key", apiKey: explicitApiKey };
+      log.error(
+        `--api-key is not a personal key for ${deployment.baseUrl} (${ON_PREM_PERSONAL_KEY_PREFIX}...). Create one in the deployment's dashboard.`
+      );
+      process.exitCode = 1;
+      return null;
+    }
     if (options.oauth) {
       if (offersOAuth) return { mode: "oauth" };
       log.error(

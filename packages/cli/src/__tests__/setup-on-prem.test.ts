@@ -395,6 +395,15 @@ describe("on-premise OAuth sign-in", () => {
     expect(await codexConfig()).not.toContain("Authorization");
   });
 
+  test("refuses an explicit key that is not a personal key", async () => {
+    authStatus({ enabled: true, mode: "both", oauth: { available: true } });
+    await runSetup("--api-key", "ctx7sk-hosted", "--yes");
+    expect(process.exitCode).toBe(1);
+    const error = vi.mocked(console.error).mock.calls.flat().join(" ");
+    expect(error).toContain("not a personal key");
+    expect(error).not.toContain("ctx7sk-hosted");
+  });
+
   test("keeps an explicit key when the server accepts both", async () => {
     authStatus({ enabled: true, mode: "both", oauth: { available: true } });
     await runSetup("--api-key", "ctx7op-abc_def", "--yes");
