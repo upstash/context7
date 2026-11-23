@@ -69,7 +69,7 @@ DCR allows 10 registrations per address per hour and 1,000 unused registrations 
 The client opens `/oauth/authorize` in the browser. A user without a session signs in with SSO or a password, and then sees the consent page. It shows the account, the app, its client ID, and where the browser goes back to. A DCR client chose its own name, so it is marked **Self-registered**.
 
 <Frame>
-  <img src="/images/enterprise/mcp-oauth/consent.png" alt="The consent page for Claude Code, a self-registered client" width="400" />
+  <img src="/images/enterprise/mcp-oauth/consent.png" alt="The consent page for Claude Code, a self-registered client" />
 </Frame>
 
 The user chooses **Connect** or **Cancel**. A request that is not valid, such as an unknown client or a wrong redirect URI, shows an error page and never sends the browser to the client.
