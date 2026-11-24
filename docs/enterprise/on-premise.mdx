@@ -159,7 +159,9 @@ Pass the root URL of your deployment (without `/mcp` or `/api`) and select the c
   </Tab>
 </Tabs>
 
-Setup reads the deployment's MCP authentication setting. When MCP authentication is disabled, no credential is written. When it is enabled, the dashboard's Connect card presents two steps: sign in and click **Create API key**, then copy the command after the dashboard inserts the one-time-visible key. Select **Configure manually** to reveal the equivalent client-native configuration instead. If you run the base command without `--api-key`, the CLI requests the key with hidden input.
+Setup reads the deployment's MCP authentication setting. When MCP authentication is disabled, no credential is written. When the deployment uses [OAuth sign-in](/enterprise/security/mcp-oauth), setup writes no key either: the client opens a browser on its first request, and the user signs in (SSO or password) and approves the client. With **OAuth and API keys**, setup chooses OAuth unless you pass `--api-key` or set `CONTEXT7_API_KEY` to a personal key (`ctx7op-`). With **OAuth only**, setup refuses `--api-key` and ignores `CONTEXT7_API_KEY`. `--api-key` takes precedence over `CONTEXT7_API_KEY`. Without `--api-key`, setup ignores a `CONTEXT7_API_KEY` that is not a personal key, such as a hosted Context7 key, and prints a warning. Keyless setup needs `ctx7` 0.13.0 or later: an older version asks for a key, and **OAuth only** refuses that key. The dashboard's Connect card shows the same keyless setup.
+
+When the deployment accepts only personal API keys, the dashboard's Connect card presents two steps: sign in and click **Create API key**, then copy the command after the dashboard inserts the one-time-visible key. Select **Configure manually** to reveal the equivalent client-native configuration instead. If you run the base command without `--api-key`, the CLI requests the key with hidden input.
 
 For non-interactive automation, provide the personal key through the environment:
 
@@ -172,7 +174,7 @@ CONTEXT7_API_KEY=ctx7op-... ctx7 setup --mcp --yes \
 You can use `--api-key ctx7op-...` instead, but command-line arguments may be retained in shell history. Setup writes the MCP client configuration, a Context7 rule, and a bundled `context7-mcp` skill. The bundled files mean the deployment does not need to expose Context7 Cloud's skill APIs.
 
 <Note>
-  Custom `--base-url` setup uses the deployment's Streamable HTTP endpoint. Hosted OAuth, local stdio transport, and the CLI + Skills setup mode are not available for on-premise targets.
+  Custom `--base-url` setup uses the deployment's Streamable HTTP endpoint. Local stdio transport and the CLI + Skills setup mode are not available for on-premise targets. OAuth sign-in needs `CONTEXT7_PUBLIC_URL` on the server. See [OAuth Sign-In for MCP Clients](/enterprise/security/mcp-oauth).
 </Note>
 
 ### Query from the CLI
@@ -191,7 +193,21 @@ Use the root URL, without `/api`. `ctx7 search`, `ctx7 code` and `ctx7 get-upgra
 
 ### Manual configuration
 
-If your client is not supported by `ctx7 setup`, point it at `<deployment-root>/mcp`. When MCP authentication is enabled, send the personal key as a standard bearer token:
+If your client is not supported by `ctx7 setup`, point it at `<deployment-root>/mcp`.
+
+With [OAuth sign-in](/enterprise/security/mcp-oauth), add only the URL. The client signs in on its first request:
+
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "url": "https://context7.internal.yourcompany.com/mcp"
+    }
+  }
+}
+```
+
+With personal API keys, send the key as a standard bearer token:
 
 ```json
 {
@@ -226,6 +242,8 @@ These are set in your `docker-compose.yml` or `.env` file before starting the co
 | `VECTOR_DATABASE_URL` | No | Postgres connection string for pgvector, if it differs from `DATABASE_URL` |
 | `PG_VECTOR_POOL_MAX` | No | pgvector connection pool size per replica (default: `5`) |
 | `MILVUS_ADDRESS`, `MILVUS_TOKEN`, `MILVUS_USERNAME`, `MILVUS_PASSWORD`, `MILVUS_DATABASE` | No | Milvus connection settings |
+| `CONTEXT7_PUBLIC_URL` | No | The origin users and MCP clients reach, such as `https://context7.internal.yourcompany.com`. Required for [OAuth sign-in for MCP clients](/enterprise/security/mcp-oauth) |
+| `CONTEXT7_TRUSTED_PROXY_HOPS` | No | The number of reverse proxies or load balancers in front of the server, from `0` to `10` (default: `0`). Any other value counts as `0`. OAuth client registration limits use it to find the caller's address. See [Client registration](/enterprise/security/mcp-oauth#client-registration) |
 | `CONTEXT7_API_URL` | No | Base URL for license checks, usage reports, and cloud library queries (default: `https://context7.com/api`) |
 | `NODE_EXTRA_CA_CERTS` | No | Path to a PEM bundle of extra CA certificates. The server trusts it for all outbound HTTPS, and git uses it too |
 | `GIT_TLS_INSECURE` | No | `true` or `1` turns off TLS verification for all outbound HTTPS and git. Use it only for testing |
@@ -359,7 +377,7 @@ Delete, cancel parse, and support bundle downloads are for admins only. Use the 
 | Refresh repositories | Off | Allow anonymous callers to refresh libraries. Notion, Google Drive, and Azure DevOps libraries stay admin-only |
 | Delete repositories | Off | Allow anonymous callers and members to delete libraries and cancel parses |
 | Download support bundle | Off | Allow anonymous callers and members to download the support bundle |
-| MCP authentication | On for a new install | Require a session or personal API key for `/mcp`, `/api/v2`, and the library, log, and queue read endpoints. See [Authentication](/enterprise/api/authentication#non-admin-permissions) |
+| MCP authentication | On for a new install | Require a session or personal API key for `/mcp`, `/api/v2`, and the library, log, and queue read endpoints. The mode chooses whether `/mcp` accepts personal API keys, OAuth access tokens, or both. See [Authentication](/enterprise/api/authentication#non-admin-permissions) and [OAuth Sign-In for MCP Clients](/enterprise/security/mcp-oauth) |
 
 <Note>
 Earlier versions allowed anonymous parse and refresh by default. If you never saved these switches, they are off after an upgrade. Scripts that call these endpoints without an API key then get `403`. Add a personal API key to the script, or turn the switch on.
@@ -367,7 +385,7 @@ Earlier versions allowed anonymous parse and refresh by default. If you never sa
 
 A fresh install with no users, no existing admin, and no libraries starts with MCP authentication on. An install you upgrade keeps the setting you saved, so if you never turned it on it stays off.
 
-When MCP authentication is enabled, each user creates personal keys from **Personal settings > API keys**. Clients send the key as `Authorization: Bearer <key>`.
+When MCP authentication is enabled, each user creates personal keys from **Personal settings > API keys**. Clients send the key as `Authorization: Bearer <key>`. With [OAuth sign-in](/enterprise/security/mcp-oauth), clients sign in through the browser instead, and users manage them under **Personal settings > Authorized apps**.
 
 When MCP authentication is off, a client that sends a valid personal API key is still treated as that user for [library access](/enterprise/security/library-access), so it reads the restricted libraries the user can access. A client with no key, or an unknown key, is anonymous and reads only libraries that are open to everyone.
 

@@ -89,6 +89,10 @@ To map Entra app roles instead of groups, set **Groups claim** to `roles` and en
 
 Click **Check configuration**, then **Save and apply**. Open `/login` in a private browser window to test the sign-in.
 
+## Sign-in from MCP clients
+
+With [OAuth sign-in for MCP clients](/enterprise/security/mcp-oauth), MCP clients use the same Entra sign-in. After Entra sends the user back, Context7 returns to the client's consent step. No change to the Entra app registration is needed.
+
 ## Troubleshooting
 
 ### `AADSTS50011: redirect URI mismatch`

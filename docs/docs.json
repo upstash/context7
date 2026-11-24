@@ -117,7 +117,8 @@
                           "enterprise/security/entra-sso",
                           "enterprise/security/oidc-sso",
                           "enterprise/security/saml-sso",
-                          "enterprise/security/library-access"
+                          "enterprise/security/library-access",
+                          "enterprise/security/mcp-oauth"
                         ]
                       },
                       {
