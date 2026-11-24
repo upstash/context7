@@ -62,7 +62,7 @@ Open **Mappings** in the provisioning configuration.
 Set `externalId` to `objectId`. Context7 matches the `oid` claim of an Entra token against this value. With the default `mailNickname`, users still join the teamspace, but they cannot sign in through an MCP gateway with their Entra token.
 </Note>
 
-Context7 uses the work email (`mail`) to find or create the user's Context7 account, and `userPrincipalName` when `mail` is empty. Context7 accepts the other default attributes, such as `title` and `department`, and does not store them.
+Context7 uses the work email (`mail`) to find or create the user's Context7 account, and `userPrincipalName` when `mail` is empty. An existing Context7 account is used only when it has verified that address. Context7 accepts the other default attributes, such as `title` and `department`, and does not store them. You can delete their mappings to keep the provisioning logs short.
 
 ## Step 5: Assign users and start provisioning
 
@@ -72,7 +72,7 @@ Context7 uses the work email (`mail`) to find or create the user's Context7 acco
 
 Entra runs the first cycle at once and then every 40 minutes. To test one user without waiting, open **Provision on demand**, select the user and click **Provision**.
 
-The **SCIM provisioning** card in Context7 shows when Entra last called. The provisioned users appear on the **Members** tab, and with an Entra tenant configured, in the **Microsoft Entra ID users** card with a **SCIM** badge.
+The **SCIM provisioning** card in Context7 shows when Entra last called. The provisioned users appear on the **Members** tab, and with an Entra tenant configured, in the **Microsoft Entra ID users** card with a **SCIM** badge. You cannot remove a **SCIM** user on that card. Unassign the user in Entra instead.
 
 ## Rotate or revoke the token
 
@@ -91,8 +91,14 @@ SCIM provisioning works next to the manual **Add user** list and the [Entra secu
 | Provisioning logs show `403` for new users | The teamspace is not on the Enterprise plan or trial. | Renew the plan. Deactivations still work without it. |
 | Provisioning logs show `501` for groups | Group provisioning is on. | Set **Provision Microsoft Entra ID Groups** to **Enabled: No**. |
 | Provisioning logs show `409` "already exists" | Another user in this application has the same `userName`. | Make `userPrincipalName` unique, or remove the duplicate assignment. |
+| Provisioning logs show `409` "has not verified that address" | A Context7 account holds the user's email, but has not verified it. | Ask the owner of that account to verify the address or remove it, then retry with **Provision on demand**. |
+| Provisioning logs show `409` "belongs to another Entra tenant" | The Context7 account with this email was provisioned from another Entra tenant. | Contact [context7@upstash.com](mailto:context7@upstash.com). |
 | A user joined but cannot sign in through the MCP gateway | `externalId` is mapped to `mailNickname`, or the teamspace has no Entra tenant. | Map `externalId` to `objectId` (Step 4) and configure the [Entra tenant](/enterprise/enterprise-managed-auth/entra). Then use **Provision on demand** for the user. |
 | Provisioning logs show `429` or `503` | Context7 limits each teamspace to 1,500 requests per minute, and a group sync can run at the same time. | No action is needed. Entra retries the request. |
+
+## Test with the Microsoft SCIM Validator
+
+You can check the connection with the [Microsoft SCIM Validator](https://scimvalidator.microsoft.com). Enter the Tenant URL and the token, and select **Use schema discovery**. Without schema discovery, the validator also sends attributes that Context7 does not store, such as `title` and `addresses`, and reports them as mismatches. Do not select group tests.
 
 ## What this does not cover
 
