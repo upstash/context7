@@ -203,6 +203,8 @@ ctx7 setup --oauth
 
 Without `--api-key` or `--oauth`, setup runs the OAuth device flow: it shows a verification link and short code that you open on any device to sign in, so it works the same locally or on a remote, headless, or SSH host. The device flow returns an API key that setup uses for authentication. `--oauth` is MCP-only — use it when an IDE handles the auth flow on your behalf.
 
+If the teamspace you pick does not allow you an API key — its policy is **Owners and admins only** and you are a developer, or **OAuth only** — the device flow refuses it and asks you to pick another teamspace, or to cancel and set up the MCP server with OAuth. See [Manage API Keys](/howto/api-keys#teamspace-api-key-access).
+
 ### On-premise setup
 
 Pass the root URL of your on-premise deployment with `--base-url`, or set it once in `CONTEXT7_BASE_URL`. Do not include `/mcp` or `/api`:

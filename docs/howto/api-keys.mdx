@@ -42,6 +42,22 @@ Your keys are in the API Keys card of the [Context7 dashboard](https://context7.
 
 <Warning>Store your API key securely. You won't be able to see it again after creation.</Warning>
 
+### Teamspace API key access
+
+A teamspace decides who may hold API keys. Owners and admins choose the policy in the **API Key Access** card of the settings tab, below the API Keys card. The card appears for teamspaces only, not for your personal teamspace.
+
+| Option                     | Who can create and use keys                       |
+| -------------------------- | ------------------------------------------------- |
+| **All members**            | Every member. This is the default.                |
+| **Owners and admins only** | Owners and admins, for example keys used in CI. Members with the Developer role connect with OAuth. |
+| **OAuth only**             | Nobody. Every member connects with OAuth.         |
+
+When the policy refuses a member's key, requests with that key get `403` with the error `api_key_admins_only` or `api_keys_disabled`, not `invalid_api_key`, and the message points to OAuth. The refusal happens when a key is used, so existing keys are not deleted: switching back to **All members** restores them.
+
+<Note>
+  A teamspace's policy does not apply to your personal teamspace, and an on-premise license key is never refused by it.
+</Note>
+
 ### Write access
 
 The [Context7 Admin MCP](/howto/admin-mcp) and the [management API](/api-reference/teamspaces/list-teamspaces) (`/api/v2/teamspaces/*`) accept every API key, but a key is read-only there unless **Write access** was ticked when the key was created. The **Access** column of the API Keys card shows **Read only** or **Write access** for each key. A key reaches only its own teamspace.
