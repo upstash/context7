@@ -31,8 +31,8 @@ To use OAuth, change the endpoint from `/mcp` to `/mcp/oauth` in your client con
 
 1. Your MCP client connects to the OAuth endpoint
 2. You're redirected to Context7 to sign in
-3. After signing in, you're redirected back to your client
-4. Your client automatically handles token refresh
+3. A Context7 page confirms the result — the app is connected, or the connection was cancelled
+4. It then opens your client, which receives the authorization response and refreshes tokens on its own
 
 <Warning>
 **Authentication required after setup.** Most clients won't authenticate automatically. After adding the OAuth endpoint, you'll need to explicitly authenticate through your client's MCP settings. For example, in Claude Code run `/mcp`, select the server, and choose "Authenticate".
