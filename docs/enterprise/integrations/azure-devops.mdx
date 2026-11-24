@@ -17,8 +17,20 @@ Each work item page contains:
 - The rich-text fields: description, acceptance criteria, repro steps, system info and resolution, and the CMMI justification, proposed fix and analysis.
 - The custom fields of your process, under their display names. Short values go in the details line. Long text and HTML fields get their own section.
 - Up to 200 comments, when **Include comments** is on. Deleted comments are left out.
+- **Tests** and **Tested by** links: the test cases of a requirement, and the requirements of a test case, with their titles.
 
-Context7 does not index attachments, images, history, links other than the parent, or HTML that a reader does not see, such as HTML comments. Work items that the credential cannot read are left out.
+Context7 does not index attachments, images, history, links other than the parent and the test links, or HTML that a reader does not see, such as HTML comments. Work items that the credential cannot read are left out.
+
+### Test plans
+
+Context7 also indexes [Azure Test Plans](https://learn.microsoft.com/azure/devops/test/overview):
+
+- **Test cases:** the steps in order, each with its expected result. Shared steps are shown in place, and the parameter values are a table, from the test case or from its shared parameter sets.
+- **Test plans:** the suite tree, with the test cases of each suite. Static, requirement-based and query-based suites are included.
+- **Test suites:** the plan, the path in the plan, the suite type, the requirement or query, and the test cases.
+- Each test case page lists the suites that contain it, for example `Release 3.2 Regression › Bluetooth`.
+
+Test cases need only **Work Items (Read)**. The suite tree comes from the Test Plans API: a personal access token also needs the **Test Management (Read)** scope, and a service principal needs **Basic** access. Without them, Context7 indexes test cases with their steps, leaves out the suites, and shows a warning.
 
 ## Connect Azure DevOps
 
@@ -43,7 +55,7 @@ Context7 stores the credential encrypted. You can replace it at any time: librar
 
     <Steps>
       <Step title="Create the token">
-        Sign in as a service account that can read the projects to index, not as a person. Open **User settings → Personal access tokens** and create a token with only the **Work Items (Read)** scope.
+        Sign in as a service account that can read the projects to index, not as a person. Open **User settings → Personal access tokens** and create a token with the **Work Items (Read)** scope. To index test plans and suites, also add **Test Management (Read)**.
       </Step>
       <Step title="Connect Context7">
         Select **Personal access token**, enter the organization URL, paste the token, and choose **Test connection**. Then save.
@@ -60,7 +72,7 @@ Context7 stores the credential encrypted. You can replace it at any time: librar
         In the Microsoft Entra admin center, create an app registration with a client secret. On AKS with [Azure workload identity](https://learn.microsoft.com/azure/aks/workload-identity-overview), add a federated credential instead.
       </Step>
       <Step title="Add the app to the organization">
-        In **Organization settings → Microsoft Entra**, check that the organization uses the tenant of the app. In **Organization settings → Users**, add the app with **Stakeholder** access (no license cost). Add it to the **Readers** group of each project to index.
+        In **Organization settings → Microsoft Entra**, check that the organization uses the tenant of the app. In **Organization settings → Users**, add the app with **Stakeholder** access (no license cost). Add it to the **Readers** group of each project to index. To index test plans and suites, give the app **Basic** access instead: Stakeholders cannot read Azure Test Plans.
       </Step>
       <Step title="Connect Context7">
         Select **Service principal (Entra ID)**. Enter the organization URL, the tenant ID, the client ID and the client secret, and choose **Test connection**. Then save.
@@ -88,7 +100,7 @@ Click **Add source** and choose **Azure DevOps**. Only admins can add Azure DevO
 
     | Filter | Effect |
     | ------ | ------ |
-    | Work item types | Only these types. Hidden and disabled types are not listed |
+    | Work item types | Only these types. **Test Plan** and **Test Suite** are listed. Disabled types and the other hidden types, such as shared steps, are not |
     | States | Only work items in these states |
     | Area paths | Only these areas, and with **Include sub-areas** every area under them |
     | Changed in the last | Only work items changed in this number of days (1–3650) |
@@ -119,7 +131,7 @@ Libraries sync daily at 03:30 in the server time zone. Change or turn off the sc
   <img src="/images/enterprise/integrations/azure-devops-sync-schedule.png" alt="The Azure DevOps sync schedule, daily at 03:30" />
 </Frame>
 
-Each sync lists the matching work items again. It indexes only the work items that changed, adds new matches, and removes work items that no longer match, were deleted, or that the credential can no longer read. To index every work item again, choose **Refresh** with **Re-index all work items**.
+Each sync lists the matching work items again. It indexes only the work items that changed, adds new matches, and removes work items that no longer match, were deleted, or that the credential can no longer read. A page is also indexed again when what it shows of other work items changes: a new test link, a renamed linked item, edited shared steps, or a test case added to a suite. To index every work item again, choose **Refresh** with **Re-index all work items**.
 
 ### When a sync fails
 
@@ -179,3 +191,4 @@ Other Git stores credentials for one host. If you use it for another host, you c
 | Use https:// | See the note on [Azure DevOps Server](#connect-azure-devops) |
 | The connection now points to a different organization | Add the library again |
 | Only the first N matching work items were indexed | Narrow the filters or raise the limit (see [Add a library](#add-a-library)) |
+| Test plans and suites were not indexed | Add the **Test Management (Read)** scope to the token, or give the service principal **Basic** access (see [Test plans](#test-plans)) |
