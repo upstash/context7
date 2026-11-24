@@ -144,7 +144,7 @@ MCP clients find out how to sign in from the gateway. Your gateway must:
    }
    ```
 
-Entra does not support Dynamic Client Registration. Each MCP client must use a client ID that you registered or pre-authorized in Step 2, and some clients ask the user for that ID the first time. Some clients also need the authorization server metadata at the gateway's own host. The [Azure APIM gateway](/enterprise/enterprise-managed-auth/entra#part-5-expose-oauth-discovery-for-mcp-clients) guide shows how to proxy it, and the same pattern works on other gateways.
+Entra does not support Dynamic Client Registration. Each MCP client must use a client ID that you registered or pre-authorized in Step 2, and some clients ask the user for that ID the first time. Some clients also need an authorization server metadata at the gateway's own host. The [Azure APIM gateway](/enterprise/enterprise-managed-auth/entra#part-5-expose-oauth-discovery-for-mcp-clients) guide shows how to proxy it, and the same pattern works on other gateways.
 
 ## Step 6: Smoke test
 
