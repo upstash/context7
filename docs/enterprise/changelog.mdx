@@ -3,6 +3,33 @@ title: "Changelog"
 description: "Release notes for the Context7 On-Premise image."
 ---
 
+<Update label="2026-11-24" description="v2.0.3">
+
+### Upgrade notes
+
+- The MCP server now runs inside the Context7 process. Existing MCP clients keep working with personal API keys. OAuth sign-in stays off until you turn it on.
+- To use OAuth sign-in, set `CONTEXT7_PUBLIC_URL` to the `https` origin that clients reach, and restart the container. Behind a reverse proxy, also set `CONTEXT7_TRUSTED_PROXY_HOPS`.
+- In the OAuth modes, `/mcp` refuses a dashboard session token sent as a bearer token. With **Personal API keys**, it accepts the token as in 2.0.2.
+- CodeDocs generation and source code indexing now need a signed-in member or a personal API key, even when anonymous parse or refresh is on.
+
+### Added
+
+- Added [OAuth sign-in](/enterprise/security/mcp-oauth) for MCP clients such as Claude Code, Cursor and VS Code. The client opens a browser, and the user signs in with SSO or a password and approves the client. Turn it on in Workspace Settings › Authentication.
+- Added **Authorized apps**, where users see and revoke the MCP clients they approved. Administrators see and revoke the apps of every user.
+- Added the `search`, `get-document` and `give_feedback` tools to the MCP server. Administrators can edit the tool descriptions.
+- Added the [Azure DevOps](/enterprise/integrations/azure-devops) connector. It indexes Azure Boards work items from Azure DevOps Services or Azure DevOps Server 2020 or later, with a personal access token or a Microsoft Entra service principal.
+- A library is one project with filters for work item types, states, area paths and the last change date. Search the project, type, state and area path lists when you add a library.
+
+### Changed
+
+- Nightly Azure DevOps syncs read only the work items that changed, so they stay fast for projects with many work items.
+- For Azure DevOps libraries, queries return the complete text of the three best work items first.
+- Git libraries on Azure DevOps now link to pages that open in Azure Repos and in project wikis.
+- The SSO settings show the Microsoft Entra ID tab only when Entra is already configured. New installations use OIDC or SAML 2.0. Existing Entra sign-ins keep working.
+- Azure DevOps sources show the Azure DevOps logo.
+
+</Update>
+
 <Update label="2026-11-16" description="v2.0.2">
 
 ### Upgrade notes
