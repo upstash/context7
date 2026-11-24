@@ -109,7 +109,7 @@ Create a new secret in **Certificates & secrets**, paste the new **Value** into 
 
 ## What this does *not* cover
 
-- **SCIM provisioning**. Context7 creates users when they first sign in. It does not sync the whole directory.
+- **Provisioning**. Context7 creates users when they first sign in. To add and remove teamspace members from Entra, set up [SCIM provisioning](/enterprise/enterprise-managed-auth/entra-scim).
 - **Revoking sessions**. When you remove a user in Entra, their existing Context7 sessions stay valid until they expire, after at most 7 days. To block the user at once, open **Members** and choose **Disable sign-in** in the user's row menu.
 
 If you run into a problem that this page does not cover, contact [context7@upstash.com](mailto:context7@upstash.com) with the **Request Id** from the Microsoft error page.
