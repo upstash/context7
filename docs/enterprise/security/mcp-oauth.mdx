@@ -34,7 +34,7 @@ The deployment is its own OAuth 2.1 authorization server and follows the [MCP au
     **MCP authentication** must be on: a client starts the sign-in only when `/mcp` answers `401`. With it off, `/mcp` answers anonymous callers.
   </Step>
   <Step title="Connect a client">
-    Run `ctx7 setup --mcp --base-url <public URL>`, or add `<public URL>/mcp` to the client with no `Authorization` header. The client starts the sign-in on its first request. Keyless setup needs `ctx7` 0.13.0 or later.
+    Run `ctx7 setup --mcp --base-url <public URL>`, or add `<public URL>/mcp` to the client with no `Authorization` header. The client starts the sign-in on its first request. Keyless setup needs `ctx7` 0.12.3 or later.
   </Step>
 </Steps>
 
