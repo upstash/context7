@@ -75,10 +75,10 @@ Context7 uses Google Application Default Credentials. It looks for credentials i
     | Field | Value |
     |---|---|
     | Google Cloud project | Your project ID. Optional when the container has `GOOGLE_CLOUD_PROJECT` or `GCLOUD_PROJECT`. |
-    | Location | Optional. Default `global`. Use a region, such as `europe-west4`, for data residency. |
+    | Location | Optional. Default `global`, or `GOOGLE_CLOUD_LOCATION` when the container has it. Use a region, such as `europe-west4`, for data residency. |
     | Model | A Gemini or Claude model ID, such as `gemini-3.8-flash` or `claude-sonnet-5-5`. |
 
-    The fields in the dashboard take precedence over `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION`.
+    The fields in the dashboard take precedence over `GOOGLE_CLOUD_PROJECT`, `GCLOUD_PROJECT`, and `GOOGLE_CLOUD_LOCATION`.
   </Step>
   <Step title="Configure embeddings">
     In the setup wizard, select **Same as LLM** to use Vertex AI embeddings, or select **Separate provider**, **Google**, and then **Google Vertex AI**. The default model is `gemini-embedding-001`.
@@ -108,7 +108,7 @@ Some organizations restrict partner model features with the `constraints/vertexa
 
 ## Egress proxy
 
-If the container reaches Google only through an egress proxy, set `HTTPS_PROXY`. Context7 sends Vertex AI calls through the proxy and always connects directly to the GKE metadata server (`169.254.169.254` and `metadata.google.internal`), so Workload Identity keeps working. See [Network Access](/enterprise/deployment/docker#network-access).
+If the container reaches Google only through an egress proxy, set `HTTPS_PROXY`. Context7 sends Vertex AI calls through the proxy and always connects directly to the GKE metadata server (`169.254.169.254` and `metadata.google.internal`), so Workload Identity keeps working. See [Egress proxy](/enterprise/deployment/docker#egress-proxy).
 
 <Note>
 An offline Context7 license removes the Context7 Cloud license check, but Vertex AI still requires network access to Google Cloud. Content sent for parsing, embedding, reranking, or source-code documentation is processed by the selected Vertex AI models.

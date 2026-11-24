@@ -74,7 +74,7 @@ Follow the deployment guide for your platform:
 
 Open `http://localhost:3000` in your browser. On first launch, the setup wizard guides you through configuring:
 
-1. **AI Provider** - Choose OpenAI, Anthropic, Gemini, AWS Bedrock, or a custom OpenAI-compatible endpoint. Enter the provider credentials and model name.
+1. **AI Provider** - Choose OpenAI, Anthropic, Google (Google AI Studio or Google Vertex AI), AWS Bedrock, or a custom OpenAI-compatible endpoint. Enter the provider credentials and model name.
 2. **Embedding Provider** - Use the same provider as your LLM, or configure a separate one for embeddings.
 3. **Git Tokens** - Add a GitHub and/or GitLab token for the platforms you use.
 
@@ -417,7 +417,7 @@ A context query for one of your local libraries is answered on the instance and 
 
 An offline license (`ctx7off.` prefix) is checked locally and makes none of these calls.
 
-The server does not use `HTTP_PROXY` or `HTTPS_PROXY` for its own calls. For the full egress list, `CONTEXT7_API_URL`, and private CA setup, see [Docker](/enterprise/deployment/docker#network-access) or [Kubernetes](/enterprise/deployment/kubernetes#networking-requirements).
+To send this traffic through a forward proxy, set `HTTPS_PROXY`, as [Egress proxy](/enterprise/deployment/docker#egress-proxy) describes. For the full egress list, `CONTEXT7_API_URL`, and private CA setup, see [Docker](/enterprise/deployment/docker#network-access) or [Kubernetes](/enterprise/deployment/kubernetes#networking-requirements).
 
 ## Hosting
 

@@ -109,7 +109,7 @@
                           "enterprise/integrations/notion",
                           "enterprise/integrations/azure-devops",
                           "enterprise/integrations/aws-bedrock",
-                  "enterprise/integrations/google-vertex-ai"
+                          "enterprise/integrations/google-vertex-ai"
                         ]
                       },
                       {
