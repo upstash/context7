@@ -1,7 +1,7 @@
 import { randomBytes } from "crypto";
 import ora from "ora";
 
-import { performLogin } from "../commands/auth.js";
+import { performDeviceLogin } from "../commands/auth.js";
 import { getBaseUrl, isApiKeyPolicyRefusal, type ApiKeyPolicyRefusal } from "../utils/api.js";
 import { getValidAccessToken, isContext7ApiKey } from "../utils/auth.js";
 import { log } from "../utils/logger.js";
@@ -13,10 +13,14 @@ export type SetupApiKeyResult =
   | null;
 
 export async function resolveSetupApiKey(): Promise<SetupApiKeyResult> {
-  const accessToken =
-    (await getValidAccessToken({ recoverExpiredSession: false })) ?? (await performLogin());
-
-  if (!accessToken) return null;
+  let accessToken = await getValidAccessToken({ recoverExpiredSession: false });
+  if (!accessToken) {
+    const login = await performDeviceLogin();
+    if (!login) return null;
+    // The approval page refused a key for the chosen teamspace: setup continues with OAuth.
+    if ("refusal" in login) return login;
+    accessToken = login.token;
+  }
   if (isContext7ApiKey(accessToken)) return { apiKey: accessToken };
 
   const spinner = ora("Configuring authentication...").start();
