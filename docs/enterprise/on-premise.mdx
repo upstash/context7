@@ -21,7 +21,7 @@ Two kinds of outside services receive data:
 - Private GitHub and GitLab repository ingestion
 
 <Frame>
-  ![On-Premise Architecture](/images/on-premise-architecture.png)
+  <img src="/images/on-premise-architecture.png" alt="On-Premise Architecture" />
 </Frame>
 
 ## Language Support
@@ -317,7 +317,7 @@ Change these in **Workspace Settings › Parsing**. Some settings also have an e
 The four count limits also have a **No limit** option: files per library, Notion pages, Google Drive files, and Azure DevOps work items. Setting their environment variable to `0` does the same. Without a limit, a very large source can take a long time and make many LLM calls. File timeout and the concurrency settings always have a limit.
 
 <Frame>
-  ![The Max files per library setting with its list open and No limit selected](/images/enterprise/settings/parsing-no-limit.png)
+  <img src="/images/enterprise/settings/parsing-no-limit.png" alt="The Max files per library setting with its list open and No limit selected" />
 </Frame>
 
 When a change takes effect:
@@ -338,7 +338,7 @@ When a change takes effect:
 | Max work items per Azure DevOps library | `20000` | 1–200000, or no limit | `AZURE_DEVOPS_MAX_WORK_ITEMS` | An Azure DevOps library indexes the newest matching work items up to this limit, and shows a warning |
 
 <Frame>
-  ![The Parsing settings page with concurrency, timeout, and file limit settings](/images/enterprise/settings/parsing-settings.png)
+  <img src="/images/enterprise/settings/parsing-settings.png" alt="The Parsing settings page with concurrency, timeout, and file limit settings" />
 </Frame>
 
 ### Git Access Tokens
@@ -368,7 +368,7 @@ Who can do what by default:
 Delete, cancel parse, and support bundle downloads are for admins only. Use the switches in **Workspace Settings › Authorization** to open some actions to anonymous callers. The **MCP authentication** switch in **Workspace Settings › Authentication** requires authentication for MCP and API search.
 
 <Frame>
-  ![The Non-admin permissions card with the anonymous parse, refresh, support bundle, and delete switches off](/images/enterprise/settings/non-admin-permissions.png)
+  <img src="/images/enterprise/settings/non-admin-permissions.png" alt="The Non-admin permissions card with the anonymous parse, refresh, support bundle, and delete switches off" />
 </Frame>
 
 | Permission | Default | Description |

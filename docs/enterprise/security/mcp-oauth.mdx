@@ -26,7 +26,7 @@ The deployment is its own OAuth 2.1 authorization server and follows the [MCP au
     | OAuth only | OAuth access tokens |
 
     <Frame>
-      ![MCP authentication turned on with OAuth and API keys selected](/images/enterprise/mcp-oauth/mode.png)
+      <img src="/images/enterprise/mcp-oauth/mode.png" alt="MCP authentication turned on with OAuth and API keys selected" />
     </Frame>
 
     The mode applies to `/mcp` only: `/api/v2`, the other read endpoints and the `ctx7` CLI keep using personal API keys. A dashboard session also works on `/mcp`, for the MCP test page.
@@ -50,7 +50,7 @@ A client identifies itself in one of two ways:
 Set both under **OAuth clients** in **Workspace Settings › Authentication**:
 
 <Frame>
-  ![OAuth clients settings: client ID metadata documents and dynamic client registration](/images/enterprise/mcp-oauth/clients.png)
+  <img src="/images/enterprise/mcp-oauth/clients.png" alt="OAuth clients settings: client ID metadata documents and dynamic client registration" />
 </Frame>
 
 | Setting | Default | Options |
@@ -83,7 +83,7 @@ For client developers: the client gets `401` with `WWW-Authenticate: Bearer reso
 Each user sees and revokes the clients they approved under **Personal settings › Authorized apps**. Admins see and revoke every user's apps under **Workspace Settings › Authentication**.
 
 <Frame>
-  ![A user's authorized apps, with the approval date and last use](/images/enterprise/mcp-oauth/authorized-apps.png)
+  <img src="/images/enterprise/mcp-oauth/authorized-apps.png" alt="A user's authorized apps, with the approval date and last use" />
 </Frame>
 
 ## Security

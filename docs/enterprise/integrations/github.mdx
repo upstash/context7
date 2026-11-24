@@ -30,7 +30,7 @@ Connecting the App is two steps: first create the App, then install it on your r
 Once both steps are done, the **GitHub App** row shows the connected App and its installation:
 
 <Frame>
-  ![Connected GitHub App with one installation under Workspace Settings, GitHub](/images/enterprise/integrations/github-app.png)
+  <img src="/images/enterprise/integrations/github-app.png" alt="Connected GitHub App with one installation under Workspace Settings, GitHub" />
 </Frame>
 
 ### Verify the App configuration
@@ -51,13 +51,13 @@ The setup flow configures everything below automatically, so a newly created App
 Under **Permissions & events**, the repository permissions are granted and the **Push** event is subscribed:
 
 <Frame>
-  ![GitHub App repository permissions and the subscribed Push event](/images/enterprise/integrations/github-permissions.png)
+  <img src="/images/enterprise/integrations/github-permissions.png" alt="GitHub App repository permissions and the subscribed Push event" />
 </Frame>
 
 Under **Webhook**, it is active and points at your instance with a secret configured:
 
 <Frame>
-  ![GitHub App webhook settings: active, webhook URL, and a configured secret](/images/enterprise/integrations/github-webhook.png)
+  <img src="/images/enterprise/integrations/github-webhook.png" alt="GitHub App webhook settings: active, webhook URL, and a configured secret" />
 </Frame>
 
 ## Personal access token
@@ -65,7 +65,7 @@ Under **Webhook**, it is active and points at your instance with a secret config
 As a simpler alternative, add a GitHub personal access token in the **GitHub token** row under **Workspace Settings › GitHub**. Use a token with the `repo` scope for private repository access.
 
 <Frame>
-  ![GitHub token fields under Workspace Settings, GitHub](/images/enterprise/integrations/git-tokens.png)
+  <img src="/images/enterprise/integrations/git-tokens.png" alt="GitHub token fields under Workspace Settings, GitHub" />
 </Frame>
 
 A personal access token can clone and index repositories, but it **cannot receive webhooks**. With a token only, push-triggered GitOps syncs are unavailable; use the GitOps sync schedule or trigger syncs from CI instead.
@@ -79,7 +79,7 @@ Context7 works with GitHub Enterprise Server, not only github.com. Set your serv
     Open **Workspace Settings › GitHub**, open the **GitHub token** row, and select **Enterprise Server**. Enter your server host in **Server URL**, for example `github.your-company.com` (no `https://`), then choose **Save and apply**.
 
     <Frame>
-      ![GitHub token row with Enterprise Server selected under Workspace Settings, GitHub](/images/enterprise/integrations/git-tokens.png)
+      <img src="/images/enterprise/integrations/git-tokens.png" alt="GitHub token row with Enterprise Server selected under Workspace Settings, GitHub" />
     </Frame>
   </Step>
   <Step title="Create the App or add a token">
