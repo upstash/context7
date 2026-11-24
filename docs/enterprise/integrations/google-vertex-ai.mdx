@@ -1,0 +1,119 @@
+---
+title: "Google Vertex AI"
+sidebarTitle: "Google Vertex AI"
+description: "Use Gemini and Claude models and Gemini embeddings through Google Cloud Vertex AI"
+---
+
+Context7 On-Premise can call Vertex AI directly for parsing, source-code documentation, reranking, and embeddings. It uses your Google Cloud project and its credentials. On GKE, Workload Identity is enough.
+
+<Note>
+The **Google** provider in Context7 has two options. **Google AI Studio** uses a Gemini API key. **Google Vertex AI** uses a Google Cloud project with Application Default Credentials, as this page describes. Choose Google Vertex AI when your organization does not issue API keys.
+</Note>
+
+## Prerequisites
+
+- A Google Cloud project with the Vertex AI API (`aiplatform.googleapis.com`) turned on.
+- An identity for Context7 with the **Vertex AI User** role (`roles/aiplatform.user`) on that project.
+- For Claude models: enable each model for the project in [Vertex AI Model Garden](https://console.cloud.google.com/vertex-ai/model-garden). Gemini models need no extra step.
+- Network access from the Context7 container to `aiplatform.googleapis.com`, or to the regional host, such as `europe-west4-aiplatform.googleapis.com`.
+
+## Authenticate
+
+Context7 uses Google Application Default Credentials. It looks for credentials in this order:
+
+1. A service account key file named by `GOOGLE_APPLICATION_CREDENTIALS`.
+2. The local credentials file from `gcloud auth application-default login`.
+3. The identity of the workload, from the metadata server.
+
+<Tabs>
+  <Tab title="GKE Workload Identity">
+    Recommended for production. Context7 gets short-lived tokens from the GKE metadata server, so no key is stored anywhere.
+
+    1. Give a Kubernetes service account the **Vertex AI User** role. Use [Workload Identity Federation for GKE](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity) with a principal binding, or an `iam.gke.io/gcp-service-account` annotation that points to a Google service account with the role.
+    2. Run the Context7 pods as that service account. With the [Helm chart](/enterprise/deployment/helm), set `serviceAccountName`:
+
+    ```bash
+    helm upgrade --install context7 oci://ghcr.io/context7/charts/context7-enterprise \
+      --namespace context7 \
+      --set license=ctx7sk-... \
+      --set 'imagePullSecrets[0].name=context7-registry' \
+      --set serviceAccountName=context7
+    ```
+
+    On a Compute Engine VM, the service account attached to the VM works the same way.
+  </Tab>
+  <Tab title="Service account key">
+    Mount the key file and point `GOOGLE_APPLICATION_CREDENTIALS` at it:
+
+    ```yaml
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /secrets/vertex-sa.json
+    volumes:
+      - ./vertex-sa.json:/secrets/vertex-sa.json:ro
+    ```
+
+    The file must be readable by the UID that runs the container.
+  </Tab>
+  <Tab title="Local testing">
+    Run `gcloud auth application-default login` on your machine. The container image sets `HOME=/data/home`, so mount the file there:
+
+    ```yaml
+    volumes:
+      - ~/.config/gcloud/application_default_credentials.json:/data/home/.config/gcloud/application_default_credentials.json:ro
+    ```
+
+    Use this only for testing. The file holds your personal Google credentials.
+  </Tab>
+</Tabs>
+
+## Configure Context7
+
+<Steps>
+  <Step title="Configure the LLM">
+    In the setup wizard or **Workspace Settings › AI models**, select **Google**, then choose **Google Vertex AI**. Enter:
+
+    | Field | Value |
+    |---|---|
+    | Google Cloud project | Your project ID. Optional when the container has `GOOGLE_CLOUD_PROJECT` or `GCLOUD_PROJECT`. |
+    | Location | Optional. Default `global`, or `GOOGLE_CLOUD_LOCATION` when the container has it. Use a region, such as `europe-west4`, for data residency. |
+    | Model | A Gemini or Claude model ID, such as `gemini-3.8-flash` or `claude-sonnet-5-5`. |
+
+    The fields in the dashboard take precedence over `GOOGLE_CLOUD_PROJECT`, `GCLOUD_PROJECT`, and `GOOGLE_CLOUD_LOCATION`.
+  </Step>
+  <Step title="Configure embeddings">
+    In the setup wizard, select **Same as LLM** to use Vertex AI embeddings, or select **Separate provider**, **Google**, and then **Google Vertex AI**. The default model is `gemini-embedding-001`.
+
+    The LLM and embedding configurations share one project and location.
+  </Step>
+  <Step title="Test and verify">
+    Test both connections, save the configuration, and parse a small repository. Query the resulting library to verify that parsing and semantic search both work.
+  </Step>
+</Steps>
+
+## Models
+
+| Use | Models |
+|---|---|
+| Parsing, reranking, and CodeDocs | Gemini, such as `gemini-3.8-flash` (default), `gemini-3.7-flash`, or `gemini-3.5-flash-lite` |
+| Parsing, reranking, and CodeDocs | Claude, such as `claude-sonnet-5-5`, `claude-haiku-5-5`, `claude-opus-5-5`, or `claude-haiku-4-5` |
+| Embeddings | `gemini-embedding-001` (default), `gemini-embedding-2`, or `text-embedding-005` |
+
+- Reranking uses `gemini-3.5-flash-lite` on Vertex AI unless you set a rerank model.
+- The `global` location serves the newest Gemini models. A regional location offers a smaller set, so check that it serves the models you pick.
+- `gemini-embedding-2` is available only in the `global` location.
+
+<Note>
+Some organizations restrict partner model features with the `constraints/vertexai.allowedPartnerModelFeatures` policy. When the policy blocks structured outputs, Context7 asks Claude for JSON as plain text instead. Parsing keeps working, and the server log shows one warning for each model.
+</Note>
+
+## Egress proxy
+
+If the container reaches Google only through an egress proxy, set `HTTPS_PROXY`. Context7 sends Vertex AI calls through the proxy and always connects directly to the GKE metadata server (`169.254.169.254` and `metadata.google.internal`), so Workload Identity keeps working. See [Egress proxy](/enterprise/deployment/docker#egress-proxy).
+
+<Note>
+An offline Context7 license removes the Context7 Cloud license check, but Vertex AI still requires network access to Google Cloud. Content sent for parsing, embedding, reranking, or source-code documentation is processed by the selected Vertex AI models.
+</Note>
+
+## Changing embedding models
+
+Vertex AI indexes are stored separately from other vector indexes, because their dimensions can differ. After changing the embedding provider or model, refresh the libraries that should be available under the new embedding configuration.

@@ -109,7 +109,8 @@
                           "enterprise/integrations/google-drive",
                           "enterprise/integrations/notion",
                           "enterprise/integrations/azure-devops",
-                          "enterprise/integrations/aws-bedrock"
+                          "enterprise/integrations/aws-bedrock",
+                          "enterprise/integrations/google-vertex-ai"
                         ]
                       },
                       {
