@@ -162,6 +162,7 @@ export async function performLogin(openBrowser = true): Promise<string | null> {
       }
       if (result.status === "denied") {
         waitingSpinner.fail(pc.red("Authorization denied."));
+        if (result.errorMessage) console.error(pc.red(result.errorMessage));
         return null;
       }
       if (result.status === "expired") {

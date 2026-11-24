@@ -46,8 +46,23 @@ interface StatusBody {
   retryAfter?: number;
 }
 
-function readStatusBody(res: Response): Promise<StatusBody> {
-  return readJson<StatusBody>(res).catch(() => ({}));
+export const OAUTH_SETUP_COMMAND = "npx ctx7@latest setup --mcp --oauth";
+
+/** 403 codes for a member whose teamspace refuses them an API key (OAuth only for them). */
+export type ApiKeyPolicyRefusal = "api_keys_disabled" | "api_key_admins_only";
+
+export function isApiKeyPolicyRefusal(code: unknown): code is ApiKeyPolicyRefusal {
+  return code === "api_keys_disabled" || code === "api_key_admins_only";
+}
+
+/** ctx7 commands (and the skills that run them) need an API key, so only the MCP server can help. */
+export const CLI_API_KEY_REFUSED_MESSAGE = `Your teamspace allows only OAuth for your account, and ctx7 CLI commands need an API key. Use the Context7 MCP server with OAuth instead: run ${OAUTH_SETUP_COMMAND}`;
+
+async function readStatusBody(res: Response): Promise<StatusBody> {
+  const body = await readJson<StatusBody>(res).catch((): StatusBody => ({}));
+  return isApiKeyPolicyRefusal(body.error)
+    ? { ...body, message: CLI_API_KEY_REFUSED_MESSAGE }
+    : body;
 }
 
 export function getBaseUrl(): string {
