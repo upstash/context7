@@ -266,10 +266,11 @@ Configured under **Workspace Settings › AI models** in the web UI.
 
 | Setting | Description |
 |---|---|
-| LLM Provider | `openai`, `anthropic`, `gemini`, `bedrock`, or custom |
-| LLM API Key | API key for your chosen provider; optional for Bedrock with workload credentials |
-| LLM Model | Model name or Bedrock model/inference-profile ID |
+| LLM Provider | OpenAI, Anthropic, Google AI Studio (Gemini API key), AWS Bedrock, Google Vertex AI, or custom |
+| LLM API Key | API key for your chosen provider; optional for Bedrock with workload credentials; not used for Google Vertex AI |
+| LLM Model | Model name, Bedrock model/inference-profile ID, or Vertex AI model ID |
 | AWS Region | Region used for Bedrock LLM and embedding requests |
+| Google Cloud project and location | Project and location used for Vertex AI LLM and embedding requests |
 | Base URL / Bedrock endpoint | Custom OpenAI-compatible endpoint, or an optional Bedrock Runtime endpoint |
 
 #### Examples
@@ -299,12 +300,12 @@ By default, Context7 uses the same provider as your LLM for generating embedding
 
 | Setting | Description |
 |---|---|
-| Embedding Provider | `openai`, `gemini`, `bedrock`, or custom |
+| Embedding Provider | OpenAI, Google AI Studio, AWS Bedrock, Google Vertex AI, or custom |
 | Embedding API Key | Separate key; inherits the LLM key only when both use the same provider |
-| Embedding Model | Embedding model name, such as `text-embedding-3-small` or `amazon.titan-embed-text-v2:0` |
+| Embedding Model | Embedding model name, such as `text-embedding-3-small`, `amazon.titan-embed-text-v2:0`, or `gemini-embedding-001` |
 | Embedding base URL / Bedrock endpoint | Custom embedding endpoint, or an optional Bedrock Runtime endpoint |
 
-See [AWS Bedrock](/enterprise/integrations/aws-bedrock) for IAM, model, region, and private-network configuration.
+See [AWS Bedrock](/enterprise/integrations/aws-bedrock) for IAM, model, region, and private-network configuration, and [Google Vertex AI](/enterprise/integrations/google-vertex-ai) for Google Cloud credentials, Workload Identity, and models.
 
 ### Decision Model
 
