@@ -90,7 +90,7 @@ To configure it:
    - **Audience:** the **Context7 MCP API** app's client ID from Step 1. Do not use the gateway app's ID.
    - **Required scope:** `mcp.access`
 3. Click **Test connection**, then **Save**.
-4. Add your developers in the **Microsoft Entra ID users** card. You can add each user by email and Entra object ID, or sync an Entra security group every 30 minutes. For the group sync setup, see [Auto-provision from an Entra security group](/enterprise/enterprise-managed-auth/entra#step-3-auto-provision-from-an-entra-security-group-optional).
+4. Add your developers in the **Microsoft Entra ID users** card. You can add each user by email and Entra object ID, or sync an Entra security group every 30 minutes. For the group sync setup, see [Auto-provision from an Entra security group](/enterprise/enterprise-managed-auth/entra#step-3-auto-provision-from-an-entra-security-group-optional). To let the Entra provisioning service add and remove them, set up [SCIM provisioning](/enterprise/enterprise-managed-auth/entra-scim).
 
 <Note>
 One Context7 MCP API app (audience) belongs to one teamspace. To connect a second teamspace, register a second Context7 MCP API app.
@@ -187,5 +187,4 @@ The expected answer is `200 OK` with an event stream that names the Context7 ser
 ## What this does not cover
 
 - **Context7's own OAuth through a pass-through gateway.** If your gateway only passes the client's sign-in through to Context7's OAuth, the token is issued for the gateway's URL and Context7 rejects it. Use the Entra flow in this guide, or give the gateway a Context7 API key if one shared identity is enough.
-- **SCIM provisioning.** Context7 does not support SCIM yet. Use the Entra security group sync to add and remove users.
 - **On-premise.** This guide proxies the hosted `mcp.context7.com`. For an on-premise deployment, contact [context7@upstash.com](mailto:context7@upstash.com).
