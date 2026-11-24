@@ -1,5 +1,12 @@
 # @upstash/context7-mcp
 
+## 4.8.0
+
+### Minor Changes
+
+- 3e98f32: Serve the context7-mcp skill through the MCP skills extension (SEP-2640).
+- 32dccfd: Agents pass the version a project uses as its own value, not as a suffix of the library ID. `query-docs` (MCP and pi) takes a `version` input and `ctx7 docs` a `--tag` option, sent to `/v2/context` as `version`; Context7 serves that version or the closest one it has. `resolve-library-id` no longer lists versions.
+
 ## 4.7.3
 
 ### Patch Changes
