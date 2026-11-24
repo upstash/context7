@@ -11,7 +11,7 @@ vi.mock("../utils/auth.js", async (importOriginal) => {
 
 const mockPerformLogin = vi.fn();
 vi.mock("../commands/auth.js", () => ({
-  performLogin: (...args: unknown[]) => mockPerformLogin(...args),
+  performDeviceLogin: (...args: unknown[]) => mockPerformLogin(...args),
 }));
 
 const mockSpinner = {
@@ -52,12 +52,22 @@ describe("setup authentication", () => {
 
   test("uses a newly authenticated device-flow API key directly", async () => {
     mockGetValidAccessToken.mockResolvedValue(undefined);
-    mockPerformLogin.mockResolvedValue("ctx7sk-new-key");
+    mockPerformLogin.mockResolvedValue({ token: "ctx7sk-new-key" });
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(resolveSetupApiKey()).resolves.toEqual({ apiKey: "ctx7sk-new-key" });
 
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  test("returns the refusal when the device login is refused a key, so setup uses OAuth", async () => {
+    mockGetValidAccessToken.mockResolvedValue(undefined);
+    mockPerformLogin.mockResolvedValue({ refusal: "api_key_admins_only" });
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(resolveSetupApiKey()).resolves.toEqual({ refusal: "api_key_admins_only" });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
