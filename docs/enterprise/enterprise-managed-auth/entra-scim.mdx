@@ -8,6 +8,40 @@ SCIM provisioning keeps a Context7 teamspace in step with the users you assign t
 
 SCIM provisioning is available on the Enterprise plan and during an Enterprise trial. Only teamspace owners and admins can set it up.
 
+## How it works
+
+Entra calls Context7. Context7 never calls Entra. Each Entra enterprise application sends its changes to the SCIM endpoint of one teamspace, with that teamspace's token.
+
+```mermaid
+sequenceDiagram
+    participant Admin as Entra admin
+    participant Entra as Entra provisioning service
+    participant SCIM as Context7 SCIM endpoint
+    participant TS as Context7 teamspace
+
+    Admin->>Entra: Assign a user to the application
+    Entra->>SCIM: GET /Users?filter=userName eq "ann@contoso.com"
+    SCIM-->>Entra: No match
+    Entra->>SCIM: POST /Users (userName, email, externalId)
+    SCIM->>TS: Find or create the account, add as developer, store the object ID
+    SCIM-->>Entra: 201 with the user's SCIM id
+    Note over Entra,SCIM: Later changes use that id
+
+    Admin->>Entra: Unassign or disable the user
+    Entra->>SCIM: PATCH /Users/{id} active = false
+    SCIM->>TS: Remove the membership and API keys
+    SCIM-->>Entra: 200
+    Note over Entra,SCIM: 30 days after a delete in Entra
+    Entra->>SCIM: DELETE /Users/{id}
+    SCIM-->>Entra: 204
+```
+
+- **Who calls whom:** Entra runs a provisioning cycle about every 40 minutes and sends only what changed since the last cycle. **Provision on demand** sends one user at once.
+- **Authentication:** every request carries the teamspace's SCIM token. Context7 stores only a hash of the token, and a token works for its own teamspace only.
+- **Matching a person:** Context7 finds the Context7 account by the user's email. It creates the account when none exists. It uses an existing account only when that account has verified the address.
+- **Gateway sign-in:** when `externalId` is the Entra object ID, Context7 stores it with the user. Your MCP gateway can then sign the user in with their Entra token.
+- **Deactivated users:** Context7 keeps the record with `active = false`, so Entra can find the user again and reactivate them.
+
 ## What provisioning does
 
 | In Entra | In Context7 |
