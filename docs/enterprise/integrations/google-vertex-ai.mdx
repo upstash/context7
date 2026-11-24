@@ -7,7 +7,7 @@ description: "Use Gemini and Claude models and Gemini embeddings through Google 
 Context7 On-Premise can call Vertex AI directly for parsing, source-code documentation, reranking, and embeddings. It uses your Google Cloud project and its credentials, so you do not need an API key. On GKE, Workload Identity is enough.
 
 <Note>
-**Google Vertex AI** and **Google AI Studio** are two different providers in Context7. Google AI Studio uses a Gemini API key. Google Vertex AI uses a Google Cloud project and Application Default Credentials. Choose Google Vertex AI when your organization does not issue API keys.
+The **Google** provider in Context7 has two options. **API key** uses Google AI Studio with a Gemini API key. **Google Cloud project** uses Vertex AI with Application Default Credentials, as this page describes. Choose Google Cloud project when your organization does not issue API keys.
 </Note>
 
 ## Prerequisites
@@ -70,7 +70,7 @@ Context7 uses Google Application Default Credentials. It looks for credentials i
 
 <Steps>
   <Step title="Configure the LLM">
-    In the setup wizard or **Workspace Settings › AI models**, select **Google Vertex AI**. Enter:
+    In the setup wizard or **Workspace Settings › AI models**, select **Google**, then choose **Google Cloud project**. Enter:
 
     | Field | Value |
     |---|---|
@@ -81,7 +81,7 @@ Context7 uses Google Application Default Credentials. It looks for credentials i
     The fields in the dashboard take precedence over `GOOGLE_CLOUD_PROJECT` and `GOOGLE_CLOUD_LOCATION`.
   </Step>
   <Step title="Configure embeddings">
-    In the setup wizard, select **Same as LLM** to use Vertex AI embeddings, or select **Separate provider** and then **Google Vertex AI**. The default model is `gemini-embedding-001`.
+    In the setup wizard, select **Same as LLM** to use Vertex AI embeddings, or select **Separate provider**, **Google**, and then **Google Cloud project**. The default model is `gemini-embedding-001`.
 
     The LLM and embedding configurations share one project and location.
   </Step>
