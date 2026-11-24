@@ -45,7 +45,7 @@ Access is governed entirely in Okta. There is no user list to maintain in Contex
 In the **Admin Console**, go to **Settings → Features**, find **Cross App Access** under Early Access, and turn it on.
 
 <Frame>
-  ![Cross App Access toggle in Okta Admin Console Settings → Features](/images/enterprise/enterprise-managed-auth/okta-enable-feature.png)
+  <img src="/images/enterprise/enterprise-managed-auth/okta-enable-feature.png" alt="Cross App Access toggle in Okta Admin Console Settings → Features" />
 </Frame>
 
 ### Step 2: Add Context7 as a resource app
@@ -58,7 +58,7 @@ Go to **Applications → Applications → Browse App Catalog**, search for **XAA
 Click **Done**.
 
 <Frame>
-  ![Add XAA Resource App general settings with Context7 label and issuer URL](/images/enterprise/enterprise-managed-auth/okta-resource-app.png)
+  <img src="/images/enterprise/enterprise-managed-auth/okta-resource-app.png" alt="Add XAA Resource App general settings with Context7 label and issuer URL" />
 </Frame>
 
 ### Step 3: Add your MCP client as a requesting app
@@ -72,7 +72,7 @@ Browse the catalog again, search for **XAA Requesting App**, and click **Add Int
 Click **Done**, then open the **Sign On** tab and note the Client ID and secret if your client needs them.
 
 <Frame>
-  ![Add XAA Requesting App general settings with label, issuer URL, and client ID](/images/enterprise/enterprise-managed-auth/okta-requesting-app.png)
+  <img src="/images/enterprise/enterprise-managed-auth/okta-requesting-app.png" alt="Add XAA Requesting App general settings with label, issuer URL, and client ID" />
 </Frame>
 
 ### Step 4: Connect the two apps
@@ -80,7 +80,7 @@ Click **Done**, then open the **Sign On** tab and note the Client ID and secret 
 Open the requesting app → **Manage Connections** tab. Under **Apps providing consent**, choose **Add resource apps**, select **Context7**, and **Save**.
 
 <Frame>
-  ![Manage Connections tab linking the MCP Client to the Context7 resource app](/images/enterprise/enterprise-managed-auth/okta-manage-connections.png)
+  <img src="/images/enterprise/enterprise-managed-auth/okta-manage-connections.png" alt="Manage Connections tab linking the MCP Client to the Context7 resource app" />
 </Frame>
 
 ### Step 5: Assign your users
@@ -88,7 +88,7 @@ Open the requesting app → **Manage Connections** tab. Under **Apps providing c
 On both apps, open the **Assignments** tab and assign the people (or groups) who should have access. Only assigned users can obtain an ID-JAG.
 
 <Frame>
-  ![Assignments tab assigning a user to the app](/images/enterprise/enterprise-managed-auth/okta-assignments.png)
+  <img src="/images/enterprise/enterprise-managed-auth/okta-assignments.png" alt="Assignments tab assigning a user to the app" />
 </Frame>
 
 ## Part 2: Configure Context7
@@ -101,7 +101,7 @@ Sign in to [context7.com/dashboard](https://context7.com/dashboard), select your
 Click **Configure**, enter the issuer, and **Save**. Context7 validates the issuer against your tenant's OpenID Connect metadata on save.
 
 <Frame>
-  ![Context7 dashboard Enterprise-Managed Auth settings card with the Okta issuer field](/images/enterprise/enterprise-managed-auth/context7-ema-config.png)
+  <img src="/images/enterprise/enterprise-managed-auth/context7-ema-config.png" alt="Context7 dashboard Enterprise-Managed Auth settings card with the Okta issuer field" />
 </Frame>
 
 <Note>

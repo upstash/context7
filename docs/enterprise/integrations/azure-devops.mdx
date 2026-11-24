@@ -25,7 +25,7 @@ Context7 does not index attachments, images, history, links other than the paren
 Open **Workspace Settings › Azure DevOps**, choose an authentication method, and fill in the fields. Choose **Test connection**, which shows how many projects the credential can see, then save.
 
 <Frame>
-  ![The Azure DevOps connection settings with a personal access token](/images/enterprise/integrations/azure-devops-connection.png)
+  <img src="/images/enterprise/integrations/azure-devops-connection.png" alt="The Azure DevOps connection settings with a personal access token" />
 </Frame>
 
 The organization URL is the part of the browser address before the project name:
@@ -95,7 +95,7 @@ Click **Add source** and choose **Azure DevOps**. Only admins can add Azure DevO
     | Include comments | Also index comments, at one extra request for each changed work item |
 
     <Frame>
-      ![Filters for done bugs in the Radar area, with 27 matching work items](/images/enterprise/integrations/azure-devops-add-library.png)
+      <img src="/images/enterprise/integrations/azure-devops-add-library.png" alt="Filters for done bugs in the Radar area, with 27 matching work items" />
     </Frame>
   </Step>
   <Step title="Add the library">
@@ -116,7 +116,7 @@ A library indexes at most 20,000 work items. If more match, it keeps the newest 
 Libraries sync daily at 03:30 in the server time zone. Change or turn off the schedule in **Workspace Settings › Azure DevOps**, or choose **Sync all now**. To sync one library, choose **Refresh** on it. Only admins can sync.
 
 <Frame>
-  ![The Azure DevOps sync schedule, daily at 03:30](/images/enterprise/integrations/azure-devops-sync-schedule.png)
+  <img src="/images/enterprise/integrations/azure-devops-sync-schedule.png" alt="The Azure DevOps sync schedule, daily at 03:30" />
 </Frame>
 
 Each sync lists the matching work items again. It indexes only the work items that changed, adds new matches, and removes work items that no longer match, were deleted, or that the credential can no longer read. To index every work item again, choose **Refresh** with **Re-index all work items**.
@@ -130,7 +130,7 @@ Context7 keeps the indexed content:
 - **A sync would remove too many work items:** all of them, or more than half of a library with 20 or more, with unchanged filters. Context7 stops and keeps the index, because the credential has usually lost access. If the removal is expected, choose **Refresh** with **Re-index all work items**.
 
 <Frame>
-  ![Azure DevOps libraries with their last sync, and one failed work item](/images/enterprise/integrations/azure-devops-libraries.png)
+  <img src="/images/enterprise/integrations/azure-devops-libraries.png" alt="Azure DevOps libraries with their last sync, and one failed work item" />
 </Frame>
 
 Throttled requests (HTTP 429) and server errors are retried as long as Azure DevOps asks, up to 2 minutes each.
