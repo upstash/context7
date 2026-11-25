@@ -112,10 +112,35 @@ describe("task", () => {
     expect(await findCodeTask(taskId, CALLER)).toBeNull();
   });
 
-  test("the hosted server has no shared store yet, so it creates no task", async () => {
+  test("the hosted server creates no task without a shared store", async () => {
+    resetCodeTasks(null);
+    const hosted: ClientContext = { transport: "http", apiKey: "ctx7sk-one" };
     expect(codeTaskStore("http")).toBeNull();
+    expect(await createCodeTask("grep-code", REQUEST, INDEXING, hosted, T0)).toBeNull();
+  });
+
+  test("the hosted server keeps tasks in the shared store, not in the process", async () => {
+    const shared = new MemoryCodeTaskStore();
+    resetCodeTasks(shared);
+    const hosted: ClientContext = { transport: "http", apiKey: "ctx7sk-one" };
+    const task = await createCodeTask("grep-code", REQUEST, INDEXING, hosted, T0);
+    expect(task && (await shared.get(task.taskId, T0))).toMatchObject({ tool: "grep-code" });
+    expect(task && (await findCodeTask(task.taskId, CALLER))).toBeNull();
+  });
+
+  test("answers without a task when the store fails", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    resetCodeTasks({
+      get: async () => null,
+      put: async () => {
+        throw new Error("redis down");
+      },
+      claimCheck: async () => false,
+    });
     const hosted: ClientContext = { transport: "http", apiKey: "ctx7sk-one" };
     expect(await createCodeTask("grep-code", REQUEST, INDEXING, hosted, T0)).toBeNull();
+    expect(error).toHaveBeenCalled();
+    error.mockRestore();
   });
 });
 
@@ -144,6 +169,14 @@ describe("MemoryCodeTaskStore", () => {
     for (const id of ["a", "b", "c"]) await store.put(id, record(T0));
     expect(await store.get("a", T0)).toBeNull();
     expect(await store.get("c", T0)).not.toBeNull();
+  });
+
+  test("does not write a task again after it has ended", async () => {
+    const store = new MemoryCodeTaskStore();
+    await store.put("a", { ...record(T0), status: "cancelled" });
+    await store.put("a", { ...record(T0), status: "completed", result: {} });
+    expect((await store.get("a", T0))?.status).toBe("cancelled");
+    expect(await store.claimCheck("a", T0 + 600_000, 0)).toBe(false);
   });
 
   test("claims a check only when the last one is old enough", async () => {

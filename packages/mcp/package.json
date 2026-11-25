@@ -55,6 +55,7 @@
     "@opentelemetry/resources": "^2.11.0",
     "@opentelemetry/sdk-metrics": "^2.11.0",
     "@types/express": "^5.0.4",
+    "@upstash/redis": "^1.41.0",
     "commander": "^13.1.0",
     "express": "^5.1.0",
     "jose": "^6.2.12",

@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import * as jose from "jose";
+import { redisCodeTaskStoreFromEnv } from "./code-task-redis.js";
 import { isJWT } from "./jwt.js";
 import type { CodeTool } from "./tool-names.js";
 import type { ClientContext, CodeRequest, ContextResponse } from "./types.js";
@@ -71,11 +72,14 @@ export interface CodeTaskRecord {
 
 /**
  * Where tasks live. A hosted server runs several pods and a tasks/get can reach any of them, so
- * its store must be one that all pods share.
+ * its store must be one that all pods share (code-task-redis.ts).
  */
 export interface CodeTaskStore {
   get(taskId: string): Promise<CodeTaskRecord | null>;
-  /** Writes the record. It is kept until CODE_TASK_TTL_MS after its creation. */
+  /**
+   * Writes the record. It is kept until CODE_TASK_TTL_MS after its creation. A task that has
+   * ended is not written again: the first final status wins.
+   */
   put(taskId: string, record: CodeTaskRecord): Promise<void>;
   /**
    * Sets `lastCheckAt` to `nowMs` and answers true when the last request to the API is at least
@@ -101,6 +105,8 @@ export class MemoryCodeTaskStore implements CodeTaskStore {
   }
 
   async put(taskId: string, record: CodeTaskRecord): Promise<void> {
+    const current = this.records.get(taskId);
+    if (current && current.status !== "working") return;
     this.records.delete(taskId);
     this.records.set(taskId, record);
     // The oldest task goes first.
@@ -113,21 +119,24 @@ export class MemoryCodeTaskStore implements CodeTaskStore {
 
   async claimCheck(taskId: string, nowMs: number, gapMs: number): Promise<boolean> {
     const record = this.records.get(taskId);
-    if (!record || nowMs - record.lastCheckAt < gapMs) return false;
+    if (!record || record.status !== "working" || nowMs - record.lastCheckAt < gapMs) return false;
     record.lastCheckAt = nowMs;
     return true;
   }
 }
 
 let processStore: MemoryCodeTaskStore | undefined;
+let sharedStore: CodeTaskStore | null | undefined;
 
 /**
- * The task store for a transport, or null when the server creates no tasks on it. Only stdio has
- * one now: the hosted server needs a store its pods share, which it does not have yet.
+ * The task store for a transport, or null when the server creates no tasks on it. stdio keeps
+ * tasks in the process. The hosted server keeps them in the Redis database of
+ * UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN, and creates no tasks without it.
  */
 export function codeTaskStore(transport: ClientContext["transport"]): CodeTaskStore | null {
-  if (transport !== "stdio") return null;
-  return (processStore ??= new MemoryCodeTaskStore());
+  if (transport === "stdio") return (processStore ??= new MemoryCodeTaskStore());
+  if (sharedStore === undefined) sharedStore = redisCodeTaskStoreFromEnv();
+  return sharedStore;
 }
 
 /** True when the request's `_meta` declares the Tasks extension (protocol 2026-07-28). */
@@ -218,8 +227,14 @@ export async function createCodeTask(
     status: "working",
     message: indexing.message.slice(0, MAX_STATUS_MESSAGE_LENGTH),
   };
-  // The Tasks extension requires the task to exist before the answer is sent.
-  await store.put(taskId, record);
+  // The Tasks extension requires the task to exist before the answer is sent. When the store
+  // fails, the tool answers without a task.
+  try {
+    await store.put(taskId, record);
+  } catch (error) {
+    console.error("Could not store the code task:", error);
+    return null;
+  }
   return codeTaskView(taskId, record);
 }
 
@@ -247,6 +262,7 @@ export function expiredTaskError(tool: CodeTool): { code: number; message: strin
 }
 
 /** For tests. */
-export function resetCodeTasks(): void {
+export function resetCodeTasks(shared?: CodeTaskStore | null): void {
   processStore = undefined;
+  sharedStore = shared;
 }
