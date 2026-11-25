@@ -1005,3 +1005,16 @@ test("feedback needs no teamspace and posts one record", async () => {
   expect(apiCalls[0].headers.get("X-Context7-Tool")).toBe("submit_feedback_to_context7_team");
   expect(apiCalls[0].headers.get("X-Context7-Tool-Request")).toBe("1");
 });
+
+describe("subscriptions", () => {
+  // The server allows none; Claude Code still asks. The refusal is expected.
+  test("a refused subscriptions/listen is answered with an error and not logged", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const client = await connect();
+
+    await expect(
+      client.request({ method: "subscriptions/listen", params: { notifications: {} } })
+    ).rejects.toThrow(/Subscription limit reached/);
+    expect(error).not.toHaveBeenCalled();
+  });
+});
