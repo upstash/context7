@@ -3,6 +3,26 @@ title: "Changelog"
 description: "Release notes for the Context7 On-Premise image."
 ---
 
+<Update label="2026-11-25" description="v2.0.4">
+
+### Upgrade notes
+
+- Context7 now sends its outbound traffic through `HTTPS_PROXY` and `HTTP_PROXY` when the container has them. Before 2.0.4, it ignored these variables. If you set them for another reason, add the hosts that Context7 must reach directly to `NO_PROXY`.
+- The **Gemini** provider is now named **Google**, with the option **Google AI Studio**. Existing Gemini configurations keep working with no change.
+
+### Added
+
+- Added [Google Vertex AI](/enterprise/integrations/google-vertex-ai) as the second option of the Google provider. It runs Gemini and Claude models and Gemini embeddings in your Google Cloud project, with Application Default Credentials: GKE Workload Identity, the service account of a VM, or a service account key file. Set the project and location in Workspace Settings › AI models.
+- Added [egress proxy](/enterprise/deployment/docker#egress-proxy) support. Context7 sends AI provider calls, Amazon Bedrock, S3 backups, Git hosts and website crawls through the proxy, and skips the hosts in `NO_PROXY`. Loopback addresses and the cloud metadata and credential endpoints always connect directly, so Workload Identity and IAM roles keep working.
+- Added the `serviceAccountName` value to the Helm chart, to run the pods as a Kubernetes service account for Workload Identity.
+- Added documentation image search. When you turn on image indexing, website parses describe the images on each page with the image model you choose, and `GET /api/v2/images` searches them. It is off by default.
+
+### Changed
+
+- Amazon Bedrock sources show the Amazon Bedrock logo.
+
+</Update>
+
 <Update label="2026-11-24" description="v2.0.3">
 
 ### Upgrade notes
