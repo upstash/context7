@@ -40,12 +40,10 @@ You set up the identity where Context7 runs, not in the Context7 dashboard. Give
 
     3. Run the Context7 pods as that service account.
 
-       With the [Helm chart](/enterprise/deployment/helm):
+       With the [Helm chart](/enterprise/deployment/helm), add this value to the command you install or upgrade with:
 
        ```bash
-       helm upgrade context7 oci://ghcr.io/context7/charts/context7-enterprise \
-         --namespace context7 --reuse-values \
-         --set serviceAccountName=context7
+       --set serviceAccountName=context7
        ```
 
        With your own manifests, set it in the pod spec of the Deployment or StatefulSet:
@@ -92,9 +90,11 @@ You set up the identity where Context7 runs, not in the Context7 dashboard. Give
 
     | Field | Value |
     |---|---|
-    | Google Cloud project | Your project ID. You can leave it empty when the container sets `GOOGLE_CLOUD_PROJECT`. |
-    | Location | Optional. Default `global`. Use a region, such as `europe-west4`, for data residency. |
+    | Google Cloud project | Your project ID. You can leave it empty when the container sets `GOOGLE_CLOUD_PROJECT` or `GCLOUD_PROJECT`. |
+    | Location | Optional. Default `global`, or `GOOGLE_CLOUD_LOCATION` when the container sets it. Use a region, such as `europe-west4`, for data residency. |
     | Model | A Gemini or Claude model, such as `gemini-3.8-flash` or `claude-sonnet-5-5`. |
+
+    Values in the dashboard take precedence over these variables.
 
     <Frame>
       <img src="/images/enterprise/integrations/vertex-ai-provider.png" alt="The Google provider with Google Vertex AI selected, a Google Cloud project, the global location, and gemini-3.8-flash" />
@@ -120,7 +120,7 @@ Open **Workspace Settings** in the top bar and select **AI models** under **Inde
   <img src="/images/enterprise/integrations/vertex-ai-settings.png" alt="Workspace Settings, AI models: the Language model card with Google Vertex AI, a Google Cloud project, the global location, and gemini-3.8-flash" />
 </Frame>
 
-To change the embedding model, run the setup wizard again, then refresh your libraries so their vectors are rebuilt.
+To change the embedding model, run the setup wizard again. Vectors from different embedding models cannot be searched together, so refresh your libraries afterwards to rebuild their vectors. Until a library is refreshed, it may not appear in search.
 
 ## Models
 
