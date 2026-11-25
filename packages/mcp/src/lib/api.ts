@@ -251,9 +251,6 @@ export const CODE_INDEX_WAIT_SECONDS = 5;
 /** A sentence of the server's 202 message that tells the agent to wait and call again. */
 const WAIT_ADVICE = /\b(call again|keep calling|meanwhile)\b/i;
 
-/** Seconds between two requests for an index when the API's 202 names no `retryAfter`. */
-const DEFAULT_INDEX_RETRY_SECONDS = 30;
-
 /** The server's 202 message without its advice to call again. */
 export function indexingMessage(message: string | undefined): string {
   return (message ?? "The library source is being indexed.")
@@ -368,10 +365,7 @@ export async function fetchLibraryCode(
             // No "indexing" outcome exists: telemetry counts it with the empty results.
             outcome: "not_found",
             indexing: {
-              retryAfter:
-                typeof body.retryAfter === "number" && body.retryAfter > 0
-                  ? body.retryAfter
-                  : DEFAULT_INDEX_RETRY_SECONDS,
+              retryAfter: typeof body.retryAfter === "number" ? body.retryAfter : undefined,
               message: indexingMessage(body.message),
             },
           };
@@ -379,7 +373,9 @@ export async function fetchLibraryCode(
         if (!response.ok) {
           const errorMessage = await codeErrorMessage(response, request, context, tool);
           console.error(errorMessage);
-          return { data: errorMessage, outcome: "error" };
+          // A 503 says the index will not come; other 5xx answers can pass.
+          const transient = response.status >= 500 && response.status !== 503;
+          return { data: errorMessage, outcome: "error", ...(transient && { transient }) };
         }
         const text = await response.text();
         if (!text) return { data: "No source results for this query.", outcome: "not_found" };
@@ -390,7 +386,7 @@ export async function fetchLibraryCode(
   } catch (error) {
     const errorMessage = `Error querying library source code: ${error}. Do not retry now: answer from query-docs.`;
     console.error(errorMessage);
-    return { data: errorMessage, outcome: "error" };
+    return { data: errorMessage, outcome: "error", transient: true };
   }
 }
 
