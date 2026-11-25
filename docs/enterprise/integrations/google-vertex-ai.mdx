@@ -19,7 +19,7 @@ The **Google** provider in Context7 has two options. **Google AI Studio** uses a
 
 ## Authenticate
 
-Context7 uses Google Application Default Credentials. It looks for credentials in this order:
+Set the credentials on the deployment, not in the Context7 dashboard. The dashboard holds only the project, location, and model. Context7 uses Google Application Default Credentials and looks for them in this order:
 
 1. A service account key file named by `GOOGLE_APPLICATION_CREDENTIALS`.
 2. The local credentials file from `gcloud auth application-default login`.
