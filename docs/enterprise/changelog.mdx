@@ -8,6 +8,7 @@ description: "Release notes for the Context7 On-Premise image."
 ### Upgrade notes
 
 - Context7 now sends its outbound traffic through `HTTPS_PROXY` and `HTTP_PROXY` when the container has them. Before 2.0.4, it ignored these variables. If you set them for another reason, add the hosts that Context7 must reach directly to `NO_PROXY`.
+- One request never uses the proxy: the fetch of an MCP client's metadata document (CIMD) during OAuth sign-in. If the container cannot connect to the internet directly, set **Client ID metadata documents** to **Off** under Workspace Settings › Authentication and turn on **Dynamic client registration**.
 - The **Gemini** provider is now named **Google**, with the option **Google AI Studio**. Existing Gemini configurations keep working with no change.
 
 ### Added
