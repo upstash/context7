@@ -444,6 +444,29 @@ describe("TOML config", () => {
     expect(content.match(/\[mcp_servers\.context7\]/g)?.length).toBe(1);
   });
 
+  test("TOML helpers ignore a commented-out context7 header", async () => {
+    const path = join(tempDir, "config.toml");
+    const commented = '# [mcp_servers.context7]\n# url = "https://old.com"\n\n';
+    const live = '[mcp_servers.context7]\nurl = "https://live.com"\n';
+
+    await writeFile(path, commented);
+    expect(await readTomlServerExists(path, "context7")).toBe(false);
+
+    await writeFile(path, commented + live);
+    await appendTomlServer(path, "context7", { url: "https://new.com" });
+    let content = await readFile(path, "utf-8");
+    expect(content.match(/^\[mcp_servers\.context7\]/gm)?.length).toBe(1);
+    expect(content).toContain('url = "https://new.com"');
+    expect(content).not.toContain("https://live.com");
+    expect(content).toContain(commented);
+
+    await writeFile(path, commented + live);
+    expect(await removeTomlServer(path, "context7")).toEqual({ removed: true });
+    content = await readFile(path, "utf-8");
+    expect(content).not.toMatch(/^\[mcp_servers\.context7\]/m);
+    expect(content).toContain('# url = "https://old.com"');
+  });
+
   test("appendTomlServer does not accumulate blank lines on repeated overwrites", async () => {
     const path = join(tempDir, "config.toml");
     await writeFile(
