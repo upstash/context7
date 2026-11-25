@@ -79,11 +79,19 @@ Context7 uses Google Application Default Credentials. It looks for credentials i
     | Model | A Gemini or Claude model ID, such as `gemini-3.8-flash` or `claude-sonnet-5-5`. |
 
     The fields in the dashboard take precedence over `GOOGLE_CLOUD_PROJECT`, `GCLOUD_PROJECT`, and `GOOGLE_CLOUD_LOCATION`.
+
+    <Frame>
+      <img src="/images/enterprise/integrations/vertex-ai-provider.png" alt="The Google provider with Google Vertex AI selected, a Google Cloud project, the global location, and gemini-3.8-flash" />
+    </Frame>
   </Step>
   <Step title="Configure embeddings">
     In the setup wizard, select **Same as LLM** to use Vertex AI embeddings, or select **Separate provider**, **Google**, and then **Google Vertex AI**. The default model is `gemini-embedding-001`.
 
     The LLM and embedding configurations share one project and location.
+
+    <Frame>
+      <img src="/images/enterprise/integrations/vertex-ai-embeddings.png" alt="Same as LLM selected for embeddings, with gemini-embedding-001 from the Google Vertex AI project" />
+    </Frame>
   </Step>
   <Step title="Test and verify">
     Test both connections, save the configuration, and parse a small repository. Query the resulting library to verify that parsing and semantic search both work.
