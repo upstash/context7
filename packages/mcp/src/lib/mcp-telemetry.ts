@@ -86,6 +86,7 @@ const KNOWN_MCP_METHODS = new Set([
   "tasks/get",
   "tasks/list",
   "tasks/result",
+  "tasks/update",
   "tools/call",
   "tools/list",
 ]);

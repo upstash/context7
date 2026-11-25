@@ -251,16 +251,24 @@ export const CODE_INDEX_WAIT_SECONDS = 5;
 /** A sentence of the server's 202 message that tells the agent to wait and call again. */
 const WAIT_ADVICE = /\b(call again|keep calling|meanwhile)\b/i;
 
+/** Seconds between two requests for an index when the API's 202 names no `retryAfter`. */
+const DEFAULT_INDEX_RETRY_SECONDS = 30;
+
+/** The server's 202 message without its advice to call again. */
+export function indexingMessage(message: string | undefined): string {
+  return (message ?? "The library source is being indexed.")
+    .split(/(?<=\.)\s+/)
+    .filter((sentence) => !WAIT_ADVICE.test(sentence))
+    .join(" ");
+}
+
 /**
  * The answer while a library's source is being indexed. The code tools never make the agent
  * wait: an index can take minutes, or stall, and the user's session must go on. So the server's
  * own "keep calling" advice is dropped, and the agent answers from query-docs now.
  */
 export function indexingAnswer(message: string | undefined, tool: string): string {
-  const base = (message ?? "The library source is being indexed.")
-    .split(/(?<=\.)\s+/)
-    .filter((sentence) => !WAIT_ADVICE.test(sentence))
-    .join(" ");
+  const base = indexingMessage(message);
   return `${base} This is not an error. Until the index is done, every code tool call for this version gives this answer, so do not try other patterns or files and do not wait: answer from query-docs now. Only if the source is still needed at the end of the task, call ${tool} once more.`;
 }
 
@@ -351,11 +359,21 @@ export async function fetchLibraryCode(
       async (response) => {
         readPromptSignal(response, context);
         if (response.status === 202) {
-          const body = (await response.json().catch(() => ({}))) as { message?: string };
+          const body = (await response.json().catch(() => ({}))) as {
+            message?: string;
+            retryAfter?: number;
+          };
           return {
             data: indexingAnswer(body.message, tool),
             // No "indexing" outcome exists: telemetry counts it with the empty results.
             outcome: "not_found",
+            indexing: {
+              retryAfter:
+                typeof body.retryAfter === "number" && body.retryAfter > 0
+                  ? body.retryAfter
+                  : DEFAULT_INDEX_RETRY_SECONDS,
+              message: indexingMessage(body.message),
+            },
           };
         }
         if (!response.ok) {

@@ -1,6 +1,23 @@
-import type { McpServer, ServerContext } from "@modelcontextprotocol/server";
+import {
+  ProtocolError,
+  ProtocolErrorCode,
+  type CallToolResult,
+  type McpServer,
+  type ServerContext,
+} from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { fetchLibraryCode } from "./api.js";
+import {
+  CODE_TASK_WAIT_MS,
+  MAX_TASK_ID_LENGTH,
+  checkGapMs,
+  clientDeclaresTasks,
+  codeTaskView,
+  createCodeTask,
+  expiredTaskError,
+  findCodeTask,
+  type CodeTaskView,
+} from "./code-task.js";
 import { maybeElicitAuthSignIn } from "./auth/auth-prompt.js";
 import { recordToolCallTelemetry } from "./auth-lifecycle-telemetry.js";
 import { aliasArgs, QUERY_DOCS_ALIASES, type AliasMap } from "./tool-args.js";
@@ -11,7 +28,12 @@ import {
   READ_CODE_TOOL,
   type CodeTool,
 } from "./tool-names.js";
-import { CODE_OUTPUT_MODES, type ClientContext, type CodeRequest } from "./types.js";
+import {
+  CODE_OUTPUT_MODES,
+  type ClientContext,
+  type CodeRequest,
+  type ContextResponse,
+} from "./types.js";
 
 // The source code tools. They follow the parameters of the Grep, Glob and Read tools that coding
 // agents already have, so agents use them like their own tools, on a library's source at one
@@ -382,6 +404,64 @@ export function symbolRequest(input: z.infer<typeof symbolSchema>): CodeRequest 
   };
 }
 
+/** The tool result for an answer of /v2/code, for the tool call and for a completed task. */
+function codeToolResult(response: ContextResponse): CallToolResult {
+  return {
+    content: [{ type: "text" as const, text: rewriteCodeHints(response.data) }],
+    // "Still indexing" is a normal answer: the agent answers from query-docs meanwhile.
+    ...(response.outcome === "error" ? { isError: true } : {}),
+  };
+}
+
+/**
+ * The state of a code tool task for tasks/get (see code-task.ts). A working task asks the API
+ * again only when its last request is old enough (checkGapMs); any other poll answers `working`
+ * at once. A finished task answers from its record, so it costs no request.
+ */
+export async function getCodeTask(
+  taskId: string,
+  ctx: ClientContext,
+  nowMs = Date.now()
+): Promise<CodeTaskView> {
+  const found = await findCodeTask(taskId, ctx);
+  // The same answer for an unknown ID and for a task of another caller.
+  if (!found) throw new ProtocolError(ProtocolErrorCode.InvalidParams, "Unknown task");
+  const { store, record } = found;
+  if (record.status !== "working") return codeTaskView(taskId, record);
+  if (!(await store.claimCheck(taskId, nowMs, checkGapMs(record))))
+    return codeTaskView(taskId, record);
+
+  const response = await fetchLibraryCode(record.request, ctx, record.tool);
+  const next = { ...record, lastCheckAt: nowMs, updatedAt: nowMs };
+  if (!response.indexing) {
+    next.status = "completed";
+    next.result = codeToolResult(response);
+  } else if (nowMs - record.createdAt >= CODE_TASK_WAIT_MS) {
+    next.status = "failed";
+    next.error = expiredTaskError(record.tool);
+  } else {
+    next.message = response.indexing.message;
+  }
+  await store.put(taskId, next);
+  return codeTaskView(taskId, next);
+}
+
+/**
+ * tasks/cancel: the task ends as `cancelled`. The index is not stopped, because the next call
+ * for the version uses it. An unknown ID is accepted without an error.
+ */
+export async function cancelCodeTask(
+  taskId: string,
+  ctx: ClientContext,
+  nowMs = Date.now()
+): Promise<void> {
+  const found = await findCodeTask(taskId, ctx);
+  if (found?.record.status !== "working") return;
+  await found.store.put(taskId, { ...found.record, status: "cancelled", updatedAt: nowMs });
+}
+
+const taskParams = z.object({ taskId: z.string().min(1).max(MAX_TASK_ID_LENGTH) }).loose();
+
 /**
  * Registers grep-code, glob-code, read-code and find-symbol. Experimental: called from
  * registerExperimentalTools when the code tools are on.
@@ -399,12 +479,30 @@ export function registerCodeTools(
     const response = await fetchLibraryCode(request, ctx, tool);
     maybeElicitAuthSignIn(server, ctx);
     recordToolCallTelemetry(ctx, response.outcome);
-    return {
-      content: [{ type: "text" as const, text: rewriteCodeHints(response.data) }],
-      // "Still indexing" is a normal answer: the agent answers from query-docs meanwhile.
-      ...(response.outcome === "error" ? { isError: true } : {}),
-    };
+    // A client that declared the Tasks extension waits for the index itself, and the agent gets
+    // the real result. Any other client gets the "still indexing" text.
+    if (response.indexing && clientDeclaresTasks(toolCtx.mcpReq.envelope)) {
+      const task = await createCodeTask(tool, request, response.indexing, ctx);
+      // The SDK sends a tools/call result with a `resultType` as it is; its types do not model one.
+      if (task) return { resultType: "task", ...task } as unknown as CallToolResult;
+    }
+    return codeToolResult(response);
   };
+
+  // The Tasks extension's methods.
+  server.server.setRequestHandler("tasks/get", { params: taskParams }, ({ taskId }, toolCtx) =>
+    getCodeTask(taskId, getClientContext(toolCtx))
+  );
+  server.server.setRequestHandler(
+    "tasks/cancel",
+    { params: taskParams },
+    async ({ taskId }, toolCtx) => {
+      await cancelCodeTask(taskId, getClientContext(toolCtx));
+      return {};
+    }
+  );
+  // No task asks the client for input.
+  server.server.setRequestHandler("tasks/update", { params: taskParams }, () => ({}));
 
   server.registerTool(
     GREP_CODE_TOOL,

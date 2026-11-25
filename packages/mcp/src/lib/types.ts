@@ -34,6 +34,13 @@ export type ContextRequest = {
 export type ContextResponse = {
   data: string;
   outcome: ToolCallOutcome;
+  /** Set on a code tool answer while the source is being indexed (the API's 202). */
+  indexing?: {
+    /** Seconds the API asks the caller to wait before the next request. */
+    retryAfter: number;
+    /** The API's message, without its advice to call again. */
+    message: string;
+  };
 };
 
 export const CODE_OPERATIONS = [
