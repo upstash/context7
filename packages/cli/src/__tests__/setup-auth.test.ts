@@ -38,16 +38,67 @@ describe("setup authentication", () => {
     vi.unstubAllGlobals();
   });
 
-  test("uses a stored device-flow API key directly", async () => {
+  test("uses a stored device-flow API key that the server still accepts", async () => {
     mockGetValidAccessToken.mockResolvedValue("ctx7sk-device-key");
-    const fetchMock = vi.fn();
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204, json: () => ({}) });
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(resolveSetupApiKey()).resolves.toEqual({ apiKey: "ctx7sk-device-key" });
 
     expect(mockPerformLogin).not.toHaveBeenCalled();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://test.context7.com/api/v2/auth/check",
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer ctx7sk-device-key" }),
+      })
+    );
     expect(mockSpinner.start).not.toHaveBeenCalled();
+  });
+
+  test.each(["api_keys_disabled", "api_key_admins_only"])(
+    "returns the refusal for a stored key the teamspace now refuses (%s), so setup uses OAuth",
+    async (code) => {
+      mockGetValidAccessToken.mockResolvedValue("ctx7sk-stored-key");
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue({
+          ok: false,
+          status: 403,
+          json: () => Promise.resolve({ error: code, message: "Connect with OAuth instead" }),
+        })
+      );
+
+      await expect(resolveSetupApiKey()).resolves.toEqual({ refusal: code });
+      expect(mockPerformLogin).not.toHaveBeenCalled();
+    }
+  );
+
+  test.each([
+    [
+      "a 401",
+      { ok: false, status: 401, json: () => Promise.resolve({ error: "invalid_api_key" }) },
+    ],
+    [
+      "another 403",
+      { ok: false, status: 403, json: () => Promise.resolve({ error: "access_denied" }) },
+    ],
+    [
+      "a 503",
+      { ok: false, status: 503, json: () => Promise.resolve({ error: "auth_unavailable" }) },
+    ],
+  ])("keeps a stored key when the check answers %s", async (_case, response) => {
+    mockGetValidAccessToken.mockResolvedValue("ctx7sk-stored-key");
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response));
+
+    await expect(resolveSetupApiKey()).resolves.toEqual({ apiKey: "ctx7sk-stored-key" });
+  });
+
+  test("keeps a stored key when the check cannot reach the server", async () => {
+    mockGetValidAccessToken.mockResolvedValue("ctx7sk-stored-key");
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+
+    await expect(resolveSetupApiKey()).resolves.toEqual({ apiKey: "ctx7sk-stored-key" });
   });
 
   test("uses a newly authenticated device-flow API key directly", async () => {
