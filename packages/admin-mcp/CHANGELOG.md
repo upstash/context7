@@ -1,5 +1,11 @@
 # @upstash/context7-admin-mcp
 
+## 0.1.2
+
+### Patch Changes
+
+- 42da8fc: Stop logging a refused `subscriptions/listen` as an error. The server allows no subscriptions, so the refusal is expected.
+
 ## 0.1.1
 
 ### Patch Changes
