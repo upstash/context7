@@ -339,7 +339,8 @@ Do not use for: refactoring, debugging, or reviewing code that does not depend o
     // snapshot has not seen, recovery after an outage), so they get the short private hint; only
     // anonymous callers, who always get just context7-mcp, get an hour.
     cacheHint: signedIn ? PRIVATE_CACHE_HINT : STATIC_CACHE_HINT,
-    strict: true,
+    // Not strict: the SDK drops an invalid team entry instead of failing the team's skills/list.
+    onWarning: ({ path, message }) => console.error(`[Context7] Skill ${path}: ${message}`),
   }).attach(server);
 
   server.registerTool(

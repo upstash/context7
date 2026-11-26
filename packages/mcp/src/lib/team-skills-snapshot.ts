@@ -1,8 +1,9 @@
 import * as jose from "jose";
-import type {
-  Skill,
-  SkillFrontmatter,
-  SkillResourceEntry,
+import {
+  SKILL_LIMITS,
+  type Skill,
+  type SkillFrontmatter,
+  type SkillResourceEntry,
 } from "@modelcontextprotocol/server/ext/skills";
 import { CONTEXT7_API_BASE_URL } from "./constants.js";
 import { apiKeyHash } from "./experimental-tools-snapshot.js";
@@ -103,9 +104,8 @@ function isInside(root: string, uri: string): boolean {
 }
 
 /**
- * The entry with canonical URIs, or why it cannot be served. These are the rules the skills
- * extension checks under `strict` (SEP-2640 and Agent Skills), so an entry the app got wrong is
- * dropped here instead of failing the caller's whole skills/list.
+ * The entry with canonical URIs, or why it cannot be served (SEP-2640 and Agent Skills rules, the
+ * spec limits and the reserved name). The skills extension drops anything else it finds wrong.
  */
 function parseSkill(value: unknown): Skill | string {
   if (!isRecord(value) || !isRecord(value.frontmatter)) return "not a skill entry";
@@ -153,6 +153,12 @@ function parseSkill(value: unknown): Skill | string {
     resources.push({ uri, digest, size });
   }
   if (!seen.has(manifest)) return `resources must include ${manifest}`;
+  // The spec's per-skill limits, which the app enforces at install; they also bound what one
+  // read can make this process download and hold.
+  if (resources.length > SKILL_LIMITS.files) return `more than ${SKILL_LIMITS.files} files`;
+  if (resources.reduce((sum, file) => sum + file.size, 0) > SKILL_LIMITS.bytes) {
+    return `larger than ${SKILL_LIMITS.bytes} bytes`;
+  }
   resources.sort((a, b) => (a.uri < b.uri ? -1 : a.uri > b.uri ? 1 : 0));
   return { uri: manifest, frontmatter: value.frontmatter as SkillFrontmatter, resources };
 }
@@ -243,8 +249,10 @@ export function teamspaceOf(credential: string | undefined): string | undefined 
     // MCP_OAUTH_AUDIENCE_ENFORCEMENT lets through for the public tools. A token with no `aud`
     // (grants from before Clerk filled it) still counts, as in the app's `foreign` mode. Opaque
     // tokens are judged by the app's auth check, which applies the app's enforcement mode.
-    const audience = checkOAuthAudience(aud);
-    if (!audience.allowed && audience.aud !== "missing") return undefined;
+    const hasAudience = (Array.isArray(aud) ? aud : [aud]).some(
+      (value) => typeof value === "string" && value !== ""
+    );
+    if (hasAudience && !checkOAuthAudience(aud).allowed) return undefined;
     return member(typeof sub === "string" ? sub : undefined);
   }
   if (isJWT(credential)) return undefined;

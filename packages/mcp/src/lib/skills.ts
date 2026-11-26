@@ -220,7 +220,8 @@ export function skillSource(teamspaceId: string | undefined): SkillSource {
     },
     async get(uri) {
       const key = canonicalUri(uri);
-      if (key === undefined) return undefined;
+      // The SDK checks the entry against the URI as sent, so only its exact canonical form matches.
+      if (key === undefined || key !== uri) return undefined;
       return key === CONTEXT7_MCP.uri ? CONTEXT7_MCP : team()?.entries.get(key);
     },
     async read(uri) {
@@ -233,7 +234,7 @@ export function skillSource(teamspaceId: string | undefined): SkillSource {
       return readResult(key, await teamFile(current.teamspaceId, key, file));
     },
     async readDirectory(uri) {
-      const key = canonicalUri(uri);
+      const key = canonicalUri(uri)?.replace(/\/+$/, "");
       const resources = key === undefined ? undefined : directoryChildren(skills(), key);
       return resources && { resources };
     },

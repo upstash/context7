@@ -171,6 +171,8 @@ describe("team skills snapshot", () => {
     expect(teamspaceOf(token("https://gateway.example.com/mcp"))).toBeUndefined();
     // Grants from before Clerk filled `aud` still count.
     expect(teamspaceOf(token())).toBe("team_b");
+    // An audience spelled like the checker's "missing" label is still an audience it refuses.
+    expect(teamspaceOf(token("missing"))).toBeUndefined();
   });
 
   test("stops resolving credentials once the snapshot is stale, until a poll succeeds", async () => {
@@ -281,13 +283,14 @@ describe("team skills snapshot", () => {
       { ...GUIDE, resources: files.map((file) => ({ ...file, digest: "sha256:abc" })) },
       { ...GUIDE, resources: files.filter((file) => !file.uri.endsWith("/SKILL.md")) },
       { ...GUIDE, frontmatter: { ...GUIDE.frontmatter, metadata: { level: 1 } } },
+      { ...GUIDE, resources: files.map((file) => ({ ...file, size: 17 * 1024 * 1024 })) },
       "not an entry",
       REVIEW,
     ];
     vi.stubGlobal("fetch", fetchMock);
     await startTeamSkillsSnapshot();
     expect(uris(teamSkillsFor("team_a")?.skills)).toEqual([REVIEW.uri]);
-    expect(vi.mocked(console.error).mock.calls).toHaveLength(8);
+    expect(vi.mocked(console.error).mock.calls).toHaveLength(9);
   });
 });
 
