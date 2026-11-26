@@ -2,7 +2,7 @@ import { createDecipheriv } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { ServerContext } from "@modelcontextprotocol/server";
 import { skillEntry, type Skill } from "@modelcontextprotocol/server/ext/skills";
-import { apiKeyHash } from "../src/lib/experimental-tools-snapshot.js";
+import { apiKeyHash } from "../src/lib/credential-owner.js";
 import {
   fetchTeamSkillFile,
   isTeamSkillsSnapshotEnabled,

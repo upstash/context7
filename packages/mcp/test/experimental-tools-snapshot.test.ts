@@ -1,7 +1,7 @@
 import { createDecipheriv } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { apiKeyHash } from "../src/lib/credential-owner.js";
 import {
-  apiKeyHash,
   isSnapshotEnabled,
   refreshSnapshot,
   snapshotExperimentalTools,

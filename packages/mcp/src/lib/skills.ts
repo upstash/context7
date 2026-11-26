@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { ProtocolError, ProtocolErrorCode } from "@modelcontextprotocol/server";
+import { ProtocolError, ProtocolErrorCode, type McpServer } from "@modelcontextprotocol/server";
 import {
   DIRECTORY_MIME_TYPE,
   skillEntry,
@@ -8,6 +8,7 @@ import {
   type SkillReadResult,
   type SkillResourceEntry,
   type SkillSource,
+  SkillsExtension,
 } from "@modelcontextprotocol/server/ext/skills";
 import { CONTEXT7_MCP_SKILL } from "./skill-md.js";
 import { fetchTeamSkillFile, safeDecode, teamSkillsFor } from "./team-skills-snapshot.js";
@@ -78,8 +79,9 @@ async function download(teamspaceId: string, uri: string, file: SkillResourceEnt
     console.error(`[Context7] Could not read team skill file ${uri} (${reason})`);
     throw new ProtocolError(ProtocolErrorCode.InternalError, `${uri} could not be read`);
   }
-  // Content addressed: bytes that do not match the entry are never served or cached.
-  if (bytes.byteLength !== file.size || sha256Digest(bytes) !== file.digest) {
+  // Content addressed: bytes that do not match the digest are never served or cached. The size
+  // is checked in teamFile, for downloads and cache hits alike.
+  if (sha256Digest(bytes) !== file.digest) {
     console.error(`[Context7] Team skill file ${uri} does not match its entry; refused`);
     throw new ProtocolError(
       ProtocolErrorCode.InternalError,
@@ -242,4 +244,23 @@ export function skillSource(teamspaceId: string | undefined): SkillSource {
       return LISTED_RESOURCES;
     },
   };
+}
+
+/**
+ * Serves the skills extension on one per-request server: the caller's skills (`skillSource`)
+ * with `cacheHint` on skills/list, skills/get, directory reads and files.
+ */
+export function attachSkills(
+  server: McpServer,
+  teamspaceId: string | undefined,
+  cacheHint: { ttlMs: number; cacheScope: "public" | "private" }
+): void {
+  // attach() is an @experimental SDK API: how an extension is wired to a server may change in a
+  // minor SDK release, so recheck this call on every SDK upgrade.
+  new SkillsExtension({
+    source: skillSource(teamspaceId),
+    cacheHint,
+    // Not strict: the SDK drops an invalid team entry instead of failing the team's skills/list.
+    onWarning: ({ path, message }) => console.error(`[Context7] Skill ${path}: ${message}`),
+  }).attach(server);
 }

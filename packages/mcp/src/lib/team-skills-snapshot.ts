@@ -1,4 +1,3 @@
-import * as jose from "jose";
 import {
   SKILL_LIMITS,
   type Skill,
@@ -6,10 +5,8 @@ import {
   type SkillResourceEntry,
 } from "@modelcontextprotocol/server/ext/skills";
 import { CONTEXT7_API_BASE_URL } from "./constants.js";
-import { apiKeyHash } from "./experimental-tools-snapshot.js";
-import { isClerkOAuthJwt, isJWT } from "./jwt.js";
+import { credentialOwner } from "./credential-owner.js";
 import { checkOAuthAudience } from "./oauth-audience.js";
-import { isOpaqueOAuthToken, validatedOpaqueOAuthTokenUserId } from "./oauth-token-validation.js";
 import {
   createSnapshotPoller,
   mcpAssertionHeader,
@@ -230,33 +227,26 @@ export const startTeamSkillsSnapshot = poller.start;
 export const stopTeamSkillsSnapshot = poller.stop;
 
 /**
- * The teamspace a credential belongs to, found without a network call: a Clerk OAuth JWT's `sub`
- * (the request got here only after `evaluateMcpAuthentication` verified it) or an opaque token's
- * user from its cached auth check, through the snapshot's members; an API key through the
- * snapshot's keys. Other JWTs (Entra, Vercel Marketplace) name no teamspace here. None while the
- * snapshot is older than STALE_AFTER_MS.
+ * The teamspace a credential belongs to (`credentialOwner`): a user's through the snapshot's
+ * members, an API key's through its keys. None while the snapshot is older than STALE_AFTER_MS.
  */
 export function teamspaceOf(credential: string | undefined): string | undefined {
   const snapshot = poller.current;
   if (!snapshot || !credential) return undefined;
   if (Date.now() - poller.lastReadAt > STALE_AFTER_MS) return undefined;
-  const member = (userId: string | undefined) =>
-    userId === undefined ? undefined : snapshot.users.get(userId);
-  if (isOpaqueOAuthToken(credential)) return member(validatedOpaqueOAuthTokenUserId(credential));
-  if (isClerkOAuthJwt(credential)) {
-    const { sub, aud } = jose.decodeJwt(credential);
-    // Team skills can be private, so a token issued for another resource gets none, whatever
-    // MCP_OAUTH_AUDIENCE_ENFORCEMENT lets through for the public tools. A token with no `aud`
-    // (grants from before Clerk filled it) still counts, as in the app's `foreign` mode. Opaque
-    // tokens are judged by the app's auth check, which applies the app's enforcement mode.
-    const hasAudience = (Array.isArray(aud) ? aud : [aud]).some(
-      (value) => typeof value === "string" && value !== ""
-    );
-    if (hasAudience && !checkOAuthAudience(aud).allowed) return undefined;
-    return member(typeof sub === "string" ? sub : undefined);
-  }
-  if (isJWT(credential)) return undefined;
-  return snapshot.apiKeys.get(apiKeyHash(credential));
+  const owner = credentialOwner(credential);
+  if (!owner) return undefined;
+  if ("apiKeyHash" in owner) return snapshot.apiKeys.get(owner.apiKeyHash);
+  // Team skills can be private, so a Clerk token issued for another resource gets none, whatever
+  // MCP_OAUTH_AUDIENCE_ENFORCEMENT lets through for the public tools. A token with no `aud`
+  // (grants from before Clerk filled it) still counts, as in the app's `foreign` mode. Opaque
+  // tokens are judged by the app's auth check, which applies the app's enforcement mode.
+  const aud = owner.jwtAudience;
+  const hasAudience = (Array.isArray(aud) ? aud : [aud]).some(
+    (value) => typeof value === "string" && value !== ""
+  );
+  if (hasAudience && !checkOAuthAudience(aud).allowed) return undefined;
+  return snapshot.users.get(owner.userId);
 }
 
 /** The teamspace's skills from the snapshot; `undefined` when it has none. */

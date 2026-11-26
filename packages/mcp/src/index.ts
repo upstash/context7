@@ -9,7 +9,6 @@ import {
   type McpRequestContext,
   type ServerContext,
 } from "@modelcontextprotocol/server";
-import { SkillsExtension } from "@modelcontextprotocol/server/ext/skills";
 import { z } from "zod";
 import { searchLibraries, fetchLibraryContext, fetchExperimentalTools } from "./lib/api.js";
 import type { ClientContext } from "./lib/types.js";
@@ -74,7 +73,7 @@ import {
   usableApiKey,
 } from "./lib/mcp-http-auth.js";
 import { mcpRouteFromUrl } from "./lib/mcp-route.js";
-import { skillSource } from "./lib/skills.js";
+import { attachSkills } from "./lib/skills.js";
 import {
   isTeamSkillsSnapshotEnabled,
   startTeamSkillsSnapshot,
@@ -331,17 +330,9 @@ Do not use for: refactoring, debugging, or reviewing code that does not depend o
   const server = mcpInstrumentation
     ? mcpInstrumentation.createServer(serverInfo, serverOptions, mcpContext)
     : new McpServer(serverInfo, serverOptions);
-  // attach() is an @experimental SDK API: how an extension is wired to a server may change in a
-  // minor SDK release, so recheck this call on every SDK upgrade.
-  new SkillsExtension({
-    source: skillSource(teamspaceId),
-    // Any signed-in caller can gain team skills at the next poll (a first install, a choice the
-    // snapshot has not seen, recovery after an outage), so they get the short private hint; only
-    // anonymous callers, who always get just context7-mcp, get an hour.
-    cacheHint: signedIn ? PRIVATE_CACHE_HINT : STATIC_CACHE_HINT,
-    // Not strict: the SDK drops an invalid team entry instead of failing the team's skills/list.
-    onWarning: ({ path, message }) => console.error(`[Context7] Skill ${path}: ${message}`),
-  }).attach(server);
+  // Any signed-in caller can gain team skills at the next poll (a first install, a choice the
+  // snapshot has not seen, recovery after an outage), so they get the short private hint.
+  attachSkills(server, teamspaceId, signedIn ? PRIVATE_CACHE_HINT : STATIC_CACHE_HINT);
 
   server.registerTool(
     RESOLVE_LIBRARY_ID_TOOL,
