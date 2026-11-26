@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.1
+
+### Patch Changes
+
+- 6f44a28: `ctx7 setup` checks an API key saved by an earlier login before it writes it, and continues with OAuth when the teamspace's policy now refuses that key, instead of configuring a key that fails on every call. A saved key the server no longer accepts (revoked or deleted) starts a new login.
+
 ## 0.13.0
 
 ### Minor Changes
