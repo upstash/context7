@@ -2,7 +2,12 @@ import { randomBytes } from "crypto";
 import ora from "ora";
 
 import { performDeviceLogin } from "../commands/auth.js";
-import { getBaseUrl, isApiKeyPolicyRefusal, type ApiKeyPolicyRefusal } from "../utils/api.js";
+import {
+  checkApiKey,
+  getBaseUrl,
+  isApiKeyPolicyRefusal,
+  type ApiKeyPolicyRefusal,
+} from "../utils/api.js";
 import { getValidAccessToken, isContext7ApiKey } from "../utils/auth.js";
 import { log } from "../utils/logger.js";
 
@@ -12,48 +17,25 @@ export type SetupApiKeyResult =
   | { refusal: ApiKeyPolicyRefusal }
   | null;
 
-// How long setup waits for the stored key check before it uses the key as before.
-const STORED_KEY_CHECK_TIMEOUT_MS = 10_000;
-
-/**
- * The policy refusal for a stored API key, or null. A key saved before its teamspace limited
- * API keys is refused now, and writing it would leave the agent with a key that fails on every
- * call. /api/v2/auth/check is versioned, so the middleware answers a refused key with 403 and
- * the policy code, and it is not quota-tracked. Any other answer, or no answer, keeps the key.
- */
-async function storedApiKeyRefusal(apiKey: string): Promise<ApiKeyPolicyRefusal | null> {
-  try {
-    const response = await fetch(`${getBaseUrl()}/api/v2/auth/check`, {
-      headers: { Authorization: `Bearer ${apiKey}` },
-      signal: AbortSignal.timeout(STORED_KEY_CHECK_TIMEOUT_MS),
-    });
-    if (response.status !== 403) return null;
-    const body = (await response.json().catch(() => ({}))) as { error?: unknown };
-    return isApiKeyPolicyRefusal(body.error) ? body.error : null;
-  } catch {
-    return null;
+export async function resolveSetupApiKey(): Promise<SetupApiKeyResult> {
+  const stored = await getValidAccessToken({ recoverExpiredSession: false });
+  if (stored) {
+    if (!isContext7ApiKey(stored)) return createApiKey(stored);
+    // A stored key may predate the teamspace's current API key policy, or be revoked.
+    const check = await checkApiKey(stored);
+    if (check === "usable") return { apiKey: stored };
+    if (check !== "invalid") return { refusal: check };
+    // The server no longer knows the key: sign in again, as with no stored key.
   }
+
+  const login = await performDeviceLogin();
+  // A refusal here means the approval page refused a key: setup continues with OAuth.
+  if (!login || "refusal" in login) return login;
+  return isContext7ApiKey(login.token) ? { apiKey: login.token } : createApiKey(login.token);
 }
 
-export async function resolveSetupApiKey(): Promise<SetupApiKeyResult> {
-  const storedToken = await getValidAccessToken({ recoverExpiredSession: false });
-  let accessToken = storedToken;
-  if (!accessToken) {
-    const login = await performDeviceLogin();
-    if (!login) return null;
-    // The approval page refused a key for the chosen teamspace: setup continues with OAuth.
-    if ("refusal" in login) return login;
-    accessToken = login.token;
-  }
-  if (isContext7ApiKey(accessToken)) {
-    // A key the device login just issued already passed the policy; a stored one may predate it.
-    if (accessToken === storedToken) {
-      const refusal = await storedApiKeyRefusal(accessToken);
-      if (refusal) return { refusal };
-    }
-    return { apiKey: accessToken };
-  }
-
+/** Exchanges an OAuth access token for an API key. */
+async function createApiKey(accessToken: string): Promise<SetupApiKeyResult> {
   const spinner = ora("Configuring authentication...").start();
 
   try {
