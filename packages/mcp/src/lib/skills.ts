@@ -11,7 +11,8 @@ import {
   SkillsExtension,
 } from "@modelcontextprotocol/server/ext/skills";
 import { CONTEXT7_MCP_SKILL } from "./skill-md.js";
-import { fetchTeamSkillFile, safeDecode, teamSkillsFor } from "./team-skills-snapshot.js";
+import { canonicalSkillUri, safeDecode } from "./skill-uri.js";
+import { fetchTeamSkillFile, teamSkillsFor } from "./team-skills-snapshot.js";
 
 /**
  * The skills one caller sees through the MCP skills extension (SEP-2640): the repo's
@@ -165,17 +166,6 @@ function readResult(uri: string, bytes: Uint8Array): SkillReadResult {
   }
 }
 
-/** WHATWG form of `uri` without its fragment; `undefined` if it does not parse. */
-function canonicalUri(uri: string): string | undefined {
-  try {
-    const url = new URL(uri);
-    url.hash = "";
-    return url.href;
-  } catch {
-    return undefined;
-  }
-}
-
 /** The direct children of a skill directory, from the entry's file list. */
 function directoryChildren(skills: readonly Skill[], dir: string): DirectoryResource[] | undefined {
   const skill = skills.find((entry) => {
@@ -221,13 +211,13 @@ export function skillSource(teamspaceId: string | undefined): SkillSource {
       return { skills: skills() };
     },
     async get(uri) {
-      const key = canonicalUri(uri);
+      const key = canonicalSkillUri(uri);
       // The SDK checks the entry against the URI as sent, so only its exact canonical form matches.
       if (key === undefined || key !== uri) return undefined;
       return key === CONTEXT7_MCP.uri ? CONTEXT7_MCP : team()?.entries.get(key);
     },
     async read(uri) {
-      const key = canonicalUri(uri);
+      const key = canonicalSkillUri(uri, { dropFragment: true });
       if (key === undefined) return undefined;
       if (key === CONTEXT7_MCP.uri) return { text: CONTEXT7_MCP_SKILL, mimeType: "text/markdown" };
       const current = team();
@@ -236,7 +226,7 @@ export function skillSource(teamspaceId: string | undefined): SkillSource {
       return readResult(key, await teamFile(current.teamspaceId, key, file));
     },
     async readDirectory(uri) {
-      const key = canonicalUri(uri)?.replace(/\/+$/, "");
+      const key = canonicalSkillUri(uri, { dropFragment: true })?.replace(/\/+$/, "");
       const resources = key === undefined ? undefined : directoryChildren(skills(), key);
       return resources && { resources };
     },

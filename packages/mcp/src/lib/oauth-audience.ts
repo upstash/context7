@@ -128,6 +128,8 @@ export function getAllowedOAuthAudienceHosts(
 export interface OAuthAudienceCheck {
   /** At least one of the token's audiences is allowed. */
   allowed: boolean;
+  /** The token names no audience (none, or only empty ones after normalizing). */
+  missing: boolean;
   /** The normalized audiences, comma-joined, or `missing`. Safe to log. */
   aud: string;
   enforcement: OAuthAudienceEnforcement;
@@ -173,6 +175,7 @@ export function checkOAuthAudience(audiences: unknown): OAuthAudienceCheck {
   if (normalized.length === 0) {
     return {
       allowed: false,
+      missing: true,
       aud: "missing",
       enforcement,
       outcome: decideOutcome(enforcement, false, true),
@@ -181,6 +184,7 @@ export function checkOAuthAudience(audiences: unknown): OAuthAudienceCheck {
   const allowed = normalized.some((audience) => allowedAudiences.has(audience));
   return {
     allowed,
+    missing: false,
     aud: normalized.join(","),
     enforcement,
     outcome: decideOutcome(enforcement, allowed, false),

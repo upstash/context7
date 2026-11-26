@@ -7,6 +7,7 @@ import {
 import { CONTEXT7_API_BASE_URL } from "./constants.js";
 import { credentialOwner } from "./credential-owner.js";
 import { checkOAuthAudience } from "./oauth-audience.js";
+import { canonicalSkillUri, safeDecode } from "./skill-uri.js";
 import {
   createSnapshotPoller,
   mcpAssertionHeader,
@@ -68,25 +69,6 @@ export const STALE_AFTER_MS = 15 * 60_000;
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 const characters = (text: string) => [...text].length;
-
-/** `uri` in WHATWG form when it is a `skill://` URI without query or fragment. */
-function canonicalSkillUri(uri: unknown): string | undefined {
-  if (typeof uri !== "string") return undefined;
-  try {
-    const url = new URL(uri);
-    return url.protocol === "skill:" && !url.search && !url.hash ? url.href : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-export function safeDecode(segment: string): string {
-  try {
-    return decodeURIComponent(segment);
-  } catch {
-    return segment;
-  }
-}
 
 /** True when `uri` names a file strictly inside `root`, with no empty, `.`, `..` or `/` segment. */
 function isInside(root: string, uri: string): boolean {
@@ -241,11 +223,8 @@ export function teamspaceOf(credential: string | undefined): string | undefined 
   // MCP_OAUTH_AUDIENCE_ENFORCEMENT lets through for the public tools. A token with no `aud`
   // (grants from before Clerk filled it) still counts, as in the app's `foreign` mode. Opaque
   // tokens are judged by the app's auth check, which applies the app's enforcement mode.
-  const aud = owner.jwtAudience;
-  const hasAudience = (Array.isArray(aud) ? aud : [aud]).some(
-    (value) => typeof value === "string" && value !== ""
-  );
-  if (hasAudience && !checkOAuthAudience(aud).allowed) return undefined;
+  const audience = checkOAuthAudience(owner.jwtAudience);
+  if (!audience.allowed && !audience.missing) return undefined;
   return snapshot.users.get(owner.userId);
 }
 

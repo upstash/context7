@@ -330,9 +330,14 @@ Do not use for: refactoring, debugging, or reviewing code that does not depend o
   const server = mcpInstrumentation
     ? mcpInstrumentation.createServer(serverInfo, serverOptions, mcpContext)
     : new McpServer(serverInfo, serverOptions);
-  // Any signed-in caller can gain team skills at the next poll (a first install, a choice the
-  // snapshot has not seen, recovery after an outage), so they get the short private hint.
-  attachSkills(server, teamspaceId, signedIn ? PRIVATE_CACHE_HINT : STATIC_CACHE_HINT);
+  // Where the snapshot is polled, any signed-in caller can gain team skills at the next poll (a
+  // first install, a choice the snapshot has not seen, recovery after an outage), so they get the
+  // short private hint. Elsewhere (stdio, no assertion key) everyone gets the public one.
+  attachSkills(
+    server,
+    teamspaceId,
+    signedIn && isTeamSkillsSnapshotEnabled() ? PRIVATE_CACHE_HINT : STATIC_CACHE_HINT
+  );
 
   server.registerTool(
     RESOLVE_LIBRARY_ID_TOOL,
