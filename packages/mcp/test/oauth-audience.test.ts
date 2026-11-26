@@ -114,6 +114,7 @@ describe("checkOAuthAudience", () => {
   test("treats a missing or non-string audience as a mismatch", () => {
     expect(checkOAuthAudience(undefined)).toEqual({
       allowed: false,
+      missing: true,
       aud: "missing",
       enforcement: "observe",
       outcome: "accepted",
@@ -121,12 +122,14 @@ describe("checkOAuthAudience", () => {
     expect(checkOAuthAudience([])).toMatchObject({ allowed: false, aud: "missing" });
     expect(checkOAuthAudience(42)).toMatchObject({ allowed: false, aud: "missing" });
     expect(checkOAuthAudience([42, null])).toMatchObject({ allowed: false, aud: "missing" });
+    expect(checkOAuthAudience([" ", "/"])).toMatchObject({ allowed: false, missing: true });
   });
 
   test("accepts a string or array containing an allowed audience", () => {
     expect(checkOAuthAudience("https://mcp.context7.com/mcp/")).toMatchObject({ allowed: true });
     expect(checkOAuthAudience(["http://localhost:8787", "https://MCP.context7.com"])).toEqual({
       allowed: true,
+      missing: false,
       aud: "http://localhost:8787,https://mcp.context7.com",
       enforcement: "observe",
       outcome: "accepted",
@@ -144,18 +147,21 @@ describe("checkOAuthAudience", () => {
 
       expect(checkOAuthAudience(ALLOWED)).toEqual({
         allowed: true,
+        missing: false,
         aud: ALLOWED,
         enforcement,
         outcome: onAllowed,
       });
       expect(checkOAuthAudience(undefined)).toEqual({
         allowed: false,
+        missing: true,
         aud: "missing",
         enforcement,
         outcome: onMissing,
       });
       expect(checkOAuthAudience(FOREIGN)).toEqual({
         allowed: false,
+        missing: false,
         aud: FOREIGN,
         enforcement,
         outcome: onForeign,
@@ -173,6 +179,7 @@ describe("checkOAuthAudience", () => {
     ]) {
       expect(checkOAuthAudience(aud)).toMatchObject({
         allowed: true,
+        missing: false,
         aud: aud.replace(/\?.*$/, ""),
         outcome: "accepted",
       });
@@ -184,6 +191,7 @@ describe("checkOAuthAudience", () => {
 
     expect(checkOAuthAudience("https://mcp.joom.it/context7?client=codex")).toEqual({
       allowed: false,
+      missing: false,
       aud: "https://mcp.joom.it/context7?client=codex",
       enforcement: "foreign",
       outcome: "rejected",
@@ -192,6 +200,7 @@ describe("checkOAuthAudience", () => {
     // has to match.
     expect(checkOAuthAudience("https://mcp.context7.com/other?client=codex")).toEqual({
       allowed: false,
+      missing: false,
       aud: "https://mcp.context7.com/other",
       enforcement: "foreign",
       outcome: "rejected",
@@ -204,12 +213,14 @@ describe("checkOAuthAudience", () => {
 
     expect(checkOAuthAudience(["http://localhost:8787/"])).toEqual({
       allowed: true,
+      missing: false,
       aud: "http://localhost:8787",
       enforcement: "required",
       outcome: "accepted",
     });
     expect(checkOAuthAudience("https://mcp.context7.com/mcp")).toEqual({
       allowed: false,
+      missing: false,
       aud: "https://mcp.context7.com/mcp",
       enforcement: "required",
       outcome: "rejected",
@@ -222,17 +233,20 @@ describe("checkOAuthAudience", () => {
 
     expect(checkOAuthAudience("http://localhost:8787/mcp")).toMatchObject({
       allowed: true,
+      missing: false,
       aud: "http://localhost:8787/mcp",
       outcome: "accepted",
     });
 
     expect(checkOAuthAudience("http://localhost:8787/mcp?client=codex")).toMatchObject({
       allowed: true,
+      missing: false,
       aud: "http://localhost:8787/mcp",
       outcome: "accepted",
     });
     expect(checkOAuthAudience("https://mcp.context7.com/mcp?client=codex")).toMatchObject({
       allowed: false,
+      missing: false,
       aud: "https://mcp.context7.com/mcp?client=codex",
       outcome: "rejected",
     });
