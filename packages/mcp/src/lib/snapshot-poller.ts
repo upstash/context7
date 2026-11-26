@@ -5,13 +5,17 @@ import { hasMcpAssertionKey, sealMcpAssertion } from "./encryption.js";
  * Keeps an in-memory copy of one of the app's internal snapshots, the way feature flag SDKs
  * evaluate flags locally (LaunchDarkly, Unleash): requests read only the copy, never the Context7
  * API, so traffic cannot turn into lookups (the CTX7-3866 incident). Each process polls the route
- * every POLL_MS with `If-None-Match`; without a change the app answers 304 after one Redis read.
+ * every POLL_MS with the version it holds; without a change the app answers 204 after one Redis
+ * read. The version goes in SNAPSHOT_VERSION_HEADER because Vercel's CDN removes `If-None-Match`
+ * before the app's function sees it; `If-None-Match` stays for apps from before the header.
  *
  * The routes (context7app `app/api/internal/mcp/*`) are for the hosted server only: they are
  * authenticated with an assertion sealed with the key the app shares with it
  * (`MCP_CLIENT_IP_ASSERTION_KEY`), so a process without that key does not poll.
  */
 
+/** Keep in step with the app's `SNAPSHOT_VERSION_HEADER` (`lib/mcp/snapshotResponse.ts`). */
+const SNAPSHOT_VERSION_HEADER = "X-Context7-Snapshot-Version";
 /** Keep in step with the app's `hasMcpServerAssertion`: the tag of every internal MCP route. */
 const ASSERTION_TAG = "s1";
 const POLL_MS = 15_000;
@@ -33,9 +37,9 @@ export interface SnapshotPoller<T> {
   readonly enabled: boolean;
   /** The last snapshot read, kept through failed polls. */
   readonly current: T | undefined;
-  /** When the app last answered a poll (200 or 304); 0 before the first answer. */
+  /** When the app last answered a poll (200, or 204/304 for no change); 0 before the first answer. */
   readonly lastReadAt: number;
-  /** One poll: a 304 keeps the copy, a 200 replaces it. Never throws. */
+  /** One poll: a 204 or 304 keeps the copy, a 200 replaces it. Never throws. */
   refresh(): Promise<void>;
   /**
    * Starts polling when `canAuthenticate`. The first read is awaited, up to
@@ -66,11 +70,14 @@ export function createSnapshotPoller<T extends { version: string }>(options: {
       const response = await fetch(`${CONTEXT7_API_BASE_URL}${options.path}`, {
         headers: {
           ...mcpAssertionHeader(options.subject),
-          ...(current && { "If-None-Match": `"${current.version}"` }),
+          ...(current && {
+            [SNAPSHOT_VERSION_HEADER]: current.version,
+            "If-None-Match": `"${current.version}"`,
+          }),
         },
         signal: AbortSignal.timeout(SNAPSHOT_REQUEST_TIMEOUT_MS),
       });
-      if (response.status !== 304) {
+      if (response.status !== 204 && response.status !== 304) {
         if (!response.ok) throw new Error(`the Context7 API answered HTTP ${response.status}`);
         current = options.parse(await response.json());
       }

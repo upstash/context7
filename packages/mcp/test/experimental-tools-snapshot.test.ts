@@ -56,6 +56,10 @@ function fakeApp() {
     } as Record<string, unknown>,
     apiKeys: { [apiKeyHash(KEY)]: "user_a" } as Record<string, string>,
     down: false,
+    // Production: Vercel's CDN removes If-None-Match, so only the version header arrives.
+    stripsIfNoneMatch: true,
+    // An app from before the version header answers 304 to If-None-Match only.
+    knowsVersionHeader: true,
     full: 0,
     notModified: 0,
   };
@@ -68,7 +72,11 @@ function fakeApp() {
     ) {
       return new Response(null, { status: 401 });
     }
-    if (headers.get("If-None-Match") === `"${state.version}"`) {
+    if (state.knowsVersionHeader && headers.get("X-Context7-Snapshot-Version") === state.version) {
+      state.notModified++;
+      return new Response(null, { status: 204 });
+    }
+    if (!state.stripsIfNoneMatch && headers.get("If-None-Match") === `"${state.version}"`) {
       state.notModified++;
       return new Response(null, { status: 304 });
     }
@@ -138,6 +146,19 @@ describe("experimental tools snapshot", () => {
     await refreshSnapshot();
     expect(state.full).toBe(2);
     expect(snapshotExperimentalTools(KEY)).toHaveLength(3);
+  });
+
+  test("still takes a 304 from an app that knows only If-None-Match", async () => {
+    const { state, fetchMock } = fakeApp();
+    state.stripsIfNoneMatch = false;
+    state.knowsVersionHeader = false;
+    vi.stubGlobal("fetch", fetchMock);
+    await startExperimentalToolsSnapshot();
+    const tools = snapshotExperimentalTools(KEY);
+    await refreshSnapshot();
+    expect(state.full).toBe(1);
+    expect(state.notModified).toBe(1);
+    expect(snapshotExperimentalTools(KEY)).toEqual(tools);
   });
 
   test("keeps serving the last snapshot while the app is down", async () => {
