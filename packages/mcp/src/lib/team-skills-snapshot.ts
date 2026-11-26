@@ -5,35 +5,27 @@ import type {
   SkillResourceEntry,
 } from "@modelcontextprotocol/server/ext/skills";
 import { CONTEXT7_API_BASE_URL } from "./constants.js";
-import { hasMcpAssertionKey, sealMcpAssertion } from "./encryption.js";
 import { apiKeyHash } from "./experimental-tools-snapshot.js";
 import { isClerkOAuthJwt, isJWT } from "./jwt.js";
 import { checkOAuthAudience } from "./oauth-audience.js";
 import { isOpaqueOAuthToken, validatedOpaqueOAuthTokenUserId } from "./oauth-token-validation.js";
+import {
+  createSnapshotPoller,
+  mcpAssertionHeader,
+  SNAPSHOT_REQUEST_TIMEOUT_MS,
+} from "./snapshot-poller.js";
 
 /**
- * The hosted server's copy of every teamspace's Agent Skills, polled from the app the way
- * experimental-tools-snapshot.ts polls dashboard choices: listing skills never calls the Context7
- * API, only reading a team skill's file does (skills.ts caches those by digest). Each process
- * polls every POLL_MS with `If-None-Match`; without a change the app answers 304.
- *
- * Both routes (context7app `app/api/internal/mcp/team-skills-*`) are for the hosted server only:
- * they are authenticated with an assertion sealed with the key the app shares with it
- * (`MCP_CLIENT_IP_ASSERTION_KEY`), so a process without that key serves no team skills.
+ * The hosted server's copy of every teamspace's Agent Skills (snapshot-poller.ts), polled from
+ * context7app `app/api/internal/mcp/team-skills-snapshot`: listing skills never calls the
+ * Context7 API, only reading a team skill's file does (skills.ts caches those by digest).
  */
 export const TEAM_SKILLS_SNAPSHOT_PATH = "/internal/mcp/team-skills-snapshot";
 export const TEAM_SKILLS_FILE_PATH = "/internal/mcp/team-skills-file";
-/** Keep in step with the routes: the tag and plaintexts of their assertions. */
-const ASSERTION_TAG = "s1";
+/** Keep in step with the routes: the plaintexts of their assertions. */
 const SNAPSHOT_ASSERTION_SUBJECT = "team-skills-snapshot";
 const FILE_ASSERTION_SUBJECT = "team-skills-file";
 
-const POLL_MS = 15_000;
-/** Poll interval while no snapshot was ever read, so a process that started during a blip recovers fast. */
-const FIRST_READ_RETRY_MS = 2_000;
-const REQUEST_TIMEOUT_MS = 5_000;
-/** At most this many failures in a row are logged; the next success says it recovered. */
-const LOGGED_FAILURES = 3;
 /** At most this many dropped entries are logged per snapshot read. */
 const LOGGED_DROPS = 10;
 
@@ -68,24 +60,12 @@ interface SnapshotBody {
   users?: Record<string, unknown>;
 }
 
-let enabled = false;
-let snapshot: Snapshot | undefined;
-/** When the app last answered a poll (200 or 304). */
-let lastReadAt = 0;
-let timer: ReturnType<typeof setTimeout> | undefined;
-let failuresInRow = 0;
-
 /**
  * How long the credential maps stay trusted without a successful poll. After that no credential
  * resolves to a teamspace (only context7-mcp is served) until polling recovers, so an API key
  * revoked or a member removed during an outage of the app loses its team's skills within this time.
  */
 export const STALE_AFTER_MS = 15 * 60_000;
-
-/** Whether this process serves team skills from the snapshot. */
-export function isTeamSkillsSnapshotEnabled(): boolean {
-  return enabled;
-}
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -102,7 +82,7 @@ function canonicalSkillUri(uri: unknown): string | undefined {
   }
 }
 
-function safeDecode(segment: string): string {
+export function safeDecode(segment: string): string {
   try {
     return decodeURIComponent(segment);
   } catch {
@@ -208,7 +188,8 @@ function stringMap(record: Record<string, unknown> | undefined): Map<string, str
   return map;
 }
 
-function parseSnapshot(body: SnapshotBody): Snapshot {
+function parseSnapshot(value: unknown): Snapshot {
+  const body = (isRecord(value) ? value : {}) as SnapshotBody;
   let dropped = 0;
   const drop = (reason: string) => {
     if (++dropped <= LOGGED_DROPS) console.error(`[Context7] Team skill dropped: ${reason}`);
@@ -229,81 +210,18 @@ function parseSnapshot(body: SnapshotBody): Snapshot {
   };
 }
 
-function assertionHeader(subject: string): Record<string, string> {
-  const assertion = sealMcpAssertion(ASSERTION_TAG, subject);
-  if (!assertion) throw new Error("the MCP assertion could not be sealed");
-  return { "X-Context7-Mcp-Assertion": assertion };
-}
+const poller = createSnapshotPoller({
+  label: "team skills",
+  path: TEAM_SKILLS_SNAPSHOT_PATH,
+  subject: SNAPSHOT_ASSERTION_SUBJECT,
+  parse: parseSnapshot,
+});
 
-/** One poll: a 304 keeps the copy, a 200 replaces it. */
-export async function refreshTeamSkillsSnapshot(): Promise<void> {
-  if (!enabled) return;
-  try {
-    const response = await fetch(`${CONTEXT7_API_BASE_URL}${TEAM_SKILLS_SNAPSHOT_PATH}`, {
-      headers: {
-        ...assertionHeader(SNAPSHOT_ASSERTION_SUBJECT),
-        ...(snapshot && { "If-None-Match": `"${snapshot.version}"` }),
-      },
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-    if (response.status !== 304) {
-      if (!response.ok) throw new Error(`the Context7 API answered HTTP ${response.status}`);
-      snapshot = parseSnapshot((await response.json()) as SnapshotBody);
-    }
-    lastReadAt = Date.now();
-    if (failuresInRow > 0) {
-      console.error(`[Context7] Team skills snapshot read again after ${failuresInRow} failures`);
-    }
-    failuresInRow = 0;
-  } catch (error) {
-    // Keep the last snapshot through a short outage; past STALE_AFTER_MS, teamspaceOf stops
-    // trusting its credential maps (a key revoked meanwhile must not keep its team's skills).
-    failuresInRow++;
-    if (failuresInRow <= LOGGED_FAILURES) {
-      const reason = error instanceof Error ? error.message : String(error);
-      console.error(
-        `[Context7] Could not read the team skills snapshot (${reason}); keeping the ${
-          snapshot ? `version ${snapshot.version}` : "empty list"
-        }`
-      );
-    }
-  }
-}
-
-/**
- * Start polling when this process holds the shared MCP assertion key (the hosted server). The
- * first read is awaited, up to REQUEST_TIMEOUT_MS, so a new process lists team skills from its
- * first request.
- */
-export async function startTeamSkillsSnapshot(
-  canAuthenticate = hasMcpAssertionKey()
-): Promise<void> {
-  stopTeamSkillsSnapshot();
-  enabled = canAuthenticate;
-  if (!enabled) return;
-  await refreshTeamSkillsSnapshot();
-  const schedule = () => {
-    // Jitter keeps the processes of one deployment from polling in step.
-    timer = setTimeout(
-      async () => {
-        await refreshTeamSkillsSnapshot();
-        schedule();
-      },
-      (snapshot ? POLL_MS : FIRST_READ_RETRY_MS) + Math.floor(Math.random() * 2_000)
-    );
-    timer.unref?.();
-  };
-  schedule();
-}
-
-export function stopTeamSkillsSnapshot(): void {
-  if (timer) clearTimeout(timer);
-  timer = undefined;
-  enabled = false;
-  snapshot = undefined;
-  lastReadAt = 0;
-  failuresInRow = 0;
-}
+/** Whether this process serves team skills from the snapshot. */
+export const isTeamSkillsSnapshotEnabled = () => poller.enabled;
+export const refreshTeamSkillsSnapshot = poller.refresh;
+export const startTeamSkillsSnapshot = poller.start;
+export const stopTeamSkillsSnapshot = poller.stop;
 
 /**
  * The teamspace a credential belongs to, found without a network call: a Clerk OAuth JWT's `sub`
@@ -313,10 +231,11 @@ export function stopTeamSkillsSnapshot(): void {
  * snapshot is older than STALE_AFTER_MS.
  */
 export function teamspaceOf(credential: string | undefined): string | undefined {
+  const snapshot = poller.current;
   if (!snapshot || !credential) return undefined;
-  if (Date.now() - lastReadAt > STALE_AFTER_MS) return undefined;
+  if (Date.now() - poller.lastReadAt > STALE_AFTER_MS) return undefined;
   const member = (userId: string | undefined) =>
-    userId === undefined ? undefined : snapshot?.users.get(userId);
+    userId === undefined ? undefined : snapshot.users.get(userId);
   if (isOpaqueOAuthToken(credential)) return member(validatedOpaqueOAuthTokenUserId(credential));
   if (isClerkOAuthJwt(credential)) {
     const { sub, aud } = jose.decodeJwt(credential);
@@ -334,7 +253,7 @@ export function teamspaceOf(credential: string | undefined): string | undefined 
 
 /** The teamspace's skills from the snapshot; `undefined` when it has none. */
 export function teamSkillsFor(teamspaceId: string | undefined): TeamSkills | undefined {
-  return teamspaceId === undefined ? undefined : snapshot?.teams.get(teamspaceId);
+  return teamspaceId === undefined ? undefined : poller.current?.teams.get(teamspaceId);
 }
 
 /**
@@ -351,8 +270,8 @@ export async function fetchTeamSkillFile(
   url.searchParams.set("teamspace", teamspaceId);
   url.searchParams.set("digest", digest);
   const response = await fetch(url, {
-    headers: assertionHeader(FILE_ASSERTION_SUBJECT),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    headers: mcpAssertionHeader(FILE_ASSERTION_SUBJECT),
+    signal: AbortSignal.timeout(SNAPSHOT_REQUEST_TIMEOUT_MS),
   });
   if (!response.ok) {
     await response.body?.cancel();

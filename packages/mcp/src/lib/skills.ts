@@ -10,7 +10,7 @@ import {
   type SkillSource,
 } from "@modelcontextprotocol/server/ext/skills";
 import { CONTEXT7_MCP_SKILL } from "./skill-md.js";
-import { fetchTeamSkillFile, teamSkillsFor } from "./team-skills-snapshot.js";
+import { fetchTeamSkillFile, safeDecode, teamSkillsFor } from "./team-skills-snapshot.js";
 
 /**
  * The skills one caller sees through the MCP skills extension (SEP-2640): the repo's
@@ -171,14 +171,6 @@ function canonicalUri(uri: string): string | undefined {
     return url.href;
   } catch {
     return undefined;
-  }
-}
-
-function safeDecode(segment: string): string {
-  try {
-    return decodeURIComponent(segment);
-  } catch {
-    return segment;
   }
 }
 

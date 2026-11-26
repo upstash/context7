@@ -335,10 +335,10 @@ Do not use for: refactoring, debugging, or reviewing code that does not depend o
   // minor SDK release, so recheck this call on every SDK upgrade.
   new SkillsExtension({
     source: skillSource(teamspaceId),
-    // Any caller with a credential can gain team skills at the next poll (a first install, a key
-    // or OAuth choice the snapshot has not seen yet, recovery after an outage), so they get the
-    // short private hint; only anonymous callers, who always get just context7-mcp, get an hour.
-    cacheHint: teamspaceId || signedIn ? PRIVATE_CACHE_HINT : STATIC_CACHE_HINT,
+    // Any signed-in caller can gain team skills at the next poll (a first install, a choice the
+    // snapshot has not seen, recovery after an outage), so they get the short private hint; only
+    // anonymous callers, who always get just context7-mcp, get an hour.
+    cacheHint: signedIn ? PRIVATE_CACHE_HINT : STATIC_CACHE_HINT,
     strict: true,
   }).attach(server);
 
