@@ -90,17 +90,30 @@ async function download(teamspaceId: string, uri: string, file: SkillResourceEnt
   return bytes;
 }
 
-/** The verified bytes of a team skill file. Equal digests are equal bytes, whichever team asks. */
-function teamFile(teamspaceId: string, uri: string, file: SkillResourceEntry) {
-  const hit = cached(file.digest);
-  if (hit) return Promise.resolve(hit);
-  const key = `${teamspaceId}\n${file.digest}`;
-  let pending = inFlight.get(key);
-  if (!pending) {
-    pending = download(teamspaceId, uri, file).finally(() => inFlight.delete(key));
-    inFlight.set(key, pending);
+/**
+ * The verified bytes of a team skill file. Equal digests are equal bytes, whichever team asks, but
+ * the size is checked against this caller's entry too, so a cache hit or a download another entry
+ * started is held to the same check as a cold read.
+ */
+async function teamFile(teamspaceId: string, uri: string, file: SkillResourceEntry) {
+  let bytes = cached(file.digest);
+  if (!bytes) {
+    const key = `${teamspaceId}\n${file.digest}`;
+    let pending = inFlight.get(key);
+    if (!pending) {
+      pending = download(teamspaceId, uri, file).finally(() => inFlight.delete(key));
+      inFlight.set(key, pending);
+    }
+    bytes = await pending;
   }
-  return pending;
+  if (bytes.byteLength !== file.size) {
+    console.error(`[Context7] Team skill file ${uri} does not match its entry's size; refused`);
+    throw new ProtocolError(
+      ProtocolErrorCode.InternalError,
+      `${uri} does not match its skill entry`
+    );
+  }
+  return bytes;
 }
 
 /** The SDK catalog's MIME types by extension (it does not export `mimeTypeFor`). */

@@ -1211,7 +1211,7 @@ describe("team skills", () => {
     expect(fileReads()).toHaveLength(0);
   });
 
-  test("serves only context7-mcp, publicly cacheable, outside a teamspace", async () => {
+  test("serves only context7-mcp outside a teamspace, publicly cached only for anonymous callers", async () => {
     const observeServer = await startHttpChild({
       environment: { ...childEnv, MCP_AUTH_ENFORCEMENT: "observe" },
       port: 0,
@@ -1221,7 +1221,9 @@ describe("team skills", () => {
         await withSkills(httpTransport(observeServer.url, apiKey), async (skills) => {
           const listing = await skills.list();
           expect(listing.skills.map((skill) => skill.uri)).toEqual([CONTEXT7_MCP_URI]);
-          expect(listing.cacheScope).toBe("public");
+          // A key outside any teamspace can gain skills at the next poll (a first install), so
+          // its listing is private and short-lived; an anonymous one never changes.
+          expect(listing.cacheScope).toBe(apiKey ? "private" : "public");
           await expect(skills.get(TEAM_SKILL.uri)).rejects.toThrow();
         });
       }

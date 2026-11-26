@@ -4,8 +4,10 @@ import type { ServerContext } from "@modelcontextprotocol/server";
 import { skillEntry, type Skill } from "@modelcontextprotocol/server/ext/skills";
 import { apiKeyHash } from "../src/lib/experimental-tools-snapshot.js";
 import {
+  fetchTeamSkillFile,
   isTeamSkillsSnapshotEnabled,
   refreshTeamSkillsSnapshot,
+  STALE_AFTER_MS,
   startTeamSkillsSnapshot,
   stopTeamSkillsSnapshot,
   teamSkillsFor,
@@ -13,6 +15,7 @@ import {
   TEAM_SKILLS_FILE_PATH,
   TEAM_SKILLS_SNAPSHOT_PATH,
 } from "../src/lib/team-skills-snapshot.js";
+import { defaultOAuthAllowedAudiences } from "../src/lib/oauth-audience.js";
 import { resetTeamSkillFileCache, skillSource } from "../src/lib/skills.js";
 import {
   resetOpaqueOAuthTokenValidation,
@@ -155,6 +158,67 @@ describe("team skills snapshot", () => {
     expect(fetchMock.mock.calls.length).toBe(calls);
   });
 
+  test("gives a Clerk token issued for another resource no teamspace", async () => {
+    const { fetchMock } = fakeApp();
+    vi.stubGlobal("fetch", fetchMock);
+    await startTeamSkillsSnapshot();
+    const token = (aud?: string) =>
+      jwt(
+        { alg: "RS256", typ: "at+jwt" },
+        { iss: "https://clerk.context7.com", sub: "user_b", ...(aud ? { aud } : {}) }
+      );
+    expect(teamspaceOf(token(defaultOAuthAllowedAudiences()[1]))).toBe("team_b");
+    expect(teamspaceOf(token("https://gateway.example.com/mcp"))).toBeUndefined();
+    // Grants from before Clerk filled `aud` still count.
+    expect(teamspaceOf(token())).toBe("team_b");
+  });
+
+  test("stops resolving credentials once the snapshot is stale, until a poll succeeds", async () => {
+    const { state, fetchMock } = fakeApp();
+    vi.stubGlobal("fetch", fetchMock);
+    await startTeamSkillsSnapshot();
+    expect(teamspaceOf(KEY)).toBe("team_a");
+
+    const start = Date.now();
+    const now = vi.spyOn(Date, "now");
+    state.down = true;
+    now.mockReturnValue(start + STALE_AFTER_MS - 1_000);
+    await refreshTeamSkillsSnapshot();
+    expect(teamspaceOf(KEY)).toBe("team_a");
+
+    now.mockReturnValue(start + STALE_AFTER_MS + 1_000);
+    expect(teamspaceOf(KEY)).toBeUndefined();
+    expect(teamspaceOf(clerkJwt("user_b"))).toBeUndefined();
+    // The skills stay in memory; only the credential maps stop counting.
+    expect(teamSkillsFor("team_a")).toBeDefined();
+
+    state.down = false;
+    await refreshTeamSkillsSnapshot();
+    expect(teamspaceOf(KEY)).toBe("team_a");
+  });
+
+  test("drops a file body that runs past its entry's size, with no Content-Length", async () => {
+    await startTeamSkillsSnapshot(false);
+    vi.stubEnv("MCP_CLIENT_IP_ASSERTION_KEY", ASSERTION_KEY);
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.enqueue(new Uint8Array(64));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(body))
+    );
+    await expect(
+      fetchTeamSkillFile("team_a", fileOf(GUIDE, "SKILL.md").digest, 100)
+    ).rejects.toThrow("larger than its entry's 100 bytes");
+    expect(cancelled).toBe(true);
+  });
+
   test("finds an opaque OAuth token's teamspace once its auth check named the user", async () => {
     const { fetchMock } = fakeApp();
     vi.stubGlobal("fetch", fetchMock);
@@ -276,11 +340,37 @@ describe("skill source", () => {
   test("refuses bytes that do not match the entry, and does not keep them", async () => {
     const { state } = await started();
     const notes = fileOf(GUIDE, "references/notes.md");
-    state.files.set(notes.digest, new TextEncoder().encode("# Tampered notes\n"));
+    // Same length as the real notes, other bytes: only the digest tells them apart.
+    state.files.set(notes.digest, new TextEncoder().encode("# Release notez\n"));
     const source = skillSource("team_a");
     await expect(source.read(notes.uri, CTX)).rejects.toThrow("does not match its skill entry");
     await expect(source.read(notes.uri, CTX)).rejects.toThrow("does not match its skill entry");
     expect(state.fileReads).toHaveLength(2);
+
+    // Longer than the entry: refused while it is read.
+    state.files.set(notes.digest, new TextEncoder().encode("# Release notes, longer\n"));
+    await expect(source.read(notes.uri, CTX)).rejects.toThrow("could not be read");
+  });
+
+  test("holds a cached file to the size of the entry that reads it", async () => {
+    const { state } = await started();
+    const notes = fileOf(GUIDE, "references/notes.md");
+    await skillSource("team_a").read(notes.uri, CTX);
+    // Another teamspace's entry lists the same digest with a wrong size.
+    state.teams.team_c = [
+      {
+        ...GUIDE,
+        resources: (GUIDE.resources as { uri: string; digest: string; size: number }[]).map(
+          (file) => (file.uri === notes.uri ? { ...file, size: file.size + 1 } : file)
+        ),
+      },
+    ];
+    state.version = "2";
+    await refreshTeamSkillsSnapshot();
+    await expect(skillSource("team_c").read(notes.uri, CTX)).rejects.toThrow(
+      "does not match its skill entry"
+    );
+    expect(state.fileReads).toHaveLength(1);
   });
 
   test("fails a read the app cannot answer", async () => {

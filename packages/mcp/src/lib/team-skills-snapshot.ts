@@ -8,6 +8,7 @@ import { CONTEXT7_API_BASE_URL } from "./constants.js";
 import { hasMcpAssertionKey, sealMcpAssertion } from "./encryption.js";
 import { apiKeyHash } from "./experimental-tools-snapshot.js";
 import { isClerkOAuthJwt, isJWT } from "./jwt.js";
+import { checkOAuthAudience } from "./oauth-audience.js";
 import { isOpaqueOAuthToken, validatedOpaqueOAuthTokenUserId } from "./oauth-token-validation.js";
 
 /**
@@ -69,8 +70,17 @@ interface SnapshotBody {
 
 let enabled = false;
 let snapshot: Snapshot | undefined;
+/** When the app last answered a poll (200 or 304). */
+let lastReadAt = 0;
 let timer: ReturnType<typeof setTimeout> | undefined;
 let failuresInRow = 0;
+
+/**
+ * How long the credential maps stay trusted without a successful poll. After that no credential
+ * resolves to a teamspace (only context7-mcp is served) until polling recovers, so an API key
+ * revoked or a member removed during an outage of the app loses its team's skills within this time.
+ */
+export const STALE_AFTER_MS = 15 * 60_000;
 
 /** Whether this process serves team skills from the snapshot. */
 export function isTeamSkillsSnapshotEnabled(): boolean {
@@ -240,12 +250,14 @@ export async function refreshTeamSkillsSnapshot(): Promise<void> {
       if (!response.ok) throw new Error(`the Context7 API answered HTTP ${response.status}`);
       snapshot = parseSnapshot((await response.json()) as SnapshotBody);
     }
+    lastReadAt = Date.now();
     if (failuresInRow > 0) {
       console.error(`[Context7] Team skills snapshot read again after ${failuresInRow} failures`);
     }
     failuresInRow = 0;
   } catch (error) {
-    // Keep serving the last snapshot: an outage of the app never changes a skill list.
+    // Keep the last snapshot through a short outage; past STALE_AFTER_MS, teamspaceOf stops
+    // trusting its credential maps (a key revoked meanwhile must not keep its team's skills).
     failuresInRow++;
     if (failuresInRow <= LOGGED_FAILURES) {
       const reason = error instanceof Error ? error.message : String(error);
@@ -289,6 +301,7 @@ export function stopTeamSkillsSnapshot(): void {
   timer = undefined;
   enabled = false;
   snapshot = undefined;
+  lastReadAt = 0;
   failuresInRow = 0;
 }
 
@@ -296,15 +309,23 @@ export function stopTeamSkillsSnapshot(): void {
  * The teamspace a credential belongs to, found without a network call: a Clerk OAuth JWT's `sub`
  * (the request got here only after `evaluateMcpAuthentication` verified it) or an opaque token's
  * user from its cached auth check, through the snapshot's members; an API key through the
- * snapshot's keys. Other JWTs (Entra, Vercel Marketplace) name no teamspace here.
+ * snapshot's keys. Other JWTs (Entra, Vercel Marketplace) name no teamspace here. None while the
+ * snapshot is older than STALE_AFTER_MS.
  */
 export function teamspaceOf(credential: string | undefined): string | undefined {
   if (!snapshot || !credential) return undefined;
+  if (Date.now() - lastReadAt > STALE_AFTER_MS) return undefined;
   const member = (userId: string | undefined) =>
     userId === undefined ? undefined : snapshot?.users.get(userId);
   if (isOpaqueOAuthToken(credential)) return member(validatedOpaqueOAuthTokenUserId(credential));
   if (isClerkOAuthJwt(credential)) {
-    const { sub } = jose.decodeJwt(credential);
+    const { sub, aud } = jose.decodeJwt(credential);
+    // Team skills can be private, so a token issued for another resource gets none, whatever
+    // MCP_OAUTH_AUDIENCE_ENFORCEMENT lets through for the public tools. A token with no `aud`
+    // (grants from before Clerk filled it) still counts, as in the app's `foreign` mode. Opaque
+    // tokens are judged by the app's auth check, which applies the app's enforcement mode.
+    const audience = checkOAuthAudience(aud);
+    if (!audience.allowed && audience.aud !== "missing") return undefined;
     return member(typeof sub === "string" ? sub : undefined);
   }
   if (isJWT(credential)) return undefined;
@@ -318,7 +339,8 @@ export function teamSkillsFor(teamspaceId: string | undefined): TeamSkills | und
 
 /**
  * A team skill file's bytes from the app, unchecked: skills.ts verifies them against the entry.
- * Refuses a response that announces more than `maxBytes`.
+ * Refuses a response longer than `maxBytes`, whether it announces its length or not: the body is
+ * read in chunks and dropped as soon as it runs past the limit.
  */
 export async function fetchTeamSkillFile(
   teamspaceId: string,
@@ -336,9 +358,30 @@ export async function fetchTeamSkillFile(
     await response.body?.cancel();
     throw new Error(`the Context7 API answered HTTP ${response.status}`);
   }
+  const tooLarge = () => new Error(`the file is larger than its entry's ${maxBytes} bytes`);
   if (Number(response.headers.get("Content-Length") ?? 0) > maxBytes) {
     await response.body?.cancel();
-    throw new Error(`the file is larger than its entry's ${maxBytes} bytes`);
+    throw tooLarge();
   }
-  return new Uint8Array(await response.arrayBuffer());
+  if (!response.body) return new Uint8Array(0);
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    length += value.byteLength;
+    if (length > maxBytes) {
+      await reader.cancel();
+      throw tooLarge();
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(length);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
 }
