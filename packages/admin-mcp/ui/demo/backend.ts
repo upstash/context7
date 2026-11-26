@@ -182,48 +182,26 @@ function listLibraries(libraries: DemoLibrary[], args: Args) {
   };
 }
 
-const QUESTIONS = [
-  [
-    "How do I retry a failed webhook delivery?",
-    18,
-    "The docs name the retry header but give no example of a retry policy.",
-  ],
-  [
-    "Configure the SDK for a proxy with a self-signed certificate",
-    24,
-    "No page covers custom CA certificates.",
-  ],
-  [
-    "Stream results with the async client",
-    37,
-    "The async client is listed, but streaming is only shown for the sync client.",
-  ],
-  [
-    "Paginate list endpoints past 1,000 items",
-    52,
-    "Cursor pagination is described; the 1,000-item cap is not mentioned.",
-  ],
-  ["Rotate API keys without downtime", 58, "Key rotation is covered in the dashboard docs only."],
-  ["Set a request timeout per call", 66, "Shown for the global client config, not per call."],
-  [
-    "Upload a file larger than 100 MB",
-    74,
-    "Multipart upload has an example; limits are on another page.",
-  ],
-  ["Use the CLI in CI without a browser", 88, "Token login is documented with a full example."],
-  ["Install the SDK with pnpm", 95, "Covered directly."],
-] as const;
+const SCORES = [18, 24, 37, 52, 58, 66, 74, 88, 95] as const;
+
+// The grader's points out of 40, 25, 20, 10 and 5, with completeness weakest.
+const subscoresFor = (score: number) => ({
+  implementation: Math.round((score / 100) * 40),
+  api: Math.round(Math.min(1, (score + 15) / 100) * 25),
+  relevance: Math.round(Math.min(1, (score + 25) / 100) * 20),
+  completeness: Math.round(Math.max(0, (score - 20) / 100) * 10),
+  clarity: Math.round(Math.min(1, (score + 10) / 100) * 5),
+});
 
 const benchmarks = (libraryId: string) => {
   const rows = Array.from({ length: 40 }, (_, i) => {
-    const [query, score, explanation] = QUESTIONS[i % QUESTIONS.length]!;
+    const base = SCORES[i % SCORES.length]!;
     const shift = libraryId === "/acme/cli" ? -18 : 0;
+    const score = Math.max(0, Math.min(100, base + shift + ((i * 7) % 11) - 5));
     return {
       benchmarkDate: new Date(today.getTime() - (i % 5) * DAY).toISOString(),
-      score: Math.max(0, Math.min(100, score + shift + ((i * 7) % 11) - 5)),
-      query:
-        i < QUESTIONS.length ? query : `${query} (variant ${Math.floor(i / QUESTIONS.length)})`,
-      explanation,
+      score,
+      subscores: subscoresFor(score),
     };
   });
   const scores = rows.map((r) => r.score);
