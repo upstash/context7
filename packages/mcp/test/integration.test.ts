@@ -41,6 +41,22 @@ const UNAVAILABLE_FROM_VERSION = "12";
 /** A deployment without the endpoint answers a plain 404. */
 const MISSING_ENDPOINT_FROM_VERSION = "98";
 const CLIENT_IP_ASSERTION_KEY = "0123456789abcdef".repeat(4);
+/** team_a's skill in the stub's team skills snapshot; the ctx7sk-team-N keys are team_a's. */
+const TEAM_SKILL_MD =
+  "---\nname: team-guide\ndescription: How the team ships.\n---\n# Team guide\n";
+const TEAM_NOTES_MD = "# Release notes\n";
+const sha256Digest = (text: string) => `sha256:${createHash("sha256").update(text).digest("hex")}`;
+const TEAM_FILES = new Map(
+  [TEAM_SKILL_MD, TEAM_NOTES_MD].map((text) => [sha256Digest(text), text] as const)
+);
+const TEAM_SKILL = {
+  uri: "skill://team-guide/SKILL.md",
+  frontmatter: { name: "team-guide", description: "How the team ships." },
+  resources: [
+    ["skill://team-guide/SKILL.md", TEAM_SKILL_MD],
+    ["skill://team-guide/references/notes.md", TEAM_NOTES_MD],
+  ].map(([uri, text]) => ({ uri, digest: sha256Digest(text), size: Buffer.byteLength(text) })),
+};
 const INVALID_OAUTH_TOKEN_BODY = {
   error: "invalid_oauth_token",
   message: "Invalid or expired OAuth token. Please re-authenticate to obtain a new token.",
@@ -193,6 +209,44 @@ function startStubApi(): Promise<string> {
           },
           apiKeys,
         })
+      );
+      return;
+    }
+    if (
+      apiPath === "/internal/mcp/team-skills-snapshot" ||
+      apiPath === "/internal/mcp/team-skills-file"
+    ) {
+      // Stands in for the app's team skills routes: teamspace team_a installed team-guide, and
+      // the ctx7sk-team-N keys are its members'. Each route takes only its own assertion.
+      const assertion = req.headers["x-context7-mcp-assertion"];
+      let subject: string | undefined;
+      try {
+        subject = typeof assertion === "string" ? decryptClientIpAssertion(assertion) : undefined;
+      } catch {
+        subject = undefined;
+      }
+      if (subject !== apiPath.slice("/internal/mcp/".length)) {
+        res.statusCode = 401;
+        res.end();
+        return;
+      }
+      if (apiPath === "/internal/mcp/team-skills-file") {
+        const text =
+          url.searchParams.get("teamspace") === "team_a"
+            ? TEAM_FILES.get(url.searchParams.get("digest") ?? "")
+            : undefined;
+        res.statusCode = text === undefined ? 404 : 200;
+        res.end(text);
+        return;
+      }
+      const apiKeys: Record<string, string> = {};
+      for (let n = 1; n <= 9; n++) {
+        apiKeys[createHash("sha256").update(`ctx7sk-team-${n}`).digest("hex")] = "team_a";
+      }
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader("ETag", '"1"');
+      res.end(
+        JSON.stringify({ version: "1", teams: { team_a: [TEAM_SKILL] }, apiKeys, users: {} })
       );
       return;
     }
@@ -1092,6 +1146,98 @@ describe("experimental tools", () => {
 
       expect(resultText(result)).toContain("not available");
       expect(resultText(result)).not.toContain("library");
+    });
+  });
+});
+
+describe("team skills", () => {
+  const CONTEXT7_MCP_URI = "skill://context7-mcp/SKILL.md";
+
+  async function withSkills<T>(
+    transport: StreamableHTTPClientTransport | StdioClientTransport,
+    run: (skills: SkillsClient, client: Client) => Promise<T>
+  ): Promise<T> {
+    const client = new Client(
+      { name: "team-skills-test", version: "1.0.0" },
+      { versionNegotiation: { mode: { pin: "2026-07-28" } } }
+    );
+    await client.connect(transport);
+    try {
+      return await run(new SkillsClient(client), client);
+    } finally {
+      await client.close();
+    }
+  }
+  const httpTransport = (url: string, apiKey?: string) =>
+    new StreamableHTTPClientTransport(new URL(url), {
+      requestInit: { headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : {} },
+    });
+  const fileReads = () =>
+    requests.filter((request) => request.path === "/internal/mcp/team-skills-file");
+
+  test("lists and reads the skills of the caller's teamspace, verified by digest", async () => {
+    requests.length = 0;
+    await withSkills(httpTransport(httpUrl, "ctx7sk-team-1"), async (skills, client) => {
+      const listing = await skills.list();
+      expect(listing.invalid).toEqual([]);
+      expect(listing.skills.map((skill) => skill.uri)).toEqual([CONTEXT7_MCP_URI, TEAM_SKILL.uri]);
+      expect(listing.cacheScope).toBe("private");
+
+      const guide = listing.skills[1];
+      expect(guide).toEqual(TEAM_SKILL);
+      expect(await skills.read(guide)).toMatchObject({ verified: true, text: TEAM_SKILL_MD });
+      expect(await skills.read(guide, "references/notes.md")).toMatchObject({
+        verified: true,
+        text: TEAM_NOTES_MD,
+      });
+
+      // resources/list is cached publicly, so it names only the skill everyone gets.
+      const { resources } = await client.listResources();
+      expect(resources.map((resource) => resource.uri)).toEqual([CONTEXT7_MCP_URI]);
+    });
+    expect(fileReads().map((request) => request.query.get("digest"))).toEqual(
+      TEAM_SKILL.resources.map((file) => file.digest)
+    );
+    expect(fileReads().every((request) => request.query.get("teamspace") === "team_a")).toBe(true);
+
+    // The process keeps verified files by digest: another member's read does not fetch again.
+    requests.length = 0;
+    await withSkills(httpTransport(httpUrl, "ctx7sk-team-2"), async (skills) => {
+      const { skills: entries } = await skills.list();
+      expect(await skills.read(entries[1], "references/notes.md")).toMatchObject({
+        verified: true,
+      });
+    });
+    expect(fileReads()).toHaveLength(0);
+  });
+
+  test("serves only context7-mcp, publicly cacheable, outside a teamspace", async () => {
+    const observeServer = await startHttpChild({
+      environment: { ...childEnv, MCP_AUTH_ENFORCEMENT: "observe" },
+      port: 0,
+    });
+    try {
+      for (const apiKey of [undefined, "ctx7sk-local-test"]) {
+        await withSkills(httpTransport(observeServer.url, apiKey), async (skills) => {
+          const listing = await skills.list();
+          expect(listing.skills.map((skill) => skill.uri)).toEqual([CONTEXT7_MCP_URI]);
+          expect(listing.cacheScope).toBe("public");
+          await expect(skills.get(TEAM_SKILL.uri)).rejects.toThrow();
+        });
+      }
+    } finally {
+      observeServer.child.kill();
+    }
+  });
+
+  test("serves only context7-mcp over stdio, even with a member's API key", async () => {
+    const transport = new StdioClientTransport({
+      command: process.execPath,
+      args: [DIST],
+      env: { ...childEnv, CONTEXT7_API_KEY: "ctx7sk-team-3" },
+    });
+    await withSkills(transport, async (skills) => {
+      expect((await skills.list()).skills.map((skill) => skill.uri)).toEqual([CONTEXT7_MCP_URI]);
     });
   });
 });

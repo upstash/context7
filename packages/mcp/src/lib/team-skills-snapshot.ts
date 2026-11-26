@@ -1,0 +1,344 @@
+import * as jose from "jose";
+import type {
+  Skill,
+  SkillFrontmatter,
+  SkillResourceEntry,
+} from "@modelcontextprotocol/server/ext/skills";
+import { CONTEXT7_API_BASE_URL } from "./constants.js";
+import { hasMcpAssertionKey, sealMcpAssertion } from "./encryption.js";
+import { apiKeyHash } from "./experimental-tools-snapshot.js";
+import { isClerkOAuthJwt, isJWT } from "./jwt.js";
+import { isOpaqueOAuthToken, validatedOpaqueOAuthTokenUserId } from "./oauth-token-validation.js";
+
+/**
+ * The hosted server's copy of every teamspace's Agent Skills, polled from the app the way
+ * experimental-tools-snapshot.ts polls dashboard choices: listing skills never calls the Context7
+ * API, only reading a team skill's file does (skills.ts caches those by digest). Each process
+ * polls every POLL_MS with `If-None-Match`; without a change the app answers 304.
+ *
+ * Both routes (context7app `app/api/internal/mcp/team-skills-*`) are for the hosted server only:
+ * they are authenticated with an assertion sealed with the key the app shares with it
+ * (`MCP_CLIENT_IP_ASSERTION_KEY`), so a process without that key serves no team skills.
+ */
+export const TEAM_SKILLS_SNAPSHOT_PATH = "/internal/mcp/team-skills-snapshot";
+export const TEAM_SKILLS_FILE_PATH = "/internal/mcp/team-skills-file";
+/** Keep in step with the routes: the tag and plaintexts of their assertions. */
+const ASSERTION_TAG = "s1";
+const SNAPSHOT_ASSERTION_SUBJECT = "team-skills-snapshot";
+const FILE_ASSERTION_SUBJECT = "team-skills-file";
+
+const POLL_MS = 15_000;
+/** Poll interval while no snapshot was ever read, so a process that started during a blip recovers fast. */
+const FIRST_READ_RETRY_MS = 2_000;
+const REQUEST_TIMEOUT_MS = 5_000;
+/** At most this many failures in a row are logged; the next success says it recovered. */
+const LOGGED_FAILURES = 3;
+/** At most this many dropped entries are logged per snapshot read. */
+const LOGGED_DROPS = 10;
+
+/** Served by skills.ts for everyone, so a teamspace cannot publish a skill under these names. */
+const RESERVED_SKILL_NAMES: ReadonlySet<string> = new Set(["context7-mcp"]);
+const SKILL_NAME = /^[\da-z]+(?:-[\da-z]+)*$/;
+const DIGEST = /^sha256:[\da-f]{64}$/;
+
+/** One teamspace's skills, with canonical URIs, indexed for skills.ts. */
+export interface TeamSkills {
+  teamspaceId: string;
+  /** Sorted by URI. */
+  skills: readonly Skill[];
+  /** By `SKILL.md` URI. */
+  entries: ReadonlyMap<string, Skill>;
+  /** Every file of every skill, by URI. */
+  files: ReadonlyMap<string, SkillResourceEntry>;
+}
+
+interface Snapshot {
+  version: string;
+  teams: Map<string, TeamSkills>;
+  apiKeys: Map<string, string>;
+  users: Map<string, string>;
+}
+
+/** The snapshot route's body (`TeamSkillsSnapshot` in context7app). */
+interface SnapshotBody {
+  version?: unknown;
+  teams?: Record<string, unknown>;
+  apiKeys?: Record<string, unknown>;
+  users?: Record<string, unknown>;
+}
+
+let enabled = false;
+let snapshot: Snapshot | undefined;
+let timer: ReturnType<typeof setTimeout> | undefined;
+let failuresInRow = 0;
+
+/** Whether this process serves team skills from the snapshot. */
+export function isTeamSkillsSnapshotEnabled(): boolean {
+  return enabled;
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+const characters = (text: string) => [...text].length;
+
+/** `uri` in WHATWG form when it is a `skill://` URI without query or fragment. */
+function canonicalSkillUri(uri: unknown): string | undefined {
+  if (typeof uri !== "string") return undefined;
+  try {
+    const url = new URL(uri);
+    return url.protocol === "skill:" && !url.search && !url.hash ? url.href : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function safeDecode(segment: string): string {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+}
+
+/** True when `uri` names a file strictly inside `root`, with no empty, `.`, `..` or `/` segment. */
+function isInside(root: string, uri: string): boolean {
+  if (!uri.startsWith(`${root}/`)) return false;
+  return uri
+    .slice(root.length + 1)
+    .split("/")
+    .every((segment) => {
+      const name = safeDecode(segment);
+      return name !== "" && name !== "." && name !== ".." && !/[/\0]/.test(name);
+    });
+}
+
+/**
+ * The entry with canonical URIs, or why it cannot be served. These are the rules the skills
+ * extension checks under `strict` (SEP-2640 and Agent Skills), so an entry the app got wrong is
+ * dropped here instead of failing the caller's whole skills/list.
+ */
+function parseSkill(value: unknown): Skill | string {
+  if (!isRecord(value) || !isRecord(value.frontmatter)) return "not a skill entry";
+  const { name, description, compatibility, metadata } = value.frontmatter;
+  if (typeof name !== "string" || name.length > 64 || !SKILL_NAME.test(name)) {
+    return "frontmatter name must be 1-64 lowercase letters, digits and single hyphens";
+  }
+  if (RESERVED_SKILL_NAMES.has(name)) return `the name ${name} is reserved`;
+  if (typeof description !== "string" || description === "" || characters(description) > 1024) {
+    return "frontmatter description must be 1-1024 characters";
+  }
+  if (
+    compatibility !== undefined &&
+    (typeof compatibility !== "string" || compatibility === "" || characters(compatibility) > 500)
+  ) {
+    return "frontmatter compatibility must be a string of 1-500 characters";
+  }
+  if (
+    metadata !== undefined &&
+    !(isRecord(metadata) && Object.values(metadata).every((item) => typeof item === "string"))
+  ) {
+    return "frontmatter metadata must map strings to strings";
+  }
+  const root = `skill://${name}`;
+  const manifest = `${root}/SKILL.md`;
+  if (canonicalSkillUri(value.uri) !== manifest) return `uri must be ${manifest}`;
+  if (!Array.isArray(value.resources)) return "resources must be a list of files";
+
+  const resources: SkillResourceEntry[] = [];
+  const seen = new Set<string>();
+  for (const resource of value.resources as unknown[]) {
+    const uri = isRecord(resource) ? canonicalSkillUri(resource.uri) : undefined;
+    if (!isRecord(resource) || uri === undefined || !isInside(root, uri)) {
+      return `every resource must be a file inside ${root}`;
+    }
+    const { digest, size } = resource;
+    if (typeof digest !== "string" || !DIGEST.test(digest)) {
+      return `${uri}: digest must be "sha256:" and 64 lowercase hex characters`;
+    }
+    if (typeof size !== "number" || !Number.isSafeInteger(size) || size < 0) {
+      return `${uri}: size must be a byte count`;
+    }
+    if (seen.has(uri)) return `${uri} is listed more than once`;
+    seen.add(uri);
+    resources.push({ uri, digest, size });
+  }
+  if (!seen.has(manifest)) return `resources must include ${manifest}`;
+  resources.sort((a, b) => (a.uri < b.uri ? -1 : a.uri > b.uri ? 1 : 0));
+  return { uri: manifest, frontmatter: value.frontmatter as SkillFrontmatter, resources };
+}
+
+function parseTeam(teamspaceId: string, value: unknown, drop: (reason: string) => void) {
+  const entries = new Map<string, Skill>();
+  for (const item of Array.isArray(value) ? (value as unknown[]) : []) {
+    const skill = parseSkill(item);
+    if (typeof skill === "string") {
+      const uri = isRecord(item) && typeof item.uri === "string" ? item.uri : "an entry";
+      drop(`${uri} of teamspace ${teamspaceId}: ${skill}`);
+    } else if (entries.has(skill.uri)) {
+      drop(`${skill.uri} of teamspace ${teamspaceId}: listed more than once`);
+    } else {
+      entries.set(skill.uri, skill);
+    }
+  }
+  if (entries.size === 0) return undefined;
+  const skills = [...entries.values()].sort((a, b) => (a.uri < b.uri ? -1 : 1));
+  const files = new Map<string, SkillResourceEntry>();
+  for (const skill of skills) {
+    if (skill.resources === "dynamic") continue;
+    for (const file of skill.resources) files.set(file.uri, file);
+  }
+  return { teamspaceId, skills, entries, files } satisfies TeamSkills;
+}
+
+function stringMap(record: Record<string, unknown> | undefined): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const [key, value] of Object.entries(record ?? {})) {
+    if (typeof value === "string") map.set(key, value);
+  }
+  return map;
+}
+
+function parseSnapshot(body: SnapshotBody): Snapshot {
+  let dropped = 0;
+  const drop = (reason: string) => {
+    if (++dropped <= LOGGED_DROPS) console.error(`[Context7] Team skill dropped: ${reason}`);
+  };
+  const teams = new Map<string, TeamSkills>();
+  for (const [teamspaceId, skills] of Object.entries(body.teams ?? {})) {
+    const team = parseTeam(teamspaceId, skills, drop);
+    if (team) teams.set(teamspaceId, team);
+  }
+  if (dropped > LOGGED_DROPS) {
+    console.error(`[Context7] ${dropped - LOGGED_DROPS} more team skills dropped`);
+  }
+  return {
+    version: String(body.version ?? "0"),
+    teams,
+    apiKeys: stringMap(body.apiKeys),
+    users: stringMap(body.users),
+  };
+}
+
+function assertionHeader(subject: string): Record<string, string> {
+  const assertion = sealMcpAssertion(ASSERTION_TAG, subject);
+  if (!assertion) throw new Error("the MCP assertion could not be sealed");
+  return { "X-Context7-Mcp-Assertion": assertion };
+}
+
+/** One poll: a 304 keeps the copy, a 200 replaces it. */
+export async function refreshTeamSkillsSnapshot(): Promise<void> {
+  if (!enabled) return;
+  try {
+    const response = await fetch(`${CONTEXT7_API_BASE_URL}${TEAM_SKILLS_SNAPSHOT_PATH}`, {
+      headers: {
+        ...assertionHeader(SNAPSHOT_ASSERTION_SUBJECT),
+        ...(snapshot && { "If-None-Match": `"${snapshot.version}"` }),
+      },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    if (response.status !== 304) {
+      if (!response.ok) throw new Error(`the Context7 API answered HTTP ${response.status}`);
+      snapshot = parseSnapshot((await response.json()) as SnapshotBody);
+    }
+    if (failuresInRow > 0) {
+      console.error(`[Context7] Team skills snapshot read again after ${failuresInRow} failures`);
+    }
+    failuresInRow = 0;
+  } catch (error) {
+    // Keep serving the last snapshot: an outage of the app never changes a skill list.
+    failuresInRow++;
+    if (failuresInRow <= LOGGED_FAILURES) {
+      const reason = error instanceof Error ? error.message : String(error);
+      console.error(
+        `[Context7] Could not read the team skills snapshot (${reason}); keeping the ${
+          snapshot ? `version ${snapshot.version}` : "empty list"
+        }`
+      );
+    }
+  }
+}
+
+/**
+ * Start polling when this process holds the shared MCP assertion key (the hosted server). The
+ * first read is awaited, up to REQUEST_TIMEOUT_MS, so a new process lists team skills from its
+ * first request.
+ */
+export async function startTeamSkillsSnapshot(
+  canAuthenticate = hasMcpAssertionKey()
+): Promise<void> {
+  stopTeamSkillsSnapshot();
+  enabled = canAuthenticate;
+  if (!enabled) return;
+  await refreshTeamSkillsSnapshot();
+  const schedule = () => {
+    // Jitter keeps the processes of one deployment from polling in step.
+    timer = setTimeout(
+      async () => {
+        await refreshTeamSkillsSnapshot();
+        schedule();
+      },
+      (snapshot ? POLL_MS : FIRST_READ_RETRY_MS) + Math.floor(Math.random() * 2_000)
+    );
+    timer.unref?.();
+  };
+  schedule();
+}
+
+export function stopTeamSkillsSnapshot(): void {
+  if (timer) clearTimeout(timer);
+  timer = undefined;
+  enabled = false;
+  snapshot = undefined;
+  failuresInRow = 0;
+}
+
+/**
+ * The teamspace a credential belongs to, found without a network call: a Clerk OAuth JWT's `sub`
+ * (the request got here only after `evaluateMcpAuthentication` verified it) or an opaque token's
+ * user from its cached auth check, through the snapshot's members; an API key through the
+ * snapshot's keys. Other JWTs (Entra, Vercel Marketplace) name no teamspace here.
+ */
+export function teamspaceOf(credential: string | undefined): string | undefined {
+  if (!snapshot || !credential) return undefined;
+  const member = (userId: string | undefined) =>
+    userId === undefined ? undefined : snapshot?.users.get(userId);
+  if (isOpaqueOAuthToken(credential)) return member(validatedOpaqueOAuthTokenUserId(credential));
+  if (isClerkOAuthJwt(credential)) {
+    const { sub } = jose.decodeJwt(credential);
+    return member(typeof sub === "string" ? sub : undefined);
+  }
+  if (isJWT(credential)) return undefined;
+  return snapshot.apiKeys.get(apiKeyHash(credential));
+}
+
+/** The teamspace's skills from the snapshot; `undefined` when it has none. */
+export function teamSkillsFor(teamspaceId: string | undefined): TeamSkills | undefined {
+  return teamspaceId === undefined ? undefined : snapshot?.teams.get(teamspaceId);
+}
+
+/**
+ * A team skill file's bytes from the app, unchecked: skills.ts verifies them against the entry.
+ * Refuses a response that announces more than `maxBytes`.
+ */
+export async function fetchTeamSkillFile(
+  teamspaceId: string,
+  digest: string,
+  maxBytes: number
+): Promise<Uint8Array> {
+  const url = new URL(`${CONTEXT7_API_BASE_URL}${TEAM_SKILLS_FILE_PATH}`);
+  url.searchParams.set("teamspace", teamspaceId);
+  url.searchParams.set("digest", digest);
+  const response = await fetch(url, {
+    headers: assertionHeader(FILE_ASSERTION_SUBJECT),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  if (!response.ok) {
+    await response.body?.cancel();
+    throw new Error(`the Context7 API answered HTTP ${response.status}`);
+  }
+  if (Number(response.headers.get("Content-Length") ?? 0) > maxBytes) {
+    await response.body?.cancel();
+    throw new Error(`the file is larger than its entry's ${maxBytes} bytes`);
+  }
+  return new Uint8Array(await response.arrayBuffer());
+}
