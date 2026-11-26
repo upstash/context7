@@ -65,6 +65,35 @@ async function readStatusBody(res: Response): Promise<StatusBody> {
     : body;
 }
 
+/** How long setup waits for a stored key check before it uses the key as before. */
+const API_KEY_CHECK_TIMEOUT_MS = 10_000;
+
+/**
+ * What the server says about a stored API key: "usable", "invalid" (a 401: the server no longer
+ * knows it), or the policy refusal of a teamspace that limits API keys. A key saved before its
+ * teamspace limited API keys is refused now, and writing it would leave the agent with a key
+ * that fails on every call. /api/v2/auth/check is versioned and not quota-tracked; the API
+ * answers 401 only when the key is certainly rejected (an outage is a 503). Any other answer,
+ * or none within the timeout, is "usable", so setup keeps the key as before.
+ */
+export async function checkApiKey(
+  apiKey: string
+): Promise<"usable" | "invalid" | ApiKeyPolicyRefusal> {
+  try {
+    const response = await fetchWithTimeout(
+      `${baseUrl}/api/v2/auth/check`,
+      { headers: { ...getAuthHeaders(), Authorization: `Bearer ${apiKey}` } },
+      API_KEY_CHECK_TIMEOUT_MS
+    );
+    if (response.status === 401) return "invalid";
+    if (response.status !== 403) return "usable";
+    const body = await readStatusBody(response);
+    return isApiKeyPolicyRefusal(body.error) ? body.error : "usable";
+  } catch {
+    return "usable";
+  }
+}
+
 export function getBaseUrl(): string {
   return baseUrl;
 }

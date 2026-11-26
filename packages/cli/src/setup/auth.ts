@@ -2,7 +2,12 @@ import { randomBytes } from "crypto";
 import ora from "ora";
 
 import { performDeviceLogin } from "../commands/auth.js";
-import { getBaseUrl, isApiKeyPolicyRefusal, type ApiKeyPolicyRefusal } from "../utils/api.js";
+import {
+  checkApiKey,
+  getBaseUrl,
+  isApiKeyPolicyRefusal,
+  type ApiKeyPolicyRefusal,
+} from "../utils/api.js";
 import { getValidAccessToken, isContext7ApiKey } from "../utils/auth.js";
 import { log } from "../utils/logger.js";
 
@@ -13,16 +18,24 @@ export type SetupApiKeyResult =
   | null;
 
 export async function resolveSetupApiKey(): Promise<SetupApiKeyResult> {
-  let accessToken = await getValidAccessToken({ recoverExpiredSession: false });
-  if (!accessToken) {
-    const login = await performDeviceLogin();
-    if (!login) return null;
-    // The approval page refused a key for the chosen teamspace: setup continues with OAuth.
-    if ("refusal" in login) return login;
-    accessToken = login.token;
+  const stored = await getValidAccessToken({ recoverExpiredSession: false });
+  if (stored) {
+    if (!isContext7ApiKey(stored)) return createApiKey(stored);
+    // A stored key may predate the teamspace's current API key policy, or be revoked.
+    const check = await checkApiKey(stored);
+    if (check === "usable") return { apiKey: stored };
+    if (check !== "invalid") return { refusal: check };
+    // The server no longer knows the key: sign in again, as with no stored key.
   }
-  if (isContext7ApiKey(accessToken)) return { apiKey: accessToken };
 
+  const login = await performDeviceLogin();
+  // A refusal here means the approval page refused a key: setup continues with OAuth.
+  if (!login || "refusal" in login) return login;
+  return isContext7ApiKey(login.token) ? { apiKey: login.token } : createApiKey(login.token);
+}
+
+/** Exchanges an OAuth access token for an API key. */
+async function createApiKey(accessToken: string): Promise<SetupApiKeyResult> {
   const spinner = ora("Configuring authentication...").start();
 
   try {
