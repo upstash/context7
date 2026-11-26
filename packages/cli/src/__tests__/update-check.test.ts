@@ -97,6 +97,40 @@ describe("detectInstallMethod", () => {
     ).toBe("bunx");
   });
 
+  test("reads the package manager from the file name, not from its folders", () => {
+    // "ubuntu" contains "bun": the default user on Ubuntu cloud images, with npm from nvm.
+    expect(
+      detectInstallMethod({
+        npm_execpath:
+          "/home/ubuntu/.nvm/versions/node/v22.12.0/lib/node_modules/npm/bin/npm-cli.js",
+        npm_command: "exec",
+      })
+    ).toBe("npx");
+
+    // npm that ships with a Node.js installed by `pnpm env use`.
+    expect(
+      detectInstallMethod({
+        npm_execpath:
+          "/home/dev/.local/share/pnpm/nodejs/22.12.0/lib/node_modules/npm/bin/npm-cli.js",
+        npm_command: "exec",
+      })
+    ).toBe("npx");
+
+    expect(
+      detectInstallMethod({
+        npm_execpath: "C:\\Users\\bunny\\AppData\\Roaming\\npm\\node_modules\\npm\\bin\\npm-cli.js",
+        npm_command: "exec",
+      })
+    ).toBe("npx");
+
+    expect(
+      detectInstallMethod({
+        npm_execpath: "/home/ubuntu/.local/share/pnpm/pnpm",
+        npm_command: "dlx",
+      })
+    ).toBe("pnpm-dlx");
+  });
+
   test("falls back to npm-global for npm user agents", () => {
     expect(detectInstallMethod({ npm_config_user_agent: "npm/10.0.0 node/v22.0.0" })).toBe(
       "npm-global"

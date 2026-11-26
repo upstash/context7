@@ -101,7 +101,9 @@ export function compareVersions(a: string, b: string): number {
 }
 
 export function detectInstallMethod(env: NodeJS.ProcessEnv = process.env): InstallMethod {
-  const execPath = env.npm_execpath?.toLowerCase() ?? "";
+  // Only the file name tells the package manager apart (npm-cli.js, pnpm.cjs, bun): a folder
+  // such as /home/ubuntu or pnpm/nodejs holds the same letters.
+  const execPath = env.npm_execpath?.toLowerCase().split(/[\\/]/).pop() ?? "";
   const npmCommand = env.npm_command?.toLowerCase() ?? "";
   const userAgent = env.npm_config_user_agent?.toLowerCase() ?? "";
 
