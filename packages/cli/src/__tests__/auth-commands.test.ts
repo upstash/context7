@@ -28,6 +28,7 @@ const mockSpinner = {
   stop: vi.fn().mockReturnThis(),
   succeed: vi.fn().mockReturnThis(),
   fail: vi.fn().mockReturnThis(),
+  warn: vi.fn().mockReturnThis(),
   text: "",
 };
 vi.mock("ora", () => ({ default: () => mockSpinner }));
@@ -36,9 +37,12 @@ const mockOpen = vi.fn().mockResolvedValue(undefined);
 vi.mock("open", () => ({ default: (...args: unknown[]) => mockOpen(...args) }));
 
 vi.mock("../constants.js", () => ({ CLI_CLIENT_ID: "test-client-id" }));
-vi.mock("../utils/api.js", () => ({ getBaseUrl: () => "https://test.context7.com" }));
+vi.mock("../utils/api.js", () => ({
+  getBaseUrl: () => "https://test.context7.com",
+  CLI_API_KEY_REFUSED_MESSAGE: "refused: use OAuth",
+}));
 
-import { registerAuthCommands, performLogin } from "../commands/auth.js";
+import { registerAuthCommands, performDeviceLogin, performLogin } from "../commands/auth.js";
 import { trackEvent } from "../utils/tracking.js";
 
 let logOutput: string[];
@@ -266,6 +270,15 @@ describe("performLogin", () => {
     mockStartDeviceAuthorization.mockResolvedValue(authorization);
     mockPollDeviceToken.mockResolvedValue({ status: "denied" });
 
+    expect(await performLogin(false)).toBeNull();
+    expect(mockSaveTokens).not.toHaveBeenCalled();
+  });
+
+  test("reports an API key policy refusal, so setup can switch to OAuth", async () => {
+    mockStartDeviceAuthorization.mockResolvedValue(authorization);
+    mockPollDeviceToken.mockResolvedValue({ status: "denied", refusal: "api_keys_disabled" });
+
+    expect(await performDeviceLogin(false)).toEqual({ refusal: "api_keys_disabled" });
     expect(await performLogin(false)).toBeNull();
     expect(mockSaveTokens).not.toHaveBeenCalled();
   });

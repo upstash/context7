@@ -1,5 +1,6 @@
 import { IconArrowLeft, IconChevronLeft, IconChevronRight, IconSearch } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
+import { weakestAreas } from "../../../src/benchmark-areas";
 import { ScoreHistogram } from "../charts";
 import {
   Button,
@@ -201,7 +202,7 @@ export function LibrariesPage({ teamspace }: { teamspace: string }) {
           <LibraryDetail teamspace={teamspace} library={current} />
         ) : (
           <Card>
-            <Empty>Pick a library to see the questions its docs answer badly.</Empty>
+            <Empty>Pick a library to see its benchmark.</Empty>
           </Card>
         )}
       </div>
@@ -256,26 +257,46 @@ function LibraryRow({
   );
 }
 
+/**
+ * Each criterion's average share of its points across the graded answers,
+ * weakest first: where the docs fall short, without the questions, which
+ * the API keeps private.
+ */
+function WeakestAreas({ benchmarks }: { benchmarks: Benchmarks["benchmarks"] }) {
+  const areas = weakestAreas(benchmarks);
+  if (areas.length === 0) return null;
+  return (
+    <div>
+      <h3 className="mb-1 text-xs font-medium text-fg-3">Weakest areas</h3>
+      <ul className="grid">
+        {areas.map((area) => (
+          <li key={area.key} className="flex gap-3 border-t border-line py-3 first:border-0">
+            <span
+              className={`w-6 shrink-0 text-sm font-semibold tabular-nums ${scoreTone(area.score)}`}
+            >
+              {Math.round(area.score)}
+            </span>
+            <span className="min-w-0 flex-1 text-sm">{area.label}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function LibraryDetail({ teamspace, library }: { teamspace: string; library: Library }) {
   useEffect(() => {
     host.setModelContext(
       `The user opened the benchmark of library ${library.id} (teamspace ${teamspace}) in the Context7 console.`
     );
   }, [teamspace, library.id]);
-  // The newest 60 questions: a fair sample for the chart, and under the server's
-  // 80,000-character cap (100 questions with long explanations reach ~100,000).
+  // The newest 60 graded answers (the tool sorts them by date): a fair sample for the chart and
+  // the weakest areas.
   const result = useTool<Benchmarks>(library.owned ? "get_library_benchmarks" : undefined, {
     teamspace,
     library_id: library.id,
     order: "newest",
     limit: 60,
-  });
-  // The lowest 10 of all questions, not of the newest 60: an old failing one still shows.
-  const lowest = useTool<Benchmarks>(library.owned ? "get_library_benchmarks" : undefined, {
-    teamspace,
-    library_id: library.id,
-    order: "lowest",
-    limit: 10,
   });
 
   return (
@@ -289,7 +310,7 @@ function LibraryDetail({ teamspace, library }: { teamspace: string; library: Lib
       action={
         library.owned ? (
           <ChatButton
-            prompt={`Fix the docs of ${library.id} for the benchmark questions that score lowest. Use get_library_benchmarks and get_library_suggestions.`}
+            prompt={`Fix the docs of ${library.id} for the suggestions with the lowest benchmark scores. Use get_library_suggestions.`}
           >
             Fix the lowest
           </ChatButton>
@@ -328,38 +349,7 @@ function LibraryDetail({ teamspace, library }: { teamspace: string; library: Lib
                   />
                 </Metrics>
                 <ScoreHistogram scores={benchmarks.map((b) => b.score)} />
-                <div>
-                  <h3 className="mb-1 text-xs font-medium text-fg-3">Lowest scores</h3>
-                  <Loaded result={lowest} skeleton={<RowsSkeleton rows={4} />}>
-                    {(low) => (
-                      <ul className="grid">
-                        {low.benchmarks.map((row, i) => (
-                          <li key={i} className="border-t border-line first:border-0">
-                            <details className="group">
-                              <summary className="flex list-none gap-3 py-3 [&::-webkit-details-marker]:hidden">
-                                <span
-                                  className={`w-6 shrink-0 text-sm font-semibold tabular-nums ${scoreTone(row.score)}`}
-                                >
-                                  {Math.round(row.score)}
-                                </span>
-                                <span className="min-w-0 flex-1 text-sm">{row.query}</span>
-                                <IconChevronRight
-                                  className="mt-0.5 size-4 shrink-0 text-fg-3 transition-transform group-open:rotate-90"
-                                  aria-hidden
-                                />
-                              </summary>
-                              {row.explanation && (
-                                <p className="pb-3 pl-9 text-sm whitespace-pre-wrap text-fg-2">
-                                  {row.explanation}
-                                </p>
-                              )}
-                            </details>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </Loaded>
-                </div>
+                <WeakestAreas benchmarks={benchmarks} />
               </div>
             )
           }
