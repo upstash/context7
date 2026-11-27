@@ -1,5 +1,11 @@
 # @upstash/context7-mcp
 
+## 4.9.1
+
+### Patch Changes
+
+- 41f84a1: The hosted HTTP server sends the version of the snapshots it holds in `X-Context7-Snapshot-Version`, so polls without a change skip the download again.
+
 ## 4.9.0
 
 ### Minor Changes
