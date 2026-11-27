@@ -1,5 +1,11 @@
 # @upstash/context7-pi
 
+## 0.2.0
+
+### Minor Changes
+
+- 32dccfd: Agents pass the version a project uses as its own value, not as a suffix of the library ID. `query-docs` (MCP and pi) takes a `version` input and `ctx7 docs` a `--tag` option, sent to `/v2/context` as `version`; Context7 serves that version or the closest one it has. `resolve-library-id` no longer lists versions.
+
 ## 0.1.3
 
 ### Patch Changes

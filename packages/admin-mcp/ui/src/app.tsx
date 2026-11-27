@@ -58,7 +58,7 @@ const PAGES: Record<View, Page> = {
     Full: LibrariesPage,
     ask: (t) => ({
       label: "Fix the lowest",
-      prompt: `Find the library of teamspace ${t} with the lowest benchmark score and fix its docs for the questions it fails.`,
+      prompt: `Find the library of teamspace ${t} with the lowest benchmark score and fix its docs for the suggestions with the lowest benchmark scores. Use get_library_suggestions.`,
     }),
   },
   docs7: {

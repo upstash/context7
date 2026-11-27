@@ -31,7 +31,9 @@ export function createAdminHandler() {
   const mcp = createMcpHandler(registerAdminTools, {
     ...SERVER_OPTIONS,
     onEvent: (event) => {
-      if (event.type === "ERROR") console.error("MCP handler error:", event.error);
+      if (event.type === "ERROR" && !isRefusedSubscription(event.error)) {
+        console.error("MCP handler error:", event.error);
+      }
     },
   });
 
@@ -65,6 +67,15 @@ export function createAdminHandler() {
       headers: response.headers,
     });
   };
+}
+
+/**
+ * The server allows no subscriptions (`maxSubscriptions: 0`), so the SDK
+ * refuses every `subscriptions/listen` and answers the client with an error.
+ * It also reports each refusal to `onerror`; that is expected, not a failure.
+ */
+function isRefusedSubscription(error: unknown): boolean {
+  return error instanceof Error && error.message.startsWith("subscriptions/listen refused:");
 }
 
 const CORS_HEADERS = {

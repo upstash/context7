@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import {
   CODE_REQUEST_TIMEOUT_MS,
   fetchWithTimeout,
+  resolveLibrary,
   getLibraryCode,
   hasSourceCode,
   retryAfterSeconds,
@@ -98,4 +99,30 @@ describe("request timeouts", () => {
 
     await expect(fetchWithTimeout("https://example.test", {})).rejects.toThrow("fetch failed");
   });
+});
+
+describe("API key policy refusals", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  test.each(["api_keys_disabled", "api_key_admins_only"])(
+    "%s points CLI users to the MCP server with OAuth",
+    async (code) => {
+      vi.stubGlobal(
+        "fetch",
+        vi
+          .fn()
+          .mockResolvedValue(
+            new Response(JSON.stringify({ error: code, message: "server text" }), { status: 403 })
+          )
+      );
+
+      const result = await resolveLibrary("react", undefined, "ctx7sk-x");
+
+      expect(result.error).toBe(code);
+      expect(result.message).toContain("ctx7 CLI commands need an API key");
+      expect(result.message).toContain("npx ctx7@latest setup --mcp --oauth");
+    }
+  );
 });
