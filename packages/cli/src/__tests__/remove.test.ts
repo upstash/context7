@@ -200,6 +200,63 @@ describe("remove command", () => {
     });
   });
 
+  describe("shared skills folder", () => {
+    const mcpSkillDir = () => join(tempDir, ".agents", "skills", "context7-mcp");
+
+    async function setUpVscodeAndSkill(): Promise<void> {
+      await mkdir(join(tempDir, ".vscode"), { recursive: true });
+      await writeFile(
+        join(tempDir, ".vscode", "mcp.json"),
+        JSON.stringify({
+          servers: { context7: { type: "http", url: "https://mcp.context7.com/mcp" } },
+        }),
+        "utf-8"
+      );
+      await mkdir(mcpSkillDir(), { recursive: true });
+      await writeFile(join(mcpSkillDir(), "SKILL.md"), "mcp skill", "utf-8");
+    }
+
+    test("keeps the skill when another agent still uses it", async () => {
+      await setUpVscodeAndSkill();
+      await mkdir(join(tempDir, ".codex"), { recursive: true });
+      await writeFile(
+        join(tempDir, ".codex", "config.toml"),
+        '[mcp_servers.context7]\nurl = "https://mcp.context7.com/mcp"\n',
+        "utf-8"
+      );
+
+      await runCommand("remove", "--vscode", "--mcp", "--project");
+
+      expect(await exists(mcpSkillDir())).toBe(true);
+      expect(logOutput.join("\n")).toContain("kept (used by Codex)");
+      expect(await readFile(join(tempDir, ".vscode", "mcp.json"), "utf-8")).not.toContain(
+        "context7"
+      );
+    });
+
+    test("removes the skill when no other agent uses it", async () => {
+      await setUpVscodeAndSkill();
+
+      await runCommand("remove", "--vscode", "--mcp", "--project");
+
+      expect(await exists(mcpSkillDir())).toBe(false);
+    });
+
+    test("removes the skill when every agent that uses it is removed together", async () => {
+      await setUpVscodeAndSkill();
+      await mkdir(join(tempDir, ".codex"), { recursive: true });
+      await writeFile(
+        join(tempDir, ".codex", "config.toml"),
+        '[mcp_servers.context7]\nurl = "https://mcp.context7.com/mcp"\n',
+        "utf-8"
+      );
+
+      await runCommand("remove", "--vscode", "--codex", "--mcp", "--project");
+
+      expect(await exists(mcpSkillDir())).toBe(false);
+    });
+  });
+
   test("supports uninstall alias and --all to remove both setup modes", async () => {
     const agentsPath = join(tempDir, "AGENTS.md");
     const tomlPath = join(tempDir, ".codex", "config.toml");
@@ -383,6 +440,28 @@ describe("remove command", () => {
     );
 
     await runCommand("remove", "--vscode", "--mcp", "--project");
+
+    expect(JSON.parse(await readFile(mcpPath, "utf-8"))).toEqual({
+      servers: { other: { type: "http", url: "https://other.com" } },
+    });
+  });
+
+  test("removes context7 from the shared workspace config with --vscode-insiders", async () => {
+    const mcpPath = join(tempDir, ".vscode", "mcp.json");
+
+    await mkdir(join(tempDir, ".vscode"), { recursive: true });
+    await writeFile(
+      mcpPath,
+      JSON.stringify({
+        servers: {
+          other: { type: "http", url: "https://other.com" },
+          context7: { type: "http", url: "https://mcp.context7.com/mcp" },
+        },
+      }),
+      "utf-8"
+    );
+
+    await runCommand("remove", "--vscode-insiders", "--mcp", "--project");
 
     expect(JSON.parse(await readFile(mcpPath, "utf-8"))).toEqual({
       servers: { other: { type: "http", url: "https://other.com" } },

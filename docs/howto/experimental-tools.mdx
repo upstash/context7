@@ -5,7 +5,7 @@ description: Turn on experimental Context7 MCP tools, such as documentation feed
 
 Experimental tools are Context7 MCP tools that are still in development. They are off by default. They can change or be removed without notice.
 
-There are three experimental tools: [documentation feedback](#documentation-feedback), [upgrade guides](#upgrade-guides) and [source code search](#source-code-search).
+One experimental tool can be turned on: [documentation feedback](#documentation-feedback). [Upgrade guides](#upgrade-guides) and [source code search](#source-code-search) are turned off for now: the dashboard does not offer them.
 
 ## Turn them on
 
@@ -72,6 +72,16 @@ To choose single tools instead, remove the old name from your configuration and 
 
 Start a new session after you change the configuration, so that your client loads the new tools.
 
+## When Context7 turns them off
+
+Context7 can turn every experimental tool off for all users, without a new server version. While they are off:
+
+- The dashboard does not show the MCP Tools card or the announcement, so there is nothing to turn on.
+- An MCP server signed in with your account or sending one of your API keys lists no experimental tool: the remote server within about a minute (reconnect or start a new session to see it), a local server after a restart.
+- The flags above still turn on every experimental tool, for your client alone. They take precedence over this.
+
+Your saved choice is kept and comes back when the tools do.
+
 ## Documentation feedback
 
 With documentation feedback on, the server lists a `submit-docs-feedback` tool, and its instructions ask the agent to call it once for each library after it answers with `query-docs`. The agent rates how well the documentation answered the question:
@@ -103,6 +113,8 @@ approval_mode = "approve"
 
 With upgrade guides on, the server lists a `get-upgrade-guide` tool. The agent calls it when you upgrade a library, or ask what changed between two versions. It returns one guide with the prerequisites, codemods, breaking changes, deprecations, and behavior and config changes from the release notes, changelogs and migration guides of every release in between, each with its source. It adds the public API changes found in the source code of both versions, including those no note mentions. The target version does not contain releases of an older line published after a newer line had started, such as Express 4.x releases published after 5.0.0, so the guide leaves them out and names them in its header.
 
+Upgrade guides are turned off for now. With a flag, the server still lists `get-upgrade-guide`, but it answers that upgrade guides are off, and the agent uses `query-docs` instead.
+
 | Field | Description |
 | --- | --- |
 | `libraryId` | The library, such as `/vercel/next.js`. A version after it, such as `/vercel/next.js/v14.3.0` or `/vercel/next.js@v14`, names the same library |
@@ -126,6 +138,10 @@ Without the MCP server, the `ctx7 get-upgrade-guide` command returns the same gu
 
 ## Source code search
 
+<Note>
+Source code search is turned off for now. The dashboard does not offer it, and an MCP server signed in with your account does not list its tools. Your saved choice is kept, and the tools return when source code search is back. A search made while it is off returns `503 code_search_unavailable` and is not counted against your monthly quota or spending limit; rate limits still apply.
+</Note>
+
 With source code search on, the server lists 4 tools: `grep-code`, `glob-code`, `read-code` and `find-symbol`. `resolve-library-id` marks the libraries whose source they can search with `Source code: searchable with grep-code, glob-code, read-code and find-symbol`. The agent uses them when the docs do not answer an exact question, such as a signature, a default value, an option name, or where an error message comes from. They search and read the library's source at the commit its docs describe.
 
 The first three take the parameters of the Grep, Glob and Read tools that coding agents already have, so agents use them like their own tools. Each also takes `libraryId` and `version`:
@@ -144,7 +160,7 @@ The first three take the parameters of the Grep, Glob and Read tools that coding
 
 A library's source follows its docs, so when the docs stop updating, the indexed commit stops too. When the answer is the default branch's code (the library has no release, or you name the branch) and both that commit and the docs are over 30 days old, the answer says so, with a note after the header such as `Note: this code is 425 days old (docs last updated 2025-09-12). Newer commits on main are not indexed, so recent changes are missing. Check the repository or query-docs for anything newer.` A release, a pinned commit, or a version whose docs are unknown or recent gets no note. With `ctx7 code --json`, the same case adds a `stale` object with `commitAgeDays`, `docsUpdatedAt` and, when known, `branch`.
 
-A `grep-code` pattern matches the exact text of one line, so to search several words give them as `a|b`. When a pattern of plain words, such as `kafka consumer group rebalance`, matches no line, `grep-code` returns the lines that match any of its words and says so first. A `grep-code` result ends with a `Next:` line that names the `read-code` call to make next. While a library's source is being indexed, the tools do not make the agent wait: they tell it to answer from `query-docs` now, and to call once more later only if it still needs the source. A first index usually takes 1 to 3 minutes, and longer for a very large repository. This also applies to a version tag indexed on first use. A content page also ends at about 40 KB of match lines and context, rather than only at `head_limit`; the result then says `more results` with the `offset` of the next page, and that page starts at the first match the cutoff left out.
+A `grep-code` pattern matches the exact text of one line, so to search several words give them as `a|b`. When a pattern of plain words, such as `kafka consumer group rebalance`, matches no line, `grep-code` returns the lines that match any of its words and says so first. A `grep-code` result ends with a `Next:` line that names the `read-code` call to make next. While a library's source is being indexed, the tools do not hold the agent. A client that supports [MCP Tasks](https://modelcontextprotocol.io/extensions/tasks/overview), such as Claude Code, gets a task: the client checks it in the background, the agent keeps working, and the real result arrives when the index is done, for up to 30 minutes. Other clients are told to answer from `query-docs` now, and to call once more later only if they still need the source. A first index usually takes 1 to 3 minutes, and longer for a very large repository or when many repositories wait to be indexed. This also applies to a version tag indexed on first use. A content page also ends at about 40 KB of match lines and context, rather than only at `head_limit`; the result then says `more results` with the `offset` of the next page, and that page starts at the first match the cutoff left out. When the source code store does not answer within 25 seconds, the tools say that source code search is busy and the agent answers from `query-docs` instead; the API returns `503 code_search_unavailable`.
 
 When a `grep-code` pattern is a file path, such as `src/a.go#L10-L40`, `src/a.ts:12` or a pasted `read:` hint, it answers with that file's lines and says it read the pattern as a file. If that file is not in the source, the no-match hint says to read it with `read-code` and that path. A pattern counts as a file path only with a `read:` prefix, a line range, or a `/` and a file extension; a qualified symbol such as `Client.send` is searched as usual. When a pattern that looks like code, such as `func (b *Build) GetAllVariables`, matches no line, `grep-code` searches it again as plain text, then with any whitespace where it has spaces, and says so first. If that still matches nothing, it returns the lines that match any of its identifiers. When a `grep-code` with a `path` or `glob` matches no line, the result names up to 5 files outside that scope that match.
 

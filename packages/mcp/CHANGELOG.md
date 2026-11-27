@@ -1,5 +1,30 @@
 # @upstash/context7-mcp
 
+## 4.9.1
+
+### Patch Changes
+
+- 41f84a1: The hosted HTTP server sends the version of the snapshots it holds in `X-Context7-Snapshot-Version`, so polls without a change skip the download again.
+
+## 4.9.0
+
+### Minor Changes
+
+- 4c98769: The hosted HTTP server serves the Agent Skills a teamspace installed in the Context7 dashboard over the MCP skills extension, next to the `context7-mcp` skill.
+
+## 4.8.0
+
+### Minor Changes
+
+- 3e98f32: Serve the context7-mcp skill through the MCP skills extension (SEP-2640).
+- 32dccfd: Agents pass the version a project uses as its own value, not as a suffix of the library ID. `query-docs` (MCP and pi) takes a `version` input and `ctx7 docs` a `--tag` option, sent to `/v2/context` as `version`; Context7 serves that version or the closest one it has. `resolve-library-id` no longer lists versions.
+
+## 4.7.3
+
+### Patch Changes
+
+- 159156f: Replace the experimental `query-code` tool with `grep-code`, `glob-code`, `read-code` and `find-symbol`. `query-code` is removed; a dashboard choice that turned it on now turns on the new tools. They take the parameters of the Grep, Glob and Read tools that coding agents have, so agents search the library instead of the local project.
+
 ## 4.7.2
 
 ### Patch Changes
