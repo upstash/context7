@@ -33,8 +33,9 @@ If the Context7 tools are deferred, load them first. If Context7 is unavailable,
 export const CLAUDE_CODE_INSTRUCTIONS_LIMIT = 2048;
 
 /**
- * The instructions a session gets: the base text, then the sections of the experimental tools
- * the caller has on. Claude Code keeps the first 2048 characters, so the base text comes first.
+ * The instructions a session gets: the base text (the current one unless an A/B arm picks
+ * another), then the sections of the experimental tools the caller has on. Claude Code keeps
+ * the first 2048 characters, so the base text comes first.
  *
  * With both experimental sections on, the text is longer than 2048 characters. Claude Code then
  * keeps the first sentence of the code tools section, which says when to read library source, and
@@ -42,10 +43,10 @@ export const CLAUDE_CODE_INSTRUCTIONS_LIMIT = 2048;
  * feedback request is also in the 'submit-docs-feedback' tool description.
  */
 export function serverInstructions(
-  options: { codeTools?: boolean; feedbackRequest?: boolean } = {}
+  options: { base?: string; codeTools?: boolean; feedbackRequest?: boolean } = {}
 ): string {
   return [
-    SERVER_INSTRUCTIONS,
+    options.base ?? SERVER_INSTRUCTIONS,
     options.codeTools && CODE_TOOLS_INSTRUCTIONS,
     options.feedbackRequest && DOCS_FEEDBACK_INSTRUCTIONS,
   ]

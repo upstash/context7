@@ -1,4 +1,5 @@
 import type { Response } from "express";
+import { findJsonRpcMessage } from "./json-rpc.js";
 import { classifyAuthMethod, classifyOAuthClientRegistration } from "./mcp-http-auth.js";
 import { mcpRouteFromUrl, type McpHttpRoute } from "./mcp-route.js";
 import type {
@@ -19,23 +20,12 @@ interface AuthEventContext {
   route: McpHttpRoute;
 }
 
-function containsJsonRpcMethod(body: unknown, method: string): boolean {
-  const messages = Array.isArray(body) ? body : [body];
-  return messages.some(
-    (message) =>
-      typeof message === "object" &&
-      message !== null &&
-      "method" in message &&
-      message.method === method
-  );
-}
-
 export function observeCredentialedInitialize(
   response: Pick<Response, "once" | "statusCode">,
   body: unknown,
   context: AuthEventContext
 ): void {
-  if (context.method === "none" || !containsJsonRpcMethod(body, "initialize")) return;
+  if (context.method === "none" || !findJsonRpcMessage(body, ["initialize"])) return;
 
   response.once("finish", () => {
     recordAuthenticationEvent({
@@ -49,7 +39,7 @@ export function observeCredentialedInitialize(
 }
 
 export function recordToolCallTelemetry(ctx: ClientContext, outcome: ToolCallOutcome): void {
-  recordToolCallOutcome(outcome);
+  recordToolCallOutcome(outcome, ctx.instructionsArm?.variant);
   if (
     ctx.transport !== "http" ||
     !ctx.apiKey ||

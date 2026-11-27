@@ -29,7 +29,6 @@ import {
   SERVER_ICONS,
   SERVER_TITLE,
   mcpServerCard,
-  ALWAYS_LOAD_META,
 } from "./lib/constants.js";
 import { maybeElicitAuthSignIn } from "./lib/auth/auth-prompt.js";
 import {
@@ -40,6 +39,10 @@ import {
   SUBMIT_DOCS_FEEDBACK_TOOL,
   type ExperimentalTool,
 } from "./lib/tool-names.js";
+import {
+  createInstructionsExperiment,
+  loadInstructionsExperiment,
+} from "./lib/instructions-experiment.js";
 import { aliasArgs, GLOBAL_ALIASES, QUERY_DOCS_ALIASES } from "./lib/tool-args.js";
 import { registerExperimentalTools } from "./lib/experimental-tools.js";
 import { serverInstructions } from "./lib/server-instructions.js";
@@ -178,6 +181,10 @@ if (TRANSPORT_TYPE === "stdio" && passedPortFlag) {
 }
 
 const requestContext = new AsyncLocalStorage<ClientContext>();
+// Server instructions A/B test; HTTP only, and off unless the env sets a control share.
+// No test until main() loads the config: stdio keeps this, the HTTP server replaces it before
+// it listens.
+let instructionsExperiment = createInstructionsExperiment(undefined);
 
 // Global state for stdio mode only
 let stdioApiKey: string | undefined;
@@ -291,7 +298,10 @@ function createMcpServer(
   teamspaceId?: string
 ) {
   const enabled: ReadonlySet<ExperimentalTool> = new Set(experimentalTools);
-  const callerHint = signedIn || enabled.size > 0 ? PRIVATE_CACHE_HINT : STATIC_CACHE_HINT;
+  const session = instructionsExperiment.sessionConfig(requestContext.getStore()?.instructionsArm);
+  // The lists also differ by arm while the instructions A/B test runs.
+  const callerHint =
+    signedIn || enabled.size > 0 || session.privateLists ? PRIVATE_CACHE_HINT : STATIC_CACHE_HINT;
   const serverInfo = {
     name: "Context7",
     title: SERVER_TITLE,
@@ -328,6 +338,7 @@ function createMcpServer(
       "server/discover": callerHint,
     },
     instructions: serverInstructions({
+      base: session.instructions,
       codeTools: enabled.has(CODE_TOOLS),
       feedbackRequest: enabled.has(SUBMIT_DOCS_FEEDBACK_TOOL),
     }),
@@ -348,7 +359,7 @@ function createMcpServer(
     RESOLVE_LIBRARY_ID_TOOL,
     {
       title: "Resolve Context7 Library ID",
-      _meta: ALWAYS_LOAD_META,
+      ...(session.toolMeta && { _meta: session.toolMeta }),
       description: `Resolves a package/product name to a Context7-compatible library ID and returns matching libraries.
 
 You MUST call this function before 'Query Documentation' tool to obtain a valid Context7-compatible library ID UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
@@ -449,7 +460,7 @@ IMPORTANT: Do not call this tool more than 3 times per question. If you cannot f
     QUERY_DOCS_TOOL,
     {
       title: "Query Documentation",
-      _meta: ALWAYS_LOAD_META,
+      ...(session.toolMeta && { _meta: session.toolMeta }),
       description: `Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
 
 You must call 'Resolve Context7 Library ID' tool first to obtain the exact Context7-compatible library ID required to use this tool, UNLESS the user explicitly provides a library ID in the format '/org/project' or '/org/project/version' in their query.
@@ -535,6 +546,7 @@ async function main() {
   });
 
   if (TRANSPORT_TYPE === "http") {
+    instructionsExperiment = await loadInstructionsExperiment(process.env);
     // Commander parsed and range-checked this already; 0 means ephemeral.
     const initialPort = cliOptions.port;
 
@@ -710,7 +722,20 @@ async function main() {
           mcpEndpoint: endpoint,
           plugin,
           transport: "http",
+          instructionsArm: instructionsExperiment.assign({ apiKey, clientIp: req.ip }),
         };
+        // Count an exposure only when the SDK answered the request, not for a 406 or 500.
+        res.once("finish", () => {
+          if (res.statusCode < 200 || res.statusCode >= 300) return;
+          instructionsExperiment.observeRequest(
+            {
+              arm: context.instructionsArm,
+              clientIp: req.ip,
+              fallbackClient: context.clientInfo?.ide,
+            },
+            filteredBody.body
+          );
+        });
         // Every experimental tool by URL flag; else the signed-in user's dashboard choice, from the
         // in-memory snapshot when the hosted server has one, or else the cached API lookup. Only
         // POST carries MCP messages.
