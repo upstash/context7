@@ -1,5 +1,6 @@
 import { IconArrowLeft, IconChevronLeft, IconChevronRight, IconSearch } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
+import { weakestAreas } from "../../../src/benchmark-areas";
 import { ScoreHistogram } from "../charts";
 import {
   Button,
@@ -201,7 +202,7 @@ export function LibrariesPage({ teamspace }: { teamspace: string }) {
           <LibraryDetail teamspace={teamspace} library={current} />
         ) : (
           <Card>
-            <Empty>Pick a library to see the questions its docs answer badly.</Empty>
+            <Empty>Pick a library to see its benchmark.</Empty>
           </Card>
         )}
       </div>
@@ -256,37 +257,20 @@ function LibraryRow({
   );
 }
 
-/** The grader's five criteria and the points each is out of (context7parser scoreQuestionPrompt). */
-const SUBSCORE_AREAS = [
-  { key: "implementation", label: "Implementation guidance", max: 40 },
-  { key: "api", label: "API accuracy", max: 25 },
-  { key: "relevance", label: "Relevance to the question", max: 20 },
-  { key: "completeness", label: "Completeness", max: 10 },
-  { key: "clarity", label: "Clarity", max: 5 },
-] as const;
-
 /**
  * Each criterion's average share of its points across the graded answers,
  * weakest first: where the docs fall short, without the questions, which
  * the API keeps private.
  */
 function WeakestAreas({ benchmarks }: { benchmarks: Benchmarks["benchmarks"] }) {
-  const areas = SUBSCORE_AREAS.flatMap(({ key, label, max }) => {
-    const points = benchmarks.flatMap((b) => {
-      const value = b.subscores?.[key];
-      return typeof value === "number" ? [value] : [];
-    });
-    if (points.length === 0) return [];
-    const average = points.reduce((sum, value) => sum + value, 0) / points.length;
-    return [{ label, score: (average / max) * 100 }];
-  }).sort((a, b) => a.score - b.score);
+  const areas = weakestAreas(benchmarks);
   if (areas.length === 0) return null;
   return (
     <div>
       <h3 className="mb-1 text-xs font-medium text-fg-3">Weakest areas</h3>
       <ul className="grid">
         {areas.map((area) => (
-          <li key={area.label} className="flex gap-3 border-t border-line py-3 first:border-0">
+          <li key={area.key} className="flex gap-3 border-t border-line py-3 first:border-0">
             <span
               className={`w-6 shrink-0 text-sm font-semibold tabular-nums ${scoreTone(area.score)}`}
             >
@@ -306,7 +290,8 @@ function LibraryDetail({ teamspace, library }: { teamspace: string; library: Lib
       `The user opened the benchmark of library ${library.id} (teamspace ${teamspace}) in the Context7 console.`
     );
   }, [teamspace, library.id]);
-  // The newest 60 graded answers: a fair sample for the chart and the weakest areas.
+  // The newest 60 graded answers (the tool sorts them by date): a fair sample for the chart and
+  // the weakest areas.
   const result = useTool<Benchmarks>(library.owned ? "get_library_benchmarks" : undefined, {
     teamspace,
     library_id: library.id,

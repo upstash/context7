@@ -4,6 +4,8 @@
  * the management API).
  */
 
+import { BENCHMARK_AREAS, newestFirst, type Subscores } from "../../src/benchmark-areas";
+
 const DAY = 86_400_000;
 const today = new Date();
 const dayKey = (offset: number) =>
@@ -184,14 +186,23 @@ function listLibraries(libraries: DemoLibrary[], args: Args) {
 
 const SCORES = [18, 24, 37, 52, 58, 66, 74, 88, 95] as const;
 
-// The grader's points out of 40, 25, 20, 10 and 5, with completeness weakest.
-const subscoresFor = (score: number) => ({
-  implementation: Math.round((score / 100) * 40),
-  api: Math.round(Math.min(1, (score + 15) / 100) * 25),
-  relevance: Math.round(Math.min(1, (score + 25) / 100) * 20),
-  completeness: Math.round(Math.max(0, (score - 20) / 100) * 10),
-  clarity: Math.round(Math.min(1, (score + 10) / 100) * 5),
-});
+// How far each criterion sits above or below the answer's score, with completeness weakest.
+const AREA_SHIFT: Record<keyof Subscores, number> = {
+  implementation: 0,
+  api: 15,
+  relevance: 25,
+  completeness: -20,
+  clarity: 10,
+};
+
+/** The grader's points for an answer of this score, each out of its criterion's maximum. */
+const subscoresFor = (score: number) =>
+  Object.fromEntries(
+    BENCHMARK_AREAS.map(({ key, max }) => [
+      key,
+      Math.round(Math.min(1, Math.max(0, (score + AREA_SHIFT[key]) / 100)) * max),
+    ])
+  ) as Subscores;
 
 const benchmarks = (libraryId: string) => {
   const rows = Array.from({ length: 40 }, (_, i) => {
@@ -534,9 +545,10 @@ export function callTool(name: string, args: Args): unknown {
     case "list_libraries":
       return listLibraries(teamspace === TEAMSPACES[2]!.id ? AGENCY_LIBRARIES : LIBRARIES, args);
     case "get_library_benchmarks": {
-      // As the tool does: lowest first unless order is newest, then the first `limit`.
+      // As the tool does: lowest first, or newest first, then the first `limit`.
       const { stats, benchmarks: rows } = benchmarks(args.library_id as string);
-      const sorted = args.order === "newest" ? rows : [...rows].sort((a, b) => a.score - b.score);
+      const sorted =
+        args.order === "newest" ? newestFirst(rows) : [...rows].sort((a, b) => a.score - b.score);
       return {
         stats,
         benchmarks: sorted.slice(0, (args.limit as number | undefined) ?? 20),

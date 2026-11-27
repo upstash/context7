@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { newestFirst } from "./benchmark-areas.js";
 
 /** `read` changes nothing; `destructive` deletes data that cannot be restored. */
 export type Kind = "read" | "write" | "destructive";
@@ -859,7 +860,7 @@ export const TOOLS = [
     console: "read",
     title: "Get library benchmarks",
     description:
-      "Get the benchmark of a library the teamspace owns: score statistics and the graded answers, each with its date, score and the grader's points per criterion. The questions are Context7 users' queries and are not returned. Lowest scores first by default. get_library_suggestions gives the gaps to fix.",
+      "Get the benchmark of a library the teamspace owns: score statistics and the graded answers, each with its date, score and the grader's points per criterion. The questions are Context7 users' queries and are not returned. Lowest scores first by default; `newest` gives the latest graded answers first. get_library_suggestions gives the gaps to fix.",
     kind: "read",
     untrusted: true,
     args: {
@@ -876,9 +877,12 @@ export const TOOLS = [
     run: async ({ teamspace, library_id, order = "lowest", limit = 20 }, api) => {
       const { stats, benchmarks = [] } = (await api.get(
         `${lib(teamspace, library_id)}/benchmarks`
-      )) as { stats?: unknown; benchmarks?: { score: number }[] };
+      )) as { stats?: unknown; benchmarks?: { score: number; benchmarkDate?: string }[] };
+      // Sorted here for both orders: the API's own order is not part of its contract.
       const sorted =
-        order === "lowest" ? [...benchmarks].sort((a, b) => a.score - b.score) : benchmarks;
+        order === "lowest"
+          ? [...benchmarks].sort((a, b) => a.score - b.score)
+          : newestFirst(benchmarks);
       return { stats, benchmarks: sorted.slice(0, limit) };
     },
   }),
