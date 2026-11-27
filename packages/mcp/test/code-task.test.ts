@@ -7,6 +7,10 @@ import {
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 vi.mock("../src/lib/auth-lifecycle-telemetry.js", () => ({ recordToolCallTelemetry: vi.fn() }));
+vi.mock("../src/lib/telemetry-runtime.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/lib/telemetry-runtime.js")>()),
+  recordToolCallOutcome: vi.fn(),
+}));
 import {
   CODE_TASK_TTL_MS,
   CODE_TASK_WAIT_MS,
@@ -24,6 +28,7 @@ import {
   type CodeTaskView,
 } from "../src/lib/code-task.js";
 import { recordToolCallTelemetry } from "../src/lib/auth-lifecycle-telemetry.js";
+import { recordToolCallOutcome } from "../src/lib/telemetry-runtime.js";
 import { codeToolResult, registerCodeTools } from "../src/lib/code-tools.js";
 import { OAUTH_AUTH_SERVER_URL } from "../src/lib/constants.js";
 import type { ClientContext, CodeRequest } from "../src/lib/types.js";
@@ -59,6 +64,7 @@ let store: MemoryCodeTaskStore;
 
 beforeEach(() => {
   vi.mocked(recordToolCallTelemetry).mockClear();
+  vi.mocked(recordToolCallOutcome).mockClear();
   store = new MemoryCodeTaskStore();
   fetchMock = vi.fn<typeof fetch>();
   vi.stubGlobal("fetch", fetchMock);
@@ -448,20 +454,22 @@ describe("getCodeTask", () => {
 });
 
 describe("telemetry", () => {
-  test("the tasks/get that completes a task records the result's outcome", async () => {
+  test("the tasks/get that completes a task marks the result's outcome, with no second call event", async () => {
     const { taskId } = await newTask();
     fetchMock.mockImplementationOnce(async () => indexing202());
     await poll(taskId, 60);
-    expect(recordToolCallTelemetry).not.toHaveBeenCalled();
+    expect(recordToolCallOutcome).not.toHaveBeenCalled();
     fetchMock.mockImplementationOnce(async () => new Response(RESULT_TEXT));
     await poll(taskId, 120);
     await poll(taskId, 180);
-    expect(vi.mocked(recordToolCallTelemetry).mock.calls).toEqual([[CALLER, "success"]]);
+    expect(vi.mocked(recordToolCallOutcome).mock.calls).toEqual([["success"]]);
+    expect(recordToolCallTelemetry).not.toHaveBeenCalled();
   });
 
   test("a cancel records nothing", async () => {
     const { taskId } = await newTask();
     await cancelCodeTask(store, taskId, CALLER);
+    expect(recordToolCallOutcome).not.toHaveBeenCalled();
     expect(recordToolCallTelemetry).not.toHaveBeenCalled();
   });
 });

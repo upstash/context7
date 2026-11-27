@@ -9,8 +9,8 @@ import {
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { codeVersion, fetchLibraryCode, indexingAnswer } from "./api.js";
-import { recordToolCallTelemetry } from "./auth-lifecycle-telemetry.js";
 import { credentialOwner } from "./credential-owner.js";
+import { recordToolCallOutcome } from "./telemetry-runtime.js";
 import type { CodeTool } from "./tool-names.js";
 import type { ClientContext, CodeRequest, ContextResponse } from "./types.js";
 
@@ -284,7 +284,7 @@ type ToolResult = (response: ContextResponse) => CallToolResult;
  * The state of a code tool task for tasks/get. A working task asks the API again only when its
  * gate (one per caller and library version) lets it; any other poll answers `working` at once. An
  * ended task answers from its record, so it costs no request. The tools/call was recorded with
- * the "being indexed" outcome; the tasks/get that completes the task records the result's outcome
+ * the "being indexed" outcome; the tasks/get that completes the task marks the result's outcome
  * on its own MCP operation.
  */
 export async function getCodeTask(
@@ -321,7 +321,8 @@ export async function getCodeTask(
     if (indexDone) await store.releaseCheck(gate);
   }
   if (await store.put(taskId, next)) {
-    if (next.status === "completed") recordToolCallTelemetry(ctx, response.outcome);
+    // The outcome only: the tools/call already sent this caller's tool call event.
+    if (next.status === "completed") recordToolCallOutcome(response.outcome);
     return codeTaskView(taskId, next);
   }
   // The task ended meanwhile (a cancel won): answer what is stored.
