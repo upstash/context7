@@ -157,7 +157,7 @@ The [Context7 MCP server](/resources/all-clients) exposes the same lookups as ag
 | MCP tool | Endpoint | Parameters |
 |----------|----------|------------|
 | `resolve-library-id` | [Search Library](/api-reference/search/search-for-libraries) — `GET /api/v2/libs/search` | `libraryName`, `query` |
-| `query-docs` | [Get Context](/api-reference/context/get-documentation-context) — `GET /api/v2/context` | `libraryId`, `query`, `language` |
+| `query-docs` | [Get Context](/api-reference/context/get-documentation-context) — `GET /api/v2/context` | `libraryId`, `query`, `language`, `version` |
 
 Call the REST API directly to control requests from your own code, or use the MCP tools when you want an agent to fetch documentation automatically during inference. Both use the same [API key](#authentication).
 
@@ -167,7 +167,9 @@ Call the REST API directly to control requests from your own code, or use the MC
 - **With API key**: Higher limits based on your plan
 - View current usage and reset windows in the [dashboard](https://context7.com/dashboard?tab=overview).
 
-Call [Get Usage](/api-reference/usage/get-api-usage) (`GET /api/v2/usage`) to read the same numbers from your own code. The response has `plan`, `usageResetsAt` (when the monthly count resets, in UTC), `member` (the member who owns the API key, with `requests` this month and `includedInPlan`) and `teamspace` (all members, with extra requests, cost and a daily breakdown). The `member` numbers match the `RateLimit-*` headers on search and docs responses. Calling this endpoint does not count as a request.
+Call [Get Usage](/api-reference/usage/get-api-usage) (`GET /api/v2/usage`) to read the same numbers from your own code. The response has `plan`, `usageResetsAt` (when the monthly count resets, in UTC), `member` (the member who owns the API key, with `requests` this month and `includedInPlan`) and `teamspace` (all members, with `extraRequests`, `extraCostUsd` for the extra requests this month, `spendingLimitUsd` or `null`, and a `daily` array). Each `daily` entry has `date` and `requests`, plus `searchRequests`, `docsRequests` and `extraCostUsd`.
+
+The `days` query parameter sets how many days `teamspace.daily` covers, ending today in UTC. It defaults to `30`, accepts `1` to `90`, and on the Free plan returns at most the last 10 days. The `member` numbers match the `RateLimit-*` headers on search and docs responses. Calling this endpoint does not count as a request.
 
 When you exceed rate limits, the API returns a `429` status code with these headers:
 
@@ -261,7 +263,7 @@ The Context7 API uses standard HTTP status codes:
 | ---- | ----------------------------------------- | -------------------------------------------- |
 | 200  | Success                                   | Process the response normally                |
 | 202  | Accepted - Library not finalized          | Wait and retry later                         |
-| 301  | Moved - Library redirected                | Use the new library ID from `redirectUrl`    |
+| 301  | Moved - Redirect chain too long or a loop    | Use the library ID from `redirectUrl`        |
 | 400  | Bad Request - Invalid parameters          | Check query parameters                       |
 | 401  | Unauthorized - Invalid API key            | Check your API key format (starts with `ctx7sk`) |
 | 403  | Forbidden - Access denied                 | Check library access permissions or plan     |
@@ -282,7 +284,7 @@ All errors return a JSON object with `error` and `message` fields:
 }
 ```
 
-For `301` redirects, the response also includes a `redirectUrl` field pointing to the new library ID.
+When a library has moved to another library ID, Context7 follows up to three moves and serves the new library, keeping the version from your request. A text response starts with a line that names the old and new IDs, such as `Library /old/lib has moved to /new/lib. Use /new/lib in later requests.`, and a JSON response reports the new ID in `libraryId`. A library that moves more than three times or in a loop returns `301 library_redirected` with a `redirectUrl` field pointing to the next library ID in the chain. This applies to `/api/v2/context`, `/api/v2/docs/code` and `/api/v2/docs/info`. A library on the way that you cannot access returns `403`.
 
 ## SDK and Libraries
 

@@ -12,7 +12,6 @@ export interface SearchResult {
   stars?: number;
   trustScore?: number;
   benchmarkScore?: number;
-  versions?: string[];
   source?: string;
 }
 
@@ -29,11 +28,23 @@ export type ContextRequest = {
   query: string;
   libraryId: string;
   language?: string;
+  version?: string;
 };
 
 export type ContextResponse = {
   data: string;
   outcome: ToolCallOutcome;
+  /** Set on a code tool answer while the source is being indexed (the API's 202). */
+  indexing?: {
+    /** Seconds the API asks the caller to wait before the next request. */
+    retryAfter?: number;
+    /** The API's message, without its advice to call again. */
+    message: string;
+    /** The task the API made for the request, when it was asked for one. */
+    taskId?: string;
+  };
+  /** Set when the request failed in a way that says nothing about the answer (timeout, 5xx). */
+  transient?: true;
 };
 
 export const CODE_OPERATIONS = [
@@ -87,6 +98,8 @@ export interface ClientContext {
    * `X-Context7-Code-Tools: 1` too.
    */
   experimentalTools?: readonly ExperimentalTool[];
+  /** The caller's teamspace (`teamspaceOf`), whose skills are served next to context7-mcp. */
+  teamspaceId?: string;
   /** Mutable: set by the upstream API layer when the backend signals the
    *  client should be prompted to sign in. Read by the auth-prompt wrapper. */
   shouldPrompt?: boolean;

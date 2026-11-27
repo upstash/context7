@@ -128,6 +128,7 @@ See [Migrating an existing deployment](/enterprise/deployment/scaling#migrating-
 | --- | --- | --- |
 | `license` | `""` | Context7 license key. Required. |
 | `imagePullSecrets` | `[]` | Pull secrets for `ghcr.io`, for example `context7-registry`. |
+| `serviceAccountName` | `""` | Kubernetes service account for the pods, for example one bound to [GKE Workload Identity](/enterprise/integrations/google-vertex-ai) or to an IAM role for Bedrock. Empty uses the namespace's default service account. |
 | `scaling.enabled` | `false` | `false` runs a single-replica StatefulSet; `true` runs a multi-replica Deployment. |
 | `scaling.replicas` | `3` | Replica count when scaling is enabled. |
 | `scaling.databaseUrl` | `""` | External Postgres (with pgvector). Required when scaling is enabled. |
@@ -136,7 +137,7 @@ See [Migrating an existing deployment](/enterprise/deployment/scaling#migrating-
 | `persistence.storageClass` | `""` | StorageClass for the single-replica volume. |
 | `ingress.enabled` | `false` | Create an Ingress for the service. |
 | `resources` | `1-4 CPU / 2-8Gi` | Pod resource requests and limits. |
-| `env` | `[]` | Extra environment variables, for example `AWS_REGION` and workload credentials for Bedrock, `NODE_EXTRA_CA_CERTS`, or `CONTEXT7_API_URL`. |
+| `env` | `[]` | Extra environment variables, for example `AWS_REGION` and workload credentials for Bedrock, `GOOGLE_CLOUD_PROJECT` for Vertex AI, `HTTPS_PROXY` and `NO_PROXY` for an [egress proxy](/enterprise/deployment/docker#egress-proxy), `NODE_EXTRA_CA_CERTS`, or `CONTEXT7_API_URL`. |
 | `migration.enabled` | `false` | Run the one-shot SQLite to Postgres migration Job. |
 | `migration.dataPvcName` | `""` | PVC holding the existing `/data` to migrate from. |
 

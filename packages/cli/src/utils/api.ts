@@ -1,9 +1,98 @@
+import { stripVTControlCharacters } from "node:util";
 import type { LibrarySearchResponse, LibrarySearchResult, ContextResponse } from "../types.js";
 import { VERSION } from "../constants.js";
 
 export const DEFAULT_CONTEXT7_BASE_URL = "https://context7.com";
 
 let baseUrl = DEFAULT_CONTEXT7_BASE_URL;
+
+// Library metadata and docs are crowdsourced, so a malicious entry could carry
+// terminal escape sequences. stripVTControlCharacters removes whole ANSI
+// sequences (CSI, OSC); the regex then removes any lone control byte left
+// (C0 except \t\n, DEL, C1). Keys are stripped too: JSON.stringify keeps
+// U+007F-009F, so a key could reach the terminal in --json output.
+const CONTROL_CHARS = /[\x00-\x08\x0B-\x1F\x7F-\x9F]/g;
+
+function stripString(value: string): string {
+  return stripVTControlCharacters(value).replace(CONTROL_CHARS, "");
+}
+
+export function stripControlChars(value: unknown): unknown {
+  if (typeof value === "string") return stripString(value);
+  if (Array.isArray(value)) return value.map(stripControlChars);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([k, v]) => [stripString(k), stripControlChars(v)])
+    );
+  }
+  return value;
+}
+
+// Every response body this module reads goes through these two readers, so
+// nothing it returns can skip the strip. Use them for every new endpoint.
+async function readText(res: Response): Promise<string> {
+  return stripString(await res.text());
+}
+
+async function readJson<T>(res: Response): Promise<T> {
+  return stripControlChars(await res.json()) as T;
+}
+
+/** The fields an error or 202 body may carry; an unreadable body reads as {}. */
+interface StatusBody {
+  error?: string;
+  message?: string;
+  redirectUrl?: string;
+  retryAfter?: number;
+}
+
+export const OAUTH_SETUP_COMMAND = "npx ctx7@latest setup --mcp --oauth";
+
+/** 403 codes for a member whose teamspace refuses them an API key (OAuth only for them). */
+export type ApiKeyPolicyRefusal = "api_keys_disabled" | "api_key_admins_only";
+
+export function isApiKeyPolicyRefusal(code: unknown): code is ApiKeyPolicyRefusal {
+  return code === "api_keys_disabled" || code === "api_key_admins_only";
+}
+
+/** ctx7 commands (and the skills that run them) need an API key, so only the MCP server can help. */
+export const CLI_API_KEY_REFUSED_MESSAGE = `Your teamspace allows only OAuth for your account, and ctx7 CLI commands need an API key. Use the Context7 MCP server with OAuth instead: run ${OAUTH_SETUP_COMMAND}`;
+
+async function readStatusBody(res: Response): Promise<StatusBody> {
+  const body = await readJson<StatusBody>(res).catch((): StatusBody => ({}));
+  return isApiKeyPolicyRefusal(body.error)
+    ? { ...body, message: CLI_API_KEY_REFUSED_MESSAGE }
+    : body;
+}
+
+/** How long setup waits for a stored key check before it uses the key as before. */
+const API_KEY_CHECK_TIMEOUT_MS = 10_000;
+
+/**
+ * What the server says about a stored API key: "usable", "invalid" (a 401: the server no longer
+ * knows it), or the policy refusal of a teamspace that limits API keys. A key saved before its
+ * teamspace limited API keys is refused now, and writing it would leave the agent with a key
+ * that fails on every call. /api/v2/auth/check is versioned and not quota-tracked; the API
+ * answers 401 only when the key is certainly rejected (an outage is a 503). Any other answer,
+ * or none within the timeout, is "usable", so setup keeps the key as before.
+ */
+export async function checkApiKey(
+  apiKey: string
+): Promise<"usable" | "invalid" | ApiKeyPolicyRefusal> {
+  try {
+    const response = await fetchWithTimeout(
+      `${baseUrl}/api/v2/auth/check`,
+      { headers: { ...getAuthHeaders(), Authorization: `Bearer ${apiKey}` } },
+      API_KEY_CHECK_TIMEOUT_MS
+    );
+    if (response.status === 401) return "invalid";
+    if (response.status !== 403) return "usable";
+    const body = await readStatusBody(response);
+    return isApiKeyPolicyRefusal(body.error) ? body.error : "usable";
+  } catch {
+    return "usable";
+  }
+}
 
 export function getBaseUrl(): string {
   return baseUrl;
@@ -89,10 +178,7 @@ export async function resolveLibrary(
   });
 
   if (!response.ok) {
-    const errorData = (await response.json().catch(() => ({}))) as {
-      error?: string;
-      message?: string;
-    };
+    const errorData = await readStatusBody(response);
     return {
       results: [],
       error: errorData.error || `HTTP error ${response.status}`,
@@ -100,12 +186,14 @@ export async function resolveLibrary(
     };
   }
 
-  return (await response.json()) as LibrarySearchResponse;
+  return readJson<LibrarySearchResponse>(response);
 }
 
 export interface GetContextOptions {
   type?: "json" | "txt";
   language?: string;
+  /** The version the user's project uses, as written there ("15.4.3", "^15.4.3", "14"). */
+  version?: string;
 }
 
 export const CODE_OPERATIONS = [
@@ -185,10 +273,7 @@ async function fetchRetryableText(
 ): Promise<RetryableResult> {
   const response = await fetchWithTimeout(url, { headers: getAuthHeaders(accessToken) }, timeoutMs);
   if (response.status === 202) {
-    const body = (await response.json().catch(() => ({}))) as {
-      message?: string;
-      retryAfter?: number;
-    };
+    const body = await readStatusBody(response);
     return {
       kind: "pending",
       message: body.message ?? pendingMessage,
@@ -196,14 +281,14 @@ async function fetchRetryableText(
     };
   }
   if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as { error?: string; message?: string };
+    const body = await readStatusBody(response);
     return {
       kind: "error",
       error: body.error || `HTTP error ${response.status}`,
       message: body.message,
     };
   }
-  return { kind: "result", body: await response.text() };
+  return { kind: "result", body: await readText(response) };
 }
 
 /** Queries a library's source code through /api/v2/code. */
@@ -274,17 +359,16 @@ export async function getLibraryContext(
   if (options?.language) {
     params.set("language", options.language);
   }
+  if (options?.version) {
+    params.set("version", options.version);
+  }
   const headers = getAuthHeaders(accessToken);
   const response = await fetchWithTimeout(`${baseUrl}/api/v2/context?${params}`, {
     headers,
   });
 
   if (!response.ok) {
-    const errorData = (await response.json().catch(() => ({}))) as {
-      error?: string;
-      message?: string;
-      redirectUrl?: string;
-    };
+    const errorData = await readStatusBody(response);
 
     if (response.status === 301 && errorData.redirectUrl) {
       return {
@@ -305,10 +389,10 @@ export async function getLibraryContext(
   }
 
   if (options?.type === "txt") {
-    return await response.text();
+    return readText(response);
   }
 
-  return (await response.json()) as ContextResponse;
+  return readJson<ContextResponse>(response);
 }
 
 export interface SearchDocumentationOptions {
@@ -339,12 +423,9 @@ export async function searchDocumentation(
   });
 
   if (!response.ok) {
-    const errorData = (await response.json().catch(() => ({}))) as {
-      error?: string;
-      message?: string;
-    };
+    const errorData = await readStatusBody(response);
     throw new Error(errorData.message || errorData.error || `HTTP error ${response.status}`);
   }
 
-  return options.type === "txt" ? response.text() : response.json();
+  return options.type === "txt" ? readText(response) : readJson<unknown>(response);
 }

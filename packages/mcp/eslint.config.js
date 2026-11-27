@@ -5,7 +5,15 @@ import eslintPluginPrettier from "eslint-plugin-prettier";
 export default defineConfig(
   {
     // Base ESLint configuration
-    ignores: ["node_modules/**", "build/**", "dist/**", ".git/**", ".github/**"],
+    ignores: [
+      "node_modules/**",
+      "build/**",
+      "dist/**",
+      ".git/**",
+      ".github/**",
+      // Generated from skills/context7-mcp/SKILL.md (pnpm build:skill).
+      "src/lib/skill-md.ts",
+    ],
   },
   {
     files: ["**/*.ts", "**/*.tsx"],

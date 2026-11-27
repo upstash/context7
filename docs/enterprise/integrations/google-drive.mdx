@@ -34,6 +34,22 @@ If your security team blocks service account keys and sharing outside your domai
 
 Open **Workspace Settings › Google** and choose the method under **Authentication**. Each method has a **Set up Google Cloud** panel with the steps below. Enter your project ID there, and the panel fills it into the commands.
 
+### Compare the security trade-offs
+
+Every method uses the same read-only scope, and Context7 stores any secret encrypted. The methods differ in what Context7 holds, which identity Google sees, and what someone could read with a leaked credential:
+
+| | Google account | Service account key | Service account key with delegation | Server credentials |
+| --- | --- | --- | --- | --- |
+| What Context7 stores | The OAuth client secret and a refresh token | The service account's JSON key | The service account's JSON key | Nothing. The server's environment holds the credentials. |
+| Identity Google sees | The Context7 Workspace user | The service account | The user in **Act as user** | The service account |
+| You share folders with | The Context7 Workspace user | The service account, an `iam.gserviceaccount.com` address outside your domain | The user in **Act as user** | The service account, outside your domain |
+| Super admin approval | No | No | Yes, for domain-wide delegation | No |
+| Redirect URI | An HTTPS name under a public top-level domain, only for a **Web application** client. The host can stay internal | No | No | No |
+| A leaked credential can read | What is shared with the Context7 user | What is shared with the service account | Drive as any user in your domain | What is shared with the service account |
+| To revoke access | Click **Disconnect**, which also asks Google to revoke the sign-in (if that fails, remove the access in the Google account's security settings), or suspend the Context7 user | Delete the key in Google Cloud | Remove the client ID from domain-wide delegation, and delete the key | Remove the service account binding for the workload |
+
+**Disconnect** on the **Google** page removes the stored credentials. For a service account key, the key stays valid at Google until you delete it there. Libraries keep their indexed content after a disconnect, but they stop syncing until you connect again with the same method, account and **Act as user**. A new key for the same service account is fine.
+
 ## Google account
 
 Context7 signs in as a Workspace user that exists only for Context7. You share folders with that user like with any colleague.

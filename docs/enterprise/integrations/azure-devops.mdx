@@ -1,0 +1,196 @@
+---
+title: "Azure DevOps Integration"
+sidebarTitle: "Azure DevOps"
+description: "Sync Azure Boards work items and Azure Test Plans, and index Azure DevOps wikis and repositories, with Context7 Enterprise"
+---
+
+Context7 indexes the work items of an Azure DevOps project and keeps them in sync. It works with **Azure DevOps Services** (`dev.azure.com`) and **Azure DevOps Server 2020 or later**.
+
+An admin connects Azure DevOps once, then adds libraries. Each library is one project with a set of filters, and each work item becomes one page. To index wikis and Git repositories, see [Wikis and repos](#wikis-and-repos).
+
+## What is indexed
+
+Each work item page contains:
+
+- The ID, type and title.
+- A details line: state and reason, area, iteration, priority, severity, assigned to, tags, parent, and the created and changed dates.
+- The rich-text fields: description, acceptance criteria, repro steps, system info and resolution, and the CMMI justification, proposed fix and analysis.
+- The custom fields of your process, under their display names. Short values go in the details line. Long text and HTML fields get their own section.
+- Up to 200 comments, when **Include comments** is on. Deleted comments are left out.
+- **Tests** and **Tested by** links: the test cases of a requirement, and the requirements of a test case, with their titles.
+
+Context7 does not index attachments, images, history, links other than the parent and the test links, or HTML that a reader does not see, such as HTML comments. Work items that the credential cannot read are left out.
+
+### Test plans
+
+Context7 also indexes [Azure Test Plans](https://learn.microsoft.com/azure/devops/test/overview):
+
+- **Test cases:** the steps in order, each with its expected result. Shared steps are shown in place, and the parameter values are a table, from the test case or from its shared parameter sets.
+- **Test plans:** the suite tree, with the test cases of each suite. Static, requirement-based and query-based suites are included.
+- **Test suites:** the plan, the path in the plan, the suite type, the requirement or query, and the test cases.
+- Each test case page lists the suites that contain it, for example `Release 3.2 Regression › Bluetooth`.
+
+Test cases need only **Work Items (Read)**. The suite tree comes from the Test Plans API: a personal access token also needs the **Test Management (Read)** scope, and a service principal needs **Basic** access. Without them, Context7 indexes test cases with their steps, leaves out the suites, and shows a warning.
+
+## Connect Azure DevOps
+
+Open **Workspace Settings › Azure DevOps**, choose an authentication method, and fill in the fields. Choose **Test connection**, which shows how many projects the credential can see, then save.
+
+<Frame>
+  <img src="/images/enterprise/integrations/azure-devops-connection.png" alt="The Azure DevOps connection settings with a personal access token" />
+</Frame>
+
+The organization URL is the part of the browser address before the project name:
+
+| Deployment | URL |
+| ---------- | --- |
+| Azure DevOps Services | `https://dev.azure.com/your-organization` (or `https://your-organization.visualstudio.com`) |
+| Azure DevOps Server | The collection URL, for example `https://server/tfs/DefaultCollection` |
+
+Context7 stores the credential encrypted. You can replace it at any time: libraries are tied to the organization URL, not to the credential.
+
+<Tabs>
+  <Tab title="Personal access token">
+    Works with Azure DevOps Services and Azure DevOps Server.
+
+    <Steps>
+      <Step title="Create the token">
+        Sign in as a service account that can read the projects to index, not as a person. Open **User settings → Personal access tokens** and create a token with the **Work Items (Read)** scope. To index test plans and suites, also add **Test Management (Read)**.
+      </Step>
+      <Step title="Connect Context7">
+        Select **Personal access token**, enter the organization URL, paste the token, and choose **Test connection**. Then save.
+      </Step>
+    </Steps>
+
+    Tokens expire. Paste a new token before the old one expires. A service principal on Azure DevOps Services does not expire in this way.
+  </Tab>
+  <Tab title="Service principal (Entra ID)">
+    Works with Azure DevOps Services only. Context7 gets short-lived tokens, and no employee account is involved.
+
+    <Steps>
+      <Step title="Create an app registration">
+        In the Microsoft Entra admin center, create an app registration with a client secret. On AKS with [Azure workload identity](https://learn.microsoft.com/azure/aks/workload-identity-overview), add a federated credential instead.
+      </Step>
+      <Step title="Add the app to the organization">
+        In **Organization settings → Microsoft Entra**, check that the organization uses the tenant of the app. In **Organization settings → Users**, add the app with **Stakeholder** access (no license cost). Add it to the **Readers** group of each project to index. To index test plans and suites, give the app **Basic** access instead: Stakeholders cannot read Azure Test Plans.
+      </Step>
+      <Step title="Connect Context7">
+        Select **Service principal (Entra ID)**. Enter the organization URL, the tenant ID, the client ID and the client secret, and choose **Test connection**. Then save.
+      </Step>
+    </Steps>
+
+    With workload identity (`AZURE_FEDERATED_TOKEN_FILE` is set), leave the secret empty. For a sovereign cloud, set `AZURE_AUTHORITY_HOST`.
+  </Tab>
+</Tabs>
+
+<Note>
+**Azure DevOps Server:** use `https://`, because the credential goes with every request. Azure DevOps Services always uses `https://`. For an internal server without TLS, set `AZURE_DEVOPS_ALLOW_HTTP=true`. For an internal or self-signed certificate, set `NODE_EXTRA_CA_CERTS` to your CA bundle.
+</Note>
+
+## Add a library
+
+Click **Add source** and choose **Azure DevOps**. Only admins can add Azure DevOps libraries.
+
+<Steps>
+  <Step title="Name the library">
+    Enter a title, for example `Radar bugs`, and optionally what the work items cover.
+  </Step>
+  <Step title="Choose the project and filters">
+    Search the project list by name. Each filter list has a search box too; searching area paths keeps their parent areas, so the tree stays readable.
+
+    Leave a filter empty to include everything it covers. **Matches** shows how many work items the filters select.
+
+    | Filter | Effect |
+    | ------ | ------ |
+    | Work item types | Only these types. **Test Plan** and **Test Suite** are listed. Disabled types and the other hidden types, such as shared steps, are not |
+    | States | Only work items in these states |
+    | Area paths | Only these areas, and with **Include sub-areas** every area under them |
+    | Changed in the last | Only work items changed in this number of days (1–3650) |
+    | Include comments | Also index comments, at one extra request for each changed work item |
+
+    <Frame>
+      <img src="/images/enterprise/integrations/azure-devops-add-library.png" alt="Filters for done bugs in the Radar area, with 27 matching work items" />
+    </Frame>
+  </Step>
+  <Step title="Add the library">
+    Choose **Add library**. Context7 fetches the work items and indexes them.
+  </Step>
+</Steps>
+
+<Warning>
+You cannot change the filters of a library. To change them, add a library with the new filters, then delete the old one.
+</Warning>
+
+Results link to the work item in Azure DevOps. For [authority labels](/enterprise/authority-labels), match the area path, for example `Sensor Platform\Radar`.
+
+A library indexes at most 20,000 work items. If more match, it keeps the newest (highest IDs) and shows a warning. Narrow the filters, or change **Max work items per Azure DevOps library** in **Workspace Settings › Parsing** (or `AZURE_DEVOPS_MAX_WORK_ITEMS`): 1–200,000, or no limit.
+
+## Sync
+
+Libraries sync daily at 03:30 in the server time zone. Change or turn off the schedule in **Workspace Settings › Azure DevOps**, or choose **Sync all now**. To sync one library, choose **Refresh** on it. Only admins can sync.
+
+<Frame>
+  <img src="/images/enterprise/integrations/azure-devops-sync-schedule.png" alt="The Azure DevOps sync schedule, daily at 03:30" />
+</Frame>
+
+Each sync lists the matching work items again. It indexes only the work items that changed, adds new matches, and removes work items that no longer match, were deleted, or that the credential can no longer read. A page is also indexed again when what it shows of other work items changes: a new test link, a renamed linked item, edited shared steps, or a test case added to a suite. To index every work item again, choose **Refresh** with **Re-index all work items**.
+
+### When a sync fails
+
+Context7 keeps the indexed content:
+
+- **The listing fails**, for example because the credential expired or the project is gone. The library keeps its work items and shows the error. Context7 retries after 15 minutes, 1 hour and 6 hours.
+- **A work item fails.** It keeps its last indexed version and is retried on the next sync. The library lists it; choose **Export failures as CSV** for the full list.
+- **A sync would remove too many work items:** all of them, or more than half of a library with 20 or more, with unchanged filters. Context7 stops and keeps the index, because the credential has usually lost access. If the removal is expected, choose **Refresh** with **Re-index all work items**.
+
+<Frame>
+  <img src="/images/enterprise/integrations/azure-devops-libraries.png" alt="Azure DevOps libraries with their last sync, and one failed work item" />
+</Frame>
+
+Throttled requests (HTTP 429) and server errors are retried as long as Azure DevOps asks, up to 2 minutes each.
+
+Connecting a different organization or disconnecting stops the syncs, and the libraries keep their content. To stop serving a library, delete it.
+
+## Access and network
+
+The credential controls what Context7 can read. [Library access](/enterprise/security/library-access) controls who can query it. A new Azure DevOps library is restricted to admins until you grant access, and a sync never changes the access you set.
+
+Allow outbound HTTPS to your organization URL (`dev.azure.com` or your server), and to `login.microsoftonline.com` for a service principal.
+
+## Wikis and repos
+
+A project wiki and a Git repository in Azure DevOps are Git repositories. Index them through [Other Git](/enterprise/integrations/other-git):
+
+<Steps>
+  <Step title="Configure Other Git">
+    Create a personal access token with the **Code (Read)** scope for a service account. In **Workspace Settings › Other Git**, select **HTTPS**, enter `dev.azure.com` (or your server) as the host, any user name, and the token as the password.
+  </Step>
+  <Step title="Add the wiki or repository">
+    Click **Add source**, choose **Other Git**, and enter the clone URL:
+
+    - Project wiki: `https://dev.azure.com/<organization>/<project>/_git/<wiki>.wiki`. Find it in the wiki under **••• → Clone wiki**.
+    - Repository: `https://dev.azure.com/<organization>/<project>/_git/<repository>`
+
+    Encode spaces in a project name as `%20`, for example `https://dev.azure.com/acme/Firmware%20Team/_git/Firmware-Team.wiki`. A wiki published from a repository is a normal repository.
+  </Step>
+</Steps>
+
+Results link to the rendered wiki page or to the file in the repository.
+
+<Note>
+Other Git stores credentials for one host. If you use it for another host, you cannot also use it for Azure DevOps with HTTPS credentials.
+</Note>
+
+## Troubleshooting
+
+| Message | Fix |
+| ------- | --- |
+| Azure DevOps rejected the token | The token is wrong or expired. Paste a new one |
+| Azure DevOps denied access | Give the token the **Work Items (Read)** scope, or add the service principal to the project's **Readers** group |
+| Azure DevOps rejected the service principal | Add the app under **Organization settings → Users** |
+| Microsoft Entra ID refused the service principal | Check the tenant ID, client ID and secret. The message gives Entra ID's reason, such as an expired secret |
+| The service principal can see no projects | Add the app to the projects to index |
+| Use https:// | See the note on [Azure DevOps Server](#connect-azure-devops) |
+| The connection now points to a different organization | Add the library again |
+| Only the first N matching work items were indexed | Narrow the filters or raise the limit (see [Add a library](#add-a-library)) |
+| Test plans and suites were not indexed | Add the **Test Management (Read)** scope to the token, or give the service principal **Basic** access (see [Test plans](#test-plans)) |
