@@ -1,6 +1,7 @@
-import type { McpServer, ServerContext } from "@modelcontextprotocol/server";
+import type { CallToolResult, McpServer, ServerContext } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { fetchLibraryCode } from "./api.js";
+import { clientDeclaresTasks, createCodeTask, registerCodeTaskHandlers } from "./code-task.js";
 import { maybeElicitAuthSignIn } from "./auth/auth-prompt.js";
 import { recordToolCallTelemetry } from "./auth-lifecycle-telemetry.js";
 import { aliasArgs, QUERY_DOCS_ALIASES, type AliasMap } from "./tool-args.js";
@@ -11,7 +12,12 @@ import {
   READ_CODE_TOOL,
   type CodeTool,
 } from "./tool-names.js";
-import { CODE_OUTPUT_MODES, type ClientContext, type CodeRequest } from "./types.js";
+import {
+  CODE_OUTPUT_MODES,
+  type ClientContext,
+  type CodeRequest,
+  type ContextResponse,
+} from "./types.js";
 
 // The source code tools. They follow the parameters of the Grep, Glob and Read tools that coding
 // agents already have, so agents use them like their own tools, on a library's source at one
@@ -382,6 +388,15 @@ export function symbolRequest(input: z.infer<typeof symbolSchema>): CodeRequest 
   };
 }
 
+/** The tool result for an answer of /v2/code, for the tool call and for a completed task. */
+export function codeToolResult(response: ContextResponse): CallToolResult {
+  return {
+    content: [{ type: "text" as const, text: rewriteCodeHints(response.data) }],
+    // "Still indexing" is a normal answer: the agent answers from query-docs meanwhile.
+    ...(response.outcome === "error" ? { isError: true } : {}),
+  };
+}
+
 /**
  * Registers grep-code, glob-code, read-code and find-symbol. Experimental: called from
  * registerExperimentalTools when the code tools are on.
@@ -396,15 +411,23 @@ export function registerCodeTools(
       recordToolCallTelemetry(ctx, "invalid");
       return { content: [{ type: "text" as const, text: request }], isError: true };
     }
-    const response = await fetchLibraryCode(request, ctx, tool);
+    // A client that declared the Tasks extension waits for the index itself, and the agent gets
+    // the real result: the API then names a task in its 202. Any other client gets the
+    // "still indexing" text.
+    const tasks = clientDeclaresTasks(toolCtx.mcpReq.envelope);
+    const response = await fetchLibraryCode(request, ctx, tool, { task: tasks });
     maybeElicitAuthSignIn(server, ctx);
     recordToolCallTelemetry(ctx, response.outcome);
-    return {
-      content: [{ type: "text" as const, text: rewriteCodeHints(response.data) }],
-      // "Still indexing" is a normal answer: the agent answers from query-docs meanwhile.
-      ...(response.outcome === "error" ? { isError: true } : {}),
-    };
+    if (tasks && response.indexing) {
+      const task = createCodeTask(tool, response.indexing);
+      // The SDK sends a tools/call result with a `resultType` as it is; its types do not model one.
+      if (task) return { resultType: "task", ...task } as unknown as CallToolResult;
+    }
+    return codeToolResult(response);
   };
+
+  // The Tasks extension's methods, only where tasks can be stored (see index.ts).
+  registerCodeTaskHandlers(server, getClientContext, codeToolResult);
 
   server.registerTool(
     GREP_CODE_TOOL,
