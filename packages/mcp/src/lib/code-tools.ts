@@ -419,15 +419,14 @@ export function registerCodeTools(
     }
     const response = await fetchLibraryCode(request, ctx, tool);
     maybeElicitAuthSignIn(server, ctx);
+    recordToolCallTelemetry(ctx, response.outcome);
     // A client that declared the Tasks extension waits for the index itself, and the agent gets
-    // the real result; the call is recorded when its task ends. Any other client gets the
-    // "still indexing" text.
+    // the real result. Any other client gets the "still indexing" text.
     if (taskStore && response.indexing && clientDeclaresTasks(toolCtx.mcpReq.envelope)) {
       const task = await createCodeTask(taskStore, tool, request, response.indexing, ctx);
       // The SDK sends a tools/call result with a `resultType` as it is; its types do not model one.
       if (task) return { resultType: "task", ...task } as unknown as CallToolResult;
     }
-    recordToolCallTelemetry(ctx, response.outcome);
     return codeToolResult(response);
   };
 

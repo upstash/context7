@@ -283,8 +283,9 @@ type ToolResult = (response: ContextResponse) => CallToolResult;
 /**
  * The state of a code tool task for tasks/get. A working task asks the API again only when its
  * gate (one per caller and library version) lets it; any other poll answers `working` at once. An
- * ended task answers from its record, so it costs no request. The tool call is recorded in
- * telemetry when its task completes, with the outcome of its result.
+ * ended task answers from its record, so it costs no request. The tools/call was recorded with
+ * the "being indexed" outcome; the tasks/get that completes the task records the result's outcome
+ * on its own MCP operation.
  */
 export async function getCodeTask(
   store: CodeTaskStore,
@@ -300,6 +301,7 @@ export async function getCodeTask(
 
   let response = await fetchLibraryCode(record.request, ctx, record.tool);
   const waiting = nowMs - record.createdAt < CODE_TASK_WAIT_MS;
+  const indexDone = !response.transient && !response.indexing;
   if (response.transient) {
     // A timeout or a gateway error says nothing about the index: the task waits on, and after
     // the wait it ends with the "being indexed" answer it last had.
@@ -316,7 +318,7 @@ export async function getCodeTask(
     next.status = "completed";
     next.result = toResult(response);
     // The index is done: the other tasks of the version may ask at their next poll.
-    if (!response.indexing) await store.releaseCheck(gate);
+    if (indexDone) await store.releaseCheck(gate);
   }
   if (await store.put(taskId, next)) {
     if (next.status === "completed") recordToolCallTelemetry(ctx, response.outcome);
@@ -327,9 +329,8 @@ export async function getCodeTask(
 }
 
 /**
- * tasks/cancel: a working task ends as `cancelled`, and its tool call is recorded as the
- * "being indexed" answer it had. The index is not stopped, because the next call for the version
- * uses it. Cancelling an ended task changes nothing.
+ * tasks/cancel: a working task ends as `cancelled`. The index is not stopped, because the next
+ * call for the version uses it. Cancelling an ended task changes nothing.
  */
 export async function cancelCodeTask(
   store: CodeTaskStore,
@@ -338,9 +339,8 @@ export async function cancelCodeTask(
   nowMs = Date.now()
 ): Promise<void> {
   const record = await requireCodeTask(store, taskId, ctx, nowMs);
-  if (record.status !== "working") return;
-  if (await store.put(taskId, { ...record, status: "cancelled", updatedAt: nowMs }))
-    recordToolCallTelemetry(ctx, "not_found");
+  if (record.status === "working")
+    await store.put(taskId, { ...record, status: "cancelled", updatedAt: nowMs });
 }
 
 const taskParams = z.object({ taskId: z.string().min(1).max(MAX_TASK_ID_LENGTH) }).loose();

@@ -386,6 +386,24 @@ describe("getCodeTask", () => {
     expect(view.result).toEqual({ content: [{ type: "text", text: message }] });
   });
 
+  test("a timeout after the wait does not open the gate for the other tasks of the version", async () => {
+    const late = await newTask();
+    const sibling = await createCodeTask(
+      store,
+      "glob-code",
+      { libraryId: "/honojs/hono", version: "v4.7.0" },
+      INDEXING,
+      CALLER,
+      T0 + CODE_TASK_WAIT_MS - 60_000
+    );
+    fetchMock.mockRejectedValue(new Error("timeout"));
+    expect((await poll(late.taskId, CODE_TASK_WAIT_MS / 1000)).status).toBe("completed");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    // The gate stays closed for the gap, so the sibling's next poll asks nothing.
+    await poll(sibling!.taskId, CODE_TASK_WAIT_MS / 1000 + 1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   test("ends after the 30 minute wait with the 'being indexed' answer when the API times out", async () => {
     fetchMock.mockRejectedValue(new Error("timeout"));
     const view = await poll((await newTask()).taskId, CODE_TASK_WAIT_MS / 1000);
@@ -430,7 +448,7 @@ describe("getCodeTask", () => {
 });
 
 describe("telemetry", () => {
-  test("records a call that became a task once, when the task completes", async () => {
+  test("the tasks/get that completes a task records the result's outcome", async () => {
     const { taskId } = await newTask();
     fetchMock.mockImplementationOnce(async () => indexing202());
     await poll(taskId, 60);
@@ -441,11 +459,10 @@ describe("telemetry", () => {
     expect(vi.mocked(recordToolCallTelemetry).mock.calls).toEqual([[CALLER, "success"]]);
   });
 
-  test("records a cancelled task as the 'being indexed' answer it had", async () => {
+  test("a cancel records nothing", async () => {
     const { taskId } = await newTask();
     await cancelCodeTask(store, taskId, CALLER);
-    await cancelCodeTask(store, taskId, CALLER);
-    expect(vi.mocked(recordToolCallTelemetry).mock.calls).toEqual([[CALLER, "not_found"]]);
+    expect(recordToolCallTelemetry).not.toHaveBeenCalled();
   });
 });
 
@@ -563,7 +580,8 @@ describe("over MCP", () => {
   test("a 202 becomes a task for a client that declared tasks", async () => {
     fetchMock.mockResolvedValue(indexing202(45));
     const { result } = await grep(true);
-    expect(recordToolCallTelemetry).not.toHaveBeenCalled();
+    // The tools/call is recorded as it is answered, as before tasks.
+    expect(vi.mocked(recordToolCallTelemetry).mock.calls).toEqual([[CALLER, "not_found"]]);
     expect(result).toMatchObject({ resultType: "task", status: "working", pollIntervalMs: 45_000 });
     expect(result?.ttlMs).toBe(CODE_TASK_TTL_MS);
     const record = await findCodeTask(store, String(result?.taskId), CALLER);
