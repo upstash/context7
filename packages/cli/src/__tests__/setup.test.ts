@@ -44,6 +44,8 @@ import {
   detectAgents,
   ALL_AGENT_NAMES,
   resolveVscodeUserDir,
+  LISTED_AGENT_NAMES,
+  agentOptionKey,
   resolveDevinConfigDir,
   type AuthOptions,
   type Transport,
@@ -664,6 +666,62 @@ describe("agent config integration", () => {
       if (agent.rule.kind === "file") {
         expect(agent.rule.contentPrefix).toBe('---\napplyTo: "**"\n---\n\n');
       }
+    });
+  });
+
+  describe("vscode-insiders", () => {
+    const agent = getAgent("vscode-insiders");
+
+    test.each([
+      ["darwin", "/home/test", {}, "/home/test/Library/Application Support/Code - Insiders/User"],
+      ["win32", "/home/test", {}, "/home/test/AppData/Roaming/Code - Insiders/User"],
+      ["linux", "/home/test", { XDG_CONFIG_HOME: "/xdg" }, "/xdg/Code - Insiders/User"],
+    ] as const)("resolves the %s Insiders user directory", (platform, home, env, expected) => {
+      expect(resolveVscodeUserDir(platform, home, env, "Code - Insiders")).toBe(expected);
+    });
+
+    test("writes global config into the Insiders user directory", () => {
+      const userDir = resolveVscodeUserDir(undefined, undefined, undefined, "Code - Insiders");
+      expect(agent.mcp.globalPaths).toEqual([join(userDir, "mcp.json")]);
+      expect(agent.detect.globalPaths).toEqual([userDir]);
+      if (agent.rule.kind === "file") {
+        expect(agent.rule.dir("global")).toBe(join(userDir, "prompts"));
+      }
+    });
+
+    test("shares the workspace config with VS Code", () => {
+      expect(agent.mcp.projectPaths).toEqual(getAgent("vscode").mcp.projectPaths);
+    });
+
+    test("is hidden from the picker and auto-detection but keeps its flag", () => {
+      expect(agent.hidden).toBe(true);
+      expect(ALL_AGENT_NAMES).toContain("vscode-insiders");
+      expect(LISTED_AGENT_NAMES).not.toContain("vscode-insiders");
+      expect(LISTED_AGENT_NAMES).toContain("vscode");
+    });
+
+    test("is not auto-detected from a shared .vscode folder", async () => {
+      const previousCwd = process.cwd();
+      await mkdir(join(tempDir, ".vscode"), { recursive: true });
+      try {
+        process.chdir(tempDir);
+        const detected = await detectAgents("project");
+        expect(detected).toContain("vscode");
+        expect(detected).not.toContain("vscode-insiders");
+      } finally {
+        process.chdir(previousCwd);
+      }
+    });
+
+    test("buildEntry matches VS Code", () => {
+      expect(buildEntry(agent, apiKeyAuth, "http")).toEqual(
+        buildEntry(getAgent("vscode"), apiKeyAuth, "http")
+      );
+    });
+
+    test("maps to the commander option key", () => {
+      expect(agentOptionKey("vscode-insiders")).toBe("vscodeInsiders");
+      expect(agentOptionKey("vscode")).toBe("vscode");
     });
   });
 

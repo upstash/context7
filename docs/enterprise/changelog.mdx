@@ -3,6 +3,64 @@ title: "Changelog"
 description: "Release notes for the Context7 On-Premise image."
 ---
 
+<Update label="2026-11-25" description="v2.0.5">
+
+### Changed
+
+- When you choose Google Vertex AI, the AI provider settings now say that Context7 signs in with the Google Cloud identity of its deployment, such as GKE Workload Identity or a service account key, and link the [setup guide](/enterprise/integrations/google-vertex-ai#set-up-the-identity).
+
+</Update>
+
+<Update label="2026-11-25" description="v2.0.4">
+
+### Upgrade notes
+
+- Context7 now sends its outbound traffic through `HTTPS_PROXY` and `HTTP_PROXY` when the container has them. Before 2.0.4, it ignored these variables. If you set them for another reason, add the hosts that Context7 must reach directly to `NO_PROXY`.
+- One request never uses the proxy: the fetch of an MCP client's metadata document (CIMD) during OAuth sign-in. If the container cannot connect to the internet directly, set **Client ID metadata documents** to **Off** under Workspace Settings › Authentication and turn on **Dynamic client registration**.
+- The **Gemini** provider is now named **Google**, with the option **Google AI Studio**. Existing Gemini configurations keep working with no change.
+- The first sync of each Azure DevOps library after the upgrade renders its test cases and shared steps again, once, to add their steps. To index test plans and suites, give the personal access token the **Test Management (Read)** scope, or give the service principal **Basic** access.
+
+### Added
+
+- Added [Google Vertex AI](/enterprise/integrations/google-vertex-ai) as the second option of the Google provider. It runs Gemini and Claude models and Gemini embeddings in your Google Cloud project, with Application Default Credentials: GKE Workload Identity, the service account of a VM, or a service account key file. Set the project and location in Workspace Settings › AI models.
+- Added [egress proxy](/enterprise/deployment/docker#egress-proxy) support. Context7 sends AI provider calls, Amazon Bedrock, S3 backups, Git hosts and website crawls through the proxy, and skips the hosts in `NO_PROXY`. Loopback addresses and the cloud metadata and credential endpoints always connect directly, so Workload Identity and IAM roles keep working.
+- Added the `serviceAccountName` value to the Helm chart, to run the pods as a Kubernetes service account for Workload Identity.
+- Added [Azure Test Plans](/enterprise/integrations/azure-devops#test-plans) to Azure DevOps libraries. Test case pages list their steps with the expected results, with shared steps in place and the parameter values. Work items list the test cases that test them, and test plan and suite pages show the suite tree with the test cases of each suite.
+- Added documentation image search. When you turn on image indexing, website parses describe the images on each page with the image model you choose, and `GET /api/v2/images` searches them. It is off by default.
+
+### Changed
+
+- Amazon Bedrock sources show the Amazon Bedrock logo.
+
+</Update>
+
+<Update label="2026-11-24" description="v2.0.3">
+
+### Upgrade notes
+
+- The MCP server now runs inside the Context7 process. Existing MCP clients keep working with personal API keys. OAuth sign-in stays off until you turn it on.
+- To use OAuth sign-in, set `CONTEXT7_PUBLIC_URL` to the `https` origin that clients reach, and restart the container. Behind a reverse proxy, also set `CONTEXT7_TRUSTED_PROXY_HOPS`.
+- In the OAuth modes, `/mcp` refuses a dashboard session token sent as a bearer token. With **Personal API keys**, it accepts the token as in 2.0.2.
+- CodeDocs generation and source code indexing now need a signed-in member or a personal API key, even when anonymous parse or refresh is on.
+
+### Added
+
+- Added [OAuth sign-in](/enterprise/security/mcp-oauth) for MCP clients such as Claude Code, Cursor and VS Code. The client opens a browser, and the user signs in with SSO or a password and approves the client. Turn it on in Workspace Settings › Authentication.
+- Added **Authorized apps**, where users see and revoke the MCP clients they approved. Administrators see and revoke the apps of every user.
+- Added the `search`, `get-document` and `give_feedback` tools to the MCP server. Administrators can edit the tool descriptions.
+- Added the [Azure DevOps](/enterprise/integrations/azure-devops) connector. It indexes Azure Boards work items from Azure DevOps Services, with a personal access token or a Microsoft Entra service principal, and from Azure DevOps Server 2020 or later, with a personal access token.
+- A library is one project with filters for work item types, states, area paths and the last change date. Search the project, type, state and area path lists when you add a library.
+
+### Changed
+
+- Nightly Azure DevOps syncs read only the work items that changed, so they stay fast for projects with many work items.
+- For Azure DevOps libraries, queries put all snippets of the three best work items first. The answer keeps its usual length.
+- Git libraries on Azure DevOps now link to pages that open in Azure Repos and in project wikis.
+- The SSO settings show the Microsoft Entra ID tab only when Entra is already configured. New installations use OIDC or SAML 2.0. Existing Entra sign-ins keep working.
+- Azure DevOps sources show the Azure DevOps logo.
+
+</Update>
+
 <Update label="2026-11-16" description="v2.0.2">
 
 ### Upgrade notes

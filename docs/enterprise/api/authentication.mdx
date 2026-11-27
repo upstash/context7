@@ -15,6 +15,12 @@ A key belongs to the user who created it and has that user's role (`admin` or `m
 
 A request with an invalid or revoked key gets `401`. It is not treated as an anonymous request.
 
+## OAuth for MCP clients
+
+MCP clients can also sign in with OAuth instead of a personal key. The client gets a short-lived access token (`ctx7oa-...`) for the user who approved it, and sends it as `Authorization: Bearer <token>`. An OAuth access token works only on `/mcp` and has the role and library access of its user. No other endpoint accepts it as a credential. See [OAuth Sign-In for MCP Clients](/enterprise/security/mcp-oauth).
+
+When OAuth is on, a `401` from `/mcp` carries a `WWW-Authenticate` header with `resource_metadata="..."`, which points clients to the sign-in flow. With OAuth on, a browser session token sent as a bearer token is not accepted on `/mcp`; the dashboard session cookie still is.
+
 ## Creating an API Key
 
 <Steps>
@@ -22,21 +28,21 @@ A request with an invalid or revoked key gets `401`. It is not treated as an ano
     Open the account menu in the admin dashboard, choose **Personal settings**, and click **Create API key** in the **API keys** card.
 
     <Frame>
-      ![API keys card in Personal settings](/images/enterprise/api-keys/api-keys-empty.png)
+      <img src="/images/enterprise/api-keys/api-keys-empty.png" alt="API keys card in Personal settings" />
     </Frame>
   </Step>
   <Step title="Name the key">
     Give the key a descriptive name so you know which client or service is using it (e.g. `CI pipeline`, `Cursor`).
 
     <Frame>
-      ![Create API key dialog](/images/enterprise/api-keys/api-keys-create-dialog.png)
+      <img src="/images/enterprise/api-keys/api-keys-create-dialog.png" alt="Create API key dialog" />
     </Frame>
   </Step>
   <Step title="Copy the key">
     Copy the full key value before closing the dialog. It is only shown once.
 
     <Frame>
-      ![Copy your key now dialog showing the key value](/images/enterprise/api-keys/api-keys-created.png)
+      <img src="/images/enterprise/api-keys/api-keys-created.png" alt="Copy your key now dialog showing the key value" />
     </Frame>
   </Step>
 </Steps>
@@ -64,6 +70,8 @@ A personal API key acts with the role of its owner:
 | Import libraries (`/api/import-libraries`) | No | Yes |
 | `/mcp` and `/api/v2` search and context | Yes | Yes |
 
+In **OAuth only** mode with MCP authentication on, `/mcp` refuses personal API keys. `/api/v2` accepts them in every mode.
+
 Settings, user management, and other admin routes need an admin signed in to the dashboard. They do not accept API keys.
 
 Default credentials on a fresh install are `admin` / `admin`. Change them immediately from **Personal settings > Password > Change password**.
@@ -80,6 +88,8 @@ Certain operations can be opened to anonymous callers (no session and no API key
 | Download support bundle | Off |
 
 These switches do not limit signed-in users. Members and their API keys can always parse and refresh, except Notion and Google Drive libraries, which only admins refresh. To re-parse or replace an existing library, a member needs read access to it.
+
+The parse and refresh switches do not cover source code indexing or CodeDocs generation. A parse or refresh with source code indexing, and CodeDocs generation, always need a session or a personal API key.
 
 The delete switch also covers cancelling a parse. When it is on, members can delete and cancel too. The support bundle switch works the same way for downloads.
 

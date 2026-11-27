@@ -22,6 +22,8 @@ const deployment = vi.hoisted(() => ({ hosted: true }));
 vi.mock("../utils/api.js", () => ({
   getBaseUrl: () => "https://test.context7.com",
   isHostedDeployment: () => deployment.hosted,
+  isApiKeyPolicyRefusal: (code: unknown) =>
+    code === "api_keys_disabled" || code === "api_key_admins_only",
 }));
 
 const mockConfirm = vi.fn();
@@ -939,6 +941,46 @@ describe("pollDeviceToken", () => {
       })
     );
     expect((await pollDeviceToken("https://t", "c", "dc")).status).toBe(expected);
+  });
+
+  test("passes on the server's reason for access_denied", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: () =>
+          Promise.resolve({
+            error: "access_denied",
+            error_description: "This teamspace does not allow API keys.",
+          }),
+      })
+    );
+    expect(await pollDeviceToken("https://t", "c", "dc")).toEqual({
+      status: "denied",
+      errorMessage: "This teamspace does not allow API keys.",
+    });
+  });
+
+  test("passes on an API key policy reason for access_denied", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        json: () =>
+          Promise.resolve({
+            error: "access_denied",
+            error_description: "This teamspace does not allow API keys.",
+            reason: "api_keys_disabled",
+          }),
+      })
+    );
+    expect(await pollDeviceToken("https://t", "c", "dc")).toEqual({
+      status: "denied",
+      errorMessage: "This teamspace does not allow API keys.",
+      refusal: "api_keys_disabled",
+    });
   });
 
   test("returns transient on a 5xx response", async () => {

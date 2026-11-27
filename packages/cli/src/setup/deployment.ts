@@ -52,7 +52,21 @@ export function getMcpUrl(deployment: SetupDeployment, auth: AuthOptions): strin
   return `${deployment.baseUrl}/mcp`;
 }
 
-export async function getOnPremMcpAuthStatus(deployment: CustomSetupDeployment): Promise<boolean> {
+export const ON_PREM_PERSONAL_KEY_PREFIX = "ctx7op-";
+
+/** Which credentials the on-premise /mcp endpoint accepts. Servers before OAuth report no mode. */
+export type OnPremMcpAuthMode = "personal_keys" | "oauth" | "both";
+
+export interface OnPremMcpAuthStatus {
+  enabled: boolean;
+  mode: OnPremMcpAuthMode;
+  /** False until the server has CONTEXT7_PUBLIC_URL; OAuth sign-in cannot work before. */
+  oauthAvailable: boolean;
+}
+
+export async function getOnPremMcpAuthStatus(
+  deployment: CustomSetupDeployment
+): Promise<OnPremMcpAuthStatus> {
   const response = await fetch(`${deployment.baseUrl}/api/auth/mcp`, {
     headers: { Accept: "application/json" },
     redirect: "manual",
@@ -69,9 +83,15 @@ export async function getOnPremMcpAuthStatus(deployment: CustomSetupDeployment):
     throw new Error(`HTTP ${response.status} from ${deployment.baseUrl}/api/auth/mcp`);
   }
 
-  const body = (await response.json()) as { enabled?: unknown };
+  const body = (await response.json()) as {
+    enabled?: unknown;
+    mode?: unknown;
+    oauth?: { available?: unknown };
+  };
   if (typeof body.enabled !== "boolean") {
     throw new Error(`Invalid response from ${deployment.baseUrl}/api/auth/mcp`);
   }
-  return body.enabled;
+  const mode: OnPremMcpAuthMode =
+    body.mode === "oauth" || body.mode === "both" ? body.mode : "personal_keys";
+  return { enabled: body.enabled, mode, oauthAvailable: body.oauth?.available === true };
 }

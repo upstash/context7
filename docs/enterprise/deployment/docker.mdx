@@ -166,7 +166,7 @@ An offline license (`ctx7off.` prefix) is checked locally and makes no calls to 
 
 To send these calls through an egress mirror, set `CONTEXT7_API_URL` (default `https://context7.com/api`).
 
-The server does not use `HTTP_PROXY` or `HTTPS_PROXY` for its own calls. Allow this egress directly or through a transparent proxy.
+To route this egress through a forward proxy, see [Egress proxy](#egress-proxy).
 
 If your network uses a private certificate authority:
 
@@ -176,6 +176,24 @@ If your network uses a private certificate authority:
 The whole server then trusts it, for every outbound call: AI providers, Bedrock, Confluence, Notion, Google, SSO identity providers, the license server, and Git.
 
 `GIT_TLS_INSECURE=true` turns off TLS checks for all outbound HTTPS and Git calls. Use it only for testing.
+
+## Egress proxy
+
+If the container reaches the internet only through an egress proxy, set the standard proxy variables. Context7 then sends all its outbound HTTP and HTTPS calls through the proxy: AI providers, Bedrock, Vertex AI, Git host APIs, Git clones over HTTPS, website crawling, connectors, and the license server.
+
+| Variable | Description |
+|---|---|
+| `HTTPS_PROXY` | Proxy for `https://` requests, for example `http://proxy.corp.example:3128` |
+| `HTTP_PROXY` | Proxy for `http://` requests |
+| `NO_PROXY` | Comma-separated hosts and domain suffixes that connect directly, for example `.corp.example,ghes.corp.example,10.0.4.17` |
+
+- Lower-case names (`https_proxy`, `http_proxy`, `no_proxy`) also work.
+- Add your internal Git host, identity provider, and in-cluster services to `NO_PROXY`. IP ranges in CIDR form (`10.0.0.0/8`) are not matched, so list each internal address or name.
+- Context7 always connects directly to `localhost`, loopback addresses, and the cloud credential endpoints (`169.254.169.254`, `metadata.google.internal`, `169.254.170.2`, and `169.254.170.23`). You do not need to add them.
+- SSH Git clones do not use an HTTP proxy.
+- If the proxy inspects TLS with its own certificate, also set `NODE_EXTRA_CA_CERTS` to that CA.
+
+One call never uses the proxy: the fetch of an MCP client's metadata document (CIMD) during [OAuth sign-in](/enterprise/security/mcp-oauth). Context7 checks that this fetch reaches only public addresses, and it cannot check an address that the proxy resolves. If the container cannot connect to the internet directly, set **Client ID metadata documents** to **Off** under **Workspace Settings › Authentication** and turn on **Dynamic client registration**.
 
 ## Running as non-root
 
