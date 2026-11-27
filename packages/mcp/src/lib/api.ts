@@ -247,21 +247,24 @@ export async function submitDocsFeedback(
  * The API would otherwise hold it up to 40 s; the agent goes on with query-docs instead.
  */
 export const CODE_INDEX_WAIT_SECONDS = 5;
+/** The one bounded wait before a last call. Keep in step with the app's FIRST_INDEX_RETRY_SECONDS. */
+export const CODE_INDEX_RETRY_MINUTES = 2;
 
-/** A sentence of the server's 202 message that tells the agent to wait and call again. */
-const WAIT_ADVICE = /\b(call again|keep calling|meanwhile)\b/i;
+/** A sentence of the server's 202 message that says what to do next; indexingAnswer says that. */
+const NEXT_STEP_ADVICE = /\b(call again|keep calling|meanwhile|answer from query-docs)\b/i;
 
 /**
- * The answer while a library's source is being indexed. The code tools never make the agent
- * wait: an index can take minutes, or stall, and the user's session must go on. So the server's
- * own "keep calling" advice is dropped, and the agent answers from query-docs now.
+ * The answer while a library's source is being indexed. An index can take minutes, or stall, and
+ * no tool call may hold the session that long. So there is one rule: answer from query-docs now,
+ * call the tool at most once more after a bounded wait, then stay with query-docs. The server's
+ * own next-step sentences are dropped so that an older or newer server cannot contradict it.
  */
 export function indexingAnswer(message: string | undefined, tool: string): string {
   const base = (message ?? "The library source is being indexed.")
     .split(/(?<=\.)\s+/)
-    .filter((sentence) => !WAIT_ADVICE.test(sentence))
+    .filter((sentence) => !NEXT_STEP_ADVICE.test(sentence))
     .join(" ");
-  return `${base} This is not an error. Until the index is done, every code tool call for this version gives this answer, so do not try other patterns or files and do not wait: answer from query-docs now. Only if the source is still needed at the end of the task, call ${tool} once more.`;
+  return `${base} This is not an error. Until the index is done, every code tool call for this version gives this answer, so do not try other patterns or files and do not poll: answer from query-docs now. If the task still needs the exact source, call ${tool} once more after about ${CODE_INDEX_RETRY_MINUTES} minutes. If it is still being indexed then, finish from query-docs and say that the source was not available.`;
 }
 
 /**

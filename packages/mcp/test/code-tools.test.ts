@@ -33,21 +33,38 @@ describe("isEmptyCodeResult", () => {
 });
 
 describe("indexingAnswer", () => {
-  test("drops the server's advice to keep calling and sends the agent to query-docs", () => {
-    const text = indexingAnswer(
-      'Git tag "v4.7.0" is not a docs version of /honojs/hono, so its source is being indexed from the tag. A first index usually takes 1 to 3 minutes, and longer for a very large repository. Call again in about 30 seconds, and keep calling until it answers, for up to 3 minutes. Meanwhile, or after that, answer from query-docs.',
-      "grep-code"
-    );
-    expect(text).toBe(
-      'Git tag "v4.7.0" is not a docs version of /honojs/hono, so its source is being indexed from the tag. A first index usually takes 1 to 3 minutes, and longer for a very large repository. This is not an error. Until the index is done, every code tool call for this version gives this answer, so do not try other patterns or files and do not wait: answer from query-docs now. Only if the source is still needed at the end of the task, call grep-code once more.'
-    );
-    expect(text).not.toMatch(/keep calling|call again/i);
+  const RULE =
+    "This is not an error. Until the index is done, every code tool call for this version gives this answer, so do not try other patterns or files and do not poll: answer from query-docs now. If the task still needs the exact source, call grep-code once more after about 2 minutes. If it is still being indexed then, finish from query-docs and say that the source was not available.";
+
+  test.each([
+    [
+      "the old polling advice",
+      "A first index usually takes 1 to 3 minutes, and longer for a very large repository. Call again in about 30 seconds, and keep calling until it answers, for up to 3 minutes. Meanwhile, or after that, answer from query-docs.",
+      "A first index usually takes 1 to 3 minutes, and longer for a very large repository.",
+    ],
+    [
+      "the bounded retry advice",
+      "A first index usually takes up to 3 minutes, and longer for a very large repository. Answer from query-docs now. If you still need the source, call again once after about 2 minutes; if it is still being indexed then, stay with query-docs.",
+      "A first index usually takes up to 3 minutes, and longer for a very large repository.",
+    ],
+  ])("gives one rule for a server with %s", (_name, advice, kept) => {
+    const start =
+      'Git tag "v4.7.0" is not a docs version of /honojs/hono, so its source is being indexed from the tag.';
+    expect(indexingAnswer(`${start} ${advice}`, "grep-code")).toBe(`${start} ${kept} ${RULE}`);
   });
 
   test("works without a server message", () => {
     expect(indexingAnswer(undefined, "read-code")).toMatch(
-      /^The library source is being indexed\. This is not an error\..*call read-code once more/
+      /^The library source is being indexed\. This is not an error\..*call read-code once more after about 2 minutes/
     );
+  });
+
+  test("survives the rewrite of API hints, also for a library named like a tool", () => {
+    const text = indexingAnswer(
+      "The source of /acme/query-code at main is being indexed.",
+      "grep-code"
+    );
+    expect(rewriteCodeHints(text)).toBe(text);
   });
 });
 

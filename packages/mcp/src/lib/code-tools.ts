@@ -22,7 +22,7 @@ import { CODE_OUTPUT_MODES, type ClientContext, type CodeRequest } from "./types
  * tools on demand and show the agent only their names and these instructions, so without it the
  * agent searches the user's project for a library's code first.
  */
-export const CODE_TOOLS_INSTRUCTIONS = `When the docs do not answer an exact question about a library (a signature or type, a default value, an option name, where an error message comes from, or how something works inside), read the library's source with '${GREP_CODE_TOOL}', '${GLOB_CODE_TOOL}', '${READ_CODE_TOOL}' and '${FIND_SYMBOL_TOOL}'. They work like your own Grep, Glob and Read tools, but on the library's source at one version, so use them when the library's source is not in the user's project. Get the library ID from 'resolve-library-id' (one marked "Source code"), and pass the version's git tag in 'version'. If a tool says the source is being indexed, do not wait for it: answer from 'query-docs'.`;
+export const CODE_TOOLS_INSTRUCTIONS = `When the docs do not answer an exact question about a library (a signature or type, a default value, an option name, where an error message comes from, or how something works inside), read the library's source with '${GREP_CODE_TOOL}', '${GLOB_CODE_TOOL}', '${READ_CODE_TOOL}' and '${FIND_SYMBOL_TOOL}'. They work like your own Grep, Glob and Read tools, but on the library's source at one version, so use them when the library's source is not in the user's project. Get the library ID from 'resolve-library-id' (one marked "Source code"), and pass the version's git tag in 'version'. If a tool says the source is being indexed, answer from 'query-docs' now; call the tool at most once more, after about 2 minutes, and only if the task still needs the exact source.`;
 
 /** The most lines one read returns (the API's limit). */
 export const MAX_READ_LINES = 200;
@@ -401,7 +401,7 @@ export function registerCodeTools(
     recordToolCallTelemetry(ctx, response.outcome);
     return {
       content: [{ type: "text" as const, text: rewriteCodeHints(response.data) }],
-      // "Still indexing" is a normal answer: the agent answers from query-docs meanwhile.
+      // "Still indexing" is a normal answer: the agent goes on from query-docs (indexingAnswer).
       ...(response.outcome === "error" ? { isError: true } : {}),
     };
   };
