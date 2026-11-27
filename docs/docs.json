@@ -51,7 +51,7 @@
                   "adding-libraries",
                   "library-updates",
                   "howto/claiming-libraries", "howto/verification", "howto/chat-widget",
-                  "howto/rules", "howto/private-sources", "howto/automatic-refresh", "howto/experimental-tools"
+                  "howto/rules", "howto/private-sources", "howto/automatic-refresh", "howto/gitops", "howto/experimental-tools"
                 ]
               },
               {

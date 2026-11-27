@@ -1,0 +1,141 @@
+---
+title: GitOps
+description: Keep your teamspace's private GitHub libraries in a manifest file and let Context7 sync them
+---
+
+GitOps lets you list your teamspace's private GitHub libraries in a manifest file, `repos.yaml`, in a GitHub repository. Context7 reads the manifest and adds, re-parses and, if you choose, removes libraries to match it. You change what is indexed with a commit and a review instead of clicking through the dashboard.
+
+The manifest uses the same format as [on-premise GitOps](/enterprise/gitops), so one file can serve both.
+
+<Note>
+GitOps is available to teamspaces on the Pro and Enterprise plans. It is off by default. In the cloud it syncs private github.com repositories only.
+</Note>
+
+## Before you start
+
+- You must be an owner or admin of the teamspace.
+- Install the Context7 GitHub App on the manifest repository and on every repository the manifest lists. All of them must be in the same GitHub account or organization as the manifest repository.
+- Your GitHub account must be able to read those repositories. Syncs run as the owner or admin who saved the GitOps settings last, with their GitHub access.
+
+<Warning>
+Anyone who can push to the manifest branch can add any repository of that account or organization that the saving owner or admin can read, and the teamspace pays for its parse. Protect the manifest branch, for example with required reviews.
+</Warning>
+
+## The manifest file
+
+The manifest lists repositories under `repos`. An optional `defaults` block applies to every entry unless the entry sets the field itself.
+
+```yaml repos.yaml
+defaults:
+  branch: ""              # empty means the repository's default branch
+  refresh: weekly
+repos:
+  - url: https://github.com/acme/payments
+    branch: main
+    folders: [docs]
+    excludeFolders: [docs/archive]
+
+  - url: https://github.com/acme/sdk
+    excludeFiles: [CHANGELOG.md]
+    refresh: push
+```
+
+| Field | Description |
+| ----- | ----------- |
+| `url` | The repository, as `https://github.com/owner/repo`. `repoUrl` is accepted too. |
+| `branch` | The branch to parse. Empty or absent means the repository's default branch. |
+| `folders` | Folders to parse. Absent means every folder. |
+| `excludeFolders`, `excludeFiles` | Folders and files to skip. Absent means Context7's default excludes, such as test and example folders. An empty list `[]` turns the defaults off. |
+| `refresh` | Sets the library's [automatic refresh](/howto/automatic-refresh) mode: `off`, `weekly`, `daily`, `hourly` or `push`. Absent leaves the mode as it is. Cloud only. |
+
+Removing a field from an entry is a change too: the library goes back to that field's default and is re-parsed.
+
+The manifest is checked as a whole before anything changes. An unknown field, a credential in a URL, a library listed twice, or more entries than your plan allows rejects the whole sync, so a broken manifest never applies in part.
+
+### Differences from on-premise
+
+- Only private github.com repositories are synced. Confluence, website, llms.txt and OpenAPI entries, and repositories on other Git hosts, are listed as unsupported in the preview and skipped.
+- `indexSourceCode` and `authority` are read but not applied.
+- On-premise rejects `refresh` on an entry and ignores it in `defaults`. If one manifest serves both, set `refresh` only in `defaults`.
+
+## Set up GitOps
+
+<Steps>
+  <Step title="Commit the manifest">
+    Add `repos.yaml` to a GitHub repository with the Context7 GitHub App installed.
+  </Step>
+  <Step title="Open the GitOps card">
+    Go to your teamspace's **Sources** tab and select **Set up GitOps** on the **GitOps** card.
+  </Step>
+  <Step title="Fill in the settings">
+    | Setting | Description |
+    | ------- | ----------- |
+    | Manifest repository | `owner/repo` or a github.com URL. |
+    | Branch | The branch to read the manifest from. Empty means the default branch. |
+    | Manifest path | The path of the manifest in the repository. Defaults to `repos.yaml`. |
+    | Sync on every push to the manifest and once a day | Turns automatic syncs on. |
+    | Prune | Remove libraries GitOps added when the manifest no longer lists them. Off by default. |
+  </Step>
+  <Step title="Confirm the terms">
+    Context7 shows your plan's GitOps limits and the parse price. Confirm to save.
+  </Step>
+  <Step title="Run the first sync">
+    Select **Preview sync** to see what the sync will add and its estimated cost, then **Confirm and sync**. Automatic syncs never run the first sync.
+  </Step>
+</Steps>
+
+## What a sync does
+
+For each entry, Context7:
+
+- **Adds** the library and parses it, if the teamspace does not have it yet.
+- **Re-parses** it, if its `branch`, `folders` or exclude lists changed since the last sync.
+- **Leaves it as it is**, if nothing changed. A sync with no changes costs nothing.
+
+A library you added in the dashboard or the API that the manifest also lists is tracked from then on: GitOps applies the manifest's settings to it, but never removes it.
+
+With **Prune** on, libraries GitOps added are removed from the teamspace when the manifest no longer lists them. Removals always wait for a sync you confirm after a preview; push and daily syncs hold them. Prune removes nothing while another entry of the sync fails. The library itself is deleted only when no other teamspace has it.
+
+## When syncs happen
+
+- **On push**: about a minute after a push to the manifest branch.
+- **Once a day.**
+- **Sync now** in the card.
+- **From CI**, with the API below. Use this if your other code lives on GitLab or Bitbucket.
+
+Push and daily syncs skip a manifest that was already applied. **Sync now** and the API always run in full, so they also add back a GitOps library someone removed in the dashboard. Only one sync runs per teamspace at a time.
+
+The card's **Sync history** lists the last 20 syncs, with what each one did to each entry.
+
+## Plan limits
+
+| | Pro | Enterprise |
+| --- | --- | --- |
+| Entries in the manifest | 20 | 100 |
+| Parses per sync | 5 | 20 |
+| Parses per day | 20 | 100 |
+
+Parses past a limit wait for the next sync or the next day. On Pro, an entry whose `refresh` would turn on automatic refresh for more than 10 libraries keeps its current mode, and the preview says so.
+
+## What it costs
+
+Each parse and re-parse bills its parse tokens to the teamspace at $5 per 1M tokens, as when you add or refresh a library yourself. See [Plans & Pricing](/plans-pricing). The preview shows an estimate before you confirm: a new library's first parse reads every page, while a re-parse reuses unchanged pages from the cache.
+
+## Use the API
+
+The GitOps settings, the preview and the sync are in the management API: [Get GitOps settings and sync history](/api-reference/teamspace-admin/get-gitops-settings-and-sync-history), [Save GitOps settings](/api-reference/teamspace-admin/save-gitops-settings), [Preview a GitOps sync](/api-reference/teamspace-admin/preview-a-gitops-sync) and [Run a GitOps sync](/api-reference/teamspace-admin/run-a-gitops-sync). Changing settings and running a sync need an API key with **Write access**.
+
+To sync from CI after a merge:
+
+```bash
+curl -X POST "https://context7.com/api/v2/teamspaces/<teamspaceId>/gitops/sync" \
+  -H "Authorization: Bearer <api-key>"
+```
+
+The first sync, and a sync that would remove libraries, answer `409 confirmation_required` until you send the `confirmation` token from a preview of the same manifest.
+
+## Related
+
+- [Automatic Refresh](/howto/automatic-refresh)
+- [Add Private Sources](/howto/private-sources)
+- [GitOps for on-premise installations](/enterprise/gitops)
