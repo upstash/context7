@@ -283,30 +283,44 @@ export function isEmptyCodeResult(text: string): boolean {
 }
 
 /**
- * The error text for a failed /v2/code call. The next step comes from the
- * HTTP status and the error code in the JSON body, not from the message text.
+ * The answer for a failed /v2/code call. The next step comes from the HTTP status and the error
+ * code in the JSON body, not from the message text.
  */
-async function codeErrorMessage(
+async function codeErrorAnswer(
   response: Response,
   request: CodeRequest,
   context: ClientContext,
   tool: CodeTool
-): Promise<string> {
+): Promise<ContextResponse> {
   const body = (await response
     .clone()
     .json()
     .catch(() => undefined)) as { error?: string; message?: string } | undefined;
   const code = typeof body?.error === "string" ? body.error : undefined;
+  // `index_pending` ends the wait for an index that is not coming soon (the API counts it as
+  // pending, not as a failure). Any other 5xx, such as a busy code store or a gateway error, can
+  // pass, so a task waits on through it.
+  if (code === "index_pending")
+    return { data: await parseErrorResponse(response, context), outcome: "not_found" };
+  const transient = response.status >= 500 ? { transient: true as const } : {};
   // A gateway error has no body from the code API: write the whole message here.
   if (!body?.message && response.status >= 500)
-    return `Source code search is not available now (HTTP ${response.status}). Do not retry now: answer from query-docs.`;
+    return {
+      data: `Source code search is not available now (HTTP ${response.status}). Do not retry now: answer from query-docs.`,
+      outcome: "error",
+      ...transient,
+    };
   const message = await parseErrorResponse(response, context);
   // For a git tag, index_failed means that the tag may not exist; the message lists the docs versions.
   const hasVersion = !!request.version || request.libraryId.split("/").filter(Boolean).length > 2;
   if (code === "index_failed" && hasVersion)
-    return `${message} Call ${tool} again with one of the docs versions in this message, or without version.`;
-  if (code === "code_search_unavailable") return `${message} Answer from query-docs.`;
-  return message;
+    return {
+      data: `${message} Call ${tool} again with one of the docs versions in this message, or without version.`,
+      outcome: "error",
+    };
+  if (code === "code_search_unavailable")
+    return { data: `${message} Answer from query-docs.`, outcome: "error", ...transient };
+  return { data: message, outcome: "error", ...transient };
 }
 
 /**
@@ -371,11 +385,9 @@ export async function fetchLibraryCode(
           };
         }
         if (!response.ok) {
-          const errorMessage = await codeErrorMessage(response, request, context, tool);
-          console.error(errorMessage);
-          // A 503 says the index will not come; other 5xx answers can pass.
-          const transient = response.status >= 500 && response.status !== 503;
-          return { data: errorMessage, outcome: "error", ...(transient && { transient }) };
+          const answer = await codeErrorAnswer(response, request, context, tool);
+          if (answer.outcome === "error") console.error(answer.data);
+          return answer;
         }
         const text = await response.text();
         if (!text) return { data: "No source results for this query.", outcome: "not_found" };

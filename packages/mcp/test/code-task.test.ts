@@ -20,6 +20,7 @@ import {
   type CodeTaskView,
 } from "../src/lib/code-task.js";
 import { cancelCodeTask, getCodeTask, registerCodeTools } from "../src/lib/code-tools.js";
+import { OAUTH_AUTH_SERVER_URL } from "../src/lib/constants.js";
 import type { ClientContext, CodeRequest } from "../src/lib/types.js";
 
 const REQUEST: CodeRequest = { libraryId: "/honojs/hono", version: "v4.7.0", pattern: "serve" };
@@ -29,10 +30,19 @@ const T0 = 1_800_000_000_000;
 const RESULT_TEXT = 'Library: /honojs/hono at v4.7.0\n2 matching lines in 1 files for "serve"';
 const MODERN = { [PROTOCOL_VERSION_META_KEY]: "2026-07-28" };
 
-/** An unsigned JWT: the binding reads `sub` without checking the signature. */
+const part = (value: object) => Buffer.from(JSON.stringify(value)).toString("base64url");
+
+/**
+ * A Clerk OAuth access token. The binding reads its `sub` without checking the signature, because
+ * the HTTP layer verified it before the request reached a tool.
+ */
 function jwt(sub: string, jti: string): string {
-  const part = (value: object) => Buffer.from(JSON.stringify(value)).toString("base64url");
-  return `${part({ alg: "none" })}.${part({ sub, jti })}.sig`;
+  return `${part({ alg: "none", typ: "at+jwt" })}.${part({ iss: OAUTH_AUTH_SERVER_URL, sub, jti })}.sig`;
+}
+
+/** A JWT of another issuer, which the HTTP layer passes on to the API unverified. */
+function foreignJwt(sub: string): string {
+  return `${part({ alg: "none" })}.${part({ iss: "https://other.example", sub })}.sig`;
 }
 
 function indexing202(retryAfter = 30, message = INDEXING.message): Response {
@@ -128,6 +138,15 @@ describe("task", () => {
     expect(await findCodeTask(store, taskId, { apiKey: jwt("user_1", "b") }, T0)).not.toBeNull();
     expect(await findCodeTask(store, taskId, { apiKey: jwt("user_2", "a") }, T0)).toBeNull();
     expect(callerBinding({ apiKey: jwt("user_1", "a") })).not.toContain("user_1");
+  });
+
+  test("a JWT this server did not verify cannot stand for its subject", async () => {
+    const { taskId } = await newTask({ apiKey: jwt("user_1", "a") });
+    expect(await findCodeTask(store, taskId, { apiKey: foreignJwt("user_1") }, T0)).toBeNull();
+    const own = await newTask({ apiKey: foreignJwt("user_1") });
+    expect(
+      await findCodeTask(store, own.taskId, { apiKey: foreignJwt("user_1") }, T0)
+    ).not.toBeNull();
   });
 
   test("an anonymous task is readable for an anonymous caller only", async () => {
@@ -307,14 +326,39 @@ describe("getCodeTask", () => {
     expect(view.result).toMatchObject({ isError: true });
   });
 
-  test("waits on after a timeout or a gateway error", async () => {
+  test("waits on after a timeout, a gateway error or a busy code store", async () => {
     const { taskId } = await newTask();
     fetchMock.mockRejectedValueOnce(new Error("timeout"));
     expect((await poll(taskId, 60)).status).toBe("working");
     fetchMock.mockResolvedValueOnce(new Response("Bad gateway", { status: 502 }));
     expect((await poll(taskId, 120)).status).toBe("working");
+    fetchMock.mockResolvedValueOnce(
+      Response.json(
+        {
+          error: "code_search_unavailable",
+          message: "Source code search is busy. Use query-docs for now.",
+        },
+        { status: 503 }
+      )
+    );
+    expect((await poll(taskId, 180)).status).toBe("working");
     fetchMock.mockResolvedValueOnce(new Response(RESULT_TEXT));
-    expect((await poll(taskId, 180)).status).toBe("completed");
+    expect((await poll(taskId, 240)).status).toBe("completed");
+  });
+
+  test("ends with the API's text, not an error, when the API ends the wait (index_pending)", async () => {
+    const message =
+      "The source of /honojs/hono at v4.7.0 has waited more than 10 minutes to be indexed, because many repositories are queued. Stop calling for it now and answer from query-docs. Try the source again in about 10 minutes.";
+    fetchMock.mockResolvedValue(
+      Response.json(
+        { error: "index_pending", message, retryAfter: 600, reason: "queued_long" },
+        { status: 503, headers: { "Retry-After": "600" } }
+      )
+    );
+    const { taskId } = await newTask();
+    const view = await poll(taskId, 60);
+    expect(view.status).toBe("completed");
+    expect(view.result).toEqual({ content: [{ type: "text", text: message }] });
   });
 
   test("ends after the 30 minute wait even when the API keeps timing out", async () => {
@@ -445,6 +489,20 @@ describe("over MCP", () => {
     expect(result?.resultType).toBe("complete");
     expect(result?.taskId).toBeUndefined();
     expect(JSON.stringify(result?.content)).toContain("answer from query-docs now");
+  });
+
+  test("the API's end of the wait (index_pending) is a normal answer, not an error", async () => {
+    fetchMock.mockImplementation(async () =>
+      Response.json(
+        { error: "index_pending", message: "Stop calling for it now and answer from query-docs." },
+        { status: 503 }
+      )
+    );
+    for (const tasks of [false, true]) {
+      const { result } = await grep(tasks);
+      expect(result?.resultType).toBe("complete");
+      expect(result?.isError).toBeUndefined();
+    }
   });
 
   test("a 202 stays a text answer on a server without a task store", async () => {

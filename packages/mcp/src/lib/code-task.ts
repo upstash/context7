@@ -1,7 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import * as jose from "jose";
-import { isJWT } from "./jwt.js";
-import { isOpaqueOAuthToken, validatedOpaqueOAuthTokenUserId } from "./oauth-token-validation.js";
+import { credentialOwner } from "./credential-owner.js";
 import type { CodeTool } from "./tool-names.js";
 import type { ClientContext, CodeRequest } from "./types.js";
 
@@ -152,26 +150,15 @@ function sha256(value: string): string {
 }
 
 /**
- * Who may read a task: the user of an OAuth token (a refreshed token is the same user), else the
- * API key, else any caller without a credential. This only stops a task ID from working with
- * another credential; the API checks what each credential may read.
+ * Who may read a task: the Context7 user of a verified OAuth token (a refreshed token is the same
+ * user), else the credential itself, else any caller without one. A stored result is answered
+ * without a call to the API, so only a verified owner may stand for a credential.
  */
 export function callerBinding(context: ClientContext): string {
   const credential = context.apiKey;
   if (!credential) return "anon";
-  if (isOpaqueOAuthToken(credential)) {
-    // The user the token check returned before the request reached the tool.
-    const userId = validatedOpaqueOAuthTokenUserId(credential);
-    if (userId) return `u:${sha256(userId)}`;
-  } else if (isJWT(credential)) {
-    try {
-      const { sub } = jose.decodeJwt(credential);
-      if (typeof sub === "string" && sub) return `s:${sha256(sub)}`;
-    } catch {
-      // Not a JWT after all: bind to the credential itself.
-    }
-  }
-  return `k:${sha256(credential)}`;
+  const owner = credentialOwner(credential);
+  return owner && "userId" in owner ? `u:${sha256(owner.userId)}` : `k:${sha256(credential)}`;
 }
 
 /**
