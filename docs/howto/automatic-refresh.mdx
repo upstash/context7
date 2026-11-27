@@ -43,7 +43,7 @@ You can change the mode or turn it off at any time. Turning a mode off never nee
 | Automatic refreshes per library per day | 6 | 48 |
 | Libraries with automatic refresh on | 10 per teamspace | No limit |
 
-On Pro, **Hourly** runs every 3 hours, and pushes that arrive inside the 3-hour window are combined into one refresh at its end. A burst of pushes always makes a single refresh.
+Both limits apply. On Pro, **Hourly** runs at most every 3 hours and stops for the day after 6 refreshes, so it never reaches the 8 that the 3-hour interval alone would allow. Pushes that arrive inside the 3-hour window are combined into one refresh at its end, and a burst of pushes always makes a single refresh.
 
 If a teamspace moves from Enterprise to Pro, its first 10 libraries keep refreshing, in the order their automatic refresh was turned on. The card marks the others as not running on the current plan; turn some off or upgrade. On the Free plan no automatic refresh runs.
 
@@ -72,7 +72,7 @@ A library several teamspaces track is refreshed once for all of them. Each teams
 
 ## Use the API
 
-Read or set a library's mode with the management API: [Get automatic refresh](/api-reference/teamspace-libraries/get-automatic-refresh) and [Set automatic refresh](/api-reference/teamspace-libraries/set-automatic-refresh) (`PUT` with `{ "mode": "off" | "weekly" | "daily" | "hourly" | "push" }`). Setting a mode needs an API key with **Write access**. The [Admin MCP](/howto/admin-mcp) server uses the same API.
+Read or set a library's mode with the management API: [Get automatic refresh](/api-reference/teamspace-libraries/get-automatic-refresh) and [Set automatic refresh](/api-reference/teamspace-libraries/set-automatic-refresh) (`PUT` with `{ "mode": "off" | "weekly" | "daily" | "hourly" | "push" }`). Setting a mode needs an API key with **Write access**.
 
 ## Related
 
