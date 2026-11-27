@@ -1,12 +1,7 @@
 import type { CallToolResult, McpServer, ServerContext } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { fetchLibraryCode } from "./api.js";
-import {
-  clientDeclaresTasks,
-  createCodeTask,
-  registerCodeTaskHandlers,
-  type CodeTaskStore,
-} from "./code-task.js";
+import { clientDeclaresTasks, createCodeTask, registerCodeTaskHandlers } from "./code-task.js";
 import { maybeElicitAuthSignIn } from "./auth/auth-prompt.js";
 import { recordToolCallTelemetry } from "./auth-lifecycle-telemetry.js";
 import { aliasArgs, QUERY_DOCS_ALIASES, type AliasMap } from "./tool-args.js";
@@ -408,8 +403,7 @@ export function codeToolResult(response: ContextResponse): CallToolResult {
  */
 export function registerCodeTools(
   server: McpServer,
-  getClientContext: (toolCtx: ServerContext) => ClientContext,
-  taskStore: CodeTaskStore | null
+  getClientContext: (toolCtx: ServerContext) => ClientContext
 ): void {
   const run = async (tool: CodeTool, request: CodeRequest | string, toolCtx: ServerContext) => {
     const ctx = getClientContext(toolCtx);
@@ -417,13 +411,15 @@ export function registerCodeTools(
       recordToolCallTelemetry(ctx, "invalid");
       return { content: [{ type: "text" as const, text: request }], isError: true };
     }
-    const response = await fetchLibraryCode(request, ctx, tool);
+    // A client that declared the Tasks extension waits for the index itself, and the agent gets
+    // the real result: the API then names a task in its 202. Any other client gets the
+    // "still indexing" text.
+    const tasks = clientDeclaresTasks(toolCtx.mcpReq.envelope);
+    const response = await fetchLibraryCode(request, ctx, tool, { task: tasks });
     maybeElicitAuthSignIn(server, ctx);
     recordToolCallTelemetry(ctx, response.outcome);
-    // A client that declared the Tasks extension waits for the index itself, and the agent gets
-    // the real result. Any other client gets the "still indexing" text.
-    if (taskStore && response.indexing && clientDeclaresTasks(toolCtx.mcpReq.envelope)) {
-      const task = await createCodeTask(taskStore, tool, request, response.indexing, ctx);
+    if (tasks && response.indexing) {
+      const task = createCodeTask(tool, response.indexing);
       // The SDK sends a tools/call result with a `resultType` as it is; its types do not model one.
       if (task) return { resultType: "task", ...task } as unknown as CallToolResult;
     }
@@ -431,7 +427,7 @@ export function registerCodeTools(
   };
 
   // The Tasks extension's methods, only where tasks can be stored (see index.ts).
-  if (taskStore) registerCodeTaskHandlers(server, getClientContext, taskStore, codeToolResult);
+  registerCodeTaskHandlers(server, getClientContext, codeToolResult);
 
   server.registerTool(
     GREP_CODE_TOOL,

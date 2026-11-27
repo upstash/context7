@@ -42,8 +42,7 @@ import {
 import { aliasArgs, GLOBAL_ALIASES, QUERY_DOCS_ALIASES } from "./lib/tool-args.js";
 import { DOCS_FEEDBACK_INSTRUCTIONS, registerExperimentalTools } from "./lib/experimental-tools.js";
 import { CODE_TOOLS_INSTRUCTIONS } from "./lib/code-tools.js";
-import { MemoryCodeTaskStore, TASKS_EXTENSION, type CodeTaskStore } from "./lib/code-task.js";
-import { redisCodeTaskStoreFromEnv } from "./lib/code-task-redis.js";
+import { TASKS_EXTENSION } from "./lib/code-task.js";
 import { installProcessShutdown } from "./lib/process-shutdown.js";
 import {
   isSnapshotEnabled,
@@ -179,14 +178,6 @@ if (TRANSPORT_TYPE === "stdio" && passedPortFlag) {
 
 const requestContext = new AsyncLocalStorage<ClientContext>();
 
-/**
- * Where code tool tasks live (code-task.ts): in this process for stdio, else in the Redis
- * database of UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN, shared by all replicas.
- * Without one the server creates no tasks.
- */
-const codeTaskStore: CodeTaskStore | null =
-  TRANSPORT_TYPE === "stdio" ? new MemoryCodeTaskStore() : redisCodeTaskStoreFromEnv();
-
 // Global state for stdio mode only
 let stdioApiKey: string | undefined;
 let stdioClientInfo: { ide?: string; version?: string } | undefined;
@@ -320,9 +311,7 @@ function createMcpServer(
       prompts: { listChanged: false },
       resources: { listChanged: false, subscribe: false },
       // While a code index is built, a code tool call can answer with a task (code-task.ts).
-      ...(enabled.has(CODE_TOOLS) && codeTaskStore
-        ? { extensions: { [TASKS_EXTENSION]: {} } }
-        : {}),
+      ...(enabled.has(CODE_TOOLS) ? { extensions: { [TASKS_EXTENSION]: {} } } : {}),
     },
     // These results change only on deploy, so clients may reuse them for an hour.
     // The tools and the instructions (server/discover) depend on the caller's
@@ -530,7 +519,7 @@ If the user's project or question names a version of the library (package.json, 
     }
   );
 
-  registerExperimentalTools(server, getClientContext, enabled, codeTaskStore);
+  registerExperimentalTools(server, getClientContext, enabled);
 
   return server;
 }

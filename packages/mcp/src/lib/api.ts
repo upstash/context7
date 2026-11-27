@@ -288,9 +288,9 @@ export function isEmptyCodeResult(text: string): boolean {
  */
 async function codeErrorAnswer(
   response: Response,
-  request: CodeRequest,
   context: ClientContext,
-  tool: CodeTool
+  tool: CodeTool,
+  request?: CodeRequest
 ): Promise<ContextResponse> {
   const body = (await response
     .clone()
@@ -312,7 +312,9 @@ async function codeErrorAnswer(
     };
   const message = await parseErrorResponse(response, context);
   // For a git tag, index_failed means that the tag may not exist; the message lists the docs versions.
-  const hasVersion = !!request.version || request.libraryId.split("/").filter(Boolean).length > 2;
+  // A task's replay does not repeat its request here: its message names the docs versions anyway.
+  const hasVersion =
+    !!request?.version || (request?.libraryId.split("/").filter(Boolean).length ?? 0) > 2;
   if (code === "index_failed" && hasVersion)
     return {
       data: `${message} Call ${tool} again with one of the docs versions in this message, or without version.`,
@@ -335,12 +337,14 @@ export function codeVersion(
 /**
  * Queries a library's source code at the version its docs were built from.
  * A 202 means the source is still being indexed: that is a normal answer, and the agent goes on
- * without it (see indexingAnswer).
+ * without it (see indexingAnswer). With `task`, the API also names a task for the request in its
+ * 202 (`indexing.taskId`), which fetchCodeTask polls.
  */
 export async function fetchLibraryCode(
   request: CodeRequest,
   context: ClientContext,
-  tool: CodeTool
+  tool: CodeTool,
+  options: { task?: boolean } = {}
 ): Promise<ContextResponse> {
   try {
     const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/code`);
@@ -366,6 +370,7 @@ export async function fetchLibraryCode(
       url.searchParams.set("head_limit", String(request.head_limit));
     if (request.offset) url.searchParams.set("offset", String(request.offset));
     url.searchParams.set("wait", String(CODE_INDEX_WAIT_SECONDS));
+    if (options.task) url.searchParams.set("task", "1");
 
     const headers = generateHeaders(context);
     const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);
@@ -373,38 +378,97 @@ export async function fetchLibraryCode(
     return await observeUpstreamRequest(
       "fetch_code",
       () => fetch(url, { headers, signal: abortSignal }),
-      async (response) => {
-        readPromptSignal(response, context);
-        if (response.status === 202) {
-          const body = (await response.json().catch(() => ({}))) as {
-            message?: string;
-            retryAfter?: number;
-          };
-          return {
-            data: indexingAnswer(body.message, tool),
-            // No "indexing" outcome exists: telemetry counts it with the empty results.
-            outcome: "not_found",
-            indexing: {
-              retryAfter: typeof body.retryAfter === "number" ? body.retryAfter : undefined,
-              message: indexingMessage(body.message),
-            },
-          };
-        }
-        if (!response.ok) {
-          const answer = await codeErrorAnswer(response, request, context, tool);
-          if (answer.outcome === "error") console.error(answer.data);
-          return answer;
-        }
-        const text = await response.text();
-        if (!text) return { data: "No source results for this query.", outcome: "not_found" };
-        return { data: text, outcome: isEmptyCodeResult(text) ? "not_found" : "success" };
+      (response) => codeAnswer(response, context, tool, request),
+      { abortSignal }
+    );
+  } catch (error) {
+    return codeRequestFailed(error);
+  }
+}
+
+/** A request to the code API that got no answer: a timeout or a network error. */
+function codeRequestFailed(error: unknown): ContextResponse {
+  const errorMessage = `Error querying library source code: ${error}. Do not retry now: answer from query-docs.`;
+  console.error(errorMessage);
+  return { data: errorMessage, outcome: "error", transient: true };
+}
+
+/** The answer for a /v2/code response, or for a task's replay of one. */
+async function codeAnswer(
+  response: Response,
+  context: ClientContext,
+  tool: CodeTool,
+  request?: CodeRequest
+): Promise<ContextResponse> {
+  readPromptSignal(response, context);
+  if (response.status === 202) {
+    const body = (await response.json().catch(() => ({}))) as {
+      message?: string;
+      retryAfter?: number;
+      taskId?: unknown;
+    };
+    return {
+      data: indexingAnswer(body.message, tool),
+      // No "indexing" outcome exists: telemetry counts it with the empty results.
+      outcome: "not_found",
+      indexing: {
+        retryAfter: typeof body.retryAfter === "number" ? body.retryAfter : undefined,
+        message: indexingMessage(body.message),
+        ...(typeof body.taskId === "string" && body.taskId ? { taskId: body.taskId } : {}),
+      },
+    };
+  }
+  if (!response.ok) {
+    const answer = await codeErrorAnswer(response, context, tool, request);
+    if (answer.outcome === "error") console.error(answer.data);
+    return answer;
+  }
+  const text = await response.text();
+  if (!text) return { data: "No source results for this query.", outcome: "not_found" };
+  return { data: text, outcome: isEmptyCodeResult(text) ? "not_found" : "success" };
+}
+
+/** What the API answered for a task (GET or DELETE /v2/code/tasks/{id}). */
+export type CodeTaskAnswer = ContextResponse & {
+  /** When the task was created, Unix milliseconds (`X-Context7-Task-Created`). */
+  createdAt?: number;
+  /** The answer was read from the task, not from a new run of its request. */
+  stored?: boolean;
+  /** The task is unknown (or another caller's), or it was cancelled. */
+  ended?: "unknown" | "cancelled";
+};
+
+/**
+ * Polls (GET) or cancels (DELETE) a code tool task. A poll answers what the task's /v2/code
+ * request answers now, for the credential of this request.
+ */
+export async function fetchCodeTask(
+  taskId: string,
+  context: ClientContext,
+  tool: CodeTool,
+  method: "GET" | "DELETE" = "GET"
+): Promise<CodeTaskAnswer> {
+  try {
+    const url = new URL(`${CONTEXT7_API_BASE_URL}/v2/code/tasks/${encodeURIComponent(taskId)}`);
+    const headers = generateHeaders(context);
+    const abortSignal = AbortSignal.timeout(API_TIMEOUT_MS);
+    return await observeUpstreamRequest(
+      "fetch_code",
+      () => fetch(url, { method, headers, signal: abortSignal }),
+      async (response): Promise<CodeTaskAnswer> => {
+        const created = Number(response.headers.get("X-Context7-Task-Created"));
+        const createdAt = Number.isFinite(created) && created > 0 ? created : undefined;
+        if (response.status === 404) return { data: "", outcome: "not_found", ended: "unknown" };
+        if (response.status === 410)
+          return { data: "", outcome: "not_found", ended: "cancelled", createdAt };
+        if (method === "DELETE") return { data: "", outcome: "success" };
+        const stored = response.headers.get("X-Context7-Task-Stored") === "1";
+        return { ...(await codeAnswer(response, context, tool)), createdAt, stored };
       },
       { abortSignal }
     );
   } catch (error) {
-    const errorMessage = `Error querying library source code: ${error}. Do not retry now: answer from query-docs.`;
-    console.error(errorMessage);
-    return { data: errorMessage, outcome: "error", transient: true };
+    return codeRequestFailed(error);
   }
 }
 

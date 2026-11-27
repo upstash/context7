@@ -40,6 +40,8 @@ export type ContextResponse = {
     retryAfter?: number;
     /** The API's message, without its advice to call again. */
     message: string;
+    /** The task the API made for the request, when it was asked for one. */
+    taskId?: string;
   };
   /** Set when the request failed in a way that says nothing about the answer (timeout, 5xx). */
   transient?: true;

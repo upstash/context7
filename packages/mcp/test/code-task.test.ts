@@ -11,61 +11,48 @@ vi.mock("../src/lib/telemetry-runtime.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../src/lib/telemetry-runtime.js")>()),
   recordToolCallOutcome: vi.fn(),
 }));
+
+import { recordToolCallTelemetry } from "../src/lib/auth-lifecycle-telemetry.js";
+import { recordToolCallOutcome } from "../src/lib/telemetry-runtime.js";
 import {
   CODE_TASK_TTL_MS,
   CODE_TASK_WAIT_MS,
-  MemoryCodeTaskStore,
+  MAX_TASK_ID_LENGTH,
   TASKS_EXTENSION,
-  callerBinding,
   cancelCodeTask,
-  checkGate,
   clientDeclaresTasks,
   createCodeTask,
-  findCodeTask,
   getCodeTask,
   pollSeconds,
-  type CodeTaskStore,
-  type CodeTaskView,
 } from "../src/lib/code-task.js";
-import { recordToolCallTelemetry } from "../src/lib/auth-lifecycle-telemetry.js";
-import { recordToolCallOutcome } from "../src/lib/telemetry-runtime.js";
 import { codeToolResult, registerCodeTools } from "../src/lib/code-tools.js";
-import { OAUTH_AUTH_SERVER_URL } from "../src/lib/constants.js";
-import type { ClientContext, CodeRequest } from "../src/lib/types.js";
+import type { ClientContext } from "../src/lib/types.js";
 
-const REQUEST: CodeRequest = { libraryId: "/honojs/hono", version: "v4.7.0", pattern: "serve" };
-const INDEXING = { retryAfter: 30, message: "The source of /honojs/hono is being indexed." };
+const API_TASK = "AbCdEfGhIjKlMnOpQrStUv";
+const TASK = `grep-code.${API_TASK}`;
 const CALLER: ClientContext = { transport: "http", apiKey: "ctx7sk-one" };
 const T0 = 1_800_000_000_000;
+const MESSAGE = "The source of /honojs/hono at v4.7.0 is being indexed.";
 const RESULT_TEXT = 'Library: /honojs/hono at v4.7.0\n2 matching lines in 1 files for "serve"';
 const MODERN = { [PROTOCOL_VERSION_META_KEY]: "2026-07-28" };
 
-const part = (value: object) => Buffer.from(JSON.stringify(value)).toString("base64url");
-
-/**
- * A Clerk OAuth access token. The binding reads its `sub` without checking the signature, because
- * the HTTP layer verified it before the request reached a tool.
- */
-function jwt(sub: string, jti: string): string {
-  return `${part({ alg: "none", typ: "at+jwt" })}.${part({ iss: OAUTH_AUTH_SERVER_URL, sub, jti })}.sig`;
+const created = (extra: Record<string, string> = {}) => ({
+  "X-Context7-Task-Created": String(T0),
+  ...extra,
+});
+function indexing202(retryAfter = 60, taskId?: string, headers = created()): Response {
+  return Response.json(
+    { error: "indexing", message: MESSAGE, retryAfter, ...(taskId ? { taskId } : {}) },
+    { status: 202, headers }
+  );
 }
-
-/** A JWT of another issuer, which the HTTP layer passes on to the API unverified. */
-function foreignJwt(sub: string): string {
-  return `${part({ alg: "none" })}.${part({ iss: "https://other.example", sub })}.sig`;
-}
-
-function indexing202(retryAfter = 30, message = INDEXING.message): Response {
-  return Response.json({ error: "indexing", retryAfter, message }, { status: 202 });
-}
+const result200 = (headers = created()) => new Response(RESULT_TEXT, { headers });
 
 let fetchMock: ReturnType<typeof vi.fn<typeof fetch>>;
-let store: MemoryCodeTaskStore;
 
 beforeEach(() => {
   vi.mocked(recordToolCallTelemetry).mockClear();
   vi.mocked(recordToolCallOutcome).mockClear();
-  store = new MemoryCodeTaskStore();
   fetchMock = vi.fn<typeof fetch>();
   vi.stubGlobal("fetch", fetchMock);
   vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -76,25 +63,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function newTask(
-  context = CALLER,
-  request = REQUEST,
-  retryAfter: number | undefined = 30
-): Promise<CodeTaskView> {
-  const task = await createCodeTask(
-    store,
-    "grep-code",
-    request,
-    { ...INDEXING, retryAfter },
-    context,
-    T0
-  );
-  if (!task) throw new Error("no task");
-  return task;
-}
-
-const poll = (taskId: string, seconds: number, context = CALLER) =>
-  getCodeTask(store, taskId, context, codeToolResult, T0 + seconds * 1000);
+const poll = (seconds: number, taskId = TASK, context = CALLER) =>
+  getCodeTask(taskId, context, codeToolResult, T0 + seconds * 1000);
 
 describe("clientDeclaresTasks", () => {
   const envelope = (capabilities: unknown, meta: object = MODERN) => ({
@@ -121,400 +91,173 @@ describe("clientDeclaresTasks", () => {
   });
 });
 
-describe("task", () => {
-  test("is stored before the answer, with a short random ID", async () => {
-    const task = await newTask();
-    expect(task).toMatchObject({ status: "working", ttlMs: CODE_TASK_TTL_MS });
-    expect(task.statusMessage).toContain(INDEXING.message);
-    expect(task.taskId).toMatch(/^[A-Za-z0-9_-]{22}$/);
-    expect(await findCodeTask(store, task.taskId, CALLER, T0)).toMatchObject({
-      tool: "grep-code",
-      request: REQUEST,
-      createdAt: T0,
+describe("createCodeTask", () => {
+  test("names the tool and the API's task, and asks to poll after retryAfter", () => {
+    const task = createCodeTask(
+      "grep-code",
+      { message: MESSAGE, retryAfter: 90, taskId: API_TASK },
+      T0
+    );
+    expect(task).toMatchObject({
+      taskId: TASK,
+      status: "working",
+      ttlMs: CODE_TASK_TTL_MS,
+      pollIntervalMs: 90_000,
+      createdAt: new Date(T0).toISOString(),
     });
+    expect(task?.statusMessage).toContain(MESSAGE);
+    expect(task!.taskId.length).toBeLessThanOrEqual(MAX_TASK_ID_LENGTH);
   });
 
-  test("keeps the result for an hour after the 30 minute wait", () => {
-    expect(CODE_TASK_TTL_MS).toBe(CODE_TASK_WAIT_MS + 60 * 60 * 1000);
-  });
-
-  test("is not found with another credential, without one, or with an unknown ID", async () => {
-    const { taskId } = await newTask();
-    expect(await findCodeTask(store, taskId, { apiKey: "ctx7sk-two" }, T0)).toBeNull();
-    expect(await findCodeTask(store, taskId, {}, T0)).toBeNull();
-    expect(await findCodeTask(store, "unknown", CALLER, T0)).toBeNull();
-  });
-
-  test("stays readable when an OAuth token is refreshed, and closed for another user", async () => {
-    const { taskId } = await newTask({ apiKey: jwt("user_1", "a") });
-    expect(await findCodeTask(store, taskId, { apiKey: jwt("user_1", "b") }, T0)).not.toBeNull();
-    expect(await findCodeTask(store, taskId, { apiKey: jwt("user_2", "a") }, T0)).toBeNull();
-    expect(callerBinding({ apiKey: jwt("user_1", "a") })).not.toContain("user_1");
-  });
-
-  test("a JWT this server did not verify cannot stand for its subject", async () => {
-    const { taskId } = await newTask({ apiKey: jwt("user_1", "a") });
-    expect(await findCodeTask(store, taskId, { apiKey: foreignJwt("user_1") }, T0)).toBeNull();
-    const own = await newTask({ apiKey: foreignJwt("user_1") });
-    expect(
-      await findCodeTask(store, own.taskId, { apiKey: foreignJwt("user_1") }, T0)
-    ).not.toBeNull();
-  });
-
-  test("an anonymous task is readable for an anonymous caller only", async () => {
-    const { taskId } = await newTask({});
-    expect(await findCodeTask(store, taskId, { clientIp: "203.0.113.9" }, T0)).not.toBeNull();
-    expect(await findCodeTask(store, taskId, CALLER, T0)).toBeNull();
-  });
-
-  test("is gone one hour after the wait", async () => {
-    const { taskId } = await newTask();
-    expect(await findCodeTask(store, taskId, CALLER, T0 + CODE_TASK_TTL_MS - 1)).not.toBeNull();
-    expect(await findCodeTask(store, taskId, CALLER, T0 + CODE_TASK_TTL_MS)).toBeNull();
-  });
-
-  test("is not created when the store fails, so the tool answers without one", async () => {
-    const failing: CodeTaskStore = {
-      get: async () => null,
-      put: async () => {
-        throw new Error("redis down");
-      },
-      claimCheck: async () => false,
-      releaseCheck: async () => undefined,
-    };
-    expect(await createCodeTask(failing, "grep-code", REQUEST, INDEXING, CALLER, T0)).toBeNull();
-    expect(console.error).toHaveBeenCalled();
-  });
-});
-
-describe("MemoryCodeTaskStore", () => {
-  const record = {
-    tool: "grep-code" as const,
-    request: REQUEST,
-    createdAt: T0,
-    updatedAt: T0,
-    caller: "anon",
-    pollSeconds: 30,
-    status: "working" as const,
-    message: "m",
-  };
-
-  test("keeps the newest tasks when it is full", async () => {
-    const small = new MemoryCodeTaskStore(2);
-    for (const id of ["a", "b", "c"]) await small.put(id, record);
-    expect(await small.get("a", T0)).toBeNull();
-    expect(await small.get("c", T0)).not.toBeNull();
-  });
-
-  test("does not write a task again after it has ended", async () => {
-    expect(await store.put("a", { ...record, status: "cancelled" })).toBe(true);
-    expect(await store.put("a", { ...record, status: "completed", result: {} })).toBe(false);
-    expect((await store.get("a", T0))?.status).toBe("cancelled");
-  });
-
-  test("keeps the newest gates when it has too many", async () => {
-    const small = new MemoryCodeTaskStore(2);
-    for (const gate of ["g1", "g2", "g3"]) await small.claimCheck(gate, T0, 0);
-    expect(await small.claimCheck("g1", T0 + 1, 60_000)).toBe(true);
-    expect(await small.claimCheck("g3", T0 + 1, 60_000)).toBe(false);
-  });
-
-  test("lets a request through the gate only after the gap or a release", async () => {
-    expect(await store.claimCheck("g", T0, 0)).toBe(true);
-    expect(await store.claimCheck("g", T0 + 44_000, 45_000)).toBe(false);
-    expect(await store.claimCheck("g", T0 + 45_000, 45_000)).toBe(true);
-    await store.releaseCheck("g");
-    expect(await store.claimCheck("g", T0 + 46_000, 45_000)).toBe(true);
+  test("makes no task when the API named none", () => {
+    expect(createCodeTask("grep-code", { message: MESSAGE, retryAfter: 60 })).toBeNull();
   });
 });
 
 describe("poll interval", () => {
-  test("is never below retryAfter, and at least 30 seconds", async () => {
-    for (const retryAfter of [undefined, 1, 5, 29.2, 30, 31, 45.5, 60, 120]) {
+  test("is never below retryAfter, and at least 30 seconds", () => {
+    for (const retryAfter of [undefined, 1, 29.2, 30, 45.5, 60, 120]) {
       expect(pollSeconds(retryAfter)).toBeGreaterThanOrEqual(retryAfter ?? 0);
       expect(pollSeconds(retryAfter)).toBeGreaterThanOrEqual(30);
-      const task = await newTask(CALLER, REQUEST, retryAfter);
-      expect(task.pollIntervalMs).toBeGreaterThanOrEqual((retryAfter ?? 0) * 1000);
     }
-  });
-
-  test("a client that polls every 30 seconds causes 10 API requests in 10 minutes", async () => {
-    fetchMock.mockImplementation(async () => indexing202());
-    const { taskId } = await newTask();
-    const times: number[] = [];
-    for (let seconds = 30; seconds <= 600; seconds += 30) {
-      const before = fetchMock.mock.calls.length;
-      await poll(taskId, seconds);
-      if (fetchMock.mock.calls.length > before) times.push(seconds);
-    }
-    expect(times).toHaveLength(10);
-    // Never closer than retryAfter (30 s), counted from the tool call at 0.
-    expect(times[0]).toBe(60);
-    for (let i = 1; i < times.length; i++) expect(times[i]! - times[i - 1]!).toBe(60);
-  });
-
-  test("parallel tasks for one version share the requests", async () => {
-    fetchMock.mockImplementation(async () => indexing202());
-    const grep = await newTask();
-    const glob = await newTask(CALLER, { libraryId: "/HonoJS/hono", version: "v4.7.0" });
-    expect(checkGate({ caller: "x", request: REQUEST })).toBe(
-      checkGate({ caller: "x", request: { libraryId: "/honojs/hono ", version: "v4.7.0" } })
-    );
-    for (let seconds = 30; seconds <= 600; seconds += 30) {
-      await poll(grep.taskId, seconds);
-      await poll(glob.taskId, seconds);
-    }
-    expect(fetchMock).toHaveBeenCalledTimes(10);
-  });
-
-  test("one gate per version, however the version is written", async () => {
-    const gate = (request: CodeRequest) => checkGate({ caller: "x", request });
-    const base = gate({ libraryId: "/honojs/hono", version: "v4.7.0" });
-    expect(gate({ libraryId: "/honojs/hono", version: "/honojs/hono/v4.7.0" })).toBe(base);
-    expect(gate({ libraryId: "/honojs/hono/v4.7.0" })).toBe(base);
-    expect(gate({ libraryId: "/HonoJS/hono", version: " v4.7.0 " })).toBe(base);
-    expect(gate({ libraryId: "/honojs/hono", version: "latest" })).toBe(
-      gate({ libraryId: "/honojs/hono" })
-    );
-    expect(gate({ libraryId: "/honojs/hono", version: "v4.8.0" })).not.toBe(base);
-  });
-
-  test("another version, or another caller, has its own requests", async () => {
-    fetchMock.mockImplementation(async () => indexing202());
-    const a = await newTask();
-    const b = await newTask(CALLER, { ...REQUEST, version: "v4.8.0" });
-    const c = await newTask({ apiKey: "ctx7sk-two" });
-    await poll(a.taskId, 60);
-    await poll(b.taskId, 60);
-    await poll(c.taskId, 60, { apiKey: "ctx7sk-two" });
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-  });
-
-  test("a later, longer retryAfter is the gap between API requests", async () => {
-    fetchMock.mockImplementation(async () => indexing202(120));
-    const { taskId } = await newTask();
-    expect((await poll(taskId, 60)).pollIntervalMs).toBe(120_000);
-    for (const seconds of [90, 120, 150, 179]) await poll(taskId, seconds);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    await poll(taskId, 180);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
 
 describe("getCodeTask", () => {
-  test("answers working without a request to the API before the gap has passed", async () => {
-    const { taskId } = await newTask();
-    const view = await poll(taskId, 30);
-    expect(view).toMatchObject({ taskId, status: "working", pollIntervalMs: 30_000 });
-    expect(view.statusMessage).toContain(INDEXING.message);
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  test("answers working with the API's new message while the API answers 202", async () => {
-    fetchMock.mockResolvedValue(indexing202(30, "Indexing, about 2 minutes left."));
-    const view = await poll((await newTask()).taskId, 60);
-    expect(view.status).toBe("working");
-    expect(view.statusMessage).toContain("Indexing, about 2 minutes left.");
-    expect(view.result).toBeUndefined();
-  });
-
-  test("asks the API with the request of the task and the credential of the poll", async () => {
+  test("polls the API's task with the poll's credential", async () => {
     fetchMock.mockResolvedValue(indexing202());
-    const refreshed = { apiKey: jwt("user_1", "b") };
-    const { taskId } = await newTask({ apiKey: jwt("user_1", "a") });
-    await poll(taskId, 60, refreshed);
+    await poll(60, TASK, { apiKey: "ctx7sk-refreshed" });
     const [url, init] = fetchMock.mock.calls[0]!;
-    expect(String(url)).toContain("libraryId=%2Fhonojs%2Fhono");
-    expect(String(url)).toContain("pattern=serve");
-    expect(new Headers(init?.headers).get("authorization")).toBe(`Bearer ${refreshed.apiKey}`);
+    expect(String(url)).toMatch(new RegExp(`/v2/code/tasks/${API_TASK}$`));
+    expect(init?.method).toBe("GET");
+    expect(new Headers(init?.headers).get("authorization")).toBe("Bearer ctx7sk-refreshed");
   });
 
-  test("completes with the result the tool returns, and keeps it", async () => {
-    fetchMock.mockResolvedValue(new Response(RESULT_TEXT));
-    const { taskId } = await newTask();
-    const view = await poll(taskId, 60);
-    expect(view.status).toBe("completed");
-    expect(view.result).toEqual({ content: [{ type: "text", text: RESULT_TEXT }] });
-    // A later read, for example after a resume, costs no request.
-    expect(await poll(taskId, 1200)).toMatchObject({ status: "completed", result: view.result });
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  test("a ready index lets the other tasks of the version ask at their next poll", async () => {
-    fetchMock.mockImplementation(async () => new Response(RESULT_TEXT));
-    const grep = await newTask();
-    const glob = await newTask(CALLER, { libraryId: "/honojs/hono", version: "v4.7.0" });
-    expect((await poll(grep.taskId, 60)).status).toBe("completed");
-    expect((await poll(glob.taskId, 61)).status).toBe("completed");
-  });
-
-  test("completes with the tool's error result when the API refuses the request", async () => {
-    fetchMock.mockResolvedValue(
-      Response.json({ error: "index_failed", message: "The tag does not exist." }, { status: 404 })
-    );
-    const view = await poll((await newTask()).taskId, 60);
-    expect(view.status).toBe("completed");
-    expect(view.result).toMatchObject({ isError: true });
-  });
-
-  test("waits on after a timeout, a gateway error or a busy code store", async () => {
-    const { taskId } = await newTask();
-    fetchMock.mockRejectedValueOnce(new Error("timeout"));
-    expect((await poll(taskId, 60)).status).toBe("working");
-    fetchMock.mockResolvedValueOnce(new Response("Bad gateway", { status: 502 }));
-    expect((await poll(taskId, 120)).status).toBe("working");
-    fetchMock.mockResolvedValueOnce(
-      Response.json(
-        {
-          error: "code_search_unavailable",
-          message: "Source code search is busy. Use query-docs for now.",
-        },
-        { status: 503 }
-      )
-    );
-    expect((await poll(taskId, 180)).status).toBe("working");
-    fetchMock.mockResolvedValueOnce(new Response(RESULT_TEXT));
-    expect((await poll(taskId, 240)).status).toBe("completed");
-  });
-
-  test("ends with the API's text, not an error, when the API ends the wait (index_pending)", async () => {
-    const message =
-      "The source of /honojs/hono at v4.7.0 has waited more than 10 minutes to be indexed, because many repositories are queued. Stop calling for it now and answer from query-docs. Try the source again in about 10 minutes.";
-    fetchMock.mockResolvedValue(
-      Response.json(
-        { error: "index_pending", message, retryAfter: 600, reason: "queued_long" },
-        { status: 503, headers: { "Retry-After": "600" } }
-      )
-    );
-    const { taskId } = await newTask();
-    const view = await poll(taskId, 60);
-    expect(view.status).toBe("completed");
-    expect(view.result).toEqual({ content: [{ type: "text", text: message }] });
-  });
-
-  test("a timeout after the wait does not open the gate for the other tasks of the version", async () => {
-    const late = await newTask();
-    const sibling = await createCodeTask(
-      store,
-      "glob-code",
-      { libraryId: "/honojs/hono", version: "v4.7.0" },
-      INDEXING,
-      CALLER,
-      T0 + CODE_TASK_WAIT_MS - 60_000
-    );
-    fetchMock.mockRejectedValue(new Error("timeout"));
-    expect((await poll(late.taskId, CODE_TASK_WAIT_MS / 1000)).status).toBe("completed");
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    // The gate stays closed for the gap, so the sibling's next poll asks nothing.
-    await poll(sibling!.taskId, CODE_TASK_WAIT_MS / 1000 + 1);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-  });
-
-  test("ends after the 30 minute wait with the 'being indexed' answer when the API times out", async () => {
-    fetchMock.mockRejectedValue(new Error("timeout"));
-    const view = await poll((await newTask()).taskId, CODE_TASK_WAIT_MS / 1000);
-    expect(view.status).toBe("completed");
-    expect(JSON.stringify(view.result)).toContain(INDEXING.message);
-    expect(JSON.stringify(view.result)).toContain("answer from query-docs now");
-    expect(view.result).not.toHaveProperty("isError");
-  });
-
-  test("ends after the 30 minute wait with the answer the call gives without a task", async () => {
-    fetchMock.mockResolvedValue(indexing202());
-    const { taskId } = await newTask();
-    const view = await poll(taskId, CODE_TASK_WAIT_MS / 1000);
-    expect(view.status).toBe("completed");
-    expect(JSON.stringify(view.result)).toContain("answer from query-docs now");
-    expect(view.result).not.toHaveProperty("isError");
-  });
-
-  test("still completes after the 30 minute wait when the index is ready", async () => {
-    fetchMock.mockResolvedValue(new Response(RESULT_TEXT));
-    const view = await poll((await newTask()).taskId, CODE_TASK_WAIT_MS / 1000);
-    expect(view.result).toEqual({ content: [{ type: "text", text: RESULT_TEXT }] });
-  });
-
-  test("rejects another caller and an unknown ID with the same error", async () => {
-    const { taskId } = await newTask();
-    const other = { apiKey: "ctx7sk-two" };
-    await expect(poll(taskId, 60, other)).rejects.toThrow(ProtocolError);
-    await expect(poll(taskId, 60, other)).rejects.toThrow("Unknown task");
-    await expect(poll("unknown", 60)).rejects.toThrow("Unknown task");
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  test("answers the stored state when a cancel wins during the API request", async () => {
-    const { taskId } = await newTask();
-    fetchMock.mockImplementation(async () => {
-      await cancelCodeTask(store, taskId, CALLER, T0 + 61_000);
-      return new Response(RESULT_TEXT);
+  test("answers working with the API's message, interval and creation time", async () => {
+    fetchMock.mockResolvedValue(indexing202(120));
+    const view = await poll(60);
+    expect(view).toMatchObject({
+      taskId: TASK,
+      status: "working",
+      pollIntervalMs: 120_000,
+      createdAt: new Date(T0).toISOString(),
     });
-    expect((await poll(taskId, 60)).status).toBe("cancelled");
+    expect(view.statusMessage).toContain(MESSAGE);
   });
-});
 
-describe("telemetry", () => {
-  test("the tasks/get that completes a task marks the result's outcome, with no second call event", async () => {
-    const { taskId } = await newTask();
-    fetchMock.mockImplementationOnce(async () => indexing202());
-    await poll(taskId, 60);
-    expect(recordToolCallOutcome).not.toHaveBeenCalled();
-    fetchMock.mockImplementationOnce(async () => new Response(RESULT_TEXT));
-    await poll(taskId, 120);
-    await poll(taskId, 180);
+  test("completes with the result the tool returns, and marks its outcome once", async () => {
+    fetchMock.mockResolvedValueOnce(result200());
+    const view = await poll(60);
+    expect(view.status).toBe("completed");
+    expect(view.result).toEqual({ content: [{ type: "text", text: RESULT_TEXT }] });
+    fetchMock.mockResolvedValueOnce(result200(created({ "X-Context7-Task-Stored": "1" })));
+    expect((await poll(1200)).result).toEqual(view.result);
     expect(vi.mocked(recordToolCallOutcome).mock.calls).toEqual([["success"]]);
     expect(recordToolCallTelemetry).not.toHaveBeenCalled();
   });
 
-  test("a cancel records nothing", async () => {
-    const { taskId } = await newTask();
-    await cancelCodeTask(store, taskId, CALLER);
-    expect(recordToolCallOutcome).not.toHaveBeenCalled();
-    expect(recordToolCallTelemetry).not.toHaveBeenCalled();
+  test("completes with the tool's error result when the API refuses the request", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        { error: "index_failed", message: "The tag does not exist." },
+        { status: 422, headers: created() }
+      )
+    );
+    const view = await poll(60);
+    expect(view.status).toBe("completed");
+    expect(view.result).toMatchObject({ isError: true });
+  });
+
+  test("ends with the API's text, not an error, when the API ends the wait (index_pending)", async () => {
+    const message =
+      "The source has waited more than 10 minutes to be indexed. Stop calling for it now and answer from query-docs.";
+    fetchMock.mockResolvedValue(
+      Response.json({ error: "index_pending", message }, { status: 503, headers: created() })
+    );
+    const view = await poll(60);
+    expect(view.status).toBe("completed");
+    expect(view.result).toEqual({ content: [{ type: "text", text: message }] });
+  });
+
+  test("waits on after a timeout, a gateway error or a busy code store", async () => {
+    fetchMock.mockRejectedValueOnce(new Error("timeout"));
+    expect((await poll(60)).status).toBe("working");
+    fetchMock.mockResolvedValueOnce(new Response("Bad gateway", { status: 502 }));
+    expect((await poll(120)).status).toBe("working");
+    fetchMock.mockResolvedValueOnce(
+      Response.json(
+        { error: "code_search_unavailable", message: "Source code search is busy." },
+        { status: 503, headers: created() }
+      )
+    );
+    expect((await poll(180)).status).toBe("working");
+  });
+
+  test("ends after the 30 minute wait with the answer the call gives without a task", async () => {
+    fetchMock.mockResolvedValue(indexing202());
+    const view = await poll(CODE_TASK_WAIT_MS / 1000);
+    expect(view.status).toBe("completed");
+    expect(JSON.stringify(view.result)).toContain(MESSAGE);
+    expect(JSON.stringify(view.result)).toContain("answer from query-docs now");
+    expect(view.result).not.toHaveProperty("isError");
+  });
+
+  test("ends after the 30 minute wait when the API keeps timing out", async () => {
+    // A timeout carries no creation time, so the poll's own clock stands in for it.
+    fetchMock.mockResolvedValue(new Response("Bad gateway", { status: 502, headers: created() }));
+    const view = await poll(CODE_TASK_WAIT_MS / 1000);
+    expect(view.status).toBe("completed");
+    expect(JSON.stringify(view.result)).toContain("answer from query-docs now");
+  });
+
+  test("answers cancelled for a cancelled task", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json({ error: "task_cancelled" }, { status: 410, headers: created() })
+    );
+    expect((await poll(60)).status).toBe("cancelled");
+  });
+
+  test("rejects an unknown task, another caller's task and a malformed ID alike", async () => {
+    fetchMock.mockResolvedValue(Response.json({ error: "task_not_found" }, { status: 404 }));
+    await expect(poll(60)).rejects.toThrow(ProtocolError);
+    await expect(poll(60)).rejects.toThrow("Unknown task");
+    for (const bad of [API_TASK, `query-docs.${API_TASK}`, "grep-code.", "grep-code.a/b"])
+      await expect(poll(60, bad)).rejects.toThrow("Unknown task");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
 
 describe("cancelCodeTask", () => {
-  test("ends a working task, and changes nothing after that", async () => {
-    const { taskId } = await newTask();
-    await cancelCodeTask(store, taskId, CALLER, T0 + 1_000);
-    await cancelCodeTask(store, taskId, CALLER, T0 + 2_000);
-    expect((await poll(taskId, 60)).status).toBe("cancelled");
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  test("rejects another caller and an unknown ID", async () => {
-    const { taskId } = await newTask();
-    await expect(cancelCodeTask(store, taskId, { apiKey: "ctx7sk-two" })).rejects.toThrow(
-      "Unknown task"
-    );
-    await expect(cancelCodeTask(store, "unknown", CALLER)).rejects.toThrow("Unknown task");
-    expect((await poll(taskId, 30)).status).toBe("working");
+  test("deletes the API's task, and rejects an unknown one", async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    await cancelCodeTask(TASK, CALLER);
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(String(url)).toMatch(new RegExp(`/v2/code/tasks/${API_TASK}$`));
+    expect(init?.method).toBe("DELETE");
+    fetchMock.mockResolvedValueOnce(Response.json({ error: "task_not_found" }, { status: 404 }));
+    await expect(cancelCodeTask(TASK, CALLER)).rejects.toThrow("Unknown task");
   });
 });
 
 describe("over MCP", () => {
-  function handler(taskStore: CodeTaskStore | null) {
-    return createMcpHandler(
-      () => {
-        const server = new McpServer(
-          { name: "test", version: "1.0.0" },
-          { capabilities: { tools: {}, extensions: { [TASKS_EXTENSION]: {} } } }
-        );
-        registerCodeTools(server, () => CALLER, taskStore);
-        return server;
-      },
-      { keepAliveMs: 0, onerror: () => undefined }
-    );
-  }
+  const handler = createMcpHandler(
+    () => {
+      const server = new McpServer(
+        { name: "test", version: "1.0.0" },
+        { capabilities: { tools: {}, extensions: { [TASKS_EXTENSION]: {} } } }
+      );
+      registerCodeTools(server, () => CALLER);
+      return server;
+    },
+    { keepAliveMs: 0, onerror: () => undefined }
+  );
 
   async function rpc(
-    taskStore: CodeTaskStore | null,
     method: string,
     params: Record<string, unknown>,
     options: { name?: string; tasks?: boolean } = {}
   ) {
-    const response = await handler(taskStore).fetch(
+    const response = await handler.fetch(
       new Request("http://127.0.0.1/mcp", {
         method: "POST",
         headers: {
@@ -547,21 +290,50 @@ describe("over MCP", () => {
     };
   }
 
-  const grep = (tasks: boolean, taskStore: CodeTaskStore | null = store) =>
+  const grep = (tasks: boolean) =>
     rpc(
-      taskStore,
       "tools/call",
       { name: "grep-code", arguments: { libraryId: "/honojs/hono", pattern: "serve" } },
       { name: "grep-code", tasks }
     );
+  const calledUrl = () => new URL(String(fetchMock.mock.calls[0]![0]));
 
-  test("a 202 stays a text answer for a client that did not declare tasks", async () => {
+  test("a client that did not declare tasks asks for none and gets the text", async () => {
     fetchMock.mockResolvedValue(indexing202());
     const { result } = await grep(false);
-    expect(vi.mocked(recordToolCallTelemetry).mock.calls).toEqual([[CALLER, "not_found"]]);
+    expect(calledUrl().searchParams.get("task")).toBeNull();
     expect(result?.resultType).toBe("complete");
     expect(result?.taskId).toBeUndefined();
     expect(JSON.stringify(result?.content)).toContain("answer from query-docs now");
+    expect(vi.mocked(recordToolCallTelemetry).mock.calls).toEqual([[CALLER, "not_found"]]);
+  });
+
+  test("a client that declared tasks asks for one and gets the API's task", async () => {
+    fetchMock.mockResolvedValue(indexing202(45, API_TASK));
+    const { result } = await grep(true);
+    expect(calledUrl().searchParams.get("task")).toBe("1");
+    expect(result).toMatchObject({
+      resultType: "task",
+      taskId: TASK,
+      status: "working",
+      pollIntervalMs: 45_000,
+      ttlMs: CODE_TASK_TTL_MS,
+    });
+    expect(vi.mocked(recordToolCallTelemetry).mock.calls).toEqual([[CALLER, "not_found"]]);
+  });
+
+  test("an API that names no task gives the text, also to a client that declared tasks", async () => {
+    fetchMock.mockResolvedValue(indexing202());
+    const { result } = await grep(true);
+    expect(result?.resultType).toBe("complete");
+    expect(JSON.stringify(result?.content)).toContain("answer from query-docs now");
+  });
+
+  test("any other answer stays synchronous for a client that declared tasks", async () => {
+    fetchMock.mockResolvedValue(new Response(RESULT_TEXT));
+    const { result } = await grep(true);
+    expect(result?.resultType).toBe("complete");
+    expect(result?.content).toEqual([{ type: "text", text: RESULT_TEXT }]);
   });
 
   test("the API's end of the wait (index_pending) is a normal answer, not an error", async () => {
@@ -578,48 +350,26 @@ describe("over MCP", () => {
     }
   });
 
-  test("a 202 stays a text answer on a server without a task store", async () => {
-    fetchMock.mockResolvedValue(indexing202());
-    const { result } = await grep(true, null);
-    expect(result?.resultType).toBe("complete");
-    expect(JSON.stringify(result?.content)).toContain("answer from query-docs now");
-  });
-
-  test("a 202 becomes a task for a client that declared tasks", async () => {
-    fetchMock.mockResolvedValue(indexing202(45));
-    const { result } = await grep(true);
-    // The tools/call is recorded as it is answered, as before tasks.
-    expect(vi.mocked(recordToolCallTelemetry).mock.calls).toEqual([[CALLER, "not_found"]]);
-    expect(result).toMatchObject({ resultType: "task", status: "working", pollIntervalMs: 45_000 });
-    expect(result?.ttlMs).toBe(CODE_TASK_TTL_MS);
-    const record = await findCodeTask(store, String(result?.taskId), CALLER);
-    expect(record).toMatchObject({ tool: "grep-code", status: "working" });
-  });
-
-  test("any other answer stays synchronous for a client that declared tasks", async () => {
-    fetchMock.mockResolvedValue(new Response(RESULT_TEXT));
-    const { result } = await grep(true);
-    expect(result?.resultType).toBe("complete");
-    expect(result?.content).toEqual([{ type: "text", text: RESULT_TEXT }]);
-  });
-
   test("serves tasks/get, tasks/update and tasks/cancel", async () => {
-    fetchMock.mockResolvedValue(indexing202());
-    const taskId = String((await grep(true)).result?.taskId);
-    const call = (method: string, id = taskId, tasks = true) =>
-      rpc(store, method, { taskId: id }, { name: id, tasks });
+    const call = (method: string, id = TASK, tasks = true) =>
+      rpc(method, { taskId: id }, { name: id, tasks });
 
-    expect((await call("tasks/get")).result).toMatchObject({ taskId, status: "working" });
-    for (const method of ["tasks/update", "tasks/cancel"]) {
-      const answer = await call(method);
-      expect(answer.error).toBeUndefined();
-      expect(answer.result?.taskId).toBeUndefined();
-    }
-    expect((await call("tasks/get")).result).toMatchObject({ taskId, status: "cancelled" });
+    fetchMock.mockResolvedValueOnce(indexing202());
+    expect((await call("tasks/get")).result).toMatchObject({ taskId: TASK, status: "working" });
+    expect((await call("tasks/update")).error).toBeUndefined();
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    expect((await call("tasks/cancel")).error).toBeUndefined();
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ error: "task_cancelled" }, { status: 410, headers: created() })
+    );
+    expect((await call("tasks/get")).result).toMatchObject({ taskId: TASK, status: "cancelled" });
 
+    fetchMock.mockImplementation(async () =>
+      Response.json({ error: "task_not_found" }, { status: 404 })
+    );
     for (const method of ["tasks/get", "tasks/update", "tasks/cancel"]) {
       expect((await call(method, "abc")).error).toMatchObject({ code: -32602 });
-      expect((await call(method, taskId, false)).error).toMatchObject({ code: -32021 });
+      expect((await call(method, TASK, false)).error).toMatchObject({ code: -32021 });
     }
   });
 });
