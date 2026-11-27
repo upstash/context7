@@ -8,6 +8,7 @@ import type {
   UpstreamObservationOptions,
   UpstreamOperation,
   UpstreamOutcome,
+  TeamSkillCall,
 } from "./telemetry-contracts.js";
 import type { ToolCallOutcome } from "./tool-names.js";
 
@@ -73,6 +74,11 @@ function createInstruments() {
     activeAuthentications: meter.createUpDownCounter("context7.mcp.authentication.active", {
       description: "Number of hosted MCP requests currently authenticating",
       unit: "{request}",
+    }),
+    teamSkillCalls: meter.createCounter("context7.mcp.team_skills.calls", {
+      description:
+        "Team skill calls the hosted MCP server answered (skills/list, skills/get, file reads)",
+      unit: "{call}",
     }),
   };
 }
@@ -268,6 +274,11 @@ const batchClientNames = new Set<string>();
  * caller's User-Agent. The header is caller-controlled, so the label set is
  * capped per process; later names are counted as "other".
  */
+/** Counts one team skill call. No teamspace or skill label: names are private and unbounded. */
+export function recordTeamSkillCall(call: TeamSkillCall): void {
+  getInstruments().teamSkillCalls.add(1, { "context7.team_skill.call": call });
+}
+
 export function recordSelfCancellingBatch(userAgent: string | undefined): void {
   let client = /^[\w.-]{1,40}/.exec(userAgent ?? "")?.[0].toLowerCase() ?? "unknown";
   if (!batchClientNames.has(client)) {
