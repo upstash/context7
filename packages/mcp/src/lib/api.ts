@@ -302,7 +302,9 @@ async function codeErrorAnswer(
   // pass, so a task waits on through it.
   if (code === "index_pending")
     return { data: await parseErrorResponse(response, context), outcome: "not_found" };
-  const transient = response.status >= 500 ? { transient: true as const } : {};
+  // A per-caller rate limit (429 `rate_limited`) also passes: a task polls again later.
+  const passes = response.status >= 500 || (response.status === 429 && code === "rate_limited");
+  const transient = passes ? { transient: true as const } : {};
   // A gateway error has no body from the code API: write the whole message here.
   if (!body?.message && response.status >= 500)
     return {

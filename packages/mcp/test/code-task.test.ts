@@ -179,6 +179,16 @@ describe("getCodeTask", () => {
     expect(view.result).toEqual({ content: [{ type: "text", text: message }] });
   });
 
+  test("waits on after the API's per-caller rate limit", async () => {
+    fetchMock.mockResolvedValue(
+      Response.json(
+        { error: "rate_limited", message: "Too many requests." },
+        { status: 429, headers: created({ "Retry-After": "20" }) }
+      )
+    );
+    expect((await poll(60)).status).toBe("working");
+  });
+
   test("waits on after a timeout, a gateway error or a busy code store", async () => {
     fetchMock.mockRejectedValueOnce(new Error("timeout"));
     expect((await poll(60)).status).toBe("working");
