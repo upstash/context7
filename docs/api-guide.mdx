@@ -263,7 +263,7 @@ The Context7 API uses standard HTTP status codes:
 | ---- | ----------------------------------------- | -------------------------------------------- |
 | 200  | Success                                   | Process the response normally                |
 | 202  | Accepted - Library not finalized          | Wait and retry later                         |
-| 301  | Moved - Library moves more than three times  | Use the new library ID from `redirectUrl`    |
+| 301  | Moved - Redirect chain too long or a loop    | Use the library ID from `redirectUrl`        |
 | 400  | Bad Request - Invalid parameters          | Check query parameters                       |
 | 401  | Unauthorized - Invalid API key            | Check your API key format (starts with `ctx7sk`) |
 | 403  | Forbidden - Access denied                 | Check library access permissions or plan     |
@@ -284,7 +284,7 @@ All errors return a JSON object with `error` and `message` fields:
 }
 ```
 
-When a library has moved to another library ID, Context7 follows up to three moves and serves the new library, keeping the version from your request. A text response starts with a line that names the old and new IDs, such as `Library /old/lib has moved to /new/lib. Use /new/lib in later requests.`, and a JSON response reports the new ID in `libraryId`. A library that moves more than three times or in a loop returns `301 library_redirected` with a `redirectUrl` field pointing to the next library ID in the chain.
+When a library has moved to another library ID, Context7 follows up to three moves and serves the new library, keeping the version from your request. A text response starts with a line that names the old and new IDs, such as `Library /old/lib has moved to /new/lib. Use /new/lib in later requests.`, and a JSON response reports the new ID in `libraryId`. A library that moves more than three times or in a loop returns `301 library_redirected` with a `redirectUrl` field pointing to the next library ID in the chain. This applies to `/api/v2/context`, `/api/v2/docs/code` and `/api/v2/docs/info`. A library on the way that you cannot access returns `403`.
 
 ## SDK and Libraries
 
