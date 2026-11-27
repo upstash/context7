@@ -3,7 +3,12 @@ import * as os from "os";
 import pc from "picocolors";
 import { confirm } from "@inquirer/prompts";
 import { CLI_CLIENT_ID } from "../constants.js";
-import { getBaseUrl, isHostedDeployment } from "./api.js";
+import {
+  getBaseUrl,
+  isApiKeyPolicyRefusal,
+  isHostedDeployment,
+  type ApiKeyPolicyRefusal,
+} from "./api.js";
 import { acquireFileLock, type ReleaseLock } from "./file-lock.js";
 import {
   CREDENTIALS_FILE_NAME,
@@ -314,6 +319,8 @@ export async function getValidAccessToken(
 interface TokenErrorResponse {
   error?: string;
   error_description?: string;
+  /** On a device login `access_denied`: why, when the member did not cancel. */
+  reason?: string;
 }
 
 export interface DeviceAuthorizationResponse {
@@ -463,6 +470,8 @@ export interface PollDeviceTokenResult {
   status: "approved" | "pending" | "slow_down" | "denied" | "expired" | "transient";
   tokens?: TokenData;
   errorMessage?: string;
+  /** A denial because the teamspace refuses this member an API key; OAuth still works. */
+  refusal?: ApiKeyPolicyRefusal;
 }
 
 export async function pollDeviceToken(
@@ -509,7 +518,12 @@ export async function pollDeviceToken(
     case "slow_down":
       return { status: "slow_down" };
     case "access_denied":
-      return { status: "denied" };
+      // The server may say why (for example, the teamspace refuses this member an API key).
+      return {
+        status: "denied",
+        errorMessage: err.error_description,
+        ...(isApiKeyPolicyRefusal(err.reason) ? { refusal: err.reason } : {}),
+      };
     case "expired_token":
       return { status: "expired" };
     default:

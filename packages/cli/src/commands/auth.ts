@@ -15,7 +15,7 @@ import {
 
 import { trackEvent } from "../utils/tracking.js";
 import { CLI_CLIENT_ID } from "../constants.js";
-import { getBaseUrl } from "../utils/api.js";
+import { CLI_API_KEY_REFUSED_MESSAGE, getBaseUrl, type ApiKeyPolicyRefusal } from "../utils/api.js";
 
 export function registerAuthCommands(program: Command): void {
   program
@@ -105,7 +105,23 @@ async function announceIdentity(accessToken: string): Promise<string> {
   }
 }
 
+export type DeviceLoginResult = { token: string } | { refusal: ApiKeyPolicyRefusal } | null;
+
+/** Logs in and prints why it failed; null when it did not get a token. */
 export async function performLogin(openBrowser = true): Promise<string | null> {
+  const result = await performDeviceLogin(openBrowser);
+  if (result && "refusal" in result) {
+    console.error(pc.red(CLI_API_KEY_REFUSED_MESSAGE));
+    return null;
+  }
+  return result?.token ?? null;
+}
+
+/**
+ * The device login. A refusal means the teamspace's API key policy refused this member a key
+ * at approval, so `ctx7 setup` can set up OAuth instead of failing.
+ */
+export async function performDeviceLogin(openBrowser = true): Promise<DeviceLoginResult> {
   const baseUrl = getBaseUrl();
   const spinner = ora("Preparing login...").start();
 
@@ -154,14 +170,19 @@ export async function performLogin(openBrowser = true): Promise<string | null> {
         saveTokens(result.tokens);
         const successText = await announceIdentity(result.tokens.access_token);
         waitingSpinner.succeed(pc.green(successText));
-        return result.tokens.access_token;
+        return { token: result.tokens.access_token };
       }
       if (result.status === "slow_down") {
         intervalMs += 5000;
         continue;
       }
+      if (result.status === "denied" && result.refusal) {
+        waitingSpinner.warn(pc.yellow("This teamspace does not give you an API key."));
+        return { refusal: result.refusal };
+      }
       if (result.status === "denied") {
         waitingSpinner.fail(pc.red("Authorization denied."));
+        if (result.errorMessage) console.error(pc.red(result.errorMessage));
         return null;
       }
       if (result.status === "expired") {

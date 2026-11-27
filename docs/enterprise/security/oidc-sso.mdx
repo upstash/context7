@@ -57,7 +57,7 @@ If your provider uses a different claim name, you can change what Context7 looks
     Sign in to your Context7 dashboard with the admin account. Open **Workspace Settings › Authentication**. In the **Single sign-on** card, select the **OIDC** tab.
 
     <Frame>
-      ![Context7 Settings showing the Single sign-on card with the OIDC tab selected](/images/enterprise/oidc-sso/02-sso-card-oidc.png)
+      <img src="/images/enterprise/oidc-sso/02-sso-card-oidc.png" alt="Context7 Settings showing the Single sign-on card with the OIDC tab selected" />
     </Frame>
   </Step>
 
@@ -77,7 +77,7 @@ If your provider uses a different claim name, you can change what Context7 looks
     The **Group mapping** section controls which users get which role in Context7.
 
     <Frame>
-      ![OIDC configuration card showing the Group mapping section](/images/enterprise/oidc-sso/03-group-mapping.png)
+      <img src="/images/enterprise/oidc-sso/03-group-mapping.png" alt="OIDC configuration card showing the Group mapping section" />
     </Frame>
 
     - **Groups claim**: the name of the claim in the token that contains the user's groups. Default is `groups`.
@@ -101,12 +101,18 @@ If your provider uses a different claim name, you can change what Context7 looks
 Open `/login` in a new browser window. You will see a **Continue with [your button label]** button at the top of the sign-in card.
 
 <Frame>
-  ![Login page showing the SSO button and the optional password form below](/images/enterprise/oidc-sso/01-login-page.png)
+  <img src="/images/enterprise/oidc-sso/01-login-page.png" alt="Login page showing the SSO button and the optional password form below" />
 </Frame>
 
 Click it. You are redirected to your identity provider's login page. After authenticating there, your provider sends you back to Context7 with an authorization code. Context7 exchanges the code for tokens, validates the ID token signature and claims, and either creates a new user or updates the existing one.
 
 The first time someone signs in, Context7 creates a user record using their name, email, and role from the token claims. On subsequent sign-ins, the name, email, and role are refreshed from the latest token, so changes in your IdP take effect automatically on the next login.
+
+## Sign-in from MCP clients
+
+With [OAuth sign-in for MCP clients](/enterprise/security/mcp-oauth), an MCP client sends the user to this sign-in flow when it needs a token. After the IdP sends the user back, Context7 returns to the client's consent step instead of the dashboard. Nothing changes in your IdP configuration.
+
+An OAuth authorization outlives the browser session: removing a user from the IdP group ends it only when it expires, after at most 30 days. To end it at once, choose **Disable sign-in** for the user on the **Members** page.
 
 ## Disabling password sign-in
 
@@ -115,7 +121,7 @@ Once OIDC is live, you can turn off password-based sign-in entirely so that all 
 Open the **Password sign-in** card directly below the SSO card and toggle it off.
 
 <Frame>
-  ![Password sign-in card with the toggle in the Enabled state](/images/enterprise/oidc-sso/04-password-card.png)
+  <img src="/images/enterprise/oidc-sso/04-password-card.png" alt="Password sign-in card with the toggle in the Enabled state" />
 </Frame>
 
 <Warning>
@@ -127,7 +133,7 @@ Disabling password sign-in means the default admin account and any manually crea
 All users who have signed in appear on the **Members** page in Workspace Settings, along with their sign-in method and last sign-in time.
 
 <Frame>
-  ![Members page showing OIDC-provisioned users](/images/enterprise/oidc-sso/05-users-tab.png)
+  <img src="/images/enterprise/oidc-sso/05-users-tab.png" alt="Members page showing OIDC-provisioned users" />
 </Frame>
 
 Roles are controlled by group membership in your IdP. To change someone's role, update their group assignment in your identity provider. The change takes effect on their next sign-in.

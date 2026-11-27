@@ -73,7 +73,12 @@ import {
   usableApiKey,
 } from "./lib/mcp-http-auth.js";
 import { mcpRouteFromUrl } from "./lib/mcp-route.js";
-import { context7SkillCatalog } from "./lib/skills.js";
+import { attachSkills } from "./lib/skills.js";
+import {
+  isTeamSkillsSnapshotEnabled,
+  startTeamSkillsSnapshot,
+  teamspaceOf,
+} from "./lib/team-skills-snapshot.js";
 import { parseOAuthAudienceEnforcement } from "./lib/oauth-audience.js";
 
 /** Default HTTP server port */
@@ -275,12 +280,13 @@ function filterBatchSelfCancellations(body: unknown): {
 /**
  * Builds the server for one request (HTTP) or one connection (stdio). `experimentalTools` are
  * the experimental tools to list; `signedIn` says the caller sent a credential, whose dashboard
- * choice can change the list.
+ * choice can change the list; `teamspaceId` is the caller's teamspace, whose skills it serves.
  */
 function createMcpServer(
   mcpContext: McpRequestContext,
   experimentalTools: readonly ExperimentalTool[],
-  signedIn: boolean
+  signedIn: boolean,
+  teamspaceId?: string
 ) {
   const enabled: ReadonlySet<ExperimentalTool> = new Set(experimentalTools);
   const callerHint = signedIn || enabled.size > 0 ? PRIVATE_CACHE_HINT : STATIC_CACHE_HINT;
@@ -324,9 +330,14 @@ Do not use for: refactoring, debugging, or reviewing code that does not depend o
   const server = mcpInstrumentation
     ? mcpInstrumentation.createServer(serverInfo, serverOptions, mcpContext)
     : new McpServer(serverInfo, serverOptions);
-  // attach() is an @experimental SDK API: how an extension is wired to a server may change in a
-  // minor SDK release, so recheck this call on every SDK upgrade.
-  context7SkillCatalog.attach(server);
+  // Where the snapshot is polled, any signed-in caller can gain team skills at the next poll (a
+  // first install, a choice the snapshot has not seen, recovery after an outage), so they get the
+  // short private hint. Elsewhere (stdio, no assertion key) everyone gets the public one.
+  attachSkills(
+    server,
+    teamspaceId,
+    signedIn && isTeamSkillsSnapshotEnabled() ? PRIVATE_CACHE_HINT : STATIC_CACHE_HINT
+  );
 
   server.registerTool(
     RESOLVE_LIBRARY_ID_TOOL,
@@ -594,10 +605,16 @@ async function main() {
     // before dispatch. Any other silent hang goes idle and the gateway reaps
     // it at streamIdleTimeout (300s) instead of its 1200s hard cap.
     const rawMcpHandler = createMcpHandler(
-      // handleMcpRequest resolved the caller's experimental tools before the SDK runs this.
+      // handleMcpRequest resolved the caller's experimental tools and teamspace before the SDK
+      // runs this.
       (mcpContext) => {
         const context = requestContext.getStore();
-        return createMcpServer(mcpContext, context?.experimentalTools ?? [], !!context?.apiKey);
+        return createMcpServer(
+          mcpContext,
+          context?.experimentalTools ?? [],
+          !!context?.apiKey,
+          context?.teamspaceId
+        );
       },
       {
         keepAliveMs: 0,
@@ -697,6 +714,9 @@ async function main() {
             : isSnapshotEnabled()
               ? snapshotExperimentalTools(apiKey)
               : await fetchExperimentalTools(context);
+        // The caller's teamspace, from the in-memory snapshot: its skills are listed next to
+        // context7-mcp. Over stdio, or without the snapshot, there is none.
+        context.teamspaceId = req.method === "POST" ? teamspaceOf(apiKey) : undefined;
 
         const oauthClientRegistration = classifyOAuthClientRegistration(apiKey);
         observeCredentialedInitialize(res, req.body, {
@@ -894,11 +914,16 @@ async function main() {
       });
     };
 
-    // At most one 5 s request; a failed first read starts with nothing on.
-    await startExperimentalToolsSnapshot();
+    // At most one 5 s request each; a failed first read starts with nothing on.
+    await Promise.all([startExperimentalToolsSnapshot(), startTeamSkillsSnapshot()]);
     if (!isSnapshotEnabled()) {
       console.warn(
         "[Context7] Experimental tools snapshot off (no MCP_CLIENT_IP_ASSERTION_KEY): dashboard choices are looked up through the Context7 API, once per credential every 5 minutes"
+      );
+    }
+    if (!isTeamSkillsSnapshotEnabled()) {
+      console.warn(
+        "[Context7] Team skills snapshot off (no MCP_CLIENT_IP_ASSERTION_KEY): only the context7-mcp skill is served"
       );
     }
     startServer(initialPort);

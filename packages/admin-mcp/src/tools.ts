@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { newestFirst } from "./benchmark-areas.js";
 
 /** `read` changes nothing; `destructive` deletes data that cannot be restored. */
 export type Kind = "read" | "write" | "destructive";
@@ -848,7 +849,7 @@ export const TOOLS = [
     name: "get_library_suggestions",
     title: "Get library suggestions",
     description:
-      "Get the suggestions for a library the teamspace owns: questions its docs answered badly in Context7's benchmark, with what to add and the doc files to change. Use them to improve the docs in the repository. For a Docs7 site, its library id is in docs7_get_site.",
+      "Get the suggestions for a library the teamspace owns: gaps Context7's benchmark found in its docs, each with what to add, its benchmark score and the doc files to change. Use them to improve the docs in the repository. For a Docs7 site, its library id is in docs7_get_site.",
     kind: "read",
     untrusted: true,
     args: { library_id: libraryId },
@@ -859,7 +860,7 @@ export const TOOLS = [
     console: "read",
     title: "Get library benchmarks",
     description:
-      "Get the benchmark of a library the teamspace owns: score statistics and the graded questions (real questions asked about the library, each with the score its docs earned and the grader's explanation). Lowest scores first by default: these are the questions the docs fail. get_library_suggestions gives the fixes Context7 proposes for them.",
+      "Get the benchmark of a library the teamspace owns: score statistics and the graded answers, each with its date, score and the grader's points per criterion. The questions are Context7 users' queries and are not returned. Lowest scores first by default; `newest` gives the latest graded answers first. get_library_suggestions gives the gaps to fix.",
     kind: "read",
     untrusted: true,
     args: {
@@ -871,14 +872,17 @@ export const TOOLS = [
         .min(1)
         .max(100)
         .optional()
-        .describe("Questions to return. Default 20."),
+        .describe("Graded answers to return. Default 20."),
     },
     run: async ({ teamspace, library_id, order = "lowest", limit = 20 }, api) => {
       const { stats, benchmarks = [] } = (await api.get(
         `${lib(teamspace, library_id)}/benchmarks`
-      )) as { stats?: unknown; benchmarks?: { score: number }[] };
+      )) as { stats?: unknown; benchmarks?: { score: number; benchmarkDate?: string }[] };
+      // Sorted here for both orders: the API's own order is not part of its contract.
       const sorted =
-        order === "lowest" ? [...benchmarks].sort((a, b) => a.score - b.score) : benchmarks;
+        order === "lowest"
+          ? [...benchmarks].sort((a, b) => a.score - b.score)
+          : newestFirst(benchmarks);
       return { stats, benchmarks: sorted.slice(0, limit) };
     },
   }),

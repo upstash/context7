@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.13.1
+
+### Patch Changes
+
+- 6f44a28: `ctx7 setup` checks an API key saved by an earlier login before it writes it, and continues with OAuth when the teamspace's policy now refuses that key, instead of configuring a key that fails on every call. A saved key the server no longer accepts (revoked or deleted) starts a new login.
+
+## 0.13.0
+
+### Minor Changes
+
+- 32dccfd: Agents pass the version a project uses as its own value, not as a suffix of the library ID. `query-docs` (MCP and pi) takes a `version` input and `ctx7 docs` a `--tag` option, sent to `/v2/context` as `version`; Context7 serves that version or the closest one it has. `resolve-library-id` no longer lists versions.
+- 11cb18d: Add `--vscode-insiders` to `ctx7 setup` and `ctx7 remove`. Global setup now writes to the VS Code Insiders user folder, and you can combine it with `--vscode` in one command. The setup picker and auto-detection do not list VS Code Insiders, so use the flag.
+
+  `ctx7 remove` no longer deletes a skill from a shared skills folder (such as `~/.agents/skills`) while another agent still uses it.
+
+### Patch Changes
+
+- 88beb24: `ctx7 setup` also continues with OAuth when the browser login is refused an API key by the teamspace's policy, instead of ending with "Authorization denied".
+- 82b851f: `ctx7 setup` continues with OAuth when the teamspace refuses the member an API key, and the CLI explains the refusal instead of a generic error.
+- 2f472ff: `ctx7 setup --base-url` writes a keyless MCP entry when the on-premise deployment uses OAuth sign-in, so the client signs in through the browser. `--oauth` now works with on-premise deployments that offer OAuth. Setup ignores a `CONTEXT7_API_KEY` that is not an on-premise personal key, and warns when it ignores one.
+- 7b68139: Strip terminal control characters from crowdsourced API content (library titles, descriptions, docs, code, upgrade guides and search results) before printing, preventing ANSI/OSC escape sequence injection in `ctx7` output. Reported by Syed Anas Mohiuddin.
+
 ## 0.12.2
 
 ### Patch Changes
