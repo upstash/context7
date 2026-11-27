@@ -1,0 +1,1442 @@
+[
+  {
+    "case": 1,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 1,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 2,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 3,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 4,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 5,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 1,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 1,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 6,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 7,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 8,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 9,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 1,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 1,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 10,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 11,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 12,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 13,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 14,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 1,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 15,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 16,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 17,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 1,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 1,
+      "gemini_score": 1
+    }
+  },
+  {
+    "case": 18,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 3,
+      "gpt_score": 1,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 3,
+      "gpt_score": 1,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 19,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 20,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 21,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 22,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 23,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 2,
+      "query_calls": 2,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 24,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 25,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 1,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 26,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 27,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 28,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 29,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 1,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 1,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 30,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 31,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 32,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 33,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 34,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 1,
+      "gemini_score": 1
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 1,
+      "gemini_score": 1
+    }
+  },
+  {
+    "case": 35,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 36,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 37,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 38,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 39,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 40,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 41,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 42,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 43,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 44,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 45,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 1,
+      "gemini_score": 1
+    }
+  },
+  {
+    "case": 46,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 47,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 48,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 49,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 1,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 50,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 1,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 1,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 51,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 1,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 52,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 1,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 53,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 2,
+      "query_calls": 2,
+      "gpt_score": 1,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 2,
+      "query_calls": 0,
+      "gpt_score": 1,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 54,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 1,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 1,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 55,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 56,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 1,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 57,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 58,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 1,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 1,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 59,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 2,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 60,
+    "lookup_expected": true,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 1,
+      "gemini_score": 1
+    },
+    "new": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 61,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 62,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 63,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 64,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 1,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 65,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 66,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 67,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 1,
+      "query_calls": 1,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 68,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 69,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 70,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 71,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 72,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 73,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 74,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 75,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 76,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 77,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 78,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 79,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 1,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 80,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 81,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 82,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 83,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 84,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 1,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 85,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 86,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 87,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 88,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 1,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 89,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 1,
+      "gemini_score": 2
+    }
+  },
+  {
+    "case": 90,
+    "lookup_expected": false,
+    "old": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    },
+    "new": {
+      "resolve_calls": 0,
+      "query_calls": 0,
+      "gpt_score": 2,
+      "gemini_score": 2
+    }
+  }
+]
