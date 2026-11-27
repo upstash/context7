@@ -123,7 +123,16 @@ Each parse and re-parse bills its parse tokens to the teamspace at $5 per 1M tok
 
 ## Use the API
 
-The GitOps settings, the preview and the sync are in the management API: [Get GitOps settings and sync history](/api-reference/teamspace-admin/get-gitops-settings-and-sync-history), [Save GitOps settings](/api-reference/teamspace-admin/save-gitops-settings), [Preview a GitOps sync](/api-reference/teamspace-admin/preview-a-gitops-sync) and [Run a GitOps sync](/api-reference/teamspace-admin/run-a-gitops-sync). Changing settings and running a sync need an API key with **Write access**.
+The GitOps settings, the preview and the sync are in the management API, listed under **Teamspace Admin** in the API reference:
+
+| Method | Path | Purpose |
+| ------ | ---- | ------- |
+| `GET` | `/api/v2/teamspaces/{teamspaceId}/gitops` | Read the settings and the sync history |
+| `PUT` | `/api/v2/teamspaces/{teamspaceId}/gitops` | Save the settings |
+| `GET` | `/api/v2/teamspaces/{teamspaceId}/gitops/preview` | Preview a sync and get its `confirmation` token |
+| `POST` | `/api/v2/teamspaces/{teamspaceId}/gitops/sync` | Run a sync |
+
+Changing settings and running a sync need an API key with **Write access**.
 
 To sync from CI after a merge:
 
